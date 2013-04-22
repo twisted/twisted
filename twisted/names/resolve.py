@@ -30,6 +30,14 @@ class FailureHandler:
 
 
 
+class ResolverChainConstructionError(Exception):
+    """
+    Raised if L{ResolverChain.__init__} is passed an empty or
+    incompatible C{resolvers} list.
+    """
+
+
+
 @implementer(interfaces.IResolver)
 class ResolverChain(common.ResolverBase):
     """
@@ -37,6 +45,11 @@ class ResolverChain(common.ResolverBase):
     """
     def __init__(self, resolvers):
         common.ResolverBase.__init__(self)
+
+        if not resolvers:
+            raise ResolverChainConstructionError(
+                "resolvers is empty: %r" % (resolvers,))
+
         self.resolvers = resolvers
 
 
