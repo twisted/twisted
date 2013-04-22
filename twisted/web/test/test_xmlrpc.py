@@ -14,7 +14,7 @@ from twisted.trial import unittest
 from twisted.web import xmlrpc
 from twisted.web.xmlrpc import (
     XMLRPC, payloadTemplate, addIntrospection, _QueryFactory, Proxy,
-    withRequest)
+    withRequest, MultiCall)
 from twisted.web import server, static, client, error, http
 from twisted.internet import reactor, defer
 from twisted.internet.error import ConnectionDone
@@ -27,7 +27,6 @@ except ImportError:
     sslSkip = "OpenSSL not present"
 else:
     sslSkip = None
-
 
 class AsyncXMLRPCTests(unittest.TestCase):
     """
@@ -681,6 +680,7 @@ class XMLRPCTestAuthenticated(XMLRPCTestCase):
         return d
 
 
+
 class XMLRPCTestIntrospection(XMLRPCTestCase):
 
     def setUp(self):
@@ -700,7 +700,8 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
                  'deferFault', 'dict', 'echo', 'fail', 'fault',
                  'pair', 'system.listMethods',
                  'system.methodHelp',
-                 'system.methodSignature', 'withRequest'])
+                 'system.methodSignature', 'system.multicall', 
+                 'withRequest'])
 
         d = self.proxy().callRemote("system.listMethods")
         d.addCallback(cbMethods)
@@ -732,6 +733,211 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
             d.addCallback(self.assertEqual, expected)
             dl.append(d)
         return defer.DeferredList(dl, fireOnOneErrback=True)
+
+
+
+class FakeProxy(object):
+    """
+    Fake twisted XMLRPC Proxy client to run tests without using
+    the network
+    """
+    def __init__(self, resource):
+        self.resource = resource
+
+
+    def callRemote(self, methodName, *args):
+        """
+        emulate twisted.web.xmlrpc.Proxy.callRemote
+        """
+        # build request
+        request = DummyRequest([''])
+        request.method = 'POST'
+        request.content = StringIO(
+            payloadTemplate % (methodName, xmlrpclib.dumps(args)))
+        
+        def returnResponse( requestResponse ):
+            results = xmlrpclib.loads(requestResponse)[0]
+            if len(results) == 1:
+                results = results[0]
+            return results
+
+        # look mom no network!
+        self.resource.render(request)
+
+        return (defer.succeed("".join(request.written))
+            .addCallback(returnResponse))
+
+
+
+class XMLRPCTestMultiCall(unittest.TestCase):
+    """
+    Tests for xmlrpc multicalls
+    """
+    def setUp(self):
+        self.resource = Test()
+        addIntrospection(self.resource)
+        self.proxy = FakeProxy(self.resource)
+
+
+    def test_multicall(self):
+        """
+        test a suscessfull multicall
+        """
+        inputs = range(5)
+        m = MultiCall(self.proxy)
+        for x in inputs:
+            m.echo(x)
+
+        def testResults(results):
+            self.assertEqual(inputs, [x[1] for x in results])
+
+        resultsDeferred = m().addCallback(testResults)
+        self.assertTrue(resultsDeferred.called) 
+
+
+    def test_multicall_callRemote(self):
+        """
+        test a suscessfull multicall using
+        multicall.callRemote instead of attribute lookups
+        """
+        inputs = range(5)
+        m = MultiCall(self.proxy)
+        for x in inputs:
+            m.callRemote('echo', x)
+
+        def testResults(results):
+            self.assertEqual(inputs, [x[1] for x in results])
+
+        resultsDeferred = m().addCallback(testResults)
+        self.assertTrue(resultsDeferred.called)
+
+
+    def test_multicall_with_callbacks(self):
+        """ 
+        test correct execution of callbacks added to the
+        multicall's returned deferreds for each individual queued
+        call
+        """
+        inputs = range(5)
+        m = MultiCall(self.proxy)
+        for x in inputs:
+            d = m.echo(x)
+            d.addCallback( lambda x : x*x )
+
+        def testResults(results):
+            self.assertEqual([ x*x for x in inputs], [x[1] for x in results])
+
+        resultsDeferred = m().addCallback(testResults)
+        self.assertTrue(resultsDeferred.called)
+
+
+    def test_multicall_errorback(self):
+        """ 
+        test that an error (an invalid - not found - method) 
+        does not propagate if properly handled in the errorback
+        of an individual deferred
+        """
+        def trapFoo(error):
+            error.trap(xmlrpclib.Fault)
+            self.assertEqual(error.value.faultString,
+                'procedure foo not found',
+                'check we have a failure message'
+                ) 
+            self.flushLoggedErrors(xmlrpc.NoSuchFunction)
+
+
+        m = MultiCall(self.proxy)
+        m.echo(1)
+        # method not present on server
+        m.foo().addErrback(trapFoo)
+        m.echo(2)
+
+        def handleErrors(error):
+            error.trap(xmlrpclib.Fault)
+            self.assertEqual(error.value.faultString,
+                'xmlrpc_echo() takes exactly 2 arguments (4 given)')
+            self.flushLoggedErrors(TypeError)
+
+        m.echo(1,2,3).addErrback(handleErrors)
+
+        def testResults(results):
+            """ 
+            the errorback should have trapped the error
+            """
+            self.assertEqual(results[1], (True, None),
+            'failure trapped in errorback does not propagate to deferredList results')
+
+        resultsDeferred = m().addCallback(testResults)
+        self.assertTrue(resultsDeferred.called)
+
+
+    def test_multicall_withRequest(self):
+        """
+        Test that methods decorated with @withRequest are handled correctly
+        """
+        m = MultiCall(self.proxy)
+        m.echo(1)
+        # method decorated with withRequest
+        msg = 'hoho'
+        m.withRequest(msg)
+        m.echo(2)
+
+        def testResults(results):
+            """
+            test that a withRequest decorated method was properly handled
+            """
+            self.assertEqual(results[1][1], 
+                'POST %s' % msg, 'check withRequest decorated result')
+
+        resultsDeferred = m().addCallback(testResults)
+        self.assertTrue(resultsDeferred.called)
+
+
+    def test_multicall_with_xmlrpclib(self):
+        """
+        check that the sever's response is also compatible with xmlrpclib
+        MultiCall client
+        """
+        class PatchedXmlrpclibProxy(object):
+            """
+            A proxy that more closely resembles xmlrpclib.ServerProxy
+            """
+            def __init__(self, resource):
+                self.resource = resource
+
+            def __request(self, methodName, params):
+                """
+                Patched xmlrpclib.ServerProxy.__request to emulate
+                RPC call without using the network
+                """
+                request = DummyRequest([''])
+                request.method = 'POST'
+                request.content = StringIO(
+                    payloadTemplate % (methodName, xmlrpclib.dumps(params)))
+
+                self.resource.render(request)
+                response =  xmlrpclib.loads("".join(request.written))[0]
+                if len(response) == 1:
+                    response = response[0]
+                return response
+
+            def __getattr__(self, name):
+                """
+                magic method dispatcher
+                """
+                return xmlrpclib._Method(self.__request, name)
+
+        inputs = range(5)
+        m = xmlrpclib.MultiCall(
+            PatchedXmlrpclibProxy(self.resource))
+        for x in inputs:
+            m.echo(x)
+
+        self.assertEqual(
+                inputs, 
+                list(m()), 
+                'xmlrpclib multicall can talk to the twisted multicall')
+
 
 
 class XMLRPCClientErrorHandling(unittest.TestCase):
