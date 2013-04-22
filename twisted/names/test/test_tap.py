@@ -18,6 +18,21 @@ class OptionsTests(TestCase):
     Tests for L{Options}, defining how command line arguments for the
     DNS server are parsed.
     """
+    def test_operatingModeOptionsExist(self):
+        """
+        The option names listed in L{Options._operatingModeOptions}
+        must all be valid command line options. This test guards
+        against accidental removal of an operating mode related
+        option, without also updating the _operatingModeOptions list.
+        """
+        options = Options()
+        availableOptionNames = options.synonyms.values()
+        for optionName in options._operatingModeOptions:
+            self.assertTrue(
+                optionName in availableOptionNames,
+                msg="%r option not found." % (optionName,))
+
+
     def test_unknownOperatingMode(self):
         """
         At least one of the DNS operating mode options must be given

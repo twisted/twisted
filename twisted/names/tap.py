@@ -16,6 +16,8 @@ from twisted.names import server
 from twisted.names import authority
 from twisted.names import secondary
 
+
+
 class Options(usage.Options):
     optParameters = [
         ["interface", "i", "",   "The interface to which to bind"],
@@ -37,6 +39,14 @@ class Options(usage.Options):
 
     zones = None
     zonefiles = None
+
+    # The names of twistd dns options which control the operating
+    # mode.  At least one of these must be provided on the command
+    # line
+    _operatingModeOptions = (
+        "recursive", "resolv-conf", "hosts-file",
+        "secondary", "pyzone", "bindzone")
+
 
     def __init__(self):
         usage.Options.__init__(self)
@@ -117,9 +127,8 @@ class Options(usage.Options):
                 or self.secondaries or self.zonefiles or self.bindfiles):
             raise usage.UsageError(
                 "Unknown operating mode. Please provide at least "
-                "one of the following operating mode options: "
-                "--recursive, --resolv-conf, --hosts-file, "
-                "--secondary, --pyzone or --bindzone")
+                "one of the following operating mode options: --%s" % (
+                    ", --".join(self._operatingModeOptions)))
 
 
 
