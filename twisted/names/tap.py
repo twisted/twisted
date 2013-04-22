@@ -117,10 +117,9 @@ class Options(usage.Options):
                 or self.secondaries or self.zonefiles or self.bindfiles):
             raise usage.UsageError(
                 "Unknown operating mode. Please provide at least "
-                "one of the following operating mode options. ("
+                "one of the following operating mode options: "
                 "--recursive, --resolv-conf, --hosts-file, "
-                "--secondary, --pyzone or --bindzone"
-                ")")
+                "--secondary, --pyzone or --bindzone")
 
 
 
