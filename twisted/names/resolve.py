@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.names.test.test_resolve -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
