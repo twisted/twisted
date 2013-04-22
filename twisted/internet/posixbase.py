@@ -391,8 +391,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
     # IReactorUNIX
 
     def connectUNIX(self, address, factory, timeout=30, checkPID=0):
-        """@see: twisted.internet.interfaces.IReactorUNIX.connectUNIX
-        """
         assert unixEnabled, "UNIX support is not present"
         # Move this import back up to main level when twisted.internet.unix is
         # ported to Python 3:
@@ -402,9 +400,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
         return c
 
     def listenUNIX(self, address, factory, backlog=50, mode=0o666, wantPID=0):
-        """
-        @see: twisted.internet.interfaces.IReactorUNIX.listenUNIX
-        """
         assert unixEnabled, "UNIX support is not present"
         # Move this import back up to main level when twisted.internet.unix is
         # ported to Python 3:
@@ -483,15 +478,11 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
     # IReactorTCP
 
     def listenTCP(self, port, factory, backlog=50, interface=''):
-        """@see: twisted.internet.interfaces.IReactorTCP.listenTCP
-        """
         p = tcp.Port(port, factory, backlog, interface, self)
         p.startListening()
         return p
 
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
-        """@see: twisted.internet.interfaces.IReactorTCP.connectTCP
-        """
         c = tcp.Connector(host, port, factory, timeout, bindAddress, self)
         c.connect()
         return c
@@ -499,8 +490,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
     # IReactorSSL (sometimes, not implemented)
 
     def connectSSL(self, host, port, factory, contextFactory, timeout=30, bindAddress=None):
-        """@see: twisted.internet.interfaces.IReactorSSL.connectSSL
-        """
         if tls is not None:
             tlsFactory = tls.TLSMemoryBIOFactory(contextFactory, True, factory)
             return self.connectTCP(host, port, tlsFactory, timeout, bindAddress)
@@ -515,8 +504,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
 
     def listenSSL(self, port, factory, contextFactory, backlog=50, interface=''):
-        """@see: twisted.internet.interfaces.IReactorSSL.listenSSL
-        """
         if tls is not None:
             tlsFactory = tls.TLSMemoryBIOFactory(contextFactory, False, factory)
             port = self.listenTCP(port, tlsFactory, backlog, interface)
