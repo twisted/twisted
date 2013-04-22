@@ -121,15 +121,18 @@ class WritingProtocol(protocol.Protocol):
 
 class FakeContext:
     """
-    Introspectable fake of an OpenSSL.SSL.Context.
+    Fake of an C{OpenSSL.SSL.Context}.
+
+    Saves call arguments for later introspection.
     """
+    _options = 0
 
     def __init__(self, method):
         self._method = method
         self._extraCertChain = []
 
     def set_options(self, options):
-        pass
+        self._options |= options
 
     def use_certificate(self, certificate):
         self._certificate = certificate
@@ -325,6 +328,9 @@ class OpenSSLOptions(unittest.TestCase):
 
 
     def test_extraChainFilesAreAddedIfSupplied(self):
+        """
+        C{extraCertChain} is respected when creating contexts.
+        """
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -335,6 +341,19 @@ class OpenSSLOptions(unittest.TestCase):
         self.assertEqual(self.sKey, ctx._privateKey)
         self.assertEqual(self.sCert, ctx._certificate)
         self.assertEqual(self.extraCertChain, ctx._extraCertChain)
+
+
+    def test_extraChainDoesNotBreakPyOpenSSL(self):
+        """
+        C{extraCertChain} doesn't break C{OpenSSL.SSL.Context} creation.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            extraCertChain=self.extraCertChain,
+        )
+        ctx = opts.getContext()
+        self.assertIsInstance(ctx, SSL.Context)
 
 
     def test_abbreviatingDistinguishedNames(self):

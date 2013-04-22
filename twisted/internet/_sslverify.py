@@ -626,6 +626,7 @@ class OpenSSLCertificateOptions(object):
     A factory for SSL context objects for both SSL servers and clients.
     """
 
+    # Factory for creating contexts.  Configurable for testability.
     _contextFactory = SSL.Context
     _context = None
     # Older versions of PyOpenSSL didn't provide OP_ALL.  Fudge it here, just in case.
