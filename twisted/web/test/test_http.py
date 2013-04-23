@@ -26,7 +26,7 @@ from twisted.internet.error import ConnectionLost
 from twisted.protocols import loopback
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.test_internet import DummyProducer
-from twisted.web.test.requesthelper import DummyChannel
+from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 
 
 
@@ -1697,6 +1697,53 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             repr(request),
             '<Otherwise at 0x%x method=(no method yet) uri=(no uri yet) '
             'clientproto=(no clientproto yet)>' % (id(request),))
+
+
+    def test_unregisterNonQueuedNonStreamingProducer(self):
+        """
+        L{Request.unregisterProducer} unregisters a non-queued non-streaming 
+        producer. It also unregisters the requests' transport producer.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.transport = StringTransport()
+        req.registerProducer(DummyProducer(), False)
+        req.unregisterProducer()
+        self.assertEqual(req.transport.producer, None)
+        self.assertEqual(req.producer, None)
+
+
+    def test_unregisterNonQueuedStreamingProducer(self):
+        """
+        L{Request.unregisterProducer} unregisters a non-queued streaming 
+        producer. Its also unregisters the requests' transport producer.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.transport = StringTransport()
+        req.registerProducer(DummyProducer(), True)
+        req.unregisterProducer()
+        self.assertEqual(req.transport.producer, None)
+        self.assertEqual(req.producer, None)
+
+
+    def test_unregisterQueuedNonStreamingProducer(self):
+        """
+        L{Request.unregisterProducer} unregisters a queued non-streaming
+        producer.
+        """
+        req = http.Request(DummyChannel(), True)
+        req.registerProducer(DummyProducer(), False)
+        req.unregisterProducer()
+        self.assertEqual(req.producer, None)
+
+
+    def test_unregisterQueuedStreamingProducer(self):
+        """
+        L{Request.unregisterProducer} unregisters a queued streaming producer.
+        """
+        req = http.Request(DummyChannel(), True)
+        req.registerProducer(DummyProducer(), True)
+        req.unregisterProducer()
+        self.assertEqual(req.producer, None)
 
 
 
