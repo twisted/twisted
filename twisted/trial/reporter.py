@@ -98,6 +98,7 @@ class SafeStream(object):
                     untilConcludes(self.original.flush)
                 except IOError as e:
                     if e.errno == errno.ENOSPC:
+                        log.msg(format="SafeStream.format failed with ENOSPC")
                         continue
                     raise
                 else:
@@ -113,11 +114,17 @@ class SafeStream(object):
         if self._catchENOSPC:
             bufferSize = 2 ** 16
             while data:
+                log.msg(
+                    format="SafeStream.write trying %(data)r",
+                    data=data[:bufferSize])
                 try:
                     untilConcludes(
                         self.original.write, data[:bufferSize])
                 except IOError as e:
                     if e.errno == errno.ENOSPC:
+                        log.msg(
+                            format="ENOSPC in SafeStream.write for %(data)r",
+                            data=data[:bufferSize])
                         if bufferSize == 1:
                             raise
                         else:
