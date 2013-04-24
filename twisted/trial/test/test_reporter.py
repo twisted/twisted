@@ -1210,6 +1210,9 @@ class TestSafeStream(unittest.SynchronousTestCase):
     """
     Tests for L{reporter.SafeStream}.
     """
+    _windows = runtime.Platform("nt")
+    _posix = runtime.Platform("posix")
+
     def setUp(self):
         self.stream = BytesIO()
 
@@ -1313,7 +1316,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
         self.assertFalse(reporter.SafeStream._isFile(fileno))
 
 
-    def _writePipeNoSpaceSetup(self, platform):
+    def _writePipeNoSpaceSetup(self, platform, bufferSize):
         """
         Prepare a L{reporter.SafeStream} as though it were running on
         C{platform} and of the conviction that the stream passed to it is not a
@@ -1321,7 +1324,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
 
         @return: The L{reporter.SafeStream} instance thusly initialized.
         """
-        broken = BrokenStream(self.stream, bufferSize=4)
+        broken = BrokenStream(self.stream, bufferSize)
         self.patch(reporter.SafeStream, "_platform", platform)
         self._setPipe()
         safe = reporter.SafeStream(broken)
@@ -1334,9 +1337,32 @@ class TestSafeStream(unittest.SynchronousTestCase):
         for a write operation on a stream connected to something that isn't a
         filesystem file.
         """
-        safe = self._writePipeNoSpaceSetup(runtime.Platform("nt"))
-        safe.write(b"hello")
-        self.assertEqual(self.stream.getvalue(), b"hello")
+        data = b"hello"
+        safe = self._writePipeNoSpaceSetup(self._windows, len(data) - 1)
+        safe.write(data)
+        self.assertEqual(self.stream.getvalue(), data)
+
+
+    def test_writeLargeWindowsPipeNoSpace(self):
+        """
+        Like L{test_writeWindowsPipeNoSpace} but for a write much larger than
+        the size of the file's buffer.
+        """
+        data = b"hello " * 50
+        safe = self._writePipeNoSpaceSetup(self._windows, 1)
+        safe.write(data)
+        self.assertEqual(self.stream.getvalue(), data)
+
+
+    def test_writeWindowsPipeAbsolutelyNoSpace(self):
+        """
+        On Windows, L{reporter.SafeStream.write} will stop retrying if ENOSPC
+        is thrown for a write operation that consists of only one byte.
+        """
+        data = b"x"
+        safe = self._writePipeNoSpaceSetup(self._windows, 0)
+        exc = self.assertRaises(IOError, safe.write, data)
+        self.assertEqual(exc.args[0], errno.ENOSPC)
 
 
     def test_writePOSIXPipeNoSpace(self):
@@ -1345,8 +1371,9 @@ class TestSafeStream(unittest.SynchronousTestCase):
         if ENOSPC is thrown for a write operation on a stream connected to
         something that isn't a filesystem file.
         """
-        safe = self._writePipeNoSpaceSetup(runtime.Platform("posix"))
-        exc = self.assertRaises(IOError, safe.write, "Hello")
+        data = b"Hello"
+        safe = self._writePipeNoSpaceSetup(self._posix, len(data) - 1)
+        exc = self.assertRaises(IOError, safe.write, data)
         self.assertEqual(exc.args[0], errno.ENOSPC)
 
 
@@ -1369,7 +1396,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
         L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
         write operation on a stream connected to a filesystem file.
         """
-        self._writeFilesystemFileNoSpaceTest(runtime.Platform("nt"))
+        self._writeFilesystemFileNoSpaceTest(self._windows)
 
 
     def test_writePOSIXFilesystemFileNoSpace(self):
@@ -1377,7 +1404,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
         L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
         write operation on a stream connected to a filesystem file.
         """
-        self._writeFilesystemFileNoSpaceTest(runtime.Platform("posix"))
+        self._writeFilesystemFileNoSpaceTest(self._posix)
 
 
     def _writeUnknownFileNoSpaceTest(self, platform):
@@ -1412,7 +1439,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
         L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
         write operation on a stream connected to a file of indeterminable type.
         """
-        self._writeUnknownFileNoSpaceTest(runtime.Platform("nt"))
+        self._writeUnknownFileNoSpaceTest(self._windows)
 
 
     def test_writePOSIXUnknownFileNoSpace(self):
@@ -1420,7 +1447,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
         L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
         write operation on a stream connected to a file of indeterminable type.
         """
-        self._writeUnknownFileNoSpaceTest(runtime.Platform("posix"))
+        self._writeUnknownFileNoSpaceTest(self._posix)
 
 
     def _writeUnrelatedError(self, platform):
@@ -1444,7 +1471,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
         neither I{ENOSPC} nor I{EINTR}, the exception propagates to the caller
         of L{reporter.SafeStream.write}.
         """
-        self._writeUnrelatedError(runtime.Platform("posix"))
+        self._writeUnrelatedError(self._posix)
 
 
     def test_writeWindowsUnrelatedError(self):
@@ -1453,7 +1480,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
         neither I{ENOSPC} nor I{EINTR}, the exception propagates to the caller
         of L{reporter.SafeStream.write}.
         """
-        self._writeUnrelatedError(runtime.Platform("nt"))
+        self._writeUnrelatedError(self._windows)
 
 
 
