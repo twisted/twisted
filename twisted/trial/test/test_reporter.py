@@ -1211,6 +1211,24 @@ class TestSafeStream(unittest.SynchronousTestCase):
         self.stream = BytesIO()
 
 
+    def _setFilesystem(self):
+        """
+        Convince L{reporter.SafeStream} that any file descriptor is associated
+        with a filesystem file.
+        """
+        self.patch(
+            reporter.SafeStream, "_isFile", staticmethod(lambda fd: True))
+
+
+    def _setPipe(self):
+        """
+        Convince L{reporter.SafeStream} that any file descriptor is not
+        associated with a filesystem file.
+        """
+        self.patch(
+            reporter.SafeStream, "_isFile", staticmethod(lambda fd: False))
+
+
     def test_writeSuccess(self):
         """
         L{reporter.SafeStream.write} calls the C{write} method of the
@@ -1279,16 +1297,41 @@ class TestSafeStream(unittest.SynchronousTestCase):
             self.assertTrue(reporter.SafeStream._isFile(f.fileno()))
 
 
+    def test_isFileError(self):
+        """
+        L{reporter.SafeStream._isFile} returns C{False} if the given file
+        descriptor is of unknown type.
+        """
+        with open(self.mktemp(), "wb") as f:
+            # Grab the file descriptor of the open file
+            fileno = f.fileno()
+        # That file has now been closed, the file descriptor is no longer
+        # valid.  Now ask SafeStream about it.
+        self.assertFalse(reporter.SafeStream._isFile(fileno))
+
+
+    def _writePipeNoSpaceSetup(self, platform):
+        """
+        Prepare a L{reporter.SafeStream} as though it were running on
+        C{platform} and of the conviction that the stream passed to it is not a
+        regular filesystem file.
+
+        @return: The L{reporter.SafeStream} instance thusly initialized.
+        """
+        broken = BrokenStream(self.stream, bufferSize=4)
+        self.patch(reporter.SafeStream, "_platform", platform)
+        self._setPipe()
+        safe = reporter.SafeStream(broken)
+        return safe
+
+
     def test_writeWindowsPipeNoSpace(self):
         """
         On Windows, L{reporter.SafeStream.write} will retry if ENOSPC is thrown
         for a write operation on a stream connected to something that isn't a
         filesystem file.
         """
-        broken = BrokenStream(self.stream, bufferSize=4)
-        self.patch(reporter.SafeStream, "_platform", runtime.Platform("nt"))
-        safe = reporter.SafeStream(broken)
-        safe._isFile = lambda fd: False
+        safe = self._writePipeNoSpaceSetup(runtime.Platform("nt"))
         safe.write(b"hello")
         self.assertEqual(self.stream.getvalue(), b"hello")
 
@@ -1299,24 +1342,77 @@ class TestSafeStream(unittest.SynchronousTestCase):
         if ENOSPC is thrown for a write operation on a stream connected to
         something that isn't a filesystem file.
         """
-        broken = BrokenStream(self.stream, bufferSize=4)
-        self.patch(reporter.SafeStream, "_platform", runtime.Platform("posix"))
-        safe = reporter.SafeStream(broken)
-        safe._isFile = lambda fd: False
-        exc = self.assertRaises(IOError, broken.write, "Hello")
+        safe = self._writePipeNoSpaceSetup(runtime.Platform("posix"))
+        exc = self.assertRaises(IOError, safe.write, "Hello")
         self.assertEqual(exc.args[0], errno.ENOSPC)
 
 
-    def test_writeFilesystemFileNoSpace(self):
+    def test_writeWindowsFilesystemFileNoSpace(self):
         """
         L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
         write operation on a stream connected to a filesystem file.
         """
+        self._writeFilesystemFileNoSpaceTest(runtime.Platform("nt"))
+
+
+    def test_writePOSIXFilesystemFileNoSpace(self):
+        """
+        L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
+        write operation on a stream connected to a filesystem file.
+        """
+        self._writeFilesystemFileNoSpaceTest(runtime.Platform("posix"))
+
+
+    def _writeFilesystemFileNoSpaceTest(self, platform):
         broken = BrokenStream(self.stream, bufferSize=4)
+        self.patch(reporter.SafeStream, "_platform", platform)
+        self._setFilesystem()
         safe = reporter.SafeStream(broken)
-        safe._isFile = lambda fd: True
-        exc = self.assertRaises(IOError, broken.write, b"Hello")
+        exc = self.assertRaises(IOError, safe.write, b"Hello")
         self.assertEqual(exc.args[0], errno.ENOSPC)
+
+
+    def _writeUnknownFileNoSpaceTest(self, platform):
+        """
+        Assert that L{reporter.SafeStream.write} raises an I{ENOSPC} L{IOError}
+        raised by the underlying stream when that stream's file type cannot be
+        determined.
+        """
+        class WithoutFileno(object):
+            def __init__(self, original):
+                self.original = original
+
+            def write(self, data):
+                return self.original.write(data)
+
+            def flush(self):
+                return self.original.flush()
+
+        broken = BrokenStream(self.stream, bufferSize=4)
+        self.patch(reporter.SafeStream, "_platform", platform)
+        # Don't believe _isFile, we shouldn't have been able to figure out the
+        # fileno to pass to it anyway.
+        self._setPipe()
+
+        safe = reporter.SafeStream(WithoutFileno(broken))
+        exc = self.assertRaises(IOError, safe.write, b"Hello")
+        self.assertEqual(exc.args[0], errno.ENOSPC)
+
+
+    def test_writeWindowsUnknownFileNoSpace(self):
+        """
+        L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
+        write operation on a stream connected to a file of indeterminable type.
+        """
+        self._writeUnknownFileNoSpaceTest(runtime.Platform("nt"))
+
+
+    def test_writePOSIXUnknownFileNoSpace(self):
+        """
+        L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
+        write operation on a stream connected to a file of indeterminable type.
+        """
+        self._writeUnknownFileNoSpaceTest(runtime.Platform("posix"))
 
 
 
