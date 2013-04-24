@@ -51,11 +51,19 @@ class SafeStream(object):
     talking to a filesystem file.
     """
 
+    _platform = runtime.platform
+
     def __init__(self, original):
         self.original = original
-        self._catchEINTR = (runtime.platformType == "win32" and
-                            getattr(self.original, "fileno", None) and
-                            not self._isFile(self.original.fileno()))
+        self._catchENOSPC = False
+        if self._platform.isWindows():
+            try:
+                fileno = self.original.fileno
+            except AttributeError:
+                pass
+            else:
+                if not self._isFile(fileno()):
+                    self._catchENOSPC = True
 
 
     def __getattr__(self, name):
@@ -70,40 +78,36 @@ class SafeStream(object):
         try:
             return stat.S_ISREG(os.fstat(fd).st_mode)
         except OSError:
+            # Some kind of error?  Hopefully that means it isn't a regular
+            # file: regular files should let us fstat them.
             return False
-
-
-    def _runSafely(self, f, *a, **kw):
-        """
-        Call a function on the underlying stream, while handling transient
-        errors by retrying.
-
-        The handled errors are C{EINTR}, which is handled on all platforms,
-        and C{ENOSPC} on Windows when dealing with a non-filesystem stream.
-        """
-        if not self._catchEINTR:
-            return untilConcludes(f, *a, **kw)
-
-        while True:
-            try:
-                return untilConcludes(f, *a, **kw)
-            except IOError as e:
-                if e.args[0] != errno.ENOSPC:
-                    raise
 
 
     def flush(self, *a, **kw):
         """
         Flush the underlying stream, while handling any transient errors.
         """
-        return self._runSafely(self.original.flush, *a, **kw)
+        return untilConcludes(self.original.flush, *a, **kw)
 
 
-    def write(self, *a, **kw):
+    def write(self, data):
         """
         Write to the underlying stream, while handling any transient errors.
         """
-        return self._runSafely(self.original.write, *a, **kw)
+        if self._catchENOSPC:
+            bufferSize = 2 ** 16
+            while data:
+                try:
+                    written = untilConcludes(
+                        self.original.write, data[:bufferSize])
+                except IOError as e:
+                    if e.errno != errno.ENOSPC:
+                        raise
+                    bufferSize //= 2
+                else:
+                    data = data[written:]
+        else:
+            return untilConcludes(self.original.write, data)
 
 
 
