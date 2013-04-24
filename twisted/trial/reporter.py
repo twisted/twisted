@@ -69,8 +69,8 @@ class SafeStream(object):
         return getattr(self.original, name)
 
 
-    @staticmethod
-    def _isFile(fd):
+    @classmethod
+    def _isFile(cls, fd):
         """
         Return whether or not the given file descriptor is a filesystem file.
         """
