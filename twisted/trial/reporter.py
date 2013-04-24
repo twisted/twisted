@@ -82,11 +82,11 @@ class SafeStream(object):
             return False
 
 
-    def flush(self, *a, **kw):
+    def flush(self):
         """
         Flush the underlying stream, while handling any transient errors.
         """
-        return untilConcludes(self.original.flush, *a, **kw)
+        return untilConcludes(self.original.flush)
 
 
     def write(self, data):
@@ -94,6 +94,7 @@ class SafeStream(object):
         Write to the underlying stream, while handling any transient errors.
         """
         if self._catchENOSPC:
+            total = 0
             bufferSize = 2 ** 16
             while data:
                 try:
@@ -109,6 +110,8 @@ class SafeStream(object):
                         raise
                 else:
                     data = data[written:]
+                    total += written
+            return total
         else:
             return untilConcludes(self.original.write, data)
 

@@ -1257,9 +1257,12 @@ class TestSafeStream(unittest.SynchronousTestCase):
         L{reporter.SafeStream.write} calls the C{write} method of the
         underlying stream.
         """
+        data = b"hello"
         safe = reporter.SafeStream(self.stream)
-        safe.write(b"hello")
-        self.assertEqual(self.stream.getvalue(), b"hello")
+        written = safe.write(data)
+        self.assertEqual(
+            (len(data), data),
+            (written, self.stream.getvalue()))
 
 
     def test_flushSuccess(self):
@@ -1267,11 +1270,12 @@ class TestSafeStream(unittest.SynchronousTestCase):
         L{reporter.SafeStream.flush} calls the C{flush} method of the
         underlying stream.
         """
+        data = b"hello"
         flushable = FlushableStream(self.stream)
-        flushable.write(b"hello")
+        flushable.write(data)
         safe = reporter.SafeStream(flushable)
         safe.flush()
-        self.assertTrue(self.stream.getvalue(), b"hello")
+        self.assertTrue(self.stream.getvalue(), data)
 
 
     def test_writeInterrupted(self):
@@ -1280,10 +1284,13 @@ class TestSafeStream(unittest.SynchronousTestCase):
         underlying stream if the first call is interrupted and fails with
         I{EINTR}.
         """
+        data = b"hello"
         broken = BrokenStream(self.stream)
         safe = reporter.SafeStream(broken)
-        safe.write(b"hello")
-        self.assertEqual(self.stream.getvalue(), b"hello")
+        written = safe.write(data)
+        self.assertEqual(
+            (len(data), data),
+            (written, self.stream.getvalue()))
 
 
     def test_flushInterrupted(self):
@@ -1356,8 +1363,10 @@ class TestSafeStream(unittest.SynchronousTestCase):
         """
         data = b"hello"
         safe = self._writePipeNoSpaceSetup(self._windows, len(data) - 1)
-        safe.write(data)
-        self.assertEqual(self.stream.getvalue(), data)
+        written = safe.write(data)
+        self.assertEqual(
+            (len(data), data),
+            (written, self.stream.getvalue()))
 
 
     def test_writeLargeWindowsPipeNoSpace(self):
@@ -1367,8 +1376,10 @@ class TestSafeStream(unittest.SynchronousTestCase):
         """
         data = b"hello " * 50
         safe = self._writePipeNoSpaceSetup(self._windows, 1)
-        safe.write(data)
-        self.assertEqual(self.stream.getvalue(), data)
+        written = safe.write(data)
+        self.assertEqual(
+            (len(data), data),
+            (written, self.stream.getvalue()))
 
 
     def test_writeWindowsPipeAbsolutelyNoSpace(self):
