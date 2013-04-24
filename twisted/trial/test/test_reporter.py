@@ -1286,10 +1286,11 @@ class TestSafeStream(unittest.SynchronousTestCase):
         filesystem file.
         """
         broken = BrokenStream(self.stream, bufferSize=4)
+        self.patch(reporter.SafeStream, "_platform", runtime.Platform("nt"))
         safe = reporter.SafeStream(broken)
         safe._isFile = lambda fd: False
         safe.write(b"hello")
-        self.assertEqual(self.stream.getvalue(), b"Hello")
+        self.assertEqual(self.stream.getvalue(), b"hello")
 
 
     def test_writePOSIXPipeNoSpace(self):
@@ -1299,6 +1300,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
         something that isn't a filesystem file.
         """
         broken = BrokenStream(self.stream, bufferSize=4)
+        self.patch(reporter.SafeStream, "_platform", runtime.Platform("posix"))
         safe = reporter.SafeStream(broken)
         safe._isFile = lambda fd: False
         exc = self.assertRaises(IOError, broken.write, "Hello")
