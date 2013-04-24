@@ -63,6 +63,9 @@ class SafeStream(object):
             else:
                 if not self._isFile(fileno()):
                     self._catchENOSPC = True
+        log.msg(
+            format="created SafeStream(%(original)s), ENOSPC=%(catch)s",
+            original=original, catch=self._catchENOSPC)
 
 
     def __getattr__(self, name):
