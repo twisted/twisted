@@ -26,6 +26,10 @@ class FlushableStream(object):
     def __init__(self, stream):
         self._stream = stream
         self._buffer = []
+        try:
+            self.fileno = self._stream.fileno
+        except AttributeError:
+            pass
 
 
     def write(self, bytes):
@@ -36,10 +40,6 @@ class FlushableStream(object):
         bytes = b"".join(self._buffer)
         del self._buffer[:]
         self._stream.write(bytes)
-
-
-    def fileno(self):
-        return self._stream.fileno()
 
 
 
