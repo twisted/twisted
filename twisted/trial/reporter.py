@@ -86,7 +86,18 @@ class SafeStream(object):
         """
         Flush the underlying stream, while handling any transient errors.
         """
-        return untilConcludes(self.original.flush)
+        if self._catchENOSPC:
+            while True:
+                try:
+                    untilConcludes(self.original.flush)
+                except IOError as e:
+                    if e.errno == errno.ENOSPC:
+                        continue
+                    raise
+                else:
+                    break
+        else:
+            untilConcludes(self.original.flush)
 
 
     def write(self, data):
