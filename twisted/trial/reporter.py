@@ -10,6 +10,7 @@ from __future__ import division, absolute_import
 
 import sys
 import os
+import io
 import stat
 import errno
 import time
@@ -61,8 +62,13 @@ class SafeStream(object):
             except AttributeError:
                 pass
             else:
-                if not self._isFile(fileno()):
-                    self._catchENOSPC = True
+                try:
+                    fd = fileno()
+                except io.UnsupportedOperation:
+                    pass
+                else:
+                    if not self._isFile(fd):
+                        self._catchENOSPC = True
 
 
     def __getattr__(self, name):

@@ -6,7 +6,7 @@ Tests for L{twisted.trial.reporter}.
 """
 from __future__ import division
 
-import errno, sys, os, re, StringIO
+import errno, sys, os, io, re, StringIO
 from inspect import getmro
 
 from twisted.internet.utils import suppressWarnings
@@ -89,6 +89,24 @@ class BrokenStream(object):
 
     def fileno(self):
         return 99999
+
+
+
+class StreamWithoutFileno(object):
+    def __init__(self, original):
+        self.original = original
+
+    def write(self, data):
+        return self.original.write(data)
+
+    def flush(self):
+        return self.original.flush()
+
+
+
+class StreamWithUnsupportedFileno(StreamWithoutFileno):
+    def fileno(self):
+        raise io.UnsupportedOperation()
 
 
 
@@ -1322,10 +1340,11 @@ class TestSafeStream(unittest.SynchronousTestCase):
             self.assertTrue(reporter.SafeStream._isFile(f.fileno()))
 
 
-    def test_isFileError(self):
+    def test_isFileBadFileDescriptor(self):
         """
         L{reporter.SafeStream._isFile} returns C{False} if the given file
-        descriptor is of unknown type.
+        descriptor is of unknown type (for example, because the descriptor
+        cannot be stat()ed successfully).
         """
         with open(self.mktemp(), "wb") as f:
             # Grab the file descriptor of the open file
@@ -1426,47 +1445,59 @@ class TestSafeStream(unittest.SynchronousTestCase):
         self._writeFilesystemFileNoSpaceTest(self._posix)
 
 
-    def _writeUnknownFileNoSpaceTest(self, platform):
+    def _writeUnknownFileNoSpaceTest(self, wrapper, platform):
         """
         Assert that L{reporter.SafeStream.write} raises an I{ENOSPC} L{IOError}
         raised by the underlying stream when that stream's file type cannot be
         determined.
         """
-        class WithoutFileno(object):
-            def __init__(self, original):
-                self.original = original
-
-            def write(self, data):
-                return self.original.write(data)
-
-            def flush(self):
-                return self.original.flush()
-
         broken = BrokenStream(self.stream, bufferSize=4)
         self.patch(reporter.SafeStream, "_platform", platform)
         # Don't believe _isFile, we shouldn't have been able to figure out the
         # fileno to pass to it anyway.
         self._setPipe()
 
-        safe = reporter.SafeStream(WithoutFileno(broken))
+        safe = reporter.SafeStream(wrapper(broken))
         exc = self.assertRaises(IOError, safe.write, b"Hello")
         self.assertEqual(exc.args[0], errno.ENOSPC)
 
 
-    def test_writeWindowsUnknownFileNoSpace(self):
+    def test_writeWindowsMissingFilenoNoSpace(self):
         """
         L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
-        write operation on a stream connected to a file of indeterminable type.
+        write operation on a stream connected to a file of indeterminable type
+        because it has no C{fileno} method.
         """
-        self._writeUnknownFileNoSpaceTest(self._windows)
+        self._writeUnknownFileNoSpaceTest(StreamWithoutFileno, self._windows)
 
 
-    def test_writePOSIXUnknownFileNoSpace(self):
+    def test_writePOSIXMissingFilenoNoSpace(self):
         """
         L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
-        write operation on a stream connected to a file of indeterminable type.
+        write operation on a stream connected to a file of indeterminable type
+        because it has no C{fileno} method.
         """
-        self._writeUnknownFileNoSpaceTest(self._posix)
+        self._writeUnknownFileNoSpaceTest(StreamWithoutFileno, self._posix)
+
+
+    def test_writeWindowsUnsupportedFilenoNoSpace(self):
+        """
+        L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
+        write operation on a stream connected to a file of indeterminable type
+        because its C{fileno} method raises L{io.UnsupportedOperation}.
+        """
+        self._writeUnknownFileNoSpaceTest(
+            StreamWithUnsupportedFileno, self._windows)
+
+
+    def test_writePOSIXUnsupportedFilenoNoSpace(self):
+        """
+        L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
+        write operation on a stream connected to a file of indeterminable type
+        because its C{fileno} method raises L{io.UnsupportedOperation}.
+        """
+        self._writeUnknownFileNoSpaceTest(
+            StreamWithUnsupportedFileno, self._posix)
 
 
     def _writeUnrelatedError(self, platform):
