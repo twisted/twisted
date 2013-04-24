@@ -93,45 +93,22 @@ class SafeStream(object):
         """
         Write to the underlying stream, while handling any transient errors.
         """
-        log.msg(
-            format="writing to SafeStream(%(original)s), ENOSPC=%(catch)s",
-            original=self.original, catch=self._catchENOSPC)
-
         if self._catchENOSPC:
-            total = 0
             bufferSize = 2 ** 16
             while data:
-                log.msg(
-                    format="trying to write %(data)d bytes of %(total)d bytes",
-                    data=len(data[:bufferSize]), total=len(data))
                 try:
                     untilConcludes(
                         self.original.write, data[:bufferSize])
                 except IOError as e:
                     if e.errno == errno.ENOSPC:
-                        log.msg(format="failed with ENOSPC")
                         if bufferSize == 1:
-                            log.msg(format="bufferSize=1, aborting")
                             raise
                         else:
                             bufferSize //= 2
-                            log.msg(
-                                format="new bufferSize is %(size)d",
-                                size=bufferSize)
                     else:
-                        log.msg(
-                            format="failed with %(errno)d (%(msg)s), aborting",
-                            errno=e.errno, msg=errno.errorcode[e.errno])
                         raise
                 else:
                     data = data[bufferSize:]
-                    total += bufferSize
-                    log.msg(
-                        format="wrote %(written)d bytes, total of %(total)d",
-                        written=bufferSize, total=total)
-            log.msg(
-                format="totally finished, wrote %(total)d bytes",
-                total=total)
         else:
             untilConcludes(self.original.write, data)
 
