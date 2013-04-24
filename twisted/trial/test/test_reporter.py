@@ -8,7 +8,6 @@ from __future__ import division
 
 import errno, sys, os, re, StringIO
 from inspect import getmro
-from io import BytesIO
 
 from twisted.internet.utils import suppressWarnings
 from twisted.python import log, runtime
@@ -1231,7 +1230,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
     _posix = runtime.Platform("posix")
 
     def setUp(self):
-        self.stream = BytesIO()
+        self.stream = StringIO.StringIO()
 
 
     def _setFilesystem(self):
@@ -1259,10 +1258,8 @@ class TestSafeStream(unittest.SynchronousTestCase):
         """
         data = b"hello"
         safe = reporter.SafeStream(self.stream)
-        written = safe.write(data)
-        self.assertEqual(
-            (len(data), data),
-            (written, self.stream.getvalue()))
+        safe.write(data)
+        self.assertEqual(data, self.stream.getvalue())
 
 
     def test_flushSuccess(self):
@@ -1287,10 +1284,8 @@ class TestSafeStream(unittest.SynchronousTestCase):
         data = b"hello"
         broken = BrokenStream(self.stream)
         safe = reporter.SafeStream(broken)
-        written = safe.write(data)
-        self.assertEqual(
-            (len(data), data),
-            (written, self.stream.getvalue()))
+        safe.write(data)
+        self.assertEqual(data, self.stream.getvalue())
 
 
     def test_flushInterrupted(self):
@@ -1363,10 +1358,8 @@ class TestSafeStream(unittest.SynchronousTestCase):
         """
         data = b"hello"
         safe = self._writePipeNoSpaceSetup(self._windows, len(data) - 1)
-        written = safe.write(data)
-        self.assertEqual(
-            (len(data), data),
-            (written, self.stream.getvalue()))
+        safe.write(data)
+        self.assertEqual(data, self.stream.getvalue())
 
 
     def test_writeLargeWindowsPipeNoSpace(self):
@@ -1376,10 +1369,8 @@ class TestSafeStream(unittest.SynchronousTestCase):
         """
         data = b"hello " * 50
         safe = self._writePipeNoSpaceSetup(self._windows, 1)
-        written = safe.write(data)
-        self.assertEqual(
-            (len(data), data),
-            (written, self.stream.getvalue()))
+        safe.write(data)
+        self.assertEqual(data, self.stream.getvalue())
 
 
     def test_writeWindowsPipeAbsolutelyNoSpace(self):
