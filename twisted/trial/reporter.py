@@ -101,9 +101,13 @@ class SafeStream(object):
                     written = untilConcludes(
                         self.original.write, data[:bufferSize])
                 except IOError as e:
-                    if e.errno != errno.ENOSPC:
+                    if e.errno == errno.ENOSPC:
+                        if bufferSize == 1:
+                            raise
+                        else:
+                            bufferSize //= 2
+                    else:
                         raise
-                    bufferSize //= 2
                 else:
                     data = data[written:]
         else:
