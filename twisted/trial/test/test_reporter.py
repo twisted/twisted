@@ -1335,7 +1335,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
         self.assertFalse(reporter.SafeStream._isFile(fileno))
 
 
-    def _writePipeNoSpaceSetup(self, platform, bufferSize):
+    def _pipeNoSpaceSetup(self, platform, bufferSize):
         """
         Prepare a L{reporter.SafeStream} as though it were running on
         C{platform} and of the conviction that the stream passed to it is not a
@@ -1357,7 +1357,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
         filesystem file.
         """
         data = b"hello"
-        safe = self._writePipeNoSpaceSetup(self._windows, len(data) - 1)
+        safe = self._pipeNoSpaceSetup(self._windows, len(data) - 1)
         safe.write(data)
         self.assertEqual(data, self.stream.getvalue())
 
@@ -1368,7 +1368,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
         the size of the file's buffer.
         """
         data = b"hello " * 50
-        safe = self._writePipeNoSpaceSetup(self._windows, 1)
+        safe = self._pipeNoSpaceSetup(self._windows, 1)
         safe.write(data)
         self.assertEqual(data, self.stream.getvalue())
 
@@ -1379,7 +1379,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
         is thrown for a write operation that consists of only one byte.
         """
         data = b"x"
-        safe = self._writePipeNoSpaceSetup(self._windows, 0)
+        safe = self._pipeNoSpaceSetup(self._windows, 0)
         exc = self.assertRaises(IOError, safe.write, data)
         self.assertEqual(exc.args[0], errno.ENOSPC)
 
@@ -1391,7 +1391,7 @@ class TestSafeStream(unittest.SynchronousTestCase):
         something that isn't a filesystem file.
         """
         data = b"Hello"
-        safe = self._writePipeNoSpaceSetup(self._posix, len(data) - 1)
+        safe = self._pipeNoSpaceSetup(self._posix, len(data) - 1)
         exc = self.assertRaises(IOError, safe.write, data)
         self.assertEqual(exc.args[0], errno.ENOSPC)
 
