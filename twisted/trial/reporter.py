@@ -105,7 +105,7 @@ class SafeStream(object):
                     format="trying to write %(data)d bytes of %(total)d bytes",
                     data=len(data[:bufferSize]), total=len(data))
                 try:
-                    written = untilConcludes(
+                    untilConcludes(
                         self.original.write, data[:bufferSize])
                 except IOError as e:
                     if e.errno == errno.ENOSPC:
@@ -124,17 +124,16 @@ class SafeStream(object):
                             errno=e.errno, msg=errno.errorcode[e.errno])
                         raise
                 else:
-                    data = data[written:]
-                    total += written
+                    data = data[bufferSize:]
+                    total += bufferSize
                     log.msg(
                         format="wrote %(written)d bytes, total of %(total)d",
-                        written=written, total=total)
+                        written=bufferSize, total=total)
             log.msg(
                 format="totally finished, wrote %(total)d bytes",
                 total=total)
-            return total
         else:
-            return untilConcludes(self.original.write, data)
+            untilConcludes(self.original.write, data)
 
 
 
