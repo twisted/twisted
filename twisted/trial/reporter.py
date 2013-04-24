@@ -93,6 +93,7 @@ class SafeStream(object):
         Flush the underlying stream, while handling any transient errors.
         """
         if self._catchENOSPC:
+            # XXX This branch very poorly tested
             while True:
                 try:
                     untilConcludes(self.original.flush)
