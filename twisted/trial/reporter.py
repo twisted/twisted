@@ -95,7 +95,7 @@ class SafeStream(object):
         """
         log.msg(
             format="writing to SafeStream(%(original)s), ENOSPC=%(catch)s",
-            original=original, catch=self._catchENOSPC)
+            original=self.original, catch=self._catchENOSPC)
 
         if self._catchENOSPC:
             total = 0
