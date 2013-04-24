@@ -97,20 +97,37 @@ class SafeStream(object):
             total = 0
             bufferSize = 2 ** 16
             while data:
+                log.msg(
+                    format="trying to write %(data)d bytes of %(total)d bytes",
+                    data=len(data[:bufferSize]), total=len(data))
                 try:
                     written = untilConcludes(
                         self.original.write, data[:bufferSize])
                 except IOError as e:
                     if e.errno == errno.ENOSPC:
+                        log.msg(format="failed with ENOSPC")
                         if bufferSize == 1:
+                            log.msg(format="bufferSize=1, aborting")
                             raise
                         else:
                             bufferSize //= 2
+                            log.msg(
+                                format="new bufferSize is %(size)d",
+                                size=bufferSize)
                     else:
+                        log.msg(
+                            format="failed with %(errno)d (%(msg)s), aborting",
+                            errno=e.errno, msg=errno.errorcode[e.errno])
                         raise
                 else:
                     data = data[written:]
                     total += written
+                    log.msg(
+                        format="wrote %(written)d bytes, total of %(total)d",
+                        written=written, total=total)
+            log.msg(
+                format="totally finished, wrote %(total)d bytes",
+                total=total)
             return total
         else:
             return untilConcludes(self.original.write, data)
