@@ -63,9 +63,6 @@ class SafeStream(object):
             else:
                 if not self._isFile(fileno()):
                     self._catchENOSPC = True
-        log.msg(
-            format="created SafeStream(%(original)s), ENOSPC=%(catch)s",
-            original=original, catch=self._catchENOSPC)
 
 
     def __getattr__(self, name):
@@ -96,6 +93,10 @@ class SafeStream(object):
         """
         Write to the underlying stream, while handling any transient errors.
         """
+        log.msg(
+            format="writing to SafeStream(%(original)s), ENOSPC=%(catch)s",
+            original=original, catch=self._catchENOSPC)
+
         if self._catchENOSPC:
             total = 0
             bufferSize = 2 ** 16
