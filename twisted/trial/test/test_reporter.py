@@ -1,7 +1,5 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-#
-# Maintainer: Jonathan Lange
 
 """
 Tests for L{twisted.trial.reporter}.
@@ -10,15 +8,40 @@ from __future__ import division
 
 import errno, sys, os, re, StringIO
 from inspect import getmro
+from io import BytesIO
 
 from twisted.internet.utils import suppressWarnings
-from twisted.python import log
+from twisted.python import log, runtime
 from twisted.python.failure import Failure
 from twisted.trial import itrial, unittest, runner, reporter, util
 from twisted.trial.reporter import UncleanWarningsReporterWrapper
 from twisted.trial.test import erroneous
 from twisted.trial.unittest import makeTodo, SkipTest, Todo
 from twisted.trial.test import sample
+
+
+class FlushableStream(object):
+    """
+    Stream-ish object that has a buffer that needs to be flushed.
+    """
+    def __init__(self, stream):
+        self._stream = stream
+        self._buffer = []
+
+
+    def write(self, bytes):
+        self._buffer.append(bytes)
+
+
+    def flush(self):
+        bytes = b"".join(self._buffer)
+        del self._buffer[:]
+        self._stream.write(bytes)
+
+
+    def fileno(self):
+        return self._stream.fileno()
+
 
 
 class BrokenStream(object):
@@ -29,20 +52,45 @@ class BrokenStream(object):
     written = False
     flushed = False
 
-    def __init__(self, fObj):
+    _interrupt = IOError(errno.EINTR, "Interrupted write")
+    _noSpace = IOError(errno.ENOSPC, "No space left on device")
+    _brokenPipe = IOError(errno.EPIPE, "Broken pipe")
+
+    _error = _interrupt
+
+    def __init__(self, fObj, bufferSize=None):
         self.fObj = fObj
+        if bufferSize is None:
+            bufferSize = 2 ** 16
+        self._bufferSize = bufferSize
+
 
     def write(self, s):
+        if len(s) > self._bufferSize:
+            # Always fail in this mode if too many bytes are given.
+            raise self._noSpace
+
         if self.written:
+            # Succeed after the first time through
             return self.fObj.write(s)
+
+        # Record one call has happened
         self.written = True
-        raise IOError(errno.EINTR, "Interrupted write")
+
+        # Fail somehow
+        raise self._error
+
 
     def flush(self):
         if self.flushed:
             return self.fObj.flush()
         self.flushed = True
-        raise IOError(errno.EINTR, "Interrupted flush")
+        raise self._error
+
+
+    def fileno(self):
+        return 99999
+
 
 
 class StringTest(unittest.SynchronousTestCase):
@@ -1176,16 +1224,280 @@ class TestReporter(TestReporterInterface):
 
 
 class TestSafeStream(unittest.SynchronousTestCase):
-    def test_safe(self):
+    """
+    Tests for L{reporter.SafeStream}.
+    """
+    _windows = runtime.Platform("nt")
+    _posix = runtime.Platform("posix")
+
+    def setUp(self):
+        self.stream = BytesIO()
+
+
+    def _setFilesystem(self):
         """
-        Test that L{reporter.SafeStream} successfully write to its original
-        stream even if an interrupt happens during the write.
+        Convince L{reporter.SafeStream} that any file descriptor is associated
+        with a filesystem file.
         """
-        stream = StringIO.StringIO()
-        broken = BrokenStream(stream)
+        self.patch(
+            reporter.SafeStream, "_isFile", staticmethod(lambda fd: True))
+
+
+    def _setPipe(self):
+        """
+        Convince L{reporter.SafeStream} that any file descriptor is not
+        associated with a filesystem file.
+        """
+        self.patch(
+            reporter.SafeStream, "_isFile", staticmethod(lambda fd: False))
+
+
+    def test_writeSuccess(self):
+        """
+        L{reporter.SafeStream.write} calls the C{write} method of the
+        underlying stream.
+        """
+        safe = reporter.SafeStream(self.stream)
+        safe.write(b"hello")
+        self.assertEqual(self.stream.getvalue(), b"hello")
+
+
+    def test_flushSuccess(self):
+        """
+        L{reporter.SafeStream.flush} calls the C{flush} method of the
+        underlying stream.
+        """
+        flushable = FlushableStream(self.stream)
+        flushable.write(b"hello")
+        safe = reporter.SafeStream(flushable)
+        safe.flush()
+        self.assertTrue(self.stream.getvalue(), b"hello")
+
+
+    def test_writeInterrupted(self):
+        """
+        L{reporter.SafeStream.write} re-calls the C{write} method of the
+        underlying stream if the first call is interrupted and fails with
+        I{EINTR}.
+        """
+        broken = BrokenStream(self.stream)
         safe = reporter.SafeStream(broken)
-        safe.write("Hello")
-        self.assertEqual(stream.getvalue(), "Hello")
+        safe.write(b"hello")
+        self.assertEqual(self.stream.getvalue(), b"hello")
+
+
+    def test_flushInterrupted(self):
+        """
+        L{reporter.SafeStream.flush} re-calls the C{flush} method of the
+        underlying stream if the first call is interrupted and fails with
+        I{EINTR}.
+        """
+        flushable = FlushableStream(self.stream)
+        flushable.write(b"hello")
+        broken = BrokenStream(flushable)
+        safe = reporter.SafeStream(broken)
+        safe.flush()
+        self.assertEqual(self.stream.getvalue(), b"hello")
+
+
+    def test_isNotFile(self):
+        """
+        L{reporter.SafeStream._isFile} returns C{False} if the given file
+        descriptor is not a filesystem file.
+        """
+        r, w = os.pipe()
+        self.addCleanup(os.close, r)
+        self.addCleanup(os.close, w)
+        self.assertFalse(reporter.SafeStream._isFile(w))
+
+
+    def test_isFile(self):
+        """
+        L{reporter.SafeStream._isFile} returns C{True} if the given file
+        descriptor is a filesystem file.
+        """
+        with open(self.mktemp(), "wb") as f:
+            self.assertTrue(reporter.SafeStream._isFile(f.fileno()))
+
+
+    def test_isFileError(self):
+        """
+        L{reporter.SafeStream._isFile} returns C{False} if the given file
+        descriptor is of unknown type.
+        """
+        with open(self.mktemp(), "wb") as f:
+            # Grab the file descriptor of the open file
+            fileno = f.fileno()
+        # That file has now been closed, the file descriptor is no longer
+        # valid.  Now ask SafeStream about it.
+        self.assertFalse(reporter.SafeStream._isFile(fileno))
+
+
+    def _writePipeNoSpaceSetup(self, platform, bufferSize):
+        """
+        Prepare a L{reporter.SafeStream} as though it were running on
+        C{platform} and of the conviction that the stream passed to it is not a
+        regular filesystem file.
+
+        @return: The L{reporter.SafeStream} instance thusly initialized.
+        """
+        broken = BrokenStream(self.stream, bufferSize)
+        self.patch(reporter.SafeStream, "_platform", platform)
+        self._setPipe()
+        safe = reporter.SafeStream(broken)
+        return safe
+
+
+    def test_writeWindowsPipeNoSpace(self):
+        """
+        On Windows, L{reporter.SafeStream.write} will retry if ENOSPC is thrown
+        for a write operation on a stream connected to something that isn't a
+        filesystem file.
+        """
+        data = b"hello"
+        safe = self._writePipeNoSpaceSetup(self._windows, len(data) - 1)
+        safe.write(data)
+        self.assertEqual(self.stream.getvalue(), data)
+
+
+    def test_writeLargeWindowsPipeNoSpace(self):
+        """
+        Like L{test_writeWindowsPipeNoSpace} but for a write much larger than
+        the size of the file's buffer.
+        """
+        data = b"hello " * 50
+        safe = self._writePipeNoSpaceSetup(self._windows, 1)
+        safe.write(data)
+        self.assertEqual(self.stream.getvalue(), data)
+
+
+    def test_writeWindowsPipeAbsolutelyNoSpace(self):
+        """
+        On Windows, L{reporter.SafeStream.write} will stop retrying if ENOSPC
+        is thrown for a write operation that consists of only one byte.
+        """
+        data = b"x"
+        safe = self._writePipeNoSpaceSetup(self._windows, 0)
+        exc = self.assertRaises(IOError, safe.write, data)
+        self.assertEqual(exc.args[0], errno.ENOSPC)
+
+
+    def test_writePOSIXPipeNoSpace(self):
+        """
+        On non-Windows platforms, L{reporter.SafeStream.write} will not retry
+        if ENOSPC is thrown for a write operation on a stream connected to
+        something that isn't a filesystem file.
+        """
+        data = b"Hello"
+        safe = self._writePipeNoSpaceSetup(self._posix, len(data) - 1)
+        exc = self.assertRaises(IOError, safe.write, data)
+        self.assertEqual(exc.args[0], errno.ENOSPC)
+
+
+    def _writeFilesystemFileNoSpaceTest(self, platform):
+        """
+        Assert that L{reporter.SafeStream.write} raises an I{ENOSPC} L{IOError}
+        raised by the underlying stream when the underlying stream's file type
+        is a regular filesystem file.
+        """
+        broken = BrokenStream(self.stream, bufferSize=4)
+        self.patch(reporter.SafeStream, "_platform", platform)
+        self._setFilesystem()
+        safe = reporter.SafeStream(broken)
+        exc = self.assertRaises(IOError, safe.write, b"Hello")
+        self.assertEqual(exc.args[0], errno.ENOSPC)
+
+
+    def test_writeWindowsFilesystemFileNoSpace(self):
+        """
+        L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
+        write operation on a stream connected to a filesystem file.
+        """
+        self._writeFilesystemFileNoSpaceTest(self._windows)
+
+
+    def test_writePOSIXFilesystemFileNoSpace(self):
+        """
+        L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
+        write operation on a stream connected to a filesystem file.
+        """
+        self._writeFilesystemFileNoSpaceTest(self._posix)
+
+
+    def _writeUnknownFileNoSpaceTest(self, platform):
+        """
+        Assert that L{reporter.SafeStream.write} raises an I{ENOSPC} L{IOError}
+        raised by the underlying stream when that stream's file type cannot be
+        determined.
+        """
+        class WithoutFileno(object):
+            def __init__(self, original):
+                self.original = original
+
+            def write(self, data):
+                return self.original.write(data)
+
+            def flush(self):
+                return self.original.flush()
+
+        broken = BrokenStream(self.stream, bufferSize=4)
+        self.patch(reporter.SafeStream, "_platform", platform)
+        # Don't believe _isFile, we shouldn't have been able to figure out the
+        # fileno to pass to it anyway.
+        self._setPipe()
+
+        safe = reporter.SafeStream(WithoutFileno(broken))
+        exc = self.assertRaises(IOError, safe.write, b"Hello")
+        self.assertEqual(exc.args[0], errno.ENOSPC)
+
+
+    def test_writeWindowsUnknownFileNoSpace(self):
+        """
+        L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
+        write operation on a stream connected to a file of indeterminable type.
+        """
+        self._writeUnknownFileNoSpaceTest(self._windows)
+
+
+    def test_writePOSIXUnknownFileNoSpace(self):
+        """
+        L{reporter.SafeStream.write} will not retry if ENOSPC is thrown on a
+        write operation on a stream connected to a file of indeterminable type.
+        """
+        self._writeUnknownFileNoSpaceTest(self._posix)
+
+
+    def _writeUnrelatedError(self, platform):
+        """
+        Assert that L{reporter.SafeStream.write} raises an L{IOError} that does
+        not represent an I{EINTR} or I{ENOSPC} error that is raised by the
+        underlying stream.
+        """
+        broken = BrokenStream(self.stream)
+        broken._error = broken._brokenPipe
+        self.patch(reporter.SafeStream, "_platform", platform)
+        self._setPipe()
+        safe = reporter.SafeStream(broken)
+        exc = self.assertRaises(IOError, safe.write, b"Hello")
+        self.assertEqual(exc.args[0], errno.EPIPE)
+
+
+    def test_writePOSIXUnrelatedError(self):
+        """
+        If the underlying stream raises an L{IOError} with an errno that is
+        neither I{ENOSPC} nor I{EINTR}, the exception propagates to the caller
+        of L{reporter.SafeStream.write}.
+        """
+        self._writeUnrelatedError(self._posix)
+
+
+    def test_writeWindowsUnrelatedError(self):
+        """
+        If the underlying stream raises an L{IOError} with an errno that is
+        neither I{ENOSPC} nor I{EINTR}, the exception propagates to the caller
+        of L{reporter.SafeStream.write}.
+        """
+        self._writeUnrelatedError(self._windows)
 
 
 

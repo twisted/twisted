@@ -1,8 +1,6 @@
 # -*- test-case-name: twisted.trial.test.test_reporter -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-#
-# Maintainer: Jonathan Lange
 
 """
 Defines classes that handle the results of tests.
@@ -12,13 +10,15 @@ from __future__ import division, absolute_import
 
 import sys
 import os
+import stat
+import errno
 import time
 import warnings
 import unittest as pyunit
 
 from zope.interface import implementer
 
-from twisted.python import _reflectpy3 as reflect, log
+from twisted.python import _reflectpy3 as reflect, log, runtime
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
@@ -40,20 +40,77 @@ class BrokenTestCaseWarning(Warning):
     """
 
 
+
 class SafeStream(object):
     """
     Wraps a stream object so that all C{write} calls are wrapped in
     L{untilConcludes<twisted.python.util.untilConcludes>}.
+
+    Additionaly, C{ENOSPC} will also cause retries on Windows, unless we're
+    talking to a filesystem file.
     """
+
+    _platform = runtime.platform
 
     def __init__(self, original):
         self.original = original
+        self._catchENOSPC = False
+        if self._platform.isWindows():
+            try:
+                fileno = self.original.fileno
+            except AttributeError:
+                pass
+            else:
+                if not self._isFile(fileno()):
+                    self._catchENOSPC = True
+
 
     def __getattr__(self, name):
         return getattr(self.original, name)
 
-    def write(self, *a, **kw):
-        return untilConcludes(self.original.write, *a, **kw)
+
+    @staticmethod
+    def _isFile(fd):
+        """
+        Return whether or not the given file descriptor is a filesystem file.
+        """
+        try:
+            return stat.S_ISREG(os.fstat(fd).st_mode)
+        except OSError:
+            # Some kind of error?  Hopefully that means it isn't a regular
+            # file: regular files should let us fstat them.
+            return False
+
+
+    def flush(self, *a, **kw):
+        """
+        Flush the underlying stream, while handling any transient errors.
+        """
+        return untilConcludes(self.original.flush, *a, **kw)
+
+
+    def write(self, data):
+        """
+        Write to the underlying stream, while handling any transient errors.
+        """
+        if self._catchENOSPC:
+            bufferSize = 2 ** 16
+            while data:
+                try:
+                    written = untilConcludes(
+                        self.original.write, data[:bufferSize])
+                except IOError as e:
+                    if e.errno == errno.ENOSPC:
+                        if bufferSize == 1:
+                            raise
+                        else:
+                            bufferSize //= 2
+                    else:
+                        raise
+                else:
+                    data = data[written:]
+        else:
+            return untilConcludes(self.original.write, data)
 
 
 
