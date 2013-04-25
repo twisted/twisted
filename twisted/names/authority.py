@@ -129,12 +129,37 @@ class FileAuthority(common.ResolverBase):
                     )
             return defer.succeed((results, authority, additional))
         else:
-            zoneLabels = self.soa[0].lower().split('.')
-            nameLabels = name.lower().split('.')
-            if nameLabels[-len(zoneLabels):] == zoneLabels:
+#            import pdb; pdb.set_trace()
+            if self._authoritativeFor(name):
                 # We are the authority and we didn't find it.  Goodbye.
                 return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
             return defer.fail(failure.Failure(dns.DomainError(name)))
+
+
+    def _authoritativeFor(self, name):
+        """
+        Test whether C{name} is a subdomain of this zone name and that
+        it is not part of a delegated child zone.
+        """
+        zoneLabels = self.soa[0].lower().split('.')
+        nameLabels = name.lower().split('.')
+
+        if nameLabels[-len(zoneLabels):] != zoneLabels:
+            # The domainname is not a child of this zone.
+            return False
+
+        for recName, records in self.records.iteritems():
+            recNameLabels = recName.lower().split('.')
+            # Ignore records for the zone root name
+            if recNameLabels == zoneLabels:
+                continue
+            for rec in records:
+                if rec.TYPE == dns.NS:
+                    if nameLabels[-len(recNameLabels):] == recNameLabels:
+                        # The domainname is within a delegated child zone.
+                        return False
+
+        return True
 
 
     def lookupZone(self, name, timeout = 10):
