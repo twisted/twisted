@@ -13,7 +13,7 @@ from twisted.trial import unittest
 
 from twisted.internet import reactor, defer, error
 from twisted.internet.defer import succeed
-from twisted.names import client, server, common, authority, dns
+from twisted.names import client, server, common, authority, dns, error
 from twisted.python import failure
 from twisted.names.dns import Message
 from twisted.names.client import Resolver
@@ -589,6 +589,31 @@ class AuthorityTests(unittest.TestCase):
     Tests for the basic response record selection code in L{FileAuthority}
     (independent of its fileness).
     """
+    def test_authoritativeDomainErrorForNameWithCommonParentDomain(self):
+        """
+        L{FileAuthority} lookup methods will errback with
+        L{error.AuthoritativeDomainError} if the requested C{name} is
+        a subdomain of this zone.
+        """
+        testDomain = test_domain_com
+        testDomainName = 'nonexistentname.' + testDomain.soa[0]
+        self.assertNotIn(testDomainName, testDomain.records.keys())
+        f = self.failureResultOf(testDomain.lookupAddress(testDomainName))
+        self.assertIsInstance(f.value, error.AuthoritativeDomainError)
+
+
+    def test_domainErrorForNameWithCommonSuffix(self):
+        """
+        L{FileAuthority} lookup methods will errback with
+        L{error.DomainError} if the requested C{name} shares a common
+        suffix with its zone but is not a subdomain its zone.
+        """
+        testDomain = test_domain_com
+        testDomainName = 'nonexistentname.prefix-' + testDomain.soa[0]
+        f = self.failureResultOf(testDomain.lookupAddress(testDomainName))
+        self.assertIsInstance(f.value, error.DomainError)
+
+
     def test_recordMissing(self):
         """
         If a L{FileAuthority} has a zone which includes an I{NS} record for a
