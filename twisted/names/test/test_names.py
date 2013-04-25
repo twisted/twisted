@@ -633,6 +633,21 @@ class AuthorityTests(unittest.TestCase):
         self.assertIsInstance(f.value, DomainError)
 
 
+    def test_domainErrorForNameOfChildZoneNS(self):
+        """
+        L{FileAuthority} lookup methods will errback with
+        L{DomainError} if the requested C{name} is that of a glue
+        record for a delegated child zone NS server.
+
+        XXX: I'm not sure about this - need to check how other servers
+        behave and find some documentation.
+        """
+        testDomain = test_domain_com
+        testDomainName = 'ns1.subdomain.' + testDomain.soa[0]
+        f = self.failureResultOf(testDomain.lookupAddress(testDomainName))
+        self.assertIsInstance(f.value, DomainError)
+
+
     def test_recordMissing(self):
         """
         If a L{FileAuthority} has a zone which includes an I{NS} record for a
