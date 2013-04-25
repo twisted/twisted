@@ -13,7 +13,8 @@ from twisted.trial import unittest
 
 from twisted.internet import reactor, defer, error
 from twisted.internet.defer import succeed
-from twisted.names import client, server, common, authority, dns, error
+from twisted.names import client, server, common, authority, dns
+from twisted.names.error import AuthoritativeDomainError, DomainError
 from twisted.python import failure
 from twisted.names.dns import Message
 from twisted.names.client import Resolver
@@ -68,6 +69,12 @@ my_soa = dns.Record_SOA(
 test_domain_com = NoFileAuthority(
     soa = ('test-domain.com', soa_record),
     records = {
+        'subdomain.test-domain.com': [
+            dns.Record_NS('ns1.subdomain.test-domain.com'),
+            ],
+        'ns1.subdomain.test-domain.com': [
+            dns.Record_A('39.28.189.39'),
+            ],
         'test-domain.com': [
             soa_record,
             dns.Record_A('127.0.0.1'),
@@ -596,22 +603,34 @@ class AuthorityTests(unittest.TestCase):
         a subdomain of this zone.
         """
         testDomain = test_domain_com
-        testDomainName = 'nonexistentname.' + testDomain.soa[0]
+        testDomainName = 'nonexistent.' + testDomain.soa[0]
         self.assertNotIn(testDomainName, testDomain.records.keys())
         f = self.failureResultOf(testDomain.lookupAddress(testDomainName))
-        self.assertIsInstance(f.value, error.AuthoritativeDomainError)
+        self.assertIsInstance(f.value, AuthoritativeDomainError)
 
 
     def test_domainErrorForNameWithCommonSuffix(self):
         """
         L{FileAuthority} lookup methods will errback with
-        L{error.DomainError} if the requested C{name} shares a common
+        L{DomainError} if the requested C{name} shares a common
         suffix with its zone but is not a subdomain its zone.
         """
         testDomain = test_domain_com
-        testDomainName = 'nonexistentname.prefix-' + testDomain.soa[0]
+        testDomainName = 'nonexistent.prefix-' + testDomain.soa[0]
         f = self.failureResultOf(testDomain.lookupAddress(testDomainName))
-        self.assertIsInstance(f.value, error.DomainError)
+        self.assertIsInstance(f.value, DomainError)
+
+
+    def test_domainErrorForNameInKnownChildZone(self):
+        """
+        L{FileAuthority} lookup methods will errback with
+        L{DomainError} if the requested C{name} is part of a
+        delegated child zone.
+        """
+        testDomain = test_domain_com
+        testDomainName = 'nonexistent.subdomain.' + testDomain.soa[0]
+        f = self.failureResultOf(testDomain.lookupAddress(testDomainName))
+        self.assertIsInstance(f.value, DomainError)
 
 
     def test_recordMissing(self):
