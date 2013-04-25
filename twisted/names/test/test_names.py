@@ -599,7 +599,7 @@ class AuthorityTests(unittest.TestCase):
     def test_authoritativeDomainErrorForNameWithCommonParentDomain(self):
         """
         L{FileAuthority} lookup methods will errback with
-        L{error.AuthoritativeDomainError} if the requested C{name} is
+        L{AuthoritativeDomainError} if the requested C{name} is
         a subdomain of this zone.
         """
         testDomain = test_domain_com
