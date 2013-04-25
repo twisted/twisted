@@ -129,7 +129,9 @@ class FileAuthority(common.ResolverBase):
                     )
             return defer.succeed((results, authority, additional))
         else:
-            if name.lower().endswith(self.soa[0].lower()):
+            zoneLabels = self.soa[0].lower().split('.')
+            nameLabels = name.lower().split('.')
+            if nameLabels[-len(zoneLabels):] == zoneLabels:
                 # We are the authority and we didn't find it.  Goodbye.
                 return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
             return defer.fail(failure.Failure(dns.DomainError(name)))
