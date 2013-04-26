@@ -83,6 +83,15 @@ class FileAuthority(common.ResolverBase):
         additional = []
         default_ttl = max(self.soa[1].minimum, self.soa[1].expire)
 
+        zoneLabels = self.soa[0].lower().split('.')
+        nameLabels = name.lower().split('.')
+
+        if nameLabels[-len(zoneLabels):] != zoneLabels:
+            # The QNAME is not a descendant of this zone. Fail with
+            # DomainError so that the next chained authority or
+            # resolver will be queried.
+            return defer.fail(failure.Failure(dns.DomainError(name)))
+
         domain_records = self.records.get(name.lower())
 
         if domain_records:
@@ -129,24 +138,18 @@ class FileAuthority(common.ResolverBase):
                     )
             return defer.succeed((results, authority, additional))
         else:
-#            import pdb; pdb.set_trace()
             if self._authoritativeFor(name):
                 # We are the authority and we didn't find it.  Goodbye.
                 return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
-            return defer.fail(failure.Failure(dns.DomainError(name)))
+
 
 
     def _authoritativeFor(self, name):
         """
-        Test whether C{name} is a subdomain of this zone name and that
-        it is not part of a delegated child zone.
+        Test that C{name} is not part of a delegated child zone.
         """
         zoneLabels = self.soa[0].lower().split('.')
         nameLabels = name.lower().split('.')
-
-        if nameLabels[-len(zoneLabels):] != zoneLabels:
-            # The domainname is not a child of this zone.
-            return False
 
         for recName, records in self.records.iteritems():
             recNameLabels = recName.lower().split('.')
