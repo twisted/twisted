@@ -514,7 +514,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         alreadySent = 0
 
         while alreadySent < len(bytes):
-            toSend = buffer(bytes, alreadySent, bufferSize)
+            toSend = bytes[alreadySent:alreadySent + bufferSize]
             try:
                 sent = self._tlsConnection.send(toSend)
             except WantReadError:
