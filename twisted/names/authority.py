@@ -76,12 +76,18 @@ class FileAuthority(common.ResolverBase):
         self.__dict__ = state
 #        print 'setstate ', self.soa
 
+
+    def _getDefaultTTL(self):
+        return max(self.soa[1].minimum, self.soa[1].expire)
+
+
     def _lookup(self, name, cls, type, timeout = None):
         cnames = []
         results = []
         authority = []
         additional = []
-        default_ttl = max(self.soa[1].minimum, self.soa[1].expire)
+
+        default_ttl = self._getDefaultTTL()
 
         zoneLabels = self.soa[0].lower().split('.')
         nameLabels = name.lower().split('.')
@@ -92,8 +98,11 @@ class FileAuthority(common.ResolverBase):
             # resolver will be queried.
             return defer.fail(failure.Failure(dns.DomainError(name)))
 
-        domain_records = self.records.get(name.lower())
+        referral = self._getReferralForName(name)
+        if referral:
+            return defer.succeed(referral)
 
+        domain_records = self.records.get(name.lower())
         if domain_records:
             for record in domain_records:
                 if record.ttl is not None:
@@ -138,31 +147,54 @@ class FileAuthority(common.ResolverBase):
                     )
             return defer.succeed((results, authority, additional))
         else:
-            if self._authoritativeFor(name):
-                # We are the authority and we didn't find it.  Goodbye.
-                return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
+            # We are the authority and we didn't find it.  Goodbye.
+            return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
 
 
 
-    def _authoritativeFor(self, name):
+    def _getReferralForName(self, name):
         """
-        Test that C{name} is not part of a delegated child zone.
+        If C{name} belongs to a delegated child zone return the
+        authority and any additional records returned
+        in the referral response.
         """
+        authority = []
+        additional = []
+
         zoneLabels = self.soa[0].lower().split('.')
         nameLabels = name.lower().split('.')
 
         for recName, records in self.records.iteritems():
             recNameLabels = recName.lower().split('.')
+
             # Ignore records for the zone root name
             if recNameLabels == zoneLabels:
                 continue
-            for rec in records:
-                if rec.TYPE == dns.NS:
-                    if nameLabels[-len(recNameLabels):] == recNameLabels:
-                        # The domainname is within a delegated child zone.
-                        return False
 
-        return True
+            for record in records:
+                if record.TYPE != dns.NS:
+                    continue
+
+                if record.ttl is not None:
+                    ttl = record.ttl
+                else:
+                    ttl = self._getDefaultTTL()
+
+                if nameLabels[-len(recNameLabels):] == recNameLabels:
+                    # The domainname is within a delegated child zone.
+                    authority.append(
+                        dns.RRHeader(recName, record.TYPE, dns.IN, ttl, record, auth=False))
+                    # The name that the NS records points to
+                    nsTargetName = record.name.name
+                    for record in self.records.get(nsTargetName, []):
+                        if record.TYPE == dns.A:
+                            additional.append(
+                                dns.RRHeader(nsTargetName, record.TYPE, dns.IN, ttl, record, auth=False))
+
+        if authority:
+            # Now try and find glue records for each of the
+            return ([], authority, additional)
+        return None
 
 
     def lookupZone(self, name, timeout = 10):

@@ -636,20 +636,19 @@ class AuthorityTests(unittest.TestCase):
             dns.NS,
             ttl=testDomain.soa[1].expire,
             payload=dns.Record_NS('ns1.subdomain.test-domain.com'),
-            auth=True)
+            auth=False)
 
         expectedNSAdditionalGlueRecord = dns.RRHeader(
             'ns1.subdomain.test-domain.com',
             dns.A,
             ttl=testDomain.soa[1].expire,
-            payload=dns.Record_A('192.0.2.1'),
-            auth=True)
+            payload=dns.Record_A('203.0.113.101'),
+            auth=False)
 
-        self.assertEqual(
-            r,
-            ([],
-             [expectedNSAuthorityRecord],
-             [expectedNSAdditionalGlueRecord]))
+        results, authority, additional = r
+        self.assertEqual(results, [])
+        self.assertEqual(authority, [expectedNSAuthorityRecord])
+        self.assertEqual(additional, [expectedNSAdditionalGlueRecord])
 
 
     def test_recordMissing(self):
