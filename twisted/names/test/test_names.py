@@ -633,19 +633,41 @@ class AuthorityTests(unittest.TestCase):
         self.assertIsInstance(f.value, DomainError)
 
 
-    def test_domainErrorForNameOfChildZoneNS(self):
+    def test_inBailiwickGlue(self):
         """
-        L{FileAuthority} lookup methods will errback with
-        L{DomainError} if the requested C{name} is that of a glue
-        record for a delegated child zone NS server.
+        L{FileAuthority} lookup methods will return a list of
+        authority NS records and additional glue A records in
+        response to queries for names in a child zone whose NS servers
+        are "in bailiwick".
+
+         * http://cr.yp.to/djbdns/notes.html
+         * http://homepage.ntlworld.com/jonathan.deboynepollard/Softwares/iu/guide/dns-problems.html
+         * https://tools.ietf.org/html/rfc1034 4.2.1
 
         XXX: I'm not sure about this - need to check how other servers
         behave and find some documentation.
         """
         testDomain = test_domain_com
         testDomainName = 'ns1.subdomain.' + testDomain.soa[0]
-        f = self.failureResultOf(testDomain.lookupAddress(testDomainName))
-        self.assertIsInstance(f.value, DomainError)
+        r = self.successResultOf(testDomain.lookupAddress(testDomainName))
+
+        expectedAuthRecord = dns.RRHeader(
+            'subdomain.test-domain.com',
+            dns.NS,
+            ttl=testDomain.soa[1].expire,
+            payload=dns.Record_NS('ns1.subdomain.test-domain.com'),
+            auth=True)
+
+        expectedNSHostRecord = dns.RRHeader(
+            'ns1.subdomain.test-domain.com',
+            dns.A,
+            ttl=testDomain.soa[1].expire,
+            payload=dns.Record_A('39.28.189.39'),
+            auth=True)
+
+        self.assertEqual(
+            r,
+            ([], [expectedAuthRecord], [expectedNSHostRecord]))
 
 
     def test_recordMissing(self):
