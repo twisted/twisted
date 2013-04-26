@@ -81,7 +81,7 @@ class FileAuthority(common.ResolverBase):
         return max(self.soa[1].minimum, self.soa[1].expire)
 
 
-    def _lookup(self, name, cls, type, timeout = None):
+    def _lookup(self, name, cls, type, timeout=None):
         cnames = []
         results = []
         authority = []
@@ -110,14 +110,7 @@ class FileAuthority(common.ResolverBase):
                 else:
                     ttl = default_ttl
 
-                if record.TYPE == dns.NS and name.lower() != self.soa[0].lower():
-                    # NS record belong to a child zone: this is a referral.  As
-                    # NS records are authoritative in the child zone, ours here
-                    # are not.  RFC 2181, section 6.1.
-                    authority.append(
-                        dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=False)
-                    )
-                elif record.TYPE == type or type == dns.ALL_RECORDS:
+                if record.TYPE == type or type == dns.ALL_RECORDS:
                     results.append(
                         dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=True)
                     )
@@ -128,7 +121,7 @@ class FileAuthority(common.ResolverBase):
             if not results:
                 results = cnames
 
-            for record in results + authority:
+            for record in results:
                 section = {dns.NS: additional, dns.CNAME: results, dns.MX: additional}.get(record.type)
                 if section is not None:
                     n = str(record.payload.name)
@@ -138,7 +131,7 @@ class FileAuthority(common.ResolverBase):
                                 dns.RRHeader(n, dns.A, dns.IN, rec.ttl or default_ttl, rec, auth=True)
                             )
 
-            if not results and not authority:
+            if not results:
                 # Empty response. Include SOA record to allow clients to cache
                 # this response.  RFC 1034, sections 3.7 and 4.3.4, and RFC 2181
                 # section 7.1.
@@ -181,7 +174,13 @@ class FileAuthority(common.ResolverBase):
                     ttl = self._getDefaultTTL()
 
                 if nameLabels[-len(recNameLabels):] == recNameLabels:
-                    # The domainname is within a delegated child zone.
+                    # The name is somewhere beneath a delegated child
+                    # zone.
+
+                    # NS records and A (glue) records belong to a
+                    # child zone.  As the NS and A records are
+                    # authoritative in the child zone, ours here are
+                    # not.  RFC 2181, section 6.1.
                     authority.append(
                         dns.RRHeader(recName, record.TYPE, dns.IN, ttl, record, auth=False))
                     # The name that the NS records points to
