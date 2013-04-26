@@ -597,11 +597,11 @@ class AuthorityTests(unittest.TestCase):
     Tests for the basic response record selection code in L{FileAuthority}
     (independent of its fileness).
     """
-    def test_authoritativeDomainErrorForNameWithCommonParentDomain(self):
+    def test_authoritativeDomainErrorForNonExistentZoneMember(self):
         """
         L{FileAuthority} lookup methods will errback with
-        L{AuthoritativeDomainError} if the requested C{name} is
-        a subdomain of this zone.
+        L{AuthoritativeDomainError} if the requested C{name} belongs
+        to this zone but does not have any associated records.
         """
         testDomain = test_domain_com
         testDomainName = 'nonexistent.' + testDomain.soa[0]
@@ -612,9 +612,11 @@ class AuthorityTests(unittest.TestCase):
 
     def test_domainErrorForNameWithCommonSuffix(self):
         """
-        L{FileAuthority} lookup methods will errback with
-        L{DomainError} if the requested C{name} shares a common
-        suffix with its zone but is not a subdomain its zone.
+        L{FileAuthority} lookup methods errback with L{DomainError} if
+        the requested C{name} shares a common suffix with its zone but
+        is not actually a descendant of its zone, in terms of its
+        sequence of DNS name labels. eg www.the-example.com has
+        nothing to do with the zone example.com.
         """
         testDomain = test_domain_com
         testDomainName = 'nonexistent.prefix-' + testDomain.soa[0]
