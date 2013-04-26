@@ -69,12 +69,6 @@ my_soa = dns.Record_SOA(
 test_domain_com = NoFileAuthority(
     soa = ('test-domain.com', soa_record),
     records = {
-        'subdomain.test-domain.com': [
-            dns.Record_NS('ns1.subdomain.test-domain.com'),
-            ],
-        'ns1.subdomain.test-domain.com': [
-            dns.Record_A('39.28.189.39'),
-            ],
         'test-domain.com': [
             soa_record,
             dns.Record_A('127.0.0.1'),
@@ -120,6 +114,13 @@ test_domain_com = NoFileAuthority(
         ],
         'anothertest-domain.com': [
             dns.Record_A('1.2.3.4')],
+
+        'subdomain.test-domain.com': [
+            dns.Record_NS('ns1.subdomain.test-domain.com'),
+            ],
+        'ns1.subdomain.test-domain.com': [
+            dns.Record_A('203.0.113.101'),
+            ],
     }
 )
 
@@ -621,53 +622,34 @@ class AuthorityTests(unittest.TestCase):
         self.assertIsInstance(f.value, DomainError)
 
 
-    def test_domainErrorForNameInKnownChildZone(self):
+    def test_referalForUnknownNameInKnownChildZone(self):
         """
-        L{FileAuthority} lookup methods will errback with
-        L{DomainError} if the requested C{name} is part of a
-        delegated child zone.
-        """
-        testDomain = test_domain_com
-        testDomainName = 'nonexistent.subdomain.' + testDomain.soa[0]
-        f = self.failureResultOf(testDomain.lookupAddress(testDomainName))
-        self.assertIsInstance(f.value, DomainError)
-
-
-    def test_inBailiwickGlue(self):
-        """
-        L{FileAuthority} lookup methods will return a list of
-        authority NS records and additional glue A records in
-        response to queries for names in a child zone whose NS servers
-        are "in bailiwick".
-
-         * http://cr.yp.to/djbdns/notes.html
-         * http://homepage.ntlworld.com/jonathan.deboynepollard/Softwares/iu/guide/dns-problems.html
-         * https://tools.ietf.org/html/rfc1034 4.2.1
-
-        XXX: I'm not sure about this - need to check how other servers
-        behave and find some documentation.
+        L{FileAuthority} lookup methods will respond with a referral
+        if the requested C{name} belongs to a delegated child zone.
         """
         testDomain = test_domain_com
-        testDomainName = 'ns1.subdomain.' + testDomain.soa[0]
+        testDomainName = 'maybeexists.subdomain.' + testDomain.soa[0]
         r = self.successResultOf(testDomain.lookupAddress(testDomainName))
 
-        expectedAuthRecord = dns.RRHeader(
+        expectedNSAuthorityRecord = dns.RRHeader(
             'subdomain.test-domain.com',
             dns.NS,
             ttl=testDomain.soa[1].expire,
             payload=dns.Record_NS('ns1.subdomain.test-domain.com'),
             auth=True)
 
-        expectedNSHostRecord = dns.RRHeader(
+        expectedNSAdditionalGlueRecord = dns.RRHeader(
             'ns1.subdomain.test-domain.com',
             dns.A,
             ttl=testDomain.soa[1].expire,
-            payload=dns.Record_A('39.28.189.39'),
+            payload=dns.Record_A('192.0.2.1'),
             auth=True)
 
         self.assertEqual(
             r,
-            ([], [expectedAuthRecord], [expectedNSHostRecord]))
+            ([],
+             [expectedNSAuthorityRecord],
+             [expectedNSAdditionalGlueRecord]))
 
 
     def test_recordMissing(self):
