@@ -622,7 +622,7 @@ class AuthorityTests(unittest.TestCase):
         self.assertIsInstance(f.value, DomainError)
 
 
-    def test_referalForUnknownNameInKnownChildZone(self):
+    def test_referralForUnknownNameInKnownChildZone(self):
         """
         L{FileAuthority} lookup methods will respond with a referral
         if the requested C{name} belongs to a delegated child zone.
@@ -694,7 +694,7 @@ class AuthorityTests(unittest.TestCase):
                 subdomain: [
                     nameserver,
                     ]})
-        d = getattr(authority, method)(subdomain)
+        d = getattr(authority, method)('maybeexists.' + subdomain)
         result = []
         d.addCallback(result.append)
         answer, authority, additional = result[0]
