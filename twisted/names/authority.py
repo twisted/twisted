@@ -122,27 +122,40 @@ class FileAuthority(common.ResolverBase):
                 results = cnames
 
             for record in results:
-                section = {dns.NS: additional, dns.CNAME: results, dns.MX: additional}.get(record.type)
+                section = {
+                    dns.NS: additional,
+                    dns.CNAME: results,
+                    dns.MX: additional}.get(record.type)
                 if section is not None:
-                    n = str(record.payload.name)
-                    for rec in self.records.get(n.lower(), ()):
-                        if rec.TYPE == dns.A:
-                            section.append(
-                                dns.RRHeader(n, dns.A, dns.IN, rec.ttl or default_ttl, rec, auth=True)
-                            )
+                    for host in self._findTargetRecords(record.payload):
+                        section.append(host)
 
             if not results:
                 # Empty response. Include SOA record to allow clients to cache
                 # this response.  RFC 1034, sections 3.7 and 4.3.4, and RFC 2181
                 # section 7.1.
                 authority.append(
-                    dns.RRHeader(self.soa[0], dns.SOA, dns.IN, ttl, self.soa[1], auth=True)
+                    dns.RRHeader(
+                        self.soa[0], dns.SOA, dns.IN, ttl,
+                        self.soa[1], auth=True)
                     )
             return defer.succeed((results, authority, additional))
         else:
             # We are the authority and we didn't find it.  Goodbye.
             return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
 
+
+    def _findTargetRecords(self, record):
+        results = []
+        n = str(record.name)
+        for rec in self.records.get(n.lower(), ()):
+            if rec.TYPE in (dns.A, dns.AAAA):
+                results.append(
+                    dns.RRHeader(
+                        n, rec.TYPE, dns.IN, rec.ttl or self._getDefaultTTL(),
+                        rec, auth=True)
+                )
+        return results
 
 
     def _getReferralForName(self, name):
@@ -178,17 +191,15 @@ class FileAuthority(common.ResolverBase):
                     # zone.
 
                     # NS records and A (glue) records belong to a
-                    # child zone.  As the NS and A records are
+                    # child zone.  As the NS and A/AAAA records are
                     # authoritative in the child zone, ours here are
                     # not.  RFC 2181, section 6.1.
                     authority.append(
                         dns.RRHeader(recName, record.TYPE, dns.IN, ttl, record, auth=False))
                     # The name that the NS records points to
-                    nsTargetName = record.name.name
-                    for record in self.records.get(nsTargetName, []):
-                        if record.TYPE == dns.A:
-                            additional.append(
-                                dns.RRHeader(nsTargetName, record.TYPE, dns.IN, ttl, record, auth=False))
+                    for target in self._findTargetRecords(record):
+                        target.auth=False
+                        additional.append(target)
 
         if authority:
             # Now try and find glue records for each of the
