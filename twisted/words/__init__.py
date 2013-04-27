@@ -3,7 +3,8 @@
 # See LICENSE for details.
 
 
-"""Twisted Words: a Twisted Chat service.
+"""
+Twisted Words: a Twisted Chat service.
 """
 
 from twisted.words._version import version
