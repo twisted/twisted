@@ -26,8 +26,8 @@ from twisted.test.proto_helpers import (
 from twisted.python.failure import Failure
 from twisted.python.systemd import ListenFDs
 from twisted.python.filepath import FilePath
-from twisted.protocols import basic
 from twisted.python import log
+from twisted.protocols import basic
 
 from twisted.test import __file__ as testInitPath
 pemPath = FilePath(testInitPath.encode("utf-8")).sibling(b"server.pem")
@@ -2505,6 +2505,49 @@ class StandardIOEndpointPluginTests(unittest.TestCase):
         ep = endpoints.serverFromString(MemoryReactor(), "stdio:")
         self.assertIsInstance(ep, endpoints.StandardIOEndpoint)
         self.assertIsInstance(ep._reactor, MemoryReactor)
+
+
+
+class ConnectProtocolTests(unittest.TestCase):
+    """
+    Tests for C{connectProtocol}.
+    """
+    def test_connectProtocolCreatesFactory(self):
+        """
+        C{endpoints.connectProtocol} calls the given endpoint's C{connect()}
+        method with a factory that will build the given protocol.
+        """
+        reactor = MemoryReactor()
+        endpoint = endpoints.TCP4ClientEndpoint(reactor, "127.0.0.1", 0)
+        theProtocol = object()
+        endpoints.connectProtocol(endpoint, theProtocol)
+
+        # A TCP connection was made via the given endpoint:
+        self.assertEqual(len(reactor.tcpClients), 1)
+        # TCP4ClientEndpoint uses a _WrapperFactory around the underlying
+        # factory, so we need to unwrap it:
+        factory = reactor.tcpClients[0][2]._wrappedFactory
+        self.assertIsInstance(factory, protocol.Factory)
+        self.assertIdentical(factory.buildProtocol(None), theProtocol)
+
+
+    def test_connectProtocolReturnsConnectResult(self):
+        """
+        C{endpoints.connectProtocol} returns the result of calling the given
+        endpoint's C{connect()} method.
+        """
+        result = defer.Deferred()
+        class Endpoint:
+            def connect(self, factory):
+                """
+                Return a marker object for use in our assertion.
+                """
+                return result
+
+        endpoint = Endpoint()
+        self.assertIdentical(result,
+                             endpoints.connectProtocol(endpoint, object()))
+
 
 
 if _PY3:

@@ -22,7 +22,8 @@ import warnings
 
 from twisted.python.compat import _PY3
 from twisted.internet import interfaces, defer, error, fdesc, threads
-from twisted.internet.protocol import ClientFactory, Protocol, ProcessProtocol
+from twisted.internet.protocol import (
+        ClientFactory, Protocol, ProcessProtocol, Factory)
 from twisted.internet.interfaces import IStreamServerEndpointStringParser
 from twisted.internet.interfaces import IStreamClientEndpointStringParser
 from twisted.python.filepath import FilePath
@@ -51,11 +52,13 @@ __all__ = ["clientFromString", "serverFromString",
            "UNIXServerEndpoint", "UNIXClientEndpoint",
            "SSL4ServerEndpoint", "SSL4ClientEndpoint",
            "AdoptedStreamServerEndpoint", "StandardIOEndpoint",
-           "ProcessEndpoint", "StandardErrorBehavior"]
+           "ProcessEndpoint", "StandardErrorBehavior",
+           "connectProtocol"]
 
 __all3__ = ["TCP4ServerEndpoint", "TCP6ServerEndpoint",
             "TCP4ClientEndpoint", "TCP6ClientEndpoint",
             "SSL4ServerEndpoint", "SSL4ClientEndpoint",
+            "connectProtocol",
             ]
 
 
@@ -1539,6 +1542,28 @@ def clientFromString(reactor, description):
         raise ValueError("Unknown endpoint type: %r" % (aname,))
     kwargs = _clientParsers[name](*args, **kwargs)
     return _endpointClientFactories[name](reactor, **kwargs)
+
+
+
+def connectProtocol(endpoint, protocol):
+    """
+    Connect a protocol instance to an endpoint.
+
+    This allows using a client endpoint without having to create a factory.
+
+    @param endpoint: A client endpoint to connect to.
+
+    @param protocol: A protocol instance.
+
+    @return: The result of calling C{connect} on the endpoint, i.e. a
+    L{Deferred} that will fire with the protocol when connected, or an
+    appropriate error.
+    """
+    class OneShotFactory(Factory):
+        def buildProtocol(self, addr):
+            return protocol
+    return endpoint.connect(OneShotFactory())
+
 
 
 if _PY3:

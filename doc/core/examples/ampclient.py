@@ -1,12 +1,12 @@
-from twisted.internet import reactor, defer
-from twisted.internet.protocol import ClientCreator
-from twisted.protocols import amp
+from twisted.internet import reactor, defer, endpoints
+from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
+from twisted.protocols.amp import AMP
 from ampserver import Sum, Divide
 
 
 def doMath():
-    creator = ClientCreator(reactor, amp.AMP)
-    sumDeferred = creator.connectTCP('127.0.0.1', 1234)
+    destination = TCP4ClientEndpoint(reactor, '127.0.0.1', 1234)
+    sumDeferred = connectProtocol(destination, AMP())
     def connected(ampProto):
         return ampProto.callRemote(Sum, a=13, b=81)
     sumDeferred.addCallback(connected)
@@ -14,7 +14,7 @@ def doMath():
         return result['total']
     sumDeferred.addCallback(summed)
 
-    divideDeferred = creator.connectTCP('127.0.0.1', 1234)
+    divideDeferred = connectProtocol(destination, AMP())
     def connected(ampProto):
         return ampProto.callRemote(Divide, numerator=1234, denominator=0)
     divideDeferred.addCallback(connected)

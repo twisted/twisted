@@ -99,23 +99,34 @@ particular action, then disposed of.</p>
 
 <h3>Clients and Cancelling</h3>
 
-<p><code class="API" base="twisted.internet.interfaces">IStreamClientEndpoint.connect</code>
-will connect your protocol factory to a new outgoing connection attempt. It
-returns a <code>Deferred</code> which fires with the <code>IProtocol</code>
-returned from the factory's <code>buildProtocol</code> method.</p>
+<p><code class="API" base="twisted.internet.endpoints">connectProtocol</code>
+connects a <code class="API" base="twisted.internet.protocol">Protocol</code>
+instance to a given ><code class="API"
+base="twisted.internet.interfaces">IStreamClientEndpoint</code>. It returns
+a <code>Deferred</code> which fires with the <code>Protocol</code> once the
+connection has been made. Connection attempts may fail, and so
+that <code class="API" base="twisted.internet.defer">Deferred</code> may also
+errback. If it does so, you will have to try again; no further attempts will
+be made. See the <a href="clients.xhtml">client documentation</a> for an
+example use.</p>
 
-<p>Connection attempts may fail, and so that <code class="API"
-base="twisted.internet.defer">Deferred</code> may also errback. If it does so,
-you will have to try again; your protocol won't be constructed, and no further
-attempts will be made.</p>
+<p><code class="API" base="twisted.internet.endpoints">connectProtocol</code>
+is a wrapper around a lower-level API: <code class="API"
+base="twisted.internet.interfaces">IStreamClientEndpoint.connect</code> will
+use a protocol factory for a new outgoing connection attempt. It returns
+a <code>Deferred</code> which fires with the <code>IProtocol</code> returned
+from the factory's <code>buildProtocol</code> method, or errbacks with the
+connection failure.</p>
 
-<p>Connection attempts may also take a long time, and your users may
-become bored and wander off. If this happens, and your code decides, for
-whatever reason, that you've been waiting for the connection too long, you
-can call <code class="API" base="twisted.internet.defer">Deferred.cancel</code>
-on the <code>Deferred</code> returned from <code class="API"
-base="twisted.internet.interfaces.IStreamClientEndpoint">connect</code>, and the
-underlying machinery should give up on the connection. This should cause the
+<p>Connection attempts may also take a long time, and your users may become
+bored and wander off. If this happens, and your code decides, for whatever
+reason, that you've been waiting for the connection too long, you can
+call <code class="API" base="twisted.internet.defer">Deferred.cancel</code> on
+the <code>Deferred</code> returned from <code class="API"
+base="twisted.internet.interfaces.IStreamClientEndpoint">connect</code>
+or <code class="API" base="twisted.internet.endpoints">connectProtocol</code>,
+and the underlying machinery should give up on the connection. This should
+cause the
 <code>Deferred</code> to errback, usually with <code class="API"
 base="twisted.internet.defer">CancelledError</code>; although you should
 consult the documentation for your particular endpoint type to see if it may do
@@ -127,10 +138,17 @@ application to cancel a wayward connection attempt, the attempt may just
 keep waiting forever.  For example, a very simple 30-second timeout could be
 implemented like this:
 <pre class="python">
-attempt = myEndpoint.connect(myFactory)
+attempt = connectProtocol(myEndpoint, myProtocol)
 reactor.callLater(30, attempt.cancel)
 </pre>
 </p>
+
+<div class="note">If you've used <code>ClientFactory</code> before,
+keep in mind that the <code>connect</code> method takes a
+<code>Factory</code>, not a <code>ClientFactory</code>.  Even if you pass a
+<code>ClientFactory</code> to <code>endpoint.connect</code>, its
+<code>clientConnectionFailed</code> and <code>clientConnectionLost</code>
+methods will not be called.</div>
 
 <h2>Maximizing the Return on your Endpoint Investment</h2>
 
