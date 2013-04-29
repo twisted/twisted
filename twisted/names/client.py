@@ -578,7 +578,6 @@ def getResolver():
 
 
 
-
 def getHostByName(name, timeout=None, effort=10):
     """
     Resolve a name to a valid ipv4 or ipv6 address.
