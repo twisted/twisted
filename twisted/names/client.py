@@ -32,6 +32,10 @@ from twisted.names import dns, common
 
 
 
+moduleProvides(interfaces.IResolver)
+
+
+
 class Resolver(common.ResolverBase):
     """
     @ivar _waiting: A C{dict} mapping tuple keys of query name/type/class to
@@ -572,9 +576,6 @@ def getResolver():
             theResolver = createResolver(servers=[('127.0.0.1', 53)])
     return theResolver
 
-
-
-moduleProvides(interfaces.IResolver)
 
 
 
