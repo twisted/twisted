@@ -3,6 +3,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import division, absolute_import, print_function
 
 import sys, os, random, gc, pdb, time, warnings
 
@@ -149,7 +150,7 @@ class _BasicOptions(object):
         """
         coverdir = 'coverage'
         result = FilePath(self['temp-directory']).child(coverdir)
-        print "Setting coverage directory to %s." % (result.path,)
+        print("Setting coverage directory to %s." % (result.path,))
         return result
 
 
@@ -200,10 +201,10 @@ class _BasicOptions(object):
         synopsis = ("Trial's output can be customized using plugins called "
                     "Reporters. You can\nselect any of the following "
                     "reporters using --reporter=<foo>\n")
-        print synopsis
+        print(synopsis)
         for p in plugin.getPlugins(itrial.IReporter):
-            print '   ', p.longOpt, '\t', p.description
-        print
+            print('   ', p.longOpt, '\t', p.description)
+        print()
         sys.exit(0)
 
 
@@ -243,7 +244,7 @@ class _BasicOptions(object):
 
     def opt_random(self, option):
         try:
-            self['random'] = long(option)
+            self['random'] = int(option)
         except ValueError:
             raise usage.UsageError(
                 "Argument to --random must be a positive integer")
@@ -252,7 +253,7 @@ class _BasicOptions(object):
                 raise usage.UsageError(
                     "Argument to --random must be a positive integer")
             elif self['random'] == 0:
-                self['random'] = long(time.time() * 100)
+                self['random'] = int(time.time() * 100)
 
 
     def opt_without_module(self, option):
@@ -409,7 +410,7 @@ def _getLoader(config):
         randomer = random.Random()
         randomer.seed(config['random'])
         loader.sorter = lambda x : randomer.random()
-        print 'Running tests shuffled with seed %d\n' % config['random']
+        print('Running tests shuffled with seed %d\n' % config['random'])
     if not config['until-failure']:
         loader.suiteFactory = runner.DestructiveTestSuite
     return loader
@@ -425,7 +426,7 @@ def _wrappedPdb():
     try:
         import readline
     except ImportError:
-        print "readline module not available"
+        print("readline module not available")
         sys.exc_clear()
     for path in ('.pdbrc', 'pdbrc'):
         if os.path.exists(path):
@@ -498,8 +499,8 @@ def run():
     config = Options()
     try:
         config.parseOptions()
-    except usage.error, ue:
-        raise SystemExit, "%s: %s" % (sys.argv[0], ue)
+    except usage.error as ue:
+        raise SystemExit("%s: %s" % (sys.argv[0], ue))
     _initialDebugSetup(config)
 
     try:
