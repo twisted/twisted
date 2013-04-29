@@ -579,6 +579,25 @@ moduleProvides(interfaces.IResolver)
 
 
 def getHostByName(name, timeout=None, effort=10):
+    """
+    Resolve a name to a valid ipv4 or ipv6 address.
+
+    Will errback with C{DNSQueryTimeoutError} on a timeout, C{DomainError} or
+    C{AuthoritativeDomainError} (or subclasses) on other errors.
+
+    @type name: C{str}
+    @param name: DNS name to resolve.
+
+    @type timeout: Sequence of C{int}
+    @param timeout: Number of seconds after which to reissue the query.
+    When the last timeout expires, the query is considered failed.
+
+    @type effort: C{int}
+    @param effort: How many times CNAME and NS records to follow while
+    resolving this name.
+
+    @rtype: C{Deferred}
+    """
     return getResolver().getHostByName(name, timeout, effort)
 
 
