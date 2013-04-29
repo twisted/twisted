@@ -2,7 +2,8 @@
 # See LICENSE for details.
 
 import gc
-import StringIO, sys, types
+import sys
+import types
 
 from twisted.trial import unittest
 from twisted.trial.runner import (
@@ -12,6 +13,7 @@ from twisted.scripts import trial
 from twisted.python import util
 from twisted.python.usage import UsageError
 from twisted.python.filepath import FilePath
+from twisted.python.compat import NativeStringIO as StringIO
 
 from twisted.trial.test.test_loader import testNames
 
@@ -58,7 +60,7 @@ class ForceGarbageCollection(unittest.SynchronousTestCase):
         Return a L{TrialRunner} object that is safe to use in tests.
         """
         runner = trial._makeRunner(self.config)
-        runner.stream = StringIO.StringIO()
+        runner.stream = StringIO()
         return runner
 
 
@@ -196,7 +198,7 @@ class TestModuleTest(unittest.SynchronousTestCase):
         Check that --testmodule displays a meaningful error message when
         passed a non-existent filename.
         """
-        buffy = StringIO.StringIO()
+        buffy = StringIO()
         stderr, sys.stderr = sys.stderr, buffy
         filename = 'test_thisbetternoteverexist.py'
         try:
@@ -220,7 +222,7 @@ class TestModuleTest(unittest.SynchronousTestCase):
         Check that --testmodule does *not* support module names as arguments
         and that it displays a meaningful error message.
         """
-        buffy = StringIO.StringIO()
+        buffy = StringIO()
         stderr, sys.stderr = sys.stderr, buffy
         moduleName = 'twisted.trial.test.test_script'
         try:
@@ -396,6 +398,92 @@ class WithoutModuleTests(unittest.SynchronousTestCase):
 
 
 
+class HelpReportersTestCase(unittest.SynchronousTestCase):
+    """
+    Tests for the I{--help-reporters} option.
+    """
+    def test_default(self):
+        """
+        L{trial.Options} handles C{"--help-reporters"} by installing a trace
+        hook to record coverage information.
+        """
+        buffy = StringIO()
+        stdout, sys.stdout = sys.stdout, buffy
+
+        options = trial.Options()
+        try:
+            error = self.assertRaises(SystemExit, options.opt_help_reporters)
+            self.assertEqual(str(error), '0')
+        finally:
+            sys.stdout = stdout
+
+
+
+class RandomOptionTestCase(unittest.SynchronousTestCase):
+    """
+    Tests for the I{--random} option.
+    """
+    def setUp(self):
+        self.options = trial.Options()
+
+
+    def test_positiveInteger(self):
+        """
+        Passing over 9000 to the I{--random} option sets the C{random}
+        attribute to 9000.
+        """
+        self.options.opt_random(9000)
+        self.assertEqual(self.options['random'], 9000)
+
+
+    def test_invalidArgument(self):
+        """
+        Passing a value to the I{--random} option that cannot be converted to
+        an integer raises a L{UsageError}.
+        """
+        error = self.assertRaises(UsageError, self.options.opt_random, 'foo')
+        self.assertEqual(str(error),
+            "Argument to --random must be a positive integer")
+
+
+    def test_negativeInteger(self):
+        """
+        Passing a negative integer to the I{--random} option raises a
+        L{UsageError}.
+        """
+        error = self.assertRaises(UsageError, self.options.opt_random, -1)
+        self.assertEqual(str(error),
+            "Argument to --random must be a positive integer")
+
+
+    def test_stringToInt(self):
+        """
+        Passing the string '0' to the I{--random} option picks and uses a
+        random number (amount of seconds since 1970).
+        """
+        self.options.opt_random('0')
+        self.assertTrue(self.options['random'] > 0)
+
+
+    def test_randomLoader(self):
+        """
+        The value passed to the I{--random}} option is used as the seed value
+        for the C{random.Random} instance used by the loader.
+        """
+        buffy = StringIO()
+        stdout, sys.stdout = sys.stdout, buffy
+        self.options['random'] = 10
+
+        try:
+            loader = trial._getLoader(self.options)
+            self.assertTrue(loader.sorter > 0)
+            self.assertEqual(buffy.getvalue(),
+                'Running tests shuffled with seed 10\n\n')
+        finally:
+            sys.stdout = stdout
+
+
+
 class CoverageTests(unittest.SynchronousTestCase):
     """
     Tests for the I{coverage} option.
@@ -427,10 +515,18 @@ class CoverageTests(unittest.SynchronousTestCase):
         L{trial.Options.coverdir} returns a L{FilePath} based on the default
         for the I{temp-directory} option if that option is not specified.
         """
+        buffy = StringIO()
+        stdout, sys.stdout = sys.stdout, buffy
+
         options = trial.Options()
-        self.assertEqual(
-            options.coverdir(),
-            FilePath(".").descendant([options["temp-directory"], "coverage"]))
+        coverageDir = FilePath(".").descendant([options["temp-directory"],
+            "coverage"])
+        try:
+            self.assertEqual(options.coverdir(), coverageDir)
+            self.assertEqual(buffy.getvalue(),
+                'Setting coverage directory to %s.\n' % (coverageDir.path,))
+        finally:
+            sys.stdout = stdout
 
 
     def test_coverdirOverridden(self):
@@ -438,11 +534,17 @@ class CoverageTests(unittest.SynchronousTestCase):
         If a value is specified for the I{temp-directory} option,
         L{trial.Options.coverdir} returns a child of that path.
         """
+        buffy = StringIO()
+        stdout, sys.stdout = sys.stdout, buffy
+
         path = self.mktemp()
         options = trial.Options()
-        options.parseOptions(["--temp-directory", path])
-        self.assertEqual(
-            options.coverdir(), FilePath(path).child("coverage"))
+        try:
+            options.parseOptions(["--temp-directory", path])
+            self.assertEqual(
+                options.coverdir(), FilePath(path).child("coverage"))
+        finally:
+            sys.stdout = stdout
 
 
 
@@ -564,6 +666,7 @@ class MakeRunnerTestCase(unittest.TestCase):
         options.parseOptions(["--debug", "--debugger", "doNotFind"])
 
         self.assertRaises(trial._DebuggerNotFound, trial._makeRunner, options)
+
 
 
 class TestRun(unittest.TestCase):
