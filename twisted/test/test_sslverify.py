@@ -121,9 +121,22 @@ class WritingProtocol(protocol.Protocol):
 
 class FakeContext:
     """
-    Fake of an C{OpenSSL.SSL.Context}.
+    Introspectable fake of an C{OpenSSL.SSL.Context}.
 
     Saves call arguments for later introspection.
+
+    Necessary because C{Context} offers poor introspection.  cf. this
+    U{pyOpenSSL bug<https://bugs.launchpad.net/pyopenssl/+bug/1173899>}.
+
+    @ivar _method: See C{method} parameter of L{__init__}.
+    @ivar _options: C{int} of C{OR}ed values from calls of L{set_options}.
+    @ivar _certificate: Set by L{use_certificate}.
+    @ivar _privateKey: Set by L{use_privatekey}.
+    @ivar _verify: Set by L{set_verify}.
+    @ivar _verifyDepth: Set by L{set_verify_depth}.
+    @ivar _sessionID: Set by L{set_session_id}.
+    @ivar _extraCertChain: Accumulated C{list} of all extra certificates added
+        by L{add_extra_chain_cert}.
     """
     _options = 0
 
@@ -290,8 +303,8 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_constructorSetsExtraChain(self):
         """
-        Setting C{extraCertChain} sets both if C{certificate} and C{privateKey}
-        are set too.
+        Setting C{extraCertChain} works if C{certificate} and C{privateKey} are
+        set along with it.
         """
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
@@ -329,7 +342,9 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_extraChainFilesAreAddedIfSupplied(self):
         """
-        C{extraCertChain} is respected when creating contexts.
+        If C{extraCertChain} is set and all prerequisites are met, the
+        specified chain certificates are added to C{Context}s that get
+        created.
         """
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,

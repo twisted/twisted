@@ -721,7 +721,10 @@ class OpenSSLCertificateOptions(object):
         if extraCertChain is not None and None in (privateKey, certificate):
             raise ValueError("A private key and a certificate are required "
                              "when adding a supplemental certificate chain.")
-        self.extraCertChain = extraCertChain or []
+        if extraCertChain is not None:
+            self.extraCertChain = extraCertChain
+        else:
+            self.extraCertChain = []
 
         self.caCerts = caCerts
         self.verifyDepth = verifyDepth
