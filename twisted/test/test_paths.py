@@ -1422,6 +1422,9 @@ class FilePathTestCase(AbstractFilePathTestCase):
         to set the execute bit, so we are skipping tests that set the execute
         bit.
         """
+        # Change permission after test so file can be deleted
+        self.addCleanup(self.path.child(b"sub1").chmod, 0o777)
+
         for mode in (0o777, 0o555):
             self.path.child(b"sub1").chmod(mode)
             self.assertEqual(self.path.child(b"sub1").getPermissions(),
