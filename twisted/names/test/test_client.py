@@ -918,6 +918,15 @@ class ClientTestCase(unittest.TestCase):
         d.addCallback(self.checkResult, dns.NAPTR)
         return d
 
+    def test_query(self):
+        """
+        See L{test_lookupAddress}
+        """
+        q = dns.Query(self.hostname, dns.A)
+        d = client.query(q)
+        d.addCallback(self.checkResult, dns.A)
+        return d
+
 
 
 class FilterAnswersTests(unittest.TestCase):
