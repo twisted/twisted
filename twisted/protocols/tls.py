@@ -507,13 +507,19 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         if self._lostTLSConnection:
             return
 
-        leftToSend = bytes
-        while leftToSend:
+        # A TLS payload is 16kB max
+        bufferSize = 2 ** 16
+
+        # How far into the input we've gotten so far
+        alreadySent = 0
+
+        while alreadySent < len(bytes):
+            toSend = bytes[alreadySent:alreadySent + bufferSize]
             try:
-                sent = self._tlsConnection.send(leftToSend)
+                sent = self._tlsConnection.send(toSend)
             except WantReadError:
                 self._writeBlockedOnRead = True
-                self._appSendBuffer.append(leftToSend)
+                self._appSendBuffer.append(bytes[alreadySent:])
                 if self._producer is not None:
                     self._producer.pauseProducing()
                 break
@@ -530,7 +536,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
                 # track of this to control error reporting behavior.
                 self._handshakeDone = True
                 self._flushSendBIO()
-                leftToSend = leftToSend[sent:]
+                alreadySent += sent
 
 
     def writeSequence(self, iovec):
