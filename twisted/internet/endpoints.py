@@ -1351,6 +1351,12 @@ def _parseClientTCP(*args, **kwargs):
         kwargs['timeout'] = int(kwargs['timeout'])
     except KeyError:
         pass
+
+    try:
+        kwargs['bindAddress'] = (kwargs['bindAddress'], 0)
+    except KeyError:
+        pass
+
     return kwargs
 
 
