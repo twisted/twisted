@@ -626,6 +626,8 @@ class OpenSSLCertificateOptions(object):
     A factory for SSL context objects for both SSL servers and clients.
     """
 
+    # Factory for creating contexts.  Configurable for testability.
+    _contextFactory = SSL.Context
     _context = None
     # Older versions of PyOpenSSL didn't provide OP_ALL.  Fudge it here, just in case.
     _OP_ALL = getattr(SSL, 'OP_ALL', 0x0000FFFF)
@@ -646,7 +648,8 @@ class OpenSSLCertificateOptions(object):
                  enableSingleUseKeys=True,
                  enableSessions=True,
                  fixBrokenPeers=False,
-                 enableSessionTickets=False):
+                 enableSessionTickets=False,
+                 extraCertChain=None):
         """
         Create an OpenSSL context SSL connection context factory.
 
@@ -694,6 +697,13 @@ class OpenSSLCertificateOptions(object):
         controlling session tickets. This option is off by default, as some
         server implementations don't correctly process incoming empty session
         ticket extensions in the hello.
+
+        @param extraCertChain: List of certificates that I{complete} your
+            verification chain if the certificate authority that signed your
+            C{certificate} isn't widely supported.  Do I{not} add
+            C{certificate} to it.
+
+        @type extraCertChain: C{list} of L{OpenSSL.crypto.X509}
         """
 
         if (privateKey is None) != (certificate is None):
@@ -708,6 +718,13 @@ class OpenSSLCertificateOptions(object):
             raise ValueError("Specify client CA certificate information if and"
                              " only if enabling certificate verification")
         self.verify = verify
+        if extraCertChain is not None and None in (privateKey, certificate):
+            raise ValueError("A private key and a certificate are required "
+                             "when adding a supplemental certificate chain.")
+        if extraCertChain is not None:
+            self.extraCertChain = extraCertChain
+        else:
+            self.extraCertChain = []
 
         self.caCerts = caCerts
         self.verifyDepth = verifyDepth
@@ -741,13 +758,15 @@ class OpenSSLCertificateOptions(object):
 
 
     def _makeContext(self):
-        ctx = SSL.Context(self.method)
+        ctx = self._contextFactory(self.method)
         # Disallow insecure SSLv2. Applies only for SSLv23_METHOD.
         ctx.set_options(SSL.OP_NO_SSLv2)
 
         if self.certificate is not None and self.privateKey is not None:
             ctx.use_certificate(self.certificate)
             ctx.use_privatekey(self.privateKey)
+            for extraCert in self.extraCertChain:
+                ctx.add_extra_chain_cert(extraCert)
             # Sanity check
             ctx.check_privatekey()
 
