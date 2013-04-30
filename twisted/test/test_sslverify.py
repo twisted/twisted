@@ -12,7 +12,7 @@ import itertools
 
 try:
     from OpenSSL import SSL
-    from OpenSSL.crypto import PKey, X509, X509Req
+    from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA
     from twisted.internet import _sslverify as sslverify
 except ImportError:
