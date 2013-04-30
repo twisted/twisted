@@ -1967,7 +1967,7 @@ class ClientStringTests(unittest.TestCase):
         self.assertEqual(client._host, "example.com")
         self.assertEqual(client._port, 1234)
         self.assertEqual(client._timeout, 7)
-        self.assertEqual(client._bindAddress, "10.0.0.2")
+        self.assertEqual(client._bindAddress, ("10.0.0.2", 0))
 
 
     def test_tcpHostPositionalArg(self):
