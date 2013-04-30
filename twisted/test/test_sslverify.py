@@ -119,7 +119,7 @@ class WritingProtocol(protocol.Protocol):
 
 
 
-class FakeContext:
+class FakeContext(object):
     """
     Introspectable fake of an C{OpenSSL.SSL.Context}.
 
@@ -351,7 +351,7 @@ class OpenSSLOptions(unittest.TestCase):
             certificate=self.sCert,
             extraCertChain=self.extraCertChain,
         )
-        opts._contextFactory = lambda method: FakeContext(method)
+        opts._contextFactory = FakeContext
         ctx = opts.getContext()
         self.assertEqual(self.sKey, ctx._privateKey)
         self.assertEqual(self.sCert, ctx._certificate)
