@@ -24,7 +24,7 @@ They are as follows::
   TCPServer, TCPClient,
   UNIXServer, UNIXClient,
   SSLServer, SSLClient,
-  UDPServer, UDPClient,
+  UDPServer,
   UNIXDatagramServer, UNIXDatagramClient,
   MulticastServer
 
