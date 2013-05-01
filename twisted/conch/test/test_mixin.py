@@ -29,13 +29,13 @@ class BufferingTest(unittest.TestCase):
         p = TestBufferingProto()
         t = p.transport = StringTransport()
 
-        self.failIf(p.scheduled)
+        self.assertFalse(p.scheduled)
 
         L = ['foo', 'bar', 'baz', 'quux']
 
         p.write('foo')
-        self.failUnless(p.scheduled)
-        self.failIf(p.rescheduled)
+        self.assertTrue(p.scheduled)
+        self.assertFalse(p.rescheduled)
 
         for s in L:
             n = p.rescheduled
