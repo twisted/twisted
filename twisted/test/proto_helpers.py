@@ -443,6 +443,22 @@ class MemoryReactor(object):
                 fileDescriptor, addressFamily, factory))
 
 
+    def adoptDatagramPort(self, fileno, addressFamily, protocol):
+        """
+        Fake L{IReactorSocket.adoptDatagramPort}, that logs the call and returns
+        an L{IListeningPort}.
+        """
+        if addressFamily == AF_INET:
+            addr = IPv4Address('TCP', '0.0.0.0', 1234)
+        elif addressFamily == AF_INET6:
+            addr = IPv6Address('TCP', '::', 1234)
+        else:
+            raise UnsupportedAddressFamily()
+
+        self.adoptedPorts.append((fileno, addressFamily, protocol))
+        return _FakePort(addr)
+
+
     def listenTCP(self, port, factory, backlog=50, interface=''):
         """
         Fake L{reactor.listenTCP}, that logs the call and returns an
