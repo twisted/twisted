@@ -970,7 +970,7 @@ class IReactorSocket(Interface):
         """
 
 
-    def adoptDatagramPort(fileDescriptor, addressFamily, factory):
+    def adoptDatagramPort(fileDescriptor, addressFamily, protocol):
         """
         Add an existing listening I{SOCK_DGRAM} socket to the reactor to
         monitor for new connections to accept and handle.
@@ -986,8 +986,8 @@ class IReactorSocket(Interface):
         @param addressFamily: The address family (or I{domain}) of the socket.
             For example, L{socket.AF_INET6}.
 
-        @param factory: A L{ServerFactory} instance to use to create new
-            protocols to handle connections accepted via this socket.
+        @param protocol: A L{DatagramProtocol} instance to connect to
+            a UDP transport.
 
         @return: An object providing L{IListeningPort}.
 
