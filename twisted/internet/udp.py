@@ -59,6 +59,11 @@ from twisted.internet import abstract, error, interfaces
 class Port(base.BasePort):
     """
     UDP port, listening for packets.
+
+    @ivar _preexistingSocket: If not C{None}, a L{socket.socket} instance which
+        was created and initialized outside of the reactor and will be used to
+        listen for connections (instead of a new socket being created by this
+        L{Port}).
     """
 
     addressFamily = socket.AF_INET
@@ -68,6 +73,10 @@ class Port(base.BasePort):
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
     _realPortNumber = None
+
+    # An externally initialized socket that we will use, rather than creating
+    # our own.
+    _preexistingSocket = None
 
     def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None):
         """
@@ -80,6 +89,36 @@ class Port(base.BasePort):
         self.interface = interface
         self.setLogStr()
         self._connectedAddr = None
+
+
+
+    @classmethod
+    def _fromListeningDescriptor(cls, reactor, fd, addressFamily, protocol, maxPacketSize=None):
+        """
+        Create a new L{Port} based on an existing listening I{SOCK_DGRAM}
+        I{AF_INET} socket.
+
+        Arguments are the same as to L{Port.__init__}, except where noted.
+
+        @param fd: An integer file descriptor associated with a listening
+            socket.  The socket must be in non-blocking mode.  Any additional
+            attributes desired, such as I{FD_CLOEXEC}, must also be set already.
+
+        @param addressFamily: The address family (sometimes called I{domain}) of
+            the existing socket.  For example, L{socket.AF_INET}.
+
+        @return: A new instance of C{cls} wrapping the socket given by C{fd}.
+        """
+        port = socket.fromfd(fd, addressFamily, cls.socketType)
+        interface = port.getsockname()[0]
+        kwargs = dict(interface=interface, reactor=reactor)
+        if maxPacketSize is not None:
+            kwargs['maxPacketSize'] = maxPacketSize
+        self = cls(None, protocol, **kwargs)
+        self._preexistingSocket = port
+        return self
+
+
 
     def __repr__(self):
         if self._realPortNumber is not None:
@@ -104,11 +143,17 @@ class Port(base.BasePort):
         self._connectToProtocol()
 
     def _bindSocket(self):
-        try:
-            skt = self.createInternetSocket()
-            skt.bind((self.interface, self.port))
-        except socket.error as le:
-            raise error.CannotListenError(self.interface, self.port, le)
+        if self._preexistingSocket is None:
+            # Create a new socket and make it listen
+            try:
+                skt = self.createInternetSocket()
+                skt.bind((self.interface, self.port))
+            except socket.error as le:
+                raise error.CannotListenError(self.interface, self.port, le)
+        else:
+            # Re-use the externally specified socket
+            skt = self._preexistingSocket
+            self._preexistingSocket = None
 
         # Make sure that if we listened on port 0, we update that to
         # reflect what the OS actually assigned us.
