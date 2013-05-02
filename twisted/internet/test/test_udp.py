@@ -19,7 +19,7 @@ from twisted.python.log import ILogContext, err
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.internet.interfaces import (
-    ILoggingContext, IListeningPort, IReactorUDP)
+    ILoggingContext, IListeningPort, IReactorUDP, IReactorSocket)
 from twisted.internet.address import IPv4Address
 from twisted.internet.protocol import DatagramProtocol
 

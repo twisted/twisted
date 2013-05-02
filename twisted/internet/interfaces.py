@@ -970,6 +970,36 @@ class IReactorSocket(Interface):
         """
 
 
+    def adoptDatagramPort(fileDescriptor, addressFamily, factory):
+        """
+        Add an existing listening I{SOCK_DGRAM} socket to the reactor to
+        monitor for new connections to accept and handle.
+
+        @param fileDescriptor: A file descriptor associated with a socket which
+            is already bound to an address and marked as listening.  The socket
+            must be set non-blocking.  Any additional flags (for example,
+            close-on-exec) must also be set by application code.  Application
+            code is responsible for closing the file descriptor, which may be
+            done as soon as C{adoptStreamPort} returns.
+        @type fileDescriptor: C{int}
+
+        @param addressFamily: The address family (or I{domain}) of the socket.
+            For example, L{socket.AF_INET6}.
+
+        @param factory: A L{ServerFactory} instance to use to create new
+            protocols to handle connections accepted via this socket.
+
+        @return: An object providing L{IListeningPort}.
+
+        @raise UnsupportedAddressFamily: If the given address family is not
+            supported by this reactor, or not supported with the given socket
+            type.
+
+        @raise UnsupportedSocketType: If the given socket type is not supported
+            by this reactor, or not supported with the given socket type.
+        """
+
+
 
 class IReactorProcess(Interface):
 
