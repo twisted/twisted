@@ -919,7 +919,6 @@ class IReactorSocket(Interface):
 
         - U{http://twistedmatrix.com/trac/ticket/5570}: established connections
         - U{http://twistedmatrix.com/trac/ticket/5573}: AF_UNIX ports
-        - U{http://twistedmatrix.com/trac/ticket/5574}: SOCK_DGRAM sockets
     """
 
     def adoptStreamPort(fileDescriptor, addressFamily, factory):
