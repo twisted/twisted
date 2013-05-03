@@ -1,3 +1,14 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Tests for implementations of L{IReactorSocket}.
+
+Generally only tests for failure cases are found here.  Success cases for
+this interface are tested elsewhere.  For example, the success case for
+I{AF_INET} is in L{twisted.internet.test.test_tcp}, since that case should
+behave exactly the same as L{IReactorTCP.listenTCP}.
+"""
 
 import errno, socket
 
