@@ -476,14 +476,6 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
 
 
     def adoptDatagramPort(self, fileDescriptor, addressFamily, protocol, maxPacketSize=None):
-        """
-        Create a new L{IListeningPort} from an already-initialized socket.
-
-        This just dispatches to a suitable port implementation (eg from
-        L{IReactorUDP}, etc) based on the specified C{addressFamily}.
-
-        @see: L{twisted.internet.interfaces.IReactorSocket.adoptDatagramPort}
-        """
         if addressFamily not in (socket.AF_INET, socket.AF_INET6):
             raise error.UnsupportedAddressFamily(addressFamily)
 
