@@ -985,7 +985,7 @@ class IReactorSocket(Interface):
 
 
     def adoptDatagramPort(fileDescriptor, addressFamily, protocol,
-                          maxPacketSize=None):
+                          maxPacketSize=8192):
         """
         Add an existing listening I{SOCK_DGRAM} socket to the reactor to
         monitor for read and write readiness.
@@ -1005,6 +1005,9 @@ class IReactorSocket(Interface):
         @param protocol: A L{DatagramProtocol} instance to connect to
             a UDP transport.
         @type protocol: L{DatagramProtocol}
+
+        @param maxPacketSize: The maximum packet size to accept.
+        @type maxPacketSize: C{int}
 
         @return: An object providing L{IListeningPort}.
 

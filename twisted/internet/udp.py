@@ -110,7 +110,7 @@ class Port(base.BasePort):
 
     @classmethod
     def _fromListeningDescriptor(cls, reactor, fd, addressFamily, protocol,
-                                 maxPacketSize=None):
+                                 maxPacketSize):
         """
         Create a new L{Port} based on an existing listening
         I{SOCK_DGRAM} socket.
@@ -131,10 +131,8 @@ class Port(base.BasePort):
         """
         port = socket.fromfd(fd, addressFamily, cls.socketType)
         interface = port.getsockname()[0]
-        kwargs = dict(interface=interface, reactor=reactor)
-        if maxPacketSize is not None:
-            kwargs['maxPacketSize'] = maxPacketSize
-        self = cls(None, protocol, **kwargs)
+        self = cls(None, protocol, interface=interface, reactor=reactor,
+                   maxPacketSize=maxPacketSize)
         self._preexistingSocket = port
         return self
 

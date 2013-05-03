@@ -34,11 +34,13 @@ class ListenUDPMixin(object):
     """
     Mixin which uses L{IReactorUDP.listenUDP} to hand out listening UDP ports.
     """
-    def getListeningPort(self, reactor, protocol, port=0, interface=''):
+    def getListeningPort(self, reactor, protocol, port=0, interface='',
+                         maxPacketSize=8192):
         """
         Get a UDP port from a reactor.
         """
-        return reactor.listenUDP(port, protocol, interface=interface)
+        return reactor.listenUDP(port, protocol, interface=interface,
+                                 maxPacketSize=maxPacketSize)
 
 
     def getExpectedStartListeningLogMessage(self, port, protocol):
@@ -61,7 +63,8 @@ class SocketUDPMixin(object):
     Mixin which uses L{IReactorSocket.adoptDatagramPort} to hand out
     listening UDP ports.
     """
-    def getListeningPort(self, reactor, protocol, port=0, interface=''):
+    def getListeningPort(self, reactor, protocol, port=0, interface='',
+                         maxPacketSize=8192):
         """
         Get a UDP port from a reactor, wrapping an already-initialized file
         descriptor.
@@ -78,7 +81,8 @@ class SocketUDPMixin(object):
             portSock.setblocking(False)
             try:
                 return reactor.adoptDatagramPort(
-                    portSock.fileno(), portSock.family, protocol)
+                    portSock.fileno(), portSock.family, protocol,
+                    maxPacketSize)
             finally:
                 # The socket should still be open; fileno will raise if it is
                 # not.

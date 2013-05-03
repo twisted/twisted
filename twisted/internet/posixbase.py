@@ -475,16 +475,14 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
             fileDescriptor, addressFamily, factory, self)
 
 
-    def adoptDatagramPort(self, fileDescriptor, addressFamily, protocol, maxPacketSize=None):
+    def adoptDatagramPort(self, fileDescriptor, addressFamily, protocol,
+                          maxPacketSize=8192):
         if addressFamily not in (socket.AF_INET, socket.AF_INET6):
             raise error.UnsupportedAddressFamily(addressFamily)
 
-        kwargs = {}
-        if maxPacketSize is not None:
-            kwargs['maxPacketSize'] = maxPacketSize
-
         p = udp.Port._fromListeningDescriptor(
-            self, fileDescriptor, addressFamily, protocol, **kwargs)
+            self, fileDescriptor, addressFamily, protocol,
+            maxPacketSize=maxPacketSize)
         p.startListening()
         return p
 

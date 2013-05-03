@@ -443,7 +443,7 @@ class MemoryReactor(object):
                 fileDescriptor, addressFamily, factory))
 
 
-    def adoptDatagramPort(self, fileno, addressFamily, protocol):
+    def adoptDatagramPort(self, fileno, addressFamily, protocol, maxPacketSize=8192):
         """
         Fake L{IReactorSocket.adoptDatagramPort}, that logs the call and returns
         a fake L{IListeningPort}.
@@ -457,7 +457,8 @@ class MemoryReactor(object):
         else:
             raise UnsupportedAddressFamily()
 
-        self.adoptedPorts.append((fileno, addressFamily, protocol))
+        self.adoptedPorts.append(
+            (fileno, addressFamily, protocol, maxPacketSize))
         return _FakePort(addr)
 
 
