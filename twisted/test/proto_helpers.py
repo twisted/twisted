@@ -446,7 +446,9 @@ class MemoryReactor(object):
     def adoptDatagramPort(self, fileno, addressFamily, protocol):
         """
         Fake L{IReactorSocket.adoptDatagramPort}, that logs the call and returns
-        an L{IListeningPort}.
+        a fake L{IListeningPort}.
+
+        @see: L{twisted.internet.interfaces.IReactorSocket.adoptDatagramPort}
         """
         if addressFamily == AF_INET:
             addr = IPv4Address('TCP', '0.0.0.0', 1234)
