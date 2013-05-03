@@ -284,7 +284,6 @@ class UDPServerTestsBuilder(ReactorBuilder, ListenUDPMixin,
 
 
 
-
 class UDPFDServerTestsBuilder(ReactorBuilder, SocketUDPMixin,
                               UDPPortTestsMixin, DatagramTransportTestsMixin):
     """

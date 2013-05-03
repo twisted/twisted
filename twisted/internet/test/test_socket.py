@@ -72,10 +72,11 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
 
     def test_stopOnlyCloses(self):
         """
-        When the L{IListeningPort} returned by L{IReactorSocket.adoptStreamPort}
-        is stopped using C{stopListening}, the underlying socket is closed but
-        not shutdown.  This allows another process which still has a reference
-        to it to continue accepting connections over it.
+        When the L{IListeningPort} returned by
+        L{IReactorSocket.adoptStreamPort} is stopped using
+        C{stopListening}, the underlying socket is closed but not
+        shutdown.  This allows another process which still has a
+        reference to it to continue accepting connections over it.
         """
         reactor = self.buildReactor()
 
@@ -90,8 +91,9 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
             portSocket.fileno(), portSocket.family, ServerFactory())
         d = port.stopListening()
         def stopped(ignored):
-            # Should still be possible to accept a connection on portSocket.  If
-            # it was shutdown, the exception would be EINVAL instead.
+            # Should still be possible to accept a connection on
+            # portSocket.  If it was shutdown, the exception would be
+            # EINVAL instead.
             exc = self.assertRaises(socket.error, portSocket.accept)
             self.assertEqual(exc.args[0], errno.EAGAIN)
         d.addCallback(stopped)
@@ -172,7 +174,8 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
 
         exc = self.assertRaises(
             socket.error,
-            reactor.adoptDatagramPort, fileno, socket.AF_INET, DatagramProtocol())
+            reactor.adoptDatagramPort, fileno, socket.AF_INET,
+            DatagramProtocol())
         self.assertEqual(exc.args[0], errno.EBADF)
 
 
@@ -191,15 +194,17 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
 
         self.assertRaises(
             UnsupportedAddressFamily,
-            reactor.adoptDatagramPort, port.fileno(), arbitrary, DatagramProtocol())
+            reactor.adoptDatagramPort, port.fileno(), arbitrary,
+            DatagramProtocol())
 
 
     def test_stopOnlyCloses(self):
         """
-        When the L{IListeningPort} returned by L{IReactorSocket.adoptDatagramPort}
-        is stopped using C{stopListening}, the underlying socket is closed but
-        not shutdown.  This allows another process which still has a reference
-        to it to continue reading and writing to it.
+        When the L{IListeningPort} returned by
+        L{IReactorSocket.adoptDatagramPort} is stopped using
+        C{stopListening}, the underlying socket is closed but not
+        shutdown.  This allows another process which still has a
+        reference to it to continue reading and writing to it.
         """
         reactor = self.buildReactor()
 
