@@ -842,9 +842,9 @@ class IReactorUDP(Interface):
         @param port: A port number on which to listen.
         @type port: C{int}
 
-        @param proto: A L{DatagramProtocol} instance which will be
+        @param protocol: A L{DatagramProtocol} instance which will be
             connected to the given C{port}.
-        @type proto: L{DatagramProtocol}
+        @type protocol: L{DatagramProtocol}
 
         @param interface: The local IPv4 or IPv6 address to which to bind;
             defaults to '', ie all IPv4 addresses.
@@ -984,7 +984,8 @@ class IReactorSocket(Interface):
         """
 
 
-    def adoptDatagramPort(fileDescriptor, addressFamily, protocol):
+    def adoptDatagramPort(fileDescriptor, addressFamily, protocol,
+                          maxPacketSize=None):
         """
         Add an existing listening I{SOCK_DGRAM} socket to the reactor to
         monitor for read and write readiness.
