@@ -105,7 +105,6 @@ class SocketUDPMixin(object):
 
 
 
-
 class DatagramTransportTestsMixin(LogObserverMixin):
     """
     Mixin defining tests which apply to any port/datagram based transport.
@@ -273,6 +272,10 @@ class UDPPortTestsMixin(object):
 
 class UDPServerTestsBuilder(ReactorBuilder, ListenUDPMixin,
                             UDPPortTestsMixin, DatagramTransportTestsMixin):
+    """
+    Run L{UDPPortTestsMixin} tests using UDP newly created UDP
+    sockets.
+    """
     requiredInterfaces = (IReactorUDP,)
 
 
@@ -280,6 +283,9 @@ class UDPServerTestsBuilder(ReactorBuilder, ListenUDPMixin,
 
 class UDPFDServerTestsBuilder(ReactorBuilder, SocketUDPMixin,
                               UDPPortTestsMixin, DatagramTransportTestsMixin):
+    """
+    Run L{UDPPortTestsMixin} tests using adopted UDP sockets.
+    """
     requiredInterfaces = (IReactorSocket,)
 
 
