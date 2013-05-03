@@ -75,7 +75,6 @@ class SocketUDPMixin(object):
                 address = (interface, port)
             portSock = socket.socket(domain, socket.SOCK_DGRAM)
             portSock.bind(address)
-#            portSock.listen(3)
             portSock.setblocking(False)
             try:
                 return reactor.adoptDatagramPort(
