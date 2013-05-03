@@ -80,7 +80,24 @@ class Port(base.BasePort):
 
     def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None):
         """
-        Initialize with a numeric port to listen on.
+        @param port: A port number on which to listen.
+        @type port: C{int}
+
+        @param proto: A C{DatagramProtocol} instance which will be
+            connected to the given C{port}.
+        @type proto: L{twisted.internet.protocol.DatagramProtocol}
+
+        @param interface: The local IPv4 or IPv6 address to which to bind;
+            defaults to '', ie all IPv4 addresses.
+        @type interface: C{str}
+
+        @param maxPacketSize: The maximum packet size to accept.
+        @type maxPacketSize: C{int}
+
+        @param reactor: A reactor which will notify this C{Port} when
+            its socket is ready for reading or writing. Defaults to
+            C{None}, ie the default global reactor.
+        @type reactor: L{interfaces.IReactorFDSet}
         """
         base.BasePort.__init__(self, reactor)
         self.port = port
@@ -91,23 +108,26 @@ class Port(base.BasePort):
         self._connectedAddr = None
 
 
-
     @classmethod
-    def _fromListeningDescriptor(cls, reactor, fd, addressFamily, protocol, maxPacketSize=None):
+    def _fromListeningDescriptor(cls, reactor, fd, addressFamily, protocol,
+                                 maxPacketSize=None):
         """
-        Create a new L{Port} based on an existing listening I{SOCK_DGRAM}
-        I{AF_INET} socket.
+        Create a new L{Port} based on an existing listening
+        I{SOCK_DGRAM} socket.
 
         Arguments are the same as to L{Port.__init__}, except where noted.
 
         @param fd: An integer file descriptor associated with a listening
             socket.  The socket must be in non-blocking mode.  Any additional
             attributes desired, such as I{FD_CLOEXEC}, must also be set already.
+        @type fd: C{int}
 
         @param addressFamily: The address family (sometimes called I{domain}) of
             the existing socket.  For example, L{socket.AF_INET}.
+        @param addressFamilt: C{int}
 
         @return: A new instance of C{cls} wrapping the socket given by C{fd}.
+        @rtype: L{Port}
         """
         port = socket.fromfd(fd, addressFamily, cls.socketType)
         interface = port.getsockname()[0]
@@ -117,7 +137,6 @@ class Port(base.BasePort):
         self = cls(None, protocol, **kwargs)
         self._preexistingSocket = port
         return self
-
 
 
     def __repr__(self):
