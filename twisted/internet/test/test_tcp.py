@@ -219,12 +219,31 @@ class FakeProtocol(Protocol):
 @implementer(IReactorFDSet)
 class _FakeFDSetReactor(object):
     """
-    A no-op implementation of L{IReactorFDSet}, which ignores all adds and
+    An in-memory implementation of L{IReactorFDSet}, which records all adds and
     removes.
     """
 
-    addReader = addWriter = removeReader = removeWriter = (
-        lambda self, desc: None)
+    def __init__(self):
+        self._readers = []
+        self._writers = []
+
+
+    def addReader(self, reader):
+        self._readers.append(reader)
+
+
+    def removeReader(self, reader):
+        if reader in self._readers:
+            self._readers.remove(reader)
+
+
+    def addWriter(self, writer):
+        self._writers.append(writer)
+
+
+    def removeWriter(self, writer):
+        if writer in self._writers:
+            self._writers.remove(writer)
 
 
 
@@ -280,6 +299,27 @@ class TCPServerTests(TestCase):
         """
         self.server.TLS = True
         self.test_writeSequenceAfterDisconnect()
+
+
+    def test_resumeProducingWhileDisconnecting(self):
+        """
+        When a L{Server} has already started disconnecting via
+        C{loseConnection}, its C{resumeProducing} method ought to be a no-op.
+        """
+        self.server.loseConnection()
+        self.server.resumeProducing()
+        self.assertEquals(self.reactor._readers, [])
+
+
+    def test_resumeProducingWhileDisconnected(self):
+        """
+        When a L{Server} has already lost its connection, its
+        C{resumeProducing} method ought to be a no-op.
+        """
+        self.server.connectionLost(Failure(Exception("dummy")))
+        self.assertEquals(self.reactor._readers, [])
+        self.server.resumeProducing()
+        self.assertEquals(self.reactor._readers, [])
 
 
 
