@@ -123,8 +123,6 @@ class SingleChildResource(object):
 
 
     def traverse(self, request, path):
-        if not self.child:
-            raise RuntimeError("WAT")
         segment, childPath = path.child()
         return childPath.traverseUsing(self.child)
 
@@ -138,6 +136,13 @@ class SingleChildDeferredResource(SingleChildResource):
     def traverse(self, request, path):
         segment, childPath = path.child()
         return childPath.traverseUsing(succeed(self.child))
+
+
+
+class TwoSegmentResource(SingleChildResource):
+    def traverse(self, request, path):
+        segments, childPath = path.descend(2)
+        return childPath.traverseUsing(self.child)
 
 
 
@@ -179,6 +184,25 @@ class TestTraverse(unittest.TestCase):
         ])
 
 
+    def test_traverseMultiSegment(self):
+        """Traverse with resources using one segment at a time."""
+        request = "REQUEST_OBJECT"
+        path = Path((u"xx", u"yy", u"wibble"))
+        leafResource = SingleChildResource("leaf", None)
+        middleResource = SingleChildResource("middle", leafResource)
+        # root resource will consume both of /xx/yy
+        rootResource = TwoSegmentResource("root", middleResource)
+        dResource = traverse(request, path, rootResource)
+
+        history = self.successResultOf(dResource)
+
+        self.assertEqual(history, [
+            (path, rootResource),
+            (Path((u"wibble",)), middleResource),
+            (Path.leaf(), leafResource),
+        ])
+
+
     def test_traverseDeferred(self):
         """Traverse with resources using one segment at a time."""
         request = "REQUEST_OBJECT"
@@ -194,7 +218,6 @@ class TestTraverse(unittest.TestCase):
             (Path.leaf(), leafResource),
         ])
 
-    # TODO: Test with resources that consume multiple path segments
     # TODO: Should there be an escape hatch if busted resources send the
     #     traversal into a loop?
 
