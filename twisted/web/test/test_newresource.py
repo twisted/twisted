@@ -4,7 +4,7 @@
 
 from zope.interface import implements
 from twisted.trial import unittest
-from twisted.web._newresource import Response, Path, INDEX, _TraversalStep
+from twisted.web._newresource import Response, Path, INDEX, _TraversalStep, traverse
 from twisted.web.http import OK
 from twisted.web.http_headers import Headers
 from twisted.web.iweb import IBodyProducer, UNKNOWN_LENGTH
@@ -110,6 +110,67 @@ class PathTests(unittest.TestCase):
         p1 = Path.fromString("/foo/bar/baz")
         self.assertEqual(repr(p1),
             "<twisted.web._newresource.Path (u'foo', u'bar', u'baz')>")
+
+
+
+class SingleChildResource(object):
+    # implements IResource
+
+    def __init__(self, name, child):
+        self.name = name
+        self.child = child
+
+
+    def traverse(self, request, path):
+        if not self.child:
+            raise RuntimeError("WAT")
+        segment, childPath = path.child()
+        return childPath.traverseUsing(self.child)
+
+
+    def __repr__(self):
+        return "<SingleChildResource %r>" % (self.name,)
+
+
+
+class TestTraverse(unittest.TestCase):
+
+
+    def test_traverseEmptyPath(self):
+        """The empty path has a single step: the root resource."""
+        request = "REQUEST_OBJECT"
+        path = Path.leaf()
+        rootResource = SingleChildResource("root", None)
+        dResource = traverse(request, path, rootResource)
+
+        @dResource.addCallback
+        def traverseDone(history):
+            self.assertEqual(history, [(path, rootResource)])
+        return dResource
+
+
+    def test_traverse(self):
+        """Traverse with resources using one segment at a time."""
+        request = "REQUEST_OBJECT"
+        path = Path((u"foo", u"bar"))
+        leafResource = SingleChildResource("leaf", None)
+        middleResource = SingleChildResource("middle", leafResource)
+        rootResource = SingleChildResource("root", middleResource)
+        dResource = traverse(request, path, rootResource)
+
+        @dResource.addCallback
+        def traverseDone(history):
+            self.assertEqual(history, [
+                (path, rootResource),
+                (Path((u"bar",)), middleResource),
+                (Path.leaf(), leafResource),
+            ])
+        return dResource
+
+    # TODO: Test with resources that have deferred traverse results
+    # TODO: Test with resources that consume multiple path segments
+    # TODO: Should there be an escape hatch if busted resources send the
+    #     traversal into a loop?
 
 
 

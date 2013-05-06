@@ -6,6 +6,7 @@
 Implementation of a low-level Resource class and related dependencies.
 """
 import urllib
+from twisted.internet.defer import Deferred
 
 __metaclass__ = type
 
@@ -178,6 +179,15 @@ def traverse(request, path, rootResource):
         L{IResource}) tuples, the traversal history. The final L{IResource} is
         the one that can render the given HTTP request.
     """
+    dHistory = Deferred()
+    resource = rootResource
+    history = [path.traverseUsing(resource)]
+    while path.segments:
+        step = resource.traverse(request, path)
+        history.append(step)
+        path, resource = step
+    dHistory.callback(history)
+    return dHistory
 
 
 
