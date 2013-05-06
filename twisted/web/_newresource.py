@@ -10,6 +10,7 @@ __metaclass__ = type
 
 from zope.interface import Interface
 from twisted.web.iweb import IBodyProducer, UNKNOWN_LENGTH
+from twisted.python.reflect import fullyQualifiedName
 from twisted.web.http_headers import Headers
 from twisted.web.http import OK
 
@@ -65,6 +66,10 @@ class Path:
 
         @raises Something: If depth is too high.
         """
+        if depth > len(self.segments):
+            raise ValueError("Cannot descend %d segments, Path only contains "
+                "%d: %r" %(depth, len(self.segments), self.segments))
+        return self.segments[0:depth], self.__class__(self.segments[depth:])
 
 
     def traverseUsing(self, resource):
@@ -76,6 +81,14 @@ class Path:
             fire with one.
         """
         return _TraversalStep(self, resource)
+
+
+    def __eq__(self, other):
+        return self.segments == other.segments
+
+
+    def __repr__(self):
+        return "<%s %r>" % (fullyQualifiedName(self.__class__), self.segments)
 
 
 

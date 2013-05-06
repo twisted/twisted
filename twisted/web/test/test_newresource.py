@@ -67,6 +67,47 @@ class PathTests(unittest.TestCase):
         self.assertEqual(step, (p, "resource"))
 
 
+    def test_descend(self):
+        """L{Path.descend} consumes multiple segments."""
+        p = Path.fromString("/foo/bar/baz")
+        consumed, remainder = p.descend(2)
+        self.assertEqual(consumed, (u"foo", u"bar"))
+        # XXX: Should the resulting remainder Path have some indicaton
+        # of its history?
+        self.assertEqual(remainder, Path((u"baz",)))
+
+
+    def test_descendAll(self):
+        """L{Path.descend}ing through all segments leaves empty remainder."""
+        p = Path.fromString("/foo/bar/baz")
+        consumed, remainder = p.descend(3)
+        self.assertEqual(consumed, (u"foo", u"bar", u"baz"))
+        self.assertEqual(remainder, Path(()))
+
+
+    def test_descendTooDeepRaises(self):
+        p = Path.fromString("sediment/ig.intrusive/metamorphic/ig.extrusive")
+        self.assertRaises(ValueError, p.descend, 5)
+
+
+    def test_eq(self):
+        """L{Path}s are equal if their segments are equal."""
+        p1 = Path.fromString("/foo/bar/baz")
+        p1b = Path.fromString("/foo/bar/baz")
+        self.assertTrue(p1 == p1)
+        self.assertTrue(p1 == p1b)
+
+        p2 = Path.fromString("/foo/bar/fizz")
+        self.assertNot(p1 == p2)
+
+
+    def test_repr(self):
+        """repr contains class and segments."""
+        p1 = Path.fromString("/foo/bar/baz")
+        self.assertEqual(repr(p1),
+            "<twisted.web._newresource.Path (u'foo', u'bar', u'baz')>")
+
+
 
 class Producer:
     """
