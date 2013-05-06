@@ -27,11 +27,17 @@ class Path:
     @ivar segmentName: The current segment's name, either a C{unicode} string
         or the C{INDEX} constant.
 
-    @ivar _segments: C{tuple} of C{unicode} strings or C{INDEX} object.
+    @ivar segments: C{tuple} of C{unicode} strings or C{INDEX} object.
     """
 
     def __init__(self, segments):
         pass
+
+
+    def leaf(self):
+        """
+        Return a L{Path} that has no more segments left.
+        """
 
 
     def child(self):
@@ -105,6 +111,13 @@ class IResource(Interface):
                 else:
                     resource = PermissionDenied()
                 return path.traverse(resource)
+
+        Finally, here's an example of consuming the whole path, regardless of
+        its length::
+
+            def traverseChild(self, request, path):
+                return path.leaf().traverse(
+                    CustomURLDispatcher(path.segments))
         """
 
 
