@@ -38,7 +38,6 @@ class Path:
         """
         Create a L{Path} from its byte representation.
         """
-        # XXX url decode
         return klass(tuple(
             [urllib.unquote(p.decode(encoding)) for p in path.split("/")[1:]]))
 
