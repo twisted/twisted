@@ -193,7 +193,7 @@ class TestTraverse(unittest.TestCase):
 
 
     def test_traverseMultiSegment(self):
-        """Traverse with resources using one segment at a time."""
+        """Traverse a resource consuming two path segments."""
         request = "REQUEST_OBJECT"
         path = Path((u"xx", u"yy", u"wibble"))
         leafResource = SingleChildResource("leaf", None)
@@ -212,7 +212,10 @@ class TestTraverse(unittest.TestCase):
 
 
     def test_traverseZeroSegment(self):
-        """Traverse with resources using one segment at a time."""
+        """
+        Traverse with a resource that consumes no segments, but directs to
+        another resource.
+        """
         request = "REQUEST_OBJECT"
         path = Path((u"argon", u"boron"))
         leafResource = SingleChildResource("leaf", None)
@@ -232,7 +235,7 @@ class TestTraverse(unittest.TestCase):
 
 
     def test_traverseDeferred(self):
-        """Traverse with resources using one segment at a time."""
+        """Traverse resources returning deferred results in traversal."""
         request = "REQUEST_OBJECT"
         path = Path((u"foo",))
         leafResource = SingleChildDeferredResource("leaf", None)
