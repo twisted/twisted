@@ -5,6 +5,7 @@
 """
 Implementation of a low-level Resource class and related dependencies.
 """
+import urllib
 
 __metaclass__ = type
 
@@ -38,7 +39,8 @@ class Path:
         Create a L{Path} from its byte representation.
         """
         # XXX url decode
-        return klass(tuple([p.decode(encoding) for p in path.split("/")[1:]]))
+        return klass(tuple(
+            [urllib.unquote(p.decode(encoding)) for p in path.split("/")[1:]]))
 
 
     @classmethod

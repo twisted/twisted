@@ -34,7 +34,8 @@ class PathTests(unittest.TestCase):
         """
         L{Path.fromString} can do URL unquoting.
         """
-    test_fromStringQuoting.todo = "laters"
+        self.assertEqual(Path.fromString("/I%2FO/a%20b").segments,
+            (u"I/O", u"a b"))
 
 
     def test_leaf(self):
