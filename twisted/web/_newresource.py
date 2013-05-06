@@ -24,22 +24,30 @@ class IResource(Interface):
     mechanism for mapping URLs to content.
     """
 
-    def locateChild(req, segments):
+    def locateChild(request, traversal):
         """
         Locate another object which can be adapted to IResource.
 
-        @return: A 2-tuple of (resource, remaining-path-segments), or a
-            C{Deferred} which will fire the above.  Causes the object publishing
-            machinery to continue on with specified resource and segments,
+        Either call C{traversal.consume()} one or more times to consume path
+        elements in the traversal, or C{traversal.replace()} to replace the
+        current resoure with a new resource in the traversal path.
+        
+        @return: Another L{IResource}, or a C{Deferred} which will fire with
+            on.  The object publishing machinery will continue on with the
+            specified resource and remaining segments in the traversal,
             calling the appropriate method on the specified resource.
         """
 
-    def render(req):
+
+    def renderHTTP(request, traversal):
         """
+        @param traversal: The traversal used to reach this resource.
+        
         Return a L{Response} instance, or a C{Deferred} which will fire with a
         L{Response}. This response will be written to the web browser which
         initiated the request.
         """
+
 
 
 class Response:
@@ -81,3 +89,24 @@ class Response:
         if length != UNKNOWN_LENGTH:
             self.headers.addRawHeader("content-length", str(length))
         self.body = body
+
+
+
+class Resource:
+
+    def locateChild(self, request, traversal):
+        #pathElem = traversal.consume()
+        #return NewResource(pathElem)
+        #or
+        #traversal.replace(NewResource())
+        #return
+        pass
+
+
+class Traversal:
+
+    def __init__(self, iri):
+        self.iri = []
+        self.history = [] # list of (iri, resource) pairs, e.g. www.foo.com/ -> R1, www.foo.com/bar -> R2
+        # Replace *replaces* last item in history
+    
