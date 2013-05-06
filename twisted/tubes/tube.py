@@ -170,13 +170,13 @@ def Tube(start, *plumbing):
 
     is roughly analagous to::
 
-        x = series(a, b, c)
+        x = Tube(a, b, c)
 
-    with the additional feature that C{series} will convert C{a}, C{b}, and
-    C{c} to the requisite L{IDrain} objects first.
+    with the additional feature that C{Tube} will convert C{a}, C{b}, and C{c}
+    to the requisite L{IDrain} objects first.
 
     @param start: The initial element in the chain; the object that will
-        consume inputs passed to the result of this call to C{series}.
+        consume inputs passed to the result of this call to C{Tube}.
     @type start: an L{IPump}, or anything adaptable to L{IFount}, as well as
         L{IDrain}.
 
