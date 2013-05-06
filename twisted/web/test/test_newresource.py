@@ -42,27 +42,19 @@ class PathTests(unittest.TestCase):
         L{Path.leaf} returns a L{Path} with no segments.
         """
         l = Path.leaf()
-        self.assertIdentical(l.segmentName, None)
         self.assertEqual(l.segments, ())
 
     # XXX Test child() of leaf raises.
-
-    def test_segmentName(self):
-        """
-        The C{segmentName} attribute of L{Path} instances matches the first
-        segment in C{segments}.
-        """
-    test_segmentName.todo = "later"
-
 
     def test_child(self):
         """
         L{Path.child} consumes one of the segments in the path.
         """
         p = Path.fromString("/foo/bar/baz")
-        child = p.child()
+        segment, child = p.child()
         self.assertIsInstance(child, Path)
-        self.assertEqual(child.segments, ("bar", "baz"))
+        self.assertEqual(segment, u"foo")
+        self.assertEqual(child.segments, (u"bar", u"baz"))
 
 
     def test_traverseUsing(self):

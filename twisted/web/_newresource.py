@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.web.test.test_web -*-
+# -*- test-case-name: twisted.web.test.test_newresource -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -14,29 +14,21 @@ from twisted.web.http_headers import Headers
 from twisted.web.http import OK
 
 
-# A special object indicating the index part of a URL path. E.g. /foo/bar is
+# A more meaningful name for the index part of a URL path. E.g. /foo/bar is
 # the path [u"foo", u"bar"], /foo/bar/ is [u"foo", u"bar", INDEX] and //foo/
 # is [INDEX, u"FOO"]:
-INDEX = object()
+INDEX = u""
 
 
 class Path:
     """
     A URL path, a series of segments.
 
-    @ivar segmentName: The current segment's name, either a C{unicode} string
-        or the C{INDEX} constant. C{None} if this is a path with no segments,
-        i.e. all parent segments have been consumed.
-
     @ivar segments: C{tuple} of C{unicode} strings or C{INDEX} object.
     """
 
     def __init__(self, segments):
         self.segments = segments
-        if segments:
-            pass#self.segmentName = segments[0]
-        else:
-            self.segmentName = None
 
 
     @classmethod
@@ -45,13 +37,7 @@ class Path:
         Create a L{Path} from its byte representation.
         """
         # XXX url decode
-        result = []
-        for p in path.split("/")[1:]:
-            p = p.decode(encoding)
-            if p == "":
-                p = INDEX
-            result.append(p)
-        return klass(tuple(result))
+        return klass(tuple([p.decode(encoding) for p in path.split("/")[1:]]))
 
 
     @classmethod
@@ -64,18 +50,30 @@ class Path:
 
     def child(self):
         """
-        Return the next child L{Path}, i.e. without the current top-level path
-        segment.
+        Return a tuple (segment, child L{Path}), i.e. consume the current
+        top-level path segment.
 
         @raises Something: If this is a leaf path.
         """
-        return self.__class__(self.segments[1:])
+        return self.segments[0], self.__class__(self.segments[1:])
+
+
+    def descend(self, depth):
+        """
+        Return a tuple of (segments, child L{Path}) which consumes C{depth}
+        segments of the path.
+
+        @raises Something: If depth is too high.
+        """
 
 
     def traverseUsing(self, resource):
         """
         Return an object comprehensible to the resource-traversal mechanism,
         indicating that this path will be traversed by the given resource.
+
+        @param resource: a L{IResource} provider, or a C{Deferred} that will
+            fire with one.
         """
         return _TraversalStep(self, resource)
 
@@ -109,31 +107,31 @@ class IResource(Interface):
         If this method will consume one or more path segments, return the
         result of calling C{traverseUsing} on the child path. C{traverseUsing}
         should be called with a L{IResource} provider that will handle the
-        remaining segments. You can also return a C{Deferred} that fires with
-        the result of C{traverseUsing}.
+        remaining segments. You can also call C{traverseUsing} with a
+        C{Deferred} that fires with a L{IResource}.
+
+        For example, this resource consumes only one path segment::
+
+            def traverse(self, request, path):
+                segmentName, child = path.child()
+                return child.traverseUsing(ChildResource(segmentName))
 
         Here's an example that consumes /YYYY/MM/DD URLs::
 
             def traverse(self, request, path):
-                year = int(path.segmentName)
-                monthPath = path.child()
-                month = int(monthPath.segmentName)
-                dayPath = monthPath.child()
-                day = int(dayPath.segmentName)
-                return dayPath.traverseUsing(DateResource(year, month, day))
+                (year, month, day), child = path.descend(3)
+                return child.traverseUsing(DateResource(year, month, day))
 
         To provide a resource that will handle the full given path, just
         return the result of calling C{traverseUsing} on the C{path} passed in
         to this method. For example, here's an implementation that returns
-        different resources depending on some sort of authentication
+        different resources depending on asynchronous authentication
         mechanism::
 
             def traverse(self, request, path):
-                if isAuthenticated(request):
-                    resource = SecretResource()
-                else:
-                    resource = PermissionDenied()
-                return path.traverseUsing(resource)
+                d = authenticate(request)
+                d.addCallbacks(AuthenticatedResource, PermissionDenied)
+                return path.traverseUsing(d)
 
         Finally, here's an example of consuming the whole path, regardless of
         its length::
@@ -149,29 +147,21 @@ class IResource(Interface):
         @param traversalHistory: A list of (path, resource) tuples.
 
         Return a L{Response} instance, or a C{Deferred} which will fire with a
-        L{Response}. This response will be written to the web browser which
+        L{Response}. This response will be written to the HTTP client which
         initiated the request.
         """
 
 
-class Traversal:
+
+def traverse(request, path, rootResource):
     """
     Traverse a path, finding the leaf L{IResource} that will render the
     corresponding web entity.
 
-    @ivar history: a C{list} of (L{Path}, L{IResource}) tuples, the traversal
-        history.
+    @return: A C{Deferred} that fires with a C{list} of (L{Path},
+        L{IResource}) tuples, the traversal history. The final L{IResource} is
+        the one that can render the given HTTP request.
     """
-
-    def __init__(self, path, rootResource):
-        pass
-
-
-    def traverse(self):
-        """
-        Return a C{Deferred} that fires with a L{IResource} that can render
-        the entity indicated by the path.
-        """
 
 
 
