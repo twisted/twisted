@@ -146,6 +146,14 @@ class TwoSegmentResource(SingleChildResource):
 
 
 
+class ZeroSegmentResource(SingleChildResource):
+    """Dispatches based on something other than a path segment."""
+
+    def traverse(self, request, path):
+        return path.traverseUsing(self.child)
+
+
+
 class TestTraverse(unittest.TestCase):
 
 
@@ -199,6 +207,26 @@ class TestTraverse(unittest.TestCase):
         self.assertEqual(history, [
             (path, rootResource),
             (Path((u"wibble",)), middleResource),
+            (Path.leaf(), leafResource),
+        ])
+
+
+    def test_traverseZeroSegment(self):
+        """Traverse with resources using one segment at a time."""
+        request = "REQUEST_OBJECT"
+        path = Path((u"argon", u"boron"))
+        leafResource = SingleChildResource("leaf", None)
+        middleResource = SingleChildResource("middle", leafResource)
+        zeroWidthResource = ZeroSegmentResource("zero", middleResource)
+        rootResource = SingleChildResource("root", zeroWidthResource)
+        dResource = traverse(request, path, rootResource)
+
+        history = self.successResultOf(dResource)
+
+        self.assertEqual(history, [
+            (path, rootResource),
+            (Path((u"boron",)), zeroWidthResource),
+            (Path((u"boron",)), middleResource),
             (Path.leaf(), leafResource),
         ])
 
