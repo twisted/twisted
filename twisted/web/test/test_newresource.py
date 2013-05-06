@@ -158,14 +158,13 @@ class TestTraverse(unittest.TestCase):
         rootResource = SingleChildResource("root", middleResource)
         dResource = traverse(request, path, rootResource)
 
-        @dResource.addCallback
-        def traverseDone(history):
-            self.assertEqual(history, [
-                (path, rootResource),
-                (Path((u"bar",)), middleResource),
-                (Path.leaf(), leafResource),
-            ])
-        return dResource
+        history = self.successResultOf(dResource)
+
+        self.assertEqual(history, [
+            (path, rootResource),
+            (Path((u"bar",)), middleResource),
+            (Path.leaf(), leafResource),
+        ])
 
     # TODO: Test with resources that have deferred traverse results
     # TODO: Test with resources that consume multiple path segments
