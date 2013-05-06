@@ -56,7 +56,9 @@ class Path:
 
         @raises Something: If this is a leaf path.
         """
-        return self.segments[0], self.__class__(self.segments[1:])
+        segments, child = self.descend(1)
+        segment = segments[0]
+        return segment, child
 
 
     def descend(self, depth):

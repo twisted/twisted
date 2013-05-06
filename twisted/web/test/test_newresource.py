@@ -44,7 +44,6 @@ class PathTests(unittest.TestCase):
         l = Path.leaf()
         self.assertEqual(l.segments, ())
 
-    # XXX Test child() of leaf raises.
 
     def test_child(self):
         """
@@ -55,6 +54,12 @@ class PathTests(unittest.TestCase):
         self.assertIsInstance(child, Path)
         self.assertEqual(segment, u"foo")
         self.assertEqual(child.segments, (u"bar", u"baz"))
+
+
+    def test_leafHasNoChild(self):
+        """L{Path.child} raises ValueError on leaf nodes."""
+        l = Path.leaf()
+        self.assertRaises(ValueError, l.child)
 
 
     def test_traverseUsing(self):
@@ -72,17 +77,15 @@ class PathTests(unittest.TestCase):
         p = Path.fromString("/foo/bar/baz")
         consumed, remainder = p.descend(2)
         self.assertEqual(consumed, (u"foo", u"bar"))
-        # XXX: Should the resulting remainder Path have some indicaton
-        # of its history?
         self.assertEqual(remainder, Path((u"baz",)))
 
 
     def test_descendAll(self):
-        """L{Path.descend}ing through all segments leaves empty remainder."""
+        """L{Path.descend}ing through all segments leaves a leaf."""
         p = Path.fromString("/foo/bar/baz")
         consumed, remainder = p.descend(3)
         self.assertEqual(consumed, (u"foo", u"bar", u"baz"))
-        self.assertEqual(remainder, Path(()))
+        self.assertEqual(remainder, Path.leaf())
 
 
     def test_descendTooDeepRaises(self):
