@@ -3,6 +3,7 @@
 # See LICENSE for details.
 
 from zope.interface import implements
+from twisted.internet.defer import succeed
 from twisted.trial import unittest
 from twisted.web._newresource import Response, Path, INDEX, _TraversalStep, traverse
 from twisted.web.http import OK
@@ -129,7 +130,14 @@ class SingleChildResource(object):
 
 
     def __repr__(self):
-        return "<SingleChildResource %r>" % (self.name,)
+        return "<%s %r>" % (self.__class__.__name__, self.name)
+
+
+
+class SingleChildDeferredResource(SingleChildResource):
+    def traverse(self, request, path):
+        segment, childPath = path.child()
+        return childPath.traverseUsing(succeed(self.child))
 
 
 
@@ -137,7 +145,11 @@ class TestTraverse(unittest.TestCase):
 
 
     def test_traverseEmptyPath(self):
-        """The empty path has a single step: the root resource."""
+        """The empty path has a single step: the root resource.
+
+        XXX: Is there ever an empty path, or does a request
+            to / result in Path((INDEX,))?
+        """
         request = "REQUEST_OBJECT"
         path = Path.leaf()
         rootResource = SingleChildResource("root", None)
@@ -166,7 +178,22 @@ class TestTraverse(unittest.TestCase):
             (Path.leaf(), leafResource),
         ])
 
-    # TODO: Test with resources that have deferred traverse results
+
+    def test_traverseDeferred(self):
+        """Traverse with resources using one segment at a time."""
+        request = "REQUEST_OBJECT"
+        path = Path((u"foo",))
+        leafResource = SingleChildDeferredResource("leaf", None)
+        rootResource = SingleChildDeferredResource("root", leafResource)
+        dResource = traverse(request, path, rootResource)
+
+        history = self.successResultOf(dResource)
+
+        self.assertEqual(history, [
+            (path, rootResource),
+            (Path.leaf(), leafResource),
+        ])
+
     # TODO: Test with resources that consume multiple path segments
     # TODO: Should there be an escape hatch if busted resources send the
     #     traversal into a loop?

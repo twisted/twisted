@@ -6,7 +6,7 @@
 Implementation of a low-level Resource class and related dependencies.
 """
 import urllib
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, inlineCallbacks, returnValue
 
 __metaclass__ = type
 
@@ -170,6 +170,7 @@ class IResource(Interface):
 
 
 
+@inlineCallbacks
 def traverse(request, path, rootResource):
     """
     Traverse a path, finding the leaf L{IResource} that will render the
@@ -179,15 +180,15 @@ def traverse(request, path, rootResource):
         L{IResource}) tuples, the traversal history. The final L{IResource} is
         the one that can render the given HTTP request.
     """
-    dHistory = Deferred()
     resource = rootResource
     history = [path.traverseUsing(resource)]
     while path.segments:
-        step = resource.traverse(request, path)
-        history.append(step)
-        path, resource = step
-    dHistory.callback(history)
-    return dHistory
+        path, resource = resource.traverse(request, path)
+        # What are we supposed to do with a TraversalStep that has a Deferred
+        # in it?  Or should it have been a Deferred(TraversalStep)?
+        resource = yield resource
+        history.append(_TraversalStep(path, resource))
+    returnValue(history)
 
 
 
