@@ -82,9 +82,29 @@ class IResource(Interface):
         segments. You can also return a C{Deferred} that fires with the result
         of C{traverse}.
 
+        Here's an example that consumes /YYYY/MM/DD URLs::
+
+            def traverseChild(self, request, path):
+                year = int(path.segmentName)
+                monthPath = path.child()
+                month = int(monthPath.segmentName)
+                dayPath = monthPath.child()
+                day = int(dayPath.segmentName)
+                return dayPath.traverse(DateResource(year, month, day))
+
         To provide a resource that will handle the full given path, just
         return the result of calling C{traverse} on the C{path} passed in to
         this method.
+
+        For example, here's an implementation that returns different resources
+        depending on some sort of authentication mechanism::
+
+            def traverseChild(self, request, path):
+                if isAuthenticated(request):
+                    resource = SecretResource()
+                else:
+                    resource = PermissionDenied()
+                return path.traverse(resource)
         """
 
 
