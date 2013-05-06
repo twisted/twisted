@@ -52,6 +52,7 @@ class _TubeFount(_TubePiece):
         self.drain = drain
         # TODO: test for ordering
         result = self.drain.flowingFrom(self)
+        self._tube._nextFount = result
         if self._tube._currentlyPaused:
             self.resumeFlow()
         return result
@@ -122,6 +123,9 @@ class _TubeDrain(_TubePiece):
         if self._tube._pendingOutput:
             self._tube._tfount.pauseFlow()
         self._pump.started()
+        nextFount = self._tube._nextFount
+        if nextFount is not None:
+            return nextFount
         return self._tube._tfount
 
 
@@ -230,10 +234,13 @@ class _Tube(object):
 
     @ivar _currentlyPaused: is this L{Tube} currently paused?  Boolean: C{True}
         if paused, C{False} if not.
+
+    @ivar _nextFount: XXX document me
     """
     _currentlyPaused = False
     _delivered = False
     _pump = None
+    _nextFount = None
 
     def __init__(self, pump):
         """

@@ -287,4 +287,21 @@ class TubeTest(TestCase):
                           ["one-item"])
 
 
+    def test_multiStageTubeReturnsLastStage(self):
+        """
+        XXX explain the way tubes hook together.
+        """
+        class A(Pump):
+            pass
+        class B(Pump):
+            pass
+        a = A()
+        b = B()
+        ab = Tube(a, b)
+        self.ff.flowTo(ab).flowTo(self.fd)
+        a.tube.deliver(3)
+        b.tube.deliver(4)
+        self.assertEquals(self.fd.received, [4])
+
+
 
