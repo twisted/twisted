@@ -18,7 +18,9 @@ class TubeTest(TestCase):
         """
         Create a tube, and a fake drain and fount connected to it.
         """
-        self.tube = Tube(TesterPump())
+        self.pump = TesterPump()
+        self.tubeDrain = Tube(self.pump)
+        self.tube = self.pump.tube
         self.ff = FakeFount()
         self.fd = FakeDrain()
 
@@ -28,7 +30,7 @@ class TubeTest(TestCase):
         The L{Tube.pump} conveniently keeps L{Pump.tube} up to date when you
         set it.
         """
-        firstPump = self.tube.pump
+        firstPump = self.pump
         secondPump = Pump()
         self.assertIdentical(firstPump.tube, self.tube)
         self.assertIdentical(secondPump.tube, None)
@@ -48,8 +50,10 @@ class TubeTest(TestCase):
                 fountValue.append(self.tube.fount)
         self.tube.pump = FountValueRecorder()
         self.assertEquals(fountValue, []) # sanity check
-        self.ff.flowTo(self.tube)
+        self.ff.flowTo(self.tubeDrain)
         self.assertEquals([self.ff], fountValue)
+
+    test_pumpStarted.todo = 'FIXME: contemplating how to expose flow control to pumps'
 
 
     def test_flowingFromFirst(self):
@@ -57,9 +61,8 @@ class TubeTest(TestCase):
         If L{Tube.flowingFrom} is called before L{Tube.flowTo}, the argument to
         L{Tube.flowTo} will immediately have its L{IDrain.flowingFrom} called.
         """
-        self.ff.flowTo(self.tube)
-        self.tube.flowTo(self.fd)
-        self.assertIdentical(self.fd.fount, self.tube)
+        self.ff.flowTo(self.tubeDrain).flowTo(self.fd)
+        self.assertNotIdentical(self.fd.fount, None)
 
 
     def test_tubeReceiveCallsPumpReceived(self):
@@ -72,7 +75,7 @@ class TubeTest(TestCase):
             def received(self, item):
                 got.append(item)
         self.tube.pump = ReceivingPump()
-        result = self.tube.receive("sample item")
+        result = self.tubeDrain.receive("sample item")
         self.assertEqual(result, 0.5)
         self.assertEqual(got, ["sample item"])
 
@@ -88,7 +91,7 @@ class TubeTest(TestCase):
                 got.append(item)
                 return 0.8
         self.tube.pump = ReceivingPumpWithProgress()
-        result = self.tube.receive("some input")
+        result = self.tubeDrain.receive("some input")
         self.assertEqual(result, 0.8)
         self.assertEqual(got, ["some input"])
 
@@ -104,22 +107,22 @@ class TubeTest(TestCase):
                 got.append(amount)
         self.tube.pump = ProgressingPump()
         self.assertEqual(got, [])
-        self.tube.progress()
-        self.tube.progress(0.6)
+        self.tubeDrain.progress()
+        self.tubeDrain.progress(0.6)
         self.assertEqual(got, [None, 0.6])
 
 
     def test_tubeReceiveRelaysProgressDownStream(self):
         """
-        L{Tube.receive} will call its downstream L{IDrain}'s C{progress} method
-        if its L{Pump} does not call its C{deliver} method.
+        L{_TubeDrain.receive} will call its downstream L{IDrain}'s C{progress}
+        method if its L{Pump} does not call its C{deliver} method.
         """
         got = []
         class ProgressingPump(Pump):
             def progressed(self, amount=None):
                 got.append(amount)
-        self.tube.flowTo(Tube(ProgressingPump()))
-        self.tube.receive(2)
+        self.ff.flowTo(self.tubeDrain).flowTo(Tube(ProgressingPump()))
+        self.tubeDrain.receive(2)
         self.assertEquals(got, [None])
 
 
@@ -135,9 +138,9 @@ class TubeTest(TestCase):
         class ProgressingPump(Pump):
             def progressed(self, amount=None):
                 got.append(amount)
-        self.tube.__init__(ReceivingPump())
-        self.tube.flowTo(Tube(ProgressingPump()))
-        self.tube.receive(2)
+        self.tube.pump = ReceivingPump()
+        self.ff.flowTo(self.tubeDrain).flowTo(Tube(ProgressingPump()))
+        self.tubeDrain.receive(2)
         self.assertEquals(got, [])
 
 
@@ -147,9 +150,12 @@ class TubeTest(TestCase):
         L{Tube.flowTo} will have its L{flowingFrom} called when
         L{Tube.flowingFrom} is called.
         """
-        self.tube.flowTo(self.fd)
-        self.ff.flowTo(self.tube)
-        self.assertIdentical(self.fd.fount, self.tube)
+        Tube(self.tube, self.fd)
+        self.ff.flowTo(self.tubeDrain)
+        self.ff.drain.receive(3)
+        self.tube.deliver(self.pump.allReceivedItems.pop())
+        self.assertEquals(self.fd.received, [3])
+        # self.assertIdentical(self.fd.fount, self.tube)
 
 
     def test_flowFromTypeCheck(self):
@@ -160,23 +166,14 @@ class TubeTest(TestCase):
         class ToPump(Pump):
             inputType = IFakeInput
         self.tube.pump = ToPump()
-        self.failUnlessRaises(TypeError, self.ff.flowTo, self.tube)
-
-
-    def test_flowToValue(self):
-        """
-        L{Tube.flowTo} returns the L{Tube} being flowed to.
-        """
-        tubeB = Tube(Pump())
-        result = self.tube.flowTo(tubeB)
-        self.assertIdentical(result, tubeB)
+        self.failUnlessRaises(TypeError, self.ff.flowTo, self.tubeDrain)
 
 
     def test_deliverPostsDownstream(self):
         """
         L{Tube.deliver} on a connected tube will call '.receive()' on its drain.
         """
-        self.ff.flowTo(self.tube).flowTo(self.fd)
+        self.ff.flowTo(self.tubeDrain).flowTo(self.fd)
         self.tube.deliver(7)
         self.assertEquals(self.fd.received, [7])
 
@@ -187,7 +184,8 @@ class TubeTest(TestCase):
         there's an active drain to deliver to.
         """
         self.tube.deliver("hi")
-        self.tube.flowTo(self.fd)
+        nextFount = self.ff.flowTo(self.tubeDrain)
+        nextFount.flowTo(self.fd)
         self.assertEquals(self.fd.received, ["hi"])
 
 
@@ -202,10 +200,22 @@ class TubeTest(TestCase):
         C{receive} delivers onwards to the L{Pump} immediately, and does not
         require any buffering.
         """
-        self.ff.flowTo(self.tube)
+        self.nextFount = self.ff.flowTo(self.tubeDrain)
         self.assertEquals(self.ff.flowIsPaused, False)
         self.tube.deliver("abc")
         self.assertEquals(self.ff.flowIsPaused, True)
+
+
+    def test_preDeliveryPausesWhenUpstreamAdded(self):
+        """
+        If L{Tube.deliver} has been called already (and the item it was called
+        with is still buffered) when L{Tube.flowingFrom} is called, it will
+        pause the fount it is being added to.
+        """
+        self.tube.deliver('value')
+        self.assertEqual(self.ff.flowIsPaused, False)
+        self.ff.flowTo(self.tubeDrain)
+        self.assertEqual(self.ff.flowIsPaused, True)
 
 
     def test_deliverPausesJustOnce(self):
@@ -224,7 +234,7 @@ class TubeTest(TestCase):
         arrives to un-buffer to.
         """
         self.test_deliverWithoutDownstreamPauses()
-        self.tube.flowTo(self.fd)
+        self.nextFount.flowTo(self.fd)
         self.assertEquals(self.ff.flowIsPaused, False)
 
 
@@ -253,13 +263,13 @@ class TubeTest(TestCase):
                 self.ready = True
                 self.fount.resumeFlow()
         sd = SlowDrain()
-        self.ff.flowTo(self.tube)
+        nextFount = self.ff.flowTo(self.tubeDrain)
         # Buffer.
         self.tube.deliver(1)
         self.tube.deliver(2)
         self.tube.deliver(3)
         # Unbuffer.
-        self.tube.flowTo(sd)
+        nextFount.flowTo(sd)
         self.assertEquals(sd.received, [1])
         sd.nextOne()
         self.assertEquals(sd.received, [1, 2])
@@ -272,7 +282,7 @@ class TubeTest(TestCase):
         L{Tube.receive} will deliver its input to L{IPump.received} on its
         pump.
         """
-        self.tube.receive("one-item")
+        self.tubeDrain.receive("one-item")
         self.assertEquals(self.tube.pump.allReceivedItems,
                           ["one-item"])
 

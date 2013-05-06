@@ -6,22 +6,222 @@
 See L{Tube}.
 """
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.tubes.itube import IDrain
+from twisted.tubes.itube import IPump
 from twisted.tubes.itube import IFount
 
-class Tube(object):
+
+class _TubePiece(object):
+    """
+    Shared functionality between L{_TubeFount} and L{_TubeDrain}
+    """
+    def __init__(self, tube):
+        self._tube = tube
+
+
+    @property
+    def _pump(self):
+        return self._tube.pump
+
+
+
+@implementer(IFount)
+class _TubeFount(_TubePiece):
+    """
+    Implementation of L{IFount} for L{Tube}.
+
+    @ivar fount: the implementation of the L{IDrain.fount} attribute.  The
+        L{IFount} which is flowing to this L{Tube}'s L{IDrain} implementation.
+
+    @ivar drain: the implementation of the L{IFount.drain} attribute.  The
+        L{IDrain} to which this L{Tube}'s L{IFount} implementation is flowing.
+    """
+    drain = None
+
+    @property
+    def outputType(self):
+        return self._pump.outputType
+
+
+    def flowTo(self, drain):
+        """
+        Flow data from this tube to the given drain.
+        """
+        self.drain = drain
+        # TODO: test for ordering
+        result = self.drain.flowingFrom(self)
+        if self._tube._currentlyPaused:
+            self.resumeFlow()
+        return result
+
+
+    def pauseFlow(self):
+        """
+        Pause the flow from the fount, or remember to do that when the
+        fount is attached, if it isn't yet.
+        """
+        self._tube._currentlyPaused = True
+        fount = self._tube._tdrain.fount
+        if fount is not None:
+            fount.pauseFlow()
+
+
+    def resumeFlow(self):
+        """
+        Resume the flow from the fount to this L{Tube}.
+        """
+        self._tube._currentlyPaused = False
+        fount = self._tube._tdrain.fount
+        if fount is not None:
+            fount.resumeFlow()
+        self._tube._unbufferSome()
+
+
+    def stopFlow(self):
+        """
+        Stop the flow from the fount to this L{Tube}.
+        """
+        fount = self._tube._tdrain.fount
+        fount.stopFlow()
+
+
+
+@implementer(IDrain)
+class _TubeDrain(_TubePiece):
+    """
+    Implementation of L{IDrain} for L{Tube}.
+    """
+    fount = None
+
+    @property
+    def inputType(self):
+        return self._pump.inputType
+
+
+    @property
+    def _drain(self):
+        return self._tube._tfount.drain
+
+
+    @property
+    def _get_delivered(self):
+        return self._tube._tfount.drain
+
+
+    def flowingFrom(self, fount):
+        """
+        This tube will now have 'receive' called.
+        """
+        out = fount.outputType
+        in_ = self.inputType
+        if out is not None and in_ is not None and not in_.isOrExtends(out):
+            raise TypeError()
+        self.fount = fount
+        if self._tube._pendingOutput:
+            self._tube._tfount.pauseFlow()
+        self._pump.started()
+        return self._tube._tfount
+
+
+    def progress(self, amount=None):
+        """
+        Progress was made.
+        """
+        self._pump.progressed(amount)
+
+
+    def receive(self, item):
+        """
+        An item was received.
+        """
+        result = self._pump.received(item)
+        if result is None:
+            # postel principle, let pumps be as lax as possible
+            result = 0.5
+        drain = self._tube._tfount.drain
+        if drain is not None:
+            if not self._tube._delivered:
+                drain.progress()
+            else:
+                self._delivered = False
+        return result
+
+
+    def flowStopped(self, reason):
+        """
+        This tube has now stopped.
+        """
+        self._pump.stopped(reason)
+
+
+
+def Tube(start, *plumbing):
+    """
+    Connect up a series of objects capable of transforming inputs to outputs;
+    convert a sequence of L{IPump} objects into a sequence of connected
+    L{IFount} and L{IDrain} objects.
+
+    This function can best be understood by understanding that::
+
+        x = a
+        a.flowTo(b).flowTo(c)
+
+    is roughly analagous to::
+
+        x = series(a, b, c)
+
+    with the additional feature that C{series} will convert C{a}, C{b}, and
+    C{c} to the requisite L{IDrain} objects first.
+
+    @param start: The initial element in the chain; the object that will
+        consume inputs passed to the result of this call to C{series}.
+    @type start: an L{IPump}, or anything adaptable to L{IFount}, as well as
+        L{IDrain}.
+
+    @param plumbing: Each element of C{plumbing}.
+    @type plumbing: a L{tuple} of L{IPump}s or objects adaptable to L{IDrain}.
+
+    @return: An L{IDrain} that can consume inputs of C{start}'s C{inputType},
+        and whose C{flowingFrom} will return an L{IFount} that will produce
+        outputs of C{plumbing[-1]} (or C{start}, if plumbing is empty).
+    @rtype: L{IDrain}
+    """
+    with _registry(_pump_registry):
+        currentFount = IFount(start)
+        drains = map(IDrain, plumbing)
+        result = IDrain(start, None)
+    for drain in drains:
+        currentFount = currentFount.flowTo(drain)
+    return result
+
+
+
+def _pumpToTube(pump):
+    if pump.tube is not None:
+        # XXX how does this even get exercised?
+        return pump.tube
+    return _Tube(pump)
+
+
+
+from zope.interface.adapter import AdapterRegistry
+from twisted.python.components import _addHook, _removeHook
+from contextlib import contextmanager
+@contextmanager
+def _registry(registry):
+    hook = _addHook(registry)
+    yield
+    _removeHook(hook)
+
+
+
+class _Tube(object):
     """
     A L{Tube} is an L{IDrain} and possibly also an L{IFount}, and provides lots
     of conveniences to make it easy to implement something that does fancy flow
     control with just a few methods.
-
-    @ivar drain: the implementation of the L{IFount.drain} attribute.  The
-        L{IDrain} to which this L{Tube}'s L{IFount} implementation is flowing.
-
-    @ivar fount: the implementation of the L{IDrain.fount} attribute.  The
-        L{IFount} which is flowing to this L{Tube}'s L{IDrain} implementation.
 
     @ivar pump: the L{Pump} which will receive values from this tube and call
         C{deliver} to deliver output to it.  (When set, this will automatically
@@ -31,12 +231,6 @@ class Tube(object):
     @ivar _currentlyPaused: is this L{Tube} currently paused?  Boolean: C{True}
         if paused, C{False} if not.
     """
-
-    implements(IDrain, IFount)
-
-    fount = None
-    drain = None
-
     _currentlyPaused = False
     _delivered = False
     _pump = None
@@ -47,6 +241,8 @@ class Tube(object):
         behavior.
         """
         self._pendingOutput = []
+        self._tfount = _TubeFount(self)
+        self._tdrain = _TubeDrain(self)
         self.pump = pump
 
 
@@ -72,108 +268,14 @@ class Tube(object):
     pump = property(_get_pump, _set_pump)
 
 
-    @property
-    def inputType(self):
-        return self.pump.inputType
-
-
-    @property
-    def outputType(self):
-        return self.pump.outputType
-
-
-    def flowingFrom(self, fount):
-        """
-        This tube will now have 'receive' called.
-        """
-        out = fount.outputType
-        in_ = self.inputType
-        if out is not None and in_ is not None and not in_.isOrExtends(out):
-            raise TypeError()
-        self.fount = fount
-        self.pump.started()
-        return self
-
-
-    def flowTo(self, drain):
-        """
-        Flow data from this tube to the given drain.
-        """
-        self.drain = drain
-        # TODO: test for ordering
-        result = self.drain.flowingFrom(self)
-        if self._currentlyPaused:
-            self.resumeFlow()
-        if self._pendingOutput:
-            self._unbufferSome()
-        return result
-
-
     def _unbufferSome(self):
         """
         Un-buffer some pending output into the downstream drain.
         """
         while self._pendingOutput and not self._currentlyPaused:
             item = self._pendingOutput.pop(0)
-            self.drain.receive(item)
+            self._tfount.drain.receive(item)
             break
-
-
-    def flowStopped(self, reason):
-        """
-        This tube has now stopped.
-        """
-        self.pump.stopped(reason)
-
-
-    def pauseFlow(self):
-        """
-        Pause the flow from the fount, or remember to do that when the
-        fount is attached, if it isn't yet.
-        """
-        self._currentlyPaused = True
-        if self.fount is not None:
-            self.fount.pauseFlow()
-
-
-    def resumeFlow(self):
-        """
-        Resume the flow from the fount to this L{Tube}.
-        """
-        self._currentlyPaused = False
-        if self.fount is not None:
-            self.fount.resumeFlow()
-        self._unbufferSome()
-
-
-    def stopFlow(self):
-        """
-        Stop the flow from the fount to this L{Tube}.
-        """
-        self.fount.stopFlow()
-
-
-    def receive(self, item):
-        """
-        An item was received.
-        """
-        result = self.pump.received(item)
-        if result is None:
-            # postel principle, let pumps be as lax as possible
-            result = 0.5
-        if self.drain is not None:
-            if not self._delivered:
-                self.drain.progress()
-            else:
-                self._delivered = False
-        return result
-
-
-    def progress(self, amount=None):
-        """
-        Progress was made.
-        """
-        self.pump.progressed(amount)
 
 
     def deliver(self, item):
@@ -182,16 +284,33 @@ class Tube(object):
         yet been set by L{flowingFrom}.
         """
         self._delivered = True
-        if self.drain is None:
+        drain = self._tfount.drain
+        if drain is None:
             if not self._pendingOutput:
-                self.pauseFlow()
+                self._tfount.pauseFlow()
             self._pendingOutput.append(item)
             return 1.0
         else:
-            return self.drain.receive(item)
+            return drain.receive(item)
 
 
 
+_pump_registry = AdapterRegistry()
+_pump_registry.register([IPump], IDrain, '',
+                        lambda pump: _pumpToTube(pump)._tdrain)
+_pump_registry.register([IPump], IFount, '',
+                        lambda pump: _pumpToTube(pump)._tfount)
+
+from zope.interface.declarations import implementedBy
+
+_pump_registry.register([implementedBy(_Tube)], IFount, '',
+                        lambda tube: tube._tfount)
+_pump_registry.register([implementedBy(_Tube)], IDrain, '',
+                        lambda tube: tube._tdrain)
+# _pump_registry = _registry(_pump_registry)
+
+
+@implementer(IPump)
 class Pump(object):
     """
     Null implementation for L{IPump}.  You can inherit from this to
