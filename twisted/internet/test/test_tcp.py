@@ -25,7 +25,7 @@ from twisted.python import log
 from twisted.trial.unittest import SkipTest, TestCase
 from twisted.internet.error import (
     ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
-    ConnectionAborted, DNSLookupError, ReactorNotRunning)
+    ConnectionAborted, DNSLookupError)
 from twisted.internet.test.connectionmixins import (
     LogObserverMixin, ConnectionTestsMixin, StreamClientTestsMixin,
     findFreePort, ConnectableProtocol, EndpointCreator,
