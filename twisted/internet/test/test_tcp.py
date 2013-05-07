@@ -1340,7 +1340,12 @@ def assertReading(self, reactor, transport):
 
     @param transport: An L{ITCPTransport}
     """
-    self.assertIn(transport, reactor.getReaders())
+    if IReactorFDSet.providedBy(reactor):
+        self.assertIn(transport, reactor.getReaders())
+    else:
+        # IOCP.
+        self.assertIn(transport, reactor.handles)
+        self.assertTrue(transport.reading)
 
 
 
@@ -1354,7 +1359,11 @@ def assertNotReading(self, reactor, transport):
 
     @param transport: An L{ITCPTransport}
     """
-    self.assertNotIn(transport, reactor.getReaders())
+    if IReactorFDSet.providedBy(reactor):
+        self.assertNotIn(transport, reactor.getReaders())
+    else:
+        # IOCP.
+        self.assertNotIn(transport, reactor.handles)
 
 
 
