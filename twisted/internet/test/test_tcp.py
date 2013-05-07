@@ -1363,7 +1363,7 @@ def assertNotReading(self, reactor, transport):
         self.assertNotIn(transport, reactor.getReaders())
     else:
         # IOCP.
-        self.assertNotIn(transport, reactor.handles)
+        self.assertFalse(transport.reading)
 
 
 
