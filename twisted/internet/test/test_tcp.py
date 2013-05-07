@@ -347,10 +347,22 @@ class TCPServerTests(TestCase):
         self.test_writeSequenceAfterDisconnect()
 
 
+    def test_resumeProducing(self):
+        """
+        When a L{Server} is connected, its C{resumeProducing} method adds it as
+        a reader to the reactor.
+        """
+        self.server.pauseProducing()
+        self.assertEqual(self.reactor.getReaders(), [])
+        self.server.resumeProducing()
+        self.assertEqual(self.reactor.getReaders(), [self.server])
+
+
     def test_resumeProducingWhileDisconnecting(self):
         """
         When a L{Server} has already started disconnecting via
-        C{loseConnection}, its C{resumeProducing} method ought to be a no-op.
+        C{loseConnection}, its C{resumeProducing} method does not add it as a
+        reader to its reactor.
         """
         self.server.loseConnection()
         self.server.resumeProducing()
@@ -360,7 +372,7 @@ class TCPServerTests(TestCase):
     def test_resumeProducingWhileDisconnected(self):
         """
         When a L{Server} has already lost its connection, its
-        C{resumeProducing} method ought to be a no-op.
+        C{resumeProducing} method does not add it as a reader to its reactor.
         """
         self.server.connectionLost(Failure(Exception("dummy")))
         self.assertEquals(self.reactor.getReaders(), [])
