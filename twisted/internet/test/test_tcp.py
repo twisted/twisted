@@ -13,6 +13,8 @@ __metaclass__ = type
 import errno
 import socket
 
+from functools import wraps
+
 from zope.interface import implementer
 from zope.interface.verify import verifyClass
 
@@ -345,39 +347,6 @@ class TCPServerTests(TestCase):
         """
         self.server.TLS = True
         self.test_writeSequenceAfterDisconnect()
-
-
-    def test_resumeProducing(self):
-        """
-        When a L{Server} is connected, its C{resumeProducing} method adds it as
-        a reader to the reactor.
-        """
-        self.server.pauseProducing()
-        self.assertEqual(self.reactor.getReaders(), [])
-        self.server.resumeProducing()
-        self.assertEqual(self.reactor.getReaders(), [self.server])
-
-
-    def test_resumeProducingWhileDisconnecting(self):
-        """
-        When a L{Server} has already started disconnecting via
-        C{loseConnection}, its C{resumeProducing} method does not add it as a
-        reader to its reactor.
-        """
-        self.server.loseConnection()
-        self.server.resumeProducing()
-        self.assertEqual(self.reactor.getReaders(), [])
-
-
-    def test_resumeProducingWhileDisconnected(self):
-        """
-        When a L{Server} has already lost its connection, its
-        C{resumeProducing} method does not add it as a reader to its reactor.
-        """
-        self.server.connectionLost(Failure(Exception("dummy")))
-        self.assertEqual(self.reactor.getReaders(), [])
-        self.server.resumeProducing()
-        self.assertEqual(self.reactor.getReaders(), [])
 
 
 
@@ -1328,6 +1297,36 @@ class StopStartReadingProtocol(Protocol):
 
 
 
+def oneTransportTest(testMethod):
+    """
+    Decorate a L{ReactorBuilder} test function which tests one reactor and one
+    connected transport.  Run that test method in the context of
+    C{connectionMade}, and immediately drop the connection (and end the test)
+    when that completes.
+
+    @param testMethod: A unit test method on a L{ReactorBuilder} test suite;
+        taking two additional parameters; a C{reactor} as built by the
+        L{ReactorBuilder}, and an L{ITCPTransport} provider.
+    @type testMethod: 3-argument C{function}
+
+    @return: a no-argument test method.
+    @rtype: 1-argument C{function}
+    """
+    @wraps(testMethod)
+    def actualTestMethod(builder):
+        class ServerProtocol(ConnectableProtocol):
+            def connectionMade(self):
+                try:
+                    testMethod(builder, self.reactor, self.transport)
+                finally:
+                    self.reactor.stop()
+        serverProtocol = ServerProtocol()
+        runProtocolsWithReactor(builder, serverProtocol, ConnectableProtocol(),
+                                TCPCreator())
+    return actualTestMethod
+
+
+
 class TCPConnectionTestsBuilder(ReactorBuilder):
     """
     Builder defining tests relating to L{twisted.internet.tcp.Connection}.
@@ -1382,6 +1381,42 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         d = DeferredList([cc.connect(cf), sf.ready]).addCallback(proceed, p)
         d.addErrback(log.err)
         self.runReactor(reactor)
+
+
+    @oneTransportTest
+    def test_resumeProducing(self, reactor, server):
+        """
+        When a L{Server} is connected, its C{resumeProducing} method adds it as
+        a reader to the reactor.
+        """
+        server.pauseProducing()
+        self.assertEqual(reactor.getReaders(), [])
+        server.resumeProducing()
+        self.assertEqual(reactor.getReaders(), [server])
+
+
+    @oneTransportTest
+    def test_resumeProducingWhileDisconnecting(self, reactor, server):
+        """
+        When a L{Server} has already started disconnecting via
+        C{loseConnection}, its C{resumeProducing} method does not add it as a
+        reader to its reactor.
+        """
+        server.loseConnection()
+        server.resumeProducing()
+        self.assertEqual(reactor.getReaders(), [])
+
+
+    @oneTransportTest
+    def test_resumeProducingWhileDisconnected(self, reactor, server):
+        """
+        When a L{Server} has already lost its connection, its
+        C{resumeProducing} method does not add it as a reader to its reactor.
+        """
+        server.connectionLost(Failure(Exception("dummy")))
+        self.assertEqual(reactor.getReaders(), [])
+        server.resumeProducing()
+        self.assertEqual(reactor.getReaders(), [])
 
 
     def test_connectionLostAfterPausedTransport(self):
