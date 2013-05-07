@@ -224,12 +224,12 @@ class _FakeFDSetReactor(object):
     """
 
     def __init__(self):
-        self._readers = []
-        self._writers = []
+        self._readers = set()
+        self._writers = set()
 
 
     def addReader(self, reader):
-        self._readers.append(reader)
+        self._readers.add(reader)
 
 
     def removeReader(self, reader):
@@ -238,7 +238,7 @@ class _FakeFDSetReactor(object):
 
 
     def addWriter(self, writer):
-        self._writers.append(writer)
+        self._writers.add(writer)
 
 
     def removeWriter(self, writer):
@@ -308,7 +308,7 @@ class TCPServerTests(TestCase):
         """
         self.server.loseConnection()
         self.server.resumeProducing()
-        self.assertEquals(self.reactor._readers, [])
+        self.assertEquals(self.reactor._readers, set())
 
 
     def test_resumeProducingWhileDisconnected(self):
@@ -317,9 +317,9 @@ class TCPServerTests(TestCase):
         C{resumeProducing} method ought to be a no-op.
         """
         self.server.connectionLost(Failure(Exception("dummy")))
-        self.assertEquals(self.reactor._readers, [])
+        self.assertEquals(self.reactor._readers, set())
         self.server.resumeProducing()
-        self.assertEquals(self.reactor._readers, [])
+        self.assertEquals(self.reactor._readers, set())
 
 
 
