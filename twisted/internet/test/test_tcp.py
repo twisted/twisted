@@ -220,8 +220,16 @@ class FakeProtocol(Protocol):
 @implementer(IReactorFDSet)
 class _FakeFDSetReactor(object):
     """
-    An in-memory implementation of L{IReactorFDSet}, which records all adds and
-    removes.
+    An in-memory implementation of L{IReactorFDSet}, which records the current
+    sets of active L{IReadDescriptor} and L{IWriteDescriptor}s.
+
+    @ivar _readers: The set of of L{IReadDescriptor}s active on this
+        L{_FakeFDSetReactor}
+    @type _readers: L{set}
+
+    @ivar _writers: The set of of L{IWriteDescriptor}s active on this
+        L{_FakeFDSetReactor}
+    @ivar _writers: L{set}
     """
 
     def __init__(self):
@@ -230,37 +238,56 @@ class _FakeFDSetReactor(object):
 
 
     def addReader(self, reader):
+        """
+        Implement L{IReactorFDSet.addReader}.
+        """
         self._readers.add(reader)
 
 
     def removeReader(self, reader):
+        """
+        Implement L{IReactorFDSet.removeReader}.
+        """
         if reader in self._readers:
             self._readers.remove(reader)
 
 
     def addWriter(self, writer):
+        """
+        Implement L{IReactorFDSet.addWriter}.
+        """
         self._writers.add(writer)
 
 
     def removeWriter(self, writer):
+        """
+        Implement L{IReactorFDSet.removeWriter}.
+        """
         if writer in self._writers:
             self._writers.remove(writer)
 
 
     def removeAll(self):
+        """
+        Implement L{IReactorFDSet.removeAll}.
+        """
         result = self.getReaders() + self.getWriters()
         self.__init__()
         return result
 
 
     def getReaders(self):
+        """
+        Implement L{IReactorFDSet.getReaders}.
+        """
         return list(self._readers)
 
 
     def getWriters(self):
+        """
+        Implement L{IReactorFDSet.getWriters}.
+        """
         return list(self._writers)
-
-
 
 verifyClass(IReactorFDSet, _FakeFDSetReactor)
 
