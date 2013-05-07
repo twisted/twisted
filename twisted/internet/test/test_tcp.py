@@ -366,7 +366,7 @@ class TCPServerTests(TestCase):
         """
         self.server.loseConnection()
         self.server.resumeProducing()
-        self.assertEquals(self.reactor.getReaders(), [])
+        self.assertEqual(self.reactor.getReaders(), [])
 
 
     def test_resumeProducingWhileDisconnected(self):
@@ -375,9 +375,9 @@ class TCPServerTests(TestCase):
         C{resumeProducing} method does not add it as a reader to its reactor.
         """
         self.server.connectionLost(Failure(Exception("dummy")))
-        self.assertEquals(self.reactor.getReaders(), [])
+        self.assertEqual(self.reactor.getReaders(), [])
         self.server.resumeProducing()
-        self.assertEquals(self.reactor.getReaders(), [])
+        self.assertEqual(self.reactor.getReaders(), [])
 
 
 
