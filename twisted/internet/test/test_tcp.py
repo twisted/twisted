@@ -25,7 +25,7 @@ from twisted.python import log
 from twisted.trial.unittest import SkipTest, TestCase
 from twisted.internet.error import (
     ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
-    ConnectionAborted, DNSLookupError)
+    ConnectionAborted, DNSLookupError, ReactorNotRunning)
 from twisted.internet.test.connectionmixins import (
     LogObserverMixin, ConnectionTestsMixin, StreamClientTestsMixin,
     findFreePort, ConnectableProtocol, EndpointCreator,
@@ -1314,16 +1314,47 @@ def oneTransportTest(testMethod):
     """
     @wraps(testMethod)
     def actualTestMethod(builder):
+        other = ConnectableProtocol()
         class ServerProtocol(ConnectableProtocol):
             def connectionMade(self):
                 try:
                     testMethod(builder, self.reactor, self.transport)
                 finally:
-                    self.reactor.stop()
+                    if self.transport is not None:
+                        self.transport.loseConnection()
+                    if other.transport is not None:
+                        other.transport.loseConnection()
         serverProtocol = ServerProtocol()
-        runProtocolsWithReactor(builder, serverProtocol, ConnectableProtocol(),
-                                TCPCreator())
+        runProtocolsWithReactor(builder, serverProtocol, other, TCPCreator())
     return actualTestMethod
+
+
+
+def assertReading(self, reactor, transport):
+    """
+    Use the given test to assert that the given transport is actively reading
+    in the given reactor.
+
+    @param reactor: A reactor, possibly one providing L{IReactorFDSet}, or an
+        IOCP reactor.
+
+    @param transport: An L{ITCPTransport}
+    """
+    self.assertIn(transport, reactor.getReaders())
+
+
+
+def assertNotReading(self, reactor, transport):
+    """
+    Use the given test to assert that the given transport is I{not} actively
+    reading in the given reactor.
+
+    @param reactor: A reactor, possibly one providing L{IReactorFDSet}, or an
+        IOCP reactor.
+
+    @param transport: An L{ITCPTransport}
+    """
+    self.assertNotIn(transport, reactor.getReaders())
 
 
 
@@ -1390,9 +1421,9 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         a reader to the reactor.
         """
         server.pauseProducing()
-        self.assertEqual(reactor.getReaders(), [])
+        assertNotReading(self, reactor, server)
         server.resumeProducing()
-        self.assertEqual(reactor.getReaders(), [server])
+        assertReading(self, reactor, server)
 
 
     @oneTransportTest
@@ -1404,7 +1435,7 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         """
         server.loseConnection()
         server.resumeProducing()
-        self.assertEqual(reactor.getReaders(), [])
+        assertNotReading(self, reactor, server)
 
 
     @oneTransportTest
@@ -1414,9 +1445,9 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         C{resumeProducing} method does not add it as a reader to its reactor.
         """
         server.connectionLost(Failure(Exception("dummy")))
-        self.assertEqual(reactor.getReaders(), [])
+        assertNotReading(self, reactor, server)
         server.resumeProducing()
-        self.assertEqual(reactor.getReaders(), [])
+        assertNotReading(self, reactor, server)
 
 
     def test_connectionLostAfterPausedTransport(self):
