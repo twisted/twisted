@@ -14,6 +14,7 @@ import errno
 import socket
 
 from zope.interface import implementer
+from zope.interface.verify import verifyClass
 
 from twisted.python.runtime import platform
 from twisted.python.failure import Failure
@@ -246,6 +247,24 @@ class _FakeFDSetReactor(object):
             self._writers.remove(writer)
 
 
+    def removeAll(self):
+        result = self.getReaders() + self.getWriters()
+        self.__init__()
+        return result
+
+
+    def getReaders(self):
+        return list(self._readers)
+
+
+    def getWriters(self):
+        return list(self._writers)
+
+
+
+verifyClass(IReactorFDSet, _FakeFDSetReactor)
+
+
 
 class TCPServerTests(TestCase):
     """
@@ -308,7 +327,7 @@ class TCPServerTests(TestCase):
         """
         self.server.loseConnection()
         self.server.resumeProducing()
-        self.assertEquals(self.reactor._readers, set())
+        self.assertEquals(self.reactor.getReaders(), [])
 
 
     def test_resumeProducingWhileDisconnected(self):
@@ -317,9 +336,9 @@ class TCPServerTests(TestCase):
         C{resumeProducing} method ought to be a no-op.
         """
         self.server.connectionLost(Failure(Exception("dummy")))
-        self.assertEquals(self.reactor._readers, set())
+        self.assertEquals(self.reactor.getReaders(), [])
         self.server.resumeProducing()
-        self.assertEquals(self.reactor._readers, set())
+        self.assertEquals(self.reactor.getReaders(), [])
 
 
 
