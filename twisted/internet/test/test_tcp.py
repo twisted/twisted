@@ -240,55 +240,34 @@ class _FakeFDSetReactor(object):
 
 
     def addReader(self, reader):
-        """
-        Implement L{IReactorFDSet.addReader}.
-        """
         self._readers.add(reader)
 
 
     def removeReader(self, reader):
-        """
-        Implement L{IReactorFDSet.removeReader}.
-        """
         if reader in self._readers:
             self._readers.remove(reader)
 
 
     def addWriter(self, writer):
-        """
-        Implement L{IReactorFDSet.addWriter}.
-        """
         self._writers.add(writer)
 
 
     def removeWriter(self, writer):
-        """
-        Implement L{IReactorFDSet.removeWriter}.
-        """
         if writer in self._writers:
             self._writers.remove(writer)
 
 
     def removeAll(self):
-        """
-        Implement L{IReactorFDSet.removeAll}.
-        """
         result = self.getReaders() + self.getWriters()
         self.__init__()
         return result
 
 
     def getReaders(self):
-        """
-        Implement L{IReactorFDSet.getReaders}.
-        """
         return list(self._readers)
 
 
     def getWriters(self):
-        """
-        Implement L{IReactorFDSet.getWriters}.
-        """
         return list(self._writers)
 
 verifyClass(IReactorFDSet, _FakeFDSetReactor)
