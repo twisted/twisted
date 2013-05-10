@@ -1309,40 +1309,56 @@ def oneTransportTest(testMethod):
 
 
 
-def assertReading(self, reactor, transport):
+def assertReading(testCase, reactor, transport):
     """
     Use the given test to assert that the given transport is actively reading
     in the given reactor.
 
+    @note: Maintainers; for more information on why this is a function rather
+        than a method on a test case, see U{this document on how we structure
+        test tools
+        <http://twistedmatrix.com/trac/wiki/Design/KeepTestToolsOutOfFixtures>}
+
+    @param testCase: a test case to perform the assertion upon.
+    @type testCase: L{TestCase}
+
     @param reactor: A reactor, possibly one providing L{IReactorFDSet}, or an
         IOCP reactor.
 
     @param transport: An L{ITCPTransport}
     """
     if IReactorFDSet.providedBy(reactor):
-        self.assertIn(transport, reactor.getReaders())
+        testCase.assertIn(transport, reactor.getReaders())
     else:
         # IOCP.
-        self.assertIn(transport, reactor.handles)
-        self.assertTrue(transport.reading)
+        testCase.assertIn(transport, reactor.handles)
+        testCase.assertTrue(transport.reading)
 
 
 
-def assertNotReading(self, reactor, transport):
+def assertNotReading(testCase, reactor, transport):
     """
     Use the given test to assert that the given transport is I{not} actively
     reading in the given reactor.
 
+    @note: Maintainers; for more information on why this is a function rather
+        than a method on a test case, see U{this document on how we structure
+        test tools
+        <http://twistedmatrix.com/trac/wiki/Design/KeepTestToolsOutOfFixtures>}
+
+    @param testCase: a test case to perform the assertion upon.
+    @type testCase: L{TestCase}
+
     @param reactor: A reactor, possibly one providing L{IReactorFDSet}, or an
         IOCP reactor.
 
     @param transport: An L{ITCPTransport}
     """
     if IReactorFDSet.providedBy(reactor):
-        self.assertNotIn(transport, reactor.getReaders())
+        testCase.assertNotIn(transport, reactor.getReaders())
     else:
         # IOCP.
-        self.assertFalse(transport.reading)
+        testCase.assertFalse(transport.reading)
 
 
 
