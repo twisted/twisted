@@ -1,22 +1,22 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <title>Twisted Positioning Documentation</title>
+    <title>twisted.positioning Documentation</title>
 </head>
 <body>
-<h1>Twisted Positioning Documentation</h1>
+<h1><code>twisted.positioning</code>: geolocation in Twisted</h1>
 
 <h2>Introduction</h2>
 <p>
-Twisted Positioning is a framework for doing geospatial positioning (trying to find where you are on Earth) using Twisted.
+<code>twisted.positioning</code> is a package for doing geospatial positioning (trying to find where you are on Earth) using Twisted.
 </p>
 
 <h2>High-level overview</h2>
 <p>
-In Twisted Positioning, you write an <code class="API" base="twisted.positioning.ipositioning">IPositioningReceiver</code> implementation that will get called whenever some information about your position is known (such as position, altitude, heading...). Twisted Positioning provides a base class called BasePositioningReceiver you might want to use that implements all of the receiver methods as stubs.
+In <code>twisted.positioning</code>, you write an <code class="API" base="twisted.positioning.ipositioning">IPositioningReceiver</code> implementation that will get called whenever some information about your position is known (such as position, altitude, heading...). The package provides a base class, <code class="API" base="twisted.positioning.base">BasePositioningReceiver</code> you might want to use that implements all of the receiver methods as stubs.
 </p>
 
 <p>
-Secondly, you will want a positioning source, which will call your <code class="API" base="twisted.positioning.ipositioning">IPositioningReceiver</code>. Currently, Twisted Positioning provides an NMEA implementation, which is a standard protocol spoken by many positioning devices, usually over a serial port.
+Secondly, you will want a positioning source, which will call your <code class="API" base="twisted.positioning.ipositioning">IPositioningReceiver</code>. Currently, <code>twisted.positioning</code> provides an NMEA implementation, which is a standard protocol spoken by many positioning devices, usually over a serial port.
 </p>
 
 <h2>Examples</h2>
