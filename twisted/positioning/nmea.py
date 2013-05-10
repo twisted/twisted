@@ -10,7 +10,7 @@ devices.
 import itertools
 import operator
 import datetime
-from zope.interface import implementer, classProvides
+from zope.interface import implementer
 
 from twisted.positioning import base, ipositioning
 from twisted.positioning.base import Angles
@@ -84,7 +84,6 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
     components. It then wraps them in L{NMEASentence} objects and
     calls the appropriate receiver method with them.
     """
-    classProvides(ipositioning._IPositioningSentenceProducer)
     METHOD_PREFIX = "nmea_"
 
     def __init__(self, receiver):

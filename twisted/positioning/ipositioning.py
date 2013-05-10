@@ -100,23 +100,4 @@ class INMEAReceiver(Interface):
 
 
 
-class _IPositioningSentenceProducer(Interface):
-    """
-    A protocol that produces positioning sentences.
-
-    Implementing this protocol allows sentence classes to be automagically
-    generated for a particular protocol.
-    """
-    def getSentenceAttributes(self):
-        """
-        Returns a set of attributes that might be present in a sentence
-        produced by this sentence producer.
-
-        @return: A set of attributes that might be present in a given
-            sentence.
-        @rtype: C{set} of C{str}
-        """
-
-
-
 __all__ = ["IPositioningReceiver"]

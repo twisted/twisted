@@ -4,9 +4,8 @@
 Tests for positioning sentences.
 """
 import itertools
-from zope.interface import classProvides
 
-from twisted.positioning import base, ipositioning
+from twisted.positioning import base
 from twisted.trial.unittest import TestCase
 
 
@@ -19,8 +18,6 @@ class DummyProtocol(object):
     """
     A simple, fake protocol.
     """
-    classProvides(ipositioning._IPositioningSentenceProducer)
-
     @staticmethod
     def getSentenceAttributes():
         return ["type", sentinelValueOne, sentinelValueTwo]
