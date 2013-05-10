@@ -13,7 +13,10 @@ __metaclass__ = type
 import errno
 import socket
 
+from functools import wraps
+
 from zope.interface import implementer
+from zope.interface.verify import verifyClass
 
 from twisted.python.runtime import platform
 from twisted.python.failure import Failure
@@ -219,12 +222,55 @@ class FakeProtocol(Protocol):
 @implementer(IReactorFDSet)
 class _FakeFDSetReactor(object):
     """
-    A no-op implementation of L{IReactorFDSet}, which ignores all adds and
-    removes.
+    An in-memory implementation of L{IReactorFDSet}, which records the current
+    sets of active L{IReadDescriptor} and L{IWriteDescriptor}s.
+
+    @ivar _readers: The set of of L{IReadDescriptor}s active on this
+        L{_FakeFDSetReactor}
+    @type _readers: L{set}
+
+    @ivar _writers: The set of of L{IWriteDescriptor}s active on this
+        L{_FakeFDSetReactor}
+    @ivar _writers: L{set}
     """
 
-    addReader = addWriter = removeReader = removeWriter = (
-        lambda self, desc: None)
+    def __init__(self):
+        self._readers = set()
+        self._writers = set()
+
+
+    def addReader(self, reader):
+        self._readers.add(reader)
+
+
+    def removeReader(self, reader):
+        if reader in self._readers:
+            self._readers.remove(reader)
+
+
+    def addWriter(self, writer):
+        self._writers.add(writer)
+
+
+    def removeWriter(self, writer):
+        if writer in self._writers:
+            self._writers.remove(writer)
+
+
+    def removeAll(self):
+        result = self.getReaders() + self.getWriters()
+        self.__init__()
+        return result
+
+
+    def getReaders(self):
+        return list(self._readers)
+
+
+    def getWriters(self):
+        return list(self._writers)
+
+verifyClass(IReactorFDSet, _FakeFDSetReactor)
 
 
 
@@ -1230,6 +1276,92 @@ class StopStartReadingProtocol(Protocol):
 
 
 
+def oneTransportTest(testMethod):
+    """
+    Decorate a L{ReactorBuilder} test function which tests one reactor and one
+    connected transport.  Run that test method in the context of
+    C{connectionMade}, and immediately drop the connection (and end the test)
+    when that completes.
+
+    @param testMethod: A unit test method on a L{ReactorBuilder} test suite;
+        taking two additional parameters; a C{reactor} as built by the
+        L{ReactorBuilder}, and an L{ITCPTransport} provider.
+    @type testMethod: 3-argument C{function}
+
+    @return: a no-argument test method.
+    @rtype: 1-argument C{function}
+    """
+    @wraps(testMethod)
+    def actualTestMethod(builder):
+        other = ConnectableProtocol()
+        class ServerProtocol(ConnectableProtocol):
+            def connectionMade(self):
+                try:
+                    testMethod(builder, self.reactor, self.transport)
+                finally:
+                    if self.transport is not None:
+                        self.transport.loseConnection()
+                    if other.transport is not None:
+                        other.transport.loseConnection()
+        serverProtocol = ServerProtocol()
+        runProtocolsWithReactor(builder, serverProtocol, other, TCPCreator())
+    return actualTestMethod
+
+
+
+def assertReading(testCase, reactor, transport):
+    """
+    Use the given test to assert that the given transport is actively reading
+    in the given reactor.
+
+    @note: Maintainers; for more information on why this is a function rather
+        than a method on a test case, see U{this document on how we structure
+        test tools
+        <http://twistedmatrix.com/trac/wiki/Design/KeepTestToolsOutOfFixtures>}
+
+    @param testCase: a test case to perform the assertion upon.
+    @type testCase: L{TestCase}
+
+    @param reactor: A reactor, possibly one providing L{IReactorFDSet}, or an
+        IOCP reactor.
+
+    @param transport: An L{ITCPTransport}
+    """
+    if IReactorFDSet.providedBy(reactor):
+        testCase.assertIn(transport, reactor.getReaders())
+    else:
+        # IOCP.
+        testCase.assertIn(transport, reactor.handles)
+        testCase.assertTrue(transport.reading)
+
+
+
+def assertNotReading(testCase, reactor, transport):
+    """
+    Use the given test to assert that the given transport is I{not} actively
+    reading in the given reactor.
+
+    @note: Maintainers; for more information on why this is a function rather
+        than a method on a test case, see U{this document on how we structure
+        test tools
+        <http://twistedmatrix.com/trac/wiki/Design/KeepTestToolsOutOfFixtures>}
+
+    @param testCase: a test case to perform the assertion upon.
+    @type testCase: L{TestCase}
+
+    @param reactor: A reactor, possibly one providing L{IReactorFDSet}, or an
+        IOCP reactor.
+
+    @param transport: An L{ITCPTransport}
+    """
+    if IReactorFDSet.providedBy(reactor):
+        testCase.assertNotIn(transport, reactor.getReaders())
+    else:
+        # IOCP.
+        testCase.assertFalse(transport.reading)
+
+
+
 class TCPConnectionTestsBuilder(ReactorBuilder):
     """
     Builder defining tests relating to L{twisted.internet.tcp.Connection}.
@@ -1284,6 +1416,42 @@ class TCPConnectionTestsBuilder(ReactorBuilder):
         d = DeferredList([cc.connect(cf), sf.ready]).addCallback(proceed, p)
         d.addErrback(log.err)
         self.runReactor(reactor)
+
+
+    @oneTransportTest
+    def test_resumeProducing(self, reactor, server):
+        """
+        When a L{Server} is connected, its C{resumeProducing} method adds it as
+        a reader to the reactor.
+        """
+        server.pauseProducing()
+        assertNotReading(self, reactor, server)
+        server.resumeProducing()
+        assertReading(self, reactor, server)
+
+
+    @oneTransportTest
+    def test_resumeProducingWhileDisconnecting(self, reactor, server):
+        """
+        When a L{Server} has already started disconnecting via
+        C{loseConnection}, its C{resumeProducing} method does not add it as a
+        reader to its reactor.
+        """
+        server.loseConnection()
+        server.resumeProducing()
+        assertNotReading(self, reactor, server)
+
+
+    @oneTransportTest
+    def test_resumeProducingWhileDisconnected(self, reactor, server):
+        """
+        When a L{Server} has already lost its connection, its
+        C{resumeProducing} method does not add it as a reader to its reactor.
+        """
+        server.connectionLost(Failure(Exception("dummy")))
+        assertNotReading(self, reactor, server)
+        server.resumeProducing()
+        assertNotReading(self, reactor, server)
 
 
     def test_connectionLostAfterPausedTransport(self):
