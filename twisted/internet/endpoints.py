@@ -31,8 +31,10 @@ from twisted.python.systemd import ListenFDs
 from twisted.internet.abstract import isIPv6Address
 from twisted.python.failure import Failure
 from twisted.python import log
-from twisted.internet.address import _ProcessAddress
+from twisted.internet.address import _ProcessAddress, HostnameAddress
 from twisted.python.components import proxyForInterface
+from socket import AF_INET6, AF_INET
+from twisted.internet.task import LoopingCall
 
 if not _PY3:
     from twisted.plugin import IPlugin, getPlugins
@@ -52,14 +54,13 @@ __all__ = ["clientFromString", "serverFromString",
            "UNIXServerEndpoint", "UNIXClientEndpoint",
            "SSL4ServerEndpoint", "SSL4ClientEndpoint",
            "AdoptedStreamServerEndpoint", "StandardIOEndpoint",
-           "ProcessEndpoint", "StandardErrorBehavior",
-           "connectProtocol"]
+           "ProcessEndpoint", "HostnameEndpoint",
+           "StandardErrorBehavior", "connectProtocol"]
 
 __all3__ = ["TCP4ServerEndpoint", "TCP6ServerEndpoint",
             "TCP4ClientEndpoint", "TCP6ClientEndpoint",
             "SSL4ServerEndpoint", "SSL4ClientEndpoint",
-            "connectProtocol",
-            ]
+            "connectProtocol", "HostnameEndpoint"]
 
 
 class _WrappingProtocol(Protocol):
@@ -620,6 +621,168 @@ class TCP6ClientEndpoint(object):
             return wf._onConnection
         except:
             return defer.fail()
+
+
+
+@implementer(interfaces.IStreamClientEndpoint)
+class HostnameEndpoint(object):
+    """
+    A smart name based endpoint that connects to the faster one of IPv4 or IPv6
+    host address resolved.
+
+    @ivar _getaddrinfo: A hook used for testing name resolution.
+
+    @ivar _deferToThread: A hook used for testing deferToThread.
+    """
+    _getaddrinfo = socket.getaddrinfo
+    _deferToThread = threads.deferToThread
+
+    def __init__(self, reactor, host, port, timeout=30, bindAddress=None):
+        """
+        @param host: A host name to connect to.
+        @type host: str
+
+        @param timeout: For each individual connection attempt, the number of
+        seconds to wait before assuming the connection has failed.
+        @type timeout: int
+
+        @see: L{twisted.internet.interfaces.IReactorTCP.connectTCP}
+        """
+        self._reactor = reactor
+        self._host = host
+        self._port = port
+        self._timeout = timeout
+        self._bindAddress = bindAddress
+
+
+    def connect(self, protocolFactory):
+        """
+        Attempts a connection to each address returned by gai, and returns a
+        connection that is the fastest.
+        """
+        wf = protocolFactory
+        pending = []
+
+
+        def _canceller(d):
+            """
+            The outgoing connection attempt was cancelled.  Fail that L{Deferred}
+            with an L{error.ConnectingCancelledError}.
+
+            @param d: The L{Deferred <defer.Deferred>} that was cancelled
+            @type d: L{Deferred <defer.Deferred>}
+
+            @return: C{None}
+            """
+            d.errback(error.ConnectingCancelledError(
+                HostnameAddress(self._host, self._port)))
+
+            for p in pending[:]:   # Cancel all pending connections
+                p.cancel()
+
+
+        def errbackForGai(failure):
+            """
+            Errback for when L{_nameResolution} returns a Deferred that fires
+            with failure.
+            """
+            return defer.fail(error.DNSLookupError(
+                "Couldn't find the hostname '%s'" % (self._host,)))
+
+
+        def _endpoints(gaiResult):
+            """
+            This method matches the host address famliy with an endpoint for
+            every address returned by GAI.
+
+            @param gaiResult: A list of 5-tuples as returned by GAI.
+            @type gaiResult: list
+            """
+            for family, socktype, proto, canonname, sockaddr in gaiResult:
+                if family in [AF_INET6]:
+                    yield TCP6ClientEndpoint(self._reactor, sockaddr[0],
+                            sockaddr[1], self._timeout, self._bindAddress)
+                elif family in [AF_INET]:
+                    yield TCP4ClientEndpoint(self._reactor, sockaddr[0],
+                            sockaddr[1], self._timeout, self._bindAddress)
+                        # Yields an endpoint for every address returned by GAI
+
+
+        def attemptConnection(endpoints):
+            """
+            When L{endpoints} yields an endpoint, this method attempts to connect it.
+            """
+            # The trial attempts for each endpoints, the recording of
+            # successful and failed attempts, and the algorithm to pick the
+            # winner endpoint goes here.
+            # Return a Deferred that fires with the endpoint that wins,
+            # or `failures` if none succeed.
+
+            endpointsListExhausted = []
+            successful = []
+            failures = []
+            winner = defer.Deferred(canceller=_canceller)
+
+            def usedEndpointRemoval(connResult, connAttempt):
+                pending.remove(connAttempt)
+                return connResult
+
+            def afterConnectionAttempt(connResult):
+                if lc.running:
+                    lc.stop()
+                successful.append(True)
+                for p in pending[:]:
+                    p.cancel()
+                winner.callback(connResult)
+                return None
+
+            def checkDone():
+                if endpointsListExhausted and not pending and\
+                    not successful:
+                    winner.errback(failures.pop())
+
+            def connectFailed(reason):
+                failures.append(reason)
+                checkDone()
+                return None
+
+            def iterateEndpoint():
+                try:
+                    endpoint = endpoints.next()
+                except StopIteration:
+                    # The list of endpoints ends.
+                    endpointsListExhausted.append(True)
+                    lc.stop()
+                    checkDone()
+                else:
+                    dconn = endpoint.connect(wf)
+                    pending.append(dconn)
+                    dconn.addBoth(usedEndpointRemoval, dconn)
+                    dconn.addCallback(afterConnectionAttempt)
+                    dconn.addErrback(connectFailed)
+
+            lc = LoopingCall(iterateEndpoint)
+            lc.clock = self._reactor
+            lc.start(0.3)
+            return winner
+
+        try:
+            d = self._nameResolution(self._host, self._port)
+            d.addErrback(errbackForGai)
+            d.addCallback(_endpoints)
+            d.addCallback(attemptConnection)
+            return d
+        except:
+            return defer.fail()
+
+
+    def _nameResolution(self, host, port):
+        """
+        Resolve the hostname string into a tuple containig the host
+        address.
+        """
+        return self._deferToThread(self._getaddrinfo, host, port, 0,
+                socket.SOCK_STREAM)
 
 
 
