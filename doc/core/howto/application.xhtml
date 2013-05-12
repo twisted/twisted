@@ -43,7 +43,6 @@ href="choosing-reactor.xhtml">choosing a reactor</a> and more.</p>
 called <code>twistd</code>.  <code>twistd</code> is cross platform, and is the
 recommended tool for running Twisted applications.  </p>
 
-
 <p>The core component of the Twisted Application infrastructure is the <code
 class="API">twisted.application.service.Application</code> object &mdash; an
 object which represents your application.  However, Application doesn't provide
@@ -57,41 +56,41 @@ done through Services.</p>
 and stopped.  Typical services include web servers, FTP servers and SSH
 clients.  Your Application object can contain many services, and can even
 contain structured hierarchies of Services using <code class="API"
-base="twisted.application.service">IServiceCollection</code>s.</p>
+base="twisted.application.service">MultiService</code> or your own
+custom <code class="API"
+base="twisted.application.service">IServiceCollection</code>
+implementations. You will most likely want to use these to manage Services
+which are dependent on other Services.  For example, a proxying Twisted
+application might want its server Service to only start up after the
+associated Client service.</p>
 
-<p>Here's a simple example of constructing an Application object which
-represents an echo server that runs on TCP port 7001.</p>
+<p>An <code class="API" base="twisted.application.service">IService</code> has
+two basic methods, <code>startService()</code> which is used to start the
+service, and <code>stopService()</code> which is used to stop the service. The
+latter can return a <code class="API"
+base="twisted.internet.defer">Deferred</code>, indicating service shutdown is
+not over until the result fires. For example:</p>
 
 <pre class="python">
-from twisted.application import internet, service
+from twisted.internet import reactor
+from twisted.application import service
 from somemodule import EchoFactory
 
-port = 7001
-factory = EchoFactory()
+class EchoService(service.Service):
+    def __init__(self, portNum):
+        self.portNum = portNum
 
-# this is the important bit
-application = service.Application("echo")  # create the Application
-echoService = internet.TCPServer(port, factory) # create the service
-# add the service to the application
-echoService.setServiceParent(application)
+    def startService(self):
+        self._port = reactor.listenTCP(self.portNum, EchoFactory())
+
+    def stopService(self):
+        return self._port.stopListening()
 </pre>
 
 <p>See <a href="servers.xhtml">Writing Servers</a> for an explanation of
-EchoFactory.</p>
+<code>EchoFactory</code> and <code>listenTCP</code>.</p>
 
-<p>This example creates a simple hierarchy:
-<pre>
-   application
-   |
-   `- echoService
-</pre> More complicated hierarchies of services can be created using
-IServiceCollection.  You will most likely want to do this to manage Services
-which are dependent on other Services.  For example, a proxying Twisted
-application might want its server Service to only start up after the associated
-Client service. </p>
-
-
-<h2>Using application</h2>
+<h2>Using Services and Application</h2>
 
 <h3>twistd and tac</h3><a name="twistd" />
 
@@ -170,7 +169,22 @@ at <code>/tmp/my.log</code>.
 
 <h3>Services provided by Twisted</h3>
 
-<p>Twisted provides several services that you want to know about.</p>
+<p>Twisted also provides pre-written <code class="API"
+base="twisted.application.service">IService</code> implementations for common
+cases like listening on a TCP port, in
+the <code class="API">twisted.application.internet</code> module. Here's a
+simple example of constructing a service that runs an echo server on TCP port
+7001:</p>
+
+<pre class="python">
+from twisted.application import internet, service
+from somemodule import EchoFactory
+
+port = 7001
+factory = EchoFactory()
+
+echoService = internet.TCPServer(port, factory) # create the service
+</pre>
 
 <p>Each of these services (except TimerService) has a corresponding 
 <q>connect</q> or <q>listen</q> method on the reactor, and the constructors for
