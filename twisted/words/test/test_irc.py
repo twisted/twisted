@@ -2209,10 +2209,13 @@ class CollectorClient(irc.IRCClient):
         @type methodsList: C{list}
         """
         self.methods = []
-        self.nickname = 'Wolf'  # set 'Wolf' as the current nickname
+        self.nickname = 'Wolf'
 
         for method in methodsList:
             def fake_method(method=method):
+                """
+                Collects C{method}s.
+                """
                 def inner(*args):
                     self.methods.append((method, args))
                 return inner

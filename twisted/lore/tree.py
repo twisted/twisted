@@ -264,6 +264,7 @@ def _removeLeadingBlanks(lines):
     @param lines: A list of strings.
     @type lines: C{list}
     @rtype: C{list}
+    @return: List of lines.
     """
     ret = []
     for line in lines:
@@ -282,6 +283,7 @@ def _removeLeadingTrailingBlanks(inputString):
     @param inputString: The input string.
     @type inputString: L{str}
     @rtype: L{str}
+    @return: String containing concencated lines.
     """
     lines = _removeLeadingBlanks(inputString.split('\n'))
     lines.reverse()

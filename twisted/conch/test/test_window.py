@@ -80,8 +80,8 @@ class DummyTerminal(object):
         @param y: The y position of the cursor.
         @type y: C{str}
         """
-        self.x = x
-        self.y = y
+        self.xPosition = x
+        self.yPosition = y
 
 
 
@@ -108,7 +108,7 @@ class TextOutputTests(TestCase):
         L{TextOutput.focusReceived} returns a L{YieldFocus} instance.
         """
         try:
-            focus = self.output.focusReceived()
+            self.output.focusReceived()
         except Exception as e:
             self.assertIsInstance(e, YieldFocus)
 
@@ -116,7 +116,7 @@ class TextOutputTests(TestCase):
     def test_setText(self):
         """
         Passing a string to L{TextOutput.setText} stores it in the
-        L{TextOutput.text} attribute. 
+        L{TextOutput.text} attribute.
         """
         self.assertEqual(self.output.text, '')
         self.output.setText('btc')
@@ -130,8 +130,8 @@ class TextOutputTests(TestCase):
         self.output.setText('batman')
         self.output.render(3, 4, self.terminal)
 
-        self.assertEqual(self.terminal.x, 0)
-        self.assertEqual(self.terminal.y, 0)
+        self.assertEqual(self.terminal.xPosition, 0)
+        self.assertEqual(self.terminal.yPosition, 0)
         self.assertEqual(self.terminal.lines, ['bat'])
 
 
@@ -175,8 +175,8 @@ class TextOutputAreaTests(TestCase):
         self.output.setText(inString)
         self.output.render(4, 4, self.terminal)
 
-        self.assertEqual(self.terminal.x, 0)
-        self.assertEqual(self.terminal.y, 2)
+        self.assertEqual(self.terminal.xPosition, 0)
+        self.assertEqual(self.terminal.yPosition, 2)
         self.assertEqual(self.terminal.lines, ['this', 'is a', 'test'])
 
 
