@@ -24,26 +24,6 @@ science.
 
 
 
-class DeprecationTestCase(unittest.TestCase):
-    """
-    L{twisted.python.text} is deprecated.
-    """
-    def test_moduleDeprecation(self):
-        """
-        The entire L{twisted.python.text} module is deprecated.
-        """
-        from twisted.python import text
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_moduleDeprecation])
-        self.assertEqual(DeprecationWarning, warnings[0]['category'])
-        self.assertEqual(
-            "twisted.python.text was deprecated in Twisted 13.1.0: "
-            "text has been deprecated.",
-            warnings[0]['message'])
-        self.assertEqual(1, len(warnings))
-
-
-
 class WrapTest(unittest.TestCase):
     """
     Tests for L{text.greedyWrap}.

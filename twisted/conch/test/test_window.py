@@ -171,13 +171,13 @@ class TextOutputAreaTests(TestCase):
         """
         L{TextOutputArea.render} wraps the lines.
         """
-        inString = '12345678'
+        inString = 'this is a test'
         self.output.setText(inString)
         self.output.render(4, 4, self.terminal)
 
         self.assertEqual(self.terminal.x, 0)
-        self.assertEqual(self.terminal.y, 0)
-        self.assertEqual(self.terminal.lines, [inString])
+        self.assertEqual(self.terminal.y, 2)
+        self.assertEqual(self.terminal.lines, ['this', 'is a', 'test'])
 
 
 

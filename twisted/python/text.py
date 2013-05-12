@@ -7,7 +7,12 @@
 Miscellany of text-munging functions.
 """
 
-from __future__ import division, absolute_import
+
+import warnings
+warnings.warn(
+    "As of Twisted 13.1, twisted.python.text is deprecated.",
+    DeprecationWarning,
+    stacklevel=2)
 
 
 

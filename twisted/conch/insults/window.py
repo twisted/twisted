@@ -607,9 +607,7 @@ class TextOutputArea(TextOutput):
         outputLines = []
         while inputLines:
             if self.longLines == self.WRAP:
-                #wrappedLines = textwrap.wrap(inputLines.pop(0), width)
-                from twisted.python import text as tptext
-                wrappedLines = tptext.greedyWrap(inputLines.pop(0), width)
+                wrappedLines = textwrap.wrap(inputLines.pop(0), width)
                 outputLines.extend(wrappedLines or [''])
             else:
                 outputLines.append(inputLines.pop(0)[:width])
