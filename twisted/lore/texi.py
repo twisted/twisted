@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.lore.test.test_texi -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 

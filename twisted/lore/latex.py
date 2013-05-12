@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.lore.test.test_latex -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
