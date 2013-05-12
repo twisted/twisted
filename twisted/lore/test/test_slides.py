@@ -8,7 +8,8 @@ Tests for L{twisted.lore.slides}.
 from xml.dom.minidom import Element, Text
 
 from twisted.trial.unittest import TestCase
-from twisted.lore.slides import HTMLSlide, splitIntoSlides, insertPrevNextLinks
+from twisted.lore.slides import (HTMLSlide, splitIntoSlides,
+    insertPrevNextLinks, MagicpointOutput)
 
 
 class SlidesTests(TestCase):
@@ -83,3 +84,56 @@ class SlidesTests(TestCase):
             next.toxml(), '<span class="next">second</span>')
         self.assertEqual(
             previous.toxml(), '<span class="previous">first</span>')
+
+
+
+class MagicpointOutputTests(TestCase):
+    """
+    Tests for L{lore.slides.MagicpointOutput}.
+    """
+    def setUp(self):
+        self.filename = self.mktemp()
+        self.output = []
+        self.spitter = MagicpointOutput(self.output.append,
+            filename=self.filename)
+
+        self.parent = Element('html')
+        title = Element('title')
+        self.body = Element('body')
+        self.parent.appendChild(title)
+        self.parent.appendChild(self.body)
+
+
+    def test_body(self):
+        """
+        L{MagicpointOutput.visitNode} emits a verbatim block when it encounters
+        a I{body} element.
+        """
+        text = Text()
+        text.data = u"\nbar\n"
+        self.body.appendChild(text)
+
+        self.spitter.visitNode(self.parent)
+        self.assertEqual(
+            ''.join(self.output),
+            '%page\n\n\n\n\n%center\n\n\n\n\n%page\n\n\n\n\n bar')
+
+
+    def test_pre(self):
+        """
+        L{MagicpointOutput.visitNode} emits the 'typewriter' font when it
+        encounters a I{pre} element.
+        """
+        pre = Element('pre')
+        text = Text()
+        text.data = u"\nbar\n"
+        pre.appendChild(text)
+        self.body.appendChild(pre)
+
+        self.spitter.visitNode(self.parent)
+        self.assertEqual(
+            ''.join(self.output),
+            '%page\n\n\n\n\n%center\n\n\n\n\n%page\n\n\n\n\n%'
+            'font "typewriter", size 4\n bar\n \n%font "standard"\n')
+
+

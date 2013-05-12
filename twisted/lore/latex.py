@@ -11,7 +11,7 @@ from cStringIO import StringIO
 import urlparse
 
 from twisted.web import domhelpers
-from twisted.python import text, procutils
+from twisted.python import procutils
 
 import tree
 
@@ -143,7 +143,7 @@ class LatexSpitter(BaseLatexSpitter):
         self.writer('\\begin{verbatim}\n')
         buf = StringIO()
         getLatexText(node, buf.write)
-        self.writer(text.removeLeadingTrailingBlanks(buf.getvalue()))
+        self.writer(tree._removeLeadingTrailingBlanks(buf.getvalue()))
         self.writer('\\end{verbatim}\n')
 
     def visitNode_code(self, node):
@@ -210,7 +210,7 @@ class LatexSpitter(BaseLatexSpitter):
         lines = map(str.rstrip, open(fileName).readlines())
         skipLines = int(node.getAttribute('skipLines') or 0)
         lines = lines[skipLines:]
-        self.writer(text.removeLeadingTrailingBlanks('\n'.join(lines)))
+        self.writer(tree._removeLeadingTrailingBlanks('\n'.join(lines)))
         self.writer('\\end{verbatim}')
 
         # Write a caption for this source listing

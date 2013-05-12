@@ -43,25 +43,28 @@ Example input file::
     </html>
 """
 
+import re
+import os.path
 from xml.dom import minidom as dom
-import os.path, re
 from cStringIO import StringIO
 
 from twisted.lore import default
 from twisted.web import domhelpers
-from twisted.python import text
 # These should be factored out
 from twisted.lore.latex import BaseLatexSpitter, LatexSpitter, processFile
 from twisted.lore.latex import getLatexText, HeadingLatexSpitter
-from twisted.lore.tree import getHeaders
+from twisted.lore.tree import getHeaders, _removeLeadingTrailingBlanks
 from twisted.lore.tree import removeH1, fixAPI, fontifyPython
 from twisted.lore.tree import addPyListings, addHTMLListings, setTitle
+
 
 hacked_entities = { 'amp': ' &', 'gt': ' >', 'lt': ' <', 'quot': ' "',
                     'copy': ' (c)'}
 
 entities = { 'amp': '&', 'gt': '>', 'lt': '<', 'quot': '"',
              'copy': '(c)'}
+
+
 
 class MagicpointOutput(BaseLatexSpitter):
     bulletDepth = 0
@@ -114,7 +117,7 @@ class MagicpointOutput(BaseLatexSpitter):
         buf = StringIO()
         getLatexText(node, buf.write, entities=entities)
         data = buf.getvalue()
-        data = text.removeLeadingTrailingBlanks(data)
+        data = _removeLeadingTrailingBlanks(data)
         lines = data.split('\n')
         self.fontStack.append(('typewriter', 4))
         self.writer('%' + self.fontName() + '\n')
