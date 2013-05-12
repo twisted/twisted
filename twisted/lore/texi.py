@@ -1,10 +1,10 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
-
+import os
+import re
 from cStringIO import StringIO
-import os, re
+
 from twisted.web import domhelpers
 import latex, tree
 

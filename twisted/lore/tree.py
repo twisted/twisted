@@ -3,7 +3,12 @@
 
 
 from itertools import count
-import re, os, cStringIO, time, cgi, urlparse
+import re
+import os
+import cStringIO
+import time
+import cgi
+import urlparse
 from xml.dom import minidom as dom
 from xml.sax.handler import ErrorHandler, feature_validation
 from xml.dom.pulldom import SAX2DOM
@@ -14,6 +19,8 @@ from twisted.python import htmlizer
 from twisted.python.filepath import FilePath
 from twisted.web import domhelpers
 import process, latex, indexer, numberer, htmlbook
+
+
 
 # relative links to html files
 def fixLinks(document, ext):
@@ -266,16 +273,17 @@ def _removeLeadingBlanks(lines):
 
 
 
-def _removeLeadingTrailingBlanks(s):
+def _removeLeadingTrailingBlanks(inputString):
     """
-    Breaks input string C{s} into lines, strips leading and trailing
-    whitespace from each line, and returns the result.
+    Breaks input string C{inputString} into lines, strips leading and trailing
+    whitespace from each line, and returns a string with all lines joined,
+    separated by a newline character.
 
-    @param s: The input string.
-    @type s: C{str}
-    @rtype: C{str}
+    @param inputString: The input string.
+    @type inputString: L{str}
+    @rtype: L{str}
     """
-    lines = _removeLeadingBlanks(s.split('\n'))
+    lines = _removeLeadingBlanks(inputString.split('\n'))
     lines.reverse()
     lines = _removeLeadingBlanks(lines)
     lines.reverse()
