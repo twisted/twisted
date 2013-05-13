@@ -261,11 +261,10 @@ def generateVersionFileData(version):
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 # This is an auto-generated file. Do not edit it.
 
 """
-Gives version of Twisted: major.minor.micro
+Provides Twisted version information.
 """
 
 from twisted.python import versions
