@@ -1475,7 +1475,7 @@ class SSHCiphers:
         ds = mod().digest_size
 
         # Truncation here appears to contravene RFC 2104, section 2.  However,
-        # implementing the hashing behavior proscribed by the RFC breaks
+        # implementing the hashing behavior prescribed by the RFC breaks
         # interoperability with OpenSSH (at least version 5.5p1).
         key = key[:ds] + ('\x00' * (64 - ds))
         i = string.translate(key, hmac.trans_36)
