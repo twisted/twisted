@@ -1865,7 +1865,7 @@ class SSHCiphersTestCase(unittest.TestCase):
 
     def test_getMAC(self):
         """
-        L{SSHCuphers._getMAC} computes the HMAC parameters for a particular
+        L{SSHCiphers._getMAC} computes the HMAC parameters for a particular
         hash function and key.
         """
         ciphers = transport.SSHCiphers('A', 'B', 'C', 'D')
