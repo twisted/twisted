@@ -40,22 +40,43 @@ pyunit = __import__('unittest')
 
 
 def isPackage(module):
-    """Given an object return True if the object looks like a package"""
+    """
+    Given an object return C{True} if the object looks like a package.
+
+    @param module:
+    @type module: C{object}
+    @rtype: C{bool}
+    @return: Boolean indicating whether the object looks like a package.
+    """
     if not isinstance(module, types.ModuleType):
         return False
-    basename = os.path.splitext(os.path.basename(module.__file__))[0]
-    return basename == '__init__'
+
+    if hasattr(module, '__file__'):
+        # actual file
+        basename = os.path.splitext(os.path.basename(module.__file__))[0]
+        return basename == '__init__'
+
+    if hasattr(module, '__path__'):
+        # namespaced package
+        path = os.path.abspath(module.__path__[0])
+        return os.path.exists(path)
+
+    return False
 
 
 def isPackageDirectory(dirname):
-    """Is the directory at path 'dirname' a Python package directory?
+    """
+    Is the directory at path C{dirname} a Python package directory?
+
     Returns the name of the __init__ file (it may have a weird extension)
-    if dirname is a package directory.  Otherwise, returns False"""
+    if dirname is a package directory.  Otherwise, returns False
+    """
     for ext in zip(*imp.get_suffixes())[0]:
         initFile = '__init__' + ext
         if os.path.exists(os.path.join(dirname, initFile)):
             return initFile
     return False
+
 
 
 def samefile(filename1, filename2):
@@ -64,6 +85,7 @@ def samefile(filename1, filename2):
     when the platform doesn't provide C{os.path.samefile}. Do not use this.
     """
     return os.path.abspath(filename1) == os.path.abspath(filename2)
+
 
 
 def filenameToModule(fn):
