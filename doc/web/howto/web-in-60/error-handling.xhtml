@@ -25,12 +25,12 @@ from twisted.internet import reactor
 </pre>
 
 <p>Next, we'll add one more import. <code class="API"
-base="twisted.web.error">NoResource</code> is one of the pre-defined error
+base="twisted.web.resource">NoResource</code> is one of the pre-defined error
 resources provided by Twisted Web. It generates the necessary 404 response code
 and renders a simple html page telling the client there is no such resource.</p>
 
 <pre class="python">
-from twisted.web.error import NoResource
+from twisted.web.resource import NoResource
 </pre>
 
 <p>Next, we'll define a custom resource which does some dynamic URL
@@ -59,7 +59,7 @@ complete code for this example:</p>
 from twisted.web.server import Site
 from twisted.web.resource import Resource
 from twisted.internet import reactor
-from twisted.web.error import NoResource
+from twisted.web.resource import NoResource
 
 from calendar import calendar
 
