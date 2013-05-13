@@ -93,8 +93,15 @@ def _isPythonIdentifier(string):
 
 
 def _isPackagePath(fpath):
-    # Determine if a FilePath-like object is a Python package.  TODO: deal with
-    # __init__module.(so|dll|pyd)?
+    """
+    Determine if a L{FilePath}-like object is a Python package.
+
+    @param fpath: L{FilePath}-like object.
+    @type fpath: L{FilePath}
+    @rtype: C{bool}
+    @return: Boolean indicating whether C{fpath} is a Python package.
+    """
+    # TODO: deal with __init__module.(so|dll|pyd)?
     extless = fpath.splitext()[0]
     basend = splitpath(extless)[1]
     return basend == "__init__"
@@ -609,6 +616,7 @@ class PythonPath:
 
     sysPath = property(_getSysPath)
 
+
     def _findEntryPathString(self, modobj):
         """
         Determine where a given Python module object came from by looking at path
@@ -618,15 +626,22 @@ class PythonPath:
         while '.' in topPackageObj.__name__:
             topPackageObj = self.moduleDict['.'.join(
                     topPackageObj.__name__.split('.')[:-1])]
-        if _isPackagePath(FilePath(topPackageObj.__file__)):
-            # if package 'foo' is on sys.path at /a/b/foo, package 'foo's
-            # __file__ will be /a/b/foo/__init__.py, and we are looking for
-            # /a/b here, the path-entry; so go up two steps.
-            rval = dirname(dirname(topPackageObj.__file__))
-        else:
-            # the module is completely top-level, not within any packages.  The
+
+        if hasattr(topPackageObj, '__file__'):
+            if _isPackagePath(FilePath(topPackageObj.__file__)):
+                # if package 'foo' is on sys.path at /a/b/foo, package 'foo's
+                # __file__ will be /a/b/foo/__init__.py, and we are looking for
+                # /a/b here, the path-entry; so go up two steps.
+                rval = dirname(dirname(topPackageObj.__file__))
+            else:
+                # the module is completely top-level, not within any packages.  The
+                # path entry it's on is just its dirname.
+                rval = dirname(topPackageObj.__file__)
+
+        elif hasattr(topPackageObj, '__path__'):
+            # the module is completely top-level.  The
             # path entry it's on is just its dirname.
-            rval = dirname(topPackageObj.__file__)
+            rval = topPackageObj.__path__[0]
 
         # There are probably some awful tricks that an importer could pull
         # which would break this, so let's just make sure... it's a loaded
@@ -640,6 +655,7 @@ class PythonPath:
                 stacklevel=3)
 
         return rval
+
 
     def _smartPath(self, pathName):
         """
@@ -695,7 +711,10 @@ class PythonPath:
                 self._smartPath(
                     self._findEntryPathString(moduleObject)),
                 self)
-            mp = self._smartPath(moduleObject.__file__)
+            if hasattr(moduleObject, '__file__'):
+                mp = self._smartPath(moduleObject.__file__)
+            elif hasattr(moduleObject, '__path__'):
+                mp = self._smartPath(moduleObject.__path__[0])
             return PythonModule(modname, mp, pe)
 
         # Recurse if we're trying to get a submodule.

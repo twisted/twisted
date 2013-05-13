@@ -9,6 +9,7 @@ to load code.
 from __future__ import division, absolute_import
 
 import sys
+import site
 
 from twisted.python.filepath import FilePath
 
@@ -19,15 +20,28 @@ class TwistedModulesMixin:
     methods for manipulating Python's module system.
     """
 
+    def _cleanUpSysPath(self, originalSysPath):
+        """
+        """
+        sys.path[:] = originalSysPath
+
+
     def replaceSysPath(self, sysPath):
         """
-        Replace sys.path, for the duration of the test, with the given value.
+        Replace C{sys.path}, for the duration of the test, with the given
+        value.
         """
-        originalSysPath = sys.path[:]
-        def cleanUpSysPath():
-            sys.path[:] = originalSysPath
-        self.addCleanup(cleanUpSysPath)
+        self.addCleanup(self._cleanUpSysPath, sys.path[:])
         sys.path[:] = sysPath
+
+
+    def replaceSiteDir(self, sysPath):
+        """
+        Replace site-specific paths, for the duration of the test, with the
+        given value.
+        """
+        self.addCleanup(self._cleanUpSysPath, sys.path[:])
+        site.addsitedir(sysPath)
 
 
     def replaceSysModules(self, sysModules):
@@ -55,5 +69,3 @@ class TwistedModulesMixin:
         pkg.makedirs()
         pkg.child(b"__init__.py").setContent(b"")
         return entry
-
-

@@ -41,7 +41,44 @@ class TwistedModulesTestCase(TwistedModulesMixin, TestCase):
 
 class BasicTests(TwistedModulesTestCase):
 
-    def test_namespacedPackages(self):
+    namespaceBoilerplate = (
+        'import pkgutil; '
+        '__path__ = pkgutil.extend_path(__path__, __name__)')
+
+
+    def _pathEntryWithNestedPackages(self, basePath):
+        # Create two temporary directories with packages:
+        #
+        #   firstEntry:
+        #       test_package/
+        #           nested_package/
+        #               __init__.py
+        #               module.py
+        #
+        #   secondEntry:
+        #       test_package/
+        #           __init__.py
+        #           nested_package/
+        #               __init__.py
+        #               module2.py
+        firstEntry = basePath.child('nested_package')
+        firstEntry.makedirs()
+        firstEntry.child('__init__.py').setContent(self.namespaceBoilerplate)
+        firstEntry.child('module.py').setContent('')
+
+        secondEntry = self.pathEntryWithOnePackage()
+        anotherPackagePath = secondEntry.child('test_package')
+        anotherPackagePath.child('__init__.py').setContent(self.namespaceBoilerplate)
+
+        anotherNestedEntry = anotherPackagePath.child('nested_package')
+        anotherNestedEntry.makedirs()
+        anotherNestedEntry.child('__init__.py').setContent(self.namespaceBoilerplate)
+        anotherNestedEntry.child('module2.py').setContent('')
+
+        return secondEntry
+
+
+    def test_namespacedPackagesNoDuplicate(self):
         """
         Duplicate packages are not yielded when iterating over namespace
         packages.
@@ -50,10 +87,6 @@ class BasicTests(TwistedModulesTestCase):
         # created depends on it, and the replaceSysPath call below will make
         # pretty much everything unimportable.
         __import__('pkgutil')
-
-        namespaceBoilerplate = (
-            'import pkgutil; '
-            '__path__ = pkgutil.extend_path(__path__, __name__)')
 
         # Create two temporary directories with packages:
         #
@@ -78,23 +111,70 @@ class BasicTests(TwistedModulesTestCase):
 
         entry = self.pathEntryWithOnePackage()
         testPackagePath = entry.child('test_package')
-        testPackagePath.child('__init__.py').setContent(namespaceBoilerplate)
+        testPackagePath.child('__init__.py').setContent(self.namespaceBoilerplate)
 
-        nestedEntry = testPackagePath.child('nested_package')
-        nestedEntry.makedirs()
-        nestedEntry.child('__init__.py').setContent(namespaceBoilerplate)
-        nestedEntry.child('module.py').setContent('')
-
-        anotherEntry = self.pathEntryWithOnePackage()
-        anotherPackagePath = anotherEntry.child('test_package')
-        anotherPackagePath.child('__init__.py').setContent(namespaceBoilerplate)
-
-        anotherNestedEntry = anotherPackagePath.child('nested_package')
-        anotherNestedEntry.makedirs()
-        anotherNestedEntry.child('__init__.py').setContent(namespaceBoilerplate)
-        anotherNestedEntry.child('module2.py').setContent('')
-
+        anotherEntry = self._pathEntryWithNestedPackages(testPackagePath)
         self.replaceSysPath([entry.path, anotherEntry.path])
+
+        module = modules.getModule('test_package')
+
+        # We have to use importPackages=True in order to resolve the namespace
+        # packages, so we remove the imported packages from sys.modules after
+        # walking
+        try:
+            walkedNames = [
+                mod.name for mod in module.walkModules(importPackages=True)]
+        finally:
+            for module in sys.modules.keys():
+                if module.startswith('test_package'):
+                    del sys.modules[module]
+
+        expected = [
+            'test_package',
+            'test_package.nested_package',
+            'test_package.nested_package.module',
+            'test_package.nested_package.module2',
+            ]
+
+        self.assertEqual(walkedNames, expected)
+
+
+    def test_namespacedPackagesPathConfigFile(self):
+        """
+        Namespaced packages that don't have an C{__init__.py} file but use a
+        path configuration file instead.
+        """
+        # Force pkgutil to be loaded already, since the probe package being
+        # created depends on it, and the replaceSysPath call below will make
+        # pretty much everything unimportable.
+        __import__('pkgutil')
+
+        # Create two temporary directories with packages, where the first uses
+        # a path configuration file:
+        #
+        #   entry:
+        #       test.pth
+        #       test_package/
+        #           nested_package/
+        #               __init__.py
+        #               module.py
+        #
+        #   anotherEntry:
+        #       test_package/
+        #           __init__.py
+        #           nested_package/
+        #               __init__.py
+        #               module2.py
+
+        entry = FilePath(self.mktemp().encode("utf-8"))
+        pkg = entry.child(b"test_package")
+        pkg.makedirs()
+        entry.child(b"test.pth").setContent(b"import sys,types,os; p = os.path.join(sys._getframe(1).f_locals['sitedir'], *('test_package',)); ie = os.path.exists(os.path.join(p,'__init__.py')); m = not ie and sys.modules.setdefault('test_package',types.ModuleType('test')); mp = (m or []) and m.__dict__.setdefault('__path__',[]); (p not in mp) and mp.append(p)")
+
+        testPackagePath = entry.child('test_package')
+
+        self._pathEntryWithNestedPackages(testPackagePath)
+        self.replaceSiteDir(entry.path)
 
         module = modules.getModule('test_package')
 
@@ -155,7 +235,7 @@ class BasicTests(TwistedModulesTestCase):
 
     def test_nonexistentPaths(self):
         """
-        Verify that L{modules.walkModules} ignores entries in sys.path which
+        Verify that L{modules.walkModules} ignores entries in C{sys.path} which
         do not exist in the filesystem.
         """
         existentPath = self.pathEntryWithOnePackage()
