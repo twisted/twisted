@@ -322,12 +322,8 @@ class TransportTestCase(unittest.TestCase):
     """
     klass = None
 
-    if Crypto is None:
-        skip = "cannot run w/o PyCrypto"
-
-    if pyasn1 is None:
-        skip = "Cannot run without PyASN1"
-
+    if dependencySkip:
+        skip = dependencySkip
 
     def setUp(self):
         self.transport = proto_helpers.StringTransport()
@@ -1827,16 +1823,70 @@ class ClientSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
 
 
 
+class GetMACTestCase(unittest.TestCase):
+    """
+    Tests for L{SSHCiphers._getMAC}.
+    """
+    if dependencySkip:
+        skip = dependencySkip
+
+    def setUp(self):
+        self.ciphers = transport.SSHCiphers(b'A', b'B', b'C', b'D')
+
+        # MD5 digest is 16 bytes.  Put some non-zero bytes into that part of
+        # the key.  Maybe varying the bytes a little bit means a bug in the
+        # implementation is more likely to be caught by the assertions below.
+        # The remaining 48 bytes of NULs are to pad the key out to 64 bytes.
+        # It doesn't seem to matter that SHA1 produces a larger digest.  The
+        # material seems always to need to be truncated at 16 bytes.
+        self.key = '\x55\xaa' * 8 + '\x00' * 48
+
+        self.ipad = b''.join(chr(ord(b) ^ 0x36) for b in self.key)
+        self.opad = b''.join(chr(ord(b) ^ 0x5c) for b in self.key)
+
+
+    def test_hmacsha1(self):
+        """
+        When L{SSHCiphers._getMAC} is called with the C{b"hmac-sha1"} MAC
+        algorithm name it returns a tuple of (sha1 digest object, inner pad,
+        outer pad, sha1 digest size) with a C{key} attribute set to the value
+        of the key supplied.
+        """
+        params = self.ciphers._getMAC(b"hmac-sha1", self.key)
+        self.assertEqual(
+            (sha1, self.ipad, self.opad, sha1().digest_size, self.key),
+            params + (params.key,))
+
+
+    def test_md5sha1(self):
+        """
+        When L{SSHCiphers._getMAC} is called with the C{b"hmac-md5"} MAC
+        algorithm name it returns a tuple of (md5 digest object, inner pad,
+        outer pad, md5 digest size) with a C{key} attribute set to the value of
+        the key supplied.
+        """
+        params = self.ciphers._getMAC(b"hmac-md5", self.key)
+        self.assertEqual(
+            (md5, self.ipad, self.opad, md5().digest_size, self.key),
+            params + (params.key,))
+
+
+    def test_none(self):
+        """
+        When L{SSHCiphers._getMAC} is called with the C{b"none"} MAC algorithm
+        name it returns a tuple of (None, "", "", 0)
+        """
+        params = self.ciphers._getMAC(b"none", self.key)
+        self.assertEqual((None, b"", b"", 0), params)
+
+
+
 class SSHCiphersTestCase(unittest.TestCase):
     """
     Tests for the SSHCiphers helper class.
     """
-    if Crypto is None:
-        skip = "cannot run w/o PyCrypto"
-
-    if pyasn1 is None:
-        skip = "Cannot run without PyASN1"
-
+    if dependencySkip:
+        skip = dependencySkip
 
     def test_init(self):
         """
@@ -1861,33 +1911,6 @@ class SSHCiphersTestCase(unittest.TestCase):
                 self.assertIsInstance(cip, transport._DummyCipher)
             else:
                 self.assertTrue(getClass(cip).__name__.startswith(modName))
-
-
-    def test_getMAC(self):
-        """
-        L{SSHCiphers._getMAC} computes the HMAC parameters for a particular
-        hash function and key.
-        """
-        ciphers = transport.SSHCiphers('A', 'B', 'C', 'D')
-
-        # MD5 digest is 16 bytes.  Put some non-zero bytes into that part of
-        # the key.  Maybe varying the bytes a little bit means a bug in the
-        # implementation is more likely to be caught by the assertions below.
-        # The remaining 48 bytes of NULs are to pad the key out to 64 bytes.
-        key = '\x55\xaa' * 8 + '\x00' * 48
-
-        for macName, mac in ciphers.macMap.items():
-            mod = ciphers._getMAC(macName, key)
-            if macName == 'none':
-                self.assertIdentical(mac, None)
-            else:
-                self.assertEqual(
-                    (mac,
-                     b''.join(chr(ord(b) ^ 0x36) for b in key),
-                     b''.join(chr(ord(b) ^ 0x5c) for b in key),
-                     len(mod[0]().digest())),
-                    mod)
-                self.assertEqual(key, mod.key)
 
 
     def test_setKeysCiphers(self):
@@ -1973,12 +1996,8 @@ class CounterTestCase(unittest.TestCase):
     """
     Tests for the _Counter helper class.
     """
-    if Crypto is None:
-        skip = "cannot run w/o PyCrypto"
-
-    if pyasn1 is None:
-        skip = "Cannot run without PyASN1"
-
+    if dependencySkip:
+        skip = dependencySkip
 
     def test_init(self):
         """
@@ -2006,12 +2025,8 @@ class TransportLoopbackTestCase(unittest.TestCase):
     """
     Test the server transport and client transport against each other,
     """
-    if Crypto is None:
-        skip = "cannot run w/o PyCrypto"
-
-    if pyasn1 is None:
-        skip = "Cannot run without PyASN1"
-
+    if dependencySkip:
+        skip = dependencySkip
 
     def _runClientServer(self, mod):
         """
@@ -2122,7 +2137,8 @@ class RandomNumberTestCase(unittest.TestCase):
     Tests for the random number generator L{_getRandomNumber} and private
     key generator L{_generateX}.
     """
-    skip = dependencySkip
+    if dependencySkip:
+        skip = dependencySkip
 
     def test_usesSuppliedRandomFunction(self):
         """
@@ -2187,13 +2203,8 @@ class OldFactoryTestCase(unittest.TestCase):
     by the C{SSHServerTransport}, so we warn the user if they create an old
     factory.
     """
-
-    if Crypto is None:
-        skip = "cannot run w/o PyCrypto"
-
-    if pyasn1 is None:
-        skip = "Cannot run without PyASN1"
-
+    if dependencySkip:
+        skip = dependencySkip
 
     def test_getPublicKeysWarning(self):
         """
