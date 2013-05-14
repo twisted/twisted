@@ -1,0 +1,1 @@
+adict, inet_pton and inet_ntop from module twisted.python.compat are now deprecated.

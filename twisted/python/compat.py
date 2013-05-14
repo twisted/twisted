@@ -30,106 +30,6 @@ else:
 
 
 
-def inet_pton(af, addr):
-    if af == socket.AF_INET:
-        return socket.inet_aton(addr)
-    elif af == getattr(socket, 'AF_INET6', 'AF_INET6'):
-        if [x for x in addr if x not in string.hexdigits + ':.']:
-            raise ValueError("Illegal characters: %r" % (''.join(x),))
-
-        parts = addr.split(':')
-        elided = parts.count('')
-        ipv4Component = '.' in parts[-1]
-
-        if len(parts) > (8 - ipv4Component) or elided > 3:
-            raise ValueError("Syntactically invalid address")
-
-        if elided == 3:
-            return '\x00' * 16
-
-        if elided:
-            zeros = ['0'] * (8 - len(parts) - ipv4Component + elided)
-
-            if addr.startswith('::'):
-                parts[:2] = zeros
-            elif addr.endswith('::'):
-                parts[-2:] = zeros
-            else:
-                idx = parts.index('')
-                parts[idx:idx+1] = zeros
-
-            if len(parts) != 8 - ipv4Component:
-                raise ValueError("Syntactically invalid address")
-        else:
-            if len(parts) != (8 - ipv4Component):
-                raise ValueError("Syntactically invalid address")
-
-        if ipv4Component:
-            if parts[-1].count('.') != 3:
-                raise ValueError("Syntactically invalid address")
-            rawipv4 = socket.inet_aton(parts[-1])
-            unpackedipv4 = struct.unpack('!HH', rawipv4)
-            parts[-1:] = [hex(x)[2:] for x in unpackedipv4]
-
-        parts = [int(x, 16) for x in parts]
-        return struct.pack('!8H', *parts)
-    else:
-        raise socket.error(97, 'Address family not supported by protocol')
-
-def inet_ntop(af, addr):
-    if af == socket.AF_INET:
-        return socket.inet_ntoa(addr)
-    elif af == socket.AF_INET6:
-        if len(addr) != 16:
-            raise ValueError("address length incorrect")
-        parts = struct.unpack('!8H', addr)
-        curBase = bestBase = None
-        for i in range(8):
-            if not parts[i]:
-                if curBase is None:
-                    curBase = i
-                    curLen = 0
-                curLen += 1
-            else:
-                if curBase is not None:
-                    if bestBase is None or curLen > bestLen:
-                        bestBase = curBase
-                        bestLen = curLen
-                    curBase = None
-        if curBase is not None and (bestBase is None or curLen > bestLen):
-            bestBase = curBase
-            bestLen = curLen
-        parts = [hex(x)[2:] for x in parts]
-        if bestBase is not None:
-            parts[bestBase:bestBase + bestLen] = ['']
-        if parts[0] == '':
-            parts.insert(0, '')
-        if parts[-1] == '':
-            parts.insert(len(parts) - 1, '')
-        return ':'.join(parts)
-    else:
-        raise socket.error(97, 'Address family not supported by protocol')
-
-try:
-    socket.AF_INET6
-except AttributeError:
-    socket.AF_INET6 = 'AF_INET6'
-
-try:
-    socket.inet_pton(socket.AF_INET6, "::")
-except (AttributeError, NameError, socket.error):
-    socket.inet_pton = inet_pton
-    socket.inet_ntop = inet_ntop
-
-
-adict = dict
-
-
-
-if _PY3:
-    # These are actually useless in Python 2 as well, but we need to go
-    # through deprecation process there (ticket #5895):
-    del adict, inet_pton, inet_ntop
 
 
 set = set
@@ -403,6 +303,138 @@ interpolation.  For example, this is safe on Python 2 and Python 3:
 
 @rtype: C{bytes}
 """
+
+# These import are here because of the circular dependency
+# between compat and the Version module
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
+from twisted.python.versions import Version
+
+
+
+@deprecated(Version("Twisted", 13, 1, 0), socket.inet_pton)
+def inet_pton(af, addr):
+    """
+    Convert an IP address from its family-specific string format to a packed,
+    binary format.
+
+    inet_pton() is useful when a library or network protocol
+    calls for an object of type struct C{in_addr} (similar to C{inet_aton()})
+    or struct C{in6_addr}.
+
+    @param af: C{address_family} used.
+
+    @param addr: L{str}, family-specific IP address string format.
+    """
+    if af == socket.AF_INET:
+        return socket.inet_aton(addr)
+    elif af == getattr(socket, 'AF_INET6', 'AF_INET6'):
+        if [x for x in addr if x not in string.hexdigits + ':.']:
+            raise ValueError("Illegal characters: %r" % (''.join(x),))
+
+        parts = addr.split(':')
+        elided = parts.count('')
+        ipv4Component = '.' in parts[-1]
+
+        if len(parts) > (8 - ipv4Component) or elided > 3:
+            raise ValueError("Syntactically invalid address")
+
+        if elided == 3:
+            return '\x00' * 16
+
+        if elided:
+            zeros = ['0'] * (8 - len(parts) - ipv4Component + elided)
+
+            if addr.startswith('::'):
+                parts[:2] = zeros
+            elif addr.endswith('::'):
+                parts[-2:] = zeros
+            else:
+                idx = parts.index('')
+                parts[idx:idx+1] = zeros
+
+            if len(parts) != 8 - ipv4Component:
+                raise ValueError("Syntactically invalid address")
+        else:
+            if len(parts) != (8 - ipv4Component):
+                raise ValueError("Syntactically invalid address")
+
+        if ipv4Component:
+            if parts[-1].count('.') != 3:
+                raise ValueError("Syntactically invalid address")
+            rawipv4 = socket.inet_aton(parts[-1])
+            unpackedipv4 = struct.unpack('!HH', rawipv4)
+            parts[-1:] = [hex(x)[2:] for x in unpackedipv4]
+
+        parts = [int(x, 16) for x in parts]
+        return struct.pack('!8H', *parts)
+    else:
+        raise socket.error(97, 'Address family not supported by protocol')
+
+
+
+@deprecated(Version("Twisted", 13, 1, 0), socket.inet_ntop)
+def inet_ntop(af, addr):
+    """
+    Convert a packed IP address (a string of some number of characters) to its
+    standard, family-specific string representation (for example, '7.10.0.5'
+    or '5aef:2b::8')
+
+    C{inet_ntop()} is useful when a library or network protocol returns an object
+    of type struct C{in_addr} (similar to C{inet_ntoa()}) or struct C{in6_addr}.
+
+    @param af: C{address_family} used.
+
+    @param addr: L{str}, packed IP address.
+    """
+    if af == socket.AF_INET:
+        return socket.inet_ntoa(addr)
+    elif af == socket.AF_INET6:
+        if len(addr) != 16:
+            raise ValueError("address length incorrect")
+        parts = struct.unpack('!8H', addr)
+        curBase = bestBase = None
+        for i in range(8):
+            if not parts[i]:
+                if curBase is None:
+                    curBase = i
+                    curLen = 0
+                curLen += 1
+            else:
+                if curBase is not None:
+                    if bestBase is None or curLen > bestLen:
+                        bestBase = curBase
+                        bestLen = curLen
+                    curBase = None
+        if curBase is not None and (bestBase is None or curLen > bestLen):
+            bestBase = curBase
+            bestLen = curLen
+        parts = [hex(x)[2:] for x in parts]
+        if bestBase is not None:
+            parts[bestBase:bestBase + bestLen] = ['']
+        if parts[0] == '':
+            parts.insert(0, '')
+        if parts[-1] == '':
+            parts.insert(len(parts) - 1, '')
+        return ':'.join(parts)
+    else:
+        raise socket.error(97, 'Address family not supported by protocol')
+
+try:
+    socket.AF_INET6
+except AttributeError:
+    socket.AF_INET6 = 'AF_INET6'
+
+try:
+    socket.inet_pton(socket.AF_INET6, "::")
+except (AttributeError, NameError, socket.error):
+    socket.inet_pton = inet_pton
+    socket.inet_ntop = inet_ntop
+
+
+adict = dict
+deprecatedModuleAttribute(
+    Version("Twisted", 13, 1, 0),
+    "adict is useless in Python 2.", __name__, "adict")
 
 
 __all__ = [

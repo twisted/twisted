@@ -8,14 +8,18 @@ Tests for L{twisted.python.compat}.
 
 from __future__ import division, absolute_import
 
-import socket, sys, traceback
+import socket
+import sys
+import traceback
 
 from twisted.trial import unittest
 
+from twisted.python import compat
 from twisted.python.compat import reduce, execfile, _PY3
 from twisted.python.compat import comparable, cmp, nativeString, networkString
 from twisted.python.compat import unicode as unicodeCompat, lazyByteSlice
 from twisted.python.compat import reraise, NativeStringIO, iterbytes, intToBytes
+from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
 
 
@@ -447,7 +451,7 @@ class StringTests(unittest.SynchronousTestCase):
 
     def test_unicode(self):
         """
-        C{compat.unicode} is C{str} on Python 3, C{unicode} on Python 2.
+        C{compat.unicode} is L{str} on Python 3, C{unicode} on Python 2.
         """
         if _PY3:
             expected = str
@@ -621,3 +625,61 @@ class Python3BytesTests(unittest.SynchronousTestCase):
         """
         data = b'123XYZ'
         self.assertEqual(bytes(lazyByteSlice(data, 2, 3)), data[2:5])
+
+
+class DeprecationTestCase(unittest.TestCase):
+    """
+    Deprecations from L{twisted.python.compat}
+    """
+
+    def test_inet_ntop(self):
+        """
+        L{compat.inet_ntop} is deprecated.
+        """
+        self.callDeprecated(
+            (Version("Twisted", 13, 1, 0), socket.inet_ntop),
+            compat.inet_ntop, socket.AF_INET, "\x01\x00\x01\x00")
+
+    def test_inet_pton(self):
+        """
+        L{compat.inet_pton} is deprecated.
+        """
+        self.callDeprecated(
+            (Version("Twisted", 13, 1, 0), socket.inet_pton),
+            compat.inet_pton, socket.AF_INET, "0.0.0.0")
+
+
+    def lookForDeprecationWarning(self, testMethod, attributeName, warningMsg):
+        """
+        'C{compat.attributeName}' is deprecated. Call 'C{compat.testMethod}' 
+        and verify the warning message 'C{compat.warningMsg}'
+
+        @param testMethod: Name of the offending function to be used with
+            flushWarnings
+        @type testmethod: L{str}
+
+        @param attributeName: Name of attribute to be checked for deprecation
+        @type attributeName: L{str}
+
+        @param warningMsg: Deprecation warning message
+        @type warningMsg: L{str}
+        """
+        warningsShown = self.flushWarnings([testMethod])
+        self.assertEqual(len(warningsShown), 1)
+        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            "twisted.python.compat." + attributeName + " "
+            "was deprecated in Twisted 13.1.0: " + warningMsg + ".")
+
+
+    def test_adict(self):
+        """
+        L{compat.adict} is deprecated.
+        """
+        a = compat.adict
+        del a
+        self.lookForDeprecationWarning(
+            self.test_adict, "adict",
+            "adict is useless in Python 2")
+
