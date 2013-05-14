@@ -9,6 +9,7 @@ from twisted.trial import unittest
 from twisted.python import usage
 
 
+
 class WellBehaved(usage.Options):
     optParameters = [['long', 'w', 'default', 'and a docstring'],
                      ['another', 'n', 'no docstring'],
@@ -24,6 +25,7 @@ class WellBehaved(usage.Options):
                  """],
                 ['flout', 'o'],
                 ]
+
 
     def opt_myflag(self):
         self.opts['myflag'] = "PONY!"
@@ -52,6 +54,7 @@ class ParseCorrectnessTest(unittest.TestCase):
 
         self.nice.parseOptions(self.niceArgV)
 
+
     def test_checkParameters(self):
         """
         Parameters have correct values.
@@ -61,12 +64,14 @@ class ParseCorrectnessTest(unittest.TestCase):
         self.assertEqual(self.nice.opts['longonly'], "noshort")
         self.assertEqual(self.nice.opts['shortless'], "Gamma")
 
+
     def test_checkFlags(self):
         """
         Flags have correct values.
         """
         self.assertEqual(self.nice.opts['aflag'], 1)
         self.assertEqual(self.nice.opts['flout'], 0)
+
 
     def test_checkCustoms(self):
         """
@@ -85,6 +90,7 @@ class TypedOptions(usage.Options):
         ['eggfloat', None, None, 'Egg float without default', float],
     ]
 
+
     def opt_under_score(self, value):
         """
         This option has an underscore in its name to exercise the _ to -
@@ -101,6 +107,7 @@ class TypedTestCase(unittest.TestCase):
     """
     def setUp(self):
         self.usage = TypedOptions()
+
 
     def test_defaultValues(self):
         """
@@ -165,15 +172,21 @@ class WrongTypedOptions(usage.Options):
     ]
 
 
+
 class WeirdCallableOptions(usage.Options):
     def _bar(value):
         raise RuntimeError("Ouch")
+
+
     def _foo(value):
         raise ValueError("Yay")
+
+
     optParameters = [
         ['barwrong', None, None, 'Bar with strange callable', _bar],
         ['foowrong', None, None, 'Foo with strange callable', _foo]
     ]
+
 
 
 class WrongTypedTestCase(unittest.TestCase):
@@ -188,6 +201,7 @@ class WrongTypedTestCase(unittest.TestCase):
         argV = "--barwrong egg".split()
         self.assertRaises(TypeError, us.parseOptions, argV)
 
+
     def test_notCalledInDefault(self):
         """
         The coerce functions are not called if no values are provided.
@@ -195,6 +209,7 @@ class WrongTypedTestCase(unittest.TestCase):
         us = WeirdCallableOptions()
         argV = []
         us.parseOptions(argV)
+
 
     def test_weirdCallable(self):
         """
@@ -212,6 +227,7 @@ class WrongTypedTestCase(unittest.TestCase):
         self.assertRaises(RuntimeError, us.parseOptions, argV)
 
 
+
 class OutputTest(unittest.TestCase):
     def test_uppercasing(self):
         """
@@ -223,10 +239,12 @@ class OutputTest(unittest.TestCase):
         self.assertEqual(str(e), 'option -Z not recognized')
 
 
+
 class InquisitionOptions(usage.Options):
     optFlags = [
         ('expect', 'e'),
         ]
+
     optParameters = [
         ('torture-device', 't',
          'comfy-chair',
@@ -241,16 +259,19 @@ class HolyQuestOptions(usage.Options):
                 ]
 
 
+
 class SubCommandOptions(usage.Options):
     optFlags = [('europian-swallow', None,
                  'set default swallow type to Europian'),
                 ]
+
     subCommands = [
         ('inquisition', 'inquest', InquisitionOptions,
             'Perform an inquisition'),
         ('holyquest', 'quest', HolyQuestOptions,
             'Embark upon a holy quest'),
         ]
+
 
 
 class SubCommandTest(unittest.TestCase):
@@ -269,6 +290,7 @@ class SubCommandTest(unittest.TestCase):
         self.assertEqual(o.subOptions['expect'], False)
         self.assertEqual(o.subOptions['torture-device'], 'comfy-chair')
 
+
     def test_subcommandWithFlagsAndOptions(self):
         """
         Flags and options of a subcommand are assigned.
@@ -280,6 +302,7 @@ class SubCommandTest(unittest.TestCase):
         self.failUnless(isinstance(o.subOptions, InquisitionOptions))
         self.assertEqual(o.subOptions['expect'], True)
         self.assertEqual(o.subOptions['torture-device'], 'feather')
+
 
     def test_subcommandAliasWithFlagsAndOptions(self):
         """
@@ -293,6 +316,7 @@ class SubCommandTest(unittest.TestCase):
         self.assertEqual(o.subOptions['expect'], True)
         self.assertEqual(o.subOptions['torture-device'], 'feather')
 
+
     def test_anotherSubcommandWithFlagsAndOptions(self):
         """
         Flags and options of another subcommand are assigned.
@@ -305,6 +329,7 @@ class SubCommandTest(unittest.TestCase):
         self.assertEqual(o.subOptions['horseback'], False)
         self.assertEqual(o.subOptions['for-grail'], True)
 
+
     def test_noSubcommand(self):
         """
         If no subcommand is specified and no default subcommand is assigned,
@@ -315,6 +340,7 @@ class SubCommandTest(unittest.TestCase):
         self.assertEqual(o['europian-swallow'], True)
         self.assertEqual(o.subCommand, None)
         self.failIf(hasattr(o, 'subOptions'))
+
 
     def test_defaultSubcommand(self):
         """
@@ -328,6 +354,7 @@ class SubCommandTest(unittest.TestCase):
         self.failUnless(isinstance(o.subOptions, InquisitionOptions))
         self.assertEqual(o.subOptions['expect'], False)
         self.assertEqual(o.subOptions['torture-device'], 'comfy-chair')
+
 
     def test_subCommandParseOptionsHasParent(self):
         """
@@ -346,6 +373,7 @@ class SubCommandTest(unittest.TestCase):
         o.parseOptions(['foo'])
         self.failUnless(hasattr(o.subOptions, 'sawParent'))
         self.assertEqual(o.subOptions.sawParent , o)
+
 
     def test_subCommandInTwoPlaces(self):
         """
@@ -372,6 +400,7 @@ class SubCommandTest(unittest.TestCase):
         self.failUnlessIdentical(oBar.subOptions.parent, oBar)
 
 
+
 class HelpStringTest(unittest.TestCase):
     """
     Test generated help strings.
@@ -387,6 +416,7 @@ class HelpStringTest(unittest.TestCase):
 
         self.nice = WellBehaved()
 
+
     def test_noGoBoom(self):
         """
         __str__ shouldn't go boom.
@@ -395,6 +425,7 @@ class HelpStringTest(unittest.TestCase):
             self.nice.__str__()
         except Exception, e:
             self.fail(e)
+
 
     def test_whitespaceStripFlagsAndParameters(self):
         """
@@ -405,6 +436,7 @@ class HelpStringTest(unittest.TestCase):
         lines = [s for s in str(self.nice).splitlines() if s.find("aflag")>=0]
         self.failUnless(len(lines) > 0)
         self.failUnless(lines[0].find("flagallicious") >= 0)
+
 
 
 class PortCoerceTestCase(unittest.TestCase):
@@ -418,6 +450,7 @@ class PortCoerceTestCase(unittest.TestCase):
         self.assertEqual(0, usage.portCoerce("0"))
         self.assertEqual(3210, usage.portCoerce("3210"))
         self.assertEqual(65535, usage.portCoerce("65535"))
+
 
     def test_errorCoerce(self):
         """
