@@ -258,7 +258,15 @@ def generateVersionFileData(version):
     else:
         prerelease = ""
     data = '''\
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 # This is an auto-generated file. Do not edit it.
+
+"""
+Provides Twisted version information.
+"""
+
 from twisted.python import versions
 version = versions.Version(%r, %s, %s, %s%s)
 ''' % (version.package, version.major, version.minor, version.micro,
