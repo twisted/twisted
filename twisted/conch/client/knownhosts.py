@@ -11,11 +11,11 @@ An implementation of the OpenSSH known_hosts database.
 from binascii import Error as DecodeError, b2a_base64
 import hmac
 import sys
+from hashlib import sha1
 
 from zope.interface import implements
 
 from twisted.python.randbytes import secureRandom
-from twisted.python.hashlib import sha1
 from twisted.internet import defer
 from twisted.python import log
 from twisted.python.util import FancyEqMixin

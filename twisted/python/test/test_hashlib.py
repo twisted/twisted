@@ -4,21 +4,36 @@
 """
 Tests for L{twisted.python.hashlib}
 """
-
 from twisted.trial.unittest import TestCase
+from twisted.trial import util
 
-from twisted.python.hashlib import md5, sha1
 
 
 class HashObjectTests(TestCase):
     """
     Tests for the hash object APIs presented by L{hashlib}, C{md5} and C{sha1}.
     """
+    def test_deprecation(self):
+        """
+        Ensure the deprecation of L{twisted.python.hashlib} is working.
+        """
+        from twisted.python import hashlib
+        warnings = self.flushWarnings(
+                offendingFunctions=[self.test_deprecation])
+        self.assertIdentical(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['message'],
+                "twisted.python.hashlib was deprecated in "
+                "Twisted 13.1.0: Please use hashlib from stdlib.")
+
+
     def test_md5(self):
         """
         L{hashlib.md5} returns an object which can be used to compute an MD5
         hash as defined by U{RFC 1321<http://www.ietf.org/rfc/rfc1321.txt>}.
         """
+        from twisted.python.hashlib import md5
+
         # Test the result using values from section A.5 of the RFC.
         self.assertEqual(
             md5().hexdigest(), "d41d8cd98f00b204e9800998ecf8427e")
@@ -53,6 +68,8 @@ class HashObjectTests(TestCase):
 
         # Instances of it should have a digest_size attribute
         self.assertEqual(md5().digest_size, 16)
+    test_md5.suppress = [util.suppress(message="twisted.python.hashlib"
+          "was deprecated in Twisted 13.1.0: Please use hashlib from stdlib.")]
 
 
     def test_sha1(self):
@@ -60,6 +77,9 @@ class HashObjectTests(TestCase):
         L{hashlib.sha1} returns an object which can be used to compute a SHA1
         hash as defined by U{RFC 3174<http://tools.ietf.org/rfc/rfc3174.txt>}.
         """
+
+        from twisted.python.hashlib import sha1
+
         def format(s):
             return ''.join(s.split()).lower()
         # Test the result using values from section 7.3 of the RFC.
@@ -88,3 +108,5 @@ class HashObjectTests(TestCase):
         # Instances of it should have a digest_size attribute.
         self.assertEqual(
             sha1().digest_size, 20)
+    test_sha1.suppress = [util.suppress(message="twisted.python.hashlib"
+          "was deprecated in Twisted 13.1.0: Please use hashlib from stdlib.")]

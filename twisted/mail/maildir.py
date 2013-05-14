@@ -10,6 +10,7 @@ Maildir-style mailbox support
 import os
 import stat
 import socket
+from hashlib import md5
 
 from zope.interface import implementer
 
@@ -23,7 +24,6 @@ from twisted.mail import smtp
 from twisted.protocols import basic
 from twisted.persisted import dirdbm
 from twisted.python import log, failure
-from twisted.python.hashlib import md5
 from twisted.mail import mail
 from twisted.internet import interfaces, defer, reactor
 from twisted.cred import portal, credentials, checkers

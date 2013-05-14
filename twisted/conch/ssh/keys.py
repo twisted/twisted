@@ -11,6 +11,7 @@ Maintainer: U{Paul Swartz}
 # base library imports
 import base64
 import itertools
+from hashlib import md5, sha1
 
 # external library imports
 from Crypto.Cipher import DES3, AES
@@ -22,7 +23,6 @@ from pyasn1.codec.ber import encoder as berEncoder
 
 # twisted
 from twisted.python import randbytes
-from twisted.python.hashlib import md5, sha1
 
 # sibling imports
 from twisted.conch.ssh import common, sexpy

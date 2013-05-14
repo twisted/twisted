@@ -8,9 +8,9 @@ Tests for L{twisted.python.zipstream}
 import sys
 import random
 import zipfile
+from hashlib import md5
 
 from twisted.python import zipstream, filepath
-from twisted.python.hashlib import md5
 from twisted.trial import unittest
 
 

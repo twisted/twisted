@@ -14,6 +14,7 @@ Maintainer: Paul Swartz
 import struct
 import zlib
 import array
+from hashlib import md5, sha1
 
 # external library imports
 from Crypto import Util
@@ -24,7 +25,6 @@ from twisted.internet import protocol, defer
 
 from twisted.conch import error
 from twisted.python import log, randbytes
-from twisted.python.hashlib import md5, sha1
 
 
 # sibling imports

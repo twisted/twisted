@@ -74,9 +74,9 @@ TODO
 import types, operator, os
 from random import randint
 from urllib import quote, unquote
+from hashlib import md5
 
 from twisted.python import failure, log
-from twisted.python.hashlib import md5
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred, execute
 from twisted.internet.protocol import ClientFactory
