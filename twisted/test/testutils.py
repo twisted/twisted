@@ -12,9 +12,10 @@ don't-use-it-outside-Twisted-we-won't-maintain-compatibility rule!
     their own test cases.
 """
 
-from io import BytesIO
 import os
 import sys
+
+from io import BytesIO
 from xml.dom import minidom as dom
 
 from twisted.internet import utils
