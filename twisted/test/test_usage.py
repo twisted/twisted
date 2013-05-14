@@ -5,6 +5,9 @@
 Tests for L{twisted.python.usage}, a command line option parsing library.
 """
 
+import sys
+from io import BytesIO
+
 from twisted.trial import unittest
 from twisted.python import usage
 
@@ -33,6 +36,70 @@ class WellBehaved(usage.Options):
 
     def opt_myparam(self, value):
         self.opts['myparam'] = "%s WITH A PONY!" % (value,)
+
+
+
+class DefaultOptionsTest(unittest.TestCase):
+    """
+    Test L{usage.Options} default options.
+    """
+
+    def test_optHelpExists(self):
+        """
+        L{usage.Options} has a default I{--help} flag without a
+        corresponding short synonym.
+        """
+        o = WellBehaved()
+        self.assertIn(('help', 'help'), o.synonyms.items())
+
+
+    def test_optHelpRaisesSystemExit(self):
+        """
+        The L{usage.Options} I{--help} flag raises SystemExit with 0
+        return code.
+        The full usage message is printed to stdout.
+        Nothing is printed to stderr.
+        """
+        stdout = BytesIO()
+        self.patch(sys, 'stdout', stdout)
+        stderr = BytesIO()
+        self.patch(sys, 'stderr', stderr)
+        o = WellBehaved()
+        e = self.assertRaises(SystemExit, o.parseOptions, ('--help',))
+        exitCode = int(e.args[0])
+        self.assertEqual(exitCode, 0)
+        self.assertEqual(stdout.getvalue(), str(o) + '\n')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_optVersionExists(self):
+        """
+        L{usage.Options} has a default I{--version} flag without a
+        corresponding short synonym.
+        """
+        o = WellBehaved()
+        self.assertIn(('version', 'version'), o.synonyms.items())
+
+
+    def test_optVersionRaisesSystemExit(self):
+        """
+        The L{usage.Options} I{--version} flag raises SystemExit with 0
+        return code.
+        A Twisted version string is printed to stdout.
+        Nothing is printed to stderr.
+        """
+        stdout = BytesIO()
+        self.patch(sys, 'stdout', stdout)
+        stderr = BytesIO()
+        self.patch(sys, 'stderr', stderr)
+        o = WellBehaved()
+        e = self.assertRaises(SystemExit, o.parseOptions, ('--version',))
+        exitCode = int(e.args[0])
+        self.assertEqual(exitCode, 0)
+        from twisted import copyright
+        self.assertEqual(
+            stdout.getvalue(), 'Twisted version: ' + copyright.version  + '\n')
+        self.assertEqual(stderr.getvalue(), '')
 
 
 
@@ -250,6 +317,7 @@ class InquisitionOptions(usage.Options):
          'comfy-chair',
          'set preferred torture device'),
         ]
+
 
 
 class HolyQuestOptions(usage.Options):
