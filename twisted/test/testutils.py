@@ -224,7 +224,7 @@ class ExampleTestBaseMixin(object):
     def tearDown(self):
         """
         Remove the example directory from the path and remove all
-        modules loaded by the test from sys.modules.
+        modules loaded by the test from L{sys.modules}.
         """
         sys.modules.clear()
         sys.modules.update(self.originalModules)
@@ -272,7 +272,7 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
     def test_definedOptions(self):
         """
         Example scripts contain an Options class which is a subclass
-        of l{twisted.python.usage.Options]
+        of L{twisted.python.usage.Options}
         """
         self.assertIsInstance(self.example.Options(), usage.Options)
 
