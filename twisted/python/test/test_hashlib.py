@@ -15,7 +15,7 @@ class HashObjectTests(TestCase):
     """
     def test_deprecation(self):
         """
-        Test to ensure deprecation of L{twisted.python.hashlib}
+        Ensure the deprecation of L{twisted.python.hashlib} is working.
         """
         from twisted.python import hashlib
         warnings = self.flushWarnings(
