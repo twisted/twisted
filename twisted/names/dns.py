@@ -580,19 +580,19 @@ class OPTHeader(tputil.FancyEqMixin):
         strio.write(struct.pack(self.fmt, self.type, self.udpPayloadSize))
 
 
-    def decode(self, strio, length = None):
+    def decode(self, strio, length=None):
         """
         Decode a byte string into this OPTHeader.
 
         @type strio: file
         @param strio: Bytes will be read from this file until the full
-        OPTHeader is decoded.
+            OPTHeader is decoded.
         """
         self.name.decode(strio)
         l = struct.calcsize(self.fmt)
         buff = readPrecisely(strio, l)
-        r = struct.unpack(self.fmt, buff)
-        self.type = r[0]
+        self.type, self.udpPayloadSize = struct.unpack(self.fmt, buff)
+
 
 
     def __str__(self):

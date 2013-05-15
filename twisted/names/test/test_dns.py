@@ -1806,7 +1806,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns.OPTHeader.encode} packs the header fields and writes
         them to a file like object passed in as an argument.
         """
-        h = dns.OPTHeader(udpPayloadSize=4096)
+        h = dns.OPTHeader(udpPayloadSize=512)
         b = BytesIO()
 
         h.encode(b)
@@ -1814,8 +1814,26 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             b.getvalue().encode('hex'),
             '0000' # 0 root zone
             '29' # type 41
-            '1000' # udpPayloadsize 4096
+            '0200' # udpPayloadsize 512
             )
+
+
+    def test_decode(self):
+        """
+        L{dns.OPTHeader.decode} unpacks the header fields from a file
+        like object and sets corresponding instance attributes.
+        """
+        h = dns.OPTHeader()
+        b = BytesIO((
+            '0000' # 0 root zone
+            '29' # type 41
+            '0200' # udpPayloadsize 512
+            ).decode('hex'))
+
+        h.decode(b)
+        self.assertEqual(h.name, dns.Name(b''))
+        self.assertEqual(h.type, 41)
+        self.assertEqual(h.udpPayloadSize, 512)
 
 
     def test_optHeaderRepr(self):
