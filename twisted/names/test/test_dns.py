@@ -1229,26 +1229,6 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             cls(b'example.org', 123))
 
 
-    def test_optheader(self):
-        """
-        Two OptHeader instances compare equal if they have the same
-        (Record_OPT) payload and auth bit.
-        """
-        self._equalityTest(
-            dns.OPTHeader(payload=dns.Record_OPT(payload_size=1024,
-                                                 dnssecOk=True,
-                                                 version=0,
-                                                 ttl=30)),
-            dns.OPTHeader(payload=dns.Record_OPT(payload_size=1024,
-                                                 dnssecOk=True,
-                                                 version=0,
-                                                 ttl=30)),
-            dns.OPTHeader(payload=dns.Record_OPT(payload_size=1492,
-                                                 dnssecOk=False,
-                                                 version=0,
-                                                 ttl=40), auth=True))
-
-
     def test_rrheader(self):
         """
         Two L{dns.RRHeader} instances compare equal if and only if they have
@@ -1786,3 +1766,28 @@ class RRHeaderTests(unittest.TestCase):
         self.assertRaises(
             ValueError, dns.RRHeader, "example.com", dns.A,
             dns.IN, -1, dns.Record_A("127.0.0.1"))
+
+
+
+class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
+    """
+    Tests for L{twisted.names.dns.OPTHeader}.
+    """
+    def test_optheaderEquality(self):
+        """
+        Two OptHeader instances compare equal if they have the same
+        (Record_OPT) payload and auth bit.
+        """
+        self.assertNormalEqualityImplementation(
+            dns.OPTHeader(payload=dns.Record_OPT(payload_size=1024,
+                                                 dnssecOk=True,
+                                                 version=0,
+                                                 ttl=30)),
+            dns.OPTHeader(payload=dns.Record_OPT(payload_size=1024,
+                                                 dnssecOk=True,
+                                                 version=0,
+                                                 ttl=30)),
+            dns.OPTHeader(payload=dns.Record_OPT(payload_size=1492,
+                                                 dnssecOk=False,
+                                                 version=0,
+                                                 ttl=40), auth=True))
