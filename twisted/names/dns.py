@@ -527,7 +527,7 @@ class Query:
 
 
 @implementer(IEncodable)
-class OPTHeader(tputil.FancyEqMixin):
+class OPTHeader(tputil.FancyEqMixin, object):
     """
     An OPT record header.
 
@@ -546,13 +546,13 @@ class OPTHeader(tputil.FancyEqMixin):
         Full conformance with this specification is indicated by
         version '0'.
     @ivar dnssecOK: DNSSEC OK bit as defined by [RFC3225].
-    @ivar rdlen: length of all RDATA
+    @ivar rdlen: length in bytes of all RDATA
     @since: 13.1
     """
 
     compareAttributes = (
         'name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
-        'dnssecOK')
+        'dnssecOK', '_rdata')
 
     fmt = "!HH2BHH"
 
@@ -562,9 +562,10 @@ class OPTHeader(tputil.FancyEqMixin):
     extendedRCODE = 0
     version = 0
     dnsssecOK = False
-    rdlen = 0
+    _rdata = b''
 
-    def __init__(self, udpPayloadSize=4096, extendedRCODE=0, version=0, dnssecOK=False):
+    def __init__(self, udpPayloadSize=4096, extendedRCODE=0, version=0,
+                 dnssecOK=False, _rdata=b''):
         """
         @type udpPayloadSize: C{int}
         @param payload: The number of octets of the largest UDP
@@ -589,6 +590,15 @@ class OPTHeader(tputil.FancyEqMixin):
         self.extendedRCODE = extendedRCODE
         self.version = version
         self.dnssecOK = dnssecOK
+        self._rdata = _rdata
+
+
+    @property
+    def rdlen(self):
+        """
+        @return: The length in bytes of all RDATA.
+        """
+        return len(self._rdata)
 
 
     def encode(self, strio, compDict=None):
@@ -612,6 +622,7 @@ class OPTHeader(tputil.FancyEqMixin):
                 self.version,
                 self.dnssecOK << 15,
                 self.rdlen))
+        strio.write(self._rdata)
 
 
     def decode(self, strio, length=None):
@@ -630,8 +641,9 @@ class OPTHeader(tputil.FancyEqMixin):
          self.extendedRCODE,
          self.version,
          doz,
-         self.rdlen) = struct.unpack(self.fmt, buff)
+         rdlen) = struct.unpack(self.fmt, buff)
         self.dnssecOK = doz >> 15
+        self._rdata = readPrecisely(strio, rdlen)
 
 
     def __str__(self):
