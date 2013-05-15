@@ -535,31 +535,34 @@ class OPTHeader(tputil.FancyEqMixin):
 
     @ivar name: Root (0, 8-bits)
     @ivar type: 41 (OPT Record)
-    @ivar payload: An object that implements the IEncodable interface
+    @param udpPayloadSize: The number of octets of the largest UDP payload
+        that can be reassembled and delivered in the requestor's
+        network stack.
 
     @since: 13.1
     """
 
-    compareAttributes = ('name', 'type', 'payload')
+    compareAttributes = ('name', 'type', 'udpPayloadSize')
 
     fmt = "!H"
 
     name = Name(b'')
     type = OPT
-    payload = None
+    udpPayloadSize = 4096
 
     # OPTHeader _really_ has no ttl or rdlength, but the
     # existence of the attributes is required.
     ttl = None
     rdlength = None
 
-    def __init__(self, payload=None):
+    def __init__(self, udpPayloadSize=4096):
         """
-        @type payload: An object implementing C{IEncodable}
-        @param payload: The OPT payload
+        @type udpPayloadSize: C{int}
+        @param payload: The number of octets of the largest UDP
+            payload that can be reassembled and delivered in the
+            requestor's network stack.
         """
-        assert (payload is None) or (payload.TYPE == OPT)
-        self.payload = payload
+        self.udpPayloadSize=udpPayloadSize
 
 
     def encode(self, strio, compDict=None):

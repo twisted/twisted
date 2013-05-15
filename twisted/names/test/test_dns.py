@@ -1790,6 +1790,17 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(dns.OPTHeader.type, 41)
 
 
+    def test_optHeaderUDPPayloadSize(self):
+        """
+        L{dns.OPTHeader.udpPayloadSize} defaults to 4096 as
+        recommended in rfc6891 section-6.2.5 but can be overridden in
+        the constructor.
+        """
+        self.assertEqual(dns.OPTHeader.udpPayloadSize, 4096)
+        h = dns.OPTHeader(udpPayloadSize=512)
+        self.assertEqual(h.udpPayloadSize, 512)
+
+
     def test_optHeaderRepr(self):
         """
         L{dns.OPTHeader.__repr__} displays the name and type.
@@ -1800,18 +1811,9 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
     def test_optheaderEquality(self):
         """
         Two OptHeader instances compare equal if they have the same
-        payload.
+        udpPayloadSize.
         """
         self.assertNormalEqualityImplementation(
-            dns.OPTHeader(payload=dns.Record_OPT(payload_size=1024,
-                                                 dnssecOk=True,
-                                                 version=0,
-                                                 ttl=30)),
-            dns.OPTHeader(payload=dns.Record_OPT(payload_size=1024,
-                                                 dnssecOk=True,
-                                                 version=0,
-                                                 ttl=30)),
-            dns.OPTHeader(payload=dns.Record_OPT(payload_size=1492,
-                                                 dnssecOk=False,
-                                                 version=0,
-                                                 ttl=40)))
+            dns.OPTHeader(udpPayloadSize=512),
+            dns.OPTHeader(udpPayloadSize=512),
+            dns.OPTHeader(udpPayloadSize=4096))
