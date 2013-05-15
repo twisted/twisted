@@ -1831,6 +1831,14 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(h.dnssecOK, True)
 
 
+    def test_optHeaderRdlen(self):
+        """
+        L{dns.OPTHeader.rdlen} is a readonly attribute which defaults
+        to 0.
+        """
+        self.assertEqual(dns.OPTHeader.rdlen, 0)
+
+
     def test_encode(self):
         """
         L{dns.OPTHeader.encode} packs the header fields and writes
@@ -1851,7 +1859,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             '0200' # udpPayloadsize 512
             '03' # extendedRCODE 3
             '03' # version 3
-            '8000' # DNSSEC OK 1
+            '8000' # DNSSEC OK 1 + Z
+            '0000' # RDLEN 0
             )
 
 
@@ -1867,7 +1876,9 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             '0200' # udpPayloadsize 512
             '03' # extendedRCODE 3
             '03' # version 3
-            '8000' # DNSSEC OK 1
+            '8000' # DNSSEC OK 1 + Z
+            '0010' # RDLEN 16
+            '1111' # RDATA
             ).decode('hex'))
 
         h.decode(b)
@@ -1877,11 +1888,13 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(h.extendedRCODE, 3)
         self.assertEqual(h.version, 3)
         self.assertEqual(h.dnssecOK, True)
+        self.assertEqual(h.rdlen, 16)
 
 
     def test_optHeaderRepr(self):
         """
-        L{dns.OPTHeader.__repr__} displays the name and type.
+        L{dns.OPTHeader.__repr__} displays the name and type and all
+        the fixed and extended header values of the OPT record.
         """
         self.assertEqual(
             repr(dns.OPTHeader()),
@@ -1891,14 +1904,15 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             'udpPayloadSize=4096 '
             'extendedRCODE=0 '
             'version=0 '
-            'dnssecOK=False'
+            'dnssecOK=False '
+            'rdlen=0'
             '>')
 
 
     def test_optheaderEquality(self):
         """
         Two OptHeader instances compare equal if they have the same
-        udpPayloadSize, extendedRCODE.
+        udpPayloadSize, extendedRCODE, version and dnssecOK flag.
         """
         self.assertNormalEqualityImplementation(
             dns.OPTHeader(udpPayloadSize=512),

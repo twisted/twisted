@@ -546,6 +546,7 @@ class OPTHeader(tputil.FancyEqMixin):
         Full conformance with this specification is indicated by
         version '0'.
     @ivar dnssecOK: DNSSEC OK bit as defined by [RFC3225].
+    @ivar rdlen: length of all RDATA
     @since: 13.1
     """
 
@@ -553,7 +554,7 @@ class OPTHeader(tputil.FancyEqMixin):
         'name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
         'dnssecOK')
 
-    fmt = "!HH2BH"
+    fmt = "!HH2BHH"
 
     name = Name(b'')
     type = OPT
@@ -561,8 +562,7 @@ class OPTHeader(tputil.FancyEqMixin):
     extendedRCODE = 0
     version = 0
     dnsssecOK = False
-
-    rdlength = None
+    rdlen = 0
 
     def __init__(self, udpPayloadSize=4096, extendedRCODE=0, version=0, dnssecOK=False):
         """
@@ -610,7 +610,8 @@ class OPTHeader(tputil.FancyEqMixin):
                 self.udpPayloadSize,
                 self.extendedRCODE,
                 self.version,
-                self.dnssecOK << 15,))
+                self.dnssecOK << 15,
+                self.rdlen))
 
 
     def decode(self, strio, length=None):
@@ -628,7 +629,8 @@ class OPTHeader(tputil.FancyEqMixin):
          self.udpPayloadSize,
          self.extendedRCODE,
          self.version,
-         doz) = struct.unpack(self.fmt, buff)
+         doz,
+         self.rdlen) = struct.unpack(self.fmt, buff)
         self.dnssecOK = doz >> 15
 
 
@@ -640,13 +642,15 @@ class OPTHeader(tputil.FancyEqMixin):
             'udpPayloadSize=%s '
             'extendedRCODE=%s '
             'version=%s '
-            'dnssecOK=%s>') % (
+            'dnssecOK=%s '
+            'rdlen=%s>') % (
             self.name,
             self.type,
             self.udpPayloadSize,
             self.extendedRCODE,
             self.version,
-            self.dnssecOK)
+            self.dnssecOK,
+            self.rdlen)
 
 
     @classmethod
