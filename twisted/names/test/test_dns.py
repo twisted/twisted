@@ -1811,6 +1811,16 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(h.extendedRCODE, 1)
 
 
+    def test_optHeaderVersion(self):
+        """
+        L{dns.OPTHeader.version} defaults to 0 but can be
+        overridden in the constructor.
+        """
+        self.assertEqual(dns.OPTHeader.version, 0)
+        h = dns.OPTHeader(version=1)
+        self.assertEqual(h.version, 1)
+
+
     def test_encode(self):
         """
         L{dns.OPTHeader.encode} packs the header fields and writes
@@ -1818,7 +1828,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         h = dns.OPTHeader(
             udpPayloadSize=512,
-            extendedRCODE=1)
+            extendedRCODE=1,
+            version=1)
         b = BytesIO()
 
         h.encode(b)
@@ -1828,7 +1839,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             '0029' # type 41
             '0200' # udpPayloadsize 512
             '01' # extendedRCODE 1
-            '00' # version
+            '01' # version
             '0000' #
             )
 
@@ -1844,7 +1855,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             '0029' # type 41
             '0200' # udpPayloadsize 512
             '01' # extendedRCODE 1
-            '00' # version
+            '01' # version
             '0000' #
             ).decode('hex'))
 
@@ -1853,6 +1864,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(h.type, 41)
         self.assertEqual(h.udpPayloadSize, 512)
         self.assertEqual(h.extendedRCODE, 1)
+        self.assertEqual(h.version, 1)
 
 
     def test_optHeaderRepr(self):
@@ -1865,7 +1877,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             'name= '
             'type=41 '
             'udpPayloadSize=4096 '
-            'extendedRCODE=0'
+            'extendedRCODE=0 '
+            'version=0'
             '>')
 
 
@@ -1883,3 +1896,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             dns.OPTHeader(extendedRCODE=1),
             dns.OPTHeader(extendedRCODE=1),
             dns.OPTHeader(extendedRCODE=2))
+
+        self.assertNormalEqualityImplementation(
+            dns.OPTHeader(version=1),
+            dns.OPTHeader(version=1),
+            dns.OPTHeader(version=2))
