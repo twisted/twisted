@@ -599,10 +599,6 @@ class OPTHeader(tputil.FancyEqMixin):
         self.type = r[0]
 
 
-    def isAuthoritative(self):
-        return self.auth
-
-
     def __str__(self):
         return '<OPT name="%s" type=%s>' % (self.name, self.type)
 
