@@ -639,7 +639,8 @@ class OPTHeader(tputil.FancyEqMixin):
 
 
 
-class RRHeader(OPTHeader):
+@implementer(IEncodable)
+class RRHeader(tputil.FancyEqMixin):
     """
     A resource record header.
 
