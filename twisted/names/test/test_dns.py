@@ -29,6 +29,7 @@ RECORD_TYPES = [
     dns.Record_WKS, dns.Record_SRV, dns.Record_AFSDB, dns.Record_RP,
     dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT,
     dns.Record_AAAA, dns.Record_A6, dns.Record_NAPTR, dns.UnknownRecord,
+    dns.Record_OPT,
     ]
 
 
@@ -1169,6 +1170,19 @@ class ReprTests(unittest.TestCase):
             "<UNKNOWN data='foo\\x1fbar' ttl=12>")
 
 
+    def test_opt(self):
+        """
+        The repr of a L{dns.OPT} instance includes the payload_size, dnssecOk
+        flag, and version fields of the record.
+        (The OPT record has no ttl field.)
+
+        @since: 12.1
+        """
+        self.assertEqual(
+            repr(dns.Record_OPT(payload_size=1492, dnssecOk=1, version=0)),
+                 "<OPT payload_size=1492 flags=0x8000 version=0>")
+
+
 
 class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
     """
@@ -1216,6 +1230,24 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             cls(b'example.com', 123),
             cls(b'example.org', 123))
 
+    def test_optheader(self):
+        """
+        Two OptHeader instances comapare equal iff the have the same
+        (Record_OPT) payload and auth bit.
+        """
+        self._equalityTest(
+            dns.OPTHeader(payload=dns.Record_OPT(payload_size=1024,
+                                                 dnssecOk=True,
+                                                 version=0,
+                                                 ttl=30)),
+            dns.OPTHeader(payload=dns.Record_OPT(payload_size=1024,
+                                                 dnssecOk=True,
+                                                 version=0,
+                                                 ttl=30)),
+            dns.OPTHeader(payload=dns.Record_OPT(payload_size=1492,
+                                                 dnssecOk=False,
+                                                 version=0,
+                                                 ttl=40), auth=True))
 
     def test_rrheader(self):
         """
