@@ -544,7 +544,7 @@ class OPTHeader(tputil.FancyEqMixin):
 
     compareAttributes = ('name', 'type', 'udpPayloadSize')
 
-    fmt = "!H"
+    fmt = "!HH"
 
     name = Name(b'')
     type = OPT
@@ -576,15 +576,8 @@ class OPTHeader(tputil.FancyEqMixin):
         @type compDict: dict
         @param compDict: not used.
         """
-        strio.write(struct.pack('!B', 0))
-        strio.write(struct.pack(self.fmt, self.type))
-        if self.payload:
-            prefix = strio.tell()
-            self.payload.encode(strio, compDict)
-            aft = strio.tell()
-            strio.seek(prefix - 2, 0)
-            strio.write(struct.pack('!H', aft - prefix))
-            strio.seek(aft, 0)
+        self.name.encode(strio, compDict)
+        strio.write(struct.pack(self.fmt, self.type, self.udpPayloadSize))
 
 
     def decode(self, strio, length = None):

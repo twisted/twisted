@@ -1801,6 +1801,23 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(h.udpPayloadSize, 512)
 
 
+    def test_encode(self):
+        """
+        L{dns.OPTHeader.encode} packs the header fields and writes
+        them to a file like object passed in as an argument.
+        """
+        h = dns.OPTHeader(udpPayloadSize=4096)
+        b = BytesIO()
+
+        h.encode(b)
+        self.assertEqual(
+            b.getvalue().encode('hex'),
+            '0000' # 0 root zone
+            '29' # type 41
+            '1000' # udpPayloadsize 4096
+            )
+
+
     def test_optHeaderRepr(self):
         """
         L{dns.OPTHeader.__repr__} displays the name and type.
