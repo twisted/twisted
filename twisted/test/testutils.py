@@ -192,6 +192,8 @@ class ExampleTestBaseMixin(object):
     repository at once, rather than relying on version control, because
     documentation will often show the progression of a single piece of code as
     features are added to it, and we want to test each one.
+
+    @since: 13.1
     """
 
     def setUp(self):
@@ -236,6 +238,8 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
     """
     Tests for consistency and executability in executable example
     scripts.
+
+    @since: 13.1
     """
 
     def test_executableModule(self):
