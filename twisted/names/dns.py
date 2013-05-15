@@ -535,34 +535,43 @@ class OPTHeader(tputil.FancyEqMixin):
 
     @ivar name: Root (0, 8-bits)
     @ivar type: 41 (OPT Record)
-    @param udpPayloadSize: The number of octets of the largest UDP payload
+    @ivar udpPayloadSize: The number of octets of the largest UDP payload
         that can be reassembled and delivered in the requestor's
         network stack.
+    @ivar extendedRCODE: Forms the upper 8 bits of extended 12-bit
+        RCODE (together with the 4 bits defined in [RFC1035].  Note
+        that EXTENDED-RCODE value 0 indicates that an unextended RCODE
+        is in use (values 0 through 15).
 
     @since: 13.1
     """
 
-    compareAttributes = ('name', 'type', 'udpPayloadSize')
+    compareAttributes = ('name', 'type', 'udpPayloadSize', 'extendedRCODE')
 
-    fmt = "!HH"
+    fmt = "!HHI"
 
     name = Name(b'')
     type = OPT
     udpPayloadSize = 4096
+    extendedRCODE = 0
 
-    # OPTHeader _really_ has no ttl or rdlength, but the
-    # existence of the attributes is required.
-    ttl = None
     rdlength = None
 
-    def __init__(self, udpPayloadSize=4096):
+    def __init__(self, udpPayloadSize=4096, extendedRCODE=0):
         """
         @type udpPayloadSize: C{int}
         @param payload: The number of octets of the largest UDP
             payload that can be reassembled and delivered in the
             requestor's network stack.
+
+        @type extendedRCODE: C{int}
+        @param extendedRCODE: Forms the upper 8 bits of extended
+            12-bit RCODE (together with the 4 bits defined in
+            [RFC1035].  Note that EXTENDED-RCODE value 0 indicates
+            that an unextended RCODE is in use (values 0 through 15).
         """
         self.udpPayloadSize=udpPayloadSize
+        self.extendedRCODE = extendedRCODE
 
 
     def encode(self, strio, compDict=None):
@@ -577,7 +586,9 @@ class OPTHeader(tputil.FancyEqMixin):
         @param compDict: not used.
         """
         self.name.encode(strio, compDict)
-        strio.write(struct.pack(self.fmt, self.type, self.udpPayloadSize))
+        ttl = self.extendedRCODE << 24
+        strio.write(
+            struct.pack(self.fmt, self.type, self.udpPayloadSize, ttl))
 
 
     def decode(self, strio, length=None):
@@ -591,13 +602,13 @@ class OPTHeader(tputil.FancyEqMixin):
         self.name.decode(strio)
         l = struct.calcsize(self.fmt)
         buff = readPrecisely(strio, l)
-        self.type, self.udpPayloadSize = struct.unpack(self.fmt, buff)
-
+        self.type, self.udpPayloadSize, ttl = struct.unpack(self.fmt, buff)
+        self.extendedRCODE = ttl >> 24
 
 
     def __str__(self):
-        return '<OPT name="%s" type=%s udpPayloadSize=%s>' % (
-            self.name, self.type, self.udpPayloadSize)
+        return '<OPT name=%s type=%s udpPayloadSize=%s extendedRCODE=%s>' % (
+            self.name, self.type, self.udpPayloadSize, self.extendedRCODE)
 
 
     @classmethod

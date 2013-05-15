@@ -1801,20 +1801,35 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(h.udpPayloadSize, 512)
 
 
+    def test_optHeaderExtendedRCODE(self):
+        """
+        L{dns.OPTHeader.extendedRCODE} defaults to 0 but can be
+        overridden in the constructor.
+        """
+        self.assertEqual(dns.OPTHeader.extendedRCODE, 0)
+        h = dns.OPTHeader(extendedRCODE=1)
+        self.assertEqual(h.extendedRCODE, 1)
+
+
     def test_encode(self):
         """
         L{dns.OPTHeader.encode} packs the header fields and writes
         them to a file like object passed in as an argument.
         """
-        h = dns.OPTHeader(udpPayloadSize=512)
+        h = dns.OPTHeader(
+            udpPayloadSize=512,
+            extendedRCODE=1)
         b = BytesIO()
 
         h.encode(b)
         self.assertEqual(
             b.getvalue().encode('hex'),
-            '0000' # 0 root zone
-            '29' # type 41
+            '00' # 0 root zone
+            '0029' # type 41
             '0200' # udpPayloadsize 512
+            '01' # extendedRCODE 1
+            '00' # version
+            '0000' #
             )
 
 
@@ -1825,30 +1840,46 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         h = dns.OPTHeader()
         b = BytesIO((
-            '0000' # 0 root zone
-            '29' # type 41
+            '00' # 0 root zone
+            '0029' # type 41
             '0200' # udpPayloadsize 512
+            '01' # extendedRCODE 1
+            '00' # version
+            '0000' #
             ).decode('hex'))
 
         h.decode(b)
         self.assertEqual(h.name, dns.Name(b''))
         self.assertEqual(h.type, 41)
         self.assertEqual(h.udpPayloadSize, 512)
+        self.assertEqual(h.extendedRCODE, 1)
 
 
     def test_optHeaderRepr(self):
         """
         L{dns.OPTHeader.__repr__} displays the name and type.
         """
-        self.assertEqual(repr(dns.OPTHeader()), '<OPT name="" type=41 udpPayloadSize=4096>')
+        self.assertEqual(
+            repr(dns.OPTHeader()),
+            '<OPT '
+            'name= '
+            'type=41 '
+            'udpPayloadSize=4096 '
+            'extendedRCODE=0'
+            '>')
 
 
     def test_optheaderEquality(self):
         """
         Two OptHeader instances compare equal if they have the same
-        udpPayloadSize.
+        udpPayloadSize, extendedRCODE.
         """
         self.assertNormalEqualityImplementation(
             dns.OPTHeader(udpPayloadSize=512),
             dns.OPTHeader(udpPayloadSize=512),
             dns.OPTHeader(udpPayloadSize=4096))
+
+        self.assertNormalEqualityImplementation(
+            dns.OPTHeader(extendedRCODE=1),
+            dns.OPTHeader(extendedRCODE=1),
+            dns.OPTHeader(extendedRCODE=2))
