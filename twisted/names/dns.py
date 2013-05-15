@@ -545,8 +545,8 @@ class OPTHeader(tputil.FancyEqMixin):
 
     fmt = "!H"
 
-    name = None
-    type = None
+    name = 0
+    type = OPT
     payload = None
 
     # OPTHeader _really_ has no ttl or rdlength, but the
@@ -563,9 +563,6 @@ class OPTHeader(tputil.FancyEqMixin):
         @param payload: The OPT payload
         """
         assert (payload is None) or (payload.TYPE == OPT)
-
-        self.name = 0
-        self.type = OPT
         self.payload = payload
         self.auth = auth
 

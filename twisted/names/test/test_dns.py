@@ -1773,6 +1773,25 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
     """
     Tests for L{twisted.names.dns.OPTHeader}.
     """
+
+    def test_optHeaderName(self):
+        """
+        L{dns.OPTHeader.name} is a readonly class attribute with fixed
+        value 0 (root domain).
+        """
+        self.assertEqual(dns.OPTHeader.name, 0)
+
+
+    def test_optHeaderType(self):
+        """
+        L{dns.OPTHeader.type} is a readonly class attribute with fixed
+        value 41.
+        """
+        self.assertEqual(dns.OPTHeader.type, 41)
+
+
+
+
     def test_optheaderEquality(self):
         """
         Two OptHeader instances compare equal if they have the same
