@@ -1175,8 +1175,6 @@ class ReprTests(unittest.TestCase):
         The repr of a L{dns.OPT} instance includes the payload_size, dnssecOk
         flag, and version fields of the record.
         (The OPT record has no ttl field.)
-
-        @since: 12.1
         """
         self.assertEqual(
             repr(dns.Record_OPT(payload_size=1492, dnssecOk=1, version=0)),
@@ -1230,9 +1228,10 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             cls(b'example.com', 123),
             cls(b'example.org', 123))
 
+
     def test_optheader(self):
         """
-        Two OptHeader instances comapare equal iff the have the same
+        Two OptHeader instances compare equal if they have the same
         (Record_OPT) payload and auth bit.
         """
         self._equalityTest(
@@ -1248,6 +1247,7 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
                                                  dnssecOk=False,
                                                  version=0,
                                                  ttl=40), auth=True))
+
 
     def test_rrheader(self):
         """
