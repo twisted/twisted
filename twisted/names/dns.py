@@ -603,7 +603,8 @@ class OPTHeader(tputil.FancyEqMixin):
 
 
     def __str__(self):
-        return '<OPT name="%s" type=%s>' % (self.name, self.type)
+        return '<OPT name="%s" type=%s udpPayloadSize=%s>' % (
+            self.name, self.type, self.udpPayloadSize)
 
 
     @classmethod

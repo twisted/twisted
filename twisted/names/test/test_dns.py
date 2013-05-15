@@ -1805,7 +1805,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         L{dns.OPTHeader.__repr__} displays the name and type.
         """
-        self.assertEqual(repr(dns.OPTHeader()), '<OPT name="" type=41>')
+        self.assertEqual(repr(dns.OPTHeader()), '<OPT name="" type=41 udpPayloadSize=4096>')
 
 
     def test_optheaderEquality(self):
