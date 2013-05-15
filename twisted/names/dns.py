@@ -529,7 +529,7 @@ class Query:
 @implementer(IEncodable)
 class OPTHeader(tputil.FancyEqMixin):
     """
-    A OPT record header.
+    An OPT record header.
 
     @cvar fmt: C{str} specifying the byte format of an OPT Header.
 
@@ -538,7 +538,7 @@ class OPTHeader(tputil.FancyEqMixin):
     @ivar payload: An object that implements the IEncodable interface
     @ivar auth: Whether this header is authoritative or not.
 
-    @since: 12.1
+    @since: 13.1
     """
 
     compareAttributes = ('name', 'type', 'payload', 'auth')
@@ -559,12 +559,6 @@ class OPTHeader(tputil.FancyEqMixin):
 
     def __init__(self, payload=None, auth=False):
         """
-        @type name: C{str}
-        @param name: Root (0)
-
-        @type type: C{int}
-        @param type: Query type 41.
-
         @type payload: An object implementing C{IEncodable}
         @param payload: The OPT payload
         """
@@ -1692,7 +1686,7 @@ class Record_OPT(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @ivar version: The version of DNSSEC used. Currently only version 0
         is defined.
 
-    @since: 12.1
+    @since: 13.1
     """
     TYPE = OPT
     fmt = '!HBBHH'
