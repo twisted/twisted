@@ -545,23 +545,26 @@ class OPTHeader(tputil.FancyEqMixin):
     @ivar version: Indicates the implementation level of the setter.
         Full conformance with this specification is indicated by
         version '0'.
-
+    @ivar dnssecOK: DNSSEC OK bit as defined by [RFC3225].
     @since: 13.1
     """
 
-    compareAttributes = ('name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version')
+    compareAttributes = (
+        'name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
+        'dnssecOK')
 
-    fmt = "!HHI"
+    fmt = "!HH2BH"
 
     name = Name(b'')
     type = OPT
     udpPayloadSize = 4096
     extendedRCODE = 0
     version = 0
+    dnsssecOK = False
 
     rdlength = None
 
-    def __init__(self, udpPayloadSize=4096, extendedRCODE=0, version=0):
+    def __init__(self, udpPayloadSize=4096, extendedRCODE=0, version=0, dnssecOK=False):
         """
         @type udpPayloadSize: C{int}
         @param payload: The number of octets of the largest UDP
@@ -578,10 +581,14 @@ class OPTHeader(tputil.FancyEqMixin):
         @param version: Indicates the implementation level of the
             setter.  Full conformance with this specification is
             indicated by version '0'.
+
+        @type dnssecOK: C{bool}
+        @param dnssecOK: DNSSEC OK bit as defined by [RFC3225].
         """
         self.udpPayloadSize=udpPayloadSize
         self.extendedRCODE = extendedRCODE
         self.version = version
+        self.dnssecOK = dnssecOK
 
 
     def encode(self, strio, compDict=None):
@@ -596,10 +603,14 @@ class OPTHeader(tputil.FancyEqMixin):
         @param compDict: not used.
         """
         self.name.encode(strio, compDict)
-        ttl = self.extendedRCODE << 24
-        ttl ^= self.version << 16
         strio.write(
-            struct.pack(self.fmt, self.type, self.udpPayloadSize, ttl))
+            struct.pack(
+                self.fmt,
+                self.type,
+                self.udpPayloadSize,
+                self.extendedRCODE,
+                self.version,
+                self.dnssecOK << 15,))
 
 
     def decode(self, strio, length=None):
@@ -613,9 +624,12 @@ class OPTHeader(tputil.FancyEqMixin):
         self.name.decode(strio)
         l = struct.calcsize(self.fmt)
         buff = readPrecisely(strio, l)
-        self.type, self.udpPayloadSize, ttl = struct.unpack(self.fmt, buff)
-        self.extendedRCODE = ttl >> 24
-        self.version = (ttl >> 16) & 0xff
+        (self.type,
+         self.udpPayloadSize,
+         self.extendedRCODE,
+         self.version,
+         doz) = struct.unpack(self.fmt, buff)
+        self.dnssecOK = doz >> 15
 
 
     def __str__(self):
@@ -625,12 +639,14 @@ class OPTHeader(tputil.FancyEqMixin):
             'type=%s '
             'udpPayloadSize=%s '
             'extendedRCODE=%s '
-            'version=%s>') % (
+            'version=%s '
+            'dnssecOK=%s>') % (
             self.name,
             self.type,
             self.udpPayloadSize,
             self.extendedRCODE,
-            self.version)
+            self.version,
+            self.dnssecOK)
 
 
     @classmethod

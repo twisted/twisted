@@ -1821,6 +1821,16 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(h.version, 1)
 
 
+    def test_optHeaderDNSSECOK(self):
+        """
+        L{dns.OPTHeader.dnssecOK} defaults to False but can be
+        overridden in the constructor.
+        """
+        self.assertEqual(dns.OPTHeader.version, False)
+        h = dns.OPTHeader(dnssecOK=True)
+        self.assertEqual(h.dnssecOK, True)
+
+
     def test_encode(self):
         """
         L{dns.OPTHeader.encode} packs the header fields and writes
@@ -1828,8 +1838,9 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         h = dns.OPTHeader(
             udpPayloadSize=512,
-            extendedRCODE=1,
-            version=1)
+            extendedRCODE=3,
+            version=3,
+            dnssecOK=True)
         b = BytesIO()
 
         h.encode(b)
@@ -1838,9 +1849,9 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             '00' # 0 root zone
             '0029' # type 41
             '0200' # udpPayloadsize 512
-            '01' # extendedRCODE 1
-            '01' # version
-            '0000' #
+            '03' # extendedRCODE 3
+            '03' # version 3
+            '8000' # DNSSEC OK 1
             )
 
 
@@ -1854,17 +1865,18 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             '00' # 0 root zone
             '0029' # type 41
             '0200' # udpPayloadsize 512
-            '01' # extendedRCODE 1
-            '01' # version
-            '0000' #
+            '03' # extendedRCODE 3
+            '03' # version 3
+            '8000' # DNSSEC OK 1
             ).decode('hex'))
 
         h.decode(b)
         self.assertEqual(h.name, dns.Name(b''))
         self.assertEqual(h.type, 41)
         self.assertEqual(h.udpPayloadSize, 512)
-        self.assertEqual(h.extendedRCODE, 1)
-        self.assertEqual(h.version, 1)
+        self.assertEqual(h.extendedRCODE, 3)
+        self.assertEqual(h.version, 3)
+        self.assertEqual(h.dnssecOK, True)
 
 
     def test_optHeaderRepr(self):
@@ -1878,7 +1890,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             'type=41 '
             'udpPayloadSize=4096 '
             'extendedRCODE=0 '
-            'version=0'
+            'version=0 '
+            'dnssecOK=False'
             '>')
 
 
@@ -1901,3 +1914,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             dns.OPTHeader(version=1),
             dns.OPTHeader(version=1),
             dns.OPTHeader(version=2))
+
+        self.assertNormalEqualityImplementation(
+            dns.OPTHeader(dnssecOK=1),
+            dns.OPTHeader(dnssecOK=1),
+            dns.OPTHeader(dnssecOK=0))
