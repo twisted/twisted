@@ -536,16 +536,15 @@ class OPTHeader(tputil.FancyEqMixin):
     @ivar name: Root (0, 8-bits)
     @ivar type: 41 (OPT Record)
     @ivar payload: An object that implements the IEncodable interface
-    @ivar auth: Whether this header is authoritative or not.
 
     @since: 13.1
     """
 
-    compareAttributes = ('name', 'type', 'payload', 'auth')
+    compareAttributes = ('name', 'type', 'payload')
 
     fmt = "!H"
 
-    name = 0
+    name = Name(b'')
     type = OPT
     payload = None
 
@@ -554,17 +553,13 @@ class OPTHeader(tputil.FancyEqMixin):
     ttl = None
     rdlength = None
 
-    cachedResponse = None
-
-
-    def __init__(self, payload=None, auth=False):
+    def __init__(self, payload=None):
         """
         @type payload: An object implementing C{IEncodable}
         @param payload: The OPT payload
         """
         assert (payload is None) or (payload.TYPE == OPT)
         self.payload = payload
-        self.auth = auth
 
 
     def encode(self, strio, compDict=None):
@@ -609,7 +604,7 @@ class OPTHeader(tputil.FancyEqMixin):
 
 
     def __str__(self):
-        return '<OPT auth=%s>' % (self.auth and 'True' or 'False')
+        return '<OPT name="%s" type=%s>' % (self.name, self.type)
 
 
     @classmethod

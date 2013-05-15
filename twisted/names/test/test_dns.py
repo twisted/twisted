@@ -1777,9 +1777,9 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
     def test_optHeaderName(self):
         """
         L{dns.OPTHeader.name} is a readonly class attribute with fixed
-        value 0 (root domain).
+        root domain L{dns.Name}.
         """
-        self.assertEqual(dns.OPTHeader.name, 0)
+        self.assertEqual(dns.OPTHeader.name, dns.Name(b''))
 
 
     def test_optHeaderType(self):
@@ -1790,12 +1790,17 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(dns.OPTHeader.type, 41)
 
 
+    def test_optHeaderRepr(self):
+        """
+        L{dns.OPTHeader.__repr__} displays the name and type.
+        """
+        self.assertEqual(repr(dns.OPTHeader()), '<OPT name="" type=41>')
 
 
     def test_optheaderEquality(self):
         """
         Two OptHeader instances compare equal if they have the same
-        (Record_OPT) payload and auth bit.
+        payload.
         """
         self.assertNormalEqualityImplementation(
             dns.OPTHeader(payload=dns.Record_OPT(payload_size=1024,
@@ -1809,4 +1814,4 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             dns.OPTHeader(payload=dns.Record_OPT(payload_size=1492,
                                                  dnssecOk=False,
                                                  version=0,
-                                                 ttl=40), auth=True))
+                                                 ttl=40)))
