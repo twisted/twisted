@@ -1944,3 +1944,44 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             dns.OPTHeader(_rdata=b'foo'),
             dns.OPTHeader(_rdata=b'foo'),
             dns.OPTHeader(_rdata=b'bar'))
+
+
+    def test_messageHandling(self):
+        """
+        L{dns.Message.decode} recognises headers of type L{dns.OPT}
+        and creates L{dns.OPTHeader} instances.
+        """
+        h = dns.OPTHeader(_rdata=b'xxx')
+        m1 = dns.Message()
+        m1.addQuery(b'www.example.com', dns.A)
+        m1.additional.append(h)
+        b = BytesIO()
+        m1.encode(b)
+
+        m2 = dns.Message()
+        m2.decode(BytesIO(b.getvalue()))
+
+        self.assertEqual(m1.queries, m2.queries)
+        self.assertEqual(m1.additional, m2.additional)
+        self.assertIsInstance(m2.additional[0], dns.OPTHeader)
+
+
+    def test_wrongSectionMessageDecodeError(self):
+        """
+        L{dns.OPT} headers are only valid in the I{additional}
+        section. L{dns.Message.decode} raises TypeError if L{dns.OPT}
+        headers are found in the I{answers} or I{authority} sections.
+        """
+        h = dns.OPTHeader(_rdata=b'xxx')
+        m1 = dns.Message()
+        m1.addQuery(b'www.example.com', dns.A)
+        m1.answers.append(h)
+        b = BytesIO()
+        m1.encode(b)
+
+        m2 = dns.Message()
+        e = self.assertRaises(
+            TypeError,
+            m2.decode, BytesIO(b.getvalue()))
+        self.assertEqual(
+            e.args[0], "OPTHeaders are not allowed in 'answers' section.")

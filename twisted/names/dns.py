@@ -664,27 +664,6 @@ class OPTHeader(tputil.FancyEqMixin, object):
             self.dnssecOK,
             self.rdlen)
 
-
-    @classmethod
-    def _headerFactory(cls, strio, auth=False):
-        """
-        reads enough of the stream to figure out if what is there is
-        an OPTHeader or an RRHeader
-        """
-        beginPos = strio.tell()
-        name = Name()
-        name.decode(strio)
-        type = struct.unpack(cls.fmt, readPrecisely(strio, 2))[0]
-
-        if len(name.name) == 0 and type == OPT:
-            return cls()
-        else:
-            # back up to the beginning and try again
-            strio.seek(beginPos, 0)
-            rrh = RRHeader(auth=auth)
-            rrh.decode(strio)
-            return rrh
-
     __repr__ = __str__
 
 
@@ -1948,10 +1927,26 @@ class Message:
     def parseRecords(self, list, num, strio):
         for i in range(num):
             header = RRHeader(auth=self.auth)
+            offset = strio.tell()
             try:
                 header.decode(strio)
             except EOFError:
+                strio.seek(offset)
                 return
+
+            if header.type is OPT:
+                strio.seek(offset)
+                if list is not self.additional:
+                    sectionName = [
+                        k for k, v in self.__dict__.items() if v is list][0]
+                    raise TypeError(
+                        'OPTHeaders are not allowed '
+                        'in %r section.' % (sectionName,))
+                header = OPTHeader()
+                header.decode(strio)
+                list.append(header)
+                return
+
             t = self.lookupRecordType(header.type)
             if not t:
                 continue
