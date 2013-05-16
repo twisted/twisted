@@ -280,8 +280,8 @@ class FlushWarningsTests(SynchronousTestCase):
 
     def test_missingSource(self):
         """
-        Warnings emitted by a function the source code of which is not
-        available can still be flushed.
+        Warnings emitted by a function the source code of which is
+        removed after import can still be flushed.
         """
         package = FilePath(self.mktemp().encode('utf-8')).child(b'twisted_private_helper')
         package.makedirs()
@@ -359,10 +359,10 @@ def foo():
         self.assertEqual(len(self.flushWarnings([module.foo])), 1)
 
 
-    def test_removedSource(self):
+    def test_importFromPYC(self):
         '''
-        Warnings emitted by a function defined in a file which has been removed
-        since it was initially compiled can still be flushed.
+        Warnings emitted by a function defined in a .pyc file whose source file
+        is removed before import can still be flushed.
         '''
         package = FilePath(self.mktemp().encode('utf-8')).child(
             b'twisted_removed_helper')
@@ -382,12 +382,12 @@ def foo():
         from twisted_removed_helper import module
 
         # Clean up the state resulting from that import; we're not going to
-        #  immediately use this module, so it should go away.
+        # immediately use this module, so it should go away.
         del sys.modules['twisted_removed_helper']
         del sys.modules[module.__name__]
 
         # Some Python versions have extra state related to the just
-        # imported/renamed package.  Clean it up too.  See also
+        # imported/renamed package. Clean it up too. See also
         # http://bugs.python.org/issue15912
         try:
             from importlib import invalidate_caches
@@ -399,7 +399,18 @@ def foo():
         # Remove the source file
         sourceFile.remove()
 
-        # Import the pyc based version
+        # .pyc file location has been changed in py3 according to PEP3147
+        if sys.version_info[0] == 3:
+            filename = ("module.cpython-" +
+                        str(sys.version_info[0]) +
+                        str(sys.version_info[1]) +
+                        ".pyc").encode("ascii")
+            FilePath(package.path + b'/__pycache__/' + filename).moveTo(
+                FilePath(package.path + b'/module.pyc'))
+
+        # At this point, The source file has already been deleted
+        # with only the .pyc file remaining
+        # We now import the pyc based version
         from twisted_removed_helper import module
         self.addCleanup(sys.modules.pop, 'twisted_removed_helper')
         self.addCleanup(sys.modules.pop, module.__name__)
