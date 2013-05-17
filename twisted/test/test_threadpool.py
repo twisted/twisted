@@ -473,8 +473,8 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
 
     def test_workerStateTransition(self):
         """
-        As the worker receives and completes work it should transition between
-        the working/waiting states.
+        As the worker receives and completes work, it transitions between
+        the working and waiting states.
         """
         pool = threadpool.ThreadPool(0,1)
         pool.start()
@@ -511,8 +511,8 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
 
     def test_workerState(self):
         """
-        Upon entering a _workerState block the threads unique identifier
-        should be added to a stateList, and removed upon exiting the block.
+        Upon entering a _workerState block, the threads unique identifier is
+        added to a stateList and is removed upon exiting the block.
         """
         pool = threadpool.ThreadPool()
         workerThread = object()
@@ -521,15 +521,25 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
             self.assertIn(workerThread, stateList)
         self.assertNotIn(workerThread, stateList)
 
-        # raise an exception instead of running out to test exception state
+
+    def test_workerStateExceptionHandling(self):
+        """
+        The _workerState block does not consume L{Exception}s or change the
+        L{Exception} that gets raised.
+        """
+        pool = threadpool.ThreadPool()
+        workerThread = object()
+        stateList = []
         try:
             with pool._workerState(stateList, workerThread):
                 self.assertIn(workerThread, stateList)
-                raise Exception()
-        except:
+                1/0
+        except ZeroDivisionError:
             pass
+        except:
+            self.fail("_workerState shouldn't change raised exceptions")
         else:
-            self.fail("_workerState shouldn't be consuming exceptions")
+            self.fail("_workerState shouldn't consume exceptions")
         self.assertNotIn(workerThread, stateList)
 
 
