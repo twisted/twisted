@@ -309,7 +309,7 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
             results.append(result)
 
         tp = threadpool.ThreadPool(0, 1)
-        tp.callInThreadWithCallback(onResult, lambda : "test")
+        tp.callInThreadWithCallback(onResult, lambda: "test")
         tp.start()
 
         try:
@@ -476,7 +476,7 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
         As the worker receives and completes work, it transitions between
         the working and waiting states.
         """
-        pool = threadpool.ThreadPool(0,1)
+        pool = threadpool.ThreadPool(0, 1)
         pool.start()
         self.addCleanup(pool.stop)
 
@@ -533,7 +533,7 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
         try:
             with pool._workerState(stateList, workerThread):
                 self.assertIn(workerThread, stateList)
-                1/0
+                1 / 0
         except ZeroDivisionError:
             pass
         except:
