@@ -17,16 +17,15 @@ from twisted.trial.unittest import TestCase, SkipTest
 
 
 class TestTap2DEB(TestCase):
-
+    """
+    Tests for the L{tap2deb} script.
+    """
     maintainer = "Jane Doe <janedoe@example.com>"
 
     def setUp(self):
-        return self._checkForDebBuild()
-
-    def _checkForDebBuild(self):
         """
-        tap2deb requires dpkg-buildpackage; skip tests if dpkg-buildpackage
-        is not present.
+        The L{tap2deb} script requires C{dpkg-buildpackage}; skip tests if
+        C{dpkg-buildpackage} is not present.
         """
         if not procutils.which("dpkg-buildpackage"):
             raise SkipTest("dpkg-buildpackage must be present to test tap2deb")
@@ -44,7 +43,7 @@ class TestTap2DEB(TestCase):
 
     def test_optionDefaults(self):
         """
-        Commandline options should default to sensible values.
+        Commandline options default to sensible values.
         """
         config = tap2deb.MyOptions()
         config.parseOptions(['--maintainer', self.maintainer])
@@ -61,42 +60,42 @@ class TestTap2DEB(TestCase):
 
     def test_basicOperation(self):
         """
-        Running tap2deb should produce a bunch of files.
+        Running the L{tap2deb} script produces a bunch of files.
         """
         basedir = FilePath(self.mktemp())
         basedir.makedirs()
         self.addCleanup(os.chdir, os.getcwd())
         os.chdir(basedir.path)
 
-        # make a temporary .tap file
+        # Make a temporary .tap file
         version = '1.0'
-        tap_name = 'lemon'
-        tap_file = basedir.child("%s.tap" % tap_name)
-        tap_file.setContent("# Dummy .tap file")
-        build_dir = basedir.child('.build')
-        input_dir = build_dir.child('twisted-%s-%s' % (tap_name, version))
-        input_name = 'twisted-%s_%s' % (tap_name, version)
+        tapName = 'lemon'
+        tapFile = basedir.child("%s.tap" % tapName)
+        tapFile.setContent("# Dummy .tap file")
+        buildDir = basedir.child('.build')
+        inputDir = buildDir.child('twisted-%s-%s' % (tapName, version))
+        inputName = 'twisted-%s_%s' % (tapName, version)
 
-        # run
-        args = ["--tapfile", tap_file.path, "--maintainer", self.maintainer]
+        # Run
+        args = ["--tapfile", tapFile.path, "--maintainer", self.maintainer]
         tap2deb.run(args)
 
-        # verify input files were created
-        self.assertEqual(len(input_dir.listdir()), 4)
-        self.assertTrue(input_dir.child('lemon.tap').exists())
+        # Verify input files were created
+        self.assertEqual(len(inputDir.listdir()), 4)
+        self.assertTrue(inputDir.child('lemon.tap').exists())
 
-        debian_dir = input_dir.child('debian')
-        self.assertTrue(debian_dir.exists())
-        self.assertTrue(debian_dir.child('source').child('format').exists())
+        debianDir = inputDir.child('debian')
+        self.assertTrue(debianDir.exists())
+        self.assertTrue(debianDir.child('source').child('format').exists())
 
         for name in ['README.Debian', 'conffiles', 'default', 'init.d',
                      'postinst', 'prerm', 'postrm', 'changelog', 'control',
                      'compat', 'copyright', 'dirs', 'rules']:
-            self.assertTrue(debian_dir.child(name).exists())
+            self.assertTrue(debianDir.child(name).exists())
 
-        # verify 4 output files were created
-        output = build_dir.globChildren(input_name + "*")
+        # Verify 4 output files were created
+        output = buildDir.globChildren(inputName + "*")
         self.assertEqual(len(output), 4)
         for ext in ['.deb', '.dsc', '.tar.gz', '.changes']:
-            self.assertEqual(len(build_dir.globChildren('*' + ext)), 1)
+            self.assertEqual(len(buildDir.globChildren('*' + ext)), 1)
 
