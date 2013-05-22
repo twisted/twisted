@@ -304,6 +304,7 @@ class MemCacheTestCase(CommandMixin, TestCase):
         def checkMessage(error):
             self.assertEqual(str(error), "Connection timeout")
         d1.addCallback(checkMessage)
+        self.assertFailure(d3, ConnectionDone)
         return gatherResults([d1, d2, d3])
 
 
@@ -336,6 +337,7 @@ class MemCacheTestCase(CommandMixin, TestCase):
         self.proto.dataReceived("VALUE foo 0 10\r\n12345")
         self.clock.advance(self.proto.persistentTimeOut)
         self.assertFailure(d1, TimeoutError)
+        self.assertFailure(d2, ConnectionDone)
         return gatherResults([d1, d2])
 
 
@@ -351,6 +353,7 @@ class MemCacheTestCase(CommandMixin, TestCase):
         self.proto.dataReceived("STAT foo bar\r\n")
         self.clock.advance(self.proto.persistentTimeOut)
         self.assertFailure(d1, TimeoutError)
+        self.assertFailure(d2, ConnectionDone)
         return gatherResults([d1, d2])
 
 
@@ -396,6 +399,7 @@ class MemCacheTestCase(CommandMixin, TestCase):
         self.clock.advance(1)
         self.assertFailure(d1, TimeoutError)
         self.assertFailure(d2, TimeoutError)
+        self.assertFailure(d3, ConnectionDone)
         return gatherResults([d1, d2, d3])
 
 
@@ -428,7 +432,6 @@ class MemCacheTestCase(CommandMixin, TestCase):
                 self.assertFalse(success)
                 result.trap(ConnectionDone)
         return done.addCallback(checkFailures)
-
 
     def test_tooLongKey(self):
         """
