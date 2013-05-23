@@ -154,6 +154,10 @@ Set Python's recursion limit. See sys.setrecursionlimit().
 Select the reporter to use for trial's output.  Use the --help-reporters
 option to see a list of valid reporters.
 .TP
+\fB-x\fR, \fB--exitfirst\fR
+Stop the test run after the first test which does not succeed. This includes
+failures, errors, or unexpected successes.
+.TP
 \fB--spew\fR
 Print an insanely verbose log of everything that happens. Useful when
 debugging freezes or locks in complex code.

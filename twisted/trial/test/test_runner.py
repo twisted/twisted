@@ -562,6 +562,18 @@ class TestRunner(unittest.SynchronousTestCase):
         self.assertEqual(['runcall'], my_runner.debugger._calls)
 
 
+    def test_exitfirst(self):
+        """
+        If trial was passed the C{--exitfirst} option, the constructed test
+        result object is wrapped with L{reporter._ExitWrapper}.
+        """
+
+        self.parseOptions(["--exitfirst"])
+        runner = self.getRunner()
+        result = runner._makeResult()
+        self.assertIsInstance(result, reporter._ExitWrapper)
+
+
 
 class TestTrialSuite(unittest.SynchronousTestCase):
 

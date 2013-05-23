@@ -15,7 +15,7 @@ from twisted.internet.utils import suppressWarnings
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.trial import itrial, unittest, runner, reporter, util
-from twisted.trial.reporter import UncleanWarningsReporterWrapper
+from twisted.trial.reporter import _ExitWrapper, UncleanWarningsReporterWrapper
 from twisted.trial.test import erroneous
 from twisted.trial.unittest import makeTodo, SkipTest, Todo
 from twisted.trial.test import sample
@@ -1674,3 +1674,51 @@ class AnsiColorizerTests(unittest.SynchronousTestCase):
         sys.modules['curses'] = fakecurses()
         self.assertFalse(reporter._AnsiColorizer.supported(FakeStream()))
         self.assertEqual(sys.modules['curses'].setUp, 1)
+
+
+
+class ExitWrapperTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{reporter._ExitWrapper}.
+    """
+
+    def setUp(self):
+        self.failure = Failure(Exception("I am a Failure"))
+        self.test = sample.FooTest('test_foo')
+        self.result = reporter.TestResult()
+        self.wrapped = _ExitWrapper(self.result)
+        self.assertFalse(self.wrapped.shouldStop)
+
+
+    def test_stopOnFailure(self):
+        """
+        L{reporter._ExitWrapper} causes a wrapped reporter to stop after its
+        first failure.
+        """
+
+        self.wrapped.addFailure(self.test, self.failure)
+        self.assertTrue(self.wrapped.shouldStop)
+        self.assertEqual(self.result.failures, [(self.test, self.failure)])
+
+
+    def test_stopOnError(self):
+        """
+        L{reporter._ExitWrapper} causes a wrapped reporter to stop after its
+        first error.
+        """
+
+        self.wrapped.addError(self.test, self.failure)
+        self.assertTrue(self.wrapped.shouldStop)
+        self.assertEqual(self.result.errors, [(self.test, self.failure)])
+
+
+    def test_stopOnUnexpectedSuccess(self):
+        """
+        L{reporter._StopWrapper} causes a wrapped reporter to stop after an
+        unexpected success if C{onlyAfterFailure} is C{False}.
+        """
+
+        self.wrapped.addUnexpectedSuccess(self.test, self.failure)
+        self.assertTrue(self.wrapped.shouldStop)
+        self.assertEqual(
+            self.result.unexpectedSuccesses, [(self.test, self.failure)])

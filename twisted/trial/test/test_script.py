@@ -518,11 +518,29 @@ class OptionsTestCase(unittest.TestCase):
             str(error))
 
 
+    def test_jobsConflictWithExitFirst(self):
+        """
+        C{parseOptions} raises a C{UsageError} when C{--exitfirst} is passed
+        along C{--jobs} as it's not supported yet.
+
+        @see: U{http://twistedmatrix.com/trac/ticket/6436}
+        """
+        error = self.assertRaises(
+            UsageError, self.options.parseOptions,
+            ["--jobs", "4", "--exitfirst"])
+        self.assertEqual(
+            "You can't specify --exitfirst when using --jobs",
+            str(error))
+
+
 
 class MakeRunnerTestCase(unittest.TestCase):
     """
     Tests for the L{_makeRunner} helper.
     """
+
+    def setUp(self):
+        self.options = trial.Options()
 
     def test_jobs(self):
         """
@@ -530,9 +548,8 @@ class MakeRunnerTestCase(unittest.TestCase):
         option is passed, and passes the C{workerNumber} and C{workerArguments}
         parameters to it.
         """
-        options = trial.Options()
-        options.parseOptions(["--jobs", "4", "--force-gc"])
-        runner = trial._makeRunner(options)
+        self.options.parseOptions(["--jobs", "4", "--force-gc"])
+        runner = trial._makeRunner(self.options)
         self.assertIsInstance(runner, DistTrialRunner)
         self.assertEqual(4, runner._workerNumber)
         self.assertEqual(["--force-gc"], runner._workerArguments)
@@ -543,9 +560,8 @@ class MakeRunnerTestCase(unittest.TestCase):
         L{_makeRunner} returns a L{TrialRunner} instance in C{DRY_RUN} mode
         when the C{--dry-run} option is passed, even if C{--jobs} is set.
         """
-        options = trial.Options()
-        options.parseOptions(["--jobs", "4", "--dry-run"])
-        runner = trial._makeRunner(options)
+        self.options.parseOptions(["--jobs", "4", "--dry-run"])
+        runner = trial._makeRunner(self.options)
         self.assertIsInstance(runner, TrialRunner)
         self.assertEqual(TrialRunner.DRY_RUN, runner.mode)
 
@@ -564,6 +580,16 @@ class MakeRunnerTestCase(unittest.TestCase):
         options.parseOptions(["--debug", "--debugger", "doNotFind"])
 
         self.assertRaises(trial._DebuggerNotFound, trial._makeRunner, options)
+
+
+    def test_exitfirst(self):
+        """
+        Passing C{--exitfirst} wraps the reporter with a
+        L{reporter._ExitWrapper} that stops on any non-success.
+        """
+        self.options.parseOptions(["--exitfirst"])
+        runner = trial._makeRunner(self.options)
+        self.assertTrue(runner._exitFirst)
 
 
 class TestRun(unittest.TestCase):

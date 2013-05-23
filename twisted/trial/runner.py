@@ -28,7 +28,7 @@ from twisted.python.versions import Version
 from twisted.internet import defer
 from twisted.trial import util, unittest
 from twisted.trial.itrial import ITestCase
-from twisted.trial.reporter import UncleanWarningsReporterWrapper
+from twisted.trial.reporter import _ExitWrapper, UncleanWarningsReporterWrapper
 
 # These are imported so that they remain in the public API for t.trial.runner
 from twisted.trial.unittest import TestSuite
@@ -669,6 +669,8 @@ class TrialRunner(object):
     def _makeResult(self):
         reporter = self.reporterFactory(self.stream, self.tbformat,
                                         self.rterrors, self._log)
+        if self._exitFirst:
+            reporter = _ExitWrapper(reporter)
         if self.uncleanWarnings:
             reporter = UncleanWarningsReporterWrapper(reporter)
         return reporter
@@ -683,7 +685,8 @@ class TrialRunner(object):
                  uncleanWarnings=False,
                  workingDirectory=None,
                  forceGarbageCollection=False,
-                 debugger=None):
+                 debugger=None,
+                 exitFirst=False):
         self.reporterFactory = reporterFactory
         self.logfile = logfile
         self.mode = mode
@@ -697,6 +700,7 @@ class TrialRunner(object):
         self._logFileObject = None
         self._forceGarbageCollection = forceGarbageCollection
         self.debugger = debugger
+        self._exitFirst = exitFirst
         if profile:
             self.run = util.profiled(self.run, 'profile.data')
 
