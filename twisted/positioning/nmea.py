@@ -743,7 +743,7 @@ class NMEAAdapter(object):
         except base.InvalidSentence:
             self.clear()
 
-        self._updateSentence()
+        self._updateState()
         self._fireSentenceCallbacks()
 
 
@@ -768,7 +768,7 @@ class NMEAAdapter(object):
                 fixer(self)
 
 
-    def _updateSentence(self):
+    def _updateState(self):
         """
         Updates the current state with the new information from the sentence.
         """
