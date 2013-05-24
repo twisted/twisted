@@ -5,6 +5,10 @@
 Classes for working with NMEA (and vaguely NMEA-like) sentence producing
 devices.
 
+For more information, read the blog post on NMEA by ESR (the gpsd maintainer)
+at U{http://esr.ibiblio.org/?p=801}. Unfortunately, official specifications on
+NMEA are only available at a cost.
+
 @since: 13.1
 """
 import itertools
