@@ -354,12 +354,18 @@ class NMEAAdapter(object):
         which assumes all dates are twenty-first century, or 
         L{NMEAAdapter.DATESTAMPS_FROM_19XX}, which assumes all dates are
         twentieth century.
-
     @cvar INTELLIGENT_DATE_THRESHOLD: The threshold that determines which
         century we guess a year is in. If the year value in a sentence is above
         this value, assumes the 20th century (19xx), otherwise assumes the
         twenty-first century (20xx). C{0 <= INTELLIGENT_DATE_THRESHOLD < 100}.
     @type INTELLIGENT_DATE_THRESHOLD: L{int}
+    @ivar _state: The current internal state of the receiver.
+    @type _state: C{dict}
+    @ivar _sentenceData: The data present in the sentence currently being
+        processed. Starts empty, is filled as the sentence is parsed.
+    @type _sentenceData: C{dict}
+    @ivar _receiver: The positioning receiver that will receive parsed data.
+    @type _receiver: L{ipositioning.IPositioningReceiver}
     """
     def __init__(self, receiver):
         """
