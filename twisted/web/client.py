@@ -1605,9 +1605,53 @@ class RedirectAgent(object):
 
 
 
+class HTTPAuthAgent(object):
+    """
+    An L{Agent} wrapper to handle HTTP authentication.
+
+    When an I{Unauthorized} response is received to a request issued using this
+    agent, credentials for the resource being requested will be looked up and
+    the request will be re-issued.
+
+    If no suitable credentials can be found or if the re-request fails the same
+    way, the request may still finish with an I{Unauthorized} response code.
+
+    @ivar _agent: Another L{Agent}-like object which will be used to issue the
+        requests.
+
+    @ivar _responders: A C{dict} mapping auth scheme names as C{str} to objects
+        which can respond to the challenges of those those schemes.
+
+    @since: 11.1
+    """
+    def __init__(self, agent, responders):
+        self._agent = agent
+        self._responders = responders
+
+
+    def request(self, method, uri, headers, bodyProducer):
+        """
+        Issue a new request to the wrapped L{Agent}, retrying with
+        authentication headers as necessary.
+
+        @see: L{Agent.request}
+        """
+        return self._agent.request(method, uri, headers, bodyProducer)
+
+
+    def _respondToChallenge(self, response, method, uri, headers, body):
+        authenticate = response.headers.getRawHeaders('www-authenticate')[0]
+        scheme, challenge = authenticate.split(None, 1)
+        headers = headers.copy()
+        headers.addRawHeader(
+            'authorization',
+            scheme + ' ' + self._responders[scheme].respond(challenge))
+        return self._agent.request(method, uri, headers, body)
+
+
 __all__ = [
     'PartialDownloadError', 'HTTPPageGetter', 'HTTPPageDownloader',
     'HTTPClientFactory', 'HTTPDownloader', 'getPage', 'downloadPage',
     'ResponseDone', 'Response', 'ResponseFailed', 'Agent', 'CookieAgent',
     'ProxyAgent', 'ContentDecoderAgent', 'GzipDecoder', 'RedirectAgent',
-    'HTTPConnectionPool']
+    'HTTPConnectionPool', 'HTTPAuthAgent']

@@ -13,6 +13,7 @@ from zope.interface.verify import verifyObject
 
 from twisted.trial import unittest
 from twisted.web import client, error, http_headers
+from twisted.web.http import OK, UNAUTHORIZED
 from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
 from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
 from twisted.internet import defer, task
@@ -29,6 +30,7 @@ from twisted.web.client import _WebToNormalContextFactory
 from twisted.web.client import WebClientContextFactory, _HTTP11ClientFactory
 from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
 from twisted.web._newclient import HTTP11ClientProtocol, Response
+from twisted.web.client import HTTPAuthAgent
 from twisted.web.error import SchemeNotSupported
 
 try:
@@ -2094,3 +2096,115 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
             self.assertEqual(302, fail.response.code)
 
         return deferred.addCallback(checkFailure)
+
+
+
+class MemoryAgent(object):
+    """
+    """
+    def __init__(self):
+        self.requests = []
+
+
+    def request(self, method, url, headers, body):
+        result = Deferred()
+        self.requests.append((result, method, url, headers, body))
+        return result
+
+
+
+class HTTPAuthAgentTests(unittest.TestCase):
+    """
+    Tests for L{HTTPAuthAgent}, an Agent-like class which supports responding
+    to HTTP authentication challenges.
+    """
+
+    def test_unchallengedRequest(self):
+        """
+        L{HTTPAuthAgent.request} issues an HTTP request according to the
+        parameters passed to it and, if the response is not a I{401
+        Unauthorized}, returns the response as-is.
+        """
+        underlying = MemoryAgent()
+        agent = HTTPAuthAgent(underlying, None)
+
+        expectedMethod = 'GET'
+        expectedURI = '/some/location'
+        expectedHeaders = http_headers.Headers(
+            {'x-test-header': ['excellent value']})
+        expectedBody = object()
+        result = agent.request(
+            'GET', '/some/location', expectedHeaders, expectedBody)
+
+        self.assertEqual(1, len(underlying.requests))
+
+        request = underlying.requests.pop()
+
+        underlyingResult, method, uri, headers, body = request
+
+        self.assertEqual(expectedMethod, method)
+        self.assertEqual(expectedURI, uri)
+        self.assertEqual(expectedHeaders, headers)
+        self.assertEqual(expectedBody, body)
+
+        expectedResponse = Response(object(), OK, 'OK', object(), object())
+        underlyingResult.callback(expectedResponse)
+
+        response = []
+        result.addCallback(response.append)
+        self.assertEqual([expectedResponse], response)
+
+
+    def test_respondToChallenge(self):
+        """
+        L{HTTPAuthAgent._respondToChallenge} issues a new request using the
+        method, URI, headers, and body passed to it, with the addition of an
+        I{Authorization} header containing a response to the
+        I{WWW-Authenticate} challenge in the response passed to it.
+        """
+        class XTestAuth(object):
+            def respond(self, challenge):
+                return challenge[::-1]
+
+        underlying = MemoryAgent()
+        agent = HTTPAuthAgent(underlying, {'X-Test': XTestAuth()})
+
+        response = Response(
+            None, UNAUTHORIZED, 'Unauthorized',
+            http_headers.Headers({'www-authenticate': ['X-Test foobar']}),
+            object())
+
+        expectedMethod = 'GET'
+        expectedURI = 'http://example.invalid/foobar'
+
+        requestHeaders = http_headers.Headers({'user-agent': ['something']})
+        expectedHeaders = requestHeaders.copy()
+        expectedHeaders.addRawHeader('authorization', 'X-Test raboof')
+
+        expectedBody = object()
+
+        result = agent._respondToChallenge(
+            response, expectedMethod, expectedURI, requestHeaders,
+            expectedBody)
+        self.assertEqual(1, len(underlying.requests))
+
+        request = underlying.requests.pop()
+
+        underlyingResult, method, uri, headers, body = request
+        self.assertEqual(expectedMethod, method)
+        self.assertEqual(expectedURI, uri)
+        self.assertEqual(expectedHeaders, headers)
+        # XXX By passing the same body producer to the underlying request
+        # method again, we require that the body producer is capable of
+        # repeating its output to a new consumer.  Hope it can!
+        self.assertIdentical(expectedBody, body)
+
+        expectedResponse = Response(None, OK, 'Ok', object(), object())
+        underlyingResult.callback(expectedResponse)
+
+        response = []
+        result.addCallback(response.append)
+        self.assertEqual([expectedResponse], response)
+    # TODO 401 response with no WWW-Authenticate header
+    # TODO 401 response to an authentication attempt
+
