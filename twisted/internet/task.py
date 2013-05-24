@@ -815,7 +815,8 @@ def react(main, argv=(), _reactor=None):
         code returned is used.
 
     @param main: A callable which returns a L{Deferred}.  It should take as
-        many arguments as there are elements in the list C{argv}.
+        many arguments as there are elements in the list C{argv}. Called with
+        _reactor as first parameter.
 
     @param argv: A list of arguments to pass to C{main}. If omitted the
         callable will be invoked with no additional arguments.
