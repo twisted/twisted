@@ -236,7 +236,7 @@ class STATUS(Values):
         Return True if the given status is associated with a response body,
         False otherwise.
         """
-        return status in (cls.NO_CONTENT, cls.NOT_MODIFIED)
+        return status not in (cls.NO_CONTENT, cls.NOT_MODIFIED)
   </pre>
 
   <p>This functionality can be used as any class methods are used:</p>
