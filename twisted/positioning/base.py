@@ -9,8 +9,8 @@ Generic positioning base classes.
 from zope.interface import implementer
 from twisted.python.constants import Names, NamedConstant
 from twisted.python.util import FancyEqMixin
-
 from twisted.positioning import ipositioning
+
 
 MPS_PER_KNOT = 0.5144444444444444
 MPS_PER_KPH = 0.27777777777777777
@@ -982,11 +982,12 @@ class BeaconInformation(object):
 
 
 
+@implementer(ipositioning.IPositioningBeacon)
 class PositioningBeacon(object):
     """
     A positioning beacon.
 
-    @ivar identifier: The unique identifier for this satellite. This is usually
+    @ivar identifier: The unique identifier for this beacon. This is usually
         an integer. For GPS, this is also known as the PRN.
     @type identifier: Pretty much anything that can be used as a unique
         identifier. Depends on the implementation.

@@ -6,6 +6,7 @@ Test cases for positioning primitives.
 from twisted.trial.unittest import TestCase
 from twisted.positioning import base
 from twisted.positioning.base import Angles, Directions
+from twisted.positioning.ipositioning import IPositioningBeacon
 
 
 class AngleTests(TestCase):
@@ -855,8 +856,16 @@ class BeaconInformationTests(TestCase):
 
 class PositioningBeaconTests(TestCase):
     """
-    Tests for L{twisted.positioning.base.PositioningBeacon}.
+    Tests for L{base.PositioningBeacon}.
     """
+    def test_interface(self):
+        """
+        Tests that L{base.PositioningBeacon} implements L{IPositioningBeacon}.
+        """
+        implements = IPositioningBeacon.implementedBy(base.PositioningBeacon)
+        self.assertTrue(implements)
+
+
     def test_usedRepr(self):
         """
         Tests the repr of a positioning beacon being used.

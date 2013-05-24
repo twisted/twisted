@@ -5,7 +5,7 @@ Positioning interfaces.
 
 @since: 13.1
 """
-from zope.interface import Interface
+from zope.interface import Attribute, Interface
 
 
 class IPositioningReceiver(Interface):
@@ -83,6 +83,18 @@ class IPositioningReceiver(Interface):
         @param beaconInformation: The beacon information.
         @type beaconInformation: L{twisted.positioning.base.BeaconInformation}
         """
+
+
+
+class IPositioningBeacon(Interface):
+    """
+    A positioning beacon.
+    """
+    identifier = Attribute(
+        """
+        A unique identifier for this beacon. The type is dependant on the
+        implementation, but must be immutable.
+        """)
 
 
 
