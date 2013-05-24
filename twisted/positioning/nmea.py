@@ -100,7 +100,7 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
         """
         Parses the data from the sentence and validates the checksum.
 
-        @param rawSentence: The MMEA positioning sentence.
+        @param rawSentence: The NMEA positioning sentence.
         @type rawSentence: C{str}
         """
         sentence = rawSentence.strip()
