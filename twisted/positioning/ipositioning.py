@@ -112,4 +112,8 @@ class INMEAReceiver(Interface):
 
 
 
-__all__ = ["IPositioningReceiver"]
+__all__ = [
+    "IPositioningReceiver",
+    "IPositioningBeacon",
+    "INMEAReceiver"
+]
