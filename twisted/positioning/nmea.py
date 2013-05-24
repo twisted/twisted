@@ -367,6 +367,10 @@ class NMEAAdapter(object):
     @ivar _receiver: The positioning receiver that will receive parsed data.
     @type _receiver: L{ipositioning.IPositioningReceiver}
     """
+    REQUIRED_CALLBACK_FIELDS = dict((name, method.positional) for name, method
+        in ipositioning.IPositioningReceiver.namesAndDescriptions())
+
+
     def __init__(self, receiver):
         """
         Initializes a new NMEA adapter.
@@ -861,11 +865,6 @@ class NMEAAdapter(object):
             if atLeastOnePresentInSentence:
                 callback(**kwargs)
 
-
-
-NMEAAdapter.REQUIRED_CALLBACK_FIELDS = dict(
-    (name, method.positional) for name, method
-    in ipositioning.IPositioningReceiver.namesAndDescriptions())
 
 
 __all__ = [
