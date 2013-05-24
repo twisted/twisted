@@ -42,7 +42,7 @@ def _split(sentence):
     @param sentence: The NMEA sentence to split.
     @type sentence: C{str}
 
-    >>> split("$GPGGA,spam,eggs*00")
+    >>> _split("$GPGGA,spam,eggs*00")
     ['GPGGA', 'spam', 'eggs']
     """
     if sentence[-3] == "*": # Sentence with checksum
