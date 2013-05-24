@@ -559,11 +559,14 @@ class NMEAAdapter(object):
     def _fixUnits(self, unitKey=None, valueKey=None, sourceKey=None,
         unit=None):
         """
-        Fixes the units of a certain value.
+        Fixes the units of a certain value. If the units are already
+        acceptable (metric), does nothing.
+
+        None of the keys are allowed to be the empty string.
 
         @param unit: The unit that is being converted I{from}. If unspecified
-            or None, asks the current sentence for the C{unitKey}. If that also
-            fails, raises C{AttributeError}.
+            or C{None}, asks the current sentence for the C{unitKey}. If that
+            also fails, raises C{AttributeError}.
         @type unit: C{str}
         @param unitKey: The name of the key/attribute under which the unit can
             be found in the current sentence. If the C{unit} parameter is set,
@@ -575,15 +578,20 @@ class NMEAAdapter(object):
             same key as the value key.
         @type sourceKey: C{str}
         @param valueKey: The key name in which the data will be stored in the
-            C{_sentenceData} instance attribute. If unset, attempts to strip
-            "Units" from the C{unitKey} parameter.
+            C{_sentenceData} instance attribute. If unset, attempts to remove
+            "Units" from the end of the C{unitKey} parameter. If that fails,
+            raises C{ValueError}.
         @type valueKey: C{str}
-
-        None of the keys are allowed to be the empty string.
         """
-        unit = unit or getattr(self.currentSentence, unitKey)
-        valueKey = valueKey or unitKey.strip('Units')
-        sourceKey = sourceKey or valueKey
+        if unit is None:
+            unit = getattr(self.currentSentence, unitKey)
+        if valueKey is None:
+            if unitKey is not None and unitKey.endswith("Units"):
+                valueKey = unitKey[:-5]
+            else:
+                raise ValueError("valueKey unspecified and couldn't be guessed")
+        if sourceKey is None:
+            sourceKey = valueKey
 
         if unit not in self.ACCEPTABLE_UNITS:
             converter = self.UNIT_CONVERTERS[unit]

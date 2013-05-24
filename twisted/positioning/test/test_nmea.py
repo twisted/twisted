@@ -529,6 +529,43 @@ class ParsingTests(NMEAReceiverSetup, TestCase):
 
 
 
+class FixUnitsTests(TestCase):
+    """
+    Tests for the generic unit fixing method, L{nmea.NMEAAdapter._fixUnits}.
+
+    @ivar adapter: The NMEA adapter.
+    @type adapter: L{nmea.NMEAAdapter}
+    """
+    def setUp(self):
+        self.adapter = nmea.NMEAAdapter(base.BasePositioningReceiver())
+
+
+    def test_noValueKey(self):
+        """
+        Tests that when no C{valueKey} is provided, C{unitKey} is used, minus
+        C{"Units"} at the end.
+        """
+        class FakeSentence(object):
+            """
+            A fake sentence that just has a "foo" attribute.
+            """
+            def __init__(self):
+                self.foo = 1
+
+        self.adapter.currentSentence = FakeSentence()
+        self.adapter._fixUnits(unitKey="fooUnits", unit="N")
+        self.assertIn("foo", self.adapter._sentenceData)
+
+
+    def test_noValueKeyAndNoUnitKey(self):
+        """
+        Tests that when a unit is specified but neither C{valueKey} nor
+        C{unitKey} is provided, C{ValueError} is raised.
+        """
+        self.assertRaises(ValueError, self.adapter._fixUnits, unit="K")
+
+
+
 class FixerTestMixin:
     """
     Mixin for tests for the fixers on L{nmea.NMEAAdapter} that adapt
