@@ -7,6 +7,7 @@ import datetime
 from zope.interface import implementer
 
 from twisted.positioning import base, nmea, ipositioning
+from twisted.positioning.test.receiver import MockPositioningReceiver
 from twisted.trial.unittest import TestCase
 
 from twisted.positioning.base import Angles
@@ -1049,42 +1050,12 @@ class InvalidFixTests(FixerTestMixin, TestCase):
 
 
 
-class MockNMEAReceiver(base.BasePositioningReceiver):
-    """
-    A mock NMEA receiver.
-
-    Mocks all the L{IPositioningReceiver} methods with stubs that don't do
-    anything but register that they were called.
-    """
-    def __init__(self):
-        self.clear()
-
-        for methodName in ipositioning.IPositioningReceiver:
-            self._addCallback(methodName)
-
-
-    def clear(self):
-        """
-        Forget all the methods that have been called on this receiver, by
-        emptying C{self.called}.
-        """
-        self.called = {}
-
-
-    def _addCallback(self, name):
-        def callback(*a, **kw):
-            self.called[name] = True
-
-        setattr(self, name, callback)
-
-
-
 class NMEAReceiverTest(TestCase):
     """
     Tests for the NMEA receiver.
     """
     def setUp(self):
-        self.receiver = MockNMEAReceiver()
+        self.receiver = MockPositioningReceiver()
         self.adapter = nmea.NMEAAdapter(self.receiver)
         self.protocol = nmea.NMEAProtocol(self.adapter)
 
