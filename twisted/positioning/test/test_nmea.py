@@ -778,7 +778,9 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
         NMEA coordinate representations in the northern hemisphere
         convert correctly.
         """
-        self._coordinateFixerTest(10, 30.0, "N")
+        sentenceData = {"latitudeFloat": "1030.000", "latitudeHemisphere": "N"}
+        state = {"latitude": base.Coordinate(10.5, Angles.LATITUDE)}
+        self._fixerTest(sentenceData, state)
 
 
     def test_south(self):
@@ -786,7 +788,9 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
         NMEA coordinate representations in the southern hemisphere
         convert correctly.
         """
-        self._coordinateFixerTest(45, 12.145, "S")
+        sentenceData = {"latitudeFloat": "1030.000", "latitudeHemisphere": "S"}
+        state = {"latitude": base.Coordinate(-10.5, Angles.LATITUDE)}
+        self._fixerTest(sentenceData, state)
 
 
     def test_east(self):
@@ -794,7 +798,9 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
         NMEA coordinate representations in the eastern hemisphere
         convert correctly.
         """
-        self._coordinateFixerTest(53, 31.513, "E")
+        sentenceData = {"longitudeFloat": "1030.000", "longitudeHemisphere": "E"}
+        state = {"longitude": base.Coordinate(10.5, Angles.LONGITUDE)}
+        self._fixerTest(sentenceData, state)
 
 
     def test_west(self):
@@ -802,7 +808,9 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
         NMEA coordinate representations in the western hemisphere
         convert correctly.
         """
-        self._coordinateFixerTest(12, 45.120, "W")
+        sentenceData = {"longitudeFloat": "1030.000", "longitudeHemisphere": "W"}
+        state = {"longitude": base.Coordinate(-10.5, Angles.LONGITUDE)}
+        self._fixerTest(sentenceData, state)
 
 
     def test_badHemisphere(self):
