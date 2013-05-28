@@ -42,6 +42,33 @@ class IRCUserTestCase(unittest.TestCase):
                           self.stringTransport.value())
 
 
+    def test_utf8Messages(self):
+        """
+        An C{Exception} is not raised when a UTF-8 nick is set and a UTF-8 
+        message is sent.
+        """
+        expectedResult = (":example.com \xd1\x82\xd0\xb5\xd1\x81\xd1\x82 "
+                          "\xd0\xbd\xd0\xb8\xd0\xba\r\n")
+
+        self.ircUser.irc_NICK("", ["\xd0\xbd\xd0\xb8\xd0\xba"])
+        self.stringTransport.clear()
+        self.ircUser.sendMessage("\xd1\x82\xd0\xb5\xd1\x81\xd1\x82")
+        self.assertEqual(self.stringTransport.value(), expectedResult)
+
+
+    def test_wrongUtf8Nick(self):
+        """
+        An C{Exception} is not raised when a NICK command is sent with a 
+        non-UTF-8 nickname.
+        """
+        expectedResult = (":NickServ!NickServ@services PRIVMSG "
+                          "\xd4\xc5\xd3\xd4 :Your nickname cannot be "
+                          "decoded. Please use ASCII or UTF-8.\r\n")
+
+        self.ircUser.irc_NICK("", ["\xd4\xc5\xd3\xd4"])
+        self.assertEqual(self.stringTransport.value(), expectedResult)
+
+
     def response(self):
         """
         Grabs our responses and then clears the transport
