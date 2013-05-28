@@ -15,6 +15,7 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 from __future__ import division, absolute_import
 
 import os
+import re
 import socket
 
 from zope.interface import implementer, directlyProvides
@@ -903,7 +904,7 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
 
 
 def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
-              sslmethod=None, interface='', backlog=50):
+              sslmethod=None, interface='', backlog=50, extraCertChain=None):
     """
     Internal parser function for L{_parseServer} to convert the string
     arguments for an SSL (over TCP/IPv4) stream endpoint into the structured
@@ -932,6 +933,11 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         "SSLv2_METHOD", "SSLv3_METHOD", "TLSv1_METHOD".
     @type sslmethod: C{str}
 
+    @param extraCertChain: The path of a file containing one or more
+        certificates in PEM format that establish the chain from a root CA to
+        the CA that signed your L{certKey}.
+    @type extraCertChain: L{bytes}
+
     @return: a 2-tuple of (args, kwargs), describing  the parameters to
         L{IReactorSSL.listenSSL} (or, modulo argument 2, the factory, arguments
         to L{SSL4ServerEndpoint}.
@@ -947,9 +953,26 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     certPEM = FilePath(certKey).getContent()
     keyPEM = FilePath(privateKey).getContent()
     privateCertificate = ssl.PrivateCertificate.loadPEM(certPEM + keyPEM)
+    if extraCertChain is not None:
+        matches = re.findall(
+            r'(-----BEGIN CERTIFICATE-----\n.+?\n-----END CERTIFICATE-----)',
+            FilePath(extraCertChain).getContent(),
+            flags=re.DOTALL
+        )
+        chainCertificates = [ssl.Certificate.loadPEM(chainCertPEM).original
+                             for chainCertPEM in matches]
+        if not chainCertificates:
+            raise ValueError(
+                "Specified chain file '%s' doesn't contain any valid "
+                "certificates in PEM format." % (extraCertChain,)
+            )
+    else:
+        chainCertificates = None
+
     cf = ssl.CertificateOptions(
         privateKey=privateCertificate.privateKey.original,
         certificate=privateCertificate.original,
+        extraCertChain=chainCertificates,
         **kw
     )
     return ((int(port), factory, cf),
@@ -1162,7 +1185,8 @@ _NO_DEFAULT = object()
 
 def _parseServer(description, factory, default=None):
     """
-    Parse a stports description into a 2-tuple of arguments and keyword values.
+    Parse a strports description into a 2-tuple of arguments and keyword
+    values.
 
     @param description: A description in the format explained by
         L{serverFromString}.
