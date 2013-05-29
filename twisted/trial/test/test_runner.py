@@ -503,7 +503,7 @@ class TestRunner(unittest.SynchronousTestCase):
         debugger = my_runner.debugger = CapturingDebugger()
         result = self.runSampleSuite(my_runner)
         self.assertEqual(self.standardReport, result._calls)
-        self.assertEqual(['runcall'], debugger.calls)
+        self.assertEqual(['runcall'], debugger._calls)
 
 
     def test_runnerDebuggerDefaultsToPdb(self):
@@ -559,7 +559,7 @@ class TestRunner(unittest.SynchronousTestCase):
         my_runner = self.getRunner()
         result = self.runSampleSuite(my_runner)
         self.assertEqual(self.standardReport, result._calls)
-        self.assertEqual(['runcall'], my_runner.debugger.calls)
+        self.assertEqual(['runcall'], my_runner.debugger._calls)
 
 
 
