@@ -117,6 +117,9 @@ class DistTrialRunner(object):
         childFDs = {0: 'w', 1: 'r', 2: 'r', _WORKER_AMP_STDIN: 'w',
                     _WORKER_AMP_STDOUT: 'r'}
         environ = os.environ.copy()
+        # Add a environment variable containing the raw sys.path, to be used by
+        # subprocesses to make sure it's identical to the parent. See the
+        # workertrial module.
         environ['TRIAL_PYTHONPATH'] = os.pathsep.join(sys.path)
         for worker in protocols:
             args = [sys.executable, workertrialPath]

@@ -15,6 +15,8 @@ import os
 import errno
 
 if 'TRIAL_PYTHONPATH' in os.environ:
+    # Override sys.path with what the parent gave us. See
+    # DistTrialRunner.launchWorkerProcesses.
     sys.path[:] = os.environ['TRIAL_PYTHONPATH'].split(os.pathsep)
 
 from twisted.internet.protocol import FileWrapper
