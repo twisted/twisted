@@ -33,6 +33,19 @@ from twisted.web.iweb import IBodyProducer, IResponse
 
 
 
+class StringTransport(StringTransport):
+    """
+    A version of C{StringTransport} that supports C{abortConnection}.
+    """
+    aborting = False
+
+
+    def abortConnection(self):
+        self.aborting = True
+        self.loseConnection()
+
+
+
 class ArbitraryException(Exception):
     """
     A unique, arbitrary exception type which L{twisted.web._newclient} knows
@@ -1574,13 +1587,11 @@ class HTTP11ClientProtocolTests(TestCase):
         received.
         """
         transport = StringTransport()
-        abort = []
-        transport.abortConnection = lambda: abort.append(None)
         protocol = HTTP11ClientProtocol()
         protocol.makeConnection(transport)
         result = protocol.request(Request('GET', '/', _boringHeaders, None))
         result.cancel()
-        self.assertEqual([None], abort)
+        self.assertTrue(transport.aborting)
         return assertWrapperExceptionTypes(
             self, result, ResponseNeverReceived, [CancelledError])
 
@@ -1593,14 +1604,12 @@ class HTTP11ClientProtocolTests(TestCase):
         received.
         """
         transport = StringTransport()
-        abort = []
-        transport.abortConnection = lambda: abort.append(None)
         protocol = HTTP11ClientProtocol()
         protocol.makeConnection(transport)
         result = protocol.request(Request('GET', '/', _boringHeaders, None))
         protocol.dataReceived("HTTP/1.1 200 OK\r\n")
         result.cancel()
-        self.assertEqual([None], abort)
+        self.assertTrue(transport.aborting)
         return assertResponseFailed(self, result, [CancelledError])
 
 
@@ -1628,7 +1637,7 @@ class HTTP11ClientProtocolTests(TestCase):
         result = protocol.request(Request('POST', '/bar', _boringHeaders, producer))
         producer.consumer.write('x' * 5)
         result.cancel()
-        self.assertTrue(transport.disconnecting)
+        self.assertTrue(transport.aborting)
         self.assertTrue(nonlocal['cancelled'])
         protocol.connectionLost(Failure(ConnectionDone()))
         return assertRequestGenerationFailed(self, result, [CancelledError])
@@ -1658,7 +1667,7 @@ class HTTP11ClientProtocolTests(TestCase):
         result = protocol.request(Request('POST', '/bar', _boringHeaders, producer))
         producer.consumer.write('x' * 5)
         result.cancel()
-        self.assertTrue(transport.disconnecting)
+        self.assertTrue(transport.aborting)
         self.assertTrue(nonlocal['cancelled'])
         protocol.connectionLost(Failure(ConnectionDone()))
         return assertRequestGenerationFailed(self, result, [CancelledError])

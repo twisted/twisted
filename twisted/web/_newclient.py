@@ -1322,7 +1322,7 @@ class HTTP11ClientProtocol(Protocol):
         def ebRequestWriting(err):
             if self._state == 'TRANSMITTING':
                 self._state = 'GENERATION_FAILED'
-                self.transport.loseConnection()
+                self.transport.abortConnection()
                 self._finishedRequest.errback(
                     Failure(RequestGenerationFailed([err])))
             else:
