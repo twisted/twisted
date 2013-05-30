@@ -14,7 +14,7 @@ from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.error import ConnectionDone, ConnectionLost
-from twisted.internet.defer import Deferred, succeed, fail
+from twisted.internet.defer import Deferred, succeed, fail, CancelledError
 from twisted.internet.protocol import Protocol
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransport, AccumulatingProtocol
@@ -30,6 +30,19 @@ from twisted.web._newclient import TransportProxyProducer, LengthEnforcingConsum
 from twisted.web.http_headers import Headers
 from twisted.web.http import _DataLoss
 from twisted.web.iweb import IBodyProducer, IResponse
+
+
+
+class StringTransport(StringTransport):
+    """
+    A version of C{StringTransport} that supports C{abortConnection}.
+    """
+    aborting = False
+
+
+    def abortConnection(self):
+        self.aborting = True
+        self.loseConnection()
 
 
 
@@ -70,7 +83,7 @@ def assertWrapperExceptionTypes(self, deferred, mainType, reasonTypes):
         trapped on C{deferred}.
 
     @param reasonTypes: A sequence of exception types which will be trapped on
-        the resulting L{mainType} exception instance's C{reasons} sequence.
+        the resulting C{mainType} exception instance's C{reasons} sequence.
 
     @return: A L{Deferred} which fires with the C{mainType} instance
         C{deferred} fails with, or which fails somehow.
@@ -1109,7 +1122,7 @@ class HTTP11ClientProtocolTests(TestCase):
     def test_connectionLostAfterReceivingResponseBeforeRequestGenerationDone(self):
         """
         If response bytes are delivered to L{HTTP11ClientProtocol} before the
-        request completes, calling L{connectionLost} on the protocol will
+        request completes, calling C{connectionLost} on the protocol will
         result in protocol being moved to C{'CONNECTION_LOST'} state.
         """
         request = SlowRequest()
@@ -1564,6 +1577,100 @@ class HTTP11ClientProtocolTests(TestCase):
         errors = self.flushLoggedErrors(ZeroDivisionError)
         self.assertEqual(len(errors), 1)
         self.assertTrue(transport.disconnecting)
+
+
+    def test_cancelBeforeResponse(self):
+        """
+        The L{Deferred} returned by L{HTTP11ClientProtocol.request} will fire
+        with a L{ResponseNeverReceived} failure containing a L{CancelledError}
+        exception if the request was cancelled before any response headers were
+        received.
+        """
+        transport = StringTransport()
+        protocol = HTTP11ClientProtocol()
+        protocol.makeConnection(transport)
+        result = protocol.request(Request('GET', '/', _boringHeaders, None))
+        result.cancel()
+        self.assertTrue(transport.aborting)
+        return assertWrapperExceptionTypes(
+            self, result, ResponseNeverReceived, [CancelledError])
+
+
+    def test_cancelDuringResponse(self):
+        """
+        The L{Deferred} returned by L{HTTP11ClientProtocol.request} will fire
+        with a L{ResponseFailed} failure containing a L{CancelledError}
+        exception if the request was cancelled before all response headers were
+        received.
+        """
+        transport = StringTransport()
+        protocol = HTTP11ClientProtocol()
+        protocol.makeConnection(transport)
+        result = protocol.request(Request('GET', '/', _boringHeaders, None))
+        protocol.dataReceived("HTTP/1.1 200 OK\r\n")
+        result.cancel()
+        self.assertTrue(transport.aborting)
+        return assertResponseFailed(self, result, [CancelledError])
+
+
+    def test_cancelDuringBodyProduction(self):
+        """
+        The L{Deferred} returned by L{HTTP11ClientProtocol.request} will fire
+        with a L{RequestGenerationFailed} failure containing a
+        L{CancelledError} exception if the request was cancelled before a
+        C{bodyProducer} with an explicit length has finished producing.
+        """
+        transport = StringTransport()
+        protocol = HTTP11ClientProtocol()
+        protocol.makeConnection(transport)
+        producer = StringProducer(10)
+
+        nonlocal = {'cancelled': False}
+        def cancel(ign):
+            nonlocal['cancelled'] = True
+        def startProducing(consumer):
+            producer.consumer = consumer
+            producer.finished = Deferred(cancel)
+            return producer.finished
+        producer.startProducing = startProducing
+
+        result = protocol.request(Request('POST', '/bar', _boringHeaders, producer))
+        producer.consumer.write('x' * 5)
+        result.cancel()
+        self.assertTrue(transport.aborting)
+        self.assertTrue(nonlocal['cancelled'])
+        protocol.connectionLost(Failure(ConnectionDone()))
+        return assertRequestGenerationFailed(self, result, [CancelledError])
+
+
+    def test_cancelDuringChunkedBodyProduction(self):
+        """
+        The L{Deferred} returned by L{HTTP11ClientProtocol.request} will fire
+        with a L{RequestGenerationFailed} failure containing a
+        L{CancelledError} exception if the request was cancelled before a
+        C{bodyProducer} with C{UNKNOWN_LENGTH} has finished producing.
+        """
+        transport = StringTransport()
+        protocol = HTTP11ClientProtocol()
+        protocol.makeConnection(transport)
+        producer = StringProducer(UNKNOWN_LENGTH)
+
+        nonlocal = {'cancelled': False}
+        def cancel(ign):
+            nonlocal['cancelled'] = True
+        def startProducing(consumer):
+            producer.consumer = consumer
+            producer.finished = Deferred(cancel)
+            return producer.finished
+        producer.startProducing = startProducing
+
+        result = protocol.request(Request('POST', '/bar', _boringHeaders, producer))
+        producer.consumer.write('x' * 5)
+        result.cancel()
+        self.assertTrue(transport.aborting)
+        self.assertTrue(nonlocal['cancelled'])
+        protocol.connectionLost(Failure(ConnectionDone()))
+        return assertRequestGenerationFailed(self, result, [CancelledError])
 
 
 
