@@ -370,6 +370,14 @@ class KnownHostsFile(object):
         self._clobber = True
 
 
+    @property
+    def savePath(self):
+        """
+        @see: C{savePath} parameter of L{__init__}
+        """
+        return self._savePath
+
+
     def iterentries(self):
         """
         Iterate over the host entries in this file.
