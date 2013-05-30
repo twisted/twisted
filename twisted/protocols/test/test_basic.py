@@ -1073,56 +1073,73 @@ class ConsumingProtocol(basic.LineReceiver):
 
 class ProducerTestCase(unittest.SynchronousTestCase):
     """
-    Pause and resume a producer.
+    Tests for L{basic._PausableMixin} and L{basic.LineReceiver.paused}.
     """
 
-    def testPauseResume(self):
+    def test_pauseResume(self):
         """
-        The producer should be paused when data is received and not paused when
-        resumed.
+        When L{basic.LineReceiver} is paused, it doesn't deliver lines to
+        L{basic.LineReceiver.lineReceived} and delivers them immediately upon
+        being resumed.
+
+        L{ConsumingProtocol} is a L{LineReceiver} that pauses itself after
+        every line, and writes that that line to its transport.
         """
         p = ConsumingProtocol()
         t = OnlyProducerTransport()
         p.makeConnection(t)
 
+        # Deliver a partial line.
+        # This doesn't trigger a pause and doesn't deliver a line.
         p.dataReceived(b'hello, ')
         self.assertEqual(t.data, [])
         self.assertFalse(t.paused)
         self.assertFalse(p.paused)
 
+        # Deliver the rest of the line.
+        # This triggers the pause, and the line is echoed.
         p.dataReceived(b'world\r\n')
-
         self.assertEqual(t.data, [b'hello, world'])
         self.assertTrue(t.paused)
         self.assertTrue(p.paused)
 
+        # Unpausing doesn't deliver more data, and the protocol is unpaused.
         p.resumeProducing()
-
+        self.assertEqual(t.data, [b'hello, world'])
         self.assertFalse(t.paused)
         self.assertFalse(p.paused)
 
+        # Deliver two lines at once.
+        # The protocol is paused after receiving and echoing the first line.
         p.dataReceived(b'hello\r\nworld\r\n')
-
         self.assertEqual(t.data, [b'hello, world', b'hello'])
         self.assertTrue(t.paused)
         self.assertTrue(p.paused)
 
+        # Unpausing delivers the waiting line, and causes the protocol to
+        # pause agin.
         p.resumeProducing()
-        p.dataReceived(b'goodbye\r\n')
-
         self.assertEqual(t.data, [b'hello, world', b'hello', b'world'])
         self.assertTrue(t.paused)
         self.assertTrue(p.paused)
 
-        p.resumeProducing()
+        # Deliver a line while paused.
+        # This doesn't have a visible effect.
+        p.dataReceived(b'goodbye\r\n')
+        self.assertEqual(t.data, [b'hello, world', b'hello', b'world'])
+        self.assertTrue(t.paused)
+        self.assertTrue(p.paused)
 
+        # Unpausing delivers the waiting line, and causes the protocol to
+        # pause agin.
+        p.resumeProducing()
         self.assertEqual(
             t.data, [b'hello, world', b'hello', b'world', b'goodbye'])
         self.assertTrue(t.paused)
         self.assertTrue(p.paused)
 
+        # Unpausing doesn't deliver more data, and the protocol is unpaused.
         p.resumeProducing()
-
         self.assertEqual(
             t.data, [b'hello, world', b'hello', b'world', b'goodbye'])
         self.assertFalse(t.paused)
