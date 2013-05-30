@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Tests for L{twisted.trial.distreporter}.
+Tests for L{twisted.trial._dist.distreporter}.
 """
 
 from cStringIO import StringIO

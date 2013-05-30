@@ -9,7 +9,8 @@ responsible for coordinating all of trial's behavior at the highest level.
 @since: 12.3
 """
 
-import sys, os
+import os
+import sys
 
 from twisted.python.filepath import FilePath
 from twisted.python.modules import theSystemPath
@@ -115,11 +116,16 @@ class DistTrialRunner(object):
             'twisted.trial._dist.workertrial'].filePath.path
         childFDs = {0: 'w', 1: 'r', 2: 'r', _WORKER_AMP_STDIN: 'w',
                     _WORKER_AMP_STDOUT: 'r'}
+        environ = os.environ.copy()
+        # Add a environment variable containing the raw sys.path, to be used by
+        # subprocesses to make sure it's identical to the parent. See
+        # workertrial._setupPath.
+        environ['TRIAL_PYTHONPATH'] = os.pathsep.join(sys.path)
         for worker in protocols:
             args = [sys.executable, workertrialPath]
             args.extend(arguments)
             spawner(worker, sys.executable, args=args, childFDs=childFDs,
-                    env=os.environ)
+                    env=environ)
 
 
     def _driveWorker(self, worker, result, testCases, cooperate):

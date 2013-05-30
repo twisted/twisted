@@ -6,6 +6,7 @@ Tests for L{twisted.trial._dist.disttrial}.
 """
 
 import os
+import sys
 from cStringIO import StringIO
 
 from twisted.internet.protocol import ProcessProtocol
@@ -111,20 +112,22 @@ class DistTrialRunnerTestCase(TestCase):
         """
         protocols = [ProcessProtocol() for i in range(4)]
         arguments = []
+        environment = {}
 
         def fakeSpawnProcess(processProtocol, executable, args=(), env={},
                              path=None, uid=None, gid=None, usePTY=0,
                              childFDs=None):
             arguments.append(executable)
-            arguments.append(args[0])
-            arguments.append(args[1])
-            arguments.append(args[2])
+            arguments.extend(args)
+            environment.update(env)
 
         self.runner.launchWorkerProcesses(
             fakeSpawnProcess, protocols, ["foo"])
         self.assertEqual(arguments[0], arguments[1])
         self.assertTrue(os.path.exists(arguments[2]))
         self.assertEqual("foo", arguments[3])
+        self.assertEqual(os.pathsep.join(sys.path),
+                         environment["TRIAL_PYTHONPATH"])
 
 
     def test_run(self):
@@ -252,7 +255,7 @@ class DistTrialRunnerTestCase(TestCase):
 
         fakeReactor = FakeReactorWithFail()
         result = self.runner.run(TestCase(), fakeReactor,
-                                  cooperator.cooperate)
+                                 cooperator.cooperate)
         self.assertEqual(fakeReactor.runCount, 1)
         self.assertEqual(fakeReactor.spawnCount, 1)
         scheduler.pump()
