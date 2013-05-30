@@ -499,7 +499,7 @@ class OpenSSLOptions(unittest.TestCase):
         self.assertEqual(opts.enableSessionTickets, True)
 
     test_certificateOptionsSerialization.suppress = [util.suppress(
-        category = DeprecationWarning)]
+        category = DeprecationWarning, message='twisted.internet._sslverify')]
 
 
     def test_certificateOptionsSessionTickets(self):
