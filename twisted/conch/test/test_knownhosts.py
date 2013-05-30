@@ -432,6 +432,18 @@ class KnownHostsDatabaseTests(TestCase):
         return KnownHostsFile.fromPath(self.pathWithContent(content))
 
 
+    def test_readOnlySavePath(self):
+        """
+        L{KnownHostsFile.savePath} is read-only; if an assignment is made to
+        it, L{AttributeError} is raised and the value is unchanged.
+        """
+        path = FilePath(self.mktemp())
+        new = FilePath(self.mktemp())
+        hostsFile = KnownHostsFile(path)
+        self.assertRaises(AttributeError, setattr, hostsFile, "savePath", new)
+        self.assertEqual(path, hostsFile.savePath)
+
+
     def test_defaultInitializerIgnoresExisting(self):
         """
         The default initializer for L{KnownHostsFile} disregards any existing
@@ -699,7 +711,7 @@ class KnownHostsDatabaseTests(TestCase):
         key = Key.fromString(sampleKey)
         entry = PlainEntry(["brandnew.example.com"], key.sshType(), key, "")
         hostsFile = self.loadSampleHostsFile()
-        with hostsFile._savePath.open("a") as hostsFileObj:
+        with hostsFile.savePath.open("a") as hostsFileObj:
             hostsFileObj.write(entry.toString() + "\n")
         self.assertEqual(
             True, hostsFile.hasHostKey("brandnew.example.com", key))
@@ -719,7 +731,7 @@ class KnownHostsDatabaseTests(TestCase):
             "www.twistedmatrix.com", Key.fromString(otherSampleKey))
         self.assertEqual(exception.offendingEntry, entries[0])
         self.assertEqual(exception.lineno, 1)
-        self.assertEqual(exception.path, hostsFile._savePath)
+        self.assertEqual(exception.path, hostsFile.savePath)
 
 
     def test_savedEntryAfterAddHasKeyMismatch(self):
@@ -737,7 +749,7 @@ class KnownHostsDatabaseTests(TestCase):
             HostKeyChanged, hostsFile.hasHostKey,
             "www.twistedmatrix.com", Key.fromString(otherSampleKey))
         self.assertEqual(exception.lineno, 1)
-        self.assertEqual(exception.path, hostsFile._savePath)
+        self.assertEqual(exception.path, hostsFile.savePath)
 
 
     def test_unsavedEntryHasKeyMismatch(self):
@@ -861,7 +873,7 @@ class KnownHostsDatabaseTests(TestCase):
         ui, l, knownHostsFile = self.verifyNonPresentKey()
         ui.promptDeferred.callback(True)
         self.assertEqual([True], l)
-        reloaded = KnownHostsFile.fromPath(knownHostsFile._savePath)
+        reloaded = KnownHostsFile.fromPath(knownHostsFile.savePath)
         self.assertEqual(
             True,
             reloaded.hasHostKey("4.3.2.1", Key.fromString(thirdSampleKey)))
@@ -909,7 +921,7 @@ class KnownHostsDatabaseTests(TestCase):
         hostsFile.verifyHostKey(
             ui, "www.twistedmatrix.com", "5.4.3.2", expectedKey)
         self.assertEqual(
-            True, KnownHostsFile.fromPath(hostsFile._savePath).hasHostKey(
+            True, KnownHostsFile.fromPath(hostsFile.savePath).hasHostKey(
                 "5.4.3.2", expectedKey))
         self.assertEqual(
             ["Warning: Permanently added the RSA host key for IP address "
