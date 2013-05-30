@@ -10,6 +10,7 @@ from __future__ import division, absolute_import
 import re
 import sys
 import traceback
+import bdb
 import pdb
 import linecache
 
@@ -17,6 +18,7 @@ from twisted.python.compat import NativeStringIO, _PY3
 from twisted.python import _reflectpy3 as reflect
 from twisted.python import failure
 
+from twisted.trial.test.test_runner import CapturingDebugger
 from twisted.trial.unittest import SynchronousTestCase
 
 
@@ -753,58 +755,112 @@ class TestFrameAttributes(SynchronousTestCase):
 
 class TestDebugMode(SynchronousTestCase):
     """
-    Failure's debug mode should allow jumping into the debugger.
+    Failure's debug mode should allow jumping into a debugger.
     """
 
     def setUp(self):
-        """
-        Override pdb.post_mortem so we can make sure it's called.
-        """
-        # Make sure any changes we make are reversed:
-        post_mortem = pdb.post_mortem
-        if _PY3:
-            origInit = failure.Failure.__init__
-        else:
-            origInit = failure.Failure.__dict__['__init__']
-        def restore():
-            pdb.post_mortem = post_mortem
-            if _PY3:
-                failure.Failure.__init__ = origInit
-            else:
-                failure.Failure.__dict__['__init__'] = origInit
-        self.addCleanup(restore)
+        self.debugger = CapturingDebugger()
 
-        self.result = []
-        pdb.post_mortem = self.result.append
-        failure.startDebugMode()
+
+    def tearDown(self):
+        failure.stopDebugMode()
 
 
     def test_regularFailure(self):
         """
-        If startDebugMode() is called, calling Failure() will first call
-        pdb.post_mortem with the traceback.
+        If L{Failure.startDebugMode} is called with a C{postMortem} function,
+        instantiating L{Failure} will first call the post mortem function with
+        the traceback.
         """
+        failure.startDebugMode(self.debugger.post_mortem)
+
         try:
-            1/0
+            raise ZeroDivisionError()
         except:
-            typ, exc, tb = sys.exc_info()
+            _, _, tb = sys.exc_info()
             f = failure.Failure()
-        self.assertEqual(self.result, [tb])
-        self.assertEqual(f.captureVars, False)
+        self.assertEqual(self.debugger.mortems, [tb])
+        self.assertFalse(f.captureVars)
 
 
     def test_captureVars(self):
         """
-        If startDebugMode() is called, passing captureVars to Failure() will
-        not blow up.
+        If L{Failure.startDebugMode} is called, instantiating L{Failure} with
+        C{captureVars} still works.
         """
+        failure.startDebugMode(self.debugger.post_mortem)
+
         try:
-            1/0
+            raise ZeroDivisionError()
         except:
-            typ, exc, tb = sys.exc_info()
+            _, _, tb = sys.exc_info()
             f = failure.Failure(captureVars=True)
-        self.assertEqual(self.result, [tb])
-        self.assertEqual(f.captureVars, True)
+        self.assertEqual(self.debugger.mortems, [tb])
+        self.assertTrue(f.captureVars)
+
+
+    def test_defaultDebuggerIsPDB(self):
+        """
+        If L{Failure.startDebugMode} is called without a debugger, L{pdb} is
+        used.
+        """
+        self.patch(pdb, "post_mortem", self.debugger.post_mortem)
+        failure.startDebugMode()
+
+        try:
+            raise ZeroDivisionError()
+        except:
+            _, _, tb = sys.exc_info()
+            f = failure.Failure()
+        self.assertEqual(self.debugger.mortems, [tb])
+
+
+    def test_postMortemQuit(self):
+        """
+        If L{Failure.startDebugMode} is called with a post mortem function that
+        quit via L{bdb.BdbQuit}, it does not fall back to L{pdb.post_mortem}.
+        """
+
+        def postMortem(tb):
+            raise bdb.BdbQuit()
+
+        self.patch(pdb, "post_mortem", self.debugger.post_mortem)
+        failure.startDebugMode(postMortem)
+
+        try:
+            raise ZeroDivisionError()
+        except:
+            _, _, tb = sys.exc_info()
+            f = failure.Failure()
+        self.assertEqual(self.debugger.mortems, [])
+
+
+    def test_postMortemRaisedException(self):
+        """
+        If L{Failure.startDebugMode} is called with a post mortem function that
+        raised an exception, it falls back to L{pdb.post_mortem}.
+        """
+        self.patch(pdb, "post_mortem", self.debugger.post_mortem)
+        failure.startDebugMode(object())
+
+        try:
+            raise ZeroDivisionError()
+        except:
+            _, _, tb = sys.exc_info()
+            f = failure.Failure()
+        self.assertEqual(self.debugger.mortems, [tb])
+
+
+    def test_stopDebugMode(self):
+        failure.startDebugMode(self.debugger.post_mortem)
+        failure.stopDebugMode()
+
+        try:
+            raise ZeroDivisionError()
+        except:
+            _, _, tb = sys.exc_info()
+            f = failure.Failure()
+        self.assertEqual(self.debugger.mortems, [])
 
 
 

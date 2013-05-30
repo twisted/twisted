@@ -23,13 +23,43 @@ pyunit = __import__('unittest')
 
 
 class CapturingDebugger(object):
+    """
+    Debugger that keeps a log of all actions performed on it.
+    """
 
     def __init__(self):
-        self._calls = []
+        self.calls = []
+        self.mortems = []
 
-    def runcall(self, *args, **kwargs):
-        self._calls.append('runcall')
-        args[0](*args[1:], **kwargs)
+
+    def post_mortem(self, tb):
+        self.mortems.append(tb)
+
+
+    def runcall(self, fn, *args, **kwargs):
+        self.calls.append((args, kwargs))
+        fn(*args, **kwargs)
+
+
+    @classmethod
+    def createAndCleanup(cls, test, attr):
+        """
+        Create a debugger at the given C{attr} and remove it after the test.
+
+        Exists because command line arguments like C{--debugger} will not have
+        access to the instance, they need to find a debugger by fully qualified
+        name on the class.
+
+        @param test: a test case instance where the debugger will live
+        @param attr: a L{str} which is the name of the attribute to set and
+            unset after the test has run. The attribute will be set on the
+            I{class} of the given test case instance.
+
+        """
+
+        debugger = cls()
+        setattr(test.__class__, attr, debugger)
+        test.addCleanup(delattr, test.__class__, attr)
 
 
 
@@ -503,7 +533,7 @@ class TestRunner(unittest.SynchronousTestCase):
         debugger = my_runner.debugger = CapturingDebugger()
         result = self.runSampleSuite(my_runner)
         self.assertEqual(self.standardReport, result._calls)
-        self.assertEqual(['runcall'], debugger._calls)
+        self.assertEqual(['runcall'], debugger.calls)
 
 
     def test_runnerDebuggerDefaultsToPdb(self):
@@ -542,24 +572,24 @@ class TestRunner(unittest.SynchronousTestCase):
         self.assertTrue(self.runcall_called)
 
 
-    cdebugger = CapturingDebugger()
-
-
     def test_runnerDebugger(self):
         """
         Trial uses specified debugger if the debugger is available.
         """
+
+        CapturingDebugger.createAndCleanup(self, "capturingDebugger")
+
         self.parseOptions([
             '--reporter', 'capturing',
             '--debugger',
-            'twisted.trial.test.test_runner.TestRunner.cdebugger',
+            'twisted.trial.test.test_runner.TestRunner.capturingDebugger',
             '--debug',
             'twisted.trial.test.sample',
         ])
         my_runner = self.getRunner()
         result = self.runSampleSuite(my_runner)
         self.assertEqual(self.standardReport, result._calls)
-        self.assertEqual(['runcall'], my_runner.debugger._calls)
+        self.assertEqual(['runcall'], my_runner.debugger.calls)
 
 
 

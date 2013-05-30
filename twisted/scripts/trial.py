@@ -93,7 +93,6 @@ def _reporterAction():
                                plugin.getPlugins(itrial.IReporter)])
 
 
-
 class _BasicOptions(object):
     """
     Basic options shared between trial and its local workers.
@@ -205,6 +204,14 @@ class _BasicOptions(object):
             print '   ', p.longOpt, '\t', p.description
         print
         sys.exit(0)
+
+
+    def opt_debugger(self, debugger):
+        try:
+            self["debugger"] = reflect.namedAny(debugger)
+        except reflect.ModuleNotFound:
+            raise usage.UsageError(
+                "%r debugger could not be found." % (debugger,))
 
 
     def opt_disablegc(self):
@@ -321,8 +328,8 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
                 ]
 
     optParameters = [
-        ["debugger", None, "pdb", "the fully qualified name of a debugger to "
-         "use if --debug is passed"],
+        ["debugger", None, pdb,
+         "the fully qualified name of a debugger to use if --debug is passed"],
         ["logfile", "l", "test.log", "log file name"],
         ["jobs", "j", None, "Number of local workers to run"]
         ]
@@ -379,18 +386,15 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
                 if self[option]:
                     raise usage.UsageError(
                         "You can't specify --%s when using --jobs" % option)
-        if self['nopm']:
-            if not self['debug']:
-                raise usage.UsageError("You must specify --debug when using "
-                                       "--nopm ")
-            failure.DO_POST_MORTEM = False
 
 
 
 def _initialDebugSetup(config):
     # do this part of debug setup first for easy debugging of import failures
-    if config['debug']:
-        failure.startDebugMode()
+    if config['debug'] and not config['nopm']:
+        debugger = config['debugger']
+        postMortem = getattr(debugger, "post_mortem", pdb.post_mortem)
+        failure.startDebugMode(postMortem)
     if config['debug'] or config['debug-stacktraces']:
         defer.setDebugging(True)
 
@@ -413,39 +417,6 @@ def _getLoader(config):
     if not config['until-failure']:
         loader.suiteFactory = runner.DestructiveTestSuite
     return loader
-
-
-def _wrappedPdb():
-    """
-    Wrap an instance of C{pdb.Pdb} with readline support and load any .rcs.
-
-    """
-
-    dbg = pdb.Pdb()
-    try:
-        import readline
-    except ImportError:
-        print "readline module not available"
-        sys.exc_clear()
-    for path in ('.pdbrc', 'pdbrc'):
-        if os.path.exists(path):
-            try:
-                rcFile = file(path, 'r')
-            except IOError:
-                sys.exc_clear()
-            else:
-                dbg.rcLines.extend(rcFile.readlines())
-    return dbg
-
-
-class _DebuggerNotFound(Exception):
-    """
-    A debugger import failed.
-
-    Used to allow translating these errors into usage error messages.
-
-    """
-
 
 
 def _makeRunner(config):
@@ -474,17 +445,7 @@ def _makeRunner(config):
     else:
         if config['debug']:
             args['mode'] = runner.TrialRunner.DEBUG
-            debugger = config['debugger']
-
-            if debugger != 'pdb':
-                try:
-                    args['debugger'] = reflect.namedAny(debugger)
-                except reflect.ModuleNotFound:
-                    raise _DebuggerNotFound(
-                        '%r debugger could not be found.' % (debugger,))
-            else:
-                args['debugger'] = _wrappedPdb()
-
+            args['debugger'] = config['debugger']
         args['profile'] = config['profile']
         args['forceGarbageCollection'] = config['force-gc']
 
@@ -500,14 +461,11 @@ def run():
         config.parseOptions()
     except usage.error, ue:
         raise SystemExit, "%s: %s" % (sys.argv[0], ue)
+
     _initialDebugSetup(config)
-
-    try:
-        trialRunner = _makeRunner(config)
-    except _DebuggerNotFound as e:
-        raise SystemExit('%s: %s' % (sys.argv[0], str(e)))
-
+    trialRunner = _makeRunner(config)
     suite = _getSuite(config)
+
     if config['until-failure']:
         test_result = trialRunner.runUntilFailure(suite)
     else:

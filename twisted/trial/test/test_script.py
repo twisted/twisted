@@ -1,19 +1,23 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import StringIO
 import gc
-import StringIO, sys, types
+import pdb
+import sys
+import types
 
 from twisted.trial import unittest
 from twisted.trial.runner import (
     TrialRunner, TestSuite, DestructiveTestSuite, TestLoader)
 from twisted.trial._dist.disttrial import DistTrialRunner
 from twisted.scripts import trial
-from twisted.python import util
+from twisted.python import failure, util
 from twisted.python.usage import UsageError
 from twisted.python.filepath import FilePath
 
 from twisted.trial.test.test_loader import testNames
+from twisted.trial.test.test_runner import CapturingDebugger
 
 pyunit = __import__('unittest')
 
@@ -551,6 +555,10 @@ class MakeRunnerTestCase(unittest.TestCase):
 
 
     def test_DebuggerNotFound(self):
+        """
+        If a debugger cannot be found using L{namedAny}, a L{UsageError} is
+        raised.
+        """
         namedAny = trial.reflect.namedAny
 
         def namedAnyExceptdoNotFind(fqn):
@@ -561,9 +569,11 @@ class MakeRunnerTestCase(unittest.TestCase):
         self.patch(trial.reflect, "namedAny", namedAnyExceptdoNotFind)
 
         options = trial.Options()
-        options.parseOptions(["--debug", "--debugger", "doNotFind"])
+        self.assertRaises(
+            UsageError,
+            options.parseOptions,
+            ["--debug", "--debugger", "doNotFind"])
 
-        self.assertRaises(trial._DebuggerNotFound, trial._makeRunner, options)
 
 
 class TestRun(unittest.TestCase):
@@ -572,9 +582,101 @@ class TestRun(unittest.TestCase):
     """
 
     def setUp(self):
-        # don't re-parse cmdline options, because if --reactor was passed to
-        # the test run trial will try to restart the (already running) reactor
-        self.patch(trial.Options, "parseOptions", lambda self: None)
+        # Calling trial.run() will call usage.Options().parseOptions(), which
+        # grabs sys.argv. Patch it, so it doesn't get the arguments from the
+        # outer trial run.
+        self.argv = [sys.argv[0]]
+        self.patch(trial.sys, "argv", self.argv)
+
+
+    def test_setsUpFailureDebugMode(self):
+        """
+        When a debug mode is enabled, L{failure.startDebugMode} is called with
+        the provided debugger's C{post_mortem} method.
+
+        """
+
+        CapturingDebugger.createAndCleanup(self, "capturingDebugger")
+
+        self.argv.extend(
+            [
+                "--debug",
+                "--debugger",
+                "twisted.trial.test.test_script.TestRun.capturingDebugger",
+            ],
+        )
+
+        def recordPostMortem(postMortem):
+            self.postMortem = postMortem
+        self.patch(failure, "startDebugMode", recordPostMortem)
+
+        try:
+            trial.run()
+        except SystemExit:
+            pass
+
+        self.assertEqual(self.postMortem, self.capturingDebugger.post_mortem)
+
+
+    def test_noPostMortemMethod(self):
+        """
+        When a debug mode is enabled and the provided debugger lacks a
+        C{post_mortem} method, L{pdb.post_method} is used.
+
+        """
+
+        CapturingDebugger.createAndCleanup(self, "capturingDebugger")
+        postMortem = CapturingDebugger.post_mortem
+        del CapturingDebugger.post_mortem
+        self.addCleanup(setattr, CapturingDebugger, "post_mortem", postMortem)
+
+        self.argv.extend(
+            [
+                "--debug",
+                "--debugger",
+                "twisted.trial.test.test_script.TestRun.capturingDebugger",
+            ],
+        )
+
+        def recordPostMortem(postMortem):
+            self.postMortem = postMortem
+        self.patch(failure, "startDebugMode", recordPostMortem)
+
+        try:
+            trial.run()
+        except SystemExit:
+            pass
+
+        self.assertEqual(self.postMortem, pdb.post_mortem)
+
+
+    def test_nopm(self):
+        """
+        When C{--nopm} is passed, L{failure.startDebugMode} is not called so
+        that L{Failure} objects do not automatically invoke a call to post
+        mortem.
+
+        """
+
+        CapturingDebugger.createAndCleanup(self, "capturingDebugger")
+
+        self.argv.extend(
+            [
+                "--debug",
+                "--debugger",
+                "twisted.trial.test.test_script.TestRun.capturingDebugger",
+                "--nopm",
+            ],
+        )
+
+        def startDebugMode(postMortem):
+            self.fail("startDebugMode should not have been called!")
+        self.patch(failure, "startDebugMode", startDebugMode)
+
+        try:
+            trial.run()
+        except SystemExit:
+            pass
 
 
     def test_debuggerNotFound(self):
@@ -583,9 +685,8 @@ class TestRun(unittest.TestCase):
 
         """
 
-        def _makeRunner(*args, **kwargs):
-            raise trial._DebuggerNotFound('foo')
-        self.patch(trial, "_makeRunner", _makeRunner)
+        self.argv.extend(["--debug", "--debugger", "foo"])
+        self.addCleanup(trial.failure.stopDebugMode)
 
         try:
             trial.run()

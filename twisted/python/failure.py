@@ -18,6 +18,8 @@ import sys
 import linecache
 import inspect
 import opcode
+import bdb
+import pdb
 from inspect import getmro
 
 from twisted.python.compat import _PY3, NativeStringIO as StringIO
@@ -169,8 +171,9 @@ class Failure:
     # throwExceptionIntoGenerator.
     _yieldOpcode = chr(opcode.opmap["YIELD_VALUE"])
 
-    def __init__(self, exc_value=None, exc_type=None, exc_tb=None,
-                 captureVars=False):
+
+    def _realInit(self, exc_value=None, exc_type=None, exc_tb=None,
+                  captureVars=False):
         """
         Initialize me with an explanation of the error.
 
@@ -312,6 +315,65 @@ class Failure:
             self.parents = list(map(reflect.qual, parentCs))
         else:
             self.parents = [self.type]
+
+
+    __init__ = _realInit
+
+
+    @classmethod
+    def startDebugMode(cls, postMortem=None):
+        """
+        Enable debug hooks for L{Failure}s.
+
+        @param postMortem: a callable taking a single argument, a traceback to
+            post-mortem. By default (or if calling the provided post mortem
+            function fails with an exception other than L{bdb.BdbQuit}),
+            L{pdb.post_mortem} is used.
+        """
+
+        if postMortem is None:
+            postMortem = pdb.post_mortem
+
+        def _debugInit(self, exc_value=None, exc_type=None, exc_tb=None,
+                       captureVars=False):
+            """
+            Initialize me, possibly spawning the debugger.
+            """
+            if (exc_value, exc_type, exc_tb) == (None, None, None):
+                exc = sys.exc_info()
+                if not exc[0] == self.__class__:
+                    try:
+                        strrepr = str(exc[1])
+                    except:
+                        strrepr = "broken str"
+                    print(
+                        "Jumping into debugger for post-mortem of "
+                        "exception '%s'" % (strrepr,))
+
+                    try:
+                        postMortem(exc[2])
+                    except bdb.BdbQuit:
+                        pass
+                    except Exception:
+                        print(
+                            "Debugging with %r failed. Falling back to pdb." %
+                            (postMortem,))
+
+                        pdb.post_mortem(exc[2])
+
+            self._realInit(exc_value, exc_type, exc_tb, captureVars)
+
+        cls.__init__ = _debugInit
+
+
+    @classmethod
+    def stopDebugMode(cls):
+        """
+        Disable debug hooks for L{Failure}s.
+        """
+
+        cls.__init__ = cls._realInit
+
 
     def trap(self, *errorTypes):
         """Trap this failure if its type is in a predetermined list.
@@ -626,29 +688,5 @@ def _safeReprVars(varsDictItems):
     return [(name, reflect.safe_repr(obj)) for (name, obj) in varsDictItems]
 
 
-# slyphon: make post-morteming exceptions tweakable
-
-DO_POST_MORTEM = True
-
-def _debuginit(self, exc_value=None, exc_type=None, exc_tb=None,
-               captureVars=False,
-               Failure__init__=Failure.__init__):
-    """
-    Initialize failure object, possibly spawning pdb.
-    """
-    if (exc_value, exc_type, exc_tb) == (None, None, None):
-        exc = sys.exc_info()
-        if not exc[0] == self.__class__ and DO_POST_MORTEM:
-            try:
-                strrepr = str(exc[1])
-            except:
-                strrepr = "broken str"
-            print("Jumping into debugger for post-mortem of exception '%s':" % (strrepr,))
-            import pdb
-            pdb.post_mortem(exc[2])
-    Failure__init__(self, exc_value, exc_type, exc_tb, captureVars)
-
-
-def startDebugMode():
-    """Enable debug hooks for Failures."""
-    Failure.__init__ = _debuginit
+startDebugMode = Failure.startDebugMode
+stopDebugMode = Failure.stopDebugMode
