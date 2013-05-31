@@ -2081,34 +2081,39 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
 
 
+class DummyResponse(object):
+    """
+    Fake L{IResponse} for testing readBody that just captures the protocol
+    passed to deliverBody.
+
+    @ivar protocol: After C{deliverBody} is called, the protocol it was called
+        with.
+    """
+
+    code = 200
+    phrase = "OK"
+
+    def __init__(self, headers=None):
+        if headers is None:
+            headers = Headers()
+        self.headers = headers
+
+
+    def deliverBody(self, protocol):
+        self.protocol = protocol
+
+
+
 class ReadBodyTests(unittest.TestCase):
     """
     Tests for L{client.readBody}
     """
-
-
-    class FakeResponse(object):
-        """
-        Fake L{IResponse} for testing readBody, that just captures the protocol
-        passed to deliverBody.
-        """
-
-        code = 200
-        phrase = "OK"
-
-        def __init__(self, headers=None):
-            self.headers = headers or Headers()
-
-        def deliverBody(self, protocol):
-            self.protocol = protocol
-
-
     def test_success(self):
         """
         L{client.readBody} returns a L{Deferred} which fires with the complete
         body of the L{IResponse} provider passed to it.
         """
-        response = self.FakeResponse()
+        response = DummyResponse()
         d = client.readBody(response)
         response.protocol.dataReceived("first")
         response.protocol.dataReceived("second")
@@ -2123,7 +2128,7 @@ class ReadBodyTests(unittest.TestCase):
         fires with a L{Failure} wrapping L{client.PartialDownloadError} with
         the content that was received.
         """
-        response = self.FakeResponse()
+        response = DummyResponse()
         d = client.readBody(response)
         response.protocol.dataReceived("first")
         response.protocol.dataReceived("second")
@@ -2147,7 +2152,7 @@ class ReadBodyTests(unittest.TestCase):
         L{client.readBody} is collecting the response body, the L{Deferred}
         returned by {client.readBody} fires with that exception.
         """
-        response = self.FakeResponse()
+        response = DummyResponse()
         d = client.readBody(response)
         response.protocol.dataReceived("first")
         response.protocol.connectionLost(
