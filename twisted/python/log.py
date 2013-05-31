@@ -93,11 +93,6 @@ def callWithLogger(logger, func, *args, **kw):
 
 
 
-_keepErrors = 0
-_keptErrors = []
-_ignoreErrors = []
-
-
 def err(_stuff=None, _why=None, **kw):
     """
     Write a failure to the log.
@@ -121,20 +116,6 @@ def err(_stuff=None, _why=None, **kw):
     if _stuff is None:
         _stuff = failure.Failure()
     if isinstance(_stuff, failure.Failure):
-        if _keepErrors:
-            if _ignoreErrors:
-                keep = 0
-                for err in _ignoreErrors:
-                    r = _stuff.check(err)
-                    if r:
-                        keep = 0
-                        break
-                    else:
-                        keep = 1
-                if keep:
-                    _keptErrors.append(_stuff)
-            else:
-                _keptErrors.append(_stuff)
         msg(failure=_stuff, why=_why, isError=1, **kw)
     elif isinstance(_stuff, Exception):
         msg(failure=failure.Failure(_stuff), why=_why, isError=1, **kw)
