@@ -9,7 +9,7 @@ __metaclass__ = type
 
 import os, sys, signal, threading
 
-from twisted.trial.unittest import TestCase, SkipTest
+from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform, platformType
@@ -312,7 +312,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         def f():
             try:
-                f1 = os.popen('%s -c "import time; time.sleep(0.1)"' %
+                os.popen('%s -c "import time; time.sleep(0.1)"' %
                     (sys.executable,))
                 f2 = os.popen('%s -c "import time; time.sleep(0.5); print \'Foo\'"' %
                     (sys.executable,))
