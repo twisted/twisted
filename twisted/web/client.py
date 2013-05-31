@@ -1680,66 +1680,9 @@ def getBody(response):
 
 
 
-def getJSONBody(response):
-    """
-    Get the body of an L{IResponse} interpreted as JSON.
-
-    @type response: L{IResponse}
-    @param response: An HTTP response
-
-    @return: A L{Deferred} which will fire with the decoded body of the response.
-    """
-    return getBody(response).addCallback(json.loads)
-
-
-
-def _guessRequestEncoding(headers):
-    """
-    Guess the encoding used by the request.
-
-    @type headers: L{Headers}
-    @param headers: HTTP reponse headers
-
-    @rtype: L{str} or L{None}
-    @return: Guessed encoding
-    """
-    contentTypes = headers.getRawHeaders('content-type')
-    if contentTypes is None:
-        return
-
-    # This seems to be the choice browsers make when encountering multiple
-    # content-type headers.
-    contentType, params = cgi.parse_header(contentTypes[-1])
-
-    if 'charset' in params:
-        return params.get('charset').strip("'\"")
-
-
-
-def getTextBody(response, defaultEncoding='ISO-8859-1'):
-    """
-    Get the body of an L{IResponse} converted to unicode.
-
-    C{getTextBody} tries to guess the content type from the HTTP headers.
-
-    @type response: L{IResponse}
-    @param response: An HTTP response
-
-    @type defaultEncoding: L{str}
-    @param defaultEncoding: default encoding to use, if it can't be guessed.
-
-    @return: A L{Deferred} which will fire with the decoded body of the response.
-    """
-    encoding = _guessRequestEncoding(response.headers) or defaultEncoding
-    def decode(body):
-        return body.decode(encoding)
-    return getBody(response).addCallback(decode)
-
-
-
 __all__ = [
     'PartialDownloadError', 'HTTPPageGetter', 'HTTPPageDownloader',
     'HTTPClientFactory', 'HTTPDownloader', 'getPage', 'downloadPage',
     'ResponseDone', 'Response', 'ResponseFailed', 'Agent', 'CookieAgent',
     'ProxyAgent', 'ContentDecoderAgent', 'GzipDecoder', 'RedirectAgent',
-    'HTTPConnectionPool', 'getBody', 'getJSONBody', 'getTextBody' ]
+    'HTTPConnectionPool', 'getBody']
