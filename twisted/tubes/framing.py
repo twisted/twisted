@@ -62,8 +62,8 @@ class _DataToStrings(Pump):
         """
         convert these outputs into one of my inputs XXX describe better
         """
-        self._stringReceiver.delimiter.join(datas +
-                                            [self._stringReceiver._buffer])
+        delimiter = self._stringReceiver.delimiter
+        return delimiter.join(datas + [self._stringReceiver._buffer])
 
 
 
