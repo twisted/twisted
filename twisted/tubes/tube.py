@@ -309,6 +309,7 @@ class _Tube(object):
         upstream.pauseFlow()
         upstream.flowTo(drain)
         junk = self.pump.reassemble(self._pendingOutput)
+        map(drain.receive, junk)
 
 
 
