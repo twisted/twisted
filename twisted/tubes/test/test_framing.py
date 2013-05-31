@@ -6,10 +6,14 @@ from twisted.tubes.framing import stringsToNetstrings
 
 from twisted.tubes.test.util import FakeFount
 from twisted.tubes.test.util import FakeDrain
-from twisted.tubes.tube import Tube
+from twisted.tubes.tube import cascade
+
+from twisted.tubes.tube import Pump
+
 from twisted.tubes.framing import netstringsToStrings
 from twisted.tubes.framing import bytesToLines
 from twisted.tubes.framing import linesToBytes
+
 from twisted.trial.unittest import TestCase
 
 class NetstringTests(TestCase):
@@ -23,7 +27,7 @@ class NetstringTests(TestCase):
         """
         ff = FakeFount()
         fd = FakeDrain()
-        ff.flowTo(Tube(stringsToNetstrings())).flowTo(fd)
+        ff.flowTo(cascade(stringsToNetstrings())).flowTo(fd)
         ff.drain.receive("hello")
         self.assertEquals(fd.received, ["{len:d}:{data:s},".format(
             len=len("hello"), data="hello"
@@ -36,7 +40,7 @@ class NetstringTests(TestCase):
         """
         ff = FakeFount()
         fd = FakeDrain()
-        ff.flowTo(Tube(stringsToNetstrings())).flowTo(fd)
+        ff.flowTo(cascade(stringsToNetstrings())).flowTo(fd)
         ff.drain.receive("hello")
         ff.drain.receive("world")
         self.assertEquals(b"".join(fd.received), 
@@ -52,9 +56,10 @@ class NetstringTests(TestCase):
         """
         ff = FakeFount()
         fd = FakeDrain()
-        ff.flowTo(Tube(netstringsToStrings())).flowTo(fd)
+        ff.flowTo(cascade(netstringsToStrings())).flowTo(fd)
         ff.drain.receive("1:x,2:yz,3:")
         self.assertEquals(fd.received, ["x", "yz"])
+
 
 
 class LineTests(TestCase):
@@ -68,7 +73,7 @@ class LineTests(TestCase):
         """
         ff = FakeFount()
         fd = FakeDrain()
-        ff.flowTo(Tube(bytesToLines())).flowTo(fd)
+        ff.flowTo(cascade(bytesToLines())).flowTo(fd)
         ff.drain.receive(b"alpha\r\nbeta\r\ngamma")
         self.assertEquals(fd.received, [b"alpha", b"beta"])
 
@@ -79,8 +84,9 @@ class LineTests(TestCase):
         """
         ff = FakeFount()
         fd = FakeDrain()
-        ff.flowTo(Tube(linesToBytes())).flowTo(fd)
+        ff.flowTo(cascade(linesToBytes())).flowTo(fd)
         ff.drain.receive(b"hello")
         ff.drain.receive(b"world")
         self.assertEquals(b"".join(fd.received), b"hello\r\nworld\r\n")
+
 

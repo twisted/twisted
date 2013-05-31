@@ -30,13 +30,13 @@ class _TubePiece(object):
 @implementer(IFount)
 class _TubeFount(_TubePiece):
     """
-    Implementation of L{IFount} for L{Tube}.
+    Implementation of L{IFount} for L{_Tube}.
 
     @ivar fount: the implementation of the L{IDrain.fount} attribute.  The
-        L{IFount} which is flowing to this L{Tube}'s L{IDrain} implementation.
+        L{IFount} which is flowing to this L{_Tube}'s L{IDrain} implementation.
 
     @ivar drain: the implementation of the L{IFount.drain} attribute.  The
-        L{IDrain} to which this L{Tube}'s L{IFount} implementation is flowing.
+        L{IDrain} to which this L{_Tube}'s L{IFount} implementation is flowing.
     """
     drain = None
 
@@ -71,7 +71,7 @@ class _TubeFount(_TubePiece):
 
     def resumeFlow(self):
         """
-        Resume the flow from the fount to this L{Tube}.
+        Resume the flow from the fount to this L{_Tube}.
         """
         self._tube._currentlyPaused = False
         fount = self._tube._tdrain.fount
@@ -82,7 +82,7 @@ class _TubeFount(_TubePiece):
 
     def stopFlow(self):
         """
-        Stop the flow from the fount to this L{Tube}.
+        Stop the flow from the fount to this L{_Tube}.
         """
         fount = self._tube._tdrain.fount
         fount.stopFlow()
@@ -92,7 +92,7 @@ class _TubeFount(_TubePiece):
 @implementer(IDrain)
 class _TubeDrain(_TubePiece):
     """
-    Implementation of L{IDrain} for L{Tube}.
+    Implementation of L{IDrain} for L{_Tube}.
     """
     fount = None
 
@@ -161,7 +161,7 @@ class _TubeDrain(_TubePiece):
 
 
 
-def Tube(start, *plumbing):
+def cascade(start, *plumbing):
     """
     Connect up a series of objects capable of transforming inputs to outputs;
     convert a sequence of L{IPump} objects into a sequence of connected
@@ -174,13 +174,13 @@ def Tube(start, *plumbing):
 
     is roughly analagous to::
 
-        x = Tube(a, b, c)
+        x = cascade(a, b, c)
 
-    with the additional feature that C{Tube} will convert C{a}, C{b}, and C{c}
-    to the requisite L{IDrain} objects first.
+    with the additional feature that C{cascade} will convert C{a}, C{b}, and
+    C{c} to the requisite L{IDrain} objects first.
 
     @param start: The initial element in the chain; the object that will
-        consume inputs passed to the result of this call to C{Tube}.
+        consume inputs passed to the result of this call to C{cascade}.
     @type start: an L{IPump}, or anything adaptable to L{IFount}, as well as
         L{IDrain}.
 
@@ -191,11 +191,14 @@ def Tube(start, *plumbing):
         and whose C{flowingFrom} will return an L{IFount} that will produce
         outputs of C{plumbing[-1]} (or C{start}, if plumbing is empty).
     @rtype: L{IDrain}
+
+    @raise TypeError: if C{start}, or any element of C{plumbing} is not
+        adaptable to L{IDrain}.
     """
     with _registry(_pump_registry):
+        result = IDrain(start)
         currentFount = IFount(start)
         drains = map(IDrain, plumbing)
-        result = IDrain(start, None)
     for drain in drains:
         currentFount = currentFount.flowTo(drain)
     return result
@@ -223,16 +226,16 @@ def _registry(registry):
 
 class _Tube(object):
     """
-    A L{Tube} is an L{IDrain} and possibly also an L{IFount}, and provides lots
-    of conveniences to make it easy to implement something that does fancy flow
-    control with just a few methods.
+    A L{_Tube} is an L{IDrain} and possibly also an L{IFount}, and provides
+    lots of conveniences to make it easy to implement something that does fancy
+    flow control with just a few methods.
 
     @ivar pump: the L{Pump} which will receive values from this tube and call
         C{deliver} to deliver output to it.  (When set, this will automatically
         set the C{tube} attribute of said L{Pump} as well, as well as
         un-setting the C{tube} attribute of the old pump.)
 
-    @ivar _currentlyPaused: is this L{Tube} currently paused?  Boolean: C{True}
+    @ivar _currentlyPaused: is this L{_Tube} currently paused?  Boolean: C{True}
         if paused, C{False} if not.
 
     @ivar _nextFount: XXX document me
@@ -244,7 +247,7 @@ class _Tube(object):
 
     def __init__(self, pump):
         """
-        Initialize this L{Tube} with the given L{Pump} to control its
+        Initialize this L{_Tube} with the given L{Pump} to control its
         behavior.
         """
         self._pendingOutput = []
@@ -301,6 +304,19 @@ class _Tube(object):
             return drain.receive(item)
 
 
+    def switch(self, drain):
+        upstream = self._tdrain.fount
+        upstream.pauseFlow()
+        upstream.flowTo(drain)
+        junk = self.pump.reassemble(self._pendingOutput)
+
+
+
+    @property
+    def downstream(self):
+        return self._tfount.drain
+
+
 
 _pump_registry = AdapterRegistry()
 _pump_registry.register([IPump], IDrain, '',
@@ -320,11 +336,11 @@ _pump_registry.register([implementedBy(_Tube)], IDrain, '',
 @implementer(IPump)
 class Pump(object):
     """
-    Null implementation for L{IPump}.  You can inherit from this to
-    get no-op implementation of all of L{IPump}'s required implementation so
-    you can just just implement the parts you're interested in.
+    Null implementation for L{IPump}.  You can inherit from this to get no-op
+    implementation of all of L{IPump}'s required implementation so you can just
+    just implement the parts you're interested in.
 
-    @ivar tube: The L{Tube} whose flow this pump is controlling.  This
+    @ivar tube: The L{ITube} whose flow this pump is controlling.  This
         attribute will be set before 'started' is called.
 
     @ivar inputType: The type of data expected to be received by C{receive}.

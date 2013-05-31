@@ -10,7 +10,7 @@ from twisted.tubes.test.util import StringEndpoint
 from twisted.trial.unittest import TestCase
 from twisted.tubes.protocol import factoryFromFlow
 from twisted.tubes.tube import Pump
-from twisted.tubes.tube import Tube
+from twisted.tubes.tube import cascade
 from twisted.python.failure import Failure
 from twisted.tubes.test.util import FakeFount
 
@@ -55,7 +55,8 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
             self.endpoint.connect(factoryFromFlow(flowFunction))
         )
 
-        self.tube = Tube(RememberingPump())
+        self.pump = RememberingPump()
+        self.tube = cascade(self.pump)
 
 
     def test_flowToSetsDrain(self):
@@ -74,7 +75,7 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         """
         self.adaptedFount.flowTo(self.tube)
         self.adaptedProtocol.dataReceived("some data")
-        self.assertEquals(self.tube.pump.items, ["some data"])
+        self.assertEquals(self.pump.items, ["some data"])
 
 
     def test_stopFlowStopsConnection(self):
@@ -87,7 +88,7 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         self.assertEquals(self.adaptedProtocol.transport.disconnecting, True)
         # The connection has not been closed yet; we *asked* the flow to stop,
         # but it may not have done.
-        self.assertEquals(self.tube.pump.wasStopped, False)
+        self.assertEquals(self.pump.wasStopped, False)
 
 
     def test_loseConnectionSendsFlowStopped(self):
@@ -100,8 +101,8 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
             "An exception."
         f = Failure(MyFunException())
         self.adaptedProtocol.connectionLost(f)
-        self.assertEquals(self.tube.pump.wasStopped, True)
-        self.assertIdentical(f, self.tube.pump.reason)
+        self.assertEquals(self.pump.wasStopped, True)
+        self.assertIdentical(f, self.pump.reason)
 
 
     def test_flowingFromAttribute(self):
