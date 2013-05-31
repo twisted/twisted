@@ -2148,9 +2148,18 @@ class GetBodyTests(unittest.TestCase):
                 })
 
 
-    def test_withConnectionLost(self):
+    def test_otherErrors(self):
+        """
+        If there is an exception other than L{client.PotentialDataLoss} while
+        L{client.getBody} is collecting the response body, the L{Deferred}
+        returned by {client.getPage} fires with that exception.
+        """
         response = self.FakeResponse()
         d = client.getBody(response)
         response.protocol.dataReceived("first")
-        response.protocol.connectionLost(Failure(ConnectionLost()))
-        self.failureResultOf(d).trap(ConnectionLost)
+        response.protocol.connectionLost(
+            Failure(ConnectionLost("mystery problem")))
+        reason = self.failureResultOf(d)
+        reason.trap(ConnectionLost)
+        self.assertEqual(reason.value.args, ("mystery problem",))
+
