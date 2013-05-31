@@ -1,5 +1,5 @@
 
-from twisted.tubes.tube import Tube
+from twisted.tubes.tube import cascade
 from twisted.tubes.framing import bytesToLines, linesToBytes
 from twisted.tubes.protocol import factoryFromFlow
 from twisted.internet.defer import Deferred
@@ -10,7 +10,7 @@ from worker import CommandsAndIntegersToResultIntegers
 from output import IntegersToLines
 
 def dataProcessor():
-    return Tube(
+    return cascade(
         bytesToLines(),
         LinesToIntegersOrCommands(),
         CommandsAndIntegersToResultIntegers(),
