@@ -1,7 +1,7 @@
 from pprint import pformat
 
 from twisted.internet.task import react
-from twisted.web.client import Agent, getBody
+from twisted.web.client import Agent, readBody
 from twisted.web.http_headers import Headers
 
 
@@ -11,7 +11,7 @@ def cbRequest(response):
     print 'Response phrase:', response.phrase
     print 'Response headers:'
     print pformat(list(response.headers.getAllRawHeaders()))
-    d = getBody(response)
+    d = readBody(response)
     d.addCallback(cbBody)
     return d
 

@@ -244,8 +244,8 @@
 
     <p>
       If the body of the response isn't going to be consumed incrementally,
-      then <code class="API" base="twisted.web.client">getBody</code> can be
-      used to get the body as a byte-string. This function returns ar
+      then <code class="API" base="twisted.web.client">readBody</code> can be
+      used to get the body as a byte-string. This function returns a
       <code>Deferred</code> that fires with the body, after the request has
       been completed. Similarity, if the respone is text or json, use
       <code class="API" base="twisted.web.client">getTextBody</code> or

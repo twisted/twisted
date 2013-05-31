@@ -1,2 +1,1 @@
-twisted.web.client now provides utility functions getBody, getTextBody
-and getJSONBody to collect the body of a response from Agent.
+twisted.web.client now provides readBody to collect the body of a response from Agent into a string.
