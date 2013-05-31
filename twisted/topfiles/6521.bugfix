@@ -1,0 +1,2 @@
+twisted.test.proto_helpers.StringTransportWithDisconnection.loseConnection now
+correctly passes Failure instead of an exception to connectionLost.
