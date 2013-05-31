@@ -1097,6 +1097,18 @@ class HTTPConnectionPoolRetryTests(unittest.TestCase, FakeReactorAndConnectMixin
                 "GET", ResponseNeverReceived([Failure(defer.CancelledError())]), None))
 
 
+    def test_retryIfFailedDueToNonCancelException(self):
+        """
+        If a request failed with L{ResponseNeverReceived} due to some
+        arbitrary exception, C{_shouldRetry} returns C{True} to indicate the
+        request should be retried.
+        """
+        pool = client.HTTPConnectionPool(None)
+        connection = client._RetryingHTTP11ClientProtocol(None, pool)
+        self.assertTrue(connection._shouldRetry(
+                "GET", ResponseNeverReceived([Failure(Exception())]), None))
+
+
     def test_wrappedOnPersistentReturned(self):
         """
         If L{client.HTTPConnectionPool.getConnection} returns a previously
