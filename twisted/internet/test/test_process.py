@@ -20,13 +20,12 @@ from twisted.internet.defer import Deferred, succeed
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, ProcessTerminated
 
-platformSkip = None
+_uidgidSkip = None
 if platform.isWindows():
-    platformSkip = "Cannot change UID/GID on Windows"
+    _uidgidSkip = "Cannot change UID/GID on Windows"
 else:
-    rootSkip = None
     if os.getuid() != 0:
-        rootSkip = "Cannot change UID/GID except as root"
+        _uidgidSkip = "Cannot change UID/GID except as root"
 
 
 class _ShutdownCallbackProcessProtocol(ProcessProtocol):
@@ -439,10 +438,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         child process is run with that UID.
         """
         self._changeIDTest(b"uid")
-    if rootSkip is not None:
-        test_changeUID.skip = rootSkip
-    elif platformSkip is not None:
-        test_changeUID.skip = platformSkip
+    if _uidgidSkip is not None:
+        test_changeUID.skip = _uidgidSkip
 
 
     def test_changeGID(self):
@@ -451,10 +448,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         child process is run with that GID.
         """
         self._changeIDTest(b"gid")
-    if rootSkip is not None:
-        test_changeGID.skip = rootSkip
-    elif platformSkip is not None:
-        test_changeUID.skip = platformSkip
+    if _uidgidSkip is not None:
+        test_changeGID.skip = _uidgidSkip
 
 
 
