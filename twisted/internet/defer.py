@@ -18,6 +18,7 @@ Maintainer: Glyph Lefkowitz
 
 from __future__ import division, absolute_import
 
+import inspect
 import traceback
 import types
 import warnings
@@ -271,6 +272,7 @@ class Deferred:
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
+        self._history = []
 
 
     def addCallbacks(self, callback, errback=None,
@@ -548,8 +550,8 @@ class Deferred:
             current._chainedTo = None
             while current.callbacks:
                 item = current.callbacks.pop(0)
-                callback, args, kw = item[
-                    isinstance(current.result, failure.Failure)]
+                isErrback = isinstance(current.result, failure.Failure)
+                callback, args, kw = item[isErrback]
                 args = args or ()
                 kw = kw or {}
 
@@ -576,16 +578,29 @@ class Deferred:
                         current.result = callback(current.result, *args, **kw)
                     finally:
                         current._runningCallbacks = False
+                        className = None
+                        if inspect.ismethod(callback):
+                            className = callback.im_class.__name__
+                        historyItem = _DeferredHistoryItem(
+                            callback.__name__,
+                            callback.__module__,
+                            className,
+                            not isErrback)
+                        current._history.append(historyItem)
                 except:
                     # Including full frame information in the Failure is quite
                     # expensive, so we avoid it unless self.debug is set.
                     current.result = failure.Failure(captureVars=self.debug)
                 else:
                     if isinstance(current.result, Deferred):
+                        historyItem.mergeHistory(current.result)
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
                         resultResult = getattr(current.result, 'result', _NO_RESULT)
-                        if resultResult is _NO_RESULT or isinstance(resultResult, Deferred) or current.result.paused:
+
+                        if (resultResult is _NO_RESULT
+                                or isinstance(resultResult, Deferred)
+                                or current.result.paused):
                             # Nope, it didn't.  Pause and chain.
                             current.pause()
                             if current.result is current:
@@ -649,6 +664,25 @@ class Deferred:
             result = ' current result: %r' % (result,)
         return "<%s at 0x%x%s>" % (cname, myID, result)
     __repr__ = __str__
+
+
+
+class _DeferredHistoryItem(object):
+    def __init__(self, name, module, className, isCallback):
+        self.name = name
+        self.module = module
+        self.className = className
+        self.isCallback = isCallback
+        self.chainedHistory = []
+
+    def mergeHistory(self, deferred):
+        """
+        In the case that this item's callback returned a Deferred, this must be
+        invoked to ensure that the returned Deferred history is recorded as a
+        child of this item.
+        """
+        self.chainedHistory.extend(deferred._history)
+        deferred._history = self.chainedHistory
 
 
 
