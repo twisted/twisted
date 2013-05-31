@@ -22,7 +22,7 @@ from twisted.test.proto_helpers import StringTransport, MemoryReactorClock
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionRefusedError, ConnectionDone
 from twisted.internet.protocol import Protocol, Factory
-from twisted.internet.defer import Deferred, succeed
+from twisted.internet.defer import Deferred, succeed, CancelledError
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.web.client import FileBodyProducer, Request, HTTPConnectionPool
 from twisted.web.client import _WebToNormalContextFactory
@@ -663,6 +663,26 @@ class HTTPConnectionPoolTests(unittest.TestCase, FakeReactorAndConnectMixin):
         self.assertEqual(result, [])
         persistent[1].connectionLost(Failure(ConnectionDone()))
         self.assertEqual(result, [None])
+
+
+    def test_cancelGetConnectionCancelsEndpointConnect(self):
+        """
+        Cancelling the C{Deferred} returned from
+        L{HTTPConnectionPool.getConnection} cancels the C{Deferred} returned
+        by opening a new connection with the given endpoint.
+        """
+        self.assertEqual(self.pool._connections, {})
+        connectionResult = Deferred()
+
+        class Endpoint:
+            def connect(self, factory):
+                return connectionResult
+
+        d = self.pool.getConnection(12345, Endpoint())
+        d.cancel()
+        self.assertEqual(self.failureResultOf(connectionResult).type,
+                         CancelledError)
+
 
 
 
