@@ -397,6 +397,7 @@ class MemCacheTestCase(CommandMixin, TestCase):
                 self.clock.seconds(), 2 * self.proto.persistentTimeOut - 1)
 
         d1.addCallback(check)
+        self.assertFailure(d3, ConnectionDone)
         return d1
 
 
