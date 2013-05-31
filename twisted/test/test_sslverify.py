@@ -804,10 +804,20 @@ class Constructors(unittest.TestCase):
 if interfaces.IReactorSSL(reactor, None) is None:
     Constructors.skip = "Reactor does not support SSL, cannot run SSL tests"
 
+
+
 class KeyPair(unittest.TestCase):
-    sKey = makeCertificate(
-        O=b"Server Test Certificate",
-        CN=b"server")[0]
+    """
+    Tests for L{sslverify.KeyPair}.
+    """
+
+    def setUp(self):
+        """
+        Create test certificate.
+        """
+        self.sKey = makeCertificate(
+            O=b"Server Test Certificate",
+            CN=b"server")[0]
 
     def test_getstateDeprecation(self):
         """
@@ -833,3 +843,8 @@ class KeyPair(unittest.TestCase):
         message = "twisted.internet._sslverify.KeyPair.__getstate__ "
         "was deprecated in Twisted 13.1.0; please use a real persistence system instead",
         category = DeprecationWarning)]
+
+
+
+if interfaces.IReactorSSL(reactor, None) is None:
+    KeyPair.skip = "Reactor does not support SSL, cannot run SSL tests"
