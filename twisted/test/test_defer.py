@@ -7,7 +7,6 @@ Test cases for L{twisted.internet.defer}.
 
 from __future__ import division, absolute_import
 
-import dis
 import gc, traceback
 import re
 
@@ -913,17 +912,14 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d.addCallback(circularCallback)
         d.callback("foo")
 
-        warnings = self.flushWarnings([self.test_circularChainWarning])
+        warnings = self.flushWarnings([circularCallback])
         self.assertEqual(len(warnings), 1)
         warning = warnings[0]
         self.assertEqual(warning['category'], DeprecationWarning)
-        lineno = list(dis.findlinestarts(circularCallback.__code__))[-1][1]
         pattern = "Callback returned the Deferred it was attached to"
         self.assertTrue(
             re.search(pattern, warning['message']),
             "\nExpected match: %r\nGot: %r" % (pattern, warning['message']))
-        self.assertEqual(warning["filename"], __file__)
-        self.assertEqual(warning["lineno"], lineno)
 
 
     def test_repr(self):
