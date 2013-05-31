@@ -2090,13 +2090,13 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
 class GetBodyTests(unittest.TestCase):
     """
-    Tests for L{client.getBody}
+    Tests for L{client.readBody}
     """
 
 
     class FakeResponse(object):
         """
-        Fake L{IResponse} for testing getBody, that just captures the protocol
+        Fake L{IResponse} for testing readBody, that just captures the protocol
         passed to deliverBody.
         """
 
@@ -2112,11 +2112,11 @@ class GetBodyTests(unittest.TestCase):
 
     def test_success(self):
         """
-        L{client.getBody} returns a L{Deferred} which fires with the complete
+        L{client.readBody} returns a L{Deferred} which fires with the complete
         body of the L{IResponse} provider passed to it.
         """
         response = self.FakeResponse()
-        d = client.getBody(response)
+        d = client.readBody(response)
         response.protocol.dataReceived("first")
         response.protocol.dataReceived("second")
         response.protocol.connectionLost(Failure(ResponseDone()))
@@ -2125,13 +2125,13 @@ class GetBodyTests(unittest.TestCase):
 
     def test_withPotentialDataLoss(self):
         """
-        If the full body of the L{IResponse} passed to L{client.getBody} is not
-        definitely received, the L{Deferred} returned by L{client.getBody}
+        If the full body of the L{IResponse} passed to L{client.readBody} is
+        not definitely received, the L{Deferred} returned by L{client.readBody}
         fires with a L{Failure} wrapping L{client.PartialDownloadError} with
         the content that was received.
         """
         response = self.FakeResponse()
-        d = client.getBody(response)
+        d = client.readBody(response)
         response.protocol.dataReceived("first")
         response.protocol.dataReceived("second")
         response.protocol.connectionLost(Failure(PotentialDataLoss()))
@@ -2151,11 +2151,11 @@ class GetBodyTests(unittest.TestCase):
     def test_otherErrors(self):
         """
         If there is an exception other than L{client.PotentialDataLoss} while
-        L{client.getBody} is collecting the response body, the L{Deferred}
-        returned by {client.getPage} fires with that exception.
+        L{client.readBody} is collecting the response body, the L{Deferred}
+        returned by {client.readBody} fires with that exception.
         """
         response = self.FakeResponse()
-        d = client.getBody(response)
+        d = client.readBody(response)
         response.protocol.dataReceived("first")
         response.protocol.connectionLost(
             Failure(ConnectionLost("mystery problem")))

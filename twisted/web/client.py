@@ -1609,7 +1609,7 @@ class RedirectAgent(object):
 
 
 
-class _GetBodyProtocol(protocol.Protocol):
+class _ReadBodyProtocol(protocol.Protocol):
     """
     Protocol that collects data sent to it.
 
@@ -1669,7 +1669,7 @@ class _GetBodyProtocol(protocol.Protocol):
 
 
 
-def getBody(response):
+def readBody(response):
     """
     Get the body of an L{IResponse} and return it as a byte string.
 
@@ -1682,7 +1682,7 @@ def getBody(response):
     @return: A L{Deferred} which will fire with the body of the response.
     """
     d = defer.Deferred()
-    response.deliverBody(_GetBodyProtocol(response.code, response.phrase, d))
+    response.deliverBody(_ReadBodyProtocol(response.code, response.phrase, d))
     return d
 
 
@@ -1692,4 +1692,4 @@ __all__ = [
     'HTTPClientFactory', 'HTTPDownloader', 'getPage', 'downloadPage',
     'ResponseDone', 'Response', 'ResponseFailed', 'Agent', 'CookieAgent',
     'ProxyAgent', 'ContentDecoderAgent', 'GzipDecoder', 'RedirectAgent',
-    'HTTPConnectionPool', 'getBody']
+    'HTTPConnectionPool', 'readBody']
