@@ -41,19 +41,14 @@ class TubeTest(TestCase):
 
     def test_pumpStarted(self):
         """
-        The L{Tube} starts its L{Pump} upon C{flowingFrom}, but only after
-        initializing its C{fount} attribute.
+        The L{Tube} starts its L{Pump} upon C{flowingFrom}.
         """
-        fountValue = []
-        class FountValueRecorder(Pump):
+        class Starter(Pump):
             def started(self):
-                fountValue.append(self.tube.fount)
-        self.tube.pump = FountValueRecorder()
-        self.assertEquals(fountValue, []) # sanity check
-        self.ff.flowTo(self.tubeDrain)
-        self.assertEquals([self.ff], fountValue)
+                self.tube.deliver("greeting")
 
-    test_pumpStarted.todo = 'FIXME: contemplating how to expose flow control to pumps'
+        Tube(self.ff, Starter(), self.fd)
+        self.assertEquals(self.fd.received, ["greeting"])
 
 
     def test_flowingFromFirst(self):
