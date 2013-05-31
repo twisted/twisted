@@ -2094,12 +2094,21 @@ class DummyResponse(object):
     phrase = "OK"
 
     def __init__(self, headers=None):
+        """
+        @param headers: The headers for this response.  If C{None}, an empty
+            L{Headers} instance will be used.
+        @type headers: L{Headers}
+        """
         if headers is None:
             headers = Headers()
         self.headers = headers
 
 
     def deliverBody(self, protocol):
+        """
+        Just record the given protocol without actually delivering anything to
+        it.
+        """
         self.protocol = protocol
 
 
