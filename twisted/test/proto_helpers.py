@@ -14,6 +14,7 @@ from io import BytesIO
 from zope.interface import implementer, implementedBy
 from zope.interface.verify import verifyClass
 
+from twisted.python import failure
 from twisted.python.compat import unicode
 from twisted.internet.interfaces import (
     ITransport, IConsumer, IPushProducer, IConnector)
@@ -257,10 +258,15 @@ class StringTransport:
 
 
 class StringTransportWithDisconnection(StringTransport):
+    """
+    A L{StringTransport} which can be disconnected.
+    """
+
     def loseConnection(self):
         if self.connected:
             self.connected = False
-            self.protocol.connectionLost(error.ConnectionDone("Bye."))
+            self.protocol.connectionLost(
+                failure.Failure(error.ConnectionDone("Bye.")))
 
 
 

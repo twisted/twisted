@@ -37,7 +37,8 @@ class CommandMixin:
         the value and the flag associated with the given key if the server
         returns a successful result.
         """
-        return self._test(self.proto.get("foo"), "get foo\r\n",
+        return self._test(
+            self.proto.get("foo"), "get foo\r\n",
             "VALUE foo 0 3\r\nbar\r\nEND\r\n", (0, "bar"))
 
 
@@ -46,7 +47,8 @@ class CommandMixin:
         Test getting a non-available key: it succeeds but return C{None} as
         value and C{0} as flag.
         """
-        return self._test(self.proto.get("foo"), "get foo\r\n",
+        return self._test(
+            self.proto.get("foo"), "get foo\r\n",
             "END\r\n", (0, None))
 
 
@@ -55,7 +57,8 @@ class CommandMixin:
         L{MemCacheProtocol.getMultiple} returns a L{Deferred} which is called
         back with a dictionary of flag, value for each given key.
         """
-        return self._test(self.proto.getMultiple(['foo', 'cow']),
+        return self._test(
+            self.proto.getMultiple(['foo', 'cow']),
             "get foo cow\r\n",
             "VALUE foo 0 3\r\nbar\r\nVALUE cow 0 7\r\nchicken\r\nEND\r\n",
             {'cow': (0, 'chicken'), 'foo': (0, 'bar')})
@@ -66,7 +69,8 @@ class CommandMixin:
         When L{MemCacheProtocol.getMultiple} is called with non-available keys,
         the corresponding tuples are (0, None).
         """
-        return self._test(self.proto.getMultiple(['foo', 'cow']),
+        return self._test(
+            self.proto.getMultiple(['foo', 'cow']),
             "get foo cow\r\n",
             "VALUE cow 1 3\r\nbar\r\nEND\r\n",
             {'cow': (1, 'bar'), 'foo': (0, None)})
@@ -77,7 +81,8 @@ class CommandMixin:
         L{MemCacheProtocol.set} returns a L{Deferred} which is called back with
         C{True} when the operation succeeds.
         """
-        return self._test(self.proto.set("foo", "bar"),
+        return self._test(
+            self.proto.set("foo", "bar"),
             "set foo 0 0 3\r\nbar\r\n", "STORED\r\n", True)
 
 
@@ -86,7 +91,8 @@ class CommandMixin:
         L{MemCacheProtocol.add} returns a L{Deferred} which is called back with
         C{True} when the operation succeeds.
         """
-        return self._test(self.proto.add("foo", "bar"),
+        return self._test(
+            self.proto.add("foo", "bar"),
             "add foo 0 0 3\r\nbar\r\n", "STORED\r\n", True)
 
 
@@ -95,7 +101,8 @@ class CommandMixin:
         L{MemCacheProtocol.replace} returns a L{Deferred} which is called back
         with C{True} when the operation succeeds.
         """
-        return self._test(self.proto.replace("foo", "bar"),
+        return self._test(
+            self.proto.replace("foo", "bar"),
             "replace foo 0 0 3\r\nbar\r\n", "STORED\r\n", True)
 
 
@@ -105,7 +112,8 @@ class CommandMixin:
         key already exists on the server, it returns a B{NOT STORED} answer,
         which calls back the resulting L{Deferred} with C{False}.
         """
-        return self._test(self.proto.add("foo", "bar"),
+        return self._test(
+            self.proto.add("foo", "bar"),
             "add foo 0 0 3\r\nbar\r\n", "NOT STORED\r\n", False)
 
 
@@ -115,7 +123,8 @@ class CommandMixin:
         but the key doesn't exist on the server, it returns a B{NOT STORED}
         answer, which calls back the resulting L{Deferred} with C{False}.
         """
-        return self._test(self.proto.replace("foo", "bar"),
+        return self._test(
+            self.proto.replace("foo", "bar"),
             "replace foo 0 0 3\r\nbar\r\n", "NOT STORED\r\n", False)
 
 
@@ -124,18 +133,18 @@ class CommandMixin:
         L{MemCacheProtocol.delete} returns a L{Deferred} which is called back
         with C{True} when the server notifies a success.
         """
-        return self._test(self.proto.delete("bar"), "delete bar\r\n",
-            "DELETED\r\n", True)
+        return self._test(
+            self.proto.delete("bar"), "delete bar\r\n", "DELETED\r\n", True)
 
 
     def test_errorDelete(self):
         """
         Test a error during a delete: if key doesn't exist on the server, it
-        returns a B{NOT FOUND} answer which calls back the resulting L{Deferred}
-        with C{False}.
+        returns a B{NOT FOUND} answer which calls back the resulting
+        L{Deferred} with C{False}.
         """
-        return self._test(self.proto.delete("bar"), "delete bar\r\n",
-            "NOT FOUND\r\n", False)
+        return self._test(
+            self.proto.delete("bar"), "delete bar\r\n", "NOT FOUND\r\n", False)
 
 
     def test_increment(self):
@@ -144,8 +153,8 @@ class CommandMixin:
         L{Deferred} which is called back with the incremented value of the
         given key.
         """
-        return self._test(self.proto.increment("foo"), "incr foo 1\r\n",
-            "4\r\n", 4)
+        return self._test(
+            self.proto.increment("foo"), "incr foo 1\r\n", "4\r\n", 4)
 
 
     def test_decrement(self):
@@ -163,8 +172,8 @@ class CommandMixin:
         L{MemCacheProtocol.increment} takes an optional argument C{value} which
         replaces the default value of 1 when specified.
         """
-        return self._test(self.proto.increment("foo", 8), "incr foo 8\r\n",
-            "4\r\n", 4)
+        return self._test(
+            self.proto.increment("foo", 8), "incr foo 8\r\n", "4\r\n", 4)
 
 
     def test_decrementVal(self):
@@ -172,8 +181,8 @@ class CommandMixin:
         L{MemCacheProtocol.decrement} takes an optional argument C{value} which
         replaces the default value of 1 when specified.
         """
-        return self._test(self.proto.decrement("foo", 3), "decr foo 3\r\n",
-            "5\r\n", 5)
+        return self._test(
+            self.proto.decrement("foo", 3), "decr foo 3\r\n", "5\r\n", 5)
 
 
     def test_stats(self):
@@ -182,7 +191,8 @@ class CommandMixin:
         command: it parses the data sent by the server and calls back the
         resulting L{Deferred} with a dictionary of the received statistics.
         """
-        return self._test(self.proto.stats(), "stats\r\n",
+        return self._test(
+            self.proto.stats(), "stats\r\n",
             "STAT foo bar\r\nSTAT egg spam\r\nEND\r\n",
             {"foo": "bar", "egg": "spam"})
 
@@ -194,7 +204,8 @@ class CommandMixin:
         responses from the server are parsed as key/value pairs and returned
         as a C{dict} (as in the case where the argument is not specified).
         """
-        return self._test(self.proto.stats("blah"), "stats blah\r\n",
+        return self._test(
+            self.proto.stats("blah"), "stats blah\r\n",
             "STAT foo bar\r\nSTAT egg spam\r\nEND\r\n",
             {"foo": "bar", "egg": "spam"})
 
@@ -205,8 +216,8 @@ class CommandMixin:
         returns a L{Deferred} which is called back with the version sent by the
         server.
         """
-        return self._test(self.proto.version(), "version\r\n",
-            "VERSION 1.1\r\n", "1.1")
+        return self._test(
+            self.proto.version(), "version\r\n", "VERSION 1.1\r\n", "1.1")
 
 
     def test_flushAll(self):
@@ -214,8 +225,8 @@ class CommandMixin:
         L{MemCacheProtocol.flushAll} returns a L{Deferred} which is called back
         with C{True} if the server acknowledges success.
         """
-        return self._test(self.proto.flushAll(), "flush_all\r\n",
-            "OK\r\n", True)
+        return self._test(
+            self.proto.flushAll(), "flush_all\r\n", "OK\r\n", True)
 
 
 
@@ -269,8 +280,8 @@ class MemCacheTestCase(CommandMixin, TestCase):
         """
         self.proto.get("foo")
         s = "spamegg"
-        self.assertRaises(RuntimeError,
-            self.proto.dataReceived,
+        self.assertRaises(
+            RuntimeError, self.proto.dataReceived,
             "VALUE bar 0 %s\r\n%s\r\nEND\r\n" % (len(s), s))
 
 
@@ -282,8 +293,8 @@ class MemCacheTestCase(CommandMixin, TestCase):
         """
         self.proto.getMultiple(["foo", "bar"])
         s = "spamegg"
-        self.assertRaises(RuntimeError,
-            self.proto.dataReceived,
+        self.assertRaises(
+            RuntimeError, self.proto.dataReceived,
             "VALUE egg 0 %s\r\n%s\r\nEND\r\n" % (len(s), s))
 
 
@@ -301,9 +312,12 @@ class MemCacheTestCase(CommandMixin, TestCase):
         self.clock.advance(self.proto.persistentTimeOut)
         self.assertFailure(d1, TimeoutError)
         self.assertFailure(d2, TimeoutError)
+
         def checkMessage(error):
             self.assertEqual(str(error), "Connection timeout")
+
         d1.addCallback(checkMessage)
+        self.assertFailure(d3, ConnectionDone)
         return gatherResults([d1, d2, d3])
 
 
@@ -336,6 +350,7 @@ class MemCacheTestCase(CommandMixin, TestCase):
         self.proto.dataReceived("VALUE foo 0 10\r\n12345")
         self.clock.advance(self.proto.persistentTimeOut)
         self.assertFailure(d1, TimeoutError)
+        self.assertFailure(d2, ConnectionDone)
         return gatherResults([d1, d2])
 
 
@@ -351,6 +366,7 @@ class MemCacheTestCase(CommandMixin, TestCase):
         self.proto.dataReceived("STAT foo bar\r\n")
         self.clock.advance(self.proto.persistentTimeOut)
         self.assertFailure(d1, TimeoutError)
+        self.assertFailure(d2, ConnectionDone)
         return gatherResults([d1, d2])
 
 
@@ -373,12 +389,15 @@ class MemCacheTestCase(CommandMixin, TestCase):
             for i in range(self.proto.persistentTimeOut):
                 self.clock.advance(1)
             return self.assertFailure(d2, TimeoutError).addCallback(checkTime)
+
         def checkTime(ignored):
             # Check that the timeout happened C{self.proto.persistentTimeOut}
             # after the last response
             self.assertEqual(
                 self.clock.seconds(), 2 * self.proto.persistentTimeOut - 1)
+
         d1.addCallback(check)
+        self.assertFailure(d3, ConnectionDone)
         return d1
 
 
@@ -396,6 +415,7 @@ class MemCacheTestCase(CommandMixin, TestCase):
         self.clock.advance(1)
         self.assertFailure(d1, TimeoutError)
         self.assertFailure(d2, TimeoutError)
+        self.assertFailure(d3, ConnectionDone)
         return gatherResults([d1, d2, d3])
 
 
@@ -423,10 +443,12 @@ class MemCacheTestCase(CommandMixin, TestCase):
         d2 = self.proto.get("bar")
         self.transport.loseConnection()
         done = DeferredList([d1, d2], consumeErrors=True)
+
         def checkFailures(results):
             for success, result in results:
                 self.assertFalse(success)
                 result.trap(ConnectionDone)
+
         return done.addCallback(checkFailures)
 
 
@@ -469,10 +491,12 @@ class MemCacheTestCase(CommandMixin, TestCase):
         a = "eggspamm"
         d = self.proto.set("foo", a)
         self.assertEqual(self.transport.value(),
-                          "set foo 0 0 8\r\neggspamm\r\n")
+                         "set foo 0 0 8\r\neggspamm\r\n")
         self.assertFailure(d, ClientError)
+
         def check(err):
             self.assertEqual(str(err), "We don't like egg and spam")
+
         d.addCallback(check)
         self.proto.dataReceived("CLIENT_ERROR We don't like egg and spam\r\n")
         return d
@@ -487,10 +511,12 @@ class MemCacheTestCase(CommandMixin, TestCase):
         a = "eggspamm"
         d = self.proto.set("foo", a)
         self.assertEqual(self.transport.value(),
-                          "set foo 0 0 8\r\neggspamm\r\n")
+                         "set foo 0 0 8\r\neggspamm\r\n")
         self.assertFailure(d, ServerError)
+
         def check(err):
             self.assertEqual(str(err), "zomg")
+
         d.addCallback(check)
         self.proto.dataReceived("SERVER_ERROR zomg\r\n")
         return d
@@ -530,7 +556,8 @@ class MemCacheTestCase(CommandMixin, TestCase):
         d2.addCallback(self.assertEqual, True)
         d3 = self.proto.get("egg")
         d3.addCallback(self.assertEqual, (0, "spam"))
-        self.assertEqual(self.transport.value(),
+        self.assertEqual(
+            self.transport.value(),
             "get foo\r\nset bar 0 0 12\r\nspamspamspam\r\nget egg\r\n")
         self.proto.dataReceived("VALUE foo 0 3\r\nbar\r\nEND\r\n"
                                 "STORED\r\n"
@@ -559,7 +586,8 @@ class MemCacheTestCase(CommandMixin, TestCase):
         method: it returns a L{Deferred} which is called back with C{True} when
         the operation succeeds.
         """
-        return self._test(self.proto.append("foo", "bar"),
+        return self._test(
+            self.proto.append("foo", "bar"),
             "append foo 0 0 3\r\nbar\r\n", "STORED\r\n", True)
 
 
@@ -569,7 +597,8 @@ class MemCacheTestCase(CommandMixin, TestCase):
         method: it returns a L{Deferred} which is called back with C{True} when
         the operation succeeds.
         """
-        return self._test(self.proto.prepend("foo", "bar"),
+        return self._test(
+            self.proto.prepend("foo", "bar"),
             "prepend foo 0 0 3\r\nbar\r\n", "STORED\r\n", True)
 
 
@@ -579,7 +608,8 @@ class MemCacheTestCase(CommandMixin, TestCase):
         C{withIdentifier} is C{True} and forward it in the resulting
         L{Deferred}.
         """
-        return self._test(self.proto.get("foo", True), "gets foo\r\n",
+        return self._test(
+            self.proto.get("foo", True), "gets foo\r\n",
             "VALUE foo 0 3 1234\r\nbar\r\nEND\r\n", (0, "1234", "bar"))
 
 
@@ -588,7 +618,8 @@ class MemCacheTestCase(CommandMixin, TestCase):
         Test getting a non-available key with gets: it succeeds but return
         C{None} as value, C{0} as flag and an empty cas value.
         """
-        return self._test(self.proto.get("foo", True), "gets foo\r\n",
+        return self._test(
+            self.proto.get("foo", True), "gets foo\r\n",
             "END\r\n", (0, "", None))
 
 
@@ -597,9 +628,11 @@ class MemCacheTestCase(CommandMixin, TestCase):
         L{MemCacheProtocol.getMultiple} handles an additional cas field in the
         returned tuples if C{withIdentifier} is C{True}.
         """
-        return self._test(self.proto.getMultiple(["foo", "bar"], True),
+        return self._test(
+            self.proto.getMultiple(["foo", "bar"], True),
             "gets foo bar\r\n",
-            "VALUE foo 0 3 1234\r\negg\r\nVALUE bar 0 4 2345\r\nspam\r\nEND\r\n",
+            "VALUE foo 0 3 1234\r\negg\r\n"
+            "VALUE bar 0 4 2345\r\nspam\r\nEND\r\n",
             {'bar': (0, '2345', 'spam'), 'foo': (0, '1234', 'egg')})
 
 
@@ -610,7 +643,8 @@ class MemCacheTestCase(CommandMixin, TestCase):
         correctly, and the non-available key gets a tuple of C{0} as flag,
         C{None} as value, and an empty cas value.
         """
-        return self._test(self.proto.getMultiple(["foo", "bar"], True),
+        return self._test(
+            self.proto.getMultiple(["foo", "bar"], True),
             "gets foo bar\r\n",
             "VALUE foo 0 3 1234\r\negg\r\nEND\r\n",
             {'bar': (0, '', None), 'foo': (0, '1234', 'egg')})
@@ -621,7 +655,8 @@ class MemCacheTestCase(CommandMixin, TestCase):
         L{MemCacheProtocol.checkAndSet} passes an additional cas identifier
         that the server handles to check if the data has to be updated.
         """
-        return self._test(self.proto.checkAndSet("foo", "bar", cas="1234"),
+        return self._test(
+            self.proto.checkAndSet("foo", "bar", cas="1234"),
             "cas foo 0 0 3 1234\r\nbar\r\n", "STORED\r\n", True)
 
 
@@ -630,7 +665,8 @@ class MemCacheTestCase(CommandMixin, TestCase):
         When L{MemCacheProtocol.checkAndSet} response is C{EXISTS}, the
         resulting L{Deferred} fires with C{False}.
         """
-        return self._test(self.proto.checkAndSet("foo", "bar", cas="1234"),
+        return self._test(
+            self.proto.checkAndSet("foo", "bar", cas="1234"),
             "cas foo 0 0 3 1234\r\nbar\r\n", "EXISTS\r\n", False)
 
 
