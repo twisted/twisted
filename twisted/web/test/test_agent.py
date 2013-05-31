@@ -2088,7 +2088,7 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
 
 
-class GetBodyTests(unittest.TestCase):
+class ReadBodyTests(unittest.TestCase):
     """
     Tests for L{client.readBody}
     """
