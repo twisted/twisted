@@ -20,15 +20,13 @@ from twisted.internet.defer import Deferred, succeed
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, ProcessTerminated
 
-if os.getuid() == 0:
-    rootSkip = None
-else:
-    rootSkip = "Cannot change UID/GID except as root"
-
+platformSkip = None
 if platform.isWindows():
     platformSkip = "Cannot change UID/GID on Windows"
 else:
-    platformSkip = None
+    rootSkip = None
+    if os.getuid() != 0:
+        rootSkip = "Cannot change UID/GID except as root"
 
 
 class _ShutdownCallbackProcessProtocol(ProcessProtocol):
