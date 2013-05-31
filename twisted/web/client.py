@@ -1610,17 +1610,12 @@ class _ReadBodyProtocol(protocol.Protocol):
     """
     Protocol that collects data sent to it.
 
-    This is a helper for L{IRespone.deliverBody}, which collects
-    the body and fires a deferred with it.
+    This is a helper for L{IResponse.deliverBody}, which collects the body and
+    fires a deferred with it.
 
     @ivar deferred: See L{__init__}.
-    @type deferred: L{Deferred} firing with L{bytes}
-
     @ivar status: See L{__init__}.
-    @ivar status: L{int}
-
     @ivar message: See L{__init__}.
-    @type message: L{bytes}
 
     @ivar dataBuffer: list of byte-strings received
     @type dataBuffer: L{list} of L{bytes}
