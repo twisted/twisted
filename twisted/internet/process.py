@@ -376,29 +376,12 @@ class _BaseProcess(BaseProcess, object):
         @type environment: C{dict}.
         @param kwargs: keyword arguments to L{_setupChild} method.
         """
-        settingUID = (uid is not None) or (gid is not None)
-        if settingUID:
-            curegid = os.getegid()
-            currgid = os.getgid()
-            cureuid = os.geteuid()
-            curruid = os.getuid()
-            if uid is None:
-                uid = cureuid
-            if gid is None:
-                gid = curegid
-            # prepare to change UID in subprocess
-            os.setuid(0)
-            os.setgid(0)
-
         collectorEnabled = gc.isenabled()
         gc.disable()
         try:
             self.pid = os.fork()
         except:
             # Still in the parent process
-            if settingUID:
-                os.setregid(currgid, curegid)
-                os.setreuid(curruid, cureuid)
             if collectorEnabled:
                 gc.enable()
             raise
@@ -416,8 +399,8 @@ class _BaseProcess(BaseProcess, object):
                     # Stop debugging. If I am, I don't care anymore.
                     sys.settrace(None)
                     self._setupChild(**kwargs)
-                    self._execChild(path, settingUID, uid, gid,
-                                    executable, args, environment)
+                    self._execChild(
+                        path, uid, gid, executable, args, environment)
                 except:
                     # If there are errors, bail and try to write something
                     # descriptive to stderr.
@@ -440,12 +423,10 @@ class _BaseProcess(BaseProcess, object):
                 os._exit(1)
 
         # we are now in parent process
-        if settingUID:
-            os.setregid(currgid, curegid)
-            os.setreuid(curruid, cureuid)
         if collectorEnabled:
             gc.enable()
         self.status = -1 # this records the exit status of the child
+
 
     def _setupChild(self, *args, **kwargs):
         """
@@ -453,17 +434,24 @@ class _BaseProcess(BaseProcess, object):
         """
         raise NotImplementedError()
 
-    def _execChild(self, path, settingUID, uid, gid,
-                   executable, args, environment):
+
+    def _execChild(self, path, uid, gid, executable, args, environment):
         """
         The exec() which is done in the forked child.
         """
         if path:
             os.chdir(path)
-        # set the UID before I actually exec the process
-        if settingUID:
+        if uid is not None or gid is not None:
+            if uid is None:
+                uid = os.geteuid()
+            if gid is None:
+                gid = os.getegid()
+            # set the UID before I actually exec the process
+            os.setuid(0)
+            os.setgid(0)
             switchUID(uid, gid)
         os.execvpe(executable, args, environment)
+
 
     def __repr__(self):
         """
