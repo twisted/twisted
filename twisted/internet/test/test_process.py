@@ -20,6 +20,11 @@ from twisted.internet.defer import Deferred, succeed
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, ProcessTerminated
 
+if os.getuid() == 0:
+    rootSkip = None
+else:
+    rootSkip = "Cannot change UID/GID except as root"
+
 
 
 class _ShutdownCallbackProcessProtocol(ProcessProtocol):
@@ -391,6 +396,59 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         # This will timeout if processExited isn't called:
         self.runReactor(reactor, timeout=30)
         self.assertEqual(protocol.exited, True)
+
+
+    def _changeIDTest(self, which):
+        """
+        Launch a child process, using either the C{uid} or C{gid} argument to
+        L{IReactorProcess.spawnProcess} to change either its UID or GID to a
+        different value.  If the child process reports this hasn't happened,
+        raise an exception to fail the test.
+
+        @param which: Either C{b"uid"} or C{b"gid"}.
+        """
+        program = [
+            b"import os",
+            b"raise SystemExit(os.get%s() != 1)" % (which,)]
+
+        container = []
+        class CaptureExitStatus(ProcessProtocol):
+            def childDataReceived(self, fd, bytes):
+                print fd, bytes
+            def processEnded(self, reason):
+                container.append(reason)
+                reactor.stop()
+
+        reactor = self.buildReactor()
+        protocol = CaptureExitStatus()
+        reactor.callWhenRunning(
+            reactor.spawnProcess, protocol, sys.executable,
+            [sys.executable, b"-c", b"\n".join(program)],
+            **{which: 1})
+
+        self.runReactor(reactor)
+
+        self.assertEqual(0, container[0].value.exitCode)
+
+
+    def test_changeUID(self):
+        """
+        If a value is passed for L{IReactorProcess.spawnProcess}'s C{uid}, the
+        child process is run with that UID.
+        """
+        self._changeIDTest(b"uid")
+    if rootSkip is not None:
+        test_changeUID.skip = rootSkip
+
+
+    def test_changeGID(self):
+        """
+        If a value is passed for L{IReactorProcess.spawnProcess}'s C{gid}, the
+        child process is run with that GID.
+        """
+        self._changeIDTest(b"gid")
+    if rootSkip is not None:
+        test_changeGID.skip = rootSkip
 
 
 
