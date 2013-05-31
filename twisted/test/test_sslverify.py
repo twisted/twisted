@@ -678,6 +678,7 @@ class OpenSSLOptions(unittest.TestCase):
         ctx = opts.getContext()
         self.assertEqual(SSL.OP_NO_SSLv2, ctx.set_options(0) & SSL.OP_NO_SSLv2)
 
+
     def test_getstateDeprecation(self):
         """
         Test deprecation of L{_sslverify.OpenSSLCertificateOptions.__getstate__}.
@@ -686,6 +687,7 @@ class OpenSSLOptions(unittest.TestCase):
         self.callDeprecated(
             (Version("Twisted", 13, 1, 0), "a real persistence system"),
             sslverify.OpenSSLCertificateOptions().__getstate__)
+
 
     def test_setstateDeprecation(self):
         """
@@ -815,6 +817,7 @@ class KeyPair(unittest.TestCase):
         self.callDeprecated(
             (Version("Twisted", 13, 1, 0), "a real persistence system"),
             sslverify.KeyPair(self.sKey).__getstate__)
+
 
     def test_setstateDeprecation(self):
         """
