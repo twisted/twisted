@@ -620,14 +620,21 @@ class TestDeprecationWarnings(SynchronousTestCase):
         about the deprecation.
         """
 
+        def localDummyCallable():
+            """
+            Do nothing.
+
+            This is used to test the deprecation decorators.
+            """
+
         version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version)(dummyCallable)
+        dummy = deprecated(version)(localDummyCallable)
 
         _appendToDocstring(
-            dummyCallable,
+            localDummyCallable,
             _getDeprecationDocstring(version, ''))
 
-        self.assertEqual(dummyCallable.__doc__, dummy.__doc__)
+        self.assertEqual(localDummyCallable.__doc__, dummy.__doc__)
 
 
     def test_versionMetadata(self):
