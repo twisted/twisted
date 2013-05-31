@@ -2110,7 +2110,7 @@ class GetBodyTests(unittest.TestCase):
             self.protocol = protocol
 
 
-    def test_simple(self):
+    def test_success(self):
         """
         L{client.getBody} returns a L{Deferred} which fires with the complete
         body of the L{IResponse} provider passed to it.
@@ -2124,21 +2124,28 @@ class GetBodyTests(unittest.TestCase):
 
 
     def test_withPotentialDataLoss(self):
+        """
+        If the full body of the L{IResponse} passed to L{client.getBody} is not
+        definitely received, the L{Deferred} returned by L{client.getBody}
+        fires with a L{Failure} wrapping L{client.PartialDownloadError} with
+        the content that was received.
+        """
         response = self.FakeResponse()
         d = client.getBody(response)
         response.protocol.dataReceived("first")
+        response.protocol.dataReceived("second")
         response.protocol.connectionLost(Failure(PotentialDataLoss()))
         failure = self.failureResultOf(d)
         failure.trap(client.PartialDownloadError)
         self.assertEqual({
-                'status': failure.value.status,
-                'message': failure.value.message,
-                'body': failure.value.response,
-            }, {
-                'status': 200,
-                'message': 'OK',
-                'body': 'first',
-            })
+                "status": failure.value.status,
+                "message": failure.value.message,
+                "body": failure.value.response,
+                }, {
+                "status": 200,
+                "message": "OK",
+                "body": "firstsecond",
+                })
 
 
     def test_withConnectionLost(self):
