@@ -1861,8 +1861,8 @@ class MockProcessTestCase(unittest.TestCase):
 
     def test_mockSetUidInParent(self):
         """
-        Try creating a process with setting its uid, in the parent path: it
-        should switch to root before fork, then restore initial uid/gids.
+        When spawning a child process with a UID different from the UID of the
+        current process, the current process does not have its UID changed.
         """
         self.mockos.child = False
         cmd = '/mock/ouch'
@@ -1899,8 +1899,9 @@ class MockProcessTestCase(unittest.TestCase):
 
     def test_mockPTYSetUidInParent(self):
         """
-        Try creating a PTY process with setting its uid, in the parent path: it
-        should switch to root before fork, then restore initial uid/gids.
+        When spawning a child process with PTY and a UID different from the UID
+        of the current process, the current process does not have its UID
+        changed.
         """
         self.mockos.child = False
         cmd = '/mock/ouch'
