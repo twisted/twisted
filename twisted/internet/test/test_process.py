@@ -25,6 +25,10 @@ if os.getuid() == 0:
 else:
     rootSkip = "Cannot change UID/GID except as root"
 
+if platform.isWindows():
+    platformSkip = "Cannot change UID/GID on Windows"
+else:
+    platformSkip = None
 
 
 class _ShutdownCallbackProcessProtocol(ProcessProtocol):
@@ -439,6 +443,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self._changeIDTest(b"uid")
     if rootSkip is not None:
         test_changeUID.skip = rootSkip
+    elif platformSkip is not None:
+        test_changeUID.skip = platformSkip
 
 
     def test_changeGID(self):
@@ -449,6 +455,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self._changeIDTest(b"gid")
     if rootSkip is not None:
         test_changeGID.skip = rootSkip
+    elif platformSkip is not None:
+        test_changeUID.skip = platformSkip
 
 
 
