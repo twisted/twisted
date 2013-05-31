@@ -41,6 +41,12 @@ class StringTransport(StringTransport):
 
 
     def abortConnection(self):
+        """
+        A testable version of the C{ITCPTransport.abortConnection} method.
+
+        Since this is a special case of closing the connection,
+        C{loseConnection} is also called.
+        """
         self.aborting = True
         self.loseConnection()
 
