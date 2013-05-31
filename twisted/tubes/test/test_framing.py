@@ -90,3 +90,39 @@ class LineTests(TestCase):
         self.assertEquals(b"".join(fd.received), b"hello\r\nworld\r\n")
 
 
+    def test_rawMode(self):
+        """
+        You should be able to have some lines, and then some bytes, and then
+        some lines.
+        """
+
+        lines = bytesToLines()
+
+        class Switcher(Pump):
+            def received(self, line):
+                splitted = line.split(" ", 1)
+                if splitted[0] == 'switch':
+                    length = int(splitted[1])
+                    # XXX document downstream
+                    lines.tube.switch(cascade(Switchee(length),
+                                              self.tube.downstream))
+                return ()
+
+        class Switchee(Pump):
+            datums = []
+            def __init__(self, length):
+                self.length = length
+            def received(self, data):
+                self.datums.append(data)
+        
+        ff = FakeFount()
+        cc = cascade(lines, Switcher())
+        fd = FakeDrain()
+        ff.flowTo(cc).flowTo(fd)
+        ff.drain.receive("hello\r\nworld\r\nswitch 10\r\nabcde\r\nfgh"
+                         # + '\r\nagain\r\n'
+                         )
+        self.assertEquals("".join(Switchee.datums), "abcde\r\nfgh")
+
+
+

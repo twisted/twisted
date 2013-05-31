@@ -9,13 +9,16 @@ from intparse import LinesToIntegersOrCommands
 from worker import CommandsAndIntegersToResultIntegers
 from output import IntegersToLines
 
+def dataProcessor():
+    return Tube(
+        bytesToLines(),
+        LinesToIntegersOrCommands(),
+        CommandsAndIntegersToResultIntegers(),
+        IntegersToLines(),
+        linesToBytes())
+
 def mathFlow(fount, drain):
-    (fount.flowTo(Tube(bytesToLines()))
-          .flowTo(Tube(LinesToIntegersOrCommands()))
-          .flowTo(Tube(CommandsAndIntegersToResultIntegers()))
-          .flowTo(Tube(IntegersToLines()))
-          .flowTo(Tube(linesToBytes()))
-        .flowTo(drain))
+    fount.flowTo(dataProcessor()).flowTo(drain)
 
 def main(reactor, port="4321"):
     endpoint = TCP4ServerEndpoint(reactor, int(port))

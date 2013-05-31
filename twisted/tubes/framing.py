@@ -58,6 +58,14 @@ class _DataToStrings(Pump):
         self._stringReceiver.dataReceived(string)
 
 
+    def reassemble(self, datas):
+        """
+        convert these outputs into one of my inputs XXX describe better
+        """
+        self._stringReceiver.delimiter.join(datas +
+                                            [self._stringReceiver._buffer])
+
+
 
 def stringsToNetstrings():
     return _StringsToData(NetstringReceiver)
