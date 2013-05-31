@@ -569,8 +569,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
 
         # This temporarily appends _buffer into _lineBuffer to avoid creating
         # an extra temporary list or string.
-        self._buffer.seek(0)
-        self._lineBuffer.append(self._buffer.read())
+        self._lineBuffer.append(self._buffer.getvalue())
         b = self.delimiter.join(self._lineBuffer)
         self._lineBuffer.clear()
         self._buffer.seek(0)
@@ -606,8 +605,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
             searchArea = self._buffer.read()
 
             if self.delimiter in searchArea:
-                self._buffer.seek(0)
-                splitted = self._buffer.read().split(self.delimiter)
+                splitted = self._buffer.getvalue().split(self.delimiter)
                 self._buffer.seek(0)
                 self._buffer.truncate()
                 self._buffer.write(splitted.pop())
