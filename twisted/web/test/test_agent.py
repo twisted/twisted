@@ -1093,8 +1093,9 @@ class HTTPConnectionPoolRetryTests(unittest.TestCase, FakeReactorAndConnectMixin
         """
         pool = client.HTTPConnectionPool(None)
         connection = client._RetryingHTTP11ClientProtocol(None, pool)
+        exception = ResponseNeverReceived([Failure(defer.CancelledError())])
         self.assertFalse(connection._shouldRetry(
-                "GET", ResponseNeverReceived([Failure(defer.CancelledError())]), None))
+                "GET", exception, None))
 
 
     def test_retryIfFailedDueToNonCancelException(self):
