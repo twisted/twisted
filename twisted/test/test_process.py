@@ -1851,18 +1851,17 @@ class MockProcessTestCase(unittest.TestCase):
                                  usePTY=False, uid=8080)
         except SystemError:
             self.assert_(self.mockos.exited)
-            self.assertEqual(
-                self.mockos.actions,
-                [('fork', False), ('setuid', 0), ('setgid', 0),
-                 ('switchuid', 8080, 1234), 'exec', 'exit'])
+            self.assertEqual(self.mockos.actions,
+                [('setuid', 0), ('setgid', 0), ('fork', False),
+                  ('switchuid', 8080, 1234), 'exec', 'exit'])
         else:
             self.fail("Should not be here")
 
 
     def test_mockSetUidInParent(self):
         """
-        When spawning a child process with a UID different from the UID of the
-        current process, the current process does not have its UID changed.
+        Try creating a process with setting its uid, in the parent path: it
+        should switch to root before fork, then restore initial uid/gids.
         """
         self.mockos.child = False
         cmd = '/mock/ouch'
@@ -1871,7 +1870,9 @@ class MockProcessTestCase(unittest.TestCase):
         p = TrivialProcessProtocol(d)
         reactor.spawnProcess(p, cmd, ['ouch'], env=None,
                              usePTY=False, uid=8080)
-        self.assertEqual(self.mockos.actions, [('fork', False), 'waitpid'])
+        self.assertEqual(self.mockos.actions,
+            [('setuid', 0), ('setgid', 0), ('fork', False),
+             ('setregid', 1235, 1234), ('setreuid', 1237, 1236), 'waitpid'])
 
 
     def test_mockPTYSetUid(self):
@@ -1888,20 +1889,18 @@ class MockProcessTestCase(unittest.TestCase):
             reactor.spawnProcess(p, cmd, ['ouch'], env=None,
                                  usePTY=True, uid=8081)
         except SystemError:
-            self.assertTrue(self.mockos.exited)
-            self.assertEqual(
-                self.mockos.actions,
-                [('fork', False), ('setuid', 0), ('setgid', 0),
-                 ('switchuid', 8081, 1234), 'exec', 'exit'])
+            self.assert_(self.mockos.exited)
+            self.assertEqual(self.mockos.actions,
+                [('setuid', 0), ('setgid', 0), ('fork', False),
+                  ('switchuid', 8081, 1234), 'exec', 'exit'])
         else:
             self.fail("Should not be here")
 
 
     def test_mockPTYSetUidInParent(self):
         """
-        When spawning a child process with PTY and a UID different from the UID
-        of the current process, the current process does not have its UID
-        changed.
+        Try creating a PTY process with setting its uid, in the parent path: it
+        should switch to root before fork, then restore initial uid/gids.
         """
         self.mockos.child = False
         cmd = '/mock/ouch'
@@ -1915,7 +1914,9 @@ class MockProcessTestCase(unittest.TestCase):
                                  usePTY=True, uid=8080)
         finally:
             process.PTYProcess = oldPTYProcess
-        self.assertEqual(self.mockos.actions, [('fork', False), 'waitpid'])
+        self.assertEqual(self.mockos.actions,
+            [('setuid', 0), ('setgid', 0), ('fork', False),
+             ('setregid', 1235, 1234), ('setreuid', 1237, 1236), 'waitpid'])
 
 
     def test_mockWithWaitError(self):
@@ -1976,6 +1977,20 @@ class MockProcessTestCase(unittest.TestCase):
         self.assertRaises(OSError, reactor.spawnProcess, protocol, None)
         self.assertEqual(self.mockos.actions, [])
         self.assertEqual(set(self.mockos.closed), set([-4, -3, -2, -1]))
+
+
+    def test_mockErrorInForkRestoreUID(self):
+        """
+        If C{os.fork} raises an exception and a UID change has been made, the
+        previous UID and GID are restored.
+        """
+        self.mockos.raiseFork = OSError(errno.EAGAIN, None)
+        protocol = TrivialProcessProtocol(None)
+        self.assertRaises(OSError, reactor.spawnProcess, protocol, None,
+                          uid=8080)
+        self.assertEqual(self.mockos.actions,
+            [('setuid', 0), ('setgid', 0), ("fork", False),
+             ('setregid', 1235, 1234), ('setreuid', 1237, 1236)])
 
 
     def test_kill(self):
