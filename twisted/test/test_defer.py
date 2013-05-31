@@ -8,6 +8,7 @@ Test cases for L{twisted.internet.defer}.
 from __future__ import division, absolute_import
 
 import gc, traceback
+import re
 
 from twisted.python.compat import _PY3
 from twisted.trial import unittest
@@ -898,6 +899,27 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         a.addCallback(lambda ignored: b)
         a.callback(None)
         self.assertIdentical(a._chainedTo, b)
+
+
+    def test_circularChainWarning(self):
+        """
+        When a Deferred is returned from a callback directly attached to that
+        same Deferred, a warning is emitted.
+        """
+        d = defer.Deferred()
+        def circularCallback(result):
+            return d
+        d.addCallback(circularCallback)
+        d.callback("foo")
+        warnings = self.flushWarnings([self.test_circularChainWarning])
+        self.assertEqual(len(warnings), 1)
+        warning = warnings[0]
+        self.assertEqual(warning['category'], DeprecationWarning)
+        pattern = ("Callback <function circularCallback at 0x\\w+> returned "
+                   "the same Deferred it was attached to")
+        self.assertTrue(
+            re.search(pattern, warning['message']),
+            "\nExpected match: %r\nGot: %r" % (pattern, warning['message']))
 
 
     def test_repr(self):
