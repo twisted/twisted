@@ -9,7 +9,7 @@ HTTP client.
 from __future__ import division, absolute_import
 
 import os, types
-import json, cgi
+
 try:
     from urlparse import urlunparse
     from urllib import splithost, splittype
