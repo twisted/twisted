@@ -1,3 +1,4 @@
+from sys import argv
 from pprint import pformat
 
 from twisted.internet.task import react
@@ -19,14 +20,13 @@ def cbBody(body):
     print 'Response body:'
     print body
 
-def main(reactor):
+def main(reactor, url=b"http://example.com/"):
     agent = Agent(reactor)
     d = agent.request(
-        'GET',
-        'http://example.com/',
+        'GET', url,
         Headers({'User-Agent': ['Twisted Web Client Example']}),
         None)
     d.addCallback(cbRequest)
     return d
 
-react(main, ())
+react(main, argv[1:])
