@@ -1046,7 +1046,7 @@ class HTTPConnectionPoolRetryTests(unittest.TestCase, FakeReactorAndConnectMixin
 
     def test_onlyRetryIdempotentMethods(self):
         """
-        Only GET, HEAD, OPTIONS, TRACE, DELETE methods should cause a retry.
+        Only GET, HEAD, OPTIONS, TRACE, DELETE methods cause a retry.
         """
         pool = client.HTTPConnectionPool(None)
         connection = client._RetryingHTTP11ClientProtocol(None, pool)
@@ -1070,7 +1070,7 @@ class HTTPConnectionPoolRetryTests(unittest.TestCase, FakeReactorAndConnectMixin
     def test_onlyRetryIfNoResponseReceived(self):
         """
         Only L{RequestNotSent}, L{RequestTransmissionFailed} and
-        L{ResponseNeverReceived} exceptions should be a cause for retrying.
+        L{ResponseNeverReceived} exceptions cause a retry.
         """
         pool = client.HTTPConnectionPool(None)
         connection = client._RetryingHTTP11ClientProtocol(None, pool)
@@ -1088,8 +1088,8 @@ class HTTPConnectionPoolRetryTests(unittest.TestCase, FakeReactorAndConnectMixin
     def test_dontRetryIfFailedDueToCancel(self):
         """
         If a request failed due to the operation being cancelled,
-        C{_shouldRetry} should return C{False} to indicate the request should
-        not be retried.
+        C{_shouldRetry} returns C{False} to indicate the request should not be
+        retried.
         """
         pool = client.HTTPConnectionPool(None)
         connection = client._RetryingHTTP11ClientProtocol(None, pool)
