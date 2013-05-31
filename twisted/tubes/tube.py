@@ -140,7 +140,14 @@ class _TubeDrain(_TubePiece):
         """
         An item was received.
         """
-        result = self._pump.received(item)
+        self._tube._pumpReceiving = True
+        try:
+            result = self._pump.received(item)
+        finally:
+            self._tube._pumpReceiving = False
+        self._tube._unbufferSome()
+        if self._tube._switchFlush:
+            self._tube._finishSwitching()
         if result is None:
             # postel principle, let pumps be as lax as possible
             result = 0.5
@@ -241,6 +248,7 @@ class _Tube(object):
     @ivar _nextFount: XXX document me
     """
     _currentlyPaused = False
+    _pumpReceiving = False
     _delivered = False
     _pump = None
     _nextFount = None
@@ -285,7 +293,6 @@ class _Tube(object):
         while self._pendingOutput and not self._currentlyPaused:
             item = self._pendingOutput.pop(0)
             self._tfount.drain.receive(item)
-            break
 
 
     def deliver(self, item):
@@ -300,17 +307,28 @@ class _Tube(object):
                 self._tfount.pauseFlow()
             self._pendingOutput.append(item)
             return 1.0
+        elif self._pumpReceiving:
+            self._pendingOutput.append(item)
+            return 0.5
         else:
             return drain.receive(item)
 
+
+    _switchFlush = False
 
     def switch(self, drain):
         upstream = self._tdrain.fount
         upstream.pauseFlow()
         upstream.flowTo(drain)
-        junk = self.pump.reassemble(self._pendingOutput)
-        map(drain.receive, junk)
+        if self._pumpReceiving:
+            self._switchFlush = True
+        else:
+            self._finishSwitching()
 
+
+    def _finishSwitching(self):
+        junk = self.pump.reassemble(self._pendingOutput)
+        map(self._tdrain.fount.drain.receive, junk)
 
 
     @property
