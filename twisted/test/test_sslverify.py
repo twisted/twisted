@@ -681,8 +681,8 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_getstateDeprecation(self):
         """
-        Test deprecation of L{_sslverify.OpenSSLCertificateOptions.__getstate__}.
-        See #6166 for removal.
+        Test deprecation of
+        L{_sslverify.OpenSSLCertificateOptions.__getstate__}.
         """
         self.callDeprecated(
             (Version("Twisted", 13, 1, 0), "a real persistence system"),
@@ -691,8 +691,8 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_setstateDeprecation(self):
         """
-        Test deprecation of L{_sslverify.OpenSSLCertificateOptions.__setstate__}.
-        See #6166 for removal.
+        Test deprecation of
+        L{_sslverify.OpenSSLCertificateOptions.__setstate__}.
         """
         state = sslverify.OpenSSLCertificateOptions().__getstate__()
         self.callDeprecated(
@@ -701,7 +701,8 @@ class OpenSSLOptions(unittest.TestCase):
 
     test_setstateDeprecation.suppress = [util.suppress(
         message = "twisted.internet._sslverify.OpenSSLCertificateOptions.__getstate__ "
-        "was deprecated in Twisted 13.1.0; please use a real persistence system instead",
+        "was deprecated in Twisted 13.1.0; please use a real persistence "
+        "system instead",
         category = DeprecationWarning)]
 
 
@@ -822,7 +823,6 @@ class KeyPair(unittest.TestCase):
     def test_getstateDeprecation(self):
         """
         Test deprecation of L{_sslverify.KeyPair.__getstate__}.
-        See #6166 for removal.
         """
         self.callDeprecated(
             (Version("Twisted", 13, 1, 0), "a real persistence system"),
@@ -832,7 +832,6 @@ class KeyPair(unittest.TestCase):
     def test_setstateDeprecation(self):
         """
         Test deprecation of L{_sslverify.KeyPair.__setstate__}.
-        See #6166 for removal.
         """
         state = sslverify.KeyPair(self.sKey).__getstate__()
         self.callDeprecated(
@@ -841,7 +840,8 @@ class KeyPair(unittest.TestCase):
 
     test_setstateDeprecation.suppress = [util.suppress(
         message = "twisted.internet._sslverify.KeyPair.__getstate__ "
-        "was deprecated in Twisted 13.1.0; please use a real persistence system instead",
+        "was deprecated in Twisted 13.1.0; please use a real persistence "
+        "system instead",
         category = DeprecationWarning)]
 
 
