@@ -422,6 +422,7 @@ class _BaseProcess(BaseProcess, object):
                 # Did you read the comment about not adding code here?
                 os._exit(1)
 
+        # we are now in parent process
         if collectorEnabled:
             gc.enable()
         self.status = -1 # this records the exit status of the child
