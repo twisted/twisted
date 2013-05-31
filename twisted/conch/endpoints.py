@@ -55,7 +55,7 @@ class ISSHConnectionCreator(Interface):
         """
 
 
-    def cleanupConnection(connection):
+    def cleanupConnection(connection, immediate):
         """
         Perform cleanup necessary for a connection object previously returned
         from this creator's C{secureConnection} method.
@@ -64,6 +64,10 @@ class ISSHConnectionCreator(Interface):
             or L{twisted.conch.ssh.transport.SSHClientTransport} returned by a
             previous call to C{secureConnection}.  It is no longer needed by the
             caller of that method and may be closed or otherwise cleaned up as
+            necessary.
+
+        @param immediate: If C{True} don't wait for any network communication,
+            just close the connection immediately and as aggressively as
             necessary.
         """
 
@@ -231,7 +235,7 @@ class _CommandChannel(SSHChannel):
         When the channel closes, deliver disconnection notification to the
         protocol.
         """
-        self._creator.cleanupConnection(self.conn)
+        self._creator.cleanupConnection(self.conn, False)
         if self._reason is None:
             reason = ConnectionDone("ssh channel closed")
         else:
@@ -612,7 +616,7 @@ class SSHCommandClientEndpoint(object):
         """
         commandConnected = Deferred()
         def disconnectOnFailure(passthrough):
-            self._creator.cleanupConnection(connection)
+            self._creator.cleanupConnection(connection, False)
             return passthrough
         commandConnected.addErrback(disconnectOnFailure)
 
@@ -687,15 +691,23 @@ class _NewConnectionHelper(object):
         return d
 
 
-    def cleanupConnection(self, connection):
+    def cleanupConnection(self, connection, immediate):
         """
         Clean up the connection by closing it.  The command running on the
         endpoint has ended so the connection is no longer needed.
 
         @param connection: The L{SSHConnection} to close.
         @type connection: L{SSHConnection}
+
+        @param immediate: Whether to close connection immediately.
+        @type immediate: L{bool}.
         """
-        connection.transport.loseConnection()
+        if immediate:
+            # We're assuming the underlying connection is a ITCPTransport,
+            # which is what the current implementation is restricted to:
+            connection.transport.transport.abortConnection()
+        else:
+            connection.transport.loseConnection()
 
 
 
@@ -722,7 +734,7 @@ class _ExistingConnectionHelper(object):
         return succeed(self.connection)
 
 
-    def cleanupConnection(self, connection):
+    def cleanupConnection(self, connection, immediate):
         """
         Do not do any cleanup on the connection.  Leave that responsibility to
         whatever code created it in the first place.
@@ -730,4 +742,7 @@ class _ExistingConnectionHelper(object):
         @param connection: The L{SSHConnection} which will not be modified in
             any way.
         @type connection: L{SSHConnection}
+
+        @param immediate: An argument which will be ignored.
+        @type immediate: L{bool}.
         """

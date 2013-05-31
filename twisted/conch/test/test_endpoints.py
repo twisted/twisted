@@ -28,6 +28,7 @@ from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 
 from twisted.conch.interfaces import IConchUser
 from twisted.conch.error import ConchError, UserRejectedKey, HostKeyChanged
+from twisted.conch.ssh.transport import SSHClientTransport
 
 try:
     from Crypto.Cipher import AES
@@ -1134,11 +1135,34 @@ class ExistingConnectionHelperTests(TestCase):
             result, self.successResultOf(helper.secureConnection()))
 
 
+    def test_cleanupConnectionNotImmediately(self):
+        """
+        L{_ExistingConnectionHelper.cleanupConnection} does nothing to the
+        existing connection if called with C{immediate} set to C{False}.
+        """
+        helper = _ExistingConnectionHelper(object())
+        # Bit hard to test nothing happens. However, since object() has no
+        # relevant methods or attributes, if the code is incorrect we can
+        # expect an AttributeError.
+        helper.cleanupConnection(object(), False)
+
+
+    def test_cleanupConnectionImmediately(self):
+        """
+        L{_ExistingConnectionHelper.cleanupConnection} does nothing to the
+        existing connection if called with C{immediate} set to C{True}.
+        """
+        helper = _ExistingConnectionHelper(object())
+        # Bit hard to test nothing happens. However, since object() has no
+        # relevant methods or attributes, if the code is incorrect we can
+        # expect an AttributeError.
+        helper.cleanupConnection(object(), True)
+
+
 
 class NewConnectionHelperTests(TestCase):
     """
-    Tests for L{_NewConnectionHelper} behaviors related to I{known_hosts} file
-    handling.
+    Tests for L{_NewConnectionHelper}.
     """
     def test_interface(self):
         """
@@ -1192,3 +1216,35 @@ class NewConnectionHelperTests(TestCase):
 
         loaded = _NewConnectionHelper._knownHosts()
         self.assertTrue(loaded.hasHostKey("127.0.0.1", key))
+
+
+    def test_cleanupConnectionNotImmediately(self):
+        """
+        L{_NewConnectionHelper.cleanupConnection} closes the transport cleanly
+        if called with C{immediate} set to C{False}.
+        """
+        helper = _NewConnectionHelper(
+            None, None, None, None, None, None, None, None, None, None)
+        connection = SSHConnection()
+        connection.transport = StringTransport()
+        helper.cleanupConnection(connection, False)
+        self.assertTrue(connection.transport.disconnecting)
+
+
+    def test_cleanupConnectionImmediately(self):
+        """
+        L{_NewConnectionHelper.cleanupConnection} closes the transport with
+        C{abortConnection} if called with C{immediate} set to C{True}.
+        """
+        class Abortable:
+            aborted = False
+            def abortConnection(self):
+                self.aborted = True
+
+        helper = _NewConnectionHelper(
+            None, None, None, None, None, None, None, None, None, None)
+        connection = SSHConnection()
+        connection.transport = SSHClientTransport()
+        connection.transport.transport = Abortable()
+        helper.cleanupConnection(connection, True)
+        self.assertTrue(connection.transport.transport.aborted)
