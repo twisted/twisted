@@ -1613,17 +1613,17 @@ class HTTP11ClientProtocolTests(TestCase):
         return assertResponseFailed(self, result, [CancelledError])
 
 
-    def test_cancelDuringBodyProduction(self):
+    def assertCancelDuringBodyProduction(self, producerLength):
         """
         The L{Deferred} returned by L{HTTP11ClientProtocol.request} will fire
         with a L{RequestGenerationFailed} failure containing a
         L{CancelledError} exception if the request was cancelled before a
-        C{bodyProducer} with an explicit length has finished producing.
+        C{bodyProducer} has finished producing.
         """
         transport = StringTransport()
         protocol = HTTP11ClientProtocol()
         protocol.makeConnection(transport)
-        producer = StringProducer(10)
+        producer = StringProducer(producerLength)
 
         nonlocal = {'cancelled': False}
         def cancel(ign):
@@ -1639,8 +1639,17 @@ class HTTP11ClientProtocolTests(TestCase):
         result.cancel()
         self.assertTrue(transport.aborting)
         self.assertTrue(nonlocal['cancelled'])
-        protocol.connectionLost(Failure(ConnectionDone()))
         return assertRequestGenerationFailed(self, result, [CancelledError])
+
+
+    def test_cancelDuringBodyProduction(self):
+        """
+        The L{Deferred} returned by L{HTTP11ClientProtocol.request} will fire
+        with a L{RequestGenerationFailed} failure containing a
+        L{CancelledError} exception if the request was cancelled before a
+        C{bodyProducer} with an explicit length has finished producing.
+        """
+        return self.assertCancelDuringBodyProduction(10)
 
 
     def test_cancelDuringChunkedBodyProduction(self):
@@ -1650,27 +1659,7 @@ class HTTP11ClientProtocolTests(TestCase):
         L{CancelledError} exception if the request was cancelled before a
         C{bodyProducer} with C{UNKNOWN_LENGTH} has finished producing.
         """
-        transport = StringTransport()
-        protocol = HTTP11ClientProtocol()
-        protocol.makeConnection(transport)
-        producer = StringProducer(UNKNOWN_LENGTH)
-
-        nonlocal = {'cancelled': False}
-        def cancel(ign):
-            nonlocal['cancelled'] = True
-        def startProducing(consumer):
-            producer.consumer = consumer
-            producer.finished = Deferred(cancel)
-            return producer.finished
-        producer.startProducing = startProducing
-
-        result = protocol.request(Request('POST', '/bar', _boringHeaders, producer))
-        producer.consumer.write('x' * 5)
-        result.cancel()
-        self.assertTrue(transport.aborting)
-        self.assertTrue(nonlocal['cancelled'])
-        protocol.connectionLost(Failure(ConnectionDone()))
-        return assertRequestGenerationFailed(self, result, [CancelledError])
+        return self.assertCancelDuringBodyProduction(UNKNOWN_LENGTH)
 
 
 
