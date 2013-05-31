@@ -242,6 +242,16 @@
       <code>stopProducing</code> on its transport.
     </p>
 
+    <p>
+      If the body of the response isn't going to be consumed incrementally, then <code class="API" base="twisted.web.client">readBody</code> can be used to get the body as a byte-string.
+      This function returns a <code>Deferred</code> that fires with the body after the request has been completed.
+    </p>
+
+    <a href="listings/client/responseBody.py" class="py-listing">
+      Inspect the response.
+    </a>
+
+
     <h3>HTTP over SSL</h3>
 
     <p>

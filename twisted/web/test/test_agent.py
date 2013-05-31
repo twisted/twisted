@@ -15,19 +15,22 @@ from twisted.trial import unittest
 from twisted.web import client, error, http_headers
 from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
 from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
+from twisted.web._newclient import PotentialDataLoss
 from twisted.internet import defer, task
 from twisted.python.failure import Failure
 from twisted.python.components import proxyForInterface
 from twisted.test.proto_helpers import StringTransport, MemoryReactorClock
 from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionRefusedError, ConnectionDone
+from twisted.internet.error import ConnectionLost
 from twisted.internet.protocol import Protocol, Factory
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.web.client import FileBodyProducer, Request, HTTPConnectionPool
-from twisted.web.client import _WebToNormalContextFactory
+from twisted.web.client import _WebToNormalContextFactory, ResponseDone
 from twisted.web.client import WebClientContextFactory, _HTTP11ClientFactory
 from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
+from twisted.web.http_headers import Headers
 from twisted.web._newclient import HTTP11ClientProtocol, Response
 from twisted.web.error import SchemeNotSupported
 
@@ -35,25 +38,6 @@ try:
     from twisted.internet import ssl
 except:
     ssl = None
-
-
-class GetBodyProtocol(Protocol):
-
-    def __init__(self, deferred):
-        self.deferred = deferred
-        self.buf = ''
-
-    def dataReceived(self, bytes):
-        self.buf += bytes
-
-    def connectionLost(self, reason):
-        self.deferred.callback(self.buf)
-
-
-def getBody(response):
-    d = defer.Deferred()
-    response.deliverBody(GetBodyProtocol(d))
-    return d
 
 
 
@@ -2094,3 +2078,81 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
             self.assertEqual(302, fail.response.code)
 
         return deferred.addCallback(checkFailure)
+
+
+
+class ReadBodyTests(unittest.TestCase):
+    """
+    Tests for L{client.readBody}
+    """
+
+
+    class FakeResponse(object):
+        """
+        Fake L{IResponse} for testing readBody, that just captures the protocol
+        passed to deliverBody.
+        """
+
+        code = 200
+        phrase = "OK"
+
+        def __init__(self, headers=None):
+            self.headers = headers or Headers()
+
+        def deliverBody(self, protocol):
+            self.protocol = protocol
+
+
+    def test_success(self):
+        """
+        L{client.readBody} returns a L{Deferred} which fires with the complete
+        body of the L{IResponse} provider passed to it.
+        """
+        response = self.FakeResponse()
+        d = client.readBody(response)
+        response.protocol.dataReceived("first")
+        response.protocol.dataReceived("second")
+        response.protocol.connectionLost(Failure(ResponseDone()))
+        self.assertEqual(self.successResultOf(d), "firstsecond")
+
+
+    def test_withPotentialDataLoss(self):
+        """
+        If the full body of the L{IResponse} passed to L{client.readBody} is
+        not definitely received, the L{Deferred} returned by L{client.readBody}
+        fires with a L{Failure} wrapping L{client.PartialDownloadError} with
+        the content that was received.
+        """
+        response = self.FakeResponse()
+        d = client.readBody(response)
+        response.protocol.dataReceived("first")
+        response.protocol.dataReceived("second")
+        response.protocol.connectionLost(Failure(PotentialDataLoss()))
+        failure = self.failureResultOf(d)
+        failure.trap(client.PartialDownloadError)
+        self.assertEqual({
+                "status": failure.value.status,
+                "message": failure.value.message,
+                "body": failure.value.response,
+                }, {
+                "status": 200,
+                "message": "OK",
+                "body": "firstsecond",
+                })
+
+
+    def test_otherErrors(self):
+        """
+        If there is an exception other than L{client.PotentialDataLoss} while
+        L{client.readBody} is collecting the response body, the L{Deferred}
+        returned by {client.readBody} fires with that exception.
+        """
+        response = self.FakeResponse()
+        d = client.readBody(response)
+        response.protocol.dataReceived("first")
+        response.protocol.connectionLost(
+            Failure(ConnectionLost("mystery problem")))
+        reason = self.failureResultOf(d)
+        reason.trap(ConnectionLost)
+        self.assertEqual(reason.value.args, ("mystery problem",))
+
