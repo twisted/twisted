@@ -1631,14 +1631,14 @@ class _GetBodyProtocol(protocol.Protocol):
 
     def __init__(self, status, message, deferred):
         """
-        @ivar deferred: deferred to fire when response is complete
-        @type deferred: L{Deferred} firing with L{bytes}
-
-        @ivar status: Status of L{IResponse}
+        @param status: Status of L{IResponse}
         @ivar status: L{int}
 
-        @ivar message: Message of L{IResponse}
+        @param message: Message of L{IResponse}
         @type message: L{bytes}
+
+        @param deferred: deferred to fire when response is complete
+        @type deferred: L{Deferred} firing with L{bytes}
         """
         self.deferred = deferred
         self.status = status
@@ -1646,11 +1646,18 @@ class _GetBodyProtocol(protocol.Protocol):
         self.dataBuffer = []
 
 
-    def dataReceived(self, bytes):
-        self.dataBuffer.append(bytes)
+    def dataReceived(self, data):
+        """
+        Accumulate some more bytes from the response.
+        """
+        self.dataBuffer.append(data)
 
 
     def connectionLost(self, reason):
+        """
+        Deliver the accumulated response bytes to the waiting L{Deferred}, if
+        the response body has been completely received without error.
+        """
         if reason.check(ResponseDone):
             self.deferred.callback(b''.join(self.dataBuffer))
         elif reason.check(PotentialDataLoss):
@@ -1669,8 +1676,8 @@ def getBody(response):
     This is a helper function for clients that don't want to incrementally
     receive the body of an HTTP response.
 
-    @type response: L{IResponse}
-    @param response: An HTTP response
+    @param response: The HTTP response for which the body will be read.
+    @type response: L{IResponse} provider
 
     @return: A L{Deferred} which will fire with the body of the response.
     """
