@@ -28,7 +28,7 @@ from twisted.internet.protocol import Protocol, Factory
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.web.client import FileBodyProducer, Request, HTTPConnectionPool
-from twisted.web.client import _WebToNormalContextFactory
+from twisted.web.client import _WebToNormalContextFactory, ResponseDone
 from twisted.web.client import WebClientContextFactory, _HTTP11ClientFactory
 from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
 from twisted.web.http_headers import Headers
@@ -2111,11 +2111,15 @@ class GetBodyTests(unittest.TestCase):
 
 
     def test_simple(self):
+        """
+        L{client.getBody} returns a L{Deferred} which fires with the complete
+        body of the L{IResponse} provider passed to it.
+        """
         response = self.FakeResponse()
         d = client.getBody(response)
         response.protocol.dataReceived("first")
         response.protocol.dataReceived("second")
-        response.protocol.connectionLost(Failure(ConnectionDone()))
+        response.protocol.connectionLost(Failure(ResponseDone()))
         self.assertEqual(self.successResultOf(d), "firstsecond")
 
 
