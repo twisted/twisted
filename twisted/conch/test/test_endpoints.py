@@ -16,7 +16,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
 from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.defer import succeed, fail
+from twisted.internet.defer import succeed, fail, CancelledError
 from twisted.internet.error import ConnectionDone, ConnectionRefusedError
 from twisted.internet.address import IPv4Address
 from twisted.trial.unittest import TestCase
@@ -60,6 +60,18 @@ else:
 from twisted.python.fakepwd import UserDatabase
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.iosim import FakeTransport, connect
+
+
+class AbortableFakeTransport(FakeTransport):
+    """
+    A L{FakeTransport} with added C{abortConnection} support.
+    """
+    aborted = False
+
+
+    def abortConnection(self):
+        self.aborted = True
+
 
 
 class BrokenExecSession(SSHChannel):
@@ -218,8 +230,8 @@ class SingleUseMemoryEndpoint(object):
             return fail()
         else:
             self.pump = connect(
-                self._server, FakeTransport(self._server, isServer=True),
-                protocol, FakeTransport(protocol, isServer=False))
+                self._server, AbortableFakeTransport(self._server, isServer=True),
+                protocol, AbortableFakeTransport(protocol, isServer=False))
             return succeed(protocol)
 
 
@@ -284,7 +296,7 @@ class SSHCommandClientEndpointTestsMixin(object):
             "%r did not implement create" % (self.__class__.__name__,))
 
 
-    def assertClientTransportState(self, client):
+    def assertClientTransportState(self, client, immediateClose):
         """
         Make an assertion about the connectedness of the given protocol's
         transport.  Override this to implement either a check for the
@@ -318,10 +330,10 @@ class SSHCommandClientEndpointTestsMixin(object):
         clientProtocol = clientFactory.buildProtocol(None)
         serverProtocol = serverFactory.buildProtocol(None)
 
-        clientTransport = FakeTransport(
+        clientTransport = AbortableFakeTransport(
             clientProtocol, isServer=False, hostAddress=self.clientAddress,
             peerAddress=self.serverAddress)
-        serverTransport = FakeTransport(
+        serverTransport = AbortableFakeTransport(
             serverProtocol, isServer=True, hostAddress=self.serverAddress,
             peerAddress=self.clientAddress)
 
@@ -365,7 +377,7 @@ class SSHCommandClientEndpointTestsMixin(object):
         f.trap(ConchError)
         self.assertEqual('unknown channel', f.value.value)
 
-        self.assertClientTransportState(client)
+        self.assertClientTransportState(client, False)
 
 
     def test_execFailure(self):
@@ -387,7 +399,36 @@ class SSHCommandClientEndpointTestsMixin(object):
         f.trap(ConchError)
         self.assertEqual('channel request failed', f.value.value)
 
-        self.assertClientTransportState(client)
+        self.assertClientTransportState(client, False)
+
+
+    def test_execCancelled(self):
+        """
+        If execution of the command is cancelled via the L{Deferred} returned
+        by L{SSHCommandClientEndpoint.connect}, the connection is closed
+        immediately.
+        """
+        self.realm.channelLookup[b'session'] = WorkingExecSession
+        endpoint = self.create()
+
+        # We want to simulate the case where connection was made, but Deferred
+        # was cancelled waiting for the command to execute:
+        def _executeCommand(connection, protocolFactory,
+                            original=endpoint._executeCommand):
+            result = original(connection, protocolFactory)
+            result.cancel()
+            return result
+        endpoint._executeCommand = _executeCommand
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+        server, client, pump = self.finishConnection()
+
+        f = self.failureResultOf(connected)
+        f.trap(CancelledError)
+
+        self.assertClientTransportState(client, True)
 
 
     def test_buildProtocol(self):
@@ -488,7 +529,7 @@ class SSHCommandClientEndpointTestsMixin(object):
         pump.pump()
         connectionLost[0].trap(ConnectionDone)
 
-        self.assertClientTransportState(client)
+        self.assertClientTransportState(client, False)
 
 
     def _exitStatusTest(self, request, requestArg):
@@ -516,7 +557,7 @@ class SSHCommandClientEndpointTestsMixin(object):
         server.service.sendRequest(channel, request, requestArg)
         channel.loseConnection()
         pump.pump()
-        self.assertClientTransportState(client)
+        self.assertClientTransportState(client, False)
         return connectionLost[0]
 
 
@@ -673,7 +714,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
             self.factory, self.reactor.tcpClients[0][2])
 
 
-    def assertClientTransportState(self, client):
+    def assertClientTransportState(self, client, immediateClose):
         """
         Assert that the transport for the given protocol has been disconnected.
         L{SSHCommandClientEndpoint.newConnection} creates a new dedicated SSH
@@ -681,7 +722,10 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         """
         # Nothing useful can be done with the connection at this point, so the
         # endpoint should close it.
-        self.assertTrue(client.transport.disconnecting)
+        if immediateClose:
+            self.assertTrue(client.transport.aborted)
+        else:
+            self.assertTrue(client.transport.disconnecting)
 
 
     def test_destination(self):
@@ -837,7 +881,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         # XXX Should assert something specific about the arguments of the
         # exception
 
-        self.assertClientTransportState(client)
+        self.assertClientTransportState(client, False)
 
 
     def setupKeyChecker(self, portal, users):
@@ -1100,7 +1144,7 @@ class ExistingConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         return self._server, self._client, self._pump
 
 
-    def assertClientTransportState(self, client):
+    def assertClientTransportState(self, client, immediateClose):
         """
         Assert that the transport for the given protocol is still connected.
         L{SSHCommandClientEndpoint.existingConnection} re-uses an SSH connected
@@ -1108,6 +1152,7 @@ class ExistingConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         it up.
         """
         self.assertFalse(client.transport.disconnecting)
+        self.assertFalse(client.transport.aborted)
 
 
 

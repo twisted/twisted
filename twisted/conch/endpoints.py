@@ -19,7 +19,7 @@ from twisted.python.failure import Failure
 from twisted.internet.error import ConnectionDone, ProcessTerminated
 from twisted.internet.interfaces import IStreamClientEndpoint
 from twisted.internet.protocol import Factory
-from twisted.internet.defer import Deferred, succeed
+from twisted.internet.defer import Deferred, succeed, CancelledError
 from twisted.internet.endpoints import TCP4ClientEndpoint
 
 from twisted.conch.ssh.keys import Key
@@ -614,7 +614,10 @@ class SSHCommandClientEndpoint(object):
         """
         commandConnected = Deferred()
         def disconnectOnFailure(passthrough):
-            self._creator.cleanupConnection(connection, False)
+            # Close the connection immediately in case of cancellation, since
+            # that implies user wants it gone immediately (e.g. a timeout):
+            immediate =  passthrough.check(CancelledError)
+            self._creator.cleanupConnection(connection, immediate)
             return passthrough
         commandConnected.addErrback(disconnectOnFailure)
 
