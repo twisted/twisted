@@ -116,7 +116,7 @@ class IPv4AddressTestCaseMixin(AddressTestCaseMixin):
 
 
 
-class HostnameAddressTestCase(unittest.TestCase, AddressTestCaseMixin):
+class HostnameAddressTests(unittest.TestCase, AddressTestCaseMixin):
     """
     Test case for L{HostnameAddress}.
     """
