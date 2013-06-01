@@ -638,7 +638,7 @@ class DeprecationTestCase(unittest.TestCase):
         """
         self.callDeprecated(
             (Version("Twisted", 13, 1, 0), socket.inet_ntop),
-            compat.inet_ntop, socket.AF_INET, "\x01\x00\x01\x00")
+            compat.inet_ntop, socket.AF_INET, b'\x01\x00\x01\x00')
 
     def test_inet_pton(self):
         """
