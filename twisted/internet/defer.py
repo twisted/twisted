@@ -674,16 +674,18 @@ class Deferred:
 
 class _DeferredHistory(object):
     """
-    The history of a given Deferred.
+    The history of a single Deferred.
 
-    Only a certain number of items are tracked, and when the limit is reached,
+    Only a certain number of items aer tracked, and when the limit is reached,
     items are dropped from the *middle*, with the assumption that the useful
     things that happen in an execution trace are at the beginning and the end.
     """
+
     def __init__(self):
         self._firstHalf = []
         self._secondHalf = deque([], 50)
         self._firstLimit = 50
+
 
     def add(self, item):
         """
@@ -695,8 +697,10 @@ class _DeferredHistory(object):
         else:
             self._secondHalf.append(item)
 
+
     def get(self):
         return self._firstHalf + list(self._secondHalf)
+
 
 
 class _DeferredHistoryItem(object):
@@ -724,12 +728,15 @@ class _DeferredHistoryItem(object):
         this callback, if it did return one.
     @type chainedHistory: ...
     """
+
     def __init__(self, name, module, className, isCallback):
         self.name = name
         self.module = module
         self.className = className
         self.isCallback = isCallback
+        # XXX this shouldn't be instantiated unless needed
         self.chainedHistory = _DeferredHistory()
+
 
     def mergeHistory(self, deferred):
         """
