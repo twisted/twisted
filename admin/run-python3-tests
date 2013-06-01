@@ -16,11 +16,15 @@ sys.path.insert(0, twistedPath)
 if sys.argv[1:]:
     testModules = sys.argv[1:]
 else:
-    from _twistedpython3 import testModules
+    modules = {}
+    with open(os.path.join(twistedPath, "setup3.py")) as setup:
+        data = setup.read()
+        code = compile(data, "setup3.py", "exec")
+        exec(code, modules)
+    testModules = modules["testModules"]
 
 # Avoid dumping trash all over the place
 os.chdir(tempfile.mkdtemp(prefix="tw-py3-"))
 
 # Run the tests
 unittest.main(module=None, argv=["run-python3-tests", "-v"] + testModules)
-
