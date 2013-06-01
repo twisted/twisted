@@ -43,7 +43,7 @@ class NetstringTests(TestCase):
         ff.flowTo(cascade(stringsToNetstrings())).flowTo(fd)
         ff.drain.receive("hello")
         ff.drain.receive("world")
-        self.assertEquals(b"".join(fd.received), 
+        self.assertEquals(b"".join(fd.received),
             "{len:d}:{data:s},{len2:d}:{data2:s},".format(
             len=len("hello"), data="hello",
             len2=len("world"), data2="world",
@@ -97,6 +97,8 @@ class LineTests(TestCase):
         """
 
         lines = bytesToLines()
+        ff = FakeFount()
+        fd = FakeDrain()
 
         class Switcher(Pump):
             def received(self, line):
@@ -104,8 +106,7 @@ class LineTests(TestCase):
                 if splitted[0] == 'switch':
                     length = int(splitted[1])
                     # XXX document downstream
-                    lines.tube.switch(cascade(Switchee(length),
-                                              self.tube.downstream))
+                    lines.tube.switch(cascade(Switchee(length), fd))
                 return ()
 
         class Switchee(Pump):
@@ -114,10 +115,8 @@ class LineTests(TestCase):
                 self.length = length
             def received(self, data):
                 self.datums.append(data)
-        
-        ff = FakeFount()
+
         cc = cascade(lines, Switcher())
-        fd = FakeDrain()
         ff.flowTo(cc).flowTo(fd)
         ff.drain.receive("hello\r\nworld\r\nswitch 10\r\nabcde\r\nfgh"
                          # + '\r\nagain\r\n'
