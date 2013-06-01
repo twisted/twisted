@@ -592,24 +592,30 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
             self._buffer = BytesIO()
             self._lineBuffer = deque()
 
-        self._buffer.write(data)
 
         if self.line_mode:
             # The idea is to look for the delimiter in a subset of the buffer.
             # This prevents slowdown if the line length is long and the bytes
             # are being received slowly.
-            self._buffer.seek(-len(data) - len(self.delimiter), os.SEEK_END)
+            self._buffer.seek(-len(self.delimiter), os.SEEK_END)
 
             # This does two things: get up to len(self.delimiter) bytes,
             # and always seek to the very end.
-            searchArea = self._buffer.read()
+            searchArea = (self._buffer.read(len(self.delimiter)) +
+                          data[:len(self.delimiter)])
 
-            if self.delimiter in searchArea:
-                splitted = self._buffer.getvalue().split(self.delimiter)
+            if self.delimiter in searchArea or self.delimiter in data:
+                splitted = (self._buffer.getvalue() +
+                            data).split(self.delimiter)
                 self._buffer.seek(0)
                 self._buffer.truncate()
                 self._buffer.write(splitted.pop())
                 self._lineBuffer.extend(splitted)
+            else:
+                self._buffer.seek(0, os.SEEK_END)
+                self._buffer.write(data)
+        else:
+            self._buffer.write(data)
 
 
     def _bufferSize(self):
