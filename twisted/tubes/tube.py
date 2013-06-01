@@ -106,11 +106,6 @@ class _TubeDrain(_TubePiece):
         return self._tube._tfount.drain
 
 
-    @property
-    def _get_delivered(self):
-        return self._tube._tfount.drain
-
-
     def flowingFrom(self, fount):
         """
         This tube will now have 'receive' called.
