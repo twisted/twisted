@@ -14,8 +14,8 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 
 from __future__ import division, absolute_import
 
-import os
 import socket
+import os
 
 from zope.interface import implementer, directlyProvides
 import warnings
@@ -640,11 +640,11 @@ class HostnameEndpoint(object):
     def __init__(self, reactor, host, port, timeout=30, bindAddress=None):
         """
         @param host: A host name to connect to.
-        @type host: str
+        @type host: L{str}
 
         @param timeout: For each individual connection attempt, the number of
-        seconds to wait before assuming the connection has failed.
-        @type timeout: int
+            seconds to wait before assuming the connection has failed.
+        @type timeout: L{int}
 
         @see: L{twisted.internet.interfaces.IReactorTCP.connectTCP}
         """
