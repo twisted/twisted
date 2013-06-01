@@ -422,6 +422,20 @@ a'''
         self.assertEqual(["foo"], calls)
 
 
+    def test_splittedDelimeter(self):
+        """
+        L{LineReceiver} handles delimeters split accross multiple payloads.
+        """
+        transport = proto_helpers.StringIOWithoutClosing()
+        proto = LineTester()
+        proto.delimiter = "\r\n"
+        proto.makeConnection(protocol.FileWrapper(transport))
+        proto.dataReceived("foo\r")
+        proto.dataReceived("\nbar\r")
+        proto.dataReceived("\n")
+        self.assertEqual(["foo", "bar"], proto.received)
+
+
 
 class LineOnlyReceiverTestCase(unittest.SynchronousTestCase):
     """
