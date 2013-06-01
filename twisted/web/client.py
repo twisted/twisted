@@ -664,7 +664,8 @@ if not _PY3:
     from twisted.web._newclient import Request, Response, HTTP11ClientProtocol
     from twisted.web._newclient import ResponseDone, ResponseFailed
     from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
-    from twisted.web._newclient import ResponseNeverReceived, PotentialDataLoss
+    from twisted.web._newclient import (
+        ResponseNeverReceived, PotentialDataLoss, _WrapperException)
 
 try:
     from twisted.internet.ssl import ClientContextFactory
@@ -865,14 +866,20 @@ class _RetryingHTTP11ClientProtocol(object):
         Indicate whether request should be retried.
 
         Only returns C{True} if method is idempotent, no response was
-        received, and no body was sent. The latter requirement may be relaxed
-        in the future, and PUT added to approved method list.
+        received, the reason for the failed request was not due to
+        user-requested cancellation, and no body was sent. The latter
+        requirement may be relaxed in the future, and PUT added to approved
+        method list.
         """
         if method not in ("GET", "HEAD", "OPTIONS", "DELETE", "TRACE"):
             return False
         if not isinstance(exception, (RequestNotSent, RequestTransmissionFailed,
                                       ResponseNeverReceived)):
             return False
+        if isinstance(exception, _WrapperException):
+            for failure in exception.reasons:
+                if failure.check(defer.CancelledError):
+                    return False
         if bodyProducer is not None:
             return False
         return True
