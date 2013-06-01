@@ -341,3 +341,16 @@ class TubeTest(TestCase):
 
         self.tube.deliver("hello")
         self.assertEqual(self.fd.received, ["hello"])
+
+
+    def test_drainPausesFlowWhenPreviouslyPaused(self):
+        """
+        L{_TubeDrain.flowingFrom} will pause its fount if its L{_TubeFount} was
+        previously paused.
+        """
+        newFF = FakeFount()
+
+        self.ff.flowTo(self.tubeDrain).pauseFlow()
+        newFF.flowTo(self.tubeDrain)
+
+        self.assertTrue(newFF.flowIsPaused, "New upstream is not paused.")
