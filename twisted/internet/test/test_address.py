@@ -128,7 +128,7 @@ class HostnameAddressTestCase(unittest.TestCase, AddressTestCaseMixin):
 
         @return: A L{HostnameAddress} instance.
         """
-        return HostnameAddress("example.com", 0)
+        return HostnameAddress(b"example.com", 0)
 
 
     def buildDifferentAddress(self):
@@ -137,7 +137,7 @@ class HostnameAddressTestCase(unittest.TestCase, AddressTestCaseMixin):
 
         @return: A L{HostnameAddress} instance.
         """
-        return HostnameAddress("example.net", 0)
+        return HostnameAddress(b"example.net", 0)
 
 
 

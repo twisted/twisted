@@ -92,13 +92,13 @@ class HostnameAddress(FancyEqMixin, object):
     """
     A L{HostnameAddress} represents the address of a L{HostnameEndpoint}.
 
-    @ivar hostname: A hostname string; for example, "example.com".
-    @type hostname: C{str}
+    @ivar hostname: A hostname byte string; for example, b"example.com".
+    @type hostname: L{bytes}
 
     @ivar port: An integer representing the port number.
-    @type port: C{int}
+    @type port: L{int}
     """
-    compareAttributes = ('hostname','port')
+    compareAttributes = ('hostname', 'port')
 
     def __init__(self, hostname, port):
         self.hostname = hostname
