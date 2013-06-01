@@ -17,14 +17,22 @@ from twisted.trial import unittest
 class TestAsynchronousAssertions(unittest.TestCase):
     """
     Tests for L{TestCase}'s asynchronous extensions to L{SynchronousTestCase}.
-    That is, assertFailure.
+    That is, L{TestCase.assertFailure}.
     """
     def test_assertFailure(self):
+        """
+        C{assertFailure} returns the passed L{Deferred} with callbacks added
+        if the L{Deferred} fails with expected exception.
+        """
         d = defer.maybeDeferred(lambda: 1/0)
         return self.assertFailure(d, ZeroDivisionError)
 
 
-    def test_assertFailure_wrongException(self):
+    def test_assertFailureWrongException(self):
+        """
+        C{assertFailure} returns a L{Failure} if the passed L{Deferred} fails
+        with unexpected exception.
+        """
         d = defer.maybeDeferred(lambda: 1/0)
         self.assertFailure(d, OverflowError)
         d.addCallbacks(lambda x: self.fail('Should have failed'),
@@ -32,7 +40,11 @@ class TestAsynchronousAssertions(unittest.TestCase):
         return d
 
 
-    def test_assertFailure_noException(self):
+    def test_assertFailureNoException(self):
+        """
+        C{assertFailure} returns a L{Failure} if the passed L{Deferred}
+        doesn't fail with expected exception.
+        """
         d = defer.succeed(None)
         self.assertFailure(d, ZeroDivisionError)
         d.addCallbacks(lambda x: self.fail('Should have failed'),
@@ -40,10 +52,10 @@ class TestAsynchronousAssertions(unittest.TestCase):
         return d
 
 
-    def test_assertFailure_moreInfo(self):
+    def test_assertFailureMoreInfo(self):
         """
-        In the case of assertFailure failing, check that we get lots of
-        information about the exception that was raised.
+        C{assertFailure} returns a L{Failure} with error message and brief
+        tracebrack information if the C{assertFailure} fails.
         """
         try:
             1/0
@@ -56,15 +68,26 @@ class TestAsynchronousAssertions(unittest.TestCase):
 
 
     def _checkInfo(self, assertionFailure, f):
+        """
+        Check L{assertFailure} returns L{Failure} with error message and 
+        brief trackback information.
+
+        @param assertionFailure: A L{Failure} instance returned by
+            L{assertFailure}.
+
+        @param f: A L{Failure} instance initialized with the explanation of
+            the exception that causes L{assertFailure} to fail.
+        """
         assert assertionFailure.check(self.failureException)
         output = assertionFailure.getErrorMessage()
         self.assertIn(f.getErrorMessage(), output)
         self.assertIn(f.getBriefTraceback(), output)
 
 
-    def test_assertFailure_masked(self):
+    def test_assertFailureMasked(self):
         """
-        A single wrong assertFailure should fail the whole test.
+        L{unittest.TestCase} fails if a single C{assertFailure} returns a
+        L{Failure}.
         """
         class ExampleFailure(Exception):
             pass
