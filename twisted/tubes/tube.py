@@ -326,11 +326,6 @@ class _Tube(object):
         map(self._tdrain.fount.drain.receive, junk)
 
 
-    @property
-    def downstream(self):
-        return self._tfount.drain
-
-
 
 _pump_registry = AdapterRegistry()
 _pump_registry.register([IPump], IDrain, '',
