@@ -323,3 +323,21 @@ class TubeTest(TestCase):
         self.assertTrue(self.ff.flowIsPaused, "Upstream is not paused.")
 
 
+    def test_reentrantFlowTo(self):
+        """
+        An L{IDrain} may call its argument's L{_TubeFount.flowTo} method in
+        L{IDrain.flowingFrom} and said fount will be flowing to the new drain.
+        """
+        test_fd = self.fd
+
+        class ReflowingDrain(FakeDrain):
+            def flowingFrom(self, fount):
+                self.fount = fount
+                self.fount.flowTo(test_fd)
+
+        self.ff.flowTo(self.tubeDrain).flowTo(ReflowingDrain())
+
+        self.assertIdentical(self.tube._tfount.drain, self.fd)
+
+        self.tube.deliver("hello")
+        self.assertEqual(self.fd.received, ["hello"])

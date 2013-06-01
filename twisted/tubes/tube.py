@@ -50,7 +50,6 @@ class _TubeFount(_TubePiece):
         Flow data from this tube to the given drain.
         """
         self.drain = drain
-        # TODO: test for ordering
         wasPaused = self._tube._currentlyPaused
         result = self.drain.flowingFrom(self)
         self._tube._nextFount = result
