@@ -7,8 +7,6 @@ Endpoint implementations of various SSH interactions.
 """
 
 __all__ = [
-    'ISSHConnectionCreator',
-
     'AuthenticationFailed', 'SSHCommandAddress', 'SSHCommandClientEndpoint']
 
 from struct import unpack
@@ -43,9 +41,10 @@ class AuthenticationFailed(Exception):
 
 
 
-class ISSHConnectionCreator(Interface):
+# This should be public.  See #6541.
+class _ISSHConnectionCreator(Interface):
     """
-    An L{ISSHConnectionCreator} knows how to create SSH connections somehow.
+    An L{_ISSHConnectionCreator} knows how to create SSH connections somehow.
     """
     def secureConnection():
         """
@@ -115,9 +114,9 @@ class _CommandChannel(SSHChannel):
 
     def __init__(self, creator, command, protocolFactory, commandConnected):
         """
-        @param creator: The L{ISSHConnectionCreator} provider which was used to
-            get the connection which this channel exists on.
-        @type creator: L{ISSHConnectionCreator} provider
+        @param creator: The L{_ISSHConnectionCreator} provider which was used
+            to get the connection which this channel exists on.
+        @type creator: L{_ISSHConnectionCreator} provider
 
         @param command: The command to be executed.
         @type command: L{bytes}
@@ -481,9 +480,10 @@ class SSHCommandClientEndpoint(object):
 
     def __init__(self, creator, command):
         """
-        @param creator: An L{ISSHConnectionCreator} provider which will be used
-            to set up the SSH connection which will be used to run a command.
-        @type creator: L{ISSHConnectionCreator} provider
+        @param creator: An L{_ISSHConnectionCreator} provider which will be
+            used to set up the SSH connection which will be used to run a
+            command.
+        @type creator: L{_ISSHConnectionCreator} provider
 
         @param command: The command line to execute on the SSH server.  This
             byte string is interpreted by a shell on the SSH server, so it may
@@ -623,11 +623,11 @@ class SSHCommandClientEndpoint(object):
 
 
 
-@implementer(ISSHConnectionCreator)
+@implementer(_ISSHConnectionCreator)
 class _NewConnectionHelper(object):
     """
-    L{_NewConnectionHelper} implements L{ISSHConnectionCreator} by establishing
-    a brand new SSH connection, securing it, and authenticating.
+    L{_NewConnectionHelper} implements L{_ISSHConnectionCreator} by
+    establishing a brand new SSH connection, securing it, and authenticating.
     """
     _KNOWN_HOSTS = _KNOWN_HOSTS
 
@@ -699,11 +699,12 @@ class _NewConnectionHelper(object):
 
 
 
-@implementer(ISSHConnectionCreator)
+@implementer(_ISSHConnectionCreator)
 class _ExistingConnectionHelper(object):
     """
-    L{_ExistingConnectionHelper} implements L{ISSHConnectionCreator} by handing
-    out an existing SSH connection which is supplied to its initializer.
+    L{_ExistingConnectionHelper} implements L{_ISSHConnectionCreator} by
+    handing out an existing SSH connection which is supplied to its
+    initializer.
     """
 
     def __init__(self, connection):
