@@ -115,7 +115,7 @@ class _TubeDrain(_TubePiece):
         if out is not None and in_ is not None and not in_.isOrExtends(out):
             raise TypeError()
         self.fount = fount
-        if self._tube._pendingOutput:
+        if self._tube._pendingOutput or self._tube._currentlyPaused:
             self._tube._tfount.pauseFlow()
         self._pump.started()
         nextFount = self._tube._nextFount
