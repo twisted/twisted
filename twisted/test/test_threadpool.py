@@ -12,7 +12,6 @@ import pickle, time, weakref, gc, threading
 from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.python import threadpool, threadable, failure, context
-from twisted.internet.defer import Deferred
 
 #
 # See the end of this module for the remainder of the imports.
@@ -310,7 +309,7 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
             results.append(result)
 
         tp = threadpool.ThreadPool(0, 1)
-        tp.callInThreadWithCallback(onResult, lambda : "test")
+        tp.callInThreadWithCallback(onResult, lambda: "test")
         tp.start()
 
         try:
@@ -470,6 +469,78 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
             self._waitForLock(waiter)
         finally:
             tp.stop()
+
+
+    def test_workerStateTransition(self):
+        """
+        As the worker receives and completes work, it transitions between
+        the working and waiting states.
+        """
+        pool = threadpool.ThreadPool(0, 1)
+        pool.start()
+        self.addCleanup(pool.stop)
+
+        # sanity check
+        self.assertEqual(pool.workers, 0)
+        self.assertEqual(len(pool.waiters), 0)
+        self.assertEqual(len(pool.working), 0)
+
+        # fire up a worker and give it some 'work'
+        threadWorking = threading.Event()
+        threadFinish = threading.Event()
+
+        def _thread():
+            threadWorking.set()
+            threadFinish.wait()
+
+        pool.callInThread(_thread)
+        threadWorking.wait()
+        self.assertEqual(pool.workers, 1)
+        self.assertEqual(len(pool.waiters), 0)
+        self.assertEqual(len(pool.working), 1)
+
+        # finish work, and spin until state changes
+        threadFinish.set()
+        while not len(pool.waiters):
+            time.sleep(0.0005)
+
+        # make sure state changed correctly
+        self.assertEqual(len(pool.waiters), 1)
+        self.assertEqual(len(pool.working), 0)
+
+
+    def test_workerState(self):
+        """
+        Upon entering a _workerState block, the threads unique identifier is
+        added to a stateList and is removed upon exiting the block.
+        """
+        pool = threadpool.ThreadPool()
+        workerThread = object()
+        stateList = []
+        with pool._workerState(stateList, workerThread):
+            self.assertIn(workerThread, stateList)
+        self.assertNotIn(workerThread, stateList)
+
+
+    def test_workerStateExceptionHandling(self):
+        """
+        The _workerState block does not consume L{Exception}s or change the
+        L{Exception} that gets raised.
+        """
+        pool = threadpool.ThreadPool()
+        workerThread = object()
+        stateList = []
+        try:
+            with pool._workerState(stateList, workerThread):
+                self.assertIn(workerThread, stateList)
+                1 / 0
+        except ZeroDivisionError:
+            pass
+        except:
+            self.fail("_workerState shouldn't change raised exceptions")
+        else:
+            self.fail("_workerState shouldn't consume exceptions")
+        self.assertNotIn(workerThread, stateList)
 
 
 
