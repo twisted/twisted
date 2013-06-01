@@ -1994,6 +1994,253 @@ class OtherPrimitives(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(len(done), 1)
 
 
+
+class DeferredHistoryTests(unittest.TestCase):
+    """
+    Tests for Deferred history.
+    """
+
+    def test_noItems(self):
+        """
+        If there are no callbacks on a Deferred, getting the history returns an
+        empty list.
+        """
+        d = defer.Deferred()
+        self.assertEqual(list(d._getHistory()), [])
+
+
+    def test_oneFunctionCallback(self):
+        """
+        If one callback has been executed, the history will represent it.
+        """
+        d = defer.Deferred()
+
+        def callback(result):
+            pass
+
+        d.addCallback(callback)
+        d.callback(None)
+        [item] = d._getHistory()
+        self.assertEqual(item.name, "callback")
+        self.assertEqual(item.module, "twisted.test.test_defer")
+        self.assertEqual(item.className, None)
+
+
+    def test_oneMethodCallback(self):
+        """
+        Methods in the callback history include information about the class
+        they are in.
+        """
+        d = defer.Deferred()
+
+        class Foo(object):
+            def callback(self, result):
+                pass
+
+        d.addCallback(Foo().callback)
+        d.callback(None)
+        [item] = d._getHistory()
+        self.assertEqual(item.name, "callback")
+        self.assertEqual(item.module, "twisted.test.test_defer")
+        self.assertEqual(item.className, "Foo")
+
+
+    def test_twoCallbacks(self):
+        """
+        Additional callbacks will be included in the history.
+        """
+        d = defer.Deferred()
+
+        def callback1(result):
+            return result + 1
+
+        def callback2(result):
+            return result * 2
+
+        d.addCallback(callback1)
+        d.addCallback(callback2)
+
+        d.callback(0)
+        [item1, item2] = d._getHistory()
+        self.assertEqual(item1.name, "callback1")
+        self.assertEqual(item2.name, "callback2")
+
+
+    def test_callbackOrErrbackFlag(self):
+        """
+        There is a flag on history items that indicates whether the object is a
+        callback or an errback.
+        """
+        d = defer.Deferred()
+
+        def callback(result):
+            1 / 0
+
+        def errback(result):
+            pass
+
+        d.addCallback(callback).addErrback(errback)
+        d.callback(None)
+        [item1, item2] = d._getHistory()
+        self.assertTrue(item1.isCallback, "item1 was not a callback")
+        self.assertFalse(item2.isCallback, "item2 was not an errback")
+
+
+    def test_lambdaName(self):
+        """
+        History items based on lambda callbacks have a name of <lambda>.
+        """
+        d = defer.Deferred()
+        d.addCallback(lambda x: None)
+        d.callback(None)
+        [item] = d._getHistory()
+        self.assertEqual(item.name, "<lambda>")
+        self.assertEqual(item.module, "twisted.test.test_defer")
+        self.assertEqual(item.className, None)
+
+
+    def test_chain(self):
+        """
+        If a callback returns a Deferred, the item representing that callback
+        will have the returned Deferred's callbacks represented as a nested
+        history.
+        """
+        outer = defer.Deferred()
+        inner = defer.Deferred()
+
+        def callback(result):
+            return inner
+
+        def innerCallback(result):
+            return None
+
+        outer.addCallback(callback)
+        inner.addCallback(innerCallback)
+        outer.callback(None)
+        inner.callback(None)
+        [outerItem] = outer._getHistory()
+        [innerItem] = outerItem.chainedHistory.get()
+
+        self.assertEqual(outerItem.name, "callback")
+        self.assertEqual(innerItem.name, "innerCallback")
+
+
+    def test_innerExecutedBeforeOuterCallback(self):
+        """
+        If a Deferred that is returned from a callback has already had some of
+        its callbacks executed, they will be represented in the first
+        callback's item's chained history.
+        """
+        outer = defer.Deferred()
+        inner = defer.Deferred()
+
+        def callback(result):
+            return inner
+
+        def innerCallback(result):
+            return None
+
+        outer.addCallback(callback)
+        inner.addCallback(innerCallback)
+        inner.callback(None)
+        outer.callback(None)
+        [outerItem] = outer._getHistory()
+        [innerItem] = outerItem.chainedHistory.get()
+
+        self.assertEqual(outerItem.name, "callback")
+        self.assertEqual(innerItem.name, "innerCallback")
+
+
+    def test_innerDeferredHistoryMergingDoesntAffectLaterCallbacks(self):
+        """
+        Callback history items are recorded on an outer deferred even when an
+        inner Deferred's callbacks are being processed.
+        """
+        outer = defer.Deferred()
+        inner = defer.Deferred()
+
+        def callback1(result):
+            return inner
+
+        def callback2(result):
+            return None
+
+        outer.addCallback(callback1)
+        outer.addCallback(callback2)
+        outer.callback(None)
+        inner.callback(None)
+
+        [outerItem1, outerItem2] = outer._getHistory()
+
+        self.assertEqual(outerItem1.name, "callback1")
+        self.assertEqual(outerItem2.name, "callback2")
+
+
+    def test_returnSameDeferredFromMultipleCallbacks(self):
+        """
+        If a Deferred is returned from multiple callbacks, the history will be
+        identical in all chained histories.
+        """
+        outer = defer.Deferred()
+        inner = defer.Deferred()
+
+        def callback1(result):
+            return inner
+
+        def callback2(result):
+            return inner
+
+        def innerCallback(result):
+            pass
+
+        outer.addCallback(callback1)
+        outer.addCallback(callback2)
+        inner.addCallback(innerCallback)
+        outer.callback(None)
+        inner.callback(None)
+
+        [outerItem1, outerItem2] = outer._getHistory()
+        [innerItem1] = inner._getHistory()
+
+        self.assertEqual(outerItem1.chainedHistory.get(), inner._getHistory())
+        self.assertEqual(outerItem2.chainedHistory.get(), inner._getHistory())
+
+        [innerItemFromOuter1] = outerItem1.chainedHistory.get()
+        [innerItemFromOuter2] = outerItem2.chainedHistory.get()
+        self.assertIdentical(innerItemFromOuter1, innerItemFromOuter2)
+
+
+    def test_historyLimit(self):
+        """
+        The length of history is limited, and items are dropped from the
+        middle.
+        """
+        outer = defer.Deferred()
+
+        def firstCallback(result):
+            pass
+
+        def callback(result):
+            pass
+
+        def lastCallback(result):
+            pass
+
+        outer.addCallback(firstCallback)
+
+        for i in range(100):
+            outer.addCallback(callback)
+
+        outer.addCallback(lastCallback)
+
+        outer.callback(None)
+        self.assertEqual(len(outer._getHistory()), 100)
+
+        self.assertEqual(outer._getHistory()[0].name, "firstCallback")
+        self.assertEqual(outer._getHistory()[-1].name, "lastCallback")
+
+
+
 # Enable on Python 3 as part of #5960:
 if not _PY3:
     from twisted.internet import reactor
