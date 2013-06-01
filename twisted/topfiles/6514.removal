@@ -1,0 +1,5 @@
+The following attributes in twisted.web.server, deprecated since 9.0, have been
+removed:
+    * Session.loopFactory
+    * lifetime parameter of Session.startCheckingExpiration
+    * Session.checkExpired
