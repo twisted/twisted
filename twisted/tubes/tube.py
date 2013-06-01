@@ -51,9 +51,10 @@ class _TubeFount(_TubePiece):
         """
         self.drain = drain
         # TODO: test for ordering
+        wasPaused = self._tube._currentlyPaused
         result = self.drain.flowingFrom(self)
         self._tube._nextFount = result
-        if self._tube._currentlyPaused:
+        if wasPaused:
             self.resumeFlow()
         return result
 

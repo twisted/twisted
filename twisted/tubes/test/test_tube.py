@@ -53,7 +53,7 @@ class TubeTest(TestCase):
 
     def test_pumpFlowSwitching(self):
         """
-        
+
         """
 
 
@@ -307,5 +307,19 @@ class TubeTest(TestCase):
         b.tube.deliver(4)
         self.assertEquals(self.fd.received, [4])
 
+
+    def test_flowToWillNotResumeFlowPausedInFlowingFrom(self):
+        """
+        L{_TubeFount.flowTo} will not call L{_TubeFount.resumeFlow} when
+        it's L{IDrain} calls L{IFount.pauseFlow} in L{IDrain.flowingFrom}.
+        """
+        class PausingDrain(FakeDrain):
+            def flowingFrom(self, fount):
+                self.fount = fount
+                self.fount.pauseFlow()
+
+        self.ff.flowTo(self.tubeDrain).flowTo(PausingDrain())
+
+        self.assertTrue(self.ff.flowIsPaused, "Upstream is not paused.")
 
 
