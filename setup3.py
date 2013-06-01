@@ -110,7 +110,8 @@ modules = [
     "twisted.web.test",
     "twisted.web.test.requesthelper",
     "twisted.web._version",
-    ]
+]
+
 
 
 # A list of test modules that have been ported, e.g
@@ -196,7 +197,9 @@ testModules = [
     "twisted.web.test.test_http_headers",
     "twisted.web.test.test_resource",
     "twisted.web.test.test_web",
-    ]
+]
+
+
 
 # A list of any other modules which are needed by any of the modules in the
 # other two lists, but which themselves have not actually been properly ported
@@ -238,7 +241,7 @@ almostModules = [
     # GzipEncoder and allowed methods functionality not ported, no doubt
     # missing lots of test coverage:
     "twisted.web.server",
-    ]
+]
 
 
 
