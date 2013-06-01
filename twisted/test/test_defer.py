@@ -2098,6 +2098,7 @@ class DeferredHistoryTests(unittest.TestCase):
         self.assertEqual(item.module, "twisted.test.test_defer")
         self.assertEqual(item.className, None)
 
+
     def test_chain(self):
         """
         If a callback returns a Deferred, the item representing that callback
@@ -2122,6 +2123,7 @@ class DeferredHistoryTests(unittest.TestCase):
 
         self.assertEqual(outerItem.name, "callback")
         self.assertEqual(innerItem.name, "innerCallback")
+
 
     def test_innerExecutedBeforeOuterCallback(self):
         """
@@ -2148,6 +2150,7 @@ class DeferredHistoryTests(unittest.TestCase):
         self.assertEqual(outerItem.name, "callback")
         self.assertEqual(innerItem.name, "innerCallback")
 
+
     def test_innerDeferredHistoryMergingDoesntAffectLaterCallbacks(self):
         """
         Callback history items are recorded on an outer deferred even when an
@@ -2171,6 +2174,41 @@ class DeferredHistoryTests(unittest.TestCase):
 
         self.assertEqual(outerItem1.name, "callback1")
         self.assertEqual(outerItem2.name, "callback2")
+
+
+    def test_returnSameDeferredFromMultipleCallbacks(self):
+        """
+        If a Deferred is returned from multiple callbacks, the history will be
+        identical in all chained histories.
+        """
+        outer = defer.Deferred()
+        inner = defer.Deferred()
+
+        def callback1(result):
+            return inner
+
+        def callback2(result):
+            return inner
+
+        def innerCallback(result):
+            pass
+
+        outer.addCallback(callback1)
+        outer.addCallback(callback2)
+        inner.addCallback(innerCallback)
+        outer.callback(None)
+        inner.callback(None)
+
+        [outerItem1, outerItem2] = outer._history
+        [innerItem1] = inner._history
+
+        self.assertEqual(outerItem1.chainedHistory, inner._history)
+        self.assertEqual(outerItem2.chainedHistory, inner._history)
+
+        [innerItemFromOuter1] = outerItem1.chainedHistory
+        [innerItemFromOuter2] = outerItem2.chainedHistory
+        self.assertIdentical(innerItemFromOuter1, innerItemFromOuter2)
+
 
 
 # Enable on Python 3 as part of #5960:
