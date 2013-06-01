@@ -116,7 +116,7 @@ class _TubeDrain(_TubePiece):
             raise TypeError()
         self.fount = fount
         if self._tube._pendingOutput or self._tube._currentlyPaused:
-            self._tube._tfount.pauseFlow()
+            fount.pauseFlow()
         self._pump.started()
         nextFount = self._tube._nextFount
         if nextFount is not None:
