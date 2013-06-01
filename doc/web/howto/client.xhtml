@@ -156,6 +156,13 @@
       <code>FileBodyProducer</code> closes the file when it no longer needs it.
     </p>
 
+    <p>
+      If the connection or the request take too much time, you can cancel the
+      <code>Deferred</code> returned by the <code>Agent.request</code> method.
+      This will abort the connection, and the <code>Deferred</code> will errback
+      with <code class="API" base="twisted.internet.defer">CancelledError</code>.
+    </p>
+
     <h3>
       Receiving Responses
     </h3>

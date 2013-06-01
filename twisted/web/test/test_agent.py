@@ -24,7 +24,7 @@ from twisted.internet.task import Clock
 from twisted.internet.error import ConnectionRefusedError, ConnectionDone
 from twisted.internet.error import ConnectionLost
 from twisted.internet.protocol import Protocol, Factory
-from twisted.internet.defer import Deferred, succeed
+from twisted.internet.defer import Deferred, succeed, CancelledError
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.web.client import FileBodyProducer, Request, HTTPConnectionPool
 from twisted.web.client import _WebToNormalContextFactory, ResponseDone
@@ -649,6 +649,26 @@ class HTTPConnectionPoolTests(unittest.TestCase, FakeReactorAndConnectMixin):
         self.assertEqual(result, [None])
 
 
+    def test_cancelGetConnectionCancelsEndpointConnect(self):
+        """
+        Cancelling the C{Deferred} returned from
+        L{HTTPConnectionPool.getConnection} cancels the C{Deferred} returned
+        by opening a new connection with the given endpoint.
+        """
+        self.assertEqual(self.pool._connections, {})
+        connectionResult = Deferred()
+
+        class Endpoint:
+            def connect(self, factory):
+                return connectionResult
+
+        d = self.pool.getConnection(12345, Endpoint())
+        d.cancel()
+        self.assertEqual(self.failureResultOf(connectionResult).type,
+                         CancelledError)
+
+
+
 
 class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
     """
@@ -1010,7 +1030,7 @@ class HTTPConnectionPoolRetryTests(unittest.TestCase, FakeReactorAndConnectMixin
 
     def test_onlyRetryIdempotentMethods(self):
         """
-        Only GET, HEAD, OPTIONS, TRACE, DELETE methods should cause a retry.
+        Only GET, HEAD, OPTIONS, TRACE, DELETE methods cause a retry.
         """
         pool = client.HTTPConnectionPool(None)
         connection = client._RetryingHTTP11ClientProtocol(None, pool)
@@ -1034,7 +1054,7 @@ class HTTPConnectionPoolRetryTests(unittest.TestCase, FakeReactorAndConnectMixin
     def test_onlyRetryIfNoResponseReceived(self):
         """
         Only L{RequestNotSent}, L{RequestTransmissionFailed} and
-        L{ResponseNeverReceived} exceptions should be a cause for retrying.
+        L{ResponseNeverReceived} exceptions cause a retry.
         """
         pool = client.HTTPConnectionPool(None)
         connection = client._RetryingHTTP11ClientProtocol(None, pool)
@@ -1047,6 +1067,31 @@ class HTTPConnectionPoolRetryTests(unittest.TestCase, FakeReactorAndConnectMixin
                 "GET", ResponseFailed([]), None))
         self.assertFalse(connection._shouldRetry(
                 "GET", ConnectionRefusedError(), None))
+
+
+    def test_dontRetryIfFailedDueToCancel(self):
+        """
+        If a request failed due to the operation being cancelled,
+        C{_shouldRetry} returns C{False} to indicate the request should not be
+        retried.
+        """
+        pool = client.HTTPConnectionPool(None)
+        connection = client._RetryingHTTP11ClientProtocol(None, pool)
+        exception = ResponseNeverReceived([Failure(defer.CancelledError())])
+        self.assertFalse(connection._shouldRetry(
+                "GET", exception, None))
+
+
+    def test_retryIfFailedDueToNonCancelException(self):
+        """
+        If a request failed with L{ResponseNeverReceived} due to some
+        arbitrary exception, C{_shouldRetry} returns C{True} to indicate the
+        request should be retried.
+        """
+        pool = client.HTTPConnectionPool(None)
+        connection = client._RetryingHTTP11ClientProtocol(None, pool)
+        self.assertTrue(connection._shouldRetry(
+                "GET", ResponseNeverReceived([Failure(Exception())]), None))
 
 
     def test_wrappedOnPersistentReturned(self):
@@ -1235,7 +1280,6 @@ class HTTPConnectionPoolRetryTests(unittest.TestCase, FakeReactorAndConnectMixin
             self.assertEqual(newConnections[0][0], key)
             self.assertIdentical(newConnections[0][1], endpoint)
         return d.addCallback(gotConnection)
-
 
 
 
