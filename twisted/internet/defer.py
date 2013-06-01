@@ -18,6 +18,7 @@ Maintainer: Glyph Lefkowitz
 
 from __future__ import division, absolute_import
 
+from collections import deque
 import inspect
 import traceback
 import types
@@ -272,7 +273,11 @@ class Deferred:
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
-        self._history = []
+        self._history = _DeferredHistory()
+
+
+    def _getHistory(self):
+        return self._history.get()
 
 
     def addCallbacks(self, callback, errback=None,
@@ -586,7 +591,7 @@ class Deferred:
                             callback.__module__,
                             className,
                             not isErrback)
-                        current._history.append(historyItem)
+                        current._history.add(historyItem)
                 except:
                     # Including full frame information in the Failure is quite
                     # expensive, so we avoid it unless self.debug is set.
@@ -667,13 +672,64 @@ class Deferred:
 
 
 
+class _DeferredHistory(object):
+    """
+    The history of a given Deferred.
+
+    Only a certain number of items are tracked, and when the limit is reached,
+    items are dropped from the *middle*, with the assumption that the useful
+    things that happen in an execution trace are at the beginning and the end.
+    """
+    def __init__(self):
+        self._firstHalf = []
+        self._secondHalf = deque([], 50)
+        self._firstLimit = 50
+
+    def add(self, item):
+        """
+        Add an item to the history.  If the queue is full, it will be moved
+        into the last position and
+        """
+        if len(self._firstHalf) < self._firstLimit:
+            self._firstHalf.append(item)
+        else:
+            self._secondHalf.append(item)
+
+    def get(self):
+        return self._firstHalf + list(self._secondHalf)
+
+
 class _DeferredHistoryItem(object):
+    """
+    A single item in a Deferred's history.
+
+    This records all the information about a single callback's *execution* (not
+    merely its structure or addition).
+
+    @ivar name: The fully qualified name of the function being executed.
+    @type name: str
+
+    @ivar module: The name of the module the function was in.
+    @type module: str
+
+    @ivar className: The name of the class the function is a member of.  May be
+        None.
+    @type className: str
+
+    @ivar isCallback: Specifies whether this was a callback (True) or errback
+        (False).
+    @type isCallback: bool
+
+    @ivar chainedHistory: The history of the Deferred that was returned from
+        this callback, if it did return one.
+    @type chainedHistory: ...
+    """
     def __init__(self, name, module, className, isCallback):
         self.name = name
         self.module = module
         self.className = className
         self.isCallback = isCallback
-        self.chainedHistory = []
+        self.chainedHistory = _DeferredHistory()
 
     def mergeHistory(self, deferred):
         """
@@ -681,7 +737,8 @@ class _DeferredHistoryItem(object):
         invoked to ensure that the returned Deferred history is recorded as a
         child of this item.
         """
-        self.chainedHistory.extend(deferred._history)
+        for item in deferred._getHistory():
+            self.chainedHistory.add(item)
         deferred._history = self.chainedHistory
 
 

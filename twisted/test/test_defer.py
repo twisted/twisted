@@ -2006,7 +2006,7 @@ class DeferredHistoryTests(unittest.TestCase):
         empty list.
         """
         d = defer.Deferred()
-        self.assertEqual(d._history, [])
+        self.assertEqual(list(d._getHistory()), [])
 
 
     def test_oneFunctionCallback(self):
@@ -2020,7 +2020,7 @@ class DeferredHistoryTests(unittest.TestCase):
 
         d.addCallback(callback)
         d.callback(None)
-        [item] = d._history
+        [item] = d._getHistory()
         self.assertEqual(item.name, "callback")
         self.assertEqual(item.module, "twisted.test.test_defer")
         self.assertEqual(item.className, None)
@@ -2039,7 +2039,7 @@ class DeferredHistoryTests(unittest.TestCase):
 
         d.addCallback(Foo().callback)
         d.callback(None)
-        [item] = d._history
+        [item] = d._getHistory()
         self.assertEqual(item.name, "callback")
         self.assertEqual(item.module, "twisted.test.test_defer")
         self.assertEqual(item.className, "Foo")
@@ -2061,7 +2061,7 @@ class DeferredHistoryTests(unittest.TestCase):
         d.addCallback(callback2)
 
         d.callback(0)
-        [item1, item2] = d._history
+        [item1, item2] = d._getHistory()
         self.assertEqual(item1.name, "callback1")
         self.assertEqual(item2.name, "callback2")
 
@@ -2081,7 +2081,7 @@ class DeferredHistoryTests(unittest.TestCase):
 
         d.addCallback(callback).addErrback(errback)
         d.callback(None)
-        [item1, item2] = d._history
+        [item1, item2] = d._getHistory()
         self.assertTrue(item1.isCallback, "item1 was not a callback")
         self.assertFalse(item2.isCallback, "item2 was not an errback")
 
@@ -2093,7 +2093,7 @@ class DeferredHistoryTests(unittest.TestCase):
         d = defer.Deferred()
         d.addCallback(lambda x: None)
         d.callback(None)
-        [item] = d._history
+        [item] = d._getHistory()
         self.assertEqual(item.name, "<lambda>")
         self.assertEqual(item.module, "twisted.test.test_defer")
         self.assertEqual(item.className, None)
@@ -2118,8 +2118,8 @@ class DeferredHistoryTests(unittest.TestCase):
         inner.addCallback(innerCallback)
         outer.callback(None)
         inner.callback(None)
-        [outerItem] = outer._history
-        [innerItem] = outerItem.chainedHistory
+        [outerItem] = outer._getHistory()
+        [innerItem] = outerItem.chainedHistory.get()
 
         self.assertEqual(outerItem.name, "callback")
         self.assertEqual(innerItem.name, "innerCallback")
@@ -2144,8 +2144,8 @@ class DeferredHistoryTests(unittest.TestCase):
         inner.addCallback(innerCallback)
         inner.callback(None)
         outer.callback(None)
-        [outerItem] = outer._history
-        [innerItem] = outerItem.chainedHistory
+        [outerItem] = outer._getHistory()
+        [innerItem] = outerItem.chainedHistory.get()
 
         self.assertEqual(outerItem.name, "callback")
         self.assertEqual(innerItem.name, "innerCallback")
@@ -2170,7 +2170,7 @@ class DeferredHistoryTests(unittest.TestCase):
         outer.callback(None)
         inner.callback(None)
 
-        [outerItem1, outerItem2] = outer._history
+        [outerItem1, outerItem2] = outer._getHistory()
 
         self.assertEqual(outerItem1.name, "callback1")
         self.assertEqual(outerItem2.name, "callback2")
@@ -2199,15 +2199,45 @@ class DeferredHistoryTests(unittest.TestCase):
         outer.callback(None)
         inner.callback(None)
 
-        [outerItem1, outerItem2] = outer._history
-        [innerItem1] = inner._history
+        [outerItem1, outerItem2] = outer._getHistory()
+        [innerItem1] = inner._getHistory()
 
-        self.assertEqual(outerItem1.chainedHistory, inner._history)
-        self.assertEqual(outerItem2.chainedHistory, inner._history)
+        self.assertEqual(outerItem1.chainedHistory.get(), inner._getHistory())
+        self.assertEqual(outerItem2.chainedHistory.get(), inner._getHistory())
 
-        [innerItemFromOuter1] = outerItem1.chainedHistory
-        [innerItemFromOuter2] = outerItem2.chainedHistory
+        [innerItemFromOuter1] = outerItem1.chainedHistory.get()
+        [innerItemFromOuter2] = outerItem2.chainedHistory.get()
         self.assertIdentical(innerItemFromOuter1, innerItemFromOuter2)
+
+
+    def test_historyLimit(self):
+        """
+        The length of history is limited, and items are dropped from the
+        middle.
+        """
+        outer = defer.Deferred()
+
+        def firstCallback(result):
+            pass
+
+        def callback(result):
+            pass
+
+        def lastCallback(result):
+            pass
+
+        outer.addCallback(firstCallback)
+
+        for i in range(100):
+            outer.addCallback(callback)
+
+        outer.addCallback(lastCallback)
+
+        outer.callback(None)
+        self.assertEqual(len(outer._getHistory()), 100)
+
+        self.assertEqual(outer._getHistory()[0].name, "firstCallback")
+        self.assertEqual(outer._getHistory()[-1].name, "lastCallback")
 
 
 
