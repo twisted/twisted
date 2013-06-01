@@ -2000,6 +2000,13 @@ class DeferredHistoryTests(unittest.TestCase):
     Tests for Deferred history.
     """
 
+    def setUp(self):
+        """
+        Ensure cleaning up of the global deferred debugging features state.
+        """
+        self.addCleanup(defer.enableDeferredDebugging,
+                        defer.getDeferredDebugging())
+
     def test_noItems(self):
         """
         If there are no callbacks on a Deferred, getting the history returns an
@@ -2238,6 +2245,106 @@ class DeferredHistoryTests(unittest.TestCase):
 
         self.assertEqual(outer._getHistory()[0].name, "firstCallback")
         self.assertEqual(outer._getHistory()[-1].name, "lastCallback")
+
+
+    def test_disableHistoryTracking(self):
+        """
+        History tracking can be disabled, causing L{Deferred._getHistory} to
+        return an empty list.
+        """
+        defer.disableDeferredDebugging(
+            [defer.DebuggingFeatures.historyTracking])
+        outer = defer.Deferred()
+        outer.addCallback(lambda x: None)
+        outer.callback(None)
+        self.assertEqual(outer._getHistory(), None)
+
+
+    def test_historyTrackingEnabledDuringCreation(self):
+        """
+        Deferreds created while history trackingis enabled will maintain
+        history even if callbacks are executed after history tracking has been
+        disabled.
+        """
+        d = defer.Deferred()
+        defer.disableDeferredDebugging(
+            [defer.DebuggingFeatures.historyTracking])
+        d.addCallback(lambda x: None)
+        d.callback(None)
+        [item] = d._getHistory()
+        self.assertEqual(item.name, "<lambda>")
+
+
+    def test_historyTrackingEnabledAfterCreation(self):
+        """
+        History will not be tracked for Deferreds if it was disabled during
+        creation of the Deferred, even if it's enabled again before callbacks
+        are executed.
+        """
+        defer.disableDeferredDebugging(
+            [defer.DebuggingFeatures.historyTracking])
+        d = defer.Deferred()
+        defer.enableDeferredDebugging(
+            [defer.DebuggingFeatures.historyTracking])
+        d.addCallback(lambda x: None)
+        d.callback(None)
+        self.assertEqual(d._getHistory(), None)
+
+
+    def test_mergeNonTrackingDeferredIntoTrackingDeferred(self):
+        """
+        When an inner Deferred that was created while history tracking was
+        disabled is returned from a callback attached to an outer Deferred that
+        was created while history tracking was enabled, the chained history of
+        the history item will not contain anything.
+        """
+        defer.disableDeferredDebugging(
+            [defer.DebuggingFeatures.historyTracking])
+        inner = defer.Deferred()
+        defer.enableDeferredDebugging(
+            [defer.DebuggingFeatures.historyTracking])
+        inner.callback(None)
+        outer = defer.Deferred()
+        
+        def callback(result):
+            return inner
+
+        outer.addCallback(callback)
+        outer.callback(None)
+        [item] = outer._getHistory()
+        self.assertEqual(item.chainedHistory.get(), [])
+
+
+    def test_mergeTrackingDeferredIntoNonTrackingDeferred(self):
+        """
+        When an inner Deferred that was created while history tracking was
+        enabled is returned from a callback attached to an outer Deferred that
+        was created while history tracking was disabled, the outer Deferred
+        will not have a history and the inner one will.
+        """
+        defer.disableDeferredDebugging(
+            [defer.DebuggingFeatures.historyTracking])
+        outer = defer.Deferred()
+        defer.enableDeferredDebugging(
+            [defer.DebuggingFeatures.historyTracking])
+        inner = defer.Deferred()
+
+        def callback(result):
+            return inner
+
+        outer.addCallback(callback)
+        inner.callback(None)
+        outer.callback(None)
+        self.assertIdentical(outer._getHistory(), None)
+        self.assertEqual(inner._getHistory(), [])
+
+
+    def test_honorHistoryTrackingDespiteIterativeOptimization(self):
+        """
+        There's a conditional on "self._history" where it should be
+        "current._history" in defer.py, fix it please.
+        """
+        1 / 0
 
 
 

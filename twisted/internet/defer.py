@@ -28,6 +28,7 @@ from functools import wraps
 
 # Twisted imports
 from twisted.python.compat import _PY3, comparable, cmp
+from twisted.python.constants import Names, NamedConstant
 from twisted.python import log, failure
 
 
@@ -160,6 +161,52 @@ def passthru(arg):
 
 
 
+class DebuggingFeatures(Names):
+    """
+    Constants representing features of Deferred debugging.
+
+    The constants here are to be used with L{enableDeferredDebugging} and
+    L{disableDeferredDebugging}.
+
+    @cvar historyTracking: Track callback and errback execution on Deferreds.
+    """
+    historyTracking = NamedConstant()
+
+
+
+def enableDeferredDebugging(features):
+    """
+    Globally enable some L{Deferred} features.
+
+    @param features: The features, defined in L{DebuggingFeatures}, to
+        enable.
+    @type features: iterable
+    """
+    for feature in features:
+        Deferred._debugFeatures.add(feature)
+
+
+
+def disableDeferredDebugging(features):
+    """
+    Globally disable some L{Deferred} debugging features.
+
+    If one of the features is not already enabled, it will be ignored.
+    """
+    for feature in features:
+        Deferred._debugFeatures.discard(feature)
+
+
+
+def getDeferredDebugging():
+    """
+    Return a copy of the currently enabled set of debugging features.
+
+    @rtype: set
+    """
+    return Deferred._debugFeatures.copy()
+
+
 def setDebugging(on):
     """
     Enable or disable L{Deferred} debugging.
@@ -226,6 +273,10 @@ class Deferred:
 
     @ivar _chainedTo: If this Deferred is waiting for the result of another
         Deferred, this is a reference to the other Deferred.  Otherwise, C{None}.
+
+    @cvar _debugFeatures: Values from L{DebuggingFeatures} that
+        indicate which debugging features should be enabled.
+    @cvar _debugFeatures: set
     """
 
     called = False
@@ -241,6 +292,8 @@ class Deferred:
     # Keep this class attribute for now, for compatibility with code that
     # sets it directly.
     debug = False
+    _debugFeatures = set([
+        DebuggingFeatures.historyTracking])
 
     _chainedTo = None
 
@@ -273,10 +326,15 @@ class Deferred:
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
-        self._history = _DeferredHistory()
+        if DebuggingFeatures.historyTracking in self._debugFeatures:
+            self._history = _DeferredHistory()
+        else:
+            self._history = None
 
 
     def _getHistory(self):
+        if self._history is None:
+            return None
         return self._history.get()
 
 
@@ -583,22 +641,26 @@ class Deferred:
                         current.result = callback(current.result, *args, **kw)
                     finally:
                         current._runningCallbacks = False
-                        className = None
-                        if inspect.ismethod(callback):
-                            className = callback.im_class.__name__
-                        historyItem = _DeferredHistoryItem(
-                            callback.__name__,
-                            callback.__module__,
-                            className,
-                            not isErrback)
-                        current._history.add(historyItem)
+                        if self._history is not None:
+                            className = None
+                            if inspect.ismethod(callback):
+                                className = callback.im_class.__name__
+                            historyItem = _DeferredHistoryItem(
+                                callback.__name__,
+                                callback.__module__,
+                                className,
+                                not isErrback)
+                            current._history.add(historyItem)
+                        else:
+                            historyItem = None
                 except:
                     # Including full frame information in the Failure is quite
                     # expensive, so we avoid it unless self.debug is set.
                     current.result = failure.Failure(captureVars=self.debug)
                 else:
                     if isinstance(current.result, Deferred):
-                        historyItem.mergeHistory(current.result)
+                        if self._history is not None: # XXX THERE'S A BUG
+                            historyItem.mergeHistory(current.result)
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
                         resultResult = getattr(current.result, 'result', _NO_RESULT)
@@ -744,9 +806,11 @@ class _DeferredHistoryItem(object):
         invoked to ensure that the returned Deferred history is recorded as a
         child of this item.
         """
-        for item in deferred._getHistory():
-            self.chainedHistory.add(item)
-        deferred._history = self.chainedHistory
+        otherHistory = deferred._getHistory()
+        if otherHistory is not None:
+            for item in deferred._getHistory():
+                self.chainedHistory.add(item)
+            deferred._history = self.chainedHistory
 
 
 
@@ -1695,4 +1759,6 @@ __all__ = ["Deferred", "DeferredList", "succeed", "fail", "FAILURE", "SUCCESS",
            "returnValue",
            "DeferredLock", "DeferredSemaphore", "DeferredQueue",
            "DeferredFilesystemLock", "AlreadyTryingToLockError",
+           "enableDeferredDebugging", "disableDeferredDebugging",
+           "getDeferredDebugging", "DebuggingFeatures"
           ]
