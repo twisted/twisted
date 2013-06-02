@@ -1,65 +1,125 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-#
-import errno, os
-from twisted.python import log, reflect, components
-from twisted.internet import base, fdesc, error
-from twisted.pair import ethernet, ip
-
 """
-You need Eunuchs for twisted.pair.tuntap to work.
-
-Eunuchs is a library containing the missing manly parts of
-UNIX API for Python.
-
-Eunuchs is a library of Python extension that complement the standard
-libraries in parts where full support for the UNIX API (or the Linux
-API) is missing.
-
-Most of the functions wrapped by Eunuchs are low-level, dirty, but
-absolutely necessary functions for real systems programming. The aim is
-to have the functions added to mainstream Python libraries.
-
-Current list of functions included:
-
- - fchdir(2)
- - recvmsg(2) and sendmsg(2), including use of cmsg(3)
- - socketpair(2)
- - support for TUN/TAP virtual network interfaces
-
-Eunuchs doesn't have a proper web home right now, but you can fetch
-the source from http://ftp.debian.org/debian/pool/main/e/eunuch
--- debian users can just use 'apt-get install python-eunuchs'.
-
+Support for Linux ethernet and IP tunnel devices.
 """
-from eunuchs.tuntap import opentuntap, TuntapPacketInfo, makePacketInfo
+
+import os
+import fcntl
+import errno
+import struct
+import warnings
+
+from zope.interface import implementer
+
+from twisted.python.constants import Flags, FlagConstant
+from twisted.python import log
+from twisted.internet import base, error, task, interfaces, defer
+from twisted.pair import ethernet, raw
+
+
+
+IFNAMSIZ = 16
+TUNSETIFF = 0x400454ca
+TUNGETIFF = 0x800454d2
+TUN_KO_PATH = b"/dev/net/tun"
+
+
+
+class TunnelType(Flags):
+    # XXX these are the kernel internal names I think
+    TUN = FlagConstant(1)
+    TAP = FlagConstant(2)
+
+    TUN_FASYNC = FlagConstant(0x0010)
+    TUN_NOCHECKSUM = FlagConstant(0x0020)
+    TUN_NO_PI = FlagConstant(0x0040)
+    TUN_ONE_QUEUE = FlagConstant(0x0080)
+    TUN_PERSIST = FlagConstant(0x0100)
+    TUN_VNET_HDR = FlagConstant(0x0200)
+
+
+
+class TunnelFlags(Flags):
+    # XXX Should have TUN and TAP constants here and use them
+    IFF_NO_PI = FlagConstant(0x1000)
+    IFF_ONE_QUEUE = FlagConstant(0x2000)
+    IFF_VNET_HDR = FlagConstant(0x4000)
+    IFF_TUN_EXCL = FlagConstant(0x8000)
+
+
+
+@implementer(interfaces.IAddress)
+class TunnelAddress(object):
+
+    def __init__(self, type, name):
+        self.type = type
+        self.name = name
+
+
+    def __getitem__(self, index):
+        warnings.warn(
+            "TunnelAddress.__getitem__ is deprecated since Twisted 13.1  "
+            "Use attributes instead.", category=DeprecationWarning,
+            stacklevel=2)
+        return ('TUNTAP', self.name)[index]
+
+
 
 class TuntapPort(base.BasePort):
-    """A Port that reads and writes packets from/to a TUN/TAP-device.
+    """
+    A Port that reads and writes packets from/to a TUN/TAP-device.
 
     TODO: Share general start/stop etc implementation details with
     twisted.internet.udp.Port.
     """
-    maxThroughput = 256 * 1024 # max bytes we read in one eventloop iteration
+
+    _open = staticmethod(os.open)
+    _read = staticmethod(os.read)
+    _write = staticmethod(os.write)
+    _close = staticmethod(os.close)
+    _ioctl = staticmethod(fcntl.ioctl)
+
+    _O_RDWR = os.O_RDWR
+    _O_NONBLOCK = os.O_NONBLOCK
+    # Introduced in Python 3.x
+    # Ubuntu 12.04, /usr/include/x86_64-linux-gnu/bits/fcntl.h
+    _O_CLOEXEC = getattr(os, "O_CLOEXEC", 0o2000000)
+
+    maxThroughput = 256 * 1024  # Max bytes we read in one eventloop iteration
 
     def __init__(self, interface, proto, maxPacketSize=8192, reactor=None):
-        if components.implements(proto, ethernet.IEthernetProtocol):
+        if ethernet.IEthernetProtocol.providedBy(proto):
             self.ethernet = 1
+            self._mode = TunnelType.TAP
         else:
             self.ethernet = 0
-            assert components.implements(proto, ip.IIPProtocol) # XXX: fix me
+            self._mode = TunnelType.TUN
+            assert raw.IRawPacketProtocol.providedBy(proto)
+
         base.BasePort.__init__(self, reactor)
         self.interface = interface
         self.protocol = proto
         self.maxPacketSize = maxPacketSize
-        self.setLogStr()
+
+        logPrefix = self._getLogPrefix(self.protocol)
+        self.logstr = "%s (%s)" % (logPrefix, self._mode.name)
+
 
     def __repr__(self):
-        return "<%s on %s>" % (self.protocol.__class__, self.interface)
+        args = (self.protocol.__class__,)
+        if self.connected:
+            args = args + ("",)
+        else:
+            args = args + ("not ",)
+        args = args + (self._mode.name, self.interface)
+        return "<%s %slistening on %s/%s>" % args
+
 
     def startListening(self):
-        """Create and bind my socket, and begin listening on it.
+        """
+        Create and bind my socket, and begin listening on it.
 
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
@@ -67,104 +127,126 @@ class TuntapPort(base.BasePort):
         self._bindSocket()
         self._connectToProtocol()
 
+
+    def _openTunnel(self, name, mode):
+        flags = self._O_RDWR | self._O_CLOEXEC | self._O_NONBLOCK
+        config = struct.pack("%dsH" % (IFNAMSIZ,), name, mode.value)
+        fileno = self._open(TUN_KO_PATH, flags)
+        result = self._ioctl(fileno, TUNSETIFF, config)
+        return fileno, result[:IFNAMSIZ].strip('\x00')
+
+
     def _bindSocket(self):
-        log.msg("%s starting on %s"%(self.protocol.__class__, self.interface))
+        log.msg("%s starting on %s" % (self.protocol.__class__,
+                                       self.interface))
         try:
-            fd, name = opentuntap(name=self.interface,
-                                  ethernet=self.ethernet,
-                                  packetinfo=0)
-        except OSError, e:
-            raise error.CannotListenError, (None, self.interface, e)
-        fdesc.setNonBlocking(fd)
-        self.interface = name
+            fileno, interface = self._openTunnel(
+                self.interface, self._mode | TunnelFlags.IFF_NO_PI)
+        except (IOError, OSError) as e:
+            raise error.CannotListenError(None, self.interface, e)
+
+        self.interface = interface
+        self._fileno = fileno
+
         self.connected = 1
-        self.fd = fd
+
 
     def fileno(self):
-        return self.fd
+        return self._fileno
+
 
     def _connectToProtocol(self):
         self.protocol.makeConnection(self)
         self.startReading()
 
+
     def doRead(self):
-        """Called when my socket is ready for reading."""
+        """
+        Called when my socket is ready for reading.
+        """
         read = 0
         while read < self.maxThroughput:
             try:
-                data = os.read(self.fd, self.maxPacketSize)
-                read += len(data)
-#                pkt = TuntapPacketInfo(data)
-                self.protocol.datagramReceived(data,
-                                               partial=0 # pkt.isPartial(),
-                                               )
-            except OSError, e:
-                if e.errno in (errno.EWOULDBLOCK,):
-                    return
-                else:
-                    raise
-            except IOError, e:
-                if e.errno in (errno.EAGAIN, errno.EINTR):
+                data = self._read(self._fileno, self.maxPacketSize)
+            except EnvironmentError as e:
+                if e.errno in (errno.EWOULDBLOCK, errno.EAGAIN, errno.EINTR):
                     return
                 else:
                     raise
             except:
-                log.deferr()
+                raise
+            read += len(data)
+            # TODO pkt.isPartial()?
+            try:
+                self.protocol.datagramReceived(data, partial=0)
+            except:
+                log.err(None, "monkeys")
+
+
 
     def write(self, datagram):
-        """Write a datagram."""
-#        header = makePacketInfo(0, 0)
+        """
+        Write a datagram.
+        """
         try:
-            return os.write(self.fd, datagram)
+            return self._write(self._fileno, datagram)
         except IOError, e:
             if e.errno == errno.EINTR:
                 return self.write(datagram)
-            elif e.errno == errno.EMSGSIZE:
-                raise error.MessageLengthError, "message too long"
-            elif e.errno == errno.ECONNREFUSED:
-                raise error.ConnectionRefusedError
-            else:
-                raise
+            raise
+
 
     def writeSequence(self, seq):
         self.write("".join(seq))
 
-    def loseConnection(self):
-        """Stop accepting connections on this port.
+
+    def stopListening(self):
+        """
+        Stop accepting connections on this port.
 
         This will shut down my socket and call self.connectionLost().
         """
         self.stopReading()
-        if self.connected:
-            from twisted.internet import reactor
-            reactor.callLater(0, self.connectionLost)
+        if self.disconnecting:
+            return self._stoppedDeferred
+        elif self.connected:
+            self._stoppedDeferred = task.deferLater(
+                self.reactor, 0, self.connectionLost)
+            self.disconnecting = True
+            return self._stoppedDeferred
+        else:
+            return defer.succeed(None)
 
-    stopListening = loseConnection
+
+    def loseConnection(self):
+        warnings.warn(
+            "TuntapPort.loseConnection is deprecated since Twisted 13.1  "
+            "Use TuntapPort.stopListening instead.",
+            category=DeprecationWarning, stacklevel=2)
+        self.stopListening().addErrback(log.err)
+
 
     def connectionLost(self, reason=None):
-        """Cleans up my socket.
+        """
+        Cleans up my socket.
         """
         log.msg('(Tuntap %s Closed)' % self.interface)
         base.BasePort.connectionLost(self, reason)
-        if hasattr(self, "protocol"):
-            # we won't have attribute in ConnectedPort, in cases
-            # where there was an error in connection process
-            self.protocol.doStop()
+        self.protocol.doStop()
         self.connected = 0
-        os.close(self.fd)
-        del self.fd
+        self._close(self._fileno)
+        self._fileno = -1
 
-    def setLogStr(self):
-        self.logstr = reflect.qual(self.protocol.__class__) + " (TUNTAP)"
 
     def logPrefix(self):
-        """Returns the name of my class, to prefix log entries with.
+        """
+        Returns the name of my class, to prefix log entries with.
         """
         return self.logstr
 
+
     def getHost(self):
         """
-        Returns a tuple of ('TUNTAP', interface), indicating
-        the servers address
+        @return: The L{TunnelAddress} for this tunnel.
         """
-        return ('TUNTAP',)+self.interface
+        return TunnelAddress(self._mode, self.interface)
