@@ -11,7 +11,7 @@ import os
 import struct
 import socket
 from errno import (
-    EPERM, EAGAIN, EWOULDBLOCK, ENOSYS, EBADF, EINVAL, EINTR, ENOBUFS)
+    EPERM, EAGAIN, EWOULDBLOCK, ENOSYS, EBADF, EINVAL, EINTR, ENOBUFS, ENOENT)
 from signal import SIGCHLD
 from random import randrange
 from functools import wraps
@@ -26,7 +26,7 @@ except ImportError:
 else:
     platformSkip = None
 
-from zope.interface import implementer, providedBy
+from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.internet.protocol import DatagramProtocol
