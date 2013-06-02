@@ -10,7 +10,6 @@ from __future__ import division, absolute_import
 import os
 import struct
 import socket
-import fcntl
 from errno import (
     EPERM, EAGAIN, EWOULDBLOCK, ENOSYS, EBADF, EINVAL, EINTR, ENOBUFS)
 from signal import SIGCHLD
@@ -18,6 +17,14 @@ from random import randrange
 from functools import wraps
 from collections import deque
 from itertools import cycle
+
+try:
+    from fcntl import ioctl as _ioctl
+except ImportError:
+    platformSkip = "Platform is missing fcntl/ioctl support"
+    _ioctl = None
+else:
+    platformSkip = None
 
 from zope.interface import implementer, providedBy
 from zope.interface.verify import verifyObject
@@ -617,7 +624,6 @@ class RealSpecial(object):
     read = staticmethod(os.read)
     write = staticmethod(os.write)
     close = staticmethod(os.close)
-    ioctl = staticmethod(fcntl.ioctl)
 
     def open(self, filename, *args, **kwargs):
         """
@@ -628,7 +634,7 @@ class RealSpecial(object):
         try:
             return os.open(filename, *args, **kwargs)
         except OSError as e:
-            if ENOENT == e.errno and filename = b"/dev/net/tun":
+            if ENOENT == e.errno and filename == b"/dev/net/tun":
                 raise SkipTest("Platform lacks /dev/net/tun")
             raise
 
@@ -640,7 +646,7 @@ class RealSpecial(object):
         do not have them are skipped instead of failed.
         """
         try:
-            return fcntl.ioctl(*args, **kwargs)
+            return _ioctl(*args, **kwargs)
         except IOError as e:
             if EPERM == e.errno:
                 raise SkipTest("Permission to configure device denied")
@@ -662,6 +668,9 @@ class RealSpecial(object):
 
 
 class RealDeviceTestsMixin(object):
+    if platformSkip:
+        skip = platformSkip
+
     def device(self):
         # Create a tap-style tunnel device.  Ethernet frames come out of this
         # and ethernet frames must be put into it.  Grant access to it to an
