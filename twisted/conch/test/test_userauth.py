@@ -22,7 +22,7 @@ from twisted.protocols import loopback
 from twisted.trial import unittest
 
 try:
-    import Crypto.Cipher.DES3, Crypto.Cipher.XOR
+    import Crypto.Cipher.DES3
     import pyasn1
 except ImportError:
     keys = None
