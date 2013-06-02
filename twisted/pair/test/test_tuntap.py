@@ -32,7 +32,7 @@ from twisted.python.compat import iterbytes
 from twisted.internet.interfaces import IAddress, IReactorFDSet
 from twisted.internet.protocol import AbstractDatagramProtocol, Factory
 from twisted.internet.task import Clock
-from twisted.trial.unittest import SynchronousTestCase
+from twisted.trial.unittest import SkipTest, SynchronousTestCase
 from twisted.internet.error import CannotListenError
 from twisted.pair.raw import IRawPacketProtocol
 from twisted.pair.tuntap import (
@@ -618,6 +618,19 @@ class RealSpecial(object):
     write = staticmethod(os.write)
     close = staticmethod(os.close)
     ioctl = staticmethod(fcntl.ioctl)
+
+    def ioctl(self, *args, **kwargs):
+        """
+        Attempt an ioctl, but translate permission denied errors into
+        L{SkipTest} so that tests that require elevated system privileges and
+        do not have them are skipped instead of failed.
+        """
+        try:
+            return fcntl.ioctl(*args, **kwargs)
+        except IOError as e:
+            if EPERM == e.errno:
+                raise SkipTest("Permission to configure device denied")
+
 
     def sendUDP(self, datagram, address):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
