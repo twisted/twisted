@@ -619,6 +619,20 @@ class RealSpecial(object):
     close = staticmethod(os.close)
     ioctl = staticmethod(fcntl.ioctl)
 
+    def open(self, filename, *args, **kwargs):
+        """
+        Attempt an open, but if the file is /dev/net/tun and it does not exist,
+        translate the error into L{SkipTest} so that tests that require
+        platform support for tuntap devices are skipped instead of failed.
+        """
+        try:
+            return os.open(filename, *args, **kwargs)
+        except OSError as e:
+            if ENOENT == e.errno and filename = b"/dev/net/tun":
+                raise SkipTest("Platform lacks /dev/net/tun")
+            raise
+
+
     def ioctl(self, *args, **kwargs):
         """
         Attempt an ioctl, but translate permission denied errors into
