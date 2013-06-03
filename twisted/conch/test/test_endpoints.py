@@ -687,7 +687,7 @@ class SSHCommandClientEndpointTestsMixin(object):
 
 class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
     """
-    Tests for L{SSHCommandClientEndpoint} when using the C{existingConnection}
+    Tests for L{SSHCommandClientEndpoint} when using the C{newConnection}
     constructor.
     """
     def setUp(self):
@@ -855,11 +855,41 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
 
         transport = StringTransport()
         factory = self.reactor.tcpClients[0][2]
-        client= factory.buildProtocol(None)
+        client = factory.buildProtocol(None)
         client.makeConnection(transport)
 
         client.connectionLost(Failure(ConnectionDone()))
         self.failureResultOf(d).trap(ConnectionDone)
+
+
+    def test_connectionCancelledBeforeSecure(self):
+        """
+        If the connection is cancelled before the SSH transport layer has
+        finished key exchange (ie, gotten to the point where we may attempt to
+        authenticate), the L{Deferred} returned by
+        L{SSHCommandClientEndpoint.connect} fires with a L{Failure} wrapping
+        L{CancelledError} and the connection is aborted.
+        """
+        endpoint = SSHCommandClientEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", b"dummy user",
+            self.hostname, self.port, knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
+
+        factory = Factory()
+        factory.protocol = Protocol
+        d = endpoint.connect(factory)
+
+        transport = AbortableFakeTransport(None, isServer=False)
+        factory = self.reactor.tcpClients[0][2]
+        client = factory.buildProtocol(None)
+        client.makeConnection(transport)
+        d.cancel()
+
+        self.failureResultOf(d).trap(CancelledError)
+        self.assertTrue(transport.aborted)
+        # Make sure the connection closing doesn't result in unexpected
+        # behavior when due to cancellation:
+        client.connectionLost(Failure(ConnectionDone()))
 
 
     def test_passwordAuthenticationFailure(self):
