@@ -648,7 +648,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
                          os.path.join(self.D.root, 'user'))
 
         self.D.postmaster = False
-        self.assertIsNone(self.D.userDirectory('nouser'))
+        self.assertIdentical(self.D.userDirectory('nouser'), None)
 
         self.D.postmaster = True
         self.assertEqual(self.D.userDirectory('nouser'),
