@@ -595,7 +595,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.P)
 
-    def testAddUser(self):
+    def test_addUser(self):
         toAdd = (('user1', 'pwd1'), ('user2', 'pwd2'), ('user3', 'pwd3'))
         for (u, p) in toAdd:
             self.D.addUser(u, p)
@@ -605,14 +605,14 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
             self.assertEqual(self.D.dbm[u], p)
             self.failUnless(os.path.exists(os.path.join(self.P, u)))
 
-    def testCredentials(self):
+    def test_credentials(self):
         creds = self.D.getCredentialsCheckers()
 
         self.assertEqual(len(creds), 1)
         self.failUnless(cred.checkers.ICredentialsChecker.providedBy(creds[0]))
         self.failUnless(cred.credentials.IUsernamePassword in creds[0].credentialInterfaces)
 
-    def testRequestAvatar(self):
+    def test_requestAvatar(self):
         class ISomething(Interface):
             pass
 
@@ -629,7 +629,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
 
         t[2]()
 
-    def testRequestAvatarId(self):
+    def test_requestAvatarId(self):
         self.D.addUser('user', 'password')
         database = self.D.getCredentialsCheckers()[0]
 
@@ -642,7 +642,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         creds = cred.credentials.UsernamePassword('user', 'password')
         self.assertEqual(database.requestAvatarId(creds), 'user')
 
-    def testUserDirectory(self):
+    def test_userDirectory(self):
         self.D.addUser('user', 'password')
         self.assertEqual(self.D.userDirectory('user'),
                          os.path.join(self.D.root, 'user'))
