@@ -2,6 +2,10 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+tap2deb creates Debian packages which wrap .tap files.
+"""
+
 import os
 import sys
 import shutil
@@ -15,14 +19,16 @@ from twisted.python.filepath import FilePath
 class MyOptions(usage.Options):
     optFlags = [["unsigned", "u"]]
     optParameters = [["tapfile", "t", "twistd.tap"],
-                  ["maintainer", "m", "", "The maintainer's name and email in a specific format: "
+                  ["maintainer", "m", "",
+                   "The maintainer's name and email in a specific format: "
                    "'John Doe <johndoe@example.com>'"],
                   ["protocol", "p", ""],
                   ["description", "e", ""],
                   ["long_description", "l", ""],
                   ["set-version", "V", "1.0"],
                   ["debfile", "d", None],
-                  ["type", "y", "tap", "type of configuration: 'tap', 'xml, 'source' or 'python' for .tac files"]]
+                  ["type", "y", "tap", "Type of configuration: 'tap', 'xml', "
+                   "'source' or 'python' for .tac files"]]
 
     compData = usage.Completions(
         optActions={
@@ -45,6 +51,9 @@ type_dict = {
 
 
 def run(options=None):
+    """
+    Run the tap2deb script.
+    """
     try:
         config = MyOptions()
         config.parseOptions(options)
@@ -57,9 +66,10 @@ def run(options=None):
     deb_file = config['debfile'] or 'twisted-' + protocol
     version = config['set-version']
     maintainer = config['maintainer']
-    description = config['description'] or ('A Twisted-based server for %(protocol)s' %
-                                            vars())
-    long_description = config['long_description'] or 'Automatically created by tap2deb'
+    description = config['description'] or (
+        'A Twisted-based server for %(protocol)s' % vars())
+    long_description = config['long_description'] or\
+        'Automatically created by tap2deb'
     twistd_option = type_dict[config['type']]
     date = now()
     directory = deb_file + '-' + version
@@ -117,14 +127,14 @@ case "$1" in
                           --rundir=$rundir \
                           --%(twistd_option)s=$file \
                           --logfile=$logfile
-        echo "."	
+        echo "."
     ;;
 
     stop)
         echo -n "Stopping %(deb_file)s: twistd"
         start-stop-daemon --stop --quiet  \
             --pidfile $pidfile
-        echo "."	
+        echo "."
     ;;
 
     restart)
