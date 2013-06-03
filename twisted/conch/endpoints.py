@@ -525,7 +525,8 @@ class SSHCommandClientEndpoint(object):
         Create and return a new endpoint which will try to create a new
         connection to an SSH server and run a command over it.  It will also
         close the connection if there are problems leading up to the command
-        being executed or after the command finishes.
+        being executed, after the command finishes, or if the connection
+        L{Deferred} is cancelled.
 
         @param reactor: The reactor to use to establish the connection.
         @type reactor: L{IReactorTCP} provider
