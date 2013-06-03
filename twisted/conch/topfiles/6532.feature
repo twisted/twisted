@@ -1,0 +1,1 @@
+twisted.conch.endpoints.SSHCommandClientEndpoint.connect() returns a cancellable Deferred when using new connections.
