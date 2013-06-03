@@ -52,7 +52,7 @@ else:
         publicRSA_openssh, privateRSA_openssh, privateDSA_openssh)
 
     from twisted.conch.endpoints import (
-        ISSHConnectionCreator, AuthenticationFailed, SSHCommandAddress,
+        _ISSHConnectionCreator, AuthenticationFailed, SSHCommandAddress,
         SSHCommandClientEndpoint, _NewConnectionHelper,
         _ExistingConnectionHelper)
 
@@ -1116,10 +1116,10 @@ class ExistingConnectionHelperTests(TestCase):
     """
     def test_interface(self):
         """
-        L{_ExistingConnectionHelper} implements L{ISSHConnectionCreator}.
+        L{_ExistingConnectionHelper} implements L{_ISSHConnectionCreator}.
         """
         self.assertTrue(
-            verifyClass(ISSHConnectionCreator, _ExistingConnectionHelper))
+            verifyClass(_ISSHConnectionCreator, _ExistingConnectionHelper))
 
 
     def test_secureConnection(self):
@@ -1142,10 +1142,10 @@ class NewConnectionHelperTests(TestCase):
     """
     def test_interface(self):
         """
-        L{_NewConnectionHelper} implements L{ISSHConnectionCreator}.
+        L{_NewConnectionHelper} implements L{_ISSHConnectionCreator}.
         """
         self.assertTrue(
-            verifyClass(ISSHConnectionCreator, _NewConnectionHelper))
+            verifyClass(_ISSHConnectionCreator, _NewConnectionHelper))
 
 
     def test_defaultPath(self):
