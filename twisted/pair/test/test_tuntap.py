@@ -12,11 +12,11 @@ import struct
 import socket
 from errno import (
     EPERM, EAGAIN, EWOULDBLOCK, ENOSYS, EBADF, EINVAL, EINTR, ENOBUFS, ENOENT)
-from signal import SIGCHLD
 from random import randrange
 from functools import wraps
 from collections import deque
 from itertools import cycle
+from signal import SIGINT
 
 try:
     from fcntl import ioctl as _ioctl
@@ -25,6 +25,8 @@ except ImportError:
     _ioctl = None
 else:
     platformSkip = None
+
+
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -1018,7 +1020,7 @@ class TunnelTestsMixin(object):
         """
         self.port.startListening()
         tunnel = self.device.getTunnel(self.port)
-        tunnel.pendingSignals.append(SIGCHLD)
+        tunnel.pendingSignals.append(SIGINT)
         self.port.write(b"hello, world")
         self.assertEqual(deque([b"hello, world"]), tunnel.writeBuffer)
 
