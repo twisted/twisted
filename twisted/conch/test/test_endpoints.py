@@ -71,6 +71,11 @@ class AbortableFakeTransport(FakeTransport):
 
 
     def abortConnection(self):
+        """
+        Abort the connection in a fake manner.
+
+        This should really be implemented in the underlying module.
+        """
         self.aborted = True
 
 
@@ -250,7 +255,8 @@ class SingleUseMemoryEndpoint(object):
             return fail()
         else:
             self.pump = connect(
-                self._server, AbortableFakeTransport(self._server, isServer=True),
+                self._server, AbortableFakeTransport(
+                    self._server, isServer=True),
                 protocol, AbortableFakeTransport(protocol, isServer=False))
             return succeed(protocol)
 
@@ -321,6 +327,11 @@ class SSHCommandClientEndpointTestsMixin(object):
         Make an assertion about the connectedness of the given protocol's
         transport.  Override this to implement either a check for the
         connection still being open or having been closed as appropriate.
+
+        @param client: The client whose state is being checked.
+
+        @param immediateClose: Boolean indicating whether the connection was
+            closed immediately or not.
         """
         raise NotImplementedError(
             "%r did not implement assertClientTransportState" % (
@@ -1327,6 +1338,9 @@ class NewConnectionHelperTests(TestCase):
         class Abortable:
             aborted = False
             def abortConnection(self):
+                """
+                Abort the connection.
+                """
                 self.aborted = True
 
         helper = _NewConnectionHelper(
