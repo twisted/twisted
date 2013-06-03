@@ -642,6 +642,18 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         creds = cred.credentials.UsernamePassword('user', 'password')
         self.assertEqual(database.requestAvatarId(creds), 'user')
 
+    def testUserDirectory(self):
+        self.D.addUser('user', 'password')
+        self.assertEqual(self.D.userDirectory('user'),
+                         os.path.join(self.D.root, 'user'))
+
+        self.D.postmaster = False
+        self.assertIsNone(self.D.userDirectory('nouser'))
+
+        self.D.postmaster = True
+        self.assertEqual(self.D.userDirectory('nouser'),
+                         os.path.join(self.D.root, 'postmaster'))
+
 
 class StubAliasableDomain(object):
     """
@@ -720,7 +732,7 @@ class ServiceDomainTestCase(unittest.TestCase):
          fp = StringIO.StringIO(hdr)
          m = rfc822.Message(fp)
          self.assertEqual(len(m.items()), 1)
-         self.failUnless(m.has_key('Received'))
+         self.failUnless('Received' in m)
 
     def testValidateTo(self):
         user = smtp.User('user@test.domain', 'helo', None, 'wherever@whatever')
