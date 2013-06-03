@@ -28,7 +28,6 @@ from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 
 from twisted.conch.interfaces import IConchUser
 from twisted.conch.error import ConchError, UserRejectedKey, HostKeyChanged
-from twisted.conch.ssh.transport import SSHClientTransport
 
 try:
     from Crypto.Cipher import AES
@@ -56,6 +55,8 @@ else:
         _ISSHConnectionCreator, AuthenticationFailed, SSHCommandAddress,
         SSHCommandClientEndpoint, _NewConnectionHelper,
         _ExistingConnectionHelper)
+
+    from twisted.conch.ssh.transport import SSHClientTransport
 
 from twisted.python.fakepwd import UserDatabase
 from twisted.test.proto_helpers import StringTransport
