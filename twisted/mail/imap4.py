@@ -41,7 +41,7 @@ from twisted.protocols import policies
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
-from twisted.python import log, text
+from twisted.python import log
 from twisted.internet import interfaces
 
 from twisted import cred
@@ -53,6 +53,44 @@ import twisted.cred.credentials
 _MONTH_NAMES = dict(zip(
         range(1, 13),
         "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()))
+
+
+
+def _strFile(searchString, readableObject, caseSensitive=True):
+    """
+    Find whether string C{searchString} occurs in a C{read()}-able object
+    C{readableObject}.
+
+    @param searchString: The string to search for.
+    @type searchString: L{str}
+    @param readableObject: The readable object to search in.
+    @type readableObject: Object with C{read()} method.
+    @param caseSensitive: Indicates if the search should be case-sensitive.
+        Default is C{True}.
+    @type caseSensitive: C{bool}
+
+    @return: Boolean indicating that string C{searchString} was found or not.
+    @rtype: C{bool}
+    """
+    buf = ""
+    bufLen = max(len(searchString), 2**2**2**2)
+    if not caseSensitive:
+        searchString = searchString.lower()
+    while 1:
+        r = readableObject.read(bufLen - len(searchString))
+        if not caseSensitive:
+            r = r.lower()
+        bytesRead = len(r)
+        if bytesRead == 0:
+            return False
+        l = len(buf) + bytesRead - bufLen
+        if l <= 0:
+            buf = buf + r
+        else:
+            buf = buf[l:] + r
+        if buf.find(searchString) != -1:
+            return True
+
 
 
 class MessageSet(object):
@@ -1636,7 +1674,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def search_BODY(self, query, id, msg):
         body = query.pop(0).lower()
-        return text.strFile(body, msg.getBodyFile(), False)
+        return _strFile(body, msg.getBodyFile(), False)
 
     def search_CC(self, query, id, msg):
         cc = msg.getHeaders(False, 'cc').get('cc', '')
@@ -1793,9 +1831,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return subj.lower().find(query.pop(0).lower()) != -1
 
     def search_TEXT(self, query, id, msg):
-        # XXX - This must search headers too
+        # XXX - This must search headers too, see #6423
         body = query.pop(0).lower()
-        return text.strFile(body, msg.getBodyFile(), False)
+        return _strFile(body, msg.getBodyFile(), False)
 
     def search_TO(self, query, id, msg):
         to = msg.getHeaders(False, 'to').get('to', '')
