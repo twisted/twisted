@@ -33,7 +33,7 @@ from zope.interface import Interface, Attribute, implementer
 from twisted.python.compat import comparable, cmp
 from twisted.python.runtime import platform
 
-from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
+from twisted.python.win32 import ERROR_FILE_NOT_FOUND
 from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
 from twisted.python.win32 import WindowsError
 
@@ -330,26 +330,13 @@ class AbstractFilePath(object):
             # codes aren't the same as POSIX error codes, so we need to handle
             # them differently.
 
-            # Under Python 2.5 on Windows, WindowsError has a winerror
+            # Under Python >= 2.5 on Windows, WindowsError has a winerror
             # attribute and an errno attribute.  The winerror attribute is
             # bound to the Windows error code while the errno attribute is
             # bound to a translation of that code to a perhaps equivalent POSIX
             # error number.
-
-            # Under Python 2.4 on Windows, WindowsError only has an errno
-            # attribute.  It is bound to the Windows error code.
-
-            # For simplicity of code and to keep the number of paths through
-            # this suite minimal, we grab the Windows error code under either
-            # version.
-
-            # Furthermore, attempting to use os.listdir on a non-existent path
-            # in Python 2.4 will result in a Windows error code of
-            # ERROR_PATH_NOT_FOUND.  However, in Python 2.5,
-            # ERROR_FILE_NOT_FOUND results instead. -exarkun
             winerror = getattr(winErrObj, 'winerror', winErrObj.errno)
-            if winerror not in (ERROR_PATH_NOT_FOUND,
-                                ERROR_FILE_NOT_FOUND,
+            if winerror not in (ERROR_FILE_NOT_FOUND,
                                 ERROR_INVALID_NAME,
                                 ERROR_DIRECTORY):
                 raise
