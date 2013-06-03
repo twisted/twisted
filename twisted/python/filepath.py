@@ -266,7 +266,7 @@ def _secureEnoughString():
     @return: A pseudorandom, 16 byte string for use in secure filenames.
     @rtype: C{bytes}
     """
-    return armor(sha1(os.urandom(64)).digest())[:16]
+    return armor(sha1(randomBytes(64)).digest())[:16]
 
 
 

@@ -319,8 +319,8 @@ class ErrorHolder(TestHolder):
 
 
     def __repr__(self):
-        return "<ErrorHolder description=%r error=%s%s>" % (
-            self.description, self.error[0].__name__, self.error[1].args)
+        return "<ErrorHolder description=%r error=%s>" % (
+            self.description, repr(self.error[1]))
 
 
     def run(self, result):

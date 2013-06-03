@@ -470,12 +470,12 @@ class Proxy:
     @type password: C{str} or C{NoneType}
 
     @ivar allowNone: allow the use of None values in parameters. It's
-        passed to the underlying C{xmlrpclib} implementation. Defaults to
+        passed to the underlying L{xmlrpclib} implementation. Defaults to
         C{False}.
     @type allowNone: C{bool} or C{NoneType}
 
     @ivar useDateTime: Accept datetime values as datetime.datetime objects.
-        also passed to the underlying C{xmlrpclib} implementation. Defaults to
+        also passed to the underlying L{xmlrpclib} implementation. Defaults to
         C{False}.
     @type useDateTime: C{bool}
 
@@ -530,10 +530,6 @@ class Proxy:
         self.useDateTime = useDateTime
         self.connectTimeout = connectTimeout
         self._reactor = reactor
-
-
-    def __setattr__(self, name, value):
-        self.__dict__[name] = value
 
 
     def callRemote(self, method, *args):

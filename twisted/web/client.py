@@ -737,9 +737,6 @@ class FileBodyProducer(object):
     @ivar _readSize: The number of bytes to read from C{_inputFile} at a time.
     """
 
-    _SEEK_SET = os.SEEK_SET
-    _SEEK_END = os.SEEK_END
-
     def __init__(self, inputFile, cooperator=task, readSize=2 ** 16):
         self._inputFile = inputFile
         self._cooperate = cooperator.cooperate
@@ -759,9 +756,9 @@ class FileBodyProducer(object):
         except AttributeError:
             return UNKNOWN_LENGTH
         originalPosition = tell()
-        seek(0, self._SEEK_END)
+        seek(0, os.SEEK_END)
         end = tell()
-        seek(originalPosition, self._SEEK_SET)
+        seek(originalPosition, os.SEEK_SET)
         return end - originalPosition
 
 
