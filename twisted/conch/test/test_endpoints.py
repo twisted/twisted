@@ -16,7 +16,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
 from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.defer import succeed, fail, CancelledError
+from twisted.internet.defer import CancelledError, Deferred, succeed, fail
 from twisted.internet.error import ConnectionDone, ConnectionRefusedError
 from twisted.internet.address import IPv4Address
 from twisted.trial.unittest import TestCase
@@ -94,7 +94,7 @@ class BrokenExecSession(SSHChannel):
 
 class WorkingExecSession(SSHChannel):
     """
-    L{BrokenExecSession} is a session on which exec requests always succeed.
+    L{WorkingExecSession} is a session on which exec requests always succeed.
     """
     def request_exec(self, data):
         """
@@ -107,6 +107,25 @@ class WorkingExecSession(SSHChannel):
         @rtype: L{int}
         """
         return 1
+
+
+
+class UnsatisfiedExecSession(SSHChannel):
+    """
+    L{UnsatisfiedExecSession} is a session on which exec requests are always
+    delayed indefinitely, never succeeding or failing.
+    """
+    def request_exec(self, data):
+        """
+        Delay all exec requests indefinitely.
+
+        @param data: Information about what is being executed.
+        @type data: L{bytes}
+
+        @return: A L{Deferred} which will never fire.
+        @rtype: L{Deferred}
+        """
+        return Deferred()
 
 
 
@@ -408,22 +427,15 @@ class SSHCommandClientEndpointTestsMixin(object):
         by L{SSHCommandClientEndpoint.connect}, the connection is closed
         immediately.
         """
-        self.realm.channelLookup[b'session'] = WorkingExecSession
+        self.realm.channelLookup[b'session'] = UnsatisfiedExecSession
         endpoint = self.create()
-
-        # We want to simulate the case where connection was made, but Deferred
-        # was cancelled waiting for the command to execute:
-        def _executeCommand(connection, protocolFactory,
-                            original=endpoint._executeCommand):
-            result = original(connection, protocolFactory)
-            result.cancel()
-            return result
-        endpoint._executeCommand = _executeCommand
 
         factory = Factory()
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
         server, client, pump = self.finishConnection()
+
+        connected.cancel()
 
         f = self.failureResultOf(connected)
         f.trap(CancelledError)
