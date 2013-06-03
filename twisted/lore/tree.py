@@ -3,17 +3,24 @@
 
 
 from itertools import count
-import re, os, cStringIO, time, cgi, urlparse
+import re
+import os
+import cStringIO
+import time
+import cgi
+import urlparse
 from xml.dom import minidom as dom
 from xml.sax.handler import ErrorHandler, feature_validation
 from xml.dom.pulldom import SAX2DOM
 from xml.sax import make_parser
 from xml.sax.xmlreader import InputSource
 
-from twisted.python import htmlizer, text
+from twisted.python import htmlizer
 from twisted.python.filepath import FilePath
 from twisted.web import domhelpers
 import process, latex, indexer, numberer, htmlbook
+
+
 
 # relative links to html files
 def fixLinks(document, ext):
@@ -204,7 +211,7 @@ def addPyListings(document, dir):
         howManyLines = len(lines)
         data = '\n'.join(lines)
 
-        data = cStringIO.StringIO(text.removeLeadingTrailingBlanks(data))
+        data = cStringIO.StringIO(_removeLeadingTrailingBlanks(data))
         htmlizer.filter(data, outfile, writer=htmlizer.SmallerHTMLWriter)
         sourceNode = dom.parseString(outfile.getvalue()).documentElement
         sourceNode.insertBefore(_makeLineNumbers(howManyLines), sourceNode.firstChild)
@@ -246,6 +253,43 @@ def _replaceWithListing(node, val, filename, class_):
             (class_, val, captionTitle, filename, filename))
     newnode = dom.parseString(text).documentElement
     node.parentNode.replaceChild(newnode, node)
+
+
+
+def _removeLeadingBlanks(lines):
+    """
+    Removes leading and trailing whitespace from each string
+    in the C{lines} list and returns them as a list.
+
+    @param lines: A list of strings.
+    @type lines: C{list}
+    @rtype: C{list}
+    @return: List of lines.
+    """
+    ret = []
+    for line in lines:
+        if ret or line.strip():
+            ret.append(line)
+    return ret
+
+
+
+def _removeLeadingTrailingBlanks(inputString):
+    """
+    Breaks input string C{inputString} into lines, strips leading and trailing
+    whitespace from each line, and returns a string with all lines joined,
+    separated by a newline character.
+
+    @param inputString: The input string.
+    @type inputString: L{str}
+    @rtype: L{str}
+    @return: String containing concencated lines.
+    """
+    lines = _removeLeadingBlanks(inputString.split('\n'))
+    lines.reverse()
+    lines = _removeLeadingBlanks(lines)
+    lines.reverse()
+    return '\n'.join(lines) + '\n'
 
 
 

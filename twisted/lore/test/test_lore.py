@@ -30,7 +30,10 @@
 # __ put all of our test files someplace neat and tidy
 #
 
-import os, shutil, errno, time
+import os
+import shutil
+import errno
+import time
 from StringIO import StringIO
 from xml.dom import minidom as dom
 
@@ -48,11 +51,43 @@ from twisted.lore.scripts import lore
 from twisted.web import domhelpers
 from twisted.test.testutils import XMLAssertionMixin
 
+
 def sp(originalFileName):
     return sibpath(__file__, originalFileName)
 
-options = {"template" : sp("template.tpl"), 'baseurl': '%s', 'ext': '.xhtml' }
+
+
+options = {"template" : sp("template.tpl"), 'baseurl': '%s', 'ext': '.xhtml'}
 d = options
+
+
+
+class RemoveBlanksTests(unittest.TestCase):
+    """
+    Tests for L{tree._removeLeadingBlanks} and
+    L{tree._removeLeadingTrailingBlanks}.
+    """
+
+    def test_removeLeadingBlanks(self):
+        """
+        L{tree._removeLeadingBlanks} removes leading and trailing whitespace
+        from each string in the C{lines} list and returns them as a list.
+        """
+        lines = [' a', 'b ', ' c ']
+        result = tree._removeLeadingBlanks(lines)
+        self.assertEqual(lines, result)
+
+
+    def test_removeLeadingTrailingBlanks(self):
+        """
+        L{tree._removeLeadingTrailingBlanks} breaks a string into lines, strips
+        leading and trailing whitespace from each line, and returns a string
+        with all lines joined, separated by a newline character.
+        """
+        inputString = 'a b c'
+        result = tree._removeLeadingTrailingBlanks(inputString)
+        self.assertEqual(result, 'a b c\n')
+
 
 
 class TestFactory(unittest.TestCase, XMLAssertionMixin):

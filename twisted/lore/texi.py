@@ -1,11 +1,11 @@
+# -*- test-case-name: twisted.lore.test.test_texi -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
-
+import os
+import re
 from cStringIO import StringIO
-import os, re
-from twisted.python import text
+
 from twisted.web import domhelpers
 import latex, tree
 
@@ -44,7 +44,7 @@ class TexiSpitter(latex.BaseLatexSpitter):
         self.writer('@verbatim\n')
         buf = StringIO()
         latex.getLatexText(node, buf.write, entities=entities)
-        self.writer(text.removeLeadingTrailingBlanks(buf.getvalue()))
+        self.writer(tree._removeLeadingTrailingBlanks(buf.getvalue()))
         self.writer('@end verbatim\n')
 
     def visitNode_code(self, node):
