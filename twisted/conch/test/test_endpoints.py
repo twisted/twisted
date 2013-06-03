@@ -21,7 +21,7 @@ from twisted.internet.error import ConnectionDone, ConnectionRefusedError
 from twisted.internet.address import IPv4Address
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import MemoryReactorClock
-from twisted.internet.error import ProcessTerminated
+from twisted.internet.error import ProcessTerminated, ConnectingCancelledError
 
 from twisted.cred.portal import Portal
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
@@ -902,6 +902,24 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         # Make sure the connection closing doesn't result in unexpected
         # behavior when due to cancellation:
         client.connectionLost(Failure(ConnectionDone()))
+
+
+    def test_connectionCancelledBeforeConnected(self):
+        """
+        If the connection is cancelled before it finishes connecting, the
+        connection attempt is stopped.
+        """
+        endpoint = SSHCommandClientEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", b"dummy user",
+            self.hostname, self.port, knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
+
+        factory = Factory()
+        factory.protocol = Protocol
+        d = endpoint.connect(factory)
+        d.cancel()
+        self.failureResultOf(d).trap(ConnectingCancelledError)
+        self.assertTrue(self.reactor.connectors[0].stoppedConnecting)
 
 
     def test_passwordAuthenticationFailure(self):
