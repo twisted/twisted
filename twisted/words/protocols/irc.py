@@ -37,14 +37,14 @@ Test coverage needs to be better.
 import errno, os, random, re, stat, struct, sys, time, types, traceback
 import operator
 import string, socket
-import warnings
 import textwrap
+import shlex
 from os import path
 
 from twisted.internet import reactor, protocol, task
 from twisted.persisted import styles
 from twisted.protocols import basic
-from twisted.python import log, reflect, text, _textattributes
+from twisted.python import log, reflect, _textattributes
 
 NUL = chr(0)
 CR = chr(015)
@@ -2231,11 +2231,12 @@ class IRCClient(basic.LineReceiver):
             self.quirkyMessage("%s offered unknown DCC type %s"
                                % (user, dcctype))
 
+
     def dcc_SEND(self, user, channel, data):
-        # Use splitQuoted for those who send files with spaces in the names.
-        data = text.splitQuoted(data)
+        # Use shlex.split for those who send files with spaces in the names.
+        data = shlex.split(data)
         if len(data) < 3:
-            raise IRCBadMessage, "malformed DCC SEND request: %r" % (data,)
+            raise IRCBadMessage("malformed DCC SEND request: %r" % (data,))
 
         (filename, address, port) = data[:3]
 
@@ -2243,7 +2244,7 @@ class IRCClient(basic.LineReceiver):
         try:
             port = int(port)
         except ValueError:
-            raise IRCBadMessage, "Indecipherable port %r" % (port,)
+            raise IRCBadMessage("Indecipherable port %r" % (port,))
 
         size = -1
         if len(data) >= 4:
@@ -2255,10 +2256,12 @@ class IRCClient(basic.LineReceiver):
         # XXX Should we bother passing this data?
         self.dccDoSend(user, address, port, filename, size, data)
 
+
     def dcc_ACCEPT(self, user, channel, data):
-        data = text.splitQuoted(data)
+        data = shlex.split(data)
         if len(data) < 3:
-            raise IRCBadMessage, "malformed DCC SEND ACCEPT request: %r" % (data,)
+            raise IRCBadMessage("malformed DCC SEND ACCEPT request: %r" % (
+                data,))
         (filename, port, resumePos) = data[:3]
         try:
             port = int(port)
@@ -2268,22 +2271,26 @@ class IRCClient(basic.LineReceiver):
 
         self.dccDoAcceptResume(user, filename, port, resumePos)
 
+
     def dcc_RESUME(self, user, channel, data):
-        data = text.splitQuoted(data)
+        data = shlex.split(data)
         if len(data) < 3:
-            raise IRCBadMessage, "malformed DCC SEND RESUME request: %r" % (data,)
+            raise IRCBadMessage("malformed DCC SEND RESUME request: %r" % (
+                data,))
         (filename, port, resumePos) = data[:3]
         try:
             port = int(port)
             resumePos = int(resumePos)
         except ValueError:
             return
+
         self.dccDoResume(user, filename, port, resumePos)
 
+
     def dcc_CHAT(self, user, channel, data):
-        data = text.splitQuoted(data)
+        data = shlex.split(data)
         if len(data) < 3:
-            raise IRCBadMessage, "malformed DCC CHAT request: %r" % (data,)
+            raise IRCBadMessage("malformed DCC CHAT request: %r" % (data,))
 
         (filename, address, port) = data[:3]
 
@@ -2291,7 +2298,7 @@ class IRCClient(basic.LineReceiver):
         try:
             port = int(port)
         except ValueError:
-            raise IRCBadMessage, "Indecipherable port %r" % (port,)
+            raise IRCBadMessage("Indecipherable port %r" % (port,))
 
         self.dccDoChat(user, channel, address, port, data)
 
@@ -2299,9 +2306,11 @@ class IRCClient(basic.LineReceiver):
     ### common dcc_ methods; the arguments have been parsed for them.
 
     def dccDoSend(self, user, address, port, fileName, size, data):
-        """Called when I receive a DCC SEND offer from a client.
+        """
+        Called when I receive a DCC SEND offer from a client.
 
-        By default, I do nothing here."""
+        By default, I do nothing here.
+        """
         ## filename = path.basename(arg)
         ## protocol = DccFileReceive(filename, size,
         ##                           (user,channel,data),self.dcc_destdir)
@@ -2309,16 +2318,23 @@ class IRCClient(basic.LineReceiver):
         ## self.dcc_sessions.append(protocol)
         pass
 
+
     def dccDoResume(self, user, file, port, resumePos):
-        """Called when a client is trying to resume an offered file
+        """
+        Called when a client is trying to resume an offered file
         via DCC send.  It should be either replied to with a DCC
-        ACCEPT or ignored (default)."""
+        ACCEPT or ignored (default).
+        """
         pass
 
+
     def dccDoAcceptResume(self, user, file, port, resumePos):
-        """Called when a client has verified and accepted a DCC resume
-        request made by us.  By default it will do nothing."""
+        """
+        Called when a client has verified and accepted a DCC resume
+        request made by us.  By default it will do nothing.
+        """
         pass
+
 
     def dccDoChat(self, user, channel, address, port, data):
         pass
