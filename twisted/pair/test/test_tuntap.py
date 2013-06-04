@@ -26,8 +26,6 @@ except ImportError:
 else:
     platformSkip = None
 
-
-
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
@@ -44,8 +42,10 @@ from twisted.internet.task import Clock
 from twisted.trial.unittest import SkipTest, SynchronousTestCase
 from twisted.internet.error import CannotListenError
 from twisted.pair.raw import IRawPacketProtocol
-from twisted.pair.tuntap import (
-    TUNSETIFF, IFNAMSIZ, TunnelType, TunnelFlags, TunnelAddress, TuntapPort)
+
+if platformSkip is None:
+    from twisted.pair.tuntap import (
+        TUNSETIFF, IFNAMSIZ, TunnelType, TunnelFlags, TunnelAddress, TuntapPort)
 
 
 
