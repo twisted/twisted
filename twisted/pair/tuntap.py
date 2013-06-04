@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.pair.test.test_tuntap -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -28,6 +29,10 @@ TUN_KO_PATH = b"/dev/net/tun"
 
 
 class TunnelType(Flags):
+    """
+    L{TunnelType} defines flags which are used to configure the behavior of a
+    tunnel device.
+    """
     # XXX these are the kernel internal names I think
     TUN = FlagConstant(1)
     TAP = FlagConstant(2)
@@ -129,6 +134,14 @@ class TuntapPort(base.BasePort):
 
 
     def _openTunnel(self, name, mode):
+        """
+        Open the named tunnel using the given mode.
+
+        @param name: The name of the tunnel to open.
+        @type name: L{bytes}
+
+        @param mode: 
+        """
         flags = self._O_RDWR | self._O_CLOEXEC | self._O_NONBLOCK
         config = struct.pack("%dsH" % (IFNAMSIZ,), name, mode.value)
         fileno = self._open(TUN_KO_PATH, flags)
@@ -190,7 +203,7 @@ class TuntapPort(base.BasePort):
         """
         try:
             return self._write(self._fileno, datagram)
-        except IOError, e:
+        except IOError as e:
             if e.errno == errno.EINTR:
                 return self.write(datagram)
             raise
@@ -247,6 +260,10 @@ class TuntapPort(base.BasePort):
 
     def getHost(self):
         """
-        @return: The L{TunnelAddress} for this tunnel.
+        Get the local address of this L{TuntapPort}.
+
+        @return: A L{TunnelAddress} which describes the tunnel device to which
+            this object is bound.
+        @rtype: L{TunnelAddress}
         """
         return TunnelAddress(self._mode, self.interface)
