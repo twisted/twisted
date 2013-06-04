@@ -364,10 +364,10 @@ class _CommandTransport(SSHClientTransport):
 
     def __init__(self, creator):
         """
-        @param creator: The L{_ISSHConnectionCreator} that created this
+        @param creator: The L{_NewConnectionHelper} that created this
             connection.
 
-        @type creator: L{_ISSHConnectionCreator} provider.
+        @type creator: L{_NewConnectionHelper}.
         """
         self.connectionReady = Deferred(
             lambda d: self.transport.abortConnection())
