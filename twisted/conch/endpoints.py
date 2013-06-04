@@ -19,8 +19,8 @@ from twisted.python.failure import Failure
 from twisted.internet.error import ConnectionDone, ProcessTerminated
 from twisted.internet.interfaces import IStreamClientEndpoint
 from twisted.internet.protocol import Factory
-from twisted.internet.defer import Deferred, succeed
-from twisted.internet.endpoints import TCP4ClientEndpoint
+from twisted.internet.defer import Deferred, succeed, CancelledError
+from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
 
 from twisted.conch.ssh.keys import Key
 from twisted.conch.ssh.common import NS
@@ -54,7 +54,7 @@ class _ISSHConnectionCreator(Interface):
         """
 
 
-    def cleanupConnection(connection):
+    def cleanupConnection(connection, immediate):
         """
         Perform cleanup necessary for a connection object previously returned
         from this creator's C{secureConnection} method.
@@ -63,6 +63,10 @@ class _ISSHConnectionCreator(Interface):
             or L{twisted.conch.ssh.transport.SSHClientTransport} returned by a
             previous call to C{secureConnection}.  It is no longer needed by the
             caller of that method and may be closed or otherwise cleaned up as
+            necessary.
+
+        @param immediate: If C{True} don't wait for any network communication,
+            just close the connection immediately and as aggressively as
             necessary.
         """
 
@@ -181,8 +185,8 @@ class _CommandChannel(SSHChannel):
         self._protocol = self._protocolFactory.buildProtocol(
             SSHCommandAddress(
                 self.conn.transport.transport.getPeer(),
-                self.conn.transport.factory.username,
-                self.conn.transport.factory.command))
+                self.conn.transport.creator.username,
+                self.conn.transport.creator.command))
         self._protocol.makeConnection(self)
         self._commandConnected.callback(self._protocol)
 
@@ -230,7 +234,7 @@ class _CommandChannel(SSHChannel):
         When the channel closes, deliver disconnection notification to the
         protocol.
         """
-        self._creator.cleanupConnection(self.conn)
+        self._creator.cleanupConnection(self.conn, False)
         if self._reason is None:
             reason = ConnectionDone("ssh channel closed")
         else:
@@ -245,15 +249,13 @@ class _ConnectionReady(SSHConnection):
     propagates the I{serviceStarted} event to a L{Deferred} to be handled
     elsewhere.
     """
-    def __init__(self, factory):
+    def __init__(self, ready):
         """
-        @param factory: The factory used to create the connection this service
-            is running over to grant access to the C{connectionReady} attribute
-            which is a L{Deferred} which will get fired when I{serviceStarted}
-            happens.
+        @param ready: A L{Deferred} which should be fired when
+            I{serviceStarted} happens.
         """
         SSHConnection.__init__(self)
-        self._factory = factory
+        self._ready = ready
 
 
     def serviceStarted(self):
@@ -262,12 +264,9 @@ class _ConnectionReady(SSHConnection):
         be used, fire the C{connectionReady} L{Deferred} to publish that event
         to some other interested party.
 
-        Also clear the reference to that deferred on its container to help the
-        garbage collector and to signal to other parts of this implementation
-        that it has already been fired and does not need to be fired again.
         """
-        d, self._factory.connectionReady = self._factory.connectionReady, None
-        d.callback(self)
+        self._ready.callback(self)
+        del self._ready
 
 
 
@@ -362,6 +361,27 @@ class _CommandTransport(SSHClientTransport):
 
     _hostKeyFailure = None
 
+
+    def __init__(self, creator):
+        """
+        @param creator: The L{_NewConnectionHelper} that created this
+            connection.
+
+        @type creator: L{_NewConnectionHelper}.
+        """
+        self.connectionReady = Deferred(
+            lambda d: self.transport.abortConnection())
+        # Clear the reference to that deferred to help the garbage collector
+        # and to signal to other parts of this implementation (in particular
+        # connectionLost) that it has already been fired and does not need to
+        # be fired again.
+        def readyFired(result):
+            self.connectionReady = None
+            return result
+        self.connectionReady.addBoth(readyFired)
+        self.creator = creator
+
+
     def verifyHostKey(self, hostKey, fingerprint):
         """
         Ask the L{KnownHostsFile} provider available on the factory which
@@ -370,12 +390,12 @@ class _CommandTransport(SSHClientTransport):
         @return: A L{Deferred} which fires with the result of
             L{KnownHostsFile.verifyHostKey}.
         """
-        hostname = self.factory.hostname
+        hostname = self.creator.hostname
         ip = self.transport.getPeer().host
 
         self._state = b'SECURING'
-        d = self.factory.knownHosts.verifyHostKey(
-            self.factory.ui, hostname, ip, Key.fromString(hostKey))
+        d = self.creator.knownHosts.verifyHostKey(
+            self.creator.ui, hostname, ip, Key.fromString(hostKey))
         d.addErrback(self._saveHostKeyFailure)
         return d
 
@@ -401,15 +421,15 @@ class _CommandTransport(SSHClientTransport):
         """
         self._state = b'AUTHENTICATING'
 
-        command = _ConnectionReady(self.factory)
+        command = _ConnectionReady(self.connectionReady)
 
-        userauth = _UserAuth(self.factory.username, command)
-        userauth.password = self.factory.password
-        if self.factory.keys:
-            userauth.keys = list(self.factory.keys)
+        userauth = _UserAuth(self.creator.username, command)
+        userauth.password = self.creator.password
+        if self.creator.keys:
+            userauth.keys = list(self.creator.keys)
 
-        if self.factory.agentEndpoint is not None:
-            d = self._connectToAgent(userauth, self.factory.agentEndpoint)
+        if self.creator.agentEndpoint is not None:
+            d = self._connectToAgent(userauth, self.creator.agentEndpoint)
         else:
             d = succeed(None)
 
@@ -449,14 +469,14 @@ class _CommandTransport(SSHClientTransport):
         When the underlying connection to the SSH server is lost, if there were
         any connection setup errors, propagate them.
         """
-        if self._state == b'RUNNING' or self.factory.connectionReady is None:
+        if self._state == b'RUNNING' or self.connectionReady is None:
             return
         if self._state == b'SECURING' and self._hostKeyFailure is not None:
             reason = self._hostKeyFailure
         elif self._state == b'AUTHENTICATING':
             reason = Failure(
                 AuthenticationFailed("Connection lost while authenticating"))
-        self.factory.connectionReady.errback(reason)
+        self.connectionReady.errback(reason)
 
 
 
@@ -505,7 +525,8 @@ class SSHCommandClientEndpoint(object):
         Create and return a new endpoint which will try to create a new
         connection to an SSH server and run a command over it.  It will also
         close the connection if there are problems leading up to the command
-        being executed or after the command finishes.
+        being executed, after the command finishes, or if the connection
+        L{Deferred} is cancelled.
 
         @param reactor: The reactor to use to establish the connection.
         @type reactor: L{IReactorTCP} provider
@@ -612,7 +633,10 @@ class SSHCommandClientEndpoint(object):
         """
         commandConnected = Deferred()
         def disconnectOnFailure(passthrough):
-            self._creator.cleanupConnection(connection)
+            # Close the connection immediately in case of cancellation, since
+            # that implies user wants it gone immediately (e.g. a timeout):
+            immediate =  passthrough.check(CancelledError)
+            self._creator.cleanupConnection(connection, immediate)
             return passthrough
         commandConnected.addErrback(disconnectOnFailure)
 
@@ -666,36 +690,33 @@ class _NewConnectionHelper(object):
             with a failure if something prevents the connection from being
             setup, secured, or authenticated.
         """
-        factory = Factory()
-        factory.protocol = _CommandTransport
-        factory.hostname = self.hostname
-        factory.username = self.username
-        factory.keys = self.keys
-        factory.password = self.password
-        factory.agentEndpoint = self.agentEndpoint
-        factory.knownHosts = self.knownHosts
-        factory.command = self.command
-        factory.ui = self.ui
-        factory.creator = self
-
-        factory.connectionReady = Deferred()
+        protocol = _CommandTransport(self)
+        ready = protocol.connectionReady
 
         sshClient = TCP4ClientEndpoint(self.reactor, self.hostname, self.port)
 
-        d = sshClient.connect(factory)
-        d.addCallback(lambda ignored: factory.connectionReady)
+        d = connectProtocol(sshClient, protocol)
+        d.addCallback(lambda ignored: ready)
         return d
 
 
-    def cleanupConnection(self, connection):
+    def cleanupConnection(self, connection, immediate):
         """
         Clean up the connection by closing it.  The command running on the
         endpoint has ended so the connection is no longer needed.
 
         @param connection: The L{SSHConnection} to close.
         @type connection: L{SSHConnection}
+
+        @param immediate: Whether to close connection immediately.
+        @type immediate: L{bool}.
         """
-        connection.transport.loseConnection()
+        if immediate:
+            # We're assuming the underlying connection is a ITCPTransport,
+            # which is what the current implementation is restricted to:
+            connection.transport.transport.abortConnection()
+        else:
+            connection.transport.loseConnection()
 
 
 
@@ -723,7 +744,7 @@ class _ExistingConnectionHelper(object):
         return succeed(self.connection)
 
 
-    def cleanupConnection(self, connection):
+    def cleanupConnection(self, connection, immediate):
         """
         Do not do any cleanup on the connection.  Leave that responsibility to
         whatever code created it in the first place.
@@ -731,4 +752,7 @@ class _ExistingConnectionHelper(object):
         @param connection: The L{SSHConnection} which will not be modified in
             any way.
         @type connection: L{SSHConnection}
+
+        @param immediate: An argument which will be ignored.
+        @type immediate: L{bool}.
         """

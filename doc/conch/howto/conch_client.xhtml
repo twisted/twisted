@@ -70,7 +70,9 @@ second version of this protocol.</p>
       no more complicated than the use of any other endpoint: pass a factory to
       its <code>connect</code> method and attach a callback to the
       resulting <code>Deferred</code> to do something with the protocol
-      instance.
+      instance. If you use an endpoint that creates new connections, the connection
+      attempt can be cancelled by calling <code>cancel()</code> on this
+      <code>Deferred</code>.
     </p>
 
     <p>
