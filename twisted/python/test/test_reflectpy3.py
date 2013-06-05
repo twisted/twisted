@@ -652,7 +652,7 @@ class FullyQualifiedNameTests(TestCase):
 
     def test_boundMethod(self):
         """
-        L{fullyQualifiedName} returns the name of a bound method inside its
+
         class and its module.
         """
         self._checkFullyQualifiedName(
@@ -675,4 +675,6 @@ class FullyQualifiedNameTests(TestCase):
         L{reflect.fullyQualifiedName} returns the name of a method_descriptor
         inside its object class and its module.
         """
-        self._checkFullyQualifiedName(int.__add__, "__builtin__.int.__add__")
+        self._checkFullyQualifiedName(
+            int.__add__,
+            "%s.int.__add__" % (int.__module__,))
