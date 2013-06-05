@@ -95,7 +95,10 @@ def _fullyQualifiedName(obj):
             return "%s.%s" % (className, name)
     elif hasattr(obj, '__objclass__'):
         objClassName = _fullyQualifiedName(obj.__objclass__)
-        return "%s.%s" % (objClassName, name)
+        # In Python3 name will be obj.__qualname__ which will include
+        # obj.__module__ already in addition to the FQN of obj.__objclass__
+        # including obj.__module__.  So we use obj.__name__ directly here.
+        return '%s.%s' % (objClassName, obj.__name__)
     return name
 # Try to keep it looking like something in twisted.python.reflect.
 _fullyQualifiedName.__module__ = 'twisted.python.reflect'
