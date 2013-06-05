@@ -574,13 +574,17 @@ class Request:
 
 
     def _writeHeaders(self, transport, bodyFramingHeader):
+        """
+        Write this request's headers to the given transport and include
+        the specified body framing header.
+        """
         hosts = self.headers.getRawHeaders('host', ())
         if len(hosts) != 1:
             raise BadHeaders("Exactly one Host header required")
 
         # In the future, having the protocol version be a parameter to this
         # method would probably be good.  It would be nice if this method
-        # weren't limited to issueing HTTP/1.1 requests.
+        # weren't limited to issuing HTTP/1.1 requests.
         requestLines = []
         requestLines.append(
             '%s %s HTTP/1.1\r\n' % (self.method, self.uri))
@@ -1238,7 +1242,7 @@ TIMEOUT_100_CONTINUE = 1
 class HTTP11ClientProtocol(Protocol):
     """
     L{HTTP11ClientProtocol} is an implementation of the HTTP 1.1 client
-    protocol. It supports as few features as possible.
+    protocol.  It supports as few features as possible.
 
     @ivar _parser: After a request is issued, the L{HTTPClientParser} to
         which received data making up the response to that request is
@@ -1277,7 +1281,7 @@ class HTTP11ClientProtocol(Protocol):
         did not respond in time with a L{Response} (possibly because of a
         buggy server that doesn't implement expectations correctly).
 
-    @ivar _firstResponseTimer: A L{Delayed} that fires after
+    @ivar _firstResponseTimer: A L{Deferred} that fires after
         TIMEOUT_100_CONTINUE seconds and forcefully sends the L{Request} body
         to the server.
 

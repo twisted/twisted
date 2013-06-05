@@ -1691,11 +1691,15 @@ class HTTP11ClientProtocolTests(TestCase):
         self.clock.advance(TIMEOUT_100_CONTINUE + 1)
 
         self.assertEqual(self.transport.value(), 'x' * 10)
+        self.assertEqual(self.protocol._firstResponseTimer.called, True)
+        self.assertEqual(self.protocol._firstResponseDeferred.called, False)
 
         self.protocol.dataReceived(
             "HTTP/1.1 200 OK\r\n"
             "Content-Length: 0\r\n"
             "\r\n")
+    
+        self.assertEqual(self.protocol._firstResponseDeferred.called, True)
 
         return d
 
@@ -1715,6 +1719,9 @@ class HTTP11ClientProtocolTests(TestCase):
 
         self.clock.advance(TIMEOUT_100_CONTINUE + 1)
 
+        self.assertEqual(self.protocol._firstResponseTimer.called, True)
+        self.assertEqual(self.protocol._firstResponseDeferred.called, False)
+
         self.assertEqual(self.transport.value(), 'x' * 10)
 
         self.protocol.dataReceived(
@@ -1727,6 +1734,8 @@ class HTTP11ClientProtocolTests(TestCase):
             "HTTP/1.1 200 OK\r\n"
             "Content-length: 0\r\n"
             "\r\n")
+
+        self.assertEqual(self.protocol._firstResponseDeferred.called, True)
 
         return d
 
