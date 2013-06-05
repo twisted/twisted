@@ -301,24 +301,15 @@ class TestPersistentClientService(TestCase):
 
     def test_startService(self):
         """Connection happens upon service start."""
+        result = []
+        self.pcs._onConnect = lambda protocol: result.append(protocol)
         self.assertEqual(self.endpoint.connectCount, 0)
         self.pcs.startService()
         self.assertEqual(self.endpoint.connectCount, 1)
 
+        self.assertEqual(len(result), 1)
+        protocol = result[0]
 
-    def test_connectedProtocol(self):
-        """connectedProtocol returns a protocol connected to our endpoint"""
-        # FIXME: This test is too long and testing too many states.
-
-        # connectedProtocol does not have a result before startService
-        dProtocol = self.pcs.connectedProtocol()
-        self.assertNoResult(dProtocol)
-
-        # TODO: the assert ate dProtocol, until we merge forward to get #6291
-        dProtocol = self.pcs.connectedProtocol()
-        self.pcs.startService()
-
-        protocol = self.successResultOf(dProtocol)
         self.assertIsInstance(protocol, self.factory.protocol)
 
         # the transport is connected to the endpoint
@@ -326,10 +317,36 @@ class TestPersistentClientService(TestCase):
         self.assertEqual(protocol.transport, self.transport)
         self.assertEqual(protocol.serialNumber, 0)
 
-        # a subsequent call returns the *same* protocol instance, so
-        # long as the connection has not been lost.
-        protocol2 = self.successResultOf(self.pcs.connectedProtocol())
-        self.assertIdentical(protocol, protocol2)
+
+    def test_connectedProtocolWithoutCurrentConnection(self):
+        """connectedProtocol returns a protocol connected to our endpoint"""
+        # connectedProtocol does not have a result before startService
+        dProtocol = self.pcs.connectedProtocol()
+        self.assertNoResult(dProtocol)
+        # TODO: the assert eats dProtocol, until we merge forward to get #6291
+
+        dProtocol = self.pcs.connectedProtocol()
+        dProtocol2 = self.pcs.connectedProtocol()
+        self.assertNotIdentical(dProtocol, dProtocol2,
+            "multiple callers should get independent deferreds")
+
+        # trigger connection callback, as done by startService
+        expectedProtocol = object()
+        self.pcs._onConnect(expectedProtocol)
+
+        protocol = self.successResultOf(dProtocol)
+        protocol2 = self.successResultOf(dProtocol2)
+        self.assertIdentical(protocol, expectedProtocol)
+        self.assertIdentical(protocol2, expectedProtocol)
+
+
+    def test_connectedProtocolAlreadyConnected(self):
+        """connectedProtocol returns immediately with existing value"""
+        # set us up as if we already have an active protocol
+        expectedProtocol = object()
+        self.pcs._currentProtocol = expectedProtocol
+        protocol = self.successResultOf(self.pcs.connectedProtocol())
+        self.assertIdentical(protocol, expectedProtocol)
 
 
     def test_lostConnectionMakesNewConnection(self):
