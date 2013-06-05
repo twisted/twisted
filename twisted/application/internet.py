@@ -36,12 +36,13 @@ For example, the following service starts a web server on port 8080:
 C{TCPServer(8080, server.Site(r))}.  See the documentation for the
 reactor.listen/connect* methods for more information.
 """
+import functools
 
 from twisted.python import log
 from twisted.application import service
 from twisted.internet import task
 
-from twisted.internet.defer import CancelledError
+from twisted.internet.defer import CancelledError, succeed, Deferred
 
 
 def _maybeGlobalReactor(maybeReactor):
@@ -384,6 +385,116 @@ class StreamServerEndpointService(service.Service, object):
             return passthrough
         d.addBoth(stop)
         return d
+
+
+
+class _RestartableProtocolProxy(object):
+    """A proxy for a Protocol to provide connectionLost notification."""
+
+    def __init__(self, protocol, clientService):
+        self.__protocol = protocol
+        self.__clientService = clientService
+
+
+    def connectionLost(self, reason):
+        result = self.__protocol.connectionLost(reason)
+        self.__clientService._onConnectionLost(reason)
+        return result
+
+    def __getattr__(self, item):
+        return getattr(self.__protocol, item)
+
+    def __repr__(self):
+        return '<%s.%s wraps %r>' % (__name__, self.__class__.__name__,
+            self.__protocol)
+
+
+
+class _RestartableProtocolFactoryProxy(object):
+    """A wrapper for a ProtocolFactory to facilitate restarting Protocols."""
+
+    _protocolProxyFactory = _RestartableProtocolProxy
+
+    def __init__(self, protocolFactory, clientService):
+        self.protocolFactory = protocolFactory
+        self.clientService = clientService
+
+
+    def buildProtocol(self, addr):
+        protocol = self.protocolFactory.buildProtocol(addr)
+        wrappedProtocol = self._protocolProxyFactory(
+            protocol, self.clientService)
+        return wrappedProtocol
+
+
+    def __getattr__(self, item):
+        # maybe components.proxyForInterface is the thing to do here, but that
+        # gave me a metaclass conflict.
+        return getattr(self.protocolFactory, item)
+
+
+    def __repr__(self):
+        return '<%s.%s wraps %r>' % ( __name__, self.__class__.__name__,
+            self.protocolFactory)
+
+
+
+class PersistentClientSerivce(service.Service):
+    """
+    A L{PersistentClientService} is an L{service.IService} which keeps a
+    connection to a L{IStreamClientEndpoint}, restarting the client when the
+    connection is lost.
+
+    @ivar factory: A L{protocol.Factory} which will be used to create clients
+        for the endpoint.
+
+    @ivar endpoint: An L{IStreamClientEndpoint
+        <twisted.internet.interfaces.IStreamClientEndpoint>} provider
+        which will be used to connect when the service starts.
+    """
+
+    def __init__(self, endpoint, factory, reactor, nextDelay=None):
+        self.endpoint = endpoint
+        self.factory = _RestartableProtocolFactoryProxy(factory, self)
+        self._reactor = reactor
+        self._nextDelay = nextDelay
+        self._dConnectingProtocol = None
+        self._currentProtocol = None
+        self._subscribers = []
+
+
+    def startService(self):
+        self._startConnection()
+        service.Service.startService(self)
+
+
+    def _startConnection(self):
+        assert not self._dConnectingProtocol, self._dConnectingProtocol
+        self._dConnectingProtocol = self.endpoint.connect(self.factory)
+        self._dConnectingProtocol.addCallback(self._onConnect)
+
+
+    def _onConnectionLost(self, reason):
+        self._currentProtocol = None
+        self._startConnection()
+
+
+    def _onConnect(self, protocol):
+        self._dConnectingProtocol = None
+        self._currentProtocol = protocol
+        subscribers = self._subscribers
+        self._subscribers = []
+        for sub in subscribers:
+            sub.callback(protocol)
+
+
+    def connectedProtocol(self):
+        if self._currentProtocol:
+            return succeed(self._currentProtocol)
+        else:
+            d = Deferred()
+            self._subscribers.append(d)
+            return d
 
 
 

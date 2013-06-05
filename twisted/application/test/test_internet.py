@@ -9,13 +9,15 @@ Tests for (new code in) L{twisted.application.internet}.
 from zope.interface import implements
 from zope.interface.verify import verifyClass
 
-from twisted.internet.protocol import Factory
+from twisted.internet.protocol import Factory, Protocol
 from twisted.trial.unittest import TestCase
-from twisted.application import internet
 from twisted.application.internet import (
-        StreamServerEndpointService, TimerService)
-from twisted.internet.interfaces import IStreamServerEndpoint, IListeningPort
-from twisted.internet.defer import Deferred, CancelledError
+    StreamServerEndpointService, TimerService, PersistentClientSerivce,
+    _RestartableProtocolFactoryProxy, _RestartableProtocolProxy)
+from twisted.internet.interfaces import IStreamServerEndpoint, IListeningPort, IStreamClientEndpoint
+from twisted.internet.defer import Deferred, CancelledError, succeed
+
+from twisted.application import internet
 from twisted.internet import task
 from twisted.python.failure import Failure
 
@@ -357,3 +359,204 @@ class TestTimerService(TestCase):
         self.assertEqual(1, len(errors))
         d = self.timer.stopService()
         self.assertIdentical(self.successResultOf(d), None)
+
+
+
+class FakeClientEndpoint(object):
+
+    implements(IStreamClientEndpoint)
+
+    def __init__(self, transport):
+        self.transport = transport
+        self.connectCount = 0
+
+    def connect(self, protocolFactory):
+        protocol = protocolFactory.buildProtocol("addr.of.lies")
+        protocol.makeConnection(self.transport)
+        self.connectCount += 1
+        return succeed(protocol)
+
+
+verifyClass(IStreamClientEndpoint, FakeClientEndpoint)
+
+
+class CountingProtocolFactory(Factory):
+    def __init__(self, protocol):
+        self.protocol = protocol
+        self.serialNumber = 0
+
+    def buildProtocol(self, addr):
+        protocol = Factory.buildProtocol(self, addr)
+        protocol.serialNumber = self.serialNumber
+        self.serialNumber += 1
+        return protocol
+
+
+
+class LoserProtocol(Protocol):
+    def __init__(self):
+        self._loserReasons = []
+
+    def connectionLost(self, reason):
+        self._loserReasons.append(reason)
+
+
+
+class TestRestartableProtocolFactoryProxy(TestCase):
+
+    def setUp(self):
+        self.origProtocol = LoserProtocol
+        self.clientService = object()
+        self.origFactory = CountingProtocolFactory(self.origProtocol)
+        self.rpfp = _RestartableProtocolFactoryProxy(
+            self.origFactory, self.clientService)
+
+
+    def test_rpfpCreatesWrappedProtocol(self):
+        protocol = self.rpfp.buildProtocol("addr")
+        self.assertIsInstance(protocol, _RestartableProtocolProxy)
+        self.assertIsInstance(protocol._RestartableProtocolProxy__protocol,
+                              self.origProtocol)
+        self.assertIdentical(protocol._RestartableProtocolProxy__clientService,
+                             self.clientService)
+
+
+    def test_rpfpProxiesOtherMethods(self):
+        stopCalled = []
+        self.origFactory.doStop = lambda: stopCalled.append("doStop")
+        self.rpfp.doStop()
+        self.assertEqual(stopCalled, ["doStop"])
+
+
+
+class TestRestartableProtocolProxy(TestCase):
+
+    def test_notifiesOnConnectionLost(self):
+        proxyReasons = []
+        class FakeClientService(object):
+            def _onConnectionLost(self, reason):
+                proxyReasons.append(reason)
+        origProtocol = LoserProtocol()
+        proxy = _RestartableProtocolProxy(origProtocol, FakeClientService())
+        reasons = ["ordinary", "non-laser-related"]
+        proxy.connectionLost(reasons[0])
+        proxy.connectionLost(reasons[1])
+
+        self.assertEqual(proxyReasons, reasons)
+        self.assertEqual(origProtocol._loserReasons, reasons)
+
+
+    def test_proxyOtherMethods(self):
+        origProtocol = LoserProtocol()
+        proxy = _RestartableProtocolProxy(origProtocol, "ClientService")
+
+        received = []
+        origProtocol.dataReceived = lambda data: received.append(data)
+
+        data = 'What hath'
+        proxy.dataReceived(data)
+        self.assertEqual(received, [data])
+
+
+
+class TestPersistentClientService(TestCase):
+
+    def setUp(self):
+        self.transport = "fake.transport"
+        self.endpoint = FakeClientEndpoint(self.transport)
+        self.factory = CountingProtocolFactory(Protocol)
+        self.reactor = "REACTOR"
+        self.nextDelay = lambda now, lastSuccess, lastFailure: 5
+        self.pcs = PersistentClientSerivce(
+            self.endpoint, self.factory, self.reactor, self.nextDelay)
+
+
+    def test_constructor(self):
+        self.assertIdentical(self.endpoint, self.pcs.endpoint)
+        self.assertIdentical(self.factory, self.pcs.factory.protocolFactory)
+
+
+    def test_startService(self):
+        """Connection happens upon service start."""
+        result = []
+        self.pcs._onConnect = lambda protocol: result.append(protocol)
+        self.assertEqual(self.endpoint.connectCount, 0)
+        self.pcs.startService()
+        self.assertEqual(self.endpoint.connectCount, 1)
+
+        self.assertEqual(len(result), 1)
+        protocol = result[0]
+
+        self.assertIsInstance(protocol, _RestartableProtocolProxy)
+        self.assertIsInstance(protocol._RestartableProtocolProxy__protocol,
+                              self.factory.protocol)
+
+        # the transport is connected to the endpoint
+        self.assertEqual(protocol.connected, 1)
+        self.assertEqual(protocol.transport, self.transport)
+        self.assertEqual(protocol.serialNumber, 0)
+
+
+    def test_connectedProtocolWithoutCurrentConnection(self):
+        """connectedProtocol returns a protocol connected to our endpoint"""
+        # connectedProtocol does not have a result before startService
+        dProtocol = self.pcs.connectedProtocol()
+        self.assertNoResult(dProtocol)
+        # TODO: the assert eats dProtocol, until we merge forward to get #6291
+
+        dProtocol = self.pcs.connectedProtocol()
+        dProtocol2 = self.pcs.connectedProtocol()
+        self.assertNotIdentical(dProtocol, dProtocol2,
+            "multiple callers should get independent deferreds")
+
+        # trigger connection callback, as done by startService
+        expectedProtocol = object()
+        self.pcs._onConnect(expectedProtocol)
+
+        protocol = self.successResultOf(dProtocol)
+        protocol2 = self.successResultOf(dProtocol2)
+        self.assertIdentical(protocol, expectedProtocol)
+        self.assertIdentical(protocol2, expectedProtocol)
+
+
+    def test_connectedProtocolAlreadyConnected(self):
+        """connectedProtocol returns immediately with existing value"""
+        # set us up as if we already have an active protocol
+        expectedProtocol = object()
+        self.pcs._currentProtocol = expectedProtocol
+        protocol = self.successResultOf(self.pcs.connectedProtocol())
+        self.assertIdentical(protocol, expectedProtocol)
+
+
+    def test_lostConnectionMakesNewConnection(self):
+        """
+        After the first connection is lost, connectedProtocol returns a
+        new protocol instance.
+        """
+        self.pcs.startService()
+        protocol = self.successResultOf(self.pcs.connectedProtocol())
+        self.assertEqual(protocol.serialNumber, 0)
+        protocol.connectionLost("reasons")
+        protocol = self.successResultOf(self.pcs.connectedProtocol())
+        self.assertEqual(protocol.serialNumber, 1)
+
+
+    def test_endpointConnectionError(self):
+        # TODO: when endpoint.connect results in ConnectError, what then?
+        raise NotImplementedError()
+
+
+    def test_nextDelayInputs(self):
+        # TODO nextDelay receives times of previous success and failure.
+        raise NotImplementedError()
+
+
+    def test_stopService(self):
+        # TODO: test stopService while connection is up
+        # TODO: test stopService during reconnect delay
+        raise NotImplementedError()
+
+
+    test_endpointConnectionError.todo = "TODO"
+    test_nextDelayInputs.todo = "TODO"
+    test_stopService.todo = "TODO"
