@@ -258,14 +258,28 @@ class FakeClientEndpoint(object):
 
     def __init__(self, transport):
         self.transport = transport
+        self.connectCount = 0
 
     def connect(self, protocolFactory):
         protocol = protocolFactory.buildProtocol("addr.of.lies")
         protocol.makeConnection(self.transport)
+        self.connectCount += 1
         return succeed(protocol)
 
 
 verifyClass(IStreamClientEndpoint, FakeClientEndpoint)
+
+
+class CountingProtocolFactory(Factory):
+    def __init__(self, protocol):
+        self.protocol = protocol
+        self.serialNumber = 0
+
+    def buildProtocol(self, addr):
+        protocol = Factory.buildProtocol(self, addr)
+        protocol.serialNumber = self.serialNumber
+        self.serialNumber += 1
+        return protocol
 
 
 class TestPersistentClientService(TestCase):
@@ -273,8 +287,7 @@ class TestPersistentClientService(TestCase):
     def setUp(self):
         self.transport = "fake.transport"
         self.endpoint = FakeClientEndpoint(self.transport)
-        self.factory = Factory()
-        self.factory.protocol = Protocol
+        self.factory = CountingProtocolFactory(Protocol)
         self.reactor = "REACTOR"
         self.nextDelay = lambda now, lastSuccess, lastFailure: 5
 
@@ -286,18 +299,42 @@ class TestPersistentClientService(TestCase):
         self.assertIdentical(self.factory, pcs.factory)
 
 
-    def test_connectedProtocol(self):
-        """connectedProtocol returns a protocol connected to our endpoint"""
+    def test_startService(self):
+        """Connection happens upon service start."""
         pcs = PersistentClientSerivce(
             self.endpoint, self.factory, self.reactor, self.nextDelay)
-        # TODO: check that we don't get a connection *before* start
+        self.assertEqual(self.endpoint.connectCount, 0)
         pcs.startService()
-        protocol = self.successResultOf(pcs.connectedProtocol())
+        self.assertEqual(self.endpoint.connectCount, 1)
+
+
+    def test_connectedProtocol(self):
+        """connectedProtocol returns a protocol connected to our endpoint"""
+        # FIXME: This test is too long and testing too many states.
+
+        pcs = PersistentClientSerivce(
+            self.endpoint, self.factory, self.reactor, self.nextDelay)
+
+        # connectedProtocol does not have a result before startService
+        dProtocol = pcs.connectedProtocol()
+        self.assertNoResult(dProtocol)
+
+        # TODO: the assert ate dProtocol, until we merge forward to get #6291
+        dProtocol = pcs.connectedProtocol()
+        pcs.startService()
+
+        protocol = self.successResultOf(dProtocol)
         self.assertIsInstance(protocol, self.factory.protocol)
 
         # the transport is connected to the endpoint
         self.assertEqual(protocol.connected, 1)
         self.assertEqual(protocol.transport, self.transport)
+        self.assertEqual(protocol.serialNumber, 0)
+
+        # a subsequent call returns the *same* protocol instance, so
+        # long as the connection has not been lost.
+        protocol2 = self.successResultOf(pcs.connectedProtocol())
+        self.assertIdentical(protocol, protocol2)
 
 
     def test_lostConnectionMakesNewConnection(self):

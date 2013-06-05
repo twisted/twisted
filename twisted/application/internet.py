@@ -43,7 +43,7 @@ from twisted.python import log
 from twisted.application import service
 from twisted.internet import task
 
-from twisted.internet.defer import CancelledError, succeed
+from twisted.internet.defer import CancelledError, succeed, Deferred
 
 
 def _maybeGlobalReactor(maybeReactor):
@@ -375,12 +375,36 @@ class PersistentClientSerivce(service.Service):
     def __init__(self, endpoint, factory, reactor, nextDelay=None):
         self.endpoint = endpoint
         self.factory = factory
-        self.reactor = reactor
-        self.nextDelay = nextDelay
+        self._reactor = reactor
+        self._nextDelay = nextDelay
+        self._dConnectingProtocol = None
+        self._currentProtocol = None
+        self._subscribers = []
+
+
+    def startService(self):
+        assert not self._dConnectingProtocol
+        self._dConnectingProtocol = self.endpoint.connect(self.factory)
+        self._dConnectingProtocol.addCallback(self._onConnect)
+        service.Service.startService(self)
+
+
+    def _onConnect(self, protocol):
+        self._dConnectingProtocol = None
+        self._currentProtocol = protocol
+        subscribers = self._subscribers
+        self._subscribers = []
+        for sub in subscribers:
+            sub.callback(protocol)
 
 
     def connectedProtocol(self):
-        return self.endpoint.connect(self.factory)
+        if self._currentProtocol:
+            return succeed(self._currentProtocol)
+        else:
+            d = Deferred()
+            self._subscribers.append(d)
+            return d
 
 
 
