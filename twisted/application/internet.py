@@ -43,7 +43,7 @@ from twisted.python import log
 from twisted.application import service
 from twisted.internet import task
 
-from twisted.internet.defer import CancelledError
+from twisted.internet.defer import CancelledError, succeed
 
 
 def _maybeGlobalReactor(maybeReactor):
@@ -355,6 +355,32 @@ class StreamServerEndpointService(service.Service, object):
             return passthrough
         d.addBoth(stop)
         return d
+
+
+
+class PersistentClientSerivce(service.Service):
+    """
+    A L{PersistentClientService} is an L{service.IService} which keeps a
+    connection to a L{IStreamClientEndpoint}, restarting the client when the
+    connection is lost.
+
+    @ivar factory: A L{protocol.Factory} which will be used to create clients
+        for the endpoint.
+
+    @ivar endpoint: An L{IStreamClientEndpoint
+        <twisted.internet.interfaces.IStreamClientEndpoint>} provider
+        which will be used to connect when the service starts.
+    """
+
+    def __init__(self, endpoint, factory, reactor, nextDelay=None):
+        self.endpoint = endpoint
+        self.factory = factory
+        self.reactor = reactor
+        self.nextDelay = nextDelay
+
+
+    def connectedProtocol(self):
+        return self.endpoint.connect(self.factory)
 
 
 

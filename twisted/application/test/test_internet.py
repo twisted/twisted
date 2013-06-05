@@ -9,11 +9,13 @@ Tests for (new code in) L{twisted.application.internet}.
 from zope.interface import implements
 from zope.interface.verify import verifyClass
 
-from twisted.internet.protocol import Factory
+from twisted.internet.protocol import Factory, Protocol
 from twisted.trial.unittest import TestCase
-from twisted.application.internet import StreamServerEndpointService
-from twisted.internet.interfaces import IStreamServerEndpoint, IListeningPort
-from twisted.internet.defer import Deferred, CancelledError
+from twisted.application.internet import StreamServerEndpointService, \
+    PersistentClientSerivce
+from twisted.internet.interfaces import IStreamServerEndpoint, IListeningPort, IStreamClientEndpoint
+from twisted.internet.defer import Deferred, CancelledError, succeed
+
 
 class FakeServer(object):
     """
@@ -250,3 +252,77 @@ class TestEndpointService(TestCase):
         self.assertEqual(len(stoppingErrors), 1)
 
 
+class FakeClientEndpoint(object):
+
+    implements(IStreamClientEndpoint)
+
+    def __init__(self, transport):
+        self.transport = transport
+
+    def connect(self, protocolFactory):
+        protocol = protocolFactory.buildProtocol("addr.of.lies")
+        protocol.makeConnection(self.transport)
+        return succeed(protocol)
+
+
+verifyClass(IStreamClientEndpoint, FakeClientEndpoint)
+
+
+class TestPersistentClientService(TestCase):
+
+    def setUp(self):
+        self.transport = "fake.transport"
+        self.endpoint = FakeClientEndpoint(self.transport)
+        self.factory = Factory()
+        self.factory.protocol = Protocol
+        self.reactor = "REACTOR"
+        self.nextDelay = lambda now, lastSuccess, lastFailure: 5
+
+
+    def test_constructor(self):
+        pcs = PersistentClientSerivce(
+            self.endpoint, self.factory, self.reactor, self.nextDelay)
+        self.assertIdentical(self.endpoint, pcs.endpoint)
+        self.assertIdentical(self.factory, pcs.factory)
+
+
+    def test_connectedProtocol(self):
+        """connectedProtocol returns a protocol connected to our endpoint"""
+        pcs = PersistentClientSerivce(
+            self.endpoint, self.factory, self.reactor, self.nextDelay)
+        # TODO: check that we don't get a connection *before* start
+        pcs.startService()
+        protocol = self.successResultOf(pcs.connectedProtocol())
+        self.assertIsInstance(protocol, self.factory.protocol)
+
+        # the transport is connected to the endpoint
+        self.assertEqual(protocol.connected, 1)
+        self.assertEqual(protocol.transport, self.transport)
+
+
+    def test_lostConnectionMakesNewConnection(self):
+        # TODO: after protocol.connectionLost, connectedProtocol returns
+        #     a *new* protocol instance.
+        raise NotImplementedError()
+
+
+    def test_endpointConnectionError(self):
+        # TODO: when endpoint.connect results in ConnectError, what then?
+        raise NotImplementedError()
+
+
+    def test_nextDelayInputs(self):
+        # TODO nextDelay receives times of previous success and failure.
+        raise NotImplementedError()
+
+
+    def test_stopService(self):
+        # TODO: test stopService while connection is up
+        # TODO: test stopService during reconnect delay
+        raise NotImplementedError()
+
+
+    test_lostConnectionMakesNewConnection.todo = "TODO"
+    test_endpointConnectionError.todo = "TODO"
+    test_nextDelayInputs.todo = "TODO"
+    test_stopService.todo = "TODO"
