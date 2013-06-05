@@ -290,21 +290,19 @@ class TestPersistentClientService(TestCase):
         self.factory = CountingProtocolFactory(Protocol)
         self.reactor = "REACTOR"
         self.nextDelay = lambda now, lastSuccess, lastFailure: 5
+        self.pcs = PersistentClientSerivce(
+            self.endpoint, self.factory, self.reactor, self.nextDelay)
 
 
     def test_constructor(self):
-        pcs = PersistentClientSerivce(
-            self.endpoint, self.factory, self.reactor, self.nextDelay)
-        self.assertIdentical(self.endpoint, pcs.endpoint)
-        self.assertIdentical(self.factory, pcs.factory)
+        self.assertIdentical(self.endpoint, self.pcs.endpoint)
+        self.assertIdentical(self.factory, self.pcs.factory)
 
 
     def test_startService(self):
         """Connection happens upon service start."""
-        pcs = PersistentClientSerivce(
-            self.endpoint, self.factory, self.reactor, self.nextDelay)
         self.assertEqual(self.endpoint.connectCount, 0)
-        pcs.startService()
+        self.pcs.startService()
         self.assertEqual(self.endpoint.connectCount, 1)
 
 
@@ -312,16 +310,13 @@ class TestPersistentClientService(TestCase):
         """connectedProtocol returns a protocol connected to our endpoint"""
         # FIXME: This test is too long and testing too many states.
 
-        pcs = PersistentClientSerivce(
-            self.endpoint, self.factory, self.reactor, self.nextDelay)
-
         # connectedProtocol does not have a result before startService
-        dProtocol = pcs.connectedProtocol()
+        dProtocol = self.pcs.connectedProtocol()
         self.assertNoResult(dProtocol)
 
         # TODO: the assert ate dProtocol, until we merge forward to get #6291
-        dProtocol = pcs.connectedProtocol()
-        pcs.startService()
+        dProtocol = self.pcs.connectedProtocol()
+        self.pcs.startService()
 
         protocol = self.successResultOf(dProtocol)
         self.assertIsInstance(protocol, self.factory.protocol)
@@ -333,7 +328,7 @@ class TestPersistentClientService(TestCase):
 
         # a subsequent call returns the *same* protocol instance, so
         # long as the connection has not been lost.
-        protocol2 = self.successResultOf(pcs.connectedProtocol())
+        protocol2 = self.successResultOf(self.pcs.connectedProtocol())
         self.assertIdentical(protocol, protocol2)
 
 
