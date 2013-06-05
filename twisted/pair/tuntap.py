@@ -57,19 +57,34 @@ class TunnelFlags(Flags):
 
 @implementer(interfaces.IAddress)
 class TunnelAddress(object):
-
+    """
+    A L{TunnelAddress} represents the tunnel to which a L{TuntapPort} is bound.
+    """
     def __init__(self, type, name):
+        """
+        @param type: One of the L{TunnelType} constants representing the type
+            of this tunnel.
+
+        @param name: The system name of the tunnel.
+        @type name: L{bytes}
+        """
         self.type = type
         self.name = name
 
 
     def __getitem__(self, index):
+        """
+        Deprecated accessor for the tunnel name.  Use attributes instead.
+        """
         warnings.warn(
             "TunnelAddress.__getitem__ is deprecated since Twisted 13.1  "
             "Use attributes instead.", category=DeprecationWarning,
             stacklevel=2)
         return ('TUNTAP', self.name)[index]
 
+
+
+_TunnelDescription = namedtuple("_TunnelDescription", "fileno name")
 
 
 class TuntapPort(base.BasePort):
@@ -140,13 +155,15 @@ class TuntapPort(base.BasePort):
         @param name: The name of the tunnel to open.
         @type name: L{bytes}
 
-        @param mode: 
+        @param mode: XXX It's a mixup
+
+        @return: A L{_TunnelDescription} representing the newly opened tunnel.
         """
         flags = self._O_RDWR | self._O_CLOEXEC | self._O_NONBLOCK
         config = struct.pack("%dsH" % (IFNAMSIZ,), name, mode.value)
         fileno = self._open(TUN_KO_PATH, flags)
         result = self._ioctl(fileno, TUNSETIFF, config)
-        return fileno, result[:IFNAMSIZ].strip('\x00')
+        return _TunnelDescription(fileno, result[:IFNAMSIZ].strip('\x00'))
 
 
     def _bindSocket(self):
