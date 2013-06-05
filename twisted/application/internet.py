@@ -36,6 +36,7 @@ For example, the following service starts a web server on port 8080:
 C{TCPServer(8080, server.Site(r))}.  See the documentation for the
 reactor.listen/connect* methods for more information.
 """
+import functools
 
 import warnings
 
@@ -383,10 +384,34 @@ class PersistentClientSerivce(service.Service):
 
 
     def startService(self):
-        assert not self._dConnectingProtocol
-        self._dConnectingProtocol = self.endpoint.connect(self.factory)
-        self._dConnectingProtocol.addCallback(self._onConnect)
+        self._startConnection()
         service.Service.startService(self)
+
+
+    def _startConnection(self):
+        assert not self._dConnectingProtocol, self._dConnectingProtocol
+        self._dConnectingProtocol = self.endpoint.connect(self.factory)
+        (self._dConnectingProtocol
+            .addCallback(self._hookConnectionLost)
+            .addCallback(self._onConnect))
+
+
+    def _hookConnectionLost(self, protocol):
+        # I hope this is a kludge that serves as a strawman and someone
+        # has better ideas in code review.
+        origConnectionLost = protocol.connectionLost
+        @functools.wraps(origConnectionLost)
+        def connectionLost(reason):
+            result = origConnectionLost(reason)
+            self._onConnectionLost(reason)
+            return result
+        protocol.connectionLost = connectionLost
+        return protocol
+
+
+    def _onConnectionLost(self, reason):
+        self._currentProtocol = None
+        self._startConnection()
 
 
     def _onConnect(self, protocol):

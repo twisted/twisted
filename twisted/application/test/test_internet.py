@@ -282,6 +282,14 @@ class CountingProtocolFactory(Factory):
         return protocol
 
 
+class LoserProtocol(Protocol):
+    def __init__(self):
+        self._loserReasons = []
+
+    def connectionLost(self, reason):
+        self._loserReasons.append(reason)
+
+
 class TestPersistentClientService(TestCase):
 
     def setUp(self):
@@ -349,10 +357,32 @@ class TestPersistentClientService(TestCase):
         self.assertIdentical(protocol, expectedProtocol)
 
 
+    def test_hookConnectionLost(self):
+        """Modify the given Protocol so PCS._onConnectionLost is called."""
+        results = []
+        protocol = LoserProtocol()
+        proto2 = self.pcs._hookConnectionLost(protocol)
+        self.assertIdentical(protocol, proto2)
+        self.pcs._onConnectionLost = lambda reason: results.append(reason)
+        protocol.connectionLost("obvious")
+
+        # check the original implementation still fired
+        self.assertEqual(protocol._loserReasons, ["obvious"])
+        # as well as our hook
+        self.assertEqual(results, ["obvious"])
+
+
     def test_lostConnectionMakesNewConnection(self):
-        # TODO: after protocol.connectionLost, connectedProtocol returns
-        #     a *new* protocol instance.
-        raise NotImplementedError()
+        """
+        After the first connection is lost, connectedProtocol returns a
+        new protocol instance.
+        """
+        self.pcs.startService()
+        protocol = self.successResultOf(self.pcs.connectedProtocol())
+        self.assertEqual(protocol.serialNumber, 0)
+        protocol.connectionLost("reasons")
+        protocol = self.successResultOf(self.pcs.connectedProtocol())
+        self.assertEqual(protocol.serialNumber, 1)
 
 
     def test_endpointConnectionError(self):
@@ -371,7 +401,6 @@ class TestPersistentClientService(TestCase):
         raise NotImplementedError()
 
 
-    test_lostConnectionMakesNewConnection.todo = "TODO"
     test_endpointConnectionError.todo = "TODO"
     test_nextDelayInputs.todo = "TODO"
     test_stopService.todo = "TODO"
