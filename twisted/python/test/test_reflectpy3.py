@@ -668,3 +668,11 @@ class FullyQualifiedNameTests(TestCase):
         self._checkFullyQualifiedName(
             self.__class__.test_unboundMethod,
             "%s.%s.test_unboundMethod" % (__name__, self.__class__.__name__))
+
+
+    def test_methodDescriptor(self):
+        """
+        L{reflect.fullyQualifiedName} returns the name of a method_descriptor
+        inside its object class and its module.
+        """
+        self._checkFullyQualifiedName(int.__add__, "__builtin__.int.__add__")
