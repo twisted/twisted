@@ -1941,17 +1941,11 @@ class ProxyAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
 
 
-class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
+class _RedirectAgentTestsMixin(object):
     """
-    Tests for L{client.RedirectAgent}.
+    Test cases mixin for L{RedirectAgentTests} and
+    L{BrowserLikeRedirectAgentTests}.
     """
-
-    def setUp(self):
-        self.reactor = self.Reactor()
-        self.agent = client.RedirectAgent(
-            self.buildAgentForWrapperTest(self.reactor))
-
-
     def test_noRedirect(self):
         """
         L{client.RedirectAgent} behaves like L{client.Agent} if the response
@@ -1966,17 +1960,15 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         res.callback(response)
 
         self.assertEqual(0, len(self.protocol.requests))
-
-        def checkResponse(result):
-            self.assertIdentical(result, response)
-
-        return deferred.addCallback(checkResponse)
+        self.assertIdentical(response, self.successResultOf(deferred))
 
 
     def _testRedirectDefault(self, code):
         """
-        When getting a redirect, L{RedirectAgent} follows the URL specified in
-        the L{Location} header field and make a new request.
+        When getting a redirect, L{client.RedirectAgent} follows the URL
+        specified in the L{Location} header field and make a new request.
+
+        @param code: HTTP status code.
         """
         self.agent.request('GET', 'http://example.com/foo')
 
@@ -2002,37 +1994,41 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
     def test_redirect301(self):
         """
-        L{RedirectAgent} follows redirects on status code 301.
+        L{client.RedirectAgent} follows redirects on status code 301.
         """
         self._testRedirectDefault(301)
 
 
     def test_redirect302(self):
         """
-        L{RedirectAgent} follows redirects on status code 302.
+        L{client.RedirectAgent} follows redirects on status code 302.
         """
         self._testRedirectDefault(302)
 
 
     def test_redirect307(self):
         """
-        L{RedirectAgent} follows redirects on status code 307.
+        L{client.RedirectAgent} follows redirects on status code 307.
         """
         self._testRedirectDefault(307)
 
 
-    def test_redirect303(self):
+    def _testRedirectToGet(self, code, method):
         """
-        L{RedirectAgent} changes the methods to C{GET} when getting a redirect
-        on a C{POST} request.
+        L{client.RedirectAgent} changes the method to I{GET} when getting
+        a redirect on a non-I{GET} request.
+
+        @param code: HTTP status code.
+
+        @param method: HTTP request method.
         """
-        self.agent.request('POST', 'http://example.com/foo')
+        self.agent.request(method, 'http://example.com/foo')
 
         req, res = self.protocol.requests.pop()
 
         headers = http_headers.Headers(
             {'location': ['http://example.com/bar']})
-        response = Response(('HTTP', 1, 1), 303, 'OK', headers, None)
+        response = Response(('HTTP', 1, 1), code, 'OK', headers, None)
         res.callback(response)
 
         req2, res2 = self.protocol.requests.pop()
@@ -2040,10 +2036,18 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         self.assertEqual('/bar', req2.uri)
 
 
+    def test_redirect303(self):
+        """
+        L{client.RedirectAgent} changes the method to I{GET} when getting a 303
+        redirect on a I{POST} request.
+        """
+        self._testRedirectToGet(303, 'POST')
+
+
     def test_noLocationField(self):
         """
         If no L{Location} header field is found when getting a redirect,
-        L{RedirectAgent} fails with a L{ResponseFailed} error wrapping a
+        L{client.RedirectAgent} fails with a L{ResponseFailed} error wrapping a
         L{error.RedirectWithNoLocation} exception.
         """
         deferred = self.agent.request('GET', 'http://example.com/foo')
@@ -2054,47 +2058,52 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         response = Response(('HTTP', 1, 1), 301, 'OK', headers, None)
         res.callback(response)
 
-        self.assertFailure(deferred, client.ResponseFailed)
-
-        def checkFailure(fail):
-            fail.reasons[0].trap(error.RedirectWithNoLocation)
-            self.assertEqual('http://example.com/foo',
-                             fail.reasons[0].value.uri)
-            self.assertEqual(301, fail.response.code)
-
-        return deferred.addCallback(checkFailure)
+        fail = self.failureResultOf(deferred, client.ResponseFailed)
+        fail.value.reasons[0].trap(error.RedirectWithNoLocation)
+        self.assertEqual('http://example.com/foo',
+                         fail.value.reasons[0].value.uri)
+        self.assertEqual(301, fail.value.response.code)
 
 
-    def test_307OnPost(self):
+    def _testPageRedirectFailure(self, code, method):
         """
-        When getting a 307 redirect on a C{POST} request, L{RedirectAgent} fais
-        with a L{ResponseFailed} error wrapping a L{error.PageRedirect}
-        exception.
+        When getting a redirect on an unsupported request method,
+        L{client.RedirectAgent} fails with a L{ResponseFailed} error wrapping
+        a L{error.PageRedirect} exception.
+
+        @param code: HTTP status code.
+
+        @param method: HTTP request method.
         """
-        deferred = self.agent.request('POST', 'http://example.com/foo')
+        deferred = self.agent.request(method, 'http://example.com/foo')
 
         req, res = self.protocol.requests.pop()
 
         headers = http_headers.Headers()
-        response = Response(('HTTP', 1, 1), 307, 'OK', headers, None)
+        response = Response(('HTTP', 1, 1), code, 'OK', headers, None)
         res.callback(response)
 
-        self.assertFailure(deferred, client.ResponseFailed)
+        fail = self.failureResultOf(deferred, client.ResponseFailed)
+        fail.value.reasons[0].trap(error.PageRedirect)
+        self.assertEqual('http://example.com/foo',
+                         fail.value.reasons[0].value.location)
+        self.assertEqual(code, fail.value.response.code)
 
-        def checkFailure(fail):
-            fail.reasons[0].trap(error.PageRedirect)
-            self.assertEqual('http://example.com/foo',
-                             fail.reasons[0].value.location)
-            self.assertEqual(307, fail.response.code)
 
-        return deferred.addCallback(checkFailure)
+    def test_307OnPost(self):
+        """
+        When getting a 307 redirect on a I{POST} request,
+        L{client.RedirectAgent} fails with a L{ResponseFailed} error wrapping
+        a L{error.PageRedirect} exception.
+        """
+        self._testPageRedirectFailure(307, 'POST')
 
 
     def test_redirectLimit(self):
         """
-        If the limit of redirects specified to L{RedirectAgent} is reached, the
-        deferred fires with L{ResponseFailed} error wrapping a
-        L{InfiniteRedirection} exception.
+        If the limit of redirects specified to L{client.RedirectAgent} is
+        reached, the deferred fires with L{ResponseFailed} error wrapping
+        a L{InfiniteRedirection} exception.
         """
         agent = self.buildAgentForWrapperTest(self.reactor)
         redirectAgent = client.RedirectAgent(agent, 1)
@@ -2113,15 +2122,154 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         response2 = Response(('HTTP', 1, 1), 302, 'OK', headers, None)
         res2.callback(response2)
 
-        self.assertFailure(deferred, client.ResponseFailed)
+        fail = self.failureResultOf(deferred, client.ResponseFailed)
 
-        def checkFailure(fail):
-            fail.reasons[0].trap(error.InfiniteRedirection)
-            self.assertEqual('http://example.com/foo',
-                             fail.reasons[0].value.location)
-            self.assertEqual(302, fail.response.code)
+        fail.value.reasons[0].trap(error.InfiniteRedirection)
+        self.assertEqual('http://example.com/foo',
+                         fail.value.reasons[0].value.location)
+        self.assertEqual(302, fail.value.response.code)
 
-        return deferred.addCallback(checkFailure)
+
+    def _testRedirectURI(self, uri, location, finalURI):
+        """
+        When L{client.RedirectAgent} encounters a relative redirect I{URI}, it
+        is resolved against the request I{URI} before following the redirect.
+
+        @param uri: Request URI.
+
+        @param location: I{Location} header redirect URI.
+
+        @param finalURI: Expected final URI.
+        """
+        # XXX: If we had a way to get the final absolute URI from a request we
+        # wouldn't need to do this.
+        # <https://twistedmatrix.com/trac/ticket/5435>
+        def _resolveLocation(requestURI, location):
+            self._redirectedURI = _originalResolveLocation(
+                requestURI, location)
+            return self._redirectedURI
+
+        self._redirectedURI = None
+        _originalResolveLocation = self.agent._resolveLocation
+        self.patch(self.agent, '_resolveLocation', _resolveLocation)
+
+        self.agent.request('GET', uri)
+
+        req, res = self.protocol.requests.pop()
+
+        headers = http_headers.Headers(
+            {'location': [location]})
+        response = Response(('HTTP', 1, 1), 302, 'OK', headers, None)
+        res.callback(response)
+
+        req2, res2 = self.protocol.requests.pop()
+        self.assertEqual('GET', req2.method)
+        self.assertEqual(finalURI, self._redirectedURI)
+
+
+    def test_relativeURI(self):
+        """
+        L{client.RedirectAgent} resolves and follows relative I{URI}s in
+        redirects, preserving query strings.
+        """
+        self._testRedirectURI(
+            'http://example.com/foo/bar', 'baz',
+            'http://example.com/foo/baz')
+        self._testRedirectURI(
+            'http://example.com/foo/bar', '/baz',
+            'http://example.com/baz')
+        self._testRedirectURI(
+            'http://example.com/foo/bar', '/baz?a',
+            'http://example.com/baz?a')
+
+
+    def test_relativeURIPreserveFragments(self):
+        """
+        L{client.RedirectAgent} resolves and follows relative I{URI}s in
+        redirects, preserving fragments in way that complies with the HTTP 1.1
+        bis draft.
+
+        @see: U{https://tools.ietf.org/html/draft-ietf-httpbis-p2-semantics-22#section-7.1.2}
+        """
+        self._testRedirectURI(
+            'http://example.com/foo/bar#frag', '/baz?a',
+            'http://example.com/baz?a#frag')
+        self._testRedirectURI(
+            'http://example.com/foo/bar', '/baz?a#frag2',
+            'http://example.com/baz?a#frag2')
+
+
+    def test_relativeURISchemeRelative(self):
+        """
+        L{client.RedirectAgent} resolves and follows scheme relative I{URI}s in
+        redirects, replacing the hostname and port when required.
+        """
+        self._testRedirectURI(
+            'http://example.com/foo/bar', '//foo.com/baz',
+            'http://foo.com/baz')
+        self._testRedirectURI(
+            'http://example.com/foo/bar', '//foo.com:81/baz',
+            'http://foo.com:81/baz')
+
+
+
+class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin,
+                         _RedirectAgentTestsMixin):
+    """
+    Tests for L{client.RedirectAgent}.
+    """
+
+    def setUp(self):
+        self.reactor = self.Reactor()
+        self.agent = client.RedirectAgent(
+            self.buildAgentForWrapperTest(self.reactor))
+
+
+    def test_301OnPost(self):
+        """
+        When getting a 301 redirect on a I{POST} request,
+        L{client.RedirectAgent} fails with a L{ResponseFailed} error wrapping
+        a L{error.PageRedirect} exception.
+        """
+        self._testPageRedirectFailure(301, 'POST')
+
+
+    def test_302OnPost(self):
+        """
+        When getting a 302 redirect on a I{POST} request,
+        L{client.RedirectAgent} fails with a L{ResponseFailed} error wrapping
+        a L{error.PageRedirect} exception.
+        """
+        self._testPageRedirectFailure(302, 'POST')
+
+
+
+class BrowserLikeRedirectAgentTests(unittest.TestCase,
+                                    FakeReactorAndConnectMixin,
+                                    _RedirectAgentTestsMixin):
+    """
+    Tests for L{client.BrowserLikeRedirectAgent}.
+    """
+    def setUp(self):
+        self.reactor = self.Reactor()
+        self.agent = client.BrowserLikeRedirectAgent(
+            self.buildAgentForWrapperTest(self.reactor))
+
+
+    def test_redirectToGet301(self):
+        """
+        L{client.BrowserLikeRedirectAgent} changes the method to I{GET} when
+        getting a 302 redirect on a I{POST} request.
+        """
+        self._testRedirectToGet(301, 'POST')
+
+
+    def test_redirectToGet302(self):
+        """
+        L{client.BrowserLikeRedirectAgent} changes the method to I{GET} when
+        getting a 302 redirect on a I{POST} request.
+        """
+        self._testRedirectToGet(302, 'POST')
 
 
 
@@ -2213,4 +2361,3 @@ class ReadBodyTests(unittest.TestCase):
         reason = self.failureResultOf(d)
         reason.trap(ConnectionLost)
         self.assertEqual(reason.value.args, ("mystery problem",))
-
