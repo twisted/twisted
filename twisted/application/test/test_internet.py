@@ -12,7 +12,8 @@ from zope.interface.verify import verifyClass
 from twisted.internet.protocol import Factory, Protocol
 from twisted.trial.unittest import TestCase
 from twisted.application.internet import (
-    StreamServerEndpointService, TimerService, PersistentClientSerivce)
+    StreamServerEndpointService, TimerService, PersistentClientSerivce,
+    _RestartableProtocolFactoryProxy, _RestartableProtocolProxy)
 from twisted.internet.interfaces import IStreamServerEndpoint, IListeningPort, IStreamClientEndpoint
 from twisted.internet.defer import Deferred, CancelledError, succeed
 
@@ -391,12 +392,71 @@ class CountingProtocolFactory(Factory):
         return protocol
 
 
+
 class LoserProtocol(Protocol):
     def __init__(self):
         self._loserReasons = []
 
     def connectionLost(self, reason):
         self._loserReasons.append(reason)
+
+
+
+class TestRestartableProtocolFactoryProxy(TestCase):
+
+    def setUp(self):
+        self.origProtocol = LoserProtocol
+        self.clientService = object()
+        self.origFactory = CountingProtocolFactory(self.origProtocol)
+        self.rpfp = _RestartableProtocolFactoryProxy(
+            self.origFactory, self.clientService)
+
+
+    def test_rpfpCreatesWrappedProtocol(self):
+        protocol = self.rpfp.buildProtocol("addr")
+        self.assertIsInstance(protocol, _RestartableProtocolProxy)
+        self.assertIsInstance(protocol._RestartableProtocolProxy__protocol,
+                              self.origProtocol)
+        self.assertIdentical(protocol._RestartableProtocolProxy__clientService,
+                             self.clientService)
+
+
+    def test_rpfpProxiesOtherMethods(self):
+        stopCalled = []
+        self.origFactory.doStop = lambda: stopCalled.append("doStop")
+        self.rpfp.doStop()
+        self.assertEqual(stopCalled, ["doStop"])
+
+
+
+class TestRestartableProtocolProxy(TestCase):
+
+    def test_notifiesOnConnectionLost(self):
+        proxyReasons = []
+        class FakeClientService(object):
+            def _onConnectionLost(self, reason):
+                proxyReasons.append(reason)
+        origProtocol = LoserProtocol()
+        proxy = _RestartableProtocolProxy(origProtocol, FakeClientService())
+        reasons = ["ordinary", "non-laser-related"]
+        proxy.connectionLost(reasons[0])
+        proxy.connectionLost(reasons[1])
+
+        self.assertEqual(proxyReasons, reasons)
+        self.assertEqual(origProtocol._loserReasons, reasons)
+
+
+    def test_proxyOtherMethods(self):
+        origProtocol = LoserProtocol()
+        proxy = _RestartableProtocolProxy(origProtocol, "ClientService")
+
+        received = []
+        origProtocol.dataReceived = lambda data: received.append(data)
+
+        data = 'What hath'
+        proxy.dataReceived(data)
+        self.assertEqual(received, [data])
+
 
 
 class TestPersistentClientService(TestCase):
@@ -413,7 +473,7 @@ class TestPersistentClientService(TestCase):
 
     def test_constructor(self):
         self.assertIdentical(self.endpoint, self.pcs.endpoint)
-        self.assertIdentical(self.factory, self.pcs.factory)
+        self.assertIdentical(self.factory, self.pcs.factory.protocolFactory)
 
 
     def test_startService(self):
@@ -427,7 +487,9 @@ class TestPersistentClientService(TestCase):
         self.assertEqual(len(result), 1)
         protocol = result[0]
 
-        self.assertIsInstance(protocol, self.factory.protocol)
+        self.assertIsInstance(protocol, _RestartableProtocolProxy)
+        self.assertIsInstance(protocol._RestartableProtocolProxy__protocol,
+                              self.factory.protocol)
 
         # the transport is connected to the endpoint
         self.assertEqual(protocol.connected, 1)
@@ -464,21 +526,6 @@ class TestPersistentClientService(TestCase):
         self.pcs._currentProtocol = expectedProtocol
         protocol = self.successResultOf(self.pcs.connectedProtocol())
         self.assertIdentical(protocol, expectedProtocol)
-
-
-    def test_hookConnectionLost(self):
-        """Modify the given Protocol so PCS._onConnectionLost is called."""
-        results = []
-        protocol = LoserProtocol()
-        proto2 = self.pcs._hookConnectionLost(protocol)
-        self.assertIdentical(protocol, proto2)
-        self.pcs._onConnectionLost = lambda reason: results.append(reason)
-        protocol.connectionLost("obvious")
-
-        # check the original implementation still fired
-        self.assertEqual(protocol._loserReasons, ["obvious"])
-        # as well as our hook
-        self.assertEqual(results, ["obvious"])
 
 
     def test_lostConnectionMakesNewConnection(self):
