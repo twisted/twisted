@@ -2341,10 +2341,73 @@ class DeferredHistoryTests(unittest.TestCase):
 
     def test_honorHistoryTrackingDespiteIterativeOptimization(self):
         """
-        There's a conditional on "self._history" where it should be
-        "current._history" in defer.py, fix it please.
+        When an outer deferred was created with Deferred history tracking
+        enabled has a callback that returns a Deferred *without* history
+        tracking enabled, the chained callbacks on the outer deferred are still
+        recorded.
+
+        This is for a "use 'current' not 'self'" bugfix in _runCallbacks, for
+        the conditional which determines whether to record a history item.
         """
-        1 / 0
+        outer = defer.Deferred()
+        defer.disableDeferredDebugging(
+            [defer.DebuggingFeatures.historyTracking])
+        inner = defer.Deferred()
+        defer.enableDeferredDebugging(
+            [defer.DebuggingFeatures.historyTracking])
+
+        def callback1(result):
+            return inner
+        def callback2(result):
+            return None
+
+        outer.addCallback(callback1)
+        outer.addCallback(callback2)
+        outer.callback(None)
+        inner.callback(None)
+        [item1, item2] = outer._getHistory()
+        
+        self.assertEqual(item1.name, "callback1")
+        self.assertEqual(item2.name, "callback2")
+
+
+    def test_mergingHonorsHistoryTrackingOfMergee(self):
+        """
+        When merging the history of a Deferred into the history item of the
+        callback that returned it, the determination of whether to do the merge
+        is based on whether the Deferred that had that callback attached is
+        tracking history.
+
+        This is for a "use 'current' not 'self'" bugfix in _runCallbacks, for
+        the conditional which deterines whether to merge a Deferred's history
+        into a callback's history item.
+        """
+        outer = defer.Deferred()
+        defer.disableDeferredDebugging(
+            [defer.DebuggingFeatures.historyTracking])
+        inner = defer.Deferred()
+        defer.enableDeferredDebugging(
+            [defer.DebuggingFeatures.historyTracking])
+        inner2 = defer.Deferred()
+
+        def inner2Callback(result):
+            return None
+        def callback1(result):
+            return inner
+        def callback2(result):
+            return inner2
+
+        inner2.addCallback(inner2Callback)
+        outer.addCallback(callback1)
+        outer.addCallback(callback2)
+        outer.callback(None)
+        inner.callback(None)
+        inner2.callback(None)
+
+        [item1, item2] = outer._getHistory()
+        # callback2 returned inner2, which has a callback inner2Callback
+        [chained1] = item2.chainedHistory.get()
+        self.assertEqual(chained1.name, "inner2Callback")
 
 
 

@@ -641,7 +641,7 @@ class Deferred:
                         current.result = callback(current.result, *args, **kw)
                     finally:
                         current._runningCallbacks = False
-                        if self._history is not None:
+                        if current._history is not None:
                             className = None
                             if inspect.ismethod(callback):
                                 className = callback.im_class.__name__
@@ -659,7 +659,7 @@ class Deferred:
                     current.result = failure.Failure(captureVars=self.debug)
                 else:
                     if isinstance(current.result, Deferred):
-                        if self._history is not None: # XXX THERE'S A BUG
+                        if current._history is not None:
                             historyItem.mergeHistory(current.result)
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
