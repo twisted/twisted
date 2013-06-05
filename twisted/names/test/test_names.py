@@ -12,7 +12,6 @@ from StringIO import StringIO
 from twisted.trial import unittest
 
 from twisted.internet import reactor, defer, error
-from twisted.internet.task import Clock
 from twisted.internet.defer import succeed
 from twisted.names import client, server, common, authority, dns
 from twisted.python import failure
@@ -22,7 +21,7 @@ from twisted.names.secondary import (
     SecondaryAuthorityService, SecondaryAuthority)
 
 from twisted.python.compat import reduce
-from twisted.test.proto_helpers import StringTransport, MemoryReactor
+from twisted.test.proto_helpers import StringTransport, MemoryReactorClock
 
 def justPayload(results):
     return [r.payload for r in results[0]]
@@ -787,14 +786,9 @@ class SecondaryAuthorityTests(unittest.TestCase):
         L{SecondaryAuthority} was constructed with from the server address it
         was constructed with when L{SecondaryAuthority.transfer} is called.
         """
-        class ClockMemoryReactor(Clock, MemoryReactor):
-            def __init__(self):
-                Clock.__init__(self)
-                MemoryReactor.__init__(self)
-
         secondary = SecondaryAuthority.fromServerAddressAndDomain(
             ('192.168.1.2', 1234), 'example.com')
-        secondary._reactor = reactor = ClockMemoryReactor()
+        secondary._reactor = reactor = MemoryReactorClock()
 
         secondary.transfer()
 

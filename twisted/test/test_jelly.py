@@ -6,14 +6,9 @@ Test cases for L{jelly} object serialization.
 """
 
 import datetime
-
-try:
-    import decimal
-except ImportError:
-    decimal = None
+import decimal
 
 from twisted.spread import jelly, pb
-from twisted.python.compat import set, frozenset
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 
@@ -277,26 +272,6 @@ class JellyTestCase(unittest.TestCase):
         self.assertEqual(output, expected)
 
 
-    def test_decimalMissing(self):
-        """
-        If decimal is unavailable on the unjelly side, L{jelly.unjelly} should
-        gracefully return L{jelly.Unpersistable} objects.
-        """
-        self.patch(jelly, 'decimal', None)
-        output = jelly.unjelly(self.decimalData)
-        self.assertEqual(len(output), 4)
-        for i in range(4):
-            self.assertIsInstance(output[i], jelly.Unpersistable)
-        self.assertEqual(output[0].reason,
-            "Could not unpersist decimal: 9.95")
-        self.assertEqual(output[1].reason,
-            "Could not unpersist decimal: 0")
-        self.assertEqual(output[2].reason,
-            "Could not unpersist decimal: 123456")
-        self.assertEqual(output[3].reason,
-            "Could not unpersist decimal: -78.901")
-
-
     def test_decimalSecurity(self):
         """
         By default, C{decimal} objects should be allowed by
@@ -305,12 +280,6 @@ class JellyTestCase(unittest.TestCase):
         """
         inputList = [decimal.Decimal('9.95')]
         self._testSecurity(inputList, "decimal")
-
-    if decimal is None:
-        skipReason = "decimal not available"
-        test_decimal.skip = skipReason
-        test_decimalUnjelly.skip = skipReason
-        test_decimalSecurity.skip = skipReason
 
 
     def test_set(self):

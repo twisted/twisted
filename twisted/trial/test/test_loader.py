@@ -473,7 +473,7 @@ class LoaderTest(packages.SysPathManglingTest):
         """
         Check that loadByNames ignores duplicate names
         """
-        module = 'twisted.trial.test.test_test_visitor'
+        module = 'twisted.trial.test.test_log'
         suite1 = self.loader.loadByNames([module, module], True)
         suite2 = self.loader.loadByName(module, True)
         self.assertSuitesEqual(suite1, suite2)
@@ -487,7 +487,7 @@ class LoaderTest(packages.SysPathManglingTest):
             "inheritancepackage.test_x.A.test_foo",
             "twisted.trial.test.sample",
             "goodpackage",
-            "twisted.trial.test.test_test_visitor",
+            "twisted.trial.test.test_log",
             "twisted.trial.test.sample.FooTest",
             "package.test_module"]
         suite1 = self.loader.loadByNames(modules)
@@ -528,15 +528,6 @@ class ZipLoadingTest(LoaderTest):
 
 
 class PackageOrderingTest(packages.SysPathManglingTest):
-    if sys.version_info < (2, 4):
-        skip = (
-            "Python 2.3 import semantics make this behavior incorrect on that "
-            "version of Python as well as difficult to test.  The second "
-            "import of a package which raised an exception the first time it "
-            "was imported will succeed on Python 2.3, whereas it will fail on "
-            "later versions of Python.  Trial does not account for this, so "
-            "this test fails with inconsistencies between the expected and "
-            "the received loader errors.")
 
     def setUp(self):
         self.loader = runner.TestLoader()

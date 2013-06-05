@@ -457,14 +457,10 @@ except ImportError:
 
     <p>Some modules don't exist across all supported Python versions. For
     example, Python 2.3's <code>sets</code> module was deprecated in Python 2.6
-    in favor of the <code>set</code> and <code>frozenset</code> builtins. When
-    you need to use sets or frozensets in your code, please use
-    the <code>set</code> and <code>frozenset</code> provided
-    by <code class="API">twisted.python.compat</code>. There are some
-    differences between <code>sets.Set</code> and <code>set</code>, that are
-    explained in the <a href="http://www.python.org/dev/peps/pep-0218/">set
-    PEP</a>. Please be sure to not rely on the behavior of one or the other
-    implementation.</p>
+    in favor of the <code>set</code> and <code>frozenset</code> builtins.
+    <code class="API">twisted.python.compat</code> would be the place to add
+    <code>set</code> and <code>frozenset</code> implementations that work across
+    Python versions.</p>
 
     <h2>Classes</h2>
 

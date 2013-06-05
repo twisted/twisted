@@ -1,6 +1,31 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Mail 13.0.0 (2013-03-19)
+================================
+
+Bugfixes
+--------
+ - twisted.mail.smtp.ESMTPClient no longer attempts to negotiate a TLS
+   session if transport security has been requested and the protocol
+   is already running on a TLS connection. (#3989)
+ - twisted.mail.imap4.Query now filters illegal characters from the
+   values of KEYWORD and UNKEYWORD and also emits them without adding
+   quotes (which are also illegal). (#4392)
+ - twisted.mail.imap4.IMAP4Client can now interpret the BODY response
+   for multipart/* messages with parts which are also multipart/*.
+   (#4631)
+
+Deprecations and Removals
+-------------------------
+ - tlsMode attribute of twisted.mail.smtp.ESMTPClient is deprecated.
+   (#5852)
+
+Other
+-----
+ - #6218, #6297
+
+
 Twisted Mail 12.3.0 (2012-12-20)
 ================================
 

@@ -11,56 +11,14 @@ from zope.interface.verify import verifyObject
 from zope.interface import implementer
 
 from twisted.python.failure import Failure
-from twisted.internet.interfaces import (IProtocol, ILoggingContext,
-                                         IProtocolFactory, IConsumer)
+from twisted.internet.interfaces import (
+    IProtocol, ILoggingContext, IProtocolFactory, IConsumer)
 from twisted.internet.defer import CancelledError
 from twisted.internet.protocol import (
     Protocol, ClientCreator, Factory, ProtocolToConsumerAdapter,
     ConsumerToProtocolAdapter)
-from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
-from twisted.test.proto_helpers import MemoryReactor, StringTransport
-
-
-
-class MemoryConnector:
-    _disconnected = False
-
-    def disconnect(self):
-        self._disconnected = True
-
-
-
-class MemoryReactorWithConnectorsAndTime(MemoryReactor, Clock):
-    """
-    An extension of L{MemoryReactor} which returns L{IConnector}
-    providers from its C{connectTCP} method.
-    """
-    def __init__(self):
-        MemoryReactor.__init__(self)
-        Clock.__init__(self)
-        self.connectors = []
-
-
-    def connectTCP(self, *a, **kw):
-        MemoryReactor.connectTCP(self, *a, **kw)
-        connector = MemoryConnector()
-        self.connectors.append(connector)
-        return connector
-
-
-    def connectUNIX(self, *a, **kw):
-        MemoryReactor.connectUNIX(self, *a, **kw)
-        connector = MemoryConnector()
-        self.connectors.append(connector)
-        return connector
-
-
-    def connectSSL(self, *a, **kw):
-        MemoryReactor.connectSSL(self, *a, **kw)
-        connector = MemoryConnector()
-        self.connectors.append(connector)
-        return connector
+from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
 
 
 
@@ -83,7 +41,7 @@ class ClientCreatorTests(TestCase):
         class SomeProtocol(Protocol):
             pass
 
-        reactor = MemoryReactorWithConnectorsAndTime()
+        reactor = MemoryReactorClock()
         cc = ClientCreator(reactor, SomeProtocol)
         factory = check(reactor, cc)
         protocol = factory.buildProtocol(None)
@@ -155,7 +113,7 @@ class ClientCreatorTests(TestCase):
         @return: A L{Deferred} which fires when the test is complete or fails if
             there is a problem.
         """
-        reactor = MemoryReactorWithConnectorsAndTime()
+        reactor = MemoryReactorClock()
         cc = ClientCreator(reactor, Protocol)
         d = connect(cc)
         connector = reactor.connectors.pop()
@@ -201,7 +159,7 @@ class ClientCreatorTests(TestCase):
         cancelled after the connection is set up but before it is fired with the
         resulting protocol instance.
         """
-        reactor = MemoryReactorWithConnectorsAndTime()
+        reactor = MemoryReactorClock()
         cc = ClientCreator(reactor, Protocol)
         d = connect(reactor, cc)
         connector = reactor.connectors.pop()
@@ -286,7 +244,7 @@ class ClientCreatorTests(TestCase):
         cancelled after the connection attempt has failed but before it is fired
         with the resulting failure.
         """
-        reactor = MemoryReactorWithConnectorsAndTime()
+        reactor = MemoryReactorClock()
         cc = ClientCreator(reactor, Protocol)
         d, factory = connect(reactor, cc)
         connector = reactor.connectors.pop()
@@ -385,6 +343,7 @@ class FactoryTests(TestCase):
     """
     Tests for L{protocol.Factory}.
     """
+
     def test_interfaces(self):
         """
         L{Factory} instances provide both L{IProtocolFactory} and
@@ -407,9 +366,8 @@ class FactoryTests(TestCase):
 
     def test_defaultBuildProtocol(self):
         """
-        L{Factory.buildProtocol} by default constructs a protocol by
-        calling its C{protocol} attribute, and attaches the factory to the
-        result.
+        L{Factory.buildProtocol} by default constructs a protocol by calling
+        its C{protocol} attribute, and attaches the factory to the result.
         """
         class SomeProtocol(Protocol):
             pass
@@ -418,6 +376,21 @@ class FactoryTests(TestCase):
         protocol = f.buildProtocol(None)
         self.assertIsInstance(protocol, SomeProtocol)
         self.assertIdentical(protocol.factory, f)
+
+
+    def test_forProtocol(self):
+        """
+        L{Factory.forProtocol} constructs a Factory, passing along any
+        additional arguments, and sets its C{protocol} attribute to the given
+        Protocol subclass.
+        """
+        class ArgTakingFactory(Factory):
+            def __init__(self, *args, **kwargs):
+                self.args, self.kwargs = args, kwargs
+        factory = ArgTakingFactory.forProtocol(Protocol, 1, 2, foo=12)
+        self.assertEqual(factory.protocol, Protocol)
+        self.assertEqual(factory.args, (1, 2))
+        self.assertEqual(factory.kwargs, {"foo": 12})
 
 
 

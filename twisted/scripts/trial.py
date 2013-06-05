@@ -12,7 +12,6 @@ from twisted.python import usage, reflect, failure
 from twisted.python.filepath import FilePath
 from twisted import plugin
 from twisted.python.util import spewer
-from twisted.python.compat import set
 from twisted.trial import runner, itrial, reporter
 
 

@@ -2,29 +2,37 @@
 # See LICENSE for details.
 
 """
-Test cases for twisted.reflect module.
+Test cases for the L{twisted.python.reflect} module.
 """
 
-import weakref, os
+import weakref
+import warnings
+from collections import deque
+
 try:
     from ihooks import ModuleImporter
 except ImportError:
     ModuleImporter = None
 
-try:
-    from collections import deque
-except ImportError:
-    deque = None
-
 from twisted.trial import unittest
-from twisted.python import reflect, util
+from twisted.python import reflect
 from twisted.python.versions import Version
 from twisted.python.test.test_reflectpy3 import LookupsTestCase
+
+with warnings.catch_warnings():
+    warnings.filterwarnings(action="ignore", category=DeprecationWarning,
+            message="twisted.python.reflect.Accessor was deprecated")
+    warnings.filterwarnings(action="ignore", category=DeprecationWarning,
+            message="twisted.python.reflect.PropertyAccessor was deprecated")
+    warnings.filterwarnings(action="ignore", category=DeprecationWarning,
+            message="twisted.python.reflect.Settable was deprecated")
+
+    from twisted.python.reflect import Accessor, PropertyAccessor, Settable
 
 
 class SettableTest(unittest.TestCase):
     def setUp(self):
-        self.setter = reflect.Settable()
+        self.setter = Settable()
 
     def tearDown(self):
         del self.setter
@@ -36,7 +44,7 @@ class SettableTest(unittest.TestCase):
 
 
 
-class AccessorTester(reflect.Accessor):
+class AccessorTester(Accessor):
 
     def set_x(self, x):
         self.y = x
@@ -53,7 +61,7 @@ class AccessorTester(reflect.Accessor):
 
 
 
-class PropertyAccessorTester(reflect.PropertyAccessor):
+class PropertyAccessorTester(PropertyAccessor):
     """
     Test class to check L{reflect.PropertyAccessor} functionalities.
     """
@@ -272,9 +280,10 @@ class ObjectGrep(unittest.TestCase):
         self.assertEqual(['[0]', '[1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=2))
         self.assertEqual(['[0]', '[1][0]', '[1][1][0]'], reflect.objgrep(d, a, reflect.isSame, maxDepth=3))
 
+
     def test_deque(self):
         """
-        Test references search through a deque object. Only for Python > 2.3.
+        Test references search through a deque object.
         """
         o = object()
         D = deque()
@@ -282,9 +291,6 @@ class ObjectGrep(unittest.TestCase):
         D.append(o)
 
         self.assertIn("[1]", reflect.objgrep(D, o, reflect.isSame))
-
-    if deque is None:
-        test_deque.skip = "Deque not available"
 
 
 class GetClass(unittest.TestCase):

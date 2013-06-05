@@ -657,15 +657,15 @@ class OpenSSLCertificateOptions(object):
         @param method: The SSL protocol to use, one of SSLv23_METHOD,
         SSLv2_METHOD, SSLv3_METHOD, TLSv1_METHOD.  Defaults to TLSv1_METHOD.
 
-        @param verify: If True, verify certificates received from the peer and
-        fail the handshake if verification fails.  Otherwise, allow anonymous
-        sessions and sessions with certificates which fail validation.  By
-        default this is False.
+        @param verify: If C{True}, verify certificates received from the peer
+            and fail the handshake if verification fails.  Otherwise, allow
+            anonymous sessions and sessions with certificates which fail
+            validation.  By default this is C{False}.
 
         @param caCerts: List of certificate authority certificate objects to
             use to verify the peer's certificate.  Only used if verify is
-            C{True}, and if verify is C{True}, this must be specified.  Since
-            verify is C{False} by default, this is C{None} by default.
+            C{True} and will be ignored otherwise.  Since verify is C{False} by
+            default, this is C{None} by default.
 
         @type caCerts: C{list} of L{OpenSSL.crypto.X509}
 
@@ -696,15 +696,18 @@ class OpenSSLCertificateOptions(object):
         ticket extensions in the hello.
         """
 
-        assert (privateKey is None) == (certificate is None), "Specify neither or both of privateKey and certificate"
+        if (privateKey is None) != (certificate is None):
+            raise ValueError(
+                "Specify neither or both of privateKey and certificate")
         self.privateKey = privateKey
         self.certificate = certificate
         if method is not None:
             self.method = method
 
+        if verify and not caCerts:
+            raise ValueError("Specify client CA certificate information if and"
+                             " only if enabling certificate verification")
         self.verify = verify
-        assert ((verify and caCerts) or
-                (not verify)), "Specify client CA certificate information if and only if enabling certificate verification"
 
         self.caCerts = caCerts
         self.verifyDepth = verifyDepth
@@ -739,6 +742,8 @@ class OpenSSLCertificateOptions(object):
 
     def _makeContext(self):
         ctx = SSL.Context(self.method)
+        # Disallow insecure SSLv2. Applies only for SSLv23_METHOD.
+        ctx.set_options(SSL.OP_NO_SSLv2)
 
         if self.certificate is not None and self.privateKey is not None:
             ctx.use_certificate(self.certificate)

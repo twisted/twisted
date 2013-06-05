@@ -14,6 +14,7 @@ from zope.interface.verify import verifyObject
 from twisted.internet.defer import succeed, gatherResults
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
+from twisted.trial.util import suppress as SUPPRESS
 from twisted.web.template import (
     Element, TagLoader, renderer, tags, XMLFile, XMLString)
 from twisted.web.iweb import ITemplateLoader
@@ -26,6 +27,12 @@ from twisted.web._element import UnexposedMethodError
 from twisted.web.test._util import FlattenTestCase
 from twisted.web.test.test_web import DummyRequest
 from twisted.web.server import NOT_DONE_YET
+
+
+_xmlFileSuppress = SUPPRESS(category=DeprecationWarning,
+        message="Passing filenames or file objects to XMLFile is "
+                "deprecated since Twisted 12.1.  Pass a FilePath instead.")
+
 
 class TagFactoryTests(TestCase):
     """
@@ -192,6 +199,7 @@ class XMLFileReprTests(TestCase):
         """
         fname = "/tmp/fake.xml"
         self.assertEqual('<XMLFile of %r>' % (fname,), repr(XMLFile(fname)))
+    test_filename.suppress = [_xmlFileSuppress]
 
 
     def test_file(self):
@@ -200,6 +208,7 @@ class XMLFileReprTests(TestCase):
         """
         fobj = StringIO("not xml")
         self.assertEqual('<XMLFile of %r>' % (fobj,), repr(XMLFile(fobj)))
+    test_file.suppress = [_xmlFileSuppress]
 
 
 
@@ -244,6 +253,7 @@ class XMLLoaderTestsMixin(object):
         tags1 = loader.load()
         tags2 = loader.load()
         self.assertEqual(tags1, tags2)
+    test_loadTwice.suppress = [_xmlFileSuppress]
 
 
 

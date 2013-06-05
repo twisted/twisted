@@ -6,17 +6,20 @@
 Utility methods.
 """
 
+from __future__ import division, absolute_import
+
 import sys, warnings
+from functools import wraps
 
 from twisted.internet import protocol, defer
-from twisted.internet._utilspy3 import runWithWarningsSuppressed
-from twisted.internet._utilspy3 import suppressWarnings
 from twisted.python import failure
+from twisted.python.compat import _PY3, reraise
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
+if not _PY3:
+    try:
+        import cStringIO as StringIO
+    except ImportError:
+        import StringIO
 
 def _callProtocolWithDeferred(protocol, executable, args, env, path, reactor=None):
     if reactor is None:
@@ -39,6 +42,7 @@ class _UnexpectedErrorOutput(IOError):
         produced the data on stderr has ended (exited and all file descriptors
         closed).
     """
+
     def __init__(self, text, processEnded):
         IOError.__init__(self, "got stderr: %r" % (text,))
         self.processEnded = processEnded
@@ -103,7 +107,7 @@ def getProcessOutput(executable, args=(), env={}, path=None, reactor=None,
                        full path should be used.
 
     @param args: the command line arguments to pass to the process; a
-                 sequence of strings. The first string should *NOT* be the
+                 sequence of strings. The first string should B{NOT} be the
                  executable's name.
 
     @param env: the environment variables to pass to the processs; a
@@ -160,6 +164,7 @@ class _EverythingGetter(protocol.ProcessProtocol):
         else:
             self.deferred.callback((out, err, code))
 
+
 def getProcessOutputAndValue(executable, args=(), env={}, path=None,
                              reactor=None):
     """Spawn a process and returns a Deferred that will be called back with
@@ -171,8 +176,60 @@ def getProcessOutputAndValue(executable, args=(), env={}, path=None,
                                     reactor)
 
 
+def _resetWarningFilters(passthrough, addedFilters):
+    for f in addedFilters:
+        try:
+            warnings.filters.remove(f)
+        except ValueError:
+            pass
+    return passthrough
+
+
+def runWithWarningsSuppressed(suppressedWarnings, f, *a, **kw):
+    """Run the function C{f}, but with some warnings suppressed.
+
+    @param suppressedWarnings: A list of arguments to pass to filterwarnings.
+                               Must be a sequence of 2-tuples (args, kwargs).
+    @param f: A callable, followed by its arguments and keyword arguments
+    """
+    for args, kwargs in suppressedWarnings:
+        warnings.filterwarnings(*args, **kwargs)
+    addedFilters = warnings.filters[:len(suppressedWarnings)]
+    try:
+        result = f(*a, **kw)
+    except:
+        exc_info = sys.exc_info()
+        _resetWarningFilters(None, addedFilters)
+        reraise(exc_info[1], exc_info[2])
+    else:
+        if isinstance(result, defer.Deferred):
+            result.addBoth(_resetWarningFilters, addedFilters)
+        else:
+            _resetWarningFilters(None, addedFilters)
+        return result
+
+
+def suppressWarnings(f, *suppressedWarnings):
+    """
+    Wrap C{f} in a callable which suppresses the indicated warnings before
+    invoking C{f} and unsuppresses them afterwards.  If f returns a Deferred,
+    warnings will remain suppressed until the Deferred fires.
+    """
+    @wraps(f)
+    def warningSuppressingWrapper(*a, **kw):
+        return runWithWarningsSuppressed(suppressedWarnings, f, *a, **kw)
+    return warningSuppressingWrapper
+
+
 __all__ = [
     "runWithWarningsSuppressed", "suppressWarnings",
-
     "getProcessOutput", "getProcessValue", "getProcessOutputAndValue",
     ]
+
+if _PY3:
+    __all3__ = ["runWithWarningsSuppressed", "suppressWarnings"]
+    for name in __all__[:]:
+        if name not in __all3__:
+            __all__.remove(name)
+            del globals()[name]
+    del name, __all3__

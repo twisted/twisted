@@ -838,6 +838,18 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
             self.failureException, self.successResultOf, fail(self.failure))
 
 
+    def test_successResultOfWithFailureHasTraceback(self):
+        """
+        L{SynchronousTestCase.successResultOf} raises a
+        L{SynchronousTestCase.failureException} that has the original failure
+        traceback when called with a L{Deferred} with a failure result.
+        """
+        try:
+            self.successResultOf(fail(self.failure))
+        except self.failureException as e:
+            self.assertIn(self.failure.getTraceback(), str(e))
+
+
     def test_withoutFailureResult(self):
         """
         L{SynchronousTestCase.failureResultOf} raises
@@ -857,6 +869,54 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
         self.assertRaises(
             self.failureException, self.failureResultOf, succeed(self.result))
 
+    def test_failureResultOfWithWrongFailure(self):
+        """
+        L{SynchronousTestCase.failureResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a L{Deferred}
+        with a failure type that was not expected.
+        """
+        self.assertRaises(
+            self.failureException, self.failureResultOf, fail(self.failure),
+            KeyError)
+
+
+    def test_failureResultOfWithWrongFailureOneExpectedFailure(self):
+        """
+        L{SynchronousTestCase.failureResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a L{Deferred}
+        with a failure type that was not expected, and the
+        L{SynchronousTestCase.failureException} message contains the original
+        failure traceback as well as the expected failure type
+        """
+        try:
+            self.failureResultOf(fail(self.failure), KeyError)
+        except self.failureException as e:
+            self.assertIn(self.failure.getTraceback(), str(e))
+            self.assertIn(
+                "Failure of type ({0}.{1}) expected on".format(
+                    KeyError.__module__, KeyError.__name__),
+                str(e))
+
+
+    def test_failureResultOfWithWrongFailureMultiExpectedFailure(self):
+        """
+        L{SynchronousTestCase.failureResultOf} raises
+        L{SynchronousTestCase.failureException} when called with a L{Deferred}
+        with a failure type that was not expected, and the
+        L{SynchronousTestCase.failureException} message contains the original
+        failure traceback as well as the expected failure types in the error
+        message
+        """
+        try:
+            self.failureResultOf(fail(self.failure), KeyError, IOError)
+        except self.failureException as e:
+            self.assertIn(self.failure.getTraceback(), str(e))
+            self.assertIn(
+                "Failure of type ({0}.{1} or {2}.{3}) expected on".format(
+                    KeyError.__module__, KeyError.__name__,
+                    IOError.__module__, IOError.__name__),
+                str(e))
+
 
     def test_withSuccessResult(self):
         """
@@ -869,12 +929,25 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
             self.result, self.successResultOf(succeed(self.result)))
 
 
-    def test_withFailureResult(self):
+    def test_withExpectedFailureResult(self):
         """
         When passed a L{Deferred} which currently has a L{Failure} result (ie,
-        L{Deferred.addErrback} would cause the added errback to be called before
-        C{addErrback} returns), L{SynchronousTestCase.failureResultOf} returns
-        that L{Failure}.
+        L{Deferred.addErrback} would cause the added errback to be called
+        before C{addErrback} returns), L{SynchronousTestCase.failureResultOf}
+        returns that L{Failure} if that L{Failure}'s type is expected.
+        """
+        self.assertIdentical(
+            self.failure,
+            self.failureResultOf(fail(self.failure), self.failure.type,
+                                 KeyError))
+
+
+    def test_withFailureResult(self):
+        """
+        When passed a L{Deferred} which currently has a L{Failure} result
+        (ie, L{Deferred.addErrback} would cause the added errback to be called
+        before C{addErrback} returns), L{SynchronousTestCase.failureResultOf}
+        returns that L{Failure}.
         """
         self.assertIdentical(
             self.failure, self.failureResultOf(fail(self.failure)))
@@ -903,9 +976,46 @@ class TestResultOfAssertions(unittest.SynchronousTestCase):
     def test_assertNoResult(self):
         """
         When passed a L{Deferred} with no current result,
-        L{SynchronousTestCase.assertNoResult} raises no exception.
         """
         self.assertNoResult(Deferred())
+
+
+    def test_assertNoResultPropagatesSuccess(self):
+        """
+        When passed a L{Deferred} with no current result, which is then
+        fired with a success result, L{SynchronousTestCase.assertNoResult}
+        doesn't modify the result of the L{Deferred}.
+        """
+        d = Deferred()
+        self.assertNoResult(d)
+        d.callback(self.result)
+        self.assertEqual(self.result, self.successResultOf(d))
+
+
+    def test_assertNoResultPropagatesLaterFailure(self):
+        """
+        When passed a L{Deferred} with no current result, which is then
+        fired with a L{Failure} result, L{SynchronousTestCase.assertNoResult}
+        doesn't modify the result of the L{Deferred}.
+        """
+        d = Deferred()
+        self.assertNoResult(d)
+        d.errback(self.failure)
+        self.assertEqual(self.failure, self.failureResultOf(d))
+
+
+    def test_assertNoResultSwallowsImmediateFailure(self):
+        """
+        When passed a L{Deferred} which currently has a L{Failure} result,
+        L{SynchronousTestCase.assertNoResult} changes the result of the
+        L{Deferred} to a success.
+        """
+        d = fail(self.failure)
+        try:
+            self.assertNoResult(d)
+        except self.failureException:
+            pass
+        self.assertEqual(None, self.successResultOf(d))
 
 
 

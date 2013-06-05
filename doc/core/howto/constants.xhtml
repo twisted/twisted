@@ -209,8 +209,6 @@ ValueError: 500
 True
 >>> STATUS.OK is STATUS.OK
 True
->>> STATUS.OK == STATUS.OK
-True
 >>> STATUS.OK is STATUS.NOT_FOUND
 False
 >>> STATUS.OK == STATUS.NOT_FOUND
@@ -331,6 +329,33 @@ True
 >>>
   </pre>
 
+  <p>These combined constants can be deconstructed via iteration:</p>
+
+  <pre class="shell">
+>>> mode = Permission.USER_READ | Permission.USER_WRITE
+>>> list(mode)
+[&lt;Permission=USER_READ>, &lt;Permission=USER_WRITE>]
+>>> Permission.USER_READ in mode
+True
+>>> Permission.USER_EXECUTE in mode
+False
+>>>
+  </pre>
+
+  <p>They can also be inspected via boolean operations:</p>
+
+  <pre class="shell">
+>>> Permission.USER_READ &amp; mode
+&lt;Permission=USER_READ>
+>>> bool(Permission.USER_READ &amp; mode)
+True
+>>> Permission.USER_EXECUTE &amp; mode
+&lt;Permission={}>
+>>> bool(Permission.USER_EXECUTE &amp; mode)
+False
+>>>
+  </pre>
+
   <p>The unary operator <code>~</code> (<em>not</em>) is also defined:</p>
 
   <pre class="shell">
@@ -350,7 +375,7 @@ True
 
   <p>
     Note the care taken to ensure the <code>~</code> operator is applied first
-    and the <code>value</code>attribute is looked up second.
+    and the <code>value</code> attribute is looked up second.
   </p>
 
   <p>A <code>Flags</code> subclass can also define methods, just as

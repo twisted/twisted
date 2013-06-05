@@ -7,9 +7,8 @@ Test cases for L{twisted.names.client}.
 
 import sys
 
-from zope.interface.verify import verifyObject
+from zope.interface.verify import verifyClass, verifyObject
 
-from twisted.python.compat import set
 from twisted.python import failure
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
@@ -25,6 +24,7 @@ from twisted.names.error import DNSQueryTimeoutError
 from twisted.names.common import ResolverBase
 
 from twisted.names.test.test_hosts import GoodTempPathMixin
+from twisted.names.test.test_rootresolve import MemoryReactor
 
 from twisted.trial import unittest
 
@@ -270,6 +270,13 @@ class ResolverTests(unittest.TestCase):
     """
     Tests for L{client.Resolver}.
     """
+    def test_clientResolverProvidesIResolver(self):
+        """
+        L{client.Resolver} provides L{IResolver}.
+        """
+        verifyClass(IResolver, client.Resolver)
+
+
     def test_noServers(self):
         """
         L{client.Resolver} raises L{ValueError} if constructed with neither
@@ -492,6 +499,18 @@ class ResolverTests(unittest.TestCase):
         return defer.gatherResults([
                 defer.maybeDeferred(firstProto.transport.stopListening),
                 defer.maybeDeferred(secondProto.transport.stopListening)])
+
+
+    def test_resolverUsesOnlyParameterizedReactor(self):
+        """
+        If a reactor instance is supplied to L{client.Resolver}
+        L{client.Resolver._connectedProtocol} should pass that reactor
+        to L{twisted.names.dns.DNSDatagramProtocol}.
+        """
+        reactor = MemoryReactor()
+        resolver = client.Resolver(resolv=self.mktemp(), reactor=reactor)
+        proto = resolver._connectedProtocol()
+        self.assertIdentical(proto._reactor, reactor)
 
 
     def test_differentProtocol(self):

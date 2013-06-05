@@ -30,7 +30,6 @@ except ImportError:
 
 from twisted.python import log
 from twisted.python.failure import Failure
-from twisted.python.compat import set
 from twisted.mail import relay
 from twisted.mail import bounce
 from twisted.internet import protocol

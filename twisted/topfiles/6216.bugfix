@@ -1,1 +1,0 @@
-Fixed problem where twisted.names.client.Resolver was not closing open file handles which can lead to an out of file descriptor error on PyPy.

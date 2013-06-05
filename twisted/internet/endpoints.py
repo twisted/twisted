@@ -425,7 +425,7 @@ class TCP6ClientEndpoint(object):
 
     def _nameResolution(self, host):
         """
-        Resolve the hostname string into a tuple containig the host
+        Resolve the hostname string into a tuple containing the host
         IPv6 address.
         """
         return self._deferToThread(
@@ -764,8 +764,17 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         certKey = privateKey
     kw = {}
     if sslmethod is not None:
-        kw['sslmethod'] = getattr(ssl.SSL, sslmethod)
-    cf = ssl.DefaultOpenSSLContextFactory(privateKey, certKey, **kw)
+        kw['method'] = getattr(ssl.SSL, sslmethod)
+    else:
+        kw['method'] = ssl.SSL.SSLv23_METHOD
+    certPEM = FilePath(certKey).getContent()
+    keyPEM = FilePath(privateKey).getContent()
+    privateCertificate = ssl.PrivateCertificate.loadPEM(certPEM + keyPEM)
+    cf = ssl.CertificateOptions(
+        privateKey=privateCertificate.privateKey.original,
+        certificate=privateCertificate.original,
+        **kw
+    )
     return ((int(port), factory, cf),
             {'interface': interface, 'backlog': int(backlog)})
 

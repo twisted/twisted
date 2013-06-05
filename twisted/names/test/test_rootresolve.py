@@ -17,8 +17,7 @@ from twisted.internet.defer import Deferred, succeed, gatherResults
 from twisted.internet.task import Clock
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IReactorUDP, IUDPTransport
-from twisted.names.root import Resolver, lookupNameservers, lookupAddress
-from twisted.names.root import extractAuthority, discoverAuthority, retry
+from twisted.names.root import Resolver
 from twisted.names.dns import (
     IN, HS, A, NS, CNAME, OK, ENAME, Record_CNAME,
     Name, Query, Message, RRHeader, Record_A, Record_NS)
@@ -578,28 +577,6 @@ class RootResolverTests(TestCase):
         return gatherResults([failD, succeedD])
 
 
-    def test_discoveredAuthorityDeprecated(self):
-        """
-        Calling L{Resolver.discoveredAuthority} produces a deprecation warning.
-        """
-        resolver = Resolver([])
-        d = resolver.discoveredAuthority('127.0.0.1', 'example.com', IN, A, (0,))
-
-        warnings = self.flushWarnings([
-                self.test_discoveredAuthorityDeprecated])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            'twisted.names.root.Resolver.discoveredAuthority is deprecated since '
-            'Twisted 10.0.  Use twisted.names.client.Resolver directly, instead.')
-        self.assertEqual(len(warnings), 1)
-
-        # This will time out quickly, but we need to wait for it because there
-        # are resources associated with.
-        d.addErrback(lambda ignored: None)
-        return d
-
-
 
 class StubDNSDatagramProtocol:
     """
@@ -618,108 +595,3 @@ _retrySuppression = util.suppress(
         'Resolver object for retry logic.'))
 
 
-class DiscoveryToolsTests(TestCase):
-    """
-    Tests for the free functions in L{twisted.names.root} which help out with
-    authority discovery.  Since these are mostly deprecated, these are mostly
-    deprecation tests.
-    """
-    def test_lookupNameserversDeprecated(self):
-        """
-        Calling L{root.lookupNameservers} produces a deprecation warning.
-        """
-        # Don't care about the return value, since it will never have a result,
-        # since StubDNSDatagramProtocol doesn't actually work.
-        lookupNameservers('example.com', '127.0.0.1', StubDNSDatagramProtocol())
-
-        warnings = self.flushWarnings([
-                self.test_lookupNameserversDeprecated])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            'twisted.names.root.lookupNameservers is deprecated since Twisted '
-            '10.0.  Use twisted.names.root.Resolver.lookupNameservers '
-            'instead.')
-        self.assertEqual(len(warnings), 1)
-    test_lookupNameserversDeprecated.suppress = [_retrySuppression]
-
-
-    def test_lookupAddressDeprecated(self):
-        """
-        Calling L{root.lookupAddress} produces a deprecation warning.
-        """
-        # Don't care about the return value, since it will never have a result,
-        # since StubDNSDatagramProtocol doesn't actually work.
-        lookupAddress('example.com', '127.0.0.1', StubDNSDatagramProtocol())
-
-        warnings = self.flushWarnings([
-                self.test_lookupAddressDeprecated])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            'twisted.names.root.lookupAddress is deprecated since Twisted '
-            '10.0.  Use twisted.names.root.Resolver.lookupAddress '
-            'instead.')
-        self.assertEqual(len(warnings), 1)
-    test_lookupAddressDeprecated.suppress = [_retrySuppression]
-
-
-    def test_extractAuthorityDeprecated(self):
-        """
-        Calling L{root.extractAuthority} produces a deprecation warning.
-        """
-        extractAuthority(Message(), {})
-
-        warnings = self.flushWarnings([
-                self.test_extractAuthorityDeprecated])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            'twisted.names.root.extractAuthority is deprecated since Twisted '
-            '10.0.  Please inspect the Message object directly.')
-        self.assertEqual(len(warnings), 1)
-
-
-    def test_discoverAuthorityDeprecated(self):
-        """
-        Calling L{root.discoverAuthority} produces a deprecation warning.
-        """
-        discoverAuthority(
-            'example.com', ['10.0.0.1'], p=StubDNSDatagramProtocol())
-
-        warnings = self.flushWarnings([
-                self.test_discoverAuthorityDeprecated])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            'twisted.names.root.discoverAuthority is deprecated since Twisted '
-            '10.0.  Use twisted.names.root.Resolver.lookupNameservers '
-            'instead.')
-        self.assertEqual(len(warnings), 1)
-
-    # discoverAuthority is implemented in terms of deprecated functions,
-    # too.  Ignore those.
-    test_discoverAuthorityDeprecated.suppress = [
-        util.suppress(
-            category=DeprecationWarning,
-            message=(
-                'twisted.names.root.lookupNameservers is deprecated since '
-                'Twisted 10.0.  Use '
-                'twisted.names.root.Resolver.lookupNameservers instead.')),
-        _retrySuppression]
-
-
-    def test_retryDeprecated(self):
-        """
-        Calling L{root.retry} produces a deprecation warning.
-        """
-        retry([0], StubDNSDatagramProtocol())
-
-        warnings = self.flushWarnings([
-                self.test_retryDeprecated])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            'twisted.names.root.retry is deprecated since Twisted '
-            '10.0.  Use a Resolver object for retry logic.')
-        self.assertEqual(len(warnings), 1)

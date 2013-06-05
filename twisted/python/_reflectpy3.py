@@ -194,27 +194,25 @@ def _importAndCheckStack(importName):
     administrative error (entering the wrong module name), from programmer
     error (writing buggy code in a module that fails to import).
 
+    @param importName: The name of the module to import.
+    @type importName: C{str}
     @raise Exception: if something bad happens.  This can be any type of
-    exception, since nobody knows what loading some arbitrary code might do.
-
+        exception, since nobody knows what loading some arbitrary code might
+        do.
     @raise _NoModuleFound: if no module was found.
     """
     try:
-        try:
-            return __import__(importName)
-        except ImportError:
-            excType, excValue, excTraceback = sys.exc_info()
-            while excTraceback:
-                execName = excTraceback.tb_frame.f_globals["__name__"]
-                if (execName is None or # python 2.4+, post-cleanup
-                    execName == importName): # python 2.3, no cleanup
-                    reraise(excValue, excTraceback)
-                excTraceback = excTraceback.tb_next
-            raise _NoModuleFound()
-    except:
-        # Necessary for cleaning up modules in 2.3.
-        sys.modules.pop(importName, None)
-        raise
+        return __import__(importName)
+    except ImportError:
+        excType, excValue, excTraceback = sys.exc_info()
+        while excTraceback:
+            execName = excTraceback.tb_frame.f_globals["__name__"]
+            # in Python 2 execName is None when an ImportError is encountered,
+            # where in Python 3 execName is equal to the importName.
+            if execName is None or execName == importName:
+                reraise(excValue, excTraceback)
+            excTraceback = excTraceback.tb_next
+        raise _NoModuleFound()
 
 
 

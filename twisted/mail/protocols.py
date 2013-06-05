@@ -3,9 +3,10 @@
 # See LICENSE for details.
 
 
-"""Protocol support for twisted.mail."""
+"""
+Protocol support for L{twisted.mail}.
+"""
 
-# twisted imports
 from twisted.mail import pop3
 from twisted.mail import smtp
 from twisted.internet import protocol
@@ -25,7 +26,9 @@ from zope.interface import implements
 
 
 class DomainDeliveryBase:
-    """A server that uses twisted.mail service's domains."""
+    """
+    A server that uses L{twisted.mail} service's domains.
+    """
 
     implements(smtp.IMessageDelivery)
     
@@ -67,11 +70,6 @@ class DomainDeliveryBase:
             raise smtp.SMTPBadSender(origin, 501, "Sender address must contain domain.")
         return origin
 
-    def startMessage(self, users):
-        ret = []
-        for user in users:
-            ret.append(self.service.domains[user.dest.domain].startMessage(user))
-        return ret
 
 
 class SMTPDomainDelivery(DomainDeliveryBase):

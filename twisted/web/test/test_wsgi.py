@@ -14,7 +14,6 @@ import StringIO, cStringIO, tempfile
 
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import set
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
 from twisted.python.threadpool import ThreadPool

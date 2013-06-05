@@ -1034,6 +1034,10 @@ class DeprecationTests(unittest.TestCase):
             "12.2.")
         self.assertEqual(warnings[0]['category'], DeprecationWarning)
         self.assertEqual(len(warnings), 1)
+    test_addPluginDir.suppress = [
+            SUPPRESS(category=DeprecationWarning,
+                     message="twisted.python.util.getPluginDirs is deprecated")
+            ]
 
 
 

@@ -27,18 +27,11 @@ class _Constant(object):
         constant is initialized by L{_ConstantsContainer}.
 
     @ivar _container: The L{_ConstantsContainer} subclass this constant belongs
-        to; only set once the constant is initialized by that subclass.
+        to; C{None} until the constant is initialized by that subclass.
     """
     def __init__(self):
+        self._container = None
         self._index = _constantOrder()
-
-
-    def __get__(self, oself, cls):
-        """
-        Ensure this constant has been initialized before returning it.
-        """
-        cls._initializeEnumerants()
-        return self
 
 
     def __repr__(self):
@@ -66,19 +59,56 @@ class _Constant(object):
 
 
 
-class _EnumerantsInitializer(object):
+class _ConstantsContainerType(type):
     """
-    L{_EnumerantsInitializer} is a descriptor used to initialize a cache of
-    objects representing named constants for a particular L{_ConstantsContainer}
-    subclass.
+    L{_ConstantsContainerType} is a metaclass for creating constants container classes.
     """
-    def __get__(self, oself, cls):
+    def __new__(self, name, bases, attributes):
         """
-        Trigger the initialization of the enumerants cache on C{cls} and then
-        return it.
+        Create a new constants container class.
+
+        If C{attributes} includes a value of C{None} for the C{"_constantType"}
+        key, the new class will not be initialized as a constants container and
+        it will behave as a normal class.
+
+        @param name: The name of the container class.
+        @type name: L{str}
+
+        @param bases: A tuple of the base classes for the new container class.
+        @type bases: L{tuple} of L{_ConstantsContainerType} instances
+
+        @param attributes: The attributes of the new container class, including
+            any constants it is to contain.
+        @type attributes: L{dict}
         """
-        cls._initializeEnumerants()
-        return cls._enumerants
+        cls = super(_ConstantsContainerType, self).__new__(
+            self, name, bases, attributes)
+
+        if cls._constantType is None:
+            return cls
+
+        constants = []
+        for (name, descriptor) in attributes.iteritems():
+            if isinstance(descriptor, cls._constantType):
+                if descriptor._container is not None:
+                    raise ValueError(
+                        "Cannot use %s as the value of an attribute on %s" % (
+                            descriptor, cls.__name__))
+                constants.append((descriptor._index, name, descriptor))
+
+        constants.sort()
+        enumerants = {}
+        for (index, enumerant, descriptor) in constants:
+            value = cls._constantFactory(enumerant, descriptor)
+            descriptor._realize(cls, enumerant, value)
+            enumerants[enumerant] = descriptor
+
+        # Save the dictionary which contains *only* constants (distinct from any
+        # other attributes the application may have given the container) where
+        # the class can use it later (eg for lookupByName).
+        cls._enumerants = enumerants
+
+        return cls
 
 
 
@@ -91,18 +121,13 @@ class _ConstantsContainer(object):
     @cvar _constantType: Specified by a L{_ConstantsContainer} subclass to
         specify the type of constants allowed by that subclass.
 
-    @cvar _enumerantsInitialized: A C{bool} tracking whether C{_enumerants} has
-        been initialized yet or not.
-
     @cvar _enumerants: A C{dict} mapping the names of constants (eg
         L{NamedConstant} instances) found in the class definition to those
-        instances.  This is initialized via the L{_EnumerantsInitializer}
-        descriptor the first time it is accessed.
+        instances.
     """
-    _constantType = None
+    __metaclass__ = _ConstantsContainerType
 
-    _enumerantsInitialized = False
-    _enumerants = _EnumerantsInitializer()
+    _constantType = None
 
     def __new__(cls):
         """
@@ -114,32 +139,7 @@ class _ConstantsContainer(object):
         raise TypeError("%s may not be instantiated." % (cls.__name__,))
 
 
-    def _initializeEnumerants(cls):
-        """
-        Find all of the L{NamedConstant} instances in the definition of C{cls},
-        initialize them with constant values, and build a mapping from their
-        names to them to attach to C{cls}.
-        """
-        if not cls._enumerantsInitialized:
-            constants = []
-            for (name, descriptor) in cls.__dict__.iteritems():
-                if isinstance(descriptor, cls._constantType):
-                    constants.append((descriptor._index, name, descriptor))
-            enumerants = {}
-            constants.sort()
-            for (index, enumerant, descriptor) in constants:
-                value = cls._constantFactory(enumerant, descriptor)
-                descriptor._realize(cls, enumerant, value)
-                enumerants[enumerant] = descriptor
-            # Replace the _enumerants descriptor with the result so future
-            # access will go directly to the values.  The _enumerantsInitialized
-            # flag is still necessary because NamedConstant.__get__ may also
-            # call this method.
-            cls._enumerants = enumerants
-            cls._enumerantsInitialized = True
-    _initializeEnumerants = classmethod(_initializeEnumerants)
-
-
+    @classmethod
     def _constantFactory(cls, name, descriptor):
         """
         Construct the value for a new constant to add to this container.
@@ -150,9 +150,9 @@ class _ConstantsContainer(object):
             so return a meaningless dummy value.
         """
         return _unspecified
-    _constantFactory = classmethod(_constantFactory)
 
 
+    @classmethod
     def lookupByName(cls, name):
         """
         Retrieve a constant by its name or raise a C{ValueError} if there is no
@@ -169,9 +169,9 @@ class _ConstantsContainer(object):
         if name in cls._enumerants:
             return getattr(cls, name)
         raise ValueError(name)
-    lookupByName = classmethod(lookupByName)
 
 
+    @classmethod
     def iterconstants(cls):
         """
         Iteration over a L{Names} subclass results in all of the constants it
@@ -183,7 +183,6 @@ class _ConstantsContainer(object):
         constants = cls._enumerants.values()
         constants.sort(key=lambda descriptor: descriptor._index)
         return iter(constants)
-    iterconstants = classmethod(iterconstants)
 
 
 
@@ -229,6 +228,7 @@ class Values(_ConstantsContainer):
     """
     _constantType = ValueConstant
 
+    @classmethod
     def lookupByValue(cls, value):
         """
         Retrieve a constant by its value or raise a C{ValueError} if there is no
@@ -245,7 +245,6 @@ class Values(_ConstantsContainer):
             if constant.value == value:
                 return constant
         raise ValueError(value)
-    lookupByValue = classmethod(lookupByValue)
 
 
 
@@ -351,6 +350,32 @@ class FlagConstant(_Constant):
         return result
 
 
+    def __iter__(self):
+        """
+        @return: An iterator of flags set on this instance set.
+        """
+        return (self._container.lookupByName(name) for name in self.names)
+
+
+    def __contains__(self, flag):
+        """
+        @param flag: The flag to test for membership in this instance
+            set.
+
+        @return: C{True} if C{flag} is in this instance set, else
+            C{False}.
+        """
+        # Optimization for testing membership without iteration.
+        return bool(flag & self)
+
+
+    def __nonzero__(self):
+        """
+        @return: C{False} if this flag's value is 0, else C{True}.
+        """
+        return bool(self.value)
+
+
 
 class Flags(Values):
     """
@@ -362,6 +387,7 @@ class Flags(Values):
 
     _value = 1
 
+    @classmethod
     def _constantFactory(cls, name, descriptor):
         """
         For L{FlagConstant} instances with no explicitly defined value, assign
@@ -374,4 +400,3 @@ class Flags(Values):
             value = descriptor.value
             cls._value = value << 1
         return value
-    _constantFactory = classmethod(_constantFactory)

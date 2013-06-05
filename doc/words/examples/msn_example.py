@@ -29,10 +29,9 @@ To run the script::
 
 
 def _createNotificationFac():
-    fac = msn.NotificationFactory()
+    fac = msn.NotificationFactory.forProtocol(Notification)
     fac.userHandle = USER_HANDLE
     fac.password = PASSWORD
-    fac.protocol = Notification
     return fac
 
 class Dispatch(msn.DispatchClient):

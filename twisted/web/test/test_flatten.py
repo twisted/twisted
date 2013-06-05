@@ -1,23 +1,59 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+
+"""
+Tests for the flattening portion of L{twisted.web.template}, implemented in
+L{twisted.web._flatten}.
+"""
 
 import sys
 import traceback
 
-from zope.interface import implements
+from xml.etree.cElementTree import XML
+
+from zope.interface import implements, implementer
 
 from twisted.trial.unittest import TestCase
-from twisted.internet.defer import succeed, gatherResults
-from twisted.web._stan import Tag
-from twisted.web._flatten import flattenString
-from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
-from twisted.web.template import tags, Comment, CDATA, CharRef, slot
+from twisted.test.testutils import XMLAssertionMixin
+
+from twisted.internet.defer import passthru, succeed, gatherResults
+
 from twisted.web.iweb import IRenderable
+from twisted.web.error import UnfilledSlot, UnsupportedType, FlattenerError
+
+from twisted.web.template import tags, Tag, Comment, CDATA, CharRef, slot
+from twisted.web.template import Element, renderer, TagLoader, flattenString
+
 from twisted.web.test._util import FlattenTestCase
 
 
-class TestSerialization(FlattenTestCase):
+
+class OrderedAttributes(object):
+    """
+    An L{OrderedAttributes} is a stand-in for the L{Tag.attributes} dictionary
+    that orders things in a deterministic order.  It doesn't do any sorting, so
+    whatever order the attributes are passed in, they will be returned.
+
+    @ivar attributes: The result of a L{dict}C{.items} call.
+    @type attributes: L{list} of 2-L{tuples}
+    """
+
+    def __init__(self, attributes):
+        self.attributes = attributes
+
+
+    def iteritems(self):
+        """
+        Like L{dict}C{.iteritems}.
+
+        @return: an iterator
+        @rtype: list iterator
+        """
+        return iter(self.attributes)
+
+
+
+class TestSerialization(FlattenTestCase, XMLAssertionMixin):
     """
     Tests for flattening various things.
     """
@@ -42,9 +78,179 @@ class TestSerialization(FlattenTestCase):
 
     def test_serializeSelfClosingTags(self):
         """
-        Test that some tags are normally written out as self-closing tags.
+        The serialized form of a self-closing tag is C{'<tagName />'}.
         """
-        return self.assertFlattensTo(tags.img(src='test'), '<img src="test" />')
+        return self.assertFlattensTo(tags.img(), '<img />')
+
+
+    def test_serializeAttribute(self):
+        """
+        The serialized form of attribute I{a} with value I{b} is C{'a="b"'}.
+        """
+        self.assertFlattensImmediately(tags.img(src='foo'),
+                                       '<img src="foo" />')
+
+
+    def test_serializedMultipleAttributes(self):
+        """
+        Multiple attributes are separated by a single space in their serialized
+        form.
+        """
+        tag = tags.img()
+        tag.attributes = OrderedAttributes([("src", "foo"), ("name", "bar")])
+        self.assertFlattensImmediately(tag, '<img src="foo" name="bar" />')
+
+
+    def checkAttributeSanitization(self, wrapData, wrapTag):
+        """
+        Common implementation of L{test_serializedAttributeWithSanitization}
+        and L{test_serializedDeferredAttributeWithSanitization},
+        L{test_serializedAttributeWithTransparentTag}.
+
+        @param wrapData: A 1-argument callable that wraps around the
+            attribute's value so other tests can customize it.
+        @param wrapData: callable taking L{bytes} and returning something
+            flattenable
+
+        @param wrapTag: A 1-argument callable that wraps around the outer tag
+            so other tests can customize it.
+        @type wrapTag: callable taking L{Tag} and returning L{Tag}.
+        """
+        self.assertFlattensImmediately(
+            wrapTag(tags.img(src=wrapData("<>&\""))),
+            '<img src="&lt;&gt;&amp;&quot;" />')
+
+
+    def test_serializedAttributeWithSanitization(self):
+        """
+        Attribute values containing C{"<"}, C{">"}, C{"&"}, or C{'"'} have
+        C{"&lt;"}, C{"&gt;"}, C{"&amp;"}, or C{"&quot;"} substituted for those
+        bytes in the serialized output.
+        """
+        self.checkAttributeSanitization(passthru, passthru)
+
+
+    def test_serializedDeferredAttributeWithSanitization(self):
+        """
+        Like L{test_serializedAttributeWithSanitization}, but when the contents
+        of the attribute are in a L{Deferred
+        <twisted.internet.defer.Deferred>}.
+        """
+        self.checkAttributeSanitization(succeed, passthru)
+
+
+    def test_serializedAttributeWithSlotWithSanitization(self):
+        """
+        Like L{test_serializedAttributeWithSanitization} but with a slot.
+        """
+        toss = []
+        self.checkAttributeSanitization(
+            lambda value: toss.append(value) or slot("stuff"),
+            lambda tag: tag.fillSlots(stuff=toss.pop())
+        )
+
+
+    def test_serializedAttributeWithTransparentTag(self):
+        """
+        Attribute values which are supplied via the value of a C{t:transparent}
+        tag have the same subsitution rules to them as values supplied
+        directly.
+        """
+        self.checkAttributeSanitization(tags.transparent, passthru)
+
+
+    def test_serializedAttributeWithTransparentTagWithRenderer(self):
+        """
+        Like L{test_serializedAttributeWithTransparentTag}, but when the
+        attribute is rendered by a renderer on an element.
+        """
+        class WithRenderer(Element):
+            def __init__(self, value, loader):
+                self.value = value
+                super(WithRenderer, self).__init__(loader)
+            @renderer
+            def stuff(self, request, tag):
+                return self.value
+        toss = []
+        self.checkAttributeSanitization(
+            lambda value: toss.append(value) or
+                          tags.transparent(render="stuff"),
+            lambda tag: WithRenderer(toss.pop(), TagLoader(tag))
+        )
+
+
+    def test_serializedAttributeWithRenderable(self):
+        """
+        Like L{test_serializedAttributeWithTransparentTag}, but when the
+        attribute is a provider of L{IRenderable} rather than a transparent
+        tag.
+        """
+        @implementer(IRenderable)
+        class Arbitrary(object):
+            def __init__(self, value):
+                self.value = value
+            def render(self, request):
+                return self.value
+        self.checkAttributeSanitization(Arbitrary, passthru)
+
+
+    def checkTagAttributeSerialization(self, wrapTag):
+        """
+        Common implementation of L{test_serializedAttributeWithTag} and
+        L{test_serializedAttributeWithDeferredTag}.
+
+        @param wrapTag: A 1-argument callable that wraps around the attribute's
+            value so other tests can customize it.
+        @param wrapTag: callable taking L{Tag} and returning something
+            flattenable
+        """
+        innerTag = tags.a('<>&"')
+        outerTag = tags.img(src=wrapTag(innerTag))
+        outer = self.assertFlattensImmediately(
+            outerTag,
+            '<img src="&lt;a&gt;&amp;lt;&amp;gt;&amp;amp;&quot;&lt;/a&gt;" />')
+        inner = self.assertFlattensImmediately(
+            innerTag, '<a>&lt;&gt;&amp;"</a>')
+
+        # Since the above quoting is somewhat tricky, validate it by making sure
+        # that the main use-case for tag-within-attribute is supported here: if
+        # we serialize a tag, it is quoted *such that it can be parsed out again
+        # as a tag*.
+        self.assertXMLEqual(XML(outer).attrib['src'], inner)
+
+
+    def test_serializedAttributeWithTag(self):
+        """
+        L{Tag} objects which are serialized within the context of an attribute
+        are serialized such that the text content of the attribute may be
+        parsed to retrieve the tag.
+        """
+        self.checkTagAttributeSerialization(passthru)
+
+
+    def test_serializedAttributeWithDeferredTag(self):
+        """
+        Like L{test_serializedAttributeWithTag}, but when the L{Tag} is in a
+        L{Deferred <twisted.internet.defer.Deferred>}.
+        """
+        self.checkTagAttributeSerialization(succeed)
+
+
+    def test_serializedAttributeWithTagWithAttribute(self):
+        """
+        Similar to L{test_serializedAttributeWithTag}, but for the additional
+        complexity where the tag which is the attribute value itself has an
+        attribute value which contains bytes which require substitution.
+        """
+        flattened = self.assertFlattensImmediately(
+            tags.img(src=tags.a(href='<>&"')),
+            '<img src="&lt;a href='
+            '&quot;&amp;lt;&amp;gt;&amp;amp;&amp;quot;&quot;&gt;'
+            '&lt;/a&gt;" />')
+
+        # As in checkTagAttributeSerialization, belt-and-suspenders:
+        self.assertXMLEqual(XML(flattened).attrib['src'],
+                            '<a href="&lt;&gt;&amp;&quot;"></a>')
 
 
     def test_serializeComment(self):

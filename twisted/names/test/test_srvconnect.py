@@ -167,3 +167,15 @@ class SRVConnectorTest(unittest.TestCase):
         self.assertNotIdentical(None, self.factory.reason)
         self.factory.reason.trap(DNSLookupError)
         self.assertEqual(self.reactor.tcpClients, [])
+
+
+    def test_unicodeDomain(self):
+        """
+        L{srvconnect.SRVConnector} automatically encodes unicode domain using
+        C{idna} encoding.
+        """
+        self.connector = srvconnect.SRVConnector(
+            self.reactor, 'xmpp-client', u'\u00e9chec.example.org',
+            self.factory)
+        self.assertIsInstance(self.connector.domain, bytes)
+        self.assertEqual(b'xn--chec-9oa.example.org', self.connector.domain)

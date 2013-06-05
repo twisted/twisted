@@ -11,7 +11,7 @@ from zope.interface.verify import verifyObject
 
 from twisted.trial.itrial import IReporter, ITestCase
 from twisted.trial import unittest, runner, reporter, util
-from twisted.python import failure, log, reflect, filepath
+from twisted.python import failure, log, reflect
 from twisted.python.filepath import FilePath
 from twisted.scripts import trial
 from twisted.plugins import twisted_trial
@@ -191,11 +191,10 @@ class TrialRunnerWithUncleanWarningsReporter(TrialRunnerTestsMixin,
 
 
 class DryRunMixin(object):
-
-    suppress = [util.suppress(
-        category=DeprecationWarning,
-        message="Test visitors deprecated in Twisted 8.0")]
-
+    """
+    Mixin for testing that 'dry run' mode works with various
+    L{pyunit.TestCase} subclasses.
+    """
 
     def setUp(self):
         self.log = []
@@ -1020,3 +1019,22 @@ class TestRunnerDeprecation(unittest.SynchronousTestCase):
             "%s should implement done() but doesn't. Falling back to "
             "printErrors() and friends." % reflect.qual(result.__class__),
             __file__, f)
+
+
+
+class DryRunVisitorDeprecation(unittest.TestCase):
+    """
+    Test for L{DryRunVisitor}
+    """
+
+    def test_deprecated(self):
+        """
+        L{DryRunVisitor} is deprecated.
+        """
+        runner.DryRunVisitor
+        warningsShown = self.flushWarnings([self.test_deprecated])
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+                "twisted.trial.runner.DryRunVisitor was deprecated in "
+                "Twisted 13.0.0: Trial no longer has support for visitors",
+                warningsShown[0]['message'])

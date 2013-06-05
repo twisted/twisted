@@ -51,6 +51,10 @@ class FlattenTestCase(TestCase):
         This version is more convenient in tests which wish to make multiple
         assertions about flattening, since it can be called multiple times
         without having to add multiple callbacks.
+
+        @return: the result of rendering L{root}, which should be equivalent to
+            L{target}.
+        @rtype: L{bytes}
         """
         results = []
         it = self.assertFlattensTo(root, target)
@@ -62,6 +66,7 @@ class FlattenTestCase(TestCase):
         result = results[0]
         if isinstance(result, Failure):
             result.raiseException()
+        return results[0]
 
 
     def assertFlatteningRaises(self, root, exn):

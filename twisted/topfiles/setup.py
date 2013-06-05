@@ -18,18 +18,13 @@ if os.path.exists('twisted'):
 from twisted import copyright
 from twisted.python.dist import setup, ConditionalExtension as Extension
 from twisted.python.dist import getPackages, getDataFiles, getScripts
-from twisted.python.dist import twisted_subprojects, _isCPython, _hasEpoll
+from twisted.python.dist import twisted_subprojects, _isCPython
 
 
 extensions = [
     Extension("twisted.test.raiser",
               ["twisted/test/raiser.c"],
               condition=lambda _: _isCPython),
-
-    Extension("twisted.python._epoll",
-              ["twisted/python/_epoll.c"],
-              condition=lambda builder: (_isCPython and _hasEpoll(builder) and
-                                         sys.version_info[:2] < (2, 6))),
 
     Extension("twisted.internet.iocpreactor.iocpsupport",
               ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",

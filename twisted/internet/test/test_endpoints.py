@@ -47,13 +47,14 @@ try:
     from twisted.test.test_sslverify import makeCertificate
     from twisted.internet.ssl import CertificateOptions, Certificate, \
         KeyPair, PrivateCertificate
-    from OpenSSL.SSL import ContextType
+    from OpenSSL.SSL import ContextType, SSLv23_METHOD, TLSv1_METHOD
     testCertificate = Certificate.loadPEM(pemPath.getContent())
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
 
     skipSSL = False
 except ImportError:
     skipSSL = "OpenSSL is required to construct SSL Endpoints"
+
 
 
 class TestProtocol(Protocol):
@@ -894,6 +895,7 @@ class TCP6EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
                 address)
 
 
+
 class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
                                          unittest.TestCase):
     """
@@ -1394,18 +1396,37 @@ class ServerStringTests(unittest.TestCase):
         server = endpoints.serverFromString(
             reactor,
             "ssl:1234:backlog=12:privateKey=%s:"
-            "certKey=%s:interface=10.0.0.1" % (escapedPEMPathName,
-                                               escapedPEMPathName))
+            "certKey=%s:sslmethod=TLSv1_METHOD:interface=10.0.0.1"
+            % (escapedPEMPathName, escapedPEMPathName))
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
         self.assertIdentical(server._reactor, reactor)
         self.assertEqual(server._port, 1234)
         self.assertEqual(server._backlog, 12)
         self.assertEqual(server._interface, "10.0.0.1")
+        self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
+        ctx = server._sslContextFactory.getContext()
+        self.assertIsInstance(ctx, ContextType)
+
+
+    def test_sslWithDefaults(self):
+        """
+        An SSL strport description with minimal arguments returns a properly
+        initialized L{SSL4ServerEndpoint} instance.
+        """
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor, "ssl:4321:privateKey=%s" % (escapedPEMPathName,))
+        self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
+        self.assertIdentical(server._reactor, reactor)
+        self.assertEqual(server._port, 4321)
+        self.assertEqual(server._backlog, 50)
+        self.assertEqual(server._interface, "")
+        self.assertEqual(server._sslContextFactory.method, SSLv23_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
 
     if skipSSL:
-        test_ssl.skip = skipSSL
+        test_ssl.skip = test_sslWithDefaults.skip = skipSSL
 
 
     def test_unix(self):
@@ -1722,6 +1743,24 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(client._port, 4321)
         self.assertEqual(client._timeout, 3)
         self.assertEqual(client._bindAddress, "10.0.0.3")
+
+
+    def test_sslWithDefaults(self):
+        """
+        When passed an SSL strports description without extra arguments,
+        L{clientFromString} returns a L{SSL4ClientEndpoint} instance
+        whose context factory is initialized with default values.
+        """
+        reactor = object()
+        client = endpoints.clientFromString(reactor, "ssl:example.net:4321")
+        self.assertIsInstance(client, endpoints.SSL4ClientEndpoint)
+        self.assertIdentical(client._reactor, reactor)
+        self.assertEqual(client._host, "example.net")
+        self.assertEqual(client._port, 4321)
+        certOptions = client._sslContextFactory
+        self.assertEqual(certOptions.method, SSLv23_METHOD)
+        self.assertEqual(certOptions.certificate, None)
+        self.assertEqual(certOptions.privateKey, None)
 
 
     def test_unreadableCertificate(self):

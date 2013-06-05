@@ -18,8 +18,7 @@ from twisted.python.compat import _PY3
 
 if not _PY3:
     from twisted.trial._asyncrunner import (
-        TestSuite, TestDecorator, suiteVisit,
-        decorate)
+        TestSuite, TestDecorator, decorate)
     from twisted.trial._asyncrunner import (
         _ForceGarbageCollectionDecorator, _iterateTests, _clearSuite)
 
@@ -39,4 +38,4 @@ from twisted.trial._synctest import (
 __all__ = [
     'FailTest', 'SkipTest', 'SynchronousTestCase', 'Todo', 'makeTodo',
 
-    'TestCase', 'TestSuite', 'suiteVisit', 'decorate']
+    'TestCase', 'TestSuite', 'decorate']

@@ -1,3 +1,3 @@
 # This is an auto-generated file. Do not edit it.
 from twisted.python import versions
-version = versions.Version('twisted.news', 12, 3, 0)
+version = versions.Version('twisted.news', 13, 0, 0)

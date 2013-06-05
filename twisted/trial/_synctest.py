@@ -619,12 +619,14 @@ class _Assertions(pyunit.TestCase, object):
         elif isinstance(result[0], failure.Failure):
             self.fail(
                 "Success result expected on %r, "
-                "found failure result (%r) instead" % (deferred, result[0]))
+                "found failure result instead:\n%s" % (
+                    deferred, result[0].getTraceback()))
         else:
             return result[0]
 
 
-    def failureResultOf(self, deferred):
+
+    def failureResultOf(self, deferred, *expectedExceptionTypes):
         """
         Return the current failure result of C{deferred} or raise
         C{self.failException}.
@@ -638,9 +640,13 @@ class _Assertions(pyunit.TestCase, object):
             L{failure.Failure}.
         @type deferred: L{Deferred<twisted.internet.defer.Deferred>}
 
+        @param expectedExceptionTypes: Exception types to expect - if
+            provided, and the the exception wrapped by the failure result is
+            not one of the types provided, then this test will fail.
+
         @raise SynchronousTestCase.failureException: If the
-            L{Deferred<twisted.internet.defer.Deferred>} has no result or has a
-            success result.
+            L{Deferred<twisted.internet.defer.Deferred>} has no result, has a
+            success result, or has an unexpected failure result.
 
         @return: The failure result of C{deferred}.
         @rtype: L{failure.Failure}
@@ -655,6 +661,17 @@ class _Assertions(pyunit.TestCase, object):
             self.fail(
                 "Failure result expected on %r, "
                 "found success result (%r) instead" % (deferred, result[0]))
+        elif (expectedExceptionTypes and
+              not result[0].check(*expectedExceptionTypes)):
+            expectedString = " or ".join([
+                '.'.join((t.__module__, t.__name__)) for t in
+                expectedExceptionTypes])
+
+            self.fail(
+                "Failure of type (%s) expected on %r, "
+                "found type %r instead: %s" % (
+                    expectedString, deferred, result[0].type,
+                    result[0].getTraceback()))
         else:
             return result[0]
 
@@ -663,6 +680,9 @@ class _Assertions(pyunit.TestCase, object):
     def assertNoResult(self, deferred):
         """
         Assert that C{deferred} does not have a result at this point.
+
+        If the assertion succeeds, then the result of C{deferred} is left
+        unchanged. Otherwise, any L{failure.Failure} result is swallowed.
 
         @param deferred: A L{Deferred<twisted.internet.defer.Deferred>} without
             a result.  This means that neither
@@ -677,8 +697,14 @@ class _Assertions(pyunit.TestCase, object):
             L{Deferred<twisted.internet.defer.Deferred>} has a result.
         """
         result = []
-        deferred.addBoth(result.append)
+        def cb(res):
+            result.append(res)
+            return res
+        deferred.addBoth(cb)
         if result:
+            # If there is already a failure, the self.fail below will
+            # report it, so swallow it in the deferred
+            deferred.addErrback(lambda _: None)
             self.fail(
                 "No result expected on %r, found %r instead" % (
                     deferred, result[0]))
@@ -1113,13 +1139,18 @@ class SynchronousTestCase(_Assertions):
 
     def mktemp(self):
         """
-        Returns a unique name that may be used as either a temporary directory
-        or filename.
+        Create a new path name which can be used for a new file or directory.
 
-        @note: you must call os.mkdir on the value returned from this method if
-            you wish to use it as a directory!
+        The result is a relative path that is guaranteed to be unique within the
+        current working directory.  The parent of the path will exist, but the
+        path will not.
 
-        @return: C{str}
+        For a temporary directory call os.mkdir on the path.  For a temporary
+        file just create the file (e.g. by opening the path for writing and then
+        closing it).
+
+        @return: The newly created path
+        @rtype: C{str}
         """
         MAX_FILENAME = 32 # some platforms limit lengths of filenames
         base = os.path.join(self.__class__.__module__[:MAX_FILENAME],
