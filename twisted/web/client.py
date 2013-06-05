@@ -11,10 +11,10 @@ from __future__ import division, absolute_import
 import os, types
 
 try:
-    from urlparse import urlunparse
+    from urlparse import urlunparse, urljoin, urldefrag
     from urllib import splithost, splittype
 except ImportError:
-    from urllib.parse import splithost, splittype
+    from urllib.parse import splithost, splittype, urljoin, urldefrag
     from urllib.parse import urlunparse as _urlunparse
 
     def urlunparse(parts):
@@ -593,6 +593,36 @@ def _parse(url, defaultPort=None):
         path = b'/'
 
     return _URL(scheme, host, port, path)
+
+
+
+def _urljoin(base, url):
+    """
+    Construct a full ("absolute") URL by combining a "base URL" with another
+    URL. Informally, this uses components of the base URL, in particular the
+    addressing scheme, the network location and (part of) the path, to provide
+    missing components in the relative URL.
+
+    Additionally, the fragment identifier is preserved according to the HTTP
+    1.1 bis draft.
+
+    @type base: C{bytes}
+    @param base: Base URL.
+
+    @type url: C{bytes}
+    @param url: URL to combine with C{base}.
+
+    @return: An absolute URL resulting from the combination of C{base} and
+        C{url}.
+
+    @see: L{urlparse.urljoin}
+
+    @see: U{https://tools.ietf.org/html/draft-ietf-httpbis-p2-semantics-22#section-7.1.2}
+    """
+    base, baseFrag = urldefrag(base)
+    url, urlFrag = urldefrag(urljoin(base, url))
+    return urljoin(url, b'#' + (urlFrag or baseFrag))
+
 
 
 def _makeGetterFactory(url, factoryFactory, contextFactory=None,
@@ -1549,13 +1579,27 @@ class RedirectAgent(object):
     An L{Agent} wrapper which handles HTTP redirects.
 
     The implementation is rather strict: 301 and 302 behaves like 307, not
-    redirecting automatically on methods different from C{GET} and C{HEAD}.
+    redirecting automatically on methods different from I{GET} and I{HEAD}.
+
+    See L{BrowserLikeRedirectAgent} for a redirecting Agent that behaves more
+    like a web browser.
 
     @param redirectLimit: The maximum number of times the agent is allowed to
         follow redirects before failing with a L{error.InfiniteRedirection}.
 
+    @cvar _redirectResponses: A L{list} of HTTP status codes to be redirected
+        for I{GET} and I{HEAD} methods.
+
+    @cvar _seeOtherResponses: A L{list} of HTTP status codes to be redirected
+        for any method and the method altered to I{GET}.
+
     @since: 11.1
     """
+
+    _redirectResponses = [http.MOVED_PERMANENTLY, http.FOUND,
+                          http.TEMPORARY_REDIRECT]
+    _seeOtherResponses = [http.SEE_OTHER]
+
 
     def __init__(self, agent, redirectLimit=20):
         self._agent = agent
@@ -1571,6 +1615,22 @@ class RedirectAgent(object):
         deferred = self._agent.request(method, uri, headers, bodyProducer)
         return deferred.addCallback(
             self._handleResponse, method, uri, headers, 0)
+
+
+    def _resolveLocation(self, requestURI, location):
+        """
+        Resolve the redirect location against the request I{URI}.
+
+        @type requestURI: C{bytes}
+        @param requestURI: The request I{URI}.
+
+        @type location: C{bytes}
+        @param location: The redirect location.
+
+        @rtype: C{bytes}
+        @return: Final resolved I{URI}.
+        """
+        return _urljoin(requestURI, location)
 
 
     def _handleRedirect(self, response, method, uri, headers, redirectCount):
@@ -1589,7 +1649,7 @@ class RedirectAgent(object):
             err = error.RedirectWithNoLocation(
                 response.code, 'No location header field', uri)
             raise ResponseFailed([failure.Failure(err)], response)
-        location = locationHeaders[0]
+        location = self._resolveLocation(uri, locationHeaders[0])
         deferred = self._agent.request(method, location, headers)
         return deferred.addCallback(
             self._handleResponse, method, uri, headers, redirectCount + 1)
@@ -1599,17 +1659,34 @@ class RedirectAgent(object):
         """
         Handle the response, making another request if it indicates a redirect.
         """
-        if response.code in (http.MOVED_PERMANENTLY, http.FOUND,
-                             http.TEMPORARY_REDIRECT):
+        if response.code in self._redirectResponses:
             if method not in ('GET', 'HEAD'):
                 err = error.PageRedirect(response.code, location=uri)
                 raise ResponseFailed([failure.Failure(err)], response)
             return self._handleRedirect(response, method, uri, headers,
                                         redirectCount)
-        elif response.code == http.SEE_OTHER:
+        elif response.code in self._seeOtherResponses:
             return self._handleRedirect(response, 'GET', uri, headers,
                                         redirectCount)
         return response
+
+
+
+class BrowserLikeRedirectAgent(RedirectAgent):
+    """
+    An L{Agent} wrapper which handles HTTP redirects in the same fashion as web
+    browsers.
+
+    Unlike L{RedirectAgent}, the implementation is more relaxed: 301 and 302
+    behave like 303, redirecting automatically on any method and altering the
+    redirect request to a I{GET}.
+
+    @see: L{RedirectAgent}
+
+    @since: 13.1
+    """
+    _redirectResponses = [http.TEMPORARY_REDIRECT]
+    _seeOtherResponses = [http.MOVED_PERMANENTLY, http.FOUND, http.SEE_OTHER]
 
 
 
@@ -1691,4 +1768,4 @@ __all__ = [
     'HTTPClientFactory', 'HTTPDownloader', 'getPage', 'downloadPage',
     'ResponseDone', 'Response', 'ResponseFailed', 'Agent', 'CookieAgent',
     'ProxyAgent', 'ContentDecoderAgent', 'GzipDecoder', 'RedirectAgent',
-    'HTTPConnectionPool', 'readBody']
+    'HTTPConnectionPool', 'readBody', 'BrowserLikeRedirectAgent']
