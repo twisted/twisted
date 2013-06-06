@@ -1,4 +1,3 @@
-# -*- test-case-name: twisted.test.test_defer,twisted.test.test_defgen,twisted.internet.test.test_inlinecb -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -575,6 +574,13 @@ class Deferred:
                     current._runningCallbacks = True
                     try:
                         current.result = callback(current.result, *args, **kw)
+                        if current.result is current:
+                            warnAboutFunction(
+                                callback,
+                                "Callback returned the Deferred "
+                                "it was attached to; this breaks the "
+                                "callback chain and will raise an "
+                                "exception in the future.")
                     finally:
                         current._runningCallbacks = False
                 except:
@@ -589,13 +595,6 @@ class Deferred:
                         if resultResult is _NO_RESULT or isinstance(resultResult, Deferred) or current.result.paused:
                             # Nope, it didn't.  Pause and chain.
                             current.pause()
-                            if current.result is current:
-                                warnAboutFunction(
-                                    callback,
-                                    "Callback returned the Deferred "
-                                    "it was attached to; this breaks the "
-                                    "callback chain and will raise an "
-                                    "exception in the future.")
                             current._chainedTo = current.result
                             # Note: current.result has no result, so it's not
                             # running its callbacks right now.  Therefore we can
