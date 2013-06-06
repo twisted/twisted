@@ -41,6 +41,33 @@ class DateTimeTest(unittest.TestCase):
             time2 = http.stringToDatetime(timestr)
             self.assertEqual(time, time2)
 
+    def test_stringToDatetimeSecondDateFormat(self):
+        """
+        Tests wheter a date string of the format
+        'Monday, 01-Jan-70 00:00:00 GMT' works as expected.
+        """
+        time = 1235543421
+        timestr = 'Wednesday, 25-Feb-09 06:30:21 GMT'
+        time2 = 132312312
+        timestr2 = 'Tuesday, 12-Mar-74 09:25:12 GMT'
+        self.assertEqual(time, http.stringToDatetime(timestr))
+        self.assertEqual(time2, http.stringToDatetime(timestr2))
+
+    def test_stringToDatetimeThirdDateFormat(self):
+        """
+        Tests whether ANSI C asctime() format works as expected.
+        """
+        time = 132312312
+        timestr = "Tue, Mar 12 09:25:12 1974"
+        self.assertEqual(time, http.stringToDatetime(timestr))
+
+    def test_stringToDatetimeUnkownFormat(self):
+        """
+        Tests whether unknown date strings raise ValueError as 
+        expected.
+        """
+        timestr = 'abc'
+        self.assertRaises(ValueError, http.stringToDatetime, timestr)
 
 class DummyHTTPHandler(http.Request):
 
