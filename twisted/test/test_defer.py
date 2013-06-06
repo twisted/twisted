@@ -14,6 +14,7 @@ from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.internet import defer
 from twisted.python import failure, log
+from twisted.python.reflect import fullyQualifiedName
 
 
 class GenericError(Exception):
@@ -2028,28 +2029,7 @@ class DeferredHistoryTests(unittest.TestCase):
         d.addCallback(callback)
         d.callback(None)
         [item] = d._getHistory()
-        self.assertEqual(item.name, "callback")
-        self.assertEqual(item.module, "twisted.test.test_defer")
-        self.assertEqual(item.className, None)
-
-
-    def test_oneMethodCallback(self):
-        """
-        Methods in the callback history include information about the class
-        they are in.
-        """
-        d = defer.Deferred()
-
-        class Foo(object):
-            def callback(self, result):
-                pass
-
-        d.addCallback(Foo().callback)
-        d.callback(None)
-        [item] = d._getHistory()
-        self.assertEqual(item.name, "callback")
-        self.assertEqual(item.module, "twisted.test.test_defer")
-        self.assertEqual(item.className, "Foo")
+        self.assertEqual(item.name, fullyQualifiedName(callback))
 
 
     def test_twoCallbacks(self):
@@ -2069,8 +2049,8 @@ class DeferredHistoryTests(unittest.TestCase):
 
         d.callback(0)
         [item1, item2] = d._getHistory()
-        self.assertEqual(item1.name, "callback1")
-        self.assertEqual(item2.name, "callback2")
+        self.assertEqual(item1.name, fullyQualifiedName(callback1))
+        self.assertEqual(item2.name, fullyQualifiedName(callback2))
 
 
     def test_callbackOrErrbackFlag(self):
@@ -2098,12 +2078,11 @@ class DeferredHistoryTests(unittest.TestCase):
         History items based on lambda callbacks have a name of <lambda>.
         """
         d = defer.Deferred()
-        d.addCallback(lambda x: None)
+        cb = lambda x: None
+        d.addCallback(cb)
         d.callback(None)
         [item] = d._getHistory()
-        self.assertEqual(item.name, "<lambda>")
-        self.assertEqual(item.module, "twisted.test.test_defer")
-        self.assertEqual(item.className, None)
+        self.assertEqual(item.name, fullyQualifiedName(cb))
 
 
     def test_chain(self):
@@ -2128,8 +2107,8 @@ class DeferredHistoryTests(unittest.TestCase):
         [outerItem] = outer._getHistory()
         [innerItem] = outerItem.chainedHistory.get()
 
-        self.assertEqual(outerItem.name, "callback")
-        self.assertEqual(innerItem.name, "innerCallback")
+        self.assertEqual(outerItem.name, fullyQualifiedName(callback))
+        self.assertEqual(innerItem.name, fullyQualifiedName(innerCallback))
 
 
     def test_innerExecutedBeforeOuterCallback(self):
@@ -2154,8 +2133,8 @@ class DeferredHistoryTests(unittest.TestCase):
         [outerItem] = outer._getHistory()
         [innerItem] = outerItem.chainedHistory.get()
 
-        self.assertEqual(outerItem.name, "callback")
-        self.assertEqual(innerItem.name, "innerCallback")
+        self.assertEqual(outerItem.name, fullyQualifiedName(callback))
+        self.assertEqual(innerItem.name, fullyQualifiedName(innerCallback))
 
 
     def test_innerDeferredHistoryMergingDoesntAffectLaterCallbacks(self):
@@ -2179,8 +2158,8 @@ class DeferredHistoryTests(unittest.TestCase):
 
         [outerItem1, outerItem2] = outer._getHistory()
 
-        self.assertEqual(outerItem1.name, "callback1")
-        self.assertEqual(outerItem2.name, "callback2")
+        self.assertEqual(outerItem1.name, fullyQualifiedName(callback1))
+        self.assertEqual(outerItem2.name, fullyQualifiedName(callback2))
 
 
     def test_returnSameDeferredFromMultipleCallbacks(self):
@@ -2243,8 +2222,10 @@ class DeferredHistoryTests(unittest.TestCase):
         outer.callback(None)
         self.assertEqual(len(outer._getHistory()), 100)
 
-        self.assertEqual(outer._getHistory()[0].name, "firstCallback")
-        self.assertEqual(outer._getHistory()[-1].name, "lastCallback")
+        self.assertEqual(outer._getHistory()[0].name,
+                         fullyQualifiedName(firstCallback))
+        self.assertEqual(outer._getHistory()[-1].name,
+                         fullyQualifiedName(lastCallback))
 
 
     def test_disableHistoryTracking(self):
@@ -2269,10 +2250,12 @@ class DeferredHistoryTests(unittest.TestCase):
         d = defer.Deferred()
         defer.disableDeferredDebugging(
             [defer.DebuggingFeatures.historyTracking])
-        d.addCallback(lambda x: None)
+        def callback(result):
+            return None
+        d.addCallback(callback)
         d.callback(None)
         [item] = d._getHistory()
-        self.assertEqual(item.name, "<lambda>")
+        self.assertEqual(item.name, fullyQualifiedName(callback))
 
 
     def test_historyTrackingEnabledAfterCreation(self):
@@ -2367,8 +2350,8 @@ class DeferredHistoryTests(unittest.TestCase):
         inner.callback(None)
         [item1, item2] = outer._getHistory()
         
-        self.assertEqual(item1.name, "callback1")
-        self.assertEqual(item2.name, "callback2")
+        self.assertEqual(item1.name, fullyQualifiedName(callback1))
+        self.assertEqual(item2.name, fullyQualifiedName(callback2))
 
 
     def test_mergingHonorsHistoryTrackingOfMergee(self):
@@ -2407,7 +2390,8 @@ class DeferredHistoryTests(unittest.TestCase):
         [item1, item2] = outer._getHistory()
         # callback2 returned inner2, which has a callback inner2Callback
         [chained1] = item2.chainedHistory.get()
-        self.assertEqual(chained1.name, "inner2Callback")
+        self.assertEqual(chained1.name,
+                         "twisted.test.test_defer.inner2Callback")
 
 
 

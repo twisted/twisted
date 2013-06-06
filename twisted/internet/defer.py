@@ -30,6 +30,7 @@ from functools import wraps
 from twisted.python.compat import _PY3, comparable, cmp
 from twisted.python.constants import Names, NamedConstant
 from twisted.python import log, failure
+from twisted.python.reflect import fullyQualifiedName
 
 
 
@@ -642,13 +643,8 @@ class Deferred:
                     finally:
                         current._runningCallbacks = False
                         if current._history is not None:
-                            className = None
-                            if inspect.ismethod(callback):
-                                className = callback.im_class.__name__
                             historyItem = _DeferredHistoryItem(
-                                callback.__name__,
-                                callback.__module__,
-                                className,
+                                fullyQualifiedName(callback),
                                 not isErrback)
                             current._history.add(historyItem)
                         else:
@@ -775,13 +771,6 @@ class _DeferredHistoryItem(object):
     @ivar name: The fully qualified name of the function being executed.
     @type name: str
 
-    @ivar module: The name of the module the function was in.
-    @type module: str
-
-    @ivar className: The name of the class the function is a member of.  May be
-        None.
-    @type className: str
-
     @ivar isCallback: Specifies whether this was a callback (True) or errback
         (False).
     @type isCallback: bool
@@ -791,10 +780,8 @@ class _DeferredHistoryItem(object):
     @type chainedHistory: ...
     """
 
-    def __init__(self, name, module, className, isCallback):
+    def __init__(self, name, isCallback):
         self.name = name
-        self.module = module
-        self.className = className
         self.isCallback = isCallback
         # XXX this shouldn't be instantiated unless needed
         self.chainedHistory = _DeferredHistory()
