@@ -85,7 +85,15 @@ class TunnelAddress(object):
 
 
 
-_TunnelDescription = namedtuple("_TunnelDescription", "fileno name")
+class _TunnelDescription(namedtuple("_TunnelDescription", "fileno name")):
+    """
+    Describe an existing tunnel.
+
+    @ivar fileno: An L{int} giving the file descriptor associated with the
+        tunnel.
+    @ivar name: A L{bytes} instance giving the name of the tunnel.
+    """
+
 
 
 class TuntapPort(base.BasePort):
