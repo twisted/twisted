@@ -11,6 +11,7 @@ import fcntl
 import errno
 import struct
 import warnings
+from collections import namedtuple
 
 from zope.interface import implementer
 
