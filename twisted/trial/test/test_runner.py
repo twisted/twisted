@@ -567,7 +567,6 @@ class TestRunner(unittest.SynchronousTestCase):
         If trial was passed the C{--exitfirst} option, the constructed test
         result object is wrapped with L{reporter._ExitWrapper}.
         """
-
         self.parseOptions(["--exitfirst"])
         runner = self.getRunner()
         result = runner._makeResult()

@@ -1695,7 +1695,6 @@ class ExitWrapperTests(unittest.SynchronousTestCase):
         L{reporter._ExitWrapper} causes a wrapped reporter to stop after its
         first failure.
         """
-
         self.wrapped.addFailure(self.test, self.failure)
         self.assertTrue(self.wrapped.shouldStop)
         self.assertEqual(self.result.failures, [(self.test, self.failure)])
@@ -1706,19 +1705,17 @@ class ExitWrapperTests(unittest.SynchronousTestCase):
         L{reporter._ExitWrapper} causes a wrapped reporter to stop after its
         first error.
         """
-
         self.wrapped.addError(self.test, self.failure)
         self.assertTrue(self.wrapped.shouldStop)
         self.assertEqual(self.result.errors, [(self.test, self.failure)])
 
 
-    def test_stopOnUnexpectedSuccess(self):
+    def test_doesNotStopOnUnexpectedSuccess(self):
         """
-        L{reporter._StopWrapper} causes a wrapped reporter to stop after an
-        unexpected success if C{onlyAfterFailure} is C{False}.
+        L{reporter._ExitWrapper} does not cause a wrapped reporter to stop
+        after an unexpected success.
         """
-
         self.wrapped.addUnexpectedSuccess(self.test, self.failure)
-        self.assertTrue(self.wrapped.shouldStop)
+        self.assertFalse(self.wrapped.shouldStop)
         self.assertEqual(
             self.result.unexpectedSuccesses, [(self.test, self.failure)])

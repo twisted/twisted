@@ -242,27 +242,13 @@ class _ExitWrapper(TestResultDecorator):
     """
 
     def addError(self, *args, **kwargs):
-        """
-        See L{itrial.IReporter}.
-        """
         self.shouldStop = True
         return self._originalReporter.addError(*args, **kwargs)
 
 
     def addFailure(self, *args, **kwargs):
-        """
-        See L{itrial.IReporter}.
-        """
         self.shouldStop = True
         return self._originalReporter.addFailure(*args, **kwargs)
-
-
-    def addUnexpectedSuccess(self, *args, **kwargs):
-        """
-        See L{itrial.IReporter}.
-        """
-        self.shouldStop = True
-        return self._originalReporter.addUnexpectedSuccess(*args, **kwargs)
 
 
 
