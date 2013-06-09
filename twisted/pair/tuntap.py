@@ -97,6 +97,10 @@ class _TunnelDescription(namedtuple("_TunnelDescription", "fileno name")):
 
 
 class _RealSystem(object):
+    """
+    An interface to the parts of the operating system which L{TuntapPort}
+    relies on.
+    """
     open = staticmethod(os.open)
     read = staticmethod(os.read)
     write = staticmethod(os.write)
@@ -184,8 +188,13 @@ class TuntapPort(base.BasePort):
 
 
     def _bindSocket(self):
-        log.msg("%s starting on %s" % (self.protocol.__class__,
-                                       self.interface))
+        """
+        Open the tunnel.
+        """
+        log.msg(
+            format="%(protocol)s starting on %(interface)s",
+            protocol=self.protocol.__class__,
+            interface=self.interface)
         try:
             fileno, interface = self._openTunnel(
                 self.interface, self._mode | TunnelFlags.IFF_NO_PI)
