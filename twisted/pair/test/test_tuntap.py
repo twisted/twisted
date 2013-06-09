@@ -654,6 +654,7 @@ class TestRealSystem(_RealSystem):
         except IOError as e:
             if EPERM == e.errno:
                 raise SkipTest("Permission to configure device denied")
+            raise
 
 
     def sendUDP(self, datagram, address):
