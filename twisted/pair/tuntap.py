@@ -162,11 +162,12 @@ class TuntapPort(base.BasePort):
         """
         Create and bind my socket, and begin listening on it.
 
-        This is called on unserialization, and must be called after creating a
-        server to begin listening on the specified port.
+        This must be called after creating a server to begin listening on the
+        specified tunnel.
         """
         self._bindSocket()
-        self._connectToProtocol()
+        self.protocol.makeConnection(self)
+        self.startReading()
 
 
     def _openTunnel(self, name, mode):
@@ -211,11 +212,6 @@ class TuntapPort(base.BasePort):
 
     def fileno(self):
         return self._fileno
-
-
-    def _connectToProtocol(self):
-        self.protocol.makeConnection(self)
-        self.startReading()
 
 
     def doRead(self):
