@@ -45,7 +45,8 @@ from twisted.pair.raw import IRawPacketProtocol
 
 if platformSkip is None:
     from twisted.pair.tuntap import (
-        TUNSETIFF, IFNAMSIZ, TunnelType, TunnelFlags, TunnelAddress, TuntapPort)
+        TUNSETIFF, IFNAMSIZ, TunnelType, TunnelFlags, TunnelAddress,
+        TuntapPort, _RealSystem)
 
 
 
@@ -179,13 +180,19 @@ class Tunnel(object):
 
 
 
-def privileged(f):
-    @wraps(f)
-    def g(self, *args, **kwargs):
-        if f.func_name not in self.permissions:
+def privileged(original):
+    """
+    Wrap a L{MemoryIOSystem} method with permission-checking logic.  The
+    returned function will check C{self.permissions} and raise L{IOError} with
+    L{errno.EPERM} if the function name is not listed as an available
+    permission.
+    """
+    @wraps(original)
+    def permissionChecker(self, *args, **kwargs):
+        if original.func_name not in self.permissions:
             raise IOError(EPERM, "Operation not permitted")
-        return f(self, *args, **kwargs)
-    return g
+        return original(self, *args, **kwargs)
+    return permissionChecker
 
 
 
@@ -193,8 +200,6 @@ class MemoryIOSystem(object):
     """
     An in-memory implementation of basic I/O primitives, useful in the context
     of unit testing as a drop-in replacement for parts of the C{os} module.
-
-    @cvar OPERATIONS:
 
     @ivar _devices:
     @ivar _openFiles:
@@ -208,10 +213,6 @@ class MemoryIOSystem(object):
     O_NONBLOCK = 1 << 1
     O_CLOEXEC = 1 << 2
 
-    OPERATIONS = [
-        'open', 'read', 'write', 'ioctl', 'close',
-        'O_RDWR', 'O_NONBLOCK', 'O_CLOEXEC']
-
     def __init__(self):
         self._devices = {}
         self._openFiles = {}
@@ -219,6 +220,12 @@ class MemoryIOSystem(object):
 
 
     def getTunnel(self, port):
+        """
+        Get the L{Tunnel} object associated with the given L{TuntapPort}.
+
+        @param port: A L{TuntapPort} previously initialized using this
+            L{MemoryIOSystem}.
+        """
         return self._openFiles[port.fileno()]
 
 
@@ -468,13 +475,13 @@ class TunMixin(object):
 
 class TunnelDeviceTestsMixin(object):
     def setUp(self):
-        self.device = self.device()
-        self.fileno = self.device.open(b"/dev/net/tun",
+        self.system = self.system()
+        self.fileno = self.system.open(b"/dev/net/tun",
                                        os.O_RDWR | os.O_NONBLOCK)
-        self.addCleanup(self.device.close, self.fileno)
+        self.addCleanup(self.system.close, self.fileno)
         config = struct.pack(
             "%dsH" % (IFNAMSIZ,), self._TUNNEL_DEVICE, self._TUNNEL_TYPE.value)
-        self.device.ioctl(self.fileno, TUNSETIFF, config)
+        self.system.ioctl(self.fileno, TUNSETIFF, config)
 
 
     def _invalidFileDescriptor(self):
@@ -484,8 +491,8 @@ class TunnelDeviceTestsMixin(object):
         descriptor, there is no guarantee the returned file descriptor will
         still be invalid.
         """
-        fd = self.device.open(b"/dev/net/tun", os.O_RDWR)
-        self.device.close(fd)
+        fd = self.system.open(b"/dev/net/tun", os.O_RDWR)
+        self.system.close(fd)
         return fd
 
 
@@ -496,7 +503,7 @@ class TunnelDeviceTestsMixin(object):
         has no associated file description).
         """
         fd = self._invalidFileDescriptor()
-        exc = self.assertRaises(OSError, self.device.read, fd, 1024)
+        exc = self.assertRaises(OSError, self.system.read, fd, 1024)
         self.assertEqual(EBADF, exc.errno)
 
 
@@ -507,7 +514,7 @@ class TunnelDeviceTestsMixin(object):
         has no associated file description).
         """
         fd = self._invalidFileDescriptor()
-        exc = self.assertRaises(OSError, self.device.write, fd, b"bytes")
+        exc = self.assertRaises(OSError, self.system.write, fd, b"bytes")
         self.assertEqual(EBADF, exc.errno)
 
 
@@ -518,7 +525,7 @@ class TunnelDeviceTestsMixin(object):
         has no associated file description).
         """
         fd = self._invalidFileDescriptor()
-        exc = self.assertRaises(OSError, self.device.close, fd)
+        exc = self.assertRaises(OSError, self.system.close, fd)
         self.assertEqual(EBADF, exc.errno)
 
 
@@ -530,7 +537,7 @@ class TunnelDeviceTestsMixin(object):
         """
         fd = self._invalidFileDescriptor()
         exc = self.assertRaises(
-            IOError, self.device.ioctl, fd, TUNSETIFF, b"tap0")
+            IOError, self.system.ioctl, fd, TUNSETIFF, b"tap0")
         self.assertEqual(EBADF, exc.errno)
 
 
@@ -544,7 +551,7 @@ class TunnelDeviceTestsMixin(object):
         # request on any system.
         request = 0xDEADBEEF
         exc = self.assertRaises(
-            IOError, self.device.ioctl, self.fileno, request, b"garbage")
+            IOError, self.system.ioctl, self.fileno, request, b"garbage")
         self.assertEqual(EINVAL, exc.errno)
 
 
@@ -555,11 +562,11 @@ class TunnelDeviceTestsMixin(object):
         for i in range(100):
             key = randrange(2 ** 64)
             message = "hello world:%d" % (key,)
-            source = self.device.sendUDP(message, (self._TUNNEL_REMOTE, 12345))
+            source = self.system.sendUDP(message, (self._TUNNEL_REMOTE, 12345))
 
             for j in range(100):
                 try:
-                    packet = self.device.read(self.fileno, 1024)
+                    packet = self.system.read(self.fileno, 1024)
                 except EnvironmentError as e:
                     if e.errno in (EAGAIN, EWOULDBLOCK):
                         break
@@ -585,12 +592,12 @@ class TunnelDeviceTestsMixin(object):
         key = 1234567  # randrange(2 ** 64)
         message = "hello world:%d" % (key,)
 
-        port = self.device.receiveUDP(self.fileno, self._TUNNEL_LOCAL, 12345)
+        port = self.system.receiveUDP(self.fileno, self._TUNNEL_LOCAL, 12345)
 
         packet = self.encapsulate(message)
 
         flags = 0
-        self.device.write(self.fileno, H(flags) + H(protocol) + packet)
+        self.system.write(self.fileno, H(flags) + H(protocol) + packet)
 
         packet = port.recv(1024)
         self.assertEqual(message, packet)
@@ -602,7 +609,7 @@ class FakeDeviceTestsMixin(object):
     _TUNNEL_LOCAL = "10.2.0.1"
     _TUNNEL_REMOTE = "10.2.0.2"
 
-    def device(self):
+    def system(self):
         system = MemoryIOSystem()
         system._devices[Tunnel._DEVICE_NAME] = Tunnel
         return system
@@ -621,12 +628,7 @@ class FakeTunDeviceTests(TunMixin, FakeDeviceTestsMixin,
 
 
 
-class RealSpecial(object):
-    open = staticmethod(os.open)
-    read = staticmethod(os.read)
-    write = staticmethod(os.write)
-    close = staticmethod(os.close)
-
+class TestRealSystem(_RealSystem):
     def open(self, filename, *args, **kwargs):
         """
         Attempt an open, but if the file is /dev/net/tun and it does not exist,
@@ -634,7 +636,7 @@ class RealSpecial(object):
         platform support for tuntap devices are skipped instead of failed.
         """
         try:
-            return os.open(filename, *args, **kwargs)
+            return super(TestRealSystem, self).open(filename, *args, **kwargs)
         except OSError as e:
             if ENOENT == e.errno and filename == b"/dev/net/tun":
                 raise SkipTest("Platform lacks /dev/net/tun")
@@ -648,7 +650,7 @@ class RealSpecial(object):
         do not have them are skipped instead of failed.
         """
         try:
-            return _ioctl(*args, **kwargs)
+            return super(TestRealSystem, self).ioctl(*args, **kwargs)
         except IOError as e:
             if EPERM == e.errno:
                 raise SkipTest("Permission to configure device denied")
@@ -673,7 +675,7 @@ class RealDeviceTestsMixin(object):
     if platformSkip:
         skip = platformSkip
 
-    def device(self):
+    def system(self):
         # Create a tap-style tunnel device.  Ethernet frames come out of this
         # and ethernet frames must be put into it.  Grant access to it to an
         # otherwise unprivileged user.
@@ -703,7 +705,7 @@ class RealDeviceTestsMixin(object):
         #
         # ip tuntap del dev tap-twistedtest mode tap
         #
-        return RealSpecial()
+        return TestRealSystem()
 
 
 
@@ -733,16 +735,12 @@ class TunnelTestsMixin(object):
 
     def setUp(self):
         self.name = b"tun0"
-        self.device = MemoryIOSystem()
-        self.device._devices[Tunnel._DEVICE_NAME] = Tunnel
+        self.system = MemoryIOSystem()
+        self.system._devices[Tunnel._DEVICE_NAME] = Tunnel
         self.protocol = self.factory.buildProtocol(
             TunnelAddress(self.TUNNEL_TYPE, self.name))
         self.reactor = FSSetClock()
-        self.port = TuntapPort(self.name, self.protocol, reactor=self.reactor)
-
-        # TODO Would be nice if this setup were a method of the device?
-        for name in self.device.OPERATIONS:
-            setattr(self.port, '_' + name, getattr(self.device, name))
+        self.port = TuntapPort(self.name, self.protocol, reactor=self.reactor, system=self.system)
 
 
     def test_startListeningOpensDevice(self):
@@ -750,11 +748,12 @@ class TunnelTestsMixin(object):
         L{TuntapPort.startListening} opens the tunnel factory character special
         device C{"/dev/net/tun"} and configures it as a I{tun} tunnel.
         """
-        dev = self.device
+        system = self.system
         self.port.startListening()
-        tunnel = self.device.getTunnel(self.port)
+        tunnel = self.system.getTunnel(self.port)
         self.assertEqual(
-            dev.O_RDWR | dev.O_CLOEXEC | dev.O_NONBLOCK, tunnel.openFlags)
+            system.O_RDWR | system.O_CLOEXEC | system.O_NONBLOCK,
+            tunnel.openFlags)
         self.assertEqual(
             b"tun0" + "\x00" * (IFNAMSIZ - len(b"tun0")), tunnel.requestedName)
         self.assertEqual(tunnel.name, self.port.interface)
@@ -787,7 +786,7 @@ class TunnelTestsMixin(object):
         L{TuntapPort.startListening} raises L{CannotListenError} if opening the
         tunnel factory character special device fails.
         """
-        self.device.permissions.remove('open')
+        self.system.permissions.remove('open')
         self.assertRaises(CannotListenError, self.port.startListening)
 
 
@@ -796,7 +795,7 @@ class TunnelTestsMixin(object):
         L{TuntapPort.startListening} raises L{CannotListenError} if the
         C{ioctl} call to configure the tunnel device fails.
         """
-        self.device.permissions.remove('ioctl')
+        self.system.permissions.remove('ioctl')
         self.assertRaises(CannotListenError, self.port.startListening)
 
 
@@ -819,7 +818,7 @@ class TunnelTestsMixin(object):
         self._stopPort(self.port)
 
         self.assertFalse(self.port.connected)
-        self.assertNotIn(fileno, self.device._openFiles)
+        self.assertNotIn(fileno, self.system._openFiles)
 
 
     def test_stopListeningStopsProtocol(self):
@@ -882,7 +881,7 @@ class TunnelTestsMixin(object):
             side-effects.
         """
         self.port.startListening()
-        tunnel = self.device.getTunnel(self.port)
+        tunnel = self.system.getTunnel(self.port)
         tunnel.nonBlockingExceptionStyle = style
         self.port.doRead()
         self.assertEqual([], self.protocol.received)
@@ -944,7 +943,7 @@ class TunnelTestsMixin(object):
         """
         datagram = b'x' * (self.port.maxPacketSize - 1)
         self.port.startListening()
-        tunnel = self.device.getTunnel(self.port)
+        tunnel = self.system.getTunnel(self.port)
         tunnel.readBuffer.append(datagram)
         self.port.doRead()
         self.assertEqual([datagram], self.protocol.received)
@@ -958,7 +957,7 @@ class TunnelTestsMixin(object):
         """
         datagram = b'x' * self.port.maxPacketSize
         self.port.startListening()
-        tunnel = self.device.getTunnel(self.port)
+        tunnel = self.system.getTunnel(self.port)
         tunnel.readBuffer.append(datagram + b'y')
         self.port.doRead()
         self.assertEqual([datagram], self.protocol.received)
@@ -977,7 +976,7 @@ class TunnelTestsMixin(object):
             total += self.port.maxPacketSize
 
         self.port.startListening()
-        tunnel = self.device.getTunnel(self.port)
+        tunnel = self.system.getTunnel(self.port)
         tunnel.readBuffer.extend(datagrams)
         tunnel.readBuffer.append(b'excessive datagram, not to be read')
 
@@ -991,7 +990,7 @@ class TunnelTestsMixin(object):
         exception is logged.
         """
         self.port.startListening()
-        self.device.getTunnel(self.port).readBuffer.append(b"ping")
+        self.system.getTunnel(self.port).readBuffer.append(b"ping")
 
         # Break the application logic
         self.protocol.received = None
@@ -1009,7 +1008,7 @@ class TunnelTestsMixin(object):
         self.port.startListening()
         self.port.write(datagram)
         self.assertEqual(
-            self.device.getTunnel(self.port).writeBuffer,
+            self.system.getTunnel(self.port).writeBuffer,
             deque([datagram]))
 
 
@@ -1019,7 +1018,7 @@ class TunnelTestsMixin(object):
         to raise C{IOError} with errno set to C{EINTR}), the write is re-tried.
         """
         self.port.startListening()
-        tunnel = self.device.getTunnel(self.port)
+        tunnel = self.system.getTunnel(self.port)
         tunnel.pendingSignals.append(SIGINT)
         self.port.write(b"hello, world")
         self.assertEqual(deque([b"hello, world"]), tunnel.writeBuffer)
@@ -1031,7 +1030,7 @@ class TunnelTestsMixin(object):
         propagated to the caller.
         """
         self.port.startListening()
-        tunnel = self.device.getTunnel(self.port)
+        tunnel = self.system.getTunnel(self.port)
         self.assertRaises(
             IOError,
             self.port.write, b"x" * tunnel.SEND_BUFFER_SIZE + b"y")
@@ -1046,7 +1045,7 @@ class TunnelTestsMixin(object):
         self.port.startListening()
         self.port.writeSequence(datagram)
         self.assertEqual(
-            self.device.getTunnel(self.port).writeBuffer,
+            self.system.getTunnel(self.port).writeBuffer,
             deque([b"".join(datagram)]))
 
 
@@ -1060,7 +1059,7 @@ class TunnelTestsMixin(object):
         self.assertIsInstance(address, TunnelAddress)
         self.assertEqual(self.TUNNEL_TYPE, address.type)
         self.assertEqual(
-            self.device.getTunnel(self.port).name, address.name)
+            self.system.getTunnel(self.port).name, address.name)
 
 
     def test_listeningString(self):
@@ -1072,7 +1071,7 @@ class TunnelTestsMixin(object):
         expected = "<%s listening on %s/%s>" % (
             fullyQualifiedName(self.protocol.__class__),
             self.TUNNEL_TYPE.name,
-            self.device.getTunnel(self.port).name)
+            self.system.getTunnel(self.port).name)
 
         self.assertEqual(expected, str(self.port))
 

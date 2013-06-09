@@ -96,6 +96,21 @@ class _TunnelDescription(namedtuple("_TunnelDescription", "fileno name")):
 
 
 
+class _RealSystem(object):
+    open = staticmethod(os.open)
+    read = staticmethod(os.read)
+    write = staticmethod(os.write)
+    close = staticmethod(os.close)
+    ioctl = staticmethod(fcntl.ioctl)
+
+    O_RDWR = os.O_RDWR
+    O_NONBLOCK = os.O_NONBLOCK
+    # Introduced in Python 3.x
+    # Ubuntu 12.04, /usr/include/x86_64-linux-gnu/bits/fcntl.h
+    O_CLOEXEC = getattr(os, "O_CLOEXEC", 0o2000000)
+
+
+
 class TuntapPort(base.BasePort):
     """
     A Port that reads and writes packets from/to a TUN/TAP-device.
@@ -103,22 +118,9 @@ class TuntapPort(base.BasePort):
     TODO: Share general start/stop etc implementation details with
     twisted.internet.udp.Port.
     """
-
-    _open = staticmethod(os.open)
-    _read = staticmethod(os.read)
-    _write = staticmethod(os.write)
-    _close = staticmethod(os.close)
-    _ioctl = staticmethod(fcntl.ioctl)
-
-    _O_RDWR = os.O_RDWR
-    _O_NONBLOCK = os.O_NONBLOCK
-    # Introduced in Python 3.x
-    # Ubuntu 12.04, /usr/include/x86_64-linux-gnu/bits/fcntl.h
-    _O_CLOEXEC = getattr(os, "O_CLOEXEC", 0o2000000)
-
     maxThroughput = 256 * 1024  # Max bytes we read in one eventloop iteration
 
-    def __init__(self, interface, proto, maxPacketSize=8192, reactor=None):
+    def __init__(self, interface, proto, maxPacketSize=8192, reactor=None, system=None):
         if ethernet.IEthernetProtocol.providedBy(proto):
             self.ethernet = 1
             self._mode = TunnelType.TAP
@@ -126,6 +128,10 @@ class TuntapPort(base.BasePort):
             self.ethernet = 0
             self._mode = TunnelType.TUN
             assert raw.IRawPacketProtocol.providedBy(proto)
+
+        if system is None:
+            system = _RealSystem()
+        self._system = system
 
         base.BasePort.__init__(self, reactor)
         self.interface = interface
@@ -168,10 +174,12 @@ class TuntapPort(base.BasePort):
 
         @return: A L{_TunnelDescription} representing the newly opened tunnel.
         """
-        flags = self._O_RDWR | self._O_CLOEXEC | self._O_NONBLOCK
+        flags = (
+            self._system.O_RDWR | self._system.O_CLOEXEC |
+            self._system.O_NONBLOCK)
         config = struct.pack("%dsH" % (IFNAMSIZ,), name, mode.value)
-        fileno = self._open(TUN_KO_PATH, flags)
-        result = self._ioctl(fileno, TUNSETIFF, config)
+        fileno = self._system.open(TUN_KO_PATH, flags)
+        result = self._system.ioctl(fileno, TUNSETIFF, config)
         return _TunnelDescription(fileno, result[:IFNAMSIZ].strip('\x00'))
 
 
@@ -206,7 +214,7 @@ class TuntapPort(base.BasePort):
         read = 0
         while read < self.maxThroughput:
             try:
-                data = self._read(self._fileno, self.maxPacketSize)
+                data = self._system.read(self._fileno, self.maxPacketSize)
             except EnvironmentError as e:
                 if e.errno in (errno.EWOULDBLOCK, errno.EAGAIN, errno.EINTR):
                     return
@@ -228,7 +236,7 @@ class TuntapPort(base.BasePort):
         Write a datagram.
         """
         try:
-            return self._write(self._fileno, datagram)
+            return self._system.write(self._fileno, datagram)
         except IOError as e:
             if e.errno == errno.EINTR:
                 return self.write(datagram)
@@ -273,7 +281,7 @@ class TuntapPort(base.BasePort):
         base.BasePort.connectionLost(self, reason)
         self.protocol.doStop()
         self.connected = 0
-        self._close(self._fileno)
+        self._system.close(self._fileno)
         self._fileno = -1
 
 
