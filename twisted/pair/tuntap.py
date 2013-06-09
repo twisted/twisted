@@ -123,7 +123,8 @@ class TuntapPort(abstract.FileDescriptor):
     """
     maxThroughput = 256 * 1024  # Max bytes we read in one eventloop iteration
 
-    def __init__(self, interface, proto, maxPacketSize=8192, reactor=None, system=None):
+    def __init__(self, interface, proto, maxPacketSize=8192, reactor=None,
+                 system=None):
         if ethernet.IEthernetProtocol.providedBy(proto):
             self.ethernet = 1
             self._mode = TunnelType.TAP
