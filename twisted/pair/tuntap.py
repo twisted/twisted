@@ -19,7 +19,7 @@ from twisted.python.versions import Version
 from twisted.python.deprecate import deprecated
 from twisted.python.constants import Flags, FlagConstant
 from twisted.python import log
-from twisted.internet import base, error, task, interfaces, defer
+from twisted.internet import abstract, error, task, interfaces, defer
 from twisted.pair import ethernet, raw
 
 
@@ -117,12 +117,9 @@ class _RealSystem(object):
 
 
 
-class TuntapPort(base.BasePort):
+class TuntapPort(abstract.FileDescriptor):
     """
     A Port that reads and writes packets from/to a TUN/TAP-device.
-
-    TODO: Share general start/stop etc implementation details with
-    twisted.internet.udp.Port.
     """
     maxThroughput = 256 * 1024  # Max bytes we read in one eventloop iteration
 
@@ -139,7 +136,7 @@ class TuntapPort(base.BasePort):
             system = _RealSystem()
         self._system = system
 
-        base.BasePort.__init__(self, reactor)
+        abstract.FileDescriptor.__init__(self, reactor)
         self.interface = interface
         self.protocol = proto
         self.maxPacketSize = maxPacketSize
@@ -286,7 +283,7 @@ class TuntapPort(base.BasePort):
         Cleans up my socket.
         """
         log.msg('(Tuntap %s Closed)' % self.interface)
-        base.BasePort.connectionLost(self, reason)
+        abstract.FileDescriptor.connectionLost(self, reason)
         self.protocol.doStop()
         self.connected = 0
         self._system.close(self._fileno)
