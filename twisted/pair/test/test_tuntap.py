@@ -863,8 +863,9 @@ class TunnelTestsMixin(object):
         warnings = self.flushWarnings([self.test_loseConnection])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
         self.assertEqual(
-            "TuntapPort.loseConnection is deprecated since Twisted 13.1  "
-            "Use TuntapPort.stopListening instead.",
+            "twisted.pair.tuntap.TuntapPort.loseConnection was deprecated "
+            "in Twisted 13.1.0; please use twisted.pair.tuntap.TuntapPort."
+            "stopListening instead",
             warnings[0]['message'])
         self.assertEqual(1, len(warnings))
 

@@ -15,6 +15,8 @@ from collections import namedtuple
 
 from zope.interface import implementer
 
+from twisted.python.versions import Version
+from twisted.python.deprecate import deprecated
 from twisted.python.constants import Flags, FlagConstant
 from twisted.python import log
 from twisted.internet import base, error, task, interfaces, defer
@@ -239,7 +241,6 @@ class TuntapPort(base.BasePort):
                 log.err(None, "monkeys")
 
 
-
     def write(self, datagram):
         """
         Write a datagram.
@@ -253,6 +254,9 @@ class TuntapPort(base.BasePort):
 
 
     def writeSequence(self, seq):
+        """
+        Write a datagram constructed for a list of L{bytes}.
+        """
         self.write("".join(seq))
 
 
@@ -275,10 +279,9 @@ class TuntapPort(base.BasePort):
 
 
     def loseConnection(self):
-        warnings.warn(
-            "TuntapPort.loseConnection is deprecated since Twisted 13.1  "
-            "Use TuntapPort.stopListening instead.",
-            category=DeprecationWarning, stacklevel=2)
+        """
+        Close this tunnel.  This is Use L{TuntapPort.stopListening} instead.
+        """
         self.stopListening().addErrback(log.err)
 
 
@@ -310,3 +313,8 @@ class TuntapPort(base.BasePort):
         @rtype: L{TunnelAddress}
         """
         return TunnelAddress(self._mode, self.interface)
+
+TuntapPort.loseConnection = deprecated(
+    Version("Twisted", 13, 1, 0),
+    TuntapPort.stopListening)(TuntapPort.loseConnection)
+
