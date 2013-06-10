@@ -2393,6 +2393,21 @@ class DeferredHistoryTests(unittest.TestCase):
         self.assertEqual(chained1.name,
                          "twisted.test.test_defer.inner2Callback")
 
+    def test_historyItemsHaveNoChainedHistoryBeforeNecessary(self):
+        """
+        If the callback associated with a deferred history item does not
+        return a Deferred, its chainedHistory will be None.
+        """
+        outer = defer.Deferred()
+
+        def callback(result):
+            return None
+
+        outer.addCallback(callback)
+        outer.callback(None)
+
+        [item] = outer._getHistory()
+        self.assertIdentical(item.chainedHistory, None)
 
 
 # Enable on Python 3 as part of #5960:
