@@ -1351,6 +1351,12 @@ def _parseClientTCP(*args, **kwargs):
         kwargs['timeout'] = int(kwargs['timeout'])
     except KeyError:
         pass
+
+    try:
+        kwargs['bindAddress'] = (kwargs['bindAddress'], 0)
+    except KeyError:
+        pass
+
     return kwargs
 
 
@@ -1506,6 +1512,17 @@ def clientFromString(reactor, description):
 
         clientFromString(reactor, "ssl:host=web.example.com:port=443:"
                                   "caCertsDir=/etc/ssl/certs")
+
+    Both TCP and SSL client endpoint description strings can include a
+    'bindAddress' keyword argument, whose value should be a local IPv4
+    address. This fixes the client socket to that IP address::
+
+        clientFromString(reactor, "tcp:www.example.com:80:"
+                                  "bindAddress=192.0.2.100")
+
+    NB: Fixed client ports are not currently supported in TCP or SSL
+    client endpoints. The client socket will always use an ephemeral
+    port assigned by the operating system
 
     You can create a UNIX client endpoint with the 'path' argument and optional
     'lockfile' and 'timeout' arguments::
