@@ -777,14 +777,13 @@ class _DeferredHistoryItem(object):
 
     @ivar chainedHistory: The history of the Deferred that was returned from
         this callback, if it did return one.
-    @type chainedHistory: ...
+    @type chainedHistory: L{_DeferredHistory}
     """
 
     def __init__(self, name, isCallback):
         self.name = name
         self.isCallback = isCallback
-        # XXX this shouldn't be instantiated unless needed
-        self.chainedHistory = _DeferredHistory()
+        self.chainedHistory = None
 
 
     def mergeHistory(self, deferred):
@@ -793,6 +792,8 @@ class _DeferredHistoryItem(object):
         invoked to ensure that the returned Deferred history is recorded as a
         child of this item.
         """
+        if self.chainedHistory is None:
+            self.chainedHistory = _DeferredHistory()
         otherHistory = deferred._getHistory()
         if otherHistory is not None:
             for item in deferred._getHistory():
