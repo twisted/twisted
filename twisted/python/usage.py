@@ -483,7 +483,7 @@ class Options(dict):
             3. Subcommands
 
         The list of options and subcommands is automatically wrapped to the
-        given width or to the width of the current terminal if none is 
+        given width or to the width of the current terminal if none is
         given. The description of the program itself is not wrapped.
 
         @param width: The width of the terminal, used to wrap the list of

@@ -401,7 +401,7 @@ class HelpStringTest(unittest.TestCase):
 
     def test_getLongdescFromMainDoc(self):
         """
-        L{usage.Options._getLongdesc} reads longdesc from 
+        L{usage.Options._getLongdesc} reads longdesc from
         C{__main__.__doc__}.
         """
         longdesc = "\nA test documentation string.\n"

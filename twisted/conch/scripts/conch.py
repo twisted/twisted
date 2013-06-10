@@ -22,7 +22,7 @@ class ClientOptions(options.ConchOptions):
     synopsis = """Usage:   conch [options] host [command]
 """
     longdesc = """\
-conch is a SSHv2 client that allows logging into a remote machine and 
+conch is a SSHv2 client that allows logging into a remote machine and
 executing commands."""
 
     optParameters = [['escape', 'e', '~'],
