@@ -11,6 +11,7 @@ from hashlib import md5
 
 from OpenSSL import SSL, crypto
 
+from twisted.python.constants import Names, NamedConstant
 from twisted.python.compat import nativeString, networkString
 from twisted.python.filepath import FilePath
 from twisted.python import _reflectpy3 as reflect, util
@@ -737,9 +738,15 @@ def getCACertificates():
     return _cachedCAs
 
 
-# Indicates that OpenSSLCertificateOptions should use the platform-provided
-# database of trusted CAs.
-PLATFORM = object()
+
+class CACertificateSource(Names):
+    """
+    Constant indicating that OpenSSLCertificateOptions should use the
+    platform-provided database of trusted CAs.
+    """
+    PLATFORM = NamedConstant()
+
+
 
 class OpenSSLCertificateOptions(object):
     """
@@ -776,7 +783,8 @@ class OpenSSLCertificateOptions(object):
         @param certificate: An X509 object holding the certificate.
 
         @param method: The SSL protocol to use, one of SSLv23_METHOD,
-        SSLv2_METHOD, SSLv3_METHOD, TLSv1_METHOD.  Defaults to TLSv1_METHOD.
+            SSLv2_METHOD, SSLv3_METHOD, TLSv1_METHOD.  Defaults to
+            TLSv1_METHOD.
 
         @param verify: If C{True}, verify certificates received from the peer
             and fail the handshake if verification fails.  Otherwise, allow
@@ -784,41 +792,43 @@ class OpenSSLCertificateOptions(object):
             validation.  By default this is C{False}.
 
         @param caCerts: List of certificate authority certificate objects to
-            use to verify the peer's certificate, or L{PLATFORM} indicating
-            that platform-provided trusted certificates should be used.  Only
-            used if verify is C{True} and will be ignored otherwise.  Since
-            verify is C{False} by default, this is C{None} by default.
-
-        @type caCerts: C{list} of L{OpenSSL.crypto.X509}, or L{PLATFORM} instance
+            use to verify the peer's certificate, or
+            L{CACertificateSource.PLATFORM} indicating that platform-provided
+            trusted certificates should be used.  Only used if verify is
+            C{True} and will be ignored otherwise.  Since verify is C{False} by
+            default, this is C{None} by default.
+        @type caCerts: C{list} of L{OpenSSL.crypto.X509}, or
+            L{CACertificateSource.PLATFORM}.
 
         @param verifyDepth: Depth in certificate chain down to which to verify.
-        If unspecified, use the underlying default (9).
+            If unspecified, use the underlying default (9).
 
         @param requireCertificate: If True, do not allow anonymous sessions.
 
-        @param verifyOnce: If True, do not re-verify the certificate
-        on session resumption.
+        @param verifyOnce: If True, do not re-verify the certificate on session
+            resumption.
 
         @param enableSingleUseKeys: If True, generate a new key whenever
-        ephemeral DH parameters are used to prevent small subgroup attacks.
+            ephemeral DH parameters are used to prevent small subgroup attacks.
 
         @param enableSessions: If True, set a session ID on each context.  This
-        allows a shortened handshake to be used when a known client reconnects.
+            allows a shortened handshake to be used when a known client
+            reconnects.
 
         @param fixBrokenPeers: If True, enable various non-spec protocol fixes
-        for broken SSL implementations.  This should be entirely safe,
-        according to the OpenSSL documentation, but YMMV.  This option is now
-        off by default, because it causes problems with connections between
-        peers using OpenSSL 0.9.8a.
+            for broken SSL implementations.  This should be entirely safe,
+            according to the OpenSSL documentation, but YMMV.  This option is
+            now off by default, because it causes problems with connections
+            between peers using OpenSSL 0.9.8a.
 
         @param enableSessionTickets: If True, enable session ticket extension
-        for session resumption per RFC 5077. Note there is no support for
-        controlling session tickets. This option is off by default, as some
-        server implementations don't correctly process incoming empty session
-        ticket extensions in the hello.
+            for session resumption per RFC 5077. Note there is no support for
+            controlling session tickets.  This option is off by default, as
+            some server implementations don't correctly process incoming empty
+            session ticket extensions in the hello.
 
         @param hostname: If given, the peer's certificate will be validated
-        against the hostname.
+            against the hostname.
         """
 
         if (privateKey is None) != (certificate is None):
@@ -887,7 +897,7 @@ class OpenSSLCertificateOptions(object):
             if self.verifyOnce:
                 verifyFlags |= SSL.VERIFY_CLIENT_ONCE
             if self.caCerts:
-                if self.caCerts is PLATFORM:
+                if self.caCerts is CACertificateSource.PLATFORM:
                     if platform.isLinux():
                         ctx.set_default_verify_paths()
                     else:

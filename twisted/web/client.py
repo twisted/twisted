@@ -734,9 +734,10 @@ class BrowserLikeContextFactory(object):
         Currently this exists as a separate method for ease of unit testing.
         """
         from OpenSSL import SSL
-        from twisted.internet._sslverify import PLATFORM, OpenSSLCertificateOptions
+        from twisted.internet._sslverify import (CACertificateSource,
+                                                 OpenSSLCertificateOptions)
         return OpenSSLCertificateOptions(verify=True,
-                                         caCerts=PLATFORM,
+                                         caCerts=CACertificateSource.PLATFORM,
                                          hostname=hostname,
                                          method=SSL.SSLv23_METHOD)
 

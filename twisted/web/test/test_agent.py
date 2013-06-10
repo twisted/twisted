@@ -2117,13 +2117,13 @@ class BrowserLikeContextFactoryTests(unittest.TestCase):
         hostnames, and support backwards compatibility with old SSL servers.
         """
         from OpenSSL import SSL
-        from twisted.internet._sslverify import PLATFORM
+        from twisted.internet._sslverify import CACertificateSource
         factory = BrowserLikeContextFactory()
         contextFactory = factory._makeContextFactory(b"www.example.com")
         self.assertEqual(contextFactory.hostname, b"www.example.com")
         self.assertEqual(contextFactory.method, SSL.SSLv23_METHOD)
         self.assertEqual(contextFactory.verify, True)
-        self.assertEqual(contextFactory.caCerts, PLATFORM)
+        self.assertEqual(contextFactory.caCerts, CACertificateSource.PLATFORM)
 
 
     def test_getContext(self):

@@ -542,11 +542,11 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_caCertsPlatformLinux(self):
         """
-        Specifying a C{caCerts} of L{sslverify.PLATFORM} when initializing
+        Specifying a C{caCerts} of L{sslverify.CACertificateSource.PLATFORM} when initializing
         C{OpenSSLCertificateOptions} loads the platform-provided trusted
         certificates.
         """
-        opts = sslverify.OpenSSLCertificateOptions(caCerts=sslverify.PLATFORM,
+        opts = sslverify.OpenSSLCertificateOptions(caCerts=sslverify.CACertificateSource.PLATFORM,
                                                    verify=True)
         called = []
         class TestContext(SSL.Context):
@@ -562,7 +562,7 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_caCertsPlatformOther(self):
         """
-        Specifying a C{caCerts} of L{sslverify.PLATFORM} when initializing
+        Specifying a C{caCerts} of L{sslverify.CACertificateSource.PLATFORM} when initializing
         C{OpenSSLCertificateOptions} loads the bundled trusted certificates.
         """
         raise NotImplementedError()
@@ -574,7 +574,7 @@ class OpenSSLOptions(unittest.TestCase):
         Specifying C{hostname} initializes C{OpenSSLCertificateOptions} correctly.
         """
         opts = sslverify.OpenSSLCertificateOptions(hostname=b"www.example.com",
-                                                   caCerts=sslverify.PLATFORM,
+                                                   caCerts=sslverify.CACertificateSource.PLATFORM,
                                                    verify=True)
         self.assertTrue(opts.verify)
         self.assertEqual(opts.hostname, b"www.example.com")
@@ -585,7 +585,7 @@ class OpenSSLOptions(unittest.TestCase):
         Specifying C{hostname} without C{verify} is not allowed.
         """
         self.assertRaises(ValueError, sslverify.OpenSSLCertificateOptions,
-                          caCerts=sslverify.PLATFORM,
+                          caCerts=sslverify.CACertificateSource.PLATFORM,
                           hostname=b"www.example.com",
                           verify=False)
 
