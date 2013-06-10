@@ -14,8 +14,9 @@ import sys
 
 from OpenSSL import SSL
 from twisted.internet import reactor
-from twisted.web.client import Agent, StandardWebContextFactory, ResponseNeverReceived
-
+from twisted.web.client import (Agent,
+                                BrowserLikeContextFactory,
+                                ResponseNeverReceived)
 
 def gotError(failure):
     if failure.check(ResponseNeverReceived):
@@ -33,7 +34,7 @@ def main():
     url = sys.argv[1]
     if not url.startswith("https"):
         raise RuntimeError("Only HTTPS URLs are supported.")
-    agent = Agent(reactor, contextFactory=StandardWebContextFactory())
+    agent = Agent(reactor, contextFactory=BrowserLikeContextFactory())
     agent.request("GET", sys.argv[1]).addCallbacks(
         lambda result: print("Validated"), gotError).addBoth(
         lambda ignore: reactor.stop())

@@ -27,7 +27,7 @@ from twisted.internet.defer import Deferred, succeed
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.web.client import FileBodyProducer, Request, HTTPConnectionPool
 from twisted.web.client import (_WebToNormalContextFactory,
-                                StandardWebContextFactory)
+                                BrowserLikeContextFactory)
 from twisted.web.client import WebClientContextFactory, _HTTP11ClientFactory
 from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
 from twisted.web._newclient import HTTP11ClientProtocol, Response
@@ -2105,20 +2105,20 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
 
 
-class StandardWebContextFactoryTests(unittest.TestCase):
+class BrowserLikeContextFactoryTests(unittest.TestCase):
     """
-    Tests for StandardWebContextFactory.
+    Tests for BrowserLikeContextFactory.
     """
 
     def test_makeContextFactory(self):
         """
-        L{StandardWebContextFactory._makeContextFactory} creates a
+        L{BrowserLikeContextFactory._makeContextFactory} creates a
         C{CertificateOptions} instance configured to use platform CAs, verify
         hostnames, and support backwards compatibility with old SSL servers.
         """
         from OpenSSL import SSL
         from twisted.internet._sslverify import PLATFORM
-        factory = StandardWebContextFactory()
+        factory = BrowserLikeContextFactory()
         contextFactory = factory._makeContextFactory(b"www.example.com")
         self.assertEqual(contextFactory.hostname, b"www.example.com")
         self.assertEqual(contextFactory.method, SSL.SSLv23_METHOD)
@@ -2128,15 +2128,15 @@ class StandardWebContextFactoryTests(unittest.TestCase):
 
     def test_getContext(self):
         """
-        L{StandardWebContextFactory.getContext} uses the factory created by
+        L{BrowserLikeContextFactory.getContext} uses the factory created by
         C{_makeContextFactory} to create a context object it returns.
         """
         from OpenSSL import SSL
         called = []
-        class TestStandard(StandardWebContextFactory):
+        class TestStandard(BrowserLikeContextFactory):
             def _makeContextFactory(self, hostname):
                 called.append(hostname)
-                return StandardWebContextFactory._makeContextFactory(
+                return BrowserLikeContextFactory._makeContextFactory(
                     self, hostname)
         context = TestStandard().getContext(b"example.com", 443)
         self.assertEqual(called, [b"example.com"])

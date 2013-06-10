@@ -715,7 +715,7 @@ class _WebToNormalContextFactory(object):
 
 
 
-class StandardWebContextFactory(object):
+class BrowserLikeContextFactory(object):
     """
     A web client context factory that follows the standard security rules.
 
