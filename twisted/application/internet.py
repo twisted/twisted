@@ -442,7 +442,7 @@ class _RestartableProtocolFactoryProxy(object):
 
 
 
-class ReconnectingClientService(Service):
+class ReconnectingClientService(service.Service):
     """
     Service which auto-reconnects clients with an exponential back-off.
 
