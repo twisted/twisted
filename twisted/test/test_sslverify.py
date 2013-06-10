@@ -18,6 +18,7 @@ try:
 except ImportError:
     pass
 
+from twisted.python.filepath import FilePath
 from twisted.python.compat import nativeString
 from twisted.python.runtime import platform
 from twisted.trial import unittest
@@ -568,13 +569,12 @@ class OpenSSLOptions(unittest.TestCase):
         trusted certificates.
         """
         raise NotImplementedError()
-    test_caCertsPlatformOther.todo = "Use getCACertificates"
+    test_caCertsPlatformOther.todo = "Use certificatesFromCAFile"
 
 
     def test_constructorWithHostname(self):
         """
-        Specifying C{hostname} initializes C{OpenSSLCertificateOptions}
-        correctly.
+        Specifying C{hostname} initializes C{OpenSSLCertificateOptions} correctly.
         """
         opts = sslverify.OpenSSLCertificateOptions(
             hostname=b"www.example.com",
@@ -932,15 +932,14 @@ class HostnameVerificationTests(unittest.TestCase):
                          [b"def.com"])
 
 
-    def test_getCACertificates(self):
+    def test_certificatesFromCAFile(self):
         """
-        C{getCACertificates} returns a reasonable-looking list of C{X509}
-        objects.
-
-        We can't test much more than that, since contents may change over
-        time.
+        C{_certificatesFromCAFile} returns the C{X509} objects representing the
+        certificates found at the specified path.
         """
-        CAs = sslverify.getCACertificates()
+        # TODO: Use a test specific path.
+        caFile = FilePath(__file__).parent().parent().child('internet').child('ca-bundle.crt')
+        CAs = sslverify.certificatesFromCAFile(caFile)
         foundThawte = False
         foundVerisign = False
         for ca in CAs:
@@ -952,15 +951,6 @@ class HostnameVerificationTests(unittest.TestCase):
                 foundThawte = True
         self.assertTrue(foundThawte)
         self.assertTrue(foundVerisign)
-
-
-    def test_getCACertificatesCached(self):
-        """
-        C{getCACertificates} returns a cached result, and doesn't load the CAs
-        from scratch each time.
-        """
-        self.assertIdentical(sslverify.getCACertificates(), sslverify.getCACertificates())
-
 
 
 if interfaces.IReactorSSL(reactor, None) is None:
