@@ -10,6 +10,7 @@ select() - this is pretty much only useful on Windows.
 from zope.interface import implements
 
 from twisted.internet.interfaces import IConsumer, IPushProducer
+from twisted.python.compat import lazyByteSlice
 
 
 MIN_TIMEOUT = 0.000000001
@@ -268,7 +269,13 @@ class _PollableWritePipe(_PollableResource):
 
 
     def checkWork(self):
-        numBytesWritten = 0
+        """
+        Called by C{_PollingTimer()} to process the write buffers and detect
+        closure of the pipe. An error normally indicates that the connection
+        has been lost.
+
+        @return: number of bytes written to the pipe, can be zero
+        """
         if not self.outQueue:
             if self.disconnecting:
                 self.writeConnectionLost()
@@ -277,24 +284,31 @@ class _PollableWritePipe(_PollableResource):
                 win32file.WriteFile(self.writePipe, '', None)
             except pywintypes.error:
                 self.writeConnectionLost()
-                return numBytesWritten
+                return 0
+        try:
+            _, writeBufferSize, _, _ = win32pipe.GetNamedPipeInfo(self.writePipe)
+        except pywintypes.error:
+            self.writeConnectionLost()
+            return 0
+        totalBytesWritten = 0
         while self.outQueue:
             data = self.outQueue.pop(0)
-            errCode = 0
+            # limit write to size of pipe write buffer, see #5365
+            buffer_ = lazyByteSlice(data, 0, writeBufferSize)
             try:
-                errCode, nBytesWritten = win32file.WriteFile(self.writePipe,
-                                                             data, None)
-            except win32api.error:
+                _, bytesWritten = win32file.WriteFile(self.writePipe,
+                                                      buffer_, None)
+            except pywintypes.error:
                 self.writeConnectionLost()
                 break
             else:
-                # assert not errCode, "wtf an error code???"
-                numBytesWritten += nBytesWritten
-                if len(data) > nBytesWritten:
-                    self.outQueue.insert(0, data[nBytesWritten:])
+                totalBytesWritten += bytesWritten
+                if len(data) > bytesWritten:
+                    # insert unwritten data back into the buffer
+                    self.outQueue.insert(0, data[bytesWritten:])
                     break
         else:
             resumed = self.bufferEmpty()
             if not resumed and self.disconnecting:
                 self.writeConnectionLost()
-        return numBytesWritten
+        return totalBytesWritten
