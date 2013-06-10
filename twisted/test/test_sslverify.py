@@ -542,12 +542,13 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_caCertsPlatformLinux(self):
         """
-        Specifying a C{caCerts} of L{sslverify.CACertificateSource.PLATFORM} when initializing
-        C{OpenSSLCertificateOptions} loads the platform-provided trusted
-        certificates.
+        Specifying a C{caCerts} of L{sslverify.CACertificateSource.PLATFORM}
+        when initializing C{OpenSSLCertificateOptions} loads the
+        platform-provided trusted certificates.
         """
-        opts = sslverify.OpenSSLCertificateOptions(caCerts=sslverify.CACertificateSource.PLATFORM,
-                                                   verify=True)
+        opts = sslverify.OpenSSLCertificateOptions(
+            caCerts=sslverify.CACertificateSource.PLATFORM,
+           verify=True)
         called = []
         class TestContext(SSL.Context):
             def set_default_verify_paths(self):
@@ -562,8 +563,9 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_caCertsPlatformOther(self):
         """
-        Specifying a C{caCerts} of L{sslverify.CACertificateSource.PLATFORM} when initializing
-        C{OpenSSLCertificateOptions} loads the bundled trusted certificates.
+        Specifying a C{caCerts} of L{sslverify.CACertificateSource.PLATFORM}
+        when initializing C{OpenSSLCertificateOptions} loads the bundled
+        trusted certificates.
         """
         raise NotImplementedError()
     test_caCertsPlatformOther.todo = "Use getCACertificates"
@@ -571,11 +573,13 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_constructorWithHostname(self):
         """
-        Specifying C{hostname} initializes C{OpenSSLCertificateOptions} correctly.
+        Specifying C{hostname} initializes C{OpenSSLCertificateOptions}
+        correctly.
         """
-        opts = sslverify.OpenSSLCertificateOptions(hostname=b"www.example.com",
-                                                   caCerts=sslverify.CACertificateSource.PLATFORM,
-                                                   verify=True)
+        opts = sslverify.OpenSSLCertificateOptions(
+            hostname=b"www.example.com",
+            caCerts=sslverify.CACertificateSource.PLATFORM,
+            verify=True)
         self.assertTrue(opts.verify)
         self.assertEqual(opts.hostname, b"www.example.com")
 
