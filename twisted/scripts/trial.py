@@ -101,8 +101,9 @@ class _BasicOptions(object):
     synopsis = """%s [options] [[file|package|module|TestCase|testmethod]...]
     """ % (os.path.basename(sys.argv[0]),)
 
-    longdesc = ("trial loads and executes a suite of unit tests, obtained "
-                "from modules, packages and files listed on the command line.")
+    longdesc = """\
+trial loads and executes a suite of unit tests, obtained from modules,
+packages and files listed on the command line."""
 
     optFlags = [["help", "h"],
                 ["no-recurse", "N", "Don't recurse into packages"],

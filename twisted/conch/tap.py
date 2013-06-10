@@ -21,10 +21,11 @@ except ImportError:
 
 class Options(usage.Options, strcred.AuthOptionMixin):
     synopsis = "[-i <interface>] [-p <port>] [-d <dir>] "
-    longdesc = ("Makes a Conch SSH server.  If no authentication methods are "
-        "specified, the default authentication methods are UNIX passwords, "
-        "SSH public keys, and PAM if it is available.  If --auth options are "
-        "passed, only the measures specified will be used.")
+    longdesc = """\
+Makes a Conch SSH server.  If no authentication methods are specified, the
+default authentication methods are UNIX passwords, SSH public keys, and PAM
+if it is available.  If --auth options are passed, only the measures specified
+will be used."""
     optParameters = [
         ["interface", "i", "", "local interface to which we listen"],
         ["port", "p", "tcp:22", "Port on which to listen"],

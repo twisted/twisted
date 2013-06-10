@@ -22,8 +22,9 @@ class ClientOptions(options.ConchOptions):
          cftp [options] [user@]host[:dir[/]]
          cftp [options] [user@]host[:file [localfile]]
 """
-    longdesc = ("cftp is a client for logging into a remote machine and "
-                "executing commands to send and receive file information")
+    longdesc = """\
+cftp is a client for logging into a remote machine and executing commands to
+send and receive file information."""
 
     optParameters = [
                     ['buffersize', 'B', 32768, 'Size of the buffer to use for sending/receiving.'],

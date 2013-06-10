@@ -472,7 +472,26 @@ class Options(dict):
 
         return synopsis
 
+
     def getUsage(self, width=None):
+        """
+        Returns a string which describes the usage details of the program.
+
+        It includes descriptions of the following in this order, if they exist:
+            1. Options and parameters
+            2. The program itself
+            3. Subcommands
+
+        The list of options and subcommands is automatically wrapped to the
+        given width or to the width of the current terminal if none is 
+        given. The description of the program itself is not wrapped.
+
+        @param width: The width of the terminal, used to wrap the list of
+                      options and subcommands. It will be autodetected if
+                      not specified.
+        @type  width: number
+        """
+
         # If subOptions exists by now, then there was probably an error while
         # parsing its options.
         if hasattr(self, 'subOptions'):
@@ -524,29 +543,41 @@ class Options(dict):
                  'dispatch': self._dispatch.get(opt, None)
                  })
 
-        if not (getattr(self, "longdesc", None) is None):
-            longdesc = self.longdesc
-        else:
-            import __main__
-            if getattr(__main__, '__doc__', None):
-                longdesc = __main__.__doc__
-            else:
-                longdesc = ''
-
-        if longdesc:
-            longdesc = '\n' + longdesc.strip() + '\n'
-
         if optDicts:
             chunks = docMakeChunks(optDicts, width)
             s = "Options:\n%s" % (''.join(chunks))
         else:
             s = "Options: None\n"
 
-        return s + longdesc + commands
+        return s + self._getLongdesc() + commands
+
+
+    def _getLongdesc(self):
+        """
+        Returns a description of the program, looking first in C{self.longdesc}
+        and then in C{__main__.__doc__}. If found, the description is formatted
+        to contain exactly one leading and trailing linebreak.
+        """
+
+        longdesc = ''
+
+        if getattr(self, "longdesc", None):
+            longdesc = self.longdesc
+        else:
+            import __main__
+            if getattr(__main__, '__doc__', None):
+                longdesc = __main__.__doc__
+
+        if longdesc:
+            longdesc = '\n' + longdesc.strip() + '\n'
+
+        return longdesc
+
 
     #def __repr__(self):
     #    XXX: It'd be cool if we could return a succinct representation
     #        of which flags and options are set here.
+
 
 
 _ZSH = 'zsh'

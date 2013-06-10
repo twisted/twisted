@@ -359,6 +359,7 @@ class HelpStringTest(unittest.TestCase):
 
         self.nice = WellBehaved()
 
+
     def test_noGoBoom(self):
         """
         __str__ shouldn't go boom.
@@ -367,6 +368,7 @@ class HelpStringTest(unittest.TestCase):
             self.nice.__str__()
         except Exception, e:
             self.fail(e)
+
 
     def test_whitespaceStripFlagsAndParameters(self):
         """
@@ -378,15 +380,35 @@ class HelpStringTest(unittest.TestCase):
         self.failUnless(len(lines) > 0)
         self.failUnless(lines[0].find("flagallicious") >= 0)
 
-    def test_longdescNotWrapped(self):
+
+    def test_whitespaceStripLongdesc(self):
         """
-        L{usage.Options.getUsage} does not wrap lines in C{longdesc}.
+        Extra whitespace at the beginning and end of C{longdesc} is stripped.
         """
-        self.nice.longdesc = ("\nA test documentation string.\n"
-                    "This line has more than 80 characters-"
-                    "PADDINGXXPADDINGXXPADDINGXXPADDINGXXPADDINGXXPADDING\n")
-        self.nice.getUsage(width=80)
-        self.assertTrue(len(self.nice.longdesc.splitlines()[2]) > 80)
+        self.nice.longdesc = "\n\nA test documentation string.\n\n"
+        expected = "\nA test documentation string.\n"
+        self.assertEqual(self.nice._getLongdesc(), expected)
+
+
+    def test_getLongdescFromAttribute(self):
+        """
+        L{usage.Options._getLongdesc} reads C{longdesc} from a class
+        attribute.
+        """
+        self.nice.longdesc = "\nA test documentation string.\n"
+        self.assertEqual(self.nice.longdesc, self.nice._getLongdesc())
+
+
+    def test_getLongdescFromMainDoc(self):
+        """
+        L{usage.Options._getLongdesc} reads longdesc from 
+        C{__main__.__doc__}.
+        """
+        longdesc = "\nA test documentation string.\n"
+        import __main__
+        self.patch(__main__, '__doc__', longdesc)
+        self.assertEqual(longdesc, self.nice._getLongdesc())
+
 
 
 class PortCoerceTestCase(unittest.TestCase):
