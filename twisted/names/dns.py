@@ -550,7 +550,7 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     showAttributes = (
         ('name', str), 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
-        'dnssecOK', 'rdlen')
+        'dnssecOK', 'rdlength')
 
     compareAttributes = (
         'name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
@@ -596,7 +596,7 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
 
     @property
-    def rdlen(self):
+    def rdlength(self):
         """
         @return: The length in bytes of all RDATA.
         """
@@ -623,7 +623,7 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
                 self.extendedRCODE,
                 self.version,
                 self.dnssecOK << 15,
-                self.rdlen))
+                self.rdlength))
         strio.write(self._rdata)
 
 
@@ -643,9 +643,9 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
          self.extendedRCODE,
          self.version,
          doz,
-         rdlen) = struct.unpack(self._fmt, buff)
+         rdlength) = struct.unpack(self._fmt, buff)
         self.dnssecOK = doz >> 15
-        self._rdata = readPrecisely(strio, rdlen)
+        self._rdata = readPrecisely(strio, rdlength)
 
 
 
