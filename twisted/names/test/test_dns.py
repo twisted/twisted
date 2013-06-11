@@ -1819,14 +1819,16 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(h.dnssecOK, True)
 
 
-    def test_optHeaderRdlength(self):
+    def test_optHeaderResourceRecordDataLength(self):
         """
-        L{dns.OPTHeader.rdlength} is a readonly attribute which defaults
-        to 0.
+        L{dns.OPTHeader.resourceRecordDataLength} is a readonly
+        attribute which defaults to 0.
         """
         h = dns.OPTHeader()
-        self.assertEqual(h.rdlength, 0)
-        self.assertRaises(AttributeError, setattr, h, 'rdlength', 1)
+        self.assertEqual(h.resourceRecordDataLength, 0)
+        self.assertRaises(
+            AttributeError,
+            setattr, h, 'resourceRecordDataLength', 1)
 
 
     def test_encode(self):
@@ -1879,7 +1881,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(h.extendedRCODE, 3)
         self.assertEqual(h.version, 3)
         self.assertEqual(h.dnssecOK, True)
-        self.assertEqual(h.rdlength, 2)
+        self.assertEqual(h.resourceRecordDataLength, 2)
         self.assertEqual(h._rdata, b'xx')
         # Check that all the input data has been consumed.
         self.assertEqual(b.tell(), len(b.getvalue()))
@@ -1899,7 +1901,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             'extendedRCODE=0 '
             'version=0 '
             'dnssecOK=False '
-            'rdlength=1'
+            'resourceRecordDataLength=1'
             '>')
 
 

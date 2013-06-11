@@ -545,12 +545,12 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         Full conformance with this specification is indicated by
         version '0'.
     @ivar dnssecOK: DNSSEC OK bit as defined by [RFC3225].
-    @ivar rdlen: length in bytes of all RDATA
+    @ivar resourceRecordDataLength: length in bytes of all RDATA
     @since: 13.1
     """
     showAttributes = (
         ('name', str), 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
-        'dnssecOK', 'rdlength')
+        'dnssecOK', 'resourceRecordDataLength')
 
     compareAttributes = (
         'name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
@@ -596,7 +596,7 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
 
     @property
-    def rdlength(self):
+    def resourceRecordDataLength(self):
         """
         @return: The length in bytes of all RDATA.
         """
@@ -609,7 +609,7 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
         @type strio: file
         @param strio: the byte representation of this OPTHeader will be written
-        to this file.
+            to this file.
 
         @type compDict: dict
         @param compDict: not used.
@@ -623,7 +623,7 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
                 self.extendedRCODE,
                 self.version,
                 self.dnssecOK << 15,
-                self.rdlength))
+                self.resourceRecordDataLength))
         strio.write(self._rdata)
 
 
@@ -643,9 +643,9 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
          self.extendedRCODE,
          self.version,
          doz,
-         rdlength) = struct.unpack(self._fmt, buff)
+         resourceRecordDataLength) = struct.unpack(self._fmt, buff)
         self.dnssecOK = doz >> 15
-        self._rdata = readPrecisely(strio, rdlength)
+        self._rdata = readPrecisely(strio, resourceRecordDataLength)
 
 
 
