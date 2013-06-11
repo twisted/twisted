@@ -28,7 +28,7 @@ __all__ = [
     'Record_A', 'Record_A6', 'Record_AAAA', 'Record_AFSDB', 'Record_CNAME',
     'Record_DNAME', 'Record_HINFO', 'Record_MB', 'Record_MD', 'Record_MF',
     'Record_MG', 'Record_MINFO', 'Record_MR', 'Record_MX', 'Record_NAPTR',
-    'Record_NS', 'Record_NULL', 'Record_OPT', 'Record_PTR', 'Record_RP',
+    'Record_NS', 'Record_NULL', 'Record_PTR', 'Record_RP',
     'Record_SOA', 'Record_SPF', 'Record_SRV', 'Record_TXT', 'Record_WKS',
     'UnknownRecord',
 
@@ -1700,64 +1700,6 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
 
 @implementer(IEncodable, IRecord)
-class Record_OPT(tputil.FancyEqMixin, tputil.FancyStrMixin):
-    """
-    EDNS0 Option record.
-
-    @type payload_size: C{int}
-    @ivar payload_size: Specifies the max UDP Packet size (bytes) that your
-        network can handle.
-
-    @type dnssecOk: C{bool}
-    @ivar dnssecOk: Requests the server to send DNSSEC RRs and to do DNSSEC
-        validation (and set the AD bit if the response validates).
-
-    @type version: C{int}
-    @ivar version: The version of DNSSEC used. Currently only version 0
-        is defined.
-
-    @since: 13.1
-    """
-    TYPE = OPT
-    fmt = '!HBBHH'
-
-    fancybasename = 'OPT'
-    showAttributes = ('payload_size', ('flags', 'flags', '0x%x'), 'version')
-    compareAttributes = ('payload_size', 'flags', 'version')
-
-
-    def __init__(self, payload_size=512, dnssecOk=0, version=0, ttl=None):
-        self.payload_size = payload_size
-        self.version = version
-        self.flags = (dnssecOk & 1) << 15
-
-
-    def encode(self, strio, compDict = None):
-        OPTHeader().encode(strio)
-        strio.write(struct.pack('!H', self.payload_size))
-        strio.write(struct.pack('!B', 0)) # high order 0
-        strio.write(struct.pack('!B', self.version))
-        strio.write(struct.pack('!H', self.flags)) # DO(bit) + Z's
-        strio.write(struct.pack('!H', 0)) # Data length: 0
-
-
-    def decode(self, strio, length=None):
-        """
-        are OPT Records always 0 rdlength?
-        """
-        l = struct.calcsize(self.fmt)
-        buff = readPrecisely(strio, l)
-        r = struct.unpack(self.fmt, buff)
-        self.payload_size, z, self.version, self.flags, length = r
-        assert length == 0
-
-
-    def __hash__(self):
-        return hash((self.payload_size, self.version, self.flags))
-
-
-
-@implementer(IEncodable, IRecord)
 class UnknownRecord(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     """
     Encapsulate the wire data for unknown record types so that they can
@@ -1927,26 +1869,10 @@ class Message:
     def parseRecords(self, list, num, strio):
         for i in range(num):
             header = RRHeader(auth=self.auth)
-            offset = strio.tell()
             try:
                 header.decode(strio)
             except EOFError:
-                strio.seek(offset)
                 return
-
-            if header.type is OPT:
-                strio.seek(offset)
-                if list is not self.additional:
-                    sectionName = [
-                        k for k, v in self.__dict__.items() if v is list][0]
-                    raise TypeError(
-                        'OPTHeaders are not allowed '
-                        'in %r section.' % (sectionName,))
-                header = OPTHeader()
-                header.decode(strio)
-                list.append(header)
-                return
-
             t = self.lookupRecordType(header.type)
             if not t:
                 continue

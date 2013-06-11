@@ -29,7 +29,6 @@ RECORD_TYPES = [
     dns.Record_WKS, dns.Record_SRV, dns.Record_AFSDB, dns.Record_RP,
     dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT,
     dns.Record_AAAA, dns.Record_A6, dns.Record_NAPTR, dns.UnknownRecord,
-    dns.Record_OPT,
     ]
 
 
@@ -1170,17 +1169,6 @@ class ReprTests(unittest.TestCase):
             "<UNKNOWN data='foo\\x1fbar' ttl=12>")
 
 
-    def test_opt(self):
-        """
-        The repr of a L{dns.OPT} instance includes the payload_size, dnssecOk
-        flag, and version fields of the record.
-        (The OPT record has no ttl field.)
-        """
-        self.assertEqual(
-            repr(dns.Record_OPT(payload_size=1492, dnssecOk=1, version=0)),
-                 "<OPT payload_size=1492 flags=0x8000 version=0>")
-
-
 
 class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
     """
@@ -1944,44 +1932,3 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             dns.OPTHeader(_rdata=b'foo'),
             dns.OPTHeader(_rdata=b'foo'),
             dns.OPTHeader(_rdata=b'bar'))
-
-
-    def test_messageHandling(self):
-        """
-        L{dns.Message.decode} recognises headers of type L{dns.OPT}
-        and creates L{dns.OPTHeader} instances.
-        """
-        h = dns.OPTHeader(_rdata=b'xxx')
-        m1 = dns.Message()
-        m1.addQuery(b'www.example.com', dns.A)
-        m1.additional.append(h)
-        b = BytesIO()
-        m1.encode(b)
-
-        m2 = dns.Message()
-        m2.decode(BytesIO(b.getvalue()))
-
-        self.assertEqual(m1.queries, m2.queries)
-        self.assertEqual(m1.additional, m2.additional)
-        self.assertIsInstance(m2.additional[0], dns.OPTHeader)
-
-
-    def test_wrongSectionMessageDecodeError(self):
-        """
-        L{dns.OPT} headers are only valid in the I{additional}
-        section. L{dns.Message.decode} raises TypeError if L{dns.OPT}
-        headers are found in the I{answers} or I{authority} sections.
-        """
-        h = dns.OPTHeader(_rdata=b'xxx')
-        m1 = dns.Message()
-        m1.addQuery(b'www.example.com', dns.A)
-        m1.answers.append(h)
-        b = BytesIO()
-        m1.encode(b)
-
-        m2 = dns.Message()
-        e = self.assertRaises(
-            TypeError,
-            m2.decode, BytesIO(b.getvalue()))
-        self.assertEqual(
-            e.args[0], "OPTHeaders are not allowed in 'answers' section.")
