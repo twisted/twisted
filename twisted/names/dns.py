@@ -28,9 +28,8 @@ __all__ = [
     'Record_A', 'Record_A6', 'Record_AAAA', 'Record_AFSDB', 'Record_CNAME',
     'Record_DNAME', 'Record_HINFO', 'Record_MB', 'Record_MD', 'Record_MF',
     'Record_MG', 'Record_MINFO', 'Record_MR', 'Record_MX', 'Record_NAPTR',
-    'Record_NS', 'Record_NULL', 'Record_PTR', 'Record_RP',
-    'Record_SOA', 'Record_SPF', 'Record_SRV', 'Record_TXT', 'Record_WKS',
-    'UnknownRecord',
+    'Record_NS', 'Record_NULL', 'Record_PTR', 'Record_RP', 'Record_SOA',
+    'Record_SPF', 'Record_SRV', 'Record_TXT', 'Record_WKS', 'UnknownRecord',
 
     'QUERY_CLASSES', 'QUERY_TYPES', 'REV_CLASSES', 'REV_TYPES', 'EXT_QUERIES',
 
@@ -531,7 +530,7 @@ class OPTHeader(tputil.FancyEqMixin, object):
     """
     An OPT record header.
 
-    @cvar fmt: C{str} specifying the byte format of an OPT Header.
+    @cvar _fmt: C{str} specifying the byte format of an OPT Header.
 
     @ivar name: Root (0, 8-bits)
     @ivar type: 41 (OPT Record)
@@ -554,7 +553,7 @@ class OPTHeader(tputil.FancyEqMixin, object):
         'name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
         'dnssecOK', '_rdata')
 
-    fmt = "!HH2BHH"
+    _fmt = "!HH2BHH"
 
     name = Name(b'')
     type = OPT
@@ -615,7 +614,7 @@ class OPTHeader(tputil.FancyEqMixin, object):
         self.name.encode(strio, compDict)
         strio.write(
             struct.pack(
-                self.fmt,
+                self._fmt,
                 self.type,
                 self.udpPayloadSize,
                 self.extendedRCODE,
@@ -634,14 +633,14 @@ class OPTHeader(tputil.FancyEqMixin, object):
             OPTHeader is decoded.
         """
         self.name.decode(strio)
-        l = struct.calcsize(self.fmt)
+        l = struct.calcsize(self._fmt)
         buff = readPrecisely(strio, l)
         (self.type,
          self.udpPayloadSize,
          self.extendedRCODE,
          self.version,
          doz,
-         rdlen) = struct.unpack(self.fmt, buff)
+         rdlen) = struct.unpack(self._fmt, buff)
         self.dnssecOK = doz >> 15
         self._rdata = readPrecisely(strio, rdlen)
 
