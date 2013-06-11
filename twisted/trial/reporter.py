@@ -106,7 +106,7 @@ class SafeStream(object):
         Write to the underlying stream, while handling any transient errors.
         """
         if self._catchENOSPC:
-            bufferSize = 2 ** 16
+            bufferSize = min(2 ** 16, len(data))
             while data:
                 log.msg(
                     format="SafeStream.write trying %(data)r",
@@ -120,12 +120,13 @@ class SafeStream(object):
                             format="ENOSPC in SafeStream.write for %(data)r",
                             data=data[:bufferSize])
                         if bufferSize == 1:
-                            raise
+                            pass
                         else:
                             bufferSize //= 2
                     else:
                         raise
                 else:
+                    bufferSize = min(2 ** 16, len(data))
                     data = data[bufferSize:]
         else:
             untilConcludes(self.original.write, data)
