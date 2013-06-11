@@ -15,7 +15,7 @@ class TestDnsTests(ExecutableExampleTestMixin, TestCase):
     Test the testdns.py example script.
     """
 
-    exampleRelativePath = 'doc/names/examples/testdns.py'
+    examplePath = 'doc/names/examples/testdns.py'
 
 
 
@@ -24,7 +24,7 @@ class GetHostByNameTests(ExecutableExampleTestMixin, TestCase):
     Test the gethostbyname.py example script.
     """
 
-    exampleRelativePath = 'doc/names/examples/gethostbyname.py'
+    examplePath = 'doc/names/examples/gethostbyname.py'
 
 
 
@@ -33,4 +33,4 @@ class DnsServiceTests(ExecutableExampleTestMixin, TestCase):
     Test the dns-service.py example script.
     """
 
-    exampleRelativePath = 'doc/names/examples/dns-service.py'
+    examplePath = 'doc/names/examples/dns-service.py'

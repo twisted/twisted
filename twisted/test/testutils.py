@@ -178,76 +178,92 @@ class ComparisonTestsMixin(object):
 
 
 
-class ExampleTestBaseMixin(object):
+def getBranchFile(branchRelativePath):
+    # Get branch root
+    here = FilePath(__file__).parent().parent().parent()
+
+    # Find the example script within this branch
+    for childName in branchRelativePath.split('/'):
+        here = here.child(childName)
+        if not here.exists():
+            raise IOError(2, 'No such file or directory: %r' % (here.path,))
+    return here
+
+
+
+class ScriptLoader(object):
     """
-    This is a mixin which adds an example to the path, tests it, and then
-    removes it from the path and unimports the modules which the test loaded.
+    Adds a script to the path, loads it as a module, and then
+    removes it from the path and unimports the modules which the script loaded.
+
     Test cases which test example code and documentation listings should use
     this.
 
-    This is done this way so that examples can live in isolated path entries,
-    next to the documentation, replete with their own plugin packages and
-    whatever other metadata they need.  Also, example code is a rare instance
-    of it being valid to have multiple versions of the same code in the
-    repository at once, rather than relying on version control, because
-    documentation will often show the progression of a single piece of code as
-    features are added to it, and we want to test each one.
-
     @since: 13.1
     """
-
-    def setUp(self):
+    def __init__(self, filePath):
         """
-        Add our example directory to the path and record which modules are
-        currently loaded.
+        @type filePath: L{FilePath}
+        @param filePath: A L{FilePath} instance containing the full
+            path to a script which will be loaded.
         """
-        self.originalPath = sys.path[:]
-        self.originalModules = sys.modules.copy()
-
-        # Get branch root
-        here = FilePath(__file__).parent().parent().parent()
-
-        # Find the example script within this branch
-        for childName in self.exampleRelativePath.split('/'):
-            here = here.child(childName)
-            if not here.exists():
-                raise SkipTest(
-                    "Examples (%s) not found - cannot test" % (here.path,))
-        self.examplePath = here
-
-        # Add the example parent folder to the Python path
-        sys.path.append(self.examplePath.parent().path)
-
-        # Import the example as a module
-        moduleName = self.examplePath.basename().split('.')[0]
-        self.example = __import__(moduleName)
+        self.filePath = filePath
 
 
-    def tearDown(self):
+    def load(self):
         """
-        Remove the example directory from the path and remove all
-        modules loaded by the test from L{sys.modules}.
+        Add the script directory to L{sys.path} and load the script as
+        a module. The original L{sys.path} and L{sys.modules} are
+        saved so that they can be restored later by calling L{unload}.
+        """
+        self._originalPath = sys.path[:]
+        self._originalModules = sys.modules.copy()
+
+        # Add the script parent folder to the Python path
+        sys.path.append(self.filePath.parent().path)
+
+        # Import the script as a module
+        moduleName = self.filePath.basename().split('.')[0]
+        self.module = __import__(moduleName)
+
+
+    def unload(self):
+        """
+        Remove the script directory from L{sys.path} and remove all
+        modules loaded by the script from L{sys.modules}.
         """
         sys.modules.clear()
-        sys.modules.update(self.originalModules)
-        sys.path[:] = self.originalPath
+        sys.modules.update(self._originalModules)
+        sys.path[:] = self._originalPath
 
 
 
-class ExecutableExampleTestMixin(ExampleTestBaseMixin):
+def loadScriptForTest(testCase, scriptRelativePath):
+    """
+    Load a script for a testCase add a cleanup handler to unload the
+    script after the test.
+    """
+    scriptLoader = ScriptLoader(getBranchFile(scriptRelativePath))
+    scriptLoader.load()
+    testCase.addCleanup(scriptLoader.unload)
+    return scriptLoader.module
+
+
+
+class ExecutableExampleTestMixin(object):
     """
     Tests for consistency and executability in executable example
     scripts.
 
     @since: 13.1
     """
-
     def test_executableModule(self):
         """
         The example scripts should have an if __name__ ==
         '__main__' so that they do something when called.
         """
-        args = [self.examplePath.path, '--help']
+        exampleModule = loadScriptForTest(self, self.examplePath)
+        args = [exampleModule.__file__, '--help']
 
         # Give the subprocess access to the same Python paths as the
         # parent process
@@ -259,7 +275,7 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
             out, err, code = res
             self.assertEqual(
                 out.splitlines()[0],
-                self.example.Options().synopsis)
+                exampleModule.Options().synopsis)
         d.addCallback(whenComplete)
         return d
 
@@ -268,8 +284,9 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         """
         The example scripts start with the standard shebang line.
         """
+        exampleFilePath = getBranchFile(self.examplePath)
         self.assertEquals(
-            self.examplePath.open().readline().rstrip(),
+            exampleFilePath.open().readline().rstrip(),
             '#!/usr/bin/env python')
 
 
@@ -278,7 +295,8 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         Example scripts contain an Options class which is a subclass
         of L{twisted.python.usage.Options}
         """
-        self.assertIsInstance(self.example.Options(), usage.Options)
+        exampleModule = loadScriptForTest(self, self.examplePath)
+        self.assertIsInstance(exampleModule.Options(), usage.Options)
 
 
     def test_usageMessageConsistency(self):
@@ -286,7 +304,8 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         The example script usage message should begin with a "Usage:"
         summary line.
         """
-        out = self.example.Options.synopsis
+        exampleModule = loadScriptForTest(self, self.examplePath)
+        out = exampleModule.Options.synopsis
         self.assertTrue(
             out.startswith('Usage:'),
             'Usage message first line should start with "Usage:". '
@@ -298,16 +317,16 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         The example script first prints a full usage message to stderr
         if it is passed incorrect command line arguments.
         """
-
+        exampleModule = loadScriptForTest(self, self.examplePath)
         fakeErr = BytesIO()
         self.patch(sys, 'stderr', fakeErr)
 
         self.assertRaises(
             SystemExit,
-            self.example.main,
+            exampleModule.main,
             None, '--unexpected_option')
         err = fakeErr.getvalue()
-        usageMessage = str(self.example.Options())
+        usageMessage = str(exampleModule.Options())
         self.assertEqual(
             err[:len(usageMessage)],
             usageMessage)
@@ -318,12 +337,13 @@ class ExecutableExampleTestMixin(ExampleTestBaseMixin):
         The example script prints an "Error:" summary on the last line
         of stderr when incorrect arguments are supplied.
         """
+        exampleModule = loadScriptForTest(self, self.examplePath)
         fakeErr = BytesIO()
         self.patch(sys, 'stderr', fakeErr)
 
         self.assertRaises(
             SystemExit,
-            self.example.main,
+            exampleModule.main,
             None, '--unexpected_option')
         err = fakeErr.getvalue().splitlines()
         self.assertTrue(
