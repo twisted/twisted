@@ -99,7 +99,7 @@ class SafeStream(object):
                     untilConcludes(self.original.flush)
                 except IOError as e:
                     if e.errno == errno.ENOSPC:
-                        log.msg(format="SafeStream.format failed with ENOSPC")
+                        log.msg(format="SafeStream.flush failed with ENOSPC")
                         continue
                     raise
                 else:
