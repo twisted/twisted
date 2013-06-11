@@ -179,7 +179,8 @@ class ComparisonTestsMixin(object):
 
 def getBranchFile(branchRelativePath):
     """
-    Return a L{FilePath} instance representing the path to a file
+    Return a L{FilePath} instance for the path to a file in the
+    current branch.
 
     @type branchRelativePath: C{str}
     @param branchRelativePath: The path to a file relative to a
@@ -250,8 +251,8 @@ class ScriptLoader(object):
 
 def loadScriptForTest(testCase, scriptRelativePath):
     """
-    Load a script for a testCase add a cleanup handler to unload the
-    script after the test.
+    Load a script for a testCase and add a cleanup handler to unload
+    the script after the test.
 
     @type testCase: L{twisted.trial.unittest.SynchronousTestCase}
     @param testCase: A L{twisted.trial.unittest.SynchronousTestCase}
