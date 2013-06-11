@@ -68,6 +68,7 @@ class SafeStream(object):
                     pass
                 else:
                     if not self._isFile(fd):
+                        self._fd = fd
                         self._catchENOSPC = True
 
 
@@ -94,16 +95,8 @@ class SafeStream(object):
         """
         if self._catchENOSPC:
             # XXX This branch very poorly tested
-            while True:
-                try:
-                    untilConcludes(self.original.flush)
-                except IOError as e:
-                    if e.errno == errno.ENOSPC:
-                        log.msg(format="SafeStream.flush failed with ENOSPC")
-                        continue
-                    raise
-                else:
-                    break
+            # Using os.write so no need to flush
+            pass
         else:
             untilConcludes(self.original.flush)
 
@@ -120,7 +113,7 @@ class SafeStream(object):
                     data=data[:bufferSize])
                 try:
                     untilConcludes(
-                        self.original.write, data[:bufferSize])
+                        os.write, self._fd, data[:bufferSize])
                 except IOError as e:
                     if e.errno == errno.ENOSPC:
                         log.msg(
