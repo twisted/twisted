@@ -1867,7 +1867,6 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns.OPTHeader.decode} unpacks the header fields from a file
         like object and sets corresponding instance attributes.
         """
-        h = dns.OPTHeader()
         b = BytesIO((
             '00' # 0 root zone
             '0029' # type 41
@@ -1878,7 +1877,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             '0002' # RDLEN 2
             ).decode('hex') + b'xx')
 
-        h.decode(b)
+        h = dns.OPTHeader.decode(b)
         self.assertEqual(h.name, dns.Name(b''))
         self.assertEqual(h.type, 41)
         self.assertEqual(h.udpPayloadSize, 512)

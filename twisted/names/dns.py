@@ -629,7 +629,8 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         strio.write(self._rdata)
 
 
-    def decode(self, strio, length=None):
+    @classmethod
+    def decode(cls, strio, length=None):
         """
         Decode a byte string into this OPTHeader.
 
@@ -640,16 +641,14 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         # OPTHeader name must always be '' so the received name is
         # discarded
         Name().decode(strio)
-        l = struct.calcsize(self._fmt)
+        l = struct.calcsize(cls._fmt)
         buff = readPrecisely(strio, l)
-        (self.type,
-         self.udpPayloadSize,
-         self.extendedRCODE,
-         self.version,
-         doz,
-         resourceRecordDataLength) = struct.unpack(self._fmt, buff)
-        self.dnssecOK = doz >> 15
-        self._rdata = readPrecisely(strio, resourceRecordDataLength)
+        (type, udpPayloadSize, extendedRCODE, version,
+         ttlByte3and4,
+         resourceRecordDataLength) = struct.unpack(cls._fmt, buff)
+        dnssecOK = ttlByte3and4 >> 15
+        rdata = readPrecisely(strio, resourceRecordDataLength)
+        return cls(udpPayloadSize, extendedRCODE, version, dnssecOK, rdata)
 
 
 
