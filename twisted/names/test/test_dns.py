@@ -1764,16 +1764,16 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
 
     def test_optHeaderName(self):
         """
-        L{dns.OPTHeader.name} is a readonly class attribute with fixed
-        root domain L{dns.Name}.
+        L{dns.OPTHeader.name} is a class attribute whose value is
+        fixed as the root domain
         """
-        self.assertEqual(dns.OPTHeader().name, dns.Name(b''))
+        self.assertEqual(dns.OPTHeader.name, dns.Name(b''))
 
 
     def test_optHeaderType(self):
         """
-        L{dns.OPTHeader.type} is a readonly class attribute with fixed
-        value 41.
+        L{dns.OPTHeader.type} is a class attribute with fixed value
+        41.
         """
         self.assertEqual(dns.OPTHeader.type, 41)
 

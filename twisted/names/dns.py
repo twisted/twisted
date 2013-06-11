@@ -558,13 +558,15 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     _fmt = "!HH2BHH"
 
-
+    name = Name(b'')
     type = OPT
+
     udpPayloadSize = 4096
     extendedRCODE = 0
     version = 0
     dnsssecOK = False
     _rdata = b''
+
 
     def __init__(self, udpPayloadSize=4096, extendedRCODE=0, version=0,
                  dnssecOK=False, _rdata=b''):
@@ -588,7 +590,6 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @type dnssecOK: C{bool}
         @param dnssecOK: DNSSEC OK bit as defined by [RFC3225].
         """
-        self.name = Name(b'')
         self.udpPayloadSize=udpPayloadSize
         self.extendedRCODE = extendedRCODE
         self.version = version
@@ -636,7 +637,9 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @param strio: Bytes will be read from this file until the full
             OPTHeader is decoded.
         """
-        self.name.decode(strio)
+        # OPTHeader name must always be '' so the received name is
+        # discarded
+        Name().decode(strio)
         l = struct.calcsize(self._fmt)
         buff = readPrecisely(strio, l)
         (self.type,
