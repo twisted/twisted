@@ -564,7 +564,7 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     udpPayloadSize = 4096
     extendedRCODE = 0
     version = 0
-    dnsssecOK = False
+    dnssecOK = False
     _rdata = b''
 
 

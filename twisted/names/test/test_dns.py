@@ -1817,8 +1817,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns.OPTHeader.dnssecOK} defaults to False but can be
         overridden in the constructor.
         """
-        self.assertEqual(dns.OPTHeader.version, False)
-        self.assertEqual(dns.OPTHeader().version, False)
+        self.assertEqual(dns.OPTHeader.dnssecOK, False)
+        self.assertEqual(dns.OPTHeader().dnssecOK, False)
         h = dns.OPTHeader(dnssecOK=True)
         self.assertEqual(h.dnssecOK, True)
 
