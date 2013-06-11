@@ -1865,7 +1865,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
     def test_decode(self):
         """
         L{dns.OPTHeader.decode} unpacks the header fields from a file
-        like object and sets corresponding instance attributes.
+        like object and returns an L{dns.OPTHeader} instance.
         """
         b = BytesIO((
             '00' # 0 root zone
@@ -1888,6 +1888,27 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(h._rdata, b'xx')
         # Check that all the input data has been consumed.
         self.assertEqual(b.tell(), len(b.getvalue()))
+
+
+    def test_decodeDiscardsName(self):
+        """
+        L{dns.OPTHeader.decode} discards the name which is encoded in
+        the supplied bytes. The name attribute of the resulting
+        L{dns.OPTHeader} instance will always be L{dns.Name(b'')}.
+        """
+        b = BytesIO(
+            # This non-root zone name should be discarded
+            b'\x07example\x03com\x00' +
+            ('0029' # type 41
+             '0200' # udpPayloadsize 512
+             '03' # extendedRCODE 3
+             '03' # version 3
+             '8000' # DNSSEC OK 1 + Z
+             '0002' # RDLEN 2
+             ).decode('hex') + b'xx')
+
+        h = dns.OPTHeader.decode(b)
+        self.assertEqual(h.name, dns.Name(b''))
 
 
     def test_optHeaderRepr(self):
