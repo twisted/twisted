@@ -22,6 +22,7 @@ from twisted.internet import utils
 from twisted.internet.protocol import FileWrapper
 from twisted.python import usage
 from twisted.python.filepath import FilePath
+from twisted.trial.unittest import SkipTest
 
 
 
@@ -177,7 +178,7 @@ class ComparisonTestsMixin(object):
 
 
 
-def getBranchFile(branchRelativePath):
+def getBranchFilePath(branchRelativePath):
     """
     Return a L{FilePath} instance for the path to a file in the
     current branch.
@@ -263,7 +264,7 @@ def loadScriptForTest(testCase, scriptRelativePath):
         twisted branch root.
     @return: The imported script module.
     """
-    scriptLoader = ScriptLoader(getBranchFile(scriptRelativePath))
+    scriptLoader = ScriptLoader(getBranchFilePath(scriptRelativePath))
     scriptLoader.load()
     testCase.addCleanup(scriptLoader.unload)
     return scriptLoader.module
@@ -277,6 +278,20 @@ class ExecutableExampleTestMixin(object):
 
     @since: 13.1
     """
+    def setUp(self):
+        """
+        The doc directory will not be present if the tests are run on
+        a twisted which has been installed with setuptools.
+        Skip all example script tests in this case.
+        """
+        try:
+            getBranchFilePath('doc')
+        except IOError as e:
+            raise SkipTest(
+                'Example tests skipped '
+                'due to missing doc directory: %s' % (e,))
+
+
     def test_executableModule(self):
         """
         The example scripts should have an if __name__ ==
@@ -304,7 +319,7 @@ class ExecutableExampleTestMixin(object):
         """
         The example scripts start with the standard shebang line.
         """
-        exampleFilePath = getBranchFile(self.examplePath)
+        exampleFilePath = getBranchFilePath(self.examplePath)
         self.assertEquals(
             exampleFilePath.open().readline().rstrip(),
             '#!/usr/bin/env python')
