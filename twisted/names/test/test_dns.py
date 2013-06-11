@@ -1892,7 +1892,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         self.assertEqual(
             repr(dns.OPTHeader(_rdata=b'x')),
-            '<OPT '
+            '<OPTHeader '
             'name= '
             'type=41 '
             'udpPayloadSize=4096 '

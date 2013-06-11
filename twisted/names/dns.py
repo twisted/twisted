@@ -526,7 +526,7 @@ class Query:
 
 
 @implementer(IEncodable)
-class OPTHeader(tputil.FancyEqMixin, object):
+class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     An OPT record header.
 
@@ -548,6 +548,9 @@ class OPTHeader(tputil.FancyEqMixin, object):
     @ivar rdlen: length in bytes of all RDATA
     @since: 13.1
     """
+    showAttributes = (
+        ('name', str), 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
+        'dnssecOK', 'rdlen')
 
     compareAttributes = (
         'name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
@@ -643,27 +646,6 @@ class OPTHeader(tputil.FancyEqMixin, object):
          rdlen) = struct.unpack(self._fmt, buff)
         self.dnssecOK = doz >> 15
         self._rdata = readPrecisely(strio, rdlen)
-
-
-    def __str__(self):
-        return (
-            '<OPT '
-            'name=%s '
-            'type=%s '
-            'udpPayloadSize=%s '
-            'extendedRCODE=%s '
-            'version=%s '
-            'dnssecOK=%s '
-            'rdlen=%s>') % (
-            self.name,
-            self.type,
-            self.udpPayloadSize,
-            self.extendedRCODE,
-            self.version,
-            self.dnssecOK,
-            self.rdlen)
-
-    __repr__ = __str__
 
 
 
