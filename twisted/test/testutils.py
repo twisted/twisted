@@ -22,7 +22,6 @@ from twisted.internet import utils
 from twisted.internet.protocol import FileWrapper
 from twisted.python import usage
 from twisted.python.filepath import FilePath
-from twisted.trial.unittest import SkipTest
 
 
 
@@ -179,6 +178,17 @@ class ComparisonTestsMixin(object):
 
 
 def getBranchFile(branchRelativePath):
+    """
+    Return a L{FilePath} instance representing the path to a file
+
+    @type branchRelativePath: C{str}
+    @param branchRelativePath: The path to a file relative to a
+        twisted branch root.
+    @return: A L{FilePath} containing the full path to
+        C{branchRelativePath} in the current branch.
+    @raises: L{IOError} if C{branchRelativePath} does not exist in the
+        current branch.
+    """
     # Get branch root
     here = FilePath(__file__).parent().parent().parent()
 
@@ -193,8 +203,8 @@ def getBranchFile(branchRelativePath):
 
 class ScriptLoader(object):
     """
-    Adds a script to the path, loads it as a module, and then
-    removes it from the path and unimports the modules which the script loaded.
+    Handle the loading and unloading of a script which is not
+    importable from the current path.
 
     Test cases which test example code and documentation listings should use
     this.
@@ -242,6 +252,15 @@ def loadScriptForTest(testCase, scriptRelativePath):
     """
     Load a script for a testCase add a cleanup handler to unload the
     script after the test.
+
+    @type testCase: L{twisted.trial.unittest.SynchronousTestCase}
+    @param testCase: A L{twisted.trial.unittest.SynchronousTestCase}
+        instance to which a cleanup handler will be added in order to
+        unload the script.
+    @type scriptRelativePath: C{str}
+    @param scriptRelativePath: The path to a script relative to a
+        twisted branch root.
+    @return: The imported script module.
     """
     scriptLoader = ScriptLoader(getBranchFile(scriptRelativePath))
     scriptLoader.load()
