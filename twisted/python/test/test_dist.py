@@ -8,6 +8,7 @@ Tests for parts of our release automation system.
 
 import os
 import sys
+from collections import defaultdict
 
 from distutils.core import Distribution
 
@@ -195,6 +196,103 @@ version = versions.Version("twisted.blat", 9, 8, 10)
 """)
         f.close()
         self.assertEqual(dist.getVersion("blat", base=self.dirname), "9.8.10")
+
+
+
+class GetAllScriptsTest(TestCase):
+    """
+    Tests for L{dist.getAllScripts} which lists all the scripts that should be
+    included in a complete distribution of Twisted, with its subprojects.
+    """
+
+
+    # getAllScripts relies on a list in twisted.python.dist.twisted_subprojects
+    # to tell it what subprojects might have scripts it needs to get. It
+    # searches recursively in bin/, at the root of the Twisted distribution, for
+    # directories that have the same name as a listed subproject. It then calls
+    # getScripts on these directories to extract the scripts from them. It also
+    # tries to extract scripts from bin/ itself, because Twisted core stores
+    # scripts there.
+    #
+    # Thus testing it relies on manipulating the contents of that list and
+    # directory.
+
+
+    def setUp(self):
+        # A mock up of Twisted's root directory.
+        basedir = FilePath(self.mktemp())
+        self.script_directory = basedir.child("bin")
+        self.script_directory.makedirs()
+        # The temporary directories will be deleted by Trial.
+
+        # getAllScripts uses a hardcoded relative path.
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(basedir.path)
+
+
+    def test_getsCorrectScripts(self):
+        """
+        L{getAllScripts} lists exactly the scripts in Twisted and its
+        subprojects that should be included in a distribution. It may encounter
+        additional scripts, files, or directories, but it will not list them
+        unless they are part of a Twisted subproject (see
+        twisted.dist.twisted_subprojects) or Twisted core.
+        """
+        # Replace getScripts with a stub that records its interactions
+        # with getAllScripts. The real getScripts is tested separately.
+        directoriesQueried = []
+        scriptsGiven = []
+        def stubGetScripts(projname, basedir=''):
+            directoriesQueried.append(projname)
+            scripts = ["dummyScript", "dummyScript2"]
+            scriptsGiven.extend(scripts)
+            return scripts
+        self.patch(dist, "getScripts", stubGetScripts)
+
+        # Create some directories that represent dummy subprojects for
+        # getAllScripts to look at. Get all scripts should ask getScripts to
+        # get scripts from these directories.
+        dummySubprojects = ["random", "subproject", "names", "kitty_kat"]
+        # Create some more directories in bin that aren't listed as
+        # subprojects. getAllScripts should ignore them.
+        redHerringDirectories = ["some", "directories", "meow"]
+        # Create some files that match the names of subprojects. getAllScripts
+        # should ignore these as well.
+        redHerringFiles = ["a", "few", "files"]
+        # Just for kicks: files that do NOT match the name of a subproject.
+        # These should also be ignored.
+        completelyUnrelatedFiles = ["unrelated", "file"]
+
+        self.patch(
+            dist, "twisted_subprojects", dummySubprojects + redHerringFiles)
+
+        for name in dummySubprojects + redHerringDirectories:
+            self.script_directory.child(name).makedirs()
+        for name in redHerringFiles + completelyUnrelatedFiles:
+            self.script_directory.child(name).touch()
+        # These are in Trial's temp directory, so we don't have to worry about
+        # deleting them.
+
+        scriptsReturned = dist.getAllScripts()
+
+        # This helper function provides the similiar functionality
+        # as provided by collections.Counter
+        def getCount(input):
+            ret = defaultdict(int)
+            for k in input:
+                ret[k] += 1
+            return ret
+
+
+        # getAllScripts should call getScripts once on each directory which
+        # corresponds to a subproject, and also on the current directory (for
+        # the core subproject). It may do this in any order.
+        self.assertEqual(getCount(directoriesQueried),
+                         getCount(dummySubprojects + ['']))
+        # getAllScripts should collect all the scripts returned by getScripts,
+        # in any order.
+        self.assertEqual(getCount(scriptsReturned),
+                         getCount(scriptsGiven))
 
 
 
