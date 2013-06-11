@@ -12,11 +12,11 @@ from zope.interface import implementer
 
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import (
-    IProtocol, ILoggingContext, IProtocolFactory, IConsumer)
+    IProtocol, ILoggingContext, IProtocolFactory, IConsumer, ITransport)
 from twisted.internet.defer import CancelledError
 from twisted.internet.protocol import (
     Protocol, ClientCreator, Factory, ProtocolToConsumerAdapter,
-    ConsumerToProtocolAdapter)
+    ConsumerToProtocolAdapter, FileWrapper)
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
 
@@ -428,3 +428,151 @@ class AdapterTests(TestCase):
         protocol.dataReceived(b"hello")
         self.assertEqual(result, [b"hello"])
         self.assertIsInstance(protocol, ConsumerToProtocolAdapter)
+
+
+
+class FakeFile(object):
+    """
+    A fake file-like object that acts enough like a file for L{FileWrapper}.
+    """
+    def __init__(self):
+        self.outchunks = []
+        self.closed = False
+
+
+    def write(self, chunk):
+        """
+        Append the given item to the 'outchunks' list.
+        """
+        if self.closed:
+            raise IOError("the file was closed")
+        self.outchunks.append(chunk)
+
+
+    def close(self):
+        """
+        Set the 'closed' flag to True, explicitly marking that it has been
+        closed.
+        """
+        self.closed = True
+
+
+
+class FileWrapperTests(TestCase):
+    """
+    Tests for L{twisted.internet.protocol.FileWrapper}.
+    """
+    def setUp(self):
+        self.fakeFile = FakeFile()
+        self.fileWrapper = FileWrapper(self.fakeFile)
+
+
+    def test_interfaces(self):
+        """
+        L{FileWrapper} instances provide L{ITransport}.
+        """
+        self.assertTrue(verifyObject(ITransport, self.fileWrapper))
+
+
+    def test_write(self):
+        """
+        L{FileWrapper.write} writes data into the file-like object.
+        """
+        text = "test write"
+        self.fileWrapper.write(text)
+        self.assertEqual(self.fakeFile.outchunks[-1], text)
+
+
+    def test_registerProducer(self):
+        """
+        L{FileWrapper.registerProducer} records the arguments supplied to it
+        as instance attributes.
+        """
+        producer = object()
+        streaming = object()
+        self.fileWrapper.registerProducer(producer, streaming)
+        self.assertIdentical(self.fileWrapper.producer, producer)
+        self.assertIdentical(self.fileWrapper.streamingProducer, streaming)
+
+
+    def test_registerProducerWithNoStreaming(self):
+        """
+        L{FileWrapper.registerProducer} records the producer as instance
+        attribute and calls C{producer.resumeProducing} when supplied producer
+        without streaming.
+        """
+        class FakeProducer(object):
+            def __init__(self):
+                self.resumeProducingCalled = False
+
+
+            def resumeProducing(self):
+                self.resumeProducingCalled = True
+
+        producer = FakeProducer()
+        self.fileWrapper.registerProducer(producer, None)
+        self.assertTrue(producer.resumeProducingCalled)
+
+
+    def _assertProducerUnregistered(self):
+        """
+        Assert L{FileWrapper.unregisterProducer} has been called successfully.
+        """
+        self.assertEqual(self.fileWrapper.producer, None)
+
+
+    def test_unregisterProducer(self):
+        """
+        L{FileWrapper.unregisterProducer} causes the transport to forget about
+        the registered producer.
+        """
+        producer = object()
+        streaming = object()
+        self.fileWrapper.registerProducer(producer, streaming)
+        self.fileWrapper.unregisterProducer()
+        self._assertProducerUnregistered()
+
+
+    def _assertConnectionLost(self):
+        """
+        Assert L{FileWrapper.loseConnection} has been called successfully.
+        """
+        self.assertEqual(self.fileWrapper.closed, 1)
+        self.assertTrue(self.fakeFile.closed)
+
+
+    def test_stopConsuming(self):
+        """
+        L{FileWrapper.stopConsuming} causes the transport to unregister
+        producer and lose connection.
+        """
+        self.fileWrapper.stopConsuming()
+        self._assertProducerUnregistered()
+        self._assertConnectionLost()
+
+
+    def test_writeSequence(self):
+        """
+        L{FileWrapper.writeSequence} concatenates the content in C{iovec} and
+        writes it into the file-like object.
+        """
+        iovec = ["test", "write", "sequence"]
+        self.fileWrapper.writeSequence(iovec)
+        self.assertEqual(self.fakeFile.outchunks[-1], "".join(iovec))
+
+
+    def test_loseConnection(self):
+        """
+        L{FileWrapper.loseConnection} changes the C{'closed'} of the transport
+        to C{'1'} and closes the C{'file'}
+        """
+        self.fileWrapper.loseConnection()
+        self._assertConnectionLost()
+
+
+    def test_stopProducing(self):
+        """
+        L{FileWrapper.stopProducing} causes the transport to lose connection.
+        """
+        self.fileWrapper.stopProducing()
+        self._assertConnectionLost()
