@@ -1785,6 +1785,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         the constructor.
         """
         self.assertEqual(dns.OPTHeader.udpPayloadSize, 4096)
+        self.assertEqual(dns.OPTHeader().udpPayloadSize, 4096)
         h = dns.OPTHeader(udpPayloadSize=512)
         self.assertEqual(h.udpPayloadSize, 512)
 
@@ -1795,6 +1796,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         overridden in the constructor.
         """
         self.assertEqual(dns.OPTHeader.extendedRCODE, 0)
+        self.assertEqual(dns.OPTHeader().extendedRCODE, 0)
         h = dns.OPTHeader(extendedRCODE=1)
         self.assertEqual(h.extendedRCODE, 1)
 
@@ -1805,6 +1807,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         overridden in the constructor.
         """
         self.assertEqual(dns.OPTHeader.version, 0)
+        self.assertEqual(dns.OPTHeader().version, 0)
         h = dns.OPTHeader(version=1)
         self.assertEqual(h.version, 1)
 
@@ -1815,6 +1818,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         overridden in the constructor.
         """
         self.assertEqual(dns.OPTHeader.version, False)
+        self.assertEqual(dns.OPTHeader().version, False)
         h = dns.OPTHeader(dnssecOK=True)
         self.assertEqual(h.dnssecOK, True)
 
