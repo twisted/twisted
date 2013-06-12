@@ -114,7 +114,7 @@ class SafeStream(object):
                 try:
                     untilConcludes(
                         os.write, self._fd, data[:bufferSize])
-                except IOError as e:
+                except OSError as e:
                     if e.errno == errno.ENOSPC:
                         log.msg(
                             format="ENOSPC in SafeStream.write for %(data)r",
