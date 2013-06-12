@@ -1862,15 +1862,18 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
 
     def test_encodeWithOptions(self):
         """
-        L{dns.OPTHeader.options} is a list of 3tuples which are packed
-        into the rdata area of the header.
+        L{dns.OPTHeader.options} is a list of L{dns.OPTVariableOption}
+        instances which are packed into the rdata area of the header.
         """
         h = dns.OPTHeader(
             udpPayloadSize=512,
             extendedRCODE=3,
             version=3,
             dnssecOK=True,
-            options=[(1, 1, b'\x00')])
+            options=[
+                dns.OPTVariableOption(1, b'\x00\x01'),
+                dns.OPTVariableOption(2, b'\x00\x02'),
+                ])
         b = BytesIO()
 
         h.encode(b)
@@ -1882,10 +1885,15 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             '03' # extendedRCODE 3
             '03' # version 3
             '8000' # DNSSEC OK 1 + Z
-            '0005' # RDLEN 5
+            '000c' # RDLEN 12
+
             '0001' # OPTION-CODE
-            '0001' # OPTION-LENGTH
-            '00' # OPTION-DATA
+            '0002' # OPTION-LENGTH
+            '0001' # OPTION-DATA
+
+            '0002' # OPTION-CODE
+            '0002' # OPTION-LENGTH
+            '0002' # OPTION-DATA
             )
 
 

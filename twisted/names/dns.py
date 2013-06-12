@@ -609,6 +609,12 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @param compDict: not used.
         """
         self.name.encode(strio, compDict)
+
+        b = BytesIO()
+        for o in self.options:
+            o.encode(b)
+        optionBytes = b.getvalue()
+
         strio.write(
             struct.pack(
                 self._fmt,
@@ -617,7 +623,7 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
                 self.extendedRCODE,
                 self.version,
                 self.dnssecOK << 15,
-                0))
+                len(optionBytes)) + optionBytes)
 
 
     @classmethod
