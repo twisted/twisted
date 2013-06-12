@@ -45,9 +45,7 @@ __all__ = [
 
 
 # System imports
-import warnings
-
-import struct, random, types, socket
+import struct, random, socket
 from itertools import chain
 
 from io import BytesIO
