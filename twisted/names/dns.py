@@ -644,12 +644,19 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
          ttlByte3and4,
          resourceRecordDataLength) = struct.unpack(cls._fmt, buff)
         dnssecOK = ttlByte3and4 >> 15
-        readPrecisely(strio, resourceRecordDataLength)
+
+        # Decode variable options if present
+        options = []
+        optionsEnd = strio.tell() + resourceRecordDataLength
+        while strio.tell() < optionsEnd:
+            options.append(OPTVariableOption.decode(strio))
+
         return cls(
             udpPayloadSize=udpPayloadSize,
             extendedRCODE=extendedRCODE,
             version=version,
-            dnssecOK=dnssecOK)
+            dnssecOK=dnssecOK,
+            options=options)
 
 
 
