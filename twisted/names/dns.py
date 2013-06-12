@@ -660,6 +660,20 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
 
 @implementer(IEncodable)
+class OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
+    """
+    """
+    showAttributes = ('code', 'data')
+    compareAttributes = ('code', 'data')
+
+
+    def __init__(self, code, data):
+        self.code = code
+        self.data = data
+
+
+
+@implementer(IEncodable)
 class RRHeader(tputil.FancyEqMixin):
     """
     A resource record header.

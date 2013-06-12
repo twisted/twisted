@@ -12,6 +12,7 @@ from io import BytesIO
 
 import struct
 
+from zope.interface.verify import verifyClass
 
 from twisted.python.failure import Failure
 from twisted.internet import address, task
@@ -1999,3 +2000,54 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             dns.OPTHeader(_rdata=b'foo'),
             dns.OPTHeader(_rdata=b'foo'),
             dns.OPTHeader(_rdata=b'bar'))
+
+
+
+class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
+    """
+    Tests for L{twisted.names.dns.OPTVariableOption}.
+    """
+    def test_interface(self):
+        """
+        L{dns.OPTVariableOption} implements L{dns.IEncodable}.
+        """
+        verifyClass(dns.IEncodable, dns.OPTVariableOption)
+
+
+    def test_constructorArguments(self):
+        """
+        L{dns.OPTVariableOption.__init__} requires code and data
+        arguments which are saved as public instance attributes.
+        """
+        h = dns.OPTVariableOption(1, b'x')
+        self.assertEqual(h.code, 1)
+        self.assertEqual(h.data, b'x')
+
+
+    def test_repr(self):
+        """
+        L{dns.OPTVariableOption.__repr__} displays the code and data
+        of the option.
+        """
+        self.assertEqual(
+            repr(dns.OPTVariableOption(1, b'x')),
+            '<OPTVariableOption '
+            'code=1 '
+            "data='x'"
+            '>')
+
+
+    def test_equality(self):
+        """
+        Two OPTVariableOption instances compare equal if they have the same
+        code and data values.
+        """
+        self.assertNormalEqualityImplementation(
+            dns.OPTVariableOption(1, b'x'),
+            dns.OPTVariableOption(1, b'x'),
+            dns.OPTVariableOption(2, b'x'))
+
+        self.assertNormalEqualityImplementation(
+            dns.OPTVariableOption(1, b'x'),
+            dns.OPTVariableOption(1, b'x'),
+            dns.OPTVariableOption(1, b'y'))
