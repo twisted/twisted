@@ -159,7 +159,9 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
             'heightOfGeoidAboveWGS84',
             'heightOfGeoidAboveWGS84Units',
 
-            # The next parts are DGPS information.
+            # The next parts are DGPS information, currently unused.
+            None, # Time since last DGPS update
+            None, # DGPS reference source id
         ],
 
         'GPRMC': [
