@@ -15,12 +15,14 @@ from twisted.trial.unittest import TestCase
 
 from twisted.python import dist
 from twisted.python.dist import (get_setup_args, ConditionalExtension,
-    build_scripts_twisted)
+    build_scripts_twisted, install_data_twisted, getVersion)
 from twisted.python.filepath import FilePath
+from twisted.python.test.test_release import (StructureAssertingMixin,
+    genVersion)
 
 
 
-class SetupTest(TestCase):
+class GetSetupArgsTest(TestCase, StructureAssertingMixin):
     """
     Tests for L{get_setup_args}.
     """
@@ -43,6 +45,7 @@ class SetupTest(TestCase):
         builder = build_ext(Distribution())
         builder.prepare_extensions()
         self.assertEqual(builder.extensions, [good_ext])
+        self.assertFalse('conditionalExtensions' in args)
 
 
     def test_win32Definition(self):
@@ -56,6 +59,135 @@ class SetupTest(TestCase):
         self.patch(os, "name", "nt")
         builder.prepare_extensions()
         self.assertEqual(ext.define_macros, [("whatever", 2), ("WIN32", 1)])
+        self.assertFalse('conditionalExtensions' in args)
+
+
+    def test_Plugins(self):
+        """
+        If L{plugins} among keyword arguments the values will be used to
+        set the L{py_modules} keyword values unless twisted_subproject is
+        also among the keyword arguments.  Note that the value of
+        L{plugins} must be a list, it cannot be None.
+        """
+        args = get_setup_args(plugins=[])
+        self.assertFalse('plugins' in args)
+        self.assertEqual(args['py_modules'], [])
+
+        args = get_setup_args(plugins=['aplugin'])
+        self.assertFalse('plugins' in args)
+        self.assertEqual(args['py_modules'], ['twisted.plugins.aplugin'])
+
+
+    def test_CmdClass(self):
+        """
+        L{cmdclass} is set to default values unless already set.
+        """
+        args = get_setup_args()
+        self.assertEqual(args['cmdclass']['install_data'],
+                         install_data_twisted)
+        self.assertEqual(args['cmdclass']['build_scripts'],
+                         build_scripts_twisted)
+        self.assertFalse('py_modules' in args)
+
+
+    def test_TwistedSubproject1(self):
+        """
+        If L{twisted_subproject} among keyword arguments then it will
+        be used to determine the value for L{py_modules} and several
+        other arguments regardless of the value of L{plugins}.
+        """
+
+        kws = {"twisted_subproject" : "aplugin",
+               "plugins" : [] }
+
+        root = FilePath(self.mktemp())
+        root.createDirectory()
+        structure = {
+            "twisted": {
+                "plugins": {
+                    "twisted_aplugin.py": "I'm a plugin file."},
+                "_version.py": genVersion("twisted", 1, 0, 0),
+                "aplugin": {
+                    "__init__.py": "I'm a package file.",
+                    "afile.txt" : "I'm a data file.",
+                    "bfile.txt" : "I'm a data file.",
+                    "_version.py": genVersion("twisted.aplugin", 1, 0, 0)},
+                "bplugin": {
+                    "__init__.py": "I'm a package file.",
+                    "afile.txt" : "I'm a data file.",
+                    "bfile.txt" : "I'm a data file.",
+                    "_version.py": genVersion("twisted.bplugin", 1, 0, 0)}}}
+        self.createStructure(root, structure)
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(root.path)
+        args = get_setup_args(**kws)
+        self.assertEqual(args['packages'], ['twisted.aplugin'])
+        self.assertEqual(args['version'], getVersion("aplugin"))
+        self.assertEqual(args['py_modules'],
+                         ['twisted.plugins.twisted_aplugin'])
+        self.assertEqual(args['data_files'],
+                         [('twisted/aplugin',
+                           ['twisted/aplugin/afile.txt',
+                            'twisted/aplugin/bfile.txt'])])
+        self.assertFalse('twisted_subproject' in args)
+
+    def test_TwistedSubproject2(self):
+        """
+        L{get_setup_args) should raise a L{RuntimeError} when not run
+        from twisted directory.
+        """
+        kws = {"twisted_subproject" : "aplugin",
+               "plugins" : [] }
+
+        root = FilePath(self.mktemp())
+        root.createDirectory()
+        structure = {"not_twisted" : {}}
+        self.createStructure(root, structure)
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(root.path)
+        self.assertRaises(RuntimeError, get_setup_args, **kws)
+
+
+    def test_TwistedSubproject3(self):
+        """
+        If L{twisted_subproject} among keyword arguments then it will
+        be used to determine the value for L{py_modules} and several
+        other keyword arguments regardless of the value of L{plugins}.
+        If there is no corresponding file in the L{plugins} subdirectory
+        L{py_modules} is not set.
+        """
+
+        kws = {"twisted_subproject" : "aplugin",
+               "plugins" : [] }
+
+        root = FilePath(self.mktemp())
+        root.createDirectory()
+        structure = {
+            "twisted": {
+                "plugins": { },
+                "_version.py": genVersion("twisted", 1, 0, 0),
+                "aplugin": {
+                    "__init__.py": "I'm a package file.",
+                    "afile.txt" : "I'm a data file.",
+                    "bfile.txt" : "I'm a data file.",
+                    "_version.py": genVersion("twisted.aplugin", 1, 0, 0)},
+                "bplugin": {
+                    "__init__.py": "I'm a package file.",
+                    "afile.txt" : "I'm a data file.",
+                    "bfile.txt" : "I'm a data file.",
+                    "_version.py": genVersion("twisted.bplugin", 1, 0, 0)}}}
+        self.createStructure(root, structure)
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(root.path)
+        args = get_setup_args(**kws)
+        self.assertEqual(args['packages'], ['twisted.aplugin'])
+        self.assertEqual(args['version'], getVersion("aplugin"))
+        self.assertEqual(args['data_files'],
+                         [('twisted/aplugin',
+                           ['twisted/aplugin/afile.txt',
+                            'twisted/aplugin/bfile.txt'])])
+        self.assertFalse('py_modules' in args)
+        self.assertFalse('twisted_subproject' in args)
 
 
 
