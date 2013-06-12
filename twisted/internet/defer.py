@@ -27,6 +27,7 @@ from functools import wraps
 # Twisted imports
 from twisted.python.compat import _PY3, comparable, cmp
 from twisted.python import log, failure
+from twisted.python.deprecate import warnAboutFunction
 
 
 
@@ -574,6 +575,13 @@ class Deferred:
                     current._runningCallbacks = True
                     try:
                         current.result = callback(current.result, *args, **kw)
+                        if current.result is current:
+                            warnAboutFunction(
+                                callback,
+                                "Callback returned the Deferred "
+                                "it was attached to; this breaks the "
+                                "callback chain and will raise an "
+                                "exception in the future.")
                     finally:
                         current._runningCallbacks = False
                 except:
@@ -588,14 +596,6 @@ class Deferred:
                         if resultResult is _NO_RESULT or isinstance(resultResult, Deferred) or current.result.paused:
                             # Nope, it didn't.  Pause and chain.
                             current.pause()
-                            if current.result is current:
-                                warnings.warn(
-                                    "Callback %s returned the same Deferred "
-                                    "it was attached to; this breaks the "
-                                    "callback chain and will raise an "
-                                    "exception in the future." % (callback),
-                                    DeprecationWarning,
-                                    stacklevel=4)
                             current._chainedTo = current.result
                             # Note: current.result has no result, so it's not
                             # running its callbacks right now.  Therefore we can

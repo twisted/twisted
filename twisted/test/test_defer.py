@@ -7,6 +7,7 @@ Test cases for L{twisted.internet.defer}.
 
 from __future__ import division, absolute_import
 
+import warnings
 import gc, traceback
 import re
 
@@ -911,15 +912,32 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
             return d
         d.addCallback(circularCallback)
         d.callback("foo")
-        warnings = self.flushWarnings([self.test_circularChainWarning])
+
+        warnings = self.flushWarnings([circularCallback])
         self.assertEqual(len(warnings), 1)
         warning = warnings[0]
         self.assertEqual(warning['category'], DeprecationWarning)
-        pattern = ("Callback <function circularCallback at 0x\\w+> returned "
-                   "the same Deferred it was attached to")
+        pattern = "Callback returned the Deferred it was attached to"
         self.assertTrue(
             re.search(pattern, warning['message']),
             "\nExpected match: %r\nGot: %r" % (pattern, warning['message']))
+
+
+    def test_circularChainException(self):
+        """
+        If the deprecation warning for circular deferred callbacks is
+        configured to be an error, the exception will become the failure
+        result of the Deferred.
+        """
+        self.addCleanup(setattr, warnings, "filters", warnings.filters)
+        warnings.filterwarnings("error", category=DeprecationWarning)
+        d = defer.Deferred()
+        def circularCallback(result):
+            return d
+        d.addCallback(circularCallback)
+        d.callback("foo")
+        failure = self.failureResultOf(d)
+        failure.trap(DeprecationWarning)
 
 
     def test_repr(self):
