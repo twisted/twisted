@@ -969,7 +969,7 @@ class ValidFixTests(FixerTestMixin, TestCase):
         """
         sentenceData = {'type': 'GPGLL',
                         'altitude': '545.4',
-                        'dataMode': nmea.DATA_ACTIVE}
+                        'dataMode': nmea.GPGLLGPRMCFixQualities.ACTIVE}
         expectedState = {'altitude': base.Altitude(545.4)}
 
         self._fixerTest(sentenceData, expectedState)
@@ -1005,12 +1005,11 @@ class InvalidFixTests(FixerTestMixin, TestCase):
 
     def test_GLL(self):
         """
-        GLL sentence data is unused when the data is flagged as
-        void.
+        GLL sentence data is unused when the data is flagged as void.
         """
         sentenceData = {'type': 'GPGLL',
                         'altitude': '545.4',
-                        'dataMode': nmea.DATA_VOID}
+                        'dataMode': nmea.GPGLLGPRMCFixQualities.VOID}
 
         self._invalidFixTest(sentenceData)
 
@@ -1024,7 +1023,7 @@ class InvalidFixTests(FixerTestMixin, TestCase):
         """
         sentenceData = {'type': 'GPGSA',
                         'altitude': '545.4',
-                        'dataMode': nmea.DATA_ACTIVE,
+                        'dataMode': nmea.GPGLLGPRMCFixQualities.ACTIVE,
                         'fixType': nmea.GPGSAFixTypes.GSA_NO_FIX}
         self._invalidFixTest(sentenceData)
 
@@ -1039,7 +1038,7 @@ class InvalidFixTests(FixerTestMixin, TestCase):
         """
         sentenceData = {'type': 'GPGSA',
                         'altitude': '545.4',
-                        'dataMode': nmea.DATA_VOID,
+                        'dataMode': nmea.GPGLLGPRMCFixQualities.VOID,
                         'fixType': nmea.GPGSAFixTypes.GSA_2D_FIX}
         self._invalidFixTest(sentenceData)
 
@@ -1052,7 +1051,7 @@ class InvalidFixTests(FixerTestMixin, TestCase):
         """
         sentenceData = {'type': 'GPGSA',
                         'altitude': '545.4',
-                        'dataMode': nmea.DATA_VOID,
+                        'dataMode': nmea.GPGLLGPRMCFixQualities.VOID,
                         'fixType': nmea.GPGSAFixTypes.GSA_NO_FIX}
         self._invalidFixTest(sentenceData)
 

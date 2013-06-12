@@ -71,8 +71,19 @@ class GPGGAFixQualities(Values):
 
 
 
-# GPGLL/GPRMC fix quality:
-DATA_ACTIVE, DATA_VOID = "A", "V"
+class GPGLLGPRMCFixQualities(Values):
+    """
+    The possible fix quality indications in GPGLL and GPRMC sentences.
+
+    Unfortunately, these sentences only indicate whether data is good or void.
+    They provide no other information, such as what went wrong if the data is
+    void, or how good the data is if the data is not void.
+
+    @cvar ACTIVE: The data is okay.
+    @cvar VOID: The data is void, and should not be used.
+    """
+    ACTIVE = ValueConstant("A")
+    VOID = ValueConstant("V")
 
 
 
@@ -351,8 +362,8 @@ class NMEASentence(base._BaseSentence):
     @ivar speedInKnots: The ground speed, expressed in knots.
     @ivar fixQuality: The quality of the fix.
     @type fixQuality: One of L{GPGGAFixQualities}.
-    @ivar dataMode: Signals if the data is usable or not. One of
-        L{DATA_ACTIVE} or L{DATA_VOID}.
+    @ivar dataMode: Signals if the data is usable or not.
+    @type dataMode: One of L{GPGLLGPRMCFixQualities}.
     @ivar numberOfSatellitesSeen: The number of satellites seen by the
         receiver.
     @ivar numberOfSatellitesUsed: The number of satellites used in
@@ -822,7 +833,7 @@ class NMEAAdapter(object):
         Tests if a sentence contains a valid fix.
         """
         if (self.currentSentence.fixQuality == GPGGAFixQualities.INVALID_FIX
-            or self.currentSentence.dataMode == DATA_VOID
+            or self.currentSentence.dataMode == GPGLLGPRMCFixQualities.VOID
             or self.currentSentence.fixType == GPGSAFixTypes.GSA_NO_FIX):
             raise base.InvalidSentence("bad sentence")
 
