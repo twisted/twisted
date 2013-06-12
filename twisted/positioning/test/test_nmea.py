@@ -957,7 +957,7 @@ class ValidFixTests(FixerTestMixin, TestCase):
         """
         sentenceData = {'type': 'GPGGA',
                         'altitude': '545.4',
-                        'fixQuality': nmea.GGA_GPS_FIX}
+                        'fixQuality': nmea.GPGGAFixQualities.GPS_FIX}
         expectedState = {'altitude': base.Altitude(545.4)}
 
         self._fixerTest(sentenceData, expectedState)
@@ -998,7 +998,7 @@ class InvalidFixTests(FixerTestMixin, TestCase):
         """
         sentenceData = {'type': 'GPGGA',
                         'altitude': '545.4',
-                        'fixQuality': nmea.GGA_INVALID_FIX}
+                        'fixQuality': nmea.GPGGAFixQualities.INVALID_FIX}
 
         self._invalidFixTest(sentenceData)
 
