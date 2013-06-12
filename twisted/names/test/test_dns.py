@@ -1823,6 +1823,17 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(h.dnssecOK, True)
 
 
+    def test_optHeaderOptions(self):
+        """
+        L{dns.OPTHeader.options} defaults to emtpy list but can be
+        overridden in the constructor.
+        """
+        self.assertEqual(dns.OPTHeader.options, [])
+        self.assertEqual(dns.OPTHeader().options, [])
+        h = dns.OPTHeader(options=[(1, 1, b'\x00')])
+        self.assertEqual(h.options, [(1, 1, b'\x00')])
+
+
     def test_optHeaderResourceRecordDataLength(self):
         """
         L{dns.OPTHeader.resourceRecordDataLength} is a readonly
@@ -1859,6 +1870,36 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             '8000' # DNSSEC OK 1 + Z
             '0003' # RDLEN 3
             '000000' # RDATA
+            )
+
+
+    def test_encodeWithOptions(self):
+        """
+        L{dns.OPTHeader.options} is a list of 3tuples which are packed
+        into the rdata area of the header.
+        """
+        h = dns.OPTHeader(
+            udpPayloadSize=512,
+            extendedRCODE=3,
+            version=3,
+            dnssecOK=True,
+            options=[(1, 1, b'\x00')],
+            _rdata=b'')
+        b = BytesIO()
+
+        h.encode(b)
+        self.assertEqual(
+            b.getvalue().encode('hex'),
+            '00' # 0 root zone
+            '0029' # type 41
+            '0200' # udpPayloadsize 512
+            '03' # extendedRCODE 3
+            '03' # version 3
+            '8000' # DNSSEC OK 1 + Z
+            '0005' # RDLEN 5
+            '0001' # OPTION-CODE
+            '0001' # OPTION-LENGTH
+            '00' # OPTION-DATA
             )
 
 

@@ -565,11 +565,12 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     extendedRCODE = 0
     version = 0
     dnssecOK = False
+    options = []
     _rdata = b''
 
 
     def __init__(self, udpPayloadSize=4096, extendedRCODE=0, version=0,
-                 dnssecOK=False, _rdata=b''):
+                 dnssecOK=False, options=[], _rdata=b''):
         """
         @type udpPayloadSize: C{int}
         @param payload: The number of octets of the largest UDP
@@ -594,6 +595,7 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.extendedRCODE = extendedRCODE
         self.version = version
         self.dnssecOK = dnssecOK
+        self.options = options
         self._rdata = _rdata
 
 
@@ -648,7 +650,12 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
          resourceRecordDataLength) = struct.unpack(cls._fmt, buff)
         dnssecOK = ttlByte3and4 >> 15
         rdata = readPrecisely(strio, resourceRecordDataLength)
-        return cls(udpPayloadSize, extendedRCODE, version, dnssecOK, rdata)
+        return cls(
+            udpPayloadSize=udpPayloadSize,
+            extendedRCODE=extendedRCODE,
+            version=version,
+            dnssecOK=dnssecOK,
+            _rdata=rdata)
 
 
 
