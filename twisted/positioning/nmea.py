@@ -832,9 +832,9 @@ class NMEAAdapter(object):
         """
         Tests if a sentence contains a valid fix.
         """
-        if (self.currentSentence.fixQuality == GPGGAFixQualities.INVALID_FIX
-            or self.currentSentence.dataMode == GPGLLGPRMCFixQualities.VOID
-            or self.currentSentence.fixType == GPGSAFixTypes.GSA_NO_FIX):
+        if (self.currentSentence.fixQuality is GPGGAFixQualities.INVALID_FIX
+            or self.currentSentence.dataMode is GPGLLGPRMCFixQualities.VOID
+            or self.currentSentence.fixType is GPGSAFixTypes.GSA_NO_FIX):
             raise base.InvalidSentence("bad sentence")
 
 
