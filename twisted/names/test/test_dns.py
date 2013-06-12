@@ -1944,6 +1944,40 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(h.name, dns.Name(b''))
 
 
+    def test_decodeWithOptions(self):
+        """
+        If the OPT bytes contain variable options,
+        L{dns.OPTHeader.decode} will populate a list
+        L{dns.OPTHeader.options} with L{dns.OPTVariableOption}
+        instances.
+        """
+
+        b = BytesIO((
+            '00' # 0 root zone
+            '0029' # type 41
+            '0200' # udpPayloadsize 512
+            '03' # extendedRCODE 3
+            '03' # version 3
+            '8000' # DNSSEC OK 1 + Z
+            '000c' # RDLEN 12
+
+            '0001' # OPTION-CODE
+            '0002' # OPTION-LENGTH
+            '0001' # OPTION-DATA
+
+            '0002' # OPTION-CODE
+            '0002' # OPTION-LENGTH
+            '0002' # OPTION-DATA
+            ).decode('hex'))
+
+        o = dns.OPTHeader.decode(b)
+        self.assertEqual(
+            o.options,
+            [dns.OPTVariableOption(1, b'\x00\x01'),
+             dns.OPTVariableOption(2, b'\x00\x02'),]
+            )
+
+
     def test_optHeaderRepr(self):
         """
         L{dns.OPTHeader.__repr__} displays the name and type and all
