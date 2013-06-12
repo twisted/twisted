@@ -352,9 +352,8 @@ class NMEASentence(base._BaseSentence):
     @ivar magneticVariationDirection: The direction of the magnetic
         variation. One of C{"E"} or C{"W"}.
     @ivar speedInKnots: The ground speed, expressed in knots.
-    @ivar fixQuality: The quality of the fix. This is a single digit
-        from C{"0"} to C{"8"}. The important ones are C{"0"} (invalid
-        fix), C{"1"} (GPS fix) and C{"2"} (DGPS fix).
+    @ivar fixQuality: The quality of the fix.
+    @type fixQuality: One of L{GPGGAFixQualities}.
     @ivar dataMode: Signals if the data is usable or not. One of
         L{DATA_ACTIVE} or L{DATA_VOID}.
     @ivar numberOfSatellitesSeen: The number of satellites seen by the
