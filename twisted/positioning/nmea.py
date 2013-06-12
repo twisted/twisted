@@ -74,9 +74,6 @@ class GPGGAFixQualities(Values):
 # GPGLL/GPRMC fix quality:
 DATA_ACTIVE, DATA_VOID = "A", "V"
 
-# Selection modes (used in a variety of sentences):
-MODE_AUTO, MODE_MANUAL = "A", "M"
-
 
 
 class GPGSAFixTypes(Values):
