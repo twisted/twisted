@@ -26,6 +26,7 @@ from zope.interface import implementer
 from twisted.positioning import base, ipositioning
 from twisted.positioning.base import Angles
 from twisted.protocols.basic import LineReceiver
+from twisted.python.constants import Values, ValueConstant
 from twisted.python.compat import reduce
 
 # GPGGA fix quality:
@@ -39,8 +40,21 @@ DATA_ACTIVE, DATA_VOID = "A", "V"
 # Selection modes (used in a variety of sentences):
 MODE_AUTO, MODE_MANUAL = "A", "M"
 
-# GPGSA fix types:
-GSA_NO_FIX, GSA_2D_FIX, GSA_3D_FIX = "1", "2", "3"
+
+
+class GPGSAFixTypes(Values):
+    """
+    The possible fix types of a GPGSA sentence.
+
+    @cvar GSA_NO_FIX: The sentence reports no fix at all.
+    @cvar GSA_2D_FIX: The sentence reports a 2D fix: position but no altitude.
+    @cvar GSA_3D_FIX: The sentence reports a 3D fix: position with altitude.
+    """
+    GSA_NO_FIX = ValueConstant("1")
+    GSA_2D_FIX = ValueConstant("2")
+    GSA_3D_FIX = ValueConstant("3")
+
+
 
 NMEA_NORTH, NMEA_EAST, NMEA_SOUTH, NMEA_WEST = "N", "E", "S", "W"
 
@@ -776,7 +790,7 @@ class NMEAAdapter(object):
         """
         if (self.currentSentence.fixQuality == GGA_INVALID_FIX
             or self.currentSentence.dataMode == DATA_VOID
-            or self.currentSentence.fixType == GSA_NO_FIX):
+            or self.currentSentence.fixType == GPGSAFixTypes.GSA_NO_FIX):
             raise base.InvalidSentence("bad sentence")
 
 

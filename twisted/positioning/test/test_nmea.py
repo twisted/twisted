@@ -1025,7 +1025,7 @@ class InvalidFixTests(FixerTestMixin, TestCase):
         sentenceData = {'type': 'GPGSA',
                         'altitude': '545.4',
                         'dataMode': nmea.DATA_ACTIVE,
-                        'fixType': nmea.GSA_NO_FIX}
+                        'fixType': nmea.GPGSAFixTypes.GSA_NO_FIX}
         self._invalidFixTest(sentenceData)
 
 
@@ -1040,7 +1040,7 @@ class InvalidFixTests(FixerTestMixin, TestCase):
         sentenceData = {'type': 'GPGSA',
                         'altitude': '545.4',
                         'dataMode': nmea.DATA_VOID,
-                        'fixType': nmea.GSA_2D_FIX}
+                        'fixType': nmea.GPGSAFixTypes.GSA_2D_FIX}
         self._invalidFixTest(sentenceData)
 
 
@@ -1053,7 +1053,7 @@ class InvalidFixTests(FixerTestMixin, TestCase):
         sentenceData = {'type': 'GPGSA',
                         'altitude': '545.4',
                         'dataMode': nmea.DATA_VOID,
-                        'fixType': nmea.GSA_NO_FIX}
+                        'fixType': nmea.GPGSAFixTypes.GSA_NO_FIX}
         self._invalidFixTest(sentenceData)
 
 
