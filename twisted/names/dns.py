@@ -35,6 +35,7 @@ __all__ = [
 
     'Charstr', 'Message', 'Name', 'Query', 'RRHeader', 'SimpleRecord',
     'DNSDatagramProtocol', 'DNSMixin', 'DNSProtocol',
+    'OPTHeader', 'OPTVariableOption',
 
     'OK', 'OP_INVERSE', 'OP_NOTIFY', 'OP_QUERY', 'OP_STATUS', 'OP_UPDATE',
     'PORT',
