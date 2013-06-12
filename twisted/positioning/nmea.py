@@ -2,12 +2,19 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 """
-Classes for working with NMEA (and vaguely NMEA-like) sentence producing
-devices.
+Classes for working with NMEA 0183 sentence producing devices.
+This standard is generally just called "NMEA", which is actually the
+name of the body that produces the standard, not the standard itself..
 
-For more information, read the blog post on NMEA by ESR (the gpsd maintainer)
-at U{http://esr.ibiblio.org/?p=801}. Unfortunately, official specifications on
-NMEA are only available at a cost.
+For more information, read the blog post on NMEA by ESR (the gpsd
+maintainer) at U{http://esr.ibiblio.org/?p=801}. Unfortunately,
+official specifications on NMEA 0183 are only available at a cost.
+
+More information can be found on the Wikipedia page:
+U{https://en.wikipedia.org/wiki/NMEA_0183}.
+
+The official standard may be obtained through the NMEA's website:
+U{http://www.nmea.org/content/nmea_standards/nmea_0183_v_410.asp}.
 
 @since: 13.1
 """
@@ -351,7 +358,7 @@ class NMEAAdapter(object):
         (default), which assumes dates are twenty-first century if the
         two-digit date is below the L{NMEAAdapter.INTELLIGENT_DATE_THRESHOLD},
         twentieth century otherwise), L{NMEAAdapter.DATESTAMPS_FROM_20XX},
-        which assumes all dates are twenty-first century, or 
+        which assumes all dates are twenty-first century, or
         L{NMEAAdapter.DATESTAMPS_FROM_19XX}, which assumes all dates are
         twentieth century.
     @cvar INTELLIGENT_DATE_THRESHOLD: The threshold that determines which
