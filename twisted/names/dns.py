@@ -617,7 +617,7 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             will be written to this file.
 
         @type compDict: L{dict}
-        @param compDict: not used.
+        @param compDict: Not used.
         """
         self.name.encode(strio, compDict)
 
@@ -645,6 +645,11 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @type strio: L{file}
         @param strio: Bytes will be read from this file until the full
             L{OPTHeader} is decoded.
+
+        @type length: C{int} or C{None}
+        @param length: Not used.
+
+        @return: An L{OPTHeader} instance.
         """
         # OPTHeader name must always be '' so the received name is
         # discarded
@@ -724,6 +729,10 @@ class OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @param strio: Bytes will be read from this file until the full
             L{OPTVariableOption} is decoded.
 
+        @type length: C{int} or C{None}
+        @param length: Not used.
+
+        @return: An L{OPTVariableOption} instance.
         """
         l = struct.calcsize(cls._fmt)
         buff = readPrecisely(strio, l)
