@@ -666,10 +666,29 @@ class OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     showAttributes = ('code', 'data')
     compareAttributes = ('code', 'data')
 
+    _fmt = '!HH'
 
     def __init__(self, code, data):
         self.code = code
         self.data = data
+
+
+    def encode(self, strio, compDict=None):
+        """
+        """
+        strio.write(
+            struct.pack(self._fmt, self.code, len(self.data)) + self.data)
+
+
+    @classmethod
+    def decode(cls, strio, length=None):
+        """
+        """
+        l = struct.calcsize(cls._fmt)
+        buff = readPrecisely(strio, l)
+        code, length = struct.unpack(cls._fmt, buff)
+        data = readPrecisely(strio, length)
+        return cls(code, data)
 
 
 

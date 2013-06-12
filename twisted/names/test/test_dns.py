@@ -2051,3 +2051,31 @@ class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
             dns.OPTVariableOption(1, b'x'),
             dns.OPTVariableOption(1, b'x'),
             dns.OPTVariableOption(1, b'y'))
+
+
+    def test_encode(self):
+        """
+        """
+        o = dns.OPTVariableOption(1, b'x')
+        b = BytesIO()
+        o.encode(b)
+        self.assertEqual(
+            b.getvalue(),
+            b'\x00\x01' # OPTION-CODE 1
+            b'\x00\x01' # OPTION-LENGTH 1
+            b'x' # OPTION-DATA
+            )
+
+
+    def test_decode(self):
+        """
+        """
+        b = BytesIO(
+            b'\x00\x01' # OPTION-CODE 1
+            b'\x00\x01' # OPTION-LENGTH 1
+            b'x' # OPTION-DATA
+            )
+
+        o = dns.OPTVariableOption.decode(b)
+        self.assertEqual(o.code, 1)
+        self.assertEqual(o.data, b'x')
