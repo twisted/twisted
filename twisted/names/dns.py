@@ -550,11 +550,11 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     showAttributes = (
         ('name', str), 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
-        'dnssecOK', 'resourceRecordDataLength')
+        'dnssecOK')
 
     compareAttributes = (
         'name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
-        'dnssecOK', '_rdata')
+        'dnssecOK')
 
     _fmt = "!HH2BHH"
 
@@ -566,11 +566,10 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     version = 0
     dnssecOK = False
     options = []
-    _rdata = b''
 
 
     def __init__(self, udpPayloadSize=4096, extendedRCODE=0, version=0,
-                 dnssecOK=False, options=[], _rdata=b''):
+                 dnssecOK=False, options=[]):
         """
         @type udpPayloadSize: C{int}
         @param payload: The number of octets of the largest UDP
@@ -596,15 +595,6 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.version = version
         self.dnssecOK = dnssecOK
         self.options = options
-        self._rdata = _rdata
-
-
-    @property
-    def resourceRecordDataLength(self):
-        """
-        @return: The length in bytes of all RDATA.
-        """
-        return len(self._rdata)
 
 
     def encode(self, strio, compDict=None):
@@ -627,8 +617,7 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
                 self.extendedRCODE,
                 self.version,
                 self.dnssecOK << 15,
-                self.resourceRecordDataLength))
-        strio.write(self._rdata)
+                0))
 
 
     @classmethod
@@ -649,13 +638,12 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
          ttlByte3and4,
          resourceRecordDataLength) = struct.unpack(cls._fmt, buff)
         dnssecOK = ttlByte3and4 >> 15
-        rdata = readPrecisely(strio, resourceRecordDataLength)
+        readPrecisely(strio, resourceRecordDataLength)
         return cls(
             udpPayloadSize=udpPayloadSize,
             extendedRCODE=extendedRCODE,
             version=version,
-            dnssecOK=dnssecOK,
-            _rdata=rdata)
+            dnssecOK=dnssecOK)
 
 
 

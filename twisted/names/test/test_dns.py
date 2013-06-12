@@ -1835,18 +1835,6 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(h.options, [(1, 1, b'\x00')])
 
 
-    def test_optHeaderResourceRecordDataLength(self):
-        """
-        L{dns.OPTHeader.resourceRecordDataLength} is a readonly
-        attribute which defaults to 0.
-        """
-        h = dns.OPTHeader()
-        self.assertEqual(h.resourceRecordDataLength, 0)
-        self.assertRaises(
-            AttributeError,
-            setattr, h, 'resourceRecordDataLength', 1)
-
-
     def test_encode(self):
         """
         L{dns.OPTHeader.encode} packs the header fields and writes
@@ -1856,8 +1844,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             udpPayloadSize=512,
             extendedRCODE=3,
             version=3,
-            dnssecOK=True,
-            _rdata=b'\0\0\0')
+            dnssecOK=True)
         b = BytesIO()
 
         h.encode(b)
@@ -1869,8 +1856,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             '03' # extendedRCODE 3
             '03' # version 3
             '8000' # DNSSEC OK 1 + Z
-            '0003' # RDLEN 3
-            '000000' # RDATA
+            '0000' # RDLEN 0
             )
 
 
@@ -1884,8 +1870,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             extendedRCODE=3,
             version=3,
             dnssecOK=True,
-            options=[(1, 1, b'\x00')],
-            _rdata=b'')
+            options=[(1, 1, b'\x00')])
         b = BytesIO()
 
         h.encode(b)
@@ -1916,8 +1901,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             '03' # extendedRCODE 3
             '03' # version 3
             '8000' # DNSSEC OK 1 + Z
-            '0002' # RDLEN 2
-            ).decode('hex') + b'xx')
+            '0000' # RDLEN 0
+            ).decode('hex'))
 
         h = dns.OPTHeader.decode(b)
         self.assertEqual(h.name, dns.Name(b''))
@@ -1926,8 +1911,6 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(h.extendedRCODE, 3)
         self.assertEqual(h.version, 3)
         self.assertEqual(h.dnssecOK, True)
-        self.assertEqual(h.resourceRecordDataLength, 2)
-        self.assertEqual(h._rdata, b'xx')
         # Check that all the input data has been consumed.
         self.assertEqual(b.tell(), len(b.getvalue()))
 
@@ -1946,8 +1929,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
              '03' # extendedRCODE 3
              '03' # version 3
              '8000' # DNSSEC OK 1 + Z
-             '0002' # RDLEN 2
-             ).decode('hex') + b'xx')
+             '0000' # RDLEN 0
+             ).decode('hex'))
 
         h = dns.OPTHeader.decode(b)
         self.assertEqual(h.name, dns.Name(b''))
@@ -1959,15 +1942,14 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         the fixed and extended header values of the OPT record.
         """
         self.assertEqual(
-            repr(dns.OPTHeader(_rdata=b'x')),
+            repr(dns.OPTHeader()),
             '<OPTHeader '
             'name= '
             'type=41 '
             'udpPayloadSize=4096 '
             'extendedRCODE=0 '
             'version=0 '
-            'dnssecOK=False '
-            'resourceRecordDataLength=1'
+            'dnssecOK=False'
             '>')
 
 
@@ -1995,11 +1977,6 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             dns.OPTHeader(dnssecOK=1),
             dns.OPTHeader(dnssecOK=1),
             dns.OPTHeader(dnssecOK=0))
-
-        self.assertNormalEqualityImplementation(
-            dns.OPTHeader(_rdata=b'foo'),
-            dns.OPTHeader(_rdata=b'foo'),
-            dns.OPTHeader(_rdata=b'bar'))
 
 
 
