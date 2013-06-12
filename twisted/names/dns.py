@@ -16,7 +16,8 @@ __all__ = [
 
     'A', 'A6', 'AAAA', 'AFSDB', 'CNAME', 'DNAME', 'HINFO',
     'MAILA', 'MAILB', 'MB', 'MD', 'MF', 'MG', 'MINFO', 'MR', 'MX',
-    'NAPTR', 'NS', 'NULL', 'PTR', 'RP', 'SOA', 'SPF', 'SRV', 'TXT', 'WKS',
+    'NAPTR', 'NS', 'NULL', 'OPT', 'PTR', 'RP', 'SOA', 'SPF', 'SRV', 'TXT',
+    'WKS',
 
     'ANY', 'CH', 'CS', 'HS', 'IN',
 
@@ -34,6 +35,7 @@ __all__ = [
 
     'Charstr', 'Message', 'Name', 'Query', 'RRHeader', 'SimpleRecord',
     'DNSDatagramProtocol', 'DNSMixin', 'DNSProtocol',
+    'OPTHeader', 'OPTVariableOption',
 
     'OK', 'OP_INVERSE', 'OP_NOTIFY', 'OP_QUERY', 'OP_STATUS', 'OP_UPDATE',
     'PORT',
@@ -43,9 +45,7 @@ __all__ = [
 
 
 # System imports
-import warnings
-
-import struct, random, types, socket
+import struct, random, socket
 from itertools import chain
 
 from io import BytesIO
@@ -119,6 +119,7 @@ SRV = 33
 NAPTR = 35
 A6 = 38
 DNAME = 39
+OPT = 41
 SPF = 99
 
 QUERY_TYPES = {
@@ -148,6 +149,7 @@ QUERY_TYPES = {
     NAPTR: 'NAPTR',
     A6: 'A6',
     DNAME: 'DNAME',
+    OPT: 'OPT',
     SPF: 'SPF'
 }
 
@@ -519,6 +521,224 @@ class Query:
 
     def __repr__(self):
         return 'Query(%r, %r, %r)' % (str(self.name), self.type, self.cls)
+
+
+
+@implementer(IEncodable)
+class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
+    """
+    An OPT record header.
+
+    @ivar name: Root (0, 8-bits)
+
+    @ivar type: 41 (OPT Record)
+
+    @ivar udpPayloadSize: The number of octets of the largest UDP payload
+        that can be reassembled and delivered in the requestor's
+        network stack.
+
+    @ivar extendedRCODE: Forms the upper 8 bits of extended 12-bit
+        RCODE (together with the 4 bits defined in [RFC1035].  Note
+        that EXTENDED-RCODE value 0 indicates that an unextended RCODE
+        is in use (values 0 through 15).
+
+    @ivar version: Indicates the implementation level of the setter.
+        Full conformance with this specification is indicated by
+        version '0'.
+
+    @ivar dnssecOK: DNSSEC OK bit as defined by [RFC3225].
+
+    @ivar options: A L{list} of 0 or more L{OPTVariableOption}
+        instances.
+
+    @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
+
+    @since: 13.1
+    """
+    showAttributes = (
+        ('name', str), 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
+        'dnssecOK', 'options')
+
+    compareAttributes = (
+        'name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
+        'dnssecOK', 'options')
+
+    _fmt = "!HH2BHH"
+
+    name = Name(b'')
+    type = OPT
+
+    udpPayloadSize = 4096
+    extendedRCODE = 0
+    version = 0
+    dnssecOK = False
+    options = []
+
+
+    def __init__(self, udpPayloadSize=4096, extendedRCODE=0, version=0,
+                 dnssecOK=False, options=[]):
+        """
+        @type udpPayloadSize: C{int}
+        @param payload: The number of octets of the largest UDP
+            payload that can be reassembled and delivered in the
+            requestor's network stack.
+
+        @type extendedRCODE: C{int}
+        @param extendedRCODE: Forms the upper 8 bits of extended
+            12-bit RCODE (together with the 4 bits defined in
+            [RFC1035].  Note that EXTENDED-RCODE value 0 indicates
+            that an unextended RCODE is in use (values 0 through 15).
+
+        @type version: C{int}
+        @param version: Indicates the implementation level of the
+            setter.  Full conformance with this specification is
+            indicated by version '0'.
+
+        @type dnssecOK: C{bool}
+        @param dnssecOK: DNSSEC OK bit as defined by [RFC3225].
+
+        @type options: L{list}
+        @param options: A L{list} of 0 or more L{OPTVariableOption}
+            instances.
+        """
+        self.udpPayloadSize = udpPayloadSize
+        self.extendedRCODE = extendedRCODE
+        self.version = version
+        self.dnssecOK = dnssecOK
+        self.options = options
+
+
+    def encode(self, strio, compDict=None):
+        """
+        Encode this L{OPTHeader} instance to bytes.
+
+        @type strio: L{file}
+        @param strio: the byte representation of this L{OPTHeader}
+            will be written to this file.
+
+        @type compDict: L{dict}
+        @param compDict: Not used.
+        """
+        self.name.encode(strio, compDict)
+
+        b = BytesIO()
+        for o in self.options:
+            o.encode(b)
+        optionBytes = b.getvalue()
+
+        strio.write(
+            struct.pack(
+                self._fmt,
+                self.type,
+                self.udpPayloadSize,
+                self.extendedRCODE,
+                self.version,
+                self.dnssecOK << 15,
+                len(optionBytes)) + optionBytes)
+
+
+    @classmethod
+    def decode(cls, strio, length=None):
+        """
+        Decode bytes into an L{OPTHeader} instance.
+
+        @type strio: L{file}
+        @param strio: Bytes will be read from this file until the full
+            L{OPTHeader} is decoded.
+
+        @type length: C{int} or C{None}
+        @param length: Not used.
+
+        @return: An L{OPTHeader} instance.
+        """
+        # OPTHeader name must always be '' so the received name is
+        # discarded
+        Name().decode(strio)
+        l = struct.calcsize(cls._fmt)
+        buff = readPrecisely(strio, l)
+        (type, udpPayloadSize, extendedRCODE, version,
+         ttlByte3and4,
+         resourceRecordDataLength) = struct.unpack(cls._fmt, buff)
+        dnssecOK = ttlByte3and4 >> 15
+
+        # Decode variable options if present
+        options = []
+        optionsEnd = strio.tell() + resourceRecordDataLength
+        while strio.tell() < optionsEnd:
+            options.append(OPTVariableOption.decode(strio))
+
+        return cls(
+            udpPayloadSize=udpPayloadSize,
+            extendedRCODE=extendedRCODE,
+            version=version,
+            dnssecOK=dnssecOK,
+            options=options)
+
+
+
+@implementer(IEncodable)
+class OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
+    """
+    A class to represent OPT record variable options.
+
+    @ivar code: The option code
+    @ivar data: The option data
+
+    @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
+
+    @since: 13.1
+    """
+    showAttributes = ('code', 'data')
+    compareAttributes = ('code', 'data')
+
+    _fmt = '!HH'
+
+    def __init__(self, code, data):
+        """
+        @type code: C{int}
+        @param code: The option code
+
+        @type data: L{bytes}
+        @param data: The option data
+        """
+        self.code = code
+        self.data = data
+
+
+    def encode(self, strio, compDict=None):
+        """
+        Encode this L{OPTVariableOption} to bytes.
+
+        @type strio: L{file}
+        @param strio: the byte representation of this
+            L{OPTVariableOption} will be written to this file.
+
+        @type compDict: L{dict}
+        @param compDict: not used.
+        """
+        strio.write(
+            struct.pack(self._fmt, self.code, len(self.data)) + self.data)
+
+
+    @classmethod
+    def decode(cls, strio, length=None):
+        """
+        Decode bytes into an L{OPTVariableOption} instance.
+
+        @type strio: L{file}
+        @param strio: Bytes will be read from this file until the full
+            L{OPTVariableOption} is decoded.
+
+        @type length: C{int} or C{None}
+        @param length: Not used.
+
+        @return: An L{OPTVariableOption} instance.
+        """
+        l = struct.calcsize(cls._fmt)
+        buff = readPrecisely(strio, l)
+        code, length = struct.unpack(cls._fmt, buff)
+        data = readPrecisely(strio, length)
+        return cls(code, data)
 
 
 
@@ -1550,6 +1770,7 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     def __hash__(self):
         return hash(tuple(self.data))
+
 
 
 @implementer(IEncodable, IRecord)

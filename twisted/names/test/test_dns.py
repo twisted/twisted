@@ -12,6 +12,7 @@ from io import BytesIO
 
 import struct
 
+from zope.interface.verify import verifyClass
 
 from twisted.python.failure import Failure
 from twisted.internet import address, task
@@ -1754,3 +1755,363 @@ class RRHeaderTests(unittest.TestCase):
         self.assertRaises(
             ValueError, dns.RRHeader, "example.com", dns.A,
             dns.IN, -1, dns.Record_A("127.0.0.1"))
+
+
+
+class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
+    """
+    Tests for L{twisted.names.dns.OPTHeader}.
+    """
+    def test_interface(self):
+        """
+        L{dns.OPTHeader} implements L{dns.IEncodable}.
+        """
+        verifyClass(dns.IEncodable, dns.OPTHeader)
+
+
+    def test_name(self):
+        """
+        L{dns.OPTHeader.name} is a class attribute whose value is
+        fixed as the root domain
+        """
+        self.assertEqual(dns.OPTHeader.name, dns.Name(b''))
+
+
+    def test_type(self):
+        """
+        L{dns.OPTHeader.type} is a class attribute with fixed value
+        41.
+        """
+        self.assertEqual(dns.OPTHeader.type, 41)
+
+
+    def test_udpPayloadSize(self):
+        """
+        L{dns.OPTHeader.udpPayloadSize} defaults to 4096 as
+        recommended in rfc6891 section-6.2.5 but can be overridden in
+        the constructor.
+        """
+        self.assertEqual(dns.OPTHeader.udpPayloadSize, 4096)
+        self.assertEqual(dns.OPTHeader().udpPayloadSize, 4096)
+        h = dns.OPTHeader(udpPayloadSize=512)
+        self.assertEqual(h.udpPayloadSize, 512)
+
+
+    def test_extendedRCODE(self):
+        """
+        L{dns.OPTHeader.extendedRCODE} defaults to 0 but can be
+        overridden in the constructor.
+        """
+        self.assertEqual(dns.OPTHeader.extendedRCODE, 0)
+        self.assertEqual(dns.OPTHeader().extendedRCODE, 0)
+        h = dns.OPTHeader(extendedRCODE=1)
+        self.assertEqual(h.extendedRCODE, 1)
+
+
+    def test_version(self):
+        """
+        L{dns.OPTHeader.version} defaults to 0 but can be
+        overridden in the constructor.
+        """
+        self.assertEqual(dns.OPTHeader.version, 0)
+        self.assertEqual(dns.OPTHeader().version, 0)
+        h = dns.OPTHeader(version=1)
+        self.assertEqual(h.version, 1)
+
+
+    def test_dnssecOK(self):
+        """
+        L{dns.OPTHeader.dnssecOK} defaults to False but can be
+        overridden in the constructor.
+        """
+        self.assertEqual(dns.OPTHeader.dnssecOK, False)
+        self.assertEqual(dns.OPTHeader().dnssecOK, False)
+        h = dns.OPTHeader(dnssecOK=True)
+        self.assertEqual(h.dnssecOK, True)
+
+
+    def test_options(self):
+        """
+        L{dns.OPTHeader.options} defaults to empty list but can be
+        overridden in the constructor.
+        """
+        self.assertEqual(dns.OPTHeader.options, [])
+        self.assertEqual(dns.OPTHeader().options, [])
+        h = dns.OPTHeader(options=[(1, 1, b'\x00')])
+        self.assertEqual(h.options, [(1, 1, b'\x00')])
+
+
+    def test_encode(self):
+        """
+        L{dns.OPTHeader.encode} packs the header fields and writes
+        them to a file like object passed in as an argument.
+        """
+        h = dns.OPTHeader(
+            udpPayloadSize=512,
+            extendedRCODE=3,
+            version=3,
+            dnssecOK=True)
+        b = BytesIO()
+
+        h.encode(b)
+        self.assertEqual(
+            b.getvalue().encode('hex'),
+            '00' # 0 root zone
+            '0029' # type 41
+            '0200' # udpPayloadsize 512
+            '03' # extendedRCODE 3
+            '03' # version 3
+            '8000' # DNSSEC OK 1 + Z
+            '0000' # RDLEN 0
+            )
+
+
+    def test_encodeWithOptions(self):
+        """
+        L{dns.OPTHeader.options} is a list of L{dns.OPTVariableOption}
+        instances which are packed into the rdata area of the header.
+        """
+        h = dns.OPTHeader(
+            udpPayloadSize=512,
+            extendedRCODE=3,
+            version=3,
+            dnssecOK=True,
+            options=[
+                dns.OPTVariableOption(1, b'\x00\x01'),
+                dns.OPTVariableOption(2, b'\x00\x02'),
+                ])
+        b = BytesIO()
+
+        h.encode(b)
+        self.assertEqual(
+            b.getvalue().encode('hex'),
+            '00' # 0 root zone
+            '0029' # type 41
+            '0200' # udpPayloadsize 512
+            '03' # extendedRCODE 3
+            '03' # version 3
+            '8000' # DNSSEC OK 1 + Z
+            '000c' # RDLEN 12
+
+            '0001' # OPTION-CODE
+            '0002' # OPTION-LENGTH
+            '0001' # OPTION-DATA
+
+            '0002' # OPTION-CODE
+            '0002' # OPTION-LENGTH
+            '0002' # OPTION-DATA
+            )
+
+
+    def test_decode(self):
+        """
+        L{dns.OPTHeader.decode} unpacks the header fields from a file
+        like object and returns an L{dns.OPTHeader} instance.
+        """
+        b = BytesIO((
+            '00' # 0 root zone
+            '0029' # type 41
+            '0200' # udpPayloadsize 512
+            '03' # extendedRCODE 3
+            '03' # version 3
+            '8000' # DNSSEC OK 1 + Z
+            '0000' # RDLEN 0
+            ).decode('hex'))
+
+        h = dns.OPTHeader.decode(b)
+        self.assertEqual(h.name, dns.Name(b''))
+        self.assertEqual(h.type, 41)
+        self.assertEqual(h.udpPayloadSize, 512)
+        self.assertEqual(h.extendedRCODE, 3)
+        self.assertEqual(h.version, 3)
+        self.assertEqual(h.dnssecOK, True)
+        # Check that all the input data has been consumed.
+        self.assertEqual(b.tell(), len(b.getvalue()))
+
+
+    def test_decodeDiscardsName(self):
+        """
+        L{dns.OPTHeader.decode} discards the name which is encoded in
+        the supplied bytes. The name attribute of the resulting
+        L{dns.OPTHeader} instance will always be L{dns.Name(b'')}.
+        """
+        b = BytesIO(
+            # This non-root zone name should be discarded
+            b'\x07example\x03com\x00' +
+            ('0029' # type 41
+             '0200' # udpPayloadsize 512
+             '03' # extendedRCODE 3
+             '03' # version 3
+             '8000' # DNSSEC OK 1 + Z
+             '0000' # RDLEN 0
+             ).decode('hex'))
+
+        h = dns.OPTHeader.decode(b)
+        self.assertEqual(h.name, dns.Name(b''))
+
+
+    def test_decodeWithOptions(self):
+        """
+        If the OPT bytes contain variable options,
+        L{dns.OPTHeader.decode} will populate a list
+        L{dns.OPTHeader.options} with L{dns.OPTVariableOption}
+        instances.
+        """
+
+        b = BytesIO((
+            '00' # 0 root zone
+            '0029' # type 41
+            '0200' # udpPayloadsize 512
+            '03' # extendedRCODE 3
+            '03' # version 3
+            '8000' # DNSSEC OK 1 + Z
+            '000c' # RDLEN 12
+
+            '0001' # OPTION-CODE
+            '0002' # OPTION-LENGTH
+            '0001' # OPTION-DATA
+
+            '0002' # OPTION-CODE
+            '0002' # OPTION-LENGTH
+            '0002' # OPTION-DATA
+            ).decode('hex'))
+
+        o = dns.OPTHeader.decode(b)
+        self.assertEqual(
+            o.options,
+            [dns.OPTVariableOption(1, b'\x00\x01'),
+             dns.OPTVariableOption(2, b'\x00\x02'),]
+            )
+
+
+    def test_repr(self):
+        """
+        L{dns.OPTHeader.__repr__} displays the name and type and all
+        the fixed and extended header values of the OPT record.
+        """
+        self.assertEqual(
+            repr(dns.OPTHeader()),
+            '<OPTHeader '
+            'name= '
+            'type=41 '
+            'udpPayloadSize=4096 '
+            'extendedRCODE=0 '
+            'version=0 '
+            'dnssecOK=False '
+            'options=[]>')
+
+
+    def test_equality(self):
+        """
+        Two L{OPTHeader} instances compare equal if they have the same
+        udpPayloadSize, extendedRCODE, version, dnssecOK flags and the
+        same options.
+        """
+        self.assertNormalEqualityImplementation(
+            dns.OPTHeader(udpPayloadSize=512),
+            dns.OPTHeader(udpPayloadSize=512),
+            dns.OPTHeader(udpPayloadSize=4096))
+
+        self.assertNormalEqualityImplementation(
+            dns.OPTHeader(extendedRCODE=1),
+            dns.OPTHeader(extendedRCODE=1),
+            dns.OPTHeader(extendedRCODE=2))
+
+        self.assertNormalEqualityImplementation(
+            dns.OPTHeader(version=1),
+            dns.OPTHeader(version=1),
+            dns.OPTHeader(version=2))
+
+        self.assertNormalEqualityImplementation(
+            dns.OPTHeader(dnssecOK=1),
+            dns.OPTHeader(dnssecOK=1),
+            dns.OPTHeader(dnssecOK=0))
+
+        self.assertNormalEqualityImplementation(
+            dns.OPTHeader(options=[dns.OPTVariableOption(1, b'x')]),
+            dns.OPTHeader(options=[dns.OPTVariableOption(1, b'x')]),
+            dns.OPTHeader(options=[dns.OPTVariableOption(2, b'y')]))
+
+
+
+class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
+    """
+    Tests for L{dns.OPTVariableOption}.
+    """
+    def test_interface(self):
+        """
+        L{dns.OPTVariableOption} implements L{dns.IEncodable}.
+        """
+        verifyClass(dns.IEncodable, dns.OPTVariableOption)
+
+
+    def test_constructorArguments(self):
+        """
+        L{dns.OPTVariableOption.__init__} requires code and data
+        arguments which are saved as public instance attributes.
+        """
+        h = dns.OPTVariableOption(1, b'x')
+        self.assertEqual(h.code, 1)
+        self.assertEqual(h.data, b'x')
+
+
+    def test_repr(self):
+        """
+        L{dns.OPTVariableOption.__repr__} displays the code and data
+        of the option.
+        """
+        self.assertEqual(
+            repr(dns.OPTVariableOption(1, b'x')),
+            '<OPTVariableOption '
+            'code=1 '
+            "data='x'"
+            '>')
+
+
+    def test_equality(self):
+        """
+        Two OPTVariableOption instances compare equal if they have the same
+        code and data values.
+        """
+        self.assertNormalEqualityImplementation(
+            dns.OPTVariableOption(1, b'x'),
+            dns.OPTVariableOption(1, b'x'),
+            dns.OPTVariableOption(2, b'x'))
+
+        self.assertNormalEqualityImplementation(
+            dns.OPTVariableOption(1, b'x'),
+            dns.OPTVariableOption(1, b'x'),
+            dns.OPTVariableOption(1, b'y'))
+
+
+    def test_encode(self):
+        """
+        L{dns.OPTVariableOption.encode} encodes the code and data
+        instance attributes to a byte string which also includes the
+        data length.
+        """
+        o = dns.OPTVariableOption(1, b'x')
+        b = BytesIO()
+        o.encode(b)
+        self.assertEqual(
+            b.getvalue(),
+            b'\x00\x01' # OPTION-CODE 1
+            b'\x00\x01' # OPTION-LENGTH 1
+            b'x' # OPTION-DATA
+            )
+
+
+    def test_decode(self):
+        """
+        L{dns.OPTVariableOption.decode} is a classmethod that decodes
+        a byte string and returns a L{dns.OPTVariableOption} instance.
+        """
+        b = BytesIO(
+            b'\x00\x01' # OPTION-CODE 1
+            b'\x00\x01' # OPTION-LENGTH 1
+            b'x' # OPTION-DATA
+            )
+
+        o = dns.OPTVariableOption.decode(b)
+        self.assertEqual(o.code, 1)
+        self.assertEqual(o.data, b'x')
