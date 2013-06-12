@@ -746,33 +746,6 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
     """
     Tests turning NMEA coordinate notations into something more pleasant.
     """
-    def _coordinateFixerTest(self, degrees, minutes, hemisphere):
-        """
-        An NMEA representation of a coordinate at the given
-        location converts correctly into a L{base.Coordinate}.
-
-        @param degrees: The integer degrees for this angle.
-        @type degrees: C{int}
-        @param minutes: The decimal minutes value for this angle.
-        @type minutes: C{float}
-        @param hemisphere: NMEA shorthand for the hemisphere. One of "NESW".
-        @type hemisphere: C{str}
-        """
-        coordinateType = _coordinateType(hemisphere)
-        if coordinateType is Angles.LATITUDE:
-            typeName = "latitude"
-        else:
-            typeName = "longitude"
-
-        sentenceData = {"%sFloat" % typeName: _nmeaFloat(degrees, minutes),
-                        "%sHemisphere" % typeName: hemisphere}
-
-        coordinateValue = _coordinateSign(hemisphere)*(degrees + minutes/60)
-        coordinate = base.Coordinate(coordinateValue, coordinateType)
-
-        self._fixerTest(sentenceData, {typeName: coordinate})
-
-
     def test_north(self):
         """
         NMEA coordinate representations in the northern hemisphere
