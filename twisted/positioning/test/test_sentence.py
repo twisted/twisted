@@ -37,7 +37,7 @@ class MixinProtocol(base._PositioningSentenceProducerMixin):
     A simple, fake protocol that declaratively tells you the sentences
     it produces using L{base.PositioningSentenceProducerMixin}.
     """
-    SENTENCE_CONTENTS = {
+    _SENTENCE_CONTENTS = {
         None: [
             sentinelValueOne,
             sentinelValueTwo,
@@ -161,6 +161,6 @@ class MixinTests(TestCase, SentenceTestsMixin):
         sentenceAttributes = self.protocol.getSentenceAttributes()
         self.assertNotIn(None, sentenceAttributes)
 
-        sentenceContents = self.protocol.SENTENCE_CONTENTS
+        sentenceContents = self.protocol._SENTENCE_CONTENTS
         sentenceSpecAttributes = itertools.chain(*sentenceContents.values())
         self.assertIn(None, sentenceSpecAttributes)

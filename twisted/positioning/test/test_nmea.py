@@ -62,7 +62,7 @@ class NMEACallbackTestProtocol(nmea.NMEAProtocol):
     def __init__(self):
         nmea.NMEAProtocol.__init__(self, None)
 
-        for sentenceType in nmea.NMEAProtocol.SENTENCE_CONTENTS:
+        for sentenceType in nmea.NMEAProtocol._SENTENCE_CONTENTS:
             self._createCallback(sentenceType)
 
         self.clear()
@@ -76,7 +76,7 @@ class NMEACallbackTestProtocol(nmea.NMEAProtocol):
         self.called = {}
 
 
-    SENTENCE_TYPES = list(nmea.NMEAProtocol.SENTENCE_CONTENTS)
+    SENTENCE_TYPES = list(nmea.NMEAProtocol._SENTENCE_CONTENTS)
 
 
     def _createCallback(self, sentenceType):

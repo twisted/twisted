@@ -203,8 +203,8 @@ class _PositioningSentenceProducerMixin(object):
     """
     A mixin for certain protocols that produce positioning sentences.
 
-    This mixin helps protocols that have C{SENTENCE_CONTENTS} class variables
-    (such as the C{NMEAProtocol}) provide the
+    This mixin helps protocols that have a C{_SENTENCE_CONTENTS} class
+    variable (such as the C{NMEAProtocol}) provide the
     L{IPositioningSentenceProducingProtocol} interface.
     """
     @classmethod
@@ -220,7 +220,7 @@ class _PositioningSentenceProducerMixin(object):
         @rtype: C{set} of C{str}
         """
         attributes = set(["type"])
-        for attributeList in cls.SENTENCE_CONTENTS.values():
+        for attributeList in cls._SENTENCE_CONTENTS.values():
             for attribute in attributeList:
                 if attribute is None:
                     continue

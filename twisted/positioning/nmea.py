@@ -150,6 +150,10 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
     they are, verifies their checksum and unpacks them into their
     components. It then wraps them in L{NMEASentence} objects and
     calls the appropriate receiver method with them.
+
+    @cvar _SENTENCE_CONTENTS: Has the field names in an NMEA sentence for each
+        sentence type (in order, obviously).
+    @type _SENTENCE_CONTENTS: C{dict} of bytestrings to C{list}s of C{str}
     """
     def __init__(self, receiver):
         """
@@ -176,7 +180,7 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
         sentenceType, contents = splitSentence[0], splitSentence[1:]
 
         try:
-            keys = self.SENTENCE_CONTENTS[sentenceType]
+            keys = self._SENTENCE_CONTENTS[sentenceType]
         except KeyError:
             raise ValueError("unknown sentence type %s" % sentenceType)
 
@@ -195,7 +199,7 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
             self.receiver.sentenceReceived(sentence)
 
 
-    SENTENCE_CONTENTS = {
+    _SENTENCE_CONTENTS = {
         'GPGGA': [
             'timestamp',
 
