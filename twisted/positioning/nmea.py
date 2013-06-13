@@ -650,9 +650,6 @@ class NMEAAdapter(object):
             self._sentenceData[valueKey] = converter(currentValue)
 
 
-    GSV_KEYS = "satellitePRN", "azimuth", "elevation", "signalToNoiseRatio"
-
-
     def _fixGSV(self):
         """
         Parses partial visible satellite information from a GSV sentence.
@@ -662,10 +659,10 @@ class NMEAAdapter(object):
         beaconInformation = base.BeaconInformation()
         self._sentenceData['_partialBeaconInformation'] = beaconInformation
 
+        keys = "satellitePRN", "azimuth", "elevation", "signalToNoiseRatio"
         for index in range(4):
-            keys = ["%s_%i" % (key, index) for key in self.GSV_KEYS]
-            values = [getattr(self.currentSentence, k) for k in keys]
-            prn, azimuth, elevation, snr = values
+            prn, azimuth, elevation, snr = [getattr(self.currentSentence, attr)
+                for attr in ("%s_%i" % (key, index) for key in keys)]
 
             if prn is None or snr is None:
                 # The peephole optimizer optimizes the jump away, meaning that
