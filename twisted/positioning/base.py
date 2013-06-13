@@ -234,10 +234,11 @@ class Angle(object, FancyEqMixin):
     """
     An object representing an angle.
 
-    @cvar _RANGE_EXPRESSIONS: A collections of expressions for the allowable
+    @cvar _RANGE_EXPRESSIONS: A collection of expressions for the allowable
         range for the angular value of a particular coordinate value.
-    @type _RANGE_EXPRESSIONS: A mapping of coordinate types (one of L{Angles})
-        to 1-argument callables.
+    @type _RANGE_EXPRESSIONS: C{dict} of L{Angles} constants to callables
+    @cvar _ANGLE_TYPE_NAMES: English names for angle types.
+    @type _ANGLE_TYPE_NAMES: C{dict} of L{Angles} constants to C{str}
     """
     _RANGE_EXPRESSIONS = {
         Angles.LATITUDE: lambda latitude: -90.0 < latitude < 90.0,
@@ -247,11 +248,11 @@ class Angle(object, FancyEqMixin):
     }
 
 
-    ANGLE_TYPE_NAMES = {
-        Angles.LATITUDE: "latitude",
-        Angles.LONGITUDE: "longitude",
-        Angles.VARIATION: "variation",
-        Angles.HEADING: "heading",
+    _ANGLE_TYPE_NAMES = {
+        Angles.LATITUDE: "Latitude",
+        Angles.LONGITUDE: "Longitude",
+        Angles.VARIATION: "Variation",
+        Angles.HEADING: "Heading",
     }
 
 
@@ -383,9 +384,10 @@ class Angle(object, FancyEqMixin):
         @return: The string representation.
         @rtype: C{str}
         """
-        angleTypeName = self.ANGLE_TYPE_NAMES.get(
-            self.angleType, "angle of unknown type").capitalize()
-        return angleTypeName
+        try:
+            return self._ANGLE_TYPE_NAMES[self.angleType]
+        except KeyError:
+            return "Angle of unknown type"
 
 
 

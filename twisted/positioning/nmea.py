@@ -470,12 +470,14 @@ class NMEAAdapter(object):
         """
         Turns the NMEAProtocol coordinate format into Python float.
 
-        @param coordinateType: The coordinate type. Should be either
-            L{Angles.LATITUDE} or L{Angles.LONGITUDE}.
+        @param coordinateType: The coordinate type.
+        @type coordinateType: One of L{Angles.LATITUDE} or L{Angles.LONGITUDE}.
         """
-        coordinateName = base.Coordinate.ANGLE_TYPE_NAMES[coordinateType]
-        key = coordinateName + 'Float'
-        nmeaCoordinate = getattr(self.currentSentence, key)
+        if coordinateType is Angles.LATITUDE:
+            coordinateName = "latitude"
+        else: # coordinateType is Angles.LONGITUDE
+            coordinateName = "longitude"
+        nmeaCoordinate = getattr(self.currentSentence, coordinateName + "Float")
 
         left, right = nmeaCoordinate.split('.')
 
@@ -528,8 +530,11 @@ class NMEAAdapter(object):
         @rtype: C{int}
         """
         if coordinateType in (Angles.LATITUDE, Angles.LONGITUDE):
-            baseName = base.Coordinate.ANGLE_TYPE_NAMES[coordinateType]
-            hemisphereKey = baseName + 'Hemisphere'
+            if coordinateType is Angles.LATITUDE:
+                coordinateName = "latitude"
+            else: # coordinateType is Angles.LONGITUDE
+                coordinateName = "longitude"
+            hemisphereKey = coordinateName + 'Hemisphere'
         elif coordinateType == Angles.VARIATION:
             hemisphereKey = 'magneticVariationDirection'
         else:
