@@ -203,9 +203,11 @@ class _PositioningSentenceProducerMixin(object):
     """
     A mixin for certain protocols that produce positioning sentences.
 
-    This mixin helps protocols that have a C{_SENTENCE_CONTENTS} class
-    variable (such as the C{NMEAProtocol}) provide the
-    L{IPositioningSentenceProducingProtocol} interface.
+    This mixin helps protocols that store the layout of sentences that they
+    consume in a C{_SENTENCE_CONTENTS} class variable provide all sentence
+    attributes that can ever occur. It does this by providing a class method,
+    C{getSentenceAttributes}, which iterates over all sentence types and
+    collects the possible sentence attributes.
     """
     @classmethod
     def getSentenceAttributes(cls):
