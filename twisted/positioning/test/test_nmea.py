@@ -886,7 +886,7 @@ class PositionErrorFixerTests(FixerTestMixin, TestCase):
     There are two basic DOP values: vertical and horizontal. HDOP tells you
     how precise your location is on the face of the earth (pretending it's
     flat, at least locally). VDOP tells you how precise your altitude is
-    known. PDOP (position DOP) is a dependent value defined as the Nuclidean
+    known. PDOP (position DOP) is a dependent value defined as the Euclidean
     norm of those two, and gives you a more generic "goodness of fix" value.
     """
     def test_simple(self):
