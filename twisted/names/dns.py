@@ -688,7 +688,7 @@ class OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     @since: 13.1
     """
-    showAttributes = ('code', 'data')
+    showAttributes = ('code', ('data', nativeString))
     compareAttributes = ('code', 'data')
 
     _fmt = '!HH'

@@ -2064,7 +2064,7 @@ class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
             repr(dns.OPTVariableOption(1, b'x')),
             '<OPTVariableOption '
             'code=1 '
-            "data='x'"
+            "data=x"
             '>')
 
 
