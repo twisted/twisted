@@ -418,6 +418,11 @@ class NMEAAdapter(object):
         acceptable (not metric) to converters that take a quantity in that
         unit and produce a metric quantity.
     @type _UNIT_CONVERTERS: C{dict} of bytestrings to unary callables
+    @cvar  _SPECIFIC_SENTENCE_FIXES: A mapping of sentece types to specific
+        fixes that are required to extract useful information from data from
+        those sentences.
+    @type  _SPECIFIC_SENTENCE_FIXES: C{dict} of sentence types to callables
+        that take self and modify it in-place
     @ivar yearThreshold: The earliest possible year that data will be
         interpreted as. For example, if this value is C{1990}, an NMEA
         0183 two-digit year of "96" will be interpreted as 1996, and
@@ -704,7 +709,7 @@ class NMEAAdapter(object):
                 self._sentenceData['_usedPRNs'].add(int(prn))
 
 
-    SPECIFIC_SENTENCE_FIXES = {
+    _SPECIFIC_SENTENCE_FIXES = {
         'GPGSV': _fixGSV,
         'GPGSA': _fixGSA,
     }
@@ -714,7 +719,7 @@ class NMEAAdapter(object):
         """
         Executes a fix for a specific type of sentence.
         """
-        fixer = self.SPECIFIC_SENTENCE_FIXES.get(self.currentSentence.type)
+        fixer = self._SPECIFIC_SENTENCE_FIXES.get(self.currentSentence.type)
         if fixer is not None:
             fixer(self)
 
