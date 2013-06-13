@@ -101,9 +101,6 @@ class GPGSAFixTypes(Values):
 
 
 
-NMEA_NORTH, NMEA_EAST, NMEA_SOUTH, NMEA_WEST = "N", "E", "S", "W"
-
-
 def _split(sentence):
     """
     Returns the split version of an NMEA sentence, minus header
@@ -527,14 +524,6 @@ class NMEAAdapter(object):
         self._sentenceData[sentenceDataKey].setSign(sign)
 
 
-    COORDINATE_SIGNS = {
-        NMEA_NORTH: 1,
-        NMEA_EAST: 1,
-        NMEA_SOUTH: -1,
-        NMEA_WEST: -1
-    }
-
-
     def _getHemisphereSign(self, coordinateType):
         """
         Returns the hemisphere sign for a given coordinate type.
@@ -545,22 +534,22 @@ class NMEAAdapter(object):
         @return: The sign of that hemisphere (-1 or 1).
         @rtype: C{int}
         """
-        if coordinateType in (Angles.LATITUDE, Angles.LONGITUDE):
-            if coordinateType is Angles.LATITUDE:
-                coordinateName = "latitude"
-            else: # coordinateType is Angles.LONGITUDE
-                coordinateName = "longitude"
-            hemisphereKey = coordinateName + 'Hemisphere'
-        elif coordinateType == Angles.VARIATION:
+        if coordinateType is Angles.LATITUDE:
+            hemisphereKey = "latitudeHemisphere"
+        elif coordinateType is Angles.LONGITUDE:
+            hemisphereKey = "longitudeHemisphere"
+        elif coordinateType is Angles.VARIATION:
             hemisphereKey = 'magneticVariationDirection'
         else:
             raise ValueError("unknown coordinate type %s" % (coordinateType,))
 
-        hemisphere = getattr(self.currentSentence, hemisphereKey)
+        hemisphere = getattr(self.currentSentence, hemisphereKey).upper()
 
-        try:
-            return self.COORDINATE_SIGNS[hemisphere.upper()]
-        except KeyError:
+        if hemisphere in "NE":
+            return 1
+        elif hemisphere in "SW":
+            return -1
+        else:
             raise ValueError("bad hemisphere/direction: %s" % (hemisphere,))
 
 
