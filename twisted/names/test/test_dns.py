@@ -1942,6 +1942,54 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(h.name, dns.Name(b''))
 
 
+    def test_decodeRdlengthTooShort(self):
+        """
+        L{dns._OPTHeader.decode} raises an exception if the supplied
+        RDLEN is too short.
+        """
+        b = BytesIO(
+            # This non-root zone name should be discarded
+            b'\x00'
+            b'\x00\x29' # type 41
+            b'\x02\x00' # udpPayloadsize 512
+            b'\x03' # extendedRCODE 3
+            b'\x03' # version 3
+            b'\x80\x00' # DNSSEC OK 1 + Z
+
+            b'\x00\x05' # RDLEN 5 Too short - should be 6
+
+            b'\x00\x01' # OPTION-CODE
+            b'\x00\x02' # OPTION-LENGTH
+            b'\x00\x00' # OPTION-DATA
+            )
+
+        self.assertRaises(EOFError, dns._OPTHeader.decode, b)
+
+
+    def test_decodeRdlengthTooLong(self):
+        """
+        L{dns._OPTHeader.decode} raises an exception if the supplied
+        RDLEN is too long.
+        """
+        b = BytesIO(
+            # This non-root zone name should be discarded
+            b'\x00'
+            b'\x00\x29' # type 41
+            b'\x02\x00' # udpPayloadsize 512
+            b'\x03' # extendedRCODE 3
+            b'\x03' # version 3
+            b'\x80\x00' # DNSSEC OK 1 + Z
+
+            b'\x00\x07' # RDLEN 7 Too long - should be 6
+
+            b'\x00\x01' # OPTION-CODE
+            b'\x00\x02' # OPTION-LENGTH
+            b'\x00\x00' # OPTION-DATA
+            )
+
+        self.assertRaises(EOFError, dns._OPTHeader.decode, b)
+
+
     def test_decodeWithOptions(self):
         """
         If the OPT bytes contain variable options,

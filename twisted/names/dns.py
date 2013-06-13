@@ -655,9 +655,9 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
         # Decode variable options if present
         options = []
-        optionsEnd = strio.tell() + resourceRecordDataLength
-        while strio.tell() < optionsEnd:
-            options.append(_OPTVariableOption.decode(strio))
+        optionsBytes = BytesIO(readPrecisely(strio, resourceRecordDataLength))
+        while optionsBytes.tell() < resourceRecordDataLength:
+            options.append(_OPTVariableOption.decode(optionsBytes))
 
         return cls(
             udpPayloadSize=udpPayloadSize,
