@@ -1855,14 +1855,14 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
 
         h.encode(b)
         self.assertEqual(
-            b.getvalue().encode('hex'),
-            '00' # 0 root zone
-            '0029' # type 41
-            '0200' # udpPayloadsize 512
-            '03' # extendedRCODE 3
-            '03' # version 3
-            '8000' # DNSSEC OK 1 + Z
-            '0000' # RDLEN 0
+            b.getvalue(),
+            b'\x00' # 0 root zone
+            b'\x00\x29' # type 41
+            b'\x02\x00' # udpPayloadsize 512
+            b'\x03' # extendedRCODE 3
+            b'\x03' # version 3
+            b'\x80\x00' # DNSSEC OK 1 + Z
+            b'\x00\x00' # RDLEN 0
             )
 
 
@@ -1884,22 +1884,23 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
 
         h.encode(b)
         self.assertEqual(
-            b.getvalue().encode('hex'),
-            '00' # 0 root zone
-            '0029' # type 41
-            '0200' # udpPayloadsize 512
-            '03' # extendedRCODE 3
-            '03' # version 3
-            '8000' # DNSSEC OK 1 + Z
-            '000c' # RDLEN 12
+            b.getvalue(),
 
-            '0001' # OPTION-CODE
-            '0002' # OPTION-LENGTH
-            '0001' # OPTION-DATA
+            b'\x00' # 0 root zone
+            b'\x00\x29' # type 41
+            b'\x02\x00' # udpPayloadsize 512
+            b'\x03' # extendedRCODE 3
+            b'\x03' # version 3
+            b'\x80\x00' # DNSSEC OK 1 + Z
+            b'\x00\x0c' # RDLEN 12
 
-            '0002' # OPTION-CODE
-            '0002' # OPTION-LENGTH
-            '0002' # OPTION-DATA
+            b'\x00\x01' # OPTION-CODE
+            b'\x00\x02' # OPTION-LENGTH
+            b'\x00\x01' # OPTION-DATA
+
+            b'\x00\x02' # OPTION-CODE
+            b'\x00\x02' # OPTION-LENGTH
+            b'\x00\x02' # OPTION-DATA
             )
 
 
@@ -1908,15 +1909,15 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns.OPTHeader.decode} unpacks the header fields from a file
         like object and returns an L{dns.OPTHeader} instance.
         """
-        b = BytesIO((
-            '00' # 0 root zone
-            '0029' # type 41
-            '0200' # udpPayloadsize 512
-            '03' # extendedRCODE 3
-            '03' # version 3
-            '8000' # DNSSEC OK 1 + Z
-            '0000' # RDLEN 0
-            ).decode('hex'))
+        b = BytesIO(
+            b'\x00' # 0 root zone
+            b'\x00\x29' # type 41
+            b'\x02\x00' # udpPayloadsize 512
+            b'\x03' # extendedRCODE 3
+            b'\x03' # version 3
+            b'\x80\x00' # DNSSEC OK 1 + Z
+            b'\x00\x00' # RDLEN 0
+            )
 
         h = dns.OPTHeader.decode(b)
         self.assertEqual(h.name, dns.Name(b''))
@@ -1937,14 +1938,14 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         b = BytesIO(
             # This non-root zone name should be discarded
-            b'\x07example\x03com\x00' +
-            ('0029' # type 41
-             '0200' # udpPayloadsize 512
-             '03' # extendedRCODE 3
-             '03' # version 3
-             '8000' # DNSSEC OK 1 + Z
-             '0000' # RDLEN 0
-             ).decode('hex'))
+            b'\x07example\x03com\x00'
+            b'\x00\x29' # type 41
+            b'\x02\x00' # udpPayloadsize 512
+            b'\x03' # extendedRCODE 3
+            b'\x03' # version 3
+            b'\x80\x00' # DNSSEC OK 1 + Z
+            b'\x00\x00' # RDLEN 0
+            )
 
         h = dns.OPTHeader.decode(b)
         self.assertEqual(h.name, dns.Name(b''))
@@ -1958,23 +1959,23 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         instances.
         """
 
-        b = BytesIO((
-            '00' # 0 root zone
-            '0029' # type 41
-            '0200' # udpPayloadsize 512
-            '03' # extendedRCODE 3
-            '03' # version 3
-            '8000' # DNSSEC OK 1 + Z
-            '000c' # RDLEN 12
+        b = BytesIO(
+            b'\x00' # 0 root zone
+            b'\x00\x29' # type 41
+            b'\x02\x00' # udpPayloadsize 512
+            b'\x03' # extendedRCODE 3
+            b'\x03' # version 3
+            b'\x80\x00' # DNSSEC OK 1 + Z
+            b'\x00\x0c' # RDLEN 12
 
-            '0001' # OPTION-CODE
-            '0002' # OPTION-LENGTH
-            '0001' # OPTION-DATA
+            b'\x00\x01' # OPTION-CODE
+            b'\x00\x02' # OPTION-LENGTH
+            b'\x00\x01' # OPTION-DATA
 
-            '0002' # OPTION-CODE
-            '0002' # OPTION-LENGTH
-            '0002' # OPTION-DATA
-            ).decode('hex'))
+            b'\x00\x02' # OPTION-CODE
+            b'\x00\x02' # OPTION-LENGTH
+            b'\x00\x02' # OPTION-DATA
+            )
 
         o = dns.OPTHeader.decode(b)
         self.assertEqual(
