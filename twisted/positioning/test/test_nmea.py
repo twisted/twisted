@@ -637,60 +637,46 @@ class TimestampFixerTests(FixerTestMixin, TestCase):
 
 
 class DatestampFixerTests(FixerTestMixin, TestCase):
-    def test_intelligent(self):
+    def test_defaultYearThreshold(self):
         """
-        Intelligent datestamp handling correctly guesses the year from the
-        last two digits. Also tests that this is the default.
+        The default year threshold is 1980.
         """
-        self.assertEqual(self.adapter.DATESTAMP_HANDLING,
-                         self.adapter.INTELLIGENT_DATESTAMPS)
-
-        datestring, date = '010199', datetime.date(1999, 1, 1)
-        self._fixerTest({'datestamp': datestring}, {'_date': date})
-
-        datestring, date = '010109', datetime.date(2009, 1, 1)
-        self._fixerTest({'datestamp': datestring}, {'_date': date})
+        self.assertEqual(self.adapter.yearThreshold, 1980)
 
 
-    def test_19xx(self):
+    def test_beforeThreshold(self):
         """
-        Tests 20th-century-only datestamp handling method.
+        Dates before the threshold are interpreted as being in the century
+        after the threshold. (Since the threshold is the earliest possible
+        date.)
         """
-        self.adapter.DATESTAMP_HANDLING = self.adapter.DATESTAMPS_FROM_19XX
-
-        datestring, date = '010199', datetime.date(1999, 1, 1)
-        self._fixerTest({'datestamp': datestring}, {'_date': date})
-
-        datestring, date = '010109', datetime.date(1909, 1, 1)
+        datestring, date = '010115', datetime.date(2015, 1, 1)
         self._fixerTest({'datestamp': datestring}, {'_date': date})
 
 
-    def test_20xx(self):
+    def test_afterThreshold(self):
         """
-        Tests 21st-century-only datestamp handling method.
+        Dates after the threshold are interpreted as being in the same century
+        as the threshold.
         """
-        self.adapter.DATESTAMP_HANDLING = self.adapter.DATESTAMPS_FROM_20XX
-
-        datestring, date = '010199', datetime.date(2099, 1, 1)
-        self._fixerTest({'datestamp': datestring}, {'_date': date})
-
-        datestring, date = '010109', datetime.date(2009, 1, 1)
+        datestring, date = '010195', datetime.date(1995, 1, 1)
         self._fixerTest({'datestamp': datestring}, {'_date': date})
 
 
-    def test_bogusMethod(self):
+    def test_invalidMonth(self):
         """
-        A nonexistent datestamp handling method raises C{ValueError}.
+        A datestring with an invalid month (> 12) raises C{ValueError}.
         """
-        self.adapter.DATESTAMP_HANDLING = "BOGUS_VALUE"
-        self._fixerTest({'datestamp': '010199'}, exceptionClass=ValueError)
+        self._fixerTest({'datestamp': '011301'}, exceptionClass=ValueError)
 
 
-    def test_broken(self):
+    def test_invalidDay(self):
         """
-        A broken datestring raises C{ValueError}.
+        A datestring with an invalid day (more days than there are in that
+        month) raises C{ValueError}.
         """
-        self._fixerTest({'datestamp': '123456'}, exceptionClass=ValueError)
+        self._fixerTest({'datestamp': '320101'}, exceptionClass=ValueError)
+        self._fixerTest({'datestamp': '300201'}, exceptionClass=ValueError)
 
 
 

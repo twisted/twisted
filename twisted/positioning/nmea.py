@@ -413,19 +413,11 @@ class NMEAAdapter(object):
     """
     An adapter from NMEAProtocol receivers to positioning receivers.
 
-    @cvar DATESTAMP_HANDLING: Determines the way incomplete (two-digit) NMEA
-        datestamps are handled. One of L{NMEAAdapter.INTELLIGENT_DATESTAMPS}
-        (default), which assumes dates are twenty-first century if the
-        two-digit date is below the L{NMEAAdapter.INTELLIGENT_DATE_THRESHOLD},
-        twentieth century otherwise), L{NMEAAdapter.DATESTAMPS_FROM_20XX},
-        which assumes all dates are twenty-first century, or
-        L{NMEAAdapter.DATESTAMPS_FROM_19XX}, which assumes all dates are
-        twentieth century.
-    @cvar INTELLIGENT_DATE_THRESHOLD: The threshold that determines which
-        century we guess a year is in. If the year value in a sentence is above
-        this value, assumes the 20th century (19xx), otherwise assumes the
-        twenty-first century (20xx). C{0 <= INTELLIGENT_DATE_THRESHOLD < 100}.
-    @type INTELLIGENT_DATE_THRESHOLD: L{int}
+    @ivar yearThreshold: The earliest possible year that data will be
+        interpreted as. For example, if this value is C{1990}, an NMEA
+        0183 two-digit year of "96" will be interpreted as 1996, and
+        a two-digit year of "13" will be interpreted as 2013.
+    @type yearThreshold: L{int}
     @ivar _state: The current internal state of the receiver.
     @type _state: C{dict}
     @ivar _sentenceData: The data present in the sentence currently being
@@ -460,38 +452,22 @@ class NMEAAdapter(object):
         self._sentenceData['_time'] = timeObject
 
 
-    INTELLIGENT_DATESTAMPS = 0
-    DATESTAMPS_FROM_20XX = 1
-    DATESTAMPS_FROM_19XX = 2
-
-    DATESTAMP_HANDLING = INTELLIGENT_DATESTAMPS
-    INTELLIGENT_DATE_THRESHOLD = 80
+    yearThreshold = 1980
 
 
     def _fixDatestamp(self):
         """
         Turns an NMEA datestamp format into a C{datetime.date} object.
+
+        @raise ValueError: When the day or month value was invalid, e.g. 32nd
+            day, or 13th month, or 0th day or month.
         """
-        datestamp = self.currentSentence.datestamp
+        date = self.currentSentence.datestamp
+        day, month, year = map(int, [date[0:2], date[2:4], date[4:6]])
 
-        day, month, year = [int(ordinalString) for ordinalString in
-                            (datestamp[0:2], datestamp[2:4], datestamp[4:6])]
-
-        if self.DATESTAMP_HANDLING == self.INTELLIGENT_DATESTAMPS:
-            if year > self.INTELLIGENT_DATE_THRESHOLD:
-                year = int('19%02d' % (year,))
-            else:
-                year = int('20%02d' % (year,))
-
-        elif self.DATESTAMP_HANDLING == self.DATESTAMPS_FROM_20XX:
-            year = int('20%02d' % (year,))
-
-        elif self.DATESTAMP_HANDLING == self.DATESTAMPS_FROM_19XX:
-            year = int('19%02d' % (year,))
-
-        else:
-            raise ValueError("unknown datestamp handling method (%s)"
-                             % (self.DATESTAMP_HANDLING,))
+        year += self.yearThreshold - (self.yearThreshold % 100)
+        if year < self.yearThreshold:
+            year += 100
 
         self._sentenceData['_date'] = datetime.date(year, month, day)
 
