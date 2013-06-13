@@ -428,6 +428,10 @@ class NMEAAdapter(object):
         those sentences.
     @type  _SPECIFIC_SENTENCE_FIXES: C{dict} of sentence types to callables
         that take self and modify it in-place
+    @cvar _FIXERS: Set of unary callables that take an NMEAAdapter instance
+        and extract useful data from the sentence data, usually modifying the
+        adapter's sentence data in-place.
+    @type _FIXERS: C{dict} of native strings to unary callables
     @ivar yearThreshold: The earliest possible year that data will be
         interpreted as. For example, if this value is C{1990}, an NMEA
         0183 two-digit year of "96" will be interpreted as 1996, and
@@ -734,7 +738,7 @@ class NMEAAdapter(object):
             fixer(self)
 
 
-    FIXERS = {
+    _FIXERS = {
         'type':
             lambda self: self._sentenceSpecificFix(),
 
@@ -837,7 +841,7 @@ class NMEAAdapter(object):
         Cleans the current sentence.
         """
         for key in sorted(self.currentSentence.presentAttributes):
-            fixer = self.FIXERS.get(key, None)
+            fixer = self._FIXERS.get(key, None)
 
             if fixer is not None:
                 fixer(self)
