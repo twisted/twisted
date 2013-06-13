@@ -12,6 +12,8 @@ from io import BytesIO
 
 import struct
 
+from zope.interface.verify import verifyClass
+
 from twisted.python.failure import Failure
 from twisted.internet import address, task
 from twisted.internet.error import CannotListenError, ConnectionDone
@@ -1760,6 +1762,13 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
     """
     Tests for L{twisted.names.dns._OPTHeader}.
     """
+    def test_interface(self):
+        """
+        L{dns._OPTHeader} implements L{dns.IEncodable}.
+        """
+        verifyClass(dns.IEncodable, dns._OPTHeader)
+
+
     def test_name(self):
         """
         L{dns._OPTHeader.name} is a class attribute whose value is
@@ -1782,10 +1791,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         recommended in rfc6891 section-6.2.5 but can be overridden in
         the constructor.
         """
-        self.assertEqual(dns._OPTHeader.udpPayloadSize, 4096)
         self.assertEqual(dns._OPTHeader().udpPayloadSize, 4096)
-        h = dns._OPTHeader(udpPayloadSize=512)
-        self.assertEqual(h.udpPayloadSize, 512)
+        self.assertEqual(dns._OPTHeader(udpPayloadSize=512).udpPayloadSize, 512)
 
 
     def test_extendedRCODE(self):
@@ -1793,10 +1800,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader.extendedRCODE} defaults to 0 but can be
         overridden in the constructor.
         """
-        self.assertEqual(dns._OPTHeader.extendedRCODE, 0)
         self.assertEqual(dns._OPTHeader().extendedRCODE, 0)
-        h = dns._OPTHeader(extendedRCODE=1)
-        self.assertEqual(h.extendedRCODE, 1)
+        self.assertEqual(dns._OPTHeader(extendedRCODE=1).extendedRCODE, 1)
 
 
     def test_version(self):
@@ -1804,10 +1809,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader.version} defaults to 0 but can be
         overridden in the constructor.
         """
-        self.assertEqual(dns._OPTHeader.version, 0)
         self.assertEqual(dns._OPTHeader().version, 0)
-        h = dns._OPTHeader(version=1)
-        self.assertEqual(h.version, 1)
+        self.assertEqual(dns._OPTHeader(version=1).version, 1)
 
 
     def test_dnssecOK(self):
@@ -1815,10 +1818,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader.dnssecOK} defaults to False but can be
         overridden in the constructor.
         """
-        self.assertEqual(dns._OPTHeader.dnssecOK, False)
         self.assertEqual(dns._OPTHeader().dnssecOK, False)
-        h = dns._OPTHeader(dnssecOK=True)
-        self.assertEqual(h.dnssecOK, True)
+        self.assertEqual(dns._OPTHeader(dnssecOK=True).dnssecOK, True)
 
 
     def test_options(self):
@@ -1826,7 +1827,6 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader.options} defaults to empty list but can be
         overridden in the constructor.
         """
-        self.assertEqual(dns._OPTHeader.options, [])
         self.assertEqual(dns._OPTHeader().options, [])
         h = dns._OPTHeader(options=[(1, 1, b'\x00')])
         self.assertEqual(h.options, [(1, 1, b'\x00')])
@@ -1910,7 +1910,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             b'\x00\x00' # RDLEN 0
             )
 
-        h = dns._OPTHeader.decode(b)
+        h = dns._OPTHeader()
+        h.decode(b)
         self.assertEqual(h.name, dns.Name(b''))
         self.assertEqual(h.type, 41)
         self.assertEqual(h.udpPayloadSize, 512)
@@ -1938,7 +1939,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             b'\x00\x00' # RDLEN 0
             )
 
-        h = dns._OPTHeader.decode(b)
+        h = dns._OPTHeader()
+        h.decode(b)
         self.assertEqual(h.name, dns.Name(b''))
 
 
@@ -1962,8 +1964,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             b'\x00\x02' # OPTION-LENGTH
             b'\x00\x00' # OPTION-DATA
             )
-
-        self.assertRaises(EOFError, dns._OPTHeader.decode, b)
+        h = dns._OPTHeader()
+        self.assertRaises(EOFError, h.decode, b)
 
 
     def test_decodeRdlengthTooLong(self):
@@ -1986,8 +1988,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             b'\x00\x02' # OPTION-LENGTH
             b'\x00\x00' # OPTION-DATA
             )
-
-        self.assertRaises(EOFError, dns._OPTHeader.decode, b)
+        h = dns._OPTHeader()
+        self.assertRaises(EOFError, h.decode, b)
 
 
     def test_decodeWithOptions(self):
@@ -2016,9 +2018,10 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             b'qux' # OPTION-DATA
             )
 
-        o = dns._OPTHeader.decode(b)
+        h = dns._OPTHeader()
+        h.decode(b)
         self.assertEqual(
-            o.options,
+            h.options,
             [dns._OPTVariableOption(1, b'foobarbaz'),
              dns._OPTVariableOption(2, b'qux'),]
             )
@@ -2078,6 +2081,13 @@ class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
     """
     Tests for L{dns._OPTVariableOption}.
     """
+    def test_interface(self):
+        """
+        L{dns._OPTVariableOption} implements L{dns.IEncodable}.
+        """
+        verifyClass(dns.IEncodable, dns._OPTVariableOption)
+
+
     def test_constructorArguments(self):
         """
         L{dns._OPTVariableOption.__init__} requires code and data
@@ -2145,6 +2155,7 @@ class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
             b'foobar' # OPTION-DATA
             )
 
-        o = dns._OPTVariableOption.decode(b)
+        o = dns._OPTVariableOption()
+        o.decode(b)
         self.assertEqual(o.code, 1)
         self.assertEqual(o.data, b'foobar')

@@ -523,6 +523,7 @@ class Query:
 
 
 
+@implementer(IEncodable)
 class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     An OPT record header.
@@ -566,15 +567,8 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     name = Name(b'')
     type = OPT
 
-    udpPayloadSize = 4096
-    extendedRCODE = 0
-    version = 0
-    dnssecOK = False
-    options = []
-
-
     def __init__(self, udpPayloadSize=4096, extendedRCODE=0, version=0,
-                 dnssecOK=False, options=[]):
+                 dnssecOK=False, options=None):
         """
         @type udpPayloadSize: C{int}
         @param payload: The number of octets of the largest UDP
@@ -603,18 +597,24 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.extendedRCODE = extendedRCODE
         self.version = version
         self.dnssecOK = dnssecOK
-        self.options = options
+        if options is None:
+            self.options = []
+        else:
+            self.options = options
 
 
-    def encode(self, strio):
+    def encode(self, strio, compDict=None):
         """
         Encode this L{OPTHeader} instance to bytes.
 
         @type strio: L{file}
         @param strio: the byte representation of this L{OPTHeader}
             will be written to this file.
+
+        @type compDict: L{dict}
+        @param compDict: Not used.
         """
-        self.name.encode(strio)
+        self.name.encode(strio, compDict)
 
         b = BytesIO()
         for o in self.options:
@@ -632,8 +632,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
                 len(optionBytes)) + optionBytes)
 
 
-    @classmethod
-    def decode(cls, strio):
+    def decode(self, strio, length=None):
         """
         Decode bytes into an L{OPTHeader} instance.
 
@@ -641,33 +640,30 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @param strio: Bytes will be read from this file until the full
             L{OPTHeader} is decoded.
 
-        @return: An L{OPTHeader} instance.
+        @type length: C{int} or C{None}
+        @param length: Not used.
         """
         # OPTHeader name must always be '' so the received name is
         # discarded
         Name().decode(strio)
-        l = struct.calcsize(cls._fmt)
+        l = struct.calcsize(self._fmt)
         buff = readPrecisely(strio, l)
-        (type, udpPayloadSize, extendedRCODE, version,
+        (self.type, self.udpPayloadSize, self.extendedRCODE, self.version,
          ttlByte3and4,
-         resourceRecordDataLength) = struct.unpack(cls._fmt, buff)
-        dnssecOK = ttlByte3and4 >> 15
+         resourceRecordDataLength) = struct.unpack(self._fmt, buff)
+        self.dnssecOK = ttlByte3and4 >> 15
 
         # Decode variable options if present
-        options = []
+        self.options = []
         optionsBytes = BytesIO(readPrecisely(strio, resourceRecordDataLength))
         while optionsBytes.tell() < resourceRecordDataLength:
-            options.append(_OPTVariableOption.decode(optionsBytes))
-
-        return cls(
-            udpPayloadSize=udpPayloadSize,
-            extendedRCODE=extendedRCODE,
-            version=version,
-            dnssecOK=dnssecOK,
-            options=options)
+            o = _OPTVariableOption()
+            o.decode(optionsBytes)
+            self.options.append(o)
 
 
 
+@implementer(IEncodable)
 class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     A class to represent OPT record variable options.
@@ -684,7 +680,7 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     _fmt = '!HH'
 
-    def __init__(self, code, data):
+    def __init__(self, code=0, data=b''):
         """
         @type code: C{int}
         @param code: The option code
@@ -696,20 +692,22 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.data = data
 
 
-    def encode(self, strio):
+    def encode(self, strio, compDict=None):
         """
         Encode this L{OPTVariableOption} to bytes.
 
         @type strio: L{file}
         @param strio: the byte representation of this
             L{OPTVariableOption} will be written to this file.
+
+        @type compDict: L{dict}
+        @param compDict: Not used.
         """
         strio.write(
             struct.pack(self._fmt, self.code, len(self.data)) + self.data)
 
 
-    @classmethod
-    def decode(cls, strio):
+    def decode(self, strio, length=None):
         """
         Decode bytes into an L{OPTVariableOption} instance.
 
@@ -717,13 +715,13 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @param strio: Bytes will be read from this file until the full
             L{OPTVariableOption} is decoded.
 
-        @return: An L{OPTVariableOption} instance.
+        @type length: C{int} or C{None}
+        @param length: Not used.
         """
-        l = struct.calcsize(cls._fmt)
+        l = struct.calcsize(self._fmt)
         buff = readPrecisely(strio, l)
-        code, length = struct.unpack(cls._fmt, buff)
-        data = readPrecisely(strio, length)
-        return cls(code, data)
+        self.code, length = struct.unpack(self._fmt, buff)
+        self.data = readPrecisely(strio, length)
 
 
 
