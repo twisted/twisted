@@ -721,6 +721,11 @@ class PositionError(object, FancyEqMixin):
         to be zero, but can be non-zero because of rounding error and limited
         reporting precision. You should never have to change this value.
     @type _ALLOWABLE_THRESHOLD: C{float}
+    @cvar _DOP_EXPRESSIONS: A mapping of DOP types (C[hvp]dop) to a list of
+        callables that take self and return that DOP type, or raise
+        C{TypeError}. This allows a DOP value to either be returned directly
+        if it's know, or computed from other DOP types if it isn't.
+    @type _DOP_EXPRESSIONS: C{dict} of C{str} to callables
     @ivar pdop: The position dilution of precision. C{None} if unknown.
     @type pdop: C{float} or C{NoneType}
     @ivar hdop: The horizontal dilution of precision. C{None} if unknown.
@@ -781,7 +786,7 @@ class PositionError(object, FancyEqMixin):
                              % (self.pdop, self.hdop, self.vdop))
 
 
-    DOP_EXPRESSIONS = {
+    _DOP_EXPRESSIONS = {
         'pdop': [
             lambda self: float(self._pdop),
             lambda self: (self._hdop**2 + self._vdop**2)**.5,
@@ -809,7 +814,7 @@ class PositionError(object, FancyEqMixin):
         @return: The DOP if it is known, C{None} otherwise.
         @rtype: C{float} or C{NoneType}
         """
-        for dopExpression in self.DOP_EXPRESSIONS[dopType]:
+        for dopExpression in self._DOP_EXPRESSIONS[dopType]:
             try:
                 return dopExpression(self)
             except TypeError:
