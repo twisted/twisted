@@ -1877,8 +1877,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             version=3,
             dnssecOK=True,
             options=[
-                dns.OPTVariableOption(1, b'\x00\x01'),
-                dns.OPTVariableOption(2, b'\x00\x02'),
+                dns.OPTVariableOption(1, b'foobarbaz'),
+                dns.OPTVariableOption(2, b'qux'),
                 ])
         b = BytesIO()
 
@@ -1892,15 +1892,15 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             b'\x03' # extendedRCODE 3
             b'\x03' # version 3
             b'\x80\x00' # DNSSEC OK 1 + Z
-            b'\x00\x0c' # RDLEN 12
+            b'\x00\x14' # RDLEN 20
 
             b'\x00\x01' # OPTION-CODE
-            b'\x00\x02' # OPTION-LENGTH
-            b'\x00\x01' # OPTION-DATA
+            b'\x00\x09' # OPTION-LENGTH
+            b'foobarbaz' # OPTION-DATA
 
             b'\x00\x02' # OPTION-CODE
-            b'\x00\x02' # OPTION-LENGTH
-            b'\x00\x02' # OPTION-DATA
+            b'\x00\x03' # OPTION-LENGTH
+            b'qux' # OPTION-DATA
             )
 
 
@@ -1966,22 +1966,22 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             b'\x03' # extendedRCODE 3
             b'\x03' # version 3
             b'\x80\x00' # DNSSEC OK 1 + Z
-            b'\x00\x0c' # RDLEN 12
+            b'\x00\x14' # RDLEN 20
 
             b'\x00\x01' # OPTION-CODE
-            b'\x00\x02' # OPTION-LENGTH
-            b'\x00\x01' # OPTION-DATA
+            b'\x00\x09' # OPTION-LENGTH
+            b'foobarbaz' # OPTION-DATA
 
             b'\x00\x02' # OPTION-CODE
-            b'\x00\x02' # OPTION-LENGTH
-            b'\x00\x02' # OPTION-DATA
+            b'\x00\x03' # OPTION-LENGTH
+            b'qux' # OPTION-DATA
             )
 
         o = dns.OPTHeader.decode(b)
         self.assertEqual(
             o.options,
-            [dns.OPTVariableOption(1, b'\x00\x01'),
-             dns.OPTVariableOption(2, b'\x00\x02'),]
+            [dns.OPTVariableOption(1, b'foobarbaz'),
+             dns.OPTVariableOption(2, b'qux'),]
             )
 
 
@@ -2091,14 +2091,14 @@ class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
         instance attributes to a byte string which also includes the
         data length.
         """
-        o = dns.OPTVariableOption(1, b'x')
+        o = dns.OPTVariableOption(1, b'foobar')
         b = BytesIO()
         o.encode(b)
         self.assertEqual(
             b.getvalue(),
             b'\x00\x01' # OPTION-CODE 1
-            b'\x00\x01' # OPTION-LENGTH 1
-            b'x' # OPTION-DATA
+            b'\x00\x06' # OPTION-LENGTH 6
+            b'foobar' # OPTION-DATA
             )
 
 
@@ -2109,10 +2109,10 @@ class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
         """
         b = BytesIO(
             b'\x00\x01' # OPTION-CODE 1
-            b'\x00\x01' # OPTION-LENGTH 1
-            b'x' # OPTION-DATA
+            b'\x00\x06' # OPTION-LENGTH 6
+            b'foobar' # OPTION-DATA
             )
 
         o = dns.OPTVariableOption.decode(b)
         self.assertEqual(o.code, 1)
-        self.assertEqual(o.data, b'x')
+        self.assertEqual(o.data, b'foobar')
