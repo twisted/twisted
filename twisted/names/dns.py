@@ -35,7 +35,6 @@ __all__ = [
 
     'Charstr', 'Message', 'Name', 'Query', 'RRHeader', 'SimpleRecord',
     'DNSDatagramProtocol', 'DNSMixin', 'DNSProtocol',
-    'OPTHeader', 'OPTVariableOption',
 
     'OK', 'OP_INVERSE', 'OP_NOTIFY', 'OP_QUERY', 'OP_STATUS', 'OP_UPDATE',
     'PORT',
@@ -524,7 +523,7 @@ class Query:
 
 
 
-class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
+class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     An OPT record header.
 
@@ -658,7 +657,7 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         options = []
         optionsEnd = strio.tell() + resourceRecordDataLength
         while strio.tell() < optionsEnd:
-            options.append(OPTVariableOption.decode(strio))
+            options.append(_OPTVariableOption.decode(strio))
 
         return cls(
             udpPayloadSize=udpPayloadSize,
@@ -669,7 +668,7 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
 
 
-class OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
+class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     A class to represent OPT record variable options.
 
