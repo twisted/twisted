@@ -17,6 +17,7 @@ from zope.interface.verify import verifyObject
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
 from twisted.python.threadpool import ThreadPool
+from twisted.internet.address import IPv4Address
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet import reactor
 from twisted.internet.error import ConnectionLost
@@ -403,7 +404,7 @@ class EnvironTests(WSGITestsMixin, TestCase):
         def makeChannel():
             channel = DummyChannel()
             channel.transport = DummyChannel.TCP()
-            channel.transport.port = portNumber
+            channel.transport.hostAddr = IPv4Address("TCP", '10.0.0.1', portNumber)
             return channel
         self.channelFactory = makeChannel
 
@@ -907,7 +908,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         d, requestFactory = self.requestFactoryFactory()
         def cbRendered(ignored):
             self.assertTrue(
-                channel.transport.written.getvalue().startswith(
+                channel.transport.value().startswith(
                     'HTTP/1.1 107 Strange message'))
         d.addCallback(cbRendered)
 
@@ -938,7 +939,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
 
         d, requestFactory = self.requestFactoryFactory()
         def cbRendered(ignored):
-            response = channel.transport.written.getvalue()
+            response = channel.transport.value()
             headers, rest = response.split('\r\n\r\n', 1)
             headerLines = headers.split('\r\n')[1:]
             headerLines.sort()
@@ -1001,7 +1002,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
 
         intermediateValues = []
         def record():
-            intermediateValues.append(channel.transport.written.getvalue())
+            intermediateValues.append(channel.transport.value())
 
         def applicationFactory():
             def application(environ, startResponse):
@@ -1033,7 +1034,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
 
         intermediateValues = []
         def record():
-            intermediateValues.append(channel.transport.written.getvalue())
+            intermediateValues.append(channel.transport.value())
 
         def applicationFactory():
             def application(environ, startResponse):
@@ -1066,7 +1067,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
 
         intermediateValues = []
         def record():
-            intermediateValues.append(channel.transport.written.getvalue())
+            intermediateValues.append(channel.transport.value())
 
         def applicationFactory():
             def application(environ, startResponse):
@@ -1112,7 +1113,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         d, requestFactory = self.requestFactoryFactory()
         def cbRendered(ignored):
             self.assertTrue(
-                channel.transport.written.getvalue().startswith(
+                channel.transport.value().startswith(
                     'HTTP/1.1 200 Bar\r\n'))
         d.addCallback(cbRendered)
 
@@ -1140,7 +1141,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         d, requestFactory = self.requestFactoryFactory()
         def cbRendered(ignored):
             self.assertTrue(
-                channel.transport.written.getvalue().startswith(
+                channel.transport.value().startswith(
                     'HTTP/1.1 100 Foo\r\n'))
         d.addCallback(cbRendered)
 
@@ -1183,7 +1184,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         d, requestFactory = self.requestFactoryFactory()
         def cbRendered(ignored):
             self.assertTrue(
-                channel.transport.written.getvalue().startswith(
+                channel.transport.value().startswith(
                     'HTTP/1.1 200 OK\r\n'))
             self.assertEqual(reraised[0][0], excInfo[0])
             self.assertEqual(reraised[0][1], excInfo[1])
@@ -1207,7 +1208,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
 
         intermediateValues = []
         def record():
-            intermediateValues.append(channel.transport.written.getvalue())
+            intermediateValues.append(channel.transport.value())
 
         def applicationFactory():
             def application(environ, startResponse):
@@ -1279,7 +1280,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
         def cbRendered(ignored):
             self.assertEqual(
                 self.getContentFromResponse(
-                    channel.transport.written.getvalue()),
+                    channel.transport.value()),
                 '012')
             self.assertFalse(result.open)
         d.addCallback(cbRendered)
@@ -1465,7 +1466,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             self.assertEqual(len(errors), 1)
 
             self.assertTrue(
-                channel.transport.written.getvalue().startswith(
+                channel.transport.value().startswith(
                     'HTTP/1.1 500 Internal Server Error'))
         d.addCallback(cbRendered)
 
@@ -1516,7 +1517,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             errors = self.flushLoggedErrors(RuntimeError)
             self.assertEqual(len(errors), 1)
 
-            response = channel.transport.written.getvalue()
+            response = channel.transport.value()
             self.assertTrue(response.startswith('HTTP/1.1 200 OK'))
             # Chunked transfer-encoding makes this a little messy.
             self.assertIn(responseContent, response)
@@ -1527,7 +1528,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             lambda: channel, 'GET', '1.1', [], [''], None, [])
 
         # By now the connection should be closed.
-        self.assertTrue(channel.transport.disconnected)
+        self.assertTrue(channel.transport.disconnecting)
         # Give it a little push to go the rest of the way.
         requests[0].connectionLost(Failure(ConnectionLost("All gone")))
 

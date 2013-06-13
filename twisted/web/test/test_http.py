@@ -1256,7 +1256,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.setResponseCode(201)
         req.write(b'')
         self.assertEqual(
-            channel.transport.written.getvalue().splitlines()[0],
+            channel.transport.value().splitlines()[0],
             b"(no clientproto yet) 201 Created")
 
 
@@ -1270,7 +1270,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.setResponseCode(202, "happily accepted")
         req.write(b'')
         self.assertEqual(
-            channel.transport.written.getvalue().splitlines()[0],
+            channel.transport.value().splitlines()[0],
             b'(no clientproto yet) 202 happily accepted')
 
 
@@ -1585,7 +1585,8 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req = http.Request(DummyChannel(), False)
         producer = DummyProducer()
         req.registerProducer(producer, True)
-        self.assertEqual([(producer, True)], req.transport.producers)
+        self.assertEqual(producer, req.transport.producer)
+        self.assertEqual(True, req.transport.streaming)
 
 
     def test_registerProducerWhenNotQueuedRegistersPullProducer(self):
@@ -1597,7 +1598,8 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req = http.Request(DummyChannel(), False)
         producer = DummyProducer()
         req.registerProducer(producer, False)
-        self.assertEqual([(producer, False)], req.transport.producers)
+        self.assertEqual(producer, req.transport.producer)
+        self.assertEqual(False, req.transport.streaming)
 
 
     def test_connectionLostNotification(self):

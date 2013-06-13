@@ -17,40 +17,16 @@ from twisted.internet.defer import Deferred
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import ISSLTransport
 
+from twisted.test.proto_helpers import StringTransport
+
 from twisted.web.http_headers import Headers
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Session, Site
 
 
 class DummyChannel:
-    class TCP:
-        port = 80
-        disconnected = False
-
-        def __init__(self):
-            self.written = BytesIO()
-            self.producers = []
-
-        def getPeer(self):
-            return IPv4Address("TCP", '192.168.1.1', 12344)
-
-        def write(self, data):
-            if not isinstance(data, bytes):
-                raise TypeError("Can only write bytes to a transport, not %r" % (data,))
-            self.written.write(data)
-
-        def writeSequence(self, iovec):
-            for data in iovec:
-                self.write(data)
-
-        def getHost(self):
-            return IPv4Address("TCP", '10.0.0.1', self.port)
-
-        def registerProducer(self, producer, streaming):
-            self.producers.append((producer, streaming))
-
-        def loseConnection(self):
-            self.disconnected = True
+    class TCP(StringTransport):
+        pass
 
 
     @implementer(ISSLTransport)
@@ -60,7 +36,7 @@ class DummyChannel:
     site = Site(Resource())
 
     def __init__(self):
-        self.transport = self.TCP()
+        self.transport = self.TCP(IPv4Address("TCP", '10.0.0.1', 80))
 
 
     def requestDone(self, request):

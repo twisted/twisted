@@ -398,7 +398,7 @@ class RequestTests(unittest.TestCase):
 
     def testPrePathURLNonDefault(self):
         d = DummyChannel()
-        d.transport.port = 81
+        d.transport.hostAddr = IPv4Address("TCP", '10.0.0.1', 81)
         request = server.Request(d, 1)
         request.setHost(b'example.com', 81)
         request.gotLength(0)
@@ -407,7 +407,7 @@ class RequestTests(unittest.TestCase):
 
     def testPrePathURLSSLPort(self):
         d = DummyChannel()
-        d.transport.port = 443
+        d.transport.hostAddr = IPv4Address("TCP", '10.0.0.1', 443)
         request = server.Request(d, 1)
         request.setHost(b'example.com', 443)
         request.gotLength(0)
@@ -417,7 +417,7 @@ class RequestTests(unittest.TestCase):
     def testPrePathURLSSLPortAndSSL(self):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
-        d.transport.port = 443
+        d.transport.hostAddr = IPv4Address("TCP", '10.0.0.1', 443)
         request = server.Request(d, 1)
         request.setHost(b'example.com', 443)
         request.gotLength(0)
@@ -427,7 +427,7 @@ class RequestTests(unittest.TestCase):
     def testPrePathURLHTTPPortAndSSL(self):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
-        d.transport.port = 80
+        d.transport.hostAddr = IPv4Address("TCP", '10.0.0.1', 80)
         request = server.Request(d, 1)
         request.setHost(b'example.com', 80)
         request.gotLength(0)
@@ -437,7 +437,7 @@ class RequestTests(unittest.TestCase):
     def testPrePathURLSSLNonDefault(self):
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
-        d.transport.port = 81
+        d.transport.hostAddr = IPv4Address("TCP", '10.0.0.1', 81)
         request = server.Request(d, 1)
         request.setHost(b'example.com', 81)
         request.gotLength(0)
@@ -446,7 +446,7 @@ class RequestTests(unittest.TestCase):
 
     def testPrePathURLSetSSLHost(self):
         d = DummyChannel()
-        d.transport.port = 81
+        d.transport.hostAddr = IPv4Address("TCP", '10.0.0.1', 81)
         request = server.Request(d, 1)
         request.setHost(b'foo.com', 81, 1)
         request.gotLength(0)
@@ -509,7 +509,7 @@ class GzipEncoderTests(unittest.TestCase):
         request.requestHeaders.setRawHeaders(b"Accept-Encoding",
                                              [b"gzip,deflate"])
         request.requestReceived(b'GET', b'/foo', b'HTTP/1.0')
-        data = self.channel.transport.written.getvalue()
+        data = self.channel.transport.value()
         self.assertNotIn(b"Content-Length", data)
         self.assertIn(b"Content-Encoding: gzip\r\n", data)
         body = data[data.find(b"\r\n\r\n") + 4:]
@@ -527,7 +527,7 @@ class GzipEncoderTests(unittest.TestCase):
         request.requestHeaders.setRawHeaders(b"Accept-Encoding",
                                              [b"foo,bar"])
         request.requestReceived(b'GET', b'/foo', b'HTTP/1.0')
-        data = self.channel.transport.written.getvalue()
+        data = self.channel.transport.value()
         self.assertIn(b"Content-Length", data)
         self.assertNotIn(b"Content-Encoding: gzip\r\n", data)
         body = data[data.find(b"\r\n\r\n") + 4:]
@@ -545,7 +545,7 @@ class GzipEncoderTests(unittest.TestCase):
         request.requestHeaders.setRawHeaders(b"Accept-Encoding",
                                              [b"deflate", b"gzip"])
         request.requestReceived(b'GET', b'/foo', b'HTTP/1.0')
-        data = self.channel.transport.written.getvalue()
+        data = self.channel.transport.value()
         self.assertNotIn(b"Content-Length", data)
         self.assertIn(b"Content-Encoding: gzip\r\n", data)
         body = data[data.find(b"\r\n\r\n") + 4:]
@@ -565,7 +565,7 @@ class GzipEncoderTests(unittest.TestCase):
         request.responseHeaders.setRawHeaders(b"Content-Encoding",
                                              [b"deflate"])
         request.requestReceived(b'GET', b'/foo', b'HTTP/1.0')
-        data = self.channel.transport.written.getvalue()
+        data = self.channel.transport.value()
         self.assertNotIn(b"Content-Length", data)
         self.assertIn(b"Content-Encoding: deflate,gzip\r\n", data)
         body = data[data.find(b"\r\n\r\n") + 4:]
@@ -586,7 +586,7 @@ class GzipEncoderTests(unittest.TestCase):
         request.responseHeaders.setRawHeaders(b"Content-Encoding",
                                              [b"foo", b"bar"])
         request.requestReceived(b'GET', b'/foo', b'HTTP/1.0')
-        data = self.channel.transport.written.getvalue()
+        data = self.channel.transport.value()
         self.assertNotIn(b"Content-Length", data)
         self.assertIn(b"Content-Encoding: foo,bar,gzip\r\n", data)
         body = data[data.find(b"\r\n\r\n") + 4:]
