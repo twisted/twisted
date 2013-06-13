@@ -234,12 +234,12 @@ class Angle(object, FancyEqMixin):
     """
     An object representing an angle.
 
-    @cvar RANGE_EXPRESSIONS: A collections of expressions for the allowable
+    @cvar _RANGE_EXPRESSIONS: A collections of expressions for the allowable
         range for the angular value of a particular coordinate value.
-    @type RANGE_EXPRESSIONS: A mapping of coordinate types (one of L{Angles})
+    @type _RANGE_EXPRESSIONS: A mapping of coordinate types (one of L{Angles})
         to 1-argument callables.
     """
-    RANGE_EXPRESSIONS = {
+    _RANGE_EXPRESSIONS = {
         Angles.LATITUDE: lambda latitude: -90.0 < latitude < 90.0,
         Angles.LONGITUDE: lambda longitude: -180.0 < longitude < 180.0,
         Angles.HEADING: lambda heading:  0 <= heading < 360,
