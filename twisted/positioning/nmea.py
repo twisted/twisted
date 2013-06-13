@@ -154,8 +154,6 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
     components. It then wraps them in L{NMEASentence} objects and
     calls the appropriate receiver method with them.
     """
-    METHOD_PREFIX = "nmea_"
-
     def __init__(self, receiver):
         """
         Initializes an NMEAProtocol.
@@ -192,7 +190,7 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
 
         sentence = NMEASentence(sentenceData)
 
-        callback = getattr(self, self.METHOD_PREFIX + sentenceType, None)
+        callback = getattr(self, "nmea_" + sentenceType, None)
         if callback is not None:
             callback(sentence)
 
