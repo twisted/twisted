@@ -411,6 +411,13 @@ class NMEAAdapter(object):
     """
     An adapter from NMEAProtocol receivers to positioning receivers.
 
+    @cvar _ACCEPTABLE_UNITS: A set of NMEA notations of units that are
+        already acceptable (metric), and therefore don't need to be converted.
+    @type _ACCEPTABLE_UNITS: C{frozenset} of bytestrings
+    @cvar _UNIT_CONVERTERS: Mapping of NMEA notations of units that are not
+        acceptable (not metric) to converters that take a quantity in that
+        unit and produce a metric quantity.
+    @type _UNIT_CONVERTERS: C{dict} of bytestrings to unary callables
     @ivar yearThreshold: The earliest possible year that data will be
         interpreted as. For example, if this value is C{1990}, an NMEA
         0183 two-digit year of "96" will be interpreted as 1996, and
@@ -605,8 +612,8 @@ class NMEAAdapter(object):
         setattr(self._sentenceData[state], attr, newValue)
 
 
-    ACCEPTABLE_UNITS = frozenset(['M'])
-    UNIT_CONVERTERS = {
+    _ACCEPTABLE_UNITS = frozenset(['M'])
+    _UNIT_CONVERTERS = {
         'N': lambda inKnots: base.Speed(float(inKnots) * base.MPS_PER_KNOT),
         'K': lambda inKPH: base.Speed(float(inKPH) * base.MPS_PER_KPH),
     }
@@ -649,8 +656,8 @@ class NMEAAdapter(object):
         if sourceKey is None:
             sourceKey = valueKey
 
-        if unit not in self.ACCEPTABLE_UNITS:
-            converter = self.UNIT_CONVERTERS[unit]
+        if unit not in self._ACCEPTABLE_UNITS:
+            converter = self._UNIT_CONVERTERS[unit]
             currentValue = getattr(self.currentSentence, sourceKey)
             self._sentenceData[valueKey] = converter(currentValue)
 
