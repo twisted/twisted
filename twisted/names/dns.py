@@ -524,7 +524,6 @@ class Query:
 
 
 
-@implementer(IEncodable)
 class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     An OPT record header.
@@ -608,18 +607,15 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.options = options
 
 
-    def encode(self, strio, compDict=None):
+    def encode(self, strio):
         """
         Encode this L{OPTHeader} instance to bytes.
 
         @type strio: L{file}
         @param strio: the byte representation of this L{OPTHeader}
             will be written to this file.
-
-        @type compDict: L{dict}
-        @param compDict: Not used.
         """
-        self.name.encode(strio, compDict)
+        self.name.encode(strio)
 
         b = BytesIO()
         for o in self.options:
@@ -638,16 +634,13 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
 
     @classmethod
-    def decode(cls, strio, length=None):
+    def decode(cls, strio):
         """
         Decode bytes into an L{OPTHeader} instance.
 
         @type strio: L{file}
         @param strio: Bytes will be read from this file until the full
             L{OPTHeader} is decoded.
-
-        @type length: C{int} or C{None}
-        @param length: Not used.
 
         @return: An L{OPTHeader} instance.
         """
@@ -676,7 +669,6 @@ class OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
 
 
-@implementer(IEncodable)
 class OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     A class to represent OPT record variable options.
@@ -705,32 +697,26 @@ class OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.data = data
 
 
-    def encode(self, strio, compDict=None):
+    def encode(self, strio):
         """
         Encode this L{OPTVariableOption} to bytes.
 
         @type strio: L{file}
         @param strio: the byte representation of this
             L{OPTVariableOption} will be written to this file.
-
-        @type compDict: L{dict}
-        @param compDict: not used.
         """
         strio.write(
             struct.pack(self._fmt, self.code, len(self.data)) + self.data)
 
 
     @classmethod
-    def decode(cls, strio, length=None):
+    def decode(cls, strio):
         """
         Decode bytes into an L{OPTVariableOption} instance.
 
         @type strio: L{file}
         @param strio: Bytes will be read from this file until the full
             L{OPTVariableOption} is decoded.
-
-        @type length: C{int} or C{None}
-        @param length: Not used.
 
         @return: An L{OPTVariableOption} instance.
         """

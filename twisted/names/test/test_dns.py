@@ -12,8 +12,6 @@ from io import BytesIO
 
 import struct
 
-from zope.interface.verify import verifyClass
-
 from twisted.python.failure import Failure
 from twisted.internet import address, task
 from twisted.internet.error import CannotListenError, ConnectionDone
@@ -1762,13 +1760,6 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
     """
     Tests for L{twisted.names.dns.OPTHeader}.
     """
-    def test_interface(self):
-        """
-        L{dns.OPTHeader} implements L{dns.IEncodable}.
-        """
-        verifyClass(dns.IEncodable, dns.OPTHeader)
-
-
     def test_name(self):
         """
         L{dns.OPTHeader.name} is a class attribute whose value is
@@ -2039,13 +2030,6 @@ class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
     """
     Tests for L{dns.OPTVariableOption}.
     """
-    def test_interface(self):
-        """
-        L{dns.OPTVariableOption} implements L{dns.IEncodable}.
-        """
-        verifyClass(dns.IEncodable, dns.OPTVariableOption)
-
-
     def test_constructorArguments(self):
         """
         L{dns.OPTVariableOption.__init__} requires code and data
