@@ -512,19 +512,6 @@ class Coordinate(Angle, FancyEqMixin):
         Angle.__init__(self, angle, coordinateType)
 
 
-    HEMISPHERES_BY_TYPE_AND_SIGN = {
-        Angles.LATITUDE: [
-            Directions.NORTH,  # Positive
-            Directions.SOUTH,  # Negative
-        ],
-
-        Angles.LONGITUDE: [
-            Directions.EAST,  # Positve
-            Directions.WEST,  # Negative
-        ]
-    }
-
-
     @property
     def hemisphere(self):
         """
@@ -533,10 +520,18 @@ class Coordinate(Angle, FancyEqMixin):
         @return: A symbolic constant representing a hemisphere (one of
             L{Angles})
         """
-        sign = int(self.inDecimalDegrees < 0)
-        try:
-            return self.HEMISPHERES_BY_TYPE_AND_SIGN[self.angleType][sign]
-        except KeyError:
+
+        if self.angleType is Angles.LATITUDE:
+            if self.inDecimalDegrees < 0:
+                return Directions.SOUTH
+            else:
+                return Directions.NORTH
+        elif self.angleType is Angles.LONGITUDE:
+            if self.inDecimalDegrees < 0:
+                return Directions.WEST
+            else:
+                return Directions.EAST
+        else:
             raise ValueError("unknown coordinate type (cant find hemisphere)")
 
 
