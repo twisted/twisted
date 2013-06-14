@@ -903,7 +903,7 @@ class Response:
 
     L{Response} should not be subclassed or instantiated.
 
-    @ivar _transport: The transport which is delivering this response.
+    @ivar _transport: See L{__init__}.
 
     @ivar _bodyProtocol: The L{IProtocol} provider to which the body is
         delivered.  C{None} before one has been registered with
@@ -947,6 +947,21 @@ class Response:
     _bodyFinished = False
 
     def __init__(self, version, code, phrase, headers, _transport):
+        """
+        @param version: HTTP version components protocol, major, minor. E.g.
+            C{('HTTP', 1, 1)} to mean C{'HTTP/1.1'}.
+
+        @param code: HTTP status code.
+        @type code: L{int}
+
+        @param phrase: HTTP reason phrase, intended to give a short description
+            of the HTTP status code.
+
+        @param headers: HTTP response headers.
+        @type: L{Headers}
+
+        @param _transport: The transport which is delivering this response.
+        """
         self.version = version
         self.code = code
         self.phrase = phrase
@@ -962,6 +977,13 @@ class Response:
     def _construct(cls, version, code, phrase, headers, _transport, request):
         """
         Private constructor.
+
+        @param version: See L{__init__}.
+        @param code: See L{__init__}.
+        @param phrase: See L{__init__}.
+        @param headers: See L{__init__}.
+        @param _transport: See L{__init__}.
+        @param request: See L{IResponse.request}.
 
         @return: L{Response} instance.
         """
