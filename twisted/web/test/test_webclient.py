@@ -1342,7 +1342,7 @@ class URITests(unittest.TestCase):
         to L{urlparse} as a L{unicode} string.
         """
         goodInput = b'http://example.com/path'
-        badInput = 'http://example.com/path'.decode('ascii')
+        badInput = goodInput.decode('ascii')
         urlparse(badInput)
         uri = client._URI.fromBytes(goodInput)
         self.assertIsInstance(uri.scheme, bytes)
