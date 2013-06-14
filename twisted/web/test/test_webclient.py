@@ -1294,7 +1294,7 @@ class URITests(unittest.TestCase):
             path=b'/foo/bar',
             params=b'param',
             query=b'a=1&b=2',
-            fragment='frag')
+            fragment=b'frag')
         self.assertEqual(uri, parsed.toBytes())
 
 
