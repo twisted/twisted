@@ -227,13 +227,13 @@ class URLJoinTests(unittest.TestCase):
         resulting URL if neither the base nor the new path include a fragment
         identifier.
         """
-        self.assertEquals(
+        self.assertEqual(
             client._urljoin(b'http://foo.com/bar', b'/quux'),
             b'http://foo.com/quux')
-        self.assertEquals(
+        self.assertEqual(
             client._urljoin(b'http://foo.com/bar#', b'/quux'),
             b'http://foo.com/quux')
-        self.assertEquals(
+        self.assertEqual(
             client._urljoin(b'http://foo.com/bar', b'/quux#'),
             b'http://foo.com/quux')
 
@@ -246,13 +246,13 @@ class URLJoinTests(unittest.TestCase):
 
         @see: U{https://tools.ietf.org/html/draft-ietf-httpbis-p2-semantics-22#section-7.1.2}
         """
-        self.assertEquals(
+        self.assertEqual(
             client._urljoin(b'http://foo.com/bar#frag', b'/quux'),
             b'http://foo.com/quux#frag')
-        self.assertEquals(
+        self.assertEqual(
             client._urljoin(b'http://foo.com/bar', b'/quux#frag2'),
             b'http://foo.com/quux#frag2')
-        self.assertEquals(
+        self.assertEqual(
             client._urljoin(b'http://foo.com/bar#frag', b'/quux#frag2'),
             b'http://foo.com/quux#frag2')
 
