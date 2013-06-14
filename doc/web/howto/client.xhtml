@@ -497,8 +497,9 @@ if __name__ == "__main__":
       the <code class="API"
       base="twisted.web.iweb.IClientRequest">request</code> that it is a response
       to, and the previously received <code class="API"
-      base="twisted.web.client.Response">response</code>. In most cases there
-      will not be a previous response, but in the case of
+      base="twisted.web.client.Response">response</code>, accessible by <code
+      class="API" based="twisted.web.iweb.IResponse">previousResponse</code>.
+      In most cases there will not be a previous response, but in the case of
       <code>RedirectAgent</code> the response history can be obtained by
       following the previous responses from response to response.
     </p>
