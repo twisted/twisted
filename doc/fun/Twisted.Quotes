@@ -29,3 +29,5 @@ Chris: I'm sick of all this dynamic crap.
 <exarkun> it might be the best thing ever but guess what
 <exarkun> if you invent the best thing ever and don't write any docs for it for 13 years, you lose
 %
+<dash> docstrings are for explaining the intent of code, comments are for apologizing for bad code
+%
