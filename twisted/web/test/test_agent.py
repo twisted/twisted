@@ -2196,18 +2196,6 @@ class _RedirectAgentTestsMixin(object):
 
         @param finalURI: Expected final URI.
         """
-        # XXX: If we had a way to get the final absolute URI from a request we
-        # wouldn't need to do this.
-        # <https://twistedmatrix.com/trac/ticket/5435>
-        def _resolveLocation(requestURI, location):
-            self._redirectedURI = _originalResolveLocation(
-                requestURI, location)
-            return self._redirectedURI
-
-        self._redirectedURI = None
-        _originalResolveLocation = self.agent._resolveLocation
-        self.patch(self.agent, '_resolveLocation', _resolveLocation)
-
         self.agent.request('GET', uri)
 
         req, res = self.protocol.requests.pop()
@@ -2219,7 +2207,7 @@ class _RedirectAgentTestsMixin(object):
 
         req2, res2 = self.protocol.requests.pop()
         self.assertEqual('GET', req2.method)
-        self.assertEqual(finalURI, self._redirectedURI)
+        self.assertEqual(finalURI, req2.absoluteURI)
 
 
     def test_relativeURI(self):
