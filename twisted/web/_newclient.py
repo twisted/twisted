@@ -548,24 +548,11 @@ class Request:
     A L{Request} instance describes an HTTP request to be sent to an HTTP
     server.
 
-    @ivar method: The HTTP method to for this request, ex: 'GET', 'HEAD',
-        'POST', etc.
-    @type method: C{str}
-
-    @ivar uri: The relative URI of the resource to request.  For example,
-        C{'/foo/bar?baz=quux'}.
-    @type uri: C{str}
-
-    @ivar headers: Headers to be sent to the server.  It is important to
-        note that this object does not create any implicit headers.  So it
-        is up to the HTTP Client to add required headers such as 'Host'.
-    @type headers: L{twisted.web.http_headers.Headers}
-
-    @ivar bodyProducer: C{None} or an L{IBodyProducer} provider which
-        produces the content body to send to the remote HTTP server.
-
-    @ivar persistent: Set to C{True} when you use HTTP persistent connection.
-    @type persistent: C{bool}
+    @ivar method: See L{__init__}.
+    @ivar uri: See L{__init__}.
+    @ivar headers: See L{__init__}.
+    @ivar bodyProducer: See L{__init__}.
+    @ivar persistent: See L{__init__}.
 
     @ivar _parsedURI: Parsed I{URI} for the request, or C{None}.
     @type _parsedURI: L{_URI}
@@ -574,6 +561,27 @@ class Request:
 
 
     def __init__(self, method, uri, headers, bodyProducer, persistent=False):
+        """
+        @param method: The HTTP method to for this request, ex: 'GET', 'HEAD',
+            'POST', etc.
+        @type method: L{str}
+
+        @param uri: The relative URI of the resource to request.  For example,
+            C{'/foo/bar?baz=quux'}.
+        @type uri: L{str}
+
+        @param headers: Headers to be sent to the server.  It is important to
+            note that this object does not create any implicit headers.  So it
+            is up to the HTTP Client to add required headers such as 'Host'.
+        @type headers: L{twisted.web.http_headers.Headers}
+
+        @param bodyProducer: C{None} or an L{IBodyProducer} provider which
+            produces the content body to send to the remote HTTP server.
+
+        @param persistent: Set to C{True} when you use HTTP persistent
+            connection, defaults to C{False}.
+        @type persistent: L{bool}
+        """
         self.method = method
         self.uri = uri
         self.headers = headers
@@ -587,6 +595,13 @@ class Request:
                    parsedURI=None):
         """
         Private constructor.
+
+        @param method: See L{__init__}.
+        @param uri: See L{__init__}.
+        @param headers: See L{__init__}.
+        @param bodyProducer: See L{__init__}.
+        @param persistent: See L{__init__}.
+        @param _parsedURI: See L{Request._parsedURI}.
 
         @return: L{Request} instance.
         """
@@ -958,7 +973,7 @@ class Response:
             of the HTTP status code.
 
         @param headers: HTTP response headers.
-        @type: L{Headers}
+        @type headers: L{twisted.web.http_headers.Headers}
 
         @param _transport: The transport which is delivering this response.
         """
