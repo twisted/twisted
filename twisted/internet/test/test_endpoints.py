@@ -1838,10 +1838,11 @@ class ServerStringTests(unittest.TestCase):
         self.assertIsInstance(ctx, ContextType)
 
 
-    # Use a class variable to ensure we use the exactly same endpoint string
-    # except for the chain file itself.
-    SSL_CHAIN_TEMPLATE = ("ssl:1234:privateKey=%s:extraCertChain=%%s"
-                          % (escapedPEMPathName,))
+    if not skipSSL:
+        # Use a class variable to ensure we use the exactly same endpoint
+        # string except for the chain file itself.
+        SSL_CHAIN_TEMPLATE = ("ssl:1234:privateKey=%s:extraCertChain=%%s"
+                              % (escapedPEMPathName,))
 
 
     def test_sslChainLoads(self):

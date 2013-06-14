@@ -935,7 +935,7 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
 
     @param extraCertChain: The path of a file containing one or more
         certificates in PEM format that establish the chain from a root CA to
-        the CA that signed your L{certKey}.
+        the CA that signed your C{certKey}.
     @type extraCertChain: L{bytes}
 
     @return: a 2-tuple of (args, kwargs), describing  the parameters to
