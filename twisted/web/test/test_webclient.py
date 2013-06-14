@@ -1328,3 +1328,18 @@ class URITests(unittest.TestCase):
         """
         uri = client._URI.fromBytes(b'http://example.com/')
         self.assertEqual(b'/', uri.originForm)
+
+
+    def test_externalUnicodeInterference(self):
+        """
+        L{client._URI.fromBytes} parses the scheme, host, and path elements
+        into L{bytes}, even when passed an URL which has previously been passed
+        to L{urlparse} as a L{unicode} string.
+        """
+        goodInput = b'http://example.com/path'
+        badInput = 'http://example.com/path'.decode('ascii')
+        urlparse(badInput)
+        uri = client._URI.fromBytes(goodInput)
+        self.assertIsInstance(uri.scheme, bytes)
+        self.assertIsInstance(uri.host, bytes)
+        self.assertIsInstance(uri.path, bytes)
