@@ -1,0 +1,1 @@
+twisted.words.service.IRCUser now allows NICK commands with non-UTF8 and non-ASCII symbols.
