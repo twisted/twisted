@@ -601,7 +601,7 @@ class Request:
         @param headers: See L{__init__}.
         @param bodyProducer: See L{__init__}.
         @param persistent: See L{__init__}.
-        @param _parsedURI: See L{Request._parsedURI}.
+        @param parsedURI: See L{Request._parsedURI}.
 
         @return: L{Request} instance.
         """
