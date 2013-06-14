@@ -144,9 +144,6 @@ class HTTPPageGetter(http.HTTPClient):
             return
         url = l[0]
         if self.followRedirect:
-            scheme, host, port, path = \
-                _parse(url, defaultPort=self.transport.getPeer().port)
-
             self.factory._redirectCount += 1
             if self.factory._redirectCount >= self.factory.redirectLimit:
                 err = error.InfiniteRedirection(
@@ -373,12 +370,12 @@ class HTTPClientFactory(protocol.ClientFactory):
 
     def setURL(self, url):
         self.url = url
-        scheme, host, port, path = _parse(url)
-        if scheme and host:
-            self.scheme = scheme
-            self.host = host
-            self.port = port
-        self.path = path
+        uri = _URI.fromBytes(url)
+        if uri.scheme and uri.host:
+            self.scheme = uri.scheme
+            self.host = uri.host
+            self.port = uri.port
+        self.path = uri.originForm
 
     def buildProtocol(self, addr):
         p = protocol.ClientFactory.buildProtocol(self, addr)
@@ -539,60 +536,111 @@ class HTTPDownloader(HTTPClientFactory):
 
 
 
-class _URL(tuple):
+class _URI(object):
     """
-    A parsed URL.
+    A URI object.
 
-    At some point this should be replaced with a better URL implementation.
+    @see: U{https://tools.ietf.org/html/draft-ietf-httpbis-p1-messaging-21}
     """
-    def __new__(self, scheme, host, port, path):
-        return tuple.__new__(_URL, (scheme, host, port, path))
+    def __init__(self, scheme, netloc, host, port, path, params, query,
+                 fragment):
+        """
+        @type scheme: L{bytes}
+        @param scheme: URI scheme specifier.
 
+        @type netloc: L{bytes}
+        @param netloc: Network location component.
 
-    def __init__(self, scheme, host, port, path):
+        @type host: L{bytes}
+        @param host: Host name.
+
+        @type port: L{int}
+        @param port: Port number.
+
+        @type path: L{bytes}
+        @param path: Hierarchical path.
+
+        @type params: L{bytes}
+        @param params: Parameters for last path segment.
+
+        @type query: L{bytes}
+        @param query: Query string.
+
+        @type fragment: L{bytes}
+        @param fragment: Fragment identifier.
+        """
         self.scheme = scheme
+        self.netloc = netloc
         self.host = host
         self.port = port
         self.path = path
+        self.params = params
+        self.query = query
+        self.fragment = fragment
 
 
-def _parse(url, defaultPort=None):
-    """
-    Split the given URL into the scheme, host, port, and path.
+    @classmethod
+    def fromBytes(cls, uri, defaultPort=None):
+        """
+        Parse the given URI into a L{_URI}.
 
-    @type url: C{bytes}
-    @param url: An URL to parse.
+        @type uri: C{bytes}
+        @param uri: URI to parse.
 
-    @type defaultPort: C{int} or C{None}
-    @param defaultPort: An alternate value to use as the port if the URL does
-    not include one.
+        @type defaultPort: C{int} or C{None}
+        @param defaultPort: An alternate value to use as the port if the URI
+            does not include one.
 
-    @return: A four-tuple of the scheme, host, port, and path of the URL.  All
-    of these are C{bytes} instances except for port, which is an C{int}.
-    """
-    url = url.strip()
-    parsed = http.urlparse(url)
-    scheme = parsed[0]
-    path = urlunparse((b'', b'') + parsed[2:])
+        @rtype: L{_URI}
+        @return: Parsed URI instance.
+        """
+        uri = uri.strip()
+        scheme, netloc, path, params, query, fragment = http.urlparse(uri)
 
-    if defaultPort is None:
-        if scheme == b'https':
-            defaultPort = 443
-        else:
-            defaultPort = 80
+        if defaultPort is None:
+            if scheme == b'https':
+                defaultPort = 443
+            else:
+                defaultPort = 80
 
-    host, port = parsed[1], defaultPort
-    if b':' in host:
-        host, port = host.split(b':')
-        try:
-            port = int(port)
-        except ValueError:
-            port = defaultPort
+        host, port = netloc, defaultPort
+        if b':' in host:
+            host, port = host.split(b':')
+            try:
+                port = int(port)
+            except ValueError:
+                port = defaultPort
 
-    if path == b'':
-        path = b'/'
+        return cls(scheme, netloc, host, port, path, params, query, fragment)
 
-    return _URL(scheme, host, port, path)
+
+    def toBytes(self):
+        """
+        Assemble the individual parts of the I{URI} into a fully formed I{URI}.
+
+        @rtype: C{bytes}
+        @return: A fully formed I{URI}.
+        """
+        return urlunparse(
+            (self.scheme, self.netloc, self.path, self.params, self.query,
+             self.fragment))
+
+
+    @property
+    def originForm(self):
+        """
+        The absolute I{URI} path including I{URI} parameters, query string and
+        fragment identifier.
+
+        @see: U{https://tools.ietf.org/html/draft-ietf-httpbis-p1-messaging-21#section-5.3}
+        """
+        # The HTTP bis draft says the origin form should not include the
+        # fragment.
+        path = urlunparse(
+            (b'', b'', self.path, self.params, self.query, b''))
+        if path == b'':
+            path = b'/'
+        return path
 
 
 
@@ -641,15 +689,16 @@ def _makeGetterFactory(url, factoryFactory, contextFactory=None,
 
     @return: The factory created by C{factoryFactory}
     """
-    scheme, host, port, path = _parse(url)
+    uri = _URI.fromBytes(url)
     factory = factoryFactory(url, *args, **kwargs)
-    if scheme == b'https':
+    if uri.scheme == b'https':
         from twisted.internet import ssl
         if contextFactory is None:
             contextFactory = ssl.ClientContextFactory()
-        reactor.connectSSL(nativeString(host), port, factory, contextFactory)
+        reactor.connectSSL(
+            nativeString(uri.host), uri.port, factory, contextFactory)
     else:
-        reactor.connectTCP(nativeString(host), port, factory)
+        reactor.connectTCP(nativeString(uri.host), uri.port, factory)
     return factory
 
 
@@ -1137,8 +1186,9 @@ class _AgentBase(object):
         d = self._pool.getConnection(key, endpoint)
         def cbConnected(proto):
             return proto.request(
-                Request(method, requestPath, headers, bodyProducer,
-                        persistent=self._pool.persistent))
+                Request._construct(method, requestPath, headers, bodyProducer,
+                                   persistent=self._pool.persistent,
+                                   parsedURI=parsedURI))
         d.addCallback(cbConnected)
         return d
 
@@ -1247,7 +1297,7 @@ class Agent(_AgentBase):
             given URI is not supported.
         @rtype: L{Deferred}
         """
-        parsedURI = _parse(uri)
+        parsedURI = _URI.fromBytes(uri)
         try:
             endpoint = self._getEndpoint(parsedURI.scheme, parsedURI.host,
                                          parsedURI.port)
@@ -1255,7 +1305,8 @@ class Agent(_AgentBase):
             return defer.fail(Failure())
         key = (parsedURI.scheme, parsedURI.host, parsedURI.port)
         return self._requestWithEndpoint(key, endpoint, method, parsedURI,
-                                         headers, bodyProducer, parsedURI.path)
+                                         headers, bodyProducer,
+                                         parsedURI.originForm)
 
 
 
@@ -1287,8 +1338,8 @@ class ProxyAgent(_AgentBase):
         # ("http-proxy-CONNECT", scheme, host, port), and an endpoint that
         # wraps _proxyEndpoint with an additional callback to do the CONNECT.
         return self._requestWithEndpoint(key, self._proxyEndpoint, method,
-                                         _parse(uri), headers, bodyProducer,
-                                         uri)
+                                         _URI.fromBytes(uri), headers,
+                                         bodyProducer, uri)
 
 
 
@@ -1651,6 +1702,10 @@ class RedirectAgent(object):
             raise ResponseFailed([failure.Failure(err)], response)
         location = self._resolveLocation(uri, locationHeaders[0])
         deferred = self._agent.request(method, location, headers)
+        def _chainResponse(newResponse):
+            newResponse.setPreviousResponse(response)
+            return newResponse
+        deferred.addCallback(_chainResponse)
         return deferred.addCallback(
             self._handleResponse, method, uri, headers, redirectCount + 1)
 

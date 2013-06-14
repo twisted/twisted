@@ -31,6 +31,7 @@ __metaclass__ = type
 from zope.interface import implements
 
 from twisted.python import log
+from twisted.python.components import proxyForInterface
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import IConsumer, IPushProducer
@@ -39,7 +40,7 @@ from twisted.internet.defer import Deferred, succeed, fail, maybeDeferred
 from twisted.internet.defer import CancelledError
 from twisted.internet.protocol import Protocol
 from twisted.protocols.basic import LineReceiver
-from twisted.web.iweb import UNKNOWN_LENGTH, IResponse
+from twisted.web.iweb import UNKNOWN_LENGTH, IResponse, IClientRequest
 from twisted.web.http_headers import Headers
 from twisted.web.http import NO_CONTENT, NOT_MODIFIED
 from twisted.web.http import _DataLoss, PotentialDataLoss
@@ -412,12 +413,13 @@ class HTTPClientParser(HTTPParser):
         except ValueError:
             raise ParseError("non-integer status code", status)
 
-        self.response = Response(
+        self.response = Response._construct(
             self.parseVersion(parts[0]),
             statusCode,
             parts[2],
             self.headers,
-            self.transport)
+            self.transport,
+            self.request)
 
 
     def _finished(self, rest):
@@ -546,31 +548,75 @@ class Request:
     A L{Request} instance describes an HTTP request to be sent to an HTTP
     server.
 
-    @ivar method: The HTTP method to for this request, ex: 'GET', 'HEAD',
-        'POST', etc.
-    @type method: C{str}
+    @ivar method: See L{__init__}.
+    @ivar uri: See L{__init__}.
+    @ivar headers: See L{__init__}.
+    @ivar bodyProducer: See L{__init__}.
+    @ivar persistent: See L{__init__}.
 
-    @ivar uri: The relative URI of the resource to request.  For example,
-        C{'/foo/bar?baz=quux'}.
-    @type uri: C{str}
-
-    @ivar headers: Headers to be sent to the server.  It is important to
-        note that this object does not create any implicit headers.  So it
-        is up to the HTTP Client to add required headers such as 'Host'.
-    @type headers: L{twisted.web.http_headers.Headers}
-
-    @ivar bodyProducer: C{None} or an L{IBodyProducer} provider which
-        produces the content body to send to the remote HTTP server.
-
-    @ivar persistent: Set to C{True} when you use HTTP persistent connection.
-    @type persistent: C{bool}
+    @ivar _parsedURI: Parsed I{URI} for the request, or C{None}.
+    @type _parsedURI: L{_URI}
     """
+    implements(IClientRequest)
+
+
     def __init__(self, method, uri, headers, bodyProducer, persistent=False):
+        """
+        @param method: The HTTP method to for this request, ex: 'GET', 'HEAD',
+            'POST', etc.
+        @type method: L{str}
+
+        @param uri: The relative URI of the resource to request.  For example,
+            C{'/foo/bar?baz=quux'}.
+        @type uri: L{str}
+
+        @param headers: Headers to be sent to the server.  It is important to
+            note that this object does not create any implicit headers.  So it
+            is up to the HTTP Client to add required headers such as 'Host'.
+        @type headers: L{twisted.web.http_headers.Headers}
+
+        @param bodyProducer: C{None} or an L{IBodyProducer} provider which
+            produces the content body to send to the remote HTTP server.
+
+        @param persistent: Set to C{True} when you use HTTP persistent
+            connection, defaults to C{False}.
+        @type persistent: L{bool}
+        """
         self.method = method
         self.uri = uri
         self.headers = headers
         self.bodyProducer = bodyProducer
         self.persistent = persistent
+        self._parsedURI = None
+
+
+    @classmethod
+    def _construct(cls, method, uri, headers, bodyProducer, persistent=False,
+                   parsedURI=None):
+        """
+        Private constructor.
+
+        @param method: See L{__init__}.
+        @param uri: See L{__init__}.
+        @param headers: See L{__init__}.
+        @param bodyProducer: See L{__init__}.
+        @param persistent: See L{__init__}.
+        @param parsedURI: See L{Request._parsedURI}.
+
+        @return: L{Request} instance.
+        """
+        request = cls(method, uri, headers, bodyProducer, persistent)
+        request._parsedURI = parsedURI
+        return request
+
+
+    @property
+    def absoluteURI(self):
+        """
+        The absolute URI of the request as C{bytes}, or C{None} if the
+        absolute URI cannot be determined.
+        """
+        return getattr(self._parsedURI, 'toBytes', lambda: None)()
 
 
     def _writeHeaders(self, transport, TEorCL):
@@ -872,7 +918,7 @@ class Response:
 
     L{Response} should not be subclassed or instantiated.
 
-    @ivar _transport: The transport which is delivering this response.
+    @ivar _transport: See L{__init__}.
 
     @ivar _bodyProtocol: The L{IProtocol} provider to which the body is
         delivered.  C{None} before one has been registered with
@@ -916,6 +962,21 @@ class Response:
     _bodyFinished = False
 
     def __init__(self, version, code, phrase, headers, _transport):
+        """
+        @param version: HTTP version components protocol, major, minor. E.g.
+            C{('HTTP', 1, 1)} to mean C{'HTTP/1.1'}.
+
+        @param code: HTTP status code.
+        @type code: L{int}
+
+        @param phrase: HTTP reason phrase, intended to give a short description
+            of the HTTP status code.
+
+        @param headers: HTTP response headers.
+        @type headers: L{twisted.web.http_headers.Headers}
+
+        @param _transport: The transport which is delivering this response.
+        """
         self.version = version
         self.code = code
         self.phrase = phrase
@@ -923,6 +984,31 @@ class Response:
         self._transport = _transport
         self._bodyBuffer = []
         self._state = 'INITIAL'
+        self.request = None
+        self.previousResponse = None
+
+
+    @classmethod
+    def _construct(cls, version, code, phrase, headers, _transport, request):
+        """
+        Private constructor.
+
+        @param version: See L{__init__}.
+        @param code: See L{__init__}.
+        @param phrase: See L{__init__}.
+        @param headers: See L{__init__}.
+        @param _transport: See L{__init__}.
+        @param request: See L{IResponse.request}.
+
+        @return: L{Response} instance.
+        """
+        response = Response(version, code, phrase, headers, _transport)
+        response.request = proxyForInterface(IClientRequest)(request)
+        return response
+
+
+    def setPreviousResponse(self, previousResponse):
+        self.previousResponse = previousResponse
 
 
     def deliverBody(self, protocol):
