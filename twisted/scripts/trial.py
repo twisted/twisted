@@ -114,6 +114,9 @@ class _BasicOptions(object):
                  "Turn dirty reactor errors into warnings"],
                 ["force-gc", None, "Have Trial run gc.collect() before and "
                  "after each test case."],
+                ["exitfirst", "x",
+                 "Exit after the first non-successful result (cannot be "
+                 "specified along with --jobs)."],
                 ]
 
     optParameters = [
@@ -375,7 +378,8 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
     def postOptions(self):
         _BasicOptions.postOptions(self)
         if self['jobs']:
-            for option in ['debug', 'profile', 'debug-stacktraces']:
+            conflicts = ['debug', 'profile', 'debug-stacktraces', 'exitfirst']
+            for option in conflicts:
                 if self[option]:
                     raise usage.UsageError(
                         "You can't specify --%s when using --jobs" % option)
@@ -485,6 +489,7 @@ def _makeRunner(config):
             else:
                 args['debugger'] = _wrappedPdb()
 
+        args['exitFirst'] = config['exitfirst']
         args['profile'] = config['profile']
         args['forceGarbageCollection'] = config['force-gc']
 

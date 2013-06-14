@@ -60,8 +60,8 @@ the normal test output.
 .SH OPTIONS
 .TP
 \fB-j\fR, \fB--jobs\fR \fInumber\fR
-Set the number of process workers to run. It conflicts with the debug and
-profile options.
+Set the number of process workers to run. It conflicts with the debug,
+exitfirst and profile options.
 .TP
 \fB-b\fR, \fB--debug\fR
 Run the tests in a debugger. If that debugger is 'pdb' (which is the default if
@@ -153,6 +153,11 @@ Set Python's recursion limit. See sys.setrecursionlimit().
 \fB--reporter\fR \fIreporter\fR
 Select the reporter to use for trial's output.  Use the --help-reporters
 option to see a list of valid reporters.
+.TP
+\fB-x\fR, \fB--exitfirst\fR
+Stop the test run after the first test which does not succeed. This includes
+failures, errors, or unexpected successes. Won't work with the --jobs option
+currently.
 .TP
 \fB--spew\fR
 Print an insanely verbose log of everything that happens. Useful when
