@@ -31,6 +31,7 @@ __metaclass__ = type
 from zope.interface import implements
 
 from twisted.python import log
+from twisted.python.components import proxyForInterface
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import IConsumer, IPushProducer
@@ -39,7 +40,7 @@ from twisted.internet.defer import Deferred, succeed, fail, maybeDeferred
 from twisted.internet.defer import CancelledError
 from twisted.internet.protocol import Protocol
 from twisted.protocols.basic import LineReceiver
-from twisted.web.iweb import UNKNOWN_LENGTH, IResponse
+from twisted.web.iweb import UNKNOWN_LENGTH, IResponse, IClientRequest
 from twisted.web.http_headers import Headers
 from twisted.web.http import NO_CONTENT, NOT_MODIFIED
 from twisted.web.http import _DataLoss, PotentialDataLoss
@@ -412,12 +413,13 @@ class HTTPClientParser(HTTPParser):
         except ValueError:
             raise ParseError("non-integer status code", status)
 
-        self.response = Response(
+        self.response = Response._construct(
             self.parseVersion(parts[0]),
             statusCode,
             parts[2],
             self.headers,
-            self.transport)
+            self.transport,
+            self.request)
 
 
     def _finished(self, rest):
@@ -564,13 +566,42 @@ class Request:
 
     @ivar persistent: Set to C{True} when you use HTTP persistent connection.
     @type persistent: C{bool}
+
+    @ivar _parsedURI: Parsed I{URI} for the request, or C{None}.
+    @type _parsedURI: L{_URI}
     """
+    implements(IClientRequest)
+
+
     def __init__(self, method, uri, headers, bodyProducer, persistent=False):
         self.method = method
         self.uri = uri
         self.headers = headers
         self.bodyProducer = bodyProducer
         self.persistent = persistent
+        self._parsedURI = None
+
+
+    @classmethod
+    def _construct(cls, method, uri, headers, bodyProducer, persistent=False,
+                   parsedURI=None):
+        """
+        Private constructor.
+
+        @return: L{Request} instance.
+        """
+        request = cls(method, uri, headers, bodyProducer, persistent)
+        request._parsedURI = parsedURI
+        return request
+
+
+    @property
+    def absoluteURI(self):
+        """
+        The absolute URI of the request as C{bytes}, or C{None} if the
+        absolute URI cannot be determined.
+        """
+        return getattr(self._parsedURI, 'toBytes', lambda: None)()
 
 
     def _writeHeaders(self, transport, TEorCL):
@@ -923,6 +954,24 @@ class Response:
         self._transport = _transport
         self._bodyBuffer = []
         self._state = 'INITIAL'
+        self.request = None
+        self.previousResponse = None
+
+
+    @classmethod
+    def _construct(cls, version, code, phrase, headers, _transport, request):
+        """
+        Private constructor.
+
+        @return: L{Response} instance.
+        """
+        response = Response(version, code, phrase, headers, _transport)
+        response.request = proxyForInterface(IClientRequest)(request)
+        return response
+
+
+    def setPreviousResponse(self, previousResponse):
+        self.previousResponse = previousResponse
 
 
     def deliverBody(self, protocol):

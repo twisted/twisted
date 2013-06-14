@@ -193,11 +193,17 @@
       happens before any of the response body, if there is one, is processed.
       The <code>Response</code> object has several attributes giving the
       response information: its code, version, phrase, and headers, as well as
-      the length of the body to expect.  The <code>Response</code> object also
-      has a method which makes the response body available: <code class="API"
+      the length of the body to expect. In addition to these, the
+      <code>Response</code> also contains a reference to the <code class="API"
+      base="twisted.web.iweb.IClientRequest">request</code> that it is
+      a response to; one particularly useful attribute on the request is <code
+      class="API" base="twisted.web.iweb.IClientRequest">absoluteURI</code>:
+      The absolute URI to which the request was made.  The
+      <code>Response</code> object has a method which makes the response body
+      available: <code class="API"
       base="twisted.web.client.Response">deliverBody</code>.  Using the
-      attributes of the response object and this method, here's an example which
-      displays part of the response to a request:
+      attributes of the response object and this method, here's an example
+      which displays part of the response to a request:
     </p>
 
     <a href="listings/client/response.py" class="py-listing">
@@ -483,6 +489,18 @@ if __name__ == "__main__":
       other words 301 and 302 <code>POST</code> redirects are treated like 303,
       meaning the method is changed to <code>GET</code> before making the redirect
       request.
+    </p>
+
+    <p>
+      As mentioned previously, <code class="API"
+      base="twisted.web.client">Response</code> contains a reference to both
+      the <code class="API"
+      base="twisted.web.iweb.IClientRequest">request</code> that it is a response
+      to, and the previously received <code class="API"
+      base="twisted.web.client.Response">response</code>. In most cases there
+      will not be a previous response, but in the case of
+      <code>RedirectAgent</code> the response history can be obtained by
+      following the previous responses from response to response.
     </p>
 
     <h3>Using a HTTP proxy</h3>

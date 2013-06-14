@@ -1020,6 +1020,59 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         self.assertEqual('192.168.0.1', address)
 
 
+    def test_responseIncludesRequest(self):
+        """
+        L{Response}s returned by L{Agent.request} have a reference to the
+        L{Request} that was originally issued.
+        """
+        uri = b'http://example.com/'
+        agent = self.buildAgentForWrapperTest(self.reactor)
+        d = agent.request('GET', uri)
+
+        # The request should be issued.
+        self.assertEqual(len(self.protocol.requests), 1)
+        req, res = self.protocol.requests.pop()
+        self.assertIsInstance(req, Request)
+
+        resp = client.Response._construct(
+            ('HTTP', 1, 1),
+            200,
+            'OK',
+            client.Headers({}),
+            None,
+            req)
+        res.callback(resp)
+
+        response = self.successResultOf(d)
+        self.assertEqual(
+            (response.request.method, response.request.absoluteURI,
+             response.request.headers),
+            (req.method, req.absoluteURI, req.headers))
+
+
+    def test_requestAbsoluteURI(self):
+        """
+        L{Request.absoluteURI} is the absolute URI of the request.
+        """
+        uri = b'http://example.com/foo;1234?bar#frag'
+        agent = self.buildAgentForWrapperTest(self.reactor)
+        agent.request(b'GET', uri)
+
+        # The request should be issued.
+        self.assertEqual(len(self.protocol.requests), 1)
+        req, res = self.protocol.requests.pop()
+        self.assertIsInstance(req, Request)
+        self.assertEquals(req.absoluteURI, uri)
+
+
+    def test_requestMissingAbsoluteURI(self):
+        """
+        L{Request.absoluteURI} is C{None} if L{Request._parsedURI} is C{None}.
+        """
+        request = client.Request(b'FOO', b'/', client.Headers(), None)
+        self.assertIdentical(request.absoluteURI, None)
+
+
 
 class HTTPConnectionPoolRetryTests(unittest.TestCase, FakeReactorAndConnectMixin):
     """
@@ -1960,7 +2013,9 @@ class _RedirectAgentTestsMixin(object):
         res.callback(response)
 
         self.assertEqual(0, len(self.protocol.requests))
-        self.assertIdentical(response, self.successResultOf(deferred))
+        result = self.successResultOf(deferred)
+        self.assertIdentical(response, result)
+        self.assertIdentical(result.previousResponse, None)
 
 
     def _testRedirectDefault(self, code):
@@ -2108,18 +2163,18 @@ class _RedirectAgentTestsMixin(object):
         agent = self.buildAgentForWrapperTest(self.reactor)
         redirectAgent = client.RedirectAgent(agent, 1)
 
-        deferred = redirectAgent.request('GET', 'http://example.com/foo')
+        deferred = redirectAgent.request(b'GET', b'http://example.com/foo')
 
         req, res = self.protocol.requests.pop()
 
         headers = http_headers.Headers(
-            {'location': ['http://example.com/bar']})
-        response = Response(('HTTP', 1, 1), 302, 'OK', headers, None)
+            {b'location': [b'http://example.com/bar']})
+        response = Response((b'HTTP', 1, 1), 302, b'OK', headers, None)
         res.callback(response)
 
         req2, res2 = self.protocol.requests.pop()
 
-        response2 = Response(('HTTP', 1, 1), 302, 'OK', headers, None)
+        response2 = Response((b'HTTP', 1, 1), 302, b'OK', headers, None)
         res2.callback(response2)
 
         fail = self.failureResultOf(deferred, client.ResponseFailed)
@@ -2210,6 +2265,33 @@ class _RedirectAgentTestsMixin(object):
         self._testRedirectURI(
             'http://example.com/foo/bar', '//foo.com:81/baz',
             'http://foo.com:81/baz')
+
+
+    def test_responseHistory(self):
+        """
+        L{Response.response} references the previous L{Response} from
+        a redirect, or C{None} if there was no previous response.
+        """
+        agent = self.buildAgentForWrapperTest(self.reactor)
+        redirectAgent = client.RedirectAgent(agent)
+
+        deferred = redirectAgent.request(b'GET', b'http://example.com/foo')
+
+        redirectReq, redirectRes = self.protocol.requests.pop()
+
+        headers = http_headers.Headers(
+            {b'location': [b'http://example.com/bar']})
+        redirectResponse = Response((b'HTTP', 1, 1), 302, b'OK', headers, None)
+        redirectRes.callback(redirectResponse)
+
+        req, res = self.protocol.requests.pop()
+
+        response = Response((b'HTTP', 1, 1), 200, b'OK', headers, None)
+        res.callback(response)
+
+        finalResponse = self.successResultOf(deferred)
+        self.assertIdentical(finalResponse.previousResponse, redirectResponse)
+        self.assertIdentical(redirectResponse.previousResponse, None)
 
 
 

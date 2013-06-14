@@ -1,0 +1,1 @@
+The new attributes twisted.web.iweb.IResponse.request and twisted.web.iweb.IResponse.response are references to the related Request and previous Response (for redirections) respectively; a convenience attribute IResponse.absoluteURI provides access to the URI that produced the response.
