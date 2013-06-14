@@ -1203,14 +1203,15 @@ class URITests(unittest.TestCase):
         Parse the path from a I{URI}.
         """
         uri = b'http://example.com/foo/bar'
+        parsed = client._URI.fromBytes(uri)
         self.assertURIEquals(
-            client._URI.fromBytes(uri),
+            parsed,
             scheme=b'http',
             netloc=b'example.com',
             host=b'example.com',
             port=80,
             path=b'/foo/bar')
-        self.assertEqual(uri, client._URI.fromBytes(uri).toBytes())
+        self.assertEqual(uri, parsed.toBytes())
 
 
     def test_noPath(self):
@@ -1218,14 +1219,15 @@ class URITests(unittest.TestCase):
         The path of a I{URI} that has no path is the empty string.
         """
         uri = b'http://example.com'
+        parsed = client._URI.fromBytes(uri)
         self.assertURIEquals(
-            client._URI.fromBytes(uri),
+            parsed,
             scheme=b'http',
             netloc=b'example.com',
             host=b'example.com',
             port=80,
             path=b'')
-        self.assertEqual(uri, client._URI.fromBytes(uri).toBytes())
+        self.assertEqual(uri, parsed.toBytes())
 
 
     def test_emptyPath(self):
@@ -1247,15 +1249,16 @@ class URITests(unittest.TestCase):
         Parse I{URI} parameters from a I{URI}.
         """
         uri = b'http://example.com/foo/bar;param'
+        parsed = client._URI.fromBytes(uri)
         self.assertURIEquals(
-            client._URI.fromBytes(uri),
+            parsed,
             scheme=b'http',
             netloc=b'example.com',
             host=b'example.com',
             port=80,
             path=b'/foo/bar',
             params=b'param')
-        self.assertEqual(uri, client._URI.fromBytes(uri).toBytes())
+        self.assertEqual(uri, parsed.toBytes())
 
 
     def test_query(self):
@@ -1263,8 +1266,9 @@ class URITests(unittest.TestCase):
         Parse the query string from a I{URI}.
         """
         uri = b'http://example.com/foo/bar;param?a=1&b=2'
+        parsed = client._URI.fromBytes(uri)
         self.assertURIEquals(
-            client._URI.fromBytes(uri),
+            parsed,
             scheme=b'http',
             netloc=b'example.com',
             host=b'example.com',
@@ -1272,7 +1276,7 @@ class URITests(unittest.TestCase):
             path=b'/foo/bar',
             params=b'param',
             query=b'a=1&b=2')
-        self.assertEqual(uri, client._URI.fromBytes(uri).toBytes())
+        self.assertEqual(uri, parsed.toBytes())
 
 
     def test_fragment(self):
@@ -1280,8 +1284,9 @@ class URITests(unittest.TestCase):
         Parse the fragment identifier from a I{URI}.
         """
         uri = b'http://example.com/foo/bar;param?a=1&b=2#frag'
+        parsed = client._URI.fromBytes(uri)
         self.assertURIEquals(
-            client._URI.fromBytes(uri),
+            parsed,
             scheme=b'http',
             netloc=b'example.com',
             host=b'example.com',
@@ -1290,7 +1295,7 @@ class URITests(unittest.TestCase):
             params=b'param',
             query=b'a=1&b=2',
             fragment='frag')
-        self.assertEqual(uri, client._URI.fromBytes(uri).toBytes())
+        self.assertEqual(uri, parsed.toBytes())
 
 
     def test_originForm(self):
