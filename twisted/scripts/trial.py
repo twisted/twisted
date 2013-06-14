@@ -115,7 +115,8 @@ class _BasicOptions(object):
                 ["force-gc", None, "Have Trial run gc.collect() before and "
                  "after each test case."],
                 ["exitfirst", "x",
-                 "Exit after the first non-successful result."],
+                 "Exit after the first non-successful result (cannot be "
+                 "specified along with --jobs)."],
                 ]
 
     optParameters = [
