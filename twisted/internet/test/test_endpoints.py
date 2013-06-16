@@ -1838,11 +1838,9 @@ class ServerStringTests(unittest.TestCase):
         self.assertIsInstance(ctx, ContextType)
 
 
-    if not skipSSL:
-        # Use a class variable to ensure we use the exactly same endpoint
-        # string except for the chain file itself.
-        SSL_CHAIN_TEMPLATE = ("ssl:1234:privateKey=%s:extraCertChain=%%s"
-                              % (escapedPEMPathName,))
+    # Use a class variable to ensure we use the exactly same endpoint string
+    # except for the chain file itself.
+    SSL_CHAIN_TEMPLATE = "ssl:1234:privateKey=%s:extraCertChain=%s"
 
 
     def test_sslChainLoads(self):
@@ -1852,7 +1850,8 @@ class ServerStringTests(unittest.TestCase):
         """
         server = endpoints.serverFromString(
             object(),
-            self.SSL_CHAIN_TEMPLATE % (escapedChainPathName,)
+            self.SSL_CHAIN_TEMPLATE % (escapedPEMPathName,
+                                       escapedChainPathName,)
         )
         # Test chain file is just a concatenation of thing1.pem and thing2.pem
         # so we can check that loading has succeeded and order has been
@@ -1883,7 +1882,7 @@ class ServerStringTests(unittest.TestCase):
             ValueError,
             endpoints.serverFromString,
             object(),
-            self.SSL_CHAIN_TEMPLATE % (fp.path,)
+            self.SSL_CHAIN_TEMPLATE % (escapedPEMPathName, fp.path,)
         )
 
 
