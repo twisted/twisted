@@ -1,0 +1,1 @@
+twisted.mail.smtp.ESMTPClient no longer tries to use a STARTTLS capability offered by a server after TLS has already been negotiated.
