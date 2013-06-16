@@ -430,7 +430,7 @@ class SSHCommandClientEndpointTestsMixin(object):
         server, client, pump = self.finishConnection()
 
         protocol = self.successResultOf(connected)
-        self.assertNotIdentical(None, protocol.transport)
+        self.assertIsNot(None, protocol.transport)
 
 
     def test_dataReceived(self):
@@ -956,7 +956,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
             self.factory, self.reactor.tcpClients[0][2])
 
         protocol = self.successResultOf(connected)
-        self.assertNotIdentical(None, protocol.transport)
+        self.assertIsNot(None, protocol.transport)
 
 
     def test_agentAuthentication(self):
@@ -994,7 +994,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
             pump.pump()
 
         protocol = self.successResultOf(connected)
-        self.assertNotIdentical(None, protocol.transport)
+        self.assertIsNot(None, protocol.transport)
 
 
     def test_loseConnection(self):
@@ -1130,7 +1130,7 @@ class ExistingConnectionHelperTests(TestCase):
         """
         result = object()
         helper = _ExistingConnectionHelper(result)
-        self.assertIdentical(
+        self.assertIs(
             result, self.successResultOf(helper.secureConnection()))
 
 
@@ -1167,7 +1167,7 @@ class NewConnectionHelperTests(TestCase):
         helper = _NewConnectionHelper(
             None, None, None, None, None, None, None, None, None, None)
 
-        self.assertIdentical(result, helper.knownHosts)
+        self.assertIs(result, helper.knownHosts)
 
 
     def test_readExisting(self):
