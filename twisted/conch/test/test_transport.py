@@ -1474,8 +1474,8 @@ class ServerSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         self.proto.nextEncryptions = transport.SSHCiphers('none', 'none',
                                                           'none', 'none')
         self.proto.ssh_NEWKEYS('')
-        self.assertIs(
-            self.proto.currentEncryptions, self.proto.nextEncryptions)
+        self.assertIs(self.proto.currentEncryptions,
+                      self.proto.nextEncryptions)
         self.assertIs(self.proto.outgoingCompression, None)
         self.assertIs(self.proto.incomingCompression, None)
         self.proto.outgoingCompressionType = 'zlib'
@@ -1738,15 +1738,15 @@ class ClientSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         self.proto.nextEncryptions = transport.SSHCiphers(
             'none', 'none', 'none', 'none')
         self.simulateKeyExchange('AB', 'CD')
-        self.assertIsNot(
-            self.proto.currentEncryptions, self.proto.nextEncryptions)
+        self.assertIsNot(self.proto.currentEncryptions,
+                         self.proto.nextEncryptions)
 
         self.proto.nextEncryptions = MockCipher()
         self.proto.ssh_NEWKEYS('')
         self.assertIs(self.proto.outgoingCompression, None)
         self.assertIs(self.proto.incomingCompression, None)
-        self.assertIs(
-            self.proto.currentEncryptions, self.proto.nextEncryptions)
+        self.assertIs(self.proto.currentEncryptions,
+                      self.proto.nextEncryptions)
         self.assertTrue(secure[0])
         self.proto.outgoingCompressionType = 'zlib'
         self.simulateKeyExchange('AB', 'GH')

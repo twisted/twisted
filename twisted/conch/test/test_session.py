@@ -604,8 +604,8 @@ class SessionInterfaceTestCase(unittest.TestCase):
             'subsystem', common.NS('TestSubsystem') + 'data')
         self.assertTrue(ret)
         self.assertIsInstance(self.session.client, protocol.ProcessProtocol)
-        self.assertIs(
-            self.session.client.transport.proto, self.session.avatar.subsystem)
+        self.assertIs(self.session.client.transport.proto,
+                      self.session.avatar.subsystem)
 
 
 
@@ -687,8 +687,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
         self.assertSessionIsStubSession()
         self.assertIsInstance(self.session.client,
                               session.SSHSessionProcessProtocol)
-        self.assertIs(
-            self.session.session.shellProtocol, self.session.client)
+        self.assertIs(self.session.session.shellProtocol, self.session.client)
         # doesn't get a shell the second time
         self.assertFalse(self.session.requestReceived('shell', ''))
         self.assertRequestRaisedRuntimeError()
