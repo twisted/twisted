@@ -1539,10 +1539,21 @@ class SSLTestCase(unittest.TestCase):
         self.clientProtocol.getMailFrom = lambda: "test@example.org"
 
 
-    def test_requireTransportSecurityOverSSL(self):
+    def _requireTransportSecurityOverSSLTest(self, capabilities):
         """
-        When C{requireTransportSecurity} is C{True} and the client is connected
-        over an SSL transport, mail may be delivered.
+        Verify that when L{smtp.ESMTPClient} connects to a server over a
+        transport providing L{ISSLTransport}, C{requireTransportSecurity} is
+        C{True}, and it is presented with the given capabilities, it will try
+        to send its mail and not first attempt to negotiate TLS using the
+        I{STARTTLS} protocol action.
+
+        @param capabilities: Bytes to include in the test server's capability
+            response.  These must be formatted exactly as required by the
+            protocol, including a line which ends the capability response.
+        @type param: L{bytes}
+
+        @raise: C{self.failException} if the behavior of C{self.clientProtocol}
+            is not as described.
         """
         transport = StringTransport()
         directlyProvides(transport, interfaces.ISSLTransport)
@@ -1553,15 +1564,21 @@ class SSLTestCase(unittest.TestCase):
         transport.clear()
 
         # Tell the client about the server's capabilities
-        self.clientProtocol.dataReceived(
-            self.EHLO_RESPONSE +
-            "250 AUTH LOGIN\r\n")
+        self.clientProtocol.dataReceived(self.EHLO_RESPONSE + capabilities)
 
         # The client should now try to send a message - without first trying to
         # negotiate TLS, since the transport is already secure.
         self.assertEqual(
-            "MAIL FROM:<test@example.org>\r\n",
+            b"MAIL FROM:<test@example.org>\r\n",
             transport.value())
+
+
+    def test_requireTransportSecurityOverSSL(self):
+        """
+        When C{requireTransportSecurity} is C{True} and the client is connected
+        over an SSL transport, mail may be delivered.
+        """
+        self._requireTransportSecurityOverSSLTest(b"250 AUTH LOGIN\r\n")
 
 
     def test_requireTransportSecurityTLSOffered(self):
@@ -1585,6 +1602,17 @@ class SSLTestCase(unittest.TestCase):
 
         # The client should try to start TLS before sending the message.
         self.assertEqual("STARTTLS\r\n", transport.value())
+
+
+    def test_requireTransportSecurityTLSOfferedOverSSL(self):
+        """
+        When C{requireTransportSecurity} is C{True} and the client is connected
+        over an SSL transport, if the server offers the I{STARTTLS}
+        extension, it is not used before mail is delivered.
+        """
+        self._requireTransportSecurityOverSSLTest(
+            b"250-AUTH LOGIN\r\n"
+            b"250 STARTTLS\r\n")
 
 
     def test_requireTransportSecurityTLSNotOffered(self):
