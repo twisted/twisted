@@ -1882,7 +1882,10 @@ class ServerStringTests(unittest.TestCase):
             ValueError,
             endpoints.serverFromString,
             object(),
-            self.SSL_CHAIN_TEMPLATE % (escapedPEMPathName, fp.path,)
+            self.SSL_CHAIN_TEMPLATE % (
+                escapedPEMPathName,
+                endpoints.quoteStringArgument(fp.path),
+            )
         )
 
 
