@@ -246,7 +246,12 @@ class _PollableWritePipe(_PollableResource):
         """
         if unicode in map(type, seq):
             raise TypeError("Unicode not allowed in output buffer.")
+        if self.disconnecting:
+            return
         self.outQueue.extend(seq)
+        # check for output buffer full
+        if sum(map(len, self.outQueue)) > FULL_BUFFER_SIZE:
+            self.bufferFull()
 
 
     def write(self, data):
@@ -263,6 +268,7 @@ class _PollableWritePipe(_PollableResource):
         if self.disconnecting:
             return
         self.outQueue.append(data)
+        # check for output buffer full
         if sum(map(len, self.outQueue)) > FULL_BUFFER_SIZE:
             self.bufferFull()
 
