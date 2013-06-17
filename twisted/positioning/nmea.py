@@ -16,7 +16,7 @@ U{https://en.wikipedia.org/wiki/NMEA_0183}.
 The official standard may be obtained through the NMEA's website:
 U{http://www.nmea.org/content/nmea_standards/nmea_0183_v_410.asp}.
 
-@since: 13.1
+@since: 13.2
 """
 import itertools
 import operator

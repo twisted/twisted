@@ -4,5 +4,5 @@
 """
 The Twisted positioning framework.
 
-@since: 13.1
+@since: 13.2
 """

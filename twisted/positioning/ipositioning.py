@@ -1,9 +1,9 @@
-# Copyright (c) 2009-2011 Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 """
 Positioning interfaces.
 
-@since: 13.1
+@since: 13.2
 """
 from zope.interface import Attribute, Interface
 
