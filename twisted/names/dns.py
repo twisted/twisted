@@ -640,19 +640,42 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
         h = RRHeader()
         h.decode(strio, length)
+        h.payload = UnknownRecord(readPrecisely(strio, h.rdlength))
 
-        self.udpPayloadSize = h.cls
-        self.extendedRCODE = h.ttl >> 24
-        self.version = h.ttl >> 16 & 0xff
-        self.dnssecOK = (h.ttl & 0xffff) >> 15
+        newOptHeader = self.fromRRHeader(h)
+
+        # XXX: Is this safe?
+        self.__dict__ = newOptHeader.__dict__
+
+
+    @classmethod
+    def fromRRHeader(cls, rrHeader):
+        """
+        Construct a new L{_OPTHeader} from the attributes and payload
+        of an existing L{RRHeader} instance.
+
+        @type rrHeader: L{RRHeader}
+        @param rrHeader: An L{RRHeader} instance containing an
+            L{UnknownRecord} payload.
+        """
+        options = None
+        if rrHeader.payload is not None:
+            options = []
+            optionsBytes = BytesIO(rrHeader.payload.data)
+            optionsBytesLength = len(rrHeader.payload.data)
+            while optionsBytes.tell() < optionsBytesLength:
+                o = _OPTVariableOption()
+                o.decode(optionsBytes)
+                options.append(o)
 
         # Decode variable options if present
-        self.options = []
-        optionsBytes = BytesIO(readPrecisely(strio, h.rdlength))
-        while optionsBytes.tell() < h.rdlength:
-            o = _OPTVariableOption()
-            o.decode(optionsBytes)
-            self.options.append(o)
+        return cls(
+            udpPayloadSize=rrHeader.cls,
+            extendedRCODE=rrHeader.ttl >> 24,
+            version=rrHeader.ttl >> 16 & 0xff,
+            dnssecOK=(rrHeader.ttl & 0xffff) >> 15,
+            options=options
+            )
 
 
 

@@ -2027,6 +2027,33 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             )
 
 
+    def test_fromRRHeader(self):
+        """
+        L{_OPTHeader.fromRRHeader} accepts an L{RRHeader} instance and
+        returns an L{_OPTHeader} instance whose attribute values have
+        been derived from the C{cls}, C{ttl} and C{payload} attributes
+        of the original header.
+        """
+        h = dns.RRHeader(
+            b'example.com',
+            type=dns.OPT,
+            cls=0xffff,
+            ttl=(0xfe << 24
+                 | 0xfd << 16
+                 | True << 15),
+            payload=dns.UnknownRecord(b'\xff\xff\x00\x03abc'))
+
+        o = dns._OPTHeader.fromRRHeader(h)
+        self.assertEqual(o.name, dns.Name(b''))
+        self.assertEqual(o.type, dns.OPT)
+        self.assertEqual(o.udpPayloadSize, 0xffff)
+        self.assertEqual(o.extendedRCODE, 0xfe)
+        self.assertEqual(o.version, 0xfd)
+        self.assertEqual(o.dnssecOK, True)
+        self.assertEqual(
+            o.options, [dns._OPTVariableOption(code=0xffff, data=b'abc')])
+
+
     def test_repr(self):
         """
         L{dns._OPTHeader.__repr__} displays the name and type and all
