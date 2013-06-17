@@ -1,3 +1,11 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 # This is an auto-generated file. Do not edit it.
+
+"""
+Provides Twisted version information.
+"""
+
 from twisted.python import versions
-version = versions.Version('twisted.lore', 13, 0, 0)
+version = versions.Version('twisted.lore', 13, 1, 0, prerelease=1)
