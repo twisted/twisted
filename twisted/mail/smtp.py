@@ -1372,17 +1372,31 @@ class ESMTPClient(SMTPClient):
 
         @return: C{None}
         """
-        sslTransport = ISSLTransport.providedBy(self.transport)
 
-        if self.context and 'STARTTLS' in items:
+        # has ssl        can ssl         must ssl       result
+        #   t               t               t           authenticate
+        #   t               t               f           authenticate
+        #   t               f               t           authenticate
+        #   t               f               f           authenticate
+
+        #   f               t               t           STARTTLS
+        #   f               t               f           STARTTLS
+        #   f               f               t           esmtpTLSRequired
+        #   f               f               f           authenticate
+
+        hasTLS = ISSLTransport.providedBy(self.transport)
+        canTLS = self.context and b"STARTTLS" in items
+        mustTLS = self.requireTransportSecurity
+
+        if hasTLS or not (canTLS or mustTLS):
+            self.authenticate(code, resp, items)
+        elif canTLS:
             self._expected = [220]
             self._okresponse = self.esmtpState_starttls
             self._failresponse = self.esmtpTLSFailed
             self.sendLine('STARTTLS')
-        elif self.requireTransportSecurity and not sslTransport:
-            self.esmtpTLSRequired()
         else:
-            self.authenticate(code, resp, items)
+            self.esmtpTLSRequired()
 
 
     def esmtpState_starttls(self, code, resp):
