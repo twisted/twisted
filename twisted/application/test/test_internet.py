@@ -431,12 +431,12 @@ class LogCatcher(object):
 
 
 class ReconnectingClientServiceTestCase(TestCase):
-    def make_reconnector(self, **kw):
+    def make_reconnector(self, continueTrying=None, **kw):
         e = ClientTestEndpoint()
         f = object()
-        s = ReconnectingClientService(e, f)
-        for key, value in kw.items():
-            setattr(s, key, value)
+        s = ReconnectingClientService(e, f, **kw)
+        if continueTrying is not None:
+            s.continueTrying = continueTrying
         self.addCleanup(s.stopService)
         return s, e, f
 
@@ -656,7 +656,7 @@ class ReconnectingClientServiceTestCase(TestCase):
 
 
     def test_resetDelay(self):
-        initial_delay = ReconnectingClientService.initialDelay
+        initial_delay = 1.0
         s = ReconnectingClientService(object(), object())
         s.delay, s.retries = initial_delay + 1, 5
         s.resetDelay()

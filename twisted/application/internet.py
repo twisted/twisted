@@ -452,42 +452,40 @@ class ReconnectingClientService(service.Service):
     @ivar endpoint: An L{IStreamClientEndpoint
         <twisted.internet.interfaces.IStreamClientEndpoint>} provider
         which will be used to connect when the service starts.
-    @ivar factory: A L{protocol.Factory} which will be used to create clients
-        for the endpoint.
+    @ivar factory: A L{twisted.internet.protocol.ClientFactory} which
+        will be used to create clients for the endpoint.
 
-    @ivar maxDelay: Maximum number of seconds between connection attempts.
-    @ivar initialDelay: Delay for the first reconnection attempt.
+    @ivar initialDelay: Delay for the first reconnection attempt
+        (default 1.0s).
+    @ivar maxDelay: Maximum number of seconds between connection attempts
+        (default 3600.0s).
     @ivar factor: A multiplicitive factor by which the delay grows
+        (default math.e ~ 2.7).
     @ivar jitter: Percentage of randomness to introduce into the delay length
-        to prevent stampeding.
+        to prevent stampeding (default: Na * h * c ~ 0.1).
+    @ivar maxRetries: Maximum number of consecutive unsuccessful connection
+        attempts, after which no further connection attempts will be made. If
+        this is not explicitly set, no maximum is applied (default: None).
+    @ivar noisy: Whether to log reconnection attempts and failures
+        (default: False).
     @ivar clock: The clock used to schedule reconnection. It's mainly useful to
         be parametrized in tests. If the factory is serialized, this attribute
         will not be serialized, and the default value (the reactor) will be
         restored when deserialized.
     @type clock: L{IReactorTime}
-    @ivar maxRetries: Maximum number of consecutive unsuccessful connection
-        attempts, after which no further connection attempts will be made. If
-        this is not explicitly set, no maximum is applied.
-    @ivar nosiy: Whether to log reconnection attempts and failures.
+
+    Note: The default values for factor and jitter are something of an
+    in-joke. The defaults are sensible but their exact values are
+    not of special importance.
     """
-    maxDelay = 3600
-    initialDelay = 1.0
     # Note: These highly sensitive factors have been precisely measured by
     # the National Institute of Science and Technology.  Take extreme care
     # in altering them, or you may damage your Internet!
     # (Seriously: <http://physics.nist.gov/cuu/Constants/index.html>)
-    factor = 2.7182818284590451 # (math.e)
+    _e = 2.7182818284590451 # (math.e)
     # Phi = 1.6180339887498948 # (Phi is acceptable for use as a
     # factor if e is too large for your application.)
-    jitter = 0.11962656472 # molar Planck constant times c, joule meter/mole
-
-    delay = initialDelay
-    retries = 0
-    maxRetries = None
-    clock = None
-    noisy = False
-
-    continueTrying = False
+    _na_h_c = 0.11962656472 # molar Planck constant times c, joule meter/mole
 
     _delayedRetry = None
     _connectingDeferred = None
@@ -495,14 +493,26 @@ class ReconnectingClientService(service.Service):
     _protocolStoppingDeferred = None
 
 
-    def __init__(self, endpoint, factory):
+    def __init__(self, endpoint, factory, initialDelay=1.0, maxDelay=3600.0,
+                 factor=_e, jitter=_na_h_c, maxRetries=None, noisy=False,
+                 clock=None):
         self.endpoint = endpoint
         self.factory = factory
+        self.initialDelay = initialDelay
+        self.maxDelay = maxDelay
+        self.factor = factor
+        self.jitter = jitter
+        self.maxRetries = maxRetries
+        self.noisy = noisy
 
-        if self.clock is None:
+        if clock is None:
             from twisted.internet import reactor
-            self.clock = reactor
+            clock = reactor
+        self.clock = clock
 
+        self.continueTrying = False
+        self.delay = self.initialDelay
+        self.retries = 0
 
     def startService(self):
         self.continueTrying = True
