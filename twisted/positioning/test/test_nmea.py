@@ -54,97 +54,73 @@ class NMEATestReceiver(object):
 
 
 
-class NMEACallbackTestProtocol(nmea.NMEAProtocol):
-    """
-    An NMEA protocol with a bunch of callbacks that remembers when
-    those callbacks have been called.
-    """
-    def __init__(self):
-        nmea.NMEAProtocol.__init__(self, None)
-
-        for sentenceType in nmea.NMEAProtocol._SENTENCE_CONTENTS:
-            self._createCallback(sentenceType)
-
-        self.clear()
-
-
-    def clear(self):
-        """
-        Forgets all of the called methods, by setting C{self.called} to
-        C{None}.
-        """
-        self.called = {}
-
-
-    SENTENCE_TYPES = list(nmea.NMEAProtocol._SENTENCE_CONTENTS)
-
-
-    def _createCallback(self, sentenceType):
-        """
-        Creates a callback for an NMEA sentence.
-        """
-        def callback(sentence):
-            self.called[sentenceType] = True
-
-        setattr(self, "nmea_" + sentenceType, callback)
-
-
-
 class CallbackTests(TestCase):
     """
-    Tests if callbacks on NMEA protocols are correctly called.
+    Tests if the NMEA protocol correctly calls its sentence callback.
+
+    @ivar protocol: The NMEA protocol under test.
+    @type protocol: L{nmea.NMEAProtocol}
+    @ivar sentenceTypes: The set of sentence types of all sentences the test's
+        sentence callback function has been called with.
+    @type sentenceTypes: C{set}
     """
     def setUp(self):
-        self.callbackProtocol = NMEACallbackTestProtocol()
+        receiver = NMEATestReceiver()
+        self.protocol = nmea.NMEAProtocol(receiver, self._sentenceCallback)
+        self.sentenceTypes = set()
+
+
+    def _sentenceCallback(self, sentence):
+        """
+        Remembers that a sentence of this type was fired.
+        """
+        self.sentenceTypes.add(sentence.type)
 
 
     def test_callbacksCalled(self):
         """
         The correct callbacks fire, and that *only* those fire.
         """
-        sentencesByType = {'GPGGA': ['$GPGGA*56'],
-                           'GPGLL': ['$GPGLL*50'],
-                           'GPGSA': ['$GPGSA*42'],
-                           'GPGSV': ['$GPGSV*55'],
-                           'GPHDT': ['$GPHDT*4f'],
-                           'GPRMC': ['$GPRMC*4b']}
+        sentencesByType = {
+            'GPGGA': ['$GPGGA*56'],
+            'GPGLL': ['$GPGLL*50'],
+            'GPGSA': ['$GPGSA*42'],
+            'GPGSV': ['$GPGSV*55'],
+            'GPHDT': ['$GPHDT*4f'],
+            'GPRMC': ['$GPRMC*4b']
+        }
 
-        for calledSentenceType in sentencesByType:
-            for sentence in sentencesByType[calledSentenceType]:
-                self.callbackProtocol.lineReceived(sentence)
-                called = self.callbackProtocol.called
-
-                for sentenceType in NMEACallbackTestProtocol.SENTENCE_TYPES:
-                    if sentenceType == calledSentenceType:
-                        self.assertEqual(called[sentenceType], True)
-                    else:
-                        self.assertNotIn(sentenceType, called)
-
-                self.callbackProtocol.clear()
+        for sentenceType, sentences in sentencesByType.iteritems():
+            for sentence in sentences:
+                self.protocol.lineReceived(sentence)
+                self.assertEqual(self.sentenceTypes, set([sentenceType]))
+                self.sentenceTypes.clear()
 
 
 
-class AttributeErrorRaisingNMEAProtocol(nmea.NMEAProtocol):
+
+
+
+class BrokenSentenceCallbackTests(TestCase):
     """
-    An NMEA protocol that raises AttributeError in a callback.
-    """
-    def nmea_GPGGA(self, sentence):
-        raise AttributeError()
-
-
-
-class BrokenNMEAProtocolTests(TestCase):
-    """
-    Tests for broken NMEA subclasses.
+    Tests for broken NMEA sentence callbacks.
     """
     def setUp(self):
-        self.protocol = AttributeErrorRaisingNMEAProtocol(None)
+        receiver = NMEATestReceiver()
+        self.protocol = nmea.NMEAProtocol(receiver, self._sentenceCallback)
+
+
+    def _sentenceCallback(self, sentence):
+        """
+        Raises C{AttributeError}.
+        """
+        raise AttributeError("ERROR!!!")
 
 
     def test_dontSwallowCallbackExceptions(self):
         """
-        An C{AttributeError}s in a sentence callback of an
-        C{NMEAProtocol} don't get accidentally swallowed.
+        An C{AttributeError} in the sentence callback of an C{NMEAProtocol}
+        doesn't get swallowed.
         """
         lineReceived = self.protocol.lineReceived
         self.assertRaises(AttributeError, lineReceived, '$GPGGA*56')

@@ -155,14 +155,19 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
         sentence type (in order, obviously).
     @type _SENTENCE_CONTENTS: C{dict} of bytestrings to C{list}s of C{str}
     """
-    def __init__(self, receiver):
+    def __init__(self, receiver, sentenceCallback=None):
         """
         Initializes an NMEAProtocol.
 
         @param receiver: A receiver for NMEAProtocol sentence objects.
         @type receiver: L{INMEAReceiver}
+        @param sentenceCallback: A function that will be called with a new
+            L{NMEASentence} when it is created. Useful for massaging data from
+            particularly misbehaving NMEA receivers.
+        @type sentenceCallback: unary callable
         """
         self.receiver = receiver
+        self.sentenceCallback = sentenceCallback
 
 
     def lineReceived(self, rawSentence):
@@ -191,9 +196,8 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
 
         sentence = NMEASentence(sentenceData)
 
-        callback = getattr(self, "nmea_" + sentenceType, None)
-        if callback is not None:
-            callback(sentence)
+        if self.sentenceCallback is not None:
+            self.sentenceCallback(sentence)
 
         if self.receiver is not None:
             self.receiver.sentenceReceived(sentence)
