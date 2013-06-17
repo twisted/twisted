@@ -552,7 +552,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
 
-    @since: 13.1
+    @since: 13.2
     """
     showAttributes = (
         ('name', str), 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
@@ -561,8 +561,6 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     compareAttributes = (
         'name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
         'dnssecOK', 'options')
-
-    _fmt = "!HH2BHH"
 
     name = Name(b'')
     type = OPT
@@ -597,10 +595,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.extendedRCODE = extendedRCODE
         self.version = version
         self.dnssecOK = dnssecOK
-        if options is None:
-            self.options = []
-        else:
-            self.options = options
+        self.options = options or []
 
 
     def encode(self, strio, compDict=None):
@@ -614,22 +609,21 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @type compDict: L{dict}
         @param compDict: Not used.
         """
-        self.name.encode(strio, compDict)
-
         b = BytesIO()
         for o in self.options:
             o.encode(b)
         optionBytes = b.getvalue()
 
-        strio.write(
-            struct.pack(
-                self._fmt,
-                self.type,
-                self.udpPayloadSize,
-                self.extendedRCODE,
-                self.version,
-                self.dnssecOK << 15,
-                len(optionBytes)) + optionBytes)
+        return RRHeader(
+            name=self.name.name,
+            type=self.type,
+            cls=self.udpPayloadSize,
+            ttl=(
+                self.extendedRCODE << 24
+                | self.version << 16
+                | self.dnssecOK << 15),
+            payload=UnknownRecord(optionBytes)
+        ).encode(strio, compDict)
 
 
     def decode(self, strio, length=None):
@@ -643,20 +637,19 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @type length: C{int} or C{None}
         @param length: Not used.
         """
-        # OPTHeader name must always be '' so the received name is
-        # discarded
-        Name().decode(strio)
-        l = struct.calcsize(self._fmt)
-        buff = readPrecisely(strio, l)
-        (self.type, self.udpPayloadSize, self.extendedRCODE, self.version,
-         ttlByte3and4,
-         resourceRecordDataLength) = struct.unpack(self._fmt, buff)
-        self.dnssecOK = ttlByte3and4 >> 15
+
+        h = RRHeader()
+        h.decode(strio, length)
+
+        self.udpPayloadSize = h.cls
+        self.extendedRCODE = h.ttl >> 24
+        self.version = h.ttl >> 16 & 0xff
+        self.dnssecOK = (h.ttl & 0xffff) >> 15
 
         # Decode variable options if present
         self.options = []
-        optionsBytes = BytesIO(readPrecisely(strio, resourceRecordDataLength))
-        while optionsBytes.tell() < resourceRecordDataLength:
+        optionsBytes = BytesIO(readPrecisely(strio, h.rdlength))
+        while optionsBytes.tell() < h.rdlength:
             o = _OPTVariableOption()
             o.decode(optionsBytes)
             self.options.append(o)
@@ -673,7 +666,7 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
 
-    @since: 13.1
+    @since: 13.2
     """
     showAttributes = ('code', ('data', nativeString))
     compareAttributes = ('code', 'data')
