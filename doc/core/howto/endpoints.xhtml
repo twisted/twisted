@@ -148,7 +148,56 @@ keep in mind that the <code>connect</code> method takes a
 <code>Factory</code>, not a <code>ClientFactory</code>.  Even if you pass a
 <code>ClientFactory</code> to <code>endpoint.connect</code>, its
 <code>clientConnectionFailed</code> and <code>clientConnectionLost</code>
-methods will not be called.</div>
+methods will not be called. In particular, clients that extend
+<code>ReconnectingClientFactory</code> won't reconnect. The next
+section describes how to set up reconnecting clients on endpoints.</div>
+
+<h3>Reconnecting Clients</h3>
+
+<p>If your application needs to maintain a persistent connection to a
+server, you will need a means of detecting when a connection attempt
+fails (or an existing connection is lost) and triggering an attempt to
+reconnect. <code class="API"
+base="twisted.application.internet">ReconnectingClientService</code>
+provides this functionality.</p>
+
+<p>Creating a <code>ReconnectingClientService</code> is straightforward:</p>
+
+<pre class="python">
+myReconnectingService = ReconnectingClientService(myEndpoint, myFactory)
+</pre>
+
+<p>If you already have a parent service, you can add the reconnecting
+service as a child service:</p>
+
+<pre class="python">
+parentService.addService(myReconnectingService)
+</pre>
+
+<p>If you do not have a parent service, you can start and stop the
+reconnecting service using its <code>startService</code> and
+<code>stopService</code> methods. <code>stopService</code> returns
+a <code>Deferred</code> that fires once the current connection
+closes or the current connection attempt is cancelled.</p>
+
+<p>By default, <code>ReconnectingClientService</code> approximately
+triples the delay before attempting to reconnect each time a
+connection attempt fails, until a maximum delay of one hour is
+reached. Each time a connection attempt succeeds, the delay is reset
+to the initial delay of one second. A small amount of random jitter is
+added to each delay (in order to prevent clients which were
+disconnected simultaneously from attempting to reconnect
+simultaneously). You can adjust all of these parameters by passing
+additional arguments to the <code>ReconnectingClientService</code>
+constructor.</p>
+
+<div class="note">Before endpoints, reconnecting clients were created
+as subclasses of <code>ReconnectingClientFactory</code>. These
+subclasses were required to call <code>resetDelay</code>. One of the
+many advantages of using endpoints is that these special subclasses
+are no longer needed. <code>ReconnectingClientService</code> accepts
+ordinary <code>ClientFactory</code> subclasses.</div>
+
 
 <h2>Maximizing the Return on your Endpoint Investment</h2>
 
