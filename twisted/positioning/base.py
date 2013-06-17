@@ -484,7 +484,7 @@ class Heading(Angle):
 
 
 
-class Coordinate(Angle, FancyEqMixin):
+class Coordinate(Angle):
     """
     A coordinate.
 
