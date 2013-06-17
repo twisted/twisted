@@ -20,7 +20,7 @@ from twisted.internet.interfaces import IReactorUDP, IUDPTransport
 from twisted.names.root import Resolver
 from twisted.names.dns import (
     IN, HS, A, NS, CNAME, OK, ENAME, Record_CNAME,
-    Name, Query, Message, RRHeader, Record_A, Record_NS)
+    Name, Query, _EDNSMessage, RRHeader, Record_A, Record_NS)
 from twisted.names.error import DNSNameError, ResolverError
 
 
@@ -171,7 +171,7 @@ class RootResolverTests(TestCase):
         # And a DNS packet sent.
         [(packet, address)] = transport._sentPackets
 
-        msg = Message()
+        msg = _EDNSMessage()
         msg.fromStr(packet)
 
         # It should be a query with the parameters used above.
@@ -211,10 +211,10 @@ class RootResolverTests(TestCase):
         """
         Similar to L{test_filteredQuery}, but for the case where a false value
         is passed for the C{filter} parameter.  In this case, the result is a
-        L{Message} instance.
+        L{_EDNSMessage} instance.
         """
         message = self._queryTest(False)
-        self.assertIsInstance(message, Message)
+        self.assertIsInstance(message, _EDNSMessage)
         self.assertEqual(message.queries, [])
         self.assertEqual(
             message.answers,
@@ -225,7 +225,7 @@ class RootResolverTests(TestCase):
 
     def _respond(self, answers=[], authority=[], additional=[], rCode=OK):
         """
-        Create a L{Message} suitable for use as a response to a query.
+        Create a L{_EDNSMessage} suitable for use as a response to a query.
 
         @param answers: A C{list} of two-tuples giving data for the answers
             section of the message.  The first element of each tuple is a name
@@ -236,9 +236,9 @@ class RootResolverTests(TestCase):
             additional section of the response.
         @param rCode: The response code the message will be created with.
 
-        @return: A new L{Message} initialized with the given values.
+        @return: A new L{_EDNSMessage} initialized with the given values.
         """
-        response = Message(rCode=rCode)
+        response = _EDNSMessage(rCode=rCode)
         for (section, data) in [(response.answers, answers),
                                 (response.authority, authority),
                                 (response.additional, additional)]:
@@ -593,5 +593,3 @@ _retrySuppression = util.suppress(
     message=(
         'twisted.names.root.retry is deprecated since Twisted 10.0.  Use a '
         'Resolver object for retry logic.'))
-
-

@@ -17,6 +17,7 @@ __all__ = [
     'A', 'A6', 'AAAA', 'AFSDB', 'CNAME', 'DNAME', 'HINFO',
     'MAILA', 'MAILB', 'MB', 'MD', 'MF', 'MG', 'MINFO', 'MR', 'MX',
     'NAPTR', 'NS', 'NULL', 'PTR', 'RP', 'SOA', 'SPF', 'SRV', 'TXT', 'WKS',
+    'OPT',
 
     'ANY', 'CH', 'CS', 'HS', 'IN',
 
@@ -119,6 +120,7 @@ SRV = 33
 NAPTR = 35
 A6 = 38
 DNAME = 39
+OPT = 41
 SPF = 99
 
 QUERY_TYPES = {
@@ -1789,6 +1791,210 @@ class Message:
 
 
 
+class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
+    """
+    An C{EDNS} message.
+
+    Designed for compatibility with L{Message} but with a narrower
+    public interface.
+
+    Most importantly, L{_EDNSMessage.fromStr} will interpret and
+    remove OPT records that are present in the additional records
+    section.
+
+    The OPT records are used to populate certain EDNS specific
+    attributes.
+
+    L{_EDNSMessage.toStr} will add suitable OPT records to the
+    additional section to represent the extended EDNS information.
+
+    @see: U{https://tools.ietf.org/html/rfc6891}
+
+    @ivar id: A 16 bit identifier assigned by the program that
+        generates any kind of query.  This identifier is copied the
+        corresponding reply and can be used by the requester to match
+        up replies to outstanding queries.
+
+    @ivar answer: A one bit field that specifies whether this message
+        is a query (0), or a response (1).
+
+    @ivar opCode: A four bit field that specifies kind of query in
+        this message.  This value is set by the originator of a query
+        and copied into the response.  The values are:
+                0               a standard query (QUERY)
+                1               an inverse query (IQUERY)
+                2               a server status request (STATUS)
+                3-15            reserved for future use
+
+    @ivar auth: Authoritative Answer - this bit is valid in responses,
+        and specifies that the responding name server is an authority
+        for the domain name in question section.
+
+    @ivar trunc: TrunCation - specifies that this message was
+        truncated due to length greater than that permitted on the
+        transmission channel.
+
+    @ivar recDes: Recursion Desired - this bit may be set in a query
+        and is copied into the response.  If RD is set, it directs the
+        name server to pursue the query recursively.  Recursive query
+        support is optional.
+
+    @ivar recAv: Recursion Available - this be is set or cleared in a
+        response, and denotes whether recursive query support is
+        available in the name server.
+
+    @ivar rCode: Response code - this 4 bit field is set as part of
+        responses.  The values have the following interpretation:
+                0               No error condition
+
+                1               Format error - The name server was
+                                unable to interpret the query.
+                2               Server failure - The name server was
+                                unable to process this query due to a
+                                problem with the name server.
+
+                3               Name Error - Meaningful only for
+                                responses from an authoritative name
+                                server, this code signifies that the
+                                domain name referenced in the query does
+                                not exist.
+
+                4               Not Implemented - The name server does
+                                not support the requested kind of query.
+
+                5               Refused - The name server refuses to
+                                perform the specified operation for
+                                policy reasons.  For example, a name
+                                server may not wish to provide the
+                                information to the particular requester,
+                                or a name server may not wish to perform
+                                a particular operation (e.g., zone
+                                transfer) for particular data.
+
+    @ivar queries: A L{list} of L{Query} instances.
+
+    @ivar answers: A L{list} of L{RRHeader} instances.
+
+    @ivar authority: A L{list} of L{RRHeader} instances.
+
+    @ivar additional: A L{list} of L{RRHeader} instances.
+    """
+
+    showAttributes = (
+        'id', 'answer', 'opCode', 'auth', 'trunc',
+        'recDes', 'recAv', 'rCode',
+        'queries', 'answers', 'authority', 'additional')
+
+    compareAttributes = showAttributes
+
+    def __init__(self, id=0, answer=0,
+                 opCode=OP_QUERY, auth=0,
+                 trunc=0, recDes=0,
+                 recAv=0, rCode=0,
+                 queries=None, answers=None, authority=None, additional=None, optRecords=None):
+        """
+        All arguments are stored as attributes with the same names.
+
+        @see: L{_EDNSMessage} for an explanation of the meaning of
+            each attribute.
+
+        @type id: C{int}
+        @type answer: C{int}
+        @type opCode: C{int}
+        @type auth: C{int}
+        @type trunc: C{int}
+        @type recDes: C{int}
+        @type recAv: C{int}
+        @type rCode: C{int}
+        @type queries: C{list} of L{Query}
+        @type answers: C{list} of L{RRHeader}
+        @type authority: C{list} of L{RRHeader}
+        @type additional: C{list} of L{RRHeader}
+        """
+        self.id = id
+        self.answer = answer
+        self.opCode = opCode
+
+        # XXX: AA bit can be determined by checking for an
+        # authoritative answer record whose name matches the query
+        # name - perhaps in a higher level EDNSResponse class?
+        self.auth = auth
+
+        # XXX: TC bit can be determined during encoding based on EDNS max
+        # packet size.
+        self.trunc = trunc
+
+        self.recDes = recDes
+        self.recAv = recAv
+        self.rCode = rCode
+
+        self.queries = queries or []
+        self.answers = answers or []
+        self.authority = authority or []
+        self.additional = additional or []
+
+        self.optRecords = optRecords or []
+
+
+    def toStr(self):
+        """
+        Encode to a wire format.
+
+        @return: A L{bytes} string.
+        """
+        m = Message(
+            id=self.id,
+            answer=self.answer,
+            opCode=self.opCode,
+            auth=self.auth,
+            trunc=self.trunc,
+            recDes=self.recDes,
+            recAv=self.recAv,
+            rCode=self.rCode,
+
+            maxSize=512)
+
+        m.queries = self.queries
+        m.answers = self.answers
+        m.authority = self.authority
+        m.additional = self.additional
+
+        return m.toStr()
+
+
+    def fromStr(self, bytes):
+        """
+        Decode from wire format, saving flags, values and records to
+        this L{_EDNSMessage} instance in place.
+
+        @type bytes: L{bytes}
+        @param bytes: The full byte string to be decoded.
+        """
+        m = Message()
+        m.fromStr(bytes)
+
+        optRecords = []
+        for r in reversed(m.additional):
+            if r.type == OPT:
+                optRecords.append(r)
+                m.additional.remove(r)
+
+        self.id = m.id
+        self.answer = m.answer
+        self.opCode = m.opCode
+        self.auth = m.auth
+        self.trunc = m.trunc
+        self.recDes = m.recDes
+        self.recAv = m.recAv
+        self.rCode = m.rCode
+        self.queries = m.queries
+        self.answers = m.answers
+        self.authority = m.authority
+        self.additional = m.additional
+        self.optRecords = optRecords
+
+
+
 class DNSMixin(object):
     """
     DNS protocol mixin shared by UDP and TCP implementations.
@@ -1907,7 +2113,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         Read a datagram, extract the message in it and trigger the associated
         Deferred.
         """
-        m = Message()
+        m = _EDNSMessage()
         try:
             m.fromStr(data)
         except EOFError:
