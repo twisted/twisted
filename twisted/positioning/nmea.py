@@ -154,6 +154,12 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
     @cvar _SENTENCE_CONTENTS: Has the field names in an NMEA sentence for each
         sentence type (in order, obviously).
     @type _SENTENCE_CONTENTS: C{dict} of bytestrings to C{list}s of C{str}
+    @param _receiver: A receiver for NMEAProtocol sentence objects.
+    @type _receiver: L{INMEAReceiver}
+    @param _sentenceCallback: A function that will be called with a new
+        L{NMEASentence} when it is created. Useful for massaging data from
+        particularly misbehaving NMEA receivers.
+    @type _sentenceCallback: unary callable
     """
     def __init__(self, receiver, sentenceCallback=None):
         """
@@ -166,8 +172,8 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
             particularly misbehaving NMEA receivers.
         @type sentenceCallback: unary callable
         """
-        self.receiver = receiver
-        self.sentenceCallback = sentenceCallback
+        self._receiver = receiver
+        self._sentenceCallback = sentenceCallback
 
 
     def lineReceived(self, rawSentence):
@@ -196,11 +202,11 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
 
         sentence = NMEASentence(sentenceData)
 
-        if self.sentenceCallback is not None:
-            self.sentenceCallback(sentence)
+        if self._sentenceCallback is not None:
+            self._sentenceCallback(sentence)
 
-        if self.receiver is not None:
-            self.receiver.sentenceReceived(sentence)
+        if self._receiver is not None:
+            self._receiver.sentenceReceived(sentence)
 
 
     _SENTENCE_CONTENTS = {
