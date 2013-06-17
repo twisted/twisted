@@ -1,6 +1,26 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Words 13.1.0pre1 (2013-06-17)
+=====================================
+
+Features
+--------
+ - twisted.words.protocols.irc.assembleFormattedText flattens a
+   formatting structure into mIRC-formatted markup; conversely
+   twisted.words.protocols.irc.stripFormatting removes all mIRC
+   formatting from text. (#3844)
+
+Deprecations and Removals
+-------------------------
+ - The `crippled` attribute in words.protocols.jabber.xmpp_stringprep
+   is deprecated now. (#5386)
+
+Other
+-----
+ - #6315, #6342, #6392, #6402, #6479, #6481, #6482
+
+
 Twisted Words 13.0.0 (2013-03-19)
 =================================
 

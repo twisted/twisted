@@ -1,6 +1,26 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 13.1.0pre1 (2013-06-17)
+=====================================
+
+Features
+--------
+ - twisted.conch.endpoints.SSHCommandClientEndpoint is a new
+   IStreamClientEndpoint which supports connecting a protocol to the
+   stdio of a command running on a remote host via an SSH connection.
+   (#4698)
+ - twisted.conch.client.knownhosts.KnownHostsFile now has a public
+   `savePath` attribute giving the filesystem path where the known
+   hosts data is saved to and loaded from. (#6255)
+ - twisted.conch.endpoints.SSHCommandClientEndpoint.connect() returns
+   a cancellable Deferred when using new connections. (#6532)
+
+Other
+-----
+ - #5386, #6342, #6386, #6405, #6541
+
+
 Twisted Conch 13.0.0 (2013-03-19)
 =================================
 

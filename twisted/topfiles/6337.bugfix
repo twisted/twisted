@@ -1,1 +1,0 @@
-twisted.internet.ssl.CertificateOptions now disables SSLv2 if SSLv23 is selected, allowing only SSLv3 and TLSv1.

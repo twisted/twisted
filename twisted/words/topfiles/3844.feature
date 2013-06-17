@@ -1,1 +1,0 @@
-twisted.words.protocols.irc.assembleFormattedText flattens a formatting structure into mIRC-formatted markup; conversely twisted.words.protocols.irc.stripFormatting removes all mIRC formatting from text.

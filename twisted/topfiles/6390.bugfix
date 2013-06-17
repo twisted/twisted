@@ -1,2 +1,0 @@
-Remove incorrect preamble in trial dist support, getting sys.path from the
-parent instead.

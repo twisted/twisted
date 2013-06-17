@@ -1,6 +1,95 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 13.1.0pre1 (2013-06-17)
+====================================
+
+Features
+--------
+ - trial now has an --exitfirst flag which stops the test run after
+   the first error or failure. (#1518)
+ - twisted.internet.ssl.CertificateOptions now supports chain
+   certificates. (#2061)
+ - twisted.internet.endpoints now provides ProcessEndpoint, a child
+   process endpoint. (#4696)
+ - Factory now has a forProtocol classmethod that constructs an
+   instance and sets its protocol attribute. (#5016)
+ - twisted.internet.endpoints.connectProtocol allows connecting to a
+   client endpoint using only a protocol instance, rather than
+   requiring a factory. (#5270)
+ - twisted.trial.unittest.SyncTestCase.assertNoResult no longer
+   swallows the result, if the assertion succeeds. (#6291)
+ - twisted.python.constants.FlagConstant implements __iter__ so that
+   it can be iterated upon to find the flags that went into a flag
+   set, and implements __nonzero__ to test as false when empty.
+   (#6302)
+ - Add assertIs and assertIsNot from python 2.7 to
+   twisted.trial.unittest.TestCase. (#6350)
+ - An optional expected exception type argument has been added to
+   twisted.trial.unittest.TestCase.failureResultOf. (#6380)
+ - The POSIX implementation of
+   twisted.internet.interfaces.IReactorProcess now does not change the
+   parent process UID or GID in order to run child processes with a
+   different UID or GID. (#6443)
+
+Bugfixes
+--------
+ - self.transport.resumeProducing() will no longer raise an
+   AssertionError if called after self.transport.loseConnection()
+   (#986)
+ - twisted.protocols.ftp.FTP now supports IFTPShell implementations
+   which return non-ASCII filenames as unicode strings. (#5411)
+ - twisted.internet.ssl.CertificateOptions now disables SSLv2 if
+   SSLv23 is selected, allowing only SSLv3 and TLSv1. (#6337)
+ - Remove incorrect preamble in trial dist support, getting sys.path
+   from the parent instead. (#6390)
+ - twisted.test.proto_helpers.StringTransportWithDisconnection.loseCon
+   nection now correctly passes Failure instead of an exception to
+   connectionLost. (#6521)
+
+Improved Documentation
+----------------------
+ - The Application howto now provides an example of writing a custom
+   Service. (#5586)
+ - The -j flag to trial (introduced in 12.3.0) is now documented.
+   (#5994)
+ - The SSL howto now covers twisted.internet.ssl.CertificateOptions
+   instead of the older context factories it replaces. (#6273)
+ - The Constants HOWTO documents iteration and truth testing of flags,
+   as well as previously undocumented boolean operations. (#6302)
+ - The "Using Processes" howto no longer contains spelling mistakes.
+   The "Using Processes" howto no longer contains spelling mistakes.
+   (#6407)
+
+Deprecations and Removals
+-------------------------
+ - twisted.trial.runner.suiteVisit and PyUnitTestCase as well as
+   visitor methods, all deprecated since Twisted 8.0, have been
+   removed. (#3231)
+ - twisted.python._epoll bindings were removed, the epoll reactor
+   using the stdlib version. (#5847)
+ - The deprecated LENGTH, DATA, COMMA, and NUMBER NetstringReceiver
+   parser state attributes in t.protocols.basic are removed now.
+   (#6321)
+ - twisted.trial.runner.DryRunVisitor is now deprecated. Trial uses a
+   different method to handle --dry-run now. (#6333)
+ - twisted.python.hashlib is now deprecated in favor of hashlib from
+   stdlib. (#6342)
+ - The following attributes in twisted.web.server, deprecated since
+   9.0, have been removed:     * Session.loopFactory     * lifetime
+   parameter of Session.startCheckingExpiration     *
+   Session.checkExpired (#6514)
+
+Other
+-----
+ - #2380, #5197, #5228, #5386, #5459, #5578, #5801, #5952, #5955,
+   #5981, #6051, #6189, #6228, #6240, #6284, #6286, #6299, #6316,
+   #6353, #6354, #6368, #6377, #6378, #6381, #6389, #6400, #6403,
+   #6416, #6417, #6418, #6419, #6430, #6433, #6438, #6439, #6440,
+   #6441, #6444, #6459, #6465, #6468, #6477, #6480, #6498, #6508,
+   #6510, #6525
+
+
 Twisted Core 13.0.0 (2013-03-19)
 ================================
 

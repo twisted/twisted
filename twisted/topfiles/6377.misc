@@ -1,1 +1,0 @@
-twisted.trial.unittest.TstCase.successResultOf test failures now contain the original failure tracebacks.
