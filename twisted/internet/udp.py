@@ -53,12 +53,19 @@ from twisted.python import log, failure
 from twisted.internet import abstract, error, interfaces
 
 
+
 @implementer(
     interfaces.IListeningPort, interfaces.IUDPTransport,
     interfaces.ISystemHandle)
 class Port(base.BasePort):
     """
     UDP port, listening for packets.
+
+    @ivar maxThroughput: Maximum number of bytes read in one event
+        loop iteration.
+
+    @ivar _realPortNumber: Actual port number being listened on. The
+        value will be C{None} until this L{Port} is listening.
 
     @ivar _preexistingSocket: If not C{None}, a L{socket.socket} instance which
         was created and initialized outside of the reactor and will be used to
@@ -68,14 +75,9 @@ class Port(base.BasePort):
 
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_DGRAM
-    maxThroughput = 256 * 1024 # max bytes we read in one eventloop iteration
+    maxThroughput = 256 * 1024
 
-    # Actual port number being listened on, only set to a non-None
-    # value when we are actually listening.
     _realPortNumber = None
-
-    # An externally initialized socket that we will use, rather than creating
-    # our own.
     _preexistingSocket = None
 
     def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None):
@@ -159,7 +161,17 @@ class Port(base.BasePort):
         self._bindSocket()
         self._connectToProtocol()
 
+
     def _bindSocket(self):
+        """
+        Responsible for preparing and assigning a L{socket.socket}
+        instance to C{self.socket}.
+
+        Either creates a new SOCK_DGRAM L{socket.socket} bound to
+        C{self.interface} and C{self.port} or takes an existing
+        L{socket.socket} provided via the
+        L{interfaces.IReactorSocket.adoptDatagramPort} interface.
+        """
         if self._preexistingSocket is None:
             # Create a new socket and make it listen
             try:
@@ -182,6 +194,7 @@ class Port(base.BasePort):
         self.connected = 1
         self.socket = skt
         self.fileno = self.socket.fileno
+
 
     def _connectToProtocol(self):
         self.protocol.makeConnection(self)

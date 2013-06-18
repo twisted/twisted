@@ -12,8 +12,6 @@ behave exactly the same as L{IReactorTCP.listenTCP}.
 
 import errno, socket
 
-from zope.interface.verify import verifyClass
-
 from twisted.python.log import err
 from twisted.internet.interfaces import IReactorSocket
 from twisted.internet.error import UnsupportedAddressFamily
@@ -142,22 +140,8 @@ class AdoptStreamConnectionErrorsTestsBuilder(ReactorBuilder):
 class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
     """
     Builder for testing L{IReactorSocket.adoptDatagramPort} implementations.
-
-    Generally only tests for failure cases are found here.  Success cases for
-    this interface are tested elsewhere.  For example, the success case for
-    I{AF_INET} is in L{twisted.internet.test.test_tcp}, since that case should
-    behave exactly the same as L{IReactorTCP.listenTCP}.
     """
     requiredInterfaces = [IReactorSocket]
-
-
-    def test_verifyInterface(self):
-        """
-        The reactor class must implement all interfaces required by
-        L{IReactorSocket.adoptDatagramPort}.
-        """
-        for iface in self.requiredInterfaces:
-            verifyClass(iface, self.reactorFactory)
 
 
     def test_invalidDescriptor(self):
