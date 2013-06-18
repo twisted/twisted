@@ -458,9 +458,9 @@ class MemoryReactor(object):
         @see: L{twisted.internet.interfaces.IReactorSocket.adoptDatagramPort}
         """
         if addressFamily == AF_INET:
-            addr = IPv4Address('TCP', '0.0.0.0', 1234)
+            addr = IPv4Address('UDP', '0.0.0.0', 1234)
         elif addressFamily == AF_INET6:
-            addr = IPv6Address('TCP', '::', 1234)
+            addr = IPv6Address('UDP', '::', 1234)
         else:
             raise UnsupportedAddressFamily()
 
