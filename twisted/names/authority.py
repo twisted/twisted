@@ -9,7 +9,7 @@ Authoritative resolvers.
 import os
 import time
 
-from twisted.names import dns
+from twisted.names import dns, error
 from twisted.internet import defer
 from twisted.python import failure
 from twisted.python.compat import execfile
@@ -58,6 +58,38 @@ def getSerial(filename = '/tmp/twisted-names.serial'):
 #            r = self._meth(name, cls, type, timeout)
 #            self._cache[(name, cls, type)] = r
 #            return r
+
+
+def _nameInName(descendantName, ancestorName):
+    """
+    Test whether C{descendantName} is equal to or is a I{subdomain} of
+    C{ancestorName}.
+
+    The names are compared case-insensitively.
+
+    The names are treated as byte strings containing one or more
+    DNS labels separated by B{.}.
+
+    C{descendantName} is considered equal if its sequence of labels
+    exactly matches the labels of C{ancestorName}.
+
+    C{descendantName} is considered a I{subdomain} if its sequence of
+    labels ends with the labels of C{ancestorName}.
+
+    @type descendantName: C{bytes}
+    @param descendantName: The DNS subdomain name.
+
+    @type ancestorName: C{bytes}
+    @param ancestorName: The DNS parent or ancestor domain name.
+
+    @return: C{True} if C{descendantName} is equal to or if it is a
+        subdomain of C{ancestorName}. Otherwise returns C{False}.
+    """
+    descendantLabels = descendantName.lower().split('.')
+    ancestorLabels = ancestorName.lower().split('.')
+
+    return  descendantLabels[-len(ancestorLabels):] == ancestorLabels
+
 
 
 class FileAuthority(common.ResolverBase):
@@ -129,10 +161,16 @@ class FileAuthority(common.ResolverBase):
                     )
             return defer.succeed((results, authority, additional))
         else:
-            if name.lower().endswith(self.soa[0].lower()):
-                # We are the authority and we didn't find it.  Goodbye.
+            if _nameInName(name, self.soa[0]):
+                # We are the authority and we didn't find it.
+                # XXX: The comment above is wrong. The QNAME may be a
+                # in a delegated subzone. See #6581 and #6580
                 return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
-            return defer.fail(failure.Failure(dns.DomainError(name)))
+            else:
+                # The QNAME is not a descendant of this zone. Fail with
+                # DomainError so that the next chained authority or
+                # resolver will be queried.
+                return defer.fail(failure.Failure(error.DomainError(name)))
 
 
     def lookupZone(self, name, timeout = 10):

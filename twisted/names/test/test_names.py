@@ -16,6 +16,7 @@ from twisted.internet.defer import succeed
 from twisted.names import client, server, common, authority, dns
 from twisted.python import failure
 from twisted.names.dns import Message
+from twisted.names.error import DomainError
 from twisted.names.client import Resolver
 from twisted.names.secondary import (
     SecondaryAuthorityService, SecondaryAuthority)
@@ -589,6 +590,21 @@ class AuthorityTests(unittest.TestCase):
     Tests for the basic response record selection code in L{FileAuthority}
     (independent of its fileness).
     """
+
+    def test_domainErrorForNameWithCommonSuffix(self):
+        """
+        L{FileAuthority} lookup methods errback with L{DomainError} if
+        the requested C{name} shares a common suffix with its zone but
+        is not actually a descendant of its zone, in terms of its
+        sequence of DNS name labels. eg www.the-example.com has
+        nothing to do with the zone example.com.
+        """
+        testDomain = test_domain_com
+        testDomainName = 'nonexistent.prefix-' + testDomain.soa[0]
+        f = self.failureResultOf(testDomain.lookupAddress(testDomainName))
+        self.assertIsInstance(f.value, DomainError)
+
+
     def test_recordMissing(self):
         """
         If a L{FileAuthority} has a zone which includes an I{NS} record for a
