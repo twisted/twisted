@@ -153,6 +153,53 @@ $ bin/trial twisted
     so they can be applied to all of the reactor implementations automatically.
     In no case should new unit tests use the global reactor.</p>
 
+<h2><a name="docstrings">Documenting Tests</a></h2>
+
+<p>
+Test docstrings should make a positive statement about the attributes of the desired behavior of the code under test.
+</p>
+
+<p>
+Here is a guide to writing good docstrings:
+</p>
+
+<ol>
+  <li>Write the first docstring that comes to mind. It will almost certainly be:
+    <blockquote>
+      Test that input is parsed correctly.
+    </blockquote>
+  </li>
+  <li> Get rid of <q>Test that</q> or <q>Check that</q>. We know it's a test.
+    <blockquote>
+      Input should be parsed correctly.
+    </blockquote>
+  </li>
+  <li>Seriously?! Why'd you have to go and add <q>should</q>? It's a test, it's all about <q>should</q>.
+    <blockquote>
+      Input is parsed correctly.
+    </blockquote>
+  </li>
+  <li> <q>Correctly</q>, <q>properly</q>, and <q>as we expect</q> are all redundant. Axe them too.
+    <blockquote>
+      Input is parsed.
+    </blockquote>
+  </li>
+  <li>
+    Look at what's left.
+    Is it saying anything at all?
+    If so, great.
+    If not, consider adding something specific about the test behaviour and perhaps even why it's desirable behaviour to have.
+    <blockquote>
+      Input is parsed into an immutable dict according to the config schema,
+      so we get config info without worrying about input validation all the time.
+    </blockquote>
+  </li>
+</ol>
+
+<h3>Further thoughts</h3>
+
+Saying that something <q>does not raise an exception</q> is not helpful;
+most code doesn't raise an exception and it doesn't do a whole bunch of other things too.
 
 <h2>Skipping tests, TODO items</h2>
 
