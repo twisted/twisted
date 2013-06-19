@@ -45,7 +45,7 @@ class IRCUserTestCase(unittest.TestCase):
     def test_utf8Messages(self):
         """
         When a UTF8 message is sent with sendMessage and the current IRCUser
-        has a UTF8 nick and is set to UTF8 encoding, the message will be 
+        has a UTF8 nick and is set to UTF8 encoding, the message will be
         written to the transport.
         """
         expectedResult = (u":example.com \u0442\u0435\u0441\u0442 "
@@ -59,8 +59,8 @@ class IRCUserTestCase(unittest.TestCase):
 
     def test_invalidEncodingNick(self):
         """
-        A NICK command sent with a nickname that cannot be decoded with the 
-        current IRCUser's encoding results in a PRIVMSG from NickServ 
+        A NICK command sent with a nickname that cannot be decoded with the
+        current IRCUser's encoding results in a PRIVMSG from NickServ
         indicating that the nickname could not be decoded.
         """
         expectedResult = (b":NickServ!NickServ@services PRIVMSG "
