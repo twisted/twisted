@@ -7,6 +7,7 @@ from twisted.trial.unittest import TestCase
 from twisted.positioning import base
 from twisted.positioning.base import Angles, Directions
 from twisted.positioning.ipositioning import IPositioningBeacon
+from zope.interface import verify
 
 
 class AngleTests(TestCase):
@@ -859,6 +860,7 @@ class PositioningBeaconTests(TestCase):
         """
         implements = IPositioningBeacon.implementedBy(base.PositioningBeacon)
         self.assertTrue(implements)
+        verify.verifyObject(IPositioningBeacon, base.PositioningBeacon(1))
 
 
     def test_usedRepr(self):
