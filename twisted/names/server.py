@@ -143,7 +143,7 @@ class DNSServerFactory(protocol.ServerFactory):
             resolvers.extend(
                 sorted(authorities,
                        key=_nameOfAuthority,
-                       cmp=lambda a, b: _nameOrder(a, b)))
+                       cmp=_nameOrder))
         if caches is not None:
             resolvers.extend(caches)
         if clients is not None:

@@ -1,0 +1,1 @@
+twisted.names.server.DNSServerFactory now sorts its list of authorities by SOA domain name. This ensures that queries are dispatched to child zones before parent zones.
