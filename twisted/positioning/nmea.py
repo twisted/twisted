@@ -707,14 +707,14 @@ class NMEAAdapter(object):
 
             if prn is None or snr is None:
                 # The peephole optimizer optimizes the jump away, meaning that
-                # coverage.py isn't covered. It is. Replace it with break and
-                # watch the test case fail.
+                # coverage.py thinks it isn't covered. It is. Replace it with
+                # break, and watch the test case fail.
                 # ML thread about this issue: http://goo.gl/1KNUi
                 # Related CPython bug: http://bugs.python.org/issue2506
                 continue # pragma: no cover
 
             satellite = base.Satellite(prn, azimuth, elevation, snr)
-            beaconInformation.beacons.add(satellite)
+            beaconInformation.seenBeacons.add(satellite)
 
 
     def _fixGSA(self):
@@ -877,12 +877,12 @@ class NMEAAdapter(object):
         usedPRNs = (self._state.get('_usedPRNs')
                     or self._sentenceData.get('_usedPRNs'))
         if usedPRNs is not None:
-            for beacon in new.beacons:
+            for beacon in new.seenBeacons:
                 beacon.isUsed = (beacon.identifier in usedPRNs)
 
         old = self._state.get('_partialBeaconInformation')
         if old is not None:
-            new.beacons.update(old.beacons)
+            new.seenBeacons.update(old.seenBeacons)
 
         if self.currentSentence._isLastGSVSentence():
             if not self.currentSentence._isFirstGSVSentence():

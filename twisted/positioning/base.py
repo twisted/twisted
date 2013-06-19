@@ -6,6 +6,7 @@ Generic positioning base classes.
 
 @since: 13.2
 """
+from operator import attrgetter
 from zope.interface import implementer
 from twisted.python.constants import Names, NamedConstant
 from twisted.python.util import FancyEqMixin
@@ -880,32 +881,23 @@ class BeaconInformation(object):
     objects that help you determine your position, such as satellites or cell
     towers).
 
-    @ivar beacons: A set of visible beacons. Note that visible beacons are not
+    @ivar seenBeacons: A set of visible beacons. Note that visible beacons are not
         necessarily used in acquiring a positioning fix.
-    @type beacons: C{set} of L{IPositioningBeacon}
-
-    @ivar usedBeacons: An iterable of the beacons that were used in obtaining a
+    @type seenBeacons: C{set} of L{IPositioningBeacon}
+    @ivar usedBeacons: An set of the beacons that were used in obtaining a
         positioning fix. This only contains beacons that are actually used, not
         beacons for which it is unknown if they are used or not. This attribute
         is immutable.
-    @type usedBeacons: iterable of L{IPositioningBeacon}
-
-    @ivar seen: The amount of beacons that can be seen. This attribute is
-        immutable.
-    @type seen: C{int}
-    @ivar used: The amount of beacons that were used in obtaining the
-        positioning fix. This attribute is immutable.
-    @type used: C{int}
+    @type usedBeacons: C{set} of L{IPositioningBeacon}
     """
-    def __init__(self, beacons=()):
+    def __init__(self, seenBeacons=()):
         """
         Initializes a beacon information object.
 
-        @param beacons: A collection of beacons that will be present in this
-            beacon information object.
-        @type beacons: iterable of L{IPositioningBeacon} or C{NoneType}
+        @param seenBeacons: A collection of beacons that are currently seen.
+        @type seenBeacons: iterable of L{IPositioningBeacon}s
         """
-        self.beacons = set(beacons)
+        self.seenBeacons = set(seenBeacons)
 
 
     @property
@@ -913,56 +905,12 @@ class BeaconInformation(object):
         """
         Returns an iterable of used beacons.
 
-        @return: A iterable containing all of the used positioning beacons.
-            This only contains beacons that are actually used, not beacons
-            of which it is unknown if they are used or not.
-        @rtype: iterable of L{IPositioningBeacon}
+        @return: A set of all of the used positioning beacons. This only
+            contains beacons that are actually used, not beacons of which
+            it is unknown if they are used or not.
+        @rtype: C{set} of L{IPositioningBeacon}
         """
-        for beacon in self.beacons:
-            if beacon.isUsed:
-                yield beacon
-
-
-    @property
-    def seen(self):
-        """
-        Returns the number of beacons that can be seen.
-
-        @return: The number of beacons that can be seen.
-        @rtype: C{int}
-        """
-        return len(self.beacons)
-
-
-    @property
-    def used(self):
-        """
-        Returns the number of beacons that are used.
-
-        @return: The number of beacons that is used, or C{None} if the number
-            is unknown. This happens as soon as one of the beacons has an
-            unknown (C{None}) C{isUsed} attribute. @rtype: C{int} or
-            C{NoneType}
-        """
-        numberOfUsedBeacons = 0
-        for beacon in self.beacons:
-            if beacon.isUsed is None:
-                return None
-            elif beacon.isUsed:
-                numberOfUsedBeacons += 1
-        return numberOfUsedBeacons
-
-
-    def __iter__(self):
-        """
-        Yields the beacons in this beacon information object.
-
-        @return: A generator producing the beacons in this beacon information
-            object.
-        @rtype: iterable of L{PositioningBeacon}
-        """
-        for beacon in self.beacons:
-            yield beacon
+        return set(b for b in self.seenBeacons if b.isUsed)
 
 
     def __repr__(self):
@@ -974,16 +922,19 @@ class BeaconInformation(object):
         @return: The string representation.
         @rtype: C{str}
         """
-        beaconReprs = ", ".join([repr(beacon) for beacon in
-            sorted(self.beacons, key=lambda x: x.identifier)])
+        sortedBeacons = sorted(self.seenBeacons, key=attrgetter("identifier"))
+        beaconReprs = ", ".join(map(repr, sortedBeacons))
 
-        if self.used is not None:
-            used = str(self.used)
-        else:
-            used = "?"
+        used = 0
+        for b in self.seenBeacons:
+            if b.isUsed is None:
+                used = "?"
+                break
+            elif b.isUsed:
+                used += 1
 
-        return "<BeaconInformation (seen: %s, used: %s, beacons: {%s})>" % (
-            self.seen, used, beaconReprs)
+        template = "<BeaconInformation (seen: %s, used: %s, beacons: {%s})>"
+        return template % (len(self.seenBeacons), used, beaconReprs)
 
 
 
@@ -1096,7 +1047,7 @@ class Satellite(PositioningBeacon):
         @return: The string representation.
         @rtype: C{str}
         """
-        azimuth, elevation, snr = [{None: "?"}.get(x, x)
+        azimuth, elevation, snr = ["?" if x is None else x
             for x in self.azimuth, self.elevation, self.signalToNoiseRatio]
 
         properties = "azimuth: %s, elevation: %s, snr: %s" % (

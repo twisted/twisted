@@ -774,8 +774,7 @@ class BeaconInformationTests(TestCase):
         repr of the object reflects that.
         """
         bi = base.BeaconInformation()
-        self.assertEqual(len(list(bi.usedBeacons)), 0)
-        self.assertEqual(len(list(bi)), 0)
+        self.assertEqual(len(bi.usedBeacons), 0)
         expectedRepr = '<BeaconInformation (seen: 0, used: 0, beacons: {})>'
         self.assertEqual(repr(bi), expectedRepr)
 
@@ -799,9 +798,7 @@ class BeaconInformationTests(TestCase):
 
         bi = base.BeaconInformation(beacons)
 
-        self.assertEqual(len(list(bi.usedBeacons)), 0)
-        self.assertEqual(bi.used, None)
-        self.assertEqual(len(list(bi)), 9)
+        self.assertEqual(len(bi.usedBeacons), 0)
         self.assertEqual(repr(bi),
             "<BeaconInformation (seen: 9, used: ?, beacons: {"
             "<Satellite (1), azimuth: 1, elevation: 1, snr: 1.0, used: ?>, "
@@ -834,11 +831,9 @@ class BeaconInformationTests(TestCase):
 
         bi = base.BeaconInformation(beacons)
 
-        self.assertEqual(len(list(bi.usedBeacons)), 5)
-        self.assertEqual(bi.used, 5)
-        self.assertEqual(len(list(bi)), 9)
-        self.assertEqual(len(bi.beacons), 9)
-        self.assertEqual(bi.seen, 9)
+        self.assertEqual(len(bi.seenBeacons), 9)
+        self.assertEqual(len(bi.usedBeacons), 5)
+
         self.assertEqual(repr(bi),
             "<BeaconInformation (seen: 9, used: 5, beacons: {"
             "<Satellite (1), azimuth: 1, elevation: 1, snr: 1.0, used: Y>, "
