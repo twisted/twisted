@@ -60,6 +60,7 @@ def getSerial(filename = '/tmp/twisted-names.serial'):
 #            return r
 
 
+
 class FileAuthority(common.ResolverBase):
     """An Authority that is loaded from a file."""
 

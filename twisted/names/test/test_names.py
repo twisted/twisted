@@ -13,7 +13,7 @@ from twisted.trial import unittest
 
 from twisted.internet import reactor, defer, error
 from twisted.internet.defer import succeed
-from twisted.names import client, server, common, authority, dns
+from twisted.names import client, server, common, authority, dns, hosts
 from twisted.python import failure
 from twisted.names.dns import Message
 from twisted.names.client import Resolver
@@ -139,6 +139,80 @@ my_domain_com = NoFileAuthority(
             ]
         }
     )
+
+
+
+SOA_com = dns.Record_SOA(
+    mname='a.gtld.example.net',
+    rname='hostmaster.example.net',
+    serial=2013061801,
+    refresh=1000,
+    retry=2000,
+    expire=3000,
+    minimum=4000,
+    )
+
+
+
+ZONE_com = NoFileAuthority(
+    soa = ('com', SOA_com),
+    records = {
+        'com': [
+            SOA_com,
+            dns.Record_NS('a.gtld.example.net'),
+            dns.Record_NS('b.gtld.example.net'),],
+        'www.com': [
+            dns.Record_A('192.0.2.200'),
+            ],
+
+        # Delegation
+        'example.com': [
+            dns.Record_NS('ns1.example.com'),
+            dns.Record_NS('ns2.example.com'),
+            ],
+        # Glue records
+        'ns1.example.com': [
+            dns.Record_A('192.0.2.101'),
+            ],
+        'ns2.example.com': [
+            dns.Record_A('192.0.2.102'),
+            ],
+        },
+    )
+
+
+
+SOA_example_com = dns.Record_SOA(
+    mname='ns1.example.com',
+    rname='hostmaster.example.com',
+    serial=2013061801,
+    refresh=1000,
+    retry=2000,
+    expire=3000,
+    minimum=4000,
+    )
+
+
+
+ZONE_example_com = NoFileAuthority(
+    soa = ('example.com', SOA_example_com),
+    records = {
+        'example.com': [
+            SOA_example_com,
+            dns.Record_NS('ns1.example.com'),
+            dns.Record_NS('ns2.example.com'),],
+        'www.example.com': [
+            dns.Record_A('192.0.2.200'),
+            ],
+        'ns1.example.com': [
+            dns.Record_A('192.0.2.101'),
+            ],
+        'ns2.example.com': [
+            dns.Record_A('192.0.2.102'),
+            ],
+        },
+    )
+
 
 
 class ServerDNSTestCase(unittest.TestCase):
@@ -500,6 +574,78 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertEqual(factory.connections, [])
 
 
+    def test_reorderAuthorites(self):
+        """
+        If L{server.DNSServerFactory} is passed a parent and a child
+        zone, it will order them in subdomain order before passing
+        them to L{resolve.ResolverChain}, so that the child zone is
+        queried before the parent zone.
+        """
+        factory = server.DNSServerFactory(
+            authorities=[ZONE_com, ZONE_example_com,])
+
+        self.assertEqual(
+            factory.resolver.resolvers, [ZONE_example_com, ZONE_com])
+
+
+    def test_secondaryAuthorites(self):
+        """
+        If L{server.DNSServerFactory} is passed a mixture of
+        L{FileAuthority} and L{SecondaryAuthority} instances they will
+        be ordered by their root domain name, with subdomains first.
+        """
+        secondary = SecondaryAuthority('192.0.2.10', 'subdomain.example.com')
+
+        factory = server.DNSServerFactory(
+            authorities=[ZONE_com, secondary, ZONE_example_com,])
+
+        self.assertEqual(
+            factory.resolver.resolvers, [secondary, ZONE_example_com, ZONE_com])
+
+
+    def test_unknownAuthorityTypes(self):
+        """
+        If L{server.DNSServerFactory} C{authorities} contains an
+        L{IResolver} instance which is neither L{FileAuthority} nor
+        L{SecondaryAuthority}, it will be treated as having zone root
+        name b'' and will be placed at the beginning of the list.
+        """
+        secondary = SecondaryAuthority('192.0.2.10', 'subdomain.example.com')
+        hostsFile = hosts.Resolver()
+        factory = server.DNSServerFactory(
+            authorities=[ZONE_com, secondary, hostsFile, ZONE_example_com,])
+
+        self.assertEqual(
+            factory.resolver.resolvers,
+            [hostsFile, secondary, ZONE_example_com, ZONE_com])
+
+
+    def test_queryChildZonesFirst(self):
+        """
+        If L{server.DNSServerFactory} is given authorities for a
+        parent and a child zone, it will query the child first.
+        """
+        factory = server.DNSServerFactory(
+            authorities=[ZONE_com, ZONE_example_com,])
+
+        d = factory.resolver.lookupAddress(b'www.example.com')
+
+        result = []
+        d.addCallback(result.append)
+        answer, authority, additional = result[0]
+
+        self.assertEqual(answer, [
+                dns.RRHeader(
+                    b'www.example.com', dns.A, auth=True, ttl=4000,
+                    payload=dns.Record_A('192.0.2.200')),
+                ])
+
+        self.assertEqual(authority, [])
+
+        self.assertEqual(additional, [])
+
+
+
 class HelperTestCase(unittest.TestCase):
     def testSerialGenerator(self):
         f = self.mktemp()
@@ -809,3 +955,65 @@ class SecondaryAuthorityTests(unittest.TestCase):
 
         self.assertEqual(
             [dns.Query('example.com', dns.AXFR, dns.IN)], msg.queries)
+
+
+
+class ZoneOrderTests(unittest.TestCase):
+    """
+    Tests for L{server._nameOrder}.
+    """
+
+    def test_nameOrderSubdomains(self):
+        """
+        L{server._nameOrder} accepts a pair of domain name strings
+        and returns a negative, zero or positive number depending on
+        whether the first name is a subdomain of the second name.
+        """
+        self.assertEqual(server._nameOrder('example.com', 'com'), -1)
+        self.assertEqual(server._nameOrder('example.com', 'example.com'), 0)
+        self.assertEqual(server._nameOrder('com', 'example.com'), 1)
+
+
+    def test_nameOrderReverseLabelOrder(self):
+        """
+        L{server._nameOrder} compares names based on the reverse
+        order of their labels. ie zzz.aaa comes before aaa.zzz
+        """
+        self.assertEqual(server._nameOrder('example-a.com', 'example-b.com'), -1)
+        self.assertEqual(server._nameOrder('example-b.com', 'example-a.org'), -1)
+
+
+    def test_nameOrderAlphabeticalLabelOrder(self):
+        """
+        L{server._nameOrder} compares individual labels
+        alphabetically and case sensitively.
+        """
+        self.assertEqual(server._nameOrder('com', 'org'), -1)
+        self.assertEqual(server._nameOrder('example-A.com', 'example-a.com'), -1)
+
+
+    def test_sorted(self):
+        """
+        L{server._nameOrder} can be used as the C{cmp} argument to
+        L{sorted} to sort a list of domain names in subdomain first order.
+        """
+        unordered = [
+            'com',
+            'subdomainA.example.com',
+            'example.com',
+            'example.org',
+            'subdomainB.example.com',
+            'subdomaina.example.com',
+            'net'
+            ]
+        ordered = [
+            'subdomainA.example.com',
+            'subdomainB.example.com',
+            'subdomaina.example.com',
+            'example.com',
+            'com',
+            'net',
+            'example.org',
+            ]
+
+        self.assertEqual(sorted(unordered, cmp=server._nameOrder), ordered)

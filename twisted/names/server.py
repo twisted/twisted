@@ -21,7 +21,76 @@ import time
 
 from twisted.internet import protocol
 from twisted.names import dns, resolve
+from twisted.names.authority import FileAuthority
+from twisted.names.secondary import SecondaryAuthority
 from twisted.python import log
+
+
+
+def _nameOrder(name1, name2):
+    """
+    A DNS name comparison function which compares names based on their
+    constituent labels.
+
+    Designed to be used as the C{cmp} parameter to L{sorted}.
+
+    For example::
+        sorted(namesList, cmp=_nameOrder)
+
+        ['subdomainA.example.com',
+         'subdomainB.example.com',
+         'subdomaina.example.com',
+         'example.com',
+         'com',
+         'net',
+         'example.org']
+
+    @type name1: C{bytes}
+    @param name1: A DNS name for comparison.
+
+    @type name2: C{bytes}
+    @param name2: A DNS name for comparison.
+
+    @return: -1 if C{name1} is a subdomain of C{name2}. 0 if C{name1}
+        and C{name2} are equal. +1 if C{name1} is a parent of
+        C{name2}. If C{name1} and C{name2} do not have a hierarchical
+        relationship, each of their labels are compared in reverse
+        order.
+    """
+    labels1 = name1.split('.')
+    labels2 = name2.split('.')
+
+    # Enumerate the label lists in reverse
+    for l1, l2 in zip(reversed(labels1), reversed(labels2)):
+        if l1 != l2:
+            # Compare the mismatched labels alphabetically.
+            return cmp(l1, l2)
+
+    # The names must have different lengths and share a common tail or
+    # they are equal so compare by length.  length2 goes first so that
+    # longer label sequences win.
+    return cmp(len(labels2), len(labels1))
+
+
+
+def _nameOfAuthority(authority):
+    """
+    Get the zone root name for an authority based on its type.
+
+    @type authority: L{FileAuthority} or L{SecondaryAuthority}
+    @param authority: The authority instance to inspect for a zone
+        root name.
+
+    @return: The C{str} root domain name of the zone represented by
+        C{authority} or C{b''} if C{authority} is of unknown type.
+    """
+    if isinstance(authority, FileAuthority):
+        return authority.soa[0]
+    elif isinstance(authority, SecondaryAuthority):
+        return authority.domain
+    else:
+        return b''
+
 
 
 class DNSServerFactory(protocol.ServerFactory):
@@ -37,10 +106,44 @@ class DNSServerFactory(protocol.ServerFactory):
     protocol = dns.DNSProtocol
     cache = None
 
-    def __init__(self, authorities = None, caches = None, clients = None, verbose = 0):
+    def __init__(self, authorities=None, caches=None, clients=None, verbose=0):
+        """
+        @type authorities: L{list} of L{FileAuthority} or
+            L{SecondaryAuthority} instances. Default C{None}.
+        @param authorities: A list of L{FileAuthority} or
+            L{SecondaryAuthority} instances which implement
+            L{IResolver} and return authoritative DNS responses. These
+            will be re-ordered so that authorities representing child
+            zones will be queried before the parent zones. These will
+            be queried before the L{IResolver} providers in C{caches}
+            or C{clients}.
+
+        @type caches: L{list} of L{cache.CacheResolver} instances. Default C{None}.
+        @param caches: A list of L{cache.CacheResolver} instances
+            which implement L{IResolver}. Only the first cache will be
+            written to so C{caches} will normally contain a single
+            cache. The first cache will be assigned to C{self.cache}
+            and that cache will be updated whenever a client in
+            C{clients} receives a successful response.
+
+        @type clients: L{list} of L{IResolver} providers. Default C{None}.
+        @param clients: These I{IResolver} objects will be queried
+            after C{authorities} and C{caches}. These may be mixture
+            of L{hosts.Resolver}, L{client.Resolver} or
+            L{root.Resolver} instances.
+
+        @type verbose: C{bool}
+        @param verbose: Set to C{True} to enable verbose
+            logging. Default C{False}.
+        """
         resolvers = []
         if authorities is not None:
-            resolvers.extend(authorities)
+            # Sort on the zone root name, which is found in
+            # FileAuthority.soa ( a 2tuple(name, record) ).
+            resolvers.extend(
+                sorted(authorities,
+                       key=_nameOfAuthority,
+                       cmp=lambda a, b: _nameOrder(a, b)))
         if caches is not None:
             resolvers.extend(caches)
         if clients is not None:
