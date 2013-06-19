@@ -5,7 +5,7 @@ Tests for positioning sentences.
 """
 import itertools
 
-from twisted.positioning import base
+from twisted.positioning import _sentence
 from twisted.trial.unittest import TestCase
 
 
@@ -24,7 +24,7 @@ class DummyProtocol(object):
 
 
 
-class DummySentence(base._BaseSentence):
+class DummySentence(_sentence._BaseSentence):
     """
     A sentence for L{DummyProtocol}.
     """
@@ -32,7 +32,7 @@ class DummySentence(base._BaseSentence):
 
 
 
-class MixinProtocol(base._PositioningSentenceProducerMixin):
+class MixinProtocol(_sentence._PositioningSentenceProducerMixin):
     """
     A simple, fake protocol that declaratively tells you the sentences
     it produces using L{base.PositioningSentenceProducerMixin}.
@@ -47,7 +47,7 @@ class MixinProtocol(base._PositioningSentenceProducerMixin):
 
 
 
-class MixinSentence(base._BaseSentence):
+class MixinSentence(_sentence._BaseSentence):
     """
     A sentence for L{MixinProtocol}.
     """

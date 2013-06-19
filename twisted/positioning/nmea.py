@@ -23,7 +23,7 @@ import operator
 import datetime
 from zope.interface import implementer
 
-from twisted.positioning import base, ipositioning
+from twisted.positioning import base, ipositioning, _sentence
 from twisted.positioning.base import Angles
 from twisted.protocols.basic import LineReceiver
 from twisted.python.constants import Values, ValueConstant
@@ -141,7 +141,7 @@ def _validateChecksum(sentence):
 
 
 
-class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
+class NMEAProtocol(LineReceiver, _sentence._PositioningSentenceProducerMixin):
     """
     A protocol that parses and verifies the checksum of an NMEA sentence (in
     string form, not L{NMEASentence}), and delegates to a receiver.
@@ -333,7 +333,7 @@ class NMEAProtocol(LineReceiver, base._PositioningSentenceProducerMixin):
 
 
 
-class NMEASentence(base._BaseSentence):
+class NMEASentence(_sentence._BaseSentence):
     """
     An object representing an NMEA sentence.
 
