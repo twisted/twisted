@@ -1766,6 +1766,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
         self.result = deferred
         self.result.addBoth(self._removeDeferred)
         self.sendFinished = 0
+        self.p = None
 
         self.retries = -retries
         self.timeout = timeout
@@ -1800,7 +1801,15 @@ class SMTPSenderFactory(protocol.ClientFactory):
         p = self.protocol(self.domain, self.nEmails*2+2)
         p.factory = self
         p.timeout = self.timeout
+        self.p = p
+        self.result.addBoth(self._removeProtocol)
         return p
+
+    def _removeProtocol(self, argh):
+        if self.p:
+            del self.p
+            self.p = None
+        return argh
 
 
 
@@ -1908,7 +1917,8 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         p.timeout = self.timeout
         return p
 
-def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25):
+def sendmail(smtphost, from_addr, to_addrs, msg,
+             senderDomainName=None, port=25, _reactor=reactor):
     """Send an email
 
     This interface is intended to be a direct replacement for
@@ -1935,9 +1945,13 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25)
 
     @param port: Remote port to which to connect.
 
+    @param _reactor: The reactor used to make TCP connection.
+
     @rtype: L{Deferred}
-    @returns: A L{Deferred}, its callback will be called if a message is sent
-        to ANY address, the errback if no message is sent.
+    @returns: A cancellable L{Deferred}, its callback will be called if a 
+        message is sent to ANY address, the errback if no message is sent. When
+        the C{cancel} method is called, it will stop retry and disconnect the
+        connection immediately.
 
         The callback will be called with a tuple (numOk, addresses) where numOk
         is the number of successful recipient addresses and addresses is a list
@@ -1948,13 +1962,24 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25)
         # It's not a file
         msg = StringIO(str(msg))
 
-    d = defer.Deferred()
+    def cancel(d):
+        """
+        Cancel the L{twisted.mail.smtp.sendmail} call, tell the factory not to
+        retry and disconnect the connection.
+        """
+        factory.sendFinished = 1
+        if factory.p:
+            factory.p.transport.abortConnection()
+        else:
+            # Connection hasn't been made yet
+            connector.disconnect()
+    d = defer.Deferred(cancel)
     factory = SMTPSenderFactory(from_addr, to_addrs, msg, d)
 
     if senderDomainName is not None:
         factory.domain = senderDomainName
 
-    reactor.connectTCP(smtphost, port, factory)
+    connector = _reactor.connectTCP(smtphost, port, factory)
 
     return d
 
