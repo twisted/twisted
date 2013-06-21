@@ -101,7 +101,7 @@ particular action, then disposed of.</p>
 
 <p><code class="API" base="twisted.internet.endpoints">connectProtocol</code>
 connects a <code class="API" base="twisted.internet.protocol">Protocol</code>
-instance to a given ><code class="API"
+instance to a given <code class="API"
 base="twisted.internet.interfaces">IStreamClientEndpoint</code>. It returns
 a <code>Deferred</code> which fires with the <code>Protocol</code> once the
 connection has been made. Connection attempts may fail, and so
@@ -238,12 +238,13 @@ available.</p>
   IPv6 address literal instead.  For example,
   <code>tcp6:port=80:interface=2001\:0DB8\:f00e\:eb00\:\:1</code>.
   </li>
-  <li>SSL.  All TCP arguments are supported, plus: certKey, privateKey, and
-  sslmethod.  certKey (optional, defaults to the value of privateKey) gives a
+  <li>SSL.  All TCP arguments are supported, plus: certKey, privateKey, extraCertChain, and sslmethod.
+  certKey (optional, defaults to the value of privateKey) gives a
   filesystem path to a certificate (PEM format).  privateKey gives a filesystem
-  path to a a private key (PEM format).  sslmethod indicates which SSL/TLS
-  version to use (a value like TLSv1_METHOD). For example,
-  <code>ssl:port=443:privateKey=/etc/ssl/server.pem:sslmethod=SSLv3_METHOD</code>.
+  path to a private key (PEM format).
+  extraCertChain gives a filesystem path to a file with one or more concatenated certificates in PEM format that establish the chain from a root CA to the one that signed your certificate.
+  sslmethod indicates which SSL/TLS version to use (a value like TLSv1_METHOD).
+  For example, <code>ssl:port=443:privateKey=/etc/ssl/server.pem:extraCertChain=/etc/ssl/chain.pem:sslmethod=SSLv3_METHOD</code>.
   </li>
   <li>UNIX.  Supported arguments: address, mode, backlog, lockfile.  address
   gives a filesystem path to listen on with a UNIX domain socket server.  mode

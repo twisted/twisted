@@ -41,8 +41,11 @@ if not _PY3:
     from twisted.internet.endpoints import StandardErrorBehavior
 
     casPath = getModule(__name__).filePath.sibling("fake_CAs")
+    chainPath = casPath.child("chain.pem")
     escapedPEMPathName = endpoints.quoteStringArgument(pemPath.path)
     escapedCAsPathName = endpoints.quoteStringArgument(casPath.path)
+    escapedChainPathName = endpoints.quoteStringArgument(chainPath.path)
+
 
 try:
     from twisted.test.test_sslverify import makeCertificate
@@ -1819,8 +1822,8 @@ class ServerStringTests(unittest.TestCase):
 
     def test_sslWithDefaults(self):
         """
-        An SSL strport description with minimal arguments returns a properly
-        initialized L{SSL4ServerEndpoint} instance.
+        An SSL string endpoint description with minimal arguments returns
+        a properly initialized L{SSL4ServerEndpoint} instance.
         """
         reactor = object()
         server = endpoints.serverFromString(
@@ -1834,8 +1837,62 @@ class ServerStringTests(unittest.TestCase):
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
 
+
+    # Use a class variable to ensure we use the exactly same endpoint string
+    # except for the chain file itself.
+    SSL_CHAIN_TEMPLATE = "ssl:1234:privateKey=%s:extraCertChain=%s"
+
+
+    def test_sslChainLoads(self):
+        """
+        Specifying a chain file loads the contained certificates in the right
+        order.
+        """
+        server = endpoints.serverFromString(
+            object(),
+            self.SSL_CHAIN_TEMPLATE % (escapedPEMPathName,
+                                       escapedChainPathName,)
+        )
+        # Test chain file is just a concatenation of thing1.pem and thing2.pem
+        # so we can check that loading has succeeded and order has been
+        # preserved.
+        expectedChainCerts = [
+            Certificate.loadPEM(casPath.child("thing%d.pem" % (n,))
+                                .getContent())
+            for n in [1, 2]
+        ]
+        cf = server._sslContextFactory
+        self.assertEqual(cf.extraCertChain[0].digest('sha1'),
+                         expectedChainCerts[0].digest('sha1'))
+        self.assertEqual(cf.extraCertChain[1].digest('sha1'),
+                         expectedChainCerts[1].digest('sha1'))
+
+
+    def test_sslChainFileMustContainCert(self):
+        """
+        If C{extraCertChain} is passed, it has to contain at least one valid
+        certificate in PEM format.
+        """
+        fp = FilePath(self.mktemp())
+        fp.create()
+        # The endpoint string is the same as in the valid case except for
+        # a different chain file.  We use an empty temp file which obviously
+        # will never contain any certificates.
+        self.assertRaises(
+            ValueError,
+            endpoints.serverFromString,
+            object(),
+            self.SSL_CHAIN_TEMPLATE % (
+                escapedPEMPathName,
+                endpoints.quoteStringArgument(fp.path),
+            )
+        )
+
+
     if skipSSL:
         test_ssl.skip = test_sslWithDefaults.skip = skipSSL
+        test_sslChainLoads.skip = skipSSL
+        test_sslChainFileMustContainCert.skip = skipSSL
 
 
     def test_unix(self):
