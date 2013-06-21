@@ -1806,6 +1806,9 @@ class SMTPSenderFactory(protocol.ClientFactory):
         return p
 
     def _removeProtocol(self, result):
+        """
+        Remove the protocol created in C{buildProtocol}.
+        """
         if self.currentProtocol:
             self.currentProtocol = None
         return result
@@ -1947,7 +1950,7 @@ def sendmail(smtphost, from_addr, to_addrs, msg,
     @param _reactor: The reactor used to make TCP connection.
 
     @rtype: L{Deferred}
-    @returns: A cancellable L{Deferred}, its callback will be called if a 
+    @returns: A cancellable L{Deferred}, its callback will be called if a
         message is sent to ANY address, the errback if no message is sent. When
         the C{cancel} method is called, it will stop retry and disconnect the
         connection immediately.
@@ -1965,6 +1968,8 @@ def sendmail(smtphost, from_addr, to_addrs, msg,
         """
         Cancel the L{twisted.mail.smtp.sendmail} call, tell the factory not to
         retry and disconnect the connection.
+
+        @param d: The L{defer.Deferred} to be cancelled.
         """
         factory.sendFinished = 1
         if factory.currentProtocol:
