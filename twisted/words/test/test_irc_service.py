@@ -42,6 +42,35 @@ class IRCUserTestCase(unittest.TestCase):
                           self.stringTransport.value())
 
 
+    def test_utf8Messages(self):
+        """
+        When a UTF8 message is sent with sendMessage and the current IRCUser
+        has a UTF8 nick and is set to UTF8 encoding, the message will be
+        written to the transport.
+        """
+        expectedResult = (u":example.com \u0442\u0435\u0441\u0442 "
+                          u"\u043d\u0438\u043a\r\n").encode('utf-8')
+
+        self.ircUser.irc_NICK("", [u"\u043d\u0438\u043a".encode('utf-8')])
+        self.stringTransport.clear()
+        self.ircUser.sendMessage(u"\u0442\u0435\u0441\u0442".encode('utf-8'))
+        self.assertEqual(self.stringTransport.value(), expectedResult)
+
+
+    def test_invalidEncodingNick(self):
+        """
+        A NICK command sent with a nickname that cannot be decoded with the
+        current IRCUser's encoding results in a PRIVMSG from NickServ
+        indicating that the nickname could not be decoded.
+        """
+        expectedResult = (b":NickServ!NickServ@services PRIVMSG "
+                          b"\xd4\xc5\xd3\xd4 :Your nickname cannot be "
+                          b"decoded. Please use ASCII or UTF-8.\r\n")
+
+        self.ircUser.irc_NICK("", [b"\xd4\xc5\xd3\xd4"])
+        self.assertEqual(self.stringTransport.value(), expectedResult)
+
+
     def response(self):
         """
         Grabs our responses and then clears the transport

@@ -1,0 +1,1 @@
+twisted.words.service.IRCUser now properly reports an error, in response to NICK commands with non-UTF8 and non-ASCII symbols.
