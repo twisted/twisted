@@ -1766,14 +1766,14 @@ class SMTPSenderFactory(protocol.ClientFactory):
         self.result = deferred
         self.result.addBoth(self._removeDeferred)
         self.sendFinished = 0
-        self.p = None
+        self.currentProtocol = None
 
         self.retries = -retries
         self.timeout = timeout
 
-    def _removeDeferred(self, argh):
+    def _removeDeferred(self, result):
         del self.result
-        return argh
+        return result
 
     def clientConnectionFailed(self, connector, err):
         self._processConnectionError(connector, err)
@@ -1801,15 +1801,14 @@ class SMTPSenderFactory(protocol.ClientFactory):
         p = self.protocol(self.domain, self.nEmails*2+2)
         p.factory = self
         p.timeout = self.timeout
-        self.p = p
+        self.currentProtocol = p
         self.result.addBoth(self._removeProtocol)
         return p
 
-    def _removeProtocol(self, argh):
-        if self.p:
-            del self.p
-            self.p = None
-        return argh
+    def _removeProtocol(self, result):
+        if self.currentProtocol:
+            self.currentProtocol = None
+        return result
 
 
 
@@ -1968,8 +1967,8 @@ def sendmail(smtphost, from_addr, to_addrs, msg,
         retry and disconnect the connection.
         """
         factory.sendFinished = 1
-        if factory.p:
-            factory.p.transport.abortConnection()
+        if factory.currentProtocol:
+            factory.currentProtocol.transport.abortConnection()
         else:
             # Connection hasn't been made yet
             connector.disconnect()
