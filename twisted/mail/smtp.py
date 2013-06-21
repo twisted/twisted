@@ -1808,6 +1808,11 @@ class SMTPSenderFactory(protocol.ClientFactory):
     def _removeProtocol(self, result):
         """
         Remove the protocol created in C{buildProtocol}.
+
+        @param result: The result/error passed to the callback/errback of
+            L{defer.Deferred}.
+
+        @return: The C{result} untouched.
         """
         if self.currentProtocol:
             self.currentProtocol = None
