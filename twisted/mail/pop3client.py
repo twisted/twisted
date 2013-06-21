@@ -159,6 +159,25 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
     # with it.
     _greetingError = None
 
+    def _errbackDeferreds(self, reason):
+        """
+        Errback all the waiting Deferreds.
+
+        @param reason: A L{twisted.python.failure.Failure} instance indicating
+            the reason why the errbacks are called.
+        """
+        deferredList = []
+        if self._waiting is not None:
+            deferredList.append(self._waiting)
+            self._waiting = None
+        if self._blockedQueue is not None:
+            deferredList.extend(
+                [deferred for (deferred, f, a) in self._blockedQueue])
+            self._blockedQueue = None
+        for deferred in deferredList:
+            deferred.errback(reason)
+
+
     def _blocked(self, f, *a):
         # Internal helper.  If commands are being blocked, append
         # the given command and arguments to a list and return a Deferred
@@ -251,15 +270,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         elif self._greetingError:
             reason = ServerErrorResponse(self._greetingError)
 
-        d = []
-        if self._waiting is not None:
-            d.append(self._waiting)
-            self._waiting = None
-        if self._blockedQueue is not None:
-            d.extend([deferred for (deferred, f, a) in self._blockedQueue])
-            self._blockedQueue = None
-        for w in d:
-            w.errback(reason)
+        self._errbackDeferreds(reason)
+
 
     def lineReceived(self, line):
         if self.timeout > 0:
