@@ -1710,7 +1710,7 @@ class SendmailTestCase(unittest.TestCase):
         L{twisted.internet.reactor}.
         """
         args, varArgs, keywords, defaults = inspect.getargspec(smtp.sendmail)
-        index = len(args)-args.index("_reactor")+1
+        index = len(args) - args.index("_reactor") + 1
         self.assertEqual(reactor, defaults[index])
 
 
@@ -1719,18 +1719,14 @@ class SendmailTestCase(unittest.TestCase):
         When a user cancels L{twisted.mail.smtp.sendmail} before the connection
         is made, the connection is closed by
         L{twisted.internet.interfaces.IConnector.disconnect}.
-
-        @rtype: C{Deferred}
-        @return: A C{Deferred} returned by L{twisted.mail.smtp.sendmail}.
         """
         reactor = MemoryReactor()
         d = smtp.sendmail("localhost", "source@address", "recipient@address",
                           "message", _reactor=reactor)
-        connector = reactor.connectors[0]
         d.cancel()
-        self.assertEqual(connector._disconnected, True)
-        self.assertFailure(d, defer.CancelledError)
-        return d
+        self.assertEqual(reactor.connectors[0]._disconnected, True)
+        failure = self.failureResultOf(d)
+        failure.trap(defer.CancelledError)
 
 
     def test_cancelAfterConnectionMade(self):
@@ -1738,20 +1734,16 @@ class SendmailTestCase(unittest.TestCase):
         When a user cancels L{twisted.mail.smtp.sendmail} after the connection
         is made, the connection is closed by
         L{twisted.internet.interfaces.ITransport.abortConnection}.
-
-        @rtype: C{Deferred}
-        @return: A C{Deferred} returned by L{twisted.mail.smtp.sendmail}.
         """
         reactor = MemoryReactor()
         transport = StringTransport()
         d = smtp.sendmail("localhost", "source@address", "recipient@address",
                           "message", _reactor=reactor)
         factory = reactor.tcpClients[0][2]
-        connector = reactor.connectors[0]
         p = factory.buildProtocol(None)
         p.makeConnection(transport)
         d.cancel()
         self.assertEqual(transport.aborting, True)
         self.assertEqual(transport.disconnecting, True)
-        self.assertFailure(d, defer.CancelledError)
-        return d
+        failure = self.failureResultOf(d)
+        failure.trap(defer.CancelledError)
