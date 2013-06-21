@@ -14,7 +14,8 @@ from twisted.protocols import basic, loopback
 from twisted.mail import smtp
 from twisted.internet import defer, protocol, reactor, interfaces
 from twisted.internet import address, error, task
-from twisted.test.proto_helpers import MemoryReactor, StringTransport
+from twisted.test.proto_helpers import MemoryReactor
+from twisted.web.test.test_newclient import StringTransport
 
 from twisted import cred
 import twisted.cred.error
@@ -1678,25 +1679,6 @@ class SSLTestCase(unittest.TestCase):
             warningsShown[0]['message'],
             "tlsMode attribute of twisted.mail.smtp.ESMTPClient "
             "is deprecated since Twisted 13.0")
-
-
-
-class StringTransport(StringTransport):
-    """
-    A version of C{StringTransport} that supports C{abortConnection}.
-    """
-    aborting = False
-
-
-    def abortConnection(self):
-        """
-        A testable version of the C{ITCPTransport.abortConnection} method.
-
-        Since this is a special case of closing the connection,
-        C{loseConnection} is also called.
-        """
-        self.aborting = True
-        self.loseConnection()
 
 
 
