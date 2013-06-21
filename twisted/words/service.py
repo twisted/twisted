@@ -289,14 +289,13 @@ class IRCUser(irc.IRC):
 
         [REQUIRED]
         """
-        nickname = params[0]
         try:
-            nickname = nickname.decode(self.encoding)
+            nickname = params[0].decode(self.encoding)
         except UnicodeDecodeError:
             self.privmsg(
                 NICKSERV,
                 nickname,
-                'Your nickname cannot be decoded. Please use ASCII or UTF-8.')
+                'Your nickname is cannot be decoded.  Please use ASCII or UTF-8.')
             self.transport.loseConnection()
             return
 
