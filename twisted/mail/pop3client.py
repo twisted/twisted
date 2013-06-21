@@ -186,8 +186,33 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         # blocked and return None.
         if self._blockedQueue is not None:
-            d = defer.Deferred()
-            self._blockedQueue.append((d, f, a))
+            def cancel(deferred):
+                """
+                Cancel the command.
+
+                If the command is in blocked queue, remove it from the queue.
+                If the command has been popped out and is trying to send the
+                message, disconnect the connection immediately.
+
+                @param deferred: The L{defer.Deferred} whose C{cancel} method
+                    is called.
+                """
+                try:
+                    self._blockedQueue.remove(command)
+                except ValueError:
+                    # The command has been popped out.
+                    if deferred == self._waiting:
+                        self._waiting = None
+                        deferred.errback(defer.CancelledError())
+                        self._errbackDeferreds(error.ConnectionAborted((
+                            "Connection aborted due to cancellation.")))
+                        self.transport.abortConnection()
+                    else:
+                        # This shouldn't happen.
+                        assert False
+            d = defer.Deferred(cancel)
+            command = (d, f, a)
+            self._blockedQueue.append(command)
             return d
         self._blockedQueue = []
         return None
