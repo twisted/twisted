@@ -271,7 +271,7 @@ SUrCyZXsNh6VXwjs3gKQ
         # trying to decrypt a key which doesn't support encryption
         self.assertRaises(keys.BadKeyError, keys.Key.fromString,
                 keydata.publicRSA_lsh, passphrase = 'unencrypted')
-        # trying to decrypt an unencrypted key
+        # trying to decrypt a key with the wrong passphrase
         self.assertRaises(keys.EncryptedKeyError, keys.Key.fromString,
                 keys.Key(self.rsaObj).toString('openssh', 'encrypted'))
         # key with no key data

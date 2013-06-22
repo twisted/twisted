@@ -118,7 +118,7 @@ def printFingerprint(options):
 
 
 def changePassPhrase(options):
-    if not options.get('filename'):
+    if not options['filename']:
         filename = os.path.expanduser('~/.ssh/id_rsa')
         options['filename'] = raw_input(
             'Enter file in which the key is (%s): ' % filename)
