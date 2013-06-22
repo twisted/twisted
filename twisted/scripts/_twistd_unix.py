@@ -289,9 +289,6 @@ class UnixApplicationRunner(app.ApplicationRunner):
             L{IReactorDaemonize}, its daemonization-related callbacks will be
             invoked.
 
-        @param os: An object like the os module to use to perform the
-            daemonization.
-
         @param waitForStart: whether parent process should wait for the forked
             process to start or not (default to C{True}).
         @type waitForStart: C{bool}
