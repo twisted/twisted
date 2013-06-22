@@ -1246,7 +1246,7 @@ class MockOS(object):
     @type actions: C{list} of C{str}
 
     @ivar closed: keep track of the file descriptor closed.
-    @param closed: C{list} of C{int}
+    @type closed: C{list} of C{int}
 
     @ivar child: whether fork return for the child or the parent.
     @type child: C{bool}
@@ -1279,6 +1279,9 @@ class MockOS(object):
     @ivar raiseKill: if set, subsequent call to kill will raise the error
         specified.
     @type raiseKill: C{None} or an exception instance.
+
+    @ivar readData: data returned by C{os.read}.
+    @type readData: C{str}
     """
     exited = False
     raiseExec = False
@@ -1291,6 +1294,7 @@ class MockOS(object):
     egid = 0
     path = None
     raiseKill = None
+    readData = ""
 
     def __init__(self):
         """
@@ -1334,8 +1338,9 @@ class MockOS(object):
 
     def setsid(self):
         """
-        Fake C{os.setsid}. Do nothing.
+        Fake C{os.setsid}. Save action.
         """
+        self.actions.append('setsid')
 
 
     def fork(self):
@@ -1368,8 +1373,17 @@ class MockOS(object):
 
     def write(self, fd, data):
         """
-        Fake C{os.write}. Do nothing.
+        Fake C{os.write}. Save action.
         """
+        self.actions.append(("write", fd, data))
+
+
+    def read(self, fd, size):
+        """
+        Fake C{os.read}: save action, and return C{readData} content.
+        """
+        self.actions.append(('read', fd, size))
+        return self.readData
 
 
     def execvpe(self, command, args, env):
@@ -1404,7 +1418,7 @@ class MockOS(object):
         Fake C{os._exit}. Save the action, set the C{self.exited} flag, and
         raise C{SystemError}.
         """
-        self.actions.append('exit')
+        self.actions.append(('exit', code))
         self.exited = True
         # Don't forget to raise an error, or you'll end up in parent
         # code path.
@@ -1498,6 +1512,13 @@ class MockOS(object):
         return -12, -13
 
 
+    def chdir(self, path):
+        """
+        Override C{os.chdir}. Save the action.
+        """
+        self.actions.append(('chdir', path))
+
+
     def geteuid(self):
         """
         Mock C{os.geteuid}, returning C{self.euid} instead.
@@ -1556,6 +1577,26 @@ class MockOS(object):
         if self.raiseKill is not None:
             raise self.raiseKill
 
+
+    def unlink(self, filename):
+        """
+        Override C{os.unlink}. Save the action.
+        """
+        self.actions.append(('unlink', filename))
+
+
+    def umask(self, mask):
+        """
+        Override C{os.umask}. Save the action.
+        """
+        self.actions.append(('umask', mask))
+
+
+    def getpid(self):
+        """
+        Return a fixed PID value.
+        """
+        return 6789
 
 
 if process is not None:
@@ -1651,7 +1692,7 @@ class MockProcessTestCase(unittest.TestCase):
         except SystemError:
             self.assert_(self.mockos.exited)
             self.assertEqual(
-                self.mockos.actions, [("fork", False), "exec", "exit"])
+                self.mockos.actions, [("fork", False), "exec", ("exit", 1)])
         else:
             self.fail("Should not be here")
 
@@ -1716,7 +1757,7 @@ class MockProcessTestCase(unittest.TestCase):
         except SystemError:
             self.assert_(self.mockos.exited)
             self.assertEqual(
-                self.mockos.actions, [("fork", False), "exec", "exit"])
+                self.mockos.actions, [("fork", False), "setsid", "exec", ("exit", 1)])
         else:
             self.fail("Should not be here")
 
@@ -1826,7 +1867,7 @@ class MockProcessTestCase(unittest.TestCase):
         except SystemError:
             self.assert_(self.mockos.exited)
             self.assertEqual(
-                self.mockos.actions, [("fork", False), "exec", "exit"])
+                self.mockos.actions, [("fork", False), "exec", ("exit", 1)])
             # Check that fd have been closed
             self.assertIn(0, self.mockos.closed)
             self.assertIn(1, self.mockos.closed)
@@ -1854,7 +1895,7 @@ class MockProcessTestCase(unittest.TestCase):
             self.assertEqual(
                 self.mockos.actions,
                 [('fork', False), ('setuid', 0), ('setgid', 0),
-                 ('switchuid', 8080, 1234), 'exec', 'exit'])
+                 ('switchuid', 8080, 1234), 'exec', ('exit', 1)])
         else:
             self.fail("Should not be here")
 
@@ -1891,8 +1932,8 @@ class MockProcessTestCase(unittest.TestCase):
             self.assertTrue(self.mockos.exited)
             self.assertEqual(
                 self.mockos.actions,
-                [('fork', False), ('setuid', 0), ('setgid', 0),
-                 ('switchuid', 8081, 1234), 'exec', 'exit'])
+                [('fork', False), 'setsid', ('setuid', 0), ('setgid', 0),
+                 ('switchuid', 8081, 1234), 'exec', ('exit', 1)])
         else:
             self.fail("Should not be here")
 
