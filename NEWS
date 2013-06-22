@@ -1,8 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 13.1.0pre1 (2013-06-17)
-====================================
+Twisted Core 13.1.0 (2013-06-23)
+================================
 
 Features
 --------
@@ -90,8 +90,8 @@ Other
    #6510, #6525
 
 
-Twisted Conch 13.1.0pre1 (2013-06-17)
-=====================================
+Twisted Conch 13.1.0 (2013-06-23)
+=================================
 
 Features
 --------
@@ -110,16 +110,16 @@ Other
  - #5386, #6342, #6386, #6405, #6541
 
 
-Twisted Lore 13.1.0pre1 (2013-06-17)
-====================================
+Twisted Lore 13.1.0 (2013-06-23)
+================================
 
 Deprecations and Removals
 -------------------------
  - lore.lint.parserErrors is deprecated now. (#5386)
 
 
-Twisted Mail 13.1.0pre1 (2013-06-17)
-====================================
+Twisted Mail 13.1.0 (2013-06-23)
+================================
 
 Bugfixes
 --------
@@ -137,8 +137,8 @@ Other
  - #6342
 
 
-Twisted Names 13.1.0pre1 (2013-06-17)
-=====================================
+Twisted Names 13.1.0 (2013-06-23)
+=================================
 
 No significant changes have been made for this release.
 
@@ -147,8 +147,8 @@ Other
  - #3908, #6381
 
 
-Twisted News 13.1.0pre1 (2013-06-17)
-====================================
+Twisted News 13.1.0 (2013-06-23)
+================================
 
 No significant changes have been made for this release.
 
@@ -157,20 +157,20 @@ Other
  - #6342
 
 
-Twisted Pair 13.1.0pre1 (2013-06-17)
-====================================
+Twisted Pair 13.1.0 (2013-06-23)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 13.1.0pre1 (2013-06-17)
-======================================
+Twisted Runner 13.1.0 (2013-06-23)
+==================================
 
 No significant changes have been made for this release.
 
 
-Twisted Web 13.1.0pre1 (2013-06-17)
-===================================
+Twisted Web 13.1.0 (2013-06-23)
+===============================
 
 Features
 --------
@@ -199,8 +199,8 @@ Other
  - #6122, #6153, #6342, #6381, #6391, #6503
 
 
-Twisted Words 13.1.0pre1 (2013-06-17)
-=====================================
+Twisted Words 13.1.0 (2013-06-23)
+=================================
 
 Features
 --------
