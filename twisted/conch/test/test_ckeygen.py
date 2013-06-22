@@ -26,19 +26,21 @@ from twisted.conch.test.keydata import (
 
 
 
-def _make_getpass(*passphrases):
+def makeGetpass(*passphrases):
     """
     Return a callable to patch C{getpass.getpass}.  Yields a passphrase each
     time called. Use case is to provide an old, then new passphrase(s) as if
     requested interactively.
+
+    @param passphrases: The list of passphrases returned, one per each call.
     """
     def _getpass():
         yield None
         for phrase in passphrases:
             yield phrase
-    getpass = _getpass()
-    next(getpass)
-    return getpass.send
+    getpassResult = _getpass()
+    next(getpassResult)
+    return getpassResult.send
 
 
 
@@ -158,7 +160,7 @@ class KeyGenTests(TestCase):
         L{changePassPhrase} allows a user to change the passphrase of a
         private key interactively.
         """
-        oldNewConfirm = _make_getpass('encrypted', 'newpass', 'newpass')
+        oldNewConfirm = makeGetpass('encrypted', 'newpass', 'newpass')
         self.patch(getpass, 'getpass', oldNewConfirm)
 
         filename = self.mktemp()
@@ -168,6 +170,8 @@ class KeyGenTests(TestCase):
         self.assertEqual(
             self.stdout.getvalue().strip('\n'),
             'Your identification has been saved with the new passphrase.')
+        self.assertNotEqual(privateRSA_openssh_encrypted,
+                            FilePath(filename).getContent())
 
 
     def test_changePassphraseWithOld(self):
@@ -175,7 +179,7 @@ class KeyGenTests(TestCase):
         L{changePassPhrase} allows a user to change the passphrase of a
         private key, providing the old passphrase and prompting for new one.
         """
-        newConfirm = _make_getpass('newpass', 'newpass')
+        newConfirm = makeGetpass('newpass', 'newpass')
         self.patch(getpass, 'getpass', newConfirm)
 
         filename = self.mktemp()
@@ -185,6 +189,8 @@ class KeyGenTests(TestCase):
         self.assertEqual(
             self.stdout.getvalue().strip('\n'),
             'Your identification has been saved with the new passphrase.')
+        self.assertNotEqual(privateRSA_openssh_encrypted,
+                            FilePath(filename).getContent())
 
 
     def test_changePassphraseWithBoth(self):
@@ -201,6 +207,8 @@ class KeyGenTests(TestCase):
         self.assertEqual(
             self.stdout.getvalue().strip('\n'),
             'Your identification has been saved with the new passphrase.')
+        self.assertNotEqual(privateRSA_openssh_encrypted,
+                            FilePath(filename).getContent())
 
 
     def test_changePassphraseWrongPassphrase(self):
@@ -215,6 +223,8 @@ class KeyGenTests(TestCase):
             {'filename': filename, 'pass': 'wrong'})
         self.assertEqual('Could not change passphrase: old passphrase error',
                          str(error))
+        self.assertEqual(privateRSA_openssh_encrypted,
+                         FilePath(filename).getContent())
 
 
     def test_changePassphraseEmptyGetPass(self):
@@ -222,7 +232,7 @@ class KeyGenTests(TestCase):
         L{changePassPhrase} exits if no passphrase is specified for the
         C{getpass} call and the key is encrypted.
         """
-        self.patch(getpass, 'getpass', _make_getpass(''))
+        self.patch(getpass, 'getpass', makeGetpass(''))
         filename = self.mktemp()
         FilePath(filename).setContent(privateRSA_openssh_encrypted)
         error = self.assertRaises(
@@ -231,6 +241,8 @@ class KeyGenTests(TestCase):
             'Could not change passphrase: Passphrase must be provided '
             'for an encrypted key',
             str(error))
+        self.assertEqual(privateRSA_openssh_encrypted,
+                         FilePath(filename).getContent())
 
 
     def test_changePassphraseBadKey(self):
@@ -245,6 +257,7 @@ class KeyGenTests(TestCase):
         self.assertEqual(
             "Could not change passphrase: cannot guess the type of 'foobar'",
             str(error))
+        self.assertEqual('foobar', FilePath(filename).getContent())
 
 
     def test_changePassphraseCreateError(self):
