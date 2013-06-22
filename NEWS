@@ -58,7 +58,6 @@ Improved Documentation
  - The Constants HOWTO documents iteration and truth testing of flags,
    as well as previously undocumented boolean operations. (#6302)
  - The "Using Processes" howto no longer contains spelling mistakes.
-   The "Using Processes" howto no longer contains spelling mistakes.
    (#6407)
 
 Deprecations and Removals
