@@ -39,7 +39,7 @@ except ImportError:
 VERSION_OFFSET = 2000
 
 
-def runCommand(args):
+def runCommand(args, printProgress=False):
     """
     Execute a vector of arguments.
 
@@ -47,13 +47,25 @@ def runCommand(args):
     @param args: A list of arguments, the first of which will be used as the
         executable to run.
 
+    @type printProgress: C{bool}
+    @param printProgress: If C{True}, read stdout line by line and print it.
+
     @rtype: C{str}
     @return: All of the standard output.
 
     @raise CommandFailed: when the program exited with a non-0 exit code.
     """
     process = Popen(args, stdout=PIPE, stderr=STDOUT)
-    stdout = process.stdout.read()
+    if printProgress:
+        stdout = ""
+        while True:
+            line = process.stdout.readline()
+            if not line:
+                break
+            print line.strip()
+            stdout += line
+    else:
+        stdout = process.stdout.read()
     exitCode = process.wait()
     if exitCode < 0:
         raise CommandFailed(None, -exitCode, stdout)
@@ -1373,6 +1385,61 @@ class BuildTarballsScript(object):
         elif len(args) == 3:
             self.buildAllTarballs(FilePath(args[0]), FilePath(args[1]),
                                   FilePath(args[2]))
+
+
+
+
+class UploadTarballsScript(object):
+    """
+    Utility to upload pre-release tarballs. See L{main}.
+    """
+
+    runCommand = staticmethod(runCommand)
+
+    def uploadTarballs(self, path, userHost, script):
+        """
+        Upload all the files at C{path} unto C{host} using sftp.
+
+        @param path: A L{FilePath} containing the release tarballs.
+        @type path: L{FilePath}
+
+        @param userHost: The target to upload to, usually in the user@host
+            form.
+        @type userHost: C{str}
+        """
+        first = path.children()[0]
+        version = first.basename().split("-")[-1].rsplit(".", 2)[0]
+        commands = [
+            "mkdir public_html/%s" % (version,),
+            "cd public_html/%s" % (version,)]
+
+        for tarball in path.children():
+            commands.append("put %s" % (tarball.path,))
+
+        commands.append("quit\n")
+
+        workPath = FilePath(mkdtemp())
+        batch = workPath.child("batch")
+
+        batch.setContent("\n".join(commands))
+
+        self.runCommand([script, "-b", batch.path, userHost],
+                        printProgress=True)
+
+
+    def main(self, args, script):
+        """
+        Update all pre-release tarballs.
+
+        @type args: list of C{str}
+        @param args: The command line arguments to process.  This must contain
+            the source directory and the user/host combination.
+        """
+        if len(args) != 2:
+            sys.exit("Must specify two arguments: "
+                     "tarballs source path and user@host.")
+        cftp = FilePath(script).parent().parent().child("conch").child("cftp")
+        self.uploadTarballs(FilePath(args[0]), args[1], cftp.path)
 
 
 

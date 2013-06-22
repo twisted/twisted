@@ -35,7 +35,8 @@ from twisted.python._release import (
     NoDocumentsFound, filePathDelta, CommandFailed, BookBuilder,
     DistributionBuilder, APIBuilder, BuildAPIDocsScript, buildAllTarballs,
     runCommand, UncleanWorkingDirectory, NotWorkingDirectory,
-    ChangeVersionsScript, BuildTarballsScript, NewsBuilder, BuildDocsScript)
+    ChangeVersionsScript, BuildTarballsScript, NewsBuilder, BuildDocsScript,
+    UploadTarballsScript)
 
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
@@ -2638,7 +2639,7 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
 
 
 
-class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
+class ScriptTests(TestCase):
     """
     Tests for the release script functionality.
     """
@@ -2794,3 +2795,56 @@ class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
         newsBuilder.buildAll = builds.append
         newsBuilder.main(["/foo/bar/baz"])
         self.assertEqual(builds, [FilePath("/foo/bar/baz")])
+
+
+
+class UploadTarballsScriptTest(StructureAssertingMixin, TestCase):
+
+    def test_main(self):
+        """
+        L{UploadTarballsScript} calls the C{sftp} command line with a batch
+        creating the target directory and the files upload.
+        """
+        root = FilePath(self.mktemp())
+        root.createDirectory()
+        structure = {
+            "TwistedConch-13.0.0.tar.bz2": "TwistedConch",
+            "Twisted-13.0.0.tar.bz2": "Twisted"}
+        self.createStructure(root, structure)
+
+        commands = []
+
+        def runCommand(command, printProgress):
+            self.assertTrue(printProgress)
+            commands.append(command)
+
+        script = UploadTarballsScript()
+        script.runCommand = runCommand
+        script.main([root.path, "releaser@example.com"],
+                    root.child("admin").child("script").path)
+
+        cftp = root.child("conch").child("cftp")
+        self.assertEqual([cftp.path, "-b"], commands[0][:2])
+        self.assertEqual("releaser@example.com", commands[0][3])
+
+        batchFile = commands[0][2]
+
+        batchContent = (
+            "mkdir public_html/13.0.0\n"
+            "cd public_html/13.0.0\n"
+            "put %(dirname)s/TwistedConch-13.0.0.tar.bz2\n"
+            "put %(dirname)s/Twisted-13.0.0.tar.bz2\n"
+            "quit\n")
+
+
+        self.assertEqual(batchContent % {"dirname": root.path},
+                         FilePath(batchFile).getContent())
+
+
+    def test_missingArgument(self):
+        """
+        L{UploadTarballsScript} exits with an error if not called with 2
+        arguments.
+        """
+        script = UploadTarballsScript()
+        self.assertRaises(SystemExit, script.main, ["path"], "script")
