@@ -766,14 +766,11 @@ class HostnameEndpoint(object):
             lc.start(0.3)
             return winner
 
-        try:
-            d = self._nameResolution(self._host, self._port)
-            d.addErrback(errbackForGai)
-            d.addCallback(_endpoints)
-            d.addCallback(attemptConnection)
-            return d
-        except:
-            return defer.fail()
+        d = self._nameResolution(self._host, self._port)
+        d.addErrback(errbackForGai)
+        d.addCallback(_endpoints)
+        d.addCallback(attemptConnection)
+        return d
 
 
     def _nameResolution(self, host, port):
