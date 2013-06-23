@@ -1423,6 +1423,10 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
     (IPv4) address.
     """
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
+        """
+        Creates a L{HostnameEndpoint} instance where the hostname is resolved
+        into a single IPv4 address.
+        """
         address = HostnameAddress("example.com", 80)
         endpoint = endpoints.HostnameEndpoint(reactor, "example.com",
                                            address.port, **connectArgs)
@@ -1558,6 +1562,10 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
     (IPv6) address.
     """
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
+        """
+        Creates a L{HostnameEndpoint} instance where the hostname is resolved
+        into a single IPv6 address.
+        """
         address = HostnameAddress("ipv6.example.com", 80)
         endpoint = endpoints.HostnameEndpoint(reactor, "ipv6.example.com",
                                               address.port, **connectArgs)
