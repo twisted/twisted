@@ -30,9 +30,7 @@ from twisted.python.filepath import FilePath
 from twisted.python import log
 from twisted.protocols import basic
 from twisted.internet.task import Clock
-from twisted.internet.test.test_protocol import (
-        MemoryReactorWithConnectorsAndTime as MemoryReactor)
-
+from twisted.test.proto_helpers import (MemoryReactorClock as MemoryReactor)
 from twisted.test import __file__ as testInitPath
 pemPath = FilePath(testInitPath.encode("utf-8")).sibling(b"server.pem")
 
