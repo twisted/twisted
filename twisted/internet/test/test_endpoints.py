@@ -1412,8 +1412,7 @@ class RaisingMemoryReactorWithClock(RaisingMemoryReactor, Clock):
     """
     def __init__(self, listenException=None, connectException=None):
         Clock.__init__(self)
-        self._listenException = listenException
-        self._connectException = connectException
+        RaisingMemoryReactor.__init__(self, listenException, connectException)
 
 
 
