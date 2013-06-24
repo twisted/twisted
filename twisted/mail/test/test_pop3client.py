@@ -66,6 +66,7 @@ def _testCancelCommandInQueue(testCase, pop3Client, command, *args, **kargs):
 
     @param kargs: The key arguments passed to the command.
     """
+    pop3Client.noop()
     deferred = getattr(pop3Client, command)(*args, **kargs)
     deferred.cancel()
     testCase.assertEqual(pop3Client._blockedQueue, None)
@@ -140,7 +141,6 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         L{_testCancelCommandInQueue}.
         """
         p, t = setUp()
-        p.noop()
         _testCancelCommandInQueue(self, p, "user", "username")
 
 
@@ -176,7 +176,6 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         L{_testCancelCommandInQueue}.
         """
         p, t = setUp()
-        p.noop()
         _testCancelCommandInQueue(self, p, "password", "password")
 
 
@@ -229,7 +228,6 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         """
         p, t = setUp()
         p.allowInsecureLogin = True
-        p.noop()
         _testCancelCommandInQueue(self, p, "login", "username", "password")
 
 
@@ -342,7 +340,6 @@ class POP3ClientListTestCase(unittest.TestCase):
         L{_testCancelCommandInQueue}.
         """
         p, t = setUp()
-        p.noop()
         _testCancelCommandInQueue(self, p, "listSize")
 
 
