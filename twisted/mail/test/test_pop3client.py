@@ -49,6 +49,63 @@ def setUp(greet=True):
 def strip(f):
     return lambda result, f=f: f()
 
+def _testCancelCommandInQueue(testCase, pop3Client, command, *args, **kargs):
+    """
+    Internal helper for testing cancel a command in queue.
+
+    When cancel a command in the blocked queue, L{POP3Client} will remove the
+    L{defer.Deferred}, function and arguments of the command from the queue.
+
+    @param testCase: An instance of L{unittest.TestCase}.
+    @param pop3Client: An instance of L{POP3Client}.
+
+    @param command: The command to test.
+    @type command: C{str}
+
+    @param args: The arguments passed to the command.
+
+    @param kargs: The key arguments passed to the command.
+    """
+    deferred = getattr(pop3Client, command)(*args, **kargs)
+    deferred.cancel()
+    testCase.assertEqual(pop3Client._blockedQueue, None)
+    failure = testCase.failureResultOf(deferred)
+    failure.trap(defer.CancelledError)
+
+def _testCancelTryingCommand(testCase, pop3Client, transport, command,
+                             *args, **kargs):
+    """
+    Internal helper for testing cancel a trying command.
+
+    When cancel a trying command, L{POP3Client} will errback the
+    L{defer.Deferred} of the trying command with {defer.CancelledError} then
+    errback the L{defer.Deferred}s of all the waiting commands in the queue
+    with L{twisted.internet.error.ConnectionAborted} and disconnect the
+    connection immediately.
+
+    @param testCase: An instance of L{unittest.TestCase}.
+
+    @param pop3Client: An instance of L{POP3Client}.
+
+    @param transport: The transport that pop3Client used to make the connection
+    @type transport: L{twisted.internet.interfaces.ITransport}
+
+    @param command: The command to test.
+    @type command: C{str}
+
+    @param args: The arguments passed to the command.
+
+    @param kargs: The key arguments passed to the command.
+    """
+    deferredOfCommand = pop3Client.user("username")
+    deferredOfNoop = pop3Client.noop()
+    deferredOfCommand.cancel()
+    testCase.assertEqual(transport.aborting, True)
+    failureOfCommand = testCase.failureResultOf(deferredOfCommand)
+    failureOfCommand.trap(defer.CancelledError)
+    failureOfNoop = testCase.failureResultOf(deferredOfNoop)
+    failureOfNoop.trap(error.ConnectionAborted)
+
 class POP3ClientLoginTestCase(unittest.TestCase):
     def testNegativeGreeting(self):
         p, t = setUp(greet=False)
@@ -75,6 +132,26 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "account suspended"))
+    
+
+    def test_cancelUserInQueue(self):
+        """
+        Test cancel user command in queue. See the docstring of
+        L{_testCancelCommandInQueue}.
+        """
+        p, t = setUp()
+        p.noop()
+        _testCancelCommandInQueue(self, p, "user", "username")
+
+
+    def test_cancelTryingUser(self):
+        """
+        Test cancel trying user command. See the docstring of
+        L{_testCancelTryingCommand}.
+        """
+        p, t = setUp()
+        _testCancelTryingCommand(self, p, t, "user", "username")
+
 
     def testOkPass(self):
         p, t = setUp()
@@ -91,6 +168,26 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "go away"))
+    
+
+    def test_cancelPasswordInQueue(self):
+        """
+        Test cancel password command in queue. See the docstring of
+        L{_testCancelCommandInQueue}.
+        """
+        p, t = setUp()
+        p.noop()
+        _testCancelCommandInQueue(self, p, "password", "password")
+
+
+    def test_cancelTryingPassword(self):
+        """
+        Test cancel trying password command. See the docstring of
+        L{_testCancelTryingCommand}.
+        """
+        p, t = setUp()
+        _testCancelTryingCommand(self, p, t, "password", "password")
+
 
     def testOkLogin(self):
         p, t = setUp()
@@ -123,6 +220,28 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "bogus login"))
+    
+
+    def test_cancelLoginInQueue(self):
+        """
+        Test cancel login command in queue. See the docstring of
+        L{_testCancelCommandInQueue}.
+        """
+        p, t = setUp()
+        p.allowInsecureLogin = True
+        p.noop()
+        _testCancelCommandInQueue(self, p, "login", "username", "password")
+
+
+    def test_cancelTryingLogin(self):
+        """
+        Test cancel trying login command. See the docstring of
+        L{_testCancelTryingCommand}.
+        """
+        p, t = setUp()
+        p.allowInsecureLogin = True
+        _testCancelTryingCommand(self, p, t, "login", "username", "password")
+
 
     def testServerGreeting(self):
         p, t = setUp(greet=False)
@@ -215,6 +334,26 @@ class POP3ClientListTestCase(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "Fatal doom server exploded"))
+    
+
+    def test_cancelListSizeInQueue(self):
+        """
+        Test cancel listSize command in queue. See the docstring of
+        L{_testCancelCommandInQueue}.
+        """
+        p, t = setUp()
+        p.noop()
+        _testCancelCommandInQueue(self, p, "listSize")
+
+
+    def test_cancelTryingListSize(self):
+        """
+        Test cancel trying listSize command. See the docstring of
+        L{_testCancelTryingCommand}.
+        """
+        p, t = setUp()
+        _testCancelTryingCommand(self, p, t, "listSize")
+
 
     def testListUID(self):
         p, t = setUp()
@@ -244,6 +383,26 @@ class POP3ClientListTestCase(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "Fatal doom server exploded"))
+
+
+    def test_cancelListUIDInQueue(self):
+        """
+        Test cancel listUID command in queue. See the docstring of
+        L{_testCancelCommandInQueue}.
+        """
+        p, t = setUp()
+        _testCancelCommandInQueue(self, p, "listUID")
+
+
+    def test_cancelTryingListUID(self):
+        """
+        Test cancel trying listUID command. see the docstring of
+        L{_testCancelTryingCommand}.
+        """
+        p, t = setUp()
+        _testCancelTryingCommand(self, p, t, "listUID")
+
+
 
 class POP3ClientMessageTestCase(unittest.TestCase):
     def testRetrieve(self):
@@ -341,6 +500,24 @@ class POP3ClientMessageTestCase(unittest.TestCase):
         return defer.DeferredList(messages, fireOnOneErrback=True)
 
 
+    def test_cancelRetrieveInQueue(self):
+        """
+        Test cancel retrieve command in queue. See the docstring of
+        L{_testCancelCommandInQueue}.
+        """
+        p, t = setUp()
+        _testCancelCommandInQueue(self, p, "retrieve", 7)
+
+
+    def test_cancelTryingRetrieve(self):
+        """
+        Test cancel trying retrieve command. See the docstring of
+        L{_testCancelTryingCommand}.
+        """
+        p, t = setUp()
+        _testCancelTryingCommand(self, p, t, "retrieve", 7)
+
+
 
 class POP3ClientMiscTestCase(unittest.TestCase):
     def testCapability(self):
@@ -363,6 +540,25 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         p.dataReceived("-ERR This server is lame!\r\n")
         return d.addCallback(self.assertEqual, {})
 
+
+    def test_cancelCapabilitiesInQueue(self):
+        """
+        Test cancel capabilities command in queue. See the docstring of
+        L{_testCancelCommandInQueue}.
+        """
+        p, t = setUp()
+        _testCancelCommandInQueue(self, p, "capabilities", useCache=0)
+
+
+    def test_cancelTryingCapabilities(self):
+        """
+        Test cancel trying capabilities command. See the docstring of
+        L{_testCancelTryingCommand}.
+        """
+        p, t = setUp()
+        _testCancelTryingCommand(self, p, t, "capabilities", useCache=0)
+
+
     def testStat(self):
         p, t = setUp()
         d = p.stat()
@@ -378,6 +574,25 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "This server is lame!"))
+
+
+    def test_cancelStatInQueue(self):
+        """
+        Test cancel stat command in queue. See the docstring of
+        L{_testCancelCommandInQueue}.
+        """
+        p, t = setUp()
+        _testCancelCommandInQueue(self, p, "stat")
+
+
+    def test_cancelTryingStat(self):
+        """
+        Test cancel trying stat command. See the docstring of
+        L{_testCancelTryingCommand}.
+        """
+        p, t = setUp()
+        _testCancelTryingCommand(self, p, t, "stat")
+
 
     def testNoop(self):
         p, t = setUp()
@@ -395,6 +610,25 @@ class POP3ClientMiscTestCase(unittest.TestCase):
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "This server is lame!"))
 
+
+    def test_cancelNoopInQueue(self):
+        """
+        Test cancel noop command in queue. See the docstring of
+        L{_testCancelCommandInQueue}.
+        """
+        p, t = setUp()
+        _testCancelCommandInQueue(self, p, "noop")
+
+
+    def test_cancelTryingNoop(self):
+        """
+        Test cancel trying noop command. See the docstring of
+        L{_testCancelTryingCommand}.
+        """
+        p, t = setUp()
+        _testCancelTryingCommand(self, p, t, "noop")
+
+
     def testRset(self):
         p, t = setUp()
         d = p.reset()
@@ -411,6 +645,25 @@ class POP3ClientMiscTestCase(unittest.TestCase):
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "This server is lame!"))
 
+
+    def test_cancelResetInQueue(self):
+        """
+        Test cancel reset command in queue. See the docstring of
+        L{_testCancelCommandInQueue}.
+        """
+        p, t = setUp()
+        _testCancelCommandInQueue(self, p, "reset")
+
+
+    def test_cancelTryingReset(self):
+        """
+        Test cancel trying reset command in queue. See the docstring of
+        L{_testCancelTryingCommand}.
+        """
+        p, t = setUp()
+        _testCancelTryingCommand(self, p, t, "reset")
+
+
     def testDelete(self):
         p, t = setUp()
         d = p.delete(3)
@@ -426,6 +679,24 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "Winner is not you."))
+
+
+    def test_cancelDeleteInQueue(self):
+        """
+        Test cancel delete command in queue. See the docstring of
+        L{_testCancelCommandInQueue}.
+        """
+        p, t = setUp()
+        _testCancelCommandInQueue(self, p, "delete", 3)
+
+
+    def test_cancelTryingDelete(self):
+        """
+        Test cancel trying delete command. See the docstring of
+        L{_testCancelTryingCommand}.
+        """
+        p, t = setUp()
+        _testCancelTryingCommand(self, p, t, "delete", 3)
 
 
 class SimpleClient(POP3Client):
@@ -579,43 +850,3 @@ if ClientTLSContext is None:
 elif interfaces.IReactorSSL(reactor, None) is None:
     for case in (POP3TLSTestCase,):
         case.skip = "Reactor doesn't support SSL"
-
-
-
-class POP3ClientCancelTestCase(unittest.TestCase):
-    """
-    Tests for deferred cancellation support in L{POP3Client}.
-    """
-    def test_cancelCommandInBlockedQueue(self):
-        """
-        When cancel a command in the blocked queue, L{POP3Client} will remove
-        the L{defer.Deferred}, function and arguments of the command from the
-        queue.
-        """
-        p, t = setUp()
-        p.user("username")
-        deferredOfListSize = p.listSize()
-        deferredOfListSize.cancel()
-        self.assertEqual(p._blockedQueue, None)
-        failure = self.failureResultOf(deferredOfListSize)
-        failure.trap(defer.CancelledError)
-        p.dataReceived("+OK send password\r\n")
-
-
-    def test_cancelTryingCommand(self):
-        """
-        When cancel a trying command, L{POP3Client} will errback the
-        L{defer.Deferred} of the trying command with {defer.CancelledError}
-        then errback the L{defer.Deferred}s of all the waiting commands in the
-        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
-        the connection immediately.
-        """
-        p, t = setUp()
-        deferredOfUser = p.user("username")
-        deferredOfListSize = p.listSize()
-        deferredOfUser.cancel()
-        self.assertEqual(t.aborting, True)
-        failureOfUser = self.failureResultOf(deferredOfUser)
-        failureOfUser.trap(defer.CancelledError)
-        failureOfListSize = self.failureResultOf(deferredOfListSize)
-        failureOfListSize.trap(error.ConnectionAborted)
