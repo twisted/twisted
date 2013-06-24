@@ -12,8 +12,8 @@ from twisted.internet import reactor, defer, error, protocol, interfaces
 from twisted.python import log
 
 from twisted.trial import unittest
-from twisted.test.proto_helpers import StringTransport
 from twisted.protocols import basic
+from twisted.web.test.test_newclient import StringTransport
 
 from twisted.mail.test import pop3testserver
 
@@ -580,3 +580,42 @@ elif interfaces.IReactorSSL(reactor, None) is None:
     for case in (POP3TLSTestCase,):
         case.skip = "Reactor doesn't support SSL"
 
+
+
+class POP3ClientCancelTestCase(unittest.TestCase):
+    """
+    Tests for deferred cancellation support in L{POP3Client}.
+    """
+    def test_cancelCommandInBlockedQueue(self):
+        """
+        When cancel a command in the blocked queue, L{POP3Client} will remove
+        the L{defer.Deferred}, function and arguments of the command from the
+        queue.
+        """
+        p, t = setUp()
+        deferredOfUser = p.user("username")
+        deferredOfListSize = p.listSize()
+        deferredOfListSize.cancel()
+        self.assertEqual(p._blockedQueue, None)
+        failure = self.failureResultOf(deferredOfListSize)
+        failure.trap(defer.CancelledError)
+        p.dataReceived("+OK send password\r\n")
+
+
+    def test_cancelTryingCommand(self):
+        """
+        When cancel a trying command, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
+        """
+        p, t = setUp()
+        deferredOfUser = p.user("username")
+        deferredOfListSize = p.listSize()
+        deferredOfUser.cancel()
+        self.assertEqual(t.aborting, True)
+        failureOfUser = self.failureResultOf(deferredOfUser)
+        failureOfUser.trap(defer.CancelledError)
+        failureOfListSize = self.failureResultOf(deferredOfListSize)
+        failureOfListSize.trap(error.ConnectionAborted)

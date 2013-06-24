@@ -159,6 +159,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
     # with it.
     _greetingError = None
 
+
     def _errbackDeferreds(self, reason):
         """
         Errback all the waiting Deferreds.
@@ -210,13 +211,15 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
                 If the command is in blocked queue, remove it from the queue.
                 If the command has been popped out and is trying to send the
-                message, disconnect the connection immediately.
+                message, see docstring of L{POP3Client._cancelTryingCommand}.
 
                 @param deferred: The L{defer.Deferred} whose C{cancel} method
                     is called.
                 """
                 try:
                     self._blockedQueue.remove(command)
+                    if self._blockedQueue == []:
+                        self._blockedQueue = None
                 except ValueError:
                     # The command has been popped out.
                     self._cancelTryingCommand(deferred)
