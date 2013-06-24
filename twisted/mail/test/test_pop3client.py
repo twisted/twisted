@@ -593,7 +593,7 @@ class POP3ClientCancelTestCase(unittest.TestCase):
         queue.
         """
         p, t = setUp()
-        deferredOfUser = p.user("username")
+        p.user("username")
         deferredOfListSize = p.listSize()
         deferredOfListSize.cancel()
         self.assertEqual(p._blockedQueue, None)
