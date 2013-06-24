@@ -178,6 +178,24 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             deferred.errback(reason)
 
 
+    def _cancelTryingCommand(self, deferred):
+        """
+        Cancel the trying command. Errorback the L{defer.Deferred} of the
+        trying command with the L{defer.CancelledError}. Errorback the
+        L{defer.Deferred} of all the commands in the blocked queue with
+        L{twisted.internet.error.ConnectionAborted}. Disconnect the connection
+        immediately.
+
+        @param deferred: The L{defer.Deferred} whose C{cancel} method is called
+        """
+        if deferred == self._waiting:
+            self._waiting = None
+            deferred.errback(defer.CancelledError())
+            self._errbackDeferreds(error.ConnectionAborted((
+                "Connection aborted due to cancellation.")))
+            self.transport.abortConnection()
+
+
     def _blocked(self, f, *a):
         # Internal helper.  If commands are being blocked, append
         # the given command and arguments to a list and return a Deferred
@@ -201,15 +219,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
                     self._blockedQueue.remove(command)
                 except ValueError:
                     # The command has been popped out.
-                    if deferred == self._waiting:
-                        self._waiting = None
-                        deferred.errback(defer.CancelledError())
-                        self._errbackDeferreds(error.ConnectionAborted((
-                            "Connection aborted due to cancellation.")))
-                        self.transport.abortConnection()
-                    else:
-                        # This shouldn't happen.
-                        assert False
+                    self._cancelTryingCommand(deferred)
             d = defer.Deferred(cancel)
             command = (d, f, a)
             self._blockedQueue.append(command)
@@ -251,7 +261,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         else:
             self.sendLine(cmd)
         self.state = 'SHORT'
-        self._waiting = defer.Deferred()
+        self._waiting = defer.Deferred(self._cancelTryingCommand)
         return self._waiting
 
     def sendLong(self, cmd, args, consumer, xform):
@@ -271,7 +281,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.state = 'LONG_INITIAL'
         self._xform = xform
         self._consumer = consumer
-        self._waiting = defer.Deferred()
+        self._waiting = defer.Deferred(self._cancelTryingCommand)
         return self._waiting
 
     # Twisted protocol callback
