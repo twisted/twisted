@@ -133,7 +133,7 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "account suspended"))
-    
+
 
     def test_cancelUserInQueue(self):
         """
