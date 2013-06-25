@@ -168,7 +168,7 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "go away"))
-    
+
 
     def test_cancelPasswordInQueue(self):
         """
@@ -219,7 +219,7 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "bogus login"))
-    
+
 
     def test_cancelLoginInQueue(self):
         """
@@ -332,7 +332,7 @@ class POP3ClientListTestCase(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "Fatal doom server exploded"))
-    
+
 
     def test_cancelListSizeInQueue(self):
         """
