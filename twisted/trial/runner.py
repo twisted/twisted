@@ -41,9 +41,10 @@ pyunit = __import__('unittest')
 
 def isPackage(module):
     """
-    Given an object return C{True} if the object looks like a package.
+    Given an object return C{True} if the C{module} object looks like a
+    package.
 
-    @param module:
+    @param module: Module-like object.
     @type module: C{object}
     @rtype: C{bool}
     @return: Boolean indicating whether the object looks like a package.
@@ -51,15 +52,15 @@ def isPackage(module):
     if not isinstance(module, types.ModuleType):
         return False
 
-    if hasattr(module, '__file__'):
+    if getattr(module, '__file__', None):
         # actual file
-        basename = os.path.splitext(os.path.basename(module.__file__))[0]
-        return basename == '__init__'
+        modulePath = filepath.FilePath(module.__file__)
+        return modules._isPackagePath(modulePath)
 
-    if hasattr(module, '__path__'):
+    elif getattr(module, '__path__', None):
         # namespaced package
-        path = os.path.abspath(module.__path__[0])
-        return os.path.exists(path)
+        modulePath = filepath.FilePath(module.__path__[0])
+        return modulePath.exists()
 
     return False
 
@@ -68,8 +69,11 @@ def isPackageDirectory(dirname):
     """
     Is the directory at path C{dirname} a Python package directory?
 
-    Returns the name of the __init__ file (it may have a weird extension)
-    if dirname is a package directory.  Otherwise, returns False
+    @param dirname: Path to package directory.
+    @type dirname: L{str}
+    @return: The name of the C{__init__} file (it may have a weird extension)
+        if C{dirname} is a package directory. Otherwise, returns C{False}.
+    @rtype: L{str} or C{bool}
     """
     for ext in zip(*imp.get_suffixes())[0]:
         initFile = '__init__' + ext

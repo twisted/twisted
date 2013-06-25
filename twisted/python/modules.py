@@ -627,7 +627,7 @@ class PythonPath:
             topPackageObj = self.moduleDict['.'.join(
                     topPackageObj.__name__.split('.')[:-1])]
 
-        if hasattr(topPackageObj, '__file__'):
+        if getattr(topPackageObj, '__file__', None):
             if _isPackagePath(FilePath(topPackageObj.__file__)):
                 # if package 'foo' is on sys.path at /a/b/foo, package 'foo's
                 # __file__ will be /a/b/foo/__init__.py, and we are looking for
@@ -638,10 +638,10 @@ class PythonPath:
                 # path entry it's on is just its dirname.
                 rval = dirname(topPackageObj.__file__)
 
-        elif hasattr(topPackageObj, '__path__'):
+        elif getattr(topPackageObj, '__path__', None):
             # the module is completely top-level.  The
             # path entry it's on is just its dirname.
-            rval = topPackageObj.__path__[0]
+            rval = dirname(topPackageObj.__path__[0])
 
         # There are probably some awful tricks that an importer could pull
         # which would break this, so let's just make sure... it's a loaded
@@ -693,11 +693,9 @@ class PythonPath:
         Get a python module by its given fully-qualified name.
 
         @param modname: The fully-qualified Python module name to load.
-
         @type modname: C{str}
 
         @return: an object representing the module identified by C{modname}
-
         @rtype: L{PythonModule}
 
         @raise KeyError: if the module name is not a valid module name, or no
@@ -711,9 +709,9 @@ class PythonPath:
                 self._smartPath(
                     self._findEntryPathString(moduleObject)),
                 self)
-            if hasattr(moduleObject, '__file__'):
+            if getattr(moduleObject, '__file__', None):
                 mp = self._smartPath(moduleObject.__file__)
-            elif hasattr(moduleObject, '__path__'):
+            elif getattr(moduleObject, '__path__', None):
                 mp = self._smartPath(moduleObject.__path__[0])
             return PythonModule(modname, mp, pe)
 

@@ -22,6 +22,9 @@ class TwistedModulesMixin:
 
     def _cleanUpSysPath(self, originalSysPath):
         """
+        Restore C{sys.path} with the given C{originalSysPath}.
+
+        @type originalSysPath: L{str}
         """
         sys.path[:] = originalSysPath
 
