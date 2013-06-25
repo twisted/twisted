@@ -9,7 +9,7 @@ L{twisted.persisted.sob}.
 import copy, os, pickle
 from StringIO import StringIO
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 from twisted.application import service, internet, app
 from twisted.persisted import sob
 from twisted.python import usage
@@ -18,6 +18,7 @@ from twisted.protocols import wire, basic
 from twisted.internet import protocol, reactor
 from twisted.application import reactors
 from twisted.test.proto_helpers import MemoryReactor
+from twisted.python.test.modules_helpers import TwistedModulesMixin
 
 
 class Dummy:
@@ -672,7 +673,7 @@ class FakeReactor(reactors.Reactor):
 
 
 
-class PluggableReactorTestCase(unittest.TestCase):
+class PluggableReactorTestCase(TwistedModulesMixin, unittest.TestCase):
     """
     Tests for the reactor discovery/inspection APIs.
     """
@@ -738,8 +739,11 @@ class PluggableReactorTestCase(unittest.TestCase):
         installed = []
         def install():
             installed.append(True)
-        installer = FakeReactor(install,
-                                'fakereactortest', __name__, 'described')
+        fakeReactor = FakeReactor(install,
+                                  'fakereactortest', __name__, 'described')
+        modules = {'fakereactortest': fakeReactor}
+        self.replaceSysModules(modules)
+        installer = reactors.Reactor('fakereactor', 'fakereactortest', 'described')
         installer.install()
         self.assertEqual(installed, [True])
 
