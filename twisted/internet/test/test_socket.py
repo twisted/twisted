@@ -258,7 +258,56 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
 
 
 
+class ConnectedDatagramPortTestsBuilder(ReactorBuilder):
+    """
+    Builder for testing L{IReactorSocket.adoptDatagramPort}
+    implementations for the ability to detect connected sockets.
+    """
+    requiredInterfaces = [IReactorSocket]
+
+
+    def test_unconnected(self):
+        """
+        An implementation of L{IReactorSocket.adoptDatagramPort}
+        returns an unconnected L{Port} when it is passed an
+        unconnected L{socket.socket}.
+        """
+        reactor = self.buildReactor()
+
+        portSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.addCleanup(portSocket.close)
+
+        portSocket.setblocking(False)
+
+        port = reactor.adoptDatagramPort(
+            portSocket.fileno(), portSocket.family, DatagramProtocol())
+
+        self.assertEqual(port._connectedAddr, None)
+
+
+    def test_connected(self):
+        """
+        An implementation of L{IReactorSocket.adoptDatagramPort}
+        returns a connected L{Port} when it is passed an connected
+        L{socket.socket}.
+        """
+        reactor = self.buildReactor()
+        addr = ('192.0.2.100', 53)
+        portSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.addCleanup(portSocket.close)
+
+        portSocket.connect(addr)
+        portSocket.setblocking(False)
+
+        port = reactor.adoptDatagramPort(
+            portSocket.fileno(), portSocket.family, DatagramProtocol())
+
+        self.assertEqual(port._connectedAddr, addr)
+
+
+
 globals().update(IReactorSocketVerificationTestsBuilder.makeTestCaseClasses())
 globals().update(AdoptStreamPortErrorsTestsBuilder.makeTestCaseClasses())
 globals().update(AdoptStreamConnectionErrorsTestsBuilder.makeTestCaseClasses())
 globals().update(AdoptDatagramPortErrorsTestsBuilder.makeTestCaseClasses())
+globals().update(ConnectedDatagramPortTestsBuilder.makeTestCaseClasses())
