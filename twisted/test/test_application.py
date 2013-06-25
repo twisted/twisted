@@ -771,8 +771,8 @@ class PluggableReactorTestCase(TwistedModulesMixin, unittest.TestCase):
         """
         reactor = object()
         def install():
-            modules = {'twisted.internet.reactor': reactor}
-            self.replaceSysModules(modules)
+            from twisted import internet
+            self.patch(internet, 'reactor', reactor)
         name = 'fakereactortest'
         package = __name__
         description = 'description'
