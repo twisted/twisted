@@ -837,7 +837,21 @@ class IReactorUDP(Interface):
 
     def listenUDP(port, protocol, interface='', maxPacketSize=8192):
         """
-        Connects a given DatagramProtocol to the given numeric UDP port.
+        Connects a given L{DatagramProtocol} to the given numeric UDP port.
+
+        @param port: A port number on which to listen.
+        @type port: C{int}
+
+        @param protocol: A L{DatagramProtocol} instance which will be
+            connected to the given C{port}.
+        @type protocol: L{DatagramProtocol}
+
+        @param interface: The local IPv4 or IPv6 address to which to bind;
+            defaults to '', ie all IPv4 addresses.
+        @type interface: C{str}
+
+        @param maxPacketSize: The maximum packet size to accept.
+        @type maxPacketSize: C{int}
 
         @return: object which provides L{IListeningPort}.
         """
@@ -905,7 +919,6 @@ class IReactorSocket(Interface):
 
         - U{http://twistedmatrix.com/trac/ticket/5570}: established connections
         - U{http://twistedmatrix.com/trac/ticket/5573}: AF_UNIX ports
-        - U{http://twistedmatrix.com/trac/ticket/5574}: SOCK_DGRAM sockets
     """
 
     def adoptStreamPort(fileDescriptor, addressFamily, factory):
@@ -929,12 +942,13 @@ class IReactorSocket(Interface):
 
         @return: An object providing L{IListeningPort}.
 
-        @raise UnsupportedAddressFamily: If the given address family is not
-            supported by this reactor, or not supported with the given socket
-            type.
+        @raise twisted.internet.error.UnsupportedAddressFamily: If the
+            given address family is not supported by this reactor, or
+            not supported with the given socket type.
 
-        @raise UnsupportedSocketType: If the given socket type is not supported
-            by this reactor, or not supported with the given socket type.
+        @raise twisted.internet.error.UnsupportedSocketType: If the
+            given socket type is not supported by this reactor, or not
+            supported with the given socket type.
         """
 
 
@@ -962,6 +976,42 @@ class IReactorSocket(Interface):
             protocol to handle the connection via this socket.
 
         @raise UnsupportedAddressFamily: If the given address family is not
+            supported by this reactor, or not supported with the given socket
+            type.
+
+        @raise UnsupportedSocketType: If the given socket type is not supported
+            by this reactor, or not supported with the given socket type.
+        """
+
+
+    def adoptDatagramPort(fileDescriptor, addressFamily, protocol,
+                          maxPacketSize=8192):
+        """
+        Add an existing listening I{SOCK_DGRAM} socket to the reactor to
+        monitor for read and write readiness.
+
+        @param fileDescriptor: A file descriptor associated with a socket which
+            is already bound to an address and marked as listening.  The socket
+            must be set non-blocking.  Any additional flags (for example,
+            close-on-exec) must also be set by application code.  Application
+            code is responsible for closing the file descriptor, which may be
+            done as soon as C{adoptDatagramPort} returns.
+        @type fileDescriptor: C{int}
+
+        @param addressFamily: The address family (or I{domain}) of the socket.
+            For example, L{socket.AF_INET6}.
+        @type addressFamily: C{int}
+
+        @param protocol: A L{DatagramProtocol} instance to connect to
+            a UDP transport.
+        @type protocol: L{DatagramProtocol}
+
+        @param maxPacketSize: The maximum packet size to accept.
+        @type maxPacketSize: C{int}
+
+        @return: An object providing L{IListeningPort}.
+
+        @raise L{UnsupportedAddressFamily}: If the given address family is not
             supported by this reactor, or not supported with the given socket
             type.
 

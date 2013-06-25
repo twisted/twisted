@@ -449,6 +449,26 @@ class MemoryReactor(object):
                 fileDescriptor, addressFamily, factory))
 
 
+    def adoptDatagramPort(self, fileno, addressFamily, protocol,
+                          maxPacketSize=8192):
+        """
+        Fake L{IReactorSocket.adoptDatagramPort}, that logs the call and returns
+        a fake L{IListeningPort}.
+
+        @see: L{twisted.internet.interfaces.IReactorSocket.adoptDatagramPort}
+        """
+        if addressFamily == AF_INET:
+            addr = IPv4Address('UDP', '0.0.0.0', 1234)
+        elif addressFamily == AF_INET6:
+            addr = IPv6Address('UDP', '::', 1234)
+        else:
+            raise UnsupportedAddressFamily()
+
+        self.adoptedPorts.append(
+            (fileno, addressFamily, protocol, maxPacketSize))
+        return _FakePort(addr)
+
+
     def listenTCP(self, port, factory, backlog=50, interface=''):
         """
         Fake L{reactor.listenTCP}, that logs the call and returns an
