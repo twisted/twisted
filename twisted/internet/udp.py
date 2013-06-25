@@ -164,8 +164,8 @@ class Port(base.BasePort):
 
     def _bindSocket(self):
         """
-        Responsible for preparing and assigning a L{socket.socket}
-        instance to C{self.socket}.
+        Prepare and assign a L{socket.socket} instance to
+        C{self.socket}.
 
         Either creates a new SOCK_DGRAM L{socket.socket} bound to
         C{self.interface} and C{self.port} or takes an existing
