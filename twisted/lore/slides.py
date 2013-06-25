@@ -43,9 +43,8 @@ Example input file::
     </html>
 """
 
-import re
-import os.path
 from xml.dom import minidom as dom
+import os.path, re
 from cStringIO import StringIO
 
 from twisted.lore import default

@@ -30,10 +30,7 @@
 # __ put all of our test files someplace neat and tidy
 #
 
-import os
-import shutil
-import errno
-import time
+import os, shutil, errno, time
 from StringIO import StringIO
 from xml.dom import minidom as dom
 

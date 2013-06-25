@@ -8,8 +8,8 @@ Tests for L{twisted.lore.slides}.
 from xml.dom.minidom import Element, Text
 
 from twisted.trial.unittest import TestCase
-from twisted.lore.slides import (HTMLSlide, splitIntoSlides,
-    insertPrevNextLinks, MagicpointOutput)
+from twisted.lore.slides import (
+    HTMLSlide, splitIntoSlides, insertPrevNextLinks, MagicpointOutput)
 
 
 class SlidesTests(TestCase):

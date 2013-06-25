@@ -3,12 +3,7 @@
 
 
 from itertools import count
-import re
-import os
-import cStringIO
-import time
-import cgi
-import urlparse
+import re, os, cStringIO, time, cgi, urlparse
 from xml.dom import minidom as dom
 from xml.sax.handler import ErrorHandler, feature_validation
 from xml.dom.pulldom import SAX2DOM

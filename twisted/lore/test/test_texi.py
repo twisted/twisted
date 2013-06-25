@@ -25,12 +25,12 @@ class TexiSpitterTests(TestCase):
         """
         L{TexiSpitter.visitNode} writes out title information.
         """
-        pre = Element('title')
+        titleElement = Element('title')
         text = Text()
         text.data = u'bar'
-        pre.appendChild(text)
+        titleElement.appendChild(text)
 
-        self.spitter.visitNode(pre)
+        self.spitter.visitNode(titleElement)
         self.assertEqual(''.join(self.output), '@node bar\n@section bar\n')
 
 
@@ -39,12 +39,12 @@ class TexiSpitterTests(TestCase):
         L{TexiSpitter.visitNode} emits a verbatim block when it encounters a
         I{pre} element.
         """
-        pre = Element('pre')
+        preElement = Element('pre')
         text = Text()
         text.data = u'foo'
-        pre.appendChild(text)
+        preElement.appendChild(text)
 
-        self.spitter.visitNode(pre)
+        self.spitter.visitNode(preElement)
         self.assertEqual(''.join(self.output),
             '@verbatim\nfoo\n@end verbatim\n')
 
@@ -54,11 +54,11 @@ class TexiSpitterTests(TestCase):
         L{TexiSpitter.visitNode} emits a C{@code} block when it encounters a
         I{code} element.
         """
-        code = Element('code')
+        codeElement = Element('code')
         text = Text()
         text.data = u'print'
-        code.appendChild(text)
+        codeElement.appendChild(text)
 
-        self.spitter.visitNode(code)
+        self.spitter.visitNode(codeElement)
         self.assertEqual(''.join(self.output), "@code{print}")
 
