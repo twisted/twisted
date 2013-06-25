@@ -764,6 +764,23 @@ class PluggableReactorTestCase(TwistedModulesMixin, unittest.TestCase):
         self.assertEqual(installed, [True])
 
 
+    def test_installReactorReturnsReactor(self):
+        """
+        Test that the L{reactors.installReactor} function correctly returns
+        the installed reactor.
+        """
+        reactor = object()
+        def install():
+            modules = {'twisted.internet.reactor': reactor}
+            self.replaceSysModules(modules)
+        name = 'fakereactortest'
+        package = __name__
+        description = 'description'
+        self.pluginResults = [FakeReactor(install, name, package, description)]
+        installed = reactors.installReactor(name)
+        self.assertEqual(installed, reactor)
+
+
     def test_installNonExistentReactor(self):
         """
         Test that L{reactors.installReactor} raises L{reactors.NoSuchReactor}
