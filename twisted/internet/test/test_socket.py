@@ -282,7 +282,7 @@ class ConnectedDatagramPortTestsBuilder(ReactorBuilder):
         port = reactor.adoptDatagramPort(
             portSocket.fileno(), portSocket.family, DatagramProtocol())
 
-        self.assertEqual(port._connectedAddr, None)
+        self.assertIs(port._connectedAddr, None)
 
 
     def test_connected(self):
@@ -303,6 +303,7 @@ class ConnectedDatagramPortTestsBuilder(ReactorBuilder):
             portSocket.fileno(), portSocket.family, DatagramProtocol())
 
         self.assertEqual(port._connectedAddr, addr)
+        self.assertRaises(RuntimeError, port.connect, *addr)
 
 
 

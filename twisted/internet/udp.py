@@ -136,6 +136,13 @@ class Port(base.BasePort):
         self = cls(None, protocol, interface=interface, reactor=reactor,
                    maxPacketSize=maxPacketSize)
         self._preexistingSocket = port
+        try:
+            self._connectedAddr = port.getpeername()
+        except socket.error as e:
+            # "[Errno 107] Transport endpoint is not connected"
+            # indicates that this socket is not connected.
+            if e.args[0] != 107:
+                raise
         return self
 
 
