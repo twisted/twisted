@@ -214,6 +214,30 @@ class CGI(unittest.TestCase):
         self.assertEqual(res, "readallinput ok%s" % os.linesep)
 
 
+class CGIScriptTests(unittest.TestCase):
+    """
+    Tests for L{twcgi.CGIScript}.
+    """
+
+
+    def test_pathInfo(self):
+        """
+        L{twcgi.CGIScript.render} sets the process environment I{PATH_INFO} from
+        the request path.
+        """
+        class FakeReactor:
+            def spawnProcess(self, process, filename, args, env, wdir):
+                self.process_env = env
+
+        _reactor = FakeReactor()
+        resource = twcgi.CGIScript(self.mktemp(), _reactor=_reactor)
+        request = DummyRequest(['a', 'b'])
+        _render(resource, request)
+
+        self.assertIn("PATH_INFO", _reactor.process_env)
+        self.assertEqual(_reactor.process_env["PATH_INFO"],
+                         "/a/b")
+
 
 class CGIDirectoryTests(unittest.TestCase):
     """

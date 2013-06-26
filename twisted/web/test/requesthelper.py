@@ -118,7 +118,8 @@ class DummyRequest(object):
         self.responseCode = None
         self.headers = {}
         self._finishedDeferreds = []
-
+        self._serverName = b"dummy"
+        self.clientproto = b"HTTP/1.0"
 
     def getHeader(self, name):
         """
@@ -133,6 +134,8 @@ class DummyRequest(object):
         """
         return self.headers.get(name.lower(), None)
 
+    def getAllHeaders(self):
+        return self.headers
 
     def setHeader(self, name, value):
         """TODO: make this assert on write() if the header is content-length
@@ -237,3 +240,15 @@ class DummyRequest(object):
         if isinstance(self.client, IPv4Address):
             return self.client.host
         return None
+
+
+    def getRequestHostname(self):
+        return self._serverName
+
+
+    def getHost(self):
+        return DummyChannel.TCP()
+
+
+    def getClient(self):
+        pass
