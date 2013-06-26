@@ -700,7 +700,8 @@ class OpenSSLOptions(unittest.TestCase):
             sslverify.OpenSSLCertificateOptions().__setstate__, state)
 
     test_setstateDeprecation.suppress = [util.suppress(
-        message = "twisted.internet._sslverify.OpenSSLCertificateOptions.__getstate__ "
+        message =
+        "twisted.internet._sslverify.OpenSSLCertificateOptions.__getstate__ "
         "was deprecated in Twisted 13.1.0; please use a real persistence "
         "system instead",
         category = DeprecationWarning)]
