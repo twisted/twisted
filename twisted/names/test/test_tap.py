@@ -5,9 +5,12 @@
 Tests for L{twisted.names.tap}.
 """
 
+from io import BytesIO
+import sys
+
 from twisted.trial.unittest import TestCase
 from twisted.python.usage import UsageError
-from twisted.names.tap import Options, _buildResolvers
+from twisted.names.tap import makeService, Options, _buildResolvers
 from twisted.names.dns import PORT
 from twisted.names.secondary import SecondaryAuthorityService
 from twisted.names.resolve import ResolverChain
@@ -15,9 +18,39 @@ from twisted.names.client import Resolver
 
 class OptionsTests(TestCase):
     """
-    Tests for L{Options}, defining how command line arguments for the DNS server
-    are parsed.
+    Tests for L{Options}, defining how command line arguments for the
+    DNS server are parsed.
     """
+    def test_operatingModeOptionsExist(self):
+        """
+        The option names listed in L{Options._operatingModeOptions}
+        must all be valid command line options. This test guards
+        against accidental removal of an operating mode related
+        option, without also updating the _operatingModeOptions list.
+        """
+        options = Options()
+        availableOptionNames = options.synonyms.values()
+        for optionName in options._operatingModeOptions:
+            self.assertTrue(
+                optionName in availableOptionNames,
+                msg="%r option not found." % (optionName,))
+
+
+    def test_unknownOperatingMode(self):
+        """
+        At least one of the L{Options._operatingModeOptions} must be
+        given or an error message is printed to L{sys.stderr} and
+        L{SystemExit} is raised.
+        """
+        options = Options()
+        options.parseOptions([])
+        fakeStderr = BytesIO()
+        self.patch(sys, 'stderr', fakeStderr)
+        self.assertRaises(
+            SystemExit, makeService, options)
+        self.assertNotEqual(fakeStderr.getvalue(), '')
+
+
     def test_malformedSecondary(self):
         """
         If the value supplied for an I{--secondary} option does not provide a
