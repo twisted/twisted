@@ -14,12 +14,14 @@ import errno, socket
 
 from zope.interface import verify
 
+from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.log import err
 from twisted.internet.interfaces import IReactorSocket
 from twisted.internet.error import UnsupportedAddressFamily
 from twisted.internet.protocol import DatagramProtocol, ServerFactory
 from twisted.internet.test.reactormixins import (
     ReactorBuilder, needsRunningReactor)
+from twisted.trial.unittest import SkipTest
 
 
 
@@ -46,8 +48,18 @@ class IReactorSocketVerificationTestsBuilder(ReactorBuilder):
         """
         C{reactorFactory} implements L{IReactorSocket}.
         """
-        self.assertTrue(
-            verify.verifyClass(IReactorSocket, self.reactorFactory))
+        # requiredInterfaces are checked in
+        # ReactorBuilder.buildReactor which isn't used here, so we
+        # have to explicitly check that the reactorFactory claims to
+        # implement the interface before attempting to verify it.
+        if IReactorSocket.implementedBy(self.reactorFactory):
+            self.assertTrue(
+                verify.verifyClass(IReactorSocket, self.reactorFactory))
+        else:
+            raise SkipTest(
+                "%s does not provide %s" % (
+                    fullyQualifiedName(self.reactorFactory.__class__),
+                    fullyQualifiedName(IReactorSocket)))
 
 
     def test_provider(self):
