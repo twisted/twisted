@@ -918,9 +918,13 @@ class ClientTestCase(unittest.TestCase):
         d.addCallback(self.checkResult, dns.NAPTR)
         return d
 
+
     def test_query(self):
         """
-        See L{test_lookupAddress}
+        L{client.query} accepts a L{dns.Query} instance and dispatches
+        it to L{client.theResolver}.C{query}, which in turn dispatches
+        to an appropriate C{lookup*} method of L{client.theResolver},
+        based on the L{dns.Query} type.
         """
         q = dns.Query(self.hostname, dns.A)
         d = client.query(q)
