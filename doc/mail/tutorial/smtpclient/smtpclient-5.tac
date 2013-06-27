@@ -10,5 +10,5 @@ smtpClientFactory = protocol.ClientFactory()
 from twisted.mail import smtp
 smtpClientFactory.protocol = smtp.ESMTPClient
 
-smtpClientService = internet.TCPClient('localhost', 25, smtpClientFactory)
+smtpClientService = internet.TCPClient('localhost', 8025, smtpClientFactory)
 smtpClientService.setServiceParent(application)

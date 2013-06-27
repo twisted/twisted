@@ -48,13 +48,12 @@ class SMTPClientFactory(protocol.ClientFactory):
 def getMailExchange(host):
     def cbMX(mxRecord):
         return str(mxRecord.name)
-    return (relaymanager.MXCalculator(createResolver(None, None, b"hosts"))
-            .getMX(host).addCallback(cbMX))
+    return relaymanager.MXCalculator().getMX(host).addCallback(cbMX)
 
 def cbMailExchange(exchange):
     smtpClientFactory = SMTPClientFactory()
 
-    smtpClientService = internet.TCPClient(exchange, 8025, smtpClientFactory)
+    smtpClientService = internet.TCPClient(exchange, 25, smtpClientFactory)
     smtpClientService.setServiceParent(application)
 
 getMailExchange('example.net').addCallback(cbMailExchange)

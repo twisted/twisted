@@ -14,5 +14,5 @@ class SMTPClientFactory(protocol.ClientFactory):
 
 smtpClientFactory = SMTPClientFactory()
 
-smtpClientService = internet.TCPClient('localhost', 25, smtpClientFactory)
+smtpClientService = internet.TCPClient('localhost', 8025, smtpClientFactory)
 smtpClientService.setServiceParent(application)

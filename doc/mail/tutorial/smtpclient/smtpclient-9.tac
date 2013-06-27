@@ -49,5 +49,5 @@ def getMailExchange(host):
 smtpClientFactory = SMTPClientFactory()
 
 smtpClientService = internet.TCPClient(
-    getMailExchange('example.net'), 25, smtpClientFactory)
+    getMailExchange('example.net'), 8025, smtpClientFactory)
 smtpClientService.setServiceParent(application)

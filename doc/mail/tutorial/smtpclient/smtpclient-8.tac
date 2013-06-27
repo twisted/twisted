@@ -10,11 +10,11 @@ from twisted.mail import smtp
 
 class SMTPTutorialClient(smtp.ESMTPClient):
     mailFrom = "tutorial_sender@example.com"
-    mailTo = "tutorial_recipient@example.net"
+    mailTo = "tutorial_recipient@localhost"
     mailData = '''\
 Date: Fri, 6 Feb 2004 10:14:39 -0800
 From: Tutorial Guy <tutorial_sender@example.com>
-To: Tutorial Gal <tutorial_recipient@example.net>
+To: Tutorial Gal <tutorial_recipient@localhost>
 Subject: Tutorate!
 
 Hello, how are you, goodbye.
@@ -45,5 +45,5 @@ class SMTPClientFactory(protocol.ClientFactory):
 
 smtpClientFactory = SMTPClientFactory()
 
-smtpClientService = internet.TCPClient('localhost', 25, smtpClientFactory)
+smtpClientService = internet.TCPClient('localhost', 8025, smtpClientFactory)
 smtpClientService.setServiceParent(application)
