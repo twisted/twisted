@@ -489,7 +489,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         connected.
         """
         protoA, protoB = object(), object()
-        factory = server.DNSServerFactory(None)
+        factory = server.DNSServerFactory()
         factory.connectionMade(protoA)
         self.assertEqual(factory.connections, [protoA])
         factory.connectionMade(protoB)
