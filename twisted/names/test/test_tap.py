@@ -5,12 +5,9 @@
 Tests for L{twisted.names.tap}.
 """
 
-from io import BytesIO
-import sys
-
 from twisted.trial.unittest import TestCase
 from twisted.python.usage import UsageError
-from twisted.names.tap import makeService, Options, _buildResolvers
+from twisted.names.tap import Options, _buildResolvers
 from twisted.names.dns import PORT
 from twisted.names.secondary import SecondaryAuthorityService
 from twisted.names.resolve import ResolverChain
@@ -18,8 +15,8 @@ from twisted.names.client import Resolver
 
 class OptionsTests(TestCase):
     """
-    Tests for L{Options}, defining how command line arguments for the
-    DNS server are parsed.
+    Tests for L{Options}, defining how command line arguments for the DNS server
+    are parsed.
     """
     def test_malformedSecondary(self):
         """

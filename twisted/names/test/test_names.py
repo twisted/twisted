@@ -453,8 +453,7 @@ class DNSServerFactoryTests(unittest.TestCase):
                 pass
 
         protocol = FakeProtocol()
-        factory = server.DNSServerFactory(
-            [NoFileAuthority(soa=(), records=())])
+        factory = server.DNSServerFactory(None)
         setattr(factory, methodName, fakeHandler)
         factory.messageReceived(message, protocol)
         self.assertEqual(receivedMessages, [(message, protocol, None)])
@@ -490,8 +489,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         connected.
         """
         protoA, protoB = object(), object()
-        factory = server.DNSServerFactory(
-            [NoFileAuthority(soa=(), records=())])
+        factory = server.DNSServerFactory(None)
         factory.connectionMade(protoA)
         self.assertEqual(factory.connections, [protoA])
         factory.connectionMade(protoB)

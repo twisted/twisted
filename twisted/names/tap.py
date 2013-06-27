@@ -16,8 +16,6 @@ from twisted.names import server
 from twisted.names import authority
 from twisted.names import secondary
 
-
-
 class Options(usage.Options):
     optParameters = [
         ["interface", "i", "",   "The interface to which to bind"],
@@ -114,7 +112,6 @@ class Options(usage.Options):
             raise usage.UsageError("Invalid port: %r" % (self['port'],))
 
 
-
 def _buildResolvers(config):
     """
     Build DNS resolver instances in an order which leaves recursive
@@ -140,6 +137,7 @@ def _buildResolvers(config):
 
 def makeService(config):
     ca, cl = _buildResolvers(config)
+
     f = server.DNSServerFactory(config.zones, ca, cl, config['verbose'])
     p = dns.DNSDatagramProtocol(f)
     f.noisy = 0
