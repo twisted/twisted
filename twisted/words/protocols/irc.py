@@ -45,7 +45,6 @@ from twisted.internet import reactor, protocol, task
 from twisted.persisted import styles
 from twisted.protocols import basic
 from twisted.python import log, reflect, _textattributes
-from twisted.python.failure import Failure
 
 NUL = chr(0)
 CR = chr(015)
@@ -267,15 +266,14 @@ class IRC(protocol.Protocol):
         to that command.  If a prefix is desired, it may be specified with the
         keyword argument 'prefix'.
         """
-
         if not command:
-            raise ValueError, "IRC message requires a command."
+            raise ValueError("IRC message requires a command.")
 
         if ' ' in command or command[0] == ':':
             # Not the ONLY way to screw up, but provides a little
             # sanity checking to catch likely dumb mistakes.
-            raise ValueError, "Somebody screwed up, 'cuz this doesn't" \
-                  " look like a command to me: %s" % command
+            raise ValueError("Somebody screwed up, 'cuz this doesn't" \
+                  " look like a command to me: %s" % command)
 
         line = ' '.join([command] + list(parameter_list))
         if 'prefix' in prefix:
@@ -2407,10 +2405,12 @@ class IRCClient(basic.LineReceiver):
     ### You may override these with something more appropriate to your UI.
 
     def badMessage(self, line, excType, excValue, tb):
-        """When I get a message that's so broken I can't use it.
         """
-        log.err(Failure(excValue, excType, tb),
-                'bad message received: %r', (line,))
+        When I get a message that's so broken I can't use it.
+        """
+        log.msg(line)
+        log.msg(''.join(traceback.format_exception(excType, excValue, tb)))
+
 
     def quirkyMessage(self, s):
         """This is called when I receive a message which is peculiar,
@@ -2738,7 +2738,7 @@ def dccDescribe(data):
                 address & 0xFF,
                 )
             # The mapping to 'int' is to get rid of those accursed
-            # "L"s which python 1.5.2 puts on the end of longs.
+            # "L"s which python puts on the end of longs.
             address = '.'.join(map(str, address))
 
     if dcctype == 'SEND':

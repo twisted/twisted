@@ -1637,10 +1637,33 @@ class BasicServerFunctionalityTestCase(unittest.TestCase):
 
     def test_sendMessage(self):
         """
-        Sanity check for L{IRC.sendMessage}.
+        Passing a command and parameters to L{IRC.sendMessage} results in a
+        valid query string.
         """
         self.p.sendMessage('CMD', 'param1', 'param2')
-        self.assertEqual(self.f.getvalue(), 'CMD param1 param2\r\n')
+        self.check('CMD param1 param2\r\n')
+
+
+    def test_sendMessageNoCommand(self):
+        """
+        Passing C{None} as the command to L{IRC.sendMessage} raises a
+        C{ValueError}.
+        """
+        error = self.assertRaises(ValueError, self.p.sendMessage, None,
+            'param1', 'param2')
+        self.assertEqual(str(error), "IRC message requires a command.")
+
+
+    def test_sendMessageInvalidCommand(self):
+        """
+        Passing an invalid string command to L{IRC.sendMessage} raises a
+        C{ValueError}.
+        """
+        error = self.assertRaises(ValueError, self.p.sendMessage, ' ',
+            'param1', 'param2')
+        self.assertEqual(str(error),
+            "Somebody screwed up, 'cuz this doesn't look like a command to "
+            "me:  ")
 
 
     def testPrivmsg(self):
@@ -2357,9 +2380,11 @@ class DccTests(unittest.TestCase):
 
 class TestServerToClient(TestCase):
     """
-    Tests for the irc_* methods sent from the server to the client.
+    Tests for the C{irc_*} methods sent from the server to the client.
     """
     def setUp(self):
+        self.user = 'Wolf!~wolf@yok.utu.fi'
+        self.channel = '#twisted'
         methods_list = ['joined', 'userJoined', 'left', 'userLeft', 'userQuit',
                         'noticed', 'kickedFrom', 'userKicked', 'topicUpdated']
         self.client = CollectorClient(methods_list)
@@ -2368,24 +2393,24 @@ class TestServerToClient(TestCase):
     def test_irc_JOIN(self):
         """
         L{IRCClient.joined} is called when I join a channel;
-        l{IRCClient.userJoined} is called when someone else joins.
+        L{IRCClient.userJoined} is called when someone else joins.
         """
-        self.client.irc_JOIN('Wolf!~wolf@yok.utu.fi', ['#twisted'])
+        self.client.irc_JOIN(self.user, [self.channel])
         self.client.irc_JOIN('Svadilfari!~svadi@yok.utu.fi', ['#python'])
         self.assertEqual(self.client.methods,
-                         [('joined', ('#twisted',)),
+                         [('joined', (self.channel,)),
                           ('userJoined', ('Svadilfari', '#python'))])
 
 
     def test_irc_PART(self):
         """
         L{IRCClient.left} is called when I part the channel;
-        l{IRCClient.userLeft} is called when someone else parts.
+        L{IRCClient.userLeft} is called when someone else parts.
         """
-        self.client.irc_PART('Wolf!~wolf@yok.utu.fi', ['#twisted'])
+        self.client.irc_PART(self.user, [self.channel])
         self.client.irc_PART('Svadilfari!~svadi@yok.utu.fi', ['#python'])
         self.assertEqual(self.client.methods,
-                         [('left', ('#twisted',)),
+                         [('left', (self.channel,)),
                           ('userLeft', ('Svadilfari', '#python'))])
 
 
@@ -2395,7 +2420,7 @@ class TestServerToClient(TestCase):
         the channel (myself included).
         """
         self.client.irc_QUIT('Svadilfari!~svadi@yok.utu.fi', ['Adios.'])
-        self.client.irc_QUIT('Wolf!~wolf@yok.utu.fi', ['Farewell.'])
+        self.client.irc_QUIT(self.user, ['Farewell.'])
         self.assertEqual(self.client.methods,
                          [('userQuit', ('Svadilfari', 'Adios.')),
                           ('userQuit', ('Wolf', 'Farewell.'))])
@@ -2405,40 +2430,39 @@ class TestServerToClient(TestCase):
         """
         L{IRCClient.noticed} is called when a notice is received.
         """
-        user = 'Wolf!~wolf@yok.utu.fi'
         msg = ('%(X)cextended%(X)cdata1%(X)cextended%(X)cdata2%(X)c%(EOL)s' %
                {'X': irc.X_DELIM, 'EOL': irc.CR + irc.LF})
-        self.client.irc_NOTICE(user, ['#twisted', msg])
+        self.client.irc_NOTICE(self.user, [self.channel, msg])
         self.assertEqual(self.client.methods,
-                         [('noticed', (user, '#twisted', 'data1 data2'))])
+                         [('noticed', (self.user, '#twisted', 'data1 data2'))])
 
 
     def test_irc_KICK(self):
         """
         L{IRCClient.kickedFrom} is called when I get kicked from the channel;
-        l{IRCClient.userKicked} is called when someone else gets kicked.
+        L{IRCClient.userKicked} is called when someone else gets kicked.
         """
         # fight!
         self.client.irc_KICK('Svadilfari!~svadi@yok.utu.fi',
                              ['#python', 'WOLF', 'shoryuken!'])
-        self.client.irc_KICK('Wolf!~wolf@yok.utu.fi',
-                             ['#twisted', 'Svadilfari', 'hadouken!'])
+        self.client.irc_KICK(self.user,
+                             [self.channel, 'Svadilfari', 'hadouken!'])
         self.assertEqual(self.client.methods,
                          [('kickedFrom',
                            ('#python', 'Svadilfari', 'shoryuken!')),
                           ('userKicked',
-                           ('Svadilfari', '#twisted', 'Wolf', 'hadouken!'))])
+                           ('Svadilfari', self.channel, 'Wolf', 'hadouken!'))])
 
 
     def test_irc_TOPIC(self):
         """
         L{IRCClient.topicUpdated} is called when someone sets the topic.
         """
-        self.client.irc_TOPIC('Wolf!~wolf@yok.utu.fi',
-                              ['#twisted', 'new topic is new'])
+        self.client.irc_TOPIC(self.user,
+                              [self.channel, 'new topic is new'])
         self.assertEqual(self.client.methods,
                          [('topicUpdated',
-                           ('Wolf', '#twisted', 'new topic is new'))])
+                           ('Wolf', self.channel, 'new topic is new'))])
 
 
     def test_irc_RPL_TOPIC(self):
@@ -2446,61 +2470,61 @@ class TestServerToClient(TestCase):
         L{IRCClient.topicUpdated} is called when the topic is initially
         reported.
         """
-        self.client.irc_RPL_TOPIC('Wolf!~wolf@yok.utu.fi',
-                              ['?', '#twisted', 'new topic is new'])
+        self.client.irc_RPL_TOPIC(self.user,
+                              ['?', self.channel, 'new topic is new'])
         self.assertEqual(self.client.methods,
                          [('topicUpdated',
-                           ('Wolf', '#twisted', 'new topic is new'))])
+                           ('Wolf', self.channel, 'new topic is new'))])
 
 
     def test_irc_RPL_NOTOPIC(self):
         """
         L{IRCClient.topicUpdated} is called when the topic is removed.
         """
-        self.client.irc_RPL_NOTOPIC('Wolf!~wolf@yok.utu.fi', ['?', '#twisted'])
+        self.client.irc_RPL_NOTOPIC(self.user, ['?', self.channel])
         self.assertEqual(self.client.methods,
-                         [('topicUpdated', ('Wolf', '#twisted', ''))])
+                         [('topicUpdated', ('Wolf', self.channel, ''))])
 
 
 
 class TestCTCPQuery(TestCase):
     """
-    Tests for the ctcpQuery_* methods.
+    Tests for the C{ctcpQuery_*} methods.
     """
     def setUp(self):
+        self.user = 'Wolf!~wolf@yok.utu.fi'
+        self.channel = '#twisted'
         self.client = CollectorClient(['ctcpMakeReply'])
 
 
     def test_ctcpQuery_PING(self):
         """
-        Test that L{IRCClient.ctcpQuery_PING} calls L{IRCClient.ctcpMakeReply}
-        with the correct args.
+        L{IRCClient.ctcpQuery_PING} calls L{IRCClient.ctcpMakeReply} with the
+        correct args.
         """
-        self.client.ctcpQuery_PING('Wolf!~wolf@yok.utu.fi', '#twisted', 'data')
+        self.client.ctcpQuery_PING(self.user, self.channel, 'data')
         self.assertEqual(self.client.methods,
                          [('ctcpMakeReply', ('Wolf', [('PING', 'data')]))])
 
 
     def test_ctcpQuery_FINGER(self):
         """
-        Test that L{IRCClient.ctcpQuery_FINGER} calls L{IRCClient.ctcpMakeReply}
-        with the correct args.
+        L{IRCClient.ctcpQuery_FINGER} calls L{IRCClient.ctcpMakeReply} with the
+        correct args.
         """
         self.client.fingerReply = 'reply'
-        self.client.ctcpQuery_FINGER('Wolf!~wolf@yok.utu.fi',
-                                     '#twisted', 'data')
+        self.client.ctcpQuery_FINGER(self.user, self.channel, 'data')
         self.assertEqual(self.client.methods,
                          [('ctcpMakeReply', ('Wolf', [('FINGER', 'reply')]))])
 
 
     def test_ctcpQuery_SOURCE(self):
         """
-        Test that L{IRCClient.ctcpQuery_SOURCE} calls L{IRCClient.ctcpMakeReply}
-        with the correct args.
+        L{IRCClient.ctcpQuery_SOURCE} calls L{IRCClient.ctcpMakeReply} with the
+        correct args.
         """
         self.client.sourceURL = 'url'
-        self.client.ctcpQuery_SOURCE('Wolf!~wolf@yok.utu.fi',
-                                     '#twisted', 'data')
+        self.client.ctcpQuery_SOURCE(self.user, self.channel, 'data')
         self.assertEqual(self.client.methods,
                          [('ctcpMakeReply', ('Wolf', [('SOURCE', 'url'),
                                                       ('SOURCE', None)]))])
@@ -2508,25 +2532,22 @@ class TestCTCPQuery(TestCase):
 
     def test_ctcpQuery_USERINFO(self):
         """
-        Test that L{IRCClient.ctcpQuery_USERINFO} calls L{IRCClient.ctcpMakeReply}
-        with the correct args.
+        L{IRCClient.ctcpQuery_USERINFO} calls L{IRCClient.ctcpMakeReply} with
+        the correct args.
         """
         self.client.userinfo = 'info'
-        self.client.ctcpQuery_USERINFO('Wolf!~wolf@yok.utu.fi',
-                                       '#twisted', 'data')
+        self.client.ctcpQuery_USERINFO(self.user, self.channel, 'data')
         self.assertEqual(self.client.methods,
                          [('ctcpMakeReply', ('Wolf', [('USERINFO', 'info')]))])
 
 
     def test_ctcpQuery_CLIENTINFO(self):
         """
-        Test that L{IRCClient.ctcpQuery_CLIENTINFO} calls
-        L{IRCClient.ctcpMakeReply} with the correct args.
+        L{IRCClient.ctcpQuery_CLIENTINFO} calls L{IRCClient.ctcpMakeReply} with
+        the correct args.
         """
-        self.client.ctcpQuery_CLIENTINFO('Wolf!~wolf@yok.utu.fi',
-                                         '#twisted', '')
-        self.client.ctcpQuery_CLIENTINFO('Wolf!~wolf@yok.utu.fi',
-                                         '#twisted', 'PING PONG')
+        self.client.ctcpQuery_CLIENTINFO(self.user, self.channel, '')
+        self.client.ctcpQuery_CLIENTINFO(self.user, self.channel, 'PING PONG')
         info = ('CLIENTINFO PING DCC SOURCE VERSION '
                 'USERINFO TIME ACTION ERRMSG FINGER')
         self.assertEqual(self.client.methods,
@@ -2536,19 +2557,19 @@ class TestCTCPQuery(TestCase):
 
     def test_ctcpQuery_TIME(self):
         """
-        Test that L{IRCClient.ctcpQuery_TIME} calls L{IRCClient.ctcpMakeReply}
-        with the correct args.
+        L{IRCClient.ctcpQuery_TIME} calls L{IRCClient.ctcpMakeReply} with the
+        correct args.
         """
-        self.client.ctcpQuery_TIME('Wolf!~wolf@yok.utu.fi', '#twisted', 'data')
+        self.client.ctcpQuery_TIME(self.user, self.channel, 'data')
         self.assertEqual(self.client.methods[0][1][0], 'Wolf')
 
 
     def test_ctcpQuery_DCC(self):
         """
-        Test that L{IRCClient.ctcpQuery_DCC} calls L{IRCClient.ctcpMakeReply}
-        with the correct args.
+        L{IRCClient.ctcpQuery_DCC} calls L{IRCClient.ctcpMakeReply} with the
+        correct args.
         """
-        self.client.ctcpQuery_DCC('Wolf!~wolf@yok.utu.fi', '#twisted', 'data')
+        self.client.ctcpQuery_DCC(self.user, self.channel, 'data')
         self.assertEqual(self.client.methods,
                          [('ctcpMakeReply',
                            ('Wolf', [('ERRMSG',
@@ -2562,24 +2583,25 @@ class DccChatFactoryTests(unittest.TestCase):
     """
     def test_buildProtocol(self):
         """
-        An instance of the DccChat protocol is returned, which has the factory
-        property set to the factory which created it.
+        An instance of the L{irc.DccChat} protocol is returned, which has the
+        factory property set to the factory which created it.
         """
         queryData = ('fromUser', None, None)
-        f = irc.DccChatFactory(None, queryData)
-        p = f.buildProtocol('127.0.0.1')
-        self.assertTrue(isinstance(p, irc.DccChat))
-        self.assertEqual(p.factory, f)
+        factory = irc.DccChatFactory(None, queryData)
+        protocol = factory.buildProtocol('127.0.0.1')
+        self.assertIsInstance(protocol, irc.DccChat)
+        self.assertEqual(protocol.factory, factory)
 
 
 
-class dccDescribeTests(unittest.TestCase):
+class DccDescribeTests(unittest.TestCase):
     """
-    Tests for L{dccDescribe}
+    Tests for L{dccDescribe}.
     """
     def test_address(self):
         """
-        Test that long IP addresses are supported.
+        L{irc.dccDescribe} supports long IP addresses.
         """
         result = irc.dccDescribe('CHAT arg 3232235522 6666')
         self.assertEqual(result, "CHAT for host 192.168.0.2, port 6666")
+
