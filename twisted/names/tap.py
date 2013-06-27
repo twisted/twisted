@@ -6,10 +6,10 @@
 Domain Name Server
 """
 
-import os, sys, traceback
+import os, traceback
 
 from twisted.python import usage
-from twisted.names import dns, resolve
+from twisted.names import dns
 from twisted.application import internet, service
 
 from twisted.names import server
@@ -39,14 +39,6 @@ class Options(usage.Options):
 
     zones = None
     zonefiles = None
-
-    # The names of twistd dns options which control the operating
-    # mode.  At least one of these must be provided on the command
-    # line
-    _operatingModeOptions = (
-        "cache", "recursive", "resolv-conf", "hosts-file",
-        "secondary", "pyzone", "bindzone")
-
 
     def __init__(self):
         usage.Options.__init__(self)
@@ -148,17 +140,7 @@ def _buildResolvers(config):
 
 def makeService(config):
     ca, cl = _buildResolvers(config)
-    try:
-        f = server.DNSServerFactory(
-            config.zones, ca, cl, config['verbose'])
-    except resolve.ResolverChainConstructionError:
-        sys.stderr.write(str(config) + '\n')
-        sys.stderr.write(
-            "Unknown operating mode. Please provide at least "
-            "one of the following operating mode options: --%s\n" % (
-                ", --".join(config._operatingModeOptions),))
-        raise SystemExit(1)
-
+    f = server.DNSServerFactory(config.zones, ca, cl, config['verbose'])
     p = dns.DNSDatagramProtocol(f)
     f.noisy = 0
     ret = service.MultiService()

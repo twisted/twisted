@@ -14,7 +14,7 @@ from __future__ import division, absolute_import
 from zope.interface import implementer
 
 from twisted.internet import defer, interfaces
-from twisted.names import dns, common
+from twisted.names import dns, common, error
 
 
 class FailureHandler:
@@ -31,14 +31,6 @@ class FailureHandler:
 
 
 
-class ResolverChainConstructionError(Exception):
-    """
-    Raised if L{ResolverChain.__init__} is passed an empty or
-    incompatible C{resolvers} list.
-    """
-
-
-
 @implementer(interfaces.IResolver)
 class ResolverChain(common.ResolverBase):
     """
@@ -46,15 +38,12 @@ class ResolverChain(common.ResolverBase):
     """
     def __init__(self, resolvers):
         common.ResolverBase.__init__(self)
-
-        if not resolvers:
-            raise ResolverChainConstructionError(
-                "resolvers is empty: %r" % (resolvers,))
-
         self.resolvers = resolvers
 
 
     def _lookup(self, name, cls, type, timeout):
+        if not self.resolvers:
+            return defer.fail(error.DomainError())
         q = dns.Query(name, type, cls)
         d = self.resolvers[0].query(q, timeout)
         for r in self.resolvers[1:]:
@@ -65,6 +54,8 @@ class ResolverChain(common.ResolverBase):
 
 
     def lookupAllRecords(self, name, timeout = None):
+        if not self.resolvers:
+            return defer.fail(error.DomainError())
         d = self.resolvers[0].lookupAllRecords(name, timeout)
         for r in self.resolvers[1:]:
             d = d.addErrback(
