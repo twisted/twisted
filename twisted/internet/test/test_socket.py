@@ -44,24 +44,6 @@ class IReactorSocketVerificationTestsBuilder(ReactorBuilder):
     requiredInterfaces = [IReactorSocket]
 
 
-    def test_implementer(self):
-        """
-        C{reactorFactory} implements L{IReactorSocket}.
-        """
-        # requiredInterfaces are checked in
-        # ReactorBuilder.buildReactor which isn't used here, so we
-        # have to explicitly check that the reactorFactory claims to
-        # implement the interface before attempting to verify it.
-        if IReactorSocket.implementedBy(self.reactorFactory):
-            self.assertTrue(
-                verify.verifyClass(IReactorSocket, self.reactorFactory))
-        else:
-            raise SkipTest(
-                "%s does not provide %s" % (
-                    fullyQualifiedName(self.reactorFactory.__class__),
-                    fullyQualifiedName(IReactorSocket)))
-
-
     def test_provider(self):
         """
         The reactor instance returned by C{buildReactor} provides
