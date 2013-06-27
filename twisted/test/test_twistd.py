@@ -853,15 +853,6 @@ class FakeDaemonizingReactor(FakeNonDaemonizingReactor):
 
 
 
-class ReactorDaemonizationTests(unittest.TestCase):
-    """
-    Tests for L{_twistd_unix.daemonize} and L{IReactorDaemonize}.
-    """
-    if _twistd_unix is None:
-        skip = "twistd unix not available"
-
-
-
 class DummyReactor(object):
     """
     A dummy reactor, only providing a C{run} method and checking that it
@@ -1584,6 +1575,52 @@ class DaemonizeTests(unittest.TestCase):
             [('chdir', '.'), ('umask', 077), ('fork', True),
              ('read', -1, 100), ('exit', 0), ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-1])
+
+
+    def test_successEINTR(self):
+        """
+        If the C{os.write} call to the status pipe raises an B{EINTR} error,
+        the process child retries to write.
+        """
+        written = []
+
+        def raisingWrite(fd, data):
+            written.append((fd, data))
+            if len(written) == 1:
+                raise IOError(errno.EINTR)
+
+        self.mockos.write = raisingWrite
+        self.runner.postApplication()
+        self.assertEqual(
+            self.mockos.actions,
+            [('chdir', '.'), ('umask', 077), ('fork', True), 'setsid',
+             ('fork', True), ('unlink', 'twistd.pid')])
+        self.assertEqual(self.mockos.closed, [-3, -2])
+        self.assertEqual([(-2, '0'), (-2, '0')], written)
+
+
+    def test_successInParentEINTR(self):
+        """
+        If the C{os.read} call on the status pipe raises an B{EINTR} error, the
+        parent child retries to read.
+        """
+        read = []
+
+        def raisingRead(fd, size):
+            read.append((fd, size))
+            if len(read) == 1:
+                raise IOError(errno.EINTR)
+            return "0"
+
+        self.mockos.read = raisingRead
+        self.mockos.child = False
+        self.assertRaises(SystemError, self.runner.postApplication)
+        self.assertEqual(
+            self.mockos.actions,
+            [('chdir', '.'), ('umask', 077), ('fork', True),
+             ('exit', 0), ('unlink', 'twistd.pid')])
+        self.assertEqual(self.mockos.closed, [-1])
+        self.assertEqual([(-1, 100), (-1, 100)], read)
 
 
     def test_error(self):

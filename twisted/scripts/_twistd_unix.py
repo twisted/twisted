@@ -5,7 +5,8 @@
 import os, errno, sys
 
 from twisted.python import log, syslog, logfile, usage
-from twisted.python.util import switchUID, uidFromString, gidFromString
+from twisted.python.util import (
+    switchUID, uidFromString, gidFromString, untilConcludes)
 from twisted.application import app, service
 from twisted.internet.interfaces import IReactorDaemonize
 from twisted import copyright
@@ -190,20 +191,20 @@ class UnixApplicationRunner(app.ApplicationRunner):
         """
         try:
             self.startApplication(self.application)
-        except Exception, e:
+        except Exception as ex:
             statusPipe = self.config.get("statusPipe", None)
             if statusPipe is not None:
                 # Limit the total length to the passed string to 100
-                strippedError = str(e)[:98]
-                os.write(statusPipe, "1 %s" % (strippedError,))
-                os.close(statusPipe)
+                strippedError = str(ex)[:98]
+                untilConcludes(os.write, statusPipe, "1 %s" % (strippedError,))
+                untilConcludes(os.close, statusPipe)
             self.removePID(self.config['pidfile'])
             raise
         else:
             statusPipe = self.config.get("statusPipe", None)
             if statusPipe is not None:
-                os.write(statusPipe, "0")
-                os.close(statusPipe)
+                untilConcludes(os.write, statusPipe, "0")
+                untilConcludes(os.close, statusPipe)
         self.startReactor(None, self.oldstdout, self.oldstderr)
         self.removePID(self.config['pidfile'])
 
@@ -327,11 +328,11 @@ class UnixApplicationRunner(app.ApplicationRunner):
         @return: code to be passed to C{os._exit}: 0 for success, 1 for error.
         @rtype: C{int}
         """
-        data = os.read(readPipe, 100)
+        data = untilConcludes(os.read, readPipe, 100)
         if data != "0":
             msg = ("An error has occurred: '%s'\nPlease look at log "
                    "file for more information.\n" % (data[2:],))
-            sys.__stderr__.write(msg)
+            untilConcludes(sys.__stderr__.write, msg)
             return 1
         return 0
 
