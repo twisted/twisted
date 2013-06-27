@@ -2385,9 +2385,9 @@ class TestServerToClient(TestCase):
     def setUp(self):
         self.user = 'Wolf!~wolf@yok.utu.fi'
         self.channel = '#twisted'
-        methods_list = ['joined', 'userJoined', 'left', 'userLeft', 'userQuit',
+        methods = ['joined', 'userJoined', 'left', 'userLeft', 'userQuit',
                         'noticed', 'kickedFrom', 'userKicked', 'topicUpdated']
-        self.client = CollectorClient(methods_list)
+        self.client = CollectorClient(methods)
 
 
     def test_irc_JOIN(self):
@@ -2442,7 +2442,7 @@ class TestServerToClient(TestCase):
         L{IRCClient.kickedFrom} is called when I get kicked from the channel;
         L{IRCClient.userKicked} is called when someone else gets kicked.
         """
-        # fight!
+        # Fight!
         self.client.irc_KICK('Svadilfari!~svadi@yok.utu.fi',
                              ['#python', 'WOLF', 'shoryuken!'])
         self.client.irc_KICK(self.user,
