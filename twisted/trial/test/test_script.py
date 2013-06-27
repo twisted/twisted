@@ -16,6 +16,7 @@ from twisted.python import failure, util
 from twisted.python.usage import UsageError
 from twisted.python.filepath import FilePath
 
+from twisted.python.test.modules_helpers import TwistedModulesMixin
 from twisted.trial.test.test_loader import testNames
 from twisted.trial.test.test_runner import CapturingDebugger
 
@@ -576,7 +577,7 @@ class MakeRunnerTestCase(unittest.TestCase):
 
 
 
-class TestRun(unittest.TestCase):
+class TestRun(TwistedModulesMixin, unittest.TestCase):
     """
     Tests for the L{run} function.
     """
@@ -596,15 +597,10 @@ class TestRun(unittest.TestCase):
 
         """
 
-        CapturingDebugger.createAndCleanup(self, "capturingDebugger")
+        debugger = CapturingDebugger()
+        self.replaceSysModules(dict(sys.modules, capturingDebugger=debugger))
 
-        self.argv.extend(
-            [
-                "--debug",
-                "--debugger",
-                "twisted.trial.test.test_script.TestRun.capturingDebugger",
-            ],
-        )
+        self.argv.extend(["--debug", "--debugger", "capturingDebugger"])
 
         def recordPostMortem(postMortem):
             self.postMortem = postMortem
@@ -615,7 +611,7 @@ class TestRun(unittest.TestCase):
         except SystemExit:
             pass
 
-        self.assertEqual(self.postMortem, self.capturingDebugger.post_mortem)
+        self.assertEqual(self.postMortem, debugger.post_mortem)
 
 
     def test_noPostMortemMethod(self):
@@ -625,18 +621,13 @@ class TestRun(unittest.TestCase):
 
         """
 
-        CapturingDebugger.createAndCleanup(self, "capturingDebugger")
-        postMortem = CapturingDebugger.post_mortem
-        del CapturingDebugger.post_mortem
-        self.addCleanup(setattr, CapturingDebugger, "post_mortem", postMortem)
+        class DebuggerWithoutPM(object):
+            def runcall(self, *args, **kwargs):
+                pass
 
-        self.argv.extend(
-            [
-                "--debug",
-                "--debugger",
-                "twisted.trial.test.test_script.TestRun.capturingDebugger",
-            ],
-        )
+        self.replaceSysModules(dict(sys.modules, debugger=DebuggerWithoutPM()))
+
+        self.argv.extend(["--debug", "--debugger", "debugger"])
 
         def recordPostMortem(postMortem):
             self.postMortem = postMortem
@@ -658,16 +649,9 @@ class TestRun(unittest.TestCase):
 
         """
 
-        CapturingDebugger.createAndCleanup(self, "capturingDebugger")
+        self.replaceSysModules(dict(sys.modules, debugger=CapturingDebugger()))
 
-        self.argv.extend(
-            [
-                "--debug",
-                "--debugger",
-                "twisted.trial.test.test_script.TestRun.capturingDebugger",
-                "--nopm",
-            ],
-        )
+        self.argv.extend(["--debug", "--debugger", "debugger", "--nopm"])
 
         def startDebugMode(postMortem):
             self.fail("startDebugMode should not have been called!")

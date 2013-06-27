@@ -835,23 +835,11 @@ class TestDebugMode(SynchronousTestCase):
         self.assertEqual(self.debugger.mortems, [])
 
 
-    def test_postMortemRaisedException(self):
-        """
-        If L{Failure.startDebugMode} is called with a post mortem function that
-        raised an exception, it falls back to L{pdb.post_mortem}.
-        """
-        self.patch(pdb, "post_mortem", self.debugger.post_mortem)
-        failure.startDebugMode(object())
-
-        try:
-            raise ZeroDivisionError()
-        except:
-            _, _, tb = sys.exc_info()
-            f = failure.Failure()
-        self.assertEqual(self.debugger.mortems, [tb])
-
-
     def test_stopDebugMode(self):
+        """
+        If L{Failure.stopDebugMode} is called, an L{Failure} no longer calls
+        the debugger for an exception.
+        """
         failure.startDebugMode(self.debugger.post_mortem)
         failure.stopDebugMode()
 

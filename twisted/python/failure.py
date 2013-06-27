@@ -354,12 +354,6 @@ class Failure:
                         postMortem(exc[2])
                     except bdb.BdbQuit:
                         pass
-                    except Exception:
-                        print(
-                            "Debugging with %r failed. Falling back to pdb." %
-                            (postMortem,))
-
-                        pdb.post_mortem(exc[2])
 
             self._realInit(exc_value, exc_type, exc_tb, captureVars)
 

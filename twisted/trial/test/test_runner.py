@@ -17,6 +17,7 @@ from twisted.scripts import trial
 from twisted.plugins import twisted_trial
 from twisted import plugin
 from twisted.internet import defer
+from twisted.python.test.modules_helpers import TwistedModulesMixin
 
 
 pyunit = __import__('unittest')
@@ -37,29 +38,8 @@ class CapturingDebugger(object):
 
 
     def runcall(self, fn, *args, **kwargs):
-        self.calls.append((args, kwargs))
+        self.calls.append("runcall")
         fn(*args, **kwargs)
-
-
-    @classmethod
-    def createAndCleanup(cls, test, attr):
-        """
-        Create a debugger at the given C{attr} and remove it after the test.
-
-        Exists because command line arguments like C{--debugger} will not have
-        access to the instance, they need to find a debugger by fully qualified
-        name on the class.
-
-        @param test: a test case instance where the debugger will live
-        @param attr: a L{str} which is the name of the attribute to set and
-            unset after the test has run. The attribute will be set on the
-            I{class} of the given test case instance.
-
-        """
-
-        debugger = cls()
-        setattr(test.__class__, attr, debugger)
-        test.addCleanup(delattr, test.__class__, attr)
 
 
 
@@ -308,7 +288,7 @@ class PyUnitDryRunTest(DryRunMixin, unittest.SynchronousTestCase):
 
 
 
-class TestRunner(unittest.SynchronousTestCase):
+class TestRunner(TwistedModulesMixin, unittest.SynchronousTestCase):
     def setUp(self):
         self.config = trial.Options()
         # whitebox hack a reporter in, because plugins are CACHED and will
@@ -577,19 +557,18 @@ class TestRunner(unittest.SynchronousTestCase):
         Trial uses specified debugger if the debugger is available.
         """
 
-        CapturingDebugger.createAndCleanup(self, "capturingDebugger")
-
+        self.replaceSysModules(dict(sys.modules, dbg=CapturingDebugger()))
         self.parseOptions([
             '--reporter', 'capturing',
             '--debugger',
-            'twisted.trial.test.test_runner.TestRunner.capturingDebugger',
+            'dbg',
             '--debug',
             'twisted.trial.test.sample',
         ])
-        my_runner = self.getRunner()
-        result = self.runSampleSuite(my_runner)
+        myRunner = self.getRunner()
+        result = self.runSampleSuite(myRunner)
         self.assertEqual(self.standardReport, result._calls)
-        self.assertEqual(['runcall'], my_runner.debugger.calls)
+        self.assertEqual(['runcall'], myRunner.debugger.calls)
 
 
 
