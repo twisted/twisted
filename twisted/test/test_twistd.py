@@ -628,7 +628,7 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         self.runner.daemonize = self.daemonize
 
 
-    def daemonize(self, reactor, waitForStart=True):
+    def daemonize(self, reactor):
         """
         Indicate that daemonization has happened and change the PID so that the
         value written to the pidfile can be tested in the daemonization case.
@@ -1652,75 +1652,6 @@ class DaemonizeTests(unittest.TestCase):
              ('fork', True), ('write', -2, '1 ' + 'x' * 98),
              ('unlink', 'twistd.pid')])
         self.assertEqual(self.mockos.closed, [-3, -2])
-
-
-    def test_successNoWait(self):
-        """
-        If C{no-wait} is set to C{True}, the forked child doesn't report success
-        to the status pipe.
-        """
-        self.config['no-wait'] = True
-        self.runner.postApplication()
-        self.assertEqual(
-            self.mockos.actions,
-            [('chdir', '.'), ('umask', 077), ('fork', True), 'setsid',
-             ('fork', True), ('unlink', 'twistd.pid')])
-        self.assertEqual(self.mockos.closed, [-3])
-
-
-    def test_successInParentNotWait(self):
-        """
-        If C{no-wait} is set to C{True} and the child succeeds, the parent
-        doesn't try to read from the status pipe and assumes success.
-        """
-        self.config['no-wait'] = True
-        self.mockos.child = False
-        self.mockos.readData = "0"
-        self.assertRaises(SystemError, self.runner.postApplication)
-        self.assertEqual(
-            self.mockos.actions,
-            [('chdir', '.'), ('umask', 077), ('fork', True), ('exit', 0),
-             ('unlink', 'twistd.pid')])
-        self.assertEqual(self.mockos.closed, [])
-
-
-    def test_errorNoWait(self):
-        """
-        If C{no-wait} is set to C{True}, the forked child doesn't write the
-        error message on the status pipe.
-        """
-        self.config['no-wait'] = True
-
-        class FakeService(service.Service):
-
-            def startService(self):
-                raise RuntimeError("Something is wrong")
-
-        errorService = FakeService()
-        errorService.setServiceParent(self.runner.application)
-
-        self.assertRaises(RuntimeError, self.runner.postApplication)
-        self.assertEqual(
-            self.mockos.actions,
-            [('chdir', '.'), ('umask', 077), ('fork', True), 'setsid',
-             ('fork', True), ('unlink', 'twistd.pid')])
-        self.assertEqual(self.mockos.closed, [-3])
-
-
-    def test_errorInParentNoWait(self):
-        """
-        If C{no-wait} is set to C{True} and the child fails, the parent
-        doesn't try to read from the status pipe, so the behavior is the
-        same as in success.
-        """
-        self.config['no-wait'] = True
-        self.mockos.child = False
-        self.assertRaises(SystemError, self.runner.postApplication)
-        self.assertEqual(
-            self.mockos.actions,
-            [('chdir', '.'), ('umask', 077), ('fork', True), ('exit', 0),
-             ('unlink', 'twistd.pid')])
-        self.assertEqual(self.mockos.closed, [])
 
 
     def test_hooksCalled(self):

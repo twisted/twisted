@@ -28,9 +28,6 @@ class ServerOptions(app.ServerOptions):
                  "after binding ports, retaining the option to regain "
                  "privileges in cases such as spawning processes. "
                  "Use with caution.)"],
-                ['no-wait', None, "Don't wait for application startup when "
-                 "daemonize. If set, no error will be reported in case of "
-                 "failure."],
                ]
 
     optParameters = [
@@ -267,15 +264,14 @@ class UnixApplicationRunner(app.ApplicationRunner):
             os.umask(umask)
         if daemon:
             from twisted.internet import reactor
-            self.config["statusPipe"] = self.daemonize(
-                reactor, not self.config['no-wait'])
+            self.config["statusPipe"] = self.daemonize(reactor)
         if pidfile:
             f = open(pidfile, 'wb')
             f.write(str(os.getpid()))
             f.close()
 
 
-    def daemonize(self, reactor, waitForStart=True):
+    def daemonize(self, reactor):
         """
         Daemonizes the application on Unix. This is done by the usual double
         forking approach.
@@ -289,27 +285,19 @@ class UnixApplicationRunner(app.ApplicationRunner):
             L{IReactorDaemonize}, its daemonization-related callbacks will be
             invoked.
 
-        @param waitForStart: whether parent process should wait for the forked
-            process to start or not (default to C{True}).
-        @type waitForStart: C{bool}
-
-        @return: if C{waitForStart} is C{True}, a writable pipe to be used to
-            report errors.
-        @rtype: C{int} or C{None}
+        @return: A writable pipe to be used to report errors.
+        @rtype: C{int}
         """
         # If the reactor requires hooks to be called for daemonization, call
         # them. Currently the only reactor which provides/needs that is
         # KQueueReactor.
         if IReactorDaemonize.providedBy(reactor):
             reactor.beforeDaemonize()
-        w = None
-        if waitForStart:
-            r, w = os.pipe()
+        r, w = os.pipe()
         if os.fork():  # launch child and...
             code = 0
-            if waitForStart:
-                code = self._waitForStart(r)
-                os.close(r)
+            code = self._waitForStart(r)
+            os.close(r)
             os._exit(code)   # kill off parent
         os.setsid()
         if os.fork():  # launch child and...
