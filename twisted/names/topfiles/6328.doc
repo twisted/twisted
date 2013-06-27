@@ -1,0 +1,2 @@
+Use zope.interface.moduleProvides to allow pydoctor to properly
+document the twisted.names.client.lookup* functions.

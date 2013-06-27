@@ -270,6 +270,15 @@ class ResolverTests(unittest.TestCase):
     """
     Tests for L{client.Resolver}.
     """
+
+    def test_clientProvidesIResolver(self):
+        """
+        L{client} provides L{IResolver} through a series of free
+        functions.
+        """
+        verifyObject(IResolver, client)
+
+
     def test_clientResolverProvidesIResolver(self):
         """
         L{client.Resolver} provides L{IResolver}.
@@ -907,6 +916,19 @@ class ClientTestCase(unittest.TestCase):
         """
         d = client.lookupNamingAuthorityPointer(self.hostname)
         d.addCallback(self.checkResult, dns.NAPTR)
+        return d
+
+
+    def test_query(self):
+        """
+        L{client.query} accepts a L{dns.Query} instance and dispatches
+        it to L{client.theResolver}.C{query}, which in turn dispatches
+        to an appropriate C{lookup*} method of L{client.theResolver},
+        based on the L{dns.Query} type.
+        """
+        q = dns.Query(self.hostname, dns.A)
+        d = client.query(q)
+        d.addCallback(self.checkResult, dns.A)
         return d
 
 
