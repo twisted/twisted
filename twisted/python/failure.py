@@ -342,13 +342,9 @@ class Failure:
             if (exc_value, exc_type, exc_tb) == (None, None, None):
                 exc = sys.exc_info()
                 if not exc[0] == self.__class__:
-                    try:
-                        strrepr = str(exc[1])
-                    except:
-                        strrepr = "broken str"
                     print(
                         "Jumping into debugger for post-mortem of "
-                        "exception '%s'" % (strrepr,))
+                        "exception '%s'" % (reflect.safe_str(exc[1]),))
 
                     try:
                         postMortem(exc[2])
