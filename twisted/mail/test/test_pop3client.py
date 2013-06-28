@@ -56,7 +56,13 @@ def testCancelCommandInQueue(testCase, pop3Client, transport, command,
 
     When cancel a command in the blocked queue, L{POP3Client} will remove the
     L{defer.Deferred}, function and arguments of the command from the queue.
-    The connection is NOT disconnected.
+    The connection is NOT disconnected. If the command has been popped out from
+    the blocked queue, L{POP3Client} will errback the L{defer.Deferred} of the
+    trying command with {defer.CancelledError} then errback the
+    L{defer.Deferred}s of all the waiting commands in the queue with
+    L{twisted.internet.error.ConnectionAborted} and disconnect the connection
+    immediately.
+
 
     @param testCase: An instance of L{unittest.TestCase}.
     @param pop3Client: An instance of L{POP3Client}.
@@ -72,9 +78,21 @@ def testCancelCommandInQueue(testCase, pop3Client, transport, command,
     deferred = getattr(pop3Client, command)(*args, **kargs)
     deferred.cancel()
     testCase.assertEqual(transport.disconnecting, False)
-    testCase.assertEqual(pop3Client._blockedQueue, None)
+    testCase.assertEqual(pop3Client._blockedQueue, [])
     failure = testCase.failureResultOf(deferred)
     failure.trap(defer.CancelledError)
+
+    deferredOfCommand = getattr(pop3Client, command)(*args, **kargs)
+    deferredOfNoop = pop3Client.noop()
+
+    # Pop out the command from the queue.
+    pop3Client.dataReceived("+OK No-op to you too!\r\n")
+    deferredOfCommand.cancel()
+    testCase.assertEqual(transport.aborting, True)
+    failureOfCommand = testCase.failureResultOf(deferredOfCommand)
+    failureOfCommand.trap(defer.CancelledError)
+    failureOfNoop = testCase.failureResultOf(deferredOfNoop)
+    failureOfNoop.trap(error.ConnectionAborted)
 
 def testCancelTryingCommand(testCase, pop3Client, transport, command,
                              *args, **kargs):
@@ -101,7 +119,7 @@ def testCancelTryingCommand(testCase, pop3Client, transport, command,
 
     @param kargs: The key arguments passed to the command.
     """
-    deferredOfCommand = pop3Client.user("username")
+    deferredOfCommand = getattr(pop3Client, command)(*args, **kargs)
     deferredOfNoop = pop3Client.noop()
     deferredOfCommand.cancel()
     testCase.assertEqual(transport.aborting, True)

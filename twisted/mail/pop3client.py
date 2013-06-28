@@ -189,12 +189,11 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         @param deferred: The L{defer.Deferred} whose C{cancel} method is called
         """
-        if deferred == self._waiting:
-            self._waiting = None
-            deferred.errback(defer.CancelledError())
-            self._errbackDeferreds(error.ConnectionAborted((
-                "Connection aborted due to cancellation.")))
-            self.transport.abortConnection()
+        self._waiting = None
+        deferred.errback(defer.CancelledError())
+        self._errbackDeferreds(error.ConnectionAborted((
+            "Connection aborted due to cancellation.")))
+        self.transport.abortConnection()
 
 
     def _blocked(self, f, *a):
@@ -218,8 +217,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 """
                 try:
                     self._blockedQueue.remove(command)
-                    if self._blockedQueue == []:
-                        self._blockedQueue = None
                 except ValueError:
                     # The command has been popped out.
                     self._cancelTryingCommand(deferred)
