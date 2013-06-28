@@ -42,7 +42,7 @@ Bugfixes
  - twisted.internet.ssl.CertificateOptions now disables SSLv2 if
    SSLv23 is selected, allowing only SSLv3 and TLSv1. (#6337)
  - trial dist support now gets sys.path from an environment variable
-   passed. (#6390)
+   passed to it. (#6390)
  - twisted.test.proto_helpers.StringTransportWithDisconnection now
    correctly passes Failure instead of an exception to
    connectionLost through loseConnection. (#6521)
@@ -125,8 +125,8 @@ Bugfixes
 
 Deprecations and Removals
 -------------------------
- - twisted.mail.IDomain.startMessage, deprecated since 2003, is removed now.
-   (#4151)
+ - twisted.mail.IDomain.startMessage, deprecated since 2003, is
+   removed now. (#4151)
 
 Other
 -----
@@ -207,8 +207,9 @@ Features
 
 Deprecations and Removals
 -------------------------
- - The `crippled` attribute in words.protocols.jabber.xmpp_stringprep
-   is deprecated now. (#5386)
+ - The `crippled` attribute in
+   twisted.words.protocols.jabber.xmpp_stringprep is deprecated now.
+   (#5386)
 
 Other
 -----
