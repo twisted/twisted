@@ -855,8 +855,13 @@ class HelpOrderTests(unittest.TestCase):
             SystemExit, trial.Options().parseOptions, ["--help-orders"])
         self.assertEqual(exc.code, 0)
 
+        output = sys.stdout.getvalue()
+
+        msg = "%r with its description not properly described in %r"
         for orderName, (orderDesc, _) in trial._runOrders.items():
             match = re.search(
-                "{0}.*{1}".format(orderName, orderDesc), sys.stdout.getvalue(),
+                "%s.*%s" % (re.escape(orderName), re.escape(orderDesc)),
+                output,
             )
-            self.assertTrue(match)
+
+            self.assertTrue(match, msg=msg % (orderName, output))
