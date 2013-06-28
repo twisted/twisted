@@ -65,7 +65,11 @@ def testCancelCommandInQueue(testCase, pop3Client, transport, command,
 
 
     @param testCase: An instance of L{unittest.TestCase}.
+
     @param pop3Client: An instance of L{POP3Client}.
+
+    @param transport: The transport that pop3Client used to make the connection
+    @type transport: L{twisted.internet.interfaces.ITransport}
 
     @param command: The command to test.
     @type command: C{str}
