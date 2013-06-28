@@ -49,12 +49,14 @@ def setUp(greet=True):
 def strip(f):
     return lambda result, f=f: f()
 
-def testCancelCommandInQueue(testCase, pop3Client, command, *args, **kargs):
+def testCancelCommandInQueue(testCase, pop3Client, transport, command,
+                             *args, **kargs):
     """
     Internal helper for testing cancel a command in queue.
 
     When cancel a command in the blocked queue, L{POP3Client} will remove the
     L{defer.Deferred}, function and arguments of the command from the queue.
+    The connection is NOT disconnected.
 
     @param testCase: An instance of L{unittest.TestCase}.
     @param pop3Client: An instance of L{POP3Client}.
@@ -69,6 +71,7 @@ def testCancelCommandInQueue(testCase, pop3Client, command, *args, **kargs):
     pop3Client.noop()
     deferred = getattr(pop3Client, command)(*args, **kargs)
     deferred.cancel()
+    testCase.assertEqual(transport.disconnecting, False)
     testCase.assertEqual(pop3Client._blockedQueue, None)
     failure = testCase.failureResultOf(deferred)
     failure.trap(defer.CancelledError)
@@ -141,7 +144,7 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         L{testCancelCommandInQueue}.
         """
         p, t = setUp()
-        testCancelCommandInQueue(self, p, "user", "username")
+        testCancelCommandInQueue(self, p, t, "user", "username")
 
 
     def test_cancelTryingUser(self):
@@ -176,7 +179,7 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         L{testCancelCommandInQueue}.
         """
         p, t = setUp()
-        testCancelCommandInQueue(self, p, "password", "password")
+        testCancelCommandInQueue(self, p, t, "password", "password")
 
 
     def test_cancelTryingPassword(self):
@@ -228,7 +231,7 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         """
         p, t = setUp()
         p.allowInsecureLogin = True
-        testCancelCommandInQueue(self, p, "login", "username", "password")
+        testCancelCommandInQueue(self, p, t, "login", "username", "password")
 
 
     def test_cancelTryingLogin(self):
@@ -340,7 +343,7 @@ class POP3ClientListTestCase(unittest.TestCase):
         L{testCancelCommandInQueue}.
         """
         p, t = setUp()
-        testCancelCommandInQueue(self, p, "listSize")
+        testCancelCommandInQueue(self, p, t, "listSize")
 
 
     def test_cancelTryingListSize(self):
@@ -388,7 +391,7 @@ class POP3ClientListTestCase(unittest.TestCase):
         L{testCancelCommandInQueue}.
         """
         p, t = setUp()
-        testCancelCommandInQueue(self, p, "listUID")
+        testCancelCommandInQueue(self, p, t, "listUID")
 
 
     def test_cancelTryingListUID(self):
@@ -503,7 +506,7 @@ class POP3ClientMessageTestCase(unittest.TestCase):
         L{testCancelCommandInQueue}.
         """
         p, t = setUp()
-        testCancelCommandInQueue(self, p, "retrieve", 7)
+        testCancelCommandInQueue(self, p, t, "retrieve", 7)
 
 
     def test_cancelTryingRetrieve(self):
@@ -544,7 +547,7 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         L{testCancelCommandInQueue}.
         """
         p, t = setUp()
-        testCancelCommandInQueue(self, p, "capabilities", useCache=0)
+        testCancelCommandInQueue(self, p, t, "capabilities", useCache=0)
 
 
     def test_cancelTryingCapabilities(self):
@@ -579,7 +582,7 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         L{testCancelCommandInQueue}.
         """
         p, t = setUp()
-        testCancelCommandInQueue(self, p, "stat")
+        testCancelCommandInQueue(self, p, t, "stat")
 
 
     def test_cancelTryingStat(self):
@@ -614,7 +617,7 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         L{testCancelCommandInQueue}.
         """
         p, t = setUp()
-        testCancelCommandInQueue(self, p, "noop")
+        testCancelCommandInQueue(self, p, t, "noop")
 
 
     def test_cancelTryingNoop(self):
@@ -649,7 +652,7 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         L{testCancelCommandInQueue}.
         """
         p, t = setUp()
-        testCancelCommandInQueue(self, p, "reset")
+        testCancelCommandInQueue(self, p, t, "reset")
 
 
     def test_cancelTryingReset(self):
@@ -684,7 +687,7 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         L{testCancelCommandInQueue}.
         """
         p, t = setUp()
-        testCancelCommandInQueue(self, p, "delete", 3)
+        testCancelCommandInQueue(self, p, t, "delete", 3)
 
 
     def test_cancelTryingDelete(self):
