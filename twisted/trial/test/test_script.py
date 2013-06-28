@@ -522,6 +522,19 @@ class OptionsTestCase(unittest.TestCase):
             str(error))
 
 
+    def test_orderConflictWithRandom(self):
+        """
+        C{parseOptions} raises a C{UsageError} when C{--order} is passed along
+        with C{--random}.
+        """
+        error = self.assertRaises(
+            UsageError,
+            self.options.parseOptions,
+            ["--order", "alphabetical", "--random", "1234"])
+        self.assertEqual("You can't specify --random when using --order",
+                         str(error))
+
+
 
 class MakeRunnerTestCase(unittest.TestCase):
     """

@@ -142,7 +142,7 @@ _runOrders = {
 }
 
 
-def _coerceOrder(order):
+def _checkKnownRunOrder(order):
     """
     Check that the given order is a known test running order.
 
@@ -185,9 +185,9 @@ class _BasicOptions(object):
                 ]
 
     optParameters = [
-        ["order", "o", "alphabetical",
+        ["order", "o", None,
          "Specify what order to run test cases and methods. "
-         "See --help-orders for more info.", _coerceOrder],
+         "See --help-orders for more info.", _checkKnownRunOrder],
         ["random", "z", None,
          "Run tests in random order using the specified seed"],
         ['temp-directory', None, '_trial_temp',
@@ -224,6 +224,14 @@ class _BasicOptions(object):
         print("Setting coverage directory to %s." % (result.path,))
         return result
 
+
+    # TODO: Some of the opt_* methods on this class have docstrings and some do
+    #       not. This is mostly because usage.Options's currently will replace
+    #       any intended output in optFlags and optParameters with the
+    #       docstring. See #6427. When that is fixed, all methods should be
+    #       given docstrings (and it should be verified that those with
+    #       docstrings already have content suitable for printing as usage
+    #       information).
 
     def opt_coverage(self):
         """
@@ -371,6 +379,9 @@ class _BasicOptions(object):
         self['reporter'] = self._loadReporterByName(self['reporter'])
         if 'tbformat' not in self:
             self['tbformat'] = 'default'
+        if self['order'] is not None and self['random'] is not None:
+            raise usage.UsageError(
+                "You can't specify --random when using --order")
 
 
 
