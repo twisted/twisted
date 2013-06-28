@@ -1925,7 +1925,7 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         return p
 
 def sendmail(smtphost, from_addr, to_addrs, msg,
-             senderDomainName=None, port=25, _reactor=reactor):
+             senderDomainName=None, port=25, reactor=reactor):
     """Send an email
 
     This interface is intended to be a direct replacement for
@@ -1952,7 +1952,7 @@ def sendmail(smtphost, from_addr, to_addrs, msg,
 
     @param port: Remote port to which to connect.
 
-    @param _reactor: The reactor used to make TCP connection.
+    @param reactor: The reactor used to make TCP connection.
 
     @rtype: L{Deferred}
     @returns: A cancellable L{Deferred}, its callback will be called if a
@@ -1988,7 +1988,7 @@ def sendmail(smtphost, from_addr, to_addrs, msg,
     if senderDomainName is not None:
         factory.domain = senderDomainName
 
-    connector = _reactor.connectTCP(smtphost, port, factory)
+    connector = reactor.connectTCP(smtphost, port, factory)
 
     return d
 

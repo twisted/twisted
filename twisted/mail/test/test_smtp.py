@@ -1688,11 +1688,11 @@ class SendmailTestCase(unittest.TestCase):
     """
     def test_defaultReactorIsGlobalReactor(self):
         """
-        The default C{_reactor} parameter of L{twisted.mail.smtp.sendmail} is
+        The default C{reactor} parameter of L{twisted.mail.smtp.sendmail} is
         L{twisted.internet.reactor}.
         """
         args, varArgs, keywords, defaults = inspect.getargspec(smtp.sendmail)
-        index = len(args) - args.index("_reactor") + 1
+        index = len(args) - args.index("reactor") + 1
         self.assertEqual(reactor, defaults[index])
 
 
@@ -1704,7 +1704,7 @@ class SendmailTestCase(unittest.TestCase):
         """
         reactor = MemoryReactor()
         d = smtp.sendmail("localhost", "source@address", "recipient@address",
-                          "message", _reactor=reactor)
+                          "message", reactor=reactor)
         d.cancel()
         self.assertEqual(reactor.connectors[0]._disconnected, True)
         failure = self.failureResultOf(d)
@@ -1720,7 +1720,7 @@ class SendmailTestCase(unittest.TestCase):
         reactor = MemoryReactor()
         transport = StringTransport()
         d = smtp.sendmail("localhost", "source@address", "recipient@address",
-                          "message", _reactor=reactor)
+                          "message", reactor=reactor)
         factory = reactor.tcpClients[0][2]
         p = factory.buildProtocol(None)
         p.makeConnection(transport)
