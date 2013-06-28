@@ -158,8 +158,14 @@ class POP3ClientLoginTestCase(unittest.TestCase):
 
     def test_cancelUserInQueue(self):
         """
-        Test cancel user command in queue. See the docstring of
-        L{testCancelCommandInQueue}.
+        When cancel a user command in the blocked queue, L{POP3Client} will
+        remove the L{defer.Deferred}, function and arguments of the command
+        from the queue. The connection is NOT disconnected. If the command has
+        been popped out from the blocked queue, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelCommandInQueue(self, p, t, "user", "username")
@@ -167,8 +173,11 @@ class POP3ClientLoginTestCase(unittest.TestCase):
 
     def test_cancelTryingUser(self):
         """
-        Test cancel trying user command. See the docstring of
-        L{testCancelTryingCommand}.
+        When cancel a trying user command, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelTryingCommand(self, p, t, "user", "username")
@@ -193,8 +202,14 @@ class POP3ClientLoginTestCase(unittest.TestCase):
 
     def test_cancelPasswordInQueue(self):
         """
-        Test cancel password command in queue. See the docstring of
-        L{testCancelCommandInQueue}.
+        When cancel a password command in the blocked queue, L{POP3Client} will
+        remove the L{defer.Deferred}, function and arguments of the command
+        from the queue. The connection is NOT disconnected. If the command has
+        been popped out from the blocked queue, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelCommandInQueue(self, p, t, "password", "password")
@@ -202,8 +217,11 @@ class POP3ClientLoginTestCase(unittest.TestCase):
 
     def test_cancelTryingPassword(self):
         """
-        Test cancel trying password command. See the docstring of
-        L{testCancelTryingCommand}.
+        When cancel a trying password command, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelTryingCommand(self, p, t, "password", "password")
@@ -244,8 +262,14 @@ class POP3ClientLoginTestCase(unittest.TestCase):
 
     def test_cancelLoginInQueue(self):
         """
-        Test cancel login command in queue. See the docstring of
-        L{testCancelCommandInQueue}.
+        When cancel a login command in the blocked queue, L{POP3Client} will
+        remove the L{defer.Deferred}, function and arguments of the command
+        from the queue. The connection is NOT disconnected. If the command has
+        been popped out from the blocked queue, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         p.allowInsecureLogin = True
@@ -254,8 +278,11 @@ class POP3ClientLoginTestCase(unittest.TestCase):
 
     def test_cancelTryingLogin(self):
         """
-        Test cancel trying login command. See the docstring of
-        L{testCancelTryingCommand}.
+        When cancel a trying login command, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         p.allowInsecureLogin = True
@@ -357,8 +384,14 @@ class POP3ClientListTestCase(unittest.TestCase):
 
     def test_cancelListSizeInQueue(self):
         """
-        Test cancel listSize command in queue. See the docstring of
-        L{testCancelCommandInQueue}.
+        When cancel a listSize command in the blocked queue, L{POP3Client} will
+        remove the L{defer.Deferred}, function and arguments of the command
+        from the queue. The connection is NOT disconnected. If the command has
+        been popped out from the blocked queue, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelCommandInQueue(self, p, t, "listSize")
@@ -366,8 +399,11 @@ class POP3ClientListTestCase(unittest.TestCase):
 
     def test_cancelTryingListSize(self):
         """
-        Test cancel trying listSize command. See the docstring of
-        L{testCancelTryingCommand}.
+        When cancel a trying listSize command, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelTryingCommand(self, p, t, "listSize")
@@ -405,8 +441,14 @@ class POP3ClientListTestCase(unittest.TestCase):
 
     def test_cancelListUIDInQueue(self):
         """
-        Test cancel listUID command in queue. See the docstring of
-        L{testCancelCommandInQueue}.
+        When cancel a listUID command in the blocked queue, L{POP3Client} will
+        remove the L{defer.Deferred}, function and arguments of the command
+        from the queue. The connection is NOT disconnected. If the command has
+        been popped out from the blocked queue, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelCommandInQueue(self, p, t, "listUID")
@@ -414,8 +456,11 @@ class POP3ClientListTestCase(unittest.TestCase):
 
     def test_cancelTryingListUID(self):
         """
-        Test cancel trying listUID command. see the docstring of
-        L{testCancelTryingCommand}.
+        When cancel a trying listUID command, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelTryingCommand(self, p, t, "listUID")
@@ -520,8 +565,14 @@ class POP3ClientMessageTestCase(unittest.TestCase):
 
     def test_cancelRetrieveInQueue(self):
         """
-        Test cancel retrieve command in queue. See the docstring of
-        L{testCancelCommandInQueue}.
+        When cancel a retrieve command in the blocked queue, L{POP3Client} will
+        remove the L{defer.Deferred}, function and arguments of the command
+        from the queue. The connection is NOT disconnected. If the command has
+        been popped out from the blocked queue, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelCommandInQueue(self, p, t, "retrieve", 7)
@@ -529,8 +580,11 @@ class POP3ClientMessageTestCase(unittest.TestCase):
 
     def test_cancelTryingRetrieve(self):
         """
-        Test cancel trying retrieve command. See the docstring of
-        L{testCancelTryingCommand}.
+        When cancel a trying retrieve command, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelTryingCommand(self, p, t, "retrieve", 7)
@@ -561,8 +615,15 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
     def test_cancelCapabilitiesInQueue(self):
         """
-        Test cancel capabilities command in queue. See the docstring of
-        L{testCancelCommandInQueue}.
+        When cancel a capabilities command in the blocked queue, L{POP3Client}
+        will remove the L{defer.Deferred}, function and arguments of the
+        command from the queue. The connection is NOT disconnected. If the
+        command has been popped out from the blocked queue, L{POP3Client} will
+        errback the L{defer.Deferred} of the trying command with
+        {defer.CancelledError} then errback the L{defer.Deferred}s of all the
+        waiting commands in the queue with
+        L{twisted.internet.error.ConnectionAborted} and disconnect the
+        connection immediately.
         """
         p, t = setUp()
         testCancelCommandInQueue(self, p, t, "capabilities", useCache=0)
@@ -570,8 +631,11 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
     def test_cancelTryingCapabilities(self):
         """
-        Test cancel trying capabilities command. See the docstring of
-        L{testCancelTryingCommand}.
+        When cancel a trying capabilities command, L{POP3Client} will errback
+        the L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelTryingCommand(self, p, t, "capabilities", useCache=0)
@@ -596,8 +660,14 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
     def test_cancelStatInQueue(self):
         """
-        Test cancel stat command in queue. See the docstring of
-        L{testCancelCommandInQueue}.
+        When cancel a stat command in the blocked queue, L{POP3Client} will
+        remove the L{defer.Deferred}, function and arguments of the command
+        from the queue. The connection is NOT disconnected. If the command has
+        been popped out from the blocked queue, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelCommandInQueue(self, p, t, "stat")
@@ -605,8 +675,11 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
     def test_cancelTryingStat(self):
         """
-        Test cancel trying stat command. See the docstring of
-        L{testCancelTryingCommand}.
+        When cancel a trying stat command, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelTryingCommand(self, p, t, "stat")
@@ -631,8 +704,14 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
     def test_cancelNoopInQueue(self):
         """
-        Test cancel noop command in queue. See the docstring of
-        L{testCancelCommandInQueue}.
+        When cancel a noop command in the blocked queue, L{POP3Client} will
+        remove the L{defer.Deferred}, function and arguments of the command
+        from the queue. The connection is NOT disconnected. If the command has
+        been popped out from the blocked queue, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelCommandInQueue(self, p, t, "noop")
@@ -640,8 +719,11 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
     def test_cancelTryingNoop(self):
         """
-        Test cancel trying noop command. See the docstring of
-        L{testCancelTryingCommand}.
+        When cancel a trying noop command, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelTryingCommand(self, p, t, "noop")
@@ -666,8 +748,14 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
     def test_cancelResetInQueue(self):
         """
-        Test cancel reset command in queue. See the docstring of
-        L{testCancelCommandInQueue}.
+        When cancel a reset command in the blocked queue, L{POP3Client} will
+        remove the L{defer.Deferred}, function and arguments of the command
+        from the queue. The connection is NOT disconnected. If the command has
+        been popped out from the blocked queue, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelCommandInQueue(self, p, t, "reset")
@@ -675,8 +763,11 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
     def test_cancelTryingReset(self):
         """
-        Test cancel trying reset command in queue. See the docstring of
-        L{testCancelTryingCommand}.
+        When cancel a trying reset command, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelTryingCommand(self, p, t, "reset")
@@ -701,8 +792,14 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
     def test_cancelDeleteInQueue(self):
         """
-        Test cancel delete command in queue. See the docstring of
-        L{testCancelCommandInQueue}.
+        When cancel a delete command in the blocked queue, L{POP3Client} will
+        remove the L{defer.Deferred}, function and arguments of the command
+        from the queue. The connection is NOT disconnected. If the command has
+        been popped out from the blocked queue, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelCommandInQueue(self, p, t, "delete", 3)
@@ -710,8 +807,11 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
     def test_cancelTryingDelete(self):
         """
-        Test cancel trying delete command. See the docstring of
-        L{testCancelTryingCommand}.
+        When cancel a trying delete command, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
         """
         p, t = setUp()
         testCancelTryingCommand(self, p, t, "delete", 3)
