@@ -4273,7 +4273,8 @@ class SearchFileTests(unittest.TestCase):
         @param inputString: The string that we're looking for.
         @type inputString: C{str}
         """
-        self.assertTrue(imap4._searchFile(inputString, self.io))
+        self.assertTrue(imap4._searchFile(inputString, self.io),
+                        "%.20r in file %r" % (inputString, self.io))
 
 
     def assertNotInFile(self, inputString):
@@ -4283,7 +4284,8 @@ class SearchFileTests(unittest.TestCase):
         @param inputString: The string that we're looking for.
         @type inputString: C{str}
         """
-        self.assertFalse(imap4._searchFile(inputString, self.io))
+        self.assertFalse(imap4._searchFile(inputString, self.io),
+                         "%.20r not in file %r" % (inputString, self.io))
 
 
     def test_exactMatch(self):
