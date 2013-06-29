@@ -266,17 +266,16 @@ class IRC(protocol.Protocol):
         to that command.  If a prefix is desired, it may be specified with the
         keyword argument 'prefix'.
         """
-
         if not command:
-            raise ValueError, "IRC message requires a command."
+            raise ValueError("IRC message requires a command.")
 
         if ' ' in command or command[0] == ':':
             # Not the ONLY way to screw up, but provides a little
             # sanity checking to catch likely dumb mistakes.
-            raise ValueError, "Somebody screwed up, 'cuz this doesn't" \
-                  " look like a command to me: %s" % command
+            raise ValueError("Somebody screwed up, 'cuz this doesn't" \
+                  " look like a command to me: %s" % command)
 
-        line = string.join([command] + list(parameter_list))
+        line = ' '.join([command] + list(parameter_list))
         if 'prefix' in prefix:
             line = ":%s %s" % (prefix['prefix'], line)
         self.sendLine(line)
@@ -1768,7 +1767,7 @@ class IRCClient(basic.LineReceiver):
         if not (size is None):
             args.append(size)
 
-        args = string.join(args, ' ')
+        args = ' '.join(args)
 
         self.ctcpMakeQuery(user, [('DCC', args)])
 
@@ -1852,7 +1851,7 @@ class IRCClient(basic.LineReceiver):
         """
         Called when a user joins a channel.
         """
-        nick = string.split(prefix,'!')[0]
+        nick = prefix.split('!')[0]
         channel = params[-1]
         if nick == self.nickname:
             self.joined(channel)
@@ -1863,7 +1862,7 @@ class IRCClient(basic.LineReceiver):
         """
         Called when a user leaves a channel.
         """
-        nick = string.split(prefix,'!')[0]
+        nick = prefix.split('!')[0]
         channel = params[0]
         if nick == self.nickname:
             self.left(channel)
@@ -1874,7 +1873,7 @@ class IRCClient(basic.LineReceiver):
         """
         Called when a user has quit.
         """
-        nick = string.split(prefix,'!')[0]
+        nick = prefix.split('!')[0]
         self.userQuit(nick, params[0])
 
 
@@ -1935,7 +1934,7 @@ class IRCClient(basic.LineReceiver):
             if not m['normal']:
                 return
 
-            message = string.join(m['normal'], ' ')
+            message = ' '.join(m['normal'])
 
         self.privmsg(user, channel, message)
 
@@ -1955,7 +1954,7 @@ class IRCClient(basic.LineReceiver):
             if not m['normal']:
                 return
 
-            message = string.join(m['normal'], ' ')
+            message = ' '.join(m['normal'])
 
         self.noticed(user, channel, message)
 
@@ -1963,7 +1962,7 @@ class IRCClient(basic.LineReceiver):
         """
         Called when a user changes their nickname.
         """
-        nick = string.split(prefix,'!', 1)[0]
+        nick = prefix.split('!', 1)[0]
         if nick == self.nickname:
             self.nickChanged(params[0])
         else:
@@ -1973,11 +1972,11 @@ class IRCClient(basic.LineReceiver):
         """
         Called when a user is kicked from a channel.
         """
-        kicker = string.split(prefix,'!')[0]
+        kicker = prefix.split('!')[0]
         channel = params[0]
         kicked = params[1]
         message = params[-1]
-        if string.lower(kicked) == string.lower(self.nickname):
+        if kicked.lower() == self.nickname.lower():
             # Yikes!
             self.kickedFrom(channel, kicker, message)
         else:
@@ -1987,7 +1986,7 @@ class IRCClient(basic.LineReceiver):
         """
         Someone in the channel set the topic.
         """
-        user = string.split(prefix, '!')[0]
+        user = prefix.split('!')[0]
         channel = params[0]
         newtopic = params[1]
         self.topicUpdated(user, channel, newtopic)
@@ -1997,13 +1996,13 @@ class IRCClient(basic.LineReceiver):
         Called when the topic for a channel is initially reported or when it
         subsequently changes.
         """
-        user = string.split(prefix, '!')[0]
+        user = prefix.split('!')[0]
         channel = params[1]
         newtopic = params[2]
         self.topicUpdated(user, channel, newtopic)
 
     def irc_RPL_NOTOPIC(self, prefix, params):
-        user = string.split(prefix, '!')[0]
+        user = prefix.split('!')[0]
         channel = params[1]
         newtopic = ""
         self.topicUpdated(user, channel, newtopic)
@@ -2112,7 +2111,7 @@ class IRCClient(basic.LineReceiver):
         self.action(user, channel, data)
 
     def ctcpQuery_PING(self, user, channel, data):
-        nick = string.split(user,"!")[0]
+        nick = user.split('!')[0]
         self.ctcpMakeReply(nick, [("PING", data)])
 
     def ctcpQuery_FINGER(self, user, channel, data):
@@ -2127,7 +2126,7 @@ class IRCClient(basic.LineReceiver):
         else:
             reply = str(self.fingerReply)
 
-        nick = string.split(user,"!")[0]
+        nick = user.split('!')[0]
         self.ctcpMakeReply(nick, [('FINGER', reply)])
 
     def ctcpQuery_VERSION(self, user, channel, data):
@@ -2136,7 +2135,7 @@ class IRCClient(basic.LineReceiver):
                                % (user, data))
 
         if self.versionName:
-            nick = string.split(user,"!")[0]
+            nick = user.split('!')[0]
             self.ctcpMakeReply(nick, [('VERSION', '%s:%s:%s' %
                                        (self.versionName,
                                         self.versionNum or '',
@@ -2147,7 +2146,7 @@ class IRCClient(basic.LineReceiver):
             self.quirkyMessage("Why did %s send '%s' with a SOURCE query?"
                                % (user, data))
         if self.sourceURL:
-            nick = string.split(user,"!")[0]
+            nick = user.split('!')[0]
             # The CTCP document (Zeuge, Rollo, Mesander 1994) says that SOURCE
             # replies should be responded to with the location of an anonymous
             # FTP server in host:directory:file format.  I'm taking the liberty
@@ -2160,7 +2159,7 @@ class IRCClient(basic.LineReceiver):
             self.quirkyMessage("Why did %s send '%s' with a USERINFO query?"
                                % (user, data))
         if self.userinfo:
-            nick = string.split(user,"!")[0]
+            nick = user.split('!')[0]
             self.ctcpMakeReply(nick, [('USERINFO', self.userinfo)])
 
     def ctcpQuery_CLIENTINFO(self, user, channel, data):
@@ -2172,7 +2171,7 @@ class IRCClient(basic.LineReceiver):
         the usage of that tag.
         """
 
-        nick = string.split(user,"!")[0]
+        nick = user.split('!')[0]
         if not data:
             # XXX: prefixedMethodNames gets methods from my *class*,
             # but it's entirely possible that this *instance* has more
@@ -2180,10 +2179,9 @@ class IRCClient(basic.LineReceiver):
             names = reflect.prefixedMethodNames(self.__class__,
                                                 'ctcpQuery_')
 
-            self.ctcpMakeReply(nick, [('CLIENTINFO',
-                                       string.join(names, ' '))])
+            self.ctcpMakeReply(nick, [('CLIENTINFO', ' '.join(names))])
         else:
-            args = string.split(data)
+            args = data.split()
             method = getattr(self, 'ctcpQuery_%s' % (args[0],), None)
             if not method:
                 self.ctcpMakeReply(nick, [('ERRMSG',
@@ -2198,7 +2196,7 @@ class IRCClient(basic.LineReceiver):
     def ctcpQuery_ERRMSG(self, user, channel, data):
         # Yeah, this seems strange, but that's what the spec says to do
         # when faced with an ERRMSG query (not a reply).
-        nick = string.split(user,"!")[0]
+        nick = user.split('!')[0]
         self.ctcpMakeReply(nick, [('ERRMSG',
                                    "%s :No error has occoured." % data)])
 
@@ -2206,7 +2204,7 @@ class IRCClient(basic.LineReceiver):
         if data is not None:
             self.quirkyMessage("Why did %s send '%s' with a TIME query?"
                                % (user, data))
-        nick = string.split(user,"!")[0]
+        nick = user.split('!')[0]
         self.ctcpMakeReply(nick,
                            [('TIME', ':%s' %
                              time.asctime(time.localtime(time.time())))])
@@ -2224,7 +2222,7 @@ class IRCClient(basic.LineReceiver):
             data = data[len(dcctype)+1:]
             handler(user, channel, data)
         else:
-            nick = string.split(user,"!")[0]
+            nick = user.split('!')[0]
             self.ctcpMakeReply(nick, [('ERRMSG',
                                        "DCC %s :Unknown DCC type '%s'"
                                        % (data, dcctype))])
@@ -2407,12 +2405,12 @@ class IRCClient(basic.LineReceiver):
     ### You may override these with something more appropriate to your UI.
 
     def badMessage(self, line, excType, excValue, tb):
-        """When I get a message that's so broken I can't use it.
+        """
+        When I get a message that's so broken I can't use it.
         """
         log.msg(line)
-        log.msg(string.join(traceback.format_exception(excType,
-                                                        excValue,
-                                                        tb),''))
+        log.msg(''.join(traceback.format_exception(excType, excValue, tb)))
+
 
     def quirkyMessage(self, s):
         """This is called when I receive a message which is peculiar,
@@ -2677,7 +2675,7 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
 
     def dataReceived(self, data):
         self.buffer = self.buffer + data
-        lines = string.split(self.buffer, LF)
+        lines = self.buffer.split(LF)
         # Put the (possibly empty) element after the last LF back in the
         # buffer
         self.buffer = lines.pop()
@@ -2719,7 +2717,7 @@ def dccDescribe(data):
     """
 
     orig_data = data
-    data = string.split(data)
+    data = data.split()
     if len(data) < 4:
         return orig_data
 
@@ -2739,9 +2737,7 @@ def dccDescribe(data):
                 (address >> 8) & 0xFF,
                 address & 0xFF,
                 )
-            # The mapping to 'int' is to get rid of those accursed
-            # "L"s which python 1.5.2 puts on the end of longs.
-            address = string.join(map(str,map(int,address)), ".")
+            address = '.'.join(map(str, address))
 
     if dcctype == 'SEND':
         filename = arg
@@ -3351,7 +3347,7 @@ def ctcpExtract(message):
     retval = {'extended': extended_messages,
               'normal': normal_messages }
 
-    messages = string.split(message, X_DELIM)
+    messages = message.split(X_DELIM)
     odd = 0
 
     # X1 extended data X2 nomal data X3 extended data X4 normal...
@@ -3367,7 +3363,7 @@ def ctcpExtract(message):
 
     extended_messages[:] = map(ctcpDequote, extended_messages)
     for i in xrange(len(extended_messages)):
-        m = string.split(extended_messages[i], SPC, 1)
+        m = extended_messages[i].split(SPC, 1)
         tag = m[0]
         if len(m) > 1:
             data = m[1]
@@ -3398,7 +3394,7 @@ mEscape_re = re.compile('%s.' % (re.escape(M_QUOTE),), re.DOTALL)
 
 def lowQuote(s):
     for c in (M_QUOTE, NUL, NL, CR):
-        s = string.replace(s, c, mQuoteTable[c])
+        s = s.replace(c, mQuoteTable[c])
     return s
 
 def lowDequote(s):
@@ -3428,7 +3424,7 @@ xEscape_re = re.compile('%s.' % (re.escape(X_QUOTE),), re.DOTALL)
 
 def ctcpQuote(s):
     for c in (X_QUOTE, X_DELIM):
-        s = string.replace(s, c, xQuoteTable[c])
+        s = s.replace(c, xQuoteTable[c])
     return s
 
 def ctcpDequote(s):
@@ -3467,7 +3463,7 @@ def ctcpStringify(messages):
         m = "%s%s%s" % (X_DELIM, m, X_DELIM)
         coded_messages.append(m)
 
-    line = string.join(coded_messages, '')
+    line = ''.join(coded_messages)
     return line
 
 
