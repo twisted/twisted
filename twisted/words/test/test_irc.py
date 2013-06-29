@@ -1638,7 +1638,8 @@ class BasicServerFunctionalityTestCase(unittest.TestCase):
     def test_sendMessage(self):
         """
         Passing a command and parameters to L{IRC.sendMessage} results in a
-        valid query string.
+        query string that consists of the command and parameters, seperated by
+        a space, ending with '\r\n'.
         """
         self.p.sendMessage('CMD', 'param1', 'param2')
         self.check('CMD param1 param2\r\n')

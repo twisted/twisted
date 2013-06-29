@@ -2737,8 +2737,6 @@ def dccDescribe(data):
                 (address >> 8) & 0xFF,
                 address & 0xFF,
                 )
-            # The mapping to 'int' is to get rid of those accursed
-            # "L"s which python puts on the end of longs.
             address = '.'.join(map(str, address))
 
     if dcctype == 'SEND':
