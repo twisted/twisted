@@ -22,15 +22,6 @@ class TestTap2DEB(TestCase):
     """
     maintainer = "Jane Doe <janedoe@example.com>"
 
-    def setUp(self):
-        """
-        The L{tap2deb} script requires C{dpkg-buildpackage}; skip tests if
-        C{dpkg-buildpackage} is not present.
-        """
-        if not procutils.which("dpkg-buildpackage"):
-            raise SkipTest("dpkg-buildpackage must be present to test tap2deb")
-
-
     def test_maintainerOption(self):
         """
         The C{--maintainer} option must be specified on the commandline or
@@ -58,21 +49,36 @@ class TestTap2DEB(TestCase):
         self.assertEqual(config['type'], 'tap')
 
 
+    def test_missingMaintainer(self):
+        """
+        Omitting the maintainer argument results in L{tap2deb.run} raising
+        C{SystemExit}.
+        """
+        error = self.assertRaises(SystemExit, tap2deb.run,
+            ["--tapfile", "foo"])
+        self.assertTrue(str(error).endswith('maintainer must be specified.'))
+
+
     def test_basicOperation(self):
         """
-        Running the L{tap2deb} script produces a bunch of files.
+        Running the L{tap2deb} script produces a bunch of files using
+        C{dpkg-buildpackage}.
         """
-        basedir = FilePath(self.mktemp())
-        basedir.makedirs()
+        # Skip tests if dpkg-buildpackage is not present
+        if not procutils.which("dpkg-buildpackage"):
+            raise SkipTest("dpkg-buildpackage must be present to test tap2deb")
+
+        baseDir = FilePath(self.mktemp())
+        baseDir.makedirs()
         self.addCleanup(os.chdir, os.getcwd())
-        os.chdir(basedir.path)
+        os.chdir(baseDir.path)
 
         # Make a temporary .tap file
         version = '1.0'
         tapName = 'lemon'
-        tapFile = basedir.child("%s.tap" % tapName)
+        tapFile = baseDir.child("%s.tap" % tapName)
         tapFile.setContent("# Dummy .tap file")
-        buildDir = basedir.child('.build')
+        buildDir = baseDir.child('.build')
         inputDir = buildDir.child('twisted-%s-%s' % (tapName, version))
         inputName = 'twisted-%s_%s' % (tapName, version)
 
@@ -81,21 +87,19 @@ class TestTap2DEB(TestCase):
         tap2deb.run(args)
 
         # Verify input files were created
-        self.assertEqual(len(inputDir.listdir()), 4)
-        self.assertTrue(inputDir.child('lemon.tap').exists())
+        self.assertEqual(sorted(inputDir.listdir()),
+            ['build-stamp', 'debian', 'install-stamp', 'lemon.tap'])
 
         debianDir = inputDir.child('debian')
-        self.assertTrue(debianDir.exists())
-        self.assertTrue(debianDir.child('source').child('format').exists())
-
         for name in ['README.Debian', 'conffiles', 'default', 'init.d',
                      'postinst', 'prerm', 'postrm', 'changelog', 'control',
                      'compat', 'copyright', 'dirs', 'rules']:
             self.assertTrue(debianDir.child(name).exists())
 
         # Verify 4 output files were created
-        output = buildDir.globChildren(inputName + "*")
-        self.assertEqual(len(output), 4)
-        for ext in ['.deb', '.dsc', '.tar.gz', '.changes']:
-            self.assertEqual(len(buildDir.globChildren('*' + ext)), 1)
+        self.assertTrue(buildDir.child('twisted-lemon_1.0_all.deb').exists())
+        self.assertTrue(buildDir.child('twisted-lemon_1.0.tar.gz').exists())
+        self.assertTrue(buildDir.child('twisted-lemon_1.0.dsc').exists())
+        self.assertEqual(
+            len(buildDir.globChildren('twisted-lemon_1.0_*.changes')), 1)
 
