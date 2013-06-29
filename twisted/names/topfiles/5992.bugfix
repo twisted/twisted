@@ -1,0 +1,1 @@
+twisted.names.resolve.ResolverChain now returns a twisted.names.error.DomainError failure if its resolvers list is empty.
