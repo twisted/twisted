@@ -4288,6 +4288,16 @@ class SearchFileTests(unittest.TestCase):
                          "%.20r not in file %r" % (inputString, self.io))
 
 
+    def test_longString(self):
+        """
+        L{_searchFile} returns C{True} when paased a string as long as its
+        internal buffer, that is equal to the file content.
+        """
+        string = b'x' * (2**2**2**2)
+        self.io = StringIO(string)
+        self.assertInFile(string)
+
+
     def test_exactMatch(self):
         """
         L{_searchFile} returns C{True} when passing a string that is equal to
