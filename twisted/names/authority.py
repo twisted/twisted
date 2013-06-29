@@ -60,7 +60,7 @@ def getSerial(filename = '/tmp/twisted-names.serial'):
 #            return r
 
 
-def _nameInName(descendantName, ancestorName):
+def _isSubdomainOf(descendantName, ancestorName):
     """
     Test whether C{descendantName} is equal to or is a I{subdomain} of
     C{ancestorName}.
@@ -161,7 +161,7 @@ class FileAuthority(common.ResolverBase):
                     )
             return defer.succeed((results, authority, additional))
         else:
-            if _nameInName(name, self.soa[0]):
+            if _isSubdomainOf(name, self.soa[0]):
                 # We are the authority and we didn't find it.
                 # XXX: The comment above is wrong. The QNAME may be a
                 # in a delegated subzone. See #6581 and #6580
