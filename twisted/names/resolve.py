@@ -88,7 +88,7 @@ class ResolverChain(common.ResolverBase):
         # XXX: Why is this necessary? dns.ALL_RECORDS queries should
         # be handled just the same as any other type by _lookup
         # above. If I remove this method all names tests still
-        # pass. -rwall
+        # pass. See #6604 -rwall
         if not self.resolvers:
             return defer.fail(error.DomainError())
         d = self.resolvers[0].lookupAllRecords(name, timeout)
