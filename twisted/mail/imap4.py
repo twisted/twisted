@@ -56,7 +56,7 @@ _MONTH_NAMES = dict(zip(
 
 
 
-def _strFile(searchString, readableObject, caseSensitive=True):
+def _searchFile(searchString, readableObject, caseSensitive=True):
     """
     Find whether string C{searchString} occurs in a C{read()}-able object
     C{readableObject}.
@@ -77,17 +77,17 @@ def _strFile(searchString, readableObject, caseSensitive=True):
     if not caseSensitive:
         searchString = searchString.lower()
     while 1:
-        r = readableObject.read(bufLen - len(searchString))
+        inputString = readableObject.read(bufLen - len(searchString))
         if not caseSensitive:
-            r = r.lower()
-        bytesRead = len(r)
+            inputString = inputString.lower()
+        bytesRead = len(inputString)
         if bytesRead == 0:
             return False
-        l = len(buf) + bytesRead - bufLen
-        if l <= 0:
-            buf = buf + r
+        length = len(buf) + bytesRead - bufLen
+        if length <= 0:
+            buf = buf + inputString
         else:
-            buf = buf[l:] + r
+            buf = buf[length:] + inputString
         if buf.find(searchString) != -1:
             return True
 
@@ -1674,7 +1674,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def search_BODY(self, query, id, msg):
         body = query.pop(0).lower()
-        return _strFile(body, msg.getBodyFile(), False)
+        return _searchFile(body, msg.getBodyFile(), False)
 
     def search_CC(self, query, id, msg):
         cc = msg.getHeaders(False, 'cc').get('cc', '')
@@ -1833,7 +1833,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def search_TEXT(self, query, id, msg):
         # XXX - This must search headers too, see #6423
         body = query.pop(0).lower()
-        return _strFile(body, msg.getBodyFile(), False)
+        return _searchFile(body, msg.getBodyFile(), False)
 
     def search_TO(self, query, id, msg):
         to = msg.getHeaders(False, 'to').get('to', '')
