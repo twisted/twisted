@@ -60,37 +60,6 @@ def getSerial(filename = '/tmp/twisted-names.serial'):
 #            return r
 
 
-def _isSubdomainOf(descendantName, ancestorName):
-    """
-    Test whether C{descendantName} is equal to or is a I{subdomain} of
-    C{ancestorName}.
-
-    The names are compared case-insensitively.
-
-    The names are treated as byte strings containing one or more
-    DNS labels separated by B{.}.
-
-    C{descendantName} is considered equal if its sequence of labels
-    exactly matches the labels of C{ancestorName}.
-
-    C{descendantName} is considered a I{subdomain} if its sequence of
-    labels ends with the labels of C{ancestorName}.
-
-    @type descendantName: C{bytes}
-    @param descendantName: The DNS subdomain name.
-
-    @type ancestorName: C{bytes}
-    @param ancestorName: The DNS parent or ancestor domain name.
-
-    @return: C{True} if C{descendantName} is equal to or if it is a
-        subdomain of C{ancestorName}. Otherwise returns C{False}.
-    """
-    descendantLabels = descendantName.lower().split('.')
-    ancestorLabels = ancestorName.lower().split('.')
-
-    return  descendantLabels[-len(ancestorLabels):] == ancestorLabels
-
-
 
 class FileAuthority(common.ResolverBase):
     """An Authority that is loaded from a file."""
@@ -161,7 +130,7 @@ class FileAuthority(common.ResolverBase):
                     )
             return defer.succeed((results, authority, additional))
         else:
-            if _isSubdomainOf(name, self.soa[0]):
+            if dns._isSubdomainOf(name, self.soa[0]):
                 # We may be the authority and we didn't find it.
                 # XXX: The QNAME may also be a in a delegated child zone. See
                 # #6581 and #6580
