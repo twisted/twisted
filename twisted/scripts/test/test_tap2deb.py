@@ -76,7 +76,7 @@ class TestTap2DEB(TestCase):
         # Make a temporary .tap file
         version = '1.0'
         tapName = 'lemon'
-        tapFile = baseDir.child("%s.tap" % tapName)
+        tapFile = baseDir.child("%s.tap" % (tapName,))
         tapFile.setContent("# Dummy .tap file")
         buildDir = baseDir.child('.build')
         inputDir = buildDir.child('twisted-%s-%s' % (tapName, version))
