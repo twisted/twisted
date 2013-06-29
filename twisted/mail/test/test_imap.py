@@ -4298,6 +4298,16 @@ class SearchFileTests(unittest.TestCase):
         self.assertInFile(string)
 
 
+    def test_matchSpansBufferBoundary(self):
+        """
+        L{_searchFile} returns C{True} when the string whose match spans the
+        bondary of the internal buffer.
+        """
+        string = b'x' * (2**2**2**2 - 2)
+        self.io = StringIO(b'y' * 20 + string + b'y' * 20)
+        self.assertInFile(string)
+
+
     def test_exactMatch(self):
         """
         L{_searchFile} returns C{True} when passing a string that is equal to
