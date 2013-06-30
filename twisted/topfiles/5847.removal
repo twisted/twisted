@@ -1,2 +1,0 @@
-twisted.python._epoll bindings were removed, the epoll reactor using the stdlib
-version.
