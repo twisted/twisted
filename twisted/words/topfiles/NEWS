@@ -13,8 +13,9 @@ Features
 
 Deprecations and Removals
 -------------------------
- - The `crippled` attribute in words.protocols.jabber.xmpp_stringprep
-   is deprecated now. (#5386)
+ - The `crippled` attribute in
+   twisted.words.protocols.jabber.xmpp_stringprep is deprecated now.
+   (#5386)
 
 Other
 -----

@@ -6,7 +6,7 @@ Twisted Lore 13.1.0 (2013-06-23)
 
 Deprecations and Removals
 -------------------------
- - lore.lint.parserErrors is deprecated now. (#5386)
+ - twisted.lore.lint.parserErrors is deprecated now. (#5386)
 
 
 Twisted Lore 13.0.0 (2013-03-19)

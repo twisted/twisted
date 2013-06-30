@@ -12,8 +12,8 @@ Bugfixes
 
 Deprecations and Removals
 -------------------------
- - mail.IDomain.startMessage, deprecated since 2003, is removed now.
-   (#4151)
+ - twisted.mail.IDomain.startMessage, deprecated since 2003, is
+   removed now. (#4151)
 
 Other
 -----
