@@ -284,11 +284,11 @@ class ProcessTestsBuilderBase(ReactorBuilder):
                 # say.  Anyway, this inconsistency between different platforms
                 # is extremely unfortunate and I would remove it if I
                 # could. -exarkun
-                self.assertIdentical(err.signal, None)
+                self.assertIs(err.signal, None)
                 self.assertEqual(err.exitCode, 1)
             else:
                 self.assertEqual(err.signal, sigNum)
-                self.assertIdentical(err.exitCode, None)
+                self.assertIs(err.exitCode, None)
 
         exited.addCallback(cbExited)
         exited.addErrback(err)

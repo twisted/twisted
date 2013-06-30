@@ -27,7 +27,7 @@ class InstallReactorTests(unittest.SynchronousTestCase):
             newReactor = object()
             installReactor(newReactor)
             from twisted.internet import reactor
-            self.assertIdentical(newReactor, reactor)
+            self.assertIs(newReactor, reactor)
 
 
     def test_alreadyInstalled(self):
