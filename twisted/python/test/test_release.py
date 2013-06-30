@@ -2847,4 +2847,7 @@ class UploadTarballsScriptTest(StructureAssertingMixin, TestCase):
         arguments.
         """
         script = UploadTarballsScript()
-        self.assertRaises(SystemExit, script.main, ["path"], "script")
+        error = self.assertRaises(SystemExit, script.main, ["path"], "script")
+        self.assertEqual(
+            "Must specify two arguments: tarballs source path and user@host.",
+            str(error))
