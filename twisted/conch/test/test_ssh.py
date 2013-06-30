@@ -631,7 +631,7 @@ class SSHProtocolTestCase(unittest.TestCase):
         def cbPty(ignored):
             # The server-side object corresponding to our client side channel.
             session = self.realm.avatar.conn.channels[0].session
-            self.assertIdentical(session.avatar, self.realm.avatar)
+            self.assertIs(session.avatar, self.realm.avatar)
             self.assertEqual(session._terminalType, 'conch-test-term')
             self.assertEqual(session._windowSize, (24, 80, 0, 0))
             self.assertTrue(session.ptyReq)
@@ -705,7 +705,7 @@ class SSHProtocolTestCase(unittest.TestCase):
         def cbClosed(ignored):
             # No data is expected
             self.assertEqual(self.channel.received, [])
-            self.assertNotEquals(self.channel.status, 0)
+            self.assertNotEqual(self.channel.status, 0)
         channel.addCallback(cbClosed)
         return channel
 
@@ -866,10 +866,10 @@ class TestSSHFactory(unittest.TestCase):
         f2 = self.makeSSHFactory(primes={1:(2,3)})
         p1 = f1.buildProtocol(None)
         p2 = f2.buildProtocol(None)
-        self.failIf('diffie-hellman-group-exchange-sha1' in p1.supportedKeyExchanges,
-                p1.supportedKeyExchanges)
-        self.failUnless('diffie-hellman-group-exchange-sha1' in p2.supportedKeyExchanges,
-                p2.supportedKeyExchanges)
+        self.assertNotIn(
+            'diffie-hellman-group-exchange-sha1', p1.supportedKeyExchanges)
+        self.assertIn(
+            'diffie-hellman-group-exchange-sha1', p2.supportedKeyExchanges)
 
 
 

@@ -280,31 +280,31 @@ class BufferTestCase(unittest.TestCase):
 
         ch = self.term.getCharacter(0, 0)
         self.assertEqual(ch[0], 'W')
-        self.failUnless(ch[1].bold)
-        self.failUnless(ch[1].underline)
-        self.failUnless(ch[1].blink)
-        self.failUnless(ch[1].reverseVideo)
+        self.assertTrue(ch[1].bold)
+        self.assertTrue(ch[1].underline)
+        self.assertTrue(ch[1].blink)
+        self.assertTrue(ch[1].reverseVideo)
 
         ch = self.term.getCharacter(1, 0)
         self.assertEqual(ch[0], 'X')
-        self.failIf(ch[1].bold)
-        self.failIf(ch[1].underline)
-        self.failIf(ch[1].blink)
-        self.failIf(ch[1].reverseVideo)
+        self.assertFalse(ch[1].bold)
+        self.assertFalse(ch[1].underline)
+        self.assertFalse(ch[1].blink)
+        self.assertFalse(ch[1].reverseVideo)
 
         ch = self.term.getCharacter(2, 0)
         self.assertEqual(ch[0], 'Y')
-        self.failUnless(ch[1].blink)
-        self.failIf(ch[1].bold)
-        self.failIf(ch[1].underline)
-        self.failIf(ch[1].reverseVideo)
+        self.assertTrue(ch[1].blink)
+        self.assertFalse(ch[1].bold)
+        self.assertFalse(ch[1].underline)
+        self.assertFalse(ch[1].reverseVideo)
 
         ch = self.term.getCharacter(3, 0)
         self.assertEqual(ch[0], 'Z')
-        self.failUnless(ch[1].blink)
-        self.failUnless(ch[1].bold)
-        self.failIf(ch[1].underline)
-        self.failIf(ch[1].reverseVideo)
+        self.assertTrue(ch[1].blink)
+        self.assertTrue(ch[1].bold)
+        self.assertFalse(ch[1].underline)
+        self.assertFalse(ch[1].reverseVideo)
 
     def testColorAttributes(self):
         s1 = "Merry xmas"
@@ -476,25 +476,25 @@ class ExpectTestCase(unittest.TestCase):
         d.addCallback(result.append)
 
         self.term.write("greeting puny earthlings\n")
-        self.failIf(result)
+        self.assertFalse(result)
         self.term.write("hello world\n")
-        self.failUnless(result)
+        self.assertTrue(result)
         self.assertEqual(result[0].group(), "hello world")
         self.assertEqual(len(self.fs.calls), 1)
-        self.failIf(self.fs.calls[0].active())
+        self.assertFalse(self.fs.calls[0].active())
 
     def testBrokenUpString(self):
         result = []
         d = self.term.expect("hello world")
         d.addCallback(result.append)
 
-        self.failIf(result)
+        self.assertFalse(result)
         self.term.write("hello ")
-        self.failIf(result)
+        self.assertFalse(result)
         self.term.write("worl")
-        self.failIf(result)
+        self.assertFalse(result)
         self.term.write("d")
-        self.failUnless(result)
+        self.assertTrue(result)
         self.assertEqual(result[0].group(), "hello world")
 
 
@@ -505,9 +505,9 @@ class ExpectTestCase(unittest.TestCase):
         d2 = self.term.expect("world")
         d2.addCallback(result.append)
 
-        self.failIf(result)
+        self.assertFalse(result)
         self.term.write("hello")
-        self.failIf(result)
+        self.assertFalse(result)
         self.term.write(" ")
         self.assertEqual(len(result), 1)
         self.term.write("world")
@@ -521,7 +521,7 @@ class ExpectTestCase(unittest.TestCase):
         result = []
         d = self.term.expect("hello world")
         d.addCallback(result.append)
-        self.failUnless(result)
+        self.assertTrue(result)
         self.assertEqual(result[0].group(), "hello world")
 
     def testMultipleSynchronous(self):
@@ -538,7 +538,7 @@ class ExpectTestCase(unittest.TestCase):
         self.assertEqual(result[1].group(), "world")
 
     def _cbTestTimeoutFailure(self, res):
-        self.assert_(hasattr(res, 'type'))
+        self.assertTrue(hasattr(res, 'type'))
         self.assertEqual(res.type, helper.ExpectationTimeout)
 
     def testTimeoutFailure(self):
@@ -557,8 +557,8 @@ class ExpectTestCase(unittest.TestCase):
 
         self.fs.calls[0].call()
 
-        self.assertEquals(len(result), 1)
-        self.assertEquals(result[0].group(), "zoom")
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].group(), "zoom")
 
 
 
@@ -572,15 +572,15 @@ class CharacterAttributeTests(unittest.TestCase):
         (bold, blink, underline, etc) with the same values to be considered
         equal.
         """
-        self.assertEquals(
+        self.assertEqual(
             helper.CharacterAttribute(),
             helper.CharacterAttribute())
 
-        self.assertEquals(
+        self.assertEqual(
             helper.CharacterAttribute(),
             helper.CharacterAttribute(charset=G0))
 
-        self.assertEquals(
+        self.assertEqual(
             helper.CharacterAttribute(
                 bold=True, underline=True, blink=False, reverseVideo=True,
                 foreground=helper.BLUE),
@@ -588,11 +588,11 @@ class CharacterAttributeTests(unittest.TestCase):
                 bold=True, underline=True, blink=False, reverseVideo=True,
                 foreground=helper.BLUE))
 
-        self.assertNotEquals(
+        self.assertNotEqual(
             helper.CharacterAttribute(),
             helper.CharacterAttribute(charset=G1))
 
-        self.assertNotEquals(
+        self.assertNotEqual(
             helper.CharacterAttribute(bold=True),
             helper.CharacterAttribute(bold=False))
 
@@ -607,7 +607,7 @@ class CharacterAttributeTests(unittest.TestCase):
 
         warningsShown = self.flushWarnings([self.test_wantOneDeprecated])
         self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
             'twisted.conch.insults.helper.wantOne was deprecated in '

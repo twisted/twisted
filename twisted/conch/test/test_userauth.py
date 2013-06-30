@@ -552,7 +552,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
         clearAuthServer.transport.isEncrypted = lambda x: False
         clearAuthServer.serviceStarted()
         clearAuthServer.serviceStopped()
-        self.failIfIn('password', clearAuthServer.supportedAuthentications)
+        self.assertNotIn('password', clearAuthServer.supportedAuthentications)
         # only encrypt incoming (the direction the password is sent)
         halfAuthServer = userauth.SSHUserAuthServer()
         halfAuthServer.transport = FakeTransport(self.portal)
@@ -575,8 +575,8 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
         clearAuthServer.transport.isEncrypted = lambda x: False
         clearAuthServer.serviceStarted()
         clearAuthServer.serviceStopped()
-        self.failIfIn('keyboard-interactive',
-                clearAuthServer.supportedAuthentications)
+        self.assertNotIn(
+            'keyboard-interactive', clearAuthServer.supportedAuthentications)
         # only encrypt incoming (the direction the password is sent)
         halfAuthServer = userauth.SSHUserAuthServer()
         halfAuthServer.transport = FakeTransport(self.portal)
@@ -805,7 +805,7 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
         authClient.serviceStarted()
         authClient.tryAuth('publickey')
         authClient.transport.packets = []
-        self.assertIdentical(authClient.ssh_USERAUTH_PK_OK(''), None)
+        self.assertIs(authClient.ssh_USERAUTH_PK_OK(''), None)
         self.assertEqual(authClient.transport.packets, [
                 (userauth.MSG_USERAUTH_REQUEST, NS('foo') + NS('nancy') +
                  NS('none'))])
@@ -978,7 +978,7 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
         getGenericAnswers() should return a failed Deferred.
         """
         authClient = userauth.SSHUserAuthClient('foo', FakeTransport.Service())
-        self.assertIdentical(authClient.getPublicKey(), None)
+        self.assertIs(authClient.getPublicKey(), None)
         def check(result):
             result.trap(NotImplementedError)
             d = authClient.getPassword()
