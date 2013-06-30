@@ -34,13 +34,12 @@ def makeGetpass(*passphrases):
 
     @param passphrases: The list of passphrases returned, one per each call.
     """
-    def _getpass():
-        yield None
-        for phrase in passphrases:
-            yield phrase
-    getpassResult = _getpass()
-    next(getpassResult)
-    return getpassResult.send
+    passphrases = iter(passphrases)
+
+    def fakeGetpass(_):
+        return passphrases.next()
+
+    return fakeGetpass
 
 
 
@@ -280,6 +279,30 @@ class KeyGenTests(TestCase):
 
         self.assertEqual(
             'Could not change passphrase: oops', str(error))
+
+        self.assertEqual(privateRSA_openssh, FilePath(filename).getContent())
+
+
+    def test_changePassphraseEmptyStringError(self):
+        """
+        L{changePassPhrase} doesn't modify the key file if C{toString} returns
+        an empty string.
+        """
+        filename = self.mktemp()
+        FilePath(filename).setContent(privateRSA_openssh)
+
+        def toString(*args, **kwargs):
+            return ''
+
+        self.patch(Key, 'toString', toString)
+
+        error = self.assertRaises(
+            SystemExit, changePassPhrase,
+            {'filename': filename, 'newpass': 'newencrypt'})
+
+        self.assertEqual(
+            "Could not change passphrase: "
+            "cannot guess the type of ''", str(error))
 
         self.assertEqual(privateRSA_openssh, FilePath(filename).getContent())
 
