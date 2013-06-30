@@ -271,7 +271,7 @@ SUrCyZXsNh6VXwjs3gKQ
         # trying to decrypt a key which doesn't support encryption
         self.assertRaises(keys.BadKeyError, keys.Key.fromString,
                 keydata.publicRSA_lsh, passphrase = 'unencrypted')
-        # trying to decrypt an unencrypted key
+        # trying to decrypt a key with the wrong passphrase
         self.assertRaises(keys.EncryptedKeyError, keys.Key.fromString,
                 keys.Key(self.rsaObj).toString('openssh', 'encrypted'))
         # key with no key data
@@ -309,7 +309,7 @@ gccf8Cqf6XWqiwlWd0B7BR3SymeHIaSymC45wmbgdstrbk7Ppa2Tp9AZku8M2Y7c
 SEJVJ+gmTKdRLYORJKyqhDet6g7kAxs4EoJ25WsOnX5nNr00rit+NkMPA7xbJT+7
 CfI51GQLw7pUPeO2WNt6yZO/YkzZrqvTj5FEwybkUyBv7L0gkqu9wjfDdUw0fVHE
 xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
------END RSA PRIVATE KEY-----""")
+-----END RSA PRIVATE KEY-----""", passphrase='encrypted')
         # key with invalid encryption type
         self.assertRaises(
             keys.BadKeyError, keys.Key.fromString,
@@ -342,7 +342,7 @@ gccf8Cqf6XWqiwlWd0B7BR3SymeHIaSymC45wmbgdstrbk7Ppa2Tp9AZku8M2Y7c
 SEJVJ+gmTKdRLYORJKyqhDet6g7kAxs4EoJ25WsOnX5nNr00rit+NkMPA7xbJT+7
 CfI51GQLw7pUPeO2WNt6yZO/YkzZrqvTj5FEwybkUyBv7L0gkqu9wjfDdUw0fVHE
 xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
------END RSA PRIVATE KEY-----""")
+-----END RSA PRIVATE KEY-----""", passphrase='encrypted')
         # key with bad IV (AES)
         self.assertRaises(
             keys.BadKeyError, keys.Key.fromString,
@@ -375,7 +375,7 @@ gccf8Cqf6XWqiwlWd0B7BR3SymeHIaSymC45wmbgdstrbk7Ppa2Tp9AZku8M2Y7c
 SEJVJ+gmTKdRLYORJKyqhDet6g7kAxs4EoJ25WsOnX5nNr00rit+NkMPA7xbJT+7
 CfI51GQLw7pUPeO2WNt6yZO/YkzZrqvTj5FEwybkUyBv7L0gkqu9wjfDdUw0fVHE
 xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
------END RSA PRIVATE KEY-----""")
+-----END RSA PRIVATE KEY-----""", passphrase='encrypted')
         # key with bad IV (DES3)
         self.assertRaises(
             keys.BadKeyError, keys.Key.fromString,
@@ -408,7 +408,7 @@ gccf8Cqf6XWqiwlWd0B7BR3SymeHIaSymC45wmbgdstrbk7Ppa2Tp9AZku8M2Y7c
 SEJVJ+gmTKdRLYORJKyqhDet6g7kAxs4EoJ25WsOnX5nNr00rit+NkMPA7xbJT+7
 CfI51GQLw7pUPeO2WNt6yZO/YkzZrqvTj5FEwybkUyBv7L0gkqu9wjfDdUw0fVHE
 xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
------END RSA PRIVATE KEY-----""")
+-----END RSA PRIVATE KEY-----""", passphrase='encrypted')
 
     def test_fromFile(self):
         """
