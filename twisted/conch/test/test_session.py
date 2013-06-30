@@ -533,8 +533,8 @@ class SessionInterfaceTestCase(unittest.TestCase):
         s = session.SSHSession(avatar=object) # use object because it doesn't
                                               # have an adapter
         self.assertEqual(s.buf, '')
-        self.assertIdentical(s.client, None)
-        self.assertIdentical(s.session, None)
+        self.assertIs(s.client, None)
+        self.assertIs(s.session, None)
 
 
     def test_client_dataReceived(self):
@@ -591,7 +591,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
         ret = self.session.requestReceived(
             'subsystem', common.NS('BadSubsystem'))
         self.assertFalse(ret)
-        self.assertIdentical(self.session.client, None)
+        self.assertIs(self.session.client, None)
 
 
     def test_lookupSubsystem(self):
@@ -604,8 +604,8 @@ class SessionInterfaceTestCase(unittest.TestCase):
             'subsystem', common.NS('TestSubsystem') + 'data')
         self.assertTrue(ret)
         self.assertIsInstance(self.session.client, protocol.ProcessProtocol)
-        self.assertIdentical(self.session.client.transport.proto,
-                             self.session.avatar.subsystem)
+        self.assertIs(self.session.client.transport.proto,
+                      self.session.avatar.subsystem)
 
 
 
@@ -620,8 +620,8 @@ class SessionInterfaceTestCase(unittest.TestCase):
         ret = s.request_subsystem(
             common.NS('subsystem') + 'data')
         self.assertTrue(ret)
-        self.assertNotIdentical(s.client, None)
-        self.assertIdentical(s.conn.closes.get(s), None)
+        self.assertIsNot(s.client, None)
+        self.assertIs(s.conn.closes.get(s), None)
         s.eofReceived()
         self.assertTrue(s.conn.closes.get(s))
         # these should not raise errors
@@ -687,8 +687,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
         self.assertSessionIsStubSession()
         self.assertIsInstance(self.session.client,
                               session.SSHSessionProcessProtocol)
-        self.assertIdentical(self.session.session.shellProtocol,
-                self.session.client)
+        self.assertIs(self.session.session.shellProtocol, self.session.client)
         # doesn't get a shell the second time
         self.assertFalse(self.session.requestReceived('shell', ''))
         self.assertRequestRaisedRuntimeError()
@@ -723,15 +722,14 @@ class SessionInterfaceTestCase(unittest.TestCase):
                                            common.NS('failure'))
         self.assertFalse(ret)
         self.assertRequestRaisedRuntimeError()
-        self.assertIdentical(self.session.client, None)
+        self.assertIs(self.session.client, None)
 
         self.assertTrue(self.session.requestReceived('exec',
                                                      common.NS('success')))
         self.assertSessionIsStubSession()
         self.assertIsInstance(self.session.client,
                               session.SSHSessionProcessProtocol)
-        self.assertIdentical(self.session.session.execProtocol,
-                self.session.client)
+        self.assertIs(self.session.session.execProtocol, self.session.client)
         self.assertEqual(self.session.session.execCommandLine,
                 'success')
 
@@ -811,7 +809,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
         When a close is received, the session should send a close message.
         """
         ret = self.session.closeReceived()
-        self.assertIdentical(ret, None)
+        self.assertIs(ret, None)
         self.assertTrue(self.session.conn.closes[self.session])
 
 
@@ -838,7 +836,7 @@ class SessionWithNoAvatarTestCase(unittest.TestCase):
     def setUp(self):
         self.session = session.SSHSession()
         self.session.avatar = StubAvatar()
-        self.assertIdentical(self.session.session, None)
+        self.assertIs(self.session.session, None)
 
 
     def assertSessionProvidesISession(self):

@@ -1061,15 +1061,15 @@ here's some other stuff
         proto2 = MockTransportBase()
         proto2.makeConnection(proto_helpers.StringTransport())
         proto2.sendIgnore('')
-        self.failIfEquals(proto.gotVersion, proto2.gotVersion)
-        self.failIfEquals(proto.transport, proto2.transport)
-        self.failIfEquals(proto.outgoingPacketSequence,
-                          proto2.outgoingPacketSequence)
-        self.failIfEquals(proto.incomingPacketSequence,
-                          proto2.incomingPacketSequence)
-        self.failIfEquals(proto.currentEncryptions,
-                          proto2.currentEncryptions)
-        self.failIfEquals(proto.service, proto2.service)
+        self.assertNotEqual(proto.gotVersion, proto2.gotVersion)
+        self.assertNotEqual(proto.transport, proto2.transport)
+        self.assertNotEqual(proto.outgoingPacketSequence,
+                            proto2.outgoingPacketSequence)
+        self.assertNotEqual(proto.incomingPacketSequence,
+                            proto2.incomingPacketSequence)
+        self.assertNotEqual(proto.currentEncryptions,
+                            proto2.currentEncryptions)
+        self.assertNotEqual(proto.service, proto2.service)
 
 
 
@@ -1473,18 +1473,18 @@ class ServerSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         self.proto.nextEncryptions = transport.SSHCiphers('none', 'none',
                                                           'none', 'none')
         self.proto.ssh_NEWKEYS('')
-        self.assertIdentical(self.proto.currentEncryptions,
-                             self.proto.nextEncryptions)
-        self.assertIdentical(self.proto.outgoingCompression, None)
-        self.assertIdentical(self.proto.incomingCompression, None)
+        self.assertIs(self.proto.currentEncryptions,
+                      self.proto.nextEncryptions)
+        self.assertIs(self.proto.outgoingCompression, None)
+        self.assertIs(self.proto.incomingCompression, None)
         self.proto.outgoingCompressionType = 'zlib'
         self.simulateKeyExchange('AB', 'CD')
         self.proto.ssh_NEWKEYS('')
-        self.failIfIdentical(self.proto.outgoingCompression, None)
+        self.assertIsNot(self.proto.outgoingCompression, None)
         self.proto.incomingCompressionType = 'zlib'
         self.simulateKeyExchange('AB', 'EF')
         self.proto.ssh_NEWKEYS('')
-        self.failIfIdentical(self.proto.incomingCompression, None)
+        self.assertIsNot(self.proto.incomingCompression, None)
 
 
     def test_SERVICE_REQUEST(self):
@@ -1643,7 +1643,7 @@ class ClientSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         exchangeHash = h.digest()
 
         def _cbTestKEXDH_REPLY(value):
-            self.assertIdentical(value, None)
+            self.assertIs(value, None)
             self.assertEqual(self.calledVerifyHostKey, True)
             self.assertEqual(self.proto.sessionID, exchangeHash)
 
@@ -1693,7 +1693,7 @@ class ClientSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         exchangeHash = h.digest()
 
         def _cbTestKEX_DH_GEX_REPLY(value):
-            self.assertIdentical(value, None)
+            self.assertIs(value, None)
             self.assertEqual(self.calledVerifyHostKey, True)
             self.assertEqual(self.proto.sessionID, exchangeHash)
 
@@ -1737,24 +1737,24 @@ class ClientSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         self.proto.nextEncryptions = transport.SSHCiphers(
             'none', 'none', 'none', 'none')
         self.simulateKeyExchange('AB', 'CD')
-        self.assertNotIdentical(
-            self.proto.currentEncryptions, self.proto.nextEncryptions)
+        self.assertIsNot(self.proto.currentEncryptions,
+                         self.proto.nextEncryptions)
 
         self.proto.nextEncryptions = MockCipher()
         self.proto.ssh_NEWKEYS('')
-        self.assertIdentical(self.proto.outgoingCompression, None)
-        self.assertIdentical(self.proto.incomingCompression, None)
-        self.assertIdentical(self.proto.currentEncryptions,
-                             self.proto.nextEncryptions)
+        self.assertIs(self.proto.outgoingCompression, None)
+        self.assertIs(self.proto.incomingCompression, None)
+        self.assertIs(self.proto.currentEncryptions,
+                      self.proto.nextEncryptions)
         self.assertTrue(secure[0])
         self.proto.outgoingCompressionType = 'zlib'
         self.simulateKeyExchange('AB', 'GH')
         self.proto.ssh_NEWKEYS('')
-        self.failIfIdentical(self.proto.outgoingCompression, None)
+        self.assertIsNot(self.proto.outgoingCompression, None)
         self.proto.incomingCompressionType = 'zlib'
         self.simulateKeyExchange('AB', 'IJ')
         self.proto.ssh_NEWKEYS('')
-        self.failIfIdentical(self.proto.incomingCompression, None)
+        self.assertIsNot(self.proto.incomingCompression, None)
 
 
     def test_SERVICE_ACCEPT(self):
@@ -1820,7 +1820,7 @@ class ClientSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         self.proto.instance = MockService()
         self.proto.ssh_SERVICE_ACCEPT('') # no payload
         self.assertTrue(self.proto.instance.started)
-        self.assertEquals(len(self.packets), 0) # not disconnected
+        self.assertEqual(len(self.packets), 0) # not disconnected
 
 
 
@@ -1932,7 +1932,7 @@ class SSHCiphersTestCase(unittest.TestCase):
             enc = cip.encrypt(key[:bs])
             enc2 = cip.encrypt(key[:bs])
             if counter:
-                self.failIfEquals(enc, enc2)
+                self.assertNotEqual(enc, enc2)
             self.assertEqual(encCipher.encrypt(key[:bs]), enc)
             self.assertEqual(encCipher.encrypt(key[:bs]), enc2)
             self.assertEqual(decCipher.decrypt(enc), key[:bs])
