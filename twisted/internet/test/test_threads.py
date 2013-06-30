@@ -124,7 +124,7 @@ class ThreadTestsBuilder(ReactorBuilder):
                           reactor.callFromThread, threadCall)
         self.runReactor(reactor, 5)
 
-        self.assertEquals(result, [threading.currentThread()])
+        self.assertEqual(result, [threading.currentThread()])
 
 
     def test_stopThreadPool(self):
