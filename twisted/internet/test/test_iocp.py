@@ -108,7 +108,7 @@ class IOCPReactorTestCase(unittest.TestCase):
         """
         ir = IOCPReactor()
         ir.wakeUp()
-        self.failIf(ir.doIteration(None))
+        self.assertFalse(ir.doIteration(None))
 
 
     def test_reactorInterfaces(self):
