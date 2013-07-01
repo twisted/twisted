@@ -1531,6 +1531,30 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         self.assertEqual(self.failureResultOf(d).value, expectedError)
 
 
+    def test_endpointConnectFailureAfterIteration(self):
+        """
+        If a connection attempt initiated by
+        L{HostnameEndpoint.connect} fails only after
+        L{HostnameEndpoint} has exhausted the list of possible server
+        addresses, the returned L{Deferred} will fail with
+        C{ConnectError}.
+        """
+        expectedError = error.ConnectError(string="Connection Failed")
+
+        mreactor = MemoryReactor()
+
+        clientFactory = object()
+
+        ep, ignoredArgs, ignoredDest = self.createClientEndpoint(
+            mreactor, clientFactory)
+
+        d = ep.connect(clientFactory)
+        mreactor.advance(0.3)
+        host, port, factory, timeout, bindAddress = mreactor.tcpClients[0]
+        factory.clientConnectionFailed(mreactor.connectors[0], expectedError)
+        self.assertEqual(self.failureResultOf(d).value, expectedError)
+
+
     def test_nameResolution(self):
         """
         While resolving host names, _nameResolution calls _deferToThread with
