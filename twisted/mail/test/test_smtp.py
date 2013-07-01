@@ -925,6 +925,45 @@ class MultipleDeliveryFactorySMTPServerFactory(protocol.ServerFactory):
 
 
 
+class SMTPSenderFactoryTestCase(unittest.TestCase):
+    """
+    Tests for L{smtp.SMTPSenderFactory}.
+    """
+    def test_removeCurrentProtocolWhenClientConnectionLost(self):
+        """
+        L{smtp.SMTPSenderFactory} removes the current protocol when the client
+        connection is lost.
+        """
+        reactor = MemoryReactor()
+        sentDeferred = defer.Deferred()
+        clientFactory = smtp.SMTPSenderFactory(
+            "source@address", "recipient@address",
+            StringIO("message"), sentDeferred)
+        connector = reactor.connectTCP("localhost", 25, clientFactory)
+        protocol = clientFactory.buildProtocol(None)
+        clientFactory.clientConnectionLost(connector,
+                                           error.ConnectionDone("Bye."))
+        self.assertEqual(clientFactory.currentProtocol, None)
+
+
+    def test_removeCurrentProtocolWhenClientConnectionFailed(self):
+        """
+        L{smtp.SMTPSenderFactory} removes the current protocol when the client
+        connection is failed.
+        """
+        reactor = MemoryReactor()
+        sentDeferred = defer.Deferred()
+        clientFactory = smtp.SMTPSenderFactory(
+            "source@address", "recipient@address",
+            StringIO("message"), sentDeferred)
+        connector = reactor.connectTCP("localhost", 25, clientFactory)
+        protocol = clientFactory.buildProtocol(None)
+        clientFactory.clientConnectionFailed(connector,
+                                           error.ConnectionDone("Bye."))
+        self.assertEqual(clientFactory.currentProtocol, None)
+
+
+
 class SMTPSenderFactoryRetryTestCase(unittest.TestCase):
     """
     Tests for the retry behavior of L{smtp.SMTPSenderFactory}.

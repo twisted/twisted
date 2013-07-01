@@ -1782,6 +1782,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
         self._processConnectionError(connector, err)
 
     def _processConnectionError(self, connector, err):
+        self.currentProtocol = None
         if self.retries < self.sendFinished <= 0:
             log.msg("SMTP Client retrying server. Retry: %s" % -self.retries)
 
