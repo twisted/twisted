@@ -1958,8 +1958,8 @@ def sendmail(smtphost, from_addr, to_addrs, msg,
     @rtype: L{Deferred}
     @returns: A cancellable L{Deferred}, its callback will be called if a
         message is sent to ANY address, the errback if no message is sent. When
-        the C{cancel} method is called, it will stop retry and disconnect the
-        connection immediately.
+        the C{cancel} method is called, it will stop retrying and disconnect
+        the connection immediately.
 
         The callback will be called with a tuple (numOk, addresses) where numOk
         is the number of successful recipient addresses and addresses is a list
