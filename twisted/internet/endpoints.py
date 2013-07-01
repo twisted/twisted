@@ -730,6 +730,7 @@ class HostnameEndpoint(object):
             def afterConnectionAttempt(connResult):
                 if lc.running:
                     lc.stop()
+
                 successful.append(True)
                 for p in pending[:]:
                     p.cancel()

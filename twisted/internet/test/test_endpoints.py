@@ -1555,6 +1555,70 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         self.assertEqual(self.failureResultOf(d).value, expectedError)
 
 
+    def test_endpointConnectFailureAfterIteration(self):
+        """
+        If a connection attempt initiated by
+        L{HostnameEndpoint.connect} fails only after
+        L{HostnameEndpoint} has exhausted the list of possible server
+        addresses, the returned L{Deferred} will fail with
+        C{ConnectError}.
+        """
+        expectedError = error.ConnectError(string="Connection Failed")
+
+        mreactor = MemoryReactor()
+
+        clientFactory = object()
+
+        ep, ignoredArgs, ignoredDest = self.createClientEndpoint(
+            mreactor, clientFactory)
+
+        d = ep.connect(clientFactory)
+        mreactor.advance(0.3)
+        host, port, factory, timeout, bindAddress = mreactor.tcpClients[0]
+        factory.clientConnectionFailed(mreactor.connectors[0], expectedError)
+        self.assertEqual(self.failureResultOf(d).value, expectedError)
+
+
+    def test_endpointConnectSuccessAfterIteration(self):
+        """
+        If a connection attempt initiated by
+        L{HostnameEndpoint.connect} succeeds only after
+        L{HostnameEndpoint} has exhausted the list of possible server
+        addresses, the returned L{Deferred} will fire with the
+        connected protocol instance and the endpoint will leave no
+        delayed calls in the reactor.
+        """
+        proto = object()
+        mreactor = MemoryReactor()
+
+        clientFactory = object()
+
+        ep, expectedArgs, ignoredDest = self.createClientEndpoint(
+            mreactor, clientFactory)
+
+        d = ep.connect(clientFactory)
+
+        receivedProtos = []
+
+        def checkProto(p):
+            receivedProtos.append(p)
+
+        d.addCallback(checkProto)
+
+        factory = self.retrieveConnectedFactory(mreactor)
+
+        mreactor.advance(0.3)
+
+        factory._onConnection.callback(proto)
+        self.assertEqual(receivedProtos, [proto])
+
+        expectedClients = self.expectedClients(mreactor)
+
+        self.assertEqual(len(expectedClients), 1)
+        self.assertConnectArgs(expectedClients[0], expectedArgs)
+        self.assertEqual([], mreactor.getDelayedCalls())
+
+
     def test_nameResolution(self):
         """
         While resolving host names, _nameResolution calls _deferToThread with
