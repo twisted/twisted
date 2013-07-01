@@ -959,7 +959,7 @@ class SMTPSenderFactoryTestCase(unittest.TestCase):
         connector = reactor.connectTCP("localhost", 25, clientFactory)
         protocol = clientFactory.buildProtocol(None)
         clientFactory.clientConnectionFailed(connector,
-                                           error.ConnectionDone("Bye."))
+                                             error.ConnectionDone("Bye."))
         self.assertEqual(clientFactory.currentProtocol, None)
 
 
