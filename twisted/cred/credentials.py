@@ -194,6 +194,16 @@ class DigestCredentialFactory(object):
         portion of the challenge
     """
 
+    _parseparts = re.compile(
+        b'([^= ]+)'    # The key
+        b'='           # Conventional key/value separator (literal)
+        b'(?:'         # Group together a couple options
+          b'"([^"]*)"' # A quoted string of length 0 or more
+        b'|'           # The other option in the group is coming
+          b'([^,]+)'   # An unquoted string of length 1 or more, up to a comma
+        b')'           # That non-matching group ends
+        b',?')         # There might be a comma at the end (none on last pair)
+
     CHALLENGE_LIFETIME_SECS = 15 * 60    # 15 minutes
 
     scheme = "digest"
@@ -339,16 +349,7 @@ class DigestCredentialFactory(object):
         @return: L{DigestedCredentials}
         """
         response = ' '.join(response.splitlines())
-        parts = re.findall(
-            b'([^= ]+)'     # The key
-            b'='            # Conventional key/value separator (literal)
-            b'(?:'          # Group together a couple options
-              b'"([^"]*)"'  # A quoted string of length 0 or more
-            b'|'            # The other option in the group is coming
-              b'([^,]+)'    # An unquoted string of length 1 or more, up to a comma
-            b')'            # That non-matching group ends
-            b',?'           # There might be a comma at the end (last group is missing one)
-            , response)
+        parts = self._parseparts.findall(response)
         auth = {}
         for (key, bare, quoted) in parts:
             value = (quoted or bare).strip()
