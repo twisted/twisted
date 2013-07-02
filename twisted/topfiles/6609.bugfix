@@ -1,0 +1,1 @@
+twisted.cred.digest.DigestCredentialFactory now supports decoding challenge responses with field values including ",".

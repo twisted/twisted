@@ -1,13 +1,18 @@
 # -*- test-case-name: twisted.test.test_newcred-*-
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+This module defines L{ICredentials}, an interface for objects that represent
+authentication credentials to provide, and also includes a number of useful
+implementations of that interface.
+"""
 
 from zope.interface import implements, Interface
 
-import hmac, time, random
+import hmac, time, random, re
 from hashlib import md5
+
 from twisted.python.randbytes import secureRandom
 from twisted.cred._digest import calcResponse, calcHA1, calcHA2
 from twisted.cred import error
@@ -189,6 +194,16 @@ class DigestCredentialFactory(object):
         portion of the challenge
     """
 
+    _parseparts = re.compile(
+        b'([^= ]+)'    # The key
+        b'='           # Conventional key/value separator (literal)
+        b'(?:'         # Group together a couple options
+          b'"([^"]*)"' # A quoted string of length 0 or more
+        b'|'           # The other option in the group is coming
+          b'([^,]+)'   # An unquoted string of length 1 or more, up to a comma
+        b')'           # That non-matching group ends
+        b',?')         # There might be a comma at the end (none on last pair)
+
     CHALLENGE_LIFETIME_SECS = 15 * 60    # 15 minutes
 
     scheme = "digest"
@@ -333,17 +348,12 @@ class DigestCredentialFactory(object):
 
         @return: L{DigestedCredentials}
         """
-        def unq(s):
-            if s[0] == s[-1] == '"':
-                return s[1:-1]
-            return s
         response = ' '.join(response.splitlines())
-        parts = response.split(',')
-
+        parts = self._parseparts.findall(response)
         auth = {}
-
-        for (k, v) in [p.split('=', 1) for p in parts]:
-            auth[k.strip()] = unq(v.strip())
+        for (key, bare, quoted) in parts:
+            value = (quoted or bare).strip()
+            auth[key.strip()] = value
 
         username = auth.get('username')
         if not username:

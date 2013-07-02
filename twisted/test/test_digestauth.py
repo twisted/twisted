@@ -320,6 +320,16 @@ class DigestAuthTests(TestCase):
         self.test_response(False)
 
 
+    def test_responseWithCommaURI(self):
+        """
+        L{DigestCredentialFactory.decode} accepts a digest challenge response
+        which quotes the values of its fields and includes a C{b","} in the URI
+        field.
+        """
+        self.uri = b"/some,path/"
+        self.test_response(True)
+
+
     def test_caseInsensitiveAlgorithm(self):
         """
         The case of the algorithm value in the response is ignored when
