@@ -1871,6 +1871,10 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
                                 a particular operation (e.g., zone
                                 transfer) for particular data.
 
+    @ivar ednsVersion: Indicates the EDNS implementation level. Set to
+        C{None} to prevent any EDNS attributes and options being added
+        to the encoded byte string.
+
     @ivar queries: A L{list} of L{Query} instances.
 
     @ivar answers: A L{list} of L{RRHeader} instances.
@@ -1882,7 +1886,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     showAttributes = (
         'id', 'answer', 'opCode', 'auth', 'trunc',
-        'recDes', 'recAv', 'rCode',
+        'recDes', 'recAv', 'rCode', 'ednsVersion',
         'queries', 'answers', 'authority', 'additional')
 
     compareAttributes = showAttributes
@@ -1890,8 +1894,8 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     def __init__(self, id=0, answer=0,
                  opCode=OP_QUERY, auth=0,
                  trunc=0, recDes=0,
-                 recAv=0, rCode=0,
-                 queries=None, answers=None, authority=None, additional=None, optRecords=None):
+                 recAv=0, rCode=0, ednsVersion=0,
+                 queries=None, answers=None, authority=None, additional=None):
         """
         All arguments are stored as attributes with the same names.
 
@@ -1906,6 +1910,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @type recDes: C{int}
         @type recAv: C{int}
         @type rCode: C{int}
+        @type ednsVersion: C{int} or C{None}
         @type queries: C{list} of L{Query}
         @type answers: C{list} of L{RRHeader}
         @type authority: C{list} of L{RRHeader}
@@ -1927,18 +1932,25 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.recDes = recDes
         self.recAv = recAv
         self.rCode = rCode
+        self.ednsVersion = ednsVersion
 
         self.queries = queries or []
         self.answers = answers or []
         self.authority = authority or []
         self.additional = additional or []
 
-        self.optRecords = optRecords or []
+        self._decodingErrors = []
 
 
     def toStr(self):
         """
-        Encode to a wire format.
+        Encode to wire format.
+
+        If C{ednsVersion} is not None, an L{_OPTHeader} instance
+        containing all the I{EDNS} specific attributes and options
+        will be appended to the list of C{additional} records and this
+        will be encoded into the byte string as an C{OPT} record byte
+        string.
 
         @return: A L{bytes} string.
         """
@@ -1954,12 +1966,72 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
             maxSize=512)
 
-        m.queries = self.queries
-        m.answers = self.answers
-        m.authority = self.authority
-        m.additional = self.additional
+        m.queries = list(self.queries)
+        m.answers = list(self.answers)
+        m.authority = list(self.authority)
+        m.additional = list(self.additional)
+
+        if self.ednsVersion is not None:
+            o = _OPTHeader(version=self.ednsVersion)
+            m.additional.append(o)
 
         return m.toStr()
+
+
+    @classmethod
+    def fromMessage(cls, message):
+        """
+        Construct and return a new L(_EDNSMessage} whose attributes
+        and records are derived from the attributes and records of
+        C{message} (a L{Message} instance)
+
+        If present, an I{OPT} record will be extracted from the
+        C{additional} section and its attributes and options will be
+        used to set the EDNS specific attributes C{extendedRCODE},
+        c{ednsVersion}, c{dnssecOK}, c{ednsOptions}.
+
+        The C{extendedRCODE} will be combined with C{message.rCode}
+        and assigned to C{self.rCode}.
+
+        If multiple I{OPT} records are found, this is considered an
+        error and no EDNS specific attributes will be
+        set. Additionally, an L{EFORMAT} error will be appended to
+        C{_decodingErrors}.
+        """
+        additional = []
+        optRecords = []
+        for r in message.additional:
+            if r.type == OPT:
+                optRecords.append(_OPTHeader.fromRRHeader(r))
+            else:
+                additional.append(r)
+
+        newMessage = cls(
+            id=message.id,
+            answer=message.answer,
+            opCode=message.opCode,
+            auth=message.auth,
+            trunc=message.trunc,
+            recDes=message.recDes,
+            recAv=message.recAv,
+            rCode=message.rCode,
+            # Default to None, it will be updated later when the OPT
+            # records are parsed.
+            ednsVersion=None,
+            queries=list(message.queries),
+            answers=list(message.answers),
+            authority=list(message.authority),
+            additional=additional,
+            )
+
+        if optRecords:
+            if len(optRecords) > 1:
+                newMessage._decodingErrors.append(EFORMAT)
+            else:
+                opt = optRecords[0]
+                newMessage.ednsVersion = opt.version
+
+        return newMessage
 
 
     def fromStr(self, bytes):
@@ -1973,25 +2045,8 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         m = Message()
         m.fromStr(bytes)
 
-        optRecords = []
-        for r in reversed(m.additional):
-            if r.type == OPT:
-                optRecords.append(r)
-                m.additional.remove(r)
-
-        self.id = m.id
-        self.answer = m.answer
-        self.opCode = m.opCode
-        self.auth = m.auth
-        self.trunc = m.trunc
-        self.recDes = m.recDes
-        self.recAv = m.recAv
-        self.rCode = m.rCode
-        self.queries = m.queries
-        self.answers = m.answers
-        self.authority = m.authority
-        self.additional = m.additional
-        self.optRecords = optRecords
+        ednsMessage = self.fromMessage(m)
+        self.__dict__ = ednsMessage.__dict__
 
 
 
