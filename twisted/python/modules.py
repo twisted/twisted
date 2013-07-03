@@ -319,7 +319,7 @@ class _ImportExportFinder(ast.NodeVisitor):
 
         def checkAll(allval):
             if self.exports is not None:
-                    raise SyntaxError("__all__ can only be defined once")
+                raise SyntaxError("__all__ can only be defined once")
             try:
                 self.exports = set(ast.literal_eval(allval))
             except ValueError:
