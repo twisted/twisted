@@ -408,16 +408,6 @@ class PathModificationTest(TwistedModulesTestCase):
         sys.path.append(self.pathExtensionName)
 
 
-    def tearDown(self):
-        # Intentionally using 'assert' here, this is not a test assertion, this
-        # is just an "oh fuck what is going ON" assertion. -glyph
-        if self.pathSetUp:
-            HORK = ("path cleanup failed: don't be surprised if other tests "
-                    " break")
-            assert sys.path.pop() is self.pathExtensionName, HORK + ", 1"
-            assert self.pathExtensionName not in sys.path, HORK + ", 2"
-
-
     def _underUnderPathTest(self, doImport=True):
         moddir2 = self.mktemp()
         fpmd = FilePath(moddir2)
