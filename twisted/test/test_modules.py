@@ -10,11 +10,13 @@ import sys
 import itertools
 import zipfile
 import compileall
+import ast
 
 import twisted
 from twisted.trial.unittest import TestCase
 
 from twisted.python import modules
+
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
 
@@ -26,6 +28,7 @@ class TwistedModulesTestCase(TwistedModulesMixin, TestCase):
     """
     Base class for L{modules} test cases.
     """
+
     def findByIteration(self, modname, where=modules, importPackages=False):
         """
         You don't ever actually want to do this, so it's not in the public
@@ -205,6 +208,28 @@ class BasicTests(TwistedModulesTestCase):
                           self.findByIteration("twisted"))
 
 
+    def test_preferPyToPyc(self):
+        """
+        L{modules.PythonModule.filePath} will always point to the original
+        source file (the C{.py} file) rather than the compiled file from which
+        it was loaded (the C{.pyc}), if it is implemented in Python module and
+        source is available.  If it's a built-in module, of course, it will
+        point to the shared object.
+        """
+        # We choose two modules here: pickle, which is in the stdlib and really
+        # ought to have been compiled already, and datetime, which should be a
+        # shared object of some kind.
+        import pickle
+        import datetime
+        def hasPyExt(module):
+            return (modules.getModule(module.__name__).filePath.
+                    path.endswith(".py"))
+        # Sanity check: if Pickle isn't a pyc, this test isn't valid.
+        self.assertEqual(pickle.__file__.split('.')[-1], 'pyc')
+        self.assertEqual(hasPyExt(pickle), True)
+        self.assertEqual(hasPyExt(datetime), False)
+
+
     def test_dottedNames(self):
         """
         Verify that the walkModules APIs will give us back subpackages, not just
@@ -262,8 +287,8 @@ class BasicTests(TwistedModulesTestCase):
 
     def test_alwaysPreferPy(self):
         """
-        Verify that .py files will always be preferred to .pyc files, regardless of
-        directory listing order.
+        Verify that .py files will always be preferred to .pyc files,
+        regardless of directory listing order.
         """
         mypath = FilePath(self.mktemp())
         mypath.createDirectory()
@@ -312,6 +337,43 @@ class BasicTests(TwistedModulesTestCase):
             sys.path.remove(mypath.path)
 
 
+sampleModuleContents = """
+import sys, os
+from twisted.python import reflect
+import twisted.python.filepath
+from twisted.python.components import registerAdapter
+
+foo = 123
+def doFoo():
+  import datetime
+class Foo:
+  x = 0
+_foo = "boring internal details"
+"""
+
+sampleModuleWithExportsContents = """
+import sys, os, datetime
+from twisted.python import reflect
+import twisted.python.filepath
+from twisted.python.components import registerAdapter
+
+foo = 123
+baz = 456
+__all__ = ['foo']
+"""
+
+sampleModuleWithExportedImportsContents = """
+import sys, os, datetime
+from twisted.python import reflect
+import twisted.python.filepath
+from twisted.python.components import registerAdapter
+
+foo = 123
+baz = 456
+__all__ = ['foo', 'registerAdapter', 'reflect']
+"""
+
+
 
 class PathModificationTest(TwistedModulesTestCase):
     """
@@ -330,9 +392,13 @@ class PathModificationTest(TwistedModulesTestCase):
         self.packagePath = self.pathExtension.child(self.packageName)
         self.packagePath.createDirectory()
         self.packagePath.child("__init__.py").setContent("")
-        self.packagePath.child("a.py").setContent("")
-        self.packagePath.child("b.py").setContent("")
+        self.packagePath.child("a.py").setContent(sampleModuleContents)
+        self.packagePath.child("b.py").setContent(
+            sampleModuleWithExportsContents)
         self.packagePath.child("c__init__.py").setContent("")
+        self.packagePath.child("d.py").setContent(
+            sampleModuleWithExportedImportsContents)
+
         self.pathSetUp = False
 
 
@@ -340,6 +406,16 @@ class PathModificationTest(TwistedModulesTestCase):
         assert not self.pathSetUp
         self.pathSetUp = True
         sys.path.append(self.pathExtensionName)
+
+
+    def tearDown(self):
+        # Intentionally using 'assert' here, this is not a test assertion, this
+        # is just an "oh fuck what is going ON" assertion. -glyph
+        if self.pathSetUp:
+            HORK = ("path cleanup failed: don't be surprised if other tests "
+                    " break")
+            assert sys.path.pop() is self.pathExtensionName, HORK + ", 1"
+            assert self.pathExtensionName not in sys.path, HORK + ", 2"
 
 
     def _underUnderPathTest(self, doImport=True):
@@ -361,14 +437,16 @@ class PathModificationTest(TwistedModulesTestCase):
 
     def test_underUnderPathAlreadyImported(self):
         """
-        Verify that iterModules will honor the __path__ of already-loaded packages.
+        Verify that iterModules will honor the __path__ of already-loaded
+        packages.
         """
         self._underUnderPathTest()
 
 
     def test_underUnderPathNotAlreadyImported(self):
         """
-        Verify that iterModules will honor the __path__ of already-loaded packages.
+        Verify that iterModules will honor the __path__ of already-loaded
+        packages.
         """
         self._underUnderPathTest(False)
 
@@ -382,13 +460,13 @@ class PathModificationTest(TwistedModulesTestCase):
         nfni = [modinfo.name.split(".")[-1] for modinfo in
                 pkginfo.iterModules()]
         nfni.sort()
-        self.assertEqual(nfni, ['a', 'b', 'c__init__'])
+        self.assertEqual(nfni, ['a', 'b', 'c__init__', 'd'])
 
 
     def test_listingModules(self):
         """
-        Make sure the module list comes back as we expect from iterModules on a
-        package, whether zipped or not.
+        Make sure the module list comes back as we expect from iterModules on
+        a package, whether zipped or not.
         """
         self._setupSysPath()
         self._listModules()
@@ -396,8 +474,8 @@ class PathModificationTest(TwistedModulesTestCase):
 
     def test_listingModulesAlreadyImported(self):
         """
-        Make sure the module list comes back as we expect from iterModules on a
-        package, whether zipped or not, even if the package has already been
+        Make sure the module list comes back as we expect from iterModules on
+        a package, whether zipped or not, even if the package has already been
         imported.
         """
         self._setupSysPath()
@@ -405,13 +483,125 @@ class PathModificationTest(TwistedModulesTestCase):
         self._listModules()
 
 
-    def tearDown(self):
-        # Intentionally using 'assert' here, this is not a test assertion, this
-        # is just an "oh fuck what is going ON" assertion. -glyph
-        if self.pathSetUp:
-            HORK = "path cleanup failed: don't be surprised if other tests break"
-            assert sys.path.pop() is self.pathExtensionName, HORK+", 1"
-            assert self.pathExtensionName not in sys.path, HORK+", 2"
+
+    def test_moduleAttributes(self):
+        """
+        Module attributes can be iterated over without executing the code.
+        """
+        self._setupSysPath()
+        modinfo = modules.getModule(self.packageName + ".a")
+        attrs = sorted(modinfo.iterAttributes(), key=lambda a: a.name)
+        names = sorted(["_foo", "foo",  "doFoo", "Foo"])
+        for attr, name in zip(attrs, names):
+            self.assertEqual(attr.onObject, modinfo)
+            self.assertFalse(attr.isLoaded())
+            self.assertEqual(attr.name, modinfo.name + '.' + name)
+            self.assertRaises(NotImplementedError,
+                              lambda: list(attr.iterAttributes()))
+
+
+    def test_loadedModuleAttributes(self):
+        """
+        Module attributes can be iterated over after the module has been
+        loaded.
+        """
+        self._setupSysPath()
+        modinfo = modules.getModule(self.packageName + ".a")
+        modinfo.load()
+        attrs = sorted([a for a in modinfo.iterAttributes()
+                        if '_' not in a.name],
+                       key=lambda a: a.name)
+        names = sorted(["foo", "doFoo", "Foo"])
+        for attr, name in zip(attrs, names):
+            self.assertEqual(attr.onObject, modinfo)
+            self.assertTrue(attr.isLoaded())
+            self.assertEqual(attr.name, modinfo.name + '.' + name)
+            if name == "Foo":
+                classattrs = [a.name for a in attr.iterAttributes()]
+                self.assertIn(modinfo.name + '.Foo.x', classattrs)
+
+
+    def test_attributeLoading(self):
+        """
+        Calling .load() on a L{PythonAttribute} loads the module it's a part
+        of and returns the attribute value.
+        """
+        self._setupSysPath()
+        modinfo = modules.getModule(self.packageName + ".a")
+        attr = [x for x in modinfo.iterAttributes()
+                if x.name.endswith('.foo')][0]
+
+        mod = attr.onObject
+        self.assertFalse(attr.isLoaded())
+        self.assertFalse(mod.isLoaded())
+        val = attr.load()
+        self.assertTrue(attr.isLoaded())
+        self.assertTrue(mod.isLoaded())
+        self.assertEqual(val, 123)
+        self.assertEqual(attr.pythonValue, 123)
+        self.assertEqual(attr.load(), 123)
+
+
+    def test_moduleImportNames(self):
+        """
+        The fully qualified names imported by a module can be inspected.
+        """
+        self._setupSysPath()
+        modinfo = modules.getModule(self.packageName + ".a")
+        self.assertEqual(sorted(modinfo.importedNames()),
+                         sorted(["sys", "os", "datetime",
+                                 "twisted.python.reflect",
+                                 "twisted.python.filepath",
+                                 "twisted.python.components.registerAdapter"]))
+
+
+    def test_moduleExportDefinedNames(self):
+        """
+        The exports of a module with no __all__ are all its defined names that
+        have no leading underscore.
+        """
+        self._setupSysPath()
+        modinfo = modules.getModule(self.packageName + ".a")
+        self.assertEqual(sorted([x.name for x in modinfo.exported()]),
+                         sorted(["foo", "doFoo", "Foo"]))
+
+
+    def test_moduleExportAll(self):
+        """
+        If __all__ is defined as a list of string literals, the names in it
+        are used as the list of the module's exports.
+        """
+        self._setupSysPath()
+        modinfo = modules.getModule(self.packageName + ".b")
+        self.assertEqual([x.name for x in modinfo.exported()],
+                         ["foo"])
+
+
+    def test_exportedImports(self):
+        """
+        If __all__ mentions imports, they're included in the collection of
+        defined names.
+        """
+        self._setupSysPath()
+        modinfo = modules.getModule(self.packageName + ".d")
+        self.assertEqual(sorted([x.name.rsplit('.', 1)[1] for x in
+                                 modinfo.iterAttributes()]),
+                         sorted(["foo", "registerAdapter", "reflect"]))
+
+
+    def test_moduleExportProblems(self):
+        """
+        C{SyntaxError} is raised when doing inspection of module exports if
+        __all__ is not a single list of string literals.
+        """
+        self.packagePath.child("e.py").setContent("__all__ = ['a' + 'b']")
+        self.packagePath.child("f.py").setContent(
+            "__all__ = ['a']\n__all__ = ['a', 'b']")
+        self._setupSysPath()
+        modinfo1 = modules.getModule(self.packageName + ".e")
+        modinfo2 = modules.getModule(self.packageName + ".f")
+        self.assertRaises(SyntaxError, lambda: list(modinfo1.exported()))
+        self.assertRaises(SyntaxError, lambda: list(modinfo2.exported()))
 
 
 
@@ -440,7 +630,7 @@ class RebindingTest(PathModificationTest):
 class ZipPathModificationTest(PathModificationTest):
     def _setupSysPath(self):
         assert not self.pathSetUp
-        zipit(self.pathExtensionName, self.pathExtensionName+'.zip')
+        zipit(self.pathExtensionName, self.pathExtensionName + '.zip')
         self.pathExtensionName += '.zip'
         assert zipfile.is_zipfile(self.pathExtensionName)
         PathModificationTest._setupSysPath(self)
@@ -490,6 +680,7 @@ class PythonPathTestCase(TestCase):
             FilePath(twisted.__file__).parent().dirname() +
             " (for module " + __name__ + ") not in path importer cache "
             "(PEP 302 violation - check your local configuration).")
+
         self.assertEqual(len(warnings), 1)
         self.assertEqual(thisModule.name, __name__)
 
@@ -512,3 +703,157 @@ class PythonPathTestCase(TestCase):
         """
         thePath = modules.PythonPath()
         self.assertNotIn('bogusModule', thePath)
+
+
+
+class ASTVisitorTests(TestCase):
+    """
+    Tests for L{ast.NodeVisitor} subclasses used to extract information from
+    modules without importing them.
+    """
+
+    def test_all(self):
+        """
+        If a module's '__all__' attribute contains a sequence of literal
+        strings, they are collected as export names.
+        """
+
+        bits = ["foo = 1\n__all__ = ['foo', 'baz']",
+                "__all__ = ('foo', 'baz')\nbaz = 1"]
+
+        for code in bits:
+            tree = ast.parse(code)
+            f = modules._ImportExportFinder()
+            f.visit(tree)
+            self.assertEqual(f.exports, set(["foo", "baz"]))
+
+
+    def test_justOneAll(self):
+        """
+        Modules with more than one definition of __all__ are rejected by
+        L{modules._ImportExportFinder}.
+        """
+
+        bits = ["__all__ = ['a']\n__all__ = ['a', 'b']",
+                "__all__ = ['a']\n__all__, x = ['a', 'b'], 1"]
+        for code in bits:
+            tree = ast.parse(code)
+            f = modules._ImportExportFinder()
+            self.assertRaises(SyntaxError, f.visit, tree)
+
+
+    def test_literalStringsAll(self):
+        """
+        Modules with a definition of __all__ that isn't a list of literal
+        strings are rejected by L{modules._ImportExportFinder}.
+        """
+
+        bits = ["__all__ = ['a' + 'b']",
+                "__all__ = ['a', 1, 'b']",
+                "x, __all__ = ['x', ['a', 1]]"]
+        for code in bits:
+            tree = ast.parse(code)
+            f = modules._ImportExportFinder()
+            self.assertRaises(SyntaxError, f.visit, tree)
+
+
+    def test_identifierStringsAll(self):
+        """
+        Modules with a definition of __all__ that contains strings that aren't
+        valid Python identifiers are rejected by
+        L{modules._ImportExportFinder}.
+        """
+        bits = ["__all__ = ['a nice variable', 'etc']",
+                "__all__ = ['call-with-current-continuation', 'goto']"]
+
+        for code in bits:
+            tree = ast.parse(code)
+            f = modules._ImportExportFinder()
+            self.assertRaises(SyntaxError, f.visit, tree)
+
+
+    def test_multiAssigns(self):
+        """
+        Assignments to __all__ in a tuple unpacking statement are recognized
+        properly.
+        """
+        bits = ['__all__, x = (["foo", "baz"], 1)',
+                'foo = 1\nx, __all__ = (None, ["foo", "baz"])',
+                'x, __all__, y = [[], ["foo", "baz"], {}]']
+
+        for code in bits:
+            tree = ast.parse(code)
+            f = modules._ImportExportFinder()
+            f.visit(tree)
+            self.assertEqual(f.exports, set(["foo", "baz"]))
+
+
+    def test_bogusMultiAssign(self):
+        """
+        Tuple-unpacking assigments containing __all__ are rejected if the RHS
+        is not a literal sequence of the proper length.
+        """
+        bits = ["(x, __all__) = 1",
+                "[x, __all__] = []",
+                "__all__, x = (1,)",
+                "(x, (y, __all__)) = 1, 2",
+                "(x, (y, __all__)) = (1, (2,))"]
+
+        for code in bits:
+            tree = ast.parse(code)
+            f = modules._ImportExportFinder()
+            self.assertRaises(SyntaxError, f.visit, tree)
+
+
+    def test_funnyAssigns(self):
+        """
+        Assignments that aren't to regular names are skipped. Assignments to
+        regular names (whether in unpacking contexts or not) are recognized.
+        """
+        bits = [('x[0] = 1', []),
+                ('x.y = 2', []),
+                ('x, y[0] = 3, 4', ["x"]),
+                ('x.y, z = 5, 6', ["z"]),
+                ("a, b = 7, 8", ["a", "b"]),
+                ("[c, d] = 9, 0", ["c", "d"]),
+                ("[e, (f, g)] = 0xA, 0xB", ["e", "f", "g"])]
+
+        for (code, expectedNames) in bits:
+            tree = ast.parse(code)
+            f = modules._ImportExportFinder()
+            f.visit(tree)
+            self.assertEqual(
+                f.definedNames, set(expectedNames),
+                "expected %s as defined names in %r" % (expectedNames, code))
+
+
+    def test_noImportStar(self):
+        """
+        Static attribute analysis currently treats 'import *' as a syntax
+        error, because it is difficult to parse, and bad style besides.
+
+        (This could be fixed, if someone were so inclined, by recursively
+        examining the module that the 'import *' is referring to.)
+        """
+        tree = ast.parse("from pickle import *")
+        f = modules._ImportExportFinder()
+        self.assertRaises(SyntaxError, f.visit, tree)
+
+
+
+class MiscTests(TestCase):
+
+    def test_isPythonIdentifier(self):
+        """
+        L{modules._isPythonIdentifier} correctly identifies which strings are
+        and aren't valid python identifiers.
+        """
+        good = ["__init__", "foo", "_foo", "foo_baz", "Foo", "FooBaz_",
+                "foo1", "foo_1", "F00"]
+        bad = ["1f", "-foo", "foo-baz", "a foo", "foo.baz", 3, ["foo"], ()]
+
+        for n in good:
+            self.assertTrue(modules._isPythonIdentifier(n))
+
+        for n in bad:
+            self.assertFalse(modules._isPythonIdentifier(n))

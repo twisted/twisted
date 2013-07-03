@@ -62,6 +62,9 @@ import sys
 import zipimport
 import inspect
 import warnings
+import re
+import ast
+
 from zope.interface import Interface, implements
 
 from twisted.python.components import registerAdapter
@@ -86,9 +89,12 @@ def _isPythonIdentifier(string):
 
     @return: True or False
     """
-    return (' ' not in string and
-            '.' not in string and
-            '-' not in string)
+    if string == '':
+        return True
+    try:
+        return re.match('[a-zA-Z_][a-zA-Z0-9_]*$', string) is not None
+    except TypeError:
+        return False
 
 
 
@@ -136,9 +142,9 @@ class _ModuleIteratorHelper:
                 ext = potentialTopLevel.splitext()[1]
                 potentialBasename = potentialTopLevel.basename()[:-len(ext)]
                 if ext in PYTHON_EXTENSIONS:
-                    # TODO: this should be a little choosier about which path entry
-                    # it selects first, and it should do all the .so checking and
-                    # crud
+                    # TODO: this should be a little choosier about which path
+                    # entry it selects first, and it should do all the .so
+                    # checking and crud
                     if not _isPythonIdentifier(potentialBasename):
                         continue
                     modname = self._subModuleName(potentialBasename)
@@ -148,7 +154,8 @@ class _ModuleIteratorHelper:
                         continue
                     if modname not in yielded:
                         yielded[modname] = True
-                        pm = PythonModule(modname, potentialTopLevel, self._getEntry())
+                        pm = PythonModule(modname, potentialTopLevel,
+                                          self._getEntry())
                         assert pm != self
                         yield pm
                 else:
@@ -179,8 +186,8 @@ class _ModuleIteratorHelper:
 
     def _subModuleName(self, mn):
         """
-        This is a hook to provide packages with the ability to specify their names
-        as a prefix to submodules here.
+        This is a hook to provide packages with the ability to specify their
+        names as a prefix to submodules here.
         """
         return mn
 
@@ -224,10 +231,11 @@ class _ModuleIteratorHelper:
                 return module
         raise KeyError(modname)
 
+
     def __iter__(self):
         """
-        Implemented to raise NotImplementedError for clarity, so that attempting to
-        loop over this object won't call __getitem__.
+        Implemented to raise NotImplementedError for clarity, so that
+        attempting to loop over this object won't call __getitem__.
 
         Note: in the future there might be some sensible default for iteration,
         like 'walkEverything', so this is deliberately untested and undefined
@@ -235,22 +243,110 @@ class _ModuleIteratorHelper:
         """
         raise NotImplementedError()
 
+
+
+class _ImportExportFinder(ast.NodeVisitor):
+    """
+    Find names of imports and exports (via __all__).
+
+    @ivar imports: A set of (source, name) pairs describing an imported name.
+        if the source is None, the name is an import from the top level.
+
+    @ivar exports: A list of names defined in __all__ in this module, or None
+        if the module has no __all__ attribute.
+
+    @ivar definedNames: A set of names created by assignment, class
+        definitions, or function definitions at the top level of this module.
+    """
+
+    def __init__(self):
+        self.imports = set()
+        self.exports = None
+        self.definedNames = set()
+
+
+    def visit_Import(self, node):
+        """
+        Collect names for all import statements.
+        """
+        for alias in node.names:
+            self.imports.add((None, alias.name))
+
+
+    def visit_ImportFrom(self, node):
+        """
+        Collect names and source modules from "import x from y" statements.
+        """
+        if node.names[0].name == "*":
+            raise SyntaxError("Code containing 'import *' cannot be "
+                              "statically analyzed.")
+        for name in node.names:
+            self.imports.add((node.module, name.name))
+
+
+    def visit_Module(self, node):
+        """
+        Look for top-level name bindings and __all__ in a module.
+        """
+        def collectNames(target, value):
+            if isinstance(target, ast.Name):
+                collectSingleName(value, target.id)
+            if isinstance(target, (ast.List, ast.Tuple)):
+                if not (isinstance(value, (ast.List, ast.Tuple))
+                        and len(value.elts) == len(target.elts)):
+                    value = None
+                nameNodes = target.elts
+                for (i, n) in enumerate(nameNodes):
+                    if value is not None:
+                        v = value.elts[i]
+                    else:
+                        v = None
+                    collectNames(n, v)
+
+        def collectSingleName(value, name):
+            if name == '__all__':
+                checkAll(value)
+            else:
+                self.definedNames.add(name)
+
+        def checkAll(allval):
+            if self.exports is not None:
+                    raise SyntaxError("__all__ can only be defined once")
+            try:
+                self.exports = set(ast.literal_eval(allval))
+            except ValueError:
+                raise SyntaxError("__all__ must only contain literal"
+                                  " Python identifier strings")
+            for exp in self.exports:
+                if not _isPythonIdentifier(exp):
+                    raise SyntaxError("__all__ must only contain literal "
+                                      "Python identifier strings")
+        for stmt in node.body:
+            self.visit(stmt)
+            if isinstance(stmt, ast.Assign):
+                collectNames(stmt.targets[0], stmt.value)
+            elif isinstance(stmt, (ast.FunctionDef, ast.ClassDef)):
+                self.definedNames.add(stmt.name)
+
+
+
 class PythonAttribute:
     """
     I represent a function, class, or other object that is present.
 
     @ivar name: the fully-qualified python name of this attribute.
 
-    @ivar onObject: a reference to a PythonModule or other PythonAttribute that
-    is this attribute's logical parent.
+    @ivar onObject: a reference to a PythonModule or other PythonAttribute
+        that is this attribute's logical parent.
 
-    @ivar name: the fully qualified python name of the attribute represented by
-    this class.
+    @ivar name: the fully qualified python name of the attribute represented
+        by this class.
     """
+
     def __init__(self, name, onObject, loaded, pythonValue):
         """
-        Create a PythonAttribute.  This is a private constructor.  Do not construct
-        me directly, use PythonModule.iterAttributes.
+        Create a PythonAttribute.  This is a private constructor.  Do not
+        construct me directly, use PythonModule.iterAttributes.
 
         @param name: the FQPN
         @param onObject: see ivar
@@ -262,18 +358,18 @@ class PythonAttribute:
         self._loaded = loaded
         self.pythonValue = pythonValue
 
+
     def __repr__(self):
         return 'PythonAttribute<%r>'%(self.name,)
+
 
     def isLoaded(self):
         """
         Return a boolean describing whether the attribute this describes has
         actually been loaded into memory by importing its module.
-
-        Note: this currently always returns true; there is no Python parser
-        support in this module yet.
         """
         return self._loaded
+
 
     def load(self, default=_nothing):
         """
@@ -282,11 +378,28 @@ class PythonAttribute:
         @return: an arbitrary Python object, or 'default' if there is an error
         loading it.
         """
+        if not self.isLoaded():
+            mod = self.onObject.load()
+            self.pythonValue = getattr(mod, self.name.split('.')[-1], default)
+            self._loaded = True
         return self.pythonValue
 
+
     def iterAttributes(self):
+        """
+        Iterate over the attributes of the value named by this object. Only
+        works when the module is loaded.
+
+        @raise NotImplementedError: when the module is not loaded.
+        """
+        if not self.isLoaded():
+            raise NotImplementedError(
+                "Static inspection of attributes doesn't "
+                "go beyond the top level of the module.")
         for name, val in inspect.getmembers(self.load()):
-            yield PythonAttribute(self.name+'.'+name, self, True, val)
+            yield PythonAttribute(self.name + '.' + name, self, True, val)
+
+
 
 class PythonModule(_ModuleIteratorHelper):
     """
@@ -299,12 +412,15 @@ class PythonModule(_ModuleIteratorHelper):
 
     @ivar pathEntry: a L{PathEntry} instance which this module was located
     from.
+
+    @ivar _finder: an L{_ImportExportFinder}, or None. Used to
+    discover names used and defined in a module by inspecting its AST.
     """
 
     def __init__(self, name, filePath, pathEntry):
         """
-        Create a PythonModule.  Do not construct this directly, instead inspect a
-        PythonPath or other PythonModule instances.
+        Create a PythonModule.  Do not construct this directly, instead
+        inspect a PythonPath or other PythonModule instances.
 
         @param name: see ivar
         @param filePath: see ivar
@@ -315,6 +431,9 @@ class PythonModule(_ModuleIteratorHelper):
         self.filePath = filePath
         self.parentPath = filePath.parent()
         self.pathEntry = pathEntry
+
+        self._finder = None
+
 
     def _getEntry(self):
         return self.pathEntry
@@ -335,32 +454,90 @@ class PythonModule(_ModuleIteratorHelper):
         return self.pathEntry.pythonPath.moduleDict.get(self.name) is not None
 
 
+    def _maybeLoadFinder(self):
+        """
+        Scan a module for imports, exports, and attributes.
+        """
+        if self._finder is None:
+            try:
+                tree = ast.parse(self.filePath.getContent())
+            except TypeError:
+                raise ValueError("Static analysis of module attributes can "
+                                 "only be done on Python source.")
+            self._finder = _ImportExportFinder()
+            self._finder.visit(tree)
+
+
     def iterAttributes(self):
         """
         List all the attributes defined in this module.
 
-        Note: Future work is planned here to make it possible to list python
-        attributes on a module without loading the module by inspecting ASTs or
-        bytecode, but currently any iteration of PythonModule objects insists
-        they must be loaded, and will use inspect.getmodule.
-
-        @raise NotImplementedError: if this module is not loaded.
+        This method can list attributes on a module without loading it, via AST
+        inspection. It will use inspect.getmembers if the module is loaded.
 
         @return: a generator yielding PythonAttribute instances describing the
-        attributes of this module.
+            attributes of this module.
         """
         if not self.isLoaded():
-            raise NotImplementedError(
-                "You can't load attributes from non-loaded modules yet.")
-        for name, val in inspect.getmembers(self.load()):
-            yield PythonAttribute(self.name+'.'+name, self, True, val)
+            self._maybeLoadFinder()
+            if self._finder.exports:
+                attrs = (set([x[1] for x in self._finder.imports])
+                         | self._finder.definedNames) & self._finder.exports
+            else:
+                attrs = self._finder.definedNames
+            for name in attrs:
+                yield PythonAttribute(self.name + '.' + name, self, False,
+                                      _nothing)
+        else:
+            for name, val in inspect.getmembers(self.load()):
+                yield PythonAttribute(self.name + '.' + name, self, True, val)
+
+
+    def importedNames(self):
+        """
+        List all the fully-qualified names imported in this module.
+
+        @return: a generator yielding fully qualified name strings for each
+            name imported into this module.
+
+        @since: 13.2
+        """
+        self._maybeLoadFinder()
+        for origin, name in self._finder.imports:
+            if origin is not None:
+                yield origin + '.' + name
+            else:
+                yield name
+
+
+    def exported(self):
+        """
+        List all the names exported by this module. If the module defines
+        __all__ as a list of literal strings, those names will be treated as
+        the module's exports. Otherwise, all names defined at the top level of
+        the module will be regarded as exports.
+
+        @return: an iterable of L{PythonAttribute}s exported by this module.
+
+        @since: 13.2
+        """
+        self._maybeLoadFinder()
+        if self._finder.exports:
+            return [PythonAttribute(name, self, False, _nothing)
+                    for name in self._finder.exports]
+        else:
+            return [PythonAttribute(name, self, False, _nothing)
+                    for name in self._finder.definedNames
+                    if not name.startswith('_')]
+
 
     def isPackage(self):
         """
-        Returns true if this module is also a package, and might yield something
-        from iterModules.
+        Returns true if this module is also a package, and might yield
+        something from iterModules.
         """
         return _isPackagePath(self.filePath)
+
 
     def load(self, default=_nothing):
         """
@@ -371,7 +548,7 @@ class PythonModule(_ModuleIteratorHelper):
         @return: a genuine python module.
 
         @raise: any type of exception.  Importing modules is a risky business;
-        the erorrs of any code run at module scope may be raised from here, as
+        the errors of any code run at module scope may be raised from here, as
         well as ImportError if something bizarre happened to the system path
         between the discovery of this PythonModule object and the attempt to
         import it.  If you specify a default, the error will be swallowed
@@ -386,6 +563,7 @@ class PythonModule(_ModuleIteratorHelper):
                 return default
             raise
 
+
     def __eq__(self, other):
         """
         PythonModules with the same name are equal.
@@ -393,6 +571,7 @@ class PythonModule(_ModuleIteratorHelper):
         if not isinstance(other, PythonModule):
             return False
         return other.name == self.name
+
 
     def __ne__(self, other):
         """
@@ -402,10 +581,13 @@ class PythonModule(_ModuleIteratorHelper):
             return True
         return other.name != self.name
 
+
     def walkModules(self, importPackages=False):
         if importPackages and self.isPackage():
             self.load()
-        return super(PythonModule, self).walkModules(importPackages=importPackages)
+        return super(PythonModule, self
+                     ).walkModules(importPackages=importPackages)
+
 
     def _subModuleName(self, mn):
         """
@@ -413,9 +595,11 @@ class PythonModule(_ModuleIteratorHelper):
         """
         return self.name + '.' + mn
 
+
     def _packagePaths(self):
         """
-        Yield a sequence of FilePath-like objects which represent path segments.
+        Yield a sequence of FilePath-like objects which represent path
+        segments.
         """
         if not self.isPackage():
             return
@@ -435,6 +619,7 @@ class PythonModule(_ModuleIteratorHelper):
             yield self.parentPath
 
 
+
 class PathEntry(_ModuleIteratorHelper):
     """
     I am a proxy for a single entry on sys.path.
@@ -451,14 +636,19 @@ class PathEntry(_ModuleIteratorHelper):
         self.filePath = filePath
         self.pythonPath = pythonPath
 
+
     def _getEntry(self):
         return self
+
 
     def __repr__(self):
         return 'PathEntry<%r>' % (self.filePath,)
 
+
     def _packagePaths(self):
         yield self.filePath
+
+
 
 class IPathImportMapper(Interface):
     """
@@ -611,8 +801,8 @@ class PythonPath:
 
     def _findEntryPathString(self, modobj):
         """
-        Determine where a given Python module object came from by looking at path
-        entries.
+        Determine where a given Python module object came from by looking at
+        path entries.
         """
         topPackageObj = modobj
         while '.' in topPackageObj.__name__:
@@ -624,8 +814,8 @@ class PythonPath:
             # /a/b here, the path-entry; so go up two steps.
             rval = dirname(dirname(topPackageObj.__file__))
         else:
-            # the module is completely top-level, not within any packages.  The
-            # path entry it's on is just its dirname.
+            # the module is completely top-level, not within any packages.
+            # The path entry it's on is just its dirname.
             rval = dirname(topPackageObj.__file__)
 
         # There are probably some awful tricks that an importer could pull
@@ -695,7 +885,10 @@ class PythonPath:
                 self._smartPath(
                     self._findEntryPathString(moduleObject)),
                 self)
-            mp = self._smartPath(moduleObject.__file__)
+            path = inspect.getsourcefile(moduleObject)
+            if path is None:
+                path = moduleObject.__file__
+            mp = self._smartPath(path)
             return PythonModule(modname, mp, pe)
 
         # Recurse if we're trying to get a submodule.
@@ -742,8 +935,8 @@ class PythonPath:
 
     def walkModules(self, importPackages=False):
         """
-        Similar to L{iterModules}, this yields every module on the path, then every
-        submodule in each package or entry.
+        Similar to L{iterModules}, this yields every module on the path, then
+        every submodule in each package or entry.
         """
         for package in self.iterModules():
             for module in package.walkModules(importPackages=False):
