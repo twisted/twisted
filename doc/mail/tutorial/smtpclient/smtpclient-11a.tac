@@ -6,9 +6,12 @@ application = service.Application("SMTP Client Tutorial")
 
 from twisted.application import internet
 from twisted.internet import protocol
-from twisted.internet import defer
 from twisted.mail import smtp, relaymanager
-from twisted.names.client import createResolver
+
+# Two changes are needed for this program to successfully send mail to
+# an external server.  Change the mailTo attribute of SMTPTutorialClient
+# to an actual email address and change the parameter to getMailExchange
+# to the domain of that email address
 
 class SMTPTutorialClient(smtp.ESMTPClient):
     mailFrom = "tutorial_sender@example.com"
@@ -56,4 +59,5 @@ def cbMailExchange(exchange):
     smtpClientService = internet.TCPClient(exchange, 25, smtpClientFactory)
     smtpClientService.setServiceParent(application)
 
+# Replace 'example.net' with the domain of the address you are sending mail to
 getMailExchange('example.net').addCallback(cbMailExchange)
