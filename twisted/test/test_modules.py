@@ -208,28 +208,6 @@ class BasicTests(TwistedModulesTestCase):
                           self.findByIteration("twisted"))
 
 
-    def test_preferPyToPyc(self):
-        """
-        L{modules.PythonModule.filePath} will always point to the original
-        source file (the C{.py} file) rather than the compiled file from which
-        it was loaded (the C{.pyc}), if it is implemented in Python module and
-        source is available.  If it's a built-in module, of course, it will
-        point to the shared object.
-        """
-        # We choose two modules here: pickle, which is in the stdlib and really
-        # ought to have been compiled already, and datetime, which should be a
-        # shared object of some kind.
-        import pickle
-        import datetime
-        def hasPyExt(module):
-            return (modules.getModule(module.__name__).filePath.
-                    path.endswith(".py"))
-        # Sanity check: if Pickle isn't a pyc, this test isn't valid.
-        self.assertEqual(pickle.__file__.split('.')[-1], 'pyc')
-        self.assertEqual(hasPyExt(pickle), True)
-        self.assertEqual(hasPyExt(datetime), False)
-
-
     def test_dottedNames(self):
         """
         Verify that the walkModules APIs will give us back subpackages, not just
