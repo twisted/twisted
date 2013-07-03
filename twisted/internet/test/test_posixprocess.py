@@ -179,7 +179,7 @@ class FDDetectorTests(TestCase):
         self.detector._implementations = [
             failWithException, failWithWrongResults, correct]
 
-        self.assertIdentical(correct, self.detector._getImplementation())
+        self.assertIs(correct, self.detector._getImplementation())
 
 
     def test_selectLast(self):
@@ -197,7 +197,7 @@ class FDDetectorTests(TestCase):
         self.detector._implementations = [
             failWithWrongResults, failWithOtherWrongResults]
 
-        self.assertIdentical(
+        self.assertIs(
             failWithOtherWrongResults, self.detector._getImplementation())
 
 

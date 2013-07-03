@@ -195,6 +195,6 @@ class Win32EventsTestsBuilder(ReactorBuilder):
         reactor.addEvent(event, listener, 'occurred')
         reactor.callWhenRunning(reactor.stop)
         self.runReactor(reactor)
-        self.assertIdentical(None, listener.connLostThreadID)
+        self.assertIs(None, listener.connLostThreadID)
 
 globals().update(Win32EventsTestsBuilder.makeTestCaseClasses())

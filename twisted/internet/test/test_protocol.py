@@ -93,7 +93,7 @@ class ClientCreatorTests(TestCase):
             host, port, factory, contextFactory, timeout, bindAddress = reactor.sslClients.pop()
             self.assertEqual(host, 'example.com')
             self.assertEqual(port, 1234)
-            self.assertIdentical(contextFactory, expectedContextFactory)
+            self.assertIs(contextFactory, expectedContextFactory)
             self.assertEqual(timeout, 4321)
             self.assertEqual(bindAddress, ('4.3.2.1', 5678))
             return factory
@@ -375,7 +375,7 @@ class FactoryTests(TestCase):
         f.protocol = SomeProtocol
         protocol = f.buildProtocol(None)
         self.assertIsInstance(protocol, SomeProtocol)
-        self.assertIdentical(protocol.factory, f)
+        self.assertIs(protocol.factory, f)
 
 
     def test_forProtocol(self):

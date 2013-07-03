@@ -47,7 +47,7 @@ class AddressTestCaseMixin(object):
         ])
         stringValue = stringFunction(addr)
         m = re.match(pattern, stringValue)
-        self.assertNotEquals(
+        self.assertNotEqual(
             None, m,
             "%s does not match the standard __str__ pattern "
             "ClassName(arg1, arg2, etc)" % (stringValue,))

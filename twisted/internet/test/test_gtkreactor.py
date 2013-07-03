@@ -48,7 +48,7 @@ class GtkReactorDeprecation(TestCase):
     def lookForDeprecationWarning(self, testmethod, attributeName):
         warningsShown = self.flushWarnings([testmethod])
         self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
+        self.assertIs(warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
             "twisted.internet.gtkreactor." + attributeName + " "

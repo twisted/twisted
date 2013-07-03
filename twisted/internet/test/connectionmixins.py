@@ -404,7 +404,7 @@ class ConnectionTestsMixin(object):
         # are no references to the protocol instance left in the reactor.
         clientProtocol = None
         collect()
-        self.assertIdentical(None, clientRef())
+        self.assertIs(None, clientRef())
 
 
 

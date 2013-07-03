@@ -957,7 +957,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         """
         host = self.endpointTransport.getHost()
         self.assertIsInstance(host, _ProcessAddress)
-        self.assertIdentical(host, self.process.host)
+        self.assertIs(host, self.process.host)
 
 
     def test_getPeer(self):
@@ -967,7 +967,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         """
         peer = self.endpointTransport.getPeer()
         self.assertIsInstance(peer, _ProcessAddress)
-        self.assertIdentical(peer, self.process.peer)
+        self.assertIs(peer, self.process.peer)
 
 
 
@@ -1792,7 +1792,7 @@ class ServerStringTests(unittest.TestCase):
         server = endpoints.serverFromString(
             reactor, "tcp:1234:backlog=12:interface=10.0.0.1")
         self.assertIsInstance(server, endpoints.TCP4ServerEndpoint)
-        self.assertIdentical(server._reactor, reactor)
+        self.assertIs(server._reactor, reactor)
         self.assertEqual(server._port, 1234)
         self.assertEqual(server._backlog, 12)
         self.assertEqual(server._interface, "10.0.0.1")
@@ -1811,7 +1811,7 @@ class ServerStringTests(unittest.TestCase):
             "certKey=%s:sslmethod=TLSv1_METHOD:interface=10.0.0.1"
             % (escapedPEMPathName, escapedPEMPathName))
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
-        self.assertIdentical(server._reactor, reactor)
+        self.assertIs(server._reactor, reactor)
         self.assertEqual(server._port, 1234)
         self.assertEqual(server._backlog, 12)
         self.assertEqual(server._interface, "10.0.0.1")
@@ -1829,7 +1829,7 @@ class ServerStringTests(unittest.TestCase):
         server = endpoints.serverFromString(
             reactor, "ssl:4321:privateKey=%s" % (escapedPEMPathName,))
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
-        self.assertIdentical(server._reactor, reactor)
+        self.assertIs(server._reactor, reactor)
         self.assertEqual(server._port, 4321)
         self.assertEqual(server._backlog, 50)
         self.assertEqual(server._interface, "")
@@ -1906,7 +1906,7 @@ class ServerStringTests(unittest.TestCase):
             reactor,
             "unix:/var/foo/bar:backlog=7:mode=0123:lockfile=1")
         self.assertIsInstance(endpoint, endpoints.UNIXServerEndpoint)
-        self.assertIdentical(endpoint._reactor, reactor)
+        self.assertIs(endpoint._reactor, reactor)
         self.assertEqual(endpoint._address, "/var/foo/bar")
         self.assertEqual(endpoint._backlog, 7)
         self.assertEqual(endpoint._mode, 0o123)
@@ -1957,7 +1957,7 @@ class ServerStringTests(unittest.TestCase):
         fakeEndpoint = endpoints.serverFromString(
             notAReactor, "fake:hello:world:yes=no:up=down")
         from twisted.plugins.fakeendpoint import fake
-        self.assertIdentical(fakeEndpoint.parser, fake)
+        self.assertIs(fakeEndpoint.parser, fake)
         self.assertEqual(fakeEndpoint.args, (notAReactor, 'hello', 'world'))
         self.assertEqual(fakeEndpoint.kwargs, dict(yes='no', up='down'))
 
@@ -2002,7 +2002,7 @@ class ClientStringTests(unittest.TestCase):
             reactor,
             "tcp:host=example.com:port=1234:timeout=7:bindAddress=10.0.0.2")
         self.assertIsInstance(client, endpoints.TCP4ClientEndpoint)
-        self.assertIdentical(client._reactor, reactor)
+        self.assertIs(client._reactor, reactor)
         self.assertEqual(client._host, "example.com")
         self.assertEqual(client._port, 1234)
         self.assertEqual(client._timeout, 7)
@@ -2020,7 +2020,7 @@ class ClientStringTests(unittest.TestCase):
             reactor,
             "tcp:example.com:1234:timeout=7:bindAddress=10.0.0.2")
         self.assertIsInstance(client, endpoints.TCP4ClientEndpoint)
-        self.assertIdentical(client._reactor, reactor)
+        self.assertIs(client._reactor, reactor)
         self.assertEqual(client._host, "example.com")
         self.assertEqual(client._port, 1234)
         self.assertEqual(client._timeout, 7)
@@ -2080,7 +2080,7 @@ class ClientStringTests(unittest.TestCase):
             reactor,
             "unix:path=/var/foo/bar:lockfile=1:timeout=9")
         self.assertIsInstance(client, endpoints.UNIXClientEndpoint)
-        self.assertIdentical(client._reactor, reactor)
+        self.assertIs(client._reactor, reactor)
         self.assertEqual(client._path, "/var/foo/bar")
         self.assertEqual(client._timeout, 9)
         self.assertEqual(client._checkPID, True)
@@ -2107,7 +2107,7 @@ class ClientStringTests(unittest.TestCase):
             reactor,
             "unix:/var/foo/bar:lockfile=1:timeout=9")
         self.assertIsInstance(client, endpoints.UNIXClientEndpoint)
-        self.assertIdentical(client._reactor, reactor)
+        self.assertIs(client._reactor, reactor)
         self.assertEqual(client._path, "/var/foo/bar")
         self.assertEqual(client._timeout, 9)
         self.assertEqual(client._checkPID, True)
@@ -2123,7 +2123,7 @@ class ClientStringTests(unittest.TestCase):
         clientEndpoint = endpoints.clientFromString(
             notAReactor, "cfake:alpha:beta:cee=dee:num=1")
         from twisted.plugins.fakeendpoint import fakeClient
-        self.assertIdentical(clientEndpoint.parser, fakeClient)
+        self.assertIs(clientEndpoint.parser, fakeClient)
         self.assertEqual(clientEndpoint.args, ('alpha', 'beta'))
         self.assertEqual(clientEndpoint.kwargs, dict(cee='dee', num='1'))
 
@@ -2164,7 +2164,7 @@ class SSLClientStringTests(unittest.TestCase):
             "certKey=%s:bindAddress=10.0.0.3:timeout=3:caCertsDir=%s" %
             (escapedPEMPathName, escapedPEMPathName, escapedCAsPathName))
         self.assertIsInstance(client, endpoints.SSL4ClientEndpoint)
-        self.assertIdentical(client._reactor, reactor)
+        self.assertIs(client._reactor, reactor)
         self.assertEqual(client._host, "example.net")
         self.assertEqual(client._port, 4321)
         self.assertEqual(client._timeout, 3)
@@ -2201,7 +2201,7 @@ class SSLClientStringTests(unittest.TestCase):
             "certKey=%s:bindAddress=10.0.0.3:timeout=3:caCertsDir=%s" %
             (escapedPEMPathName, escapedPEMPathName, escapedCAsPathName))
         self.assertIsInstance(client, endpoints.SSL4ClientEndpoint)
-        self.assertIdentical(client._reactor, reactor)
+        self.assertIs(client._reactor, reactor)
         self.assertEqual(client._host, "example.net")
         self.assertEqual(client._port, 4321)
         self.assertEqual(client._timeout, 3)
@@ -2217,7 +2217,7 @@ class SSLClientStringTests(unittest.TestCase):
         reactor = object()
         client = endpoints.clientFromString(reactor, "ssl:example.net:4321")
         self.assertIsInstance(client, endpoints.SSL4ClientEndpoint)
-        self.assertIdentical(client._reactor, reactor)
+        self.assertIs(client._reactor, reactor)
         self.assertEqual(client._host, "example.net")
         self.assertEqual(client._port, 4321)
         certOptions = client._sslContextFactory
@@ -2444,7 +2444,7 @@ class SystemdEndpointPluginTests(unittest.TestCase):
 
         server = parser.parseStreamServer(
             reactor, domain=addressFamilyString, index=str(index))
-        self.assertIdentical(server.reactor, reactor)
+        self.assertIs(server.reactor, reactor)
         self.assertEqual(server.addressFamily, addressFamily)
         self.assertEqual(server.fileno, descriptors[index])
 
@@ -2585,7 +2585,7 @@ class ConnectProtocolTests(unittest.TestCase):
         # factory, so we need to unwrap it:
         factory = reactor.tcpClients[0][2]._wrappedFactory
         self.assertIsInstance(factory, protocol.Factory)
-        self.assertIdentical(factory.buildProtocol(None), theProtocol)
+        self.assertIs(factory.buildProtocol(None), theProtocol)
 
 
     def test_connectProtocolReturnsConnectResult(self):
@@ -2602,8 +2602,7 @@ class ConnectProtocolTests(unittest.TestCase):
                 return result
 
         endpoint = Endpoint()
-        self.assertIdentical(result,
-                             endpoints.connectProtocol(endpoint, object()))
+        self.assertIs(result, endpoints.connectProtocol(endpoint, object()))
 
 
 
