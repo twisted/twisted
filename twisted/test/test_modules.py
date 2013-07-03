@@ -473,7 +473,6 @@ class PathModificationTest(TwistedModulesTestCase):
         self._listModules()
 
 
-
     def test_moduleAttributes(self):
         """
         Module attributes can be iterated over without executing the code.
@@ -832,6 +831,9 @@ class ASTVisitorTests(TestCase):
 
 
 class MiscTests(TestCase):
+    """
+    Tests for L{modules} utilities.
+    """
 
     def test_isPythonIdentifier(self):
         """

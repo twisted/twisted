@@ -81,6 +81,8 @@ if OPTIMIZED_MODE:
 else:
     PYTHON_EXTENSIONS.append('.pyc')
 
+
+
 def _isPythonIdentifier(string):
     """
     cheezy fake test for proper identifier-ness.
@@ -268,6 +270,8 @@ class _ImportExportFinder(ast.NodeVisitor):
     def visit_Import(self, node):
         """
         Collect names for all import statements.
+
+        @param node: The visited AST node.
         """
         for alias in node.names:
             self.imports.add((None, alias.name))
@@ -276,6 +280,8 @@ class _ImportExportFinder(ast.NodeVisitor):
     def visit_ImportFrom(self, node):
         """
         Collect names and source modules from "import x from y" statements.
+
+        @param node: The visited AST node.
         """
         if node.names[0].name == "*":
             raise SyntaxError("Code containing 'import *' cannot be "
@@ -287,6 +293,8 @@ class _ImportExportFinder(ast.NodeVisitor):
     def visit_Module(self, node):
         """
         Look for top-level name bindings and __all__ in a module.
+
+        @param node: The visited AST node.
         """
         def collectNames(target, value):
             if isinstance(target, ast.Name):
@@ -296,7 +304,7 @@ class _ImportExportFinder(ast.NodeVisitor):
                         and len(value.elts) == len(target.elts)):
                     value = None
                 nameNodes = target.elts
-                for (i, n) in enumerate(nameNodes):
+                for i, n in enumerate(nameNodes):
                     if value is not None:
                         v = value.elts[i]
                     else:
