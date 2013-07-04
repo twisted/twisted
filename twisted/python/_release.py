@@ -1396,22 +1396,30 @@ class UploadTarballsScript(object):
 
     runCommand = staticmethod(runCommand)
 
-    def uploadTarballs(self, path, userHost, script):
+    def uploadTarballs(self, path, userHost, remotePath, script):
         """
         Upload all the files at C{path} unto C{host} using sftp.
 
         @param path: A L{FilePath} containing the release tarballs.
         @type path: L{FilePath}
 
-        @param userHost: The target to upload to, usually in the user@host
-            form.
+        @param userHost: The target to upload to, usually in the
+            user@host form.
         @type userHost: C{str}
+
+        @param remotePath: The path on the server to put the tarballs. The
+            version will be appended to it.
+        @type remotePath: C{str}
+
+        @param script: The path to the cftp script.
+        @type script: C{str}
         """
         first = path.children()[0]
         version = first.basename().split("-")[-1].rsplit(".", 2)[0]
+        remotePath = os.path.join(remotePath, version)
         commands = [
-            "mkdir public_html/%s" % (version,),
-            "cd public_html/%s" % (version,)]
+            "mkdir %s" % (remotePath,),
+            "cd %s" % (remotePath,)]
 
         for tarball in path.children():
             commands.append("put %s" % (tarball.path,))
@@ -1433,13 +1441,14 @@ class UploadTarballsScript(object):
 
         @type args: list of C{str}
         @param args: The command line arguments to process.  This must contain
-            the source directory and the user/host combination.
+            the source directory the user/host combination, and the remote
+            path.
         """
-        if len(args) != 2:
-            sys.exit("Must specify two arguments: "
-                     "tarballs source path and user@host.")
+        if len(args) != 3:
+            sys.exit("Must specify three arguments: "
+                     "tarballs source path, user@host and remote path.")
         cftp = FilePath(script).parent().parent().child("conch").child("cftp")
-        self.uploadTarballs(FilePath(args[0]), args[1], cftp.path)
+        self.uploadTarballs(FilePath(args[0]), args[1], args[2], cftp.path)
 
 
 

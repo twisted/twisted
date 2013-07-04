@@ -2809,7 +2809,7 @@ class UploadTarballsScriptTest(StructureAssertingMixin, TestCase):
         root.createDirectory()
         structure = {
             "TwistedConch-13.0.0.tar.bz2": "TwistedConch",
-            "Twisted-13.0.0.tar.bz2": "Twisted"}
+            "TwistedWeb-13.0.0.tar.bz2": "Twisted"}
         self.createStructure(root, structure)
 
         commands = []
@@ -2820,7 +2820,7 @@ class UploadTarballsScriptTest(StructureAssertingMixin, TestCase):
 
         script = UploadTarballsScript()
         script.runCommand = runCommand
-        script.main([root.path, "releaser@example.com"],
+        script.main([root.path, "releaser@example.com", "public_html"],
                     root.child("admin").child("script").path)
 
         cftp = root.child("conch").child("cftp")
@@ -2832,8 +2832,8 @@ class UploadTarballsScriptTest(StructureAssertingMixin, TestCase):
         batchContent = (
             "mkdir public_html/13.0.0\n"
             "cd public_html/13.0.0\n"
+            "put %(dirname)s/TwistedWeb-13.0.0.tar.bz2\n"
             "put %(dirname)s/TwistedConch-13.0.0.tar.bz2\n"
-            "put %(dirname)s/Twisted-13.0.0.tar.bz2\n"
             "quit\n")
 
 
@@ -2849,5 +2849,6 @@ class UploadTarballsScriptTest(StructureAssertingMixin, TestCase):
         script = UploadTarballsScript()
         error = self.assertRaises(SystemExit, script.main, ["path"], "script")
         self.assertEqual(
-            "Must specify two arguments: tarballs source path and user@host.",
+            "Must specify three arguments: tarballs source path, "
+            "user@host and remote path.",
             str(error))
