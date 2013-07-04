@@ -1372,6 +1372,16 @@ class NewConnectionHelperTests(TestCase):
             self.assertEqual(fObj.read(), b"no")
 
 
+    def test_defaultTTYFilename(self):
+        """
+        If not passed the name of a tty in the filesystem,
+        L{_NewConnectionHelper} uses C{b"/dev/tty"}.
+        """
+        helper = _NewConnectionHelper(
+            None, None, None, None, None, None, None, None, None, None)
+        self.assertEqual(b"/dev/tty", helper.tty)
+
+
     def test_cleanupConnectionNotImmediately(self):
         """
         L{_NewConnectionHelper.cleanupConnection} closes the transport cleanly
