@@ -1354,7 +1354,8 @@ class NewConnectionHelperTests(TestCase):
         tty = FilePath(self.mktemp())
         tty.touch()
         helper = _NewConnectionHelper(
-            None, None, None, None, None, None, None, None, None, None, tty.path)
+            None, None, None, None, None, None, None, None, None, None,
+            tty.path)
         with helper.ui.opener() as fObj:
             self.assertEqual(tty.path, fObj.name)
 
@@ -1367,7 +1368,8 @@ class NewConnectionHelperTests(TestCase):
         """
         tty = FilePath(self.mktemp())
         helper = _NewConnectionHelper(
-            None, None, None, None, None, None, None, None, None, None, tty.path)
+            None, None, None, None, None, None, None, None, None, None,
+            tty.path)
         with helper.ui.opener() as fObj:
             self.assertEqual(fObj.read(), b"no")
 
