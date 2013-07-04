@@ -2529,8 +2529,45 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if recent is not None or exists is not None:
             self.newMessages(exists, recent)
 
+
     def sendCommand(self, cmd):
-        cmd.defer = defer.Deferred()
+        """
+        Send a command.
+
+        If there is already a command running, append the command in the queue.
+        Otherwise send the command immediately.
+
+        @param cmd: The command to be sent.
+        @type cmd: L{Command}
+
+        @return: An instance of L{defer.Deferred} that will be fired when the
+            command is finished.
+        """
+        def cancel(deferred):
+            """
+            Cancel the command.
+
+            If the command is waiting in the queue, remove it from the queue.
+            If the command has been popped out from the queue, disconnect from
+            the server, errback the L{defer.Deferred} of the canceled command
+            with L{defer.CancelledError} and errback the L{defer.Deferred}s of
+            all the waiting commands with the error L{error.ConnectionAborted}.
+
+            @param deferred: The L{defer.Deferred} of the canceled command.
+            """
+            try:
+                self.queued.remove(cmd)
+            except ValueError:
+                # The command has been popped out from the queue.
+                tags = self.tags
+                self.tags = None
+                for cmd in tags.itervalues():
+                    if cmd is not None and cmd.defer is not None:
+                        cmd.defer.errback(defer.CancelledError())
+                self._errbackDeferreds(error.ConnectionAborted(
+                    "Connection aborted due to cancellation."))
+                self.transport.abortConnection()
+        cmd.defer = defer.Deferred(cancel)
         if self.waiting:
             self.queued.append(cmd)
             return cmd.defer
@@ -2540,6 +2577,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         self.waiting = t
         self._lastCmd = cmd
         return cmd.defer
+
 
     def getCapabilities(self, useCache=1):
         """Request the capabilities available on this server.
