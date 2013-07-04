@@ -44,7 +44,7 @@ else:
     from twisted.conch.ssh.keys import Key
     from twisted.conch.ssh.channel import SSHChannel
     from twisted.conch.ssh.agent import SSHAgentServer
-    from twisted.conch.client.knownhosts import KnownHostsFile
+    from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
     from twisted.conch.checkers import SSHPublicKeyDatabase
     from twisted.conch.avatar import ConchUser
 
@@ -1333,6 +1333,43 @@ class NewConnectionHelperTests(TestCase):
 
         loaded = _NewConnectionHelper._knownHosts()
         self.assertTrue(loaded.hasHostKey("127.0.0.1", key))
+
+
+    def test_defaultConsoleUI(self):
+        """
+        If C{None} is passed for the C{ui} parameter to
+        L{_NewConnectionHelper}, a L{ConsoleUI} is used.
+        """
+        helper = _NewConnectionHelper(
+            None, None, None, None, None, None, None, None, None, None)
+        self.assertIsInstance(helper.ui, ConsoleUI)
+
+
+    def test_ttyConsoleUI(self):
+        """
+        If C{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
+        and /dev/tty is available, the L{ConsoleUI} used is associated with
+        /dev/tty.
+        """
+        tty = FilePath(self.mktemp())
+        tty.touch()
+        helper = _NewConnectionHelper(
+            None, None, None, None, None, None, None, None, None, None, tty.path)
+        with helper.ui.opener() as fObj:
+            self.assertEqual(tty.path, fObj.name)
+
+
+    def test_nottyUI(self):
+        """
+        If C{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
+        and /dev/tty is not available, the L{ConsoleUI} used is associated with
+        some file which always produces a C{b"no"} response.
+        """
+        tty = FilePath(self.mktemp())
+        helper = _NewConnectionHelper(
+            None, None, None, None, None, None, None, None, None, None, tty.path)
+        with helper.ui.opener() as fObj:
+            self.assertEqual(fObj.read(), b"no")
 
 
     def test_cleanupConnectionNotImmediately(self):
