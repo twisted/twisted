@@ -2308,10 +2308,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if self.timeout > 0:
             self.setTimeout(self.timeout)
 
-    def connectionLost(self, reason):
-        """We are no longer connected"""
-        if self.timeout > 0:
-            self.setTimeout(None)
+
+    def _errbackDeferreds(self, reason):
+        """
+        Errback the L{defer.Deferred}s of all the waiting commands.
+
+        @param reason: A L{twisted.python.failure.Failure} instance indicating
+            the reason why the errbacks are called.
+        """
         if self.queued is not None:
             queued = self.queued
             self.queued = None
@@ -2323,6 +2327,19 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             for cmd in tags.itervalues():
                 if cmd is not None and cmd.defer is not None:
                     cmd.defer.errback(reason)
+
+
+    def connectionLost(self, reason):
+        """
+        We are no longer connected. Disable the timeout and errback the
+        L{defer.Deferred}s of all the waiting commands.
+
+        @param reason: A L{twisted.python.failure.Failure} instance indicating
+            the reason why the connection is lost.
+        """
+        if self.timeout > 0:
+            self.setTimeout(None)
+        self._errbackDeferreds(reason)
 
 
     def lineReceived(self, line):
