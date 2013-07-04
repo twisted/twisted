@@ -8,9 +8,8 @@ An implementation of the OpenSSH known_hosts database.
 @since: 8.2
 """
 
-from binascii import Error as DecodeError, b2a_base64
 import hmac
-import sys
+from binascii import Error as DecodeError, b2a_base64
 from hashlib import sha1
 
 from zope.interface import implements
