@@ -650,18 +650,37 @@ class SSHCommandClientEndpoint(object):
 
 
 class _NoFile(object):
+    """
+    A weakly file-like object which can be used with L{KnownHostsFile} to
+    respond in the negative to all prompts for decisions.
+    """
     def write(self, data):
-        pass
+        """
+        No-op.
+        """
 
 
     def read(self, count=-1):
+        """
+        Always give back the byte string that L{KnownHostsFile} recognizes as
+        rejecting some option (C{b"no"}).
+        """
         return b"no"
 
+
     def __enter__(self):
+        """
+        No-op implementation of the context-manager interface to make this
+        object more file-like.
+        """
         return self
 
+
     def __exit__(self, *args):
-        pass
+        """
+        No-op implementation of the context-manager interface to make this
+        object more file-like.
+        """
 
 
 
