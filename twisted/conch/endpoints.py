@@ -28,7 +28,7 @@ from twisted.conch.ssh.transport import SSHClientTransport
 from twisted.conch.ssh.connection import SSHConnection
 from twisted.conch.ssh.userauth import SSHUserAuthClient
 from twisted.conch.ssh.channel import SSHChannel
-from twisted.conch.client.knownhosts import KnownHostsFile
+from twisted.conch.client.knownhosts import ConsoleUI, KnownHostsFile
 from twisted.conch.client.agent import SSHAgentClient
 from twisted.conch.client.default import _KNOWN_HOSTS
 
@@ -563,8 +563,10 @@ class SSHCommandClientEndpoint(object):
         @type knownHosts: L{KnownHostsFile}
 
         @param ui: An object for interacting with users to make decisions about
-            whether to accept the server host keys.
-        @type ui: L{ConsoleUI}
+            whether to accept the server host keys.  If C{None}, a L{ConsoleUI}
+            connected to /dev/tty will be used; if /dev/tty is unavailable, an
+            object which answers C{b"no"} to all prompts will be used.
+        @type ui: L{NoneType} or L{ConsoleUI}
 
         @return: A new instance of C{cls} (probably
             L{SSHCommandClientEndpoint}).
@@ -647,6 +649,22 @@ class SSHCommandClientEndpoint(object):
 
 
 
+class _NoFile(object):
+    def write(self, data):
+        pass
+
+
+    def read(self, count=-1):
+        return b"no"
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
+
+
 @implementer(_ISSHConnectionCreator)
 class _NewConnectionHelper(object):
     """
@@ -656,7 +674,14 @@ class _NewConnectionHelper(object):
     _KNOWN_HOSTS = _KNOWN_HOSTS
 
     def __init__(self, reactor, hostname, port, command, username, keys,
-                 password, agentEndpoint, knownHosts, ui):
+                 password, agentEndpoint, knownHosts, ui, tty=b"/dev/tty"):
+        """
+        @param tty: The filename of the tty device to use in case C{ui} is
+            C{None}.
+        @type tty: L{bytes}
+
+        @see: L{SSHCommandClientEndpoint.newConnection}
+        """
         self.reactor = reactor
         self.hostname = hostname
         self.port = port
@@ -668,7 +693,24 @@ class _NewConnectionHelper(object):
         if knownHosts is None:
             knownHosts = self._knownHosts()
         self.knownHosts = knownHosts
+
+        if ui is None:
+            ui = ConsoleUI(self._opener)
         self.ui = ui
+        self.tty = tty
+
+
+    def _opener(self):
+        """
+        Open the tty if possible, otherwise give back a file-like object from
+        which C{b"no"} can be read.
+
+        For use as the opener argument to L{ConsoleUI}.
+        """
+        try:
+            return open(self.tty, "r+b")
+        except:
+            return _NoFile()
 
 
     @classmethod
