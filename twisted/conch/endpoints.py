@@ -657,6 +657,8 @@ class _NoFile(object):
     def write(self, data):
         """
         No-op.
+
+        @param data: ignored
         """
 
 
@@ -664,6 +666,10 @@ class _NoFile(object):
         """
         Always give back the byte string that L{KnownHostsFile} recognizes as
         rejecting some option (C{b"no"}).
+
+        @param count: ignored
+        @return: The negative response.
+        @rtype: L{bytes}
         """
         return b"no"
 
