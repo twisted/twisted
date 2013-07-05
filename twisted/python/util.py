@@ -1084,7 +1084,7 @@ def _socketFamilyFromName(name):
         constant or C{None} if the family could not be detected.
     """
     family = None
-    if isinstance(name, str):
+    if isinstance(name, bytes):
         family = socket.AF_UNIX
     elif isinstance(name, tuple):
         if len(name) == 4:
@@ -1114,7 +1114,7 @@ def socketFamilyFromFd(fd):
 
     @see: U{http://utcc.utoronto.ca/~cks/space/blog/python/SocketFromFdMistake}
     """
-    probe = socket.fromfd(fd, socket.AF_UNIX, socket.SOCK_RAW)
+    probe = socket.fromfd(fd, socket.AF_UNIX, socket.SOCK_STREAM)
     try:
         name = probe.getsockname()
     except socket.error:
@@ -1138,7 +1138,7 @@ def socketTypeFromFd(fd):
 
     @see: U{http://utcc.utoronto.ca/~cks/space/blog/python/SocketFromFdMistake}
     """
-    probe = socket.fromfd(fd, socket.AF_UNIX, socket.SOCK_RAW)
+    probe = socket.fromfd(fd, socket.AF_UNIX, socket.SOCK_STREAM)
     try:
         socketType = probe.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
     finally:
@@ -1163,7 +1163,8 @@ __all__ = [
 if _PY3:
     __all3__ = ["FancyEqMixin", "setIDFunction", "unsignedID", "untilConcludes",
                 "runWithWarningsSuppressed", "FancyStrMixin", "nameToLabel",
-                "InsensitiveDict"]
+                "InsensitiveDict",
+                "socketFamilyFromFd", "socketTypeFromFd",]
     for name in __all__[:]:
         if name not in __all3__:
             __all__.remove(name)
