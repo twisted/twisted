@@ -662,7 +662,7 @@ class _NoFile(object):
         """
 
 
-    def read(self, count=-1):
+    def readline(self, count=-1):
         """
         Always give back the byte string that L{KnownHostsFile} recognizes as
         rejecting some option (C{b"no"}).
@@ -674,18 +674,9 @@ class _NoFile(object):
         return b"no"
 
 
-    def __enter__(self):
+    def close(self):
         """
-        No-op implementation of the context-manager interface to make this
-        object more file-like.
-        """
-        return self
-
-
-    def __exit__(self, *args):
-        """
-        No-op implementation of the context-manager interface to make this
-        object more file-like.
+        No-op.
         """
 
 

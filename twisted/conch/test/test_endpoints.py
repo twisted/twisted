@@ -1352,12 +1352,12 @@ class NewConnectionHelperTests(TestCase):
         /dev/tty.
         """
         tty = FilePath(self.mktemp())
-        tty.touch()
+        tty.setContent(b"yes")
         helper = _NewConnectionHelper(
             None, None, None, None, None, None, None, None, None, None,
             tty.path)
-        with helper.ui.opener() as fObj:
-            self.assertEqual(tty.path, fObj.name)
+        result = self.successResultOf(helper.ui.prompt(b"does this work?"))
+        self.assertTrue(result)
 
 
     def test_nottyUI(self):
@@ -1370,8 +1370,8 @@ class NewConnectionHelperTests(TestCase):
         helper = _NewConnectionHelper(
             None, None, None, None, None, None, None, None, None, None,
             tty.path)
-        with helper.ui.opener() as fObj:
-            self.assertEqual(fObj.read(), b"no")
+        result = self.successResultOf(helper.ui.prompt(b"did this break?"))
+        self.assertFalse(result)
 
 
     def test_defaultTTYFilename(self):
