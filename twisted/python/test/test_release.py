@@ -2799,6 +2799,9 @@ class ScriptTests(TestCase):
 
 
 class UploadTarballsScriptTest(StructureAssertingMixin, TestCase):
+    """
+    Tests for tarball upload.
+    """
 
     def test_main(self):
         """
@@ -2829,16 +2832,19 @@ class UploadTarballsScriptTest(StructureAssertingMixin, TestCase):
 
         batchFile = commands[0][2]
 
-        batchContent = (
-            "mkdir public_html/13.0.0\n"
-            "cd public_html/13.0.0\n"
-            "put %(dirname)s/TwistedWeb-13.0.0.tar.bz2\n"
-            "put %(dirname)s/TwistedConch-13.0.0.tar.bz2\n"
-            "quit\n")
+        expectedContent = [
+            "mkdir public_html/13.0.0",
+            "cd public_html/13.0.0",
+            "put %s/TwistedWeb-13.0.0.tar.bz2" % (root.path,),
+            "put %s/TwistedConch-13.0.0.tar.bz2" % (root.path,),
+            "quit"]
 
+        batchContent = FilePath(batchFile).getContent().splitlines()
 
-        self.assertEqual(batchContent % {"dirname": root.path},
-                         FilePath(batchFile).getContent())
+        self.assertEqual(expectedContent[:2], batchContent[:2])
+        self.assertEqual(expectedContent[4], batchContent[4])
+        # File order is arbitrary, so compare using sets
+        self.assertEqual(set(expectedContent[2:4]), set(batchContent[2:4]))
 
 
     def test_missingArgument(self):

@@ -12,6 +12,8 @@ Only Linux is supported by this code.  It should not be used by any tools
 which must run on multiple platforms (eg the setup.py script).
 """
 
+from __future__ import print_function
+
 import textwrap
 from datetime import date
 import re
@@ -62,7 +64,7 @@ def runCommand(args, printProgress=False):
             line = process.stdout.readline()
             if not line:
                 break
-            print line.strip()
+            print(line.strip())
             stdout += line
     else:
         stdout = process.stdout.read()
@@ -1443,6 +1445,10 @@ class UploadTarballsScript(object):
         @param args: The command line arguments to process.  This must contain
             the source directory the user/host combination, and the remote
             path.
+
+        @type script: C{str}
+        @param script: The script making the main call, used as a reference
+            point in the bin/ directory to find the cftp script.
         """
         if len(args) != 3:
             sys.exit("Must specify three arguments: "
