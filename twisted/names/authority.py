@@ -9,7 +9,7 @@ Authoritative resolvers.
 import os
 import time
 
-from twisted.names import dns
+from twisted.names import dns, error
 from twisted.internet import defer
 from twisted.python import failure
 from twisted.python.compat import execfile
@@ -58,6 +58,7 @@ def getSerial(filename = '/tmp/twisted-names.serial'):
 #            r = self._meth(name, cls, type, timeout)
 #            self._cache[(name, cls, type)] = r
 #            return r
+
 
 
 class FileAuthority(common.ResolverBase):
@@ -129,10 +130,16 @@ class FileAuthority(common.ResolverBase):
                     )
             return defer.succeed((results, authority, additional))
         else:
-            if name.lower().endswith(self.soa[0].lower()):
-                # We are the authority and we didn't find it.  Goodbye.
+            if dns._isSubdomainOf(name, self.soa[0]):
+                # We may be the authority and we didn't find it.
+                # XXX: The QNAME may also be a in a delegated child zone. See
+                # #6581 and #6580
                 return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
-            return defer.fail(failure.Failure(dns.DomainError(name)))
+            else:
+                # The QNAME is not a descendant of this zone. Fail with
+                # DomainError so that the next chained authority or
+                # resolver will be queried.
+                return defer.fail(failure.Failure(error.DomainError(name)))
 
 
     def lookupZone(self, name, timeout = 10):

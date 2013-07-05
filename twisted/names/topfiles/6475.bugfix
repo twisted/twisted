@@ -1,0 +1,2 @@
+twisted.names.authority.FileAuthority now only returns
+AuthoritativeDomainError (NXDOMAIN) for names which are subdomains.
