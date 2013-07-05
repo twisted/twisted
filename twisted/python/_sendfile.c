@@ -12,6 +12,7 @@
  * Rewritten from scratch and maintained by Giampaolo Rodola'
  *     Copyright (C) 2009,2012 <g.rodola@gmail.com>
  *
+ * Downloaded from http://code.google.com/p/pysendfile/
  *
  *  The MIT License
  *

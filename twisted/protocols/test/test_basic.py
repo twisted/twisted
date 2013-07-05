@@ -1157,7 +1157,7 @@ class FileSenderTestCase(unittest.TestCase):
 
     def test_multipleRegister(self):
         """
-        If a producter is already registered with the transport,
+        If a producer is already registered with the transport,
         L{basic.FileSender.beginFileTransfer} fires the returned L{Deferred}
         with the error and doesn't raise an exception.
         """
@@ -1242,7 +1242,7 @@ class FileSenderTestCase(unittest.TestCase):
 
     def test_abortedTransfer(self):
         """
-        The C{Deferred} returned by L{basic.FileSender.beginFileTransfer} fails
+        The L{Deferred} returned by L{basic.FileSender.beginFileTransfer} fails
         with an C{Exception} if C{stopProducing} when the transfer is not
         complete.
         """
@@ -1263,7 +1263,7 @@ class FileSenderTestCase(unittest.TestCase):
         """
         If we have a very fast consumer, we may reach the end of
         C{beginFileTransfer} with the transfer is already done: the
-        C{FileSender} producer must be able to refer to the C{Deferred}
+        C{FileSender} producer must be able to refer to the L{Deferred}
         returned even though we're still in the middle of C{beginFileTransfer}.
         """
         source = BytesIO(b"Test content X")
@@ -1610,7 +1610,7 @@ class FileSenderSendfileTestCase(ReactorBuilder):
     def test_closedConnection(self):
         """
         If the connection is closed during a L{basic.FileSender} transfer, the
-        C{Deferred} returned fires with an L{Exception}.
+        L{Deferred} returned fires with an L{Exception}.
         """
         reactor = self.buildReactor()
         if not IReactorFDSet.providedBy(reactor):

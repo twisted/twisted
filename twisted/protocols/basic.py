@@ -987,8 +987,8 @@ class FileSender:
            it's a bit hard to check, so we verify it has a fileno method, and
            rely on the extension to fail sanely on the first call, so that we
            can fallback to normal writes.
-         - The consumer must be a C{IFileDescriptor} provider.
-         - The reactor must be a C{IReactorFDSet} provider.
+         - The consumer must be a L{interfaces.IFileDescriptor} provider.
+         - The reactor must be a L{interfaces.IReactorFDSet} provider.
 
         @return: C{True} if we should try to use C{sendfile} for this transfer.
         @rtype: C{bool}
@@ -1001,24 +1001,24 @@ class FileSender:
 
     def resumeProducing(self):
         """
-        Delegate producing to C{self._producer}.
+        Delegate producing to L{self._producer}.
         """
         self._producer.produce()
 
 
     def pauseProducing(self):
         """
-        Stub method, as we're don't have anything to pause.
+        Stub method, as we don't have anything to pause.
 
         It's there for compatibility reason as L{FileSender} ought to be a
-        C{IPullProducer}.
+        L{interfaces.IPullProducer}.
         """
 
 
     def stopProducing(self):
         """
         If the connection is lost before the end of the transfer, fire the
-        C{beginFileTransfer}'s C{Deferred}.
+        L{beginFileTransfer}'s L{Deferred}.
         """
         self._fire(
             Failure(Exception("Consumer asked us to stop producing")))
@@ -1026,7 +1026,7 @@ class FileSender:
 
     def _fire(self, value):
         """
-        Fire C{self.deferred} if still present.
+        Fire L{self.deferred} if still present.
         """
         if self.deferred is not None:
             deferred, self.deferred = self.deferred, None
@@ -1036,8 +1036,8 @@ class FileSender:
 
 class _FileSenderNoOp(object):
     """
-    A L{FileSender} producer which doesn't do anything, and change the producer
-    to L{_FileSenderSendfile}.
+    A L{FileSender} producer which doesn't do anything except changing the
+    producer to L{_FileSenderSendfile}.
     """
 
     def __init__(self, sender):
@@ -1050,7 +1050,7 @@ class _FileSenderNoOp(object):
         C{resumeProducing}.
         """
         # That's really unfortunate, but we need to skip the first call:
-        # the reactor is calling use immediately after registerProducer,
+        # the reactor is calling us immediately after registerProducer,
         # but the buffer can still contain things to send: we don't want
         # sendfile to mix bytes with previous write calls. So we wait for
         # resumeProducing to be called, which will happen when the buffer
@@ -1062,7 +1062,7 @@ class _FileSenderNoOp(object):
 
 class _FileSenderSendfile(object):
     """
-    A L{FileSender} producer using the sendfile systme call, with the
+    A L{FileSender} producer using the sendfile system call, with the
     ability of fallback to L{_FileSenderWrite} in case of errors.
 
     @ivar _count: The size of the file to send, in bytes.
