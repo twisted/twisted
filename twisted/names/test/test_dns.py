@@ -1754,3 +1754,206 @@ class RRHeaderTests(unittest.TestCase):
         self.assertRaises(
             ValueError, dns.RRHeader, "example.com", dns.A,
             dns.IN, -1, dns.Record_A("127.0.0.1"))
+
+
+
+class NameToLabelsTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{twisted.names.dns._nameToLabels}.
+    """
+
+    def test_empty(self):
+        """
+        L{dns._nameToLabels} returns a list containing a single
+        empty label for an empty name.
+        """
+        self.assertEqual(dns._nameToLabels(b''), [b''])
+
+
+    def test_onlyDot(self):
+        """
+        L{dns._nameToLabels} returns a list containing a single
+        empty label for a name containing only a dot.
+        """
+        self.assertEqual(dns._nameToLabels(b'.'), [b''])
+
+
+    def test_withoutTrailingDot(self):
+        """
+        L{dns._nameToLabels} returns a list ending with an empty
+        label for a name without a trailing dot.
+        """
+        self.assertEqual(dns._nameToLabels(b'com'), [b'com', b''])
+
+
+    def test_withTrailingDot(self):
+        """
+        L{dns._nameToLabels} returns a list ending with an empty
+        label for a name with a trailing dot.
+        """
+        self.assertEqual(dns._nameToLabels(b'com.'), [b'com', b''])
+
+
+    def test_subdomain(self):
+        """
+        L{dns._nameToLabels} returns a list containing entries
+        for all labels in a subdomain name.
+        """
+        self.assertEqual(
+            dns._nameToLabels(b'foo.bar.baz.example.com.'),
+            [b'foo', b'bar', b'baz', b'example', b'com', b''])
+
+
+    def test_casePreservation(self):
+        """
+        L{dns._nameToLabels} preserves the case of ascii
+        characters in labels.
+        """
+        self.assertEqual(
+            dns._nameToLabels(b'EXAMPLE.COM'),
+            [b'EXAMPLE', b'COM', b''])
+
+
+
+def assertIsSubdomainOf(testCase, descendant, ancestor):
+    """
+    Assert that C{descendant} *is* a subdomain of C{ancestor}.
+
+    @type testCase: L{unittest.SynchronousTestCase}
+    @param testCase: The test case on which to run the assertions.
+
+    @type descendant: C{str}
+    @param descendant: The subdomain name to test.
+
+    @type ancestor: C{str}
+    @param ancestor: The superdomain name to test.
+    """
+    testCase.assertTrue(
+        dns._isSubdomainOf(descendant, ancestor),
+        '%r is not a subdomain of %r' % (descendant, ancestor))
+
+
+
+def assertIsNotSubdomainOf(testCase, descendant, ancestor):
+    """
+    Assert that C{descendant} *is not* a subdomain of C{ancestor}.
+
+    @type testCase: L{unittest.SynchronousTestCase}
+    @param testCase: The test case on which to run the assertions.
+
+    @type descendant: C{str}
+    @param descendant: The subdomain name to test.
+
+    @type ancestor: C{str}
+    @param ancestor: The superdomain name to test.
+    """
+    testCase.assertFalse(
+        dns._isSubdomainOf(descendant, ancestor),
+        '%r is a subdomain of %r' % (descendant, ancestor))
+
+
+
+class IsSubdomainOfTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{twisted.names.dns._isSubdomainOf}.
+    """
+
+    def test_identical(self):
+        """
+        L{dns._isSubdomainOf} returns C{True} for identical
+        domain names.
+        """
+        assertIsSubdomainOf(self, b'example.com', b'example.com')
+
+
+    def test_parent(self):
+        """
+        L{dns._isSubdomainOf} returns C{True} when the first
+        name is an immediate descendant of the second name.
+        """
+        assertIsSubdomainOf(self, b'foo.example.com', b'example.com')
+
+
+    def test_distantAncestor(self):
+        """
+        L{dns._isSubdomainOf} returns C{True} when the first
+        name is a distant descendant of the second name.
+        """
+        assertIsSubdomainOf(self, b'foo.bar.baz.example.com', b'com')
+
+
+    def test_superdomain(self):
+        """
+        L{dns._isSubdomainOf} returns C{False} when the first
+        name is an ancestor of the second name.
+        """
+        assertIsNotSubdomainOf(self, b'example.com', b'foo.example.com')
+
+
+    def test_sibling(self):
+        """
+        L{dns._isSubdomainOf} returns C{False} if the first name
+        is a sibling of the second name.
+        """
+        assertIsNotSubdomainOf(self, b'foo.example.com', b'bar.example.com')
+
+
+    def test_unrelatedCommonSuffix(self):
+        """
+        L{dns._isSubdomainOf} returns C{False} even when domain
+        names happen to share a common suffix.
+        """
+        assertIsNotSubdomainOf(self, b'foo.myexample.com', b'example.com')
+
+
+    def test_subdomainWithTrailingDot(self):
+        """
+        L{dns._isSubdomainOf} returns C{True} if the first name
+        is a subdomain of the second name but the first name has a
+        trailing ".".
+        """
+        assertIsSubdomainOf(self, b'foo.example.com.', b'example.com')
+
+
+    def test_superdomainWithTrailingDot(self):
+        """
+        L{dns._isSubdomainOf} returns C{True} if the first name
+        is a subdomain of the second name but the second name has a
+        trailing ".".
+        """
+        assertIsSubdomainOf(self, b'foo.example.com', b'example.com.')
+
+
+    def test_bothWithTrailingDot(self):
+        """
+        L{dns._isSubdomainOf} returns C{True} if the first name
+        is a subdomain of the second name and both names have a
+        trailing ".".
+        """
+        assertIsSubdomainOf(self, b'foo.example.com.', b'example.com.')
+
+
+    def test_emptySubdomain(self):
+        """
+        L{dns._isSubdomainOf} returns C{False} if the first name
+        is empty and the second name is not.
+        """
+        assertIsNotSubdomainOf(self, b'', b'example.com')
+
+
+    def test_emptySuperdomain(self):
+        """
+        L{dns._isSubdomainOf} returns C{True} if the second name
+        is empty and the first name is not.
+        """
+        assertIsSubdomainOf(self, b'foo.example.com', b'')
+
+
+    def test_caseInsensitiveComparison(self):
+        """
+        L{dns._isSubdomainOf} does case-insensitive comparison
+        of name labels.
+        """
+        assertIsSubdomainOf(self, b'foo.example.com', b'EXAMPLE.COM')
+
+        assertIsSubdomainOf(self, b'FOO.EXAMPLE.COM', b'example.com')

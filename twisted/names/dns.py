@@ -204,6 +204,58 @@ from twisted.names.error import DomainError, AuthoritativeDomainError
 from twisted.names.error import DNSQueryTimeoutError
 
 
+
+def _nameToLabels(name):
+    """
+    Split a domain name into its constituent labels.
+
+    @type name: C{str}
+    @param name: A fully qualified domain name (with or without a
+        trailing dot).
+
+    @return: A L{list} of labels ending with an empty label
+        representing the DNS root zone.
+    """
+    if name in (b'', b'.'):
+        return [b'']
+    labels = name.split(b'.')
+    if labels[-1] != b'':
+        labels.append(b'')
+    return labels
+
+
+
+def _isSubdomainOf(descendantName, ancestorName):
+    """
+    Test whether C{descendantName} is equal to or is a I{subdomain} of
+    C{ancestorName}.
+
+    The names are compared case-insensitively.
+
+    The names are treated as byte strings containing one or more
+    DNS labels separated by B{.}.
+
+    C{descendantName} is considered equal if its sequence of labels
+    exactly matches the labels of C{ancestorName}.
+
+    C{descendantName} is considered a I{subdomain} if its sequence of
+    labels ends with the labels of C{ancestorName}.
+
+    @type descendantName: C{bytes}
+    @param descendantName: The DNS subdomain name.
+
+    @type ancestorName: C{bytes}
+    @param ancestorName: The DNS parent or ancestor domain name.
+
+    @return: C{True} if C{descendantName} is equal to or if it is a
+        subdomain of C{ancestorName}. Otherwise returns C{False}.
+    """
+    descendantLabels = _nameToLabels(descendantName.lower())
+    ancestorLabels = _nameToLabels(ancestorName.lower())
+    return descendantLabels[-len(ancestorLabels):] == ancestorLabels
+
+
+
 def str2time(s):
     """
     Parse a string description of an interval into an integer number of seconds.
