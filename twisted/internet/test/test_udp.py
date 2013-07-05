@@ -2,15 +2,14 @@
 # See LICENSE for details.
 
 """
-Tests for implementations of L{IReactorUDP} and the UDP parts of
-L{IReactorSocket}.
+Tests for implementations of L{IReactorUDP}.
 """
 
 from __future__ import division, absolute_import
 
 __metaclass__ = type
 
-import socket
+from socket import SOCK_DGRAM
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -20,78 +19,20 @@ from twisted.python.log import ILogContext, err
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.internet.interfaces import (
-    ILoggingContext, IListeningPort, IReactorUDP, IReactorSocket)
+    ILoggingContext, IListeningPort, IReactorUDP)
 from twisted.internet.address import IPv4Address
 from twisted.internet.protocol import DatagramProtocol
 
 from twisted.internet.test.connectionmixins import (LogObserverMixin,
                                                     findFreePort)
-from twisted.trial.unittest import SkipTest
 
 
-
-class ListenUDPMixin(object):
-    """
-    Mixin which uses L{IReactorUDP.listenUDP} to hand out listening UDP ports.
-    """
-    def getListeningPort(self, reactor, protocol, port=0, interface='',
-                         maxPacketSize=8192):
+class UDPPortMixin(object):
+    def getListeningPort(self, reactor, protocol):
         """
         Get a UDP port from a reactor.
         """
-        return reactor.listenUDP(port, protocol, interface=interface,
-                                 maxPacketSize=maxPacketSize)
-
-
-    def getExpectedStartListeningLogMessage(self, port, protocol):
-        """
-        Get the message expected to be logged when a UDP port starts listening.
-        """
-        return "%s starting on %d" % (protocol, port.getHost().port)
-
-
-    def getExpectedConnectionLostLogMessage(self, port):
-        """
-        Get the expected connection lost message for a UDP port.
-        """
-        return "(UDP Port %s Closed)" % (port.getHost().port,)
-
-
-
-class SocketUDPMixin(object):
-    """
-    Mixin which uses L{IReactorSocket.adoptDatagramPort} to hand out
-    listening UDP ports.
-    """
-    def getListeningPort(self, reactor, protocol, port=0, interface='',
-                         maxPacketSize=8192):
-        """
-        Get a UDP port from a reactor, wrapping an already-initialized file
-        descriptor.
-        """
-        if IReactorSocket.providedBy(reactor):
-            if ':' in interface:
-                domain = socket.AF_INET6
-                address = socket.getaddrinfo(interface, port)[0][4]
-            else:
-                domain = socket.AF_INET
-                address = (interface, port)
-            portSock = socket.socket(domain, socket.SOCK_DGRAM)
-            portSock.bind(address)
-            portSock.setblocking(False)
-            try:
-                return reactor.adoptDatagramPort(
-                    portSock.fileno(), portSock.family, protocol,
-                    maxPacketSize)
-            finally:
-                # The socket should still be open; fileno will raise if it is
-                # not.
-                portSock.fileno()
-                # Now clean it up, because the rest of the test does not need
-                # it.
-                portSock.close()
-        else:
-            raise SkipTest("Reactor does not provide IReactorSocket")
+        return reactor.listenUDP(0, protocol)
 
 
     def getExpectedStartListeningLogMessage(self, port, protocol):
@@ -192,17 +133,19 @@ class DatagramTransportTestsMixin(LogObserverMixin):
 
 
 
-class UDPPortTestsMixin(object):
+class UDPServerTestsBuilder(ReactorBuilder, UDPPortMixin,
+                            DatagramTransportTestsMixin):
     """
-    Tests for L{IReactorUDP.listenUDP} and
-    L{IReactorSocket.adoptDatagramPort}.
+    Builder defining tests relating to L{IReactorUDP.listenUDP}.
     """
+    requiredInterfaces = (IReactorUDP,)
+
     def test_interface(self):
         """
         L{IReactorUDP.listenUDP} returns an object providing L{IListeningPort}.
         """
         reactor = self.buildReactor()
-        port = self.getListeningPort(reactor, DatagramProtocol())
+        port = reactor.listenUDP(0, DatagramProtocol())
         self.assertTrue(verifyObject(IListeningPort, port))
 
 
@@ -212,10 +155,10 @@ class UDPPortTestsMixin(object):
         dotted-quad of the IPv4 address the port is listening on as well as
         the port number.
         """
-        host, portNumber = findFreePort(type=socket.SOCK_DGRAM)
+        host, portNumber = findFreePort(type=SOCK_DGRAM)
         reactor = self.buildReactor()
-        port = self.getListeningPort(
-            reactor, DatagramProtocol(), port=portNumber, interface=host)
+        port = reactor.listenUDP(
+            portNumber, DatagramProtocol(), interface=host)
         self.assertEqual(
             port.getHost(), IPv4Address('UDP', host, portNumber))
 
@@ -242,7 +185,7 @@ class UDPPortTestsMixin(object):
         reactor = self.buildReactor()
         protocol = CustomLogPrefixDatagramProtocol("Custom Datagrams")
         d = protocol.system
-        port = self.getListeningPort(reactor, protocol)
+        port = reactor.listenUDP(0, protocol)
         address = port.getHost()
 
         def gotSystem(system):
@@ -260,7 +203,7 @@ class UDPPortTestsMixin(object):
         C{str()} on the listening port object includes the port number.
         """
         reactor = self.buildReactor()
-        port = self.getListeningPort(reactor, DatagramProtocol())
+        port = reactor.listenUDP(0, DatagramProtocol())
         self.assertIn(str(port.getHost().port), str(port))
 
 
@@ -269,29 +212,7 @@ class UDPPortTestsMixin(object):
         C{repr()} on the listening port object includes the port number.
         """
         reactor = self.buildReactor()
-        port = self.getListeningPort(reactor, DatagramProtocol())
+        port = reactor.listenUDP(0, DatagramProtocol())
         self.assertIn(repr(port.getHost().port), str(port))
 
-
-
-class UDPServerTestsBuilder(ReactorBuilder, ListenUDPMixin,
-                            UDPPortTestsMixin, DatagramTransportTestsMixin):
-    """
-    Run L{UDPPortTestsMixin} tests using UDP newly created UDP
-    sockets.
-    """
-    requiredInterfaces = (IReactorUDP,)
-
-
-
-class UDPFDServerTestsBuilder(ReactorBuilder, SocketUDPMixin,
-                              UDPPortTestsMixin, DatagramTransportTestsMixin):
-    """
-    Run L{UDPPortTestsMixin} tests using adopted UDP sockets.
-    """
-    requiredInterfaces = (IReactorSocket,)
-
-
-
 globals().update(UDPServerTestsBuilder.makeTestCaseClasses())
-globals().update(UDPFDServerTestsBuilder.makeTestCaseClasses())

@@ -65,37 +65,6 @@ reactor.run()
     class="python">reactor.resolve()</code> to resolve the address (see <code
     class="API">twisted.internet.interfaces.IReactorCore.resolve</code>).</p>
 
-    <h2>Adopted Datagram Ports</h2>
-
-    <p>It is also possible to add an
-    existing <code class="python">SOCK_DGRAM</code> file descriptor to
-    the reactor using the <code class="API"
-    base="twisted.internet.interfaces.IReactorSocket">adoptDatagramPort</code>
-    API.</p>
-
-    <p>Here is a simple example:</p>
-
-    <a href="listings/udp/adopt_datagram_port.py"
-       class="py-listing">adopt_datagram_port.py</a>
-
-    <div class="note">
-    <ul>
-      <li>You must ensure that the socket is non-blocking before
-      passing its file descriptor to <code class="API"
-      base="twisted.internet.interfaces.IReactorSocket">
-      adoptDatagramPort</code>.</li>
-      <li><code class="API"
-      base="twisted.internet.interfaces.IReactorSocket">
-      adoptDatagramPort</code> cannot
-      (<a href="https://twistedmatrix.com/trac/ticket/5599">currently</a>)
-      detect the family of the adopted socket so you must ensure that
-      you pass the correct socket family argument.</li>
-      <li>The reactor will not shutdown the socket. It is the
-      responsibility of the process that created the socket to
-      shutdown and clean up the socket when it is no longer
-      needed.</li>
-    </ul>
-    </div>
 
     <h2>Connected UDP</h2>
 
