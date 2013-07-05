@@ -1259,6 +1259,36 @@ class FileSenderTestCase(unittest.TestCase):
                          str(failure.value))
 
 
+    def test_firedRightAway(self):
+        """
+        If we have a very fast consumer, we may reach the end of
+        C{beginFileTransfer} with the transfer is already done: the
+        C{FileSender} producer must be able to refer to the C{Deferred}
+        returned even though we're still in the middle of C{beginFileTransfer}.
+        """
+        source = BytesIO(b"Test content X")
+
+        class FastConsumer(proto_helpers.StringTransport):
+
+            def registerProducer(self, producer, streaming):
+                proto_helpers.StringTransport.registerProducer(
+                    self, producer, streaming)
+                self.producer.resumeProducing()
+
+            def write(self, data):
+                proto_helpers.StringTransport.write(self, data)
+                self.producer.resumeProducing()
+
+
+        consumer = FastConsumer()
+        sender = basic.FileSender()
+        d = sender.beginFileTransfer(source, consumer)
+        self.assertEqual(consumer.producer, None)
+
+        self.assertEqual(b"X", self.successResultOf(d))
+        self.assertEqual(b"Test content X", consumer.value())
+
+
 
 class FileSenderSendfileTestCase(ReactorBuilder):
     """

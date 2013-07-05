@@ -961,7 +961,7 @@ class FileSender:
         self.consumer = consumer
         self.transform = transform
 
-        deferred = defer.Deferred()
+        self.deferred = deferred = defer.Deferred()
 
         if self._trySendFile():
             self._producer = _FileSenderNoOp(self)
@@ -971,8 +971,8 @@ class FileSender:
         try:
             self.consumer.registerProducer(self, False)
         except:
+            self.deferred = None
             deferred.errback()
-        self.deferred = deferred
         return deferred
 
 
@@ -1156,5 +1156,5 @@ class _FileSenderWrite(object):
 
         if self.sender.transform:
             chunk = self.sender.transform(chunk)
-        self.sender.consumer.write(chunk)
         self.sender.lastSent = chunk[-1:]
+        self.sender.consumer.write(chunk)
