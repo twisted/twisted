@@ -261,13 +261,17 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         if self.offset == len(self.dataBuffer) and not self._tempDataLen:
             self.dataBuffer = b""
             self.offset = 0
-            # stop writing.
+            # Stop writing.
             self.stopWriting()
             # If I've got a producer who is supposed to supply me with data,
             if self.producer is not None and ((not self.streamingProducer)
                                               or self.producerPaused):
-                # tell them to supply some more.
+                # Tell them to supply some more.
                 self.producerPaused = 0
+                # Due to the stopWriting call above, the producer may need to
+                # call startWriting again (or reactor.addWriter). It'd be nice
+                # if the producer had a way to tell us that we shouldn't call
+                # stopWriting.
                 self.producer.resumeProducing()
             elif self.disconnecting:
                 # But if I was previously asked to let the connection die, do
