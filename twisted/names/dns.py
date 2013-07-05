@@ -216,8 +216,8 @@ def _nameToLabels(name):
     @return: A L{list} of labels ending with an empty label
         representing the DNS root zone.
     """
-    if name == b'.':
-        name = b''
+    if name in (b'', b'.'):
+        return [b'']
     labels = name.split(b'.')
     if labels[-1] != b'':
         labels.append(b'')
