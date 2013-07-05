@@ -5,6 +5,7 @@
 from __future__ import division, absolute_import
 
 import os, sys, errno, warnings
+import socket
 try:
     import pwd, grp
 except ImportError:
@@ -17,6 +18,7 @@ except ImportError:
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version
 from twisted.python.compat import _PY3, unicode
+
 if _PY3:
     UserDict = object
 else:
@@ -1066,6 +1068,85 @@ def runWithWarningsSuppressed(suppressedWarnings, f, *args, **kwargs):
 
 
 
+def _socketFamilyFromName(name):
+    """
+    Attempt to detect the the socket family based on the type and
+    length of a name provided by L{socket.socket.getsocketname}.
+
+    A string is assumed to be AF_UNIX.
+    A 2tuple containing and IPv4 address is AF_INET.
+    A 4tuple containing an IPv6 address is AF_INET6.
+
+    @type name: mixed
+    @param name: Any return value of L{socket.socket.getsocketname}.
+
+    @return: An C{int} corresponding to the detected socket family
+        constant or C{None} if the family could not be detected.
+    """
+    family = None
+    if isinstance(name, str):
+        family = socket.AF_UNIX
+    elif isinstance(name, tuple):
+        if len(name) == 4:
+            family = socket.AF_INET6
+        elif len(name) == 2:
+            ip, port = name
+            if isinstance(ip, str):
+                try:
+                    socket.inet_aton(ip)
+                except:
+                    pass
+                else:
+                    family = socket.AF_INET
+    return family
+
+
+
+def socketFamilyFromFd(fd):
+    """
+    Attempt to detect the socket family of a socket filedescriptor.
+
+    @type fd: C{int}
+    @param fd: A filedescriptor number.
+
+    @return: An C{int} corresponding to the detected socket family
+        constant or C{None} if the family could not be detected.
+
+    @see: U{http://utcc.utoronto.ca/~cks/space/blog/python/SocketFromFdMistake}
+    """
+    probe = socket.fromfd(fd, socket.AF_UNIX, socket.SOCK_RAW)
+    try:
+        name = probe.getsockname()
+    except socket.error:
+        return
+    finally:
+        probe.close()
+
+    return _socketFamilyFromName(name)
+
+
+
+def socketTypeFromFd(fd):
+    """
+    Attempt to detect the socket type of a socket filedescriptor.
+
+    @type fd: C{int}
+    @param fd: A filedescriptor number.
+
+    @return: An C{int} corresponding to the detected socket type
+        constant.
+
+    @see: U{http://utcc.utoronto.ca/~cks/space/blog/python/SocketFromFdMistake}
+    """
+    probe = socket.fromfd(fd, socket.AF_UNIX, socket.SOCK_RAW)
+    try:
+        socketType = probe.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
+    finally:
+        probe.close()
+    return socketType
+
+
+
 __all__ = [
     "uniquify", "padTo", "getPluginDirs", "addPluginDir", "sibpath",
     "getPassword", "println", "makeStatBar", "OrderedDict",
@@ -1075,6 +1156,7 @@ __all__ = [
     "nameToLabel", "uidFromString", "gidFromString", "runAsEffectiveUser",
     "untilConcludes",
     "runWithWarningsSuppressed",
+    "socketFamilyFromFd", "socketTypeFromFd",
     ]
 
 

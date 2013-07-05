@@ -10,6 +10,7 @@ from __future__ import division, absolute_import
 
 import os.path, sys
 import shutil, errno, warnings
+import socket
 try:
     import pwd, grp
 except ImportError:
@@ -19,6 +20,7 @@ from twisted.trial import unittest
 from twisted.trial.util import suppress as SUPPRESS
 
 from twisted.python.compat import _PY3
+from twisted.python.modules import namedAny
 from twisted.python import util
 from twisted.python.versions import Version
 from twisted.internet import reactor
@@ -203,7 +205,7 @@ class SwitchUIDTest(unittest.TestCase):
         self.assertEqual(self.mockos.actions, [])
         warnings = self.flushWarnings([util.switchUID])
         self.assertEqual(len(warnings), 1)
-        self.assertIn('tried to drop privileges and setuid %i' % uid, 
+        self.assertIn('tried to drop privileges and setuid %i' % uid,
                       warnings[0]['message'])
         self.assertIn('but uid is already %i' % uid, warnings[0]['message'])
 
@@ -219,7 +221,7 @@ class SwitchUIDTest(unittest.TestCase):
         self.assertEqual(self.mockos.seteuidCalls, [])
         warnings = self.flushWarnings([util.switchUID])
         self.assertEqual(len(warnings), 1)
-        self.assertIn('tried to drop privileges and seteuid %i' % euid, 
+        self.assertIn('tried to drop privileges and seteuid %i' % euid,
                       warnings[0]['message'])
         self.assertIn('but euid is already %i' % euid, warnings[0]['message'])
 
@@ -1140,6 +1142,7 @@ class FancyStrMixinTests(unittest.TestCase):
         self.assertEqual(str(Foo()), "<Foo first=1 2nd=2.1>")
 
 
+
     def test_fancybasename(self):
         """
         If C{fancybasename} is present, C{__str__} uses it instead of the class name.
@@ -1159,6 +1162,152 @@ class FancyStrMixinTests(unittest.TestCase):
             second = "hello"
         obj = Foo()
         self.assertEqual(str(obj), repr(obj))
+
+
+
+class SocketTestBuilder(object):
+    """
+    Create L{unittest.TestCase} instances for combinations of
+    L{socket} families and types.
+
+    @ivar socketFamilies: A L{list} of 2tuple(familyName, familyValue)
+        which will be used when building test cases from this builder.
+    @ivar socketTypes: A L{list} of 2tuple(typeName, typeValue) which
+        will be used when building test cases from this builder.
+    @ivar socketFamily: The C{int} socket family value which will be
+        used when creating sockets for this test.
+    @ivar socketType: The C{int} socket family value which will be
+        used when creating sockets for this test.
+    """
+    socketFamilies = []
+    for n in dir(socket):
+        if n in ('AF_INET', 'AF_INET6', 'AF_UNIX'):
+            socketFamilies.append(('socket.%s' % (n,), getattr(socket, n)))
+    del n
+
+    socketTypes = []
+    for n in dir(socket):
+        if n in ('SOCK_DGRAM', 'SOCK_STREAM'):
+            socketTypes.append(('socket.%s' % (n,), getattr(socket, n)))
+    del n
+
+
+    def socketFactory(self):
+        """
+        Create a socket.
+
+        @returns: a L{socket.socket} built using C{self.socketFamily}
+            and C{self.socketType}.
+
+        @raises: L{unittest.SkipTest} if the L{socket.socket} raises
+            L{socket.error} eg because the socketType is unsupported
+            or due to permissions errors.
+        """
+        try:
+            s = socket.socket(self.socketFamily, self.socketType)
+            self.addCleanup(s.close)
+        except socket.error as e:
+            raise unittest.SkipTest(
+                'Unable to create socket for test. Reason: socket.%r' % (e,))
+        return s
+
+
+    @classmethod
+    def makeTestCaseClasses(cls):
+        """
+        @return: A L{dict} whose keys are test case names and whose
+            values are L{unittest.TestCase} instances. These should be
+            added to the globals() dict so that they can be discovered
+            by trial.
+        """
+        classes = {}
+
+        for familyName, familyValue in cls.socketFamilies:
+            for typeName, typeValue in cls.socketTypes:
+                shortFamilyName = familyName.split(".")[-1]
+                shortTypeName = typeName.split(".")[-1]
+                name = (
+                    cls.__name__ + "."
+                    + shortFamilyName + "."
+                    + shortTypeName).replace(".", "_")
+                class testcase(cls, unittest.SynchronousTestCase):
+                    __module__ = cls.__module__
+                    socketFamily = familyValue
+                    socketFamilyName = familyName
+                    socketType = typeValue
+                    socketTypeName = typeName
+                testcase.__name__ = name
+                classes[testcase.__name__] = testcase
+        return classes
+
+
+
+class SocketFamilyFromFdSupportedTestBuilder(SocketTestBuilder):
+    """
+    Success tests for L{util.socketFamilyFromFd}.
+    """
+    def test_supported(self):
+        """
+        L{util.socketFamilyFromFd} accepts a socket filedescriptor and
+        returns an C{int} corresponding to one of the following socket
+        family constants 'AF_INET', 'AF_INET6', 'AF_UNIX'.
+
+        Repeated for all supported socketTypes.
+        """
+        fd = self.socketFactory().fileno()
+        self.assertEqual(util.socketFamilyFromFd(fd), self.socketFamily)
+
+
+
+globals().update(SocketFamilyFromFdSupportedTestBuilder.makeTestCaseClasses())
+
+
+
+class SocketFamilyFromFdUnsupportedTestBuilder(SocketTestBuilder):
+    """
+    Failure tests for L{util.socketFamilyFromFd}.
+    """
+    socketFamilies = []
+    for n in dir(socket):
+        if n.startswith('AF_') and n not in ('AF_INET', 'AF_INET6', 'AF_UNIX'):
+            socketFamilies.append(('socket.%s' % (n,), getattr(socket, n)))
+    del n
+
+    def test_unsupported(self):
+        """
+        L{util.socketFamilyFromFd} returns C{None} if it cannot detect
+        the socket family from the provided socket file descriptor.
+
+        Repeated for all supported socketTypes.
+        """
+        fd = self.socketFactory().fileno()
+        self.assertIs(util.socketFamilyFromFd(fd), None)
+
+
+
+globals().update(SocketFamilyFromFdUnsupportedTestBuilder.makeTestCaseClasses())
+
+
+
+class SocketTypeFromFdTestBuilder(SocketTestBuilder):
+    """
+    Success tests for L{util.socketTypeFromFd}.
+    """
+    def test_type(self):
+        """
+        L{util.socketTypeFromFd} returns a C{int} corresponding to the
+        socket type of the socket filedescriptor.
+
+        Repeated for all supported socketFamilies.
+        """
+        fd = self.socketFactory().fileno()
+        self.assertEqual(util.socketTypeFromFd(fd), self.socketType)
+
+
+
+globals().update(SocketTypeFromFdTestBuilder.makeTestCaseClasses())
+
+
 
 if _PY3:
     del (SwitchUIDTest, SearchUpwardsTest, RunAsEffectiveUserTests,
