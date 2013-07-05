@@ -991,7 +991,7 @@ class FileSender:
 
     def resumeProducing(self):
         """
-        Delegate producing to L{self._producer}.
+        Delegate producing to C{self._producer}.
         """
         self._producer.produce()
 
@@ -1016,7 +1016,10 @@ class FileSender:
 
     def _fire(self, value):
         """
-        Fire L{self.deferred} if still present.
+        Fire C{self.deferred} if still present.
+
+        @param value: The result passed to the L{Ðeferred}.
+        @type value: any.
         """
         if self.deferred is not None:
             deferred, self.deferred = self.deferred, None
