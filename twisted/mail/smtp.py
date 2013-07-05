@@ -1729,6 +1729,15 @@ class SMTPSender(SenderMixin, SMTPClient):
 class SMTPSenderFactory(protocol.ClientFactory):
     """
     Utility factory for sending emails easily.
+
+    @type currentProtocol: L{SMTPSender}
+    @ivar currentProtocol: The current running protocol returned by
+        L{buildProtocol}.
+
+    @type sendFinished: C{int}
+    @ivar sendFinished: When the value is set to 1, it means the message has
+        been sent or there has been an unrecoverable error or the sending has
+        been cancelled. The default value is 0.
     """
 
     domain = DNSNAME
