@@ -14,14 +14,12 @@ import errno, socket
 
 from zope.interface import verify
 
-from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.log import err
 from twisted.internet.interfaces import IReactorSocket
 from twisted.internet.error import UnsupportedAddressFamily
 from twisted.internet.protocol import DatagramProtocol, ServerFactory
 from twisted.internet.test.reactormixins import (
     ReactorBuilder, needsRunningReactor)
-from twisted.trial.unittest import SkipTest
 
 
 
