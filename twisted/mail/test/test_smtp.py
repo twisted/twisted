@@ -1722,10 +1722,9 @@ class SSLTestCase(unittest.TestCase):
 
 class AbortableStringTransport(StringTransport):
     """
-    A version of L{StringTransport} that supports C{abortConnection}. 
-
-    This should be replaced by a common version in #6530.
+    A version of L{StringTransport} that supports C{abortConnection}.
     """
+    # This should be replaced by a common version in #6530.
     aborting = False
 
 
