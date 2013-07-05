@@ -957,7 +957,7 @@ class SMTPSenderFactoryTestCase(unittest.TestCase):
             "source@address", "recipient@address",
             StringIO("message"), sentDeferred)
         connector = reactor.connectTCP("localhost", 25, clientFactory)
-        protocol = clientFactory.buildProtocol(None)
+        clientFactory.buildProtocol(None)
         clientFactory.clientConnectionFailed(connector,
                                              error.ConnectionDone("Bye."))
         self.assertEqual(clientFactory.currentProtocol, None)
@@ -1722,8 +1722,9 @@ class SSLTestCase(unittest.TestCase):
 
 class AbortableStringTransport(StringTransport):
     """
-    A version of C{StringTransport} that supports C{abortConnection}. This
-    should be replaced by a common version in #6530.
+    A version of L{StringTransport} that supports C{abortConnection}. 
+
+    This should be replaced by a common version in #6530.
     """
     aborting = False
 
