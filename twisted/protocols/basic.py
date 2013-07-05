@@ -1018,7 +1018,7 @@ class FileSender:
         """
         Fire C{self.deferred} if still present.
 
-        @param value: The result passed to the L{Ðeferred}.
+        @param value: The result passed to the L{Deferred}.
         @type value: any.
         """
         if self.deferred is not None:
