@@ -1,1 +1,0 @@
-Returning a Deferred from a callback that's directly returned from that Deferred will now produce a DeprecationWarning, to notify users of the buggy behavior.

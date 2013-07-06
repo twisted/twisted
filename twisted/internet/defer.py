@@ -27,13 +27,11 @@ from functools import wraps
 # Twisted imports
 from twisted.python.compat import _PY3, comparable, cmp
 from twisted.python import log, failure
-from twisted.python.deprecate import warnAboutFunction
 
 
 
 class AlreadyCalledError(Exception):
     pass
-
 
 
 class CancelledError(Exception):
@@ -575,13 +573,6 @@ class Deferred:
                     current._runningCallbacks = True
                     try:
                         current.result = callback(current.result, *args, **kw)
-                        if current.result is current:
-                            warnAboutFunction(
-                                callback,
-                                "Callback returned the Deferred "
-                                "it was attached to; this breaks the "
-                                "callback chain and will raise an "
-                                "exception in the future.")
                     finally:
                         current._runningCallbacks = False
                 except:
