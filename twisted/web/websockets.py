@@ -8,6 +8,8 @@
 """
 The WebSockets protocol (RFC 6455), provided as a resource which wraps a
 factory.
+
+@since: 13.2
 """
 
 __all__ = ["WebSocketsResource", "IWebSocketsProtocol", "IWebSocketsResource",
@@ -237,7 +239,7 @@ class IWebSocketsProtocol(IProtocol):
     """
     A protocol which understands the WebSockets interface.
 
-    @since: 13.1
+    @since: 13.2
     """
 
     def sendFrame(opcode, data, fin):
@@ -262,7 +264,7 @@ class IWebSocketsProtocol(IProtocol):
 @implementer(IWebSocketsProtocol)
 class WebSocketsProtocol(Protocol):
     """
-    @since: 13.1
+    @since: 13.2
     """
     _disconnecting = False
     _buffer = None
@@ -355,7 +357,7 @@ class WebSocketsProtocolWrapper(WebSocketsProtocol):
     A protocol wrapper which provides L{IWebSocketsProtocol} by making messages
     as data frames.
 
-    @since: 13.1
+    @since: 13.2
     """
 
     def __init__(self, wrappedProtocol, defaultOpcode=CONTROLS.TEXT):
@@ -427,7 +429,7 @@ class IWebSocketsResource(Interface):
     """
     A WebSockets resource.
 
-    @since: 13.1
+    @since: 13.2
     """
 
     def lookupProtocol(protocolNames, request):
@@ -467,7 +469,7 @@ class WebSocketsResource(object):
         C{lookupProtocol} implementation.
     @type factory: L{twisted.internet.protocol.Factory}
 
-    @since: 13.1
+    @since: 13.2
     """
     isLeaf = True
 
