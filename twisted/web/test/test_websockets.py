@@ -502,6 +502,9 @@ class WebSocketsProtocolWrapperTest(TestCase):
 
 
 class WebSocketsResourceTest(TestCase):
+    """
+    Tests for L{WebSocketsResource}.
+    """
 
     def setUp(self):
 

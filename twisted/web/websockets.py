@@ -103,6 +103,12 @@ def _makeFrame(buf, opcode, fin, mask=None):
     @type opcode: C{CONTROLS}
     @param opcode: Which type of frame to create.
 
+    @type fin: C{bool}
+    @param fin: Whether or not we're creating a final frame.
+
+    @type mask: C{int} or C{NoneType}
+    @param mask: If specified, the masking key to apply on the created frame.
+
     @rtype: C{str}
     @return: A packed frame.
     """
@@ -154,7 +160,7 @@ def _parseFrames(frameBuffer, needMask=True):
         header = ord(payload[start])
         if header & 0x70:
             # At least one of the reserved flags is set. Pork chop sandwiches!
-            raise _WSException("Reserved flag in frame (%d)" % header)
+            raise _WSException("Reserved flag in frame (%d)" % (header,))
 
         fin = header & 0x80
 
@@ -234,7 +240,6 @@ def _parseFrames(frameBuffer, needMask=True):
 
 
 
-
 class IWebSocketsProtocol(IProtocol):
     """
     A protocol which understands the WebSockets interface.
@@ -245,12 +250,30 @@ class IWebSocketsProtocol(IProtocol):
     def sendFrame(opcode, data, fin):
         """
         Send a frame.
+
+        @type opcode: C{CONTROLS}
+        @param opcode: The type of frame to send.
+
+        @type data: C{bytes}
+        @param data: The content of the frame to send.
+
+        @type fin: C{bool}
+        @param fin: Whether or not we're sending a final frame.
         """
 
 
     def frameReceived(opcode, data, fin):
         """
         Callback when a frame is received.
+
+        @type opcode: C{CONTROLS}
+        @param opcode: The type of frame received.
+
+        @type data: C{bytes}
+        @param data: The content of the frame received.
+
+        @type fin: C{bool}
+        @param fin: Whether or not the frame is final.
         """
 
 
@@ -274,7 +297,7 @@ class WebSocketsProtocol(Protocol):
         """
         Log the new connection and initialize the buffer list.
         """
-        log.msg("Opening connection with %s" % self.transport.getPeer())
+        log.msg("Opening connection with %s" % (self.transport.getPeer(),))
         self._buffer = []
 
 
@@ -306,6 +329,15 @@ class WebSocketsProtocol(Protocol):
     def frameReceived(self, opcode, data, fin):
         """
         Callback to implement.
+
+        @type opcode: C{CONTROLS}
+        @param opcode: The type of frame received.
+
+        @type data: C{bytes}
+        @param data: The content of the frame received.
+
+        @type fin: C{bool}
+        @param fin: Whether or not the frame is final.
         """
         raise NotImplementedError()
 
@@ -313,6 +345,15 @@ class WebSocketsProtocol(Protocol):
     def sendFrame(self, opcode, data, fin):
         """
         Build a frame packet and send it over the wire.
+
+        @type opcode: C{CONTROLS}
+        @param opcode: The type of frame to send.
+
+        @type data: C{bytes}
+        @param data: The content of the frame to send.
+
+        @type fin: C{bool}
+        @param fin: Whether or not we're sending a final frame.
         """
         packet = _makeFrame(data, opcode, fin)
         self.transport.write(packet)
@@ -321,6 +362,9 @@ class WebSocketsProtocol(Protocol):
     def dataReceived(self, data):
         """
         Append the data to the buffer list and parse the whole.
+
+        @type data: C{bytes}
+        @param data: The buffer received.
         """
         self._buffer.append(data)
         try:
@@ -369,6 +413,9 @@ class WebSocketsProtocolWrapper(WebSocketsProtocol):
         """
         Upon connection, provides the transport interface, and forwards ourself
         as the transport to C{self.wrappedProtocol}.
+
+        @type transport: L{twisted.internet.interfaces.ITransport} provider.
+        @param transport: The transport to use for the protocol.
         """
         directlyProvides(self, providedBy(transport))
         WebSocketsProtocol.makeConnection(self, transport)
@@ -386,6 +433,9 @@ class WebSocketsProtocolWrapper(WebSocketsProtocol):
     def write(self, data):
         """
         Write to the websocket protocol, transforming C{data} in a frame.
+
+        @type data: C{bytes}
+        @param data: Data buffer used for the frame content.
         """
         self.sendFrame(self.defaultOpcode, data, True)
 
@@ -393,6 +443,9 @@ class WebSocketsProtocolWrapper(WebSocketsProtocol):
     def writeSequence(self, data):
         """
         Send all chunks from C{data} using C{write}.
+
+        @type data: C{list} of C{bytes}
+        @param data: Data buffers used for the frames content.
         """
         for chunk in data:
             self.write(chunk)
@@ -407,8 +460,17 @@ class WebSocketsProtocolWrapper(WebSocketsProtocol):
 
     def frameReceived(self, opcode, data, fin):
         """
-        FOr each frame received, accumulate the data (ignoring the opcode), and
+        For each frame received, accumulate the data (ignoring the opcode), and
         forwarding the messages if C{fin} is set.
+
+        @type opcode: C{CONTROLS}
+        @param opcode: The type of frame received.
+
+        @type data: C{bytes}
+        @param data: The content of the frame received.
+
+        @type fin: C{bool}
+        @param fin: Whether or not the frame is final.
         """
         self._messages.append(data)
         if fin:
@@ -420,6 +482,10 @@ class WebSocketsProtocolWrapper(WebSocketsProtocol):
     def connectionLost(self, reason):
         """
         Forward C{connectionLost} to C{self.wrappedProtocol}.
+
+        @type reason: L{twisted.python.failure.Failure}
+        @param reason: A failure instance indicating the reason why the
+            connection was lost.
         """
         self.wrappedProtocol.connectionLost(reason)
 
@@ -482,6 +548,12 @@ class WebSocketsResource(object):
         Reject attempts to retrieve a child resource.  All path segments beyond
         the one which refers to this resource are handled by the WebSocket
         connection.
+
+        @type name: C{bytes}
+        @param name: A single path component from a requested URL.
+
+        @type request: L{twisted.web.iweb.IRequest} provider
+        @param request: The request received.
         """
         raise RuntimeError(
             "Cannot get IResource children from WebSocketsResource")
@@ -492,6 +564,12 @@ class WebSocketsResource(object):
         Reject attempts to add a child resource to this resource.  The
         WebSocket connection handles all path segments beneath this resource,
         so L{IResource} children can never be found.
+
+        @type path: C{bytes}
+        @param path: A single path component.
+
+        @type child: L{IResource} provider
+        @param child: A resource to put underneat this one.
         """
         raise RuntimeError(
             "Cannot put IResource children under WebSocketsResource")
