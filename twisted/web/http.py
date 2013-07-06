@@ -933,12 +933,14 @@ class Request:
                 intToBytes(self.code) + b" " +
                 networkString(self.code_message) + b"\r\n")
 
-            # if we don't have a content length, we send data in
+            # If we don't have a content length, we send data in
             # chunked mode, so that we can support pipelining in
-            # persistent connections.
+            # persistent connections. We also check that we don't have a status
+            # code which doesn't have a body, or that we're switching protocol.
             if ((version == b"HTTP/1.1") and
-                (self.responseHeaders.getRawHeaders(b'content-length') is None) and
-                self.method != b"HEAD" and self.code not in NO_BODY_CODES):
+                self.responseHeaders.getRawHeaders(b'content-length') is None
+                and self.method != b"HEAD" and
+                self.code not in NO_BODY_CODES + (SWITCHING,)):
                 l.append(b'Transfer-Encoding: chunked\r\n')
                 self.chunked = 1
 

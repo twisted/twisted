@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>WebSockets Servers in Twisted</title>
+  </head>
+
+  <body>
+<h1>WebSockets Servers in Twisted</h1>
+
+<h2>Introduction</h2>
+
+<p>WebSockets is a protocol for real-time communication between Web browsers
+and Web servers. Twisted Web includes a <code>Resource</code>, <code
+class="API">twisted.web.websockets.WebSocketsResource</code>, which can be
+used to provide WebSockets services.</p>
+
+<h2>Serving WebSockets</h2>
+
+<p>Twisted makes WebSockets easy. <code>WebSocketsResource</code> wraps a
+factory, exposing that factory as a resource in a Web server, and can be used
+anywhere a normal <code>Resource</code> can be used.</p>
+
+<p>The following example creates a <code>Site</code> which responds to all
+requests to /ws with a WebSockets connection, which serves an
+<code>EchoProtocol</code>.</p>
+
+<a href="listings/websockets_echo.tac" class="py-listing">websockets_echo.tac</a>
+
+<p>After we run this command, we can open http://localhost:7080/ with a browser, the <code>Site</code> serving the following HTML:</p>
+
+<a href="listings/websockets_echo.html" class="html-listing">websockets_echo.html</a>
+
+<p>The example sends a message and closes the connection on response of the echo. Note that you'll need a modern browser supporting RFC 6455.</p>
+
+</body>
+</html>
