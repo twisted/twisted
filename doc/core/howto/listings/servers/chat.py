@@ -13,7 +13,7 @@ class Chat(LineReceiver):
         self.sendLine("What's your name?")
 
     def connectionLost(self, reason):
-        if self.users.has_key(self.name):
+        if self.name in self.users:
             del self.users[self.name]
 
     def lineReceived(self, line):
@@ -23,7 +23,7 @@ class Chat(LineReceiver):
             self.handle_CHAT(line)
 
     def handle_GETNAME(self, name):
-        if self.users.has_key(name):
+        if name in self.users:
             self.sendLine("Name taken, please choose another.")
             return
         self.sendLine("Welcome, %s!" % (name,))
