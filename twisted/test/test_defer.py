@@ -913,9 +913,9 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d.addCallback(circularCallback)
         d.callback("foo")
 
-        warnings = self.flushWarnings([circularCallback])
-        self.assertEqual(len(warnings), 1)
-        warning = warnings[0]
+        circular_warnings = self.flushWarnings([circularCallback])
+        self.assertEqual(len(circular_warnings), 1)
+        warning = circular_warnings[0]
         self.assertEqual(warning['category'], DeprecationWarning)
         pattern = "Callback returned the Deferred it was attached to"
         self.assertTrue(
