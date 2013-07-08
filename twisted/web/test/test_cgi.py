@@ -238,7 +238,6 @@ class CGIScriptTests(unittest.TestCase):
     Tests for L{twcgi.CGIScript}.
     """
 
-
     def test_pathInfo(self):
         """
         L{twcgi.CGIScript.render} sets the process environment I{PATH_INFO} from
