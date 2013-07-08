@@ -213,6 +213,7 @@ class CGI(unittest.TestCase):
     def _testReadAllInput_1(self, res):
         self.assertEqual(res, "readallinput ok%s" % os.linesep)
 
+
     def test_useReactorArgument(self):
         """
         L{twcgi.FilteredScript.runProcess} uses the reactor passed as an
@@ -223,12 +224,13 @@ class CGI(unittest.TestCase):
             def spawnProcess(self, *args, **kwargs):
                 self.called = True
 
-        _fake_reactor = FakeReactor()
+        fakeReactor = FakeReactor()
         request = DummyRequest(['a', 'b'])
-        resource = twcgi.FilteredScript("dummy-file", reactor=_fake_reactor)
+        resource = twcgi.FilteredScript("dummy-file", reactor=fakeReactor)
         _render(resource, request)
 
-        self.assertTrue(_fake_reactor.called)
+        self.assertTrue(fakeReactor.called)
+
 
 
 class CGIScriptTests(unittest.TestCase):
@@ -254,6 +256,7 @@ class CGIScriptTests(unittest.TestCase):
         self.assertIn("PATH_INFO", _reactor.process_env)
         self.assertEqual(_reactor.process_env["PATH_INFO"],
                          "/a/b")
+
 
 
 class CGIDirectoryTests(unittest.TestCase):

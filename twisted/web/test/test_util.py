@@ -424,11 +424,11 @@ class DeferredResourceTests(TestCase):
         self.assertEqual(rendered, [result])
 
 
+
 class HtmlIndentTests(TestCase):
     """
     Tests for L{htmlIndent}
     """
-
 
     def test_simpleInput(self):
         """
