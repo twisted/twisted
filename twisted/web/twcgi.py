@@ -13,7 +13,7 @@ import urllib
 
 # Twisted Imports
 from twisted.web import http
-from twisted.internet import reactor, protocol
+from twisted.internet import protocol
 from twisted.spread import pb
 from twisted.python import log, filepath
 from twisted.web import resource, server, static
@@ -50,14 +50,17 @@ class CGIScript(resource.Resource):
     IPC with an external process with an unpleasant protocol.
     """
     isLeaf = 1
-    def __init__(self, filename, registry=None, _reactor=None):
+    def __init__(self, filename, registry=None, reactor=None):
         """
         Initialize, with the name of a CGI script file.
         """
         self.filename = filename
-        if _reactor is None:
-            _reactor = reactor
-        self._reactor = _reactor
+        if reactor is None:
+            # This installs a default reactor, if None was installed before.
+            # We do a late import here, so that importing the current module
+            # won't directly trigger installing a default reactor.
+            from twisted.internet import reactor
+        self._reactor = reactor
 
 
     def render(self, request):
@@ -101,17 +104,16 @@ class CGIScript(resource.Resource):
             request.content.seek(0,0)
             env['CONTENT_LENGTH'] = str(length)
 
-        try:
-            qindex = request.uri.index('?')
-        except ValueError: # '?' not found
-            env['QUERY_STRING'] = ''
-            qargs = []
-        else:
+        qindex = request.uri.find('?')
+        if qindex != -1:
             qs = env['QUERY_STRING'] = request.uri[qindex+1:]
             if '=' in qs:
                 qargs = []
             else:
                 qargs = [urllib.unquote(x) for x in qs.split('+')]
+        else:
+            env['QUERY_STRING'] = ''
+            qargs = []
 
         # Propogate HTTP headers
         for title, header in request.getAllHeaders().items():
@@ -188,9 +190,9 @@ class FilteredScript(CGIScript):
             will get spawned.
         """
         p = CGIProcessProtocol(request)
-        reactor.spawnProcess(p, self.filter,
-                             [self.filter, self.filename] + qargs, env,
-                             os.path.dirname(self.filename))
+        self._reactor.spawnProcess(p, self.filter,
+                                   [self.filter, self.filename] + qargs, env,
+                                   os.path.dirname(self.filename))
 
 
 
