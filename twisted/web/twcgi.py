@@ -104,16 +104,17 @@ class CGIScript(resource.Resource):
             request.content.seek(0,0)
             env['CONTENT_LENGTH'] = str(length)
 
-        qindex = request.uri.find('?')
-        if qindex != -1:
+        try:
+            qindex = request.uri.index('?')
+        except ValueError: # '?' not found
+            env['QUERY_STRING'] = ''
+            qargs = []
+        else:
             qs = env['QUERY_STRING'] = request.uri[qindex+1:]
             if '=' in qs:
                 qargs = []
             else:
                 qargs = [urllib.unquote(x) for x in qs.split('+')]
-        else:
-            env['QUERY_STRING'] = ''
-            qargs = []
 
         # Propogate HTTP headers
         for title, header in request.getAllHeaders().items():
