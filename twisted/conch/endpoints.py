@@ -649,11 +649,15 @@ class SSHCommandClientEndpoint(object):
 
 
 
-class _NoFile(object):
+class _ReadFile(object):
     """
     A weakly file-like object which can be used with L{KnownHostsFile} to
     respond in the negative to all prompts for decisions.
     """
+    def __init__(self, contents):
+        self._contents = contents
+
+
     def write(self, data):
         """
         No-op.
@@ -664,14 +668,15 @@ class _NoFile(object):
 
     def readline(self, count=-1):
         """
-        Always give back the byte string that L{KnownHostsFile} recognizes as
-        rejecting some option (C{b"no"}).
+        Always give back the byte string that this L{_ReadFile} was initialized
+        with.
 
         @param count: ignored
-        @return: The negative response.
+
+        @return: A fixed byte-string.
         @rtype: L{bytes}
         """
-        return b"no"
+        return self._contents
 
 
     def close(self):
@@ -690,11 +695,11 @@ class _NewConnectionHelper(object):
     _KNOWN_HOSTS = _KNOWN_HOSTS
 
     def __init__(self, reactor, hostname, port, command, username, keys,
-                 password, agentEndpoint, knownHosts, ui, tty=b"/dev/tty"):
+                 password, agentEndpoint, knownHosts, ui,
+                 tty=FilePath(b"/dev/tty")):
         """
-        @param tty: The filename of the tty device to use in case C{ui} is
-            C{None}.
-        @type tty: L{bytes}
+        @param tty: The path of the tty device to use in case C{ui} is C{None}.
+        @type tty: L{FilePath}
 
         @see: L{SSHCommandClientEndpoint.newConnection}
         """
@@ -724,9 +729,11 @@ class _NewConnectionHelper(object):
         For use as the opener argument to L{ConsoleUI}.
         """
         try:
-            return open(self.tty, "r+b")
+            return self.tty.open("r+")
         except:
-            return _NoFile()
+            # Give back a file-like object from which can be read a byte string
+            # that KnownHostsFile recognizes as rejecting some option (b"no").
+            return _ReadFile(b"no")
 
 
     @classmethod

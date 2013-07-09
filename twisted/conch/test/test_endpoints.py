@@ -7,6 +7,7 @@ Tests for L{twisted.conch.endpoints}.
 
 import os.path
 from struct import pack
+from errno import ENOSYS
 
 from zope.interface.verify import verifyObject, verifyClass
 from zope.interface import implementer
@@ -53,7 +54,7 @@ else:
 
     from twisted.conch.endpoints import (
         _ISSHConnectionCreator, AuthenticationFailed, SSHCommandAddress,
-        SSHCommandClientEndpoint, _NewConnectionHelper,
+        SSHCommandClientEndpoint, _ReadFile, _NewConnectionHelper,
         _ExistingConnectionHelper)
 
     from twisted.conch.ssh.transport import SSHClientTransport
@@ -1277,6 +1278,18 @@ class ExistingConnectionHelperTests(TestCase):
 
 
 
+class _PTYPath(object):
+    def __init__(self, contents):
+        self.contents = contents
+
+
+    def open(self, mode):
+        if mode == "r+":
+            return _ReadFile(self.contents)
+        raise OSError(ENOSYS, "Function not implemented")
+
+
+
 class NewConnectionHelperTests(TestCase):
     """
     Tests for L{_NewConnectionHelper}.
@@ -1351,11 +1364,9 @@ class NewConnectionHelperTests(TestCase):
         and /dev/tty is available, the L{ConsoleUI} used is associated with
         /dev/tty.
         """
-        tty = FilePath(self.mktemp())
-        tty.setContent(b"yes")
+        tty = _PTYPath(b"yes")
         helper = _NewConnectionHelper(
-            None, None, None, None, None, None, None, None, None, None,
-            tty.path)
+            None, None, None, None, None, None, None, None, None, None, tty)
         result = self.successResultOf(helper.ui.prompt(b"does this work?"))
         self.assertTrue(result)
 
@@ -1368,8 +1379,7 @@ class NewConnectionHelperTests(TestCase):
         """
         tty = FilePath(self.mktemp())
         helper = _NewConnectionHelper(
-            None, None, None, None, None, None, None, None, None, None,
-            tty.path)
+            None, None, None, None, None, None, None, None, None, None, tty)
         result = self.successResultOf(helper.ui.prompt(b"did this break?"))
         self.assertFalse(result)
 
@@ -1381,7 +1391,7 @@ class NewConnectionHelperTests(TestCase):
         """
         helper = _NewConnectionHelper(
             None, None, None, None, None, None, None, None, None, None)
-        self.assertEqual(b"/dev/tty", helper.tty)
+        self.assertEqual(FilePath(b"/dev/tty"), helper.tty)
 
 
     def test_cleanupConnectionNotImmediately(self):
