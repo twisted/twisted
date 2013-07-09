@@ -1279,11 +1279,27 @@ class ExistingConnectionHelperTests(TestCase):
 
 
 class _PTYPath(object):
+    """
+    A L{FilePath}-like object which can be opened to create a L{_ReadFile} with
+    certain contents.
+    """
     def __init__(self, contents):
+        """
+        @param contents: L{bytes} which will be the contents of the
+            L{_ReadFile} this path can open.
+        """
         self.contents = contents
 
 
     def open(self, mode):
+        """
+        If the mode is r+, return a L{_ReadFile} with the contents given to
+        this path's initializer.
+
+        @raise OSError: If the mode is unsupported.
+
+        @return: A L{_ReadFile} instance
+        """
         if mode == "r+":
             return _ReadFile(self.contents)
         raise OSError(ENOSYS, "Function not implemented")

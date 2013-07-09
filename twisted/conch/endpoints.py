@@ -655,6 +655,10 @@ class _ReadFile(object):
     respond in the negative to all prompts for decisions.
     """
     def __init__(self, contents):
+        """
+        @param contents: L{bytes} which will be returned from every C{readline}
+            call.
+        """
         self._contents = contents
 
 
