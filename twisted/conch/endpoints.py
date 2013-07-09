@@ -116,7 +116,8 @@ class _CommandChannel(SSHChannel):
     """
     name = b'session'
 
-    def __init__(self, creator, command, protocolFactory, commandConnected):
+    def __init__(self, creator, command, protocolFactory, commandConnected,
+                 requestType):
         """
         @param creator: The L{_ISSHConnectionCreator} provider which was used
             to get the connection which this channel exists on.
@@ -132,6 +133,10 @@ class _CommandChannel(SSHChannel):
             of the command has failed or that it has succeeded and the command
             is now running.
         @type commandConnected: L{Deferred}
+
+        @param requestType: The initial request made, one of I{exec} or
+            I{subsystem}.
+        @type requestType: C{bytes}
         """
         SSHChannel.__init__(self)
         self._creator = creator
@@ -139,6 +144,7 @@ class _CommandChannel(SSHChannel):
         self._protocolFactory = protocolFactory
         self._commandConnected = commandConnected
         self._reason = None
+        self._requestType = requestType
 
 
     def openFailed(self, reason):
@@ -155,7 +161,7 @@ class _CommandChannel(SSHChannel):
         issue an C{"exec"} request to run the command.
         """
         command = self.conn.sendRequest(
-            self, 'exec', NS(self._command), wantReply=True)
+            self, self._requestType, NS(self._command), wantReply=True)
         command.addCallbacks(self._execSuccess, self._execFailure)
 
 
@@ -479,23 +485,11 @@ class _CommandTransport(SSHClientTransport):
         self.connectionReady.errback(reason)
 
 
-
-@implementer(IStreamClientEndpoint)
-class SSHCommandClientEndpoint(object):
+class _SSHClientEndpoint(object):
     """
-    L{SSHCommandClientEndpoint} exposes the command-executing functionality of
-    SSH servers.
-
-    L{SSHCommandClientEndpoint} can set up a new SSH connection, authenticate
-    it in any one of a number of different ways (keys, passwords, agents),
-    launch a command over that connection and then associate its input and
-    output with a protocol.
-
-    It can also re-use an existing, already-authenticated SSH connection
-    (perhaps one which already has some SSH channels being used for other
-    purposes).  In this case it creates a new SSH channel to use to execute the
-    command.  Notably this means it supports multiplexing several different
-    command invocations over a single SSH connection.
+    Base class for SSH client endpoints. It provides methods for creating
+    connections, depending on the C{_requestType} attribute to be specified by
+    subclasses.
     """
 
     def __init__(self, creator, command):
@@ -507,9 +501,9 @@ class SSHCommandClientEndpoint(object):
 
         @param command: The command line to execute on the SSH server.  This
             byte string is interpreted by a shell on the SSH server, so it may
-            have a value like C{"ls /"}.  Take care when trying to run a command
-            like C{"/Volumes/My Stuff/a-program"} - spaces (and other special
-            bytes) may require escaping.
+            have a value like C{"ls /"}.  Take care when trying to run a
+            command like C{"/Volumes/My Stuff/a-program"} - spaces (and other
+            special bytes) may require escaping.
         @type command: L{bytes}
 
         """
@@ -578,10 +572,10 @@ class SSHCommandClientEndpoint(object):
     @classmethod
     def existingConnection(cls, connection, command):
         """
-        Create and return a new endpoint which will try to open a new channel on
-        an existing SSH connection and run a command over it.  It will B{not}
-        close the connection if there is a problem executing the command or
-        after the command finishes.
+        Create and return a new endpoint which will try to open a new channel
+        on an existing SSH connection and run a command over it.  It will
+        B{not} close the connection if there is a problem executing the command
+        or after the command finishes.
 
         @param connection: An existing connection to an SSH server.
         @type connection: L{SSHConnection}
@@ -632,18 +626,58 @@ class SSHCommandClientEndpoint(object):
         @return: See L{SSHCommandClientEndpoint.connect}'s return value.
         """
         commandConnected = Deferred()
+
         def disconnectOnFailure(passthrough):
             # Close the connection immediately in case of cancellation, since
             # that implies user wants it gone immediately (e.g. a timeout):
-            immediate =  passthrough.check(CancelledError)
+            immediate = passthrough.check(CancelledError)
             self._creator.cleanupConnection(connection, immediate)
             return passthrough
         commandConnected.addErrback(disconnectOnFailure)
 
         channel = _CommandChannel(
-            self._creator, self._command, protocolFactory, commandConnected)
+            self._creator, self._command, protocolFactory, commandConnected,
+            self._requestType)
         connection.openChannel(channel)
         return commandConnected
+
+
+
+@implementer(IStreamClientEndpoint)
+class SSHCommandClientEndpoint(_SSHClientEndpoint):
+    """
+    L{SSHCommandClientEndpoint} exposes the command-executing functionality of
+    SSH servers.
+
+    L{SSHCommandClientEndpoint} can set up a new SSH connection, authenticate
+    it in any one of a number of different ways (keys, passwords, agents),
+    launch a command over that connection and then associate its input and
+    output with a protocol.
+
+    It can also re-use an existing, already-authenticated SSH connection
+    (perhaps one which already has some SSH channels being used for other
+    purposes).  In this case it creates a new SSH channel to use to execute the
+    command.  Notably this means it supports multiplexing several different
+    command invocations over a single SSH connection.
+    """
+    _requestType = b'exec'
+
+
+
+@implementer(IStreamClientEndpoint)
+class SSHSubsystemClientEndpoint(_SSHClientEndpoint):
+    """
+    L{SSHSubsystemClientEndpoint} exposes the subsystem-running functionality
+    of SSH servers.
+
+    L{SSHCommandClientEndpoint} can set up a new SSH connection, authenticate
+    it in any one of a number of different ways (keys, passwords, agents),
+    run a subsystem over that connection and then associate its input and
+    output with a protocol.
+
+    It can also re-use an existing, already-authenticated SSH connection.
+    """
+    _requestType = b'subsystem'
 
 
 
