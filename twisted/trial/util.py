@@ -23,11 +23,11 @@ from __future__ import division, absolute_import, print_function
 import sys
 from random import randrange
 
-from twisted.python.compat import _PY3
 from twisted.internet import defer, utils, interfaces
 from twisted.python.failure import Failure
 from twisted.python import deprecate, versions
 from twisted.python.filepath import FilePath
+from twisted.python.lockfile import FilesystemLock
 
 __all__ = [
     'DEFAULT_TIMEOUT_DURATION',
@@ -157,7 +157,7 @@ class _Janitor(object):
         reactor = self._getReactor()
         if interfaces.IReactorThreads.providedBy(reactor):
             if reactor.threadpool is not None:
-                # Stop the threadpool now so that a new one is created. 
+                # Stop the threadpool now so that a new one is created.
                 # This improves test isolation somewhat (although this is a
                 # post class cleanup hook, so it's only isolating classes
                 # from each other, not methods from each other).
@@ -379,7 +379,6 @@ def _unusedTestDirectory(base):
         same name until the lock is released, either explicitly or by this
         process exiting.
     """
-    from twisted.python.lockfile import FilesystemLock
     counter = 0
     while True:
         if counter:
@@ -405,7 +404,3 @@ def _unusedTestDirectory(base):
                 counter += 1
             else:
                 raise _WorkingDirectoryBusy()
-
-# Remove this, and move lockfile import, after ticket #5960 is resolved:
-if _PY3:
-    del _unusedTestDirectory
