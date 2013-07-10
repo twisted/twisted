@@ -28,7 +28,7 @@ from twisted.conch.ssh.transport import SSHClientTransport
 from twisted.conch.ssh.connection import SSHConnection
 from twisted.conch.ssh.userauth import SSHUserAuthClient
 from twisted.conch.ssh.channel import SSHChannel
-from twisted.conch.client.knownhosts import KnownHostsFile
+from twisted.conch.client.knownhosts import ConsoleUI, KnownHostsFile
 from twisted.conch.client.agent import SSHAgentClient
 from twisted.conch.client.default import _KNOWN_HOSTS
 
@@ -563,8 +563,10 @@ class SSHCommandClientEndpoint(object):
         @type knownHosts: L{KnownHostsFile}
 
         @param ui: An object for interacting with users to make decisions about
-            whether to accept the server host keys.
-        @type ui: L{ConsoleUI}
+            whether to accept the server host keys.  If C{None}, a L{ConsoleUI}
+            connected to /dev/tty will be used; if /dev/tty is unavailable, an
+            object which answers C{b"no"} to all prompts will be used.
+        @type ui: L{NoneType} or L{ConsoleUI}
 
         @return: A new instance of C{cls} (probably
             L{SSHCommandClientEndpoint}).
@@ -647,6 +649,47 @@ class SSHCommandClientEndpoint(object):
 
 
 
+class _ReadFile(object):
+    """
+    A weakly file-like object which can be used with L{KnownHostsFile} to
+    respond in the negative to all prompts for decisions.
+    """
+    def __init__(self, contents):
+        """
+        @param contents: L{bytes} which will be returned from every C{readline}
+            call.
+        """
+        self._contents = contents
+
+
+    def write(self, data):
+        """
+        No-op.
+
+        @param data: ignored
+        """
+
+
+    def readline(self, count=-1):
+        """
+        Always give back the byte string that this L{_ReadFile} was initialized
+        with.
+
+        @param count: ignored
+
+        @return: A fixed byte-string.
+        @rtype: L{bytes}
+        """
+        return self._contents
+
+
+    def close(self):
+        """
+        No-op.
+        """
+
+
+
 @implementer(_ISSHConnectionCreator)
 class _NewConnectionHelper(object):
     """
@@ -656,7 +699,14 @@ class _NewConnectionHelper(object):
     _KNOWN_HOSTS = _KNOWN_HOSTS
 
     def __init__(self, reactor, hostname, port, command, username, keys,
-                 password, agentEndpoint, knownHosts, ui):
+                 password, agentEndpoint, knownHosts, ui,
+                 tty=FilePath(b"/dev/tty")):
+        """
+        @param tty: The path of the tty device to use in case C{ui} is C{None}.
+        @type tty: L{FilePath}
+
+        @see: L{SSHCommandClientEndpoint.newConnection}
+        """
         self.reactor = reactor
         self.hostname = hostname
         self.port = port
@@ -668,7 +718,26 @@ class _NewConnectionHelper(object):
         if knownHosts is None:
             knownHosts = self._knownHosts()
         self.knownHosts = knownHosts
+
+        if ui is None:
+            ui = ConsoleUI(self._opener)
         self.ui = ui
+        self.tty = tty
+
+
+    def _opener(self):
+        """
+        Open the tty if possible, otherwise give back a file-like object from
+        which C{b"no"} can be read.
+
+        For use as the opener argument to L{ConsoleUI}.
+        """
+        try:
+            return self.tty.open("r+")
+        except:
+            # Give back a file-like object from which can be read a byte string
+            # that KnownHostsFile recognizes as rejecting some option (b"no").
+            return _ReadFile(b"no")
 
 
     @classmethod

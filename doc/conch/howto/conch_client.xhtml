@@ -84,6 +84,52 @@ second version of this protocol.</p>
     </p>
 
     <p>
+      Several of the options accepted by <code>SSHCommandClientEndpoint.newConnection</code> should be easy to understand.
+      The endpoint takes a reactor which it uses to do any and all I/O it needs to do.
+      It also takes a command which it executes on the remote server once the SSH connection is established and authenticated; this command is a single string, perhaps including spaces or other special shell symbols, and is interpreted by a shell on the server.
+      It takes a username with which it identifies itself to the server for authentication purposes.
+      It takes an optional password argument which will also be used for authentication - if the server supports password authentication (prefer keys instead where possible, see below).
+      It takes a host (either a name or an IP address) and a port number, defining where to connect.
+    </p>
+
+    <p>
+      Some of the other options may bear further explanation.
+    </p>
+
+    <p>
+      The <code>keys</code> argument gives any SSH <code class="API" base="twisted.conch.ssh.keys">Key</code> objects which may be useful for authentication.
+      These keys are available to the endpoint for authentication, but only keys that the server indicates are useful will actually be used.
+      This argument is optional.
+      If key authentication against the server is either unnecessary or undesired, it may be omitted entirely.
+    </p>
+
+    <p>
+      The <code>agentEndpoint</code> argument gives the <code>SSHCommandClientEndpoint</code> an opportunity to connect to an SSH authentication agent.
+      The agent may already be loaded with keys, or may have some other way to authenticate a connection.
+      Using the agent can mean the process actually establishing the SSH connection doesn't need to load any authentication material (passwords or keys) itself (often convenient in case keys are encrypted and potentially more secure, since only the agent process ever actually holds the secrets).
+      The value for this argument is another <code>IStreamClientEndpoint</code>.
+      Often in a typical *NIX desktop environment, the <em>SSH_AUTH_SOCK</em> environment variable will give the location of a AF_UNIX socket.
+      This explains the value <code>echoclient_ssh.py</code> assigns this parameter when <em>--no-agent</em> is not given.
+    </p>
+
+    <p>
+      The <code>knownHosts</code> argument accepts a <code class="API" base="twisted.conch.client.knownhosts">KnownHostsFile</code> instance and controls how server keys are checked and stored.
+      This object has the opportunity to reject server keys if they differ from expectations.
+      It can also save server keys when they are first observed.
+    </p>
+
+    <p>
+      Finally, there is one option that is not demonstrated in the example - the <code>ui</code> argument.
+      This argument is closely related to the <code>knownHosts</code> argument described above.
+      <code>KnownHostsFile</code> may require user-input under certain circumstances - for example, to ask if it should accept a server key the first time it is observed.
+      The <code>ui</code> object is how this user-input is obtained.
+      By default, a <code class="API" base="twisted.conch.client.knownhosts">ConsoleUI</code> instance associated with <em>/dev/tty</em> will be used.
+      This gives about the same behavior as is seen in a standard command-line ssh client.
+      See <code class="API" base="twisted.conch.endpoints">SSHCommandClientEndpoint.newConnection</code> for details about how edge cases are handled for this default value.
+      For use of <code>SSHCommandClientEndpoint</code> that is intended to be completely autonomous, applications will probably want to specify a custom <code>ui</code> object which can make the necessary decisions without user-input.
+    </p>
+
+    <p>
       It is also possible to run commands (one or more) over an
       already-established connection.  This is done using the alternate
       constructor <code>SSHCommandClientEndpoint.existingConnection</code>.

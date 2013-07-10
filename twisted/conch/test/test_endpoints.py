@@ -7,6 +7,7 @@ Tests for L{twisted.conch.endpoints}.
 
 import os.path
 from struct import pack
+from errno import ENOSYS
 
 from zope.interface.verify import verifyObject, verifyClass
 from zope.interface import implementer
@@ -44,7 +45,7 @@ else:
     from twisted.conch.ssh.keys import Key
     from twisted.conch.ssh.channel import SSHChannel
     from twisted.conch.ssh.agent import SSHAgentServer
-    from twisted.conch.client.knownhosts import KnownHostsFile
+    from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
     from twisted.conch.checkers import SSHPublicKeyDatabase
     from twisted.conch.avatar import ConchUser
 
@@ -53,7 +54,7 @@ else:
 
     from twisted.conch.endpoints import (
         _ISSHConnectionCreator, AuthenticationFailed, SSHCommandAddress,
-        SSHCommandClientEndpoint, _NewConnectionHelper,
+        SSHCommandClientEndpoint, _ReadFile, _NewConnectionHelper,
         _ExistingConnectionHelper)
 
     from twisted.conch.ssh.transport import SSHClientTransport
@@ -1277,6 +1278,34 @@ class ExistingConnectionHelperTests(TestCase):
 
 
 
+class _PTYPath(object):
+    """
+    A L{FilePath}-like object which can be opened to create a L{_ReadFile} with
+    certain contents.
+    """
+    def __init__(self, contents):
+        """
+        @param contents: L{bytes} which will be the contents of the
+            L{_ReadFile} this path can open.
+        """
+        self.contents = contents
+
+
+    def open(self, mode):
+        """
+        If the mode is r+, return a L{_ReadFile} with the contents given to
+        this path's initializer.
+
+        @raise OSError: If the mode is unsupported.
+
+        @return: A L{_ReadFile} instance
+        """
+        if mode == "r+":
+            return _ReadFile(self.contents)
+        raise OSError(ENOSYS, "Function not implemented")
+
+
+
 class NewConnectionHelperTests(TestCase):
     """
     Tests for L{_NewConnectionHelper}.
@@ -1333,6 +1362,52 @@ class NewConnectionHelperTests(TestCase):
 
         loaded = _NewConnectionHelper._knownHosts()
         self.assertTrue(loaded.hasHostKey("127.0.0.1", key))
+
+
+    def test_defaultConsoleUI(self):
+        """
+        If C{None} is passed for the C{ui} parameter to
+        L{_NewConnectionHelper}, a L{ConsoleUI} is used.
+        """
+        helper = _NewConnectionHelper(
+            None, None, None, None, None, None, None, None, None, None)
+        self.assertIsInstance(helper.ui, ConsoleUI)
+
+
+    def test_ttyConsoleUI(self):
+        """
+        If C{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
+        and /dev/tty is available, the L{ConsoleUI} used is associated with
+        /dev/tty.
+        """
+        tty = _PTYPath(b"yes")
+        helper = _NewConnectionHelper(
+            None, None, None, None, None, None, None, None, None, None, tty)
+        result = self.successResultOf(helper.ui.prompt(b"does this work?"))
+        self.assertTrue(result)
+
+
+    def test_nottyUI(self):
+        """
+        If C{None} is passed for the C{ui} parameter to L{_NewConnectionHelper}
+        and /dev/tty is not available, the L{ConsoleUI} used is associated with
+        some file which always produces a C{b"no"} response.
+        """
+        tty = FilePath(self.mktemp())
+        helper = _NewConnectionHelper(
+            None, None, None, None, None, None, None, None, None, None, tty)
+        result = self.successResultOf(helper.ui.prompt(b"did this break?"))
+        self.assertFalse(result)
+
+
+    def test_defaultTTYFilename(self):
+        """
+        If not passed the name of a tty in the filesystem,
+        L{_NewConnectionHelper} uses C{b"/dev/tty"}.
+        """
+        helper = _NewConnectionHelper(
+            None, None, None, None, None, None, None, None, None, None)
+        self.assertEqual(FilePath(b"/dev/tty"), helper.tty)
 
 
     def test_cleanupConnectionNotImmediately(self):

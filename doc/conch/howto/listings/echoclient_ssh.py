@@ -16,7 +16,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.endpoints import UNIXClientEndpoint
 from twisted.conch.ssh.keys import EncryptedKeyError, Key
-from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
+from twisted.conch.client.knownhosts import KnownHostsFile
 from twisted.conch.endpoints import SSHCommandClientEndpoint
 
 
@@ -76,10 +76,9 @@ def readKey(path):
 
 
 class ConnectionParameters(object):
-    def __init__(self, reactor, ui, host, port, username, password, keys,
+    def __init__(self, reactor, host, port, username, password, keys,
                  knownHosts, agent):
         self.reactor = reactor
-        self.ui = ui
         self.host = host
         self.port = port
         self.username = username
@@ -93,8 +92,6 @@ class ConnectionParameters(object):
     def fromCommandLine(cls, reactor, argv):
         config = EchoOptions()
         config.parseOptions(argv)
-
-        ui = ConsoleUI(lambda: open("/dev/tty", "r+"))
 
         keys = []
         if config["identity"]:
@@ -115,7 +112,7 @@ class ConnectionParameters(object):
                 reactor, os.environ["SSH_AUTH_SOCK"])
 
         return cls(
-            reactor, ui, config["host"], config["port"],
+            reactor, config["host"], config["port"],
             config["username"], config["password"], keys,
             knownHosts, agentEndpoint)
 
@@ -124,7 +121,7 @@ class ConnectionParameters(object):
         return SSHCommandClientEndpoint.newConnection(
             self.reactor, command, self.username, self.host,
             port=self.port, keys=self.keys, password=self.password,
-            agentEndpoint=self.agent, knownHosts=self.knownHosts, ui=self.ui)
+            agentEndpoint=self.agent, knownHosts=self.knownHosts)
 
 
 
