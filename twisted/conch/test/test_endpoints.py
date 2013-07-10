@@ -55,7 +55,7 @@ else:
     from twisted.conch.endpoints import (
         _ISSHConnectionCreator, AuthenticationFailed, SSHCommandAddress,
         SSHCommandClientEndpoint, _ReadFile, _NewConnectionHelper,
-        _ExistingConnectionHelper)
+        _ExistingConnectionHelper, SSHSubsystemClientEndpoint)
 
     from twisted.conch.ssh.transport import SSHClientTransport
 
@@ -1470,3 +1470,188 @@ class NewConnectionHelperTests(TestCase):
         connection.transport.transport = Abortable()
         helper.cleanupConnection(connection, True)
         self.assertTrue(connection.transport.transport.aborted)
+
+
+
+class BrokenSubsystemSession(SSHChannel):
+    """
+    L{BrokenSubsystemSession} is a session on which subsystem requests always
+    fail.
+    """
+    def request_subsystem(self, data):
+        """
+        Fail all subsystem requests.
+
+        @param data: Information about what is being executed.
+        @type data: L{bytes}
+
+        @return: C{0} to indicate failure
+        @rtype: L{int}
+        """
+        return 0
+
+
+
+class WorkingSubsystemSession(SSHChannel):
+    """
+    L{WorkingSubsystemSession} is a session on which subsystem requests always
+    succeed.
+    """
+    def request_subsystem(self, data):
+        """
+        Succeed all subsystem requests.
+
+        @param data: Information about what is being executed.
+        @type data: L{bytes}
+
+        @return: C{1} to indicate success
+        @rtype: L{int}
+        """
+        return 1
+
+
+
+class SSHSubsystemClientEndpointTests(TestCase):
+    """
+    Tests for L{SSHSubsystemClientEndpoint}.
+    """
+    def setUp(self):
+        """
+        Configure an SSH server with password authentication enabled for a
+        well-known (to the tests) account.
+        """
+        self.hostname = b"ssh.example.com"
+        self.port = 42022
+        self.user = b"user"
+        self.password = b"password"
+        self.reactor = MemoryReactorClock()
+        self.realm = TrivialRealm()
+        self.portal = Portal(self.realm)
+        self.passwdDB = InMemoryUsernamePasswordDatabaseDontUse()
+        self.passwdDB.addUser(self.user, self.password)
+        self.portal.registerChecker(self.passwdDB)
+        self.factory = CommandFactory()
+        self.factory.reactor = self.reactor
+        self.factory.portal = self.portal
+        self.factory.doStart()
+        self.addCleanup(self.factory.doStop)
+
+        self.clientAddress = IPv4Address("TCP", "10.0.0.1", 12345)
+        self.serverAddress = IPv4Address("TCP", "192.168.100.200", 54321)
+        # Make the server's host key available to be verified by the client.
+        self.hostKeyPath = FilePath(self.mktemp())
+        self.knownHosts = KnownHostsFile(self.hostKeyPath)
+        self.knownHosts.addHostKey(
+            self.hostname, self.factory.publicKeys['ssh-rsa'])
+        self.knownHosts.addHostKey(
+            self.serverAddress.host, self.factory.publicKeys['ssh-rsa'])
+        self.knownHosts.save()
+
+
+    def connectedServerAndClient(self, serverFactory, clientFactory):
+        """
+        Set up an in-memory connection between protocols created by
+        C{serverFactory} and C{clientFactory}.
+
+        @return: A three-tuple.  The first element is the protocol created by
+            C{serverFactory}.  The second element is the protocol created by
+            C{clientFactory}.  The third element is the L{IOPump} connecting
+            them.
+        """
+        clientProtocol = clientFactory.buildProtocol(None)
+        serverProtocol = serverFactory.buildProtocol(None)
+
+        clientTransport = AbortableFakeTransport(
+            clientProtocol, isServer=False, hostAddress=self.clientAddress,
+            peerAddress=self.serverAddress)
+        serverTransport = AbortableFakeTransport(
+            serverProtocol, isServer=True, hostAddress=self.serverAddress,
+            peerAddress=self.clientAddress)
+
+        pump = connect(
+            serverProtocol, serverTransport, clientProtocol, clientTransport)
+        return serverProtocol, clientProtocol, pump
+
+
+    def create(self):
+        """
+        Create and return a new L{SSHSubsystemClientEndpoint} using the
+        C{newConnection} constructor.
+        """
+        return SSHSubsystemClientEndpoint.newConnection(
+            self.reactor, b"sftp", self.user, self.hostname, self.port,
+            password=self.password, knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
+
+
+    def finishConnection(self):
+        """
+        Establish the first attempted TCP connection using the SSH server which
+        C{self.factory} can create.
+        """
+        return self.connectedServerAndClient(
+            self.factory, self.reactor.tcpClients[0][2])
+
+
+    def assertClientTransportState(self, client, immediateClose):
+        """
+        Assert that the transport for the given protocol has been disconnected.
+        L{SSHCommandClientEndpoint.newConnection} creates a new dedicated SSH
+        connection and cleans it up after the command exits.
+        """
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
+        if immediateClose:
+            self.assertTrue(client.transport.aborted)
+        else:
+            self.assertTrue(client.transport.disconnecting)
+
+
+    def test_dataReceived(self):
+        """
+        After establishing the connection, when the command on the SSH server
+        produces output, it is delivered to the protocol's C{dataReceived}
+        method.
+        """
+        self.realm.channelLookup[b'session'] = WorkingSubsystemSession
+        endpoint = self.create()
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.finishConnection()
+
+        protocol = self.successResultOf(connected)
+        dataReceived = []
+        protocol.dataReceived = dataReceived.append
+
+        # Figure out which channel on the connection this protocol is
+        # associated with so the test can do a write on it.
+        channelId = protocol.transport.id
+
+        server.service.channels[channelId].write(b"hello, world")
+        pump.pump()
+        self.assertEqual(b"hello, world", b"".join(dataReceived))
+
+
+    def test_execFailure(self):
+        """
+        If execution of the command fails, the L{Deferred} returned by
+        L{SSHSubsystemClientEndpoint.connect} fires with a L{Failure} wrapping
+        the reason given by the server.
+        """
+        self.realm.channelLookup[b'session'] = BrokenSubsystemSession
+        endpoint = self.create()
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        server, client, pump = self.finishConnection()
+
+        f = self.failureResultOf(connected)
+        f.trap(ConchError)
+        self.assertEqual('channel request failed', f.value.value)
+
+        self.assertClientTransportState(client, False)
