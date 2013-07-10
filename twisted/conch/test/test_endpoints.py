@@ -1077,6 +1077,41 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         self.assertIsNot(None, protocol.transport)
 
 
+    def test_skipPasswordAuthentication(self):
+        """
+        If the password is not specified, L{SSHCommandClientEndpoint} doesn't
+        try as an authentication mechanism.
+        """
+        badKey = Key.fromString(privateRSA_openssh)
+        self.setupKeyChecker(self.portal, {self.user: privateDSA_openssh})
+
+        endpoint = SSHCommandClientEndpoint.newConnection(
+            self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
+            keys=[badKey], knownHosts=self.knownHosts,
+            ui=FixedResponseUI(False))
+
+        factory = Factory()
+        factory.protocol = Protocol
+        connected = endpoint.connect(factory)
+
+        # Exercising fallback requires a failed authentication attempt.  Allow
+        # one.
+        self.factory.attemptsBeforeDisconnect += 1
+
+        server, client, pump = self.connectedServerAndClient(
+            self.factory, self.reactor.tcpClients[0][2])
+
+        pump.pump()
+
+        # Now deal with the results on the endpoint side.
+        f = self.failureResultOf(connected)
+        f.trap(AuthenticationFailed)
+
+        # Nothing useful can be done with the connection at this point, so the
+        # endpoint should close it.
+        self.assertTrue(client.transport.disconnecting)
+
+
     def test_agentAuthentication(self):
         """
         If L{SSHCommandClientEndpoint} is initialized with an

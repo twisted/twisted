@@ -335,6 +335,8 @@ class _UserAuth(SSHUserAuthClient):
 
         @return: A L{Deferred} which fires with the password.
         """
+        if self.password is None:
+            return
         return succeed(self.password)
 
 
