@@ -1080,23 +1080,15 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
     def test_skipPasswordAuthentication(self):
         """
         If the password is not specified, L{SSHCommandClientEndpoint} doesn't
-        try as an authentication mechanism.
+        try it as an authentication mechanism.
         """
-        badKey = Key.fromString(privateRSA_openssh)
-        self.setupKeyChecker(self.portal, {self.user: privateDSA_openssh})
-
         endpoint = SSHCommandClientEndpoint.newConnection(
             self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
-            keys=[badKey], knownHosts=self.knownHosts,
-            ui=FixedResponseUI(False))
+            knownHosts=self.knownHosts, ui=FixedResponseUI(False))
 
         factory = Factory()
         factory.protocol = Protocol
         connected = endpoint.connect(factory)
-
-        # Exercising fallback requires a failed authentication attempt.  Allow
-        # one.
-        self.factory.attemptsBeforeDisconnect += 1
 
         server, client, pump = self.connectedServerAndClient(
             self.factory, self.reactor.tcpClients[0][2])
