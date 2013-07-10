@@ -333,8 +333,11 @@ class _UserAuth(SSHUserAuthClient):
         """
         Get the password to use for authentication.
 
-        @return: A L{Deferred} which fires with the password.
+        @return: A L{Deferred} which fires with the password, or C{None} if the
+            password was not specified.
         """
+        if self.password is None:
+            return
         return succeed(self.password)
 
 

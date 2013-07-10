@@ -1,0 +1,1 @@
+twisted.conch.endpoints.SSHCommandClientEndpoint now doesn't try password authentication if there is no password specified.
