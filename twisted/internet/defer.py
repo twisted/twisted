@@ -1485,12 +1485,12 @@ class DeferredQueue(object):
 
 
 
-
 class AlreadyTryingToLockError(Exception):
     """
     Raised when L{DeferredFilesystemLock.deferUntilLocked} is called twice on a
     single L{DeferredFilesystemLock}.
     """
+
 
 
 class DeferredFilesystemLock(lockfile.FilesystemLock):
