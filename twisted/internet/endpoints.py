@@ -1597,8 +1597,10 @@ def connectProtocol(endpoint, protocol):
     @param protocol: A protocol instance.
 
     @return: The result of calling C{connect} on the endpoint, i.e. a
-    L{Deferred} that will fire with the protocol when connected, or an
-    appropriate error.
+        L{Deferred} that will fire with the protocol when connected, or an
+        appropriate error.
+
+    @since: 13.1
     """
     class OneShotFactory(Factory):
         def buildProtocol(self, addr):
