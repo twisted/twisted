@@ -2513,7 +2513,24 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             self.newMessages(exists, recent)
 
     def sendCommand(self, cmd):
-        cmd.defer = defer.Deferred()
+        def cancel(deferred):
+            """
+            Cancel the command.
+
+            If the command is in the queue, remove the command from the queue.
+            If the command has been sent directly or has been popped out from
+            the queue, drop the response on the floor safely.
+            
+            @param deferred: The L{defer.Deferred} of the cancelled command.
+            """
+            try:
+                self.queued.remove(cmd)
+            except ValueError:
+                # The command has been popped out from the queue.
+                # Make a new Deferred to safely drop the response on the floor.
+                new_deferred = defer.Deferred()
+                cmd.defer = new_deferred
+        cmd.defer = defer.Deferred(cancel)
         if self.waiting:
             self.queued.append(cmd)
             return cmd.defer

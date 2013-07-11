@@ -2835,6 +2835,71 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
 
 
 
+class IMAP4ClientSendCommandTestCase(unittest.TestCase):
+    """
+    Tests for the L{imap4.IMAP4Client.sendCommand} method.
+    """
+    def setUp(self):
+        """
+        Set up a working L{imap4.IMAP4Client} protocol.
+        """
+        self.transport = StringTransport()
+        self.imap4client = imap4.IMAP4Client()
+        self.imap4client.makeConnection(self.transport)
+        self.imap4client.dataReceived('* OK [IMAP4rev1]\r\n')
+
+
+    def test_cancelCommandInQueue(self):
+        """
+        When user cancels a command sent by L{imap4.IMAP4Client.sendCommand}
+        which is in the queue, the command will be removed from the queue, the
+        errbacks of the L{defer.Deferred} will be called with
+        L{defer.CancelledError}, the connection will NOT be disconnected.
+        """
+        self.imap4client.noop()
+        deferred = self.imap4client.sendCommand(imap4.Command("COMMAND", None))
+        deferred.cancel()
+        self.assertEqual(self.transport.disconnecting, False)
+        self.assertEqual(self.imap4client.queued, [])
+        failure = self.failureResultOf(deferred)
+        failure.trap(defer.CancelledError)
+
+
+    def test_cancelCommandPoppedFromQueue(self):
+        """
+        When user cancels a command sent by L{imap4.IMAP4Client.sendCommand}
+        which has been popped out from the queue, the errbacks of the
+        L{defer.Deferred} will be called with L{defer.CancelledError}, the
+        connection will NOT be disconnected and the response will be safely
+        dropped on the floor.
+        """
+        self.imap4client.noop()
+        deferred = self.imap4client.sendCommand(imap4.Command("COMMAND", None))
+        self.imap4client.dataReceived('0001 OK NO-OP completed\r\n')
+        deferred.cancel()
+        self.assertEqual(self.transport.disconnecting, False)
+        failure = self.failureResultOf(deferred)
+        failure.trap(defer.CancelledError)
+        self.imap4client.dataReceived('0002 OK COMMAND completed\r\n')
+
+
+    def test_cancelCommandSentDirectly(self):
+        """
+        When user cancels a command sent by L{imap4.IMAP4Client.sendCommand}
+        directly without being in the queue, the errbacks of the
+        L{defer.Deferred} will be called with L{defer.CancelledError}, the
+        connection will NOT be disconnected and the response will be safely
+        dropped on the floor.
+        """
+        deferred = self.imap4client.sendCommand(imap4.Command("COMMAND", None))
+        deferred.cancel()
+        self.assertEqual(self.transport.disconnecting, False)
+        failure = self.failureResultOf(deferred)
+        failure.trap(defer.CancelledError)
+        self.imap4client.dataReceived('0001 OK COMMAND completed\r\n')
+
+
+
 class IMAP4ClientExamineTests(SelectionTestsMixin, unittest.TestCase):
     """
     Tests for the L{IMAP4Client.examine} method.
