@@ -2871,9 +2871,9 @@ class MemoryIMAP4Client(imap4.IMAP4Client):
 
 
 
-class IMAP4ClientSendCommandTestCase(unittest.TestCase):
+class IMAP4ClientCancelTestCase(unittest.TestCase):
     """
-    Tests for the L{imap4.IMAP4Client.sendCommand} method.
+    Tests for cancelling commands of L{imap4.IMAP4Client}.
     """
     def setUp(self):
         """
@@ -2935,6 +2935,206 @@ class IMAP4ClientSendCommandTestCase(unittest.TestCase):
         self.imap4client.dataReceived('0001 OK COMMAND completed\r\n')
 
 
+    def test_getCapabilitiesUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.getCapabilities} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.getCapabilities(useCache=0)
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_logoutUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.logout} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.logout()
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_noopUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.noop} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.noop()
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    # TODO: Add 'STARTTLS' in IMAP4Client._capCache and use a helper transport
+    #       that implement ITLSTransport
+    # def test_startTLSUsesSendCommand(self):
+    #     """
+    #     The L{imap4.IMAP4Client.startTLS} supports cancellation by using
+    #     L{imap4.IMAP4Client.sendCommand} to send the command.
+    #     """
+    #     deferred = self.imap4client.startTLS()
+    #     self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_namespaceUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.namespace} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.namespace()
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_selectUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.select} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.select("inbox")
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_examineUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.examine} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.examine("inbox")
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_createUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.create} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.create("mailbox")
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_deleteUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.delete} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.delete("mailbox")
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_renameUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.rename} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.rename("mailbox", "newname")
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_subscribeUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.subscribe} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.subscribe("mailbox")
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_unsubscribeUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.unsubscribe} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.unsubscribe("mailbox")
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_listUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.list} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.list("reference", "*")
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_lsubUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.lsub} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.lsub("reference", "*")
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_statusUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.status} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.status("mailbox", "MESSAGES")
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_appendUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.append} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.append("mailbox", StringIO("message"))
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_checkUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.check} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.check()
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_closeUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.close} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.close()
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_expungeUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.expunge} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.expunge()
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_searchUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.search} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.search("query")
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_fetchSpecificUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.fetchSpecific} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.fetchSpecific("message")
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
+    def test_copyUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.copy} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        deferred = self.imap4client.copy("message", "mailbox", True)
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+
+
 
 class IMAP4ClientExamineTests(SelectionTestsMixin, unittest.TestCase):
     """
@@ -2953,7 +3153,6 @@ class IMAP4ClientExamineTests(SelectionTestsMixin, unittest.TestCase):
     """
     method = 'examine'
     command = 'EXAMINE'
-
 
 
 
