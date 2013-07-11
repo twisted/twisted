@@ -12,8 +12,8 @@ from twisted.internet import reactor, defer, error, protocol, interfaces
 from twisted.python import log
 
 from twisted.trial import unittest
+from twisted.test.proto_helpers import StringTransport
 from twisted.protocols import basic
-from twisted.web.test.test_newclient import StringTransport
 
 from twisted.mail.test import pop3testserver
 
@@ -21,6 +21,25 @@ try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
 except ImportError:
     ClientTLSContext = ServerTLSContext = None
+
+class StringTransport(StringTransport):
+    """
+    A version of C{StringTransport} that supports C{abortConnection}.
+    """
+    # This should be replaced by a common version in #6530.
+    aborting = False
+
+
+    def abortConnection(self):
+        """
+        A testable version of the C{ITCPTransport.abortConnection} method.
+
+        Since this is a special case of closing the connection,
+        C{loseConnection} is also called.
+        """
+        self.aborting = True
+        self.loseConnection()
+
 
 
 class StringTransportWithConnectionLosing(StringTransport):
