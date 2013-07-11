@@ -481,7 +481,7 @@ class LineOnlyReceiver(protocol.Protocol):
         Called when the maximum line length has been reached.
         Override if it needs to be dealt with in some special way.
         """
-        return error.ConnectionLost('Line length exceeded')
+        return self.transport.loseConnection()
 
 
 
