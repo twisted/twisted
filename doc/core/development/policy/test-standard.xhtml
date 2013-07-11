@@ -103,6 +103,12 @@ $ bin/trial twisted
     conventions, <code class="shell">trial</code> will be smart
     enough to pick up any new tests you write.</p>
 
+    <p>When you add a unit test, make sure all methods have docstrings
+    specifying at a high level the intent of the test. That is, a description
+    that users of the method would understand.</p>
+
+    <h3>Assertions</h3>
+
     <p>PyUnit provides a large number of assertion methods to be used when
     writing tests.  Many of these are redundant.  For consistency, Twisted
     unit tests should use the <code>assert</code> forms rather than the
@@ -115,9 +121,24 @@ $ bin/trial twisted
     some test code and notice the wrong method being used in nearby code,
     feel free to adjust it.</p>
 
-    <p>When you add a unit test, make sure all methods have docstrings
-    specifying at a high level the intent of the test. That is, a description
-    that users of the method would understand.</p>
+    Here are a couple of conventions, when writting assertions:
+    <ol>
+    <li>
+      Put the actual value first, followed by the expected value, when using <code class="python">assertEqual</code>.
+      <pre class="python">
+result = (lambda x, y: x + y)(2,2)
+self.assertEqual(result, 4)
+      </pre>
+    </li>
+    <li>
+      Use <code class="python">str(error)</code> to get the text of an exception.
+      <pre class="python">
+error = self.assertRaises(CustomException, someInterestingFunction, *args)
+self.assertEqual(str(error), "Custom failed in an obvious way")
+      </pre>
+      This is how the error will typicaly get displayed to the user, so it makes sense to test against it as well.
+    </li>
+    </ol>
 
     <h2>Test Implementation Guidelines</h2>
 
