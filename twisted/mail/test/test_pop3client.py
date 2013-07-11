@@ -132,6 +132,122 @@ def testCancelTryingCommand(testCase, pop3Client, transport, command,
     failureOfNoop = testCase.failureResultOf(deferredOfNoop)
     failureOfNoop.trap(error.ConnectionAborted)
 
+
+
+class POP3ClientCancelTestCase(unittest.TestCase):
+    """
+    Tests for cancelling command returned by L{POP3Client.sendShort}
+    and L{POP3Client.sendLong}.
+    """
+    def test_cancelCommandInQueueReturnedBySendShort(self):
+        """
+        When cancel a command in the blocked queue returned
+        by L{POP3Client.sendShort}, L{POP3Client} will remove the
+        L{defer.Deferred}, function and arguments of the command from the
+        queue. The connection is NOT disconnected. If the command has been
+        popped out from the blocked queue, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
+        """
+        pop3client, transport = setUp()
+        pop3client.noop()
+        deferred = pop3client.sendShort("command", None)
+        deferred.cancel()
+        self.assertEqual(transport.disconnecting, False)
+        self.assertEqual(pop3client._blockedQueue, [])
+        failure = self.failureResultOf(deferred)
+        failure.trap(defer.CancelledError)
+
+        deferredOfCommand = pop3client.sendShort("command", None)
+        deferredOfNoop = pop3client.noop()
+
+        # Pop out the command from the queue.
+        pop3client.dataReceived("+OK No-op to you too!\r\n")
+        deferredOfCommand.cancel()
+        self.assertEqual(transport.aborting, True)
+        failureOfCommand = self.failureResultOf(deferredOfCommand)
+        failureOfCommand.trap(defer.CancelledError)
+        failureOfNoop = self.failureResultOf(deferredOfNoop)
+        failureOfNoop.trap(error.ConnectionAborted)
+
+
+    def test_cancelTryingCommandReturnedBySendShort(self):
+        """
+        When cancel a trying command returned by L{POP3Client.sendShort},
+        L{POP3Client} will errback the L{defer.Deferred} of the trying command
+        with {defer.CancelledError} then errback the L{defer.Deferred}s of all
+        the waiting commands in the queue with
+        L{twisted.internet.error.ConnectionAborted} and disconnect the
+        connection immediately.
+        """
+        pop3client, transport = setUp()
+        deferredOfCommand = pop3client.sendShort("command", None)
+        deferredOfNoop = pop3client.noop()
+        deferredOfCommand.cancel()
+        self.assertEqual(transport.aborting, True)
+        failureOfCommand = self.failureResultOf(deferredOfCommand)
+        failureOfCommand.trap(defer.CancelledError)
+        failureOfNoop = self.failureResultOf(deferredOfNoop)
+        failureOfNoop.trap(error.ConnectionAborted)
+
+
+    def test_cancelCommandInQueueReturnedBySendLong(self):
+        """
+        When cancel a command in the blocked queue returned
+        by L{POP3Client.sendLong}, L{POP3Client} will remove the
+        L{defer.Deferred}, function and arguments of the command from the
+        queue. The connection is NOT disconnected. If the command has been
+        popped out from the blocked queue, L{POP3Client} will errback the
+        L{defer.Deferred} of the trying command with {defer.CancelledError}
+        then errback the L{defer.Deferred}s of all the waiting commands in the
+        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
+        the connection immediately.
+        """
+        pop3client, transport = setUp()
+        pop3client.noop()
+        deferred = pop3client.sendLong("command", None, None, None)
+        deferred.cancel()
+        self.assertEqual(transport.disconnecting, False)
+        self.assertEqual(pop3client._blockedQueue, [])
+        failure = self.failureResultOf(deferred)
+        failure.trap(defer.CancelledError)
+
+        deferredOfCommand = pop3client.sendLong("command", None, None, None)
+        deferredOfNoop = pop3client.noop()
+
+        # Pop out the command from the queue.
+        pop3client.dataReceived("+OK No-op to you too!\r\n")
+        deferredOfCommand.cancel()
+        self.assertEqual(transport.aborting, True)
+        failureOfCommand = self.failureResultOf(deferredOfCommand)
+        failureOfCommand.trap(defer.CancelledError)
+        failureOfNoop = self.failureResultOf(deferredOfNoop)
+        failureOfNoop.trap(error.ConnectionAborted)
+
+
+    def test_cancelTryingCommandReturnedBySendLong(self):
+        """
+        When cancel a trying command returned by L{POP3Client.sendLong},
+        L{POP3Client} will errback the L{defer.Deferred} of the trying command
+        with {defer.CancelledError} then errback the L{defer.Deferred}s of all
+        the waiting commands in the queue with
+        L{twisted.internet.error.ConnectionAborted} and disconnect the
+        connection immediately.
+        """
+        pop3client, transport = setUp()
+        deferredOfCommand = pop3client.sendLong("command", None, None, None)
+        deferredOfNoop = pop3client.noop()
+        deferredOfCommand.cancel()
+        self.assertEqual(transport.aborting, True)
+        failureOfCommand = self.failureResultOf(deferredOfCommand)
+        failureOfCommand.trap(defer.CancelledError)
+        failureOfNoop = self.failureResultOf(deferredOfNoop)
+        failureOfNoop.trap(error.ConnectionAborted)
+
+
+
 class POP3ClientLoginTestCase(unittest.TestCase):
     def testNegativeGreeting(self):
         p, t = setUp(greet=False)
