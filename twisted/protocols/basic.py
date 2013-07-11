@@ -449,11 +449,15 @@ class LineOnlyReceiver(protocol.Protocol):
                 # the one that told it to close.
                 return
             if len(line) > self.MAX_LENGTH:
-                return self.lineLengthExceeded(line)
+                lines.append(self._buffer)
+                buf = self.delimiter.join(lines)
+                self._buffer = ''
+                return self.lineLengthExceeded(buf)
             else:
                 self.lineReceived(line)
         if len(self._buffer) > self.MAX_LENGTH:
-            return self.lineLengthExceeded(self._buffer)
+            buf, self._buffer = self._buffer, ''
+            return self.lineLengthExceeded(buf)
 
 
     def lineReceived(self, line):
