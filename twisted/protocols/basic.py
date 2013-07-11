@@ -1096,9 +1096,9 @@ class _FileSenderSendfile(object):
             sent = self.sender._sendfile(self.sender.consumer.fileno(),
                                          self.sender.file.fileno(),
                                          self._offset, self._count)
-        except IOError as e:
+        except (OSError, IOError) as e:
             if e.errno == errno.EAGAIN:
-                self.sender.consumer.reactor.addWriter(self.consumer)
+                self.sender.consumer.reactor.addWriter(self.sender.consumer)
                 return
             elif self._offset == self._position:
                 self.sender._producer = _FileSenderWrite(self.sender)

@@ -39,7 +39,11 @@ extensions = [
               ["twisted/python/_sendfile.c"],
               condition=lambda builder:
                   # Linux
-                  builder._check_header("sys/sendfile.h")),
+                  builder._check_header("sys/sendfile.h") or
+                  # OS X >= 10.5
+                  sys.platform == "darwin" or
+                  # FreeBSD
+                  'freebsd' in sys.platform),
 ]
 
 if sys.version_info[:2] <= (2, 6):
