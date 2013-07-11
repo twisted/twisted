@@ -404,3 +404,40 @@ def _unusedTestDirectory(base):
                 counter += 1
             else:
                 raise _WorkingDirectoryBusy()
+
+
+
+def _listToPhrase(things, finalDelimiter, delimiter=', '):
+    """
+    Produce a string containing each thing in C{things},
+    separated by a C{delimiter}, with the last couple being separated
+    by C{finalDelimiter}
+
+    @param things: The elements of the resulting phrase
+    @type things: L{list} or L{tuple}
+
+    @param finalDelimiter: What to put between the last two things
+        (typically 'and' or 'or')
+    @type finalDelimiter: L{str}
+
+    @param delimiter: The separator to use between each thing,
+        not including the last two. Should typically include a trailing space.
+    @type delimiter: L{str}
+
+    @return: The resulting phrase
+    @rtype: L{str}
+    """
+    if not isinstance(things, (list, tuple)):
+        raise TypeError("Things must be a list or a tuple")
+    if not things:
+        return ''
+    if len(things) == 1:
+        return str(things[0])
+    if len(things) == 2:
+        return "%s %s %s" % (str(things[0]), finalDelimiter, str(things[1]))
+    else:
+        strThings = []
+        for thing in things:
+            strThings.append(str(thing))
+        return "%s%s%s %s" % (delimiter.join(strThings[:-1]),
+            delimiter, finalDelimiter, strThings[-1])
