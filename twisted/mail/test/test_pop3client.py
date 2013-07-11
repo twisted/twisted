@@ -28,10 +28,69 @@ class StringTransportWithConnectionLosing(StringTransport):
         self.protocol.connectionLost(error.ConnectionDone())
 
 
+
+class MemoryPOP3Client(POP3Client):
+    """
+    A version of L{POP3Client} that can memory the L{defer.Deferred} returned
+    by L{POP3Client.sendShort} and L{POP3Client.sendLong}.
+
+    @ivar sendShortDeferreds: An instance of C{list} that keeps all the
+        L{defer.Deferred}s returned by L{POP3Client.sendShort}.
+
+    @ivar sendLongDeferreds: An instance of C{list} that keeps all the
+        L{defer.Deferred}s returned by L{POP3Client.sendLong}.
+    """
+    sendShortDeferreds = []
+    sendLongDeferreds = []
+
+    def sendShort(self, cmd, args):
+        """
+        Send a command to which a short response is expected. Return a
+        L{defer.Deferred} that fires when the response is received. Append the
+        L{defer.Deferred} to L{sendShortDeferreds}. Block all further commands
+        from being sent until the response is received. Transition the state to
+        SHORT.
+
+        @param cmd: The command to send.
+        @type cmd: C{str}
+
+        @param args: The arguments of the command.
+
+        @return: A L{defer.Deferred} that fires when the response is recevied.
+        """
+        # The POP3Client isn't a new-style class, we cann't use super()
+        deferred = POP3Client.sendShort(self, cmd, args)
+        self.sendShortDeferreds.append(deferred)
+        return deferred
+
+
+    def sendLong(self, cmd, args, consumer, xform):
+        """
+        Send a command to which a multiline response is expected. Return a 
+        L{defer.Deferred} that fires when the entire response is received.
+        Append the L{defer.Deferred} to L{sendLongDeferreds}. Block all
+        further commands from being sent until the entire response is received.
+        Transition the state to LONG_INITIAL.
+
+        @param cmd: The command to send.
+        @type cmd: C{str}
+
+        @param args: The arguments of the command.
+
+        @param consumer: The consumer of the response.
+
+        @param xform: The response parser.
+        """
+        # The POP3Client isn't a new-style class, we cann't use super()
+        deferred = POP3Client.sendLong(self, cmd, args, consumer, xform)
+        self.sendLongDeferreds.append(deferred)
+        return deferred
+
+
 capCache = {"TOP": None, "LOGIN-DELAY": "180", "UIDL": None, \
             "STLS": None, "USER": None, "SASL": "LOGIN"}
 def setUp(greet=True):
-    p = POP3Client()
+    p = MemoryPOP3Client()
 
     # Skip the CAPA login will issue if it doesn't already have a
     # capability cache
