@@ -80,6 +80,8 @@ class MemoryPOP3Client(POP3Client):
         @param consumer: The consumer of the response.
 
         @param xform: The response parser.
+
+        @return: A L{defer.Deferred} that fires when the response is recevied.
         """
         # The POP3Client isn't a new-style class, we cann't use super()
         deferred = POP3Client.sendLong(self, cmd, args, consumer, xform)
