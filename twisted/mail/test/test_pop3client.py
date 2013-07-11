@@ -335,6 +335,16 @@ class POP3ClientLoginTestCase(unittest.TestCase):
             lambda exc: self.assertEqual(exc.args[0], "account suspended"))
 
 
+    def test_userUseSendShort(self):
+        """
+        The user command uses L{POP3Client.sendShort} to send the command.
+        """
+        pop3client, transport = setUp()
+        deferred = pop3client.user("username")
+        self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
+        pop3client.dataReceived("+OK send password\r\n")
+
+
     def test_cancelUserInQueue(self):
         """
         When cancel a user command in the blocked queue, L{POP3Client} will
@@ -377,6 +387,16 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "go away"))
+
+
+    def test_passwordUseSendShort(self):
+        """
+        The password command uses L{POP3Client.sendShort} to send the command.
+        """
+        pop3client, transport = setUp()
+        deferred = pop3client.password("password")
+        self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
+        pop3client.dataReceived("+OK you're in!\r\n")
 
 
     def test_cancelPasswordInQueue(self):
@@ -561,6 +581,17 @@ class POP3ClientListTestCase(unittest.TestCase):
             lambda exc: self.assertEqual(exc.args[0], "Fatal doom server exploded"))
 
 
+    def test_listSizeUseSendLong(self):
+        """
+        The listSize command uses L{POP3Client.sendLong} to send the command.
+        """
+        pop3client, transport = setUp()
+        deferred = pop3client.listSize()
+        self.assertEqual(deferred, pop3client.sendLongDeferreds[-1])
+        pop3client.dataReceived("+OK Here it comes\r\n")
+        pop3client.dataReceived("1 3\r\n2 2\r\n3 1\r\n.\r\n")
+
+
     def test_cancelListSizeInQueue(self):
         """
         When cancel a listSize command in the blocked queue, L{POP3Client} will
@@ -616,6 +647,17 @@ class POP3ClientListTestCase(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "Fatal doom server exploded"))
+
+
+    def test_listUIDUseSendLong(self):
+        """
+        The listUID command uses L{POP3Client.sendLong} to send the command.
+        """
+        pop3client, transport = setUp()
+        deferred = pop3client.listUID()
+        self.assertEqual(deferred, pop3client.sendLongDeferreds[-1])
+        pop3client.dataReceived("+OK Here it comes\r\n")
+        pop3client.dataReceived("1 abc\r\n2 def\r\n3 ghi\r\n.\r\n")
 
 
     def test_cancelListUIDInQueue(self):
@@ -742,6 +784,19 @@ class POP3ClientMessageTestCase(unittest.TestCase):
         return defer.DeferredList(messages, fireOnOneErrback=True)
 
 
+    def test_retrieveUseSendLong(self):
+        """
+        The retrieve command uses L{POP3Client.sendLong} to send the command.
+        """
+        pop3client, transport = setUp()
+        deferred = pop3client.retrieve(7)
+        self.assertEqual(deferred, pop3client.sendLongDeferreds[-1])
+        pop3client.dataReceived("+OK Message incoming\r\n")
+        pop3client.dataReceived("La la la here is message text\r\n")
+        pop3client.dataReceived("..Further message text tra la la\r\n")
+        pop3client.dataReceived(".\r\n")
+
+
     def test_cancelRetrieveInQueue(self):
         """
         When cancel a retrieve command in the blocked queue, L{POP3Client} will
@@ -792,6 +847,19 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         return d.addCallback(self.assertEqual, {})
 
 
+    def test_capabilitiesUseSendLong(self):
+        """
+        The capabilities command uses L{POP3Client.sendLong} to send the
+        command.
+        """
+        pop3client, transport = setUp()
+        deferred = pop3client.capabilities(useCache=0)
+        self.assertEqual(deferred, pop3client.sendLongDeferreds[-1])
+        pop3client.dataReceived("+OK Capabilities on the way\r\n")
+        pop3client.dataReceived(
+            "X\r\nY\r\nZ\r\nA 1 2 3\r\nB 1 2\r\nC 1\r\n.\r\n")
+
+
     def test_cancelCapabilitiesInQueue(self):
         """
         When cancel a capabilities command in the blocked queue, L{POP3Client}
@@ -835,6 +903,16 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "This server is lame!"))
+
+
+    def test_statUseSendShort(self):
+        """
+        The stat command uses L{POP3Client.sendShort} to send the command.
+        """
+        pop3client, transport = setUp()
+        deferred = pop3client.stat()
+        self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
+        pop3client.dataReceived("+OK 1 1212\r\n")
 
 
     def test_cancelStatInQueue(self):
@@ -881,6 +959,16 @@ class POP3ClientMiscTestCase(unittest.TestCase):
             lambda exc: self.assertEqual(exc.args[0], "This server is lame!"))
 
 
+    def test_noopUseSendShort(self):
+        """
+        The noop command uses L{POP3Client.sendShort} to send the command.
+        """
+        pop3client, transport = setUp()
+        deferred = pop3client.noop()
+        self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
+        pop3client.dataReceived("+OK No-op to you too!\r\b")
+
+
     def test_cancelNoopInQueue(self):
         """
         When cancel a noop command in the blocked queue, L{POP3Client} will
@@ -925,6 +1013,16 @@ class POP3ClientMiscTestCase(unittest.TestCase):
             lambda exc: self.assertEqual(exc.args[0], "This server is lame!"))
 
 
+    def test_resetUseSendShort(self):
+        """
+        The reset command uses L{POP3Client.sendShort} to send the command.
+        """
+        pop3client, transport = setUp()
+        deferred = pop3client.reset()
+        self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
+        pop3client.dataReceived("+OK Reset state\r\n")
+
+
     def test_cancelResetInQueue(self):
         """
         When cancel a reset command in the blocked queue, L{POP3Client} will
@@ -967,6 +1065,13 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         return self.assertFailure(
             d, ServerErrorResponse).addCallback(
             lambda exc: self.assertEqual(exc.args[0], "Winner is not you."))
+
+
+    def test_deleteUseSendShort(self):
+        pop3client, transport = setUp()
+        deferred = pop3client.delete(3)
+        self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
+        pop3client.dataReceived("+OK Hasta la vista\r\n")
 
 
     def test_cancelDeleteInQueue(self):
