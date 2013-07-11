@@ -2835,6 +2835,42 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
 
 
 
+class MemoryIMAP4Client(imap4.IMAP4Client):
+    """
+    A version of L{imap4.IMAP4Client} that can memory the L{defer.Deferred}s
+    returned by L{imap4.IMAP4Client.sendCommand}.
+
+    @ivar sendCommandDeferreds: An instance of C{list} that keeps all the
+        L{defer.Deferred}s returned by L{imap4.IMAP4Client.sendCommand}.
+    """
+    sendCommandDeferreds = []
+
+
+    def sendCommand(self, cmd):
+        """
+        Send a command.
+
+        If there is already a command running, the command will be appended
+        into the queue. The L{defer.Deferred} of the command will be kept in
+        L{sendCommandDeferreds}.
+
+        @param cmd: The command to be sent.
+        @type cmd: L{imap4.Command}
+
+        @return: A L{defer.Deferred} that fires when the response is ready.
+            When the C{cancel} method of the L{defer.Deferred} is called, the
+            command is cancelled. If the command is in the queue, remove the
+            command from the queue. If the command has been sent directly or
+            has been popped out from the queue, drop the response on the floor
+            safely.
+        """
+        # The imap4.IMAP4Client isn't new-style class, we can't use super().
+        deferred = imap4.IMAP4Client.sendCommand(self, cmd)
+        self.sendCommandDeferreds.append(deferred)
+        return deferred
+
+
+
 class IMAP4ClientSendCommandTestCase(unittest.TestCase):
     """
     Tests for the L{imap4.IMAP4Client.sendCommand} method.
@@ -2844,7 +2880,7 @@ class IMAP4ClientSendCommandTestCase(unittest.TestCase):
         Set up a working L{imap4.IMAP4Client} protocol.
         """
         self.transport = StringTransport()
-        self.imap4client = imap4.IMAP4Client()
+        self.imap4client = MemoryIMAP4Client()
         self.imap4client.makeConnection(self.transport)
         self.imap4client.dataReceived('* OK [IMAP4rev1]\r\n')
 
