@@ -85,7 +85,7 @@ class MemoryPOP3Client(POP3Client):
 
     def sendLong(self, cmd, args, consumer, xform):
         """
-        Send a command to which a multiline response is expected. Return a 
+        Send a command to which a multiline response is expected. Return a
         L{defer.Deferred} that fires when the entire response is received.
         Append the L{defer.Deferred} to L{sendLongDeferreds}. Block all
         further commands from being sent until the entire response is received.
@@ -733,6 +733,9 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
 
     def test_deleteUseSendShort(self):
+        """
+        The delete command uses L{POP3Client.sendShort} to send the command.
+        """
         pop3client, transport = setUp()
         deferred = pop3client.delete(3)
         self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
