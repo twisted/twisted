@@ -439,4 +439,5 @@ def _listToPhrase(things, finalDelimiter, delimiter=', '):
         strThings = []
         for thing in things:
             strThings.append(str(thing))
-        return "%s%s%s %s" % (delimiter.join(strThings[:-1]), delimiter, finalDelimiter, strThings[-1])
+        return "%s%s%s %s" % (delimiter.join(strThings[:-1]),
+            delimiter, finalDelimiter, strThings[-1])

@@ -757,7 +757,7 @@ class TestListToPhrase(SynchronousTestCase):
         """
         sample = "One, two, three"
         error = self.assertRaises(TypeError, util._listToPhrase, sample, 'and')
-        self.assertEqual(error.message, "Things must be a list or a tuple")
+        self.assertEqual(error.args, ("Things must be a list or a tuple",))
 
 
     def test_iteratorTypeError(self):
@@ -766,7 +766,7 @@ class TestListToPhrase(SynchronousTestCase):
         """
         sample = iter([1, 2, 3])
         error = self.assertRaises(TypeError, util._listToPhrase, sample, 'and')
-        self.assertEqual(error.message, "Things must be a list or a tuple")
+        self.assertEqual(error.args, ("Things must be a list or a tuple",))
 
 
     def test_generatorTypeError(self):
@@ -777,4 +777,4 @@ class TestListToPhrase(SynchronousTestCase):
             for i in range(2):
                 yield i
         error = self.assertRaises(TypeError, util._listToPhrase, sample, 'and')
-        self.assertEqual(error.message, "Things must be a list or a tuple")
+        self.assertEqual(error.args, ("Things must be a list or a tuple",))
