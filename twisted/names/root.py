@@ -13,8 +13,6 @@ todo::
     documentation
 """
 
-import warnings
-
 from twisted.python.failure import Failure
 from twisted.internet import defer
 from twisted.names import dns, common, error
