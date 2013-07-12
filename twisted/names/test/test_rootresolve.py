@@ -259,6 +259,11 @@ class RootResolverTests(TestCase):
             mappings.  The inner mappings are from query two-tuples (name,
             type) to dictionaries suitable for use as **arguments to
             L{_respond}.  See that method for details.
+
+        @param includeHostnames: Whether to query the C{serverResponses} dict
+            with hostnames or not. If this is false, the lookup will be
+            C{serverResponses['ip', port]}; if this is true, the lookup will
+            instead be C{serverResponses['host', 'ip', port]}.
         """
         roots = ['1.1.2.3']
         resolver = Resolver(roots, maximumQueries)
