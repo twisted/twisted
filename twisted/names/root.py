@@ -62,6 +62,21 @@ class Resolver(common.ResolverBase):
 
 
     def buildResolver(self, query, servers):
+        """
+        Build an L{IResolver} to make a DNS query on.
+
+        @param query: The query to issue.
+        @type query: L{dns.Query}
+
+        @param servers: The servers to query.
+        @type servers: L{list} of L{tuple} of C{host, ip, port}. C{host} may be
+            a L{str} or C{None}; C{ip} will be a L{str}; C{port} will be a
+            L{int}.
+
+        @return: A resolver on which to issue the query.
+        @rtype: L{IResolver}
+        """
+
         from twisted.names import client
         hostlessServers = [(ip, port) for host, ip, port in servers]
         return client.Resolver(servers=hostlessServers, reactor=self._reactor)
@@ -76,7 +91,9 @@ class Resolver(common.ResolverBase):
 
         @param servers: The servers which might have an answer for this
             query.
-        @type servers: L{list} of L{tuple} of L{str} and L{int}
+        @type servers: L{list} of L{tuple} of C{host, ip, port}. C{host} may be
+            a L{str} or C{None}; C{ip} will be a L{str}; C{port} will be a
+            L{int}.
 
         @param timeout: A timeout on how long to wait for the response.
         @type timeout: L{tuple} of L{int}
@@ -123,7 +140,9 @@ class Resolver(common.ResolverBase):
 
         @param servers: The servers which might have an answer for this
             query.
-        @type servers: L{list} of L{tuple} of L{str} and L{int}
+        @type servers: L{list} of L{tuple} of C{host, ip, port}. C{host} may be
+            a L{str} or C{None}; C{ip} will be a L{str}; C{port} will be a
+            L{int}.
 
         @param timeout: A C{tuple} of C{int} giving the timeout to use for this
             query.
