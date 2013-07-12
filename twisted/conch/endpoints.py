@@ -563,7 +563,7 @@ class _SSHClientEndpoint(object):
             whether to accept the server host keys.  If C{None}, a L{ConsoleUI}
             connected to /dev/tty will be used; if /dev/tty is unavailable, an
             object which answers C{b"no"} to all prompts will be used.
-        @type ui: L{NoneType} or L{ConsoleUI}
+        @type ui: C{NoneType} or L{ConsoleUI}
 
         @return: A new instance of C{cls} (probably
             L{SSHCommandClientEndpoint}).
@@ -585,7 +585,7 @@ class _SSHClientEndpoint(object):
         @param connection: An existing connection to an SSH server.
         @type connection: L{SSHConnection}
 
-        @param command: See L{SSHCommandClientEndpoint.newConnection}'s
+        @param command: See C{SSHCommandClientEndpoint.newConnection}'s
             C{command} parameter.
         @type command: L{bytes}
 
@@ -622,13 +622,13 @@ class _SSHClientEndpoint(object):
         channel created on it and associate the result with a protocol from the
         given factory.
 
-        @param connection: See L{SSHCommandClientEndpoint.existingConnection}'s
+        @param connection: See C{SSHCommandClientEndpoint.existingConnection}'s
             C{connection} parameter.
 
-        @param protocolFactory: See L{SSHCommandClientEndpoint.connect}'s
+        @param protocolFactory: See C{SSHCommandClientEndpoint.connect}'s
             C{protocolFactory} parameter.
 
-        @return: See L{SSHCommandClientEndpoint.connect}'s return value.
+        @return: See C{SSHCommandClientEndpoint.connect}'s return value.
         """
         commandConnected = Deferred()
 
@@ -742,7 +742,7 @@ class _NewConnectionHelper(object):
         @param tty: The path of the tty device to use in case C{ui} is C{None}.
         @type tty: L{FilePath}
 
-        @see: L{SSHCommandClientEndpoint.newConnection}
+        @see: C{SSHCommandClientEndpoint.newConnection}
         """
         self.reactor = reactor
         self.hostname = hostname
@@ -836,7 +836,7 @@ class _ExistingConnectionHelper(object):
 
     def __init__(self, connection):
         """
-        @param connection: See L{SSHCommandClientEndpoint.existingConnection}'s
+        @param connection: See C{SSHCommandClientEndpoint.existingConnection}'s
             C{connection} parameter.
         """
         self.connection = connection
