@@ -151,7 +151,25 @@ class LineOnlyTester(basic.LineOnlyReceiver):
 
 
 
-class LineReceiverTests(unittest.SynchronousTestCase):
+class BasicLineTester(basic.LineReceiver):
+    """
+    A line receiver that stores received lines in self.received.
+    """
+    def connectionMade(self):
+        """
+        Create/clean data received on connection.
+        """
+        self.received = []
+
+    def lineReceived(self, line):
+        """
+        Receive line and store it.
+        """
+        self.received.append(line)
+
+
+
+class LineReceiverTestCase(unittest.SynchronousTestCase):
     """
     Test L{twisted.protocols.basic.LineReceiver}, using the C{LineTester}
     wrapper.
@@ -302,6 +320,57 @@ a'''
         limit = sys.getrecursionlimit()
         proto.dataReceived(b'x\nx' * limit)
         self.assertEqual(b'x' * limit, b''.join(proto.lines))
+
+
+    def test_maximumLineLength(self):
+        """
+        C{LineReceiver} disconnects the transport if it receives a line longer
+        than its C{MAX_LENGTH}.
+        """
+        proto = basic.LineReceiver()
+        transport = proto_helpers.StringTransport()
+        proto.makeConnection(transport)
+        proto.dataReceived(b'x' * (proto.MAX_LENGTH + 1) + b'\r\nr')
+        self.assertTrue(transport.disconnecting)
+
+
+    def test_maximumLineLengthPartialDelimiter(self):
+        """
+        C{LineReceiver} doesn't disconnect the transport when it
+        receives a finished line as long as its C{MAX_LENGTH}, when
+        the second-to-last packet ended with a pattern that could have
+        been -- and turns out to have been -- the start of a
+        delimiter, and that packet causes the total input to exceed
+        C{MAX_LENGTH} + len(delimiter).
+        """
+        proto = BasicLineTester()
+        proto.MAX_LENGTH = 4
+        t = proto_helpers.StringTransport()
+        proto.makeConnection(t)
+
+        line = b'x' * (proto.MAX_LENGTH - 1)
+        proto.dataReceived(line)
+        proto.dataReceived(proto.delimiter[:-1])
+        proto.dataReceived(proto.delimiter[-1:] + line)
+        self.assertFalse(t.disconnecting)
+        self.assertEqual(line, proto.received and proto.received[0])
+
+
+    def test_notQuiteMaximumLineLengthUnfinished(self):
+        """
+        C{LineReceiver} doesn't disconnect the transport it if
+        receives a non-finished line whose length, counting the
+        delimiter, is longer than its C{MAX_LENGTH} but shorter than
+        its C{MAX_LENGTH} + len(delimiter). (When the first part that
+        exceeds the max is the beginning of the delimiter.)
+        """
+        proto = basic.LineReceiver()
+        # '\r\n' is the default, but we set it just to be explicit in this test.
+        proto.delimiter = '\r\n'
+        transport = proto_helpers.StringTransport()
+        proto.makeConnection(transport)
+        proto.dataReceived((b'x' * proto.MAX_LENGTH) + proto.delimiter[:len(proto.delimiter)-1])
+        self.assertFalse(transport.disconnecting)
 
 
     def test_rawDataError(self):

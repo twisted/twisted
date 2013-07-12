@@ -558,7 +558,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
                         line, self._buffer = self._buffer.split(
                             self.delimiter, 1)
                     except ValueError:
-                        if len(self._buffer) > self.MAX_LENGTH:
+                        if len(self._buffer) >= (self.MAX_LENGTH + len(self.delimiter)):
                             line, self._buffer = self._buffer, b''
                             return self.lineLengthExceeded(line)
                         return
