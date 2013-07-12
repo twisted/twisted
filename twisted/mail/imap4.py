@@ -2544,8 +2544,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             except ValueError:
                 # The command has been popped out from the queue.
                 # Make a new Deferred to safely drop the response on the floor.
-                new_deferred = defer.Deferred()
-                cmd.defer = new_deferred
+                newDeferred = defer.Deferred()
+                cmd.defer = newDeferred
         cmd.defer = defer.Deferred(cancel)
         if self.waiting:
             self.queued.append(cmd)

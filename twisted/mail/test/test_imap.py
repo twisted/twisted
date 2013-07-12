@@ -2841,16 +2841,16 @@ class TLSStringTransport(StringTransport):
     A version of L{StringTransport} that implements the
     L{interfaces.ITLSTransport}.
     """
-    TLSStarted = False
+    startTLSCalled = False
 
 
     def startTLS(self, contextFactory):
         """
-        Simply set L{TLSStarted} to C{True}.
+        Simply set L{startTLSCalled} to C{True}.
 
         @param contextFactory: A context factory (see L{ssl.py<twisted.internet.ssl>})
         """
-        self.TLSStarted = True
+        self.startTLSCalled = True
 
 
 
