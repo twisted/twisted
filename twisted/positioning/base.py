@@ -6,6 +6,7 @@ Generic positioning base classes.
 
 @since: 13.2
 """
+from functools import partial
 from operator import attrgetter
 from zope.interface import implementer
 from twisted.python.constants import Names, NamedConstant
@@ -769,8 +770,7 @@ class BeaconInformation(object):
     @type seenBeacons: C{set} of L{IPositioningBeacon}
     @ivar usedBeacons: An set of the beacons that were used in obtaining a
         positioning fix. This only contains beacons that are actually used, not
-        beacons for which it is unknown if they are used or not. This attribute
-        is immutable.
+        beacons for which it is unknown if they are used or not.
     @type usedBeacons: C{set} of L{IPositioningBeacon}
     """
     def __init__(self, seenBeacons=()):
@@ -781,19 +781,7 @@ class BeaconInformation(object):
         @type seenBeacons: iterable of L{IPositioningBeacon}s
         """
         self.seenBeacons = set(seenBeacons)
-
-
-    @property
-    def usedBeacons(self):
-        """
-        Returns an iterable of used beacons.
-
-        @return: A set of all of the used positioning beacons. This only
-            contains beacons that are actually used, not beacons of which
-            it is unknown if they are used or not.
-        @rtype: C{set} of L{IPositioningBeacon}
-        """
-        return set(b for b in self.seenBeacons if b.isUsed)
+        self.usedBeacons = set()
 
 
     def __repr__(self):
@@ -805,19 +793,20 @@ class BeaconInformation(object):
         @return: The string representation.
         @rtype: C{str}
         """
-        sortedBeacons = sorted(self.seenBeacons, key=attrgetter("identifier"))
-        beaconReprs = ", ".join(map(repr, sortedBeacons))
+        sortedBeacons = partial(sorted, key=attrgetter("identifier"))
 
-        used = 0
-        for b in self.seenBeacons:
-            if b.isUsed is None:
-                used = "?"
-                break
-            elif b.isUsed:
-                used += 1
+        usedBeacons = sortedBeacons(self.usedBeacons)
+        unusedBeacons = sortedBeacons(self.seenBeacons - self.usedBeacons)
 
-        template = "<BeaconInformation (seen: %s, used: %s, beacons: {%s})>"
-        return template % (len(self.seenBeacons), used, beaconReprs)
+        template = ("<BeaconInformation ("
+                    "used beacons ({numUsed}): {usedBeacons}, "
+                    "unused beacons: {unusedBeacons})>")
+
+        formatted = template.format(numUsed=len(self.usedBeacons),
+                                    usedBeacons=usedBeacons,
+                                    unusedBeacons=unusedBeacons)
+
+        return formatted
 
 
 
@@ -830,9 +819,6 @@ class PositioningBeacon(object):
         an integer. For GPS, this is also known as the PRN.
     @type identifier: Pretty much anything that can be used as a unique
         identifier. Depends on the implementation.
-    @ivar isUsed: C{True} if the satellite is currently being used to obtain a
-        fix, C{False} if it is not currently being used, C{None} if unknown.
-    @type isUsed: C{bool} or C{NoneType}
     """
     def __init__(self, identifier, isUsed=None):
         """
@@ -840,9 +826,6 @@ class PositioningBeacon(object):
 
         @param identifier: The identifier for this beacon.
         @type identifier: Can be pretty much anything (see ivar documentation).
-        @param isUsed: Determines if this beacon is used in obtaining a
-            positioning fix (see the ivar documentation).
-        @type isUsed: C{bool} or C{NoneType}
         """
         self.identifier = identifier
         self.isUsed = isUsed
@@ -858,18 +841,6 @@ class PositioningBeacon(object):
         return hash(self.identifier)
 
 
-    def _usedRepr(self):
-        """
-        Returns a single character representation of the status of this
-        satellite in terms of being used for attaining a positioning fix.
-
-        @return: One of ("Y", "N", "?") depending on the status of the
-            satellite.
-        @rtype: C{str}
-        """
-        return {True: "Y", False: "N", None: "?"}[self.isUsed]
-
-
     def __repr__(self):
         """
         Returns a string representation of this beacon.
@@ -877,8 +848,7 @@ class PositioningBeacon(object):
         @return: The string representation.
         @rtype: C{str}
         """
-        return "<Beacon (identifier: %s, used: %s)>" \
-            % (self.identifier, self._usedRepr())
+        return "<Beacon ({0.identifier})>".format(self)
 
 
 
@@ -898,8 +868,7 @@ class Satellite(PositioningBeacon):
                  identifier,
                  azimuth=None,
                  elevation=None,
-                 signalToNoiseRatio=None,
-                 isUsed=None):
+                 signalToNoiseRatio=None):
         """
         Initializes a satellite object.
 
@@ -914,9 +883,8 @@ class Satellite(PositioningBeacon):
         @param signalToNoiseRatio: The signal to noise ratio of the connection
             to this satellite (see instance variable documentation).
         @type signalToNoiseRatio: C{float}
-
         """
-        PositioningBeacon.__init__(self, int(identifier), isUsed)
+        PositioningBeacon.__init__(self, int(identifier))
 
         self.azimuth = azimuth
         self.elevation = elevation
@@ -930,14 +898,12 @@ class Satellite(PositioningBeacon):
         @return: The string representation.
         @rtype: C{str}
         """
-        azimuth, elevation, snr = ["?" if x is None else x
-            for x in self.azimuth, self.elevation, self.signalToNoiseRatio]
+        template = ("<Satellite ({self.identifier}), "
+                    "azimuth: {self.azimuth}, "
+                    "elevation: {self.elevation}, "
+                    "snr: {self.signalToNoiseRatio}>")
 
-        properties = "azimuth: %s, elevation: %s, snr: %s" % (
-            azimuth, elevation, snr)
-
-        return "<Satellite (%s), %s, used: %s>" % (
-            self.identifier, properties, self._usedRepr())
+        return template.format(self=self)
 
 
 

@@ -776,7 +776,9 @@ class BeaconInformationTests(TestCase):
         """
         bi = base.BeaconInformation()
         self.assertEqual(len(bi.usedBeacons), 0)
-        expectedRepr = '<BeaconInformation (seen: 0, used: 0, beacons: {})>'
+        expectedRepr = ("<BeaconInformation ("
+                        "used beacons (0): [], "
+                        "unused beacons: [])>")
         self.assertEqual(repr(bi), expectedRepr)
 
 
@@ -791,7 +793,7 @@ class BeaconInformationTests(TestCase):
         def _buildSatellite(**kw):
             kwargs = dict(self.satelliteKwargs)
             kwargs.update(kw)
-            return base.Satellite(isUsed=None, **kwargs)
+            return base.Satellite(**kwargs)
 
         beacons = set()
         for prn in range(1, 10):
@@ -799,19 +801,21 @@ class BeaconInformationTests(TestCase):
 
         bi = base.BeaconInformation(beacons)
 
+        self.assertEqual(len(bi.seenBeacons), 9)
         self.assertEqual(len(bi.usedBeacons), 0)
         self.assertEqual(repr(bi),
-            "<BeaconInformation (seen: 9, used: ?, beacons: {"
-            "<Satellite (1), azimuth: 1, elevation: 1, snr: 1.0, used: ?>, "
-            "<Satellite (2), azimuth: 1, elevation: 1, snr: 1.0, used: ?>, "
-            "<Satellite (3), azimuth: 1, elevation: 1, snr: 1.0, used: ?>, "
-            "<Satellite (4), azimuth: 1, elevation: 1, snr: 1.0, used: ?>, "
-            "<Satellite (5), azimuth: 1, elevation: 1, snr: 1.0, used: ?>, "
-            "<Satellite (6), azimuth: 1, elevation: 1, snr: 1.0, used: ?>, "
-            "<Satellite (7), azimuth: 1, elevation: 1, snr: 1.0, used: ?>, "
-            "<Satellite (8), azimuth: 1, elevation: 1, snr: 1.0, used: ?>, "
-            "<Satellite (9), azimuth: 1, elevation: 1, snr: 1.0, used: ?>"
-            "})>")
+            "<BeaconInformation (used beacons (0): [], "
+            "unused beacons: ["
+            "<Satellite (1), azimuth: 1, elevation: 1, snr: 1.0>, "
+            "<Satellite (2), azimuth: 1, elevation: 1, snr: 1.0>, "
+            "<Satellite (3), azimuth: 1, elevation: 1, snr: 1.0>, "
+            "<Satellite (4), azimuth: 1, elevation: 1, snr: 1.0>, "
+            "<Satellite (5), azimuth: 1, elevation: 1, snr: 1.0>, "
+            "<Satellite (6), azimuth: 1, elevation: 1, snr: 1.0>, "
+            "<Satellite (7), azimuth: 1, elevation: 1, snr: 1.0>, "
+            "<Satellite (8), azimuth: 1, elevation: 1, snr: 1.0>, "
+            "<Satellite (9), azimuth: 1, elevation: 1, snr: 1.0>"
+            "])>")
 
 
     def test_someSatellitesUsed(self):
@@ -819,34 +823,29 @@ class BeaconInformationTests(TestCase):
         Tests a beacon information with a bunch of satellites, some of
         them used in computing a fix.
         """
-        def _buildSatellite(**kw):
-            kwargs = dict(self.satelliteKwargs)
-            kwargs.update(kw)
-            return base.Satellite(**kwargs)
+        bi = base.BeaconInformation()
 
-        beacons = set()
         for prn in range(1, 10):
-            isUsed = bool(prn % 2)
-            satellite = _buildSatellite(identifier=prn, isUsed=isUsed)
-            beacons.add(satellite)
-
-        bi = base.BeaconInformation(beacons)
+            satellite = base.Satellite(identifier=prn, **self.satelliteKwargs)
+            bi.seenBeacons.add(satellite)
+            if prn % 2:
+                bi.usedBeacons.add(satellite)
 
         self.assertEqual(len(bi.seenBeacons), 9)
         self.assertEqual(len(bi.usedBeacons), 5)
 
         self.assertEqual(repr(bi),
-            "<BeaconInformation (seen: 9, used: 5, beacons: {"
-            "<Satellite (1), azimuth: 1, elevation: 1, snr: 1.0, used: Y>, "
-            "<Satellite (2), azimuth: 1, elevation: 1, snr: 1.0, used: N>, "
-            "<Satellite (3), azimuth: 1, elevation: 1, snr: 1.0, used: Y>, "
-            "<Satellite (4), azimuth: 1, elevation: 1, snr: 1.0, used: N>, "
-            "<Satellite (5), azimuth: 1, elevation: 1, snr: 1.0, used: Y>, "
-            "<Satellite (6), azimuth: 1, elevation: 1, snr: 1.0, used: N>, "
-            "<Satellite (7), azimuth: 1, elevation: 1, snr: 1.0, used: Y>, "
-            "<Satellite (8), azimuth: 1, elevation: 1, snr: 1.0, used: N>, "
-            "<Satellite (9), azimuth: 1, elevation: 1, snr: 1.0, used: Y>"
-            "})>")
+            "<BeaconInformation (used beacons (5): ["
+            "<Satellite (1), azimuth: 1, elevation: 1, snr: 1.0>, "
+            "<Satellite (3), azimuth: 1, elevation: 1, snr: 1.0>, "
+            "<Satellite (5), azimuth: 1, elevation: 1, snr: 1.0>, "
+            "<Satellite (7), azimuth: 1, elevation: 1, snr: 1.0>, "
+            "<Satellite (9), azimuth: 1, elevation: 1, snr: 1.0>], "
+            "unused beacons: ["
+            "<Satellite (2), azimuth: 1, elevation: 1, snr: 1.0>, "
+            "<Satellite (4), azimuth: 1, elevation: 1, snr: 1.0>, "
+            "<Satellite (6), azimuth: 1, elevation: 1, snr: 1.0>, "
+            "<Satellite (8), azimuth: 1, elevation: 1, snr: 1.0>])>")
 
 
 
@@ -863,28 +862,11 @@ class PositioningBeaconTests(TestCase):
         verify.verifyObject(IPositioningBeacon, base.PositioningBeacon(1))
 
 
-    def test_usedRepr(self):
+    def test_repr(self):
         """
-        Tests the repr of a positioning beacon being used.
+        Tests the repr of a positioning beacon.
         """
-        s = base.PositioningBeacon("A", True)
-        self.assertEqual(repr(s), "<Beacon (identifier: A, used: Y)>")
-
-
-    def test_unusedRepr(self):
-        """
-        Tests the repr of a positioning beacon not being used.
-        """
-        s = base.PositioningBeacon("A", False)
-        self.assertEqual(repr(s), "<Beacon (identifier: A, used: N)>")
-
-
-    def test_dontKnowIfUsed(self):
-        """
-        Tests the repr of a positioning beacon that might be used.
-        """
-        s = base.PositioningBeacon("A", None)
-        self.assertEqual(repr(s), "<Beacon (identifier: A, used: ?)>")
+        self.assertEqual(repr(base.PositioningBeacon("A")), "<Beacon (A)>")
 
 
 
@@ -904,8 +886,8 @@ class SatelliteTests(TestCase):
         self.assertEqual(s.azimuth, None)
         self.assertEqual(s.elevation, None)
         self.assertEqual(s.signalToNoiseRatio, None)
-        self.assertEqual(repr(s), "<Satellite (1), azimuth: ?, "
-                                   "elevation: ?, snr: ?, used: ?>")
+        self.assertEqual(repr(s), "<Satellite (1), azimuth: None, "
+                                   "elevation: None, snr: None>")
 
 
     def test_simple(self):
@@ -918,12 +900,11 @@ class SatelliteTests(TestCase):
         s = base.Satellite(identifier=1,
                            azimuth=270.,
                            elevation=30.,
-                           signalToNoiseRatio=25.,
-                           isUsed=True)
+                           signalToNoiseRatio=25.)
 
         self.assertEqual(s.identifier, 1)
         self.assertEqual(s.azimuth, 270.)
         self.assertEqual(s.elevation, 30.)
         self.assertEqual(s.signalToNoiseRatio, 25.)
         self.assertEqual(repr(s), "<Satellite (1), azimuth: 270.0, "
-                                   "elevation: 30.0, snr: 25.0, used: Y>")
+                                   "elevation: 30.0, snr: 25.0>")
