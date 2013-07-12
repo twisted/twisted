@@ -9,7 +9,7 @@ if __name__ == '__main__':
     react(sftpclient_ssh.main, sys.argv[1:])
 
 from twisted.internet.defer import Deferred
-from twisted.internet.protocol import Factory, Protocol
+from twisted.internet.protocol import Protocol
 from twisted.internet.endpoints import connectProtocol
 
 from twisted.conch.endpoints import SSHSubsystemClientEndpoint
@@ -35,9 +35,7 @@ def main(reactor, *argv):
     parameters = ConnectionParameters.fromCommandLine(reactor, argv)
     endpoint = parameters.endpointForCommand(b"/bin/cat")
 
-    factory = Factory()
-    factory.protocol = Protocol
-    d = endpoint.connect(factory)
+    d = connectProtocol(endpoint, Protocol())
 
     def gotConnection(proto):
         conn = proto.transport.conn

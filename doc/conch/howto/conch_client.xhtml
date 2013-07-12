@@ -139,6 +139,22 @@ second version of this protocol.</p>
       Bounce some bytes off an SSH-based echo server many times using one TCP connection
     </a>
 
+    <h2>Using an SSH Subsystem Endpoint</h2>
+
+    <p>
+      Very simarly to the command endpoint, <code class="API">twisted.conch.endpoints.SSHSubsystemClientEndpoint</code> provides a way to run a subsystem using the endpoint API.
+      You simply provide a protocol to interact with the subsystem, after getting a channel either via <code>newConnection</code> or <code>existingConnection</code>.
+    </p>
+
+    <a href="listings/sftpclient_ssh.py" class="py-listing">
+      Create a directory using SFTP
+    </a>
+
+    <p>
+      The example uses the sftp subsystem with a <code>FileTransferClient</code> protocol to create a directory.
+      The connection is created using the previous <code>SSHCommandClientEndpoint</code> and is reused by <code>SSHSubsystemClientEndpoint</code> to talk to the subsystem.
+    </p>
+
     <h2>Writing a client</h2>
 
 <p>
