@@ -58,7 +58,13 @@ class Resolver(common.ResolverBase):
         Return a list of two-tuples representing the addresses of the root
         servers, as defined by C{self.hints}.
         """
-        return [(ip, dns.PORT) for ip in self.hints]
+        return [(None, ip, dns.PORT) for ip in self.hints]
+
+
+    def buildResolver(self, query, servers):
+        from twisted.names import client
+        hostlessServers = [(ip, port) for host, ip, port in servers]
+        return client.Resolver(servers=hostlessServers, reactor=self._reactor)
 
 
     def _query(self, query, servers, timeout, filter):
@@ -86,8 +92,7 @@ class Resolver(common.ResolverBase):
             error.
         @rtype: L{Deferred}
         """
-        from twisted.names import client
-        r = client.Resolver(servers=servers, reactor=self._reactor)
+        r = self.buildResolver(query, servers)
         d = r.queryUDP([query], timeout)
         if filter:
             d.addCallback(r.filterAnswers)
@@ -235,7 +240,7 @@ class Resolver(common.ResolverBase):
             if rr.type == dns.NS:
                 ns = rr.payload.name.name
                 if ns in addresses:
-                    hints.append((addresses[ns], dns.PORT))
+                    hints.append((ns, addresses[ns], dns.PORT))
                 else:
                     traps.append(ns)
         if hints:
@@ -249,7 +254,8 @@ class Resolver(common.ResolverBase):
             d.addCallback(getOneAddress)
             d.addCallback(
                 lambda hint: self._discoverAuthority(
-                    query, [(hint, dns.PORT)], timeout, queriesLeft - 1))
+                    query, [(traps[0], hint, dns.PORT)], timeout,
+                    queriesLeft - 1))
             return d
         else:
             return Failure(error.ResolverError(

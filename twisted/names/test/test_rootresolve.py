@@ -162,7 +162,7 @@ class RootResolverTests(TestCase):
         reactor = MemoryReactor()
         resolver = Resolver([], reactor=reactor)
         d = resolver._query(
-            Query(b'foo.example.com', A, IN), [('1.1.2.3', 1053)], (30,),
+            Query(b'foo.example.com', A, IN), [(None, '1.1.2.3', 1053)], (30,),
             filter)
 
         # A UDP port should have been started.
@@ -249,7 +249,8 @@ class RootResolverTests(TestCase):
         return response
 
 
-    def _getResolver(self, serverResponses, maximumQueries=10):
+    def _getResolver(self, serverResponses, maximumQueries=10,
+                     includeHostnames=False):
         """
         Create and return a new L{root.Resolver} modified to resolve queries
         against the record data represented by C{servers}.
@@ -264,7 +265,11 @@ class RootResolverTests(TestCase):
 
         def query(query, serverAddresses, timeout, filter):
             msg("Query for QNAME %s at %r" % (query.name, serverAddresses))
-            for addr in serverAddresses:
+            for host, ip, port in serverAddresses:
+                if includeHostnames:
+                    addr = host, ip, port
+                else:
+                    addr = ip, port
                 try:
                     server = serverResponses[addr]
                 except KeyError:
@@ -577,6 +582,50 @@ class RootResolverTests(TestCase):
         return gatherResults([failD, succeedD])
 
 
+    def test_passedHostnames(self):
+        """
+        L{Resolver.lookupAddress} will pass the hostname along with the IP and
+        port of the next DNS servers to query to L{Resolver._query}.
+        """
+        servers = {
+            # This is a root server, so the hostname will be None.
+            (None, '1.1.2.3', 53): {
+                # First query - force it to start over with a name lookup of
+                # ns1.example.com
+                ('example.com', A): {
+                    'authority': [('example.com', Record_NS('ns1.example.com'))],
+                },
+                # Second query - let it resume the original lookup with the
+                # address of the nameserver handling the delegation.
+                ('ns1.example.com', A): {
+                    'answers': [('ns1.example.com', Record_A('10.0.0.2'))],
+                },
+            },
+            # Even though it took two resolutions to get this hostname, it will
+            # be passed along.
+            ('ns1.example.com', '10.0.0.2', 53): {
+                # Third query - let it jump straight to asking the
+                # delegation server by including its address here (different
+                # case from the first query).
+                ('example.com', A): {
+                    'authority': [('example.com', Record_NS('ns2.example.com'))],
+                    'additional': [('ns2.example.com', Record_A('10.0.0.3'))],
+                },
+            },
+            # 'Regular' responses including an additional section will pass
+            # along the hostname.
+            ('ns2.example.com', '10.0.0.3', 53): {
+                # Fourth query - give it the answer, we're done.
+                ('example.com', A): {
+                    'answers': [('example.com', Record_A('10.0.0.4'))],
+                },
+            },
+        }
+
+        r = self._getResolver(servers, 4, includeHostnames=True)
+        return r.lookupAddress('example.com')
+
+
 
 class StubDNSDatagramProtocol:
     """
@@ -593,5 +642,3 @@ _retrySuppression = util.suppress(
     message=(
         'twisted.names.root.retry is deprecated since Twisted 10.0.  Use a '
         'Resolver object for retry logic.'))
-
-
