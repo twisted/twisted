@@ -2986,7 +2986,7 @@ class IMAP4ClientCancelTestCase(unittest.TestCase):
         The L{imap4.IMAP4Client.startTLS} supports cancellation by using
         L{imap4.IMAP4Client.sendCommand} to send the command.
         """
-        imap4client = MemoryIMAP4Client()
+        imap4client = MemoryIMAP4Client(object())
         transport = TLSStringTransport()
         imap4client.makeConnection(transport)
         imap4client.dataReceived('* OK [IMAP4rev1]\r\n')
