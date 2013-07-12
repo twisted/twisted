@@ -354,6 +354,10 @@ class SSHCommandClientEndpointTestsMixin(object):
         Set up an in-memory connection between protocols created by
         C{serverFactory} and C{clientFactory}.
 
+        @param serverFactory: Factory providing the server protocol.
+
+        @param clientFactory: Factory providing the client protocol.
+
         @return: A three-tuple.  The first element is the protocol created by
             C{serverFactory}.  The second element is the protocol created by
             C{clientFactory}.  The third element is the L{IOPump} connecting
@@ -723,6 +727,8 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         """
         Create and return a new L{SSHCommandClientEndpoint} using the
         C{newConnection} constructor.
+
+        @return: A L{SSHCommandClientEndpoint} instance.
         """
         return SSHCommandClientEndpoint.newConnection(
             self.reactor, b"/bin/ls -l", self.user, self.hostname, self.port,
@@ -744,6 +750,11 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         Assert that the transport for the given protocol has been disconnected.
         L{SSHCommandClientEndpoint.newConnection} creates a new dedicated SSH
         connection and cleans it up after the command exits.
+
+        @param client: The client whose state is being checked.
+
+        @param immediateClose: Boolean indicating whether the connection was
+            closed immediately or not.
         """
         # Nothing useful can be done with the connection at this point, so the
         # endpoint should close it.
@@ -1202,6 +1213,8 @@ class ExistingConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         """
         Create and return a new L{SSHCommandClientEndpoint} using the
         C{existingConnection} constructor.
+
+        @return: A L{SSHCommandClientEndpoint} instance.
         """
         factory = Factory()
         factory.protocol = Protocol
@@ -1233,6 +1246,9 @@ class ExistingConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         """
         Give back the connection established in L{create} over which the new
         command channel being tested will exchange data.
+
+        @return: A three-tuple, with the server protocol, the client protocol
+            and the L{IOPump} connecting them.
         """
         # The connection was set up and the first command channel set up, but
         # some more I/O needs to happen for the second command channel to be
@@ -1250,6 +1266,11 @@ class ExistingConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         L{SSHCommandClientEndpoint.existingConnection} re-uses an SSH connected
         created by some other code, so other code is responsible for cleaning
         it up.
+
+        @param client: The client whose state is being checked.
+
+        @param immediateClose: Boolean indicating whether the connection was
+            closed immediately or not.
         """
         self.assertFalse(client.transport.disconnecting)
         self.assertFalse(client.transport.aborted)
@@ -1553,6 +1574,10 @@ class SSHSubsystemClientEndpointTests(TestCase):
         Set up an in-memory connection between protocols created by
         C{serverFactory} and C{clientFactory}.
 
+        @param serverFactory: Factory providing the server protocol.
+
+        @param clientFactory: Factory providing the client protocol.
+
         @return: A three-tuple.  The first element is the protocol created by
             C{serverFactory}.  The second element is the protocol created by
             C{clientFactory}.  The third element is the L{IOPump} connecting
@@ -1577,6 +1602,8 @@ class SSHSubsystemClientEndpointTests(TestCase):
         """
         Create and return a new L{SSHSubsystemClientEndpoint} using the
         C{newConnection} constructor.
+
+        @return: A L{SSHSubsystemClientEndpoint} instance.
         """
         return SSHSubsystemClientEndpoint.newConnection(
             self.reactor, b"sftp", self.user, self.hostname, self.port,
@@ -1588,6 +1615,9 @@ class SSHSubsystemClientEndpointTests(TestCase):
         """
         Establish the first attempted TCP connection using the SSH server which
         C{self.factory} can create.
+
+        @return: A three-tuple, with the server protocol, the client protocol
+            and the L{IOPump} connecting them.
         """
         return self.connectedServerAndClient(
             self.factory, self.reactor.tcpClients[0][2])
@@ -1598,6 +1628,11 @@ class SSHSubsystemClientEndpointTests(TestCase):
         Assert that the transport for the given protocol has been disconnected.
         L{SSHCommandClientEndpoint.newConnection} creates a new dedicated SSH
         connection and cleans it up after the command exits.
+
+        @param client: The client whose state is being checked.
+
+        @param immediateClose: Boolean indicating whether the connection was
+            closed immediately or not.
         """
         # Nothing useful can be done with the connection at this point, so the
         # endpoint should close it.

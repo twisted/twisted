@@ -488,6 +488,7 @@ class _CommandTransport(SSHClientTransport):
         self.connectionReady.errback(reason)
 
 
+
 class _SSHClientEndpoint(object):
     """
     Base class for SSH client endpoints. It provides methods for creating
