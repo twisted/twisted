@@ -17,7 +17,7 @@ import locale
 import os
 import types
 
-from zope.interface import implements
+from zope.interface import implements, implementer
 
 from twisted.mail.imap4 import MessageSet
 from twisted.mail import imap4
@@ -2835,6 +2835,25 @@ class SelectionTestsMixin(PreauthIMAP4ClientMixin):
 
 
 
+@implementer(interfaces.ITLSTransport)
+class TLSStringTransport(StringTransport):
+    """
+    A version of L{StringTransport} that implements the
+    L{interfaces.ITLSTransport}.
+    """
+    TLSStarted = False
+
+
+    def startTLS(self, contextFactory):
+        """
+        Simply set L{TLSStarted} to C{True}.
+
+        @param contextFactory: A context factory (see L{ssl.py<twisted.internet.ssl>})
+        """
+        self.TLSStarted = True
+
+
+
 class MemoryIMAP4Client(imap4.IMAP4Client):
     """
     A version of L{imap4.IMAP4Client} that can memory the L{defer.Deferred}s
@@ -2962,15 +2981,19 @@ class IMAP4ClientCancelTestCase(unittest.TestCase):
         self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
 
 
-    # TODO: Add 'STARTTLS' in IMAP4Client._capCache and use a helper transport
-    #       that implement ITLSTransport
-    # def test_startTLSUsesSendCommand(self):
-    #     """
-    #     The L{imap4.IMAP4Client.startTLS} supports cancellation by using
-    #     L{imap4.IMAP4Client.sendCommand} to send the command.
-    #     """
-    #     deferred = self.imap4client.startTLS()
-    #     self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
+    def test_startTLSUsesSendCommand(self):
+        """
+        The L{imap4.IMAP4Client.startTLS} supports cancellation by using
+        L{imap4.IMAP4Client.sendCommand} to send the command.
+        """
+        imap4client = MemoryIMAP4Client()
+        transport = TLSStringTransport()
+        imap4client.makeConnection(transport)
+        imap4client.dataReceived('* OK [IMAP4rev1]\r\n')
+        imap4client._capCache = ['STARTTLS']
+
+        deferred = imap4client.startTLS()
+        self.assertEqual(deferred, self.imap4client.sendCommandDeferreds[-1])
 
 
     def test_namespaceUsesSendCommand(self):
