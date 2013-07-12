@@ -531,7 +531,25 @@ class FixUnitsTests(TestCase):
 
         self.adapter.currentSentence = FakeSentence()
         self.adapter._fixUnits(unitKey="fooUnits", unit="N")
-        self.assertIn("foo", self.adapter._sentenceData)
+        self.assertNotEqual(self.adapter._sentenceData["foo"], 1)
+
+
+    def test_unitKeyButNoUnit(self):
+        """
+        Tests that if a unit key is provided but the unit isn't, the unit is
+        automatically determined from the unit key.
+        """
+        class FakeSentence(object):
+            """
+            A fake sentence that just has "foo" and "fooUnits" attributes.
+            """
+            def __init__(self):
+                self.foo = 1
+                self.fooUnits = "N"
+
+        self.adapter.currentSentence = FakeSentence()
+        self.adapter._fixUnits(unitKey="fooUnits")
+        self.assertNotEqual(self.adapter._sentenceData["foo"], 1)
 
 
     def test_noValueKeyAndNoUnitKey(self):
