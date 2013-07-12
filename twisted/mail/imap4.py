@@ -2518,7 +2518,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         If there is already a command running, the new command will be appended
         into a queue.
-        
+
         @param cmd: The command to be sent.
         @type cmd: L{Command}
 
@@ -2536,7 +2536,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             If the command is in the queue, remove the command from the queue.
             If the command has been sent directly or has been popped out from
             the queue, drop the response on the floor safely.
-            
+
             @param deferred: The L{defer.Deferred} of the cancelled command.
             """
             try:
