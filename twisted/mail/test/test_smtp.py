@@ -4,6 +4,7 @@
 """
 Test cases for twisted.mail.smtp module.
 """
+import inspect
 
 from zope.interface import implements, directlyProvides
 
@@ -13,7 +14,7 @@ from twisted.protocols import basic, loopback
 from twisted.mail import smtp
 from twisted.internet import defer, protocol, reactor, interfaces
 from twisted.internet import address, error, task
-from twisted.test.proto_helpers import StringTransport
+from twisted.test.proto_helpers import MemoryReactor, StringTransport
 
 from twisted import cred
 import twisted.cred.error
@@ -924,6 +925,45 @@ class MultipleDeliveryFactorySMTPServerFactory(protocol.ServerFactory):
 
 
 
+class SMTPSenderFactoryTestCase(unittest.TestCase):
+    """
+    Tests for L{smtp.SMTPSenderFactory}.
+    """
+    def test_removeCurrentProtocolWhenClientConnectionLost(self):
+        """
+        L{smtp.SMTPSenderFactory} removes the current protocol when the client
+        connection is lost.
+        """
+        reactor = MemoryReactor()
+        sentDeferred = defer.Deferred()
+        clientFactory = smtp.SMTPSenderFactory(
+            "source@address", "recipient@address",
+            StringIO("message"), sentDeferred)
+        connector = reactor.connectTCP("localhost", 25, clientFactory)
+        clientFactory.buildProtocol(None)
+        clientFactory.clientConnectionLost(connector,
+                                           error.ConnectionDone("Bye."))
+        self.assertEqual(clientFactory.currentProtocol, None)
+
+
+    def test_removeCurrentProtocolWhenClientConnectionFailed(self):
+        """
+        L{smtp.SMTPSenderFactory} removes the current protocol when the client
+        connection is failed.
+        """
+        reactor = MemoryReactor()
+        sentDeferred = defer.Deferred()
+        clientFactory = smtp.SMTPSenderFactory(
+            "source@address", "recipient@address",
+            StringIO("message"), sentDeferred)
+        connector = reactor.connectTCP("localhost", 25, clientFactory)
+        clientFactory.buildProtocol(None)
+        clientFactory.clientConnectionFailed(connector,
+                                             error.ConnectionDone("Bye."))
+        self.assertEqual(clientFactory.currentProtocol, None)
+
+
+
 class SMTPSenderFactoryRetryTestCase(unittest.TestCase):
     """
     Tests for the retry behavior of L{smtp.SMTPSenderFactory}.
@@ -1677,3 +1717,73 @@ class SSLTestCase(unittest.TestCase):
             warningsShown[0]['message'],
             "tlsMode attribute of twisted.mail.smtp.ESMTPClient "
             "is deprecated since Twisted 13.0")
+
+
+
+class AbortableStringTransport(StringTransport):
+    """
+    A version of L{StringTransport} that supports C{abortConnection}.
+    """
+    # This should be replaced by a common version in #6530.
+    aborting = False
+
+
+    def abortConnection(self):
+        """
+        A testable version of the C{ITCPTransport.abortConnection} method.
+
+        Since this is a special case of closing the connection,
+        C{loseConnection} is also called.
+        """
+        self.aborting = True
+        self.loseConnection()
+
+
+
+class SendmailTestCase(unittest.TestCase):
+    """
+    Tests for L{twisted.mail.smtp.sendmail}.
+    """
+    def test_defaultReactorIsGlobalReactor(self):
+        """
+        The default C{reactor} parameter of L{twisted.mail.smtp.sendmail} is
+        L{twisted.internet.reactor}.
+        """
+        args, varArgs, keywords, defaults = inspect.getargspec(smtp.sendmail)
+        index = len(args) - args.index("reactor") + 1
+        self.assertEqual(reactor, defaults[index])
+
+
+    def test_cancelBeforeConnectionMade(self):
+        """
+        When a user cancels L{twisted.mail.smtp.sendmail} before the connection
+        is made, the connection is closed by
+        L{twisted.internet.interfaces.IConnector.disconnect}.
+        """
+        reactor = MemoryReactor()
+        d = smtp.sendmail("localhost", "source@address", "recipient@address",
+                          "message", reactor=reactor)
+        d.cancel()
+        self.assertEqual(reactor.connectors[0]._disconnected, True)
+        failure = self.failureResultOf(d)
+        failure.trap(defer.CancelledError)
+
+
+    def test_cancelAfterConnectionMade(self):
+        """
+        When a user cancels L{twisted.mail.smtp.sendmail} after the connection
+        is made, the connection is closed by
+        L{twisted.internet.interfaces.ITransport.abortConnection}.
+        """
+        reactor = MemoryReactor()
+        transport = AbortableStringTransport()
+        d = smtp.sendmail("localhost", "source@address", "recipient@address",
+                          "message", reactor=reactor)
+        factory = reactor.tcpClients[0][2]
+        p = factory.buildProtocol(None)
+        p.makeConnection(transport)
+        d.cancel()
+        self.assertEqual(transport.aborting, True)
+        self.assertEqual(transport.disconnecting, True)
+        failure = self.failureResultOf(d)
+        failure.trap(defer.CancelledError)

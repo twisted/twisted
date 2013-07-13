@@ -1699,12 +1699,12 @@ class SenderMixin:
 
         if (self.factory.retries >= 0 or
             (not exc.retry and not (exc.code >= 400 and exc.code < 500))):
-            self.factory.sendFinished = 1
+            self.factory.sendFinished = True
             self.factory.result.errback(exc)
 
     def sentMail(self, code, resp, numOk, addresses, log):
         # Do not retry, the SMTP server acknowledged the request
-        self.factory.sendFinished = 1
+        self.factory.sendFinished = True
         if code not in SUCCESS:
             errlog = []
             for addr, acode, aresp in addresses:
@@ -1729,6 +1729,15 @@ class SMTPSender(SenderMixin, SMTPClient):
 class SMTPSenderFactory(protocol.ClientFactory):
     """
     Utility factory for sending emails easily.
+
+    @type currentProtocol: L{SMTPSender}
+    @ivar currentProtocol: The current running protocol returned by
+        L{buildProtocol}.
+
+    @type sendFinished: C{bool}
+    @ivar sendFinished: When the value is set to True, it means the message has
+        been sent or there has been an unrecoverable error or the sending has
+        been cancelled. The default value is False.
     """
 
     domain = DNSNAME
@@ -1765,14 +1774,15 @@ class SMTPSenderFactory(protocol.ClientFactory):
         self.file = file
         self.result = deferred
         self.result.addBoth(self._removeDeferred)
-        self.sendFinished = 0
+        self.sendFinished = False
+        self.currentProtocol = None
 
         self.retries = -retries
         self.timeout = timeout
 
-    def _removeDeferred(self, argh):
+    def _removeDeferred(self, result):
         del self.result
-        return argh
+        return result
 
     def clientConnectionFailed(self, connector, err):
         self._processConnectionError(connector, err)
@@ -1781,7 +1791,8 @@ class SMTPSenderFactory(protocol.ClientFactory):
         self._processConnectionError(connector, err)
 
     def _processConnectionError(self, connector, err):
-        if self.retries < self.sendFinished <= 0:
+        self.currentProtocol = None
+        if (self.retries < 0) and (not self.sendFinished):
             log.msg("SMTP Client retrying server. Retry: %s" % -self.retries)
 
             # Rewind the file in case part of it was read while attempting to
@@ -1789,7 +1800,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
             self.file.seek(0, 0)
             connector.connect()
             self.retries += 1
-        elif self.sendFinished <= 0:
+        elif not self.sendFinished:
             # If we were unable to communicate with the SMTP server a ConnectionDone will be
             # returned. We want a more clear error message for debugging
             if err.check(error.ConnectionDone):
@@ -1800,7 +1811,22 @@ class SMTPSenderFactory(protocol.ClientFactory):
         p = self.protocol(self.domain, self.nEmails*2+2)
         p.factory = self
         p.timeout = self.timeout
+        self.currentProtocol = p
+        self.result.addBoth(self._removeProtocol)
         return p
+
+    def _removeProtocol(self, result):
+        """
+        Remove the protocol created in C{buildProtocol}.
+
+        @param result: The result/error passed to the callback/errback of
+            L{defer.Deferred}.
+
+        @return: The C{result} untouched.
+        """
+        if self.currentProtocol:
+            self.currentProtocol = None
+        return result
 
 
 
@@ -1908,7 +1934,8 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         p.timeout = self.timeout
         return p
 
-def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25):
+def sendmail(smtphost, from_addr, to_addrs, msg,
+             senderDomainName=None, port=25, reactor=reactor):
     """Send an email
 
     This interface is intended to be a direct replacement for
@@ -1935,9 +1962,13 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25)
 
     @param port: Remote port to which to connect.
 
+    @param reactor: The reactor used to make TCP connection.
+
     @rtype: L{Deferred}
-    @returns: A L{Deferred}, its callback will be called if a message is sent
-        to ANY address, the errback if no message is sent.
+    @returns: A cancellable L{Deferred}, its callback will be called if a
+        message is sent to ANY address, the errback if no message is sent. When
+        the C{cancel} method is called, it will stop retrying and disconnect
+        the connection immediately.
 
         The callback will be called with a tuple (numOk, addresses) where numOk
         is the number of successful recipient addresses and addresses is a list
@@ -1948,13 +1979,26 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25)
         # It's not a file
         msg = StringIO(str(msg))
 
-    d = defer.Deferred()
+    def cancel(d):
+        """
+        Cancel the L{twisted.mail.smtp.sendmail} call, tell the factory not to
+        retry and disconnect the connection.
+
+        @param d: The L{defer.Deferred} to be cancelled.
+        """
+        factory.sendFinished = True
+        if factory.currentProtocol:
+            factory.currentProtocol.transport.abortConnection()
+        else:
+            # Connection hasn't been made yet
+            connector.disconnect()
+    d = defer.Deferred(cancel)
     factory = SMTPSenderFactory(from_addr, to_addrs, msg, d)
 
     if senderDomainName is not None:
         factory.domain = senderDomainName
 
-    reactor.connectTCP(smtphost, port, factory)
+    connector = reactor.connectTCP(smtphost, port, factory)
 
     return d
 
