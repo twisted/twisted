@@ -1699,12 +1699,12 @@ class SenderMixin:
 
         if (self.factory.retries >= 0 or
             (not exc.retry and not (exc.code >= 400 and exc.code < 500))):
-            self.factory.sendFinished = 1
+            self.factory.sendFinished = True
             self.factory.result.errback(exc)
 
     def sentMail(self, code, resp, numOk, addresses, log):
         # Do not retry, the SMTP server acknowledged the request
-        self.factory.sendFinished = 1
+        self.factory.sendFinished = True
         if code not in SUCCESS:
             errlog = []
             for addr, acode, aresp in addresses:
@@ -1734,10 +1734,10 @@ class SMTPSenderFactory(protocol.ClientFactory):
     @ivar currentProtocol: The current running protocol returned by
         L{buildProtocol}.
 
-    @type sendFinished: C{int}
-    @ivar sendFinished: When the value is set to 1, it means the message has
+    @type sendFinished: C{bool}
+    @ivar sendFinished: When the value is set to True, it means the message has
         been sent or there has been an unrecoverable error or the sending has
-        been cancelled. The default value is 0.
+        been cancelled. The default value is False.
     """
 
     domain = DNSNAME
@@ -1774,7 +1774,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
         self.file = file
         self.result = deferred
         self.result.addBoth(self._removeDeferred)
-        self.sendFinished = 0
+        self.sendFinished = False
         self.currentProtocol = None
 
         self.retries = -retries
@@ -1792,7 +1792,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
 
     def _processConnectionError(self, connector, err):
         self.currentProtocol = None
-        if self.retries < self.sendFinished <= 0:
+        if (self.retries < 0) and (not self.sendFinished):
             log.msg("SMTP Client retrying server. Retry: %s" % -self.retries)
 
             # Rewind the file in case part of it was read while attempting to
@@ -1800,7 +1800,7 @@ class SMTPSenderFactory(protocol.ClientFactory):
             self.file.seek(0, 0)
             connector.connect()
             self.retries += 1
-        elif self.sendFinished <= 0:
+        elif not self.sendFinished:
             # If we were unable to communicate with the SMTP server a ConnectionDone will be
             # returned. We want a more clear error message for debugging
             if err.check(error.ConnectionDone):
@@ -1986,7 +1986,7 @@ def sendmail(smtphost, from_addr, to_addrs, msg,
 
         @param d: The L{defer.Deferred} to be cancelled.
         """
-        factory.sendFinished = 1
+        factory.sendFinished = True
         if factory.currentProtocol:
             factory.currentProtocol.transport.abortConnection()
         else:
