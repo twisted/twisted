@@ -78,6 +78,8 @@ def installReactor(shortName):
     """
     for installer in getReactorTypes():
         if installer.shortName == shortName:
-            return installer.install()
+            installer.install()
+            from twisted.internet import reactor
+            return reactor
     raise NoSuchReactor(shortName)
 
