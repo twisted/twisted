@@ -1,1 +1,1 @@
-twisted.application.reactors.installReactor now returns the just installed reactor.
+twisted.application.reactors.installReactor now returns the just-installed reactor.
