@@ -299,3 +299,43 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
         self.assertIn("inlineCallbacks",
             str(self.assertRaises(TypeError, _noYield)))
+
+
+class DeprecateDeferredGenerator(unittest.SynchronousTestCase):
+    """
+    Tests that L{DeferredGeneratorTests} and L{waitForDeferred} are
+    deprecated.
+    """
+
+    def test_deferredGeneratorDeprecated(self):
+        """
+        L{deferredGenerator} is deprecated.
+        """
+        @deferredGenerator
+        def decoratedFunction():
+            yield None
+
+        warnings = self.flushWarnings([self.test_deferredGeneratorDeprecated])
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            "twisted.internet.defer.deferredGenerator was deprecated in "
+            "Twisted 13.2.0; please use twisted.internet.defer.inlineCallbacks "
+            "instead")
+
+    def test_waitForDeferredDeprecated(self):
+        """
+        L{waitForDeferred} is deprecated.
+        """
+        d = Deferred()
+        waitForDeferred(d)
+
+        warnings = self.flushWarnings([self.test_waitForDeferredDeprecated])
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            "twisted.internet.defer.waitForDeferred was deprecated in "
+            "Twisted 13.2.0; please use twisted.internet.defer.inlineCallbacks "
+            "instead")
