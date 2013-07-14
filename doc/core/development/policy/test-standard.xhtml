@@ -124,13 +124,6 @@ $ bin/trial twisted
     Here are a couple of conventions, when writting assertions:
     <ol>
     <li>
-      Put the actual value first, followed by the expected value, when using <code class="python">assertEqual</code>.
-      <pre class="python">
-result = (lambda x, y: x + y)(2,2)
-self.assertEqual(result, 4)
-      </pre>
-    </li>
-    <li>
       Use <code class="python">str(error)</code> to get the text of an exception.
       <pre class="python">
 error = self.assertRaises(CustomException, someInterestingFunction, *args)
