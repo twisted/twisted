@@ -338,7 +338,8 @@ class ManholeLoopbackMixin:
             "c = reactor.callLater(0.1, d.callback, 'Hi!')\n")
         yield self.recvlineClient.expect(">>> ")
 
-        yield self.recvlineClient.expect("Deferred #0 called back: 'Hi!'\n>>> ")
+        yield self.recvlineClient.expect(
+            "Deferred #0 called back: 'Hi!'\n>>> ")
         self._assertBuffer(
             [">>> from twisted.internet import defer, reactor",
              ">>> d = defer.Deferred()",
