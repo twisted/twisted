@@ -600,11 +600,11 @@ class Request:
 
     def __init__(self, channel, queued):
         """
-        @param channel: the channel we're connected to.
+        @param channel: The channel we're connected to.
         @type channel: L{HTTPChannel}
 
-        @param queued: are we in the request queue, or can we start writing to
-            the transport?
+        @param queued: Is this request in the request queue, or can we start
+             writing to the C{channel}?
         @type queued: L{bool}
         """
         self.notifications = []
