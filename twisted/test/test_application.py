@@ -778,7 +778,7 @@ class PluggableReactorTestCase(TwistedModulesMixin, unittest.TestCase):
         description = 'description'
         self.pluginResults = [FakeReactor(install, name, package, description)]
         installed = reactors.installReactor(name)
-        self.assertEqual(installed, reactor)
+        self.assertIdentical(installed, reactor)
 
 
     def test_installReactorMultiplePlugins(self):
