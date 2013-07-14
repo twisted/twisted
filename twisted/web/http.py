@@ -487,7 +487,7 @@ class HTTPClient(basic.LineReceiver):
         Called when some data from the body is received.
 
         @type buffer: L(bytes)
-        @param buffer: The data that was received from the remote server.
+        @param buffer: The data that was received from the remote serve.
         """
         self.__buffer.write(data)
 
