@@ -39,7 +39,7 @@ class ProxyClient(HTTPClient):
 
     @ivar _finished: A flag which indicates whether or not the original request
         has been finished yet.
-    @type _finished: C{bool}
+    @type _finished: L{bool}
 
     @ivar father: see L{__init__}
     @type father: L{Request}
@@ -58,7 +58,7 @@ class ProxyClient(HTTPClient):
         @type version: L{bytes}
         @param version: HTTP Version (HTTP/1.1, HTTP/1.0)
 
-        @type headers: C{dict}
+        @type headers: L{dict}
         @param headers: The headers that were specified in the request to
             (or through) the proxy server.
 
@@ -136,7 +136,7 @@ class ProxyClientFactory(ClientFactory):
         @type version: L{bytes}
         @param version: HTTP Version (HTTP/1.1, HTTP/1.0)
 
-        @type headers: C{dict}
+        @type headers: L{dict}
         @param headers: The headers that were specified in the request to
             (or through) the proxy server
 
@@ -147,7 +147,6 @@ class ProxyClientFactory(ClientFactory):
         @type father: L{Request}
         @param father: The L{Request} to which we should forward the eventual
             response.
-
         """
         self.father = father
         self.command = command
@@ -188,10 +187,10 @@ class ProxyRequest(Request):
     @type reactor: L{twisted.internet.interfaces.IReactorTCP}
 
     @ivar protocols: Mapping of protocol/factory class.
-    @type protocols: C{dict}
+    @type protocols: L{dict}
 
     @ivar ports: Mapping of protocol/port.
-    @type ports: C{dict}
+    @type ports: L{dict}
     """
 
     protocols = {'http': ProxyClientFactory}

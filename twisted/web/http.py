@@ -486,8 +486,8 @@ class HTTPClient(basic.LineReceiver):
         """
         Called when some data from the body is received.
 
-        @type buffer: C(bytes)
-        @param buffer: The data that was received from the remote serve
+        @type buffer: L(bytes)
+        @param buffer: The data that was received from the remote server.
         """
         self.__buffer.write(data)
 
@@ -508,10 +508,10 @@ class HTTPClient(basic.LineReceiver):
         """
         Called every time a header is received.
 
-        @type key: C{bytes}
+        @type key: L{bytes}
         @param key: An HTTP header field name.
 
-        @type value: C{bytes}
+        @type value: L{bytes}
         @param value: An HTTP header field value.
         """
 
@@ -559,26 +559,26 @@ class Request:
 
     @ivar received_headers: Backwards-compatibility access to
         C{requestHeaders}.  Use C{requestHeaders} instead.  C{received_headers}
-        behaves mostly like a C{dict} and does not provide access to all header
+        behaves mostly like a L{dict} and does not provide access to all header
         values.
 
     @type responseHeaders: L{http_headers.Headers}
     @ivar responseHeaders: All HTTP response headers to be sent.
 
     @ivar headers: Backwards-compatibility access to C{responseHeaders}.  Use
-        C{responseHeaders} instead.  C{headers} behaves mostly like a C{dict}
+        C{responseHeaders} instead.  C{headers} behaves mostly like a L{dict}
         and does not provide access to all header values nor does it allow
         multiple values for one header to be set.
 
-    @ivar notifications: A C{list} of L{Deferred}s which are waiting for
+    @ivar notifications: A L{list} of L{Deferred}s which are waiting for
         notification that the response to this request has been finished
         (successfully or with an error).  Don't use this attribute directly,
         instead use the L{Request.notifyFinish} method.
 
-    @ivar _disconnected: A flag which is C{False} until the connection over
-        which this request was received is closed and which is C{True} after
+    @ivar _disconnected: A flag which is L{False} until the connection over
+        which this request was received is closed and which is L{True} after
         that.
-    @type _disconnected: C{bool}
+    @type _disconnected: L{bool}
     """
     producer = None
     finished = 0
