@@ -41,6 +41,18 @@ class ProxyClient(HTTPClient):
         has been finished yet.
     @type _finished: L{bool}
 
+    @type command: L{bytes}
+    @param command: see L{__init__}
+
+    @type rest: L{bytes}
+    @param rest: see L{__init__}
+
+    @type headers: L{dict}
+    @param headers: The headers that should be sent to the origin server.
+
+    @type data: L{bytes}
+    @param data: see L{__init__}
+
     @ivar father: see L{__init__}
     @type father: L{Request}
     """
