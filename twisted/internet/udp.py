@@ -117,7 +117,10 @@ class Port(base.BasePort):
         Create a new L{Port} based on an existing listening
         I{SOCK_DGRAM} socket.
 
-        Arguments are the same as to L{Port.__init__}, except where noted.
+        @param reactor: A reactor which will notify this L{Port} when
+            its socket is ready for reading or writing. Defaults to
+            C{None}, ie the default global reactor.
+        @type reactor: L{interfaces.IReactorFDSet}
 
         @param fd: An integer file descriptor associated with a listening
             socket.  The socket must be in non-blocking mode.  Any additional
@@ -126,7 +129,14 @@ class Port(base.BasePort):
 
         @param addressFamily: The address family (sometimes called I{domain}) of
             the existing socket.  For example, L{socket.AF_INET}.
-        @param addressFamilt: C{int}
+        @param addressFamily: C{int}
+
+        @param protocol: A C{DatagramProtocol} instance which will be
+            connected to the C{port}.
+        @type proto: L{twisted.internet.protocol.DatagramProtocol}
+
+        @param maxPacketSize: The maximum packet size to accept.
+        @type maxPacketSize: C{int}
 
         @return: A new instance of C{cls} wrapping the socket given by C{fd}.
         @rtype: L{Port}
