@@ -475,6 +475,19 @@ class PosixReactorBase(_SignalReactorMixin, _DisconnectSelectableMixin,
             fileDescriptor, addressFamily, factory, self)
 
 
+    def adoptDatagramPort(self, fileDescriptor, addressFamily, protocol,
+                          maxPacketSize=8192):
+        if addressFamily not in (socket.AF_INET, socket.AF_INET6):
+            raise error.UnsupportedAddressFamily(addressFamily)
+
+        p = udp.Port._fromListeningDescriptor(
+            self, fileDescriptor, addressFamily, protocol,
+            maxPacketSize=maxPacketSize)
+        p.startListening()
+        return p
+
+
+
     # IReactorTCP
 
     def listenTCP(self, port, factory, backlog=50, interface=''):
@@ -581,7 +594,7 @@ class _PollLikeMixin(object):
             # Any non-disconnect event turns into a doRead or a doWrite.
             try:
                 # First check to see if the descriptor is still valid.  This
-                # gives fileno() a chance to raise an exception, too. 
+                # gives fileno() a chance to raise an exception, too.
                 # Ideally, disconnection would always be indicated by the
                 # return value of doRead or doWrite (or an exception from
                 # one of those methods), but calling fileno here helps make
