@@ -30,85 +30,6 @@ from twisted.trial.unittest import SkipTest
 
 
 
-class ListenUDPMixin(object):
-    """
-    Mixin which uses L{IReactorUDP.listenUDP} to hand out listening UDP ports.
-    """
-    def getListeningPort(self, reactor, protocol, port=0, interface='',
-                         maxPacketSize=8192):
-        """
-        Get a UDP port from a reactor.
-        """
-        return reactor.listenUDP(port, protocol, interface=interface,
-                                 maxPacketSize=maxPacketSize)
-
-
-    def getExpectedStartListeningLogMessage(self, port, protocol):
-        """
-        Get the message expected to be logged when a UDP port starts listening.
-        """
-        return "%s starting on %d" % (protocol, port.getHost().port)
-
-
-    def getExpectedConnectionLostLogMessage(self, port):
-        """
-        Get the expected connection lost message for a UDP port.
-        """
-        return "(UDP Port %s Closed)" % (port.getHost().port,)
-
-
-
-class SocketUDPMixin(object):
-    """
-    Mixin which uses L{IReactorSocket.adoptDatagramPort} to hand out
-    listening UDP ports.
-    """
-    def getListeningPort(self, reactor, protocol, port=0, interface='',
-                         maxPacketSize=8192):
-        """
-        Get a UDP port from a reactor, wrapping an already-initialized file
-        descriptor.
-        """
-        if IReactorSocket.providedBy(reactor):
-            if ':' in interface:
-                domain = socket.AF_INET6
-                address = socket.getaddrinfo(interface, port)[0][4]
-            else:
-                domain = socket.AF_INET
-                address = (interface, port)
-            portSock = socket.socket(domain, socket.SOCK_DGRAM)
-            portSock.bind(address)
-            portSock.setblocking(False)
-            try:
-                return reactor.adoptDatagramPort(
-                    portSock.fileno(), portSock.family, protocol,
-                    maxPacketSize)
-            finally:
-                # The socket should still be open; fileno will raise if it is
-                # not.
-                portSock.fileno()
-                # Now clean it up, because the rest of the test does not need
-                # it.
-                portSock.close()
-        else:
-            raise SkipTest("Reactor does not provide IReactorSocket")
-
-
-    def getExpectedStartListeningLogMessage(self, port, protocol):
-        """
-        Get the message expected to be logged when a UDP port starts listening.
-        """
-        return "%s starting on %d" % (protocol, port.getHost().port)
-
-
-    def getExpectedConnectionLostLogMessage(self, port):
-        """
-        Get the expected connection lost message for a UDP port.
-        """
-        return "(UDP Port %s Closed)" % (port.getHost().port,)
-
-
-
 class DatagramTransportTestsMixin(LogObserverMixin):
     """
     Mixin defining tests which apply to any port/datagram based transport.
@@ -128,21 +49,19 @@ class DatagramTransportTestsMixin(LogObserverMixin):
         protocol = SomeProtocol()
 
         p = self.getListeningPort(reactor, protocol)
-        expectedMessage = self.getExpectedStartListeningLogMessage(
-            p, "Crazy Protocol")
+        expectedMessage = "Crazy Protocol starting on %d" % (p.getHost().port,)
         self.assertEqual((expectedMessage,), loggedMessages[0]['message'])
 
 
     def test_connectionLostLogMessage(self):
         """
-        When a connection is lost, an informative message should be logged (see
-        L{getExpectedConnectionLostLogMessage}): an address identifying the port
-        and the fact that it was closed.
+        When a connection is lost a message is logged containing an
+        address identifying the port and the fact that it was closed.
         """
         loggedMessages = self.observe()
         reactor = self.buildReactor()
         p = self.getListeningPort(reactor, DatagramProtocol())
-        expectedMessage = self.getExpectedConnectionLostLogMessage(p)
+        expectedMessage = "(UDP Port %s Closed)" % (p.getHost().port,)
 
         def stopReactor(ignored):
             reactor.stop()
@@ -274,22 +193,60 @@ class UDPPortTestsMixin(object):
 
 
 
-class UDPServerTestsBuilder(ReactorBuilder, ListenUDPMixin,
+class UDPServerTestsBuilder(ReactorBuilder,
                             UDPPortTestsMixin, DatagramTransportTestsMixin):
     """
-    Run L{UDPPortTestsMixin} tests using UDP newly created UDP
+    Run L{UDPPortTestsMixin} tests using newly created UDP
     sockets.
     """
     requiredInterfaces = (IReactorUDP,)
 
+    def getListeningPort(self, reactor, protocol, port=0, interface='',
+                         maxPacketSize=8192):
+        """
+        Get a UDP port from a reactor.
+        """
+        return reactor.listenUDP(port, protocol, interface=interface,
+                                 maxPacketSize=maxPacketSize)
 
 
-class UDPFDServerTestsBuilder(ReactorBuilder, SocketUDPMixin,
+
+class UDPFDServerTestsBuilder(ReactorBuilder,
                               UDPPortTestsMixin, DatagramTransportTestsMixin):
     """
     Run L{UDPPortTestsMixin} tests using adopted UDP sockets.
     """
     requiredInterfaces = (IReactorSocket,)
+
+    def getListeningPort(self, reactor, protocol, port=0, interface='',
+                         maxPacketSize=8192):
+        """
+        Get a UDP port from a reactor, wrapping an already-initialized file
+        descriptor.
+        """
+        if IReactorSocket.providedBy(reactor):
+            if ':' in interface:
+                domain = socket.AF_INET6
+                address = socket.getaddrinfo(interface, port)[0][4]
+            else:
+                domain = socket.AF_INET
+                address = (interface, port)
+            portSock = socket.socket(domain, socket.SOCK_DGRAM)
+            portSock.bind(address)
+            portSock.setblocking(False)
+            try:
+                return reactor.adoptDatagramPort(
+                    portSock.fileno(), portSock.family, protocol,
+                    maxPacketSize)
+            finally:
+                # The socket should still be open; fileno will raise if it is
+                # not.
+                portSock.fileno()
+                # Now clean it up, because the rest of the test does not need
+                # it.
+                portSock.close()
+        else:
+            raise SkipTest("Reactor does not provide IReactorSocket")
 
 
 
