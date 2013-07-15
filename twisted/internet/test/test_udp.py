@@ -205,6 +205,13 @@ class UDPServerTestsBuilder(ReactorBuilder,
                          maxPacketSize=8192):
         """
         Get a UDP port from a reactor.
+
+        @param reactor: A reactor used to build the returned
+            L{IListeningPort} provider.
+        @type reactor: L{twisted.internet.interfaces.IReactorUDP}
+
+        @see: L{twisted.internet.IReactorUDP.listenUDP} for other
+            argument and return types.
         """
         return reactor.listenUDP(port, protocol, interface=interface,
                                  maxPacketSize=maxPacketSize)
@@ -223,6 +230,22 @@ class UDPFDServerTestsBuilder(ReactorBuilder,
         """
         Get a UDP port from a reactor, wrapping an already-initialized file
         descriptor.
+
+        @param reactor: A reactor used to build the returned
+            L{IListeningPort} provider.
+        @type reactor: L{twisted.internet.interfaces.IReactorSocket}
+
+        @param port: A port number to which the adopted socket will be
+            bound.
+        @type port: C{int}
+
+        @param interface: The local IPv4 or IPv6 address to which the
+            adopted socket will be bound.  defaults to '', ie all IPv4
+            addresses.
+        @type interface: C{str}
+
+        @see: L{twisted.internet.IReactorSocket.adoptDatagramPort} for other
+            argument and return types.
         """
         if IReactorSocket.providedBy(reactor):
             if ':' in interface:
