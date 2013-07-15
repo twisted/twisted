@@ -4,6 +4,7 @@
 Test cases for using NMEA sentences.
 """
 import datetime
+from operator import attrgetter
 from zope.interface import implementer
 
 from twisted.positioning import base, nmea, ipositioning
@@ -1051,10 +1052,22 @@ class NMEAReceiverTest(TestCase):
         sentences = [GPGSA] + GPGSV_SEQ
         callbacksFired = ['positionErrorReceived', 'beaconInformationReceived']
 
+        def _getIdentifiers(beacons):
+            return sorted(map(attrgetter("identifier"), beacons))
+
         def checkBeaconInformation():
             beaconInformation = self.adapter._state['beaconInformation']
-            self.assertEqual(len(beaconInformation.seenBeacons), 11)
-            self.assertEqual(len(beaconInformation.usedBeacons), 5)
+
+            seenIdentifiers = _getIdentifiers(beaconInformation.seenBeacons)
+            expected = [3, 4, 6, 13, 14, 16, 18, 19, 22, 24, 27]
+            self.assertEqual(seenIdentifiers, expected)
+
+            usedIdentifiers = _getIdentifiers(beaconInformation.usedBeacons)
+            # These are not actually all the PRNs in the sample GPGSA:
+            # only the ones also reported by the GPGSV sequence. This
+            # is just because the sample data doesn't come from the
+            # same reporting cycle of a GPS device.
+            self.assertEqual(usedIdentifiers, [14, 18, 19, 22, 27])
 
         self._receiverTest(sentences, callbacksFired, checkBeaconInformation)
 
