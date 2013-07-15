@@ -2,14 +2,15 @@
 # See LICENSE for details.
 
 """
-Tests for implementations of L{IReactorUDP}.
+Tests for implementations of L{IReactorUDP} and the UDP parts of
+L{IReactorSocket}.
 """
 
 from __future__ import division, absolute_import
 
 __metaclass__ = type
 
-from socket import SOCK_DGRAM
+import socket
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -19,34 +20,13 @@ from twisted.python.log import ILogContext, err
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.internet.interfaces import (
-    ILoggingContext, IListeningPort, IReactorUDP)
+    ILoggingContext, IListeningPort, IReactorUDP, IReactorSocket)
 from twisted.internet.address import IPv4Address
 from twisted.internet.protocol import DatagramProtocol
 
 from twisted.internet.test.connectionmixins import (LogObserverMixin,
                                                     findFreePort)
-
-
-class UDPPortMixin(object):
-    def getListeningPort(self, reactor, protocol):
-        """
-        Get a UDP port from a reactor.
-        """
-        return reactor.listenUDP(0, protocol)
-
-
-    def getExpectedStartListeningLogMessage(self, port, protocol):
-        """
-        Get the message expected to be logged when a UDP port starts listening.
-        """
-        return "%s starting on %d" % (protocol, port.getHost().port)
-
-
-    def getExpectedConnectionLostLogMessage(self, port):
-        """
-        Get the expected connection lost message for a UDP port.
-        """
-        return "(UDP Port %s Closed)" % (port.getHost().port,)
+from twisted.trial.unittest import SkipTest
 
 
 
@@ -69,21 +49,19 @@ class DatagramTransportTestsMixin(LogObserverMixin):
         protocol = SomeProtocol()
 
         p = self.getListeningPort(reactor, protocol)
-        expectedMessage = self.getExpectedStartListeningLogMessage(
-            p, "Crazy Protocol")
+        expectedMessage = "Crazy Protocol starting on %d" % (p.getHost().port,)
         self.assertEqual((expectedMessage,), loggedMessages[0]['message'])
 
 
     def test_connectionLostLogMessage(self):
         """
-        When a connection is lost, an informative message should be logged (see
-        L{getExpectedConnectionLostLogMessage}): an address identifying the port
-        and the fact that it was closed.
+        When a connection is lost a message is logged containing an
+        address identifying the port and the fact that it was closed.
         """
         loggedMessages = self.observe()
         reactor = self.buildReactor()
         p = self.getListeningPort(reactor, DatagramProtocol())
-        expectedMessage = self.getExpectedConnectionLostLogMessage(p)
+        expectedMessage = "(UDP Port %s Closed)" % (p.getHost().port,)
 
         def stopReactor(ignored):
             reactor.stop()
@@ -133,19 +111,17 @@ class DatagramTransportTestsMixin(LogObserverMixin):
 
 
 
-class UDPServerTestsBuilder(ReactorBuilder, UDPPortMixin,
-                            DatagramTransportTestsMixin):
+class UDPPortTestsMixin(object):
     """
-    Builder defining tests relating to L{IReactorUDP.listenUDP}.
+    Tests for L{IReactorUDP.listenUDP} and
+    L{IReactorSocket.adoptDatagramPort}.
     """
-    requiredInterfaces = (IReactorUDP,)
-
     def test_interface(self):
         """
         L{IReactorUDP.listenUDP} returns an object providing L{IListeningPort}.
         """
         reactor = self.buildReactor()
-        port = reactor.listenUDP(0, DatagramProtocol())
+        port = self.getListeningPort(reactor, DatagramProtocol())
         self.assertTrue(verifyObject(IListeningPort, port))
 
 
@@ -155,10 +131,10 @@ class UDPServerTestsBuilder(ReactorBuilder, UDPPortMixin,
         dotted-quad of the IPv4 address the port is listening on as well as
         the port number.
         """
-        host, portNumber = findFreePort(type=SOCK_DGRAM)
+        host, portNumber = findFreePort(type=socket.SOCK_DGRAM)
         reactor = self.buildReactor()
-        port = reactor.listenUDP(
-            portNumber, DatagramProtocol(), interface=host)
+        port = self.getListeningPort(
+            reactor, DatagramProtocol(), port=portNumber, interface=host)
         self.assertEqual(
             port.getHost(), IPv4Address('UDP', host, portNumber))
 
@@ -185,7 +161,7 @@ class UDPServerTestsBuilder(ReactorBuilder, UDPPortMixin,
         reactor = self.buildReactor()
         protocol = CustomLogPrefixDatagramProtocol("Custom Datagrams")
         d = protocol.system
-        port = reactor.listenUDP(0, protocol)
+        port = self.getListeningPort(reactor, protocol)
         address = port.getHost()
 
         def gotSystem(system):
@@ -203,7 +179,7 @@ class UDPServerTestsBuilder(ReactorBuilder, UDPPortMixin,
         C{str()} on the listening port object includes the port number.
         """
         reactor = self.buildReactor()
-        port = reactor.listenUDP(0, DatagramProtocol())
+        port = self.getListeningPort(reactor, DatagramProtocol())
         self.assertIn(str(port.getHost().port), str(port))
 
 
@@ -212,7 +188,90 @@ class UDPServerTestsBuilder(ReactorBuilder, UDPPortMixin,
         C{repr()} on the listening port object includes the port number.
         """
         reactor = self.buildReactor()
-        port = reactor.listenUDP(0, DatagramProtocol())
+        port = self.getListeningPort(reactor, DatagramProtocol())
         self.assertIn(repr(port.getHost().port), str(port))
 
+
+
+class UDPServerTestsBuilder(ReactorBuilder,
+                            UDPPortTestsMixin, DatagramTransportTestsMixin):
+    """
+    Run L{UDPPortTestsMixin} tests using newly created UDP
+    sockets.
+    """
+    requiredInterfaces = (IReactorUDP,)
+
+    def getListeningPort(self, reactor, protocol, port=0, interface='',
+                         maxPacketSize=8192):
+        """
+        Get a UDP port from a reactor.
+
+        @param reactor: A reactor used to build the returned
+            L{IListeningPort} provider.
+        @type reactor: L{twisted.internet.interfaces.IReactorUDP}
+
+        @see: L{twisted.internet.IReactorUDP.listenUDP} for other
+            argument and return types.
+        """
+        return reactor.listenUDP(port, protocol, interface=interface,
+                                 maxPacketSize=maxPacketSize)
+
+
+
+class UDPFDServerTestsBuilder(ReactorBuilder,
+                              UDPPortTestsMixin, DatagramTransportTestsMixin):
+    """
+    Run L{UDPPortTestsMixin} tests using adopted UDP sockets.
+    """
+    requiredInterfaces = (IReactorSocket,)
+
+    def getListeningPort(self, reactor, protocol, port=0, interface='',
+                         maxPacketSize=8192):
+        """
+        Get a UDP port from a reactor, wrapping an already-initialized file
+        descriptor.
+
+        @param reactor: A reactor used to build the returned
+            L{IListeningPort} provider.
+        @type reactor: L{twisted.internet.interfaces.IReactorSocket}
+
+        @param port: A port number to which the adopted socket will be
+            bound.
+        @type port: C{int}
+
+        @param interface: The local IPv4 or IPv6 address to which the
+            adopted socket will be bound.  defaults to '', ie all IPv4
+            addresses.
+        @type interface: C{str}
+
+        @see: L{twisted.internet.IReactorSocket.adoptDatagramPort} for other
+            argument and return types.
+        """
+        if IReactorSocket.providedBy(reactor):
+            if ':' in interface:
+                domain = socket.AF_INET6
+                address = socket.getaddrinfo(interface, port)[0][4]
+            else:
+                domain = socket.AF_INET
+                address = (interface, port)
+            portSock = socket.socket(domain, socket.SOCK_DGRAM)
+            portSock.bind(address)
+            portSock.setblocking(False)
+            try:
+                return reactor.adoptDatagramPort(
+                    portSock.fileno(), portSock.family, protocol,
+                    maxPacketSize)
+            finally:
+                # The socket should still be open; fileno will raise if it is
+                # not.
+                portSock.fileno()
+                # Now clean it up, because the rest of the test does not need
+                # it.
+                portSock.close()
+        else:
+            raise SkipTest("Reactor does not provide IReactorSocket")
+
+
+
 globals().update(UDPServerTestsBuilder.makeTestCaseClasses())
+globals().update(UDPFDServerTestsBuilder.makeTestCaseClasses())

@@ -1,0 +1,1 @@
+twisted.internet.interfaces.IReactorSocket now has a new adoptDatagramPort method which is implemented by some reactors allowing them to listen on UDP sockets set up by external software (eg systemd or launchd).
