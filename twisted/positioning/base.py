@@ -820,7 +820,7 @@ class PositioningBeacon(object):
     @type identifier: Pretty much anything that can be used as a unique
         identifier. Depends on the implementation.
     """
-    def __init__(self, identifier, isUsed=None):
+    def __init__(self, identifier):
         """
         Initializes a positioning beacon.
 
@@ -828,7 +828,6 @@ class PositioningBeacon(object):
         @type identifier: Can be pretty much anything (see ivar documentation).
         """
         self.identifier = identifier
-        self.isUsed = isUsed
 
 
     def __hash__(self):
