@@ -874,15 +874,8 @@ class NMEAAdapter(object):
         if new is None:
             return
 
-        usedPRNs = (self._state.get('_usedPRNs')
-                    or self._sentenceData.get('_usedPRNs'))
-        if usedPRNs is not None:
-            for beacon in new.seenBeacons:
-                beacon.isUsed = (beacon.identifier in usedPRNs)
-
-        old = self._state.get('_partialBeaconInformation')
-        if old is not None:
-            new.seenBeacons.update(old.seenBeacons)
+        self._updateUsedBeacons(new)
+        self._mergeBeaconInformation(new)
 
         if self.currentSentence._isLastGSVSentence():
             if not self.currentSentence._isFirstGSVSentence():
@@ -890,6 +883,50 @@ class NMEAAdapter(object):
                 del self._state['_partialBeaconInformation']
             bi = self._sentenceData.pop('_partialBeaconInformation')
             self._sentenceData['beaconInformation'] = bi
+
+
+    def _updateUsedBeacons(self, beaconInformation):
+        """
+        Searches the adapter state and sentence data for information about
+        which beacons where used, then adds it to the provided beacon
+        information object.
+
+        If no new beacon usage information is available, does nothing.
+
+        @param beaconInformation: The beacon information object that beacon
+            usage information will be added to (if necessary).
+        @type beaconInformation: L{twisted.positioning.base.BeaconInformation}
+        """
+        for source in [self._state, self._sentenceData]:
+            usedPRNs = source.get("_usedPRNs")
+            if usedPRNs is not None:
+                break
+        else:  # No used PRN info to update
+            return
+
+        for beacon in beaconInformation.seenBeacons:
+            if beacon.identifier in usedPRNs:
+                beaconInformation.usedBeacons.add(beacon)
+
+
+    def _mergeBeaconInformation(self, newBeaconInformation):
+        """
+        Merges beacon information in the adapter state (if it exists) into
+        the provided beacon information. Specifically, this merges used and
+        seen beacons.
+
+        If the adapter state has no beacon information, does nothing.
+
+        @param beaconInformation: The beacon information object that beacon
+            information will be merged into (if necessary).
+        @type beaconInformation: L{twisted.positioning.base.BeaconInformation}
+        """
+        old = self._state.get('_partialBeaconInformation')
+        if old is None:
+            return
+
+        for attr in ["seenBeacons", "usedBeacons"]:
+            getattr(newBeaconInformation, attr).update(getattr(old, attr))
 
 
     def _combineDateAndTime(self):
