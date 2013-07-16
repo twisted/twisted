@@ -406,13 +406,13 @@ class EncodingResourceWrapper(proxyForInterface(IResource)):
 
 
 
-class ForwardedForResource(Resource):
+class ForwardedForParserResource(Resource):
     """
     Use this at the root of a Site to set the client IP to the actual client
     IP in the case of one or more proxy servers.
     """
     def _fixClient(self, request):
-        forwarders = request.getForwarders()
+        forwarders = request.getForwardedFor()
         if len(forwarders) > 1:
             request.setClientIP(forwarders[0])
 

@@ -1243,7 +1243,7 @@ class Request:
             self.client = clientIP
 
 
-    def getForwarders(self):
+    def getForwardedFor(self):
         """
         Attempt to return a list of IP addresses and ports this request has
         passed through starting with the client and ending with the host

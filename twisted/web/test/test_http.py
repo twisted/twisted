@@ -1386,16 +1386,16 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(req.client.port, 443)
 
 
-    def test_getForwarders(self):
+    def test_getForwardedFor(self):
         """
-        L{http.Request.getForwarders} returns a list of hosts/ports that the
+        L{http.Request.getForwardedFor} returns a list of hosts/ports that the
         request has been forwarded through using the X-Forwarded-For header.
         """
         req = http.Request(DummyChannel(), None)
         req.client = IPv4Address("TCP", "4.3.2.1", 80)
         req.requestHeaders.setRawHeaders("X-Forwarded-For", ["1.2.3.4, 2.2.3.4",
             "3.2.3.4,4.2.3.4", "5.2.3.4"])
-        fwd = req.getForwarders()
+        fwd = req.getForwardedFor()
         self.assertEqual(len(fwd), 6)
         self.assertEqual(fwd[0].host, "1.2.3.4")
         self.assertEqual(fwd[1].host, "2.2.3.4")
