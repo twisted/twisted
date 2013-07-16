@@ -585,6 +585,7 @@ class Request:
     content = None
     _forceSSL = 0
     _disconnected = False
+    _originalClient = None
 
     def __init__(self, channel, queued):
         """
@@ -1210,6 +1211,60 @@ class Request:
             return self.client.host
         else:
             return None
+
+
+    def setClientIP(self, clientIP, ssl=None):
+        """
+        Sets the IP address of the client who submitted this request. If ssl
+        is specified, it will override the current secure status of the
+        request.
+
+        @type clientIP: C{str} or C{twisted.internet.address.IPv4Address}
+        @param clientIP: The client's IP to set.
+
+        @type ssl: C{bool}
+        @param ssl: Optionally override the secure status of the request.
+        """
+        if self._originalClient is None:
+            self._originalClient = self.client
+        if ssl is not None:
+            self._forceSSL = ssl # set first so isSecure will work
+            if self.isSecure():
+                port = 443
+            else:
+                port = 80
+        elif isinstance(self.client, address.IPv4Address):
+            port = self.client.port
+        else:
+            port = 80
+        if isinstance(clientIP, (str, unicode)):
+            self.client = address.IPv4Address("TCP", clientIP, port)
+        else:
+            self.client = clientIP
+
+
+    def getForwarders(self):
+        """
+        Attempt to return a list of IP addresses and ports this request has
+        passed through starting with the client and ending with the host
+        that submitted this request.
+
+        Note: Any proxy between the client and here may have falsified this
+        information. 
+
+        @returns: a list of IP addresses that the request has passed through.
+        @rtype: C{list}
+        """
+        xForwardedFor = self.requestHeaders.getRawHeaders("X-Forwarded-For")
+        forwarders = []
+        for forwardHeader in xForwardedFor or []:
+            forwardList = forwardHeader.replace(" ", "").split(",")
+            for forwardAddress in forwardList:
+                forwarders.append(address.IPv4Address("TCP",
+                    forwardAddress.strip(), self.client.port))
+        forwarders.append(self._originalClient or self.client)
+        return forwarders
+
 
     def isSecure(self):
         """

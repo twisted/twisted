@@ -10,8 +10,10 @@ from twisted.trial.unittest import TestCase
 from twisted.web.error import UnsupportedMethod
 from twisted.web.resource import (
     NOT_FOUND, FORBIDDEN, Resource, ErrorPage, NoResource, ForbiddenResource,
-    getChildForRequest)
-from twisted.web.test.requesthelper import DummyRequest
+    getChildForRequest, ForwardedForResource)
+from twisted.web.test.requesthelper import DummyRequest, DummyChannel
+from twisted.web import http
+from twisted.internet.address import IPv4Address
 
 
 class ErrorPageTests(TestCase):
@@ -259,3 +261,79 @@ class GetChildForRequestTests(TestCase):
         self.assertIdentical(child, getChildForRequest(root, request))
         self.assertEqual(request.prepath, [b"foo"])
         self.assertEqual(request.postpath, [b"bar"])
+
+
+
+class DummyForwardedForResource(ForwardedForResource):
+    """
+    Dummy class to test L{ForwardedForResource}.
+    """
+    def render_GET(self, request):
+        return "foo"
+
+
+
+class ForwardedForResourceTests(TestCase):
+    """
+    Tests for L{ForwardedForResource}. 
+    """
+    def test_render(self):
+        """
+        L{ForwardedForResource.render} will change the client IP to be the
+        original client instead of the proxy server.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.client = IPv4Address("TCP", "4.3.2.1", 80)
+        req.requestHeaders.setRawHeaders("X-Forwarded-For", ["1.2.3.4, 2.2.3.4",
+            "3.2.3.4,4.2.3.4", "5.2.3.4"])
+        req.method = "GET"
+        resource = DummyForwardedForResource()
+        resource.render(req)
+        self.assertEqual(req.client.host, "1.2.3.4")
+        self.assertEqual(req.client.port, 80)
+
+
+    def test_renderNoForward(self):
+        """
+        L{ForwardedForResource.render} will change the client IP to be the
+        original client instead of the proxy server. It shouldn't do this if
+        there is no X-Forwarded-For header.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.client = IPv4Address("TCP", "4.3.2.1", 80)
+        req.method = "GET"
+        resource = DummyForwardedForResource()
+        resource.render(req)
+        self.assertEqual(req.client.host, "4.3.2.1")
+        self.assertEqual(req.client.port, 80)
+
+
+    def test_getChildWithDefault(self):
+        """
+        L{ForwardedForResource.render} will change the client IP to be the
+        original client instead of the proxy server.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.client = IPv4Address("TCP", "4.3.2.1", 80)
+        req.requestHeaders.setRawHeaders("X-Forwarded-For", ["1.2.3.4, 2.2.3.4",
+            "3.2.3.4,4.2.3.4", "5.2.3.4"])
+        req.method = "GET"
+        resource = DummyForwardedForResource()
+        resource.getChildWithDefault("/", req)
+        self.assertEqual(req.client.host, "1.2.3.4")
+        self.assertEqual(req.client.port, 80)
+
+
+    def test_getChildWithDefaultNoForward(self):
+        """
+        L{ForwardedForResource.render} will change the client IP to be the
+        original client instead of the proxy server. It shouldn't do this if
+        there is no X-Forwarded-For header.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.client = IPv4Address("TCP", "4.3.2.1", 80)
+        req.method = "GET"
+        resource = DummyForwardedForResource()
+        resource.getChildWithDefault("/", req)
+        self.assertEqual(req.client.host, "4.3.2.1")
+        self.assertEqual(req.client.port, 80)

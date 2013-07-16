@@ -403,3 +403,25 @@ class EncodingResourceWrapper(proxyForInterface(IResource)):
             encoder = encoderFactory.encoderForRequest(request)
             if encoder is not None:
                 return encoder
+
+
+
+class ForwardedForResource(Resource):
+    """
+    Use this at the root of a Site to set the client IP to the actual client
+    IP in the case of one or more proxy servers.
+    """
+    def _fixClient(self, request):
+        forwarders = request.getForwarders()
+        if len(forwarders) > 1:
+            request.setClientIP(forwarders[0])
+
+
+    def render(self, request):
+        self._fixClient(request)
+        return Resource.render(self, request)
+
+
+    def getChildWithDefault(self, path, request):
+        self._fixClient(request)
+        return Resource.getChildWithDefault(self, path, request)

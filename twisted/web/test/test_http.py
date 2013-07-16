@@ -6,6 +6,7 @@ Test HTTP support.
 """
 
 import random, cgi, base64
+from twisted.internet.address import IPv4Address
 
 try:
     from urlparse import (
@@ -1342,6 +1343,66 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.setHost(b"example.com", 81)
         self.assertEqual(
             req.requestHeaders.getRawHeaders(b"host"), [b"example.com:81"])
+
+
+    def test_setClientIP(self):
+        """
+        L{http.Request.setClientIP} sets the originating client's address.
+        The clientIP parameter can be a string.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.client = "4.3.2.1"
+        req.setClientIP("1.2.3.4")
+        self.assertEqual(req._originalClient, "4.3.2.1")
+        self.assertEqual(req.client.host, "1.2.3.4")
+        self.assertEqual(req.client.port, 80)
+
+
+    def test_setClientIPAddress(self):
+        """
+        L{http.Request.setClientIP} sets the originating client's address.
+        The clientIP parameter can be an IPV4Address.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.client = IPv4Address("TCP", "4.3.2.1", 80)
+        req.setClientIP(IPv4Address("TCP", "1.2.3.4", 8080))
+        self.assertEqual(req._originalClient.host, "4.3.2.1")
+        self.assertEqual(req._originalClient.port, 80)
+        self.assertEqual(req.client.host, "1.2.3.4")
+        self.assertEqual(req.client.port, 8080)
+
+
+    def test_setClientIPAddressForceSSL(self):
+        """
+        L{http.Request.setClientIP} sets the originating client's address.
+        The ssl option can be used to force ssl on or off.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.client = IPv4Address("TCP", "4.3.2.1", 80)
+        req.setClientIP("1.2.3.4", True)
+        self.assertEqual(req._originalClient.host, "4.3.2.1")
+        self.assertEqual(req._originalClient.port, 80)
+        self.assertEqual(req.client.host, "1.2.3.4")
+        self.assertEqual(req.client.port, 443)
+
+
+    def test_getForwarders(self):
+        """
+        L{http.Request.getForwarders} returns a list of hosts/ports that the
+        request has been forwarded through using the X-Forwarded-For header.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.client = IPv4Address("TCP", "4.3.2.1", 80)
+        req.requestHeaders.setRawHeaders("X-Forwarded-For", ["1.2.3.4, 2.2.3.4",
+            "3.2.3.4,4.2.3.4", "5.2.3.4"])
+        fwd = req.getForwarders()
+        self.assertEqual(len(fwd), 6)
+        self.assertEqual(fwd[0].host, "1.2.3.4")
+        self.assertEqual(fwd[1].host, "2.2.3.4")
+        self.assertEqual(fwd[2].host, "3.2.3.4")
+        self.assertEqual(fwd[3].host, "4.2.3.4")
+        self.assertEqual(fwd[4].host, "5.2.3.4")
+        self.assertEqual(fwd[5].host, "4.3.2.1")
 
 
     def test_setHeader(self):
