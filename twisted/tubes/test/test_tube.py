@@ -131,7 +131,10 @@ class TubeTest(TestCase):
     def test_tubeReceiveDoesntRelayUnnecessaryProgress(self):
         """
         L{_TubeDrain.receive} will not call its downstream L{IDrain}'s
-        C{progress} method if its L{Pump} I{does} call its C{deliver} method.
+        C{progress} method if its L{Pump} I{does} call its C{deliver} method,
+        because the progress notification is redundant in that case; input was
+        received, output was sent on.  A call to C{progress} would imply that
+        I{more} data had come in, and that isn't necessarily true.
         """
         got = []
         class ReceivingPump(Pump):
