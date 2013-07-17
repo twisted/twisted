@@ -136,17 +136,22 @@ class TubeTest(TestCase):
         received, output was sent on.  A call to C{progress} would imply that
         I{more} data had come in, and that isn't necessarily true.
         """
+        progged = []
         got = []
         class ReceivingPump(Pump):
             def received(self, item):
-                return [item + 1]
+                self.tube.deliver(item + 1)
         class ProgressingPump(Pump):
             def progressed(self, amount=None):
-                got.append(amount)
+                progged.append(amount)
+            def received(self, item):
+                got.append(item)
         self.tube.pump = ReceivingPump()
         self.ff.flowTo(self.tubeDrain).flowTo(cascade(ProgressingPump()))
         self.tubeDrain.receive(2)
-        self.assertEquals(got, [])
+        # sanity check
+        self.assertEquals(got, [3])
+        self.assertEquals(progged, [])
 
 
     def test_flowToFirst(self):
