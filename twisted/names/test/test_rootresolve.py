@@ -19,7 +19,7 @@ from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IReactorUDP, IUDPTransport
 from twisted.names.root import Resolver
 from twisted.names.dns import (
-    IN, HS, A, NS, CNAME, OK, ENAME, Record_CNAME,
+    IN, HS, A, NS, CNAME, OK, ENAME, EREFUSED, Record_CNAME,
     Name, Query, Message, RRHeader, Record_A, Record_NS)
 from twisted.names.error import DNSNameError, ResolverError
 
@@ -359,6 +359,46 @@ class RootResolverTests(TestCase):
         return d
 
 
+    def test_badGlue(self):
+        """
+        If an intermediate response includes bad glue records for some
+        authorities (eg the glue IP refuses queries for the domain),
+        the remaining glueless authorities will also be queried to
+        find those addresses.
+        """
+        servers = {
+            ('1.1.2.3', 53): {
+                (b'foo.example.com', A): {
+                    'authority': [
+                        (b'foo.example.com', Record_NS(b'ns1.example.org')),
+                        (b'foo.example.com', Record_NS(b'ns2.example.net')),
+                        ],
+                    'additional': [('ns1.example.org', Record_A('10.0.0.1'))],
+                    },
+                (b'ns2.example.net', A): {
+                    'answers': [
+                        (b'ns2.example.net', Record_A(b'10.0.0.2'))],
+                    },
+                },
+            ('10.0.0.1', 53): {
+                (b'foo.example.com', A): {
+                    'rCode': EREFUSED,
+                    },
+                },
+            ('10.0.0.2', 53): {
+                (b'foo.example.com', A): {
+                    'answers': [
+                        (b'foo.example.com', Record_A(b'10.0.0.3'))],
+                    },
+                },
+            }
+        resolver = self._getResolver(servers)
+        d = resolver.lookupAddress(b'foo.example.com')
+        d.addCallback(getOneAddress)
+        d.addCallback(self.assertEqual, '10.0.0.3')
+        return d
+
+
     def test_missingName(self):
         """
         If a name is missing, L{Resolver.lookupAddress} returns a L{Deferred}
@@ -593,5 +633,3 @@ _retrySuppression = util.suppress(
     message=(
         'twisted.names.root.retry is deprecated since Twisted 10.0.  Use a '
         'Resolver object for retry logic.'))
-
-
