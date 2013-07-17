@@ -162,9 +162,9 @@ class POP3ClientCancelTestCase(unittest.TestCase):
         self.assertTrue(failureOfNoop.check(error.ConnectionAborted))
 
 
-    def test_cancelTryingCommandReturnedBySendShort(self):
+    def test_cancelCommandSentDirectlyBySendShort(self):
         """
-        When cancel a trying command returned by L{POP3Client.sendShort},
+        When cancel a command sent directly by L{POP3Client.sendShort},
         L{POP3Client} will errback the L{defer.Deferred} of the trying command
         with {defer.CancelledError} then errback the L{defer.Deferred}s of all
         the waiting commands in the queue with
@@ -216,11 +216,11 @@ class POP3ClientCancelTestCase(unittest.TestCase):
         self.assertTrue(failureOfNoop.check(error.ConnectionAborted))
 
 
-    def test_cancelTryingCommandReturnedBySendLong(self):
+    def test_cancelCommandSentDirectlyBySendLong(self):
         """
-        When cancel a trying command returned by L{POP3Client.sendLong},
-        L{POP3Client} will errback the L{defer.Deferred} of the trying command
-        with {defer.CancelledError} then errback the L{defer.Deferred}s of all
+        When cancel a command sent by L{POP3Client.sendLong}, L{POP3Client}
+        will errback the L{defer.Deferred} of the trying command with
+        {defer.CancelledError} then errback the L{defer.Deferred}s of all
         the waiting commands in the queue with
         L{twisted.internet.error.ConnectionAborted} and disconnect the
         connection immediately.
