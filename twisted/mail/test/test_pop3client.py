@@ -280,7 +280,6 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         pop3client, transport = setUp()
         deferred = pop3client.user("username")
         self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
-        pop3client.dataReceived("+OK send password\r\n")
 
 
     def testOkPass(self):
@@ -307,7 +306,6 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         pop3client, transport = setUp()
         deferred = pop3client.password("password")
         self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
-        pop3client.dataReceived("+OK you're in!\r\n")
 
 
     def testOkLogin(self):
@@ -443,8 +441,6 @@ class POP3ClientListTestCase(unittest.TestCase):
         pop3client, transport = setUp()
         deferred = pop3client.listSize()
         self.assertEqual(deferred, pop3client.sendLongDeferreds[-1])
-        pop3client.dataReceived("+OK Here it comes\r\n")
-        pop3client.dataReceived("1 3\r\n2 2\r\n3 1\r\n.\r\n")
 
 
     def testListUID(self):
@@ -484,8 +480,6 @@ class POP3ClientListTestCase(unittest.TestCase):
         pop3client, transport = setUp()
         deferred = pop3client.listUID()
         self.assertEqual(deferred, pop3client.sendLongDeferreds[-1])
-        pop3client.dataReceived("+OK Here it comes\r\n")
-        pop3client.dataReceived("1 abc\r\n2 def\r\n3 ghi\r\n.\r\n")
 
 
 
@@ -592,10 +586,6 @@ class POP3ClientMessageTestCase(unittest.TestCase):
         pop3client, transport = setUp()
         deferred = pop3client.retrieve(7)
         self.assertEqual(deferred, pop3client.sendLongDeferreds[-1])
-        pop3client.dataReceived("+OK Message incoming\r\n")
-        pop3client.dataReceived("La la la here is message text\r\n")
-        pop3client.dataReceived("..Further message text tra la la\r\n")
-        pop3client.dataReceived(".\r\n")
 
 
 
@@ -629,9 +619,6 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         pop3client, transport = setUp()
         deferred = pop3client.capabilities(useCache=0)
         self.assertEqual(deferred, pop3client.sendLongDeferreds[-1])
-        pop3client.dataReceived("+OK Capabilities on the way\r\n")
-        pop3client.dataReceived(
-            "X\r\nY\r\nZ\r\nA 1 2 3\r\nB 1 2\r\nC 1\r\n.\r\n")
 
 
     def testStat(self):
@@ -658,7 +645,6 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         pop3client, transport = setUp()
         deferred = pop3client.stat()
         self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
-        pop3client.dataReceived("+OK 1 1212\r\n")
 
 
     def testNoop(self):
@@ -685,7 +671,6 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         pop3client, transport = setUp()
         deferred = pop3client.noop()
         self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
-        pop3client.dataReceived("+OK No-op to you too!\r\b")
 
 
     def testRset(self):
@@ -712,7 +697,6 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         pop3client, transport = setUp()
         deferred = pop3client.reset()
         self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
-        pop3client.dataReceived("+OK Reset state\r\n")
 
 
     def testDelete(self):
@@ -739,7 +723,6 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         pop3client, transport = setUp()
         deferred = pop3client.delete(3)
         self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
-        pop3client.dataReceived("+OK Hasta la vista\r\n")
 
 
 
