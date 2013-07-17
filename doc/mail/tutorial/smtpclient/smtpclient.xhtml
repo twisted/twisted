@@ -647,7 +647,7 @@ In the previous example we defined <code>getMailExchange</code> to return a stri
 While this was a step in the right direction, it turns out not to be a very big one.
 Determining the mail exchange host for a particular domain is going to involve network traffic (specifically, some DNS requests).
 This might take an arbitrarily large amount of time.
-To address this issue, Twisted provides <code>Deferred</code>s, a mechanism for delaying action until an asynchronous request is complete.
+To address this issue, Twisted provides <code>Deferred</code>s, a mechanism for specifying an action to occur upon completion of an asynchronous request. 
 An in-depth exploration of <code>Deferred</code>s is beyond the scope of this document.
 For more information, see the <a href="../../../core/howto/defer.html">Deferred Reference</a>.
 </p>
@@ -720,7 +720,7 @@ required.  </p>
 
 <p>
 In case your ISP does not block port 25 and you'd like to try to send mail to an external server, <a href="smtpclient-11a.tac"><code>smtpclient-11a.tac</code></a> configures the <code>MXCalculator</code> to contact a DNS server to get the address of the mail server and sends the message to its port 25.
-Since <code>example.net</code> does not accept email, you'll need to make two changes to the file to supply an actual email address for the recipient and to look up the recipient's domain.
+Because <code>example.net</code> does not accept email, you'll need to replace the two references to it in <code>smtpclient-11a.tac</code>.
 </p>
 
 
