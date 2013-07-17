@@ -4,40 +4,19 @@ from zope.interface import Interface, implements
 
 from ampserver import Math
 
-from twisted.tubes.protocol import ProtocolAdapterCreatorThing as ThinkOfAName
+from twisted.tubes.protocol import factoryFromFlow
 from twisted.internet.endpoints import serverFromString
 
 from twisted.internet import reactor
 
-from twisted.protocols.amp import AmpBox
-from twisted.protocols.amp import IBoxSender
+from twisted.protocols.amp import AmpBox, IBoxSender
 from twisted.tubes.itube import ISegment
-from twisted.tubes.tube import Pump
-from twisted.tubes.tube import Tube
-from twisted.protocols.basic import Int16StringReceiver
-
-
-class IString(Interface):
-    """
-    A string that's a discrete message.
-    """
-
-
-class DataToStrings(Pump):
-
-    inputType = ISegment
-    outputType = IString
-
-    def __init__(self, stringReceiverClass, stringReceiverMethod):
-        self._stringReceiver = stringReceiverClass()
-        setattr(self._stringReceiver, stringReceiverMethod, self.tube.deliver)
-        self.received = self._stringReceiver.dataReceived
-
-
+from twisted.tubes.tube import Pump, cascade
+from twisted.tubes.framing import packedPrefixToStrings
 
 class StringsToBoxes(Pump):
 
-    inputType = IString
+    inputType = None # I... Packet? IString? IDatagram?
     outputType = None # AmpBox -> TODO, implement classes.
 
     state = 'new'
@@ -98,7 +77,7 @@ class BoxConsumer(Pump):
 
 
     def unhandledError(self, failure):
-        pass
+        failure.printTraceback()
 
 
     def received(self, box):
@@ -106,15 +85,14 @@ class BoxConsumer(Pump):
 
 
 
-def boot(fount, drain):
-    (fount.flowTo(Tube(DataToStrings(Int16StringReceiver, "stringReceived")))
-          .flowTo(Tube(StringsToBoxes()))
-          .flowTo(Tube(BoxConsumer(Math())))
-          .flowTo(Tube(BoxesToData()))
-          .flowTo(drain))
+def mathFlow(fount, drain):
+    fount.flowTo(cascade(packedPrefixToStrings(16), StringsToBoxes(),
+                         BoxConsumer(Math()), BoxesToData(), drain))
+
+
 
 serverEndpoint = serverFromString(reactor, "tcp:1234")
-serverEndpoint.listen(ThinkOfAName(boot))
+serverEndpoint.listen(factoryFromFlow(mathFlow))
 from twisted.internet import reactor
 reactor.run()
 
