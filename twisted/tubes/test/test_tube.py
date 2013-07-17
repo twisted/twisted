@@ -306,13 +306,17 @@ class TubeTest(TestCase):
             pass
         class B(Pump):
             pass
+        class C(Pump):
+            pass
         a = A()
         b = B()
-        ab = cascade(a, b)
+        c = C()
+        ab = cascade(a, b, c)
         self.ff.flowTo(ab).flowTo(self.fd)
-        a.tube.deliver(3)
-        b.tube.deliver(4)
-        self.assertEquals(self.fd.received, [4])
+        a.tube.deliver("received by B")
+        b.tube.deliver("receved by C")
+        c.tube.deliver("received by FD")
+        self.assertEquals(self.fd.received, ["received by FD"])
 
 
     def test_flowToWillNotResumeFlowPausedInFlowingFrom(self):
