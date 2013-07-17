@@ -279,7 +279,7 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         """
         pop3client, transport = setUp()
         deferred = pop3client.user("username")
-        self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
+        self.assertIdentical(deferred, pop3client.sendShortDeferreds[-1])
 
 
     def testOkPass(self):
@@ -305,7 +305,7 @@ class POP3ClientLoginTestCase(unittest.TestCase):
         """
         pop3client, transport = setUp()
         deferred = pop3client.password("password")
-        self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
+        self.assertIdentical(deferred, pop3client.sendShortDeferreds[-1])
 
 
     def testOkLogin(self):
@@ -440,7 +440,7 @@ class POP3ClientListTestCase(unittest.TestCase):
         """
         pop3client, transport = setUp()
         deferred = pop3client.listSize()
-        self.assertEqual(deferred, pop3client.sendLongDeferreds[-1])
+        self.assertIdentical(deferred, pop3client.sendLongDeferreds[-1])
 
 
     def testListUID(self):
@@ -479,7 +479,7 @@ class POP3ClientListTestCase(unittest.TestCase):
         """
         pop3client, transport = setUp()
         deferred = pop3client.listUID()
-        self.assertEqual(deferred, pop3client.sendLongDeferreds[-1])
+        self.assertIdentical(deferred, pop3client.sendLongDeferreds[-1])
 
 
 
@@ -585,7 +585,7 @@ class POP3ClientMessageTestCase(unittest.TestCase):
         """
         pop3client, transport = setUp()
         deferred = pop3client.retrieve(7)
-        self.assertEqual(deferred, pop3client.sendLongDeferreds[-1])
+        self.assertIdentical(deferred, pop3client.sendLongDeferreds[-1])
 
 
 
@@ -618,7 +618,7 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         """
         pop3client, transport = setUp()
         deferred = pop3client.capabilities(useCache=0)
-        self.assertEqual(deferred, pop3client.sendLongDeferreds[-1])
+        self.assertIdentical(deferred, pop3client.sendLongDeferreds[-1])
 
 
     def testStat(self):
@@ -644,7 +644,7 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         """
         pop3client, transport = setUp()
         deferred = pop3client.stat()
-        self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
+        self.assertIdentical(deferred, pop3client.sendShortDeferreds[-1])
 
 
     def testNoop(self):
@@ -670,7 +670,7 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         """
         pop3client, transport = setUp()
         deferred = pop3client.noop()
-        self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
+        self.assertIdentical(deferred, pop3client.sendShortDeferreds[-1])
 
 
     def testRset(self):
@@ -696,7 +696,7 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         """
         pop3client, transport = setUp()
         deferred = pop3client.reset()
-        self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
+        self.assertIdentical(deferred, pop3client.sendShortDeferreds[-1])
 
 
     def testDelete(self):
@@ -722,7 +722,7 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         """
         pop3client, transport = setUp()
         deferred = pop3client.delete(3)
-        self.assertEqual(deferred, pop3client.sendShortDeferreds[-1])
+        self.assertIdentical(deferred, pop3client.sendShortDeferreds[-1])
 
 
 
