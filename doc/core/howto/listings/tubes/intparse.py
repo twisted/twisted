@@ -1,16 +1,20 @@
+import operator
 from twisted.tubes.tube import Pump
+
+def reducer(operation, initializer):
+    def reduction(values):
+        return reduce(operation, values, initializer)
+    return reduction
+
 class LinesToIntegersOrCommands(Pump):
     def received(self, item):
         if item == 'SUM':
-            result = sum
+            result = reducer(operator.add, 0)
         elif item == 'PRODUCT':
-            result = product
+            result = reducer(operator.mul, 1)
         else:
             result = int(item)
         self.tube.deliver(result)
 
 def product(numbers):
-    result = 1
-    for number in numbers:
-        result *= number
-    return result
+    return reduce(operator.mul, numbers, 1)

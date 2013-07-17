@@ -76,7 +76,9 @@ To demonstrate both receiving and processing data, let's write a server that:
 </p>
 
 <p>
-In order to implement this program, we will use a series of <code>Tube</code> objects, each of which will be responsible for transforming the data; first from raw chunks of TCP data to a sequence of lines, then from lines into integers, and commands, then from integers and commands into sums and products (more integers), from those integers into lines, and finally from those lines into chunks of TCP data that are sent back out over the network.
+In order to implement this program, we will construct a <i>cascade</i> of objects which process the data; or, in the parlance of the <code>tubes</code> package, "<code>Pump</code>s".
+Each <code>Pump</code> in the <code>cascade</code> will be responsible for processing part of the data.</p>
+<p>First we will create a pump that transforms arbitrary segments of a TCP stream into lines, then from lines into a combination of integers and callables (functions that perform the work of the <code>SUM</code> and <code>PRODUCT commands</code>), then from integers and callables into more integers - sums and products - from those integers into lines, and finally from those lines into CRLF-terminated segments of TCP data that are sent back out over the network.
 </p>
 
 <p>
@@ -86,18 +88,15 @@ Here's a sketch of the overall structure of such a program:
 <a href="listings/tubes/computube.py" class="py-listing">computube.py</a>
 
 <p>
-As with <code>echoFlow</code>, <code>mathFlow</code> takes a fount and a drain.  Rather than connecting them directly, it puts several objects between them.
-There are two kinds of objects being constructed by this example. One kind is the Tubes themselves, and the other is each Tube's <i>Pump</i>.
-An instance of <code>Tube</code> is, itself, both a fount (specifically, an <code class="API" base="twisted.tubes.itube">IFount</code>) and a drain (<code class="API" base="twisted.tubes.itube">IDrain</code>).
-However, a Tube is a fairly dumb object: it doesn't know what to do with the data that it receives.
-In order to process the data, the Tube relies on its Pump. The data processing (if any) is embedded in the Pump logic. In this example, one pump convert bytes to lines, another converts lines to integers, another pump calculates SUM or PRODUCT, and so on.
+As with <code>echoFlow</code>, <code>mathFlow</code> takes a fount and a drain.  
+Rather than connecting them directly, it puts an object between them to process the data.
+So what is <code>dataProcessor</code> and what does it return?  We need to write it, and it would look something like this:
 </p>
 
+<a href="listings/tubes/dataproc.py" class="py-listing">computube2.py</a>
 <p>
-Several of the classes involved are already within Twisted: Tube, for example, and several of the Pump classes.  Some of the Pumps, however, we will have to implement as part of the example.  So, to flesh out the <code>computube</code> example a little more, here's a version with the existing classes imported:
-</p>
 
-<a href="listings/tubes/computube2.py" class="py-listing">computube2.py</a>
+</p>
 
 <p>
 To complete the example, we need to implement 3 classes, each of which is a Pump:

@@ -1,21 +1,10 @@
 
-from twisted.tubes.tube import cascade
-from twisted.tubes.framing import bytesToLines, linesToBytes
 from twisted.tubes.protocol import factoryFromFlow
+
 from twisted.internet.defer import Deferred
 from twisted.internet.endpoints import TCP4ServerEndpoint
 
-from intparse import LinesToIntegersOrCommands
-from worker import CommandsAndIntegersToResultIntegers
-from output import IntegersToLines
-
-def dataProcessor():
-    return cascade(
-        bytesToLines(),
-        LinesToIntegersOrCommands(),
-        CommandsAndIntegersToResultIntegers(),
-        IntegersToLines(),
-        linesToBytes())
+from dataproc import dataProcessor
 
 def mathFlow(fount, drain):
     fount.flowTo(dataProcessor()).flowTo(drain)
