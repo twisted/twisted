@@ -73,7 +73,7 @@ class MemoryPOP3Client(POP3Client):
 
         @return: A L{defer.Deferred} that fires when the response is recevied.
         """
-        # The POP3Client isn't a new-style class, we cann't use super()
+        # The POP3Client isn't a new-style class, we can't use super()
         deferred = POP3Client.sendShort(self, cmd, args)
         self.sendShortDeferreds.append(deferred)
         return deferred
@@ -94,7 +94,7 @@ class MemoryPOP3Client(POP3Client):
 
         @return: A L{defer.Deferred} that fires when the response is recevied.
         """
-        # The POP3Client isn't a new-style class, we cann't use super()
+        # The POP3Client isn't a new-style class, we can't use super()
         deferred = POP3Client.sendLong(self, cmd, args, consumer, xform)
         self.sendLongDeferreds.append(deferred)
         return deferred
