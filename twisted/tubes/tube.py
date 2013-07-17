@@ -209,7 +209,6 @@ def cascade(start, *plumbing):
 
 def _pumpToTube(pump):
     if pump.tube is not None:
-        # XXX how does this even get exercised?
         return pump.tube
     return _Tube(pump)
 
