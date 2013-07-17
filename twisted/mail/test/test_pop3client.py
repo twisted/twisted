@@ -130,8 +130,8 @@ class POP3ClientCancelTestCase(unittest.TestCase):
     """
     def test_cancelCommandInQueueReturnedBySendShort(self):
         """
-        When cancel a command in the blocked queue returned
-        by L{POP3Client.sendShort}, L{POP3Client} will remove the
+        When cancelling a command returned by L{POP3Client.sendShort} that
+        hasn't yet been sent over the network, L{POP3Client} will remove the
         L{defer.Deferred}, function and arguments of the command from the
         queue. The connection is NOT disconnected.
         """
@@ -147,12 +147,13 @@ class POP3ClientCancelTestCase(unittest.TestCase):
 
     def test_cancelCommandPoppedOutFromQueueBySendShort(self):
         """
-        When cancelling a command that returned by L{POP3Client.sendShort} and
-        has been popped out from the queue, L{POP3Client} will errback the
-        L{defer.Deferred} of the trying command with {defer.CancelledError}
-        then errback the L{defer.Deferred}s of all the waiting commands in the
-        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
-        the connection immediately.
+        When cancelling a command returned by L{POP3Client.sendShort} that has
+        been popped out from the queue and sent over the network, L{POP3Client}
+        will errback the L{defer.Deferred} of the trying command with
+        {defer.CancelledError} then errback the L{defer.Deferred}s of all the
+        waiting commands in the queue with
+        L{twisted.internet.error.ConnectionAborted} and disconnect the
+        connection immediately.
         """
         pop3client, transport = setUp()
         pop3client.noop()
@@ -171,7 +172,7 @@ class POP3ClientCancelTestCase(unittest.TestCase):
 
     def test_cancelCommandSentDirectlyBySendShort(self):
         """
-        When cancel a command sent directly by L{POP3Client.sendShort},
+        When cancelling a command sent directly by L{POP3Client.sendShort},
         L{POP3Client} will errback the L{defer.Deferred} of the trying command
         with {defer.CancelledError} then errback the L{defer.Deferred}s of all
         the waiting commands in the queue with
@@ -191,8 +192,8 @@ class POP3ClientCancelTestCase(unittest.TestCase):
 
     def test_cancelCommandInQueueReturnedBySendLong(self):
         """
-        When cancel a command in the blocked queue returned
-        by L{POP3Client.sendLong}, L{POP3Client} will remove the
+        When cancelling a command returned by L{POP3Client.sendLong} that
+        hasn't yet been sent over the network, L{POP3Client} will remove the
         L{defer.Deferred}, function and arguments of the command from the
         queue. The connection is NOT disconnected.
         """
@@ -208,12 +209,13 @@ class POP3ClientCancelTestCase(unittest.TestCase):
 
     def test_cancelCommandPoppedOutFromQueueBySendLong(self):
         """
-        When cancelling a command that returned by L{POP3Client.sendLong} and
-        has been popped out from the queue, L{POP3Client} will errback the
-        L{defer.Deferred} of the trying command with {defer.CancelledError}
-        then errback the L{defer.Deferred}s of all the waiting commands in the
-        queue with L{twisted.internet.error.ConnectionAborted} and disconnect
-        the connection immediately.
+        When cancelling a command returned by L{POP3Client.sendLong} that has
+        been popped out from the queue and sent over the network, L{POP3Client}
+        will errback the L{defer.Deferred} of the trying command with
+        {defer.CancelledError} then errback the L{defer.Deferred}s of all the
+        waiting commands in the queue with
+        L{twisted.internet.error.ConnectionAborted} and disconnect the
+        connection immediately.
         """
         pop3client, transport = setUp()
         pop3client.noop()
@@ -232,9 +234,9 @@ class POP3ClientCancelTestCase(unittest.TestCase):
 
     def test_cancelCommandSentDirectlyBySendLong(self):
         """
-        When cancel a command sent by L{POP3Client.sendLong}, L{POP3Client}
-        will errback the L{defer.Deferred} of the trying command with
-        {defer.CancelledError} then errback the L{defer.Deferred}s of all
+        When cancelling a command sent directly by L{POP3Client.sendLong},
+        L{POP3Client} will errback the L{defer.Deferred} of the trying command
+        with {defer.CancelledError} then errback the L{defer.Deferred}s of all
         the waiting commands in the queue with
         L{twisted.internet.error.ConnectionAborted} and disconnect the
         connection immediately.
