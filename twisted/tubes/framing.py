@@ -4,8 +4,10 @@ Protocols to support framing.
 """
 
 from twisted.tubes.tube import Pump
-from twisted.protocols.basic import LineOnlyReceiver
-from twisted.protocols.basic import NetstringReceiver
+from twisted.protocols.basic import (
+    LineOnlyReceiver, NetstringReceiver, Int8StringReceiver,
+    Int16StringReceiver, Int32StringReceiver
+)
 
 class _Transporter(object):
     def __init__(self, deliver):
@@ -84,4 +86,20 @@ def linesToBytes():
 
 def bytesToLines():
     return _DataToStrings(LineOnlyReceiver, "lineReceived")
+
+
+
+_packedPrefixProtocols = {
+    8: Int8StringReceiver,
+    16: Int16StringReceiver,
+    32: Int32StringReceiver,
+}
+
+def packedPrefixToStrings(prefixBits):
+    return _DataToStrings(_packedPrefixProtocols[prefixBits])
+
+
+
+def stringsToPackedPrefix(prefixBits):
+    return _StringsToData(_packedPrefixProtocols[prefixBits])
 

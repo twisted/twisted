@@ -14,6 +14,8 @@ from twisted.tubes.framing import netstringsToStrings
 from twisted.tubes.framing import bytesToLines
 from twisted.tubes.framing import linesToBytes
 
+from twisted.tubes.framing import packedPrefixToStrings
+from twisted.tubes.framing import stringsToPackedPrefix
 from twisted.trial.unittest import TestCase
 
 class NetstringTests(TestCase):
@@ -124,4 +126,32 @@ class LineTests(TestCase):
         self.assertEquals("".join(Switchee.datums), "abcde\r\nfgh")
 
 
+class PackedPrefixTests(TestCase):
+    """
+    Test cases for `packedPrefix`.
+    """
 
+    def test_prefixIn(self):
+        """
+        Parse some prefixed data.
+        """
+        packed = packedPrefixToStrings(8)
+        ff = FakeFount()
+        fd = FakeDrain()
+        ff.flowTo(cascade(packed)).flowTo(fd)
+        ff.drain.receive(b"\x0812345678\x02")
+        self.assertEquals(fd.received, ["12345678"])
+
+
+    def test_prefixOut(self):
+        """
+        Emit some prefixes.
+        """
+        packed = stringsToPackedPrefix(8)
+        ff = FakeFount()
+        fd = FakeDrain()
+        ff.flowTo(cascade(packed, fd))
+        ff.drain.receive('a')
+        ff.drain.receive('bc')
+        ff.drain.receive('def')
+        self.assertEquals(fd.received, ['\x01a', '\x02bc', '\x03def'])
