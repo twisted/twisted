@@ -12,6 +12,7 @@ from twisted.tubes.protocol import factoryFromFlow
 from twisted.tubes.tube import Pump
 from twisted.tubes.tube import cascade
 from twisted.python.failure import Failure
+from twisted.tubes.test.util import FakeDrain
 from twisted.tubes.test.util import FakeFount
 
 class RememberingPump(Pump):
@@ -148,6 +149,20 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         self.assertEquals(ff.flowIsStopped, True)
 
 
+    def test_flowingFrom(self):
+        """
+        L{_ProtocolFount.flowTo} returns the result of its argument's
+        C{flowingFrom}.
+        """
+        another = FakeFount()
+        class ReflowingFakeDrain(FakeDrain):
+            def flowingFrom(self, fount):
+                super(ReflowingFakeDrain, self).flowingFrom(fount)
+                return another
+        anotherOther = self.adaptedFount.flowTo(ReflowingFakeDrain())
+        self.assertIdentical(another, anotherOther)
+
+
     def test_pureConsumerConnectionGetsShutDown(self):
         """
         When C{connectionLost} is called on a L{_ProtocolPlumbing} and it has
@@ -162,7 +177,6 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
             Failure(Exception("it's a fair cop"))
         )
         self.assertEquals(ff.flowIsStopped, True)
-
 
 
 

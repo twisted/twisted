@@ -92,8 +92,7 @@ class _ProtocolFount(object):
         Flow to the given drain.
         """
         self.drain = drain
-        self.drain.flowingFrom(self) # XXX test me
-        return drain # XXX test me
+        return self.drain.flowingFrom(self)
 
 
     _flowPaused = False
