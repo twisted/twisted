@@ -64,11 +64,7 @@ class MemoryPOP3Client(POP3Client):
 
     def sendShort(self, cmd, args):
         """
-        Send a command to which a short response is expected. Return a
-        L{defer.Deferred} that fires when the response is received. Append the
-        L{defer.Deferred} to L{sendShortDeferreds}. Block all further commands
-        from being sent until the response is received. Transition the state to
-        SHORT.
+        Send a command, append the L{defer.Deferred} to L{sendShortDeferreds}.
 
         @param cmd: The command to send.
         @type cmd: C{str}
@@ -85,11 +81,7 @@ class MemoryPOP3Client(POP3Client):
 
     def sendLong(self, cmd, args, consumer, xform):
         """
-        Send a command to which a multiline response is expected. Return a
-        L{defer.Deferred} that fires when the entire response is received.
-        Append the L{defer.Deferred} to L{sendLongDeferreds}. Block all
-        further commands from being sent until the entire response is received.
-        Transition the state to LONG_INITIAL.
+        Send a command, append the L{defer.Deferred} to L{sendLongDeferreds}.
 
         @param cmd: The command to send.
         @type cmd: C{str}
