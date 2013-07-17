@@ -69,8 +69,8 @@ class TubeTest(TestCase):
 
     def test_tubeReceiveCallsPumpReceived(self):
         """
-        L{_Tube.receive} will call C{pump.received} and synthesize a fake "0.5"
-        progress result if L{None} is returned.
+        L{_TubeDrain.receive} will call C{pump.received} and synthesize a fake
+        "0.5" progress result if L{None} is returned.
         """
         got = []
         class ReceivingPump(Pump):
@@ -84,8 +84,8 @@ class TubeTest(TestCase):
 
     def test_tubeReceiveRelaysPumpReceivedResult(self):
         """
-        L{_Tube.receive} will call C{Pump.received} and relay its resulting
-        progress value if one is provided.
+        L{_TubeDrain.receive} will call C{Pump.received} and relay its
+        resulting progress value if one is provided.
         """
         got = []
         class ReceivingPumpWithProgress(Pump):
@@ -130,8 +130,8 @@ class TubeTest(TestCase):
 
     def test_tubeReceiveDoesntRelayUnnecessaryProgress(self):
         """
-        L{_Tube.receive} will not call its downstream L{IDrain}'s C{progress}
-        method if its L{Pump} I{does} call its C{deliver} method.
+        L{_TubeDrain.receive} will not call its downstream L{IDrain}'s
+        C{progress} method if its L{Pump} I{does} call its C{deliver} method.
         """
         got = []
         class ReceivingPump(Pump):
@@ -145,13 +145,11 @@ class TubeTest(TestCase):
         self.tubeDrain.receive(2)
         self.assertEquals(got, [])
 
-    test_tubeReceiveDoesntRelayUnnecessaryProgress.todo = "The problem here is that 'tube' isn't a tube any more."
-
 
     def test_flowToFirst(self):
         """
-        If L{_Tube.flowTo} is called before L{_Tube.flowingFrom}, the argument to
-        L{_Tube.flowTo} will have its L{flowingFrom} called when
+        If L{_Tube.flowTo} is called before L{_Tube.flowingFrom}, the argument
+        to L{_Tube.flowTo} will have its L{flowingFrom} called when
         L{_Tube.flowingFrom} is called.
         """
         cascade(self.tube, self.fd)
@@ -175,7 +173,8 @@ class TubeTest(TestCase):
 
     def test_deliverPostsDownstream(self):
         """
-        L{_Tube.deliver} on a connected tube will call '.receive()' on its drain.
+        L{_Tube.deliver} on a connected tube will call '.receive()' on its
+        drain.
         """
         self.ff.flowTo(self.tubeDrain).flowTo(self.fd)
         self.tube.deliver(7)
@@ -196,13 +195,13 @@ class TubeTest(TestCase):
     def test_deliverWithoutDownstreamPauses(self):
         """
         L{_Tube.deliver} on a tube with an upstream L{IFount} but no downstream
-        L{IDrain} will pause its L{IFount}.  This is because the L{_Tube} has to
-        buffer everything downstream, and it doesn't want to buffer infinitely;
-        if it has nowhere to deliver onward to, then it issues a pause.  Note
-        also that this happens when data is delivered via the L{_Tube} and
-        I{not} when data arrives via the L{_Tube}'s C{receive} method, since
-        C{receive} delivers onwards to the L{Pump} immediately, and does not
-        require any buffering.
+        L{IDrain} will pause its L{IFount}.  This is because the L{_Tube} has
+        to buffer everything downstream, and it doesn't want to buffer
+        infinitely; if it has nowhere to deliver onward to, then it issues a
+        pause.  Note also that this happens when data is delivered via the
+        L{_Tube} and I{not} when data arrives via the L{_Tube}'s C{receive}
+        method, since C{receive} delivers onwards to the L{Pump} immediately,
+        and does not require any buffering.
         """
         self.nextFount = self.ff.flowTo(self.tubeDrain)
         self.assertEquals(self.ff.flowIsPaused, False)
@@ -283,8 +282,8 @@ class TubeTest(TestCase):
 
     def test_receiveCallsPumpReceived(self):
         """
-        L{_Tube.receive} will deliver its input to L{IPump.received} on its
-        pump.
+        L{_TubeDrain.receive} will deliver its input to L{IPump.received} on
+        its pump.
         """
         self.tubeDrain.receive("one-item")
         self.assertEquals(self.tube.pump.allReceivedItems,
