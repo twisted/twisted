@@ -18,7 +18,7 @@ from twisted.internet.protocol import Factory, Protocol
 from twisted.python import log
 from twisted.test.proto_helpers import (
     StringTransportWithDisconnection, AccumulatingProtocol)
-from twisted.protocols.policies import ProtocolWrapper
+from twisted.protocols.tls import TLSMemoryBIOProtocol
 
 from twisted.web.http_headers import Headers
 from twisted.web.resource import IResource, Resource
@@ -570,8 +570,8 @@ class WebSocketsResourceTest(TestCase):
         request = DummyRequest("/")
         request.requestHeaders = Headers()
         transport = StringTransportWithDisconnection()
+        transport.protocol = Protocol()
         request.transport = transport
-        request.isSecure = lambda: False
         request.headers.update({
             "upgrade": "Websocket",
             "connection": "Upgrade",
@@ -608,8 +608,8 @@ class WebSocketsResourceTest(TestCase):
         request.requestHeaders = Headers(
             {"sec-websocket-protocol": ["foo", "bar"]})
         transport = StringTransportWithDisconnection()
+        transport.protocol = Protocol()
         request.transport = transport
-        request.isSecure = lambda: False
         request.headers.update({
             "upgrade": "Websocket",
             "connection": "Upgrade",
@@ -757,10 +757,9 @@ class WebSocketsResourceTest(TestCase):
         request = DummyRequest("/")
         request.requestHeaders = Headers()
         transport = StringTransportWithDisconnection()
-        secureProtocol = ProtocolWrapper(Factory(), Protocol())
+        secureProtocol = TLSMemoryBIOProtocol(Factory(), Protocol())
         transport.protocol = secureProtocol
         request.transport = transport
-        request.isSecure = lambda: True
         request.headers.update({
             "upgrade": "Websocket",
             "connection": "Upgrade",
@@ -786,6 +785,7 @@ class WebSocketsResourceTest(TestCase):
         """
         channel = DummyChannel()
         channel.transport = StringTransportWithDisconnection()
+        channel.transport.protocol = channel
         request = Request(channel, False)
         headers = {
             "upgrade": "Websocket",
@@ -828,8 +828,8 @@ class WebSocketsResourceTest(TestCase):
         request = DummyRequest("/")
         request.requestHeaders = Headers()
         transport = StringTransportWithDisconnection()
+        transport.protocol = Protocol()
         request.transport = transport
-        request.isSecure = lambda: False
         request.headers.update({
             "upgrade": "Websocket",
             "connection": "Upgrade",

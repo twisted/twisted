@@ -26,6 +26,7 @@ from twisted.python import log
 from twisted.python.constants import Flags, FlagConstant
 from twisted.internet.protocol import Protocol
 from twisted.internet.interfaces import IProtocol
+from twisted.protocols.tls import TLSMemoryBIOProtocol
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
 
@@ -638,8 +639,7 @@ class WebSocketsResource(object):
 
         # Connect the transport to our factory, and make things go. We need to
         # do some stupid stuff here; see #3204, which could fix it.
-        if request.isSecure():
-            # Secure connections wrap in TLSMemoryBIOProtocol too.
+        if isinstance(transport.protocol, TLSMemoryBIOProtocol):
             transport.protocol.wrappedProtocol = protocol
         else:
             transport.protocol = protocol
