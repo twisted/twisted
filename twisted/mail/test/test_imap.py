@@ -2882,6 +2882,26 @@ class MemoryIMAP4Client(imap4.IMAP4Client):
 
 
 
+class AbortableStringTransport(StringTransport):
+    """
+    A version of L{StringTransport} that supports C{abortConnection}.
+    """
+    # This should be replaced by a common version in #6530.
+    aborting = False
+
+
+    def abortConnection(self):
+        """
+        A testable version of the C{ITCPTransport.abortConnection} method.
+
+        Since this is a special case of closing the connection,
+        C{loseConnection} is also called.
+        """
+        self.aborting = True
+        self.loseConnection()
+
+
+
 class IMAP4ClientCancelTestCase(unittest.TestCase):
     """
     Tests for cancelling commands of L{imap4.IMAP4Client}.
@@ -2890,7 +2910,7 @@ class IMAP4ClientCancelTestCase(unittest.TestCase):
         """
         Set up a working L{imap4.IMAP4Client} protocol.
         """
-        self.transport = StringTransport()
+        self.transport = AbortableStringTransport()
         self.imap4client = MemoryIMAP4Client()
         self.imap4client.makeConnection(self.transport)
         self.imap4client.dataReceived('* OK [IMAP4rev1]\r\n')
@@ -2914,11 +2934,11 @@ class IMAP4ClientCancelTestCase(unittest.TestCase):
 
     def test_cancelCommandPoppedFromQueue(self):
         """
-        When user cancels a command sent by L{imap4.IMAP4Client.sendCommand}
-        which has been popped out from the queue, the errbacks of the
-        L{defer.Deferred} will be called with L{defer.CancelledError}, the
-        connection will NOT be disconnected and the response will be safely
-        dropped on the floor.
+        When user cancels a command(except for C{startTLS}) sent by
+        L{imap4.IMAP4Client.sendCommand} which has been popped out from the
+        queue, the errbacks of the L{defer.Deferred} will be called with
+        L{defer.CancelledError}, the connection will NOT be disconnected and
+        the response will be safely dropped on the floor.
         """
         self.imap4client.noop()
         deferred = self.imap4client.sendCommand(imap4.Command("COMMAND", None))
@@ -2939,11 +2959,11 @@ class IMAP4ClientCancelTestCase(unittest.TestCase):
 
     def test_cancelCommandSentDirectly(self):
         """
-        When user cancels a command sent by L{imap4.IMAP4Client.sendCommand}
-        directly without being in the queue, the errbacks of the
-        L{defer.Deferred} will be called with L{defer.CancelledError}, the
-        connection will NOT be disconnected and the response will be safely
-        dropped on the floor.
+        When user cancels a command(except for C{startTLS}) sent by
+        L{imap4.IMAP4Client.sendCommand} directly without being in the queue,
+        the errbacks of the L{defer.Deferred} will be called with
+        L{defer.CancelledError}, the connection will NOT be disconnected and
+        the response will be safely dropped on the floor.
         """
         deferred = self.imap4client.sendCommand(imap4.Command("COMMAND", None))
         deferred.cancel()
@@ -2958,6 +2978,46 @@ class IMAP4ClientCancelTestCase(unittest.TestCase):
         substituteDeferred.addCallback(checkResponse)
         self.imap4client.dataReceived('0001 OK COMMAND completed\r\n')
         self.assertTrue(substituteDeferred.called)
+
+
+    def test_cancelStartTLSPoppedFromQueue(self):
+        """
+        When user cancels a C{startTLS} command sent by
+        L{imap4.IMAP4Client.sendCommand} which has been popped out from the
+        queue, the errbacks of the L{defer.Deferred} will be called with
+        L{defer.CancelledError}, the connection will be disconnected
+        immediately, the L{defer.Deferred}s of all the waiting commands will be
+        errbacked with L{error.ConnectionAborted}.
+        """
+        self.imap4client.noop()
+        deferred = self.imap4client.sendCommand(imap4.Command("STARTTLS"))
+        deferredOfNoop = self.imap4client.noop()
+        self.imap4client.dataReceived('0001 OK NO-OP completed\r\n')
+        deferred.cancel()
+        self.assertEqual(self.transport.aborting, True)
+        failure = self.failureResultOf(deferred)
+        self.assertTrue(failure.check(defer.CancelledError))
+        failureOfNoop = self.failureResultOf(deferredOfNoop)
+        self.assertTrue(failureOfNoop.check(error.ConnectionAborted))
+
+
+    def test_cancelStartTLSSentDirectly(self):
+        """
+        When user cancels a C{startTLS} command sent by
+        L{imap4.IMAP4Client.sendCommand} directly, the errbacks of the
+        L{defer.Deferred} will be called with L{defer.CancelledError}, the
+        connection will be disconnected immediately, the L{defer.Deferred}s of
+        all the waiting commands will be errbacked with
+        L{error.ConnectionAborted}.
+        """
+        deferred = self.imap4client.sendCommand(imap4.Command("STARTTLS"))
+        deferredOfNoop = self.imap4client.noop()
+        deferred.cancel()
+        self.assertEqual(self.transport.aborting, True)
+        failure = self.failureResultOf(deferred)
+        self.assertTrue(failure.check(defer.CancelledError))
+        failureOfNoop = self.failureResultOf(deferredOfNoop)
+        self.assertTrue(failureOfNoop.check(error.ConnectionAborted))
 
 
     def test_getCapabilitiesUsesSendCommand(self):

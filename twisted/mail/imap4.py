@@ -41,7 +41,7 @@ from twisted.protocols import policies
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
-from twisted.python import log, text
+from twisted.python import log, text, failure
 from twisted.internet import interfaces
 
 from twisted import cred
@@ -2327,10 +2327,14 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         if self.timeout > 0:
             self.setTimeout(self.timeout)
 
-    def connectionLost(self, reason):
-        """We are no longer connected"""
-        if self.timeout > 0:
-            self.setTimeout(None)
+
+    def _errbackDeferreds(self, reason):
+        """
+        Errback the L{defer.Deferred}s of all the L{Command}s.
+
+        @param reason: The reason why the errbacks are called.
+        @type reason: L{failure.Failure}
+        """
         if self.queued is not None:
             queued = self.queued
             self.queued = None
@@ -2342,6 +2346,19 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             for cmd in tags.itervalues():
                 if cmd is not None and cmd.defer is not None:
                     cmd.defer.errback(reason)
+
+
+    def connectionLost(self, reason):
+        """
+        We are no longer connected. Disable the timeout and errback the
+        L{defer.Deferred}s of all the L{Command}s.
+
+        @param reason: The reason why the connnection is lost.
+        @type reason: L{failure.Failure}
+        """
+        if self.timeout > 0:
+            self.setTimeout(None)
+        self._errbackDeferreds(reason)
 
 
     def lineReceived(self, line):
@@ -2544,33 +2561,42 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         @return: A L{defer.Deferred} that fires when the response is ready.
             When the C{cancel} method of the L{defer.Deferred} is called, the
             command is cancelled. If the command is in the queue, remove the
-            command from the queue. If the command has been sent directly or
-            has been popped out from the queue, drop the response on the floor
-            safely since it may arrive later and try to fire an already
-            cancelled Deferred.
+            command from the queue. If the command other than C{startTLS} has
+            been sent directly or has been popped out from the queue, drop the
+            response on the floor safely since it may arrive later and try to
+            fire an already cancelled Deferred. If the C{startTLS} command has
+            been sent directly or has been popped out from the queue,
+            cancelling the command will disconnect from the server immediately
+            and errback the L{defer.Deferred}s of all the waiting commands with
+            L{error.ConnectionAborted}.
         """
         # Since in the future we will support sending multiple commands at
         # the same time, we choose NOT to disconnect from the server when
         # cancelling a running command.
         def cancel(deferred):
             """
-            Cancel the command.
-
-            If the command is in the queue, remove the command from the queue.
-            If the command has been sent directly or has been popped out from
-            the queue, drop the response on the floor safely.
+            Cancel the command. See the docstring for
+            L{IMAP4Client.sendCommand} for detail.
 
             @param deferred: The L{defer.Deferred} of the cancelled command.
             """
             try:
                 self.queued.remove(cmd)
             except ValueError:
-                # The command has been sent over the network. Make a new
-                # substitution commmand to safely drop the response on the
-                # floor.
-                substitutionCommand = CancelledCommand(cmd)
-                self.tags[self.waiting] = substitutionCommand
-                self._lastCmd = substitutionCommand
+                if cmd.command == "STARTTLS":
+                    cmd.defer.errback(defer.CancelledError())
+                    del self.tags[self.waiting]
+                    self.waiting = None
+                    self._errbackDeferreds(error.ConnectionAborted(
+                        "ConnectionAborted due to startTLS cancellation"))
+                    self.transport.abortConnection()
+                else:
+                    # The command has been sent over the network. Make a new
+                    # substitution commmand to safely drop the response on the
+                    # floor.
+                    substitutionCommand = CancelledCommand(cmd)
+                    self.tags[self.waiting] = substitutionCommand
+                    self._lastCmd = substitutionCommand
         cmd.defer = defer.Deferred(cancel)
         if self.waiting:
             self.queued.append(cmd)
