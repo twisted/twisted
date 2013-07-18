@@ -2867,21 +2867,13 @@ class MemoryIMAP4Client(imap4.IMAP4Client):
 
     def sendCommand(self, cmd):
         """
-        Send a command.
-
-        If there is already a command running, the command will be appended
-        into the queue. The L{defer.Deferred} of the command will be kept in
+        Send a command, append the L{defer.Deferred} to
         L{sendCommandDeferreds}.
 
         @param cmd: The command to be sent.
         @type cmd: L{imap4.Command}
 
-        @return: A L{defer.Deferred} that fires when the response is ready.
-            When the C{cancel} method of the L{defer.Deferred} is called, the
-            command is cancelled. If the command is in the queue, remove the
-            command from the queue. If the command has been sent directly or
-            has been popped out from the queue, drop the response on the floor
-            safely.
+        @return: The L{defer.Deferred} of the L{imap4.Command}
         """
         # The imap4.IMAP4Client isn't new-style class, we can't use super().
         deferred = imap4.IMAP4Client.sendCommand(self, cmd)
