@@ -21,11 +21,13 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.internet.interfaces import (
     ILoggingContext, IListeningPort, IReactorUDP, IReactorSocket)
-from twisted.internet.address import IPv4Address
+from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.protocol import DatagramProtocol
 
 from twisted.internet.test.connectionmixins import (LogObserverMixin,
                                                     findFreePort)
+from twisted.internet import protocol, error, defer, interfaces, udp
+from twisted.test.test_udp import Server, GoodClient
 from twisted.trial.unittest import SkipTest
 
 
@@ -138,6 +140,17 @@ class UDPPortTestsMixin(object):
         self.assertEqual(
             port.getHost(), IPv4Address('UDP', host, portNumber))
 
+    def test_getHostIPv6(self):
+        """
+        L{IListeningPort.getHost} returns an L{IPv6Address} giving a
+        IPv6 address, the port number that the protocol is listening on
+        and the port number.
+        """
+        reactor = self.buildReactor()
+        port = self.getIPv6ListeningPort(reactor, DatagramProtocol())
+        addr = port.getHost()
+        self.assertEqual(addr.host, "::1")
+
 
     def test_logPrefix(self):
         """
@@ -191,6 +204,74 @@ class UDPPortTestsMixin(object):
         port = self.getListeningPort(reactor, DatagramProtocol())
         self.assertIn(repr(port.getHost().port), str(port))
 
+    def test_bindToIPv6Interface(self):
+        """
+        Binds to ipv6 interface.
+        """
+        reactor = self.buildReactor()
+        server = Server()
+        p = reactor.listenUDP(0, server, interface="::1")
+        self.assertEqual(p.getHost().host, "::1")
+
+        return p.stopListening()
+
+    def test_connectAndWriteToIPv6Interface(self):
+        """
+        Connects and writes to ipv6 address.
+        """
+
+        reactor = self.buildReactor()
+        server = Server()
+        serverStarted = server.startedDeferred = defer.Deferred()
+        port1 = reactor.listenUDP(0, server, interface="::1")
+
+        client = GoodClient()
+        clientStarted = client.startedDeferred = defer.Deferred()
+
+        def cbServerStarted(ignored):
+            """Client starts listening"""
+            self.port2 = reactor.listenUDP(0, client, interface="::1")
+            return clientStarted
+
+        def cbClientStarted(ignored):
+            """Client sends messages before and after connecting"""
+            client.transport.write("a",
+                                   ("::1", server.transport.getHost().port))
+            client.transport.connect("::1", server.transport.getHost().port)
+            serverReceived = server.packetReceived = defer.Deferred()
+            def cbSendAfterConnect(ignored):
+                serverReceived = server.packetReceived = defer.Deferred()
+                client.transport.write("hello")
+                return serverReceived
+
+            serverReceived.addCallback(cbSendAfterConnect)
+
+            return serverReceived
+
+        def cbServerReceived(ignored):
+            """Assert packets received in server"""
+            unconnPacket, connPacket = server.packets[0], server.packets[1]
+            cAddr = client.transport.getHost()
+            sAddr = server.transport.getHost()
+            self.assertEqual(unconnPacket, ("a", (cAddr.host, cAddr.port, 0, 0)))
+            self.assertEqual(connPacket, ("hello",
+                                          (cAddr.host, cAddr.port, 0, 0)))
+
+
+        def cbFinished(ignored):
+            """Stops listening"""
+            self.port2.stopListening()
+            port1.stopListening()
+            reactor.stop()
+
+        d = serverStarted.addCallback(cbServerStarted)
+        d.addCallback(cbClientStarted)
+        d.addCallback(cbServerReceived)
+        d.addCallback(cbFinished)
+        self.runReactor(reactor)
+        return d
+
+
 
 
 class UDPServerTestsBuilder(ReactorBuilder,
@@ -215,6 +296,14 @@ class UDPServerTestsBuilder(ReactorBuilder,
         """
         return reactor.listenUDP(port, protocol, interface=interface,
                                  maxPacketSize=maxPacketSize)
+
+
+    def getIPv6ListeningPort(self, reactor, protocol):
+        """
+        Get a UDP port binded to ipv6 interface.
+        """
+        return reactor.listenUDP(0, protocol, "::1")
+
 
 
 

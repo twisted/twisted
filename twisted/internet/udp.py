@@ -108,6 +108,7 @@ class Port(base.BasePort):
         self.interface = interface
         self.setLogStr()
         self._connectedAddr = None
+        self._setAddressFamily()
 
 
     @classmethod
@@ -292,7 +293,7 @@ class Port(base.BasePort):
         """
         if self._connectedAddr:
             raise RuntimeError("already connected, reconnecting is not currently supported")
-        if not abstract.isIPAddress(host):
+        if not abstract.isIPAddress(host) and not abstract.isIPv6Address(host):
             raise ValueError("please pass only IP addresses, not domain names")
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
@@ -337,6 +338,16 @@ class Port(base.BasePort):
         logPrefix = self._getLogPrefix(self.protocol)
         self.logstr = "%s (UDP)" % logPrefix
 
+    def _setAddressFamily(self):
+        """
+        Resolve address family for the socket.
+        """
+        if abstract.isIPv6Address(self.interface):
+            self.addressFamily = socket.AF_INET6
+        elif abstract.isIPAddress(self.interface):
+            self.addressFamily = socket.AF_INET
+        
+
 
     def logPrefix(self):
         """
@@ -347,11 +358,15 @@ class Port(base.BasePort):
 
     def getHost(self):
         """
-        Returns an IPv4Address.
+        Returns an IPv4Address or IPv6Address.
 
         This indicates the address from which I am connecting.
         """
-        return address.IPv4Address('UDP', *self.socket.getsockname())
+        addr = self.socket.getsockname()
+        if self.addressFamily == socket.AF_INET:
+            return address.IPv4Address('UDP', *addr)
+        elif self.addressFamily == socket.AF_INET6:
+            return address.IPv6Address('UDP', *(addr[:2]))
 
 
 
@@ -417,7 +432,8 @@ class MulticastPort(MulticastMixin, Port):
     UDP Port that supports multicasting.
     """
 
-    def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None, listenMultiple=False):
+    def __init__(self, port, proto, interface='', maxPacketSize=8192,
+                 reactor=None, listenMultiple=False):
         """
         @see: L{twisted.internet.interfaces.IReactorMulticast.listenMulticast}
         """
