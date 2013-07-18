@@ -21,12 +21,12 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.internet.interfaces import (
     ILoggingContext, IListeningPort, IReactorUDP, IReactorSocket)
-from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.internet.address import IPv4Address
 from twisted.internet.protocol import DatagramProtocol
 
 from twisted.internet.test.connectionmixins import (LogObserverMixin,
                                                     findFreePort)
-from twisted.internet import protocol, error, defer, interfaces, udp
+from twisted.internet import defer
 from twisted.test.test_udp import Server, GoodClient
 from twisted.trial.unittest import SkipTest
 
@@ -256,7 +256,6 @@ class UDPPortTestsMixin(object):
             """Assert packets received in server"""
             unconnPacket, connPacket = server.packets[0], server.packets[1]
             cAddr = client.transport.getHost()
-            sAddr = server.transport.getHost()
             self.assertEqual(unconnPacket, ("a", (cAddr.host, cAddr.port, 0, 0)))
             self.assertEqual(connPacket, ("hello",
                                           (cAddr.host, cAddr.port, 0, 0)))
