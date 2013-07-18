@@ -663,7 +663,6 @@ class HostnameEndpoint(object):
         wf = protocolFactory
         pending = []
 
-
         def _canceller(d):
             """
             The outgoing connection attempt was cancelled.  Fail that L{Deferred}
@@ -676,10 +675,8 @@ class HostnameEndpoint(object):
             """
             d.errback(error.ConnectingCancelledError(
                 HostnameAddress(self._host, self._port)))
-
-            for p in pending[:]:   # Cancel all pending connections
+            for p in pending[:]:
                 p.cancel()
-
 
         def errbackForGai(failure):
             """
@@ -688,7 +685,6 @@ class HostnameEndpoint(object):
             """
             return defer.fail(error.DNSLookupError(
                 "Couldn't find the hostname '%s'" % (self._host,)))
-
 
         def _endpoints(gaiResult):
             """
@@ -706,7 +702,6 @@ class HostnameEndpoint(object):
                     yield TCP4ClientEndpoint(self._reactor, sockaddr[0],
                             sockaddr[1], self._timeout, self._bindAddress)
                         # Yields an endpoint for every address returned by GAI
-
 
         def attemptConnection(endpoints):
             """
@@ -772,7 +767,6 @@ class HostnameEndpoint(object):
         d.addCallback(_endpoints)
         d.addCallback(attemptConnection)
         return d
-
 
     def _nameResolution(self, host, port):
         """
