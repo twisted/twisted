@@ -635,7 +635,7 @@ class HostnameEndpoint(object):
     @ivar _deferToThread: A hook used for testing deferToThread.
     """
     _getaddrinfo = socket.getaddrinfo
-    _deferToThread = threads.deferToThread
+    _deferToThread = staticmethod(threads.deferToThread)
 
     def __init__(self, reactor, host, port, timeout=30, bindAddress=None):
         """

@@ -20,7 +20,7 @@ from twisted.internet import (
     error, interfaces, defer, endpoints, protocol, reactor)
 from twisted.internet.address import (
     IPv4Address, IPv6Address, UNIXAddress, _ProcessAddress, HostnameAddress)
-from twisted.internet import endpoints
+from twisted.internet import endpoints, threads
 from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.test.proto_helpers import (
     RaisingMemoryReactor, StringTransport)
@@ -1480,6 +1480,19 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         @return: C{dict} of keyword arguments to pass to connect.
         """
         return {'timeout': 10, 'bindAddress': ('localhost', 49595)}
+
+
+    def test_freeFunctionDeferToThread(self):
+        """
+        By default, L{HostnameEndpoint._deferToThread} is
+        L{threads.deferToThread}.
+        """
+        mreactor = None
+        clientFactory = None
+        ep, ignoredArgs, address = self.createClientEndpoint(
+                mreactor, clientFactory)
+
+        self.assertEqual(ep._deferToThread, threads.deferToThread)
 
 
     def test_endpointConnectingCancelled(self):
