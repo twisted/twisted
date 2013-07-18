@@ -298,7 +298,8 @@ class WebSocketsProtocol(Protocol):
         """
         Log the new connection and initialize the buffer list.
         """
-        log.msg("Opening connection with %s" % (self.transport.getPeer(),))
+        peer = self.transport.getPeer()
+        log.msg("Opening connection with {peer}".format(peer=peer))
         self._buffer = []
 
 
@@ -315,7 +316,9 @@ class WebSocketsProtocol(Protocol):
             elif opcode == CONTROLS.CLOSE:
                 # The other side wants us to close.
                 reason, text = data
-                log.msg("Closing connection: %r (%d)" % (text, reason))
+                log.msg(
+                    "Closing connection: '{text}' ({reason})".format(
+                        text=text, reason=reason))
 
                 # Close the connection.
                 self.transport.loseConnection()
