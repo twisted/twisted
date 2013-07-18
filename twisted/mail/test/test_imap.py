@@ -2917,7 +2917,7 @@ class IMAP4ClientCancelTestCase(unittest.TestCase):
         self.assertEqual(self.transport.disconnecting, False)
         self.assertEqual(self.imap4client.queued, [])
         failure = self.failureResultOf(deferred)
-        failure.trap(defer.CancelledError)
+        self.assertTrue(failure.check(defer.CancelledError))
 
 
     def test_cancelCommandPoppedFromQueue(self):
@@ -2957,7 +2957,7 @@ class IMAP4ClientCancelTestCase(unittest.TestCase):
         deferred.cancel()
         self.assertEqual(self.transport.disconnecting, False)
         failure = self.failureResultOf(deferred)
-        failure.trap(defer.CancelledError)
+        self.assertTrue(failure.check(defer.CancelledError))
  
         substituteCommand = self.imap4client.tags[self.imap4client.waiting]
         substituteDeferred = substituteCommand.defer
