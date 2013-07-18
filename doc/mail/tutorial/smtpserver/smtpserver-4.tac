@@ -6,7 +6,6 @@ from twisted.mail import smtp
 application = service.Application("SMTP Server Tutorial")
 
 smtpServerFactory = protocol.ServerFactory()
-
 smtpServerFactory.protocol = smtp.ESMTP
 
 smtpServerService = internet.TCPServer(2025, smtpServerFactory)

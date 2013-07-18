@@ -1,45 +1,41 @@
-import os
 from zope.interface import implements
 from twisted.application import service
 from twisted.application import internet
 from twisted.internet import protocol, defer
-
-application = service.Application("SMTP Server Tutorial")
-smtpServerFactory = protocol.ServerFactory()
-
 from twisted.mail import smtp
 
-class FileMessage(object):
+application = service.Application("SMTP Server Tutorial")
+
+class ConsoleMessage(object):
     implements(smtp.IMessage)
 
-    def __init__(self, fileObj):
-        self.fileObj = fileObj
+    def __init__(self):
+        self.lines=[]
 
     def lineReceived(self, line):
-        self.fileObj.write(line + '\n')
+        self.lines.append(line)
 
     def eomReceived(self):
-        self.fileObj.close()
+        print "New message received:"
+        print "\n".join(self.lines)
+        self.lines = None
         return defer.succeed(None)
 
     def connectionLost(self):
-        self.fileObj.close()
-        os.remove(self.fileObj.name)
+        self.lines = None
 
 class TutorialESMTP(smtp.ESMTP):
-    counter = 0
-
-    def validateTo(self, user):
-        fileName = 'tutorial-smtp.' + str(self.counter)
-        self.counter += 1
-        return lambda: FileMessage(file(fileName, 'w'))
-
     def validateFrom(self, helo, origin):
         return origin
 
-    def receivedHeader(self, helo, origin, recipients):
-        return 'Received: Tutorially.'
+    def validateTo(self, user):
+        return ConsoleMessage
 
+    def receivedHeader(self, helo, origin, recipients):
+        return ('Received: from {}\n   to {}\n   by Tutorial Server'
+                .format(origin, ", ".join([str(recipient) 
+                                           for recipient in recipients])))
+ 
 class TutorialESMTPFactory(protocol.ServerFactory):
     protocol = TutorialESMTP
 
@@ -48,7 +44,7 @@ class TutorialESMTPFactory(protocol.ServerFactory):
         p.factory = self
         return p
 
-smtpServerFactory.protocol = TutorialESMTP
+smtpServerFactory = TutorialESMTPFactory()
 
 smtpServerService = internet.TCPServer(2025, smtpServerFactory)
 smtpServerService.setServiceParent(application)

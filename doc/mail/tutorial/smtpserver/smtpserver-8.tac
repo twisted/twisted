@@ -1,4 +1,3 @@
-import os
 from zope.interface import implements
 from twisted.application import service
 from twisted.application import internet
@@ -7,38 +6,58 @@ from twisted.mail import smtp
 
 application = service.Application("SMTP Server Tutorial")
 
-class FileMessage(object):
+class NullMessage(object):
     implements(smtp.IMessage)
 
-    def __init__(self, fileObj):
-        self.fileObj = fileObj
-
     def lineReceived(self, line):
-        self.fileObj.write(line + '\n')
+        pass
 
     def eomReceived(self):
-        self.fileObj.close()
         return defer.succeed(None)
 
     def connectionLost(self):
-        self.fileObj.close()
-        os.remove(self.fileObj.name)
+        pass
+
+class ConsoleMessage(object):
+    implements(smtp.IMessage)
+
+    def __init__(self):
+        self.lines=[]
+
+    def lineReceived(self, line):
+        self.lines.append(line)
+
+    def eomReceived(self):
+        print "New message received:"
+        print "\n".join(self.lines)
+        self.lines = None
+        return defer.succeed(None)
+
+    def connectionLost(self):
+        self.lines = None
 
 class TutorialDelivery(object):
     implements(smtp.IMessageDelivery)
-    counter = 0
 
-    def validateTo(self, user):
-        fileName = 'tutorial-smtp.' + str(self.counter)
-        self.counter += 1
-        return lambda: FileMessage(file(fileName, 'w'))
+    def __init__(self):
+        self.to = []
 
     def validateFrom(self, helo, origin):
         return origin
 
-    def receivedHeader(self, helo, origin, recipients):
-        return 'Received: Tutorially.'
+    def validateTo(self, user):
+        if self.to:
+            self.to.append(user)
+            return NullMessage
+        else:
+            self.to = [user]
+            return ConsoleMessage
 
+    def receivedHeader(self, helo, origin, recipients):
+        return ('Received: from {}\n   to {}\n   by Tutorial Server'
+                .format(origin, ", ".join([str(recipient) 
+                                           for recipient in self.to])))
+ 
 class TutorialDeliveryFactory(object):
     implements(smtp.IMessageDeliveryFactory)
 
@@ -53,6 +72,7 @@ class TutorialESMTPFactory(protocol.ServerFactory):
         p.deliveryFactory = TutorialDeliveryFactory()
         p.factory = self
         return p
+
 
 smtpServerFactory = TutorialESMTPFactory()
 
