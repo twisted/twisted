@@ -12,20 +12,15 @@
 
 <h2>Introduction</h2>
 
-<p>WebSockets is a protocol for real-time communication between Web browsers
-and Web servers. Twisted Web includes a <code>Resource</code>, <code
-class="API">twisted.web.websockets.WebSocketsResource</code>, which can be
-used to provide WebSockets services.</p>
+<p>WebSockets is a protocol for real-time communication between Web browsers and Web servers.
+Twisted Web includes a <code>Resource</code>, <code class="API">twisted.web.websockets.WebSocketsResource</code>, which can be used to provide WebSockets services.</p>
 
 <h2>Serving WebSockets</h2>
 
-<p>Twisted makes WebSockets easy. <code>WebSocketsResource</code> wraps a
-factory, exposing that factory as a resource in a Web server, and can be used
-anywhere a normal <code>Resource</code> can be used.</p>
+<p>Twisted makes WebSockets easy.
+<code>WebSocketsResource</code> wraps a factory, exposing that factory as a resource in a Web server, and can be used anywhere a normal <code>Resource</code> can be used.</p>
 
-<p>The following example creates a <code>Site</code> which responds to all
-requests to /ws with a WebSockets connection, which serves an
-<code>EchoProtocol</code>.</p>
+<p>The following example creates a <code>Site</code> which responds to all requests to /ws with a WebSockets connection, which serves an <code>EchoProtocol</code>.</p>
 
 <a href="listings/websockets_echo.tac" class="py-listing">websockets_echo.tac</a>
 

@@ -12,14 +12,15 @@ factory.
 @since: 13.2
 """
 
-__all__ = ["WebSocketsResource", "IWebSocketsProtocol", "IWebSocketsResource",
-           "WebSocketsProtocol", "WebSocketsProtocolWrapper"]
+__all__ = ["WebSocketsResource", "IWebSocketsProtocol",
+           "lookupProtocolForFactory", "WebSocketsProtocol",
+           "WebSocketsProtocolWrapper"]
 
 
 from hashlib import sha1
 from struct import pack, unpack
 
-from zope.interface import implementer, Interface, providedBy, directlyProvides
+from zope.interface import implementer, providedBy, directlyProvides
 
 from twisted.python import log
 from twisted.python.constants import Flags, FlagConstant
@@ -491,35 +492,7 @@ class WebSocketsProtocolWrapper(WebSocketsProtocol):
 
 
 
-class IWebSocketsResource(Interface):
-    """
-    A WebSockets resource.
-
-    @since: 13.2
-    """
-
-    def lookupProtocol(protocolNames, request):
-        """
-        Build a protocol instance for the given protocol options and request.
-        The returned protocol is plugged to the HTTP transport, and the
-        returned protocol name, if specified, is used as
-        I{Sec-WebSocket-Protocol} value. If the protocol provides
-        L{IWebSocketsProtocol}, it will be connected directly, otherwise it
-        will be wrapped by L{WebSocketsProtocolWrapper}.
-
-        @param protocolNames: The asked protocols from the client.
-        @type protocolNames: C{list} of C{str}
-
-        @param request: The connecting client request.
-        @type request: L{IRequest<twisted.web.iweb.IRequest>}
-
-        @return: A tuple of (protocol, matched protocol name or C{None}).
-        @rtype: C{tuple}
-        """
-
-
-
-@implementer(IResource, IWebSocketsResource)
+@implementer(IResource)
 class WebSocketsResource(object):
     """
     A resource for serving a protocol through WebSockets.
@@ -530,17 +503,23 @@ class WebSocketsResource(object):
     Due to unresolved questions of logistics, this resource cannot have
     children.
 
-    @param factory: The factory producing either L{IWebSocketsProtocol} or
-        L{IProtocol} providers, which will be used by the default
-        C{lookupProtocol} implementation.
-    @type factory: L{twisted.internet.protocol.Factory}
+    @param lookupProtocol: A callable returning a tuple of
+        (protocol instance, matched protocol name or C{None}) when called with
+        a valid connection. It's called with a list of asked protocols from the
+        client and the connecting client request. If the returned protocol name
+        is specified, it is used as I{Sec-WebSocket-Protocol} value. If the
+        protocol provides L{IWebSocketsProtocol}, it will be connected
+        directly, otherwise it will be wrapped by L{WebSocketsProtocolWrapper}.
+        For simple use cases using a factory, you can use
+        L{lookupProtocolForFactory}.
+    @type lookupProtocol: C{callable}.
 
     @since: 13.2
     """
     isLeaf = True
 
-    def __init__(self, factory):
-        self._factory = factory
+    def __init__(self, lookupProtocol):
+        self._lookupProtocol = lookupProtocol
 
 
     def getChildWithDefault(self, name, request):
@@ -573,25 +552,6 @@ class WebSocketsResource(object):
         """
         raise RuntimeError(
             "Cannot put IResource children under WebSocketsResource")
-
-
-    def lookupProtocol(self, protocolNames, request):
-        """
-        Build a protocol instance for the given protocol names and request.
-        This default implementation ignores the protocol names and just return
-        a protocol instance built by C{self._factory}.
-
-        @param protocolNames: The asked protocols from the client.
-        @type protocolNames: C{list} of C{str}
-
-        @param request: The connecting client request.
-        @type request: L{Request<twisted.web.http.Request>}
-
-        @return: A tuple of (protocol, C{None}).
-        @rtype: C{tuple}
-        """
-        protocol = self._factory.buildProtocol(request.transport.getPeer())
-        return protocol, None
 
 
     def render(self, request):
@@ -642,7 +602,7 @@ class WebSocketsResource(object):
 
         askedProtocols = request.requestHeaders.getRawHeaders(
             "Sec-WebSocket-Protocol")
-        protocol, protocolName = self.lookupProtocol(askedProtocols, request)
+        protocol, protocolName = self._lookupProtocol(askedProtocols, request)
 
         # If a protocol is not created, we deliver an error status.
         if not protocol:
@@ -683,3 +643,18 @@ class WebSocketsResource(object):
         protocol.makeConnection(transport)
 
         return NOT_DONE_YET
+
+
+
+def lookupProtocolForFactory(factory):
+    """
+    Return a suitable C{lookupProtocol} argument for L{WebSocketsResource}
+    which ignores the protocol names and just return a protocol instance built
+    by C{factory}.
+    """
+
+    def lookupProtocol(protocolNames, request):
+        protocol = factory.buildProtocol(request.transport.getPeer())
+        return protocol, None
+
+    return lookupProtocol

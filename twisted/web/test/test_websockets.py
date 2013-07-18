@@ -25,8 +25,8 @@ from twisted.web.resource import IResource, Resource
 from twisted.web.server import NOT_DONE_YET, Request
 from twisted.web.websockets import (
     CONTROLS, _makeAccept, _mask, _makeFrame, _parseFrames, _WSException,
-    WebSocketsResource, WebSocketsProtocol, IWebSocketsResource,
-    WebSocketsProtocolWrapper)
+    WebSocketsResource, WebSocketsProtocol, WebSocketsProtocolWrapper,
+    lookupProtocolForFactory)
 from twisted.web.test.test_web import DummyRequest, DummyChannel
 
 
@@ -516,7 +516,7 @@ class WebSocketsResourceTest(TestCase):
         factory = SavingEchoFactory()
         self.echoProtocol = SavingEcho()
 
-        self.resource = WebSocketsResource(factory)
+        self.resource = WebSocketsResource(lookupProtocolForFactory(factory))
 
 
     def assertRequestFail(self, request):
@@ -554,11 +554,9 @@ class WebSocketsResourceTest(TestCase):
 
     def test_IResource(self):
         """
-        L{WebSocketsResource} implements L{IResource} and
-        L{IWebSocketsResource}.
+        L{WebSocketsResource} implements L{IResource}.
         """
         self.assertTrue(verifyObject(IResource, self.resource))
-        self.assertTrue(verifyObject(IWebSocketsResource, self.resource))
 
 
     def test_render(self):
@@ -595,16 +593,16 @@ class WebSocketsResourceTest(TestCase):
     def test_renderProtocol(self):
         """
         If protocols are specified via the C{Sec-WebSocket-Protocol} header,
-        L{WebSocketsResource} passes them to its C{lookupProtocol} method,
+        L{WebSocketsResource} passes them to its C{lookupProtocol} argument,
         which can decide which protocol to return, and which is accepted.
         """
 
         def lookupProtocol(names, otherRequest):
             self.assertEqual(["foo", "bar"], names)
             self.assertIdentical(request, otherRequest)
-            return self.resource._factory.buildProtocol(None), "bar"
+            return self.echoProtocol, "bar"
 
-        self.resource.lookupProtocol = lookupProtocol
+        self.resource = WebSocketsResource(lookupProtocol)
 
         request = DummyRequest("/")
         request.requestHeaders = Headers(
@@ -825,7 +823,7 @@ class WebSocketsResourceTest(TestCase):
         def lookupProtocol(names, otherRequest):
             return AccumulatingProtocol(), None
 
-        self.resource.lookupProtocol = lookupProtocol
+        self.resource = WebSocketsResource(lookupProtocol)
 
         request = DummyRequest("/")
         request.requestHeaders = Headers()
