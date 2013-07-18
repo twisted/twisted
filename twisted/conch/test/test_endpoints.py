@@ -384,6 +384,27 @@ class SSHCommandClientEndpointTestsMixin(object):
         self.assertTrue(verifyObject(IStreamClientEndpoint, endpoint))
 
 
+    def test_defaultPort(self):
+        """
+        Passing C{None} for C{port} makes the endpoint use the default port
+        number.
+        """
+        endpoint = SSHCommandClientEndpoint.newConnection(
+            self.reactor, b"dummy command", b"dummy user",
+            self.hostname, port=None)
+        self.assertEqual(22, endpoint._creator.port)
+
+
+    def test_specifiedPort(self):
+        """
+        Passing a C{port} makes the endpoint use it.
+        """
+        endpoint = SSHCommandClientEndpoint.newConnection(
+            self.reactor, b"dummy command", b"dummy user",
+            self.hostname, port=2222)
+        self.assertEqual(2222, endpoint._creator.port)
+
+
     def test_channelOpenFailure(self):
         """
         If a channel cannot be opened on the authenticated SSH connection, the
