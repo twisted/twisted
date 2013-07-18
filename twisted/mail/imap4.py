@@ -41,7 +41,7 @@ from twisted.protocols import policies
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet.defer import maybeDeferred
-from twisted.python import log, text, failure
+from twisted.python import log, text
 from twisted.internet import interfaces
 
 from twisted import cred
@@ -2333,7 +2333,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         Errback the L{defer.Deferred}s of all the L{Command}s.
 
         @param reason: The reason why the errbacks are called.
-        @type reason: L{failure.Failure}
+        @type reason: L{twisted.python.failure.Failure}
         """
         if self.queued is not None:
             queued = self.queued
@@ -2354,7 +2354,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         L{defer.Deferred}s of all the L{Command}s.
 
         @param reason: The reason why the connnection is lost.
-        @type reason: L{failure.Failure}
+        @type reason: L{twisted.python.failure.Failure}
         """
         if self.timeout > 0:
             self.setTimeout(None)

@@ -2970,7 +2970,7 @@ class IMAP4ClientCancelTestCase(unittest.TestCase):
         self.assertEqual(self.transport.disconnecting, False)
         failure = self.failureResultOf(deferred)
         self.assertTrue(failure.check(defer.CancelledError))
- 
+
         substituteCommand = self.imap4client.tags[self.imap4client.waiting]
         substituteDeferred = substituteCommand.defer
         def checkResponse((send, lastLine)):
