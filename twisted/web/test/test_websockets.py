@@ -561,8 +561,7 @@ class WebSocketsResourceTest(TestCase):
 
     def test_render(self):
         """
-        When rendering a request, L{WebSocketsResource}, checks the C{Upgrade},
-        C{Connection} and C{Sec-WebSocket-Version} headers, and use the
+        When rendering a request, L{WebSocketsResource} uses the
         C{Sec-WebSocket-Key} header to generate a C{Sec-WebSocket-Accept}
         value. It creates a L{WebSocketsProtocol} instance connected to the
         protocol provided by the user factory.
