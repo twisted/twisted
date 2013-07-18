@@ -1,0 +1,636 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Twisted Mail Tutorial: Building a Simple ESMTP Server</title>
+</head>
+
+<body>
+
+<h1>Twisted Mail Tutorial: Building a Simple ESMTP Server</h1>
+
+<p>
+This tutorial will show you how to use the <code class="API">twisted.mail.smtp</code> module to create an ESMTP server.
+ESMTP stands for Extended (or Enhanced) SMTP. 
+You don't need to know the details about it in order to build a simple server.
+After all, Twisted already takes care of the protocol implementation. 
+Just remember that you will want to use the enhanced version for your SMTP server.
+This tutorial is meant for a user with some basic knowledge of Twisted and the SMTP protocol.
+By the end of this tutorial, you will have a very simple ESMTP server application which accepts email messages and prints them to standard output. 
+</p>
+
+<p>
+This tutorial uses <code>twistd</code> to launch the server applications. 
+Make sure that you have twistd installed and conveniently accessible for use in running each of the example <code>.tac</code> files. 
+If you have checked out the Twisted code, you can find twistd in the bin directory.  
+<code>telnet</code> will be used to act as an SMTP client.
+</p>
+
+<h2>Server 1</h2>
+
+<p>
+Let's start by creating the most minimal <a href="smtpserver-1.tac"><code>.tac</code> file</a> from which <code>twistd</code> can launch our application.
+</p>
+
+<pre class="python">
+from twisted.application import service
+
+application = service.Application("SMTP Server Tutorial")
+</pre>
+
+<p>
+We use the <code>Application</code> function from <code class="API">twisted.application.service</code> to create a new <em>application service</em>. 
+An <em>application service</em> simply acts as a central object on which to store certain kinds of deployment configuration. 
+<code>"SMTP Server Tutorial"</code> is the name of our server.
+A name is required for each <code>twistd</code> application.
+</p>
+
+<p>
+Now we have enough of a <code>.tac</code> file to pass to <code>twistd</code>. 
+When we run <a href="smtpserver-1.tac"><code>smtpserver-1.tac</code></a> using the <code>twistd</code> command line
+</p>
+
+<pre class="shell">
+twistd -ny smtpserver-1.tac
+</pre>
+
+<p>
+we are rewarded with output similar to the following (exact output varies by
+release and platform):
+</p>
+
+<pre class="shell">
+14:48:30-0400 [-] Log opened.
+14:48:30-0400 [-] twistd 13.1.0 (/usr/local/bin/python 2.7.3) starting up.
+14:48:30-0400 [-] reactor class: twisted.internet.selectreactor.SelectReactor.
+</pre>
+
+<p>
+It worked, but the server is doing absolutely nothing at the moment. 
+It's not even listening on any port. 
+We can shut it down by issuing Control-C (<code>^C</code>):
+</p>
+
+<pre class="shell">
+14:48:32-0400 [-] Received SIGINT, shutting down.
+14:48:32-0400 [-] Main loop terminated.
+14:48:32-0400 [-] Server Shut Down.
+</pre>
+
+
+<h2>Server 2</h2>
+
+<p>
+Now that we have an idea of how to run a <code>twistd</code> application, let's make some TCP connections in the <a href="smtpserver-2.tac">second version</a>. 
+First, we need to import a few more things:
+</p>
+
+<pre class="python">
+from twisted.application import internet
+from twisted.internet import protocol
+</pre>
+
+<p>
+<code class="API">twisted.application.internet</code> is another <em>application service</em> module. 
+We will use it to create TCP connections. 
+<code class="API">twisted.internet.protocol</code> provides base implementations of many of the core Twisted concepts, such as <em>factories</em> and <em>protocols</em>.
+</p>
+
+<p>
+The next line of <a href="smtpserver-2.tac"><code>smtpserver-2.tac</code></a> instantiates a new <em>server factory</em>:
+</p>
+
+<pre class="python">
+smtpServerFactory = protocol.ServerFactory()
+</pre>
+
+<p>
+<em>Server factories</em> are responsible for constructing <em>protocol instances</em> whenever connections are established.
+</p>
+
+<p>
+Now that we have a server factory, we'll need to hook it up to the network somehow. 
+The next line of <code>smtpserver-2.tac</code> does just that:
+</p>
+
+<pre class="python">
+smtpServerService = internet.TCPServer(2025, smtpServerFactory)
+</pre>
+
+<p>
+The call to <code>TCPServer</code> creates a TCP server on port 2025. 
+The second argument is the <em>server factory</em> instance we just created. 
+Whenever there is a TCP connection request, <code>TCPServer</code> associates it with a protocol instance and then continues to listens for new connections.
+</p>
+
+<p>
+We can use <code>twistd</code> to run <code>smtpserver-2.tac</code> in the same way we ran the previous version which results in the following output:
+</p>
+
+<pre class="shell">
+14:48:53-0400 [-] Log opened.
+14:48:53-0400 [-] twistd 13.1.0 (/usr/local/bin/python 2.7.3) starting up.
+14:48:53-0400 [-] reactor class: twisted.internet.selectreactor.SelectReactor.
+14:48:53-0400 [-] ServerFactory starting on 2025
+14:48:53-0400 [-] Starting factory &lt;twisted.internet.protocol.ServerFactory 
+                  instance at 0x10f52f950&gt;
+</pre>
+
+<p>
+The server now listens on port 2025. 
+Let's fire up <code>telnet</code>, and see what happens when we try to connect to the server:
+</p>
+
+<pre class="shell">
+$ telnet localhost 2025
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+Connection closed by foreign host.
+</pre>
+
+<p>
+Oops, we get an exception on the server! 
+</p>
+
+<pre class="shell">
+14:49:02-0400 [twisted.internet.protocol.ServerFactory] Unhandled Error
+	Traceback (most recent call last):
+	  File "twisted/python/log.py", line 73, in callWithContext
+	    return context.call({ILogContext: newCtx}, func, *args, **kw)
+	  File "twisted/python/context.py", line 118, in callWithContext
+	    return self.currentContext().callWithContext(ctx, func, *args, **kw)
+	  File "twisted/python/context.py", line 81, in callWithContext
+	    return func(*args,**kw)
+	  File "twisted/internet/selectreactor.py", line 151, in _doReadOrWrite
+	    why = getattr(selectable, method)()
+	--- &lt;exception caught here&gt; ---
+	  File "twisted/internet/tcp.py", line 1063, in doRead
+	    protocol = self.factory.buildProtocol(self._buildAddr(addr))
+	  File "twisted/internet/protocol.py", line 123, in buildProtocol
+	    p = self.protocol()
+	exceptions.TypeError: 'NoneType' object is not callable
+</pre>
+
+<p>
+Obviously, we are missing something here. 
+We didn't specify a <em>protocol class</em> for the factory to use.  We'll do that in the next example. 
+For now, let's shut down the server by issuing <code>^C</code>.
+</p>
+
+<h2>Server 3</h2>
+
+<p>
+In the previous example, we ran into a problem because we didn't set up our <em>server factory's</em> <em>protocol</em> attribute.
+<code class="API">twisted.internet.protocol.ServerFactory</code>'s <code>buildProtocol</code> method is responsible for creating a <em>protocol instance</em>. 
+The default implementation calls the factory's <code>protocol</code> attribute, adds itself as an attribute named <code>factory</code> to the resulting instance, and returns it. 
+In <a href="smtpserver-3.tac"><code>smtpserver-3.tac</code></a>, we'll correct the oversight that caused the traceback in <code>smtpserver-2.tac</code> by setting the protocol attribute to generate an instance of a base protocol class, <code class="API">twisted.internet.protocol.Protocol</code>:
+</p>
+
+<pre class="python">
+smtpServerFactory.protocol = protocol.Protocol
+</pre>
+
+<p>
+When we run this version of the server and then establish a connection with <code>telnet</code>, we can see that no exception is generated when the connection is established, although nothing happens because we are using the base protocol. 
+Any data sent from the client, is simply discarded by the server.
+Let's improve this in the next example.
+</p>
+
+<h2>Server 4</h2>
+
+<p>
+In <a href="smtpserver-4.tac"><code>smtpserver-4.tac</code></a>, we will use Twisted's ESMTP protocol implementation for the first time.
+We'll swap out <code class="API">twisted.internet.protocol.Protocol</code> in favor of <code class="API">twisted.mail.smtp.ESMTP</code>.
+</p>
+
+<p>
+First, let's add a new import:
+</p>
+
+<pre class="python">
+from twisted.mail import smtp
+</pre>
+
+<p>
+Next, we remove the line we added in <code>smtpserver-3.tac</code>:
+</p>
+
+<pre class="python">
+smtpServerFactory.protocol = protocol.Protocol
+</pre>
+
+<p>
+Then, we'll add a similar one in its place:
+</p>
+
+<pre class="python">
+smtpServerFactory.protocol = smtp.ESMTP
+</pre>
+
+<p>
+Our server factory is now using a protocol implementation which behaves as an ESMTP server. 
+Let's see what happens when we run this version, connect to it with <code>telnet</code> and issue SMTP commands.  
+Here's a transcript of a <code>telnet</code> session annotated to indicate which lines you should input (client) and which are generated by telnet (telnet) and received from the server (server):
+</p>
+
+<pre class="shell">
+$ telnet localhost 2025
+telnet: Trying 127.0.0.1...
+telnet: Connected to localhost.
+telnet: Escape character is '^]'.
+server: 220 localhost NO UCE NO UBE NO RELAY PROBES ESMTP
+client: EHLO localhost
+server: 250 localhost Hello 127.0.0.1, nice to meet you
+client: MAIL FROM: &lt;alice@example.com&gt;
+server: 550 Cannot receive from specified address &lt;alice@example.com&gt;: 
+            Sender not acceptable
+client: QUIT
+telnet: 221 See you later
+telnet: Connection closed by foreign host.
+</pre>
+
+<p>
+In this session, the server responds positively to our <code>EHLO</code> command. 
+But we can't send emails yet because the server responds negatively to our <code>MAIL FROM</code> command indicating that the sender is not acceptable.  
+Let's solve this problem in the next example.
+</p>
+
+<h2>Server 5</h2>
+
+<p>
+In this version of the server, <a href="smtpserver-5.tac"><code>smtpserver-5.tac</code></a>, we'll enable it to accept messages.  
+Let's define a new class, <code>TutorialESMTP</code>, which inherits from <code class="API">twisted.mail.smtp.ESMTP</code> and override three class methods. 
+</p>
+
+<pre class="python">
+class TutorialESMTP(smtp.ESMTP):
+    def validateFrom(self, helo, origin):
+        return origin
+
+    def validateTo(self, user):
+        return ConsoleMessage
+
+    def receivedHeader(self, helo, origin, recipients):
+        return ('Received: from {}\n   to {}\n   by Tutorial Server'
+                .format(origin, ", ".join([str(recipient) 
+                                           for recipient in recipients])))
+</pre>
+
+<p>
+The <code>validateFrom</code> function is invoked from a function within a base class of <code>TutorialESMTP</code> when a <code>MAIL FROM</code> command is received.  
+It is expected to return either the address that the message is from or a <code>Deferred</code> which results in the address.  
+Here, we accept mail from any address by returning the address provided in the <code>MAIL FROM</code> command without doing any authentication.
+</p> 
+
+<p>
+Similarly, the base class invokes the <code>validateTo</code> function on receipt of a <code>RCPT TO</code> command.  
+It must return a function that takes no arguments and returns an object which implements the <code class="API">twisted.mail.smtp.IMessage</code> interface or a <code>Deferred</code> which results in that.  
+Here, we return a function which creates a new <code>ConsoleMessage</code> object. 
+</p>
+
+<p>
+The <code>ConsoleMessage</code> class below implements the <code>IMessage</code> interface which determines what happens when each line of the message is received or an end of message or loss of connection is encountered.  
+In this case, the message is simply written to standard output.
+</p>
+
+<pre class="python">
+from zope.interface import implements
+
+class ConsoleMessage(object):
+    implements(smtp.IMessage)
+
+    def __init__(self):
+        self.lines=[]
+
+    def lineReceived(self, line):
+        self.lines.append(line)
+
+    def eomReceived(self):
+        print "New message received:"
+        print "\n".join(self.lines)
+        self.lines = None
+        return defer.succeed(None)
+
+    def connectionLost(self):
+        self.lines = None
+</pre>
+
+<p>
+The final function overridden by <code>TutorialESMTP</code> is <code>receivedHeader</code>.  
+It is invoked by the base class when it receives the <code>DATA</code> command. 
+It returns a string which is then prepended to the message.
+</p>
+
+<p>
+Now, let's see the server in action. 
+Run the server as usual, fire up <code>telnet</code> and enter the client commands in the following transcript:
+</p>
+
+<pre class="shell">
+$ telnet localhost 2025
+telnet: Trying 127.0.0.1...
+telnet: Connected to localhost.
+telnet: Escape character is '^]'.
+server: 220 localhost NO UCE NO UBE NO RELAY PROBES ESMTP
+client: EHLO localhost
+server: 250 localhost Hello 127.0.0.1, nice to meet you
+client: MAIL FROM: &lt;tom@example.com&gt;
+server: 250 Sender address accepted
+client: RCPT TO: &lt;alice@example.com&gt;
+server: 250 Recipient address accepted
+client: DATA
+server: 354 Continue
+client: From: tom@example.com
+client: To: alice@example.com
+client: Subject: Test message to Alice
+client:
+client: This is a test message.
+client: .
+server: 250 Delivery in progress
+client: MAIL FROM: &lt;alice@example.com&gt;
+server: 250 Sender address accepted
+client: RCPT TO: &lt;tom@example.com&gt;
+server: 250 Recipient address accepted
+client: RCPT TO: &lt;joe@example.com&gt;
+server: 250 Recipient address accepted
+client: DATA
+server: 354 Continue
+client: From: alice@example.com
+client: To: tom@example.com, joe@example.com
+client: Subject: Test message to Tom and Joe
+client:
+client: This is a test message.
+client: .
+server: 250 Delivery in progress
+client: QUIT
+server: 221 See you later
+telnet: Connection closed by foreign host.
+</pre>
+
+<p>
+We sent two emails to the server during the <code>telnet</code> session.  
+The first is from Tom to Alice and the second is from Alice to Tom and Joe.
+As you can see from the output below, the first message is printed followed by two versions of the second message, one for each recipient.  
+Each message is prepended by our custom <em>received header</em>.
+</p>
+
+<pre class="shell">
+14:49:47-0400 [-] Log opened.
+14:49:47-0400 [-] twistd 13.1.0 (/usr/local/bin/python 2.7.3) starting up.
+14:49:47-0400 [-] reactor class: twisted.internet.selectreactor.SelectReactor.
+14:49:47-0400 [-] ServerFactory starting on 2025
+14:49:47-0400 [-] Starting factory &lt;twisted.internet.protocol.ServerFactory 
+                  instance at 0x102e611b8&gt;
+14:50:25-0400 [TutorialESMTP,0,127.0.0.1] Receiving message for delivery: 
+              from=tom@example.com to=['alice@example.com']
+14:50:51-0400 [TutorialESMTP,0,127.0.0.1] New message received:
+14:50:51-0400 [TutorialESMTP,0,127.0.0.1] Received: from tom@example.com
+14:50:51-0400 [TutorialESMTP,0,127.0.0.1]    to alice@example.com
+14:50:51-0400 [TutorialESMTP,0,127.0.0.1]    by Tutorial Server
+14:50:51-0400 [TutorialESMTP,0,127.0.0.1] From: tom@example.com
+14:50:51-0400 [TutorialESMTP,0,127.0.0.1] To: alice@example.com
+14:50:51-0400 [TutorialESMTP,0,127.0.0.1] Subject: Test message to Alice
+14:50:51-0400 [TutorialESMTP,0,127.0.0.1] 
+14:50:51-0400 [TutorialESMTP,0,127.0.0.1] This is the first test message.
+14:51:15-0400 [TutorialESMTP,0,127.0.0.1] Receiving message for delivery: 
+              from=alice@example.com to=['tom@example.com', 'joe@example.com']
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1] New message received:
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1] Received: from alice@example.com
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1]    to tom@example.com
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1]    by Tutorial Server
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1] From: alice@example.com
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1] To: tom@example.com, joe@example.com
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1] Subject: Test message to Tom and Joe
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1] 
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1] This is the second test message.
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1] New message received:
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1] Received: from alice@example.com
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1]    to joe@example.com
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1]    by Tutorial Server
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1] From: alice@example.com
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1] To: tom@example.com, joe@example.com
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1] Subject: Test message to Tom and Joe
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1] 
+14:51:42-0400 [TutorialESMTP,0,127.0.0.1] This is the second test message.
+</pre>
+
+<p>
+If you check the base class implementation of those three overridden methods in <code class="API">twisted.mail.smtp.SMTP</code> which is the superclass of <code>ESMTP</code>, you will notice that they all check for an attribute called <code>delivery</code>. 
+It turns out that the <code>SMTP</code> class delegates the delivery job to an object which implements the  <code class="API">twisted.mail.smtp.IMessageDelivery</code> interface. 
+Doing that makes the server more flexible and modular. 
+You will see the benefit in Server 7 but first we'll do a little bit of code refactoring!
+</p>
+
+<h2>Server 6</h2>
+
+<p>
+In example <a href="smtpserver-6.tac"><code>smtpserver-6.tac</code></a>, we'll refactor the <em>factory</em> which creates new <em>protocol instances</em> when TCP connections are established with the server.
+We'll remove the lines which create a <code>twisted.internet.protocol.ServerFactory</code> instance and set its <code>protocol</code> attribute:
+</p>
+
+<pre class="python">
+smtpServerFactory = protocol.ServerFactory()
+
+smtpServerFactory.protocol = TutorialESMTP
+</pre>
+
+<p>
+We'll replace that code with the creation of a new subclass of <code>ServerFactory</code> where the protocol attribute is defined in the class definition:
+</p>
+
+<pre class="python">
+class TutorialESMTPFactory(protocol.ServerFactory):
+    protocol = TutorialESMTP
+
+    def buildProtocol(self, addr):
+        p = self.protocol()
+        p.factory = self
+        return p
+
+smtpServerFactory = TutorialESMTPFactory() 
+</pre>
+
+<p>
+Although this version of the server works identically to the previous one, it is a step towards using the <code>IMessageDelivery</code> interface as we'll see in the next example.
+</p>
+
+<h2>Server 7</h2>
+
+<p>
+Let's do some further refactoring in <a href="smtpserver-7.tac"><code>smtpserver-7.tac</code></a>.
+Since the <code class="API">twisted.mail.smtp.IMessageDelivery</code> interface requires three methods with the same signatures as those defined in <code>TutorialESMTP</code> (<code>validateTo</code>, <code>validateFrom</code> and <code>receivedHeader</code>),
+we can move those three functions into a new class which implements the interface and remove the <code>TutorialESMTP</code> class.
+We'll call the new class <code>TutorialDelivery</code>:
+</p>
+
+<pre class="python">
+class TutorialDelivery(object):
+    implements(smtp.IMessageDelivery)
+
+    def validateFrom(self, helo, origin):
+        return origin
+
+    def validateTo(self, user):
+        return ConsoleMessage
+
+    def receivedHeader(self, helo, origin, recipients):
+        return ('Received: from {}\n   to {}\n   by Tutorial Server'
+                .format(origin, ", ".join([str(recipient) 
+                                           for recipient in recipients])))
+</pre>
+
+<p>
+We'll need to tell the <code>TutorialESMPTFactory</code> to use the <code>ESMTP</code> protocol instead of <code>TutorialESMTP</code> so remove
+</p>
+
+<pre class="python">
+    protocol = TutorialESMTP
+</pre>
+
+<p> 
+and add
+</p>
+
+<pre class="python">
+    protocol = smtp.ESMTP
+</pre>
+
+<p>
+We will also need to have the <code>ESMTP</code> protocol use <code>TutorialDelivery</code>.  
+For each SMTP connection, a new protocol object is created by the <code>TutorialESMTPFactory.buildProtocol</code> method.  
+In that method, we can create a new <code>TutorialDelivery</code> object and assign it to the protocol's <code>delivery</code> attribute:
+</p>
+
+<pre class="python">
+        p.delivery = TutorialDelivery()
+</pre>
+
+<p>
+Example <code>smtpserver-7.tac</code> does the same thing as <code>smtpserver-5.tac</code> but in a much cleaner and flexible way. 
+If you wish to change the way you validate senders or compose receive headers, you don't have to touch the code in the <em>protocol</em> class.  
+Those changes now occur in the <em>delivery</em> class.
+</p>
+
+<h2>Server 8</h2>
+<p> 
+We have one final improvement to make in <a href="smtpserver-8.tac"><code>smtpserver-8.tac</code></a>.
+Right now, if a message is sent to multiple recipients, it is printed once for each recipient.  
+In cases where we are delivering messages to another server, we might want to send only one copy of each message and let the receiving server deliver it to each recipient. 
+</p>
+<p>
+If we were able to have each <em>delivery</em> object handle one message, instead of handling all messages over a connection as we do now, it could be smarter about what it does with the message.  
+That's where <em>delivery factories</em> which implement the <code class="API">twisted.mail.smtp.IMessageDeliveryFactory</code> interface come in.
+If we give the <code>ESMTP</code> protocol a <em>delivery factory</em> instead instead of a <em>delivery</em>  object, it will ask the factory to create a new <em>delivery</em> object for each message.
+Let's add a <code>TutorialDeliveryFactory</code> class:
+</p>
+<pre class="python">
+class TutorialDeliveryFactory(object):
+    implements(smtp.IMessageDeliveryFactory)
+
+    def getMessageDelivery(self):
+        return TutorialDelivery()
+</pre>
+<p>
+We'll need to remove the line which creates a <code>TutorialDelivery</code> object in <code>TutorialESMTPFactory</code>'s <code>buildProtocol</code> method:
+</p>
+<pre class="python">
+        p.delivery = TutorialDelivery()
+</pre>
+<p>
+Then, we'll need to create a <code>TutorialDeliveryFactory</code> in the same method:
+</p>
+<pre class="python">
+        p.deliveryFactory = TutorialDeliveryFactory()
+</pre>
+<p>
+Now there will be one <code>TutorialDelivery</code> object for each message but its methods which are part of the <code>IMessageDelivery</code> interface will be called in the same way as before in response to an incoming message. 
+The <code>validateTo</code> method will be called after each <code>RCPT TO</code> command is received and the <code>receivedHeader</code> method will be called once for each recipient when the <code>DATA</code> command is received. 
+</p>
+<p>
+We'd like to have the message printed once with a custom header listing all the recipients regardless of how many there are.
+To do this, <code>TutorialDelivery</code> will need to keep track of the recipients and cause just one <code>ConsoleMessage</code> to be created to receive the message.  
+Here's the modified <code>TutorialDelivery</code>:
+</p>
+<pre class="python">
+class TutorialDelivery(object):
+    implements(smtp.IMessageDelivery)
+
+    def __init__(self):
+        self.to = []
+
+    def validateFrom(self, helo, origin):
+        return origin
+
+    def validateTo(self, user):
+        if self.to:
+            self.to.append(user)
+            return NullMessage
+        else:
+            self.to = [user]
+            return ConsoleMessage
+
+    def receivedHeader(self, helo, origin, recipients):
+        return ('Received: from {}\n   to {}\n   by Tutorial Server'
+                .format(origin, ", ".join([str(recipient) 
+                                           for recipient in self.to])))
+</pre>
+<p>
+The first time <code>validateTo</code> is called, it returns a function to create a <code>ConsoleMessage</code>.  
+After that, it returns a function to create a <code>NullMessage</code>.  
+<code>NullMessage</code>, which does nothing in response to an incoming message, is shown below:
+</p>
+<pre class="python">
+class NullMessage(object):
+    implements(smtp.IMessage)
+
+    def lineReceived(self, line):
+        pass
+
+    def eomReceived(self):
+        return defer.succeed(None)
+
+    def connectionLost(self):
+        pass
+</pre>
+<p>
+Now when we run <a href="smtpserver-8.tac"><code>smtpserver-8.tac</code></a> and give the same input as that for Server 5, two messages are printed instead of three.  
+The header of the second message indicates that it is destined for two recipients:
+<pre class="shell">
+18:52:34-0400 [-] Log opened.
+18:52:34-0400 [-] twistd 13.1.0 (/usr/local/bin/python 2.7.3) starting up.
+18:52:34-0400 [-] reactor class: twisted.internet.selectreactor.SelectReactor.
+18:52:34-0400 [-] TutorialESMTPFactory starting on 2025
+18:52:34-0400 [-] Starting factory &lt;__builtin__.TutorialESMTPFactory instance at 0x10bd982d8&gt;
+18:53:15-0400 [ESMTP,0,127.0.0.1] Receiving message for delivery: from=tom@example.com to=['alice@example.com']
+18:53:37-0400 [ESMTP,0,127.0.0.1] New message received:
+18:53:37-0400 [ESMTP,0,127.0.0.1] Received: from tom@example.com
+18:53:37-0400 [ESMTP,0,127.0.0.1]    to alice@example.com
+18:53:37-0400 [ESMTP,0,127.0.0.1]    by Tutorial Server
+18:53:37-0400 [ESMTP,0,127.0.0.1] From: tom@example.com
+18:53:37-0400 [ESMTP,0,127.0.0.1] To: alice@example.com
+18:53:37-0400 [ESMTP,0,127.0.0.1] Subject: Test message to Alice
+18:53:37-0400 [ESMTP,0,127.0.0.1] 
+18:53:37-0400 [ESMTP,0,127.0.0.1] This is the first test message.
+18:54:02-0400 [ESMTP,0,127.0.0.1] Receiving message for delivery: 
+              from=alice@example.com to=['tom@example.com', 'joe@example.com']
+18:54:33-0400 [ESMTP,0,127.0.0.1] New message received:
+18:54:33-0400 [ESMTP,0,127.0.0.1] Received: from alice@example.com
+18:54:33-0400 [ESMTP,0,127.0.0.1]    to tom@example.com, joe@example.com
+18:54:33-0400 [ESMTP,0,127.0.0.1]    by Tutorial Server
+18:54:33-0400 [ESMTP,0,127.0.0.1] From: alice@example.com
+18:54:33-0400 [ESMTP,0,127.0.0.1] To: tom@example.com, joe@example.com
+18:54:33-0400 [ESMTP,0,127.0.0.1] Subject: Test message to Tom and Joe
+18:54:33-0400 [ESMTP,0,127.0.0.1] 
+18:54:33-0400 [ESMTP,0,127.0.0.1] This is the second test message.
+</pre>
+</p>
+<h2>Conclusion</h2>
+<p>
+This tutorial began with the skeleton of a Twisted application and worked step by step to produce a server which uses the <code>IMessageDelivery</code> interface to accept a message from any sender and print it out once for each recipient.
+The tutorial finished with a server that employs the <code>IMessageDeliveryFactory</code> interface which makes it possible to handle each message more intelligently.
+</p>
+</body>
+</html>
