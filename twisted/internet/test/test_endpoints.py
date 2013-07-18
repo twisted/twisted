@@ -1386,7 +1386,7 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
 
     def test_nameResolution(self):
         """
-        While resolving host names, _nameResolution calls
+        While resolving hostnames, _nameResolution calls
         _deferToThread with _getaddrinfo.
         """
         calls = []
@@ -1597,7 +1597,7 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
 
     def test_nameResolution(self):
         """
-        While resolving host names, _nameResolution calls _deferToThread with
+        While resolving hostnames, _nameResolution calls _deferToThread with
         _getaddrinfo.
         """
         calls = []

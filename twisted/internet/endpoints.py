@@ -627,8 +627,8 @@ class TCP6ClientEndpoint(object):
 @implementer(interfaces.IStreamClientEndpoint)
 class HostnameEndpoint(object):
     """
-    A smart name based endpoint that connects to the faster one of IPv4 or IPv6
-    host address resolved.
+    A name-based endpoint that connects to the fastest amongst the
+    resolved host addresses.
 
     @ivar _getaddrinfo: A hook used for testing name resolution.
 
@@ -639,7 +639,7 @@ class HostnameEndpoint(object):
 
     def __init__(self, reactor, host, port, timeout=30, bindAddress=None):
         """
-        @param host: A host name to connect to.
+        @param host: A hostname to connect to.
         @type host: L{bytes}
 
         @param timeout: For each individual connection attempt, the number of
