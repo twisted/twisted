@@ -1,0 +1,1 @@
+twisted.conch.endpoints.SSHCommandClientEndpoint now uses the standard SSH port if no port is specified.

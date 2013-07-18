@@ -700,6 +700,7 @@ class _NewConnectionHelper(object):
     establishing a brand new SSH connection, securing it, and authenticating.
     """
     _KNOWN_HOSTS = _KNOWN_HOSTS
+    port = 22
 
     def __init__(self, reactor, hostname, port, command, username, keys,
                  password, agentEndpoint, knownHosts, ui,
@@ -712,7 +713,8 @@ class _NewConnectionHelper(object):
         """
         self.reactor = reactor
         self.hostname = hostname
-        self.port = port
+        if port is not None:
+            self.port = port
         self.command = command
         self.username = username
         self.keys = keys

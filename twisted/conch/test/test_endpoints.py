@@ -374,16 +374,6 @@ class SSHCommandClientEndpointTestsMixin(object):
         return serverProtocol, clientProtocol, pump
 
 
-    def test_interface(self):
-        """
-        L{SSHCommandClientEndpoint} instances provide L{IStreamClientEndpoint}.
-        """
-        endpoint = SSHCommandClientEndpoint.newConnection(
-            self.reactor, b"dummy command", b"dummy user",
-            self.hostname, self.port)
-        self.assertTrue(verifyObject(IStreamClientEndpoint, endpoint))
-
-
     def test_channelOpenFailure(self):
         """
         If a channel cannot be opened on the authenticated SSH connection, the
@@ -751,6 +741,36 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
             self.assertTrue(client.transport.aborted)
         else:
             self.assertTrue(client.transport.disconnecting)
+
+
+    def test_interface(self):
+        """
+        L{SSHCommandClientEndpoint} instances provide L{IStreamClientEndpoint}.
+        """
+        endpoint = SSHCommandClientEndpoint.newConnection(
+            self.reactor, b"dummy command", b"dummy user",
+            self.hostname, self.port)
+        self.assertTrue(verifyObject(IStreamClientEndpoint, endpoint))
+
+
+    def test_defaultPort(self):
+        """
+        L{SSHCommandClientEndpoint} uses the default port number for SSH when
+        the C{port} argument is not specified.
+        """
+        endpoint = SSHCommandClientEndpoint.newConnection(
+            self.reactor, b"dummy command", b"dummy user", self.hostname)
+        self.assertEqual(22, endpoint._creator.port)
+
+
+    def test_specifiedPort(self):
+        """
+        L{SSHCommandClientEndpoint} uses the C{port} argument if specified.
+        """
+        endpoint = SSHCommandClientEndpoint.newConnection(
+            self.reactor, b"dummy command", b"dummy user",
+            self.hostname, port=2222)
+        self.assertEqual(2222, endpoint._creator.port)
 
 
     def test_destination(self):
