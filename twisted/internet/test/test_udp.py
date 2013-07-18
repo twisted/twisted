@@ -140,6 +140,7 @@ class UDPPortTestsMixin(object):
         self.assertEqual(
             port.getHost(), IPv4Address('UDP', host, portNumber))
 
+
     def test_getHostIPv6(self):
         """
         L{IListeningPort.getHost} returns an L{IPv6Address} giving a
@@ -147,7 +148,8 @@ class UDPPortTestsMixin(object):
         and the port number.
         """
         reactor = self.buildReactor()
-        port = self.getIPv6ListeningPort(reactor, DatagramProtocol())
+        port = self.getListeningPort(
+            reactor, DatagramProtocol(), interface='::1')
         addr = port.getHost()
         self.assertEqual(addr.host, "::1")
 
@@ -204,16 +206,18 @@ class UDPPortTestsMixin(object):
         port = self.getListeningPort(reactor, DatagramProtocol())
         self.assertIn(repr(port.getHost().port), str(port))
 
+
     def test_bindToIPv6Interface(self):
         """
         Binds to ipv6 interface.
         """
         reactor = self.buildReactor()
         server = Server()
-        p = reactor.listenUDP(0, server, interface="::1")
+        p = self.getListeningPort(reactor, server, interface="::1")
         self.assertEqual(p.getHost().host, "::1")
 
         return p.stopListening()
+
 
     def test_connectAndWriteToIPv6Interface(self):
         """
@@ -223,14 +227,14 @@ class UDPPortTestsMixin(object):
         reactor = self.buildReactor()
         server = Server()
         serverStarted = server.startedDeferred = defer.Deferred()
-        port1 = reactor.listenUDP(0, server, interface="::1")
+        port1 = self.getListeningPort(reactor, server, interface="::1")
 
         client = GoodClient()
         clientStarted = client.startedDeferred = defer.Deferred()
 
         def cbServerStarted(ignored):
             """Client starts listening"""
-            self.port2 = reactor.listenUDP(0, client, interface="::1")
+            self.port2 = self.getListeningPort(reactor, client, interface="::1")
             return clientStarted
 
         def cbClientStarted(ignored):
@@ -273,7 +277,6 @@ class UDPPortTestsMixin(object):
 
 
 
-
 class UDPServerTestsBuilder(ReactorBuilder,
                             UDPPortTestsMixin, DatagramTransportTestsMixin):
     """
@@ -296,14 +299,6 @@ class UDPServerTestsBuilder(ReactorBuilder,
         """
         return reactor.listenUDP(port, protocol, interface=interface,
                                  maxPacketSize=maxPacketSize)
-
-
-    def getIPv6ListeningPort(self, reactor, protocol):
-        """
-        Get a UDP port binded to ipv6 interface.
-        """
-        return reactor.listenUDP(0, protocol, "::1")
-
 
 
 
