@@ -2934,8 +2934,15 @@ class IMAP4ClientCancelTestCase(unittest.TestCase):
         deferred.cancel()
         self.assertEqual(self.transport.disconnecting, False)
         failure = self.failureResultOf(deferred)
-        failure.trap(defer.CancelledError)
+        self.assertTrue(failure.check(defer.CancelledError))
+
+        substituteCommand = self.imap4client.tags[self.imap4client.waiting]
+        substituteDeferred = substituteCommand.defer
+        def checkResponse((send, lastLine)):
+            self.assertEqual(lastLine, 'OK COMMAND completed')
+        substituteDeferred.addCallback(checkResponse)
         self.imap4client.dataReceived('0002 OK COMMAND completed\r\n')
+        self.assertTrue(substituteDeferred.called)
 
 
     def test_cancelCommandSentDirectly(self):
@@ -2951,7 +2958,14 @@ class IMAP4ClientCancelTestCase(unittest.TestCase):
         self.assertEqual(self.transport.disconnecting, False)
         failure = self.failureResultOf(deferred)
         failure.trap(defer.CancelledError)
+ 
+        substituteCommand = self.imap4client.tags[self.imap4client.waiting]
+        substituteDeferred = substituteCommand.defer
+        def checkResponse((send, lastLine)):
+            self.assertEqual(lastLine, 'OK COMMAND completed')
+        substituteDeferred.addCallback(checkResponse)
         self.imap4client.dataReceived('0001 OK COMMAND completed\r\n')
+        self.assertTrue(substituteDeferred.called)
 
 
     def test_getCapabilitiesUsesSendCommand(self):

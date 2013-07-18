@@ -383,6 +383,25 @@ class Command:
         if unuse:
             unusedCallback(unuse)
 
+
+
+class CancelledCommand(Command):
+    """
+    Used to safely drop the response of a cancelled L{Command} on the floor.
+
+    @ivar originalCommand: The original L{Command} that be cancelled.
+    """
+    def __init__(self, originalCommand):
+        self.originalCommand = originalCommand
+        self.command = originalCommand.command
+        self.args = originalCommand.args
+        self.wantResponse = originalCommand.wantResponse
+        self.continuation = originalCommand.continuation
+        self.lines = originalCommand.lines
+        self.defer = defer.Deferred()
+
+
+
 class LOGINCredentials(cred.credentials.UsernamePassword):
     def __init__(self):
         self.challenges = ['Password\0', 'User Name\0']
@@ -2542,10 +2561,11 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             try:
                 self.queued.remove(cmd)
             except ValueError:
-                # The command has been popped out from the queue.
-                # Make a new Deferred to safely drop the response on the floor.
-                newDeferred = defer.Deferred()
-                cmd.defer = newDeferred
+                # The command has been sent over the network. Make a new
+                # substitution commmand to safely drop the response on the floor.
+                substitutionCommand = CancelledCommand(cmd)
+                self.tags[self.waiting] = substitutionCommand
+                self._lastCmd = substitutionCommand
         cmd.defer = defer.Deferred(cancel)
         if self.waiting:
             self.queued.append(cmd)
