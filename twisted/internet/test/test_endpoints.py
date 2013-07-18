@@ -16,7 +16,7 @@ from zope.interface.verify import verifyObject
 
 from twisted.python.compat import _PY3
 from twisted.trial import unittest
-from twisted.internet import error, interfaces, defer
+from twisted.internet import error, interfaces, defer, threads
 from twisted.internet import endpoints, protocol, reactor
 from twisted.internet.address import (
     IPv4Address, IPv6Address, UNIXAddress, _ProcessAddress)
@@ -1383,6 +1383,15 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
         self.assertEqual(port, expectedPort)
         self.assertEqual(timeout, expectedTimeout)
         self.assertEqual(bindAddress, expectedBindAddress)
+
+
+    def test_freeFunctionDeferToThread(self):
+        """
+        By default, L{TCP6ClientEndpoint._deferToThread} is
+        L{threads.deferToThread}.
+        """
+        ep = endpoints.TCP6ClientEndpoint(None, 'www.example.com', 1234)
+        self.assertEqual(ep._deferToThread, threads.deferToThread)
 
 
     def test_nameResolution(self):
