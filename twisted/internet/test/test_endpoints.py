@@ -1776,6 +1776,37 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
         self.endpoint._nameResolution = nameResolution
 
 
+    def test_ignoreUnknownAddressFamilies(self):
+        """
+        If an address family other than AF_INET and AF_INET6 is returned by
+        on address resolution, the endpoint ignores that address.
+        """
+        self.mreactor = MemoryReactor()
+        self.endpoint = endpoints.HostnameEndpoint(self.mreactor,
+                "www.example.com", 80)
+        AF_INX = None
+
+        def nameResolution(host, port):
+            self.assertEqual("www.example.com", host)
+            data = [
+                (AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', port)),
+                (AF_INX, SOCK_STREAM, 'SOME_PROTOCOL_IN_FUTURE', '', ('a.b.c.d', port)),
+                (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', port, 0, 0))
+                ]
+            return defer.succeed(data)
+
+        self.endpoint._nameResolution = nameResolution
+        clientFactory = None
+
+        d = self.endpoint.connect(clientFactory)
+
+        self.mreactor.advance(0.3)
+        (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[1]
+        self.assertEqual(len(self.mreactor.tcpClients), 2)
+        self.assertEqual(host, '1:2::3:4')
+        self.assertEqual(port, 80)
+  
+
     def test_IPv4IsFaster(self):
         """
         The endpoint returns a connection to the IPv4 address.
