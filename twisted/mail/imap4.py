@@ -2548,6 +2548,9 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             has been popped out from the queue, drop the response on the floor
             safely.
         """
+        # Since in the future we will support sending multiple commands at
+        # the same time, we choose NOT to disconnect from the server when
+        # cancelling a running command.
         def cancel(deferred):
             """
             Cancel the command.
@@ -2562,7 +2565,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
                 self.queued.remove(cmd)
             except ValueError:
                 # The command has been sent over the network. Make a new
-                # substitution commmand to safely drop the response on the floor.
+                # substitution commmand to safely drop the response on the
+                # floor.
                 substitutionCommand = CancelledCommand(cmd)
                 self.tags[self.waiting] = substitutionCommand
                 self._lastCmd = substitutionCommand
