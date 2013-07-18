@@ -26,7 +26,7 @@ from twisted.web.server import NOT_DONE_YET, Request
 from twisted.web.websockets import (
     CONTROLS, _makeAccept, _mask, _makeFrame, _parseFrames, _WSException,
     WebSocketsResource, WebSocketsProtocol, WebSocketsProtocolWrapper,
-    lookupProtocolForFactory)
+    WebSocketsTransport, lookupProtocolForFactory)
 from twisted.web.test.test_web import DummyRequest, DummyChannel
 
 
@@ -333,19 +333,20 @@ class TestFrameHelpers(TestCase):
 
 
 
-class SavingEcho(WebSocketsProtocol):
+class SavingEchoReceiver(object):
     """
-    A test protocol saving the data received and sending it back.
+    A test receiver saving the data received and sending it back.
     """
 
-    def connectionMade(self):
-        WebSocketsProtocol.connectionMade(self)
+    def makeConnection(self, transport):
+        self.transport = transport
         self.received = []
 
 
     def frameReceived(self, opcode, data, fin):
         self.received.append((opcode, data, fin))
-        self.sendFrame(opcode, data, fin)
+        if opcode == CONTROLS.TEXT:
+            self.transport.sendFrame(opcode, data, fin)
 
 
 
@@ -355,14 +356,9 @@ class WebSocketsProtocolTest(TestCase):
     """
 
     def setUp(self):
-
-        class SavingEchoFactory(Factory):
-
-            def buildProtocol(oself, addr):
-                return self.protocol
-
-        self.protocol = SavingEcho()
-        self.factory = SavingEchoFactory()
+        self.receiver = SavingEchoReceiver()
+        self.protocol = WebSocketsProtocol(self.receiver)
+        self.factory = Factory.forProtocol(lambda: self.protocol)
         self.transport = StringTransportWithDisconnection()
         self.protocol.makeConnection(self.transport)
         self.transport.protocol = self.protocol
@@ -377,18 +373,19 @@ class WebSocketsProtocolTest(TestCase):
             _makeFrame("Hello", CONTROLS.TEXT, True, mask="abcd"))
         self.assertEqual("\x81\x05Hello", self.transport.value())
         self.assertEqual([(CONTROLS.TEXT, "Hello", True)],
-                         self.protocol.received)
+                         self.receiver.received)
 
 
     def test_ping(self):
         """
         When a C{PING} frame is received, the frame is resent with a C{PONG},
-        but the application protocol doesn't receive any data.
+        and the application receiver is notified about it.
         """
         self.protocol.dataReceived(
             _makeFrame("Hello", CONTROLS.PING, True, mask="abcd"))
         self.assertEqual("\x8a\x05Hello", self.transport.value())
-        self.assertEqual([], self.protocol.received)
+        self.assertEqual([(CONTROLS.PING, "Hello", True)],
+                         self.receiver.received)
 
 
     def test_close(self):
@@ -421,16 +418,25 @@ class WebSocketsProtocolTest(TestCase):
         self.assertEqual("Reserved flag in frame (114)", str(error.value))
 
 
+
+class WebSocketsTransportTest(TestCase):
+    """
+    Tests for L{WebSocketsTransport}.
+    """
+
     def test_loseConnection(self):
         """
-        L{WebSocketsProtocol.loseConnection} sends a close frame and closes the
-        transport afterwards.
+        L{WebSocketsTransport.loseConnection} sends a close frame and closes
+        the transport afterwards.
         """
-        self.protocol.loseConnection()
-        self.assertFalse(self.transport.connected)
-        self.assertEqual("\x88\x00", self.transport.value())
+        transport = StringTransportWithDisconnection()
+        transport.protocol = Protocol()
+        webSocketsTranport = WebSocketsTransport(transport)
+        webSocketsTranport.loseConnection()
+        self.assertFalse(transport.connected)
+        self.assertEqual("\x88\x00", transport.value())
         # We can call loseConnection again without side effects
-        self.protocol.loseConnection()
+        webSocketsTranport.loseConnection()
 
 
 
@@ -501,6 +507,21 @@ class WebSocketsProtocolWrapperTest(TestCase):
 
 
 
+class SavingEchoProtocol(Protocol):
+    """
+    A test protocol saving the data received and sending it back.
+    """
+
+    def connectionMade(self):
+        self.received = []
+
+
+    def dataReceived(self, data):
+        self.received.append(data)
+        self.transport.write(data)
+
+
+
 class WebSocketsResourceTest(TestCase):
     """
     Tests for L{WebSocketsResource}.
@@ -514,7 +535,7 @@ class WebSocketsResourceTest(TestCase):
                 return self.echoProtocol
 
         factory = SavingEchoFactory()
-        self.echoProtocol = SavingEcho()
+        self.echoProtocol = SavingEchoProtocol()
 
         self.resource = WebSocketsResource(lookupProtocolForFactory(factory))
 
@@ -586,7 +607,8 @@ class WebSocketsResourceTest(TestCase):
         self.assertEqual([""], request.written)
         self.assertEqual(101, request.responseCode)
         self.assertIdentical(None, request.transport)
-        self.assertIsInstance(transport.protocol, SavingEcho)
+        self.assertIsInstance(transport.protocol.wrappedProtocol,
+                              SavingEchoProtocol)
 
 
     def test_renderProtocol(self):
@@ -774,7 +796,9 @@ class WebSocketsResourceTest(TestCase):
         self.assertEqual([""], request.written)
         self.assertEqual(101, request.responseCode)
         self.assertIdentical(None, request.transport)
-        self.assertIsInstance(transport.protocol.wrappedProtocol, SavingEcho)
+        self.assertIsInstance(
+            transport.protocol.wrappedProtocol.wrappedProtocol,
+            SavingEchoProtocol)
 
 
     def test_renderRealRequest(self):

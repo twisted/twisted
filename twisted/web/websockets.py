@@ -12,7 +12,7 @@ factory.
 @since: 13.2
 """
 
-__all__ = ["WebSocketsResource", "IWebSocketsProtocol",
+__all__ = ["WebSocketsResource", "IWebSocketsFrameReceiver",
            "lookupProtocolForFactory", "WebSocketsProtocol",
            "WebSocketsProtocolWrapper"]
 
@@ -20,12 +20,11 @@ __all__ = ["WebSocketsResource", "IWebSocketsProtocol",
 from hashlib import sha1
 from struct import pack, unpack
 
-from zope.interface import implementer, providedBy, directlyProvides
+from zope.interface import implementer, providedBy, directlyProvides, Interface
 
 from twisted.python import log
 from twisted.python.constants import Flags, FlagConstant
 from twisted.internet.protocol import Protocol
-from twisted.internet.interfaces import IProtocol
 from twisted.protocols.tls import TLSMemoryBIOProtocol
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
@@ -242,25 +241,20 @@ def _parseFrames(frameBuffer, needMask=True):
 
 
 
-class IWebSocketsProtocol(IProtocol):
+class IWebSocketsFrameReceiver(Interface):
     """
-    A protocol which understands the WebSockets interface.
+    An interface for receiving WebSockets frames.
 
     @since: 13.2
     """
 
-    def sendFrame(opcode, data, fin):
+    def makeConnection(transport):
         """
-        Send a frame.
+        Notification about the connection.
 
-        @type opcode: C{CONTROLS}
-        @param opcode: The type of frame to send.
-
-        @type data: C{bytes}
-        @param data: The content of the frame to send.
-
-        @type fin: C{bool}
-        @param fin: Whether or not we're sending a final frame.
+        @param transport: A L{WebSocketsTransport} instance wrapping the
+            TCP transport.
+        @type transport: L{WebSocketsTransport}.
         """
 
 
@@ -279,72 +273,18 @@ class IWebSocketsProtocol(IProtocol):
         """
 
 
-    def loseConnection():
-        """
-        Close the connection sending a close frame first.
-        """
 
-
-
-@implementer(IWebSocketsProtocol)
-class WebSocketsProtocol(Protocol):
+class WebSocketsTransport(object):
     """
+    A frame transport for WebSockets.
+
     @since: 13.2
     """
+
     _disconnecting = False
-    _buffer = None
 
-
-    def connectionMade(self):
-        """
-        Log the new connection and initialize the buffer list.
-        """
-        peer = self.transport.getPeer()
-        log.msg("Opening connection with {peer}".format(peer=peer))
-        self._buffer = []
-
-
-    def _parseFrames(self):
-        """
-        Find frames in incoming data and pass them to the underlying protocol.
-        """
-        for frame in _parseFrames(self._buffer):
-            opcode, data, fin = frame
-            if opcode in (CONTROLS.CONTINUE, CONTROLS.TEXT, CONTROLS.BINARY):
-                # Business as usual. Decode the frame, if we have a decoder.
-                # Pass the frame to the underlying protocol.
-                self.frameReceived(opcode, data, fin)
-            elif opcode == CONTROLS.CLOSE:
-                # The other side wants us to close.
-                reason, text = data
-                log.msg(
-                    "Closing connection: '{text}' ({reason})".format(
-                        text=text, reason=reason))
-
-                # Close the connection.
-                self.transport.loseConnection()
-                return
-            elif opcode == CONTROLS.PING:
-                # 5.5.2 PINGs must be responded to with PONGs.
-                # 5.5.3 PONGs must contain the data that was sent with the
-                # provoking PING.
-                self.transport.write(_makeFrame(data, CONTROLS.PONG, True))
-
-
-    def frameReceived(self, opcode, data, fin):
-        """
-        Callback to implement.
-
-        @type opcode: C{CONTROLS}
-        @param opcode: The type of frame received.
-
-        @type data: C{bytes}
-        @param data: The content of the frame received.
-
-        @type fin: C{bool}
-        @param fin: Whether or not the frame is final.
-        """
-        raise NotImplementedError()
+    def __init__(self, transport):
+        self._transport = transport
 
 
     def sendFrame(self, opcode, data, fin):
@@ -361,7 +301,75 @@ class WebSocketsProtocol(Protocol):
         @param fin: Whether or not we're sending a final frame.
         """
         packet = _makeFrame(data, opcode, fin)
-        self.transport.write(packet)
+        self._transport.write(packet)
+
+
+    def loseConnection(self, reason=""):
+        """
+        Close the connection.
+
+        This includes telling the other side we're closing the connection.
+
+        If the other side didn't signal that the connection is being closed,
+        then we might not see their last message, but since their last message
+        should, according to the spec, be a simple acknowledgement, it
+        shouldn't be a problem.
+        """
+        # Send a closing frame. It's only polite. (And might keep the browser
+        # from hanging.)
+        if not self._disconnecting:
+            frame = _makeFrame(reason, CONTROLS.CLOSE, True)
+            self._transport.write(frame)
+            self._disconnecting = True
+            self._transport.loseConnection()
+
+
+
+class WebSocketsProtocol(Protocol):
+    """
+    A protocol parsing WebSockets frames and interacting with a
+    L{IWebSocketsFrameReceiver} instance.
+
+    @since: 13.2
+    """
+    _buffer = None
+
+
+    def __init__(self, receiver):
+        self._receiver = receiver
+
+
+    def connectionMade(self):
+        """
+        Log the new connection and initialize the buffer list.
+        """
+        peer = self.transport.getPeer()
+        log.msg("Opening connection with {peer}".format(peer=peer))
+        self._buffer = []
+        self._receiver.makeConnection(WebSocketsTransport(self.transport))
+
+
+    def _parseFrames(self):
+        """
+        Find frames in incoming data and pass them to the underlying protocol.
+        """
+        for opcode, data, fin in _parseFrames(self._buffer):
+            self._receiver.frameReceived(opcode, data, fin)
+            if opcode == CONTROLS.CLOSE:
+                # The other side wants us to close.
+                reason, text = data
+                log.msg(
+                    "Closing connection: '{text}' ({reason})".format(
+                        text=text, reason=reason))
+
+                # Close the connection.
+                self.transport.loseConnection()
+                return
+            elif opcode == CONTROLS.PING:
+                # 5.5.2 PINGs must be responded to with PONGs.
+                # 5.5.3 PONGs must contain the data that was sent with the
+                # provoking PING.
+                self.transport.write(_makeFrame(data, CONTROLS.PONG, True))
 
 
     def dataReceived(self, data):
@@ -380,87 +388,16 @@ class WebSocketsProtocol(Protocol):
             self.transport.loseConnection()
 
 
-    def loseConnection(self):
-        """
-        Close the connection.
 
-        This includes telling the other side we're closing the connection.
+class _WebSocketsProtocolWrapperReceiver():
 
-        If the other side didn't signal that the connection is being closed,
-        then we might not see their last message, but since their last message
-        should, according to the spec, be a simple acknowledgement, it
-        shouldn't be a problem.
-        """
-        # Send a closing frame. It's only polite. (And might keep the browser
-        # from hanging.)
-        if not self._disconnecting:
-            frame = _makeFrame("", CONTROLS.CLOSE, True)
-            self.transport.write(frame)
-            self._disconnecting = True
-            self.transport.loseConnection()
-
-
-
-class WebSocketsProtocolWrapper(WebSocketsProtocol):
-    """
-    A protocol wrapper which provides L{IWebSocketsProtocol} by making messages
-    as data frames.
-
-    @since: 13.2
-    """
-
-    def __init__(self, wrappedProtocol, defaultOpcode=CONTROLS.TEXT):
+    def __init__(self, wrappedProtocol):
         self.wrappedProtocol = wrappedProtocol
-        self.defaultOpcode = defaultOpcode
 
 
     def makeConnection(self, transport):
-        """
-        Upon connection, provides the transport interface, and forwards ourself
-        as the transport to C{self.wrappedProtocol}.
-
-        @type transport: L{twisted.internet.interfaces.ITransport} provider.
-        @param transport: The transport to use for the protocol.
-        """
-        directlyProvides(self, providedBy(transport))
-        WebSocketsProtocol.makeConnection(self, transport)
-        self.wrappedProtocol.makeConnection(self)
-
-
-    def connectionMade(self):
-        """
-        Initialize the list of messages.
-        """
-        WebSocketsProtocol.connectionMade(self)
+        self._transport = transport
         self._messages = []
-
-
-    def write(self, data):
-        """
-        Write to the websocket protocol, transforming C{data} in a frame.
-
-        @type data: C{bytes}
-        @param data: Data buffer used for the frame content.
-        """
-        self.sendFrame(self.defaultOpcode, data, True)
-
-
-    def writeSequence(self, data):
-        """
-        Send all chunks from C{data} using C{write}.
-
-        @type data: C{list} of C{bytes}
-        @param data: Data buffers used for the frames content.
-        """
-        for chunk in data:
-            self.write(chunk)
-
-
-    def __getattr__(self, name):
-        """
-        Forward all non-local attributes and methods to C{self.transport}.
-        """
-        return getattr(self.transport, name)
 
 
     def frameReceived(self, opcode, data, fin):
@@ -482,6 +419,64 @@ class WebSocketsProtocolWrapper(WebSocketsProtocol):
             content = "".join(self._messages)
             self._messages[:] = []
             self.wrappedProtocol.dataReceived(content)
+
+
+
+class WebSocketsProtocolWrapper(WebSocketsProtocol):
+    """
+    @since: 13.2
+    """
+
+    def __init__(self, wrappedProtocol, defaultOpcode=CONTROLS.TEXT):
+        self.wrappedProtocol = wrappedProtocol
+        self.defaultOpcode = defaultOpcode
+        WebSocketsProtocol.__init__(
+            self, _WebSocketsProtocolWrapperReceiver(wrappedProtocol))
+
+
+    def makeConnection(self, transport):
+        """
+        Upon connection, provides the transport interface, and forwards ourself
+        as the transport to C{self.wrappedProtocol}.
+
+        @type transport: L{twisted.internet.interfaces.ITransport} provider.
+        @param transport: The transport to use for the protocol.
+        """
+        directlyProvides(self, providedBy(transport))
+        WebSocketsProtocol.makeConnection(self, transport)
+        self.wrappedProtocol.makeConnection(self)
+
+
+    def write(self, data):
+        """
+        Write to the websocket protocol, transforming C{data} in a frame.
+
+        @type data: C{bytes}
+        @param data: Data buffer used for the frame content.
+        """
+        self._receiver._transport.sendFrame(self.defaultOpcode, data, True)
+
+
+    def writeSequence(self, data):
+        """
+        Send all chunks from C{data} using C{write}.
+
+        @type data: C{list} of C{bytes}
+        @param data: Data buffers used for the frames content.
+        """
+        for chunk in data:
+            self.write(chunk)
+
+
+    def loseConnection(self):
+        self._receiver._transport.loseConnection()
+
+
+    def __getattr__(self, name):
+        """
+        Forward all non-local attributes and methods to C{self.transport}.
+        """
+        return getattr(self.transport, name)
 
 
     def connectionLost(self, reason):
@@ -634,7 +629,7 @@ class WebSocketsResource(object):
         # transport's lifecycle.
         transport, request.transport = request.transport, None
 
-        if not IWebSocketsProtocol.providedBy(protocol):
+        if not IWebSocketsFrameReceiver.providedBy(protocol):
             protocol = WebSocketsProtocolWrapper(protocol)
 
         # Connect the transport to our factory, and make things go. We need to
