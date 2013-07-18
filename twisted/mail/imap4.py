@@ -2546,7 +2546,8 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             command is cancelled. If the command is in the queue, remove the
             command from the queue. If the command has been sent directly or
             has been popped out from the queue, drop the response on the floor
-            safely.
+            safely since it may arrive later and try to fire an already
+            cancelled Deferred.
         """
         # Since in the future we will support sending multiple commands at
         # the same time, we choose NOT to disconnect from the server when
