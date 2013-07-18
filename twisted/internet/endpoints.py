@@ -640,7 +640,7 @@ class HostnameEndpoint(object):
     def __init__(self, reactor, host, port, timeout=30, bindAddress=None):
         """
         @param host: A host name to connect to.
-        @type host: L{str}
+        @type host: L{bytes}
 
         @param timeout: For each individual connection attempt, the number of
             seconds to wait before assuming the connection has failed.

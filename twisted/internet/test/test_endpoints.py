@@ -1427,12 +1427,12 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         Creates a L{HostnameEndpoint} instance where the hostname is resolved
         into a single IPv4 address.
         """
-        address = HostnameAddress("example.com", 80)
-        endpoint = endpoints.HostnameEndpoint(reactor, "example.com",
+        address = HostnameAddress(b"example.com", 80)
+        endpoint = endpoints.HostnameEndpoint(reactor, b"example.com",
                                            address.port, **connectArgs)
 
         def testNameResolution(host, port):
-            self.assertEqual("example.com", host)
+            self.assertEqual(b"example.com", host)
             data = [(AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', port))]
             return defer.succeed(data)
 
@@ -1607,14 +1607,14 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
             calls.append((f, args, kwargs))
             return defer.Deferred()
 
-        endpoint = endpoints.HostnameEndpoint(reactor, 'ipv4.example.com',
+        endpoint = endpoints.HostnameEndpoint(reactor, b'ipv4.example.com',
             1234)
         fakegetaddrinfo = object()
         endpoint._getaddrinfo = fakegetaddrinfo
         endpoint._deferToThread = fakeDeferToThread
         endpoint.connect(clientFactory)
         self.assertEqual(
-            [(fakegetaddrinfo, ("ipv4.example.com", 1234, 0, SOCK_STREAM), {})],
+            [(fakegetaddrinfo, (b"ipv4.example.com", 1234, 0, SOCK_STREAM), {})],
             calls)
 
 
@@ -1630,12 +1630,12 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
         Creates a L{HostnameEndpoint} instance where the hostname is resolved
         into a single IPv6 address.
         """
-        address = HostnameAddress("ipv6.example.com", 80)
-        endpoint = endpoints.HostnameEndpoint(reactor, "ipv6.example.com",
+        address = HostnameAddress(b"ipv6.example.com", 80)
+        endpoint = endpoints.HostnameEndpoint(reactor, b"ipv6.example.com",
                                               address.port, **connectArgs)
 
         def testNameResolution(host, port):
-            self.assertEqual("ipv6.example.com", host)
+            self.assertEqual(b"ipv6.example.com", host)
             data = [(AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', port, 0,
                 0))]
             return defer.succeed(data)
@@ -1741,10 +1741,10 @@ class HostnameEndpointsGAIFailureTestCase(unittest.TestCase):
         If no address is returned by GAI for a hostname, the connection attempt
         fails with L{error.DNSLookupError}.
         """
-        endpoint = endpoints.HostnameEndpoint(Clock(), "example.com", 80)
+        endpoint = endpoints.HostnameEndpoint(Clock(), b"example.com", 80)
 
         def testNameResolution(host, port):
-            self.assertEqual("example.com", host)
+            self.assertEqual(b"example.com", host)
             data = error.DNSLookupError("Problems")
             return defer.fail(data)
 
@@ -1763,10 +1763,10 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
     def setUp(self):
         self.mreactor = MemoryReactor()
         self.endpoint = endpoints.HostnameEndpoint(self.mreactor,
-                "www.example.com", 80)
+                b"www.example.com", 80)
 
         def nameResolution(host, port):
-            self.assertEqual("www.example.com", host)
+            self.assertEqual(b"www.example.com", host)
             data = [
                 (AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', port)),
                 (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', port, 0, 0))
@@ -1783,11 +1783,11 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
         """
         self.mreactor = MemoryReactor()
         self.endpoint = endpoints.HostnameEndpoint(self.mreactor,
-                "www.example.com", 80)
+                b"www.example.com", 80)
         AF_INX = None
 
         def nameResolution(host, port):
-            self.assertEqual("www.example.com", host)
+            self.assertEqual(b"www.example.com", host)
             data = [
                 (AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', port)),
                 (AF_INX, SOCK_STREAM, 'SOME_PROTOCOL_IN_FUTURE', '', ('a.b.c.d', port)),
@@ -1805,7 +1805,7 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
         self.assertEqual(len(self.mreactor.tcpClients), 2)
         self.assertEqual(host, '1:2::3:4')
         self.assertEqual(port, 80)
-  
+
 
     def test_IPv4IsFaster(self):
         """
