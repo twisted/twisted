@@ -1,0 +1,1 @@
+twisted.web.client.Agent now has an endpointFactory argument for allowing Agent to connect through arbitrary user-specified endpoints.
