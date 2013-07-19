@@ -2142,6 +2142,26 @@ class ClientStringTests(unittest.TestCase):
             "Unknown endpoint type: 'ftl'")
 
 
+    def test_stringParserWithoutReactorIsDeprecated(self):
+        """
+        L{endpoints.clientFromString} will issue a deprecation warning if a
+        plugin implements the L{IStreamClientStringParser} interface.
+        """
+        addFakePlugin(self)
+        reactor = object()
+        endpoints.clientFromString(reactor, 'cfake:alpha:beta:cee=dee:num=1')
+        from twisted.plugins.fakeendpoint import fakeClient
+        warnings = self.flushWarnings([fakeClient.parseStreamClient])
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        message = (
+            "The IStreamClientStringParser interface used for "
+            "twisted.plugins.fakeendpoint.FakeClientParser.parseStreamClient "
+            "is deprecated since Twisted 13.2.0. Please use the "
+            "IStreamClientStringParserWithReactor interface instead.")
+        self.assertEqual(warnings[0]['message'], message)
+
+
     def test_stringParserWithReactor(self):
         """
         L{endpoints.clientFromString} will pass a reactor to plugins

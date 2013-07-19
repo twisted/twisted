@@ -32,7 +32,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.systemd import ListenFDs
 from twisted.internet.abstract import isIPv6Address
 from twisted.python.failure import Failure
-from twisted.python import log
+from twisted.python import log, deprecate, versions
 from twisted.internet.address import _ProcessAddress
 from twisted.python.components import proxyForInterface
 
@@ -1561,8 +1561,8 @@ def clientFromString(reactor, description):
         clientFromString(reactor, "unix:/var/foo/bar:lockfile=1:timeout=9")
 
     This function is also extensible; new endpoint types may be registered as
-    L{IStreamClientEndpointStringParser} plugins.  See that interface for more
-    information.
+    L{IStreamClientEndpointStringParserWithReactor} plugins.  See that
+    interface for more information.
 
     @param reactor: The client endpoint will be constructed with this reactor.
 
@@ -1582,6 +1582,15 @@ def clientFromString(reactor, description):
             return plugin.parseStreamClient(reactor, *args, **kwargs)
     for plugin in getPlugins(IStreamClientEndpointStringParser):
         if plugin.prefix.upper() == name:
+            warningFormat = (
+                "The IStreamClientStringParser interface used for %(fqpn)s is "
+                "deprecated since %(version)s. Please use the "
+                "IStreamClientStringParserWithReactor interface instead.")
+            warningString = deprecate.getDeprecationWarningString(
+                plugin.parseStreamClient,
+                versions.Version('Twisted', 13, 2, 0),
+                format=warningFormat)
+            deprecate.warnAboutFunction(plugin.parseStreamClient, warningString)
             return plugin.parseStreamClient(*args, **kwargs)
     if name not in _clientParsers:
         raise ValueError("Unknown endpoint type: %r" % (aname,))

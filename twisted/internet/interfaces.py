@@ -2453,6 +2453,9 @@ class IStreamServerEndpointStringParser(Interface):
 
 class IStreamClientEndpointStringParser(Interface):
     """
+    This interface is deprecated since Twisted 13.2; please use the
+    L{IStreamClientEndpointStringParserWithReactor} interface instead.
+
     An L{IStreamClientEndpointStringParser} is a parser which can convert
     a set of string C{*args} and C{**kwargs} into an L{IStreamClientEndpoint}
     provider.
@@ -2469,6 +2472,7 @@ class IStreamClientEndpointStringParser(Interface):
     If a L{IStreamClientEndpointStringParserWithReactor} plugin and
     L{IStreamClientStringParser} plugin share the same prefix, the
     L{IStreamClientEndpointStringParserWithReactor} plugin will be preferred.
+
     """
 
     prefix = Attribute(
