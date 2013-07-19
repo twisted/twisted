@@ -2534,7 +2534,7 @@ class IStreamClientEndpointStringParserWithReactor(Interface):
     prefix = Attribute(
         """
         A C{str}, the description prefix to respond to.  For example, an
-        L{IStreamClientEndpointStringParserWithPlugin} plugin which had
+        L{IStreamClientEndpointStringParserWithReactor} plugin which had
         C{"foo"} for its C{prefix} attribute would be called for endpoint
         descriptions like C{"foo:bar:baz"} or C{"foo:"}.
         """
