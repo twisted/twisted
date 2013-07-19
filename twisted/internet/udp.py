@@ -265,7 +265,9 @@ class Port(base.BasePort):
                     raise
         else:
             assert addr != None
-            if not addr[0].replace(".", "").isdigit() and addr[0] != "<broadcast>":
+            if (not abstract.isIPAddress(addr[0])
+                    and not abstract.isIPv6Address(addr[0])
+                    and addr[0] != "<broadcast>"):
                 warnings.warn("Please only pass IPs to write(), not hostnames",
                               DeprecationWarning, stacklevel=2)
             try:

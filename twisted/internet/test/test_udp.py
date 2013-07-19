@@ -219,9 +219,10 @@ class UDPPortTestsMixin(object):
         return p.stopListening()
 
 
-    def test_connectAndWriteToIPv6Interface(self):
+    def test_writeToIPv6Interface(self):
         """
-        Connects and writes to ipv6 address.
+        Writing to an IPv6 UDP socket on the loopback interface succeeds
+        without warnings.
         """
 
         reactor = self.buildReactor()
@@ -231,55 +232,86 @@ class UDPPortTestsMixin(object):
 
         client = GoodClient()
         clientStarted = client.startedDeferred = defer.Deferred()
-
-        def cbServerStarted(ignored):
-            """Client starts listening"""
-            self.port2 = self.getListeningPort(
-                reactor, client, interface="::1")
-            return clientStarted
+        port2 = self.getListeningPort(reactor, client, interface="::1")
 
         def cbClientStarted(ignored):
             """Client sends messages before and after connecting"""
-            client.transport.write(b"a",
-                                   ("::1", server.transport.getHost().port))
-            client.transport.connect("::1", server.transport.getHost().port)
+            client.transport.write(
+                b"spam", ("::1", server.transport.getHost().port))
             serverReceived = server.packetReceived = defer.Deferred()
-            def cbSendAfterConnect(ignored):
-                serverReceived = server.packetReceived = defer.Deferred()
-                client.transport.write(b"hello")
-                return serverReceived
-
-            serverReceived.addCallback(cbSendAfterConnect)
-
             return serverReceived
 
         def cbServerReceived(ignored):
             """Assert packets received in server"""
-            unconnPacket, connPacket = server.packets[0], server.packets[1]
             cAddr = client.transport.getHost()
-            self.assertEqual(unconnPacket,
-                             (b"a", (cAddr.host, cAddr.port, 0, 0)))
-            self.assertEqual(connPacket,
-                             (b"hello", (cAddr.host, cAddr.port, 0, 0)))
+            packet = server.packets[0]
+            self.assertEqual(packet[0], b'spam')
+            self.assertEqual(packet[1][:2], (cAddr.host, cAddr.port))
             canceler.cancel()
-
-
-        def cbFinished(ignored):
-            """Stops listening"""
-            self.port2.stopListening()
             port1.stopListening()
+            port2.stopListening()
             reactor.stop()
 
         def fail():
             reactor.stop()
             self.fail('no UDP response in 10 seconds')
 
-        d = serverStarted.addCallback(cbServerStarted)
+        d = defer.gatherResults([serverStarted, clientStarted])
         d.addCallback(cbClientStarted)
         d.addCallback(cbServerReceived)
-        d.addCallback(cbFinished)
+        d.addErrback(err)
         canceler = reactor.callLater(10, fail)
         self.runReactor(reactor)
+        warnings = self.flushWarnings()
+        self.assertEqual(len(warnings), 0, msg=repr(warnings))
+        return d
+
+
+    def test_connectedWriteToIPv6Interface(self):
+        """
+        Writing to a connected IPv6 UDP socket on the loopback interface
+        succeeds without warnings.
+        """
+
+        reactor = self.buildReactor()
+        server = Server()
+        serverStarted = server.startedDeferred = defer.Deferred()
+        port1 = self.getListeningPort(reactor, server, interface="::1")
+
+        client = GoodClient()
+        clientStarted = client.startedDeferred = defer.Deferred()
+        port2 = self.getListeningPort(reactor, client, interface="::1")
+
+        def cbClientStarted(ignored):
+            """Client sends messages before and after connecting"""
+            client.transport.connect("::1", server.transport.getHost().port)
+            client.transport.write(b"spam")
+            serverReceived = server.packetReceived = defer.Deferred()
+            return serverReceived
+
+        def cbServerReceived(ignored):
+            """Assert packets received in server"""
+            cAddr = client.transport.getHost()
+            packet = server.packets[0]
+            self.assertEqual(packet[0], b'spam')
+            self.assertEqual(packet[1][:2], (cAddr.host, cAddr.port))
+            canceler.cancel()
+            port1.stopListening()
+            port2.stopListening()
+            reactor.stop()
+
+        def fail():
+            reactor.stop()
+            self.fail('no UDP response in 10 seconds')
+
+        d = defer.gatherResults([serverStarted, clientStarted])
+        d.addCallback(cbClientStarted)
+        d.addCallback(cbServerReceived)
+        d.addErrback(err)
+        canceler = reactor.callLater(10, fail)
+        self.runReactor(reactor)
+        warnings = self.flushWarnings()
+        self.assertEqual(len(warnings), 0, msg=repr(warnings))
         return d
 
 

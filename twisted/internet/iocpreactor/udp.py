@@ -185,7 +185,7 @@ class Port(abstract.FileHandle):
                     raise
         else:
             assert addr != None
-            if not addr[0].replace(".", "").isdigit():
+            if not isIPAddress(addr[0]) and not isIPv6Address(addr[0]):
                 warnings.warn("Please only pass IPs to write(), not hostnames",
                               DeprecationWarning, stacklevel=2)
             try:
@@ -218,7 +218,7 @@ class Port(abstract.FileHandle):
             raise RuntimeError(
                 "already connected, reconnecting is not currently supported "
                 "(talk to itamar if you want this)")
-        if not isIPAddress(host):
+        if not isIPAddress(host) and not isIPv6Address(host):
             raise ValueError, "please pass only IP addresses, not domain names"
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
