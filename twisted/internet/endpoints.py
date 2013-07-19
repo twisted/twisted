@@ -745,7 +745,7 @@ class HostnameEndpoint(object):
 
             def iterateEndpoint():
                 try:
-                    endpoint = endpoints.next()
+                    endpoint = next(endpoints)
                 except StopIteration:
                     # The list of endpoints ends.
                     endpointsListExhausted.append(True)
