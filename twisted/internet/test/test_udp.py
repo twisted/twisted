@@ -262,9 +262,10 @@ class UDPPortTestsMixin(object):
         d.addErrback(err)
         canceler = reactor.callLater(10, fail)
         self.runReactor(reactor)
-        warnings = self.flushWarnings()
+        # Since stacklevel=2 on the warning, the function that gets the warning
+        # is cbClientStarted.
+        warnings = self.flushWarnings([cbClientStarted])
         self.assertEqual(len(warnings), 0, msg=repr(warnings))
-        return d
 
 
     def test_connectedWriteToIPv6Interface(self):
@@ -310,9 +311,10 @@ class UDPPortTestsMixin(object):
         d.addErrback(err)
         canceler = reactor.callLater(10, fail)
         self.runReactor(reactor)
-        warnings = self.flushWarnings()
+        # Since stacklevel=2 on the warning, the function that gets the warning
+        # is cbClientStarted.
+        warnings = self.flushWarnings([cbClientStarted])
         self.assertEqual(len(warnings), 0, msg=repr(warnings))
-        return d
 
 
 
