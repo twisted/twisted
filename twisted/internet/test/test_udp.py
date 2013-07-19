@@ -239,13 +239,13 @@ class UDPPortTestsMixin(object):
 
         def cbClientStarted(ignored):
             """Client sends messages before and after connecting"""
-            client.transport.write("a",
+            client.transport.write(b"a",
                                    ("::1", server.transport.getHost().port))
             client.transport.connect("::1", server.transport.getHost().port)
             serverReceived = server.packetReceived = defer.Deferred()
             def cbSendAfterConnect(ignored):
                 serverReceived = server.packetReceived = defer.Deferred()
-                client.transport.write("hello")
+                client.transport.write(b"hello")
                 return serverReceived
 
             serverReceived.addCallback(cbSendAfterConnect)
@@ -256,8 +256,8 @@ class UDPPortTestsMixin(object):
             """Assert packets received in server"""
             unconnPacket, connPacket = server.packets[0], server.packets[1]
             cAddr = client.transport.getHost()
-            self.assertEqual(unconnPacket, ("a", (cAddr.host, cAddr.port, 0, 0)))
-            self.assertEqual(connPacket, ("hello",
+            self.assertEqual(unconnPacket, (b"a", (cAddr.host, cAddr.port, 0, 0)))
+            self.assertEqual(connPacket, (b"hello",
                                           (cAddr.host, cAddr.port, 0, 0)))
             canceler.cancel()
 
