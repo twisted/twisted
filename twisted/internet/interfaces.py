@@ -2541,7 +2541,7 @@ class IStreamClientEndpointStringParserWithReactor(Interface):
     )
 
 
-    def parseStreamClient(*args, **kwargs):
+    def parseStreamClient(reactor, *args, **kwargs):
         """
         This method is invoked by L{endpoints.clientFromString}, if the type of
         endpoint matches the return value from this
