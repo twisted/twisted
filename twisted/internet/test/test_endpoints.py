@@ -2145,7 +2145,7 @@ class ClientStringTests(unittest.TestCase):
     def test_stringParserWithoutReactorIsDeprecated(self):
         """
         L{endpoints.clientFromString} will issue a deprecation warning if a
-        plugin implements the L{IStreamClientStringParser} interface.
+        plugin implements the L{IStreamClientEndpointStringParser} interface.
         """
         addFakePlugin(self)
         reactor = object()
@@ -2155,17 +2155,18 @@ class ClientStringTests(unittest.TestCase):
         self.assertEqual(len(warnings), 1)
         self.assertEqual(warnings[0]['category'], DeprecationWarning)
         message = (
-            "The IStreamClientStringParser interface used for "
+            "The IStreamClientEndpointStringParser interface used for "
             "twisted.plugins.fakeendpoint.FakeClientParser.parseStreamClient "
             "is deprecated since Twisted 13.2.0. Please use the "
-            "IStreamClientStringParserWithReactor interface instead.")
+            "IStreamClientEndpointStringParserWithReactor interface instead.")
         self.assertEqual(warnings[0]['message'], message)
 
 
     def test_stringParserWithReactor(self):
         """
         L{endpoints.clientFromString} will pass a reactor to plugins
-        implementing the L{IStreamClientStringParserWithReactor} interface.
+        implementing the L{IStreamClientEndpointStringParserWithReactor}
+        interface.
         """
         addFakePlugin(self)
         reactor = object()
@@ -2180,9 +2181,9 @@ class ClientStringTests(unittest.TestCase):
     def test_stringParserWithReactorHasPreference(self):
         """
         L{endpoints.clientFromString} will prefer to use a plugin implementing
-        the L{IStreamClientStringParserWithReactor} interface over one
-        implementing the L{IStreamClientStringParser} interface, if both have
-        the same prefix.
+        the L{IStreamClientEndpointStringParserWithReactor} interface over one
+        implementing the L{IStreamClientEndpointStringParser} interface, if
+        both have the same prefix.
         """
         addFakePlugin(self)
         reactor = object()

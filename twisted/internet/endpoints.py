@@ -1583,9 +1583,10 @@ def clientFromString(reactor, description):
     for plugin in getPlugins(IStreamClientEndpointStringParser):
         if plugin.prefix.upper() == name:
             warningFormat = (
-                "The IStreamClientStringParser interface used for %(fqpn)s is "
-                "deprecated since %(version)s. Please use the "
-                "IStreamClientStringParserWithReactor interface instead.")
+                "The IStreamClientEndpointStringParser interface used for "
+                "%(fqpn)s is deprecated since %(version)s. Please use the "
+                "IStreamClientEndpointStringParserWithReactor interface "
+                "instead.")
             warningString = deprecate.getDeprecationWarningString(
                 plugin.parseStreamClient,
                 versions.Version('Twisted', 13, 2, 0),

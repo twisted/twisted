@@ -2470,7 +2470,7 @@ class IStreamClientEndpointStringParser(Interface):
     the result of that L{IStreamClientEndpointStringParser}'s prefix attribute.
 
     If a L{IStreamClientEndpointStringParserWithReactor} plugin and
-    L{IStreamClientStringParser} plugin share the same prefix, the
+    L{IStreamClientEndpointStringParser} plugin share the same prefix, the
     L{IStreamClientEndpointStringParserWithReactor} plugin will be preferred.
 
     """
@@ -2527,7 +2527,7 @@ class IStreamClientEndpointStringParserWithReactor(Interface):
     prefix attribute.
 
     If a L{IStreamClientEndpointStringParserWithReactor} plugin and
-    L{IStreamClientStringParser} plugin share the same prefix, the
+    L{IStreamClientEndpointStringParser} plugin share the same prefix, the
     L{IStreamClientEndpointStringParserWithReactor} plugin will be preferred.
     """
 
