@@ -593,6 +593,20 @@ if __name__ == "__main__":
       use, gzip is the only encoding supported by Twisted itself.
     </p>
 
+    <h3>Arbitrary endpoint construction</h3>
+
+    <p>
+      Sometimes it's useful to be able to specify the endpoint used by the
+      <code>Agent</code> when making a request. For example, when making an
+      HTTP request over a SOCKS proxy connection. For this reason, there is an
+      <code>endpointFactory</code> argument to <code>Agent.__init__</code>.
+    </p>
+
+    <a href="listings/client/endpointfactory.py" class="py-listing">
+      The default Agent endpoint construction, implemented as an
+      <code>endpointFactory</code>.
+    </a>
+
     <h2>
       Conclusion
     </h2>
