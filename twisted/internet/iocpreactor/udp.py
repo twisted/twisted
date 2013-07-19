@@ -10,7 +10,7 @@ import socket, operator, struct, warnings, errno
 from zope.interface import implements
 
 from twisted.internet import defer, address, error, interfaces
-from twisted.internet.abstract import isIPAddress
+from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.python import log, failure
 
 from twisted.internet.iocpreactor.const import ERROR_IO_PENDING
@@ -65,9 +65,9 @@ class Port(abstract.FileHandle):
         """
         Resolve address family for the socket.
         """
-        if abstract.isIPv6Address(self.interface):
+        if isIPv6Address(self.interface):
             self.addressFamily = socket.AF_INET6
-        elif abstract.isIPAddress(self.interface):
+        elif isIPAddress(self.interface):
             self.addressFamily = socket.AF_INET
 
 
