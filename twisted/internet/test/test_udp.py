@@ -234,7 +234,8 @@ class UDPPortTestsMixin(object):
 
         def cbServerStarted(ignored):
             """Client starts listening"""
-            self.port2 = self.getListeningPort(reactor, client, interface="::1")
+            self.port2 = self.getListeningPort(
+                reactor, client, interface="::1")
             return clientStarted
 
         def cbClientStarted(ignored):
@@ -256,9 +257,10 @@ class UDPPortTestsMixin(object):
             """Assert packets received in server"""
             unconnPacket, connPacket = server.packets[0], server.packets[1]
             cAddr = client.transport.getHost()
-            self.assertEqual(unconnPacket, (b"a", (cAddr.host, cAddr.port, 0, 0)))
-            self.assertEqual(connPacket, (b"hello",
-                                          (cAddr.host, cAddr.port, 0, 0)))
+            self.assertEqual(unconnPacket,
+                             (b"a", (cAddr.host, cAddr.port, 0, 0)))
+            self.assertEqual(connPacket,
+                             (b"hello", (cAddr.host, cAddr.port, 0, 0)))
             canceler.cancel()
 
 

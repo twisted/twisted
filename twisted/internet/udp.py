@@ -348,7 +348,6 @@ class Port(base.BasePort):
             self.addressFamily = socket.AF_INET
 
 
-
     def logPrefix(self):
         """
         Return the prefix to log with.
