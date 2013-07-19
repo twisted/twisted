@@ -2142,6 +2142,40 @@ class ClientStringTests(unittest.TestCase):
             "Unknown endpoint type: 'ftl'")
 
 
+    def test_stringParserWithReactor(self):
+        """
+        L{endpoints.clientFromString} will pass a reactor to plugins
+        implementing the L{IStreamClientStringParserWithReactor} interface.
+        """
+        addFakePlugin(self)
+        reactor = object()
+        clientEndpoint = endpoints.clientFromString(
+            reactor, 'crfake:alpha:beta:cee=dee:num=1')
+        from twisted.plugins.fakeendpoint import fakeClientWithReactor
+        self.assertIs(clientEndpoint.parser, fakeClientWithReactor)
+        self.assertEqual(clientEndpoint.args, (reactor, 'alpha', 'beta'))
+        self.assertEqual(clientEndpoint.kwargs, dict(cee='dee', num='1'))
+
+
+    def test_stringParserWithReactorHasPreference(self):
+        """
+        L{endpoints.clientFromString} will prefer to use a plugin implementing
+        the L{IStreamClientStringParserWithReactor} interface over one
+        implementing the L{IStreamClientStringParser} interface, if both have
+        the same prefix.
+        """
+        addFakePlugin(self)
+        reactor = object()
+        clientEndpoint = endpoints.clientFromString(
+            reactor, 'cpfake:alpha:beta:cee=dee:num=1')
+        from twisted.plugins.fakeendpoint import (
+            fakeClientWithReactorAndPreference)
+        self.assertIs(
+            clientEndpoint.parser, fakeClientWithReactorAndPreference)
+        self.assertEqual(clientEndpoint.args, (reactor, 'alpha', 'beta'))
+        self.assertEqual(clientEndpoint.kwargs, dict(cee='dee', num='1'))
+
+
 
 class SSLClientStringTests(unittest.TestCase):
     """
