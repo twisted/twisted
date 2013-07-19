@@ -346,7 +346,7 @@ class Port(base.BasePort):
             self.addressFamily = socket.AF_INET6
         elif abstract.isIPAddress(self.interface):
             self.addressFamily = socket.AF_INET
-        
+
 
 
     def logPrefix(self):
@@ -358,7 +358,7 @@ class Port(base.BasePort):
 
     def getHost(self):
         """
-        Returns an IPv4Address or IPv6Address.
+        Returns an L{IPv4Address} or L{IPv6Address}.
 
         This indicates the address from which I am connecting.
         """
