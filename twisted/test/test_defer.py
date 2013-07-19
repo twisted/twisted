@@ -2393,6 +2393,7 @@ class DeferredHistoryTests(unittest.TestCase):
         self.assertEqual(chained1.name,
                          "twisted.test.test_defer.inner2Callback")
 
+
     def test_historyItemsHaveNoChainedHistoryBeforeNecessary(self):
         """
         If the callback associated with a deferred history item does not
@@ -2408,6 +2409,18 @@ class DeferredHistoryTests(unittest.TestCase):
 
         [item] = outer._getHistory()
         self.assertIdentical(item.chainedHistory, None)
+
+
+    def test_historyIgnoresPassthru(self):
+        """
+        L{twisted.internet.defer.passthru} will not show up in Deferred
+        histories.
+        """
+        outer = defer.Deferred()
+        outer.addErrback(lambda x: None)
+        outer.callback(None)
+        self.assertEqual([], outer._getHistory())
+
 
 
 # Enable on Python 3 as part of #5960:

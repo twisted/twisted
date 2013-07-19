@@ -642,7 +642,8 @@ class Deferred:
                         current.result = callback(current.result, *args, **kw)
                     finally:
                         current._runningCallbacks = False
-                        if current._history is not None:
+                        if (current._history is not None
+                            and callback is not passthru):
                             historyItem = _DeferredHistoryItem(
                                 fullyQualifiedName(callback),
                                 not isErrback)
