@@ -259,6 +259,7 @@ class UDPPortTestsMixin(object):
             self.assertEqual(unconnPacket, ("a", (cAddr.host, cAddr.port, 0, 0)))
             self.assertEqual(connPacket, ("hello",
                                           (cAddr.host, cAddr.port, 0, 0)))
+            canceler.cancel()
 
 
         def cbFinished(ignored):
@@ -267,10 +268,15 @@ class UDPPortTestsMixin(object):
             port1.stopListening()
             reactor.stop()
 
+        def fail():
+            reactor.stop()
+            self.fail('no UDP response in 10 seconds')
+
         d = serverStarted.addCallback(cbServerStarted)
         d.addCallback(cbClientStarted)
         d.addCallback(cbServerReceived)
         d.addCallback(cbFinished)
+        canceler = reactor.callLater(10, fail)
         self.runReactor(reactor)
         return d
 
