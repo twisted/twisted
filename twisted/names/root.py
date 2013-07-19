@@ -40,17 +40,20 @@ class Resolver(common.ResolverBase):
     @ivar hints: A C{list} of C{str} giving the dotted quad representation
         of IP addresses of root servers at which to begin resolving names.
 
+    @ivar clresolver: auxiliary resolver for making a query
+
     @ivar _maximumQueries: A C{int} giving the maximum number of queries
         which will be attempted to resolve a single name.
 
     @ivar _reactor: A L{IReactorTime} and L{IReactorUDP} provider to use to
         bind UDP ports and manage timeouts.
     """
-    def __init__(self, hints, maximumQueries=10, reactor=None):
+    def __init__(self, hints, clresolver, maximumQueries=10, reactor=None):
         common.ResolverBase.__init__(self)
         self.hints = hints
         self._maximumQueries = maximumQueries
         self._reactor = reactor
+        self.clresolver = clresolver
 
 
     def _roots(self):
@@ -86,11 +89,12 @@ class Resolver(common.ResolverBase):
             error.
         @rtype: L{Deferred}
         """
-        from twisted.names import client
-        r = client.Resolver(servers=servers, reactor=self._reactor)
-        d = r.queryUDP([query], timeout)
+        self.clresolver.servers = servers
+        self.clresolver.reactor = self._reactor
+
+        d = self.clresolver.queryUDP([query], timeout)
         if filter:
-            d.addCallback(r.filterAnswers)
+            d.addCallback(self.clresolver.filterAnswers)
         return d
 
 
@@ -281,7 +285,7 @@ class DeferredResolver:
             return makePlaceholder(self.waiting[-1], name)
         raise AttributeError(name)
 
-def bootstrap(resolver):
+def bootstrap(resolver, clresolver):
     """Lookup the root nameserver addresses using the given resolver
 
     Return a Resolver which will eventually become a C{root.Resolver}
@@ -293,5 +297,5 @@ def bootstrap(resolver):
     f = lambda r: r
     L = [resolver.getHostByName('%s.root-servers.net' % d).addCallback(f) for d in domains]
     d = defer.DeferredList(L)
-    d.addCallback(lambda r: Resolver([e[1] for e in r if e[0]]))
+    d.addCallback(lambda r: Resolver([e[1] for e in r if e[0]], clresolver))
     return DeferredResolver(d)
