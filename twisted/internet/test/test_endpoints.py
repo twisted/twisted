@@ -2130,7 +2130,7 @@ class ClientStringTests(unittest.TestCase):
 
     def test_unknownType(self):
         """
-        L{endpoints.serverFromString} raises C{ValueError} when given an
+        L{endpoints.clientFromString} raises C{ValueError} when given an
         unknown endpoint type.
         """
         value = self.assertRaises(
