@@ -17,10 +17,9 @@ from zope.interface.verify import verifyObject
 from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.internet import (
-    error, interfaces, defer, endpoints, protocol, reactor)
+    error, interfaces, defer, endpoints, protocol, reactor, threads)
 from twisted.internet.address import (
     IPv4Address, IPv6Address, UNIXAddress, _ProcessAddress, HostnameAddress)
-from twisted.internet import endpoints, threads
 from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.test.proto_helpers import (
     RaisingMemoryReactor, StringTransport)
@@ -1535,7 +1534,8 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         """
         expectedError = error.ConnectError(string="Connection Failed")
 
-        mreactor = RaisingMemoryReactorWithClock(connectException=expectedError)
+        mreactor = RaisingMemoryReactorWithClock(
+                connectException=expectedError)
 
         clientFactory = object()
 
@@ -1630,8 +1630,8 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
         endpoint._deferToThread = fakeDeferToThread
         endpoint.connect(clientFactory)
         self.assertEqual(
-            [(fakegetaddrinfo, (b"ipv4.example.com", 1234, 0, SOCK_STREAM), {})],
-            calls)
+            [(fakegetaddrinfo, (b"ipv4.example.com", 1234, 0, SOCK_STREAM),
+                {})], calls)
 
 
 
@@ -1652,8 +1652,8 @@ class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
 
         def testNameResolution(host, port):
             self.assertEqual(b"ipv6.example.com", host)
-            data = [(AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', port, 0,
-                0))]
+            data = [(AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', port,
+                0, 0))]
             return defer.succeed(data)
 
         endpoint._nameResolution = testNameResolution
@@ -1800,21 +1800,22 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
         self.mreactor = MemoryReactor()
         self.endpoint = endpoints.HostnameEndpoint(self.mreactor,
                 b"www.example.com", 80)
-        AF_INX = None
+        AF_INX = None  # An arbitrary name for the test
 
         def nameResolution(host, port):
             self.assertEqual(b"www.example.com", host)
             data = [
                 (AF_INET, SOCK_STREAM, IPPROTO_TCP, '', ('1.2.3.4', port)),
-                (AF_INX, SOCK_STREAM, 'SOME_PROTOCOL_IN_FUTURE', '', ('a.b.c.d', port)),
-                (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', port, 0, 0))
-                ]
+                (AF_INX, SOCK_STREAM, 'SOME_PROTOCOL_IN_FUTURE', '',
+                    ('a.b.c.d', port)),
+                (AF_INET6, SOCK_STREAM, IPPROTO_TCP, '', ('1:2::3:4', port, 0,
+                    0))]
             return defer.succeed(data)
 
         self.endpoint._nameResolution = nameResolution
         clientFactory = None
 
-        d = self.endpoint.connect(clientFactory)
+        self.endpoint.connect(clientFactory)
 
         self.mreactor.advance(0.3)
         (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[1]
