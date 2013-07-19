@@ -49,6 +49,7 @@ class Port(abstract.FileHandle):
         self.interface = interface
         self.setLogStr()
         self._connectedAddr = None
+        self._setAddressFamily()
 
         abstract.FileHandle.__init__(self, reactor)
 
@@ -58,6 +59,16 @@ class Port(abstract.FileHandle):
         # WSARecvFrom takes an int
         self.addressLengthBuffer = _iocp.AllocateReadBuffer(
                 struct.calcsize('i'))
+
+
+    def _setAddressFamily(self):
+        """
+        Resolve address family for the socket.
+        """
+        if abstract.isIPv6Address(self.interface):
+            self.addressFamily = socket.AF_INET6
+        elif abstract.isIPAddress(self.interface):
+            self.addressFamily = socket.AF_INET
 
 
     def __repr__(self):
@@ -268,11 +279,15 @@ class Port(abstract.FileHandle):
 
     def getHost(self):
         """
-        Returns an IPv4Address.
+        Returns an L{IPv4Address} or L{IPv6Address}.
 
         This indicates the address from which I am connecting.
         """
-        return address.IPv4Address('UDP', *self.socket.getsockname())
+        addr = self.socket.getsockname()
+        if self.addressFamily == socket.AF_INET:
+            return address.IPv4Address('UDP', *addr)
+        elif self.addressFamily == socket.AF_INET6:
+            return address.IPv6Address('UDP', *(addr[:2]))
 
 
 
@@ -378,5 +393,3 @@ class MulticastPort(MulticastMixin, Port):
             if hasattr(socket, "SO_REUSEPORT"):
                 skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         return skt
-
-
