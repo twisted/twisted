@@ -1202,6 +1202,10 @@ class Agent(_AgentBase):
     @param pool: A L{HTTPConnectionPool} instance, or C{None}, in which case a
         non-persistent L{HTTPConnectionPool} instance will be created.
 
+    @param endpointFactory: If not C{None}, a callable that takes C{reactor,
+        contextFactory, bindAddress, connectTimeout, scheme, host, port} and
+        returns an object implementing L{IStreamClientEndpoint}.
+
     @ivar _contextFactory: A web context factory which will be used to create
         SSL context objects for any SSL connections the agent needs to make.
 
@@ -1216,11 +1220,12 @@ class Agent(_AgentBase):
 
     def __init__(self, reactor, contextFactory=WebClientContextFactory(),
                  connectTimeout=None, bindAddress=None,
-                 pool=None):
+                 pool=None, endpointFactory=None):
         _AgentBase.__init__(self, reactor, pool)
         self._contextFactory = contextFactory
         self._connectTimeout = connectTimeout
         self._bindAddress = bindAddress
+        self._endpointFactory = endpointFactory
 
 
     def _wrapContextFactory(self, host, port):
@@ -1246,6 +1251,9 @@ class Agent(_AgentBase):
         Get an endpoint for the given host and port, using a transport
         selected based on scheme.
 
+        If an C{endpointFactory} was passed to L{__init__}, that will be called
+        to furnish an endpoint.
+
         @param scheme: A string like C{'http'} or C{'https'} (the only two
             supported values) to use to determine how to establish the
             connection.
@@ -1258,6 +1266,12 @@ class Agent(_AgentBase):
 
         @return: An endpoint which can be used to connect to given address.
         """
+        if self._endpointFactory is not None:
+            contextFactory = self._wrapContextFactory(host, port)
+            return self._endpointFactory(
+                self._reactor, contextFactory, self._bindAddress,
+                self._connectTimeout, scheme, host, port)
+
         kwargs = {}
         if self._connectTimeout is not None:
             kwargs['timeout'] = self._connectTimeout

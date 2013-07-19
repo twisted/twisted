@@ -1073,6 +1073,27 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         self.assertIdentical(request.absoluteURI, None)
 
 
+    def test_endpointFactory(self):
+        """
+        L{Agent} can be passed a callable which is used for endpoint
+        construction.
+        """
+        endpoint = object()
+        def fakeEndpointFactory(reactor, contextFactory, bindAddress,
+                                connectTimeout, scheme, host, port):
+            self.assertIs(self.reactor, reactor)
+            self.assertIsInstance(contextFactory,
+                                  _WebToNormalContextFactory)
+            self.assertEquals(bindAddress, agent._bindAddress)
+            self.assertEquals(connectTimeout, agent._connectTimeout)
+            self.assertEquals(scheme, 'http')
+            self.assertEquals(host, 'example.com')
+            self.assertEquals(port, 80)
+            return endpoint
+        agent = client.Agent(self.reactor, endpointFactory=fakeEndpointFactory)
+        self.assertIs(endpoint, agent._getEndpoint('http', 'example.com', 80))
+
+
 
 class HTTPConnectionPoolRetryTests(unittest.TestCase, FakeReactorAndConnectMixin):
     """
