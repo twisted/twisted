@@ -32,7 +32,7 @@ def handle(result, line, filename, lineNo):
     Parse a line from an alias file.
 
     @type result: C{dict} of C{str} -> C{list} of C{str}
-    @param result: A dictionary mapping username to aliases to which 
+    @param result: A dictionary mapping username to aliases to which
         the results of parsing the line are added.
 
     @type line: C{str}
@@ -289,7 +289,7 @@ class FileWrapper:
     def eomReceived(self):
         """
         Handle end of message by writing the message to the file.
-    
+
         @rtype: L{Deferred} which successfully results in a C{str} 
         @return: A deferred which succeeds with the name of the file to which 
             the message has been stored or fails if the message cannot be 
@@ -605,6 +605,9 @@ class ProcessAlias(AliasBase):
         @type path: C{list} of C{str}
         @param path: The arguments to pass to the process. The first string 
             should be the executable's name.
+
+        @rtype: L{IProcessTransport} provider
+        @return: A process transport.
         """
         return self.reactor.spawnProcess(proto, program, path)
 
@@ -674,6 +677,7 @@ class MultiWrapper:
         """
         for o in self.objs:
             o.connectionLost()
+
 
     def __str__(self):
         """
