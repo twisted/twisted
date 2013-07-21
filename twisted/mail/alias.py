@@ -66,7 +66,7 @@ def loadAliasFile(domains, filename=None, fp=None):
     Aliases beginning with a | will be treated as programs, will be run, and
     the message will be written to their stdin.
 
-    Aliases beginning with a : will be treated as filenames and the message 
+    Aliases beginning with a : will be treated as filenames and the message
     will be written to the file.
 
     Aliases without a host part will be assumed to be addresses on localhost.
@@ -74,20 +74,20 @@ def loadAliasFile(domains, filename=None, fp=None):
     If a username is specified multiple times, the aliases for each are joined
     together as if they had all been on one line.
 
-    Lines beginning with a space or a tab are continuations of the previous 
+    Lines beginning with a space or a tab are continuations of the previous
     line.
 
     Lines beginning with # are comments.
 
-    @type domains: C{dict} of C{str} -> L{IDomain} provider 
+    @type domains: C{dict} of C{str} -> L{IDomain} provider
     @param domains: A mapping of domain name to domain object.
 
     @type filename: C{str} or C{NoneType}
-    @param filename: (optional) The name of a file from which to load aliases. 
+    @param filename: (optional) The name of a file from which to load aliases.
         If omitted, the fp parameter must be specified.
 
     @type fp: file-like object or C{NoneType}
-    @param fp: (optional) The file from which to load aliases. If specified, 
+    @param fp: (optional) The file from which to load aliases. If specified,
         the filename parameter is ignored.
 
     @rtype: C{dict} of C{str} -> L{AliasGroup}
@@ -177,7 +177,7 @@ class AliasBase:
 
         @type memo: C{dict} of L{AliasBase} or C{NoneType}
         @param memo: (optional) A record of the aliases already considered
-            in the resolution process.  If provided, memo is modified 
+            in the resolution process.  If provided, memo is modified
             to include this alias.
 
         @rtype: L{smtp.IMessage}
@@ -227,8 +227,8 @@ class AddressAlias(AliasBase):
 
     def createMessageReceiver(self):
         """
-        Create a message receiver which delivers the message to 
-        the destination address. 
+        Create a message receiver which delivers the message to
+        the destination address.
 
         @rtype: L{smtp.IMessage} provider
         @return: A message receiver.
@@ -260,7 +260,7 @@ class FileWrapper:
     @ivar fp: A file used for temporary storage of the message.
 
     @type finalname: C{str}
-    @ivar finalname: The name of the file to which the message should be 
+    @ivar finalname: The name of the file to which the message should be
         stored.
     """
 
@@ -290,9 +290,9 @@ class FileWrapper:
         """
         Handle end of message by writing the message to the file.
 
-        @rtype: L{Deferred} which successfully results in a C{str} 
-        @return: A deferred which succeeds with the name of the file to which 
-            the message has been stored or fails if the message cannot be 
+        @rtype: L{Deferred} which successfully results in a C{str}
+        @return: A deferred which succeeds with the name of the file to which
+            the message has been stored or fails if the message cannot be
             saved to the file.
         """
         self.fp.seek(0, 0)
@@ -361,7 +361,7 @@ class FileAlias(AliasBase):
     def createMessageReceiver(self):
         """
         Create a message receiver which delivers the message to the file.
-        
+
         @rtype: L{FileWrapper}
         @return: A message receiver which writes the message to the file.
         """
@@ -424,7 +424,7 @@ class MessageWrapper:
             @param process: (optional) The process name.
 
             @type reactor: L{IReactorTime} provider or C{NoneType}
-            @param reactor: (optional) A reactor which will be used to 
+            @param reactor: (optional) A reactor which will be used to
                 schedule timeouts.
         """
         self.processName = process
@@ -445,7 +445,7 @@ class MessageWrapper:
         @param result: The reason the child process terminated.
 
         @rtype: C{NoneType} or L{Failure}
-        @return: None, if the process end is expected, or the reason the child 
+        @return: None, if the process end is expected, or the reason the child
             process terminated, if the process end is unexpected.
         """
         self.done = True
@@ -474,12 +474,12 @@ class MessageWrapper:
 
     def eomReceived(self):
         """
-        Disconnect from the child process and set up a timeout to wait for it 
+        Disconnect from the child process and set up a timeout to wait for it
         to exit.
 
         @rtype: L{Deferred}
         @return: A deferred which will be called back when the child process
-            exits. 
+            exits.
         """
         if not self.done:
             self.protocol.transport.loseConnection()
@@ -492,7 +492,7 @@ class MessageWrapper:
         """
         Handle the expiration of the timeout for the child process to exit by
         terminating the child process forcefully and issuing a failure to the
-        L{completion} deferred. 
+        L{completion} deferred.
         """
         self._timeoutCallID = None
         self.protocol.transport.signalProcess('KILL')
@@ -514,7 +514,7 @@ class MessageWrapper:
         Build a string representation of this L{MessageWrapper} instance
 
         @rtype: C{str}
-        @return: A string containing the name of the process. 
+        @return: A string containing the name of the process.
         """
         return '<ProcessWrapper %s>' % (self.processName,)
 
@@ -555,7 +555,7 @@ class ProcessAlias(AliasBase):
     @ivar program: The path of the program to be executed.
 
     @type reactor: L{IReactorProcess} and L{IReactorTime} provider
-    @ivar reactor: A reactor which will be used to create and timeout the 
+    @ivar reactor: A reactor which will be used to create and timeout the
         child process.
     """
 
@@ -592,7 +592,7 @@ class ProcessAlias(AliasBase):
         """
         Spawn a process.
 
-        This wraps C{reactor.spawnProcess} so that it can be customized 
+        This wraps C{reactor.spawnProcess} so that it can be customized
         for tests purposes.
 
         @type proto: L{IProcessProtocol} provider
@@ -603,7 +603,7 @@ class ProcessAlias(AliasBase):
         @param program: The full path name of the file to execute.
 
         @type path: C{list} of C{str}
-        @param path: The arguments to pass to the process. The first string 
+        @param path: The arguments to pass to the process. The first string
             should be the executable's name.
 
         @rtype: L{IProcessTransport} provider
@@ -614,9 +614,9 @@ class ProcessAlias(AliasBase):
 
     def createMessageReceiver(self):
         """
-        Launch a process and create a message receiver to pass a message 
+        Launch a process and create a message receiver to pass a message
         to the process.
-        
+
         @rtype: L{MessageWrapper}
         @return: A message receiver which delivers the message to the process.
         """
@@ -660,7 +660,7 @@ class MultiWrapper:
     def eomReceived(self):
         """
         Pass the end of message along to the message receivers.
-    
+
         @rtype: L{DeferredList} whose successful results are C{str} or
             C{NoneType}
         @return: A deferredList which triggers when all of the message
@@ -765,10 +765,10 @@ class AliasGroup(AliasBase):
     def createMessageReceiver(self):
         """
         Create a message receiver for each alias and return a message receiver
-        which will pass on the message to each of those. 
-        
+        which will pass on the message to each of those.
+
         @rtype: L{MultiWrapper}
-        @return: A message receiver which passes the message on to message 
+        @return: A message receiver which passes the message on to message
             receivers for each alias in the group.
         """
         return MultiWrapper([a.createMessageReceiver() for a in self.aliases])
@@ -783,11 +783,11 @@ class AliasGroup(AliasBase):
 
         @type memo: C{dict} of L{AliasBase} or C{NoneType}
         @param memo: (optional) A record of the aliases already considered
-            in the resolution process.  If provided, memo is modified to 
+            in the resolution process.  If provided, memo is modified to
             include this alias.
 
         @rtype: L{MultiWrapper}
-        @return: A message receiver which passes the message on to message 
+        @return: A message receiver which passes the message on to message
             receivers for the ultimate destination of each alias in the group.
         """
         if memo is None:
