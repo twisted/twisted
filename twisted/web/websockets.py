@@ -14,7 +14,7 @@ factory.
 
 __all__ = ["WebSocketsResource", "IWebSocketsFrameReceiver",
            "lookupProtocolForFactory", "WebSocketsProtocol",
-           "WebSocketsProtocolWrapper"]
+           "WebSocketsProtocolWrapper", "CONTROLS", "STATUSES"]
 
 
 from hashlib import sha1
@@ -23,7 +23,7 @@ from struct import pack, unpack
 from zope.interface import implementer, providedBy, directlyProvides, Interface
 
 from twisted.python import log
-from twisted.python.constants import Flags, FlagConstant
+from twisted.python.constants import Values, ValueConstant
 from twisted.internet.protocol import Protocol
 from twisted.protocols.tls import TLSMemoryBIOProtocol
 from twisted.web.resource import IResource
@@ -38,17 +38,42 @@ class _WSException(Exception):
 
 
 
-class CONTROLS(Flags):
+class CONTROLS(Values):
     """
     Control frame specifiers.
+
+    @since: 13.2
     """
 
-    CONTINUE = FlagConstant(0)
-    TEXT = FlagConstant(1)
-    BINARY = FlagConstant(2)
-    CLOSE = FlagConstant(8)
-    PING = FlagConstant(9)
-    PONG = FlagConstant(10)
+    CONTINUE = ValueConstant(0)
+    TEXT = ValueConstant(1)
+    BINARY = ValueConstant(2)
+    CLOSE = ValueConstant(8)
+    PING = ValueConstant(9)
+    PONG = ValueConstant(10)
+
+
+
+class STATUSES(Values):
+    """
+    Closing status codes.
+
+    @since: 13.2
+    """
+
+    NORMAL = ValueConstant(1000)
+    GOING_AWAY = ValueConstant(1001)
+    PROTOCOL_ERROR = ValueConstant(1002)
+    UNSUPPORTED_DATA = ValueConstant(1003)
+    NONE = ValueConstant(1005)
+    ABNORMAL_CLOSE = ValueConstant(1006)
+    INVALID_PAYLOAD = ValueConstant(1007)
+    POLICY_VIOLATION = ValueConstant(1008)
+    MESSAGE_TOO_BIG = ValueConstant(1009)
+    MISSING_EXTENSIONS = ValueConstant(1010)
+    INTERNAL_ERROR = ValueConstant(1011)
+    TLS_HANDSHAKE_FAILED = ValueConstant(1056)
+
 
 
 # The GUID for WebSockets, from RFC 6455.
@@ -227,10 +252,11 @@ def _parseFrames(frameBuffer, needMask=True):
         if opcode == CONTROLS.CLOSE:
             if len(data) >= 2:
                 # Gotta unpack the opcode and return usable data here.
-                data = unpack(">H", data[:2])[0], data[2:]
+                code = STATUSES.lookupByValue(unpack(">H", data[:2])[0])
+                data = code, data[2:]
             else:
                 # No reason given; use generic data.
-                data = 1005, ""
+                data = STATUSES.NONE, ""
 
         yield opcode, data, bool(fin)
         start += offset + length
@@ -307,7 +333,7 @@ class WebSocketsTransport(object):
         self._transport.write(packet)
 
 
-    def loseConnection(self, code=1000, reason=""):
+    def loseConnection(self, code=STATUSES.NORMAL, reason=""):
         """
         Close the connection.
 
@@ -317,11 +343,18 @@ class WebSocketsTransport(object):
         then we might not see their last message, but since their last message
         should, according to the spec, be a simple acknowledgement, it
         shouldn't be a problem.
+
+        @param code: The closing frame status code.
+        @type code: L{STATUSES}
+
+        @param reason: Optionally, a utf-8 encoded text explaining why the
+            connection was closed.
+        @param reason: C{bytes}
         """
         # Send a closing frame. It's only polite. (And might keep the browser
         # from hanging.)
         if not self._disconnecting:
-            data = "%s%s" % (pack(">H", code), reason)
+            data = "%s%s" % (pack(">H", code.value), reason)
             frame = _makeFrame(data, CONTROLS.CLOSE, True)
             self._transport.write(frame)
             self._disconnecting = True
@@ -369,8 +402,10 @@ class WebSocketsProtocol(Protocol):
             if opcode == CONTROLS.CLOSE:
                 # The other side wants us to close.
                 code, reason = data
-                log.msg(format="Closing connection: %(reason)r (%(code)d)",
-                        reason=reason, code=code)
+                msgFormat = "Closing connection: %(code)r"
+                if reason:
+                    msgFormat += " (%(reason)r)"
+                log.msg(format=msgFormat, reason=reason, code=code)
 
                 # Close the connection.
                 self.transport.loseConnection()

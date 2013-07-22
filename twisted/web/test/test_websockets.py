@@ -27,7 +27,8 @@ from twisted.web.server import NOT_DONE_YET, Request
 from twisted.web.websockets import (
     CONTROLS, _makeAccept, _mask, _makeFrame, _parseFrames, _WSException,
     WebSocketsResource, WebSocketsProtocol, WebSocketsProtocolWrapper,
-    WebSocketsTransport, lookupProtocolForFactory, IWebSocketsFrameReceiver)
+    WebSocketsTransport, lookupProtocolForFactory, IWebSocketsFrameReceiver,
+    STATUSES)
 from twisted.web.test.test_web import DummyRequest, DummyChannel
 
 
@@ -193,7 +194,8 @@ class TestFrameHelpers(TestCase):
         frame = ["\x88\x00"]
         frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 1)
-        self.assertEqual(frames[0], (CONTROLS.CLOSE, (1005, ""), True))
+        self.assertEqual(
+            frames[0], (CONTROLS.CLOSE, (STATUSES.NONE, ""), True))
         self.assertEqual(frame, [])
 
 
@@ -207,7 +209,7 @@ class TestFrameHelpers(TestCase):
         frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 1)
         self.assertEqual(
-            frames[0], (CONTROLS.CLOSE, (1000, "No reason"), True))
+            frames[0], (CONTROLS.CLOSE, (STATUSES.NORMAL, "No reason"), True))
         self.assertEqual(frame, [])
 
 
@@ -404,7 +406,8 @@ class WebSocketsProtocolTest(TestCase):
         self.protocol.dataReceived(
             _makeFrame("", CONTROLS.CLOSE, True, mask="abcd"))
         self.assertFalse(self.transport.connected)
-        self.assertEqual(["Closing connection: '' (1005)"], loggedMessages)
+        self.assertEqual(["Closing connection: <STATUSES=NONE>"],
+                         loggedMessages)
 
 
     def test_invalidFrame(self):
@@ -440,11 +443,13 @@ class WebSocketsTransportTest(TestCase):
 
     def test_loseConnectionCodeAndReason(self):
         """
+        L{WebSocketsTransport.loseConnection} accepts a code and a reason which
+        are used to build the closing frame.
         """
         transport = StringTransportWithDisconnection()
         transport.protocol = Protocol()
         webSocketsTranport = WebSocketsTransport(transport)
-        webSocketsTranport.loseConnection(1001, "Going away")
+        webSocketsTranport.loseConnection(STATUSES.GOING_AWAY, "Going away")
         self.assertEqual("\x88\x0c\x03\xe9Going away", transport.value())
 
 
@@ -482,7 +487,7 @@ class WebSocketsProtocolWrapperTest(TestCase):
         self.protocol.dataReceived(
             _makeFrame("Hello", CONTROLS.PONG, True, mask="abcd"))
         self.protocol.dataReceived(
-            _makeFrame("Bye", CONTROLS.CLOSE, True, mask="abcd"))
+            _makeFrame("", CONTROLS.CLOSE, True, mask="abcd"))
         self.assertEqual("", self.accumulatingProtocol.data)
 
 
