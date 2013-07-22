@@ -175,7 +175,7 @@ class AliasBase:
         @type aliasmap: C{dict} of C{str} -> L{AliasBase}
         @param aliasmap: A mapping of username to alias or group of aliases.
 
-        @type memo: C{NoneType} or C{dict} of L{AliasBase} 
+        @type memo: C{NoneType} or C{dict} of L{AliasBase}
         @param memo: (optional) A record of the aliases already considered
             in the resolution process.  If provided, memo is modified
             to include this alias.
