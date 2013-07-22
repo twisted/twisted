@@ -141,7 +141,8 @@ def _makeFrame(buf, opcode, fin, mask=None):
 
 def _parseFrames(frameBuffer, needMask=True):
     """
-    Parse frames in a highly compliant manner.
+    Parse frames in a highly compliant manner. It modifies C{frameBuffer}
+    removing the parsed content from it.
 
     @param frameBuffer: A buffer of bytes.
     @type frameBuffer: C{list}
@@ -229,7 +230,7 @@ def _parseFrames(frameBuffer, needMask=True):
                 data = unpack(">H", data[:2])[0], data[2:]
             else:
                 # No reason given; use generic data.
-                data = 1000, "No reason given"
+                data = 1005, ""
 
         yield opcode, data, bool(fin)
         start += offset + length
@@ -252,8 +253,8 @@ class IWebSocketsFrameReceiver(Interface):
         """
         Notification about the connection.
 
-        @param transport: A L{WebSocketsTransport} instance wrapping the
-            TCP transport.
+        @param transport: A L{WebSocketsTransport} instance wrapping an
+            underlying transport.
         @type transport: L{WebSocketsTransport}.
         """
 
@@ -277,6 +278,8 @@ class IWebSocketsFrameReceiver(Interface):
 class WebSocketsTransport(object):
     """
     A frame transport for WebSockets.
+
+    @ivar _transport: A reference to the real transport.
 
     @since: 13.2
     """
@@ -304,7 +307,7 @@ class WebSocketsTransport(object):
         self._transport.write(packet)
 
 
-    def loseConnection(self, reason=""):
+    def loseConnection(self, code=1000, reason=""):
         """
         Close the connection.
 
@@ -318,7 +321,8 @@ class WebSocketsTransport(object):
         # Send a closing frame. It's only polite. (And might keep the browser
         # from hanging.)
         if not self._disconnecting:
-            frame = _makeFrame(reason, CONTROLS.CLOSE, True)
+            data = "%s%s" % (pack(">H", code), reason)
+            frame = _makeFrame(data, CONTROLS.CLOSE, True)
             self._transport.write(frame)
             self._disconnecting = True
             self._transport.loseConnection()
@@ -329,6 +333,13 @@ class WebSocketsProtocol(Protocol):
     """
     A protocol parsing WebSockets frames and interacting with a
     L{IWebSocketsFrameReceiver} instance.
+
+    @ivar _receiver: The L{IWebSocketsFrameReceiver} provider handling the
+        frames.
+    @type _receiver: L{IWebSocketsFrameReceiver} provider
+
+    @ivar _buffer: The pending list of frames not processed yet.
+    @type _buffer: C{list}
 
     @since: 13.2
     """
@@ -344,7 +355,7 @@ class WebSocketsProtocol(Protocol):
         Log the new connection and initialize the buffer list.
         """
         peer = self.transport.getPeer()
-        log.msg("Opening connection with {peer}".format(peer=peer))
+        log.msg(format="Opening connection with %(peer)s", peer=peer)
         self._buffer = []
         self._receiver.makeConnection(WebSocketsTransport(self.transport))
 
@@ -357,10 +368,9 @@ class WebSocketsProtocol(Protocol):
             self._receiver.frameReceived(opcode, data, fin)
             if opcode == CONTROLS.CLOSE:
                 # The other side wants us to close.
-                reason, text = data
-                log.msg(
-                    "Closing connection: '{text}' ({reason})".format(
-                        text=text, reason=reason))
+                code, reason = data
+                log.msg(format="Closing connection: %(reason)r (%(code)d)",
+                        reason=reason, code=code)
 
                 # Close the connection.
                 self.transport.loseConnection()
@@ -389,13 +399,31 @@ class WebSocketsProtocol(Protocol):
 
 
 
+@implementer(IWebSocketsFrameReceiver)
 class _WebSocketsProtocolWrapperReceiver():
+    """
+    A L{IWebSocketsFrameReceiver} which accumulates data frames and forwards
+    the payload to its C{wrappedProtocol}.
+
+    @ivar _wrappedProtocol: The connected protocol
+    @type _wrappedProtocol: C{IProtocol} provider.
+
+    @ivar _transport: A reference to the L{WebSocketsTransport}
+    @type _transport: L{WebSocketsTransport}
+
+    @ivar _messages: The pending list of payloads received.
+    @types _messages: C{list}
+    """
 
     def __init__(self, wrappedProtocol):
-        self.wrappedProtocol = wrappedProtocol
+        self._wrappedProtocol = wrappedProtocol
 
 
     def makeConnection(self, transport):
+        """
+        Keep a reference to the given C{transport} and instantiate the list of
+        messages.
+        """
         self._transport = transport
         self._messages = []
 
@@ -414,16 +442,28 @@ class _WebSocketsProtocolWrapperReceiver():
         @type fin: C{bool}
         @param fin: Whether or not the frame is final.
         """
+        if not opcode in (CONTROLS.BINARY, CONTROLS.TEXT, CONTROLS.CONTINUE):
+            return
         self._messages.append(data)
         if fin:
             content = "".join(self._messages)
             self._messages[:] = []
-            self.wrappedProtocol.dataReceived(content)
+            self._wrappedProtocol.dataReceived(content)
 
 
 
 class WebSocketsProtocolWrapper(WebSocketsProtocol):
     """
+    A L{WebSocketsProtocol} which wraps a regular C{IProtocol} provider,
+    ignoring the frame mechanism.
+
+    @ivar _wrappedProtocol: The connected protocol
+    @type _wrappedProtocol: C{IProtocol} provider.
+
+    @ivar defaultOpcode: The opcode used when C{transport.write} is called.
+        Defaults to L{CONTROLS.TEXT}, can be L{CONTROLS.BINARY}.
+    @type defaultOpcode: L{CONTROLS}
+
     @since: 13.2
     """
 
@@ -469,6 +509,10 @@ class WebSocketsProtocolWrapper(WebSocketsProtocol):
 
 
     def loseConnection(self):
+        """
+        Try to lose the connection gracefully when closing by sending a close
+        frame.
+        """
         self._receiver._transport.loseConnection()
 
 
@@ -507,7 +551,7 @@ class WebSocketsResource(object):
         a valid connection. It's called with a list of asked protocols from the
         client and the connecting client request. If the returned protocol name
         is specified, it is used as I{Sec-WebSocket-Protocol} value. If the
-        protocol provides L{IWebSocketsProtocol}, it will be connected
+        protocol is a L{WebSocketsProtocol} instance, it will be connected
         directly, otherwise it will be wrapped by L{WebSocketsProtocolWrapper}.
         For simple use cases using a factory, you can use
         L{lookupProtocolForFactory}.
@@ -629,7 +673,7 @@ class WebSocketsResource(object):
         # transport's lifecycle.
         transport, request.transport = request.transport, None
 
-        if not IWebSocketsFrameReceiver.providedBy(protocol):
+        if not isinstance(protocol, WebSocketsProtocol):
             protocol = WebSocketsProtocolWrapper(protocol)
 
         # Connect the transport to our factory, and make things go. We need to
@@ -649,6 +693,8 @@ def lookupProtocolForFactory(factory):
     Return a suitable C{lookupProtocol} argument for L{WebSocketsResource}
     which ignores the protocol names and just return a protocol instance built
     by C{factory}.
+
+    @since: 13.2
     """
 
     def lookupProtocol(protocolNames, request):

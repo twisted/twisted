@@ -10,6 +10,7 @@ HyBi-07 (http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-07),
 which are drafts of RFC 6455.
 """
 
+from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.trial.unittest import TestCase
@@ -26,7 +27,7 @@ from twisted.web.server import NOT_DONE_YET, Request
 from twisted.web.websockets import (
     CONTROLS, _makeAccept, _mask, _makeFrame, _parseFrames, _WSException,
     WebSocketsResource, WebSocketsProtocol, WebSocketsProtocolWrapper,
-    WebSocketsTransport, lookupProtocolForFactory)
+    WebSocketsTransport, lookupProtocolForFactory, IWebSocketsFrameReceiver)
 from twisted.web.test.test_web import DummyRequest, DummyChannel
 
 
@@ -192,8 +193,7 @@ class TestFrameHelpers(TestCase):
         frame = ["\x88\x00"]
         frames = list(_parseFrames(frame, needMask=False))
         self.assertEqual(len(frames), 1)
-        self.assertEqual(
-            frames[0], (CONTROLS.CLOSE, (1000, "No reason given"), True))
+        self.assertEqual(frames[0], (CONTROLS.CLOSE, (1005, ""), True))
         self.assertEqual(frame, [])
 
 
@@ -333,6 +333,7 @@ class TestFrameHelpers(TestCase):
 
 
 
+@implementer(IWebSocketsFrameReceiver)
 class SavingEchoReceiver(object):
     """
     A test receiver saving the data received and sending it back.
@@ -403,8 +404,7 @@ class WebSocketsProtocolTest(TestCase):
         self.protocol.dataReceived(
             _makeFrame("", CONTROLS.CLOSE, True, mask="abcd"))
         self.assertFalse(self.transport.connected)
-        self.assertEqual(["Closing connection: 'No reason given' (1000)"],
-                         loggedMessages)
+        self.assertEqual(["Closing connection: '' (1005)"], loggedMessages)
 
 
     def test_invalidFrame(self):
@@ -434,9 +434,18 @@ class WebSocketsTransportTest(TestCase):
         webSocketsTranport = WebSocketsTransport(transport)
         webSocketsTranport.loseConnection()
         self.assertFalse(transport.connected)
-        self.assertEqual("\x88\x00", transport.value())
+        self.assertEqual("\x88\x02\x03\xe8", transport.value())
         # We can call loseConnection again without side effects
         webSocketsTranport.loseConnection()
+
+    def test_loseConnectionCodeAndReason(self):
+        """
+        """
+        transport = StringTransportWithDisconnection()
+        transport.protocol = Protocol()
+        webSocketsTranport = WebSocketsTransport(transport)
+        webSocketsTranport.loseConnection(1001, "Going away")
+        self.assertEqual("\x88\x0c\x03\xe9Going away", transport.value())
 
 
 
@@ -461,6 +470,30 @@ class WebSocketsProtocolWrapperTest(TestCase):
         self.protocol.dataReceived(
             _makeFrame("Hello", CONTROLS.TEXT, True, mask="abcd"))
         self.assertEqual("Hello", self.accumulatingProtocol.data)
+
+
+    def test_controlFrames(self):
+        """
+        L{WebSocketsProtocolWrapper} doesn't forward data from control frames
+        to the underlying protocol.
+        """
+        self.protocol.dataReceived(
+            _makeFrame("Hello", CONTROLS.PING, True, mask="abcd"))
+        self.protocol.dataReceived(
+            _makeFrame("Hello", CONTROLS.PONG, True, mask="abcd"))
+        self.protocol.dataReceived(
+            _makeFrame("Bye", CONTROLS.CLOSE, True, mask="abcd"))
+        self.assertEqual("", self.accumulatingProtocol.data)
+
+
+    def test_loseConnection(self):
+        """
+        L{WebSocketsProtocolWrapper.loseConnection} sends a close frame and
+        disconnects the transport.
+        """
+        self.protocol.loseConnection()
+        self.assertFalse(self.transport.connected)
+        self.assertEqual("\x88\x02\x03\xe8", self.transport.value())
 
 
     def test_write(self):
@@ -507,21 +540,6 @@ class WebSocketsProtocolWrapperTest(TestCase):
 
 
 
-class SavingEchoProtocol(Protocol):
-    """
-    A test protocol saving the data received and sending it back.
-    """
-
-    def connectionMade(self):
-        self.received = []
-
-
-    def dataReceived(self, data):
-        self.received.append(data)
-        self.transport.write(data)
-
-
-
 class WebSocketsResourceTest(TestCase):
     """
     Tests for L{WebSocketsResource}.
@@ -535,7 +553,7 @@ class WebSocketsResourceTest(TestCase):
                 return self.echoProtocol
 
         factory = SavingEchoFactory()
-        self.echoProtocol = SavingEchoProtocol()
+        self.echoProtocol = WebSocketsProtocol(SavingEchoReceiver())
 
         self.resource = WebSocketsResource(lookupProtocolForFactory(factory))
 
@@ -607,8 +625,8 @@ class WebSocketsResourceTest(TestCase):
         self.assertEqual([""], request.written)
         self.assertEqual(101, request.responseCode)
         self.assertIdentical(None, request.transport)
-        self.assertIsInstance(transport.protocol.wrappedProtocol,
-                              SavingEchoProtocol)
+        self.assertIsInstance(transport.protocol._receiver,
+                              SavingEchoReceiver)
 
 
     def test_renderProtocol(self):
@@ -797,8 +815,10 @@ class WebSocketsResourceTest(TestCase):
         self.assertEqual(101, request.responseCode)
         self.assertIdentical(None, request.transport)
         self.assertIsInstance(
-            transport.protocol.wrappedProtocol.wrappedProtocol,
-            SavingEchoProtocol)
+            transport.protocol.wrappedProtocol, WebSocketsProtocol)
+        self.assertIsInstance(
+            transport.protocol.wrappedProtocol._receiver,
+            SavingEchoReceiver)
 
 
     def test_renderRealRequest(self):
@@ -838,8 +858,8 @@ class WebSocketsResourceTest(TestCase):
 
     def test_renderIProtocol(self):
         """
-        If the protocol returned by C{lookupProtocol} doesn't implement
-        C{IWebSocketsProtocol}, L{WebSocketsResource} wraps it automatically
+        If the protocol returned by C{lookupProtocol} isn't a
+        C{WebSocketsProtocol}, L{WebSocketsResource} wraps it automatically
         with L{WebSocketsProtocolWrapper}.
         """
 
