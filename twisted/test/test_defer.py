@@ -63,9 +63,9 @@ class MockCancel(object):
     """
     A mock cancel method.
 
+    @type called: C{bool}
     @ivar called: If the mock cancel method has been called, this value
         will be set to C{True}, otherwise C{False}.
-    @type called: C{bool}
     """
     def __init__(self):
         """
@@ -381,7 +381,6 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         cancellation will do nothing instead of cancelling the
         L{defer.Deferred}s.
         """
-        
         deferredOne = defer.Deferred()
         deferredOne.cancel = MockCancel()
         deferredTwo = defer.Deferred()
