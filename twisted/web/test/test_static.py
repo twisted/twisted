@@ -4,11 +4,11 @@
 """
 Tests for L{twisted.web.static}.
 """
-
+import inspect
+import mimetypes
 import os
 import re
 import StringIO
-import mimetypes
 
 from zope.interface.verify import verifyObject
 
@@ -1530,6 +1530,9 @@ class LoadMimeTypesTests(TestCase):
         """
         By default, C{mimetypes.init} is called.
         """
-        self.assertFalse(mimetypes.inited)
-        static.loadMimeTypes()
-        self.assertTrue(mimetypes.inited)
+        # Checking mimetypes.inited doesn't always work, because
+        # something, somewhere, calls mimetypes.init. Yay global
+        # mutable state :)
+        args, _, _, defaults = inspect.getargspec(static.loadMimeTypes)
+        defaultInit = defaults[args.index("_init")]
+        self.assertIdentical(defaultInit, mimetypes.init)
