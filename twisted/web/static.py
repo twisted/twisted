@@ -100,10 +100,23 @@ class Registry(components.Componentized, styles.Versioned):
 
 def loadMimeTypes(mimetype_locations=None, _init=mimetypes.init):
     """
+    Produces a mapping of extensions (with leading dot) to MIME types.
+
+    It does this by calling the C{init} function of the L{mimetypes} module.
+    This will have the side effect of modifying the global MIME types cache
+    in that module.
+
     Multiple file locations containing mime-types can be passed as a list.
     The files will be sourced in that order, overriding mime-types from the
     files sourced beforehand, but only if a new entry explicitly overrides
     the current entry.
+
+    @param mimetype_locations: Optional. List of paths to C{mime.types} style
+        files that should be used.
+    @type mimetype_locations: iterable of paths or C{None}
+    @param _init: The init function to call. Defaults to the global C{init}
+        function of the C{mimetypes} module. For internal use (testing) only.
+    @type _init: callable
     """
     _init(mimetype_locations)
     mimetypes.types_map.update(
