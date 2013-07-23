@@ -1800,7 +1800,7 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
         self.mreactor = MemoryReactor()
         self.endpoint = endpoints.HostnameEndpoint(self.mreactor,
                 b"www.example.com", 80)
-        AF_INX = None  # An arbitrary name for the test
+        AF_INX = None  # An arbitrary name for testing
 
         def nameResolution(host, port):
             self.assertEqual(b"www.example.com", host)
@@ -1827,6 +1827,11 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
     def test_IPv4IsFaster(self):
         """
         The endpoint returns a connection to the IPv4 address.
+
+        IPv4 ought to be the first attempt, since nameResolution (standing in
+        for GAI here) returns it first. The IPv4 attempt succeeds, the
+        connection is established, and a Deferred fires with the protocol
+        constructed.
         """
         clientFactory = protocol.Factory()
         clientFactory.protocol = protocol.Protocol
@@ -1836,23 +1841,16 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
         d.addCallback(results.append)
         (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[0]
 
-        # IPv4 ought to be the first attempt, since nameResolution (standing in
-        # for GAI here) returned it first.
         self.assertEqual(host, '1.2.3.4')
         self.assertEqual(port, 80)
 
-        # The IPv4 attempt succeeds.
         proto = factory.buildProtocol((host, port))
         fakeTransport = object()
 
-        # We haven't established the connection yet...
         self.assertEqual(results, [])
 
-        # Establish the connection.
         proto.makeConnection(fakeTransport)
 
-        # Now, the Deferred should have fired, with the protocol constructed
-        # from the above.
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].factory, clientFactory)
 
@@ -1860,6 +1858,11 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
     def test_IPv6IsFaster(self):
         """
         The endpoint returns a connection to the IPv6 address.
+
+        IPv6 ought to be the second attempt, since nameResolution (standing in
+        for GAI here) returns it second. The IPv6 attempt succeeds, a
+        connection is established, and a Deferred fires with the protocol
+        constructed.
         """
         clientFactory = protocol.Factory()
         clientFactory.protocol = protocol.Protocol
@@ -1871,31 +1874,27 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
         self.mreactor.advance(0.3)
         (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[1]
 
-        # IPv6 ought to be the second attempt, since nameResolution (standing in
-        # for GAI here) returned it second.
         self.assertEqual(host, '1:2::3:4')
         self.assertEqual(port, 80)
 
-        # The IPv6 attempt succeeds.
         proto = factory.buildProtocol((host, port))
         fakeTransport = object()
 
-        # We haven't established the connection yet...
         self.assertEqual(results, [])
 
-        # Establish the connection.
         proto.makeConnection(fakeTransport)
 
-        # Now, the Deferred should have fired, with the protocol constructed
-        # from the above.
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].factory, clientFactory)
 
 
     def test_otherConnectionsCancelled(self):
         """
-        Once the endpoint returns a succesful connection, all the
-        other pending connections are cancelled.
+        Once the endpoint returns a succesful connection, all the other
+        pending connections are cancelled.
+
+        Here, the second connection attempt, i.e. IPv6, succeeds, and the
+        pending first attempt, i.e. IPv4, is cancelled.
         """
         clientFactory = protocol.Factory()
         clientFactory.protocol = protocol.Protocol
@@ -1907,14 +1906,11 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
         self.mreactor.advance(0.3)
         (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[1]
 
-        # The IPv6 attempt succeeds.
         proto = factory.buildProtocol((host, port))
         fakeTransport = object()
 
-        # Establish the connection.
         proto.makeConnection(fakeTransport)
 
-        # Now, the pending IPv4 connection should have been cancelled.
         self.assertEqual(True,
                 self.mreactor.tcpClients[0][2]._connector.stoppedConnecting)
 
