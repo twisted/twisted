@@ -98,18 +98,15 @@ class Registry(components.Componentized, styles.Versioned):
         return self._pathCache.get(path)
 
 
-def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
+def loadMimeTypes(mimetype_locations=None, _init=mimetypes.init):
     """
     Multiple file locations containing mime-types can be passed as a list.
     The files will be sourced in that order, overriding mime-types from the
     files sourced beforehand, but only if a new entry explicitly overrides
     the current entry.
     """
-    # Grab Python's built-in mimetypes dictionary.
-    contentTypes = mimetypes.types_map
-    # Update Python's semi-erroneous dictionary with a few of the
-    # usual suspects.
-    contentTypes.update(
+    _init(mimetype_locations)
+    mimetypes.types_map.update(
         {
             '.conf':  'text/plain',
             '.diff':  'text/plain',
@@ -126,15 +123,8 @@ def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
             '.patch': 'text/plain',
         }
     )
-    # Users can override these mime-types by loading them out configuration
-    # files (this defaults to ['/etc/mime.types']).
-    for location in mimetype_locations:
-        if os.path.exists(location):
-            more = mimetypes.read_mime_types(location)
-            if more is not None:
-                contentTypes.update(more)
+    return mimetypes.types_map
 
-    return contentTypes
 
 def getTypeAndEncoding(filename, types, encodings, defaultType):
     p, ext = os.path.splitext(filename)
