@@ -13,6 +13,7 @@ import urllib
 import itertools
 import cgi
 import time
+import mimetypes
 
 from zope.interface import implements
 
@@ -104,7 +105,6 @@ def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
     files sourced beforehand, but only if a new entry explicitly overrides
     the current entry.
     """
-    import mimetypes
     # Grab Python's built-in mimetypes dictionary.
     contentTypes = mimetypes.types_map
     # Update Python's semi-erroneous dictionary with a few of the
