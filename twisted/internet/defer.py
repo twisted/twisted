@@ -846,7 +846,7 @@ class DeferredList(Deferred):
 
     def cancel(self):
         """
-        Cancel this L{DeferredList}
+        Cancel this L{DeferredList}.
 
         If the L{DeferredList} hasn't fired yet, cancel every L{Deferred} in
         the list. If the C{fireOnOneErrback} flag is not set in this case, the
