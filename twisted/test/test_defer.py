@@ -62,7 +62,7 @@ class ImmediateFailureMixin(object):
 class MockCancel(object):
     """
     A mock cancel method.
-    
+
     @ivar called: If the mock cancel method has been called, this value
         will be set to C{True}, otherwise C{False}.
     @type called: C{bool}
@@ -73,8 +73,8 @@ class MockCancel(object):
         C{False}.
         """
         self.called = False
-    
-    
+
+
     def __call__(self):
         """
         Simply set L{self.called} to C{True}.

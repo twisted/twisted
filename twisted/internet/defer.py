@@ -853,7 +853,7 @@ class DeferredList(Deferred):
         L{DeferredList} will callback with a C{list} of (C{False},
         L{CancelledError}) tuples.  Otherwise, the L{DeferredList} will errback
         with a L{FirstError}.
-        
+
         If the L{DeferredList} has fired, including the case where the
         C{fireOnOneCallback}/C{fireOnOneErrback} flag is set and the
         L{DeferredList} fires because one L{Deferred} in the list fires with a
