@@ -1505,6 +1505,8 @@ class LoadMimeTypesTests(TestCase):
         """
         A mock L{mimetypes.init} that records the value of the passed C{paths}
         argument.
+
+        @param paths: The paths that will be recorded.
         """
         self.paths = paths
 
