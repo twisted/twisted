@@ -297,8 +297,7 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(len(callbackResult), 2)
         for (success, result) in callbackResult:
             self.assertFalse(success)
-            self.assertIsInstance(
-                result, type(failure.Failure(defer.CancelledError)))
+            self.assertTrue(result.check(defer.CancelledError))
 
 
     def test_cancelDeferredListWithFireOnOneCallback(self):
@@ -318,8 +317,7 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(len(callbackResult), 2)
         for (success, result) in callbackResult:
             self.assertFalse(success)
-            self.assertIsInstance(
-                result, type(failure.Failure(defer.CancelledError)))
+            self.assertTrue(result.check(defer.CancelledError))
 
 
     def test_cancelDeferredListWithFireOnOneErrback(self):
