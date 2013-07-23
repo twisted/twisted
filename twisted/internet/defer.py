@@ -883,6 +883,10 @@ def gatherResults(deferredList, consumeErrors=False):
     The returned L{Deferred} will fire when I{all} of the provided L{Deferred}s
     have fired, or when any one of them has failed.
 
+    This method can be cancelled by calling the C{cancel} method of the
+    L{Deferred}, all the L{Deferred}s in the list will be cancelled and the
+    returned L{Deferred} will errback with L{FirstError}.
+
     This differs from L{DeferredList} in that you don't need to parse
     the result for success/failure.
 

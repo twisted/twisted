@@ -576,6 +576,59 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertIsInstance(firstError.value, RuntimeError)
 
 
+    def test_cancelGatherResults(self):
+        """
+        When cancelling the L{defer.gatherResults} call, all the
+        L{defer.Deferred}s in the list will be cancelled and the returned
+        L{defer.Deferred} will errback with L{defer.FirstError}.
+        """
+        deferredOne = defer.Deferred()
+        deferredTwo = defer.Deferred()
+        result = defer.gatherResults([deferredOne, deferredTwo])
+        result.cancel()
+        self.failureResultOf(deferredOne, defer.CancelledError)
+        self.failureResultOf(deferredTwo, defer.CancelledError)
+        self.failureResultOf(result, defer.FirstError)
+
+
+    def test_cancelGatherResultsAlreadyFiredWithNonFailureResult(self):
+        """
+        When cancelling a L{defer.Deferred} returned by L{defer.gatherResults}
+        which has already fired with a non-failure result, the cancellation
+        will do nothing instead of cancelling the L{defer.Deferred}s in the
+        list.
+        """
+        deferredOne = defer.Deferred()
+        deferredOne.cancel = MockCancel()
+        deferredTwo = defer.Deferred()
+        deferredTwo.cancel = MockCancel()
+        result = defer.gatherResults([deferredOne, deferredTwo])
+        deferredOne.callback(None)
+        deferredTwo.callback(None)
+        result.cancel()
+        self.assertFalse(deferredOne.cancel.called)
+        self.assertFalse(deferredTwo.cancel.called)
+
+
+    def test_cancelGatherResultsAlreadyFiredWithFailureResult(self):
+        """
+        When cancelling a L{defer.Deferred} returned by L{defer.gatherResults}
+        which has already fired with a failure result, the cancellation will do
+        nothing instead of cancelling the L{defer.Deferred}s in the list.
+        """
+        deferredOne = defer.Deferred()
+        deferredOne.cancel = MockCancel()
+        deferredTwo = defer.Deferred()
+        deferredTwo.cancel = MockCancel()
+        result = defer.gatherResults([deferredOne, deferredTwo])
+        deferredOne.errback(GenericError("test"))
+        result.cancel()
+        self.assertFalse(deferredOne.cancel.called)
+        self.assertFalse(deferredTwo.cancel.called)
+        self.failureResultOf(deferredOne, GenericError)
+        self.failureResultOf(result, defer.FirstError)
+
+
     def test_maybeDeferredSync(self):
         """
         L{defer.maybeDeferred} should retrieve the result of a synchronous
