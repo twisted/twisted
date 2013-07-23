@@ -759,6 +759,8 @@ class DeferredList(Deferred):
     they see.
 
     See the documentation for the C{__init__} arguments for more information.
+
+    @ivar deferredList: The C{list} of L{Deferred}s to track.
     """
 
     fireOnOneCallback = False
@@ -811,6 +813,7 @@ class DeferredList(Deferred):
         self.fireOnOneErrback = fireOnOneErrback
         self.consumeErrors = consumeErrors
         self.finishedCount = 0
+        self.deferredList = list(deferredList)
 
         index = 0
         for deferred in deferredList:
@@ -840,6 +843,28 @@ class DeferredList(Deferred):
 
         return result
 
+
+    def cancel(self):
+        """
+        Cancel this L{DeferredList}
+
+        If the L{DeferredList} hasn't fired yet, cancel every L{Deferred} in
+        the list. If the C{fireOnOneErrback} flag is not set in this case, the
+        L{DeferredList} will callback with a C{list} of (C{False},
+        L{CancelledError}) tuples.  Otherwise, the L{DeferredList} will errback
+        with a L{FirstError}.
+        
+        If the L{DeferredList} has fired, including the case where the
+        C{fireOnOneCallback}/C{fireOnOneErrback} flag is set and the
+        L{DeferredList} fires because one L{Deferred} in the list fires with a
+        non-failure/failure result, do nothing in the C{cancel} method.
+        """
+        if not self.called:
+            for deferred in self.deferredList:
+                try:
+                    deferred.cancel()
+                except:
+                    log.err()
 
 
 def _parseDListResult(l, fireOnOneErrback=False):
