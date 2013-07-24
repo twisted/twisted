@@ -760,7 +760,7 @@ class DeferredList(Deferred):
 
     See the documentation for the C{__init__} arguments for more information.
 
-    @ivar deferredList: The C{list} of L{Deferred}s to track.
+    @ivar _deferredList: The C{list} of L{Deferred}s to track.
     """
 
     fireOnOneCallback = False
@@ -813,7 +813,7 @@ class DeferredList(Deferred):
         self.fireOnOneErrback = fireOnOneErrback
         self.consumeErrors = consumeErrors
         self.finishedCount = 0
-        self.deferredList = list(deferredList)
+        self._deferredList = list(deferredList)
 
         index = 0
         for deferred in deferredList:
@@ -860,7 +860,7 @@ class DeferredList(Deferred):
         non-failure/failure result, do nothing in the C{cancel} method.
         """
         if not self.called:
-            for deferred in self.deferredList:
+            for deferred in self._deferredList:
                 try:
                     deferred.cancel()
                 except:
