@@ -709,17 +709,18 @@ class AdditionalProcessingTests(unittest.TestCase):
             )
         d = getattr(authority, method)(soa_record.mname.name)
         answer, authority, additional = self.successResultOf(d)
+
+        # RRHeader instances aren't inherently ordered.  Impose an ordering
+        # that's good enough for the purposes of these tests - in which we
+        # never have more than one record of a particular type.
+        key = lambda rr: rr.type
+
         self.assertEqual(
-            sorted(additional),
+            sorted(additional, key=key),
             sorted([dns.RRHeader(
                         target, address.TYPE, ttl=soa_record.expire, payload=address,
                         auth=True)
-                    for address in addresses],
-                   # RRHeader instances aren't inherently ordered.  Impose an
-                   # ordering that's good enough for the purposes of these
-                   # tests - in which we never have more than one record of a
-                   # particular type.
-                   key=lambda rr: rr.payload.TYPE))
+                    for address in addresses], key=key))
 
 
     def _additionalMXTest(self, addresses):
