@@ -284,7 +284,7 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
     def test_cancelDeferredList(self):
         """
         When cancelling an unfired L{defer.DeferredList}, cancel every
-        L{defer.Deferrd} in the list and callback with a C{list} of (C{False},
+        L{defer.Deferred} in the list and callback with a C{list} of (C{False},
         L{CancelledError}) tuples.
         """
         deferredOne = defer.Deferred()
@@ -303,7 +303,7 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
     def test_cancelDeferredListWithFireOnOneCallback(self):
         """
         When cancelling an unfired L{defer.DeferredList} with the flag
-        C{fireOnOneCallback} set, cancel every L{defer.Deferrd} in the list and
+        C{fireOnOneCallback} set, cancel every L{defer.Deferred} in the list and
         callback with a C{list} of (C{False}, L{CancelledError}) tuples.
         """
         deferredOne = defer.Deferred()
@@ -323,7 +323,7 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
     def test_cancelDeferredListWithFireOnOneErrback(self):
         """
         When cancelling an unfired L{defer.DeferredList} with the flag
-        C{fireOnOneErrback} set, cancel every L{defer.Deferrd} in the list and
+        C{fireOnOneErrback} set, cancel every L{defer.Deferred} in the list and
         errback with L{defer.FirstError}.
         """
         deferredOne = defer.Deferred()
