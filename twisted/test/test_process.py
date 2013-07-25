@@ -1381,6 +1381,12 @@ class MockOS(object):
     def read(self, fd, size):
         """
         Fake C{os.read}: save action, and return C{readData} content.
+
+        @param fd: The file descriptor to read.
+
+        @param size: The maximum number of bytes to read.
+
+        @return: A fixed C{bytes} buffer.
         """
         self.actions.append(('read', fd, size))
         return self.readData
@@ -1515,6 +1521,8 @@ class MockOS(object):
     def chdir(self, path):
         """
         Override C{os.chdir}. Save the action.
+
+        @param path: The path to change the current directory to.
         """
         self.actions.append(('chdir', path))
 
@@ -1581,6 +1589,8 @@ class MockOS(object):
     def unlink(self, filename):
         """
         Override C{os.unlink}. Save the action.
+
+        @param filename: The file name to remove.
         """
         self.actions.append(('unlink', filename))
 
@@ -1588,6 +1598,8 @@ class MockOS(object):
     def umask(self, mask):
         """
         Override C{os.umask}. Save the action.
+
+        @param mask: The new file mode creation mask.
         """
         self.actions.append(('umask', mask))
 
@@ -1595,6 +1607,8 @@ class MockOS(object):
     def getpid(self):
         """
         Return a fixed PID value.
+
+        @return: A fixed value.
         """
         return 6789
 
