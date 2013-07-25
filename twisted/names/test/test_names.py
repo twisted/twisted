@@ -714,7 +714,12 @@ class AdditionalProcessingTests(unittest.TestCase):
             sorted([dns.RRHeader(
                         target, address.TYPE, ttl=soa_record.expire, payload=address,
                         auth=True)
-                    for address in addresses]))
+                    for address in addresses],
+                   # RRHeader instances aren't inherently ordered.  Impose an
+                   # ordering that's good enough for the purposes of these
+                   # tests - in which we never have more than one record of a
+                   # particular type.
+                   key=lambda rr: rr.payload.type))
 
 
     def _additionalMXTest(self, addresses):

@@ -94,6 +94,8 @@ class FileAuthority(common.ResolverBase):
         the response and construct appropriate records to include in the
         I{additional} section of that response.
 
+        Essentially, implement RFC 1034 section 4.3.2 step 6.
+
         @param answer: A L{list} of the records which will be included in the
             I{answer} section of the response.
 
