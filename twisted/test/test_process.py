@@ -1751,15 +1751,12 @@ class MockProcessTestCase(unittest.TestCase):
 
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
-        try:
-            reactor.spawnProcess(p, cmd, ['ouch'], env=None,
-                                 usePTY=True)
-        except SystemError:
-            self.assert_(self.mockos.exited)
-            self.assertEqual(
-                self.mockos.actions, [("fork", False), "setsid", "exec", ("exit", 1)])
-        else:
-            self.fail("Should not be here")
+        self.assertRaises(SystemError, reactor.spawnProcess, p, cmd, ['ouch'],
+                          env=None, usePTY=True)
+        self.assertTrue(self.mockos.exited)
+        self.assertEqual(
+            self.mockos.actions,
+            [("fork", False), "setsid", "exec", ("exit", 1)])
 
 
     def _mockWithForkError(self):
