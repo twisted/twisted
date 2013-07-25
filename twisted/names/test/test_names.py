@@ -719,7 +719,7 @@ class AdditionalProcessingTests(unittest.TestCase):
                    # ordering that's good enough for the purposes of these
                    # tests - in which we never have more than one record of a
                    # particular type.
-                   key=lambda rr: rr.payload.type))
+                   key=lambda rr: rr.payload.TYPE))
 
 
     def _additionalMXTest(self, addresses):
