@@ -296,7 +296,6 @@ class UnixApplicationRunner(app.ApplicationRunner):
             reactor.beforeDaemonize()
         r, w = os.pipe()
         if os.fork():  # launch child and...
-            code = 0
             code = self._waitForStart(r)
             os.close(r)
             os._exit(code)   # kill off parent
@@ -307,7 +306,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         for i in range(3):
             try:
                 os.dup2(null, i)
-            except OSError, e:
+            except OSError as e:
                 if e.errno != errno.EBADF:
                     raise
         os.close(null)
