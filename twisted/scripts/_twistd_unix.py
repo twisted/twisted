@@ -5,7 +5,8 @@
 import os, errno, sys
 
 from twisted.python import log, syslog, logfile, usage
-from twisted.python.util import switchUID, uidFromString, gidFromString
+from twisted.python.util import (
+    switchUID, uidFromString, gidFromString, untilConcludes)
 from twisted.application import app, service
 from twisted.internet.interfaces import IReactorDaemonize
 from twisted import copyright
@@ -18,9 +19,9 @@ def _umask(value):
 class ServerOptions(app.ServerOptions):
     synopsis = "Usage: twistd [options]"
 
-    optFlags = [['nodaemon','n',  "don't daemonize, don't use default umask of 0077"],
+    optFlags = [['nodaemon', 'n', "don't daemonize, don't use default umask of 0077"],
                 ['originalname', None, "Don't try to change the process name"],
-                ['syslog', None,   "Log to syslog, not to file"],
+                ['syslog', None, "Log to syslog, not to file"],
                 ['euid', '',
                  "Set only effective user-id rather than real user-id. "
                  "(This option has no effect unless the server is running as "
@@ -156,45 +157,6 @@ class UnixAppLogger(app.AppLogger):
 
 
 
-def daemonize(reactor, os):
-    """
-    Daemonizes the application on Unix. This is done by the usual double
-    forking approach.
-
-    @see: U{http://code.activestate.com/recipes/278731/}
-    @see: W. Richard Stevens, "Advanced Programming in the Unix Environment",
-          1992, Addison-Wesley, ISBN 0-201-56317-7
-
-    @param reactor: The reactor in use.  If it provides L{IReactorDaemonize},
-        its daemonization-related callbacks will be invoked.
-
-    @param os: An object like the os module to use to perform the daemonization.
-    """
-
-    ## If the reactor requires hooks to be called for daemonization, call them.
-    ## Currently the only reactor which provides/needs that is KQueueReactor.
-    if IReactorDaemonize.providedBy(reactor):
-        reactor.beforeDaemonize()
-
-    if os.fork():   # launch child and...
-        os._exit(0) # kill off parent
-    os.setsid()
-    if os.fork():   # launch child and...
-        os._exit(0) # kill off parent again.
-    null = os.open('/dev/null', os.O_RDWR)
-    for i in range(3):
-        try:
-            os.dup2(null, i)
-        except OSError, e:
-            if e.errno != errno.EBADF:
-                raise
-    os.close(null)
-
-    if IReactorDaemonize.providedBy(reactor):
-        reactor.afterDaemonize()
-
-
-
 def launchWithName(name):
     if name and name != sys.argv[0]:
         exe = os.path.realpath(sys.executable)
@@ -223,11 +185,26 @@ class UnixApplicationRunner(app.ApplicationRunner):
 
     def postApplication(self):
         """
-        To be called after the application is created: start the
-        application and run the reactor. After the reactor stops,
-        clean up PID files and such.
+        To be called after the application is created: start the application
+        and run the reactor. After the reactor stops, clean up PID files and
+        such.
         """
-        self.startApplication(self.application)
+        try:
+            self.startApplication(self.application)
+        except Exception as ex:
+            statusPipe = self.config.get("statusPipe", None)
+            if statusPipe is not None:
+                # Limit the total length to the passed string to 100
+                strippedError = str(ex)[:98]
+                untilConcludes(os.write, statusPipe, "1 %s" % (strippedError,))
+                untilConcludes(os.close, statusPipe)
+            self.removePID(self.config['pidfile'])
+            raise
+        else:
+            statusPipe = self.config.get("statusPipe", None)
+            if statusPipe is not None:
+                untilConcludes(os.write, statusPipe, "0")
+                untilConcludes(os.close, statusPipe)
         self.startReactor(None, self.oldstdout, self.oldstderr)
         self.removePID(self.config['pidfile'])
 
@@ -248,9 +225,9 @@ class UnixApplicationRunner(app.ApplicationRunner):
             if e.errno == errno.EACCES or e.errno == errno.EPERM:
                 log.msg("Warning: No permission to delete pid file")
             else:
-                log.err(e, "Failed to unlink PID file")
+                log.err(e, "Failed to unlink PID file:")
         except:
-            log.err(None, "Failed to unlink PID file")
+            log.err(None, "Failed to unlink PID file:")
 
 
     def setupEnvironment(self, chroot, rundir, nodaemon, umask, pidfile):
@@ -288,11 +265,75 @@ class UnixApplicationRunner(app.ApplicationRunner):
             os.umask(umask)
         if daemon:
             from twisted.internet import reactor
-            daemonize(reactor, os)
+            self.config["statusPipe"] = self.daemonize(reactor)
         if pidfile:
-            f = open(pidfile,'wb')
+            f = open(pidfile, 'wb')
             f.write(str(os.getpid()))
             f.close()
+
+
+    def daemonize(self, reactor):
+        """
+        Daemonizes the application on Unix. This is done by the usual double
+        forking approach.
+
+        @see: U{http://code.activestate.com/recipes/278731/}
+        @see: W. Richard Stevens,
+            "Advanced Programming in the Unix Environment",
+            1992, Addison-Wesley, ISBN 0-201-56317-7
+
+        @param reactor: The reactor in use.  If it provides
+            L{IReactorDaemonize}, its daemonization-related callbacks will be
+            invoked.
+
+        @return: A writable pipe to be used to report errors.
+        @rtype: C{int}
+        """
+        # If the reactor requires hooks to be called for daemonization, call
+        # them. Currently the only reactor which provides/needs that is
+        # KQueueReactor.
+        if IReactorDaemonize.providedBy(reactor):
+            reactor.beforeDaemonize()
+        r, w = os.pipe()
+        if os.fork():  # launch child and...
+            code = self._waitForStart(r)
+            os.close(r)
+            os._exit(code)   # kill off parent
+        os.setsid()
+        if os.fork():  # launch child and...
+            os._exit(0)  # kill off parent again.
+        null = os.open('/dev/null', os.O_RDWR)
+        for i in range(3):
+            try:
+                os.dup2(null, i)
+            except OSError as e:
+                if e.errno != errno.EBADF:
+                    raise
+        os.close(null)
+
+        if IReactorDaemonize.providedBy(reactor):
+            reactor.afterDaemonize()
+
+        return w
+
+
+    def _waitForStart(self, readPipe):
+        """
+        Wait for the daemonization success.
+
+        @param readPipe: file descriptor to read start information from.
+        @type readPipe: C{int}
+
+        @return: code to be passed to C{os._exit}: 0 for success, 1 for error.
+        @rtype: C{int}
+        """
+        data = untilConcludes(os.read, readPipe, 100)
+        if data != "0":
+            msg = ("An error has occurred: '%s'\nPlease look at log "
+                   "file for more information.\n" % (data[2:],))
+            untilConcludes(sys.__stderr__.write, msg)
+            return 1
+        return 0
 
 
     def shedPrivileges(self, euid, uid, gid):
