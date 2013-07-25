@@ -849,7 +849,9 @@ class FakeNonDaemonizingReactor(object):
 
 
     def addSystemEventTrigger(self, *args, **kw):
-        pass
+        """
+        Skip event registration.
+        """
 
 
 
