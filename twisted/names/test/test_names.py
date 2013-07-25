@@ -691,8 +691,9 @@ class AdditionalProcessingTests(unittest.TestCase):
             with this record.  The L{FileAuthority} is queried for a record of
             the resulting type with the given name.
 
-        @param addresses: A L{set} of L{IRecord} providers which the
-            I{additional} section of the response is required to match exactly.
+        @param addresses: A L{list} of L{IRecord} providers which the
+            I{additional} section of the response is required to match
+            (ignoring order).
 
         @raise self.failureException: If the I{additional} section of the
             response consists of different records than those given by
@@ -709,11 +710,11 @@ class AdditionalProcessingTests(unittest.TestCase):
         d = getattr(authority, method)(soa_record.mname.name)
         answer, authority, additional = self.successResultOf(d)
         self.assertEqual(
-            set(additional),
-            set([dns.RRHeader(
+            sorted(additional),
+            sorted([dns.RRHeader(
                         target, address.TYPE, ttl=soa_record.expire, payload=address,
                         auth=True)
-                 for address in addresses]))
+                    for address in addresses]))
 
 
     def _additionalMXTest(self, addresses):
@@ -730,7 +731,7 @@ class AdditionalProcessingTests(unittest.TestCase):
         If the name of the MX response has A records, they are included in the
         additional section of the response.
         """
-        self._additionalMXTest(set([self._A]))
+        self._additionalMXTest([self._A])
 
 
     def test_mailExchangeAdditionalAAAA(self):
@@ -738,7 +739,7 @@ class AdditionalProcessingTests(unittest.TestCase):
         If the name of the MX response has AAAA records, they are included in
         the additional section of the response.
         """
-        self._additionalMXTest(set([self._AAAA]))
+        self._additionalMXTest([self._AAAA])
 
 
     def test_mailExchangeAdditionalBoth(self):
@@ -746,7 +747,7 @@ class AdditionalProcessingTests(unittest.TestCase):
         If the name of the MX response has both A and AAAA records, they are
         all included in the additional section of the response.
         """
-        self._additionalMXTest(set([self._A, self._AAAA]))
+        self._additionalMXTest([self._A, self._AAAA])
 
 
     def _additionalCNAMETest(self, addresses):
@@ -763,7 +764,7 @@ class AdditionalProcessingTests(unittest.TestCase):
         If the name of the CNAME response has A records, they are included in
         the additional section of the response.
         """
-        self._additionalCNAMETest(set([self._A]))
+        self._additionalCNAMETest([self._A])
 
 
     def test_canonicalNameAdditionalAAAA(self):
@@ -779,7 +780,7 @@ class AdditionalProcessingTests(unittest.TestCase):
         If the name of the CNAME response has both A and AAAA records, they are
         all included in the additional section of the response.
         """
-        self._additionalCNAMETest(set([self._A, self._AAAA]))
+        self._additionalCNAMETest([self._A, self._AAAA])
 
 
     def _additionalNSTest(self, addresses):
@@ -796,7 +797,7 @@ class AdditionalProcessingTests(unittest.TestCase):
         If the name of the NS response has A records, they are included in the
         additional section of the response.
         """
-        self._additionalNSTest(set([self._A]))
+        self._additionalNSTest([self._A])
 
 
     def test_nameserverAdditionalAAAA(self):
@@ -804,7 +805,7 @@ class AdditionalProcessingTests(unittest.TestCase):
         If the name of the NS response has AAAA records, they are included in
         the additional section of the response.
         """
-        self._additionalNSTest(set([self._AAAA]))
+        self._additionalNSTest([self._AAAA])
 
 
     def test_nameserverAdditionalBoth(self):
@@ -812,7 +813,7 @@ class AdditionalProcessingTests(unittest.TestCase):
         If the name of the NS response has both A and AAAA records, they are
         all included in the additional section of the response.
         """
-        self._additionalNSTest(set([self._A, self._AAAA]))
+        self._additionalNSTest([self._A, self._AAAA])
 
 
 
