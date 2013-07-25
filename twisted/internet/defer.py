@@ -849,10 +849,7 @@ class DeferredList(Deferred):
         Cancel this L{DeferredList}.
 
         If the L{DeferredList} hasn't fired yet, cancel every L{Deferred} in
-        the list. If the C{fireOnOneErrback} flag is not set in this case, the
-        L{DeferredList} will callback with a C{list} of (C{False},
-        L{CancelledError}) tuples.  Otherwise, the L{DeferredList} will errback
-        with a L{FirstError}.
+        the list.
 
         If the L{DeferredList} has fired, including the case where the
         C{fireOnOneCallback}/C{fireOnOneErrback} flag is set and the
@@ -884,8 +881,7 @@ def gatherResults(deferredList, consumeErrors=False):
     have fired, or when any one of them has failed.
 
     This method can be cancelled by calling the C{cancel} method of the
-    L{Deferred}, all the L{Deferred}s in the list will be cancelled and the
-    returned L{Deferred} will errback with L{FirstError}.
+    L{Deferred}, all the L{Deferred}s in the list will be cancelled.
 
     This differs from L{DeferredList} in that you don't need to parse
     the result for success/failure.

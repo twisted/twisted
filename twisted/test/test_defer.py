@@ -284,8 +284,7 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
     def test_cancelDeferredList(self):
         """
         When cancelling an unfired L{defer.DeferredList}, cancel every
-        L{defer.Deferred} in the list and callback with a C{list} of (C{False},
-        L{CancelledError}) tuples.
+        L{defer.Deferred} in the list.
         """
         deferredOne = defer.Deferred()
         deferredTwo = defer.Deferred()
@@ -293,18 +292,12 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         deferredList.cancel()
         self.failureResultOf(deferredOne, defer.CancelledError)
         self.failureResultOf(deferredTwo, defer.CancelledError)
-        callbackResult = self.successResultOf(deferredList)
-        self.assertEqual(len(callbackResult), 2)
-        for (success, result) in callbackResult:
-            self.assertFalse(success)
-            self.assertTrue(result.check(defer.CancelledError))
 
 
     def test_cancelDeferredListWithFireOnOneCallback(self):
         """
         When cancelling an unfired L{defer.DeferredList} with the flag
-        C{fireOnOneCallback} set, cancel every L{defer.Deferred} in the list and
-        callback with a C{list} of (C{False}, L{CancelledError}) tuples.
+        C{fireOnOneCallback} set, cancel every L{defer.Deferred} in the list.
         """
         deferredOne = defer.Deferred()
         deferredTwo = defer.Deferred()
@@ -313,18 +306,12 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         deferredList.cancel()
         self.failureResultOf(deferredOne, defer.CancelledError)
         self.failureResultOf(deferredTwo, defer.CancelledError)
-        callbackResult = self.successResultOf(deferredList)
-        self.assertEqual(len(callbackResult), 2)
-        for (success, result) in callbackResult:
-            self.assertFalse(success)
-            self.assertTrue(result.check(defer.CancelledError))
 
 
     def test_cancelDeferredListWithFireOnOneErrback(self):
         """
         When cancelling an unfired L{defer.DeferredList} with the flag
-        C{fireOnOneErrback} set, cancel every L{defer.Deferred} in the list and
-        errback with L{defer.FirstError}.
+        C{fireOnOneErrback} set, cancel every L{defer.Deferred} in the list.
         """
         deferredOne = defer.Deferred()
         deferredTwo = defer.Deferred()
@@ -576,8 +563,7 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
     def test_cancelGatherResults(self):
         """
         When cancelling the L{defer.gatherResults} call, all the
-        L{defer.Deferred}s in the list will be cancelled and the returned
-        L{defer.Deferred} will errback with L{defer.FirstError}.
+        L{defer.Deferred}s in the list will be cancelled.
         """
         deferredOne = defer.Deferred()
         deferredTwo = defer.Deferred()
