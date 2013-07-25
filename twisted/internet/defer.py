@@ -615,6 +615,8 @@ class Deferred:
             while current.callbacks:
                 item = current.callbacks.pop(0)
                 isErrback = isinstance(current.result, failure.Failure)
+                if isErrback:
+                    current.result._deferredHistory = self._getHistory()
                 callback, args, kw = item[isErrback]
                 args = args or ()
                 kw = kw or {}
@@ -653,7 +655,9 @@ class Deferred:
                 except:
                     # Including full frame information in the Failure is quite
                     # expensive, so we avoid it unless self.debug is set.
-                    current.result = failure.Failure(captureVars=self.debug)
+                    current.result = failure.Failure(
+                        captureVars=self.debug,
+                        _deferredHistory=current._getHistory())
                 else:
                     if isinstance(current.result, Deferred):
                         if current._history is not None:

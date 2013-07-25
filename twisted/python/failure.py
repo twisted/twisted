@@ -170,7 +170,7 @@ class Failure:
     _yieldOpcode = chr(opcode.opmap["YIELD_VALUE"])
 
     def __init__(self, exc_value=None, exc_type=None, exc_tb=None,
-                 captureVars=False):
+                 captureVars=False, _deferredHistory=None):
         """
         Initialize me with an explanation of the error.
 
@@ -193,12 +193,17 @@ class Failure:
         @param captureVars: if set, capture locals and globals of stack
             frames.  This is pretty slow, and makes no difference unless you
             are going to use L{printDetailedTraceback}.
+
+        @param _deferredHistory: If passed, include the specified deferred
+            history in formatted output.
+        @type _deferredHistory: list of L{_DeferredHistoryItem}s
         """
         global count
         count = count + 1
         self.count = count
         self.type = self.value = tb = None
         self.captureVars = captureVars
+        self._deferredHistory = _deferredHistory
 
         if isinstance(exc_value, str) and exc_type is None:
             raise TypeError("Strings are not supported by Failure")
@@ -560,6 +565,10 @@ class Failure:
         else:
             formatDetail = detail
 
+        if self._deferredHistory:
+            w('Failing Deferred History:\n')
+            for item in self._deferredHistory:
+                w(self._formatHistory(item, indentation=4) + "\n")
         # Preamble
         if detail == 'verbose':
             w( '*--- Failure #%d%s---\n' %
@@ -599,6 +608,20 @@ class Failure:
             self.value.printTraceback(file, elideFrameworkCode, detail)
         if detail == 'verbose':
             w('*--- End of Failure #%d ---\n' % self.count)
+
+
+    def _formatHistory(self, item, indentation=0):
+        line = "{indentation}[{tag} {name}".format(
+            indentation=" " * indentation,
+            tag="callback" if item.isCallback else "errback",
+            name=item.name)
+        if item.chainedHistory:
+            line += " ->"
+            for item in item.chainedHistory.get():
+                line += "\n"
+                line += self._formatHistory(item, indentation=indentation + 4)
+        line += "]"
+        return line
 
 
     def printBriefTraceback(self, file=None, elideFrameworkCode=0):

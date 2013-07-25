@@ -2411,6 +2411,24 @@ class DeferredHistoryTests(unittest.TestCase):
         self.assertIdentical(item.chainedHistory, None)
 
 
+    def test_historyInNewFailure(self):
+        """
+        When a callback raises an exception, the deferred's history will be
+        included in the failure.
+
+        Only the history up to the invocation of the callback that raised the
+        exception will be included.
+        """
+        outer = defer.Deferred()
+        def callback(result):
+            1 / 0
+        outer.addCallback(callback)
+        outer.callback(callback)
+        failure = self.failureResultOf(outer)
+        [item] = failure._deferredHistory
+        self.assertEqual(item.name, fullyQualifiedName(callback))
+
+
     def test_historyIgnoresPassthru(self):
         """
         L{twisted.internet.defer.passthru} will not show up in Deferred

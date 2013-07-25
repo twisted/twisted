@@ -15,7 +15,9 @@ import linecache
 
 from twisted.python.compat import NativeStringIO, _PY3
 from twisted.python import _reflectpy3 as reflect
+from twisted.python.reflect import fullyQualifiedName
 from twisted.python import failure
+from twisted.internet.defer import Deferred
 
 from twisted.trial.unittest import SynchronousTestCase
 
@@ -399,6 +401,131 @@ class FailureTestCase(SynchronousTestCase):
         the stack after C{cleanFailure} has been called.
         """
         self.assertDetailedTraceback(captureVars=True, cleanFailure=True)
+
+
+    def test_printDefaultTracebackWithHistory(self):
+        """
+        If a Failure has a Deferred history, it will include the formatted
+        history items in the default traceback output.
+        """
+        d = Deferred()
+        def callback1(result):
+            return None
+        def callback2(result):
+            1 / 0
+        d.addCallback(callback1)
+        d.addCallback(callback2)
+        d.callback(None)
+        f = self.failureResultOf(d)
+        tb = f.getTraceback()
+        self.assertStartsWith(
+            tb,
+            "Failing Deferred History:\n"
+            "    [callback %s]\n"
+            "    [callback %s]\n"
+            % (fullyQualifiedName(callback1),
+               fullyQualifiedName(callback2)))
+
+
+    def test_formatErrbackHistory(self):
+        """
+        Errbacks in history are explicitly indicated as such.
+        """
+        d = Deferred()
+        
+        def errback(failure):
+            return failure
+
+        d.addErrback(errback)
+        d.errback(failure.Failure(Exception("Boo")))
+        f = self.failureResultOf(d)
+        tb = f.getTraceback()
+        self.assertStartsWith(
+            tb,
+            "Failing Deferred History:\n"
+            "    [errback %s]"
+            % (fullyQualifiedName(errback),))
+
+
+    def test_printDefaultTracebackWithNestedHistory(self):
+        """
+        If a Failure's Deferred history has an item with a chained history,
+        that chained history will me rendered along with its parent.
+        """
+        outer = Deferred()
+        inner = Deferred()
+        def callback1(result):
+            return inner
+        def innerCallback(result):
+            return None
+        def callback2(result):
+            1 / 0
+        outer.addCallback(callback1)
+        outer.addCallback(callback2)
+        inner.addCallback(innerCallback)
+        outer.callback(None)
+        inner.callback(None)
+        f = self.failureResultOf(outer)
+        tb = f.getTraceback()
+        self.assertStartsWith(
+            tb,
+            "Failing Deferred History:\n"
+            "    [callback %s ->\n"
+            "        [callback %s]]\n"
+            "    [callback %s]\n"
+            % (fullyQualifiedName(callback1),
+               fullyQualifiedName(innerCallback),
+               fullyQualifiedName(callback2)))
+
+    def test_outerHistoryWithInnerFailureShowsOuterCallbacks(self):
+        """
+        When a Deferred has a callback that returns a Deferred which fails,
+        the failure will ultimately include the history of the outer Deferred,
+        since the Failure will traverse the outer Deferred.
+        """
+        outer = Deferred()
+        inner = Deferred()
+        def callback1(result):
+            return inner
+        def innerCallback(result):
+            1 / 0
+        outer.addCallback(callback1)
+        inner.addCallback(innerCallback)
+        outer.callback(None)
+        inner.callback(None)
+        f = self.failureResultOf(outer)
+        tb = f.getTraceback()
+        # only inner's history is being included in the failure. that's a problem.
+        self.assertStartsWith(
+            tb,
+            "Failing Deferred History:\n"
+            "    [callback %s ->\n"
+            "        [callback %s]]\n"
+            % (fullyQualifiedName(callback1),
+               fullyQualifiedName(innerCallback)))
+
+
+    def test_injectHistoryIntoReturnedFailure(self):
+        """
+        Failures that are returned from a callback will have the Deferred
+        history injected into them.
+        """
+        outer = Deferred()
+        
+        def callback(result):
+            return failure.Failure(ZeroDivisionError("hello"))
+
+        outer.addCallback(callback)
+        outer.callback(None)
+
+        f = self.failureResultOf(outer)
+        tb = f.getTraceback()
+        f.trap(ZeroDivisionError)
+        self.assertStartsWith(
+            tb,
+            "Failing Deferred History:\n"
+            "    [callback %s]\n"
+            % (fullyQualifiedName(callback)))
 
 
     def test_invalidFormatFramesDetail(self):
