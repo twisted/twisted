@@ -801,9 +801,10 @@ class DeferredList(Deferred):
             logged.  This does not prevent C{fireOnOneErrback} from working.
         @type consumeErrors: C{bool}
         """
-        self.resultList = [None] * len(deferredList)
+        self._deferredList = list(deferredList)
+        self.resultList = [None] * len(self._deferredList)
         Deferred.__init__(self)
-        if len(deferredList) == 0 and not fireOnOneCallback:
+        if len(self._deferredList) == 0 and not fireOnOneCallback:
             self.callback(self.resultList)
 
         # These flags need to be set *before* attaching callbacks to the
@@ -813,10 +814,9 @@ class DeferredList(Deferred):
         self.fireOnOneErrback = fireOnOneErrback
         self.consumeErrors = consumeErrors
         self.finishedCount = 0
-        self._deferredList = list(deferredList)
 
         index = 0
-        for deferred in deferredList:
+        for deferred in self._deferredList:
             deferred.addCallbacks(self._cbDeferred, self._cbDeferred,
                                   callbackArgs=(index,SUCCESS),
                                   errbackArgs=(index,FAILURE))
