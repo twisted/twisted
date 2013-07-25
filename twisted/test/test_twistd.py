@@ -39,6 +39,7 @@ from twisted.python.log import ILogObserver
 from twisted.python.components import Componentized
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IReactorDaemonize
+from twisted.internet.test.modulehelpers import AlternateReactor
 from twisted.python.fakepwd import UserDatabase
 try:
     from twisted.scripts import _twistd_unix
@@ -669,7 +670,8 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         L{UnixApplicationRunner.setupEnvironment} daemonizes the process if
         C{False} is passed for the C{nodaemon} parameter.
         """
-        self.runner.setupEnvironment(None, ".", False, None, None)
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.runner.setupEnvironment(None, ".", False, None, None)
         self.assertTrue(self.daemon)
 
 
@@ -702,7 +704,8 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         C{nodaemon} is C{False}.
         """
         pidfile = self.mktemp()
-        self.runner.setupEnvironment(None, ".", False, None, pidfile)
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.runner.setupEnvironment(None, ".", False, None, pidfile)
         fObj = file(pidfile)
         pid = int(fObj.read())
         fObj.close()
@@ -714,7 +717,8 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         L{UnixApplicationRunner.setupEnvironment} changes the process umask to
         the value specified by the C{umask} parameter.
         """
-        self.runner.setupEnvironment(None, ".", False, 123, None)
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.runner.setupEnvironment(None, ".", False, 123, None)
         self.assertEqual(self.mask, 123)
 
 
@@ -734,7 +738,8 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
         C{0077} if C{None} is passed for the C{umask} parameter and C{False} is
         passed for the C{nodaemon} parameter.
         """
-        self.runner.setupEnvironment(None, ".", False, None, None)
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.runner.setupEnvironment(None, ".", False, None, None)
         self.assertEqual(self.mask, 0077)
 
 
@@ -841,6 +846,10 @@ class FakeNonDaemonizingReactor(object):
 
     def afterDaemonize(self):
         self._afterDaemonizeCalled = True
+
+
+    def addSystemEventTrigger(self, *args, **kw):
+        pass
 
 
 
@@ -1554,7 +1563,8 @@ class DaemonizeTests(unittest.TestCase):
         When double fork succeeded in C{daemonize}, the child process writes
         B{0} to the status pipe.
         """
-        self.runner.postApplication()
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.runner.postApplication()
         self.assertEqual(
             self.mockos.actions,
             [('chdir', '.'), ('umask', 077), ('fork', True), 'setsid',
@@ -1569,7 +1579,8 @@ class DaemonizeTests(unittest.TestCase):
         """
         self.mockos.child = False
         self.mockos.readData = "0"
-        self.assertRaises(SystemError, self.runner.postApplication)
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.assertRaises(SystemError, self.runner.postApplication)
         self.assertEqual(
             self.mockos.actions,
             [('chdir', '.'), ('umask', 077), ('fork', True),
@@ -1590,7 +1601,8 @@ class DaemonizeTests(unittest.TestCase):
                 raise IOError(errno.EINTR)
 
         self.mockos.write = raisingWrite
-        self.runner.postApplication()
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.runner.postApplication()
         self.assertEqual(
             self.mockos.actions,
             [('chdir', '.'), ('umask', 077), ('fork', True), 'setsid',
@@ -1614,7 +1626,8 @@ class DaemonizeTests(unittest.TestCase):
 
         self.mockos.read = raisingRead
         self.mockos.child = False
-        self.assertRaises(SystemError, self.runner.postApplication)
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.assertRaises(SystemError, self.runner.postApplication)
         self.assertEqual(
             self.mockos.actions,
             [('chdir', '.'), ('umask', 077), ('fork', True),
@@ -1637,7 +1650,8 @@ class DaemonizeTests(unittest.TestCase):
         errorService = FakeService()
         errorService.setServiceParent(self.runner.application)
 
-        self.assertRaises(RuntimeError, self.runner.postApplication)
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.assertRaises(RuntimeError, self.runner.postApplication)
         self.assertEqual(
             self.mockos.actions,
             [('chdir', '.'), ('umask', 077), ('fork', True), 'setsid',
@@ -1656,7 +1670,8 @@ class DaemonizeTests(unittest.TestCase):
         self.mockos.readData = "1: An identified error"
         errorIO = StringIO.StringIO()
         self.patch(sys, '__stderr__', errorIO)
-        self.assertRaises(SystemError, self.runner.postApplication)
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.assertRaises(SystemError, self.runner.postApplication)
         self.assertEqual(
             errorIO.getvalue(),
             "An error has occurred: ' An identified error'\n"
@@ -1682,7 +1697,8 @@ class DaemonizeTests(unittest.TestCase):
         errorService = FakeService()
         errorService.setServiceParent(self.runner.application)
 
-        self.assertRaises(RuntimeError, self.runner.postApplication)
+        with AlternateReactor(FakeDaemonizingReactor()):
+            self.assertRaises(RuntimeError, self.runner.postApplication)
         self.assertEqual(
             self.mockos.actions,
             [('chdir', '.'), ('umask', 077), ('fork', True), 'setsid',

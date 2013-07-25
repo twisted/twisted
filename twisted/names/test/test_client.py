@@ -5,8 +5,6 @@
 Test cases for L{twisted.names.client}.
 """
 
-import sys
-
 from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.python import failure
@@ -16,7 +14,7 @@ from twisted.python.runtime import platform
 from twisted.internet import defer
 from twisted.internet.error import CannotListenError
 from twisted.internet.interfaces import IResolver
-from twisted.internet.test.modulehelpers import NoReactor
+from twisted.internet.test.modulehelpers import AlternateReactor
 from twisted.internet.task import Clock
 
 from twisted.names import error, client, dns, hosts, cache
@@ -32,24 +30,6 @@ if platform.isWindows():
     windowsSkip = "These tests need more work before they'll work on Windows."
 else:
     windowsSkip = None
-
-class AlternateReactor(NoReactor):
-    """
-    A context manager which temporarily installs a different object as the global reactor.
-    """
-    def __init__(self, reactor):
-        """
-        @param reactor: Any object to install as the global reactor.
-        """
-        NoReactor.__init__(self)
-        self.alternate = reactor
-
-
-    def __enter__(self):
-        NoReactor.__enter__(self)
-        import twisted.internet
-        twisted.internet.reactor = self.alternate
-        sys.modules['twisted.internet.reactor'] = self.alternate
 
 
 
@@ -161,7 +141,6 @@ class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
         specified.
         """
         with AlternateReactor(Clock()):
-            sys.modules["twisted.internet.reactor"] = Clock()
             resolver = client.createResolver()
         self._hostsTest(resolver, b"/etc/hosts")
 
