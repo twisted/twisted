@@ -607,8 +607,8 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     @since: 13.2
     """
     showAttributes = (
-        ('name', str), 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
-        'dnssecOK', 'options')
+        ('name', lambda n: nativeString(n.name)), 'type', 'udpPayloadSize',
+        'extendedRCODE', 'version', 'dnssecOK', 'options')
 
     compareAttributes = (
         'name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
