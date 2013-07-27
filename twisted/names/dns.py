@@ -580,12 +580,15 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     An OPT record header.
 
-    @ivar name: Root (0, 8-bits)
+    @ivar name: The DNS name associated with this record. Since this
+        is a pseudo record, the name is always b'', which represents
+        the DNS root zone.
 
-    @ivar type: 41 (OPT Record)
+    @ivar type: The DNS record type. This is a fixed value of 41 for
+        OPT Record.
 
     @see: L{_OPTHeader.__init__} for documentation of other public
-        instance variables.
+        instance attributes.
 
     @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
 
@@ -722,7 +725,7 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     A class to represent OPT record variable options.
 
     @see: L{_OPTVariableOption.__init__} for documentation of public
-        instance variables.
+        instance attributes.
 
     @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
 
