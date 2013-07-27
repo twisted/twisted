@@ -175,13 +175,14 @@ class IPump(Interface):
 
     Look at this awesome ASCII art::
 
-                      +-----  the                   +-----  the
-                     / +----  fount                / +----  fount
-                    / /                           / /
-                   /o+---O the pump              /o+---O the pump
-                  / /                           / /
-        the   ---+ /                  the   ---+ /
-        drain ----+                   drain ----+
+                         a fount
+                      +----+--------+               +-----  a
+                     / +---+------+ | | data flow  / +----  fount
+                    / /           | | v           / /
+                   /o+---O a pump | |            /o+---O a pump
+                  / /             | |  a drain  / /
+        a     ---+ /              | +----+-----+ /
+        drain ----+               +------+------+
 
               =========> direction of flow =========>
 
@@ -238,5 +239,3 @@ class ISegment(Interface):
     This is a marker interface for the arbitrarily-sized segments of data that
     a stream-oriented protocol may deliver.
     """
-
-
