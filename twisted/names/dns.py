@@ -721,8 +721,8 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     A class to represent OPT record variable options.
 
-    @ivar code: The option code
-    @ivar data: The option data
+    @see: L{_OPTVariableOption.__init__} for documentation of public
+        instance variables.
 
     @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
 
