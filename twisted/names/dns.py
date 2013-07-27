@@ -581,11 +581,11 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     An OPT record header.
 
     @ivar name: The DNS name associated with this record. Since this
-        is a pseudo record, the name is always b'', which represents
-        the DNS root zone.
+        is a pseudo record, the name is always an L{dns.Name} instance
+        with value b'', which represents the DNS root zone.
 
-    @ivar type: The DNS record type. This is a fixed value of 41 for
-        OPT Record.
+    @ivar type: The DNS record type. This is a fixed value of 41
+        (L{dns.OPT} for OPT Record.
 
     @see: L{_OPTHeader.__init__} for documentation of other public
         instance attributes.
@@ -605,27 +605,27 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     def __init__(self, udpPayloadSize=4096, extendedRCODE=0, version=0,
                  dnssecOK=False, options=None):
         """
-        @type udpPayloadSize: C{int}
+        @type udpPayloadSize: L{int}
         @param payload: The number of octets of the largest UDP
             payload that can be reassembled and delivered in the
             requestor's network stack.
 
-        @type extendedRCODE: C{int}
+        @type extendedRCODE: L{int}
         @param extendedRCODE: Forms the upper 8 bits of extended
             12-bit RCODE (together with the 4 bits defined in
             [RFC1035].  Note that EXTENDED-RCODE value 0 indicates
             that an unextended RCODE is in use (values 0 through 15).
 
-        @type version: C{int}
+        @type version: L{int}
         @param version: Indicates the implementation level of the
             setter.  Full conformance with this specification is
             indicated by version '0'.
 
-        @type dnssecOK: C{bool}
+        @type dnssecOK: L{bool}
         @param dnssecOK: DNSSEC OK bit as defined by [RFC3225].
 
         @type options: L{list}
-        @param options: A L{list} of 0 or more L{OPTVariableOption}
+        @param options: A L{list} of 0 or more L{_OPTVariableOption}
             instances.
         """
         self.udpPayloadSize = udpPayloadSize
@@ -681,7 +681,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @param strio: Bytes will be read from this file until the full
             L{OPTHeader} is decoded.
 
-        @type length: C{int} or C{None}
+        @type length: L{int} or L{None}
         @param length: Not used.
         """
 
@@ -745,7 +745,7 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     def __init__(self, code=0, data=b''):
         """
-        @type code: C{int}
+        @type code: L{int}
         @param code: The option code
 
         @type data: L{bytes}
@@ -757,11 +757,11 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     def encode(self, strio, compDict=None):
         """
-        Encode this L{OPTVariableOption} to bytes.
+        Encode this L{_OPTVariableOption} to bytes.
 
         @type strio: L{file}
         @param strio: the byte representation of this
-            L{OPTVariableOption} will be written to this file.
+            L{_OPTVariableOption} will be written to this file.
 
         @type compDict: L{dict}
         @param compDict: Not used.
@@ -772,13 +772,13 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     def decode(self, strio, length=None):
         """
-        Decode bytes into an L{OPTVariableOption} instance.
+        Decode bytes into an L{_OPTVariableOption} instance.
 
         @type strio: L{file}
         @param strio: Bytes will be read from this file until the full
-            L{OPTVariableOption} is decoded.
+            L{_OPTVariableOption} is decoded.
 
-        @type length: C{int} or C{None}
+        @type length: L{int} or L{None}
         @param length: Not used.
         """
         l = struct.calcsize(self._fmt)
