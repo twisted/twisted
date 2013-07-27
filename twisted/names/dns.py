@@ -1905,7 +1905,18 @@ class DNSMixin(object):
         except:
             return defer.fail()
 
-        resultDeferred = defer.Deferred()
+        def cancel(deferred):
+            """
+            Cancel the query.
+
+            Remove the C{resultDeferred} and C{cancelCall} from
+            L{self.liveMessages}. Cancel the C{cancelCall}.
+
+            @param deferred: The cancelled L{defer.Deferred}.
+            """
+            del self.liveMessages[id]
+            cancelCall.cancel()
+        resultDeferred = defer.Deferred(cancel)
         cancelCall = self.callLater(timeout, self._clearFailed, resultDeferred, id)
         self.liveMessages[id] = (resultDeferred, cancelCall)
 
