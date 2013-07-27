@@ -9,11 +9,9 @@
 <h1>An Introduction to Tubes</h1>
 
 <p>
-Tubes are a mechanism for flowing data through your Twisted application.
+All programs transform input to output.
+In the context of doing some blocking calculation, transforming input to output just looks like this:
 </p>
-
-<p>
-All programs transform input to output.  In other words, all programs are, at some level, like this:
 
 <pre class="python">
 def process(input):
@@ -21,10 +19,51 @@ def process(input):
     return output
 </pre>
 
-However, in the context of a concurrent, event-driven system like Twisted, not every input corresponds to exactly one output, so we can't always write simple functions like this.
+<p>
+However, when doing I/O with Twisted, not every input corresponds to exactly one output, so we can't always write synchronous functions like <code>process</code>.
 Sometimes we need to wait for more input before we can generate some output; sometimes one piece of input will generate multiple outputs.
-Within Twisted, the abstraction for receiving, buffering, and processing streams of data is in the <code>twisted.tubes</code> package, and in this document we're going to learn how to use it.
 </p>
+
+<p>
+For example, let's say you are processing a stream of bytes, containing messages that are delimited by marker, <code>b"\r\n"</code> (as many network protocols are).
+If your program receives <code>b"hello, world"</code>, as an input, it should deliver zero outputs, since it hasn't seen a message boundary yet.
+If it receives <code>b"hello\r\nworld\r\n"</code>, then it should deliver two outputs, <code>b"hello"</code>, and <code>b"world"</code>.
+If your program receives <code>b"hello\r"</code>, and then <em>later</em> receives <code>b"\nworld\r\n"</code>, the <em>second</em> invocation needs to return two outputs.
+</p>
+
+<p>
+Also, when dealing with streams of data from networks, it's common to want to send data somewhere as well as receiving it from somewhere.
+Even if your program is concerned with converting a sequence bytes into a sequence of lines, it needs to be aware of the fact that its output may be full, and unprepared receive any more lines.
+For example, the line-splitting code above might be used in a proxy that relays output from a cloud server with a very fast datacenter uplink, to computers on very slow consumer networks.
+The cloud server's output will easily outpace a home network's input, which means that if the line parser is going as fast as it can, lines will pile up in outgoing buffers while waiting to be sent out, and consume all of the proxy's memory.
+When this happens, the line parsing program needs to tell <em>its</em> input to slow down, by indicating that it should no longer produce bytes, until the program consuming the line parser's output is ready again.
+</p>
+
+<p>
+The <code>twisted.tubes</code> package contains several interfaces and utilities for dealing with passing inputs to outputs, buffering intermediary data, and dealing with flow-control.
+<code>tubes</code> will solve some of the problems above for you automatically, and for those problems you need to solve yourself, it will provide common abstractions that make solving them easier.
+</p>
+
+<div class="note">
+If you've used Twisted before, you may notice that half of this is exactly what <code class="API" base="twisted.protocols.basic">LineReceiver</code> does, and that there are lots of related classes that can do similar things for other message types.
+The other half is handled by <a href="producers.xhtml"><code>IProducer</code> and <code>IConsumer</code></a>.
+
+There are three important distinctions here:
+<ol>
+    <li>
+    <code>twisted.tubes</code> is <em>general purpose</em>.
+    Whereas each <code>FooReceiver</code> class receives <code>Foo</code>s in its own way, <code>tubes</code> provides consistent, re-usable abstractions for sending and receiving.
+    </li>
+    <li>
+    <code>twisted.tubes</code> <em>does not require subclassing</em>.
+    The fact that different responsibilities live in different objects makes it easier to test and instrument them.
+    </li>
+    <li>
+    <code>twisted.tubes</code> <em>handles flow control automatically</em>.
+    The manual flow-control notifications provided by <code>IProducer</code> and <code>IConsumer</code> are still used internnally in <code>tubes</code> to hook up to <code>twisted.internet</code>, but the interfaces defined in <code>tubes</code> itself are considerably more flexible, as they allow you to hook together chains of arbitrary length, as opposed to just get buffer notifications for a single connection.
+    </li>
+</ol>
+</div>
 
 <p>
 Before we get into the interesting applications of the API, let's start with the simplest example; the simplest way to process any data is to avoid processing it entirely, to pass input straight on to output.
@@ -38,7 +77,7 @@ def echoFlow(fount, drain):
 </pre>
 
 <p>
-In the above example, <code>echoFlow</code> takes two things: a <i>fount</i>, or a source of data, and a <i>drain</i>, or a place where data eventually goes.
+In the above example, <code>echoFlow</code> takes two things: a <em>fount</em>, or a source of data, and a <em>drain</em>, or a place where data eventually goes.
 In the context of using tubes, we call such a function a "flow", because it establishes a flow of data from one place to another.
 Most often, the arguments to such a function are the two parts of the same network connection. The fount represents data coming in over the connection, and the drain represents data going back out over that same connection.
 </p>
@@ -76,7 +115,7 @@ To demonstrate both receiving and processing data, let's write a server that:
 </p>
 
 <p>
-In order to implement this program, we will construct a <i>cascade</i> of objects which process the data; or, in the parlance of the <code>tubes</code> package, "<code>Pump</code>s".
+In order to implement this program, we will construct a <em>cascade</em> of objects which process the data; or, in the parlance of the <code>tubes</code> package, "<code>Pump</code>s".
 Each <code>Pump</code> in the <code>cascade</code> will be responsible for processing part of the data.</p>
 <p>First we will create a pump that transforms arbitrary segments of a TCP stream into lines, then from lines into a combination of integers and callables (functions that perform the work of the <code>SUM</code> and <code>PRODUCT commands</code>), then from integers and callables into more integers - sums and products - from those integers into lines, and finally from those lines into CRLF-terminated segments of TCP data that are sent back out over the network.
 </p>
