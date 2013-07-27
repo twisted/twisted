@@ -197,7 +197,7 @@ def cascade(start, *plumbing):
     @raise TypeError: if C{start}, or any element of C{plumbing} is not
         adaptable to L{IDrain}.
     """
-    with _registry(_pump_registry):
+    with _registryActive(_pumpRegistry):
         result = IDrain(start)
         currentFount = IFount(start)
         drains = map(IDrain, plumbing)
@@ -208,6 +208,14 @@ def cascade(start, *plumbing):
 
 
 def _pumpToTube(pump):
+    """
+    Convert a L{Pump} into a L{_Tube}.  If the L{Pump} already has a C{tube}
+    attribute, return that; otherwise, associate one with it and return that.
+
+    @param pump: a pump
+
+    @return: a L{_Tube}.
+    """
     if pump.tube is not None:
         return pump.tube
     return _Tube(pump)
@@ -217,8 +225,27 @@ def _pumpToTube(pump):
 from zope.interface.adapter import AdapterRegistry
 from twisted.python.components import _addHook, _removeHook
 from contextlib import contextmanager
+
 @contextmanager
-def _registry(registry):
+def _registryActive(registry):
+    """
+    A context manager that activates and deactivates a zope adapter registry
+    for the duration of the call.
+
+    For example, if you wanted to have a function that could adapt L{IFoo} to
+    L{IBar}, but doesn't expose that adapter outside of itself::
+
+        def convertToBar(maybeFoo):
+            with _registryActive(_registryAdapting((IFoo, IBar, fooToBar))):
+                return IBar(maybeFoo)
+
+    @note: This isn't thread safe, so other threads will be affected as well.
+
+    @param registry: The registry to activate.
+    @type registry: L{AdapterRegistry}
+
+    @rtype:
+    """
     hook = _addHook(registry)
     yield
     _removeHook(hook)
@@ -324,19 +351,40 @@ class _Tube(object):
 
 
 
-_pump_registry = AdapterRegistry()
-_pump_registry.register([IPump], IDrain, '',
-                        lambda pump: _pumpToTube(pump)._tdrain)
-_pump_registry.register([IPump], IFount, '',
-                        lambda pump: _pumpToTube(pump)._tfount)
+def _registryAdapting(*fromToAdapterTuples):
+    """
+    Construct a Zope Interface adapter registry.
+
+    For example, if you want to construct an adapter registry that can convert
+    C{IFoo} to C{IBar} with C{fooToBar}.
+
+    @param fromToAdapterTuples: A sequence of tuples of C{(fromInterface,
+        toInterface, adapterCallable)}, where C{fromInterface} and
+        C{toInterface} are L{Interface}s, and C{adapterCallable} is a callable
+        that takes one argument which provides C{fromInterface} and returns an
+        object providing C{toInterface}.
+    @type fromToAdapterTuples: C{tuple} of 3-C{tuple}s of C{(Interface,
+        Interface, callable)}
+
+    @rtype: L{AdapterRegistry}
+    """
+    result = AdapterRegistry()
+    for From, to, adapter in fromToAdapterTuples:
+        result.register([From], to, '', adapter)
+    return result
+
+
 
 from zope.interface.declarations import implementedBy
 
-_pump_registry.register([implementedBy(_Tube)], IFount, '',
-                        lambda tube: tube._tfount)
-_pump_registry.register([implementedBy(_Tube)], IDrain, '',
-                        lambda tube: tube._tdrain)
-# _pump_registry = _registry(_pump_registry)
+_tubeType = implementedBy(_Tube)
+_pumpRegistry = _registryAdapting(
+    (IPump, IDrain, lambda pump: _pumpToTube(pump)._tdrain),
+    (IPump, IFount, lambda pump: _pumpToTube(pump)._tfount),
+    (_tubeType, IFount, lambda tube: tube._tfount),
+    (_tubeType, IDrain, lambda tube: tube._tdrain),
+)
+
 
 
 @implementer(IPump)
