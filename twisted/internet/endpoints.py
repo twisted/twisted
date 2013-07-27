@@ -568,7 +568,7 @@ class TCP6ClientEndpoint(object):
     """
 
     _getaddrinfo = socket.getaddrinfo
-    _deferToThread = threads.deferToThread
+    _deferToThread = staticmethod(threads.deferToThread)
     _GAI_ADDRESS = 4
     _GAI_ADDRESS_HOST = 0
 
