@@ -18,7 +18,7 @@ import os
 import re
 import socket
 
-from zope.interface import implementer, directlyProvides
+from zope.interface import implementer, implements, directlyProvides
 import warnings
 
 from twisted.python.compat import _PY3
@@ -844,16 +844,10 @@ class AdoptedStreamServerEndpoint(object):
 
 
 
-def _parseTCP(factory, port, interface="", backlog=50):
+def _parseTCP(port, interface="", backlog=50):
     """
     Internal parser function for L{_parseServer} to convert the string
     arguments for a TCP(IPv4) stream endpoint into the structured arguments.
-
-    @param factory: the protocol factory being parsed, or C{None}.  (This was a
-        leftover argument from when this code was in C{strports}, and is now
-        mostly None and unused.)
-
-    @type factory: L{IProtocolFactory} or C{NoneType}
 
     @param port: the integer port number to bind
     @type port: C{str}
@@ -862,26 +856,19 @@ def _parseTCP(factory, port, interface="", backlog=50):
     @param backlog: the length of the listen queue
     @type backlog: C{str}
 
-    @return: a 2-tuple of (args, kwargs), describing  the parameters to
+    @return: a 2-tuple of (args, kwargs), describing the parameters to
         L{IReactorTCP.listenTCP} (or, modulo argument 2, the factory, arguments
         to L{TCP4ServerEndpoint}.
     """
-    return (int(port), factory), {'interface': interface,
-                                  'backlog': int(backlog)}
+    return (int(port),), {'interface': interface, 'backlog': int(backlog)}
 
 
 
-def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
+def _parseUNIX(address, mode='666', backlog=50, lockfile=True):
     """
     Internal parser function for L{_parseServer} to convert the string
     arguments for a UNIX (AF_UNIX/SOCK_STREAM) stream endpoint into the
     structured arguments.
-
-    @param factory: the protocol factory being parsed, or C{None}.  (This was a
-        leftover argument from when this code was in C{strports}, and is now
-        mostly None and unused.)
-
-    @type factory: L{IProtocolFactory} or C{NoneType}
 
     @param address: the pathname of the unix socket
     @type address: C{str}
@@ -897,23 +884,18 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
         arguments to L{UNIXServerEndpoint}.
     """
     return (
-        (address, factory),
+        (address,),
         {'mode': int(mode, 8), 'backlog': int(backlog),
          'wantPID': bool(int(lockfile))})
 
 
 
-def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
+def _parseSSL(port, privateKey="server.pem", certKey=None,
               sslmethod=None, interface='', backlog=50, extraCertChain=None):
     """
     Internal parser function for L{_parseServer} to convert the string
     arguments for an SSL (over TCP/IPv4) stream endpoint into the structured
     arguments.
-
-    @param factory: the protocol factory being parsed, or C{None}.  (This was a
-        leftover argument from when this code was in C{strports}, and is now
-        mostly None and unused.)
-    @type factory: L{IProtocolFactory} or C{NoneType}
 
     @param port: the integer port number to bind
     @type port: C{str}
@@ -975,7 +957,7 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         extraCertChain=chainCertificates,
         **kw
     )
-    return ((int(port), factory, cf),
+    return ((int(port), cf),
             {'interface': interface, 'backlog': int(backlog)})
 
 
@@ -1181,9 +1163,7 @@ _endpointClientFactories = {
     }
 
 
-_NO_DEFAULT = object()
-
-def _parseServer(description, factory, default=None):
+def _parseServer(description):
     """
     Parse a strports description into a 2-tuple of arguments and keyword
     values.
@@ -1192,32 +1172,9 @@ def _parseServer(description, factory, default=None):
         L{serverFromString}.
     @type description: C{str}
 
-    @param factory: A 'factory' argument; this is left-over from
-        twisted.application.strports, it's not really used.
-    @type factory: L{IProtocolFactory} or L{None}
-
-    @param default: Deprecated argument, specifying the default parser mode to
-        use for unqualified description strings (those which do not have a ':'
-        and prefix).
-    @type default: C{str} or C{NoneType}
-
     @return: a 3-tuple of (plugin or name, arguments, keyword arguments)
     """
     args, kw = _parse(description)
-    if not args or (len(args) == 1 and not kw):
-        deprecationMessage = (
-            "Unqualified strport description passed to 'service'."
-            "Use qualified endpoint descriptions; for example, 'tcp:%s'."
-            % (description,))
-        if default is None:
-            default = 'tcp'
-            warnings.warn(
-                deprecationMessage, category=DeprecationWarning, stacklevel=4)
-        elif default is _NO_DEFAULT:
-            raise ValueError(deprecationMessage)
-        # If the default has been otherwise specified, the user has already
-        # been warned.
-        args[0:0] = [default]
     endpointType = args[0]
     parser = _serverParsers.get(endpointType)
     if parser is None:
@@ -1227,24 +1184,7 @@ def _parseServer(description, factory, default=None):
             if plugin.prefix == endpointType:
                 return (plugin, args[1:], kw)
         raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
-    return (endpointType.upper(),) + parser(factory, *args[1:], **kw)
-
-
-
-def _serverFromStringLegacy(reactor, description, default):
-    """
-    Underlying implementation of L{serverFromString} which avoids exposing the
-    deprecated 'default' argument to anything but L{strports.service}.
-    """
-    nameOrPlugin, args, kw = _parseServer(description, None, default)
-    if type(nameOrPlugin) is not str:
-        plugin = nameOrPlugin
-        return plugin.parseStreamServer(reactor, *args, **kw)
-    else:
-        name = nameOrPlugin
-    # Chop out the factory.
-    args = args[:1] + args[2:]
-    return _endpointServerFactories[name](reactor, *args, **kw)
+    return (endpointType.upper(),) + parser(*args[1:], **kw)
 
 
 
@@ -1308,7 +1248,13 @@ def serverFromString(reactor, description):
 
     @since: 10.2
     """
-    return _serverFromStringLegacy(reactor, description, _NO_DEFAULT)
+    nameOrPlugin, args, kw = _parseServer(description)
+    if type(nameOrPlugin) is not str:
+        plugin = nameOrPlugin
+        return plugin.parseStreamServer(reactor, *args, **kw)
+    else:
+        name = nameOrPlugin
+    return _endpointServerFactories[name](reactor, *args, **kw)
 
 
 
