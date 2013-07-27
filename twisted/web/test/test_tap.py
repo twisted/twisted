@@ -159,6 +159,17 @@ class ServiceTests(TestCase):
             endpoints._parseServer(options['port'])[:2],
             ('TCP', (8080,)))
 
+    def test_allDigitsPort(self):
+        """
+        If the I{--port} option specifies a numerical port without a full
+        endpoint description, treat that as if it were a TCP port.
+        """
+        options = Options()
+        options.parseOptions(['--port', '8081'])
+        self.assertEqual(
+            endpoints._parseServer(options['port'])[:2],
+            ('TCP', (8081,)))
+
 
     def test_wsgi(self):
         """
