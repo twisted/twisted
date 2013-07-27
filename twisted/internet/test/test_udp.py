@@ -154,6 +154,17 @@ class UDPPortTestsMixin(object):
         self.assertIsInstance(addr, IPv6Address)
 
 
+    def test_invalidInterface(self):
+        """
+        A C{ValueError} is raised when trying to listen on an address that
+        isn't a valid IPv4 or IPv6 address.
+        """
+        reactor = self.buildReactor()
+        self.assertRaises(
+            ValueError, reactor.listenUDP, DatagramProtocol(), 0,
+            interface='example.com')
+
+
     def test_logPrefix(self):
         """
         Datagram transports implement L{ILoggingContext.logPrefix} to return a

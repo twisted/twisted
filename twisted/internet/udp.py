@@ -348,6 +348,8 @@ class Port(base.BasePort):
             self.addressFamily = socket.AF_INET6
         elif abstract.isIPAddress(self.interface):
             self.addressFamily = socket.AF_INET
+        elif self.interface:
+            raise ValueError(self.interface, 'is not an IPv4 or IPv6 address.')
 
 
     def logPrefix(self):

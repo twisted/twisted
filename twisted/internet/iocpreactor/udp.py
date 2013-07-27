@@ -69,6 +69,8 @@ class Port(abstract.FileHandle):
             self.addressFamily = socket.AF_INET6
         elif isIPAddress(self.interface):
             self.addressFamily = socket.AF_INET
+        elif self.interface:
+            raise ValueError(self.interface, 'is not an IPv4 or IPv6 address.')
 
 
     def __repr__(self):
