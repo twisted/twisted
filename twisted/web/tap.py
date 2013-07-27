@@ -181,6 +181,8 @@ demo webserver that has the Test class from twisted.web.demo in it."""
                 self['port'] = 'unix:' + path
             else:
                 self['port'] = 'tcp:8080'
+        elif self['port'].isdigit():
+            self['port'] = 'tcp:' + self['port']
 
 
 
