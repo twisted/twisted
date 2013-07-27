@@ -602,9 +602,6 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         'name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
         'dnssecOK', 'options')
 
-    name = Name(b'')
-    type = OPT
-
     def __init__(self, udpPayloadSize=4096, extendedRCODE=0, version=0,
                  dnssecOK=False, options=None):
         """
@@ -636,6 +633,16 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.version = version
         self.dnssecOK = dnssecOK
         self.options = options or []
+
+
+    @property
+    def name(self):
+        return Name(b'')
+
+
+    @property
+    def type(self):
+        return OPT
 
 
     def encode(self, strio, compDict=None):

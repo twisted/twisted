@@ -1974,18 +1974,36 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
 
     def test_name(self):
         """
-        L{dns._OPTHeader.name} is a class attribute whose value is
+        L{dns._OPTHeader.name} is a instance attribute whose value is
         fixed as the root domain
         """
-        self.assertEqual(dns._OPTHeader.name, dns.Name(b''))
+        self.assertEqual(dns._OPTHeader().name, dns.Name(b''))
+
+
+    def test_nameReadonly(self):
+        """
+        L{dns._OPTHeader.name} is readonly.
+        """
+        h = dns._OPTHeader()
+        self.assertRaises(
+            AttributeError, setattr, h, 'name', dns.Name(b'example.com'))
 
 
     def test_type(self):
         """
-        L{dns._OPTHeader.type} is a class attribute with fixed value
+        L{dns._OPTHeader.type} is an instance attribute with fixed value
         41.
         """
-        self.assertEqual(dns._OPTHeader.type, 41)
+        self.assertEqual(dns._OPTHeader().type, 41)
+
+
+    def test_typeReadonly(self):
+        """
+        L{dns._OPTHeader.type} is readonly.
+        """
+        h = dns._OPTHeader()
+        self.assertRaises(
+            AttributeError, setattr, h, 'type', dns.A)
 
 
     def test_udpPayloadSize(self):
