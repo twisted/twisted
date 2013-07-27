@@ -318,36 +318,13 @@ class XMLRPCIntrospection(XMLRPC):
     xmlrpc_methodSignature.signature = [['array', 'string'],
                                         ['string', 'string']]
 
-
     @withRequest
     def xmlrpc_multicall(self, request, procedureList):
         """
-        Execute several RPC methods in a single XMLRPC request using the
-        multicall object.
+        Execute several RPC methods in a single XMLRPC request.
 
-        Example::
-            On the server side, just load the instrospection so your
-            server has system.multicall. Then on the client::
-
-                from twisted.web.xmlrpc import Proxy
-                from twisted.web.xmlrpc import MultiCall
-
-                proxy = Proxy('url of your server')
-
-                multiRPC = MultiCall( proxy )
-                # queue a few calls
-                multiRPC.system.listMethods()
-                multiRPC.system.methodHelp('system.listMethods')
-                multiRPC.system.methodSignature('system.listMethods')
-
-                def handleResults(results):
-                    for success, result in results:
-                        print result
-
-                multiRPC().addCallback(handleResults)
-
-        @param request: The http C{request} object, obtained
-            via the @withRequest decorator. 
+        @param request: The http L{request} object, obtained
+            via the @withRequest decorator.
         @type request: L{http.Request}
 
         @param procedureList: A list of dictionaries, each representing an
@@ -358,28 +335,28 @@ class XMLRPCIntrospection(XMLRPC):
         @return: L{defer.DeferredList} of the deferreds for each procedure
             in procedure list.
         @rtype: L{defer.DeferredList}
-        @since: 12.3
+        @since: 13.1
         """
-        def callError(error):
+        def ebCallError(error):
             """
             Errorback to handle individual call errors.
 
             Individual errors in a multicall are returned as
             dictionaries. See U{http://www.xmlrpc.com/discuss/msgReader$1208}.
 
-            @param result: C{failure}
-            @type result: L{Failure}
+            @param error: L{failure}
+            @type error: L{Failure}
 
             @rtype: dict
             @return: A dict with keys C{faultCode} and C{faultString}.
             """
-            log.err(error.value)
+            log.err(error)
             return {'faultCode':   self.FAILURE,
                     'faultString': (error.value.faultString
-                        if isinstance(error.value, Fault)
-                        else getattr(error.value, 'message', ''))}
+                                    if isinstance(error.value, Fault)
+                                    else getattr(error.value, 'message', ''))}
 
-        def prepareCallResponse(result):
+        def cbPrepareCallResponse(result):
             """
             Callback to convert a call C{response} to a list.
 
@@ -388,7 +365,8 @@ class XMLRPCIntrospection(XMLRPC):
             See U{http://www.xmlrpc.com/discuss/msgReader$1208}.
 
             @param result: C{response}
-            @type result: Any python type.
+            @type result: any accepted "xmlrpc type": int, boolean, str,
+                float, dict, list or C{xmlrpclib.Binary} object
 
             @rtype: list.
             @return: A list with response as element 0.
@@ -406,22 +384,22 @@ class XMLRPCIntrospection(XMLRPC):
             @param params: List of arguments to be passed to the procedure.
             @type params: list
 
-            @return: A C{deferred} object with prepareCallResponse and
+            @return: A L{deferred} object with prepareCallResponse and
             callError attached.
             @rtype: L{defer.Deferred}
             """
             try:
                 procedure = self._xmlrpc_parent.lookupProcedure(procedurePath)
             except NoSuchFunction, e:
-                return defer.fail(e).addErrback(callError)
+                return defer.fail(e).addErrback(ebCallError)
             else:
                 if getattr(procedure, 'withRequest', False):
                     call = defer.maybeDeferred(procedure, request, *params)
                 else:
                     call = defer.maybeDeferred(procedure, *params)
 
-                call.addCallback(prepareCallResponse)
-                call.addErrback(callError)
+                call.addCallback(cbPrepareCallResponse)
+                call.addErrback(ebCallError)
                 return call
 
         results = [
@@ -429,33 +407,48 @@ class XMLRPCIntrospection(XMLRPC):
             for procedure in procedureList]
 
         return (defer.DeferredList(results)
-            .addCallback(lambda results: [r[1] for r in results]))
+                     .addCallback(lambda results: [r[1] for r in results]))
 
     xmlrpc_multicall.signature = [['array', 'array']]
-
 
 
 class _DeferredMultiCallProcedure(object):
     """
     A helper object to store calls made on the
     MultiCall object for batch execution.
-    @since: 12.3
+    @since: 13.1
     """
     def __init__(self, call_list, name):
+        """
+        A helper object to emulate the attribute lookup for
+        a remote procedure
+
+        @param call_list: A C{list} of queued tuples representing
+                          a queued call. Each tupple containing 3
+                          elements: a L{defer.Deferred} that will
+                          be triggered with the call results, the
+                          remote method name, and the arguments to
+                          execute the method
+        @type call_list: C{list}
+
+        @param name: the name of the remote method
+        @type name: c{string}
+        """
         self.__call_list = call_list
         self.__name = name
-
 
     def __getattr__(self, name):
         """
         Magic to emulate x.y.name lookups for
         a remote procedure.
         """
-        return _DeferredMultiCallProcedure(
-            self.__call_list,
-            "%s.%s" % (self.__name, name)
-        )
-
+        try:
+            return super(_DeferredMultiCallProcedure, self).__getattr__(name)
+        except:
+            return _DeferredMultiCallProcedure(
+                self.__call_list,
+                "%s.%s" % (self.__name, name)
+            )
 
     def __call__(self, *args):
         """
@@ -471,17 +464,8 @@ class _DeferredMultiCallProcedure(object):
         return d
 
 
-
-class MultiCall(xmlrpclib.MultiCall):
+class MultiCall(object):
     """
-    @param server: An object used to boxcar method calls
-    @type server: L{Proxy}.
-
-    @return: A L{defer.DeferredList} of all the deferreds for
-        each queued rpc call.
-    @rtype: L{defer.DeferredList}
-    @since: 12.3
-
     Methods can be added to the MultiCall using normal
     method call syntax e.g.::
 
@@ -505,31 +489,87 @@ class MultiCall(xmlrpclib.MultiCall):
 
         d = multicall()
         d.addCallback(printResults)
+
+    @since: 13.1
     """
+    def __init__(self, server):
+        """
+        An object used to boxcar method calls
+        @param server: An instance of the L{Proxy} where
+                the methods are to be executed
+        @type server: L{Proxy}.
+        """
+        self.__server = server
+        self.__call_list = []
+
+    def __repr__(self):
+        return "<MultiCall at %x%s>" % (
+            id(self),
+            (':\n'+'\n'.join(['  |-- %s(%s)' % (x[1], ','.join(map(str, x[2])))
+            for x in self.__call_list])
+            if self.__call_list else '')
+        )
+
     def __getattr__(self, name):
         """ Get a ref to a helper object to emulate
         RPC 'attributes lookup'.
         """
-        return _DeferredMultiCallProcedure(self.__call_list, name)
-
+        try:
+            return super(MultiCall, self).__getattr__(name)
+        except:
+            return _DeferredMultiCallProcedure(self.__call_list, name)
 
     def callRemote(self, method, *args):
         """
         Queue a call for C{method} on this multicall object
         with the given arguments.
+        @param method: name of the remote method
+        @type method: c{string}
 
         @return: A L{defer.Deferred} that will fire with the method response,
             or a failure if the method raised a L{Fault}.
         """
         return getattr(self, method)(*args)
 
-
-    def __call__(self):
+    def run(self, fireOnOneCallback=False, fireOnOneErrback=False,
+        consumeErrors=False):
         """
         Execute the multicall, processing the deferreds for each
         procedure once the results are ready.
 
-        @return: A L{defer.DeferredList} that will fire all the queued deferreds.
+        @param fireOnOneCallback: (keyword param) a flag indicating that
+                            only one callback needs to be fired for me to call
+                            my callback
+        @param fireOnOneErrback: (keyword param) a flag indicating that
+                            only one errback needs to be fired for me to call
+                            my errback
+        @param consumeErrors: (keyword param) a flag indicating that any errors
+                            raised in the original deferreds should be
+                            consumed by this DeferredList.  This is useful to
+                            prevent spurious warnings being logged.
+        @return: A L{defer.DeferredList} that will fire all the queued
+                            deferreds.
+        """
+        return self.__call__(fireOnOneCallback, fireOnOneErrback,
+            consumeErrors)
+
+    def __call__(self, fireOnOneCallback=False,
+        fireOnOneErrback=False, consumeErrors=False):
+        """
+        Execute the multicall, processing the deferreds for each
+        procedure once the results are ready.
+        @param fireOnOneCallback: (keyword param) a flag indicating that
+                            only one callback needs to be fired for me to call
+                            my callback
+        @param fireOnOneErrback: (keyword param) a flag indicating that
+                            only one errback needs to be fired for me to call
+                            my errback
+        @param consumeErrors: (keyword param) a flag indicating that any errors
+                            raised in the original deferreds should be
+                            consumed by this DeferredList.  This is useful to
+                            prevent spurious warnings being logged.
+        @return: A L{defer.DeferredList} that will fire all the queued
+                            deferreds.
         """
         marshalled_list = []
         deferreds = []
@@ -539,14 +579,15 @@ class MultiCall(xmlrpclib.MultiCall):
                 'params': args})
             deferreds.append(deferred)
 
-        def processResults(results, deferreds):
+        def cbProcessResults(results, deferreds):
             """
             Callback to trigger the deferreds with their
             corresponding RPC's results.
             """
             for d, result in zip(deferreds, results):
                 if isinstance(result, dict):
-                    d.errback(Fault(result['faultCode'],
+                    d.errback(Fault(
+                        result['faultCode'],
                         result['faultString']))
 
                 elif isinstance(result, list):
@@ -558,9 +599,10 @@ class MultiCall(xmlrpclib.MultiCall):
 
         self.__server.callRemote(
             'system.multicall', marshalled_list
-        ).addCallback(processResults, deferreds)
+        ).addCallback(cbProcessResults, deferreds)
 
-        return defer.DeferredList(deferreds)
+        return defer.DeferredList(deferreds, fireOnOneCallback,
+            fireOnOneErrback, consumeErrors)
 
 
 def addIntrospection(xmlrpc):
@@ -659,7 +701,8 @@ class _QueryFactory(protocol.ClientFactory):
         @type method: C{str}
 
         @param allowNone: allow the use of None values in parameters. It's
-            passed to the underlying xmlrpclib implementation. Default to False.
+            passed to the underlying xmlrpclib implementation.Default to
+            False.
         @type allowNone: C{bool} or C{NoneType}
 
         @param args: the arguments to pass to the method.
@@ -753,8 +796,8 @@ class Proxy:
         """
         @param url: The URL to which to post method calls.  Calls will be made
             over SSL if the scheme is HTTPS.  If netloc contains username or
-            password information, these will be used to authenticate, as long as
-            the C{user} and C{password} arguments are not specified.
+            password information, these will be used to authenticate, as long
+            as the C{user} and C{password} arguments are not specified.
         @type url: C{str}
 
         """

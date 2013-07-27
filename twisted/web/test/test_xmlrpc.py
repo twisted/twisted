@@ -700,7 +700,7 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
                  'deferFault', 'dict', 'echo', 'fail', 'fault',
                  'pair', 'system.listMethods',
                  'system.methodHelp',
-                 'system.methodSignature', 'system.multicall', 
+                 'system.methodSignature', 'system.multicall',
                  'withRequest'])
 
         d = self.proxy().callRemote("system.listMethods")
@@ -748,13 +748,20 @@ class FakeProxy(object):
     def callRemote(self, methodName, *args):
         """
         emulate twisted.web.xmlrpc.Proxy.callRemote
+
+        @param methodName: name of remote method to execute
+        @type methodName: str
+
+        @param args: optional positional arguments
+
+        @rtype: L{defer.Deferred}
         """
         # build request
         request = DummyRequest([''])
         request.method = 'POST'
         request.content = StringIO(
             payloadTemplate % (methodName, xmlrpclib.dumps(args)))
-        
+
         def returnResponse( requestResponse ):
             results = xmlrpclib.loads(requestResponse)[0]
             if len(results) == 1:
@@ -766,7 +773,6 @@ class FakeProxy(object):
 
         return (defer.succeed("".join(request.written))
             .addCallback(returnResponse))
-
 
 
 class XMLRPCTestMultiCall(unittest.TestCase):
@@ -781,7 +787,7 @@ class XMLRPCTestMultiCall(unittest.TestCase):
 
     def test_multicall(self):
         """
-        test a suscessfull multicall
+        test a successfull multicall
         """
         inputs = range(5)
         m = MultiCall(self.proxy)
@@ -792,12 +798,11 @@ class XMLRPCTestMultiCall(unittest.TestCase):
             self.assertEqual(inputs, [x[1] for x in results])
 
         resultsDeferred = m().addCallback(testResults)
-        self.assertTrue(resultsDeferred.called) 
 
 
     def test_multicall_callRemote(self):
         """
-        test a suscessfull multicall using
+        test a successfull multicall using
         multicall.callRemote instead of attribute lookups
         """
         inputs = range(5)
@@ -809,7 +814,6 @@ class XMLRPCTestMultiCall(unittest.TestCase):
             self.assertEqual(inputs, [x[1] for x in results])
 
         resultsDeferred = m().addCallback(testResults)
-        self.assertTrue(resultsDeferred.called)
 
 
     def test_multicall_with_callbacks(self):
@@ -828,7 +832,6 @@ class XMLRPCTestMultiCall(unittest.TestCase):
             self.assertEqual([ x*x for x in inputs], [x[1] for x in results])
 
         resultsDeferred = m().addCallback(testResults)
-        self.assertTrue(resultsDeferred.called)
 
 
     def test_multicall_errorback(self):
@@ -865,19 +868,21 @@ class XMLRPCTestMultiCall(unittest.TestCase):
             the errorback should have trapped the error
             """
             self.assertEqual(results[1], (True, None),
-            'failure trapped in errorback does not propagate to deferredList results')
+            'failure trapped in errorback does not propagate to' +\
+            'deferredList results')
 
         resultsDeferred = m().addCallback(testResults)
-        self.assertTrue(resultsDeferred.called)
 
 
     def test_multicall_withRequest(self):
         """
-        Test that methods decorated with @withRequest are handled correctly
+        Test that methods decorated with @withRequest are handled correctly.
+        In this test one of the "boxed" rpc calls is a call to
+        L{Text.xmlrpc_withRequest}.
         """
         m = MultiCall(self.proxy)
         m.echo(1)
-        # method decorated with withRequest
+        # Call Test.withRequest method, which decorated with @withRequest
         msg = 'hoho'
         m.withRequest(msg)
         m.echo(2)
@@ -885,18 +890,18 @@ class XMLRPCTestMultiCall(unittest.TestCase):
         def testResults(results):
             """
             test that a withRequest decorated method was properly handled
+            by searching for 'POST hoho' in its output 
             """
             self.assertEqual(results[1][1], 
-                'POST %s' % msg, 'check withRequest decorated result')
+                'POST %s' % (msg), 'check withRequest decorated result')
 
         resultsDeferred = m().addCallback(testResults)
-        self.assertTrue(resultsDeferred.called)
 
 
     def test_multicall_with_xmlrpclib(self):
         """
-        check that the sever's response is also compatible with xmlrpclib
-        MultiCall client
+        check that the sever's response is equivalent/compatible with its
+        counterparts in the standard python module xmlrpclib
         """
         class PatchedXmlrpclibProxy(object):
             """
