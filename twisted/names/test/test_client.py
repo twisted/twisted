@@ -24,7 +24,8 @@ from twisted.names.error import DNSQueryTimeoutError
 from twisted.names.common import ResolverBase
 
 from twisted.names.test.test_hosts import GoodTempPathMixin
-from twisted.names.test.test_rootresolve import MemoryReactor
+from twisted.names.test.test_rootresolve import (
+    MemoryDatagramTransport, MemoryReactor)
 
 from twisted.trial import unittest
 
@@ -1103,3 +1104,221 @@ class ThreadedResolverTests(unittest.TestCase):
             "instead.")
         self.assertEqual(warnings[0]['category'], DeprecationWarning)
         self.assertEqual(len(warnings), 1)
+
+
+
+class ResolverTestsMixin:
+    """
+    Tests for consistent behaviour in L{client.Resolver} and
+    L{client.FakeResolver}.
+    """
+    def test_iresolverImplementor(self):
+        """
+        L{client.Resolver} and L{client.FakeResolver} both implement
+        L{IResolver}.
+        """
+        self.assertTrue(
+            verifyClass(IResolver, self.resolverFactory))
+
+
+    def test_emptyServers(self):
+        """
+        L{client.Resolver} and L{client.FakeResolver} both raise
+        L{ValueError} when initialised with empty C{server} arguments..
+        """
+        self.assertRaises(
+            ValueError, self.resolverFactory, servers=[])
+
+
+    def test_reactorArgument(self):
+        """
+        L{client.Resolver} and L{client.FakeResolver} both accept a
+        reactor argument and save it as a private attribute.
+        """
+        reactor = MemoryReactor()
+        resolver = self.resolverFactory(servers=[None], reactor=reactor)
+        self.assertIdentical(resolver._reactor, reactor)
+
+
+    def test_lookupAddress(self):
+        """
+        L{client.Resolver} and L{client.FakeResolver} both respond to
+        queries with the same result structure.
+        """
+        resolver = self._getResolver()
+
+        d = resolver.lookupAddress('www.example.com')
+        resolver._respond(
+            dns.Query('www.example.com', dns.A),
+            client.CannedResponse(
+                server='1.1.1.1',
+                answers=[
+                    dns.RRHeader(
+                        'www.example.com', dns.A,
+                        payload=dns.Record_A('203.0.113.100', ttl=0),
+                        ttl=0)])
+            )
+        answers, authority, additional = self.successResultOf(d)
+
+        self.assertEqual(len(answers), 1)
+        self.assertEqual(
+            answers[0],
+            dns.RRHeader(
+                'www.example.com', dns.A, ttl=0,
+                payload=dns.Record_A('203.0.113.100', ttl=0)))
+
+
+    def test_nxdomain(self):
+        """
+        L{client.Resolver} and L{client.FakeResolver} both raise
+        L{error.DNSNameError) in response to NXDOMAIN messages.
+        """
+        resolver = self._getResolver()
+
+        d = resolver.lookupAddress('www.example.com', timeout=(5,))
+        resolver._respond(
+            dns.Query('www.example.com', dns.A),
+            client.CannedResponse(
+                server='1.1.1.1',
+                message=dns.Message(rCode=dns.ENAME)))
+
+        self.failureResultOf(d, error.DNSNameError)
+
+
+    def test_repeatedOutstandingQuery(self):
+        """
+        L{client.Resolver} and L{client.FakeResolver} both
+        track outstanding identical queries.
+        """
+        resolver = self._getResolver()
+
+        d1 = resolver.lookupAddress('www.example.com', timeout=(100,))
+
+        resolver._reactor.advance(1)
+
+        d2 = resolver.lookupAddress('www.example.com')
+
+        resolver._reactor.advance(1)
+
+        resolver._respond(
+            dns.Query('www.example.com', dns.A),
+            client.CannedResponse(
+                server='1.1.1.1',
+                answers=[
+                    dns.RRHeader(
+                        'www.example.com', dns.A,
+                        payload=dns.Record_A('203.0.113.100', ttl=0),
+                        ttl=0)]))
+
+        res1 = self.successResultOf(d1)
+        res2 = self.successResultOf(d2)
+
+        self.assertIdentical(res1, res2)
+        self.assertEqual(
+            res1,
+            ([dns.RRHeader('www.example.com', dns.A,
+                           payload=dns.Record_A('203.0.113.100', ttl=0),
+                           ttl=0)], [], []))
+
+
+    def test_defaultTimeout(self):
+        """
+        L{client.Resolver.__init__} and
+        L{client.FakeResolver.__init__} both have the same default
+        C{timeout} argument.
+        """
+        resolver = self.resolverFactory(servers=[None])
+        self.assertEqual(resolver.timeout, (1, 3, 11, 45))
+
+
+    def test_useDefaultTimeout(self):
+        """
+        L{client.Resolver} and L{client.FakeResolver} both use
+        C{self.timeout} if a lookupFunction is called with
+        timeout=None.
+        """
+        # A resolver which will timeout after 100 second ie something
+        # different to the default timeout arguments in
+        # IResolver.lookup methods.
+        resolver = self._getResolver(servers=['1.1.1.1'], timeout=(100,))
+
+        d = resolver.lookupAddress('www.example.com', timeout=None)
+
+        resolver._reactor.advance(99)
+        self.assertNoResult(d)
+
+        resolver._reactor.advance(1)
+        self.failureResultOf(d, defer.TimeoutError)
+
+
+    def test_useLookupTimeout(self):
+        """
+        L{client.Resolver} and
+        L{client.FakeResolver} both errBack with L{defer.TimeoutError}
+        if none of the servers respond within the given timeout period.
+        """
+        # A resolver which will timeout after 1 second.
+        resolver = self._getResolver(servers=['1.1.1.1'])
+
+        d = resolver.lookupAddress('www.example.com', timeout=(1,2))
+
+        resolver._reactor.advance(1)
+        self.assertNoResult(d)
+
+        resolver._reactor.advance(2)
+        self.failureResultOf(d, defer.TimeoutError)
+
+
+
+class FakeResolverTests(ResolverTestsMixin, unittest.SynchronousTestCase):
+    resolverFactory = client.FakeResolver
+
+    def _getResolver(self, **kwargs):
+        kwargs.setdefault('servers', ['192.0.2.100'])
+        kwargs.setdefault('reactor', MemoryReactor())
+
+        return self.resolverFactory(**kwargs)
+
+
+
+from twisted.python.components import proxyForInterface
+
+
+
+class ClientResolverWrapper(proxyForInterface(IResolver)):
+    @property
+    def _reactor(self):
+        return self.original._reactor
+
+
+    def _respond(self, query, response):
+        # A UDP port should have been started.
+        portNumber, transport = self.original._reactor.udpPorts.popitem()
+
+        # And a DNS packet sent.
+        [(packet, address)] = transport._sentPackets
+
+        msg = dns.Message()
+        msg.fromStr(packet)
+
+        # Once a reply is received, the Deferred should fire.
+        msg.queries[:] = response.message.queries
+        msg.answer = response.message.answer
+        msg.rCode = response.message.rCode
+        msg.answers[:] = response.message.answers
+        msg.authority[:] = response.message.authority
+        msg.additional[:] = response.message.additional
+
+        transport._protocol.datagramReceived(msg.toStr(), (response.server, response.serverPort))
+
+
+
+class ClientResolverTests(ResolverTestsMixin, unittest.SynchronousTestCase):
+    resolverFactory = client.Resolver
+
+    def _getResolver(self, **kwargs):
+        kwargs.setdefault('servers', ['192.0.2.100'])
+        kwargs.setdefault('reactor', MemoryReactor())
+
+        return ClientResolverWrapper(
+            self.resolverFactory(**kwargs))

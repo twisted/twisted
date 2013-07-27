@@ -396,7 +396,7 @@ class Charstr(object):
 
 
 @implementer(IEncodable)
-class Name:
+class Name(tputil.FancyStrMixin):
     """
     A name in the domain name system, made up of multiple labels.  For example,
     I{twistedmatrix.com}.
@@ -404,6 +404,8 @@ class Name:
     @ivar name: A byte string giving the name.
     @type name: C{bytes}
     """
+    showAttributes = ('name',)
+
     def __init__(self, name=b''):
         if isinstance(name, unicode):
             name = name.encode('idna')
@@ -575,7 +577,7 @@ class Query:
 
 
 @implementer(IEncodable)
-class RRHeader(tputil.FancyEqMixin):
+class RRHeader(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     A resource record header.
 
@@ -590,7 +592,7 @@ class RRHeader(tputil.FancyEqMixin):
     @ivar auth: A C{bool} indicating whether this C{RRHeader} was parsed from an
         authoritative message.
     """
-    compareAttributes = ('name', 'type', 'cls', 'ttl', 'payload', 'auth')
+    showAttributes = compareAttributes = ('name', 'type', 'cls', 'ttl', 'payload', 'auth')
 
     fmt = "!HHIH"
 
@@ -657,15 +659,6 @@ class RRHeader(tputil.FancyEqMixin):
 
     def isAuthoritative(self):
         return self.auth
-
-
-    def __str__(self):
-        t = QUERY_TYPES.get(self.type, EXT_QUERIES.get(self.type, 'UNKNOWN (%d)' % self.type))
-        c = QUERY_CLASSES.get(self.cls, 'UNKNOWN (%d)' % self.cls)
-        return '<RR name=%s type=%s class=%s ttl=%ds auth=%s>' % (self.name, t, c, self.ttl, self.auth and 'True' or 'False')
-
-
-    __repr__ = __str__
 
 
 

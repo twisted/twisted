@@ -438,6 +438,110 @@ class Resolver(common.ResolverBase):
 
 
 
+class CannedResponse(object):
+    messageFactory = dns.Message
+
+    def __init__(self, server, message=None,
+                 answers=None, authority=None, additional=None,
+                 serverPort=53):
+
+        self.server = server
+        self.serverPort = serverPort
+
+        if message is None:
+            message = self.messageFactory()
+        self.message = message
+        if answers is not None:
+            self.message.answers = answers[:]
+        if authority is not None:
+            self.message.authority = authority[:]
+        if additional is not None:
+            self.message.additional = additional[:]
+
+
+
+class DeferredGroup(list):
+    def call(self, methodName, *args, **kwargs):
+        for d in self:
+            getattr(d, methodName)(*args, **kwargs)
+
+
+    def callback(self, *args, **kwargs):
+        self.call('callback', *args, **kwargs)
+
+
+    def errback(self, *args, **kwargs):
+        self.call('errback', *args, **kwargs)
+
+
+    def cancel(self, *args, **kwargs):
+        self.call('cancel', *args, **kwargs)
+
+
+
+class FakeResolver(common.ResolverBase):
+    """
+    A verified fake of L{twisted.names.client.Resolver} for use in
+    tests.
+    """
+    def __init__(self, servers=None, timeout=(1, 3, 11, 45), reactor=None):
+        """
+        @see: L{Resolver.__init__} for argument documentation.
+        """
+        self._serverAddresses = servers or []
+        if not self._serverAddresses:
+            raise ValueError("No nameservers specified")
+
+        self.timeout = timeout
+
+        self._reactor = reactor
+
+        self._pendingResponses = []
+
+        self._waiting = {}
+
+
+    def _nextResponse(self):
+        return self._pendingResponses.pop(0)
+
+
+    def _lookup(self, queryName, queryClass, queryType, timeout):
+        """
+        Return the first pending response after a delay specified in
+        the L{CannedResponse}.
+
+        @see: L{Resolver} for argument documentation.
+        """
+        if timeout is None:
+            timeout = self.timeout
+
+        key = dns.Query(queryName, queryType, queryClass)
+
+        waiting = self._waiting.get(key)
+
+        if waiting is None:
+            waiting = self._waiting[key] = DeferredGroup()
+            self._reactor.callLater(
+                sum(timeout), waiting.errback, defer.TimeoutError())
+
+        d = defer.Deferred()
+        waiting.append(d)
+        return d
+
+
+    def _respond(self, query, response):
+        waiting = self._waiting[query]
+        if response.message.rCode != dns.OK:
+            waiting.errback(
+                self.exceptionForCode(response.message.rCode)())
+        else:
+            waiting.callback((
+                    response.message.answers,
+                    response.message.authority,
+                    response.message.additional))
+
+
+
 class AXFRController:
     timeoutCall = None
 
