@@ -619,7 +619,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @type version: L{int}
         @param version: Indicates the implementation level of the
             setter.  Full conformance with this specification is
-            indicated by version '0'.
+            indicated by version C{0}.
 
         @type dnssecOK: L{bool}
         @param dnssecOK: DNSSEC OK bit as defined by [RFC3225].
