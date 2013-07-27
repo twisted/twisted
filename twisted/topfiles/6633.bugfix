@@ -1,1 +1,1 @@
-twisted.internet.endpoints.TCP6ClientEndpoint no longer wraps the free function `deferToThread` in a bound method.
+twisted.internet.endpoints.TCP6ClientEndpoint now establishes connections when constructed with a hostname.
