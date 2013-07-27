@@ -2009,46 +2009,76 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
     def test_udpPayloadSize(self):
         """
         L{dns._OPTHeader.udpPayloadSize} defaults to 4096 as
-        recommended in rfc6891 section-6.2.5 but can be overridden in
-        the constructor.
+        recommended in rfc6891 section-6.2.5.
         """
         self.assertEqual(dns._OPTHeader().udpPayloadSize, 4096)
+
+
+    def test_udpPayloadSizeOverride(self):
+        """
+        L{dns._OPTHeader.udpPayloadSize} can be overridden in the
+        constructor.
+        """
         self.assertEqual(dns._OPTHeader(udpPayloadSize=512).udpPayloadSize, 512)
 
 
     def test_extendedRCODE(self):
         """
-        L{dns._OPTHeader.extendedRCODE} defaults to 0 but can be
-        overridden in the constructor.
+        L{dns._OPTHeader.extendedRCODE} defaults to 0.
         """
         self.assertEqual(dns._OPTHeader().extendedRCODE, 0)
+
+
+    def test_extendedRCODEOverride(self):
+        """
+        L{dns._OPTHeader.extendedRCODE} can be overridden in the
+        constructor.
+        """
         self.assertEqual(dns._OPTHeader(extendedRCODE=1).extendedRCODE, 1)
 
 
     def test_version(self):
         """
-        L{dns._OPTHeader.version} defaults to 0 but can be
-        overridden in the constructor.
+        L{dns._OPTHeader.version} defaults to 0.
         """
         self.assertEqual(dns._OPTHeader().version, 0)
+
+
+    def test_versionOverride(self):
+        """
+        L{dns._OPTHeader.version} can be overridden in the
+        constructor.
+        """
         self.assertEqual(dns._OPTHeader(version=1).version, 1)
 
 
     def test_dnssecOK(self):
         """
-        L{dns._OPTHeader.dnssecOK} defaults to False but can be
-        overridden in the constructor.
+        L{dns._OPTHeader.dnssecOK} defaults to False.
         """
         self.assertEqual(dns._OPTHeader().dnssecOK, False)
+
+
+    def test_dnssecOKOverride(self):
+        """
+        L{dns._OPTHeader.dnssecOK} can be overridden in the
+        constructor.
+        """
         self.assertEqual(dns._OPTHeader(dnssecOK=True).dnssecOK, True)
 
 
     def test_options(self):
         """
-        L{dns._OPTHeader.options} defaults to empty list but can be
-        overridden in the constructor.
+        L{dns._OPTHeader.options} defaults to empty list.
         """
         self.assertEqual(dns._OPTHeader().options, [])
+
+
+    def test_optionsOverride(self):
+        """
+        L{dns._OPTHeader.options} can be overridden in the
+        constructor.
+        """
         h = dns._OPTHeader(options=[(1, 1, b'\x00')])
         self.assertEqual(h.options, [(1, 1, b'\x00')])
 
