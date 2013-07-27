@@ -632,7 +632,10 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.extendedRCODE = extendedRCODE
         self.version = version
         self.dnssecOK = dnssecOK
-        self.options = options or []
+
+        if options is None:
+            options = []
+        self.options = options
 
 
     @property
