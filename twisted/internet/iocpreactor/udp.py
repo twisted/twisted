@@ -106,7 +106,7 @@ class Port(abstract.FileHandle):
             skt = self.createSocket()
             skt.bind((self.interface, self.port))
         except socket.error, le:
-            raise error.CannotListenError, (self.interface, self.port, le)
+            raise error.CannotListenError(self.interface, self.port, le)
 
         # Make sure that if we listened on port 0, we update that to
         # reflect what the OS actually assigned us.
@@ -177,7 +177,7 @@ class Port(abstract.FileHandle):
                 if no == errno.WSAEINTR:
                     return self.write(datagram)
                 elif no == errno.WSAEMSGSIZE:
-                    raise error.MessageLengthError, "message too long"
+                    raise error.MessageLengthError("message too long")
                 elif no in (errno.WSAECONNREFUSED, errno.WSAECONNRESET,
                             ERROR_CONNECTION_REFUSED, ERROR_PORT_UNREACHABLE):
                     self.protocol.connectionRefused()
@@ -195,7 +195,7 @@ class Port(abstract.FileHandle):
                 if no == errno.WSAEINTR:
                     return self.write(datagram, addr)
                 elif no == errno.WSAEMSGSIZE:
-                    raise error.MessageLengthError, "message too long"
+                    raise error.MessageLengthError("message too long")
                 elif no in (errno.WSAECONNREFUSED, errno.WSAECONNRESET,
                             ERROR_CONNECTION_REFUSED, ERROR_PORT_UNREACHABLE):
                     # in non-connected UDP ECONNREFUSED is platform dependent,
@@ -219,7 +219,7 @@ class Port(abstract.FileHandle):
                 "already connected, reconnecting is not currently supported "
                 "(talk to itamar if you want this)")
         if not isIPAddress(host) and not isIPv6Address(host):
-            raise ValueError, "please pass only IP addresses, not domain names"
+            raise ValueError("please pass only IP addresses, not domain names")
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
 
