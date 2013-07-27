@@ -584,23 +584,8 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     @ivar type: 41 (OPT Record)
 
-    @ivar udpPayloadSize: The number of octets of the largest UDP payload
-        that can be reassembled and delivered in the requestor's
-        network stack.
-
-    @ivar extendedRCODE: Forms the upper 8 bits of extended 12-bit
-        RCODE (together with the 4 bits defined in [RFC1035].  Note
-        that EXTENDED-RCODE value 0 indicates that an unextended RCODE
-        is in use (values 0 through 15).
-
-    @ivar version: Indicates the implementation level of the setter.
-        Full conformance with this specification is indicated by
-        version '0'.
-
-    @ivar dnssecOK: DNSSEC OK bit as defined by [RFC3225].
-
-    @ivar options: A L{list} of 0 or more L{OPTVariableOption}
-        instances.
+    @see: L{_OPTHeader.__init__} for documentation of other public
+        instance variables.
 
     @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
 
