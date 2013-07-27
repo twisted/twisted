@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-See L{Tube}.
+See L{_Tube}.
 """
 
 from zope.interface import implementer
@@ -167,7 +167,8 @@ def cascade(start, *plumbing):
     """
     Connect up a series of objects capable of transforming inputs to outputs;
     convert a sequence of L{IPump} objects into a sequence of connected
-    L{IFount} and L{IDrain} objects.
+    L{IFount} and L{IDrain} objects. This is necessary to be able to C{flowTo}
+    an object implementing L{IPump}.
 
     This function can best be understood by understanding that::
 
@@ -316,7 +317,7 @@ class _Tube(object):
 
     def deliver(self, item):
         """
-        Deliver the given item to this L{Tube}'s C{drain} attribute, if it has
+        Deliver the given item to this L{_Tube}'s C{drain} attribute, if it has
         yet been set by L{flowingFrom}.
         """
         self._delivered = True

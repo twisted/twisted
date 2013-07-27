@@ -166,12 +166,12 @@ class IDrain(Interface):
 
 class IPump(Interface):
     """
-    An L{IPump} provider is a control object for a L{Tube}.  A pump provides
-    all the behavior associated with a the L{Tube}'s translation of input to
-    output, so that users of L{Tube}'s buffering and pipeline establishment
-    behavior don't need to inherit from anything in order to use it.  L{Pump}
-    provides a default implementation which does nothing in response to every
-    method.
+    An L{IPump} provider is a control object for an L{ITube}.  A pump provides
+    all the behavior associated with the L{ITube}'s translation of input to
+    output, so that users of the L{ITube}'s buffering and pipeline
+    establishment behavior don't need to inherit from anything in order to use
+    it.  L{Pump} provides a default implementation which does nothing in
+    response to every method.
 
     Look at this awesome ASCII art::
 
@@ -203,7 +203,7 @@ class IPump(Interface):
 
     tube = Attribute(
         """
-        A reference to a L{Tube}.  This will be set externally.
+        A reference to an L{ITube}.  This will be set externally.
         """)
 
 
@@ -230,6 +230,95 @@ class IPump(Interface):
     def stopped(reason):
         """
         The flow of data was stopped.
+        """
+
+
+
+class ISwitchablePump(IPump):
+    """
+    An L{ISwitchablePump} is an extension on top of L{IPump} which provides
+    support for L{ISwitchableTube.switch} through L{reassemble}.
+    """
+
+    tube = Attribute(
+        """
+        A reference to an L{ISwitchableTube}.  This will be set externally.
+        """)
+
+
+    def reassemble(data):
+        """
+        Reverse the transformation done between the L{ISwitchableTube} calling
+        L{received} and the L{ISwitchablePump} calling C{tube.deliver}.
+
+        L{reassemble} will be called from L{ISwitchableTube.switch}, and the
+        new L{IDrain} passed to C{switch} will have its C{receive} method
+        called with each object of the reassembled data.
+
+        @param data: The objects which had been passed to C{tube.deliver} which
+            had been buffered by the L{ISwitchableTube}.
+
+        @type data: L{list}
+
+        @returns: A list of objects such that, if L{received} was called
+            successively with each object in the returned list, C{tube.deliver}
+            would be called successively with each object in C{data}. This does
+            not need to be exactly equal to what was originally passed in as
+            long as it achieves the same effect. Any objects which were
+            buffered by the L{ISwitchablePump} which did not yet correspond to
+            a C{tube.deliver} call should be included as well.
+
+        @rtype: L{list}
+        """
+
+
+
+class ITube(Interface):
+    """
+    An L{ITube} is an L{IDrain} and possibly also an L{IFount}, and provides
+    lots of conveniences to make it easy to implement something that does fancy
+    flow control with just a few methods.
+    """
+
+    pump = Attribute(
+        """
+        The L{Pump} which will receive values from this tube and call
+        C{deliver} to deliver output to it. (When set, this will automatically
+        set the C{tube} attribute of said L{Pump} as well, as well as
+        un-setting the C{tube} attribute of the old pump.)
+        """
+    )
+
+
+    def deliver(item):
+        """
+        Deliver the given item to this L{ITube}'s L{IDrain}, if something is
+        flowing from the L{IDrain}.
+        """
+
+
+class ISwitchableTube(ITube):
+    """
+    L{ISwitchableTube} is an extension on top of L{ITube} which also allows the
+    tube's underlying L{IDrain} to be swapped for another L{IDrain} with the
+    L{switch} method.
+    """
+
+    pump = Attribute(
+        """
+        Similar to L{ITube.pump}, except an object implementing the
+        L{ISwitchablePump} interface.
+        """
+    )
+
+
+    def switch(drain):
+        """
+        Start pumping to another drain.
+
+        Any data buffered by the L{ISwitchableTube} will be reassembled using
+        C{pump.reassemble} (i.e. L{SwitchablePump.reassemble}) and then passed
+        to the new L{IDrain}'s C{receive} method.
         """
 
 
