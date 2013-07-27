@@ -696,8 +696,9 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
         newOptHeader = self.fromRRHeader(h)
 
-        # XXX: Is this safe?
-        self.__dict__ = newOptHeader.__dict__
+        for attrName in self.compareAttributes:
+            if attrName not in ('name', 'type'):
+                setattr(self, attrName, getattr(newOptHeader, attrName))
 
 
     @classmethod
