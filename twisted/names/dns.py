@@ -656,8 +656,10 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @param strio: the byte representation of this L{OPTHeader}
             will be written to this file.
 
-        @type compDict: L{dict}
-        @param compDict: Not used.
+        @type compDict: L{dict} or L{None}
+        @param compDict: A dictionary of backreference addresses that
+            have have already been written to this stream and that may
+            be used for DNS name compression.
         """
         b = BytesIO()
         for o in self.options:
@@ -766,8 +768,10 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @param strio: the byte representation of this
             L{_OPTVariableOption} will be written to this file.
 
-        @type compDict: L{dict}
-        @param compDict: Not used.
+        @type compDict: L{dict} or L{None}
+        @param compDict: A dictionary of backreference addresses that
+            have have already been written to this stream and that may
+            be used for DNS name compression.
         """
         strio.write(
             struct.pack(self._fmt, self.code, len(self.data)) + self.data)
