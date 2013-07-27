@@ -21,7 +21,7 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.internet.interfaces import (
     ILoggingContext, IListeningPort, IReactorUDP, IReactorSocket)
-from twisted.internet.address import IPv4Address
+from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.protocol import DatagramProtocol
 
 from twisted.internet.test.connectionmixins import (LogObserverMixin,
@@ -143,15 +143,15 @@ class UDPPortTestsMixin(object):
 
     def test_getHostIPv6(self):
         """
-        L{IListeningPort.getHost} returns an L{IPv6Address} giving a
-        IPv6 address, the port number that the protocol is listening on
-        and the port number.
+        L{IListeningPort.getHost} returns an L{IPv6Address} when listening on
+        an IPv6 interface.
         """
         reactor = self.buildReactor()
         port = self.getListeningPort(
             reactor, DatagramProtocol(), interface='::1')
         addr = port.getHost()
         self.assertEqual(addr.host, "::1")
+        self.assertIsInstance(addr, IPv6Address)
 
 
     def test_logPrefix(self):
@@ -207,114 +207,81 @@ class UDPPortTestsMixin(object):
         self.assertIn(repr(port.getHost().port), str(port))
 
 
-    def test_bindToIPv6Interface(self):
-        """
-        Binds to ipv6 interface.
-        """
-        reactor = self.buildReactor()
-        server = Server()
-        p = self.getListeningPort(reactor, server, interface="::1")
-        self.assertEqual(p.getHost().host, "::1")
-
-        return p.stopListening()
-
-
     def test_writeToIPv6Interface(self):
         """
-        Writing to an IPv6 UDP socket on the loopback interface succeeds
-        without warnings.
+        Writing to an IPv6 UDP socket on the loopback interface succeeds.
         """
 
         reactor = self.buildReactor()
         server = Server()
         serverStarted = server.startedDeferred = defer.Deferred()
-        port1 = self.getListeningPort(reactor, server, interface="::1")
+        self.getListeningPort(reactor, server, interface="::1")
 
         client = GoodClient()
         clientStarted = client.startedDeferred = defer.Deferred()
-        port2 = self.getListeningPort(reactor, client, interface="::1")
+        self.getListeningPort(reactor, client, interface="::1")
+        cAddr = client.transport.getHost()
 
         def cbClientStarted(ignored):
-            """Client sends messages before and after connecting"""
+            """Send a datagram from the client once it's started."""
             client.transport.write(
                 b"spam", ("::1", server.transport.getHost().port))
             serverReceived = server.packetReceived = defer.Deferred()
             return serverReceived
 
         def cbServerReceived(ignored):
-            """Assert packets received in server"""
-            cAddr = client.transport.getHost()
-            packet = server.packets[0]
-            self.assertEqual(packet[0], b'spam')
-            self.assertEqual(packet[1][:2], (cAddr.host, cAddr.port))
-            canceler.cancel()
-            port1.stopListening()
-            port2.stopListening()
+            """Stop the reactor after a datagram is received."""
             reactor.stop()
-
-        def fail():
-            reactor.stop()
-            self.fail('no UDP response in 10 seconds')
 
         d = defer.gatherResults([serverStarted, clientStarted])
         d.addCallback(cbClientStarted)
         d.addCallback(cbServerReceived)
         d.addErrback(err)
-        canceler = reactor.callLater(10, fail)
         self.runReactor(reactor)
-        # Since stacklevel=2 on the warning, the function that gets the warning
-        # is cbClientStarted.
-        warnings = self.flushWarnings([cbClientStarted])
-        self.assertEqual(len(warnings), 0, msg=repr(warnings))
+
+        packet = server.packets[0]
+        self.assertEqual(packet[0], b'spam')
+        self.assertEqual(packet[1][:2], (cAddr.host, cAddr.port))
 
 
     def test_connectedWriteToIPv6Interface(self):
         """
         Writing to a connected IPv6 UDP socket on the loopback interface
-        succeeds without warnings.
+        succeeds.
         """
 
         reactor = self.buildReactor()
         server = Server()
         serverStarted = server.startedDeferred = defer.Deferred()
-        port1 = self.getListeningPort(reactor, server, interface="::1")
+        self.getListeningPort(reactor, server, interface="::1")
 
         client = GoodClient()
         clientStarted = client.startedDeferred = defer.Deferred()
-        port2 = self.getListeningPort(reactor, client, interface="::1")
+        self.getListeningPort(reactor, client, interface="::1")
+        cAddr = client.transport.getHost()
 
         def cbClientStarted(ignored):
-            """Client sends messages before and after connecting"""
+            """
+            Send a datagram from the client once it's started and connected.
+            """
             client.transport.connect("::1", server.transport.getHost().port)
             client.transport.write(b"spam")
             serverReceived = server.packetReceived = defer.Deferred()
             return serverReceived
 
         def cbServerReceived(ignored):
-            """Assert packets received in server"""
-            cAddr = client.transport.getHost()
-            packet = server.packets[0]
-            self.assertEqual(packet[0], b'spam')
-            self.assertEqual(packet[1][:2], (cAddr.host, cAddr.port))
-            canceler.cancel()
-            port1.stopListening()
-            port2.stopListening()
+            """Stop the reactor after a datagram is received."""
             reactor.stop()
-
-        def fail():
-            reactor.stop()
-            self.fail('no UDP response in 10 seconds')
 
         d = defer.gatherResults([serverStarted, clientStarted])
         d.addCallback(cbClientStarted)
         d.addCallback(cbServerReceived)
         d.addErrback(err)
-        canceler = reactor.callLater(10, fail)
         self.runReactor(reactor)
-        # Since stacklevel=2 on the warning, the function that gets the warning
-        # is cbClientStarted.
-        warnings = self.flushWarnings([cbClientStarted])
-        self.assertEqual(len(warnings), 0, msg=repr(warnings))
+
+        packet = server.packets[0]
+        self.assertEqual(packet[0], b'spam')
+        self.assertEqual(packet[1][:2], (cAddr.host, cAddr.port))
 
 
 
