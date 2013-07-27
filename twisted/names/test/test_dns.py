@@ -2322,32 +2322,55 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             'options=[]>')
 
 
-    def test_equality(self):
+    def test_equalityUdpPayloadSize(self):
         """
         Two L{OPTHeader} instances compare equal if they have the same
-        udpPayloadSize, extendedRCODE, version, dnssecOK flags and the
-        same options.
+        udpPayloadSize.
         """
         self.assertNormalEqualityImplementation(
             dns._OPTHeader(udpPayloadSize=512),
             dns._OPTHeader(udpPayloadSize=512),
             dns._OPTHeader(udpPayloadSize=4096))
 
+
+    def test_equalityExtendedRCODE(self):
+        """
+        Two L{OPTHeader} instances compare equal if they have the same
+        extendedRCODE.
+        """
         self.assertNormalEqualityImplementation(
             dns._OPTHeader(extendedRCODE=1),
             dns._OPTHeader(extendedRCODE=1),
             dns._OPTHeader(extendedRCODE=2))
 
+
+    def test_equalityVersion(self):
+        """
+        Two L{OPTHeader} instances compare equal if they have the same
+        version.
+        """
         self.assertNormalEqualityImplementation(
             dns._OPTHeader(version=1),
             dns._OPTHeader(version=1),
             dns._OPTHeader(version=2))
 
+
+    def test_equalityDnssecOK(self):
+        """
+        Two L{OPTHeader} instances compare equal if they have the same
+        dnssecOK flags.
+        """
         self.assertNormalEqualityImplementation(
             dns._OPTHeader(dnssecOK=1),
             dns._OPTHeader(dnssecOK=1),
             dns._OPTHeader(dnssecOK=0))
 
+
+    def test_equalityOptions(self):
+        """
+        Two L{OPTHeader} instances compare equal if they have the same
+        options.
+        """
         self.assertNormalEqualityImplementation(
             dns._OPTHeader(options=[dns._OPTVariableOption(1, b'x')]),
             dns._OPTHeader(options=[dns._OPTVariableOption(1, b'x')]),
