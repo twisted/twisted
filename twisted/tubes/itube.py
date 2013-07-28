@@ -300,8 +300,7 @@ class ITube(Interface):
 class ISwitchableTube(ITube):
     """
     L{ISwitchableTube} is an extension on top of L{ITube} which also allows the
-    tube's underlying L{IDrain} to be swapped for another L{IDrain} with the
-    L{switch} method.
+    tube to be swapped for a different L{IDrain} with the L{switch} method.
     """
 
     pump = Attribute(
@@ -314,11 +313,14 @@ class ISwitchableTube(ITube):
 
     def switch(drain):
         """
-        Start pumping to another drain.
+        Replace this L{ISwitchableTube} with a different drain.
+
+        Calling L{switch} will tell the fount flowing to this
+        L{ISwitchableTube}'s drain to instead flow to the C{drain} argument.
 
         Any data buffered by the L{ISwitchableTube} will be reassembled using
         C{pump.reassemble} (i.e. L{SwitchablePump.reassemble}) and then passed
-        to the new L{IDrain}'s C{receive} method.
+        to the new C{drain}'s C{receive} method.
         """
 
 
