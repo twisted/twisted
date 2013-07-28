@@ -771,6 +771,8 @@ class AdditionalProcessingTests(unittest.TestCase):
         """
         Verify that a response to an MX query has certain records in the
         I{additional} section.
+
+        @param addresses: See C{_additionalTest}
         """
         self._additionalTest(
             "lookupMailExchange", partial(dns.Record_MX, 10), addresses)
@@ -804,6 +806,8 @@ class AdditionalProcessingTests(unittest.TestCase):
         """
         Verify that a response to an NS query has certain records in the
         I{additional} section.
+
+        @param addresses: See C{_additionalTest}
         """
         self._additionalTest(
             "lookupNameservers", dns.Record_NS, addresses)
@@ -837,6 +841,8 @@ class AdditionalProcessingTests(unittest.TestCase):
         """
         Verify that a response to a CNAME query has certain records in the
         I{answer} section.
+
+        @param addresses: See C{_additionalTest}
         """
         target = b"www." + soa_record.mname.name
         d = self._lookupSomeRecords(
