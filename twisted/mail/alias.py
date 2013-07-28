@@ -148,7 +148,7 @@ class AliasBase:
 
     def __init__(self, domains, original):
         """
-        @type domains: C{dict} of C{str} -> L{IDomain}
+        @type domains: C{dict} of C{str} -> L{IDomain} provider
         @param domains: A mapping of domain name to domain object.
 
         @type original: C{str}
@@ -162,7 +162,7 @@ class AliasBase:
         """
         Return the domain associated with original address.
 
-        @rtype: L{IDomain}
+        @rtype: L{IDomain} provider
         @return: The domain for the original address.
         """
         return self.domains[self.original.domain]
@@ -208,7 +208,7 @@ class AddressAlias(AliasBase):
             converted into a C{str}
         @param alias: The destination address.
 
-        @type args: C{(C{dict} of C{str} -> L{IDomain}, C{str})}
+        @type args: C{(C{dict} of C{str} -> L{IDomain} provider, C{str})}
         @param args: Parameters for L{AliasBase}.
         """
         AliasBase.__init__(self, *args)
@@ -341,7 +341,7 @@ class FileAlias(AliasBase):
         @type filename: C{str}
         @param filename: The name of the file in which to store the message.
 
-        @type args: C{(C{dict} of C{str} -> L{IDomain}, C{str})}
+        @type args: C{(C{dict} of C{str} -> L{IDomain} provider, C{str})}
         @param args: Parameters for L{AliasBase}.
         """
         AliasBase.__init__(self, *args)
@@ -385,7 +385,7 @@ class MessageWrapper:
     @ivar completionTimeout: The number of seconds to wait for the child
         process to exit before reporting the delivery as a failure.
 
-    @type _timeoutCallID: L{IDelayedCall} or C{NoneType}
+    @type _timeoutCallID: L{IDelayedCall} provider or C{NoneType}
     @ivar _timeoutCallID: The call used to time out delivery, started when the
         connection to the child process is closed.
 
@@ -569,7 +569,7 @@ class ProcessAlias(AliasBase):
         @param path: The command to invoke the program consisting of the path
             to the executable followed by any arguments.
 
-        @type args: C{(C{dict} of C{str} -> L{IDomain}, C{str})}
+        @type args: C{(C{dict} of C{str} -> L{IDomain} provider, C{str})}
         @param args: Parameters for L{AliasBase}.
         """
 
@@ -639,7 +639,7 @@ class MultiWrapper:
 
     def __init__(self, objs):
         """
-        @type objs: C{list} of L{smtp.IMessage} providers
+        @type objs: C{list} of L{smtp.IMessage} provider
         @param objs: Message receivers to which the incoming message should be
             directed.
         """
@@ -697,7 +697,7 @@ class AliasGroup(AliasBase):
     @type processAliasFactory: C{class}
     @ivar processAliasFactory: A factory for process aliases.
 
-    @type aliases: C{list} of L{AliasBase} and L{IAlias} providers
+    @type aliases: C{list} of L{AliasBase} which implements L{IAlias}
     @ivar aliases: The destination aliases.
     """
 
@@ -710,12 +710,12 @@ class AliasGroup(AliasBase):
         Create a group of aliases.
 
         Parse a list of alias strings and, for each, create an appropriate
-        L{AliasBase} which implements L{IAlias}.
+        alias object.
 
         @type items: C{list} of C{str}
         @param items: Aliases.
 
-        @type args: C{(C{dict} of C{str} -> L{IDomain}, C{str})}
+        @type args: C{(C{dict} of C{str} -> L{IDomain} provider, C{str})}
         @param args: Parameters for L{AliasBase}.
         """
 
@@ -781,7 +781,7 @@ class AliasGroup(AliasBase):
         @type aliasmap: C{dict} of C{str} -> L{AliasBase}
         @param aliasmap: A mapping of username to alias or group of aliases.
 
-        @type memo: C{NoneType} or C{dict} of L{AliasBase} 
+        @type memo: C{NoneType} or C{dict} of L{AliasBase}
         @param memo: (optional) A record of the aliases already considered
             in the resolution process.  If provided, memo is modified to
             include this alias.
