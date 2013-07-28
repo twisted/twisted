@@ -176,7 +176,12 @@ class FileAuthority(common.ResolverBase):
             if not results:
                 results = cnames
 
-            additional.extend(self._additionalRecords(results, authority, default_ttl))
+            # https://tools.ietf.org/html/rfc1034#section-4.3.2 - sort of.
+            additionalInformation = self._additionalRecords(results, authority, default_ttl)
+            if cnames:
+                results.extend(additionalInformation)
+            else:
+                additional.extend(additionalInformation)
 
             if not results and not authority:
                 # Empty response. Include SOA record to allow clients to cache
