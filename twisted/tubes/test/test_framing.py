@@ -126,6 +126,31 @@ class LineTests(TestCase):
         self.assertEquals("".join(Switchee.datums), "abcde\r\nfgh")
 
 
+    def test_switchingWithMoreDataToDeliver(self):
+        """
+        Switching drains should immediately stop delivering data.
+        """
+
+        lines = bytesToLines()
+        ff = FakeFount()
+        fd1 = FakeDrain()
+        fd2 = FakeDrain()
+
+        class Switcher(Pump):
+            def received(self, line):
+                if 'switch' in line:
+                    lines.tube.switch(cascade(netstringsToStrings(), fd2))
+                else:
+                    self.tube.deliver(line)
+
+        cc = cascade(lines, Switcher())
+        ff.flowTo(cc).flowTo(fd1)
+        ff.drain.receive('switch\r\n7:hello\r\n,5:world,')
+        self.assertEquals(fd1.received, [])
+        self.assertEquals(fd2.received, ['hello\r\n', 'world'])
+
+
+
 class PackedPrefixTests(TestCase):
     """
     Test cases for `packedPrefix`.
