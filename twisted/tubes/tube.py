@@ -142,8 +142,6 @@ class _TubeDrain(_TubePiece):
         finally:
             self._tube._pumpReceiving = False
         self._tube._unbufferSome()
-        if self._tube._switchFlush:
-            self._tube._finishSwitching()
         if result is None:
             # postel principle, let pumps be as lax as possible
             result = 0.5
@@ -349,8 +347,10 @@ class _Tube(object):
 
 
     def _finishSwitching(self):
-        junk = self.pump.reassemble(self._pendingOutput)
-        map(self._tdrain.fount.drain.receive, junk)
+        reassembled = self.pump.reassemble(self._pendingOutput)
+        self._pendingOutput[:] = []
+        for value in reassembled:
+            self._tdrain.fount.drain.receive(value)
 
 
 
