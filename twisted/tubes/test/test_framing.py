@@ -185,9 +185,9 @@ class LineTests(TestCase):
 
         cc = cascade(lines, SwitchAfterFirstLine(), downstream, fd1)
         ff.flowTo(cc)
-        ff.drain.receive('spam\r\neggs\r\nspameggs\r\n')
+        ff.drain.receive('spam\r\neggs\r\nspameggs\r\nspamspam\r\n')
         self.assertEquals(fd1.received, ['spam'])
-        self.assertEquals(fd2.received, ['eggs', 'spameggs'])
+        self.assertEquals(fd2.received, ['eggs', 'spameggs', 'spamspam'])
 
 
 
