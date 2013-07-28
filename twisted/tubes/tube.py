@@ -11,6 +11,7 @@ from zope.interface import implementer
 from twisted.tubes.itube import IDrain
 from twisted.tubes.itube import IPump
 from twisted.tubes.itube import IFount
+from twisted.tubes.itube import ITube
 
 
 class _TubePiece(object):
@@ -253,6 +254,7 @@ def _registryActive(registry):
 
 
 
+@implementer(ITube)
 class _Tube(object):
     """
     A L{_Tube} is an L{IDrain} and possibly also an L{IFount}, and provides
