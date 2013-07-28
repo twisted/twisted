@@ -341,6 +341,9 @@ class _Tube(object):
         upstream.pauseFlow()
         upstream.flowTo(drain)
         if self._pumpReceiving:
+            # this line currently does nothing (since the codea that checked
+            # for _switchFlush was deleted in r39353) but was not covered by
+            # the test case prior to r39353. it still is not covered now.
             self._switchFlush = True
         else:
             self._finishSwitching()
