@@ -394,6 +394,34 @@ class TubeTest(TestCase):
         self.assertFalse(ISwitchableTube.providedBy(tube))
 
 
+    def test_switchableTubeCanStayImplemented(self):
+        """
+        Passing an L{ISwitchablePump} and then an L{ISwitchablePump} to
+        L{_Tube} will cause it to still implement L{ISwitchableTube}.
+        """
+
+        pump = SwitchableTesterPump()
+        cascade(pump)
+        otherPump = SwitchableTesterPump()
+        tube = pump.tube
+        tube.pump = otherPump
+        self.assertTrue(ISwitchableTube.providedBy(tube))
+
+
+    def test_switchableTubeCanStayUnimplemented(self):
+        """
+        Passing an L{IPump} and then an L{IPump} to L{_Tube} will cause it to
+        still not implement L{ISwitchableTube}.
+        """
+
+        pump = TesterPump()
+        cascade(pump)
+        otherPump = TesterPump()
+        tube = pump.tube
+        tube.pump = otherPump
+        self.assertFalse(ISwitchableTube.providedBy(tube))
+
+
     def test_switchableTubeCanGetReimplemented(self):
         """
         Passing an L{ISwitchablePump} and then a L{IPump} and then an
