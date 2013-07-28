@@ -60,7 +60,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     @type service: L{MailService}
     @ivar service: The email service.
 
-    @type last_domain: L{IDomain} or C{NoneType}
+    @type last_domain: L{IDomain} provider or C{NoneType}
     @ivar last_domain: The most recently specified domain.
     """
 
@@ -353,10 +353,10 @@ class AliasUpdater:
     """
     def __init__(self, domains, domain):
         """
-        @type domains: C{dict} of C{str} -> L{IDomain}
+        @type domains: C{dict} of C{str} -> L{IDomain} provider
         @param domains: A mapping of domain name to domain object
 
-        @type domain: L{IAliasableDomain}
+        @type domain: L{IAliasableDomain} provider
         @param domain: The domain to update.
         """
         self.domains = domains
