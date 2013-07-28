@@ -6,13 +6,14 @@
 Utilities for testing L{twisted.tubes}.
 """
 
-from zope.interface import Interface, implements
+from zope.interface import Interface, implements, implementer
 from zope.interface.verify import verifyClass
 
 from twisted.test.proto_helpers import StringTransport
 from twisted.internet.defer import succeed
 from twisted.tubes.itube import IDrain
 from twisted.tubes.itube import IFount
+from twisted.tubes.itube import ISwitchablePump
 from twisted.tubes.tube import Pump
 
 
@@ -193,3 +194,14 @@ class TesterPump(Pump):
 
 
 
+@implementer(ISwitchablePump)
+class SwitchableTesterPump(TesterPump):
+    """
+    A L{TesterPump} that supports reassembly.
+    """
+
+    def reassemble(self, data):
+        """
+        Do nothing.
+        """
+        return []

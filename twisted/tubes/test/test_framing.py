@@ -2,6 +2,10 @@
 """
 Tests for framing protocols.
 """
+from zope.interface import implementer
+
+from twisted.tubes.itube import ISwitchablePump
+
 from twisted.tubes.framing import stringsToNetstrings
 
 from twisted.tubes.test.util import FakeFount
@@ -169,9 +173,7 @@ class LineTests(TestCase):
                     downstream.tube.switch(fd2)
                 self.tube.deliver(line)
 
-            def reassemble(self, data):
-                return data
-
+        @implementer(ISwitchablePump)
         class Downstream(Pump):
             def received(self, line):
                 self.tube.deliver(line)

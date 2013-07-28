@@ -3,6 +3,9 @@
 Protocols to support framing.
 """
 
+from zope.interface import implementer
+
+from twisted.tubes.itube import ISwitchablePump
 from twisted.tubes.tube import Pump
 from twisted.protocols.basic import (
     LineOnlyReceiver, NetstringReceiver, Int8StringReceiver,
@@ -43,6 +46,7 @@ class _NotDisconnecting(object):
     disconnecting = False
 
 
+@implementer(ISwitchablePump)
 class _DataToStrings(Pump):
     def __init__(self, stringReceiverClass,
                  receivedMethodName="stringReceived"):
@@ -102,4 +106,3 @@ def packedPrefixToStrings(prefixBits):
 
 def stringsToPackedPrefix(prefixBits):
     return _StringsToData(_packedPrefixProtocols[prefixBits])
-

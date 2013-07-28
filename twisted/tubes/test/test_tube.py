@@ -7,6 +7,8 @@ Tests for L{twisted.tubes.tube}.
 
 from twisted.trial.unittest import TestCase
 from twisted.tubes.test.util import TesterPump, FakeFount, FakeDrain, IFakeInput
+from twisted.tubes.test.util import SwitchableTesterPump
+from twisted.tubes.itube import ISwitchableTube
 from twisted.tubes.tube import Pump, cascade
 
 class TubeTest(TestCase):
@@ -365,3 +367,45 @@ class TubeTest(TestCase):
         newFF.flowTo(self.tubeDrain)
 
         self.assertTrue(newFF.flowIsPaused, "New upstream is not paused.")
+
+
+    def test_switchableTubeGetsImplemented(self):
+        """
+        Passing an L{ISwitchablePump} to L{_Tube} will cause it to implement
+        L{ISwitchableTube}.
+        """
+
+        pump = SwitchableTesterPump()
+        cascade(pump)
+        self.assertTrue(ISwitchableTube.providedBy(pump.tube))
+
+
+    def test_switchableTubeCanGetUnimplemented(self):
+        """
+        Passing an L{ISwitchablePump} and then a L{IPump} to L{_Tube} will
+        cause it to no longer implement L{ISwitchableTube}.
+        """
+
+        pump = SwitchableTesterPump()
+        cascade(pump)
+        otherPump = TesterPump()
+        tube = pump.tube
+        tube.pump = otherPump
+        self.assertFalse(ISwitchableTube.providedBy(tube))
+
+
+    def test_switchableTubeCanGetReimplemented(self):
+        """
+        Passing an L{ISwitchablePump} and then a L{IPump} and then an
+        L{ISwitchablePump} again to L{_Tube} will cause it to implement
+        L{ISwitchableTube}.
+        """
+
+        pump = SwitchableTesterPump()
+        cascade(pump)
+        otherPump = TesterPump()
+        tube = pump.tube
+        tube.pump = otherPump
+        thirdPump = SwitchableTesterPump()
+        tube.pump = thirdPump
+        self.assertTrue(ISwitchableTube.providedBy(tube))

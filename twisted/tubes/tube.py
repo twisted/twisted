@@ -7,11 +7,15 @@ See L{_Tube}.
 """
 
 from zope.interface import implementer
+from zope.interface import directlyProvides
+from zope.interface import noLongerProvides
 
 from twisted.tubes.itube import IDrain
 from twisted.tubes.itube import IPump
 from twisted.tubes.itube import IFount
 from twisted.tubes.itube import ITube
+from twisted.tubes.itube import ISwitchablePump
+from twisted.tubes.itube import ISwitchableTube
 
 
 class _TubePiece(object):
@@ -302,6 +306,10 @@ class _Tube(object):
             self._pump.tube = None
         self._pump = newPump
         self._pump.tube = self
+        if ISwitchablePump.providedBy(self._pump):
+            directlyProvides(self, ISwitchableTube)
+        else:
+            noLongerProvides(self, ISwitchableTube)
 
     pump = property(_get_pump, _set_pump)
 
@@ -337,6 +345,10 @@ class _Tube(object):
     _switchFlush = False
 
     def switch(self, drain):
+        if not ISwitchableTube.providedBy(self):
+            raise NotImplementedError(
+                'this tube cannot be switched; its pump does not implement '
+                'ISwitchablePump')
         upstream = self._tdrain.fount
         upstream.pauseFlow()
         upstream.flowTo(drain)
