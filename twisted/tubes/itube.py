@@ -318,7 +318,7 @@ class ISwitchableTube(ITube):
         Calling L{switch} will tell the fount flowing to this
         L{ISwitchableTube}'s drain to instead flow to the C{drain} argument.
 
-        Any data buffered by the L{ISwitchableTube} will be reassembled using
+        Any data buffered by this L{ISwitchableTube} will be reassembled using
         C{pump.reassemble} (i.e. L{SwitchablePump.reassemble}) and then passed
         to the new C{drain}'s C{receive} method.
         """

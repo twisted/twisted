@@ -155,7 +155,7 @@ class LineTests(TestCase):
 
     def test_switchingSelfWhileReceiving(self):
         """
-        Switching drains downstream will deliver data in the correct order.
+        Switching drains downstream delivers data in order.
         """
         lines = bytesToLines()
         ff = FakeFount()
@@ -166,16 +166,18 @@ class LineTests(TestCase):
             seenFirstLine = False
 
             def received(self, line):
+                print("SAFL", line)
                 if not self.seenFirstLine:
                     self.seenFirstLine = True
                 else:
+                    print("***SWITCH***")
                     downstream.tube.switch(fd2)
                 self.tube.deliver(line)
 
         @implementer(ISwitchablePump)
         class Downstream(Pump):
             def received(self, line):
-                self.tube.deliver(line)
+                self.tube.deliver(line + "(downstream)")
 
             def reassemble(self, data):
                 return data
@@ -185,7 +187,7 @@ class LineTests(TestCase):
         cc = cascade(lines, SwitchAfterFirstLine(), downstream, fd1)
         ff.flowTo(cc)
         ff.drain.receive('spam\r\neggs\r\nspameggs\r\nspamspam\r\n')
-        self.assertEquals(fd1.received, ['spam'])
+        self.assertEquals(fd1.received, ['spam(downstream)'])
         self.assertEquals(fd2.received, ['eggs', 'spameggs', 'spamspam'])
 
 

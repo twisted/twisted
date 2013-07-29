@@ -45,6 +45,15 @@ class _TubeFount(_TubePiece):
     """
     drain = None
 
+    def __repr__(self):
+        """
+        Nice string representation.
+
+        XXX test me.
+        """
+        return "<Fount for {0}>".format(repr(self._tube))
+
+
     @property
     def outputType(self):
         return self._pump.outputType
@@ -81,6 +90,7 @@ class _TubeFount(_TubePiece):
         fount = self._tube._tdrain.fount
         if fount is not None:
             fount.resumeFlow()
+        print("Unbuffering in resume.")
         self._tube._unbufferSome()
 
 
@@ -99,6 +109,15 @@ class _TubeDrain(_TubePiece):
     Implementation of L{IDrain} for L{_Tube}.
     """
     fount = None
+
+    def __repr__(self):
+        """
+        Nice string representation.
+
+        XXX test me.
+        """
+        return '<Drain for {0}>'.format(self._tube)
+
 
     @property
     def inputType(self):
@@ -138,13 +157,15 @@ class _TubeDrain(_TubePiece):
 
     def receive(self, item):
         """
-        An item was received.
+        An item was received.  Pass it on to the pump for processing.
         """
+        print(self, "receiving", item)
         self._tube._pumpReceiving = True
         try:
             result = self._pump.received(item)
         finally:
             self._tube._pumpReceiving = False
+        print("Unbuffering in receive.", self, item)
         self._tube._unbufferSome()
         if result is None:
             # postel principle, let pumps be as lax as possible
@@ -286,6 +307,15 @@ class _Tube(object):
         self.pump = pump
 
 
+    def __repr__(self):
+        """
+        Nice string representation.
+
+        XXX testme.
+        """
+        return '<Tube for pump {0}>'.format(repr(self.pump))
+
+
     def _get_pump(self):
         """
         Getter for the C{pump} property.
@@ -317,6 +347,7 @@ class _Tube(object):
         Un-buffer some pending output into the downstream drain.
         """
         while self._pendingOutput and not self._currentlyPaused:
+            print("Unbuffering from:", self._pendingOutput)
             item = self._pendingOutput.pop(0)
             self._tfount.drain.receive(item)
 
@@ -350,17 +381,13 @@ class _Tube(object):
         upstream = self._tdrain.fount
         upstream.pauseFlow()
         upstream.flowTo(drain)
-        if self._pumpReceiving:
-            # this line currently does nothing (since the codea that checked
-            # for _switchFlush was deleted in r39353) but was not covered by
-            # the test case prior to r39353. it still is not covered now.
-            self._switchFlush = True
-        else:
-            self._finishSwitching()
+        self._finishSwitching()
 
 
     def _finishSwitching(self):
+        print("Finishing switching...", self._pendingOutput)
         reassembled = self.pump.reassemble(self._pendingOutput)
+        print("Assembled:", reassembled)
         self._pendingOutput[:] = []
         for value in reassembled:
             self._tdrain.fount.drain.receive(value)

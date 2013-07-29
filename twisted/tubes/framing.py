@@ -68,6 +68,7 @@ class _DataToStrings(Pump):
         """
         convert these outputs into one of my inputs XXX describe better
         """
+        print("REASSEMBLING:", datas)
         delimiter = self._stringReceiver.delimiter
         return delimiter.join(datas + [self._stringReceiver._buffer])
 
