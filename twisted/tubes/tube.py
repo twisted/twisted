@@ -153,8 +153,6 @@ class _TubeDrain(_TubePiece):
         if drain is not None:
             if not self._tube._delivered:
                 drain.progress()
-            else:
-                self._delivered = False
         return result
 
 
