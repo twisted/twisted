@@ -166,11 +166,9 @@ class LineTests(TestCase):
             seenFirstLine = False
 
             def received(self, line):
-                print("SAFL", line)
                 if not self.seenFirstLine:
                     self.seenFirstLine = True
                 else:
-                    print("***SWITCH***")
                     downstream.tube.switch(fd2)
                 self.tube.deliver(line)
 

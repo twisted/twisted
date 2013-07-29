@@ -90,7 +90,6 @@ class _TubeFount(_TubePiece):
         fount = self._tube._tdrain.fount
         if fount is not None:
             fount.resumeFlow()
-        print("Unbuffering in resume.")
         self._tube._unbufferSome()
 
 
@@ -159,13 +158,11 @@ class _TubeDrain(_TubePiece):
         """
         An item was received.  Pass it on to the pump for processing.
         """
-        print(self, "receiving", item)
         self._tube._pumpReceiving = True
         try:
             result = self._pump.received(item)
         finally:
             self._tube._pumpReceiving = False
-        print("Unbuffering in receive.", self, item)
         self._tube._unbufferSome()
         if result is None:
             # postel principle, let pumps be as lax as possible
@@ -342,14 +339,20 @@ class _Tube(object):
     pump = property(_get_pump, _set_pump)
 
 
+    _tubeUnbuffering = False
     def _unbufferSome(self):
         """
         Un-buffer some pending output into the downstream drain.
         """
-        while self._pendingOutput and not self._currentlyPaused:
-            print("Unbuffering from:", self._pendingOutput)
-            item = self._pendingOutput.pop(0)
-            self._tfount.drain.receive(item)
+        if self._pumpReceiving or self._tubeUnbuffering:
+            return
+        self._tubeUnbuffering = True
+        try:
+            while self._pendingOutput and not self._currentlyPaused:
+                item = self._pendingOutput.pop(0)
+                self._tfount.drain.receive(item)
+        finally:
+            self._tubeUnbuffering = False
 
 
     def deliver(self, item):
@@ -385,9 +388,7 @@ class _Tube(object):
 
 
     def _finishSwitching(self):
-        print("Finishing switching...", self._pendingOutput)
         reassembled = self.pump.reassemble(self._pendingOutput)
-        print("Assembled:", reassembled)
         self._pendingOutput[:] = []
         for value in reassembled:
             self._tdrain.fount.drain.receive(value)
