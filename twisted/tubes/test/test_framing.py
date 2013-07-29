@@ -134,7 +134,6 @@ class LineTests(TestCase):
         """
         Switching drains should immediately stop delivering data.
         """
-
         lines = bytesToLines()
         ff = FakeFount()
         fd1 = FakeDrain()

@@ -168,7 +168,7 @@ def cascade(start, *plumbing):
     """
     Connect up a series of objects capable of transforming inputs to outputs;
     convert a sequence of L{IPump} objects into a sequence of connected
-    L{IFount} and L{IDrain} objects. This is necessary to be able to C{flowTo}
+    L{IFount} and L{IDrain} objects.  This is necessary to be able to C{flowTo}
     an object implementing L{IPump}.
 
     This function can best be understood by understanding that::
