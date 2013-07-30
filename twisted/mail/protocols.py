@@ -49,7 +49,7 @@ class DomainDeliveryBase:
         @param service: A mail service.
 
         @type user: C{str} or C{NoneType}
-        @param user: The authenticated SMTP client.
+        @param user: The authenticated SMTP user.
 
         @type host: C{str}
         @param host: The hostname.
