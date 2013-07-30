@@ -231,7 +231,7 @@ class ESMTPFactory(SMTPFactory):
 
     def __init__(self, *args):
         """
-        @type args: (L{MailService}, L{Portal} or C{NoneType}) 
+        @type args: (L{MailService}, L{Portal} or C{NoneType})
         @param args: Arguments for L{SMTPFactory}
         """
         SMTPFactory.__init__(self, *args)
