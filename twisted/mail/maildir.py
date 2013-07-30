@@ -230,7 +230,7 @@ class AbstractMaildirDomain:
             receiver for the user.
 
         @raises SMTPBadRcpt: When the given user does not exist in this domain
-            or an alias of it. 
+            or an alias of it.
         """
         if self.userDirectory(user.dest.local) is not None:
             return lambda: self.startMessage(user)
