@@ -203,10 +203,35 @@ class AbstractMaildirDomain:
 
 
     def setAliasGroup(self, alias):
+        """
+        Set the group of defined aliases for this domain.
+
+        @type alias: C{dict} of C{str} -> L{IAlias} provider.
+        @param alias: A mapping of domain name to alias.
+        """
         self.alias = alias
 
 
     def exists(self, user, memo=None):
+        """
+        Check whether a user exists in this domain or an alias of it.
+
+        @type user: L{User}
+        @param user: A user.
+
+        @type memo: C{NoneType} or C{dict} of L{AliasBase}
+        @param memo: (optional) A record of the addresses already considered
+            while resolving aliases. The default value should be used by all
+            external code.
+
+        @rtype: no-argument callable which returns an L{smtp.IMessage}
+            provider.
+        @return: A function which takes no arguments and returns a message
+            receiver for the user.
+
+        @raises SMTPBadRcpt: When the given user does not exist in this domain
+            or an alias of it. 
+        """
         if self.userDirectory(user.dest.local) is not None:
             return lambda: self.startMessage(user)
         try:
@@ -806,8 +831,8 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         access will be met with a mailbox containing a message indicating
         that an internal error has occured.
 
-        @type avatarID: C{str} or C{twisted.cred.checkers.ANONYMOUS}
-        @param avatarID: A string which identifies a user or an object which
+        @type avatarId: C{str} or C{twisted.cred.checkers.ANONYMOUS}
+        @param avatarId: A string which identifies a user or an object which
             signals a request for anonymous access.
 
         @type mind: C{NoneType}
