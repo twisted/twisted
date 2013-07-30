@@ -654,8 +654,8 @@ class MailService(service.MultiService):
         """
         Return a message delivery for an authenticated SMTP user.
 
-        @type avatarID: C{str}
-        @param avatarID: A string which identifies an authenticated user.
+        @type avatarId: C{str}
+        @param avatarId: A string which identifies an authenticated user.
 
         @type mind: C{NoneType}
         @param mind: Unused.
