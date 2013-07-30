@@ -847,13 +847,12 @@ class DNSMixinTestCase(unittest.TestCase):
         L{dns.DNSMixin._query}, the C{resultDeferred} and C{cancelCall} should
         be removed from L{dns.DNSMixin.liveMessages}.
         """
-        query_id = self.protocol.pickID()
+        queryId = self.protocol.pickID()
         deferred = self.protocol._query(
-            [dns.Query(b'foo')], 20, query_id, lambda message: None)
+            [dns.Query(b'foo')], 20, queryId, lambda message: None)
         deferred.cancel()
         self.failureResultOf(deferred, defer.CancelledError)
-        self.assertNotIn(query_id, self.protocol.liveMessages)
-        return deferred
+        self.assertNotIn(queryId, self.protocol.liveMessages)
 
 
     def test_cancelQueryCancelTheCancelCall(self):
@@ -861,14 +860,13 @@ class DNSMixinTestCase(unittest.TestCase):
         When cancelling the L{defer.Deferred} returned by
         L{dns.DNSMixin._query}, the C{cancelCall} should be cancelled.
         """
-        query_id = self.protocol.pickID()
+        queryId = self.protocol.pickID()
         self.protocol._query(
-            [dns.Query(b'foo')], 20, query_id, lambda message: None)
-        (resultDeferred, cancelCall) = self.protocol.liveMessages[query_id]
+            [dns.Query(b'foo')], 20, queryId, lambda message: None)
+        (resultDeferred, cancelCall) = self.protocol.liveMessages[queryId]
         resultDeferred.cancel()
         self.failureResultOf(resultDeferred, defer.CancelledError)
         self.assertFalse(cancelCall.active())
-        return resultDeferred
 
 
 
