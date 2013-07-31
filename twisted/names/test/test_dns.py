@@ -1969,7 +1969,8 @@ class OPT_NON_STANDARD_ATTRIBUTES(object):
     For testing whether attributes have really been read from the byte
     string during decoding.
     """
-    def BYTES(self, excludeName=False, excludeOptions=False):
+    @classmethod
+    def BYTES(cls, excludeName=False, excludeOptions=False):
         """
         @param excludeName: A flag that controls whether to exclude
             the name field. This allows a non-standard name to be
@@ -1998,7 +1999,8 @@ class OPT_NON_STANDARD_ATTRIBUTES(object):
             ) + rdlen
 
 
-    def OBJECT(self):
+    @classmethod
+    def OBJECT(cls):
         """
         @return: A L{dns._OPTHeader} instance with attributes that
             match the encoded record returned by L{BYTES}.
@@ -2140,10 +2142,10 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         b = BytesIO()
 
-        OPT_NON_STANDARD_ATTRIBUTES().OBJECT().encode(b)
+        OPT_NON_STANDARD_ATTRIBUTES.OBJECT().encode(b)
         self.assertEqual(
             b.getvalue(),
-            OPT_NON_STANDARD_ATTRIBUTES().BYTES()
+            OPT_NON_STANDARD_ATTRIBUTES.BYTES()
             )
 
 
@@ -2152,7 +2154,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader.options} is a list of L{dns._OPTVariableOption}
         instances which are packed into the rdata area of the header.
         """
-        h = OPT_NON_STANDARD_ATTRIBUTES().OBJECT()
+        h = OPT_NON_STANDARD_ATTRIBUTES.OBJECT()
         h.options = [
             dns._OPTVariableOption(1, b'foobarbaz'),
             dns._OPTVariableOption(2, b'qux'),
@@ -2163,7 +2165,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(
             b.getvalue(),
 
-            OPT_NON_STANDARD_ATTRIBUTES().BYTES(excludeOptions=True) + (
+            OPT_NON_STANDARD_ATTRIBUTES.BYTES(excludeOptions=True) + (
                 b'\x00\x14' # RDLEN 20
 
                 b'\x00\x01' # OPTION-CODE
@@ -2183,11 +2185,11 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader} instance.
         """
         decodedHeader = dns._OPTHeader()
-        decodedHeader.decode(BytesIO(OPT_NON_STANDARD_ATTRIBUTES().BYTES()))
+        decodedHeader.decode(BytesIO(OPT_NON_STANDARD_ATTRIBUTES.BYTES()))
 
         self.assertEqual(
             decodedHeader,
-            OPT_NON_STANDARD_ATTRIBUTES().OBJECT())
+            OPT_NON_STANDARD_ATTRIBUTES.OBJECT())
 
 
     def test_decodeAllExpectedBytes(self):
@@ -2196,7 +2198,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         that is being decoded.
         """
         # Check that all the input data has been consumed.
-        b = BytesIO(OPT_NON_STANDARD_ATTRIBUTES().BYTES())
+        b = BytesIO(OPT_NON_STANDARD_ATTRIBUTES.BYTES())
 
         decodedHeader = dns._OPTHeader()
         decodedHeader.decode(b)
@@ -2210,7 +2212,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         file position to the end of the record that is being
         decoded. Trailing bytes are not consumed.
         """
-        b = BytesIO(OPT_NON_STANDARD_ATTRIBUTES().BYTES()
+        b = BytesIO(OPT_NON_STANDARD_ATTRIBUTES.BYTES()
                     +  b'xxxx') # Trailing bytes
 
         decodedHeader = dns._OPTHeader()
@@ -2225,7 +2227,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         the supplied bytes. The name attribute of the resulting
         L{dns._OPTHeader} instance will always be L{dns.Name(b'')}.
         """
-        b = BytesIO(OPT_NON_STANDARD_ATTRIBUTES().BYTES(excludeName=True)
+        b = BytesIO(OPT_NON_STANDARD_ATTRIBUTES.BYTES(excludeName=True)
                     +b'\x07example\x03com\x00')
 
         h = dns._OPTHeader()
@@ -2239,7 +2241,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         RDLEN is too short.
         """
         b = BytesIO(
-            OPT_NON_STANDARD_ATTRIBUTES().BYTES(excludeOptions=True) + (
+            OPT_NON_STANDARD_ATTRIBUTES.BYTES(excludeOptions=True) + (
                 b'\x00\x05' # RDLEN 5 Too short - should be 6
 
                 b'\x00\x01' # OPTION-CODE
@@ -2256,7 +2258,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         RDLEN is too long.
         """
         b = BytesIO(
-            OPT_NON_STANDARD_ATTRIBUTES().BYTES(excludeOptions=True) + (
+            OPT_NON_STANDARD_ATTRIBUTES.BYTES(excludeOptions=True) + (
 
                 b'\x00\x07' # RDLEN 7 Too long - should be 6
 
@@ -2277,7 +2279,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
 
         b = BytesIO(
-            OPT_NON_STANDARD_ATTRIBUTES().BYTES(excludeOptions=True) + (
+            OPT_NON_STANDARD_ATTRIBUTES.BYTES(excludeOptions=True) + (
 
                 b'\x00\x14' # RDLEN 20
 
