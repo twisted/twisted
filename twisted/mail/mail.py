@@ -767,7 +767,7 @@ class FileMonitoringService(internet.TimerService):
         @type name: C{str}
         @param name: The name of a file to monitor.
 
-        @type callback: C{Callable which takes a C{str} argument}
+        @type callback: callable which takes a C{str} argument
         @param callback: The function to call when the file has changed.
 
         @type interval: C{float}
