@@ -2196,6 +2196,30 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(b.tell(), len(b.getvalue()))
 
 
+    def test_decodeOnlyExpectedBytes(self):
+        """
+        L{dns._OPTHeader.decode} reads only the bytes from the current
+        file position to the end of the record that is being
+        decoded. Trailing bytes are not consumed.
+        """
+        # Check that all the input data has been consumed.
+        b = BytesIO(
+            b'\x00' # 0 root zone
+            b'\x00\x29' # type 41
+            b'\x02\x00' # udpPayloadsize 512
+            b'\x03' # extendedRCODE 3
+            b'\x03' # version 3
+            b'\x80\x00' # DNSSEC OK 1 + Z
+            b'\x00\x00' # RDLEN 0
+            b'xxxx' # Trailing bytes
+            )
+
+        decodedHeader = dns._OPTHeader()
+        decodedHeader.decode(b)
+
+        self.assertEqual(b.tell(), len(b.getvalue())-len(b'xxxx'))
+
+
     def test_decodeDiscardsName(self):
         """
         L{dns._OPTHeader.decode} discards the name which is encoded in
