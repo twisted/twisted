@@ -2306,7 +2306,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         been derived from the C{cls}, C{ttl} and C{payload} attributes
         of the original header.
         """
-        h = dns.RRHeader(
+        genericHeader = dns.RRHeader(
             b'example.com',
             type=dns.OPT,
             cls=0xffff,
@@ -2315,15 +2315,16 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
                  | True << 15),
             payload=dns.UnknownRecord(b'\xff\xff\x00\x03abc'))
 
-        o = dns._OPTHeader.fromRRHeader(h)
-        self.assertEqual(o.name, dns.Name(b''))
-        self.assertEqual(o.type, dns.OPT)
-        self.assertEqual(o.udpPayloadSize, 0xffff)
-        self.assertEqual(o.extendedRCODE, 0xfe)
-        self.assertEqual(o.version, 0xfd)
-        self.assertEqual(o.dnssecOK, True)
-        self.assertEqual(
-            o.options, [dns._OPTVariableOption(code=0xffff, data=b'abc')])
+        decodedOptHeader = dns._OPTHeader.fromRRHeader(genericHeader)
+
+        expectedOptHeader = dns._OPTHeader(
+            udpPayloadSize=0xffff,
+            extendedRCODE=0xfe,
+            version=0xfd,
+            dnssecOK=1,
+            options=[dns._OPTVariableOption(code=0xffff, data=b'abc')])
+
+        self.assertEqual(decodedOptHeader, expectedOptHeader)
 
 
     def test_repr(self):
