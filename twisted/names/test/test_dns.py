@@ -2149,8 +2149,37 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
     def test_decode(self):
         """
         L{dns._OPTHeader.decode} unpacks the header fields from a file
-        like object and returns an L{dns._OPTHeader} instance.
+        like object and populates the attributes of an existing
+        L{dns._OPTHeader} instance.
         """
+        decodedHeader = dns._OPTHeader()
+        decodedHeader.decode(
+            BytesIO(
+                b'\x00' # 0 root zone
+                b'\x00\x29' # type 41
+                b'\x02\x00' # udpPayloadsize 512
+                b'\x03' # extendedRCODE 3
+                b'\x04' # version 4
+                b'\x80\x00' # DNSSEC OK 1 + Z
+                b'\x00\x00' # RDLEN 0
+                ))
+
+        expectedHeader = dns._OPTHeader(
+            udpPayloadSize=512,
+            extendedRCODE=3,
+            version=4,
+            dnssecOK=1,
+            )
+
+        self.assertEqual(decodedHeader, expectedHeader)
+
+
+    def test_decodeAllExpectedBytes(self):
+        """
+        L{dns._OPTHeader.decode} reads all the bytes of the record
+        that is being decoded.
+        """
+        # Check that all the input data has been consumed.
         b = BytesIO(
             b'\x00' # 0 root zone
             b'\x00\x29' # type 41
@@ -2161,15 +2190,9 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             b'\x00\x00' # RDLEN 0
             )
 
-        h = dns._OPTHeader()
-        h.decode(b)
-        self.assertEqual(h.name, dns.Name(b''))
-        self.assertEqual(h.type, 41)
-        self.assertEqual(h.udpPayloadSize, 512)
-        self.assertEqual(h.extendedRCODE, 3)
-        self.assertEqual(h.version, 3)
-        self.assertEqual(h.dnssecOK, True)
-        # Check that all the input data has been consumed.
+        decodedHeader = dns._OPTHeader()
+        decodedHeader.decode(b)
+
         self.assertEqual(b.tell(), len(b.getvalue()))
 
 
