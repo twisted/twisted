@@ -59,44 +59,6 @@ class ImmediateFailureMixin(object):
 
 
 
-class MockCancel(object):
-    """
-    A mock cancel method.
-
-    @type called: C{bool}
-    @ivar called: If the mock cancel method has been called, this value
-        will be set to C{True}, otherwise C{False}.
-    """
-    def __init__(self):
-        """
-        Initialize the mock cancel method, set L{self.called} to
-        C{False}.
-        """
-        self.called = False
-
-
-    def __call__(self):
-        """
-        Simply set L{self.called} to C{True}.
-        """
-        self.called = True
-
-
-
-def makeDeferredWithMockCancel():
-    """
-    Make a L{defer.Deferred} whose C{cancel} method is replaced with an
-    instance of L{MockCancel}.
-
-    @return: An instance of L{defer.Deferred} whose C{cancel} method is
-        replaced with an instance of L{MockCancel}.
-    """
-    deferred = defer.Deferred()
-    deferred.cancel = MockCancel()
-    return deferred
-
-
-
 class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
     def setUp(self):
@@ -376,40 +338,6 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(len(errors), 1)
 
 
-    def test_cancelDeferredListFiredWithNonFailure(self):
-        """
-        When a L{defer.DeferredList} has fired with a non-failure result, the
-        cancellation will do nothing instead of cancelling the
-        L{defer.Deferred}s.
-        """
-        deferredOne = makeDeferredWithMockCancel()
-        deferredTwo = makeDeferredWithMockCancel()
-        deferredList = defer.DeferredList([deferredOne, deferredTwo])
-        deferredOne.callback(None)
-        deferredTwo.callback(None)
-        deferredList.cancel()
-        self.assertFalse(deferredOne.cancel.called)
-        self.assertFalse(deferredTwo.cancel.called)
-
-
-    def test_cancelDeferredListFiredWithFailure(self):
-        """
-        When a L{defer.DeferredList} has fired with a failure result, the
-        cancellation will do nothing instead of cancelling the
-        L{defer.Deferred}s.
-        """
-        deferredOne = makeDeferredWithMockCancel()
-        deferredTwo = makeDeferredWithMockCancel()
-        deferredList = defer.DeferredList([deferredOne, deferredTwo])
-        deferredOne.errback(GenericError("test"))
-        deferredTwo.errback(GenericError("test"))
-        deferredList.cancel()
-        self.assertFalse(deferredOne.cancel.called)
-        self.assertFalse(deferredTwo.cancel.called)
-        self.failureResultOf(deferredOne, GenericError)
-        self.failureResultOf(deferredTwo, GenericError)
-
-
     def test_cancelFiredOnOneCallbackDeferredList(self):
         """
         When a L{defer.DeferredList} has fired because one L{defer.Deferred} in
@@ -581,40 +509,6 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         result.cancel()
         self.failureResultOf(deferredOne, defer.CancelledError)
         self.failureResultOf(deferredTwo, defer.CancelledError)
-        self.failureResultOf(result, defer.FirstError)
-
-
-    def test_cancelGatherResultsAlreadyFiredWithNonFailureResult(self):
-        """
-        When cancelling a L{defer.Deferred} returned by L{defer.gatherResults}
-        which has already fired with a non-failure result, the cancellation
-        will do nothing instead of cancelling the L{defer.Deferred}s in the
-        list.
-        """
-        deferredOne = makeDeferredWithMockCancel()
-        deferredTwo = makeDeferredWithMockCancel()
-        result = defer.gatherResults([deferredOne, deferredTwo])
-        deferredOne.callback(None)
-        deferredTwo.callback(None)
-        result.cancel()
-        self.assertFalse(deferredOne.cancel.called)
-        self.assertFalse(deferredTwo.cancel.called)
-
-
-    def test_cancelGatherResultsAlreadyFiredWithFailureResult(self):
-        """
-        When cancelling a L{defer.Deferred} returned by L{defer.gatherResults}
-        which has already fired with a failure result, the cancellation will do
-        nothing instead of cancelling the L{defer.Deferred}s in the list.
-        """
-        deferredOne = makeDeferredWithMockCancel()
-        deferredTwo = makeDeferredWithMockCancel()
-        result = defer.gatherResults([deferredOne, deferredTwo])
-        deferredOne.errback(GenericError("test"))
-        result.cancel()
-        self.assertFalse(deferredOne.cancel.called)
-        self.assertFalse(deferredTwo.cancel.called)
-        self.failureResultOf(deferredOne, GenericError)
         self.failureResultOf(result, defer.FirstError)
 
 
