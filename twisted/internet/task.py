@@ -151,17 +151,19 @@ class LoopingCall:
         """
         Start running function every interval seconds.
 
-        @param interval: The number of seconds between calls.  May be
-        less than one.  Precision will depend on the underlying
-        platform, the available hardware, and the load on the system.
+        @param interval: The number of seconds between calls. May be less than
+            one. Precision will depend on the underlying platform, the
+            available hardware, and the load on the system.
 
-        @param now: If True, run this call right now.  Otherwise, wait
-        until the interval has elapsed before beginning.
+        @param now: If C{True}, run this call right now. Otherwise, wait until
+            the interval has elapsed before beginning.
 
-        @return: A Deferred whose callback will be invoked with
-        C{self} when C{self.stop} is called, or whose errback will be
-        invoked when the function raises an exception or returned a
-        deferred that has its errback invoked.
+        @return: A L{defer.Deferred} whose callback will be invoked with
+            L{self} when L{self.stop} is called, or whose errback will be
+            invoked when the function raises an exception or returned a
+            L{defer.Deferred} that has its errback invoked. The looping call
+            can be cancelled by calling the C{cancel} method of the
+            L{defer.Deferred}.
         """
         assert not self.running, ("Tried to start an already running "
                                   "LoopingCall.")
