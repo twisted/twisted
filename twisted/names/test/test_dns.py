@@ -1961,6 +1961,56 @@ class IsSubdomainOfTests(unittest.SynchronousTestCase):
 
 
 
+class OPT_NON_STANDARD_ATTRIBUTES(object):
+    """
+    Generate byte and instance representations of an L{dns._OPTHeader}
+    where all attributes are set to non-default values.
+
+    For testing whether attributes have really been read from the byte
+    string during decoding.
+    """
+    def BYTES(self, excludeName=False, excludeOptions=False):
+        """
+        @param excludeName: A flag that controls whether to exclude
+            the name field. This allows a non-standard name to be
+            prepended during the test.
+        @type excludeName: L{bool}
+
+        @param excludeOptions: A flag that controls whether to exclude
+            the RDLEN field. This allows encoded variable options to be
+            appended during the test.
+        @type excludeOptions: L{bool}
+
+        @return: L{bytes} representing the encoded OPT record returned
+            by L{OBJECT}.
+        """
+        rdlen = b'\x00\x00' # RDLEN 0
+        if excludeOptions:
+            rdlen = b''
+
+        return (
+            b'\x00' # 0 root zone
+            b'\x00\x29' # type 41
+            b'\x02\x00' # udpPayloadsize 512
+            b'\x03' # extendedRCODE 3
+            b'\x04' # version 4
+            b'\x80\x00' # DNSSEC OK 1 + Z
+            ) + rdlen
+
+
+    def OBJECT(self):
+        """
+        @return: A L{dns._OPTHeader} instance with attributes that
+            match the encoded record returned by L{BYTES}.
+        """
+        return dns._OPTHeader(
+            udpPayloadSize=512,
+            extendedRCODE=3,
+            version=4,
+            dnssecOK=1)
+
+
+
 class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
     """
     Tests for L{twisted.names.dns._OPTHeader}.
@@ -2088,23 +2138,12 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader.encode} packs the header fields and writes
         them to a file like object passed in as an argument.
         """
-        h = dns._OPTHeader(
-            udpPayloadSize=512,
-            extendedRCODE=3,
-            version=3,
-            dnssecOK=True)
         b = BytesIO()
 
-        h.encode(b)
+        OPT_NON_STANDARD_ATTRIBUTES().OBJECT().encode(b)
         self.assertEqual(
             b.getvalue(),
-            b'\x00' # 0 root zone
-            b'\x00\x29' # type 41
-            b'\x02\x00' # udpPayloadsize 512
-            b'\x03' # extendedRCODE 3
-            b'\x03' # version 3
-            b'\x80\x00' # DNSSEC OK 1 + Z
-            b'\x00\x00' # RDLEN 0
+            OPT_NON_STANDARD_ATTRIBUTES().BYTES()
             )
 
 
@@ -2113,37 +2152,28 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader.options} is a list of L{dns._OPTVariableOption}
         instances which are packed into the rdata area of the header.
         """
-        h = dns._OPTHeader(
-            udpPayloadSize=512,
-            extendedRCODE=3,
-            version=3,
-            dnssecOK=True,
-            options=[
-                dns._OPTVariableOption(1, b'foobarbaz'),
-                dns._OPTVariableOption(2, b'qux'),
-                ])
+        h = OPT_NON_STANDARD_ATTRIBUTES().OBJECT()
+        h.options = [
+            dns._OPTVariableOption(1, b'foobarbaz'),
+            dns._OPTVariableOption(2, b'qux'),
+            ]
         b = BytesIO()
 
         h.encode(b)
         self.assertEqual(
             b.getvalue(),
 
-            b'\x00' # 0 root zone
-            b'\x00\x29' # type 41
-            b'\x02\x00' # udpPayloadsize 512
-            b'\x03' # extendedRCODE 3
-            b'\x03' # version 3
-            b'\x80\x00' # DNSSEC OK 1 + Z
-            b'\x00\x14' # RDLEN 20
+            OPT_NON_STANDARD_ATTRIBUTES().BYTES(excludeOptions=True) + (
+                b'\x00\x14' # RDLEN 20
 
-            b'\x00\x01' # OPTION-CODE
-            b'\x00\x09' # OPTION-LENGTH
-            b'foobarbaz' # OPTION-DATA
+                b'\x00\x01' # OPTION-CODE
+                b'\x00\x09' # OPTION-LENGTH
+                b'foobarbaz' # OPTION-DATA
 
-            b'\x00\x02' # OPTION-CODE
-            b'\x00\x03' # OPTION-LENGTH
-            b'qux' # OPTION-DATA
-            )
+                b'\x00\x02' # OPTION-CODE
+                b'\x00\x03' # OPTION-LENGTH
+                b'qux' # OPTION-DATA
+                ))
 
 
     def test_decode(self):
@@ -2153,25 +2183,11 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader} instance.
         """
         decodedHeader = dns._OPTHeader()
-        decodedHeader.decode(
-            BytesIO(
-                b'\x00' # 0 root zone
-                b'\x00\x29' # type 41
-                b'\x02\x00' # udpPayloadsize 512
-                b'\x03' # extendedRCODE 3
-                b'\x04' # version 4
-                b'\x80\x00' # DNSSEC OK 1 + Z
-                b'\x00\x00' # RDLEN 0
-                ))
+        decodedHeader.decode(BytesIO(OPT_NON_STANDARD_ATTRIBUTES().BYTES()))
 
-        expectedHeader = dns._OPTHeader(
-            udpPayloadSize=512,
-            extendedRCODE=3,
-            version=4,
-            dnssecOK=1,
-            )
-
-        self.assertEqual(decodedHeader, expectedHeader)
+        self.assertEqual(
+            decodedHeader,
+            OPT_NON_STANDARD_ATTRIBUTES().OBJECT())
 
 
     def test_decodeAllExpectedBytes(self):
@@ -2180,15 +2196,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         that is being decoded.
         """
         # Check that all the input data has been consumed.
-        b = BytesIO(
-            b'\x00' # 0 root zone
-            b'\x00\x29' # type 41
-            b'\x02\x00' # udpPayloadsize 512
-            b'\x03' # extendedRCODE 3
-            b'\x03' # version 3
-            b'\x80\x00' # DNSSEC OK 1 + Z
-            b'\x00\x00' # RDLEN 0
-            )
+        b = BytesIO(OPT_NON_STANDARD_ATTRIBUTES().BYTES())
 
         decodedHeader = dns._OPTHeader()
         decodedHeader.decode(b)
@@ -2202,17 +2210,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         file position to the end of the record that is being
         decoded. Trailing bytes are not consumed.
         """
-        # Check that all the input data has been consumed.
-        b = BytesIO(
-            b'\x00' # 0 root zone
-            b'\x00\x29' # type 41
-            b'\x02\x00' # udpPayloadsize 512
-            b'\x03' # extendedRCODE 3
-            b'\x03' # version 3
-            b'\x80\x00' # DNSSEC OK 1 + Z
-            b'\x00\x00' # RDLEN 0
-            b'xxxx' # Trailing bytes
-            )
+        b = BytesIO(OPT_NON_STANDARD_ATTRIBUTES().BYTES()
+                    +  b'xxxx') # Trailing bytes
 
         decodedHeader = dns._OPTHeader()
         decodedHeader.decode(b)
@@ -2226,16 +2225,8 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         the supplied bytes. The name attribute of the resulting
         L{dns._OPTHeader} instance will always be L{dns.Name(b'')}.
         """
-        b = BytesIO(
-            # This non-root zone name should be discarded
-            b'\x07example\x03com\x00'
-            b'\x00\x29' # type 41
-            b'\x02\x00' # udpPayloadsize 512
-            b'\x03' # extendedRCODE 3
-            b'\x03' # version 3
-            b'\x80\x00' # DNSSEC OK 1 + Z
-            b'\x00\x00' # RDLEN 0
-            )
+        b = BytesIO(OPT_NON_STANDARD_ATTRIBUTES().BYTES(excludeName=True)
+                    +b'\x07example\x03com\x00')
 
         h = dns._OPTHeader()
         h.decode(b)
@@ -2248,20 +2239,13 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         RDLEN is too short.
         """
         b = BytesIO(
-            # This non-root zone name should be discarded
-            b'\x00'
-            b'\x00\x29' # type 41
-            b'\x02\x00' # udpPayloadsize 512
-            b'\x03' # extendedRCODE 3
-            b'\x03' # version 3
-            b'\x80\x00' # DNSSEC OK 1 + Z
+            OPT_NON_STANDARD_ATTRIBUTES().BYTES(excludeOptions=True) + (
+                b'\x00\x05' # RDLEN 5 Too short - should be 6
 
-            b'\x00\x05' # RDLEN 5 Too short - should be 6
-
-            b'\x00\x01' # OPTION-CODE
-            b'\x00\x02' # OPTION-LENGTH
-            b'\x00\x00' # OPTION-DATA
-            )
+                b'\x00\x01' # OPTION-CODE
+                b'\x00\x02' # OPTION-LENGTH
+                b'\x00\x00' # OPTION-DATA
+                ))
         h = dns._OPTHeader()
         self.assertRaises(EOFError, h.decode, b)
 
@@ -2272,20 +2256,14 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         RDLEN is too long.
         """
         b = BytesIO(
-            # This non-root zone name should be discarded
-            b'\x00'
-            b'\x00\x29' # type 41
-            b'\x02\x00' # udpPayloadsize 512
-            b'\x03' # extendedRCODE 3
-            b'\x03' # version 3
-            b'\x80\x00' # DNSSEC OK 1 + Z
+            OPT_NON_STANDARD_ATTRIBUTES().BYTES(excludeOptions=True) + (
 
-            b'\x00\x07' # RDLEN 7 Too long - should be 6
+                b'\x00\x07' # RDLEN 7 Too long - should be 6
 
-            b'\x00\x01' # OPTION-CODE
-            b'\x00\x02' # OPTION-LENGTH
-            b'\x00\x00' # OPTION-DATA
-            )
+                b'\x00\x01' # OPTION-CODE
+                b'\x00\x02' # OPTION-LENGTH
+                b'\x00\x00' # OPTION-DATA
+                ))
         h = dns._OPTHeader()
         self.assertRaises(EOFError, h.decode, b)
 
@@ -2299,22 +2277,18 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
 
         b = BytesIO(
-            b'\x00' # 0 root zone
-            b'\x00\x29' # type 41
-            b'\x02\x00' # udpPayloadsize 512
-            b'\x03' # extendedRCODE 3
-            b'\x03' # version 3
-            b'\x80\x00' # DNSSEC OK 1 + Z
-            b'\x00\x14' # RDLEN 20
+            OPT_NON_STANDARD_ATTRIBUTES().BYTES(excludeOptions=True) + (
 
-            b'\x00\x01' # OPTION-CODE
-            b'\x00\x09' # OPTION-LENGTH
-            b'foobarbaz' # OPTION-DATA
+                b'\x00\x14' # RDLEN 20
 
-            b'\x00\x02' # OPTION-CODE
-            b'\x00\x03' # OPTION-LENGTH
-            b'qux' # OPTION-DATA
-            )
+                b'\x00\x01' # OPTION-CODE
+                b'\x00\x09' # OPTION-LENGTH
+                b'foobarbaz' # OPTION-DATA
+
+                b'\x00\x02' # OPTION-CODE
+                b'\x00\x03' # OPTION-LENGTH
+                b'qux' # OPTION-DATA
+                ))
 
         h = dns._OPTHeader()
         h.decode(b)
