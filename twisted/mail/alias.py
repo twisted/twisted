@@ -127,7 +127,7 @@ class AddressAlias(AliasBase):
         return '<Address %s>' % (self.alias,)
 
     def createMessageReceiver(self):
-        return self.domain().exists(str(self.alias))
+        return self.domain().exists(smtp.User(self.alias, None, None, None))()
 
     def resolve(self, aliasmap, memo=None):
         if memo is None:
