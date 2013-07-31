@@ -57,6 +57,10 @@ class LoopingCall:
     @type _runAtStart: C{bool}
     @ivar _runAtStart: A flag indicating whether the 'now' argument was passed
         to L{LoopingCall.start}.
+
+    @ivar _deferredOfFunction: A L{defer.Deferred} returned by a call of L{f}.
+        If the L{f} hasn't been called yet or the L{defer.Deferred} has fired
+        the value will be set to C{None}.
     """
 
     call = None
@@ -164,7 +168,28 @@ class LoopingCall:
         if interval < 0:
             raise ValueError("interval must be >= 0")
         self.running = True
-        d = self.deferred = defer.Deferred()
+        def cancel(deferred):
+            """
+            Cancel the looping call.
+
+            If a call of the target function hasn't returned yet, cancel the
+            running call. If a call of the target function has been scheduled,
+            cancel the scheduled call. The C{running} flag will be set to
+            C{False}.
+
+            @param deferred: The cancelled L{defer.Deferred}>
+            """
+            if self.running:
+                self.running = False
+                if self.call is not None:
+                    self.call.cancel()
+                    self.call = None
+                    self.deferred = None
+                if self._deferredOfFunction is not None:
+                    self._deferredOfFunction.cancel()
+                    self._deferredOfFunction = None
+
+        d = self.deferred = defer.Deferred(cancel)
         self.starttime = self.clock.seconds()
         self._expectNextCallAt = self.starttime
         self.interval = interval
@@ -203,6 +228,7 @@ class LoopingCall:
 
     def __call__(self):
         def cb(result):
+            self._deferredOfFunction = None
             if self.running:
                 self._reschedule()
             else:
@@ -210,14 +236,15 @@ class LoopingCall:
                 d.callback(self)
 
         def eb(failure):
+            self._deferredOfFunction = None
             self.running = False
             d, self.deferred = self.deferred, None
             d.errback(failure)
 
         self.call = None
-        d = defer.maybeDeferred(self.f, *self.a, **self.kw)
-        d.addCallback(cb)
-        d.addErrback(eb)
+        self._deferredOfFunction = defer.maybeDeferred(
+            self.f, *self.a, **self.kw)
+        self._deferredOfFunction.addCallbacks(cb, eb)
 
 
     def _reschedule(self):
