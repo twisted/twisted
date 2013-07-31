@@ -861,7 +861,8 @@ class DeferredList(Deferred):
                 try:
                     deferred.cancel()
                 except:
-                    log.err()
+                    log.err(
+                        _why="Exception raised from user supplied canceller")
 
 
 def _parseDListResult(l, fireOnOneErrback=False):
