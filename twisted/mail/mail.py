@@ -406,7 +406,7 @@ class IAliasableDomain(IDomain):
 
     def exists(user, memo=None):
         """
-        Check whether a user exists in this domain.
+        Check whether a user exists in this domain or an alias of it.
 
         @type user: L{User}
         @param user: A user.
@@ -420,7 +420,8 @@ class IAliasableDomain(IDomain):
         @return: A function which takes no arguments and returns a message
             receiver for the user.
 
-        @raise SMTPBadRcpt: When the given user does not exist in this domain.
+        @raise SMTPBadRcpt: When the given user does not exist in this domain
+            or an alias of it.
         """
 
 
