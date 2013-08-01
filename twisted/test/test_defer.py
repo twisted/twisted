@@ -592,7 +592,7 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         callbackResult = self.successResultOf(result)
         self.assertEqual(callbackResult[0], "Callback Result")
         self.assertEqual(callbackResult[1], "Callback Result")
- 
+
 
     def test_maybeDeferredSync(self):
         """
