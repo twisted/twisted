@@ -357,3 +357,19 @@ class TestTimerService(TestCase):
         self.assertEqual(1, len(errors))
         d = self.timer.stopService()
         self.assertIdentical(self.successResultOf(d), None)
+
+
+    def test_pickleTimerServiceNotPickleLoop(self):
+        """
+        When pickling L{internet.TimerService}, it won't pickle
+        L{internet.TimerService._loop}.
+        """
+        self.assertIn("_loop", self.timer.volatile)
+
+
+    def test_pickleTimerServiceNotPickleLoopFinished(self):
+        """
+        When pickling L{internet.TimerService}, it won't pickle
+        L{internet.TimerService._loopFinished}.
+        """
+        self.assertIn("_loopFinished", self.timer.volatile)
