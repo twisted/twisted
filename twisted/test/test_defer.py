@@ -39,6 +39,17 @@ def getDivisionFailure(*args, **kwargs):
 
 
 
+def fakeCallbackCanceller(deferred):
+    """
+    A fake L{defer.Deferred} canceller which callbacks the L{defer.Deferred}
+    with C{str} "Callback Result" when cancelling it.
+
+    @param deferred: The cancelled L{defer.Deferred}.
+    """
+    deferred.callback("Callback Result")
+
+
+
 class ImmediateFailureMixin(object):
     """
     Add additional assertion methods.
@@ -270,6 +281,25 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.failureResultOf(deferredTwo, defer.CancelledError)
 
 
+    def test_cancelDeferredListCallback(self):
+        """
+        When cancelling an unfired L{defer.DeferredList} without the
+        C{fireOnOneCallback} and C{fireOnOneErrback} flags set, the
+        L{defer.DeferredList} will be callback with a C{list} of
+        (success, result) C{tuple}s.
+        """
+        deferredOne = defer.Deferred(fakeCallbackCanceller)
+        deferredTwo = defer.Deferred()
+        deferredList = defer.DeferredList([deferredOne, deferredTwo])
+        deferredList.cancel()
+        self.failureResultOf(deferredTwo, defer.CancelledError)
+        result = self.successResultOf(deferredList)
+        self.assertTrue(result[0][0])
+        self.assertEqual(result[0][1], "Callback Result")
+        self.assertFalse(result[1][0])
+        self.assertTrue(result[1][1].check(defer.CancelledError))
+
+
     def test_cancelDeferredListWithFireOnOneCallback(self):
         """
         When cancelling an unfired L{defer.DeferredList} with the flag
@@ -282,6 +312,23 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         deferredList.cancel()
         self.failureResultOf(deferredOne, defer.CancelledError)
         self.failureResultOf(deferredTwo, defer.CancelledError)
+
+
+    def test_cancelDeferredListWithFireOnOneCallbackAndDeferredCallback(self):
+        """
+        When cancelling an unfired L{defer.DeferredList} with the flag
+        C{fireOnOneCallback} set, if one of the L{defer.Deferred} callbacks
+        in its canceller, the L{defer.DeferredList} will callback with the
+        result and the index of the L{defer.Deferred} in a C{tuple}.
+        """
+        deferredOne = defer.Deferred(fakeCallbackCanceller)
+        deferredTwo = defer.Deferred()
+        deferredList = defer.DeferredList([deferredOne, deferredTwo],
+                                          fireOnOneCallback=True)
+        deferredList.cancel()
+        self.failureResultOf(deferredTwo, defer.CancelledError)
+        result = self.successResultOf(deferredList)
+        self.assertEqual(result, ("Callback Result", 0))
 
 
     def test_cancelDeferredListWithFireOnOneErrback(self):
@@ -297,6 +344,25 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.failureResultOf(deferredOne, defer.CancelledError)
         self.failureResultOf(deferredTwo, defer.CancelledError)
         self.failureResultOf(deferredList, defer.FirstError)
+
+
+    def test_cancelDeferredListWithFireOnOneErrbackAllDeferredsCallback(self):
+        """
+        When cancelling an unfired L{defer.DeferredList} with the flag
+        C{fireOnOneErrback} set, if all the L{defer.Deferred} callbacks
+        in its canceller, the L{defer.DeferredList} will callback with a
+        C{list} of (success, result) C{tuple}s.
+        """
+        deferredOne = defer.Deferred(fakeCallbackCanceller)
+        deferredTwo = defer.Deferred(fakeCallbackCanceller)
+        deferredList = defer.DeferredList([deferredOne, deferredTwo],
+                                          fireOnOneErrback=True)
+        deferredList.cancel()
+        result = self.successResultOf(deferredList)
+        self.assertTrue(result[0][0])
+        self.assertEqual(result[0][1], "Callback Result")
+        self.assertTrue(result[1][0])
+        self.assertEqual(result[1][1], "Callback Result")
 
 
     def test_cancelDeferredListWithOriginalDeferreds(self):
@@ -511,6 +577,22 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.failureResultOf(deferredTwo, defer.CancelledError)
         self.failureResultOf(result, defer.FirstError)
 
+
+    def test_cancelGatherResultsWithAllDeferredsCallback(self):
+        """
+        When cancelling the L{defer.gatherResults} call, if all the
+        L{defer.Deferred}s callback in their canceller, the L{defer.Deferred}
+        returned by L{defer.gatherResults} will be callbacked with the C{list}
+        of the results.
+        """
+        deferredOne = defer.Deferred(fakeCallbackCanceller)
+        deferredTwo = defer.Deferred(fakeCallbackCanceller)
+        result = defer.gatherResults([deferredOne, deferredTwo])
+        result.cancel()
+        callbackResult = self.successResultOf(result)
+        self.assertEqual(callbackResult[0], "Callback Result")
+        self.assertEqual(callbackResult[1], "Callback Result")
+ 
 
     def test_maybeDeferredSync(self):
         """
