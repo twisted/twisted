@@ -147,6 +147,28 @@ class LoopingCall:
         return intervalNum
 
 
+    def _cancel(self, defered):
+        """
+        Cancel the looping call.
+
+        If a call of the target function hasn't returned yet, cancel the
+        running call. If a call of the target function has been scheduled,
+        cancel the scheduled call. The C{running} flag will be set to
+        C{False}.
+
+        @param deferred: The cancelled L{defer.Deferred}.
+        """
+        if self.running:
+            self.running = False
+            if self.call is not None:
+                self.call.cancel()
+                self.call = None
+                self.deferred = None
+            if self._deferredOfFunction is not None:
+                self._deferredOfFunction.cancel()
+                self._deferredOfFunction = None
+
+
     def start(self, interval, now=True):
         """
         Start running function every interval seconds.
@@ -170,28 +192,7 @@ class LoopingCall:
         if interval < 0:
             raise ValueError("interval must be >= 0")
         self.running = True
-        def cancel(deferred):
-            """
-            Cancel the looping call.
-
-            If a call of the target function hasn't returned yet, cancel the
-            running call. If a call of the target function has been scheduled,
-            cancel the scheduled call. The C{running} flag will be set to
-            C{False}.
-
-            @param deferred: The cancelled L{defer.Deferred}>
-            """
-            if self.running:
-                self.running = False
-                if self.call is not None:
-                    self.call.cancel()
-                    self.call = None
-                    self.deferred = None
-                if self._deferredOfFunction is not None:
-                    self._deferredOfFunction.cancel()
-                    self._deferredOfFunction = None
-
-        d = self.deferred = defer.Deferred(cancel)
+        d = self.deferred = defer.Deferred(self._cancel)
         self.starttime = self.clock.seconds()
         self._expectNextCallAt = self.starttime
         self.interval = interval
