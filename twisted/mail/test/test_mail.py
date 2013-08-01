@@ -1741,7 +1741,7 @@ class TestMessage(object):
         @rtype: C{str}
         @return: A string containing the user. 
         """
-        return "<Message for {}>".format(self.user)
+        return "<Message for %s>" % self.user
 
     def lineReceived(self, line):
         pass
@@ -1800,7 +1800,7 @@ class AddressAliasTests(unittest.TestCase):
         The string presentation of L{AddressAlias} includes the alias.
         """
         self.assertEqual(str(self.alias), 
-            '<Address {}>'.format(str(self.destination)))
+            '<Address %s>' % str(self.destination))
 
 
 
