@@ -490,6 +490,19 @@ class TestInternet2(unittest.TestCase):
         t = pickle.loads(s)
         self.failIf(t.running)
 
+
+    def test_pickleTimerServiceNotPickleLoopAndLoopFinished(self):
+        """
+        When pickling L{internet.TimerService}, it won't pickle
+        L{internet.TimerService._loop} and
+        L{internet.TimerService._loopFinished}.
+        """
+        target = TimerTarget()
+        timer = internet.TimerService(1, target.append, "hello")
+        self.assertIn("_loop", timer.volatile)
+        self.assertIn("_loopFinished", timer.volatile)
+
+
     def testBrokenTimer(self):
         d = defer.Deferred()
         t = internet.TimerService(1, lambda: 1 // 0)
