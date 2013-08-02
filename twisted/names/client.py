@@ -512,7 +512,8 @@ class DNSClientFactory(protocol.ClientFactory):
 
     def clientConnectionFailed(self, connector, reason):
         """
-        Fail all pending TCP DNS queries if the TCP connection fails.
+        Fail all pending TCP DNS queries if the TCP connection attempt
+        fails.
 
         @see: L{twisted.internet.protocol.ClientFactory}
 
