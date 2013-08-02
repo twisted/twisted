@@ -523,7 +523,7 @@ class DNSClientFactory(protocol.ClientFactory):
             query deferreds.
         @type reason: L{twisted.python.failure.Failure}
         """
-        for d, q, t in self.controller.pending:
+        for d, query, timeout in self.controller.pending:
             d.errback(reason)
 
 
