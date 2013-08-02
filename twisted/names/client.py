@@ -512,15 +512,17 @@ class DNSClientFactory(protocol.ClientFactory):
 
     def clientConnectionFailed(self, connector, reason):
         """
-        Errback all pending TCP queries if the TCP connect fails.
+        Fail all pending TCP DNS queries if the TCP connection fails.
+
+        @see: L{twisted.internet.protocol.ClientFactory}
 
         @param connector: Not used.
-        @type connector: L{twisted.internet.tcp.Connector}
+        @type connector: L{twisted.internet.interfaces.IConnector}
 
-        @param reason: A C{Failure} passed in from
-            L{twisted.internet.tcp.Client}.C{failIfNotConnected} and
-            passed on to the C{errback} method of each of the pending
-            query deferreds.
+        @param reason: A C{Failure} containing information about the
+            cause of the connection failure. This will be passed as the
+            argument to C{errback} on every pending TCP query
+            C{deferred}.
         @type reason: L{twisted.python.failure.Failure}
         """
         for d, query, timeout in self.controller.pending:
