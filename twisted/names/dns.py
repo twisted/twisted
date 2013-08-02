@@ -683,7 +683,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             o.encode(b)
         optionBytes = b.getvalue()
 
-        return RRHeader(
+        RRHeader(
             name=self.name.name,
             type=self.type,
             cls=self.udpPayloadSize,
