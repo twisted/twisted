@@ -526,7 +526,12 @@ class DNSClientFactory(protocol.ClientFactory):
             C{deferred}.
         @type reason: L{twisted.python.failure.Failure}
         """
-        for d, query, timeout in self.controller.pending:
+        # Copy the current pending deferreds then reset the master
+        # pending list. This prevents triggering new deferreds which
+        # may be added by callback or errback functions on the current
+        # deferreds.
+        pending, self.controller.pending = self.controller.pending, []
+        for d, query, timeout in pending:
             d.errback(reason)
 
 

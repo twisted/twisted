@@ -12,7 +12,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 
 from twisted.internet import defer
-from twisted.internet.error import CannotListenError
+from twisted.internet.error import CannotListenError, ConnectionRefusedError
 from twisted.internet.interfaces import IResolver
 from twisted.internet.test.modulehelpers import AlternateReactor
 from twisted.internet.task import Clock
@@ -715,6 +715,55 @@ class ResolverTests(unittest.TestCase):
         f1 = self.failureResultOf(d1, SentinelException)
         f2 = self.failureResultOf(d2, SentinelException)
         self.assertIdentical(f1, f2)
+
+
+    def test_reentrantTCPQueryErrbackOnConnectionFailure(self):
+        """
+        An errback on the deferred returned by
+        L{client.Resolver.queryTCP} may trigger another TCP query.
+        """
+        reactor = proto_helpers.MemoryReactor()
+        resolver = client.Resolver(
+            servers=[('127.0.0.1', 10053)],
+            reactor=reactor)
+
+        q = dns.Query('example.com')
+
+        # First query sent
+        d = resolver.queryTCP(q)
+
+        # Repeat the query when the first query fails
+        def reissue(e):
+            e.trap(ConnectionRefusedError)
+            return resolver.queryTCP(q)
+        d.addErrback(reissue)
+
+        self.assertEqual(len(reactor.tcpClients), 1)
+        self.assertEqual(len(reactor.connectors), 1)
+
+        host, port, factory, timeout, bindAddress = reactor.tcpClients[0]
+
+        # First query fails
+        f1 = failure.Failure(ConnectionRefusedError())
+        factory.clientConnectionFailed(
+            reactor.connectors[0],
+            f1)
+
+        # A second TCP connection is immediately attempted
+        self.assertEqual(len(reactor.tcpClients), 2)
+        self.assertEqual(len(reactor.connectors), 2)
+        # No result expected until the second chained query returns
+        self.assertNoResult(d)
+
+        # Second query fails
+        f2 = failure.Failure(ConnectionRefusedError())
+        factory.clientConnectionFailed(
+            reactor.connectors[1],
+            f2)
+
+        # Original deferred now fires with the second failure
+        f = self.failureResultOf(d, ConnectionRefusedError)
+        self.assertIdentical(f, f2)
 
 
 
