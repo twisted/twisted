@@ -498,6 +498,8 @@ class ThreadedResolver(_ThreadedResolverImpl):
             "instead.",
             category=DeprecationWarning, stacklevel=2)
 
+
+
 class DNSClientFactory(protocol.ClientFactory):
     def __init__(self, controller, timeout = 10):
         self.controller = controller
