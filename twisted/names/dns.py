@@ -650,10 +650,10 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     def encode(self, strio, compDict=None):
         """
-        Encode this L{OPTHeader} instance to bytes.
+        Encode this L{_OPTHeader} instance to bytes.
 
         @type strio: L{file}
-        @param strio: the byte representation of this L{OPTHeader}
+        @param strio: the byte representation of this L{_OPTHeader}
             will be written to this file.
 
         @type compDict: L{dict} or L{None}
@@ -680,11 +680,11 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     def decode(self, strio, length=None):
         """
-        Decode bytes into an L{OPTHeader} instance.
+        Decode bytes into an L{_OPTHeader} instance.
 
         @type strio: L{file}
         @param strio: Bytes will be read from this file until the full
-            L{OPTHeader} is decoded.
+            L{_OPTHeader} is decoded.
 
         @type length: L{int} or L{None}
         @param length: Not used.
