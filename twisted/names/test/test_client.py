@@ -669,12 +669,33 @@ class ResolverTests(unittest.TestCase):
         self.assertNotIn(protocol, resolver.connections)
 
 
-    def test_queryTCPDeferredErrbackOnConnectionFailure(self):
+    def test_singleTCPQueryErrbackOnConnectionFailure(self):
         """
         The deferred returned by L{client.Resolver.queryTCP} will
         errback when the TCP connection attempt fails. The reason for
-        the connection failure is passed to error handlers on all the
-        original deferreds.
+        the connection failure is passed as the argument to errback.
+        """
+        reactor = proto_helpers.MemoryReactor()
+        resolver = client.Resolver(
+            servers=[('192.0.2.100', 53)],
+            reactor=reactor)
+
+        d = resolver.queryTCP(dns.Query('example.com'))
+        host, port, factory, timeout, bindAddress = reactor.tcpClients[0]
+
+        class SentinelException(Exception):
+            pass
+
+        factory.clientConnectionFailed(
+            reactor.connectors[0], failure.Failure(SentinelException()))
+
+        self.failureResultOf(d, SentinelException)
+
+
+    def test_multipleTCPQueryErrbackOnConnectionFailure(self):
+        """
+        All pending L{resolver.queryTCP} C{deferred}s will C{errback}
+        with the same C{Failure} if the connection attempt fails.
         """
         reactor = proto_helpers.MemoryReactor()
         resolver = client.Resolver(
@@ -689,10 +710,11 @@ class ResolverTests(unittest.TestCase):
             pass
 
         factory.clientConnectionFailed(
-            reactor.connectors[0], SentinelException())
+            reactor.connectors[0], failure.Failure(SentinelException()))
 
-        self.failureResultOf(d1, SentinelException)
-        self.failureResultOf(d2, SentinelException)
+        f1 = self.failureResultOf(d1, SentinelException)
+        f2 = self.failureResultOf(d2, SentinelException)
+        self.assertIdentical(f1, f2)
 
 
 
