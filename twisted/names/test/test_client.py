@@ -24,6 +24,8 @@ from twisted.names.common import ResolverBase
 from twisted.names.test.test_hosts import GoodTempPathMixin
 from twisted.names.test.test_rootresolve import MemoryReactor
 
+from twisted.test import proto_helpers
+
 from twisted.trial import unittest
 
 if platform.isWindows():
@@ -665,6 +667,28 @@ class ResolverTests(unittest.TestCase):
         # Disconnecting should remove the protocol from the connection list:
         protocol.connectionLost(None)
         self.assertNotIn(protocol, resolver.connections)
+
+
+    def test_queryTCPDeferredErrbackOnConnectionFailure(self):
+        """
+        The deferred returned by L{client.Resolver.queryTCP} will
+        errback when the TCP connection attempt fails. The reason for
+        the connection failure is passed to error handlers on all the
+        original deferreds.
+        """
+        reactor = proto_helpers.MemoryReactor()
+        resolver = client.Resolver(
+            servers=[('192.0.2.100', 53)],
+            reactor=reactor)
+
+        d1 = resolver.queryTCP(dns.Query('example.com'))
+        d2 = resolver.queryTCP(dns.Query('example.net'))
+        host, port, factory, timeout, bindAddress = reactor.tcpClients[0]
+        class SentinelException(Exception):
+            pass
+        factory.clientConnectionFailed(reactor.connectors[0], SentinelException())
+        self.failureResultOf(d1, SentinelException)
+        self.failureResultOf(d2, SentinelException)
 
 
 
