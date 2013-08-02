@@ -508,6 +508,11 @@ class DNSClientFactory(protocol.ClientFactory):
         pass
 
 
+    def clientConnectionFailed(self, connector, reason):
+        for d, q, t in self.controller.pending:
+            d.errback(reason)
+
+
     def buildProtocol(self, addr):
         p = dns.DNSProtocol(self.controller)
         p.factory = self
