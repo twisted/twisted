@@ -509,6 +509,19 @@ class DNSClientFactory(protocol.ClientFactory):
 
 
     def clientConnectionFailed(self, connector, reason):
+        """
+        Errback all pending TCP queries if the TCP connect fails.
+
+        @param connector: Not used.
+        @type connector: L{twisted.internet.tcp.Connector}
+
+        @param reason: A C{Failure} passed in from
+            L{twisted.internet.tcp.Client.failIfNotConnected} and
+            passed on to the C{errback} method of each of the pending
+            query deferreds.
+        @type reason: L{twisted.python.failure.Failure}
+        """
+        import pdb; pdb.set_trace()
         for d, q, t in self.controller.pending:
             d.errback(reason)
 
