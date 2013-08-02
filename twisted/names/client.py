@@ -521,7 +521,6 @@ class DNSClientFactory(protocol.ClientFactory):
             query deferreds.
         @type reason: L{twisted.python.failure.Failure}
         """
-        import pdb; pdb.set_trace()
         for d, q, t in self.controller.pending:
             d.errback(reason)
 
