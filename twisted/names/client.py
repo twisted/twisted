@@ -518,7 +518,7 @@ class DNSClientFactory(protocol.ClientFactory):
         @type connector: L{twisted.internet.tcp.Connector}
 
         @param reason: A C{Failure} passed in from
-            L{twisted.internet.tcp.Client.failIfNotConnected} and
+            L{twisted.internet.tcp.Client}.C{failIfNotConnected} and
             passed on to the C{errback} method of each of the pending
             query deferreds.
         @type reason: L{twisted.python.failure.Failure}
