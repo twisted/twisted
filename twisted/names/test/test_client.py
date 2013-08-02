@@ -684,9 +684,13 @@ class ResolverTests(unittest.TestCase):
         d1 = resolver.queryTCP(dns.Query('example.com'))
         d2 = resolver.queryTCP(dns.Query('example.net'))
         host, port, factory, timeout, bindAddress = reactor.tcpClients[0]
+
         class SentinelException(Exception):
             pass
-        factory.clientConnectionFailed(reactor.connectors[0], SentinelException())
+
+        factory.clientConnectionFailed(
+            reactor.connectors[0], SentinelException())
+
         self.failureResultOf(d1, SentinelException)
         self.failureResultOf(d2, SentinelException)
 
