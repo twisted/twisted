@@ -721,12 +721,15 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     @classmethod
     def fromRRHeader(cls, rrHeader):
         """
-        Construct a new L{_OPTHeader} from the attributes and payload
-        of an existing L{RRHeader} instance.
+        A classmethod for constructing a new L{_OPTHeader} from the
+        attributes and payload of an existing L{RRHeader} instance.
 
         @type rrHeader: L{RRHeader}
         @param rrHeader: An L{RRHeader} instance containing an
             L{UnknownRecord} payload.
+
+        @return: An instance of L{_OPTHeader}.
+        @rtype: L{_OPTHeader}
         """
         options = None
         if rrHeader.payload is not None:
