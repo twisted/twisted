@@ -46,11 +46,14 @@ class Resolver(common.ResolverBase):
     @ivar _reactor: A L{IReactorTime} and L{IReactorUDP} provider to use to
         bind UDP ports and manage timeouts.
     """
-    def __init__(self, hints, maximumQueries=10, reactor=None):
+    def __init__(self, hints, maximumQueries=10, reactor=None, resolverFactory=None):
         common.ResolverBase.__init__(self)
         self.hints = hints
         self._maximumQueries = maximumQueries
         self._reactor = reactor
+        if resolverFactory is None:
+            from twisted.names.client import Resolver as resolverFactory
+        self._resolverFactory = resolverFactory
 
 
     def _roots(self):
@@ -86,8 +89,7 @@ class Resolver(common.ResolverBase):
             error.
         @rtype: L{Deferred}
         """
-        from twisted.names import client
-        r = client.Resolver(servers=servers, reactor=self._reactor)
+        r = self._resolverFactory(servers=servers, reactor=self._reactor)
         d = r.queryUDP([query], timeout)
         if filter:
             d.addCallback(r.filterAnswers)
