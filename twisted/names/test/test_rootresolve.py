@@ -579,19 +579,35 @@ class RootResolverTests(TestCase):
 
 
 
-class RootResolverTests2(TestCase):
+class ResolverFactoryArguments(Exception):
     """
-    More tests for L{root.Resolver}.
+    Raised by L{raisingResolverFactory} with the *args and **kwargs
+    passed to that function.
+    """
+    pass
+
+
+
+def raisingResolverFactory(*args, **kwargs):
+    """
+    Raise a L{ResolverFactoryArguments} exception containing the
+    positional and keyword arguments passed to resolverFactory.
+    """
+    raise ResolverFactoryArguments(args, kwargs)
+
+
+
+class RootResolverResolverFactoryTests(TestCase):
+    """
+    Tests for L{root.Resolver._resolverFactory}.
     """
     def test_resolverFactoryArgumentPresent(self):
         """
-        L{root.Resolver.__init__} accepts a C{_resolverFactory}
+        L{root.Resolver.__init__} accepts a C{resolverFactory}
         argument and assigns it to C{self._resolverFactory}.
         """
-        def stubResolverFactory():
-            pass
-        r = Resolver(hints=[None], resolverFactory=stubResolverFactory)
-        self.assertIdentical(r._resolverFactory, stubResolverFactory)
+        r = Resolver(hints=[None], resolverFactory=raisingResolverFactory)
+        self.assertIdentical(r._resolverFactory, raisingResolverFactory)
 
 
     def test_resolverFactoryArgumentAbsent(self):
@@ -602,6 +618,54 @@ class RootResolverTests2(TestCase):
         """
         r = Resolver(hints=[None])
         self.assertIdentical(r._resolverFactory, client.Resolver)
+
+
+    def test_resolverFactoryOnlyExpectedArguments(self):
+        """
+        L{root.Resolver._resolverFactory} is only supplied with
+        C{reactor} and C{servers} keyword arguments and no positional
+        arguments.
+        """
+        r = Resolver(hints=[None],
+                     resolverFactory=raisingResolverFactory)
+
+        e = self.assertRaises(ResolverFactoryArguments,
+                              r.lookupAddress, 'example.com')
+
+        self.assertEqual(e[0], ())
+        self.assertEqual(e[1].keys(), ['reactor', 'servers'])
+
+
+    def test_resolverFactorySuppliedReactor(self):
+        """
+        L{root.Resolver._resolverFactory} is supplied with a C{reactor}
+        keyword argument with L{root.Resolver._reactor} as the value.
+        """
+        stubReactor = object()
+
+        r = Resolver(hints=[None],
+                     resolverFactory=raisingResolverFactory,
+                     reactor=stubReactor)
+
+        e = self.assertRaises(ResolverFactoryArguments,
+                              r.lookupAddress, 'example.com')
+
+        self.assertIdentical(e[1]['reactor'], stubReactor)
+
+
+    def test_resolverFactorySuppliedServers(self):
+        """
+        L{root.Resolver._resolverFactory} is supplied with a
+        C{servers} keyword argument with a list of C{(server, port)}
+        address pairs.
+        """
+        r = Resolver(hints=['192.0.2.101'],
+                     resolverFactory=raisingResolverFactory)
+
+        e = self.assertRaises(ResolverFactoryArguments,
+                              r.lookupAddress, 'example.com')
+
+        self.assertEqual(e[1]['servers'], [('192.0.2.101', 53)])
 
 
 
