@@ -37,16 +37,34 @@ class Resolver(common.ResolverBase):
     L{Resolver} implements recursive lookup starting from a specified list of
     root servers.
 
-    @ivar hints: A C{list} of C{str} giving the dotted quad representation
-        of IP addresses of root servers at which to begin resolving names.
-
-    @ivar _maximumQueries: A C{int} giving the maximum number of queries
-        which will be attempted to resolve a single name.
-
-    @ivar _reactor: A L{IReactorTime} and L{IReactorUDP} provider to use to
-        bind UDP ports and manage timeouts.
+    @ivar hints: See C{hints} parameter of L{__init__}
+    @ivar _maximumQueries: See C{maximumQueries} parameter of L{__init__}
+    @ivar _reactor: See C{reactor} parameter of L{__init__}
+    @ivar _resolverFactory: See C{resolverFactory} parameter of L{__init__}
     """
-    def __init__(self, hints, maximumQueries=10, reactor=None, resolverFactory=None):
+    def __init__(self, hints, maximumQueries=10,
+                 reactor=None, resolverFactory=None):
+        """
+        @param hints: A L{list} of L{str} giving the dotted quad
+            representation of IP addresses of root servers at which to
+            begin resolving names.
+        @type hints: L{list} of L{str}
+
+        @param maximumQueries: An optional L{int} giving the maximum
+             number of queries which will be attempted to resolve a
+             single name.
+        @type maximumQueries: L{int}
+
+        @param reactor: An optional L{IReactorTime} and L{IReactorUDP}
+             provider to use to bind UDP ports and manage timeouts.
+        @type reactor: L{IReactorTime} and L{IReactorUDP} provider
+
+        @param resolverFactory: An optional L{callable} which accepts
+             C{reactor} and C{servers} arguments and returns an
+             instance that provides L{IResolver}. Defaults to
+             L{twisted.names.client.Resolver}.
+        @type resolverFactory: L{callable}
+        """
         common.ResolverBase.__init__(self)
         self.hints = hints
         self._maximumQueries = maximumQueries
