@@ -652,12 +652,10 @@ def createResolver(servers=None, resolvconf=None, hosts=None):
     else:
         if hosts is None:
             hosts = r'c:\windows\hosts'
-        hostResolver = hostsModule.Resolver(hosts)
-
         from twisted.internet import reactor
         bootstrap = _ThreadedResolverImpl(reactor)
-        clresolver = Resolver(servers, reactor)
-        theResolver = root.bootstrap(bootstrap, clresolver)
+        hostResolver = hostsModule.Resolver(hosts)
+        theResolver = root.bootstrap(bootstrap)
 
     L = [hostResolver, cache.CacheResolver(), theResolver]
     return resolve.ResolverChain(L)
