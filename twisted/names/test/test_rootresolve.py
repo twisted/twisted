@@ -808,6 +808,23 @@ class BootstrapTests(SynchronousTestCase):
         d1.addBoth(checkHints)
 
 
+    def test_bootstrapPassesResolverFactory(self):
+        """
+        L{root.bootstrap} accepts a C{resolverFactory} argument which
+        is passed as an argument to L{root.Resolver} when it has
+        successfully looked up root hints.
+        """
+        stubResolver = StubResolver()
+        deferredResolver = root.bootstrap(stubResolver,
+                                          resolverFactory=raisingResolverFactory)
+
+        for d in stubResolver.pendingResults:
+            d.callback('192.0.2.101')
+
+        self.assertIdentical(
+            deferredResolver._resolverFactory, raisingResolverFactory)
+
+
 
 class StubDNSDatagramProtocol:
     """
