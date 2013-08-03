@@ -292,6 +292,18 @@ def bootstrap(resolver, resolverFactory=None):
     Return a Resolver which will eventually become a C{root.Resolver}
     instance that has references to all the root servers that we were able
     to look up.
+
+    @param resolver: The resolver instance which will be used to
+        lookup the root nameserver addresses.
+    @type resolver: L{twisted.internet.interfaces.IResolverSimple}
+
+    @param resolverFactory: An optional callable which returns a
+        resolver instance. It will passed as the C{resolverFactory}
+        argument to L{Resolver.__init__}.
+    @type resolverFactory: L{callable}
+
+    @return: A L{DeferredResolver} which will be dynamically replaced
+        with L{Resolver} when the root nameservers have been looked up.
     """
     domains = [chr(ord('a') + i) for i in range(13)]
     L = [resolver.getHostByName('%s.root-servers.net' % d) for d in domains]
