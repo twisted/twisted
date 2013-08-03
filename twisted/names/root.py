@@ -283,7 +283,7 @@ class DeferredResolver:
             return makePlaceholder(self.waiting[-1], name)
         raise AttributeError(name)
 
-def bootstrap(resolver):
+def bootstrap(resolver, resolverFactory=None):
     """Lookup the root nameserver addresses using the given resolver
 
     Return a Resolver which will eventually become a C{root.Resolver}
@@ -295,5 +295,5 @@ def bootstrap(resolver):
     f = lambda r: r
     L = [resolver.getHostByName('%s.root-servers.net' % d).addCallback(f) for d in domains]
     d = defer.DeferredList(L)
-    d.addCallback(lambda r: Resolver([e[1] for e in r if e[0]]))
+    d.addCallback(lambda r: Resolver([e[1] for e in r if e[0]], resolverFactory=resolverFactory))
     return DeferredResolver(d)
