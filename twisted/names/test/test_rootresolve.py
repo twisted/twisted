@@ -12,12 +12,12 @@ from zope.interface.verify import verifyClass
 
 from twisted.python.log import msg
 from twisted.trial import util
-from twisted.trial.unittest import TestCase
-from twisted.internet.defer import Deferred, succeed, gatherResults
+from twisted.trial.unittest import SynchronousTestCase, TestCase
+from twisted.internet.defer import Deferred, succeed, gatherResults, TimeoutError
 from twisted.internet.task import Clock
 from twisted.internet.address import IPv4Address
-from twisted.internet.interfaces import IReactorUDP, IUDPTransport
-from twisted.names import client
+from twisted.internet.interfaces import IReactorUDP, IUDPTransport, IResolverSimple
+from twisted.names import client, root
 from twisted.names.root import Resolver
 from twisted.names.dns import (
     IN, HS, A, NS, CNAME, OK, ENAME, Record_CNAME,
@@ -666,6 +666,146 @@ class RootResolverResolverFactoryTests(TestCase):
                               r.lookupAddress, 'example.com')
 
         self.assertEqual(e[1]['servers'], [('192.0.2.101', 53)])
+
+
+
+ROOT_SERVERS = [
+    'a.root-servers.net',
+    'b.root-servers.net',
+    'c.root-servers.net',
+    'd.root-servers.net',
+    'e.root-servers.net',
+    'f.root-servers.net',
+    'g.root-servers.net',
+    'h.root-servers.net',
+    'i.root-servers.net',
+    'j.root-servers.net',
+    'k.root-servers.net',
+    'l.root-servers.net',
+    'm.root-servers.net']
+
+
+
+@implementer(IResolverSimple)
+class StubResolver(object):
+    """
+    An L{IResolverSimple} implementer which traces all getHostByName
+    calls and their deferred results. The deferred results can be
+    accessed and fired synchronously.
+    """
+    def __init__(self):
+        """
+        @type calls: L{list} of L{tuple} containing C{args} and
+            C{kwargs} supplied to C{getHostByName} calls.
+        @type pendingResults: L{list} of L{Deferred} returned by
+            C{getHostByName}.
+        """
+        self.calls = []
+        self.pendingResults = []
+
+    def getHostByName(self, *args, **kwargs):
+        self.calls.append((args, kwargs))
+        d = Deferred()
+        self.pendingResults.append(d)
+        return d
+
+verifyClass(IResolverSimple, StubResolver)
+
+
+
+class BootstrapTests(SynchronousTestCase):
+    """
+    Tests for L{root.bootstrap}
+    """
+    def test_bootstrapReturnsDeferredResolver(self):
+        """
+        L{root.bootstrap} returns an object which is initially a
+        L{root.DeferredResolver}.
+        """
+        deferredResolver = root.bootstrap(StubResolver())
+        self.assertIsInstance(deferredResolver, root.DeferredResolver)
+
+
+    def test_bootstrapResolves13RootServers(self):
+        """
+        The L{IResolverSimple} supplied to L{root.bootstrap} is used
+        to lookup the IP addresses of the 13 root name servers.
+        """
+        stubResolver = StubResolver()
+        root.bootstrap(stubResolver)
+        self.assertEqual(
+            stubResolver.calls,
+            [((s,),{}) for s in ROOT_SERVERS])
+
+
+    def test_bootstrapBecomesResolver(self):
+        """
+        The L{root.DeferredResolver} initially returned by
+        L{root.bootstrap} becomes a L{root.Resolver} when the supplied
+        resolver has successfully looked up all root hints.
+        """
+        stubResolver = StubResolver()
+        deferredResolver = root.bootstrap(stubResolver)
+        for d in stubResolver.pendingResults:
+            d.callback('192.0.2.101')
+        self.assertIsInstance(deferredResolver, Resolver)
+
+
+    def test_bootstrapResolverReceivesRootHints(self):
+        """
+        The L{root.Resolver} which eventually replaces
+        L{root.DeferredResolver} is supplied with the IP addresses of
+        the 13 root servers.
+        """
+        stubResolver = StubResolver()
+        deferredResolver = root.bootstrap(stubResolver)
+        for d in stubResolver.pendingResults:
+            d.callback('192.0.2.101')
+        self.assertEqual(deferredResolver.hints, ['192.0.2.101'] * 13)
+
+
+    def test_bootstrapContinuesWhenSomeRootHintsFail(self):
+        """
+        The L{root.Resolver} is eventually created, even if some of
+        the root hint lookups fail. Only the working root hint IP
+        addresses are supplied to the L{root.Resolver}.
+        """
+        stubResolver = StubResolver()
+        deferredResolver = root.bootstrap(stubResolver)
+        results = iter(stubResolver.pendingResults)
+        d1 = next(results)
+        for d in results:
+            d.callback('192.0.2.101')
+        d1.errback(TimeoutError())
+
+        def checkHints(res):
+            self.assertEqual(deferredResolver.hints, ['192.0.2.101'] * 12)
+        d1.addBoth(checkHints)
+
+
+    def test_bootstrapContinuesWhenAllRootHintsFail(self):
+        """
+        The L{root.Resolver} is eventually created, even if all of the
+        root hint lookups fail. Pending and new lookups will then fail
+        with AttributeError.
+        """
+        stubResolver = StubResolver()
+        deferredResolver = root.bootstrap(stubResolver)
+        results = iter(stubResolver.pendingResults)
+        d1 = next(results)
+        for d in results:
+            d.errback(TimeoutError())
+            # XXX: It seems I have to add at least one Errback to
+            # prevent the TestCase detecting unhandled deferred
+            # errors.  Maybe this suggests a bug in bootstrap or
+            # DeferredResolver not specifically handling errors during
+            # async hint lookup.
+            d.addErrback(id)
+        d1.errback(TimeoutError())
+
+        def checkHints(res):
+            self.assertEqual(deferredResolver.hints, [])
+        d1.addBoth(checkHints)
 
 
 
