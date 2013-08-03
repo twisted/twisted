@@ -291,9 +291,7 @@ def bootstrap(resolver, resolverFactory=None):
     to look up.
     """
     domains = [chr(ord('a') + i) for i in range(13)]
-    # f = lambda r: (log.msg('Root server address: ' + str(r)), r)[1]
-    f = lambda r: r
-    L = [resolver.getHostByName('%s.root-servers.net' % d).addCallback(f) for d in domains]
+    L = [resolver.getHostByName('%s.root-servers.net' % d) for d in domains]
     d = defer.DeferredList(L)
 
     def buildResolver(res):
