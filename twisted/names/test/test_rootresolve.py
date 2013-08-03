@@ -592,6 +592,12 @@ def raisingResolverFactory(*args, **kwargs):
     """
     Raise a L{ResolverFactoryArguments} exception containing the
     positional and keyword arguments passed to resolverFactory.
+
+    @param args: A L{list} of all the positional arguments supplied by
+        the caller.
+
+    @param kwargs: A L{list} of all the keyword arguments supplied by
+        the caller.
     """
     raise ResolverFactoryArguments(args, kwargs)
 
@@ -703,11 +709,26 @@ class StubResolver(object):
         self.calls = []
         self.pendingResults = []
 
+
     def getHostByName(self, *args, **kwargs):
+        """
+        A fake implementation of L{IResolverSimple.getHostByName}
+
+        @param args: A L{list} of all the positional arguments supplied by
+           the caller.
+
+        @param kwargs: A L{list} of all the keyword arguments supplied by
+           the caller.
+
+        @return: A L{Deferred} which may be fired later from the test
+            fixture.
+        """
         self.calls.append((args, kwargs))
         d = Deferred()
         self.pendingResults.append(d)
         return d
+
+
 
 verifyClass(IResolverSimple, StubResolver)
 
