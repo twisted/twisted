@@ -815,8 +815,8 @@ class BootstrapTests(SynchronousTestCase):
         successfully looked up root hints.
         """
         stubResolver = StubResolver()
-        deferredResolver = root.bootstrap(stubResolver,
-                                          resolverFactory=raisingResolverFactory)
+        deferredResolver = root.bootstrap(
+            stubResolver, resolverFactory=raisingResolverFactory)
 
         for d in stubResolver.pendingResults:
             d.callback('192.0.2.101')

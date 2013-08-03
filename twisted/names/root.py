@@ -295,5 +295,11 @@ def bootstrap(resolver, resolverFactory=None):
     f = lambda r: r
     L = [resolver.getHostByName('%s.root-servers.net' % d).addCallback(f) for d in domains]
     d = defer.DeferredList(L)
-    d.addCallback(lambda r: Resolver([e[1] for e in r if e[0]], resolverFactory=resolverFactory))
+
+    def buildResolver(res):
+        return Resolver(
+            hints=[e[1] for e in res if e[0]],
+            resolverFactory=resolverFactory)
+    d.addCallback(buildResolver)
+
     return DeferredResolver(d)
