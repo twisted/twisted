@@ -17,6 +17,7 @@ from twisted.internet.defer import Deferred, succeed, gatherResults
 from twisted.internet.task import Clock
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IReactorUDP, IUDPTransport
+from twisted.names import client
 from twisted.names.root import Resolver
 from twisted.names.dns import (
     IN, HS, A, NS, CNAME, OK, ENAME, Record_CNAME,
@@ -578,6 +579,32 @@ class RootResolverTests(TestCase):
 
 
 
+class RootResolverTests2(TestCase):
+    """
+    More tests for L{root.Resolver}.
+    """
+    def test_resolverFactoryArgumentPresent(self):
+        """
+        L{root.Resolver.__init__} accepts a C{_resolverFactory}
+        argument and assigns it to C{self._resolverFactory}.
+        """
+        def stubResolverFactory():
+            pass
+        r = Resolver(hints=[None], resolverFactory=stubResolverFactory)
+        self.assertIdentical(r._resolverFactory, stubResolverFactory)
+
+
+    def test_resolverFactoryArgumentAbsent(self):
+        """
+        L{root.Resolver.__init__} sets L{client.Resolver} as the
+        C{_resolverFactory} if a C{resolverFactory} argument is not
+        supplied.
+        """
+        r = Resolver(hints=[None])
+        self.assertIdentical(r._resolverFactory, client.Resolver)
+
+
+
 class StubDNSDatagramProtocol:
     """
     A do-nothing stand-in for L{DNSDatagramProtocol} which can be used to avoid
@@ -593,5 +620,3 @@ _retrySuppression = util.suppress(
     message=(
         'twisted.names.root.retry is deprecated since Twisted 10.0.  Use a '
         'Resolver object for retry logic.'))
-
-
