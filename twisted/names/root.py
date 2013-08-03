@@ -283,8 +283,11 @@ class DeferredResolver:
             return makePlaceholder(self.waiting[-1], name)
         raise AttributeError(name)
 
+
+
 def bootstrap(resolver, resolverFactory=None):
-    """Lookup the root nameserver addresses using the given resolver
+    """
+    Lookup the root nameserver addresses using the given resolver
 
     Return a Resolver which will eventually become a C{root.Resolver}
     instance that has references to all the root servers that we were able
