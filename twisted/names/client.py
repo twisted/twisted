@@ -655,7 +655,7 @@ def createResolver(servers=None, resolvconf=None, hosts=None):
         from twisted.internet import reactor
         bootstrap = _ThreadedResolverImpl(reactor)
         hostResolver = hostsModule.Resolver(hosts)
-        theResolver = root.bootstrap(bootstrap)
+        theResolver = root.bootstrap(bootstrap, resolverFactory=Resolver)
 
     L = [hostResolver, cache.CacheResolver(), theResolver]
     return resolve.ResolverChain(L)
