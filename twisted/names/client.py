@@ -28,7 +28,8 @@ from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.internet import error, defer, interfaces, protocol
 from twisted.python import log, failure
-from twisted.names import dns, common
+from twisted.names import (
+    dns, common, resolve, cache, root, hosts as hostsModule)
 
 
 
@@ -537,7 +538,6 @@ def createResolver(servers=None, resolvconf=None, hosts=None):
 
     @rtype: C{IResolver}
     """
-    from twisted.names import resolve, cache, root, hosts as hostsModule
     if platform.getType() == 'posix':
         if resolvconf is None:
             resolvconf = b'/etc/resolv.conf'
