@@ -410,8 +410,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @type args: C{str}
         @param args: The command arguments.
 
-        @type _consumer: callable that takes C{object}
-        @param _consumer: A consumer function which should be used to put
+        @type consumer: callable that takes C{object}
+        @param consumer: A consumer function which should be used to put
             the values derived by a transform function from each line of the
             multi-line response into a list.
 
@@ -762,8 +762,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @type result: C{dict} of C{str} -> C{NoneType} or C{list} of C{str}
         @param result: The server capabilities.
 
-        @type contextFactory: L{ClientContextFactory}
-        @param contextFactory: A context factory with which to negotiate TLS.
+        @type context: L{ClientContextFactory}
+        @param context: A context factory with which to negotiate TLS.
 
         @type tls: L{ITLSTransport}
         @param tls: A TCP transport that supports switching to TLS midstream.
@@ -1027,8 +1027,14 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def _consumeOrSetItem(self, cmd, args, consumer, xform):
         """
-        Send a long command and process the multi-line response into a list
-        accounting for deleted messages.
+        Send a command to which a long response is expected and process the
+        multi-line response into a list accounting for deleted messages.
+
+        @type cmd: C{str}
+        @param cmd: A POP3 command to which a long response is expected.
+
+        @type args: C{str}
+        @param args: The command arguments.
 
         @type consumer: C{NoneType} or callable that takes C{object}
         @param consumer: None or a function that consumes the output from
@@ -1059,7 +1065,14 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def _consumeOrAppend(self, cmd, args, consumer, xform):
         """
-        Send a long command and process the multi-line response into a list.
+        Send a command to which a long response is expected and process the
+        multi-line response into a list.
+
+        @type cmd: C{str}
+        @param cmd: A POP3 command which expects a long response.
+
+        @type args: C{str}
+        @param args: The command arguments.
 
         @type consumer: C{NoneType} or callable that takes C{object}
         @param consumer: None or a function that consumes the output from the
