@@ -12,6 +12,8 @@ from io import BytesIO
 
 import struct
 
+from zope.interface.verify import verifyClass
+from zope.interface.exceptions import BrokenImplementation
 
 from twisted.python.failure import Failure
 from twisted.internet import address, task
@@ -385,6 +387,18 @@ class RoundtripDNSTestCase(unittest.TestCase):
             hk1 = hash(k1)
             hk2 = hash(k2)
             self.assertEqual(hk1, hk2, "%s != %s (for %s)" % (hk1,hk2,k))
+
+
+    def test_interface(self):
+        """
+        All record types implement L{dns.IEncodable},
+        """
+        for cls in RECORD_TYPES:
+            try:
+                verifyClass(dns.IEncodable, cls)
+            except BrokenImplementation as e:
+                self.fail(
+                    '%s does not implement IEncodable. %s' % (cls, e))
 
 
     def test_Charstr(self):
