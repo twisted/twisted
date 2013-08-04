@@ -29,6 +29,7 @@ RECORD_TYPES = [
     dns.Record_WKS, dns.Record_SRV, dns.Record_AFSDB, dns.Record_RP,
     dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT,
     dns.Record_AAAA, dns.Record_A6, dns.Record_NAPTR, dns.UnknownRecord,
+    dns.Record_DNSKEY,
     ]
 
 
@@ -415,6 +416,17 @@ class RoundtripDNSTestCase(unittest.TestCase):
         replica = record.__class__()
         replica.decode(stream, length)
         self.assertEqual(record, replica)
+
+
+    def test_DNSKEY(self):
+        """
+        The byte stream written by L{dns.Record_DNSKEY.encode} can be used by
+        L{dns.Record_DNSKEY.decode} to reconstruct the state of the original
+        L{dns.Record_DNSKEY} instance.
+        """
+        self._recordRoundtripTest(
+            dns.Record_DNSKEY(
+                flags=None, protocol=None, algorithm=None, key=None))
 
 
     def test_SOA(self):
