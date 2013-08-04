@@ -29,6 +29,7 @@ __all__ = [
     'Record_MG', 'Record_MINFO', 'Record_MR', 'Record_MX', 'Record_NAPTR',
     'Record_NS', 'Record_NULL', 'Record_PTR', 'Record_RP', 'Record_SOA',
     'Record_SPF', 'Record_SRV', 'Record_TXT', 'Record_WKS', 'UnknownRecord',
+    'Record_DNSKEY',
 
     'QUERY_CLASSES', 'QUERY_TYPES', 'REV_CLASSES', 'REV_TYPES', 'EXT_QUERIES',
 
@@ -119,6 +120,7 @@ SRV = 33
 NAPTR = 35
 A6 = 38
 DNAME = 39
+DNSKEY = 48
 SPF = 99
 
 QUERY_TYPES = {
@@ -1664,6 +1666,14 @@ class Record_SPF(Record_TXT):
     TYPE = SPF
     fancybasename = 'SPF'
 
+
+
+@implementer(IEncodable, IRecord)
+class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
+    TYPE = DNSKEY
+
+    def __init__(self, *args, **kwargs):
+        pass
 
 
 class Message:

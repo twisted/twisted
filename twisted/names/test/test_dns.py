@@ -1171,6 +1171,16 @@ class ReprTests(unittest.TestCase):
             "<SPF data=['foo', 'bar'] ttl=15>")
 
 
+    def test_dnskey(self):
+        """
+        The repr of a L{dns.Record_DNSKEY} instance includes
+        fields of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_DNSKEY()),
+            "<Record_DNSKEY>")
+
+
     def test_unknown(self):
         """
         The repr of a L{dns.UnknownRecord} instance includes the data and ttl
