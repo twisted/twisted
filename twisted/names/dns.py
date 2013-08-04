@@ -1671,10 +1671,15 @@ class Record_SPF(Record_TXT):
 @implementer(IEncodable, IRecord)
 class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     TYPE = DNSKEY
-    fancybasename = 'DNSKEY'
 
-    def __init__(self, *args, **kwargs):
-        pass
+    fancybasename = 'DNSKEY'
+    showAttributes = compareAttributes = ('flags', 'protocol', 'algorithm', 'key')
+
+    def __init__(self, flags=None, protocol=None, algorithm=None, key=None):
+        self.flags = flags
+        self.protocol = protocol
+        self.algorithm = algorithm
+        self.key = key
 
 
     def encode(self, strio, compDict=None):
