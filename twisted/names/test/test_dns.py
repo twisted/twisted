@@ -1192,7 +1192,7 @@ class ReprTests(unittest.TestCase):
         """
         self.assertEqual(
             repr(dns.Record_DNSKEY()),
-            "<Record_DNSKEY>")
+            "<DNSKEY>")
 
 
     def test_unknown(self):

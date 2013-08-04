@@ -1671,6 +1671,7 @@ class Record_SPF(Record_TXT):
 @implementer(IEncodable, IRecord)
 class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     TYPE = DNSKEY
+    fancybasename = 'DNSKEY'
 
     def __init__(self, *args, **kwargs):
         pass
