@@ -1676,6 +1676,15 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
         pass
 
 
+    def encode(self, strio, compDict=None):
+        return
+
+
+    def decode(self, strio, length=None):
+        return
+
+
+
 class Message:
     """
     L{Message} contains all the information represented by a single
