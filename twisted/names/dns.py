@@ -1690,6 +1690,17 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
         return
 
 
+    def __hash__(self):
+        # XXX: All other record types (apart from UnknownRecord) seem
+        # to exclude ttl from the hash while including it in
+        # compareAttributes. Why?
+        # TTL is duplicated in and really belongs in RRHeader.
+        # but on the other hand FileAuthority relies on having the ttl
+        # in Records.
+        # Are Records really used as dictionary keys? and if so
+        # shouldn't they be immutable?
+        return hash(tuple(getattr(self, k) for k in self.compareAttributes if k != 'ttl'))
+
 
 class Message:
     """
