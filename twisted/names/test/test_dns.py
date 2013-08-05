@@ -1205,7 +1205,7 @@ class ReprTests(unittest.TestCase):
         """
         self.assertEqual(
             repr(dns.Record_DNSKEY()),
-            "<DNSKEY flags=None protocol=None algorithm=None key=None>")
+            "<DNSKEY flags=None protocol=None algorithm=None key=None ttl=None>")
 
 
     def test_unknown(self):
@@ -1767,6 +1767,32 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             dns.Record_SPF('foo', 'bar', ttl=100))
 
 
+    def test_dnskey(self):
+        """
+        L{dns.Record_DNSKEY} instances compare equal if and only if
+        they have the same flags, protocol, algorithm, and key.
+        """
+        self._equalityTest(
+            dns.Record_DNSKEY(flags=4),
+            dns.Record_DNSKEY(flags=4),
+            dns.Record_DNSKEY(flags=5))
+
+        self._equalityTest(
+            dns.Record_DNSKEY(protocol=4),
+            dns.Record_DNSKEY(protocol=4),
+            dns.Record_DNSKEY(protocol=5))
+
+        self._equalityTest(
+            dns.Record_DNSKEY(algorithm=4),
+            dns.Record_DNSKEY(algorithm=4),
+            dns.Record_DNSKEY(algorithm=5))
+
+        self._equalityTest(
+            dns.Record_DNSKEY(key=4),
+            dns.Record_DNSKEY(key=4),
+            dns.Record_DNSKEY(key=5))
+
+
     def test_unknown(self):
         """
         L{dns.UnknownRecord} instances compare equal if and only if they have
@@ -2006,6 +2032,7 @@ class IsSubdomainOfTests(unittest.SynchronousTestCase):
         assertIsSubdomainOf(self, b'foo.example.com', b'EXAMPLE.COM')
 
         assertIsSubdomainOf(self, b'FOO.EXAMPLE.COM', b'example.com')
+
 
 
 def recordClasses(parentModule):

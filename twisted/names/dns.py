@@ -1674,13 +1674,15 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     TYPE = DNSKEY
 
     fancybasename = 'DNSKEY'
-    showAttributes = compareAttributes = ('flags', 'protocol', 'algorithm', 'key')
+    compareAttributes = ('flags', 'protocol', 'algorithm', 'key', 'ttl')
+    showAttributes = compareAttributes
 
-    def __init__(self, flags=None, protocol=None, algorithm=None, key=None):
+    def __init__(self, flags=None, protocol=None, algorithm=None, key=None, ttl=None):
         self.flags = flags
         self.protocol = protocol
         self.algorithm = algorithm
         self.key = key
+        self.ttl = ttl
 
 
     def encode(self, strio, compDict=None):
