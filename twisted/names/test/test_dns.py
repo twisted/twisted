@@ -2170,7 +2170,7 @@ class DNSKEYRecordTests(unittest.TestCase):
         intended for use as a secure entry point. The default is
         C{True}.
 
-        xxx: enforce the following "A DNSKEY RR with the SEP set and the
+        XXX: enforce the following "A DNSKEY RR with the SEP set and the
         Zone Key flag not set MUST NOT be used to verify RRSIGs that cover
         RRsets."
 
@@ -2213,6 +2213,38 @@ class DNSKEYRecordTests(unittest.TestCase):
         """
         record = dns.Record_DNSKEY(revoked=True)
         self.assertEqual(record.revoked, True)
+
+
+    def test_protocolAttribute(self):
+        """
+        L{dns.Record_DNSKEY.protocol} is a public L{int} attribute
+        whose value should always be 3.
+
+        https://tools.ietf.org/html/rfc4034#section-2.1.2
+
+        "Although the Protocol Field always has value 3, it is retained
+        for backward compatibility with early versions of the KEY
+        record."
+
+        https://tools.ietf.org/html/rfc4034#section-2.1.5
+
+        XXX: I considered not including a constructor parameter for
+        this one to avoid people accidentally setting a non-3
+        protocol. But it's useful to be able to override it for
+        testing.
+        """
+        record = dns.Record_DNSKEY()
+        self.assertEqual(record.protocol, 3)
+
+
+    def test_protocolOverride(self):
+        """
+        L{dns.Record_DNSKEY.__init__} accepts a C{protocol}
+        parameter which overrides the
+        L{dns.Record_DNSKEY.protocol} attribute.
+        """
+        record = dns.Record_DNSKEY(protocol=4)
+        self.assertEqual(record.protocol, 4)
 
 
     def test_encode(self):
