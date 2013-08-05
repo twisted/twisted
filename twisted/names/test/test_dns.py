@@ -11,6 +11,7 @@ from __future__ import division, absolute_import
 from io import BytesIO
 
 import struct
+import types
 
 from zope.interface.verify import verifyClass
 from zope.interface.exceptions import BrokenImplementation
@@ -389,7 +390,7 @@ class RoundtripDNSTestCase(unittest.TestCase):
             self.assertEqual(hk1, hk2, "%s != %s (for %s)" % (hk1,hk2,k))
 
 
-    def test_interface(self):
+    def test_iencodableInterface(self):
         """
         All record types implement L{dns.IEncodable},
         """
@@ -399,6 +400,18 @@ class RoundtripDNSTestCase(unittest.TestCase):
             except BrokenImplementation as e:
                 self.fail(
                     '%s does not implement IEncodable. %s' % (cls, e))
+
+
+    def test_irecordInterface(self):
+        """
+        All record types implement L{dns.IRecord},
+        """
+        for cls in RECORD_TYPES:
+            try:
+                verifyClass(dns.IRecord, cls)
+            except BrokenImplementation as e:
+                self.fail(
+                    '%s does not implement IRecord. %s' % (cls, e))
 
 
     def test_Charstr(self):
@@ -1993,3 +2006,59 @@ class IsSubdomainOfTests(unittest.SynchronousTestCase):
         assertIsSubdomainOf(self, b'foo.example.com', b'EXAMPLE.COM')
 
         assertIsSubdomainOf(self, b'FOO.EXAMPLE.COM', b'example.com')
+
+
+def recordClasses(parentModule):
+    for k in dir(dns):
+        if k.startswith('Record_'):
+            v = getattr(dns, k)
+            if isinstance(v, (types.ClassType, type)):
+                yield v
+
+
+
+class DnsConstantsTests(unittest.TestCase):
+    """
+    Tests for constants in L{dns}.
+    """
+
+    def test_queryTypeUnique(self):
+        """
+        Each Record_ class in the L{dns} module has a unique C{TYPE}
+        code
+        """
+        typesFound = set()
+
+        for v in recordClasses(dns):
+            recordTypeCode = v.TYPE
+
+            self.assertNotIn(recordTypeCode, typesFound)
+
+            typesFound.add(recordTypeCode)
+
+
+    def test_queryTypesMap(self):
+        """
+        Each Record_ class in the L{dns} module has a corresponding
+        type code entry in L{dns.QUERY_TYPES}.
+        """
+        for v in recordClasses(dns):
+            recordTypeCode = v.TYPE
+
+            try:
+                dns.QUERY_TYPES[recordTypeCode]
+            except KeyError:
+                self.fail('Missing twisted.names.dns.QUERY_TYPE. '
+                          'type: %r, record: %r' % (recordTypeCode, v))
+
+
+    def test_queryTypesNamedConstants(self):
+        """
+        Each Record_ class in the L{dns} module has a corresponding
+        type code constant.
+        """
+        for v in recordClasses(dns):
+            recordTypeCode = v.TYPE
+            recordTypeName = dns.QUERY_TYPES[recordTypeCode]
+
+            self.assertEqual(getattr(dns, recordTypeName), recordTypeCode)

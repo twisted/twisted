@@ -150,6 +150,7 @@ QUERY_TYPES = {
     NAPTR: 'NAPTR',
     A6: 'A6',
     DNAME: 'DNAME',
+    DNSKEY: 'DNSKEY',
     SPF: 'SPF'
 }
 
