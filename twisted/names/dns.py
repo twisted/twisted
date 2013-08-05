@@ -1680,7 +1680,7 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     _fmt = '!HBB'
     _fmt_size = struct.calcsize(_fmt)
 
-    def __init__(self, zoneKey=True, secureEntryPoint=True, revoked=False, protocol=3, algorithm=None, key=None, ttl=None):
+    def __init__(self, zoneKey=True, secureEntryPoint=True, revoked=False, protocol=3, algorithm=5, key=None, ttl=None):
         self.zoneKey = zoneKey
         self.secureEntryPoint = secureEntryPoint
         self.revoked = revoked
