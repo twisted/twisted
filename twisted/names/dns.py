@@ -1674,26 +1674,26 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     TYPE = DNSKEY
 
     fancybasename = 'DNSKEY'
-    compareAttributes = ('zoneKey', 'secureEntryPoint', 'revoked', 'protocol', 'algorithm', 'key', 'ttl')
-    showAttributes = compareAttributes
+    compareAttributes = ('zoneKey', 'secureEntryPoint', 'revoked', 'protocol', 'algorithm', 'publicKey', 'ttl')
+    showAttributes = ('zoneKey', 'secureEntryPoint', 'revoked', 'protocol', 'algorithm', ('publicKey', nativeString), 'ttl')
 
     _fmt = '!HBB'
     _fmt_size = struct.calcsize(_fmt)
 
-    def __init__(self, zoneKey=True, secureEntryPoint=True, revoked=False, protocol=3, algorithm=5, key=None, ttl=None):
+    def __init__(self, zoneKey=True, secureEntryPoint=True, revoked=False, protocol=3, algorithm=5, publicKey=b'', ttl=None):
         self.zoneKey = zoneKey
         self.secureEntryPoint = secureEntryPoint
         self.revoked = revoked
         self.protocol = protocol
         self.algorithm = algorithm
-        self.key = key
+        self.publicKey = publicKey
         self.ttl = ttl
 
 
     def encode(self, strio, compDict=None):
         flags = (self.zoneKey << 8 | self.revoked << 7 | self.secureEntryPoint)
         strio.write(struct.pack(self._fmt, flags, self.protocol, self.algorithm))
-        strio.write(self.key)
+        strio.write(self.publicKey)
 
 
     def decode(self, strio, length=None):
@@ -1704,7 +1704,7 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
         self.secureEntryPoint = bool(flags & 0x1)
 
         length -= self._fmt_size
-        self.key = readPrecisely(strio, length)
+        self.publicKey = readPrecisely(strio, length)
 
 
     def __hash__(self):

@@ -453,7 +453,7 @@ class RoundtripDNSTestCase(unittest.TestCase):
         """
         self._recordRoundtripTest(
             dns.Record_DNSKEY(
-                zoneKey=False, secureEntryPoint=False, revoked=True, protocol=4, algorithm=253, key='1'))
+                zoneKey=False, secureEntryPoint=False, revoked=True, protocol=4, algorithm=253, publicKey='foobar'))
 
 
     def test_SOA(self):
@@ -1204,8 +1204,8 @@ class ReprTests(unittest.TestCase):
         fields of the record.
         """
         self.assertEqual(
-            repr(dns.Record_DNSKEY()),
-            "<DNSKEY zoneKey=True secureEntryPoint=True revoked=False protocol=3 algorithm=5 key=None ttl=None>")
+            repr(dns.Record_DNSKEY(publicKey=b'foobar')),
+            "<DNSKEY zoneKey=True secureEntryPoint=True revoked=False protocol=3 algorithm=5 publicKey=foobar ttl=None>")
 
 
     def test_unknown(self):
@@ -1798,9 +1798,9 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             dns.Record_DNSKEY(algorithm=254))
 
         self._equalityTest(
-            dns.Record_DNSKEY(key=4),
-            dns.Record_DNSKEY(key=4),
-            dns.Record_DNSKEY(key=5))
+            dns.Record_DNSKEY(publicKey=b'foobar'),
+            dns.Record_DNSKEY(publicKey=b'foobar'),
+            dns.Record_DNSKEY(publicKey=b'FOOBAR'))
 
 
     def test_unknown(self):
@@ -2120,7 +2120,7 @@ class DNSKEY_TEST_DATA(object):
             '\x00\x80' # flags ZONE: 0, REVOKE: 1, SEM: 0
             '\x04' # protocol
             '\xfd' # private algorithm 253
-            'thekey')
+            'foobar') # public key
 
 
     @classmethod
@@ -2135,7 +2135,7 @@ class DNSKEY_TEST_DATA(object):
             revoked=True,
             protocol=4,
             algorithm=253,
-            key=b'thekey')
+            publicKey=b'foobar')
 
 
 
@@ -2271,6 +2271,27 @@ class DNSKEYRecordTests(unittest.TestCase):
         """
         record = dns.Record_DNSKEY(algorithm=255)
         self.assertEqual(record.algorithm, 255)
+
+
+    def test_publicKeyAttribute(self):
+        """
+        L{dns.Record_DNSKEY.publicKey} is a public L{bytes} attribute
+        whose default value is C{b''}.
+
+        https://tools.ietf.org/html/rfc4034#section-2.1.4
+        """
+        record = dns.Record_DNSKEY()
+        self.assertEqual(record.publicKey, b'')
+
+
+    def test_publicKeyOverride(self):
+        """
+        L{dns.Record_DNSKEY.__init__} accepts a C{publicKey}
+        parameter which overrides the
+        L{dns.Record_DNSKEY.publicKey} attribute.
+        """
+        record = dns.Record_DNSKEY(publicKey=b'foobar')
+        self.assertEqual(record.publicKey, b'foobar')
 
 
     def test_encode(self):
