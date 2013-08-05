@@ -1756,7 +1756,7 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
         @param ttl: The time-to-live of this record. TTL can be
             supplied as an L{int} representing a period in seconds or
             a human readable string can be supplied which will be
-            parsed by L{str2tme}. Default is C{None}.
+            parsed by L{str2time}. Default is C{None}.
         @type ttl: L{int} or L{str} or C{None}.
         """
         self.zoneKey = zoneKey
