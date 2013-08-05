@@ -844,42 +844,46 @@ class DummyTransport(object):
 
     def getPeer(self):
         """
+        Get the remote address of this connection.
+
         @rtype: L{internet.interfaces.IAddress}
         @return: The remote address of this connection.
         """
         return self.peer
 
 
-    def write(data):
+    def write(self, data):
         """
         Ignore data.
         """
         pass
 
 
-    def writeSequence(data):
+    def writeSequence(self, data):
         """
         Ignore data.
         """
         pass
 
 
-    def loseConnection():
+    def loseConnection(self):
         """
         Close the connection.
         """
         self.peer = None
 
 
-    def getHost():
+    def getHost(self):
         """
+        Get an address describing this side of this connection.
+
         @rtype: L{internet.interfaces.IAddress}
-        @return: The address of the near side of the connection.
+        @return: An address describing of this side of the connection.
         """
         if self.host:
             return self.host
 
-        if isinstance(self.peer, internet.address.UNIXAddress):
+        if isinstance(self.peer, twisted.internet.address.UNIXAddress):
             return address.UNIXAddress(None)
         else:
             return address.IPv4Address('TCP', '192.168.1.2', 25)
