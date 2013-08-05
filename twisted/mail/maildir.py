@@ -536,6 +536,9 @@ class MaildirMailbox(pop3.Mailbox):
             is not specified, a list of the number of octets for all messages
             in the mailbox.  Any value which corresponds to a deleted message
             is set to 0.
+
+        @raise IndexError: When the index does not correspond to a message in
+            the mailbox.
         """
         if i is None:
             ret = []
@@ -557,6 +560,9 @@ class MaildirMailbox(pop3.Mailbox):
 
         @rtype: file-like object
         @return: A file containing the message.
+
+        @raise IndexError: When the index does not correspond to a message in
+            the mailbox.
         """
         return open(self.list[i])
 
@@ -571,6 +577,9 @@ class MaildirMailbox(pop3.Mailbox):
         @rtype: C{str}
         @return: A string of printable characters uniquely identifying the
             message for all time.
+
+        @raise IndexError: When the index does not correspond to a message in
+            the mailbox.
         """
         # Returning the actual filename is a mistake.  Hash it.
         base = os.path.basename(self.list[i])
@@ -670,6 +679,9 @@ class StringListMailbox:
             is not specified, a list of the number of octets in each message in
             the mailbox.  Any value which corresponds to a deleted message is
             set to 0.
+
+        @raise IndexError: When the index does not correspond to a message in
+            the mailbox.
         """
         if i is None:
             return [self.listMessages(i) for i in range(len(self.msgs))]
@@ -687,6 +699,9 @@ class StringListMailbox:
 
         @rtype: C{StringIO}
         @return: An in-memory file-like object containing the message.
+
+        @raise IndexError: When the index does not correspond to a message in
+            the mailbox.
         """
         return StringIO.StringIO(self.msgs[i])
 
@@ -700,6 +715,9 @@ class StringListMailbox:
 
         @rtype: C{str}
         @return: A hash of the contents of the message at the given index.
+
+        @raise IndexError: When the index does not correspond to a message in
+            the mailbox.
         """
         return md5(self.msgs[i]).hexdigest()
 
@@ -710,6 +728,9 @@ class StringListMailbox:
 
         @type i: C{int}
         @param i: The 0-based index of a message to delete.
+
+        @raise IndexError: When the index does not correspond to a message in
+            the mailbox.
         """
         self._delete.add(i)
 
