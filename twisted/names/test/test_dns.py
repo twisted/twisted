@@ -453,7 +453,7 @@ class RoundtripDNSTestCase(unittest.TestCase):
         """
         self._recordRoundtripTest(
             dns.Record_DNSKEY(
-                flags=None, protocol=None, algorithm=None, key=None))
+                zoneKey=False, secureEntryPoint=False, revoked=True, protocol=3, algorithm=2, key='1'))
 
 
     def test_SOA(self):
@@ -1205,7 +1205,7 @@ class ReprTests(unittest.TestCase):
         """
         self.assertEqual(
             repr(dns.Record_DNSKEY()),
-            "<DNSKEY flags=None protocol=None algorithm=None key=None ttl=None>")
+            "<DNSKEY zoneKey=True secureEntryPoint=True revoked=False protocol=None algorithm=None key=None ttl=None>")
 
 
     def test_unknown(self):
@@ -1770,12 +1770,22 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
     def test_dnskey(self):
         """
         L{dns.Record_DNSKEY} instances compare equal if and only if
-        they have the same flags, protocol, algorithm, and key.
+        they have the same zoneKey, secureEntryPoint, revoked, protocol, algorithm, and key.
         """
         self._equalityTest(
-            dns.Record_DNSKEY(flags=4),
-            dns.Record_DNSKEY(flags=4),
-            dns.Record_DNSKEY(flags=5))
+            dns.Record_DNSKEY(zoneKey=False),
+            dns.Record_DNSKEY(zoneKey=False),
+            dns.Record_DNSKEY(zoneKey=True))
+
+        self._equalityTest(
+            dns.Record_DNSKEY(secureEntryPoint=False),
+            dns.Record_DNSKEY(secureEntryPoint=False),
+            dns.Record_DNSKEY(secureEntryPoint=True))
+
+        self._equalityTest(
+            dns.Record_DNSKEY(revoked=True),
+            dns.Record_DNSKEY(revoked=True),
+            dns.Record_DNSKEY(revoked=False))
 
         self._equalityTest(
             dns.Record_DNSKEY(protocol=4),
@@ -2107,8 +2117,7 @@ class DNSKEY_TEST_DATA(object):
             by L{OBJECT}.
         """
         return (
-            # dig @a.iana-servers.net. example.com DNSKEY
-            '\x01\x01' # flags
+            '\x01\x81' # flags ZONE: 0, REVOKE: 1, SEM: 0
             '\x03' # protocol
             '\x08' # algorithm
             'thekey')
@@ -2121,14 +2130,91 @@ class DNSKEY_TEST_DATA(object):
             match the encoded record returned by L{BYTES}.
         """
         return dns.Record_DNSKEY(
-            flags=0x0101,
-            protocol=0x03,
-            algorithm=0x8,
+            zoneKey=False,
+            secureEntryPoint=False,
+            revoked=True,
+            protocol=3,
+            algorithm=8,
             key=b'thekey')
 
 
 
 class DNSKEYRecordTests(unittest.TestCase):
+
+    def test_zoneKeyDefaultAttribute(self):
+        """
+        L{dns.Record_DNSKEY.zoneKey} is a public L{bool} attribute
+        signifying whether the DNSKEY record holds a DNS zone key. The
+        default value is C{True}.
+
+        https://tools.ietf.org/html/rfc4034#section-2.1.1
+        https://www.ietf.org/assignments/dnskey-flags/dnskey-flags.txt
+        """
+        record = dns.Record_DNSKEY()
+        self.assertEqual(record.zoneKey, True)
+
+
+    def test_zoneKeyOverride(self):
+        """
+        L{dns.Record_DNSKEY.__init__} accepts a C{zoneKey} parameter
+        which overrides the L{dns.Record_DNSKEY.zoneKey} attribute.
+        """
+        record = dns.Record_DNSKEY(zoneKey=False)
+        self.assertEqual(record.zoneKey, False)
+
+
+    def test_secureEntryPointDefaultAttribute(self):
+        """
+        L{dns.Record_DNSKEY.secureEntryPoint} is a public L{bool}
+        attribute signifying whether the DNSKEY record holds a key
+        intended for use as a secure entry point. The default is
+        C{True}.
+
+        xxx: enforce the following "A DNSKEY RR with the SEP set and the
+        Zone Key flag not set MUST NOT be used to verify RRSIGs that cover
+        RRsets."
+
+        https://tools.ietf.org/html/rfc4034#section-2.1.1
+        https://www.ietf.org/assignments/dnskey-flags/dnskey-flags.txt
+        """
+        record = dns.Record_DNSKEY()
+        self.assertEqual(record.secureEntryPoint, True)
+
+
+    def test_secureEntryPointOverride(self):
+        """
+        L{dns.Record_DNSKEY.__init__} accepts a C{secureEntryPoint}
+        parameter which overrides the
+        L{dns.Record_DNSKEY.secureEntryPoint} attribute.
+        """
+        record = dns.Record_DNSKEY(secureEntryPoint=False)
+        self.assertEqual(record.secureEntryPoint, False)
+
+
+    def test_revokedDefaultAttribute(self):
+        """
+        L{dns.Record_DNSKEY.revoked} is a public L{bool} attribute
+        signifying whether the key field of this DNSKEY record has
+        been revoked. The default is C{False}.
+
+        https://tools.ietf.org/html/rfc4034#section-2.1.1
+        https://www.ietf.org/assignments/dnskey-flags/dnskey-flags.txt
+        https://tools.ietf.org/html/rfc5011#section-2.1
+        """
+        record = dns.Record_DNSKEY()
+        self.assertEqual(record.revoked, False)
+
+
+    def test_revokedOverride(self):
+        """
+        L{dns.Record_DNSKEY.__init__} accepts a C{revoked}
+        parameter which overrides the
+        L{dns.Record_DNSKEY.revoked} attribute.
+        """
+        record = dns.Record_DNSKEY(revoked=True)
+        self.assertEqual(record.revoked, True)
+
+
     def test_encode(self):
         """
         L{dns.Record_DNSKEY.encode} packs the header fields and the
