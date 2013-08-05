@@ -1691,13 +1691,17 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
 
     def encode(self, strio, compDict=None):
-        strio.write(struct.pack(self._fmt, self.flags, self.protocol, self.algorithm))
+        flags = (self.zoneKey << 8 | self.revoked << 7 | self.secureEntryPoint)
+        strio.write(struct.pack(self._fmt, flags, self.protocol, self.algorithm))
         strio.write(self.key)
 
 
     def decode(self, strio, length=None):
         hdr = readPrecisely(strio, self._fmt_size)
-        self.flags, self.protocol, self.algorithm = struct.unpack(self._fmt, hdr)
+        flags, self.protocol, self.algorithm = struct.unpack(self._fmt, hdr)
+        self.zoneKey = bool(flags >> 8)
+        self.revoked = bool(flags >> 7 & 0x1)
+        self.secureEntryPoint = bool(flags & 0x1)
         length -= self._fmt_size
 
         self.key = readPrecisely(strio, length)

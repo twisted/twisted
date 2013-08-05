@@ -2117,7 +2117,7 @@ class DNSKEY_TEST_DATA(object):
             by L{OBJECT}.
         """
         return (
-            '\x01\x81' # flags ZONE: 0, REVOKE: 1, SEM: 0
+            '\x00\x80' # flags ZONE: 0, REVOKE: 1, SEM: 0
             '\x03' # protocol
             '\x08' # algorithm
             'thekey')
