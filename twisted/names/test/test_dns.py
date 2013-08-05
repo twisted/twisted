@@ -453,7 +453,8 @@ class RoundtripDNSTestCase(unittest.TestCase):
         """
         self._recordRoundtripTest(
             dns.Record_DNSKEY(
-                zoneKey=False, secureEntryPoint=False, revoked=True, protocol=4, algorithm=253, publicKey='foobar'))
+                zoneKey=False, secureEntryPoint=False, revoked=True,
+                protocol=4, algorithm=253, publicKey='foobar'))
 
 
     def test_SOA(self):
@@ -1205,7 +1206,14 @@ class ReprTests(unittest.TestCase):
         """
         self.assertEqual(
             repr(dns.Record_DNSKEY(publicKey=b'foobar')),
-            "<DNSKEY zoneKey=True secureEntryPoint=True revoked=False protocol=3 algorithm=5 publicKey=foobar ttl=None>")
+            ("<DNSKEY "
+             "zoneKey=True "
+             "secureEntryPoint=True "
+             "revoked=False "
+             "protocol=3 "
+             "algorithm=5 "
+             "publicKey=foobar "
+             "ttl=None>"))
 
 
     def test_unknown(self):
@@ -1770,7 +1778,8 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
     def test_dnskey(self):
         """
         L{dns.Record_DNSKEY} instances compare equal if and only if
-        they have the same zoneKey, secureEntryPoint, revoked, protocol, algorithm, and key.
+        they have the same zoneKey, secureEntryPoint, revoked,
+        protocol, algorithm, and key.
         """
         self._equalityTest(
             dns.Record_DNSKEY(zoneKey=False),
@@ -2104,8 +2113,9 @@ class DnsConstantsTests(unittest.TestCase):
 
 class DNSKEY_TEST_DATA(object):
     """
-    Generate byte and instance representations of an L{dns.Record_DNSKEY}
-    where all attributes are set to non-default values.
+    Generate byte and instance representations of an
+    L{dns.Record_DNSKEY} where all attributes are set to non-default
+    values.
 
     For testing whether attributes have really been read from the byte
     string during decoding.
@@ -2140,6 +2150,9 @@ class DNSKEY_TEST_DATA(object):
 
 
 class DNSKEYRecordTests(unittest.TestCase):
+    """
+    Tests for L{dns.Record_DNSKEY}.
+    """
 
     def test_zoneKeyDefaultAttribute(self):
         """
@@ -2340,4 +2353,7 @@ class DNSKEYRecordTests(unittest.TestCase):
         expectedBytes = DNSKEY_TEST_DATA.BYTES()
         record = dns.Record_DNSKEY()
 
-        self.assertRaises(EOFError, record.decode, BytesIO(expectedBytes[:-1]), length=len(expectedBytes))
+        self.assertRaises(
+                EOFError,
+                record.decode,
+                BytesIO(expectedBytes[:-1]), length=len(expectedBytes))

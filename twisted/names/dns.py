@@ -1674,13 +1674,22 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     TYPE = DNSKEY
 
     fancybasename = 'DNSKEY'
-    compareAttributes = ('zoneKey', 'secureEntryPoint', 'revoked', 'protocol', 'algorithm', 'publicKey', 'ttl')
-    showAttributes = ('zoneKey', 'secureEntryPoint', 'revoked', 'protocol', 'algorithm', ('publicKey', nativeString), 'ttl')
+
+    compareAttributes = (
+        'zoneKey', 'secureEntryPoint', 'revoked', 'protocol',
+        'algorithm', 'publicKey', 'ttl')
+
+    showAttributes = (
+        'zoneKey', 'secureEntryPoint', 'revoked', 'protocol',
+        'algorithm', ('publicKey', nativeString), 'ttl')
 
     _fmt = '!HBB'
     _fmt_size = struct.calcsize(_fmt)
 
-    def __init__(self, zoneKey=True, secureEntryPoint=True, revoked=False, protocol=3, algorithm=5, publicKey=b'', ttl=None):
+    def __init__(self, zoneKey=True, secureEntryPoint=True, revoked=False,
+                 protocol=3, algorithm=5, publicKey=b'', ttl=None):
+        """
+        """
         self.zoneKey = zoneKey
         self.secureEntryPoint = secureEntryPoint
         self.revoked = revoked
@@ -1691,8 +1700,12 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
 
     def encode(self, strio, compDict=None):
-        flags = (self.zoneKey << 8 | self.revoked << 7 | self.secureEntryPoint)
-        strio.write(struct.pack(self._fmt, flags, self.protocol, self.algorithm))
+        flags = (
+            self.zoneKey << 8
+            | self.revoked << 7
+            | self.secureEntryPoint)
+        strio.write(
+            struct.pack(self._fmt, flags, self.protocol, self.algorithm))
         strio.write(self.publicKey)
 
 
@@ -1716,7 +1729,9 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
         # in Records.
         # Are Records really used as dictionary keys? and if so
         # shouldn't they be immutable?
-        return hash(tuple(getattr(self, k) for k in self.compareAttributes if k != 'ttl'))
+        return hash(tuple(getattr(self, k)
+                          for k in self.compareAttributes
+                          if k != 'ttl'))
 
 
 
