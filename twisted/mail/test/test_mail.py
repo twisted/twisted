@@ -855,6 +855,9 @@ class DummyTransport(object):
     def write(self, data):
         """
         Ignore data.
+
+        @type data: C{str}
+        @param data: The data to write.
         """
         pass
 
@@ -862,6 +865,9 @@ class DummyTransport(object):
     def writeSequence(self, data):
         """
         Ignore data.
+
+        @type data: C{list} of C{str}
+        @param data: The list of data to write.
         """
         pass
 
