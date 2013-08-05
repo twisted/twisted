@@ -1671,17 +1671,52 @@ class Record_SPF(Record_TXT):
 
 @implementer(IEncodable, IRecord)
 class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
+    """
+    A DNSKEY record.
+
+    DNSSEC uses public key cryptography to sign and authenticate DNS
+    resource record sets (RRsets).  The public keys are stored in DNSKEY
+    resource records and are used in the DNSSEC authentication process
+    described in [RFC4035]: A zone signs its authoritative RRsets by
+    using a private key and stores the corresponding public key in a
+    DNSKEY RR.  A resolver can then use the public key to validate
+    signatures covering the RRsets in the zone, and thus to authenticate
+    them.
+
+    The DNSKEY RR is not intended as a record for storing arbitrary
+    public keys and MUST NOT be used to store certificates or public keys
+    that do not directly relate to the DNS infrastructure.
+
+    @see: U{https://tools.ietf.org/html/rfc4034#section-2}
+    @see: U{https://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.txt}
+    @see: U{https://www.ietf.org/assignments/dnskey-flags/dnskey-flags.txt}
+    @see: U{https://tools.ietf.org/html/rfc5011#section-2.1}
+
+    @ivar TYPE: DNSKEY type code constant C{48}.
+    @ivar fancybasename: See L{tputil.FancyStrMixin}
+    @ivar showAttributes: See L{tputil.FancyStrMixin}
+    @ivar compareAttributes: See L{tputil.FancyEqMixin}
+
+    @ivar zoneKey: See L{__init__}
+    @ivar secureEntryPoint: See L{__init__}
+    @ivar revoked: See L{__init__}
+    @ivar protocol: See L{__init__}
+    @ivar algorithm: See L{__init__}
+    @ivar publicKey: See L{__init__}
+    @ivar ttl: See L{__init__}
+    """
+
     TYPE = DNSKEY
 
     fancybasename = 'DNSKEY'
 
-    compareAttributes = (
-        'zoneKey', 'secureEntryPoint', 'revoked', 'protocol',
-        'algorithm', 'publicKey', 'ttl')
-
     showAttributes = (
         'zoneKey', 'secureEntryPoint', 'revoked', 'protocol',
         'algorithm', ('publicKey', nativeString), 'ttl')
+
+    compareAttributes = (
+        'zoneKey', 'secureEntryPoint', 'revoked', 'protocol',
+        'algorithm', 'publicKey', 'ttl')
 
     _fmt = '!HBB'
     _fmt_size = struct.calcsize(_fmt)
@@ -1689,6 +1724,40 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     def __init__(self, zoneKey=True, secureEntryPoint=True, revoked=False,
                  protocol=3, algorithm=5, publicKey=b'', ttl=None):
         """
+        @param zoneKey: a L{bool} signifying whether
+            this DNSKEY record holds a DNS zone key.
+        @type zoneKey: L{bool}
+
+        @param secureEntryPoint: a L{bool} signifying
+            whether this DNSKEY record holds a key intended for use as
+            a secure entry point.
+        @type secureEntryPoint: L{bool}
+
+        @param revoked: a L{bool} signifying whether
+            the key field of this DNSKEY record has been revoked.
+        @type revoked: L{bool}
+
+        @param protocol: an L{int} representing the protocol code of
+            this DNSKEY. Retained only for backward compatibility with
+            early versions of the KEY record. The value should always
+            be C{3}.
+        @type protocol: L{int}
+
+        @param algorithm: an L{int} representing the algorithm number
+            used in this DNSKEY. The default value (C{5}) represents
+            RSA/SHA-1. See
+            U{https://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.txt}
+        @type algorithm: L{int}
+
+        @param publicKey: the public key bytestring. The format
+            depends on the algorithm of the key being stored.
+        @type publicKey: L{bytes}
+
+        @param ttl: The time-to-live of this record. TTL can be
+            supplied as an L{int} representing a period in seconds or
+            a human readable string can be supplied which will be
+            parsed by L{str2tme}. Default is C{None}.
+        @type ttl: L{int} or L{str} or C{None}.
         """
         self.zoneKey = zoneKey
         self.secureEntryPoint = secureEntryPoint
@@ -1721,6 +1790,13 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
 
     def __hash__(self):
+        """
+        A hash allowing this L{Record_DNSKEY} to be used as a L{dict}
+        key.
+
+        @return: A L{hash} of the values of
+             L{Record_DNSKEY.compareAttributes} except C{ttl}.
+        """
         # XXX: All other record types (apart from UnknownRecord) seem
         # to exclude ttl from the hash while including it in
         # compareAttributes. Why?

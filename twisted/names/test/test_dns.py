@@ -478,7 +478,7 @@ class RoundtripDNSTestCase(unittest.TestCase):
         self._recordRoundtripTest(
             dns.Record_DNSKEY(
                 zoneKey=False, secureEntryPoint=False, revoked=True,
-                protocol=4, algorithm=253, publicKey='foobar'))
+                protocol=4, algorithm=253, publicKey=b'foobar'))
 
 
     def test_SOA(self):
@@ -1803,7 +1803,7 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         """
         L{dns.Record_DNSKEY} instances compare equal if and only if
         they have the same zoneKey, secureEntryPoint, revoked,
-        protocol, algorithm, and key.
+        protocol, algorithm, and publicKey.
         """
         self._equalityTest(
             dns.Record_DNSKEY(zoneKey=False),
@@ -2078,7 +2078,11 @@ class IsSubdomainOfTests(unittest.SynchronousTestCase):
 
 
 
-def recordClasses(parentModule):
+def recordClasses():
+    """
+    @return: A generator of all the classes in the L{dns} module whose
+        name begins with C{'Record_'}.
+    """
     for k in dir(dns):
         if k.startswith('Record_'):
             v = getattr(dns, k)
@@ -2099,7 +2103,7 @@ class DnsConstantsTests(unittest.TestCase):
         """
         typesFound = set()
 
-        for v in recordClasses(dns):
+        for v in recordClasses():
             recordTypeCode = v.TYPE
 
             self.assertNotIn(recordTypeCode, typesFound)
@@ -2112,7 +2116,7 @@ class DnsConstantsTests(unittest.TestCase):
         Each Record_ class in the L{dns} module has a corresponding
         type code entry in L{dns.QUERY_TYPES}.
         """
-        for v in recordClasses(dns):
+        for v in recordClasses():
             recordTypeCode = v.TYPE
 
             try:
@@ -2127,7 +2131,7 @@ class DnsConstantsTests(unittest.TestCase):
         Each Record_ class in the L{dns} module has a corresponding
         type code constant.
         """
-        for v in recordClasses(dns):
+        for v in recordClasses():
             recordTypeCode = v.TYPE
             recordTypeName = dns.QUERY_TYPES[recordTypeCode]
 
