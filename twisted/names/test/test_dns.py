@@ -2089,3 +2089,60 @@ class DnsConstantsTests(unittest.TestCase):
             recordTypeName = dns.QUERY_TYPES[recordTypeCode]
 
             self.assertEqual(getattr(dns, recordTypeName), recordTypeCode)
+
+
+
+class DNSKEY_TEST_DATA(object):
+    """
+    Generate byte and instance representations of an L{dns.Record_DNSKEY}
+    where all attributes are set to non-default values.
+
+    For testing whether attributes have really been read from the byte
+    string during decoding.
+    """
+    @classmethod
+    def BYTES(cls):
+        """
+        @return: L{bytes} representing the encoded OPT record returned
+            by L{OBJECT}.
+        """
+        return (
+            # dig @a.iana-servers.net. example.com DNSKEY
+            '\x01\x01' # flags
+            '\x03' # protocol
+            '\x08' # algorithm
+            'thekey')
+
+
+    @classmethod
+    def OBJECT(cls):
+        """
+        @return: A L{dns.Record_DNSKEY} instance with attributes that
+            match the encoded record returned by L{BYTES}.
+        """
+        return dns.Record_DNSKEY(
+            flags=0x0101,
+            protocol=0x03,
+            algorithm=0x8,
+            key=b'thekey')
+
+
+
+class DNSKEYRecordTests(unittest.TestCase):
+    def test_encode(self):
+        """
+        """
+        record = DNSKEY_TEST_DATA.OBJECT()
+        actualBytes = BytesIO()
+        record.encode(actualBytes)
+
+        self.assertEqual(actualBytes.getvalue(), DNSKEY_TEST_DATA.BYTES())
+
+
+    def test_decode(self):
+        """
+        """
+        record = dns.Record_DNSKEY()
+        record.decode(BytesIO(DNSKEY_TEST_DATA.BYTES()))
+
+        self.assertEqual(record, DNSKEY_TEST_DATA.OBJECT())

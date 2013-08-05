@@ -1705,6 +1705,7 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
         return hash(tuple(getattr(self, k) for k in self.compareAttributes if k != 'ttl'))
 
 
+
 class Message:
     """
     L{Message} contains all the information represented by a single
