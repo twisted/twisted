@@ -2078,16 +2078,8 @@ class IsSubdomainOfTests(unittest.SynchronousTestCase):
 
 
 
-def recordClasses():
-    """
-    @return: A generator of all the classes in the L{dns} module whose
-        name begins with C{'Record_'}.
-    """
-    for k in dir(dns):
-        if k.startswith('Record_'):
-            v = getattr(dns, k)
-            if isinstance(v, (types.ClassType, type)):
-                yield v
+# Exclude dns.UnknownRecord which doesn't have a TYPE attribute.
+KNOWN_RECORD_TYPES = [r for r in RECORD_TYPES if r is not dns.UnknownRecord]
 
 
 
@@ -2103,7 +2095,7 @@ class DnsConstantsTests(unittest.TestCase):
         """
         typesFound = set()
 
-        for v in recordClasses():
+        for v in KNOWN_RECORD_TYPES:
             recordTypeCode = v.TYPE
 
             self.assertNotIn(recordTypeCode, typesFound)
@@ -2116,7 +2108,7 @@ class DnsConstantsTests(unittest.TestCase):
         Each Record_ class in the L{dns} module has a corresponding
         type code entry in L{dns.QUERY_TYPES}.
         """
-        for v in recordClasses():
+        for v in KNOWN_RECORD_TYPES:
             recordTypeCode = v.TYPE
 
             try:
@@ -2131,7 +2123,7 @@ class DnsConstantsTests(unittest.TestCase):
         Each Record_ class in the L{dns} module has a corresponding
         type code constant.
         """
-        for v in recordClasses():
+        for v in KNOWN_RECORD_TYPES:
             recordTypeCode = v.TYPE
             recordTypeName = dns.QUERY_TYPES[recordTypeCode]
 
@@ -2155,10 +2147,10 @@ class DNSKEY_TEST_DATA(object):
             by L{OBJECT}.
         """
         return (
-            '\x00\x80' # flags ZONE: 0, REVOKE: 1, SEM: 0
-            '\x04' # protocol
-            '\xfd' # private algorithm 253
-            'foobar') # public key
+            b'\x00\x80' # flags ZONE: 0, REVOKE: 1, SEM: 0
+            b'\x04' # protocol
+            b'\xfd' # private algorithm 253
+            b'foobar') # public key
 
 
     @classmethod
@@ -2369,7 +2361,7 @@ class DNSKEYRecordTests(unittest.TestCase):
         """
         record = dns.Record_DNSKEY()
 
-        self.assertRaises(EOFError, record.decode, BytesIO('x'), length=1)
+        self.assertRaises(EOFError, record.decode, BytesIO(b'x'), length=1)
 
 
     def test_decodeShorterThanKey(self):
