@@ -1696,7 +1696,7 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
         self.protocol = protocol
         self.algorithm = algorithm
         self.publicKey = publicKey
-        self.ttl = ttl
+        self.ttl = str2time(ttl)
 
 
     def encode(self, strio, compDict=None):

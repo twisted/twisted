@@ -414,6 +414,30 @@ class RoundtripDNSTestCase(unittest.TestCase):
                     '%s does not implement IRecord. %s' % (cls, e))
 
 
+    def test_ttlOverride(self):
+        """
+        All record types have a public C{ttl} argument whose default
+        value is C{None}.
+        """
+        for cls in RECORD_TYPES:
+            record = cls()
+            self.assertIdentical(
+                record.ttl, None,
+                'Unexpected default ttl %r in %s' % (record.ttl, cls,))
+
+
+    def test_ttlOverride(self):
+        """
+        All record types accept a C{ttl} argument which is converted
+        using L{dns.str2time}.
+        """
+        for cls in RECORD_TYPES:
+            record = cls(ttl='1d')
+            self.assertEqual(
+                record.ttl, 60*60*24,
+                'No str2time conversion %r in %s' % (record.ttl, cls,))
+
+
     def test_Charstr(self):
         """
         Test L{dns.Charstr} encode and decode.
