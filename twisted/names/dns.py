@@ -1674,14 +1674,16 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     TYPE = DNSKEY
 
     fancybasename = 'DNSKEY'
-    compareAttributes = ('flags', 'protocol', 'algorithm', 'key', 'ttl')
+    compareAttributes = ('zoneKey', 'secureEntryPoint', 'revoked', 'protocol', 'algorithm', 'key', 'ttl')
     showAttributes = compareAttributes
 
     _fmt = '!HBB'
     _fmt_size = struct.calcsize(_fmt)
 
-    def __init__(self, flags=None, protocol=None, algorithm=None, key=None, ttl=None):
-        self.flags = flags
+    def __init__(self, zoneKey=True, secureEntryPoint=True, revoked=False, protocol=None, algorithm=None, key=None, ttl=None):
+        self.zoneKey = zoneKey
+        self.secureEntryPoint = secureEntryPoint
+        self.revoked = revoked
         self.protocol = protocol
         self.algorithm = algorithm
         self.key = key
