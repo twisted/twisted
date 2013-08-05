@@ -453,7 +453,7 @@ class RoundtripDNSTestCase(unittest.TestCase):
         """
         self._recordRoundtripTest(
             dns.Record_DNSKEY(
-                zoneKey=False, secureEntryPoint=False, revoked=True, protocol=3, algorithm=2, key='1'))
+                zoneKey=False, secureEntryPoint=False, revoked=True, protocol=4, algorithm=2, key='1'))
 
 
     def test_SOA(self):
@@ -1205,7 +1205,7 @@ class ReprTests(unittest.TestCase):
         """
         self.assertEqual(
             repr(dns.Record_DNSKEY()),
-            "<DNSKEY zoneKey=True secureEntryPoint=True revoked=False protocol=None algorithm=None key=None ttl=None>")
+            "<DNSKEY zoneKey=True secureEntryPoint=True revoked=False protocol=3 algorithm=None key=None ttl=None>")
 
 
     def test_unknown(self):
@@ -2118,7 +2118,7 @@ class DNSKEY_TEST_DATA(object):
         """
         return (
             '\x00\x80' # flags ZONE: 0, REVOKE: 1, SEM: 0
-            '\x03' # protocol
+            '\x04' # protocol
             '\x08' # algorithm
             'thekey')
 
@@ -2133,7 +2133,7 @@ class DNSKEY_TEST_DATA(object):
             zoneKey=False,
             secureEntryPoint=False,
             revoked=True,
-            protocol=3,
+            protocol=4,
             algorithm=8,
             key=b'thekey')
 
