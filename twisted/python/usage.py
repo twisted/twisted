@@ -52,7 +52,7 @@ class CoerceParameter(object):
                              % (parameterName,))
         try:
             value = self.coerce(value)
-        except ValueError, e:
+        except ValueError as e:
             raise UsageError("Parameter type enforcement failed: %s" % (e,))
 
         self.options.opts[parameterName] = value
@@ -194,7 +194,7 @@ class Options(dict):
         """
         Display this help and exit.
         """
-        print self.__str__()
+        sys.stdout.write(self.__str__() + '\n')
         sys.exit(0)
 
     def opt_version(self):
@@ -202,7 +202,7 @@ class Options(dict):
         Display Twisted version and exit.
         """
         from twisted import copyright
-        print "Twisted version:", copyright.version
+        sys.stdout.write("Twisted version: " + copyright.version + '\n')
         sys.exit(0)
 
     #opt_h = opt_help # this conflicted with existing 'host' options.
@@ -232,7 +232,7 @@ class Options(dict):
         try:
             opts, args = getopt.getopt(options,
                                        self.shortOpt, self.longOpt)
-        except getopt.error, e:
+        except getopt.error as e:
             raise UsageError(str(e))
 
         for opt, arg in opts:
@@ -969,5 +969,3 @@ def portCoerce(value):
         raise ValueError("Port number not in range: %s" % (value,))
     return value
 portCoerce.coerceDoc = "Must be an int between 0 and 65535."
-
-

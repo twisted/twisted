@@ -17,12 +17,6 @@ from collections import deque
 
 RegexType = type(re.compile(""))
 
-
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
-
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.versions import Version
@@ -244,7 +238,7 @@ class Summer(Accessor):
 
     deprecatedModuleAttribute(
         Version("Twisted", 12, 1, 0),
-        "Summer is a child class of twisted.python.reflect.Accessor which is " 
+        "Summer is a child class of twisted.python.reflect.Accessor which is "
         "deprecated.", "twisted.python.reflect", "Summer")
 
     def reallySet(self, k,v):
@@ -407,20 +401,20 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
 
       class Soy:
         properties = {\"taste\": \"bland\"}
-    
+
       class Plant:
         properties = {\"colour\": \"green\"}
-    
+
       class Seaweed(Plant):
         pass
-    
+
       class Lunch(Soy, Seaweed):
         properties = {\"vegan\": 1 }
-    
+
       dct = {}
-    
+
       accumulateClassDict(Lunch, \"properties\", dct)
-    
+
       print dct
 
     {\"taste\": \"bland\", \"colour\": \"green\", \"vegan\": 1}
@@ -509,7 +503,7 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns
                                    'member_descriptor', 'getset_descriptor')):
         pass
     elif showUnknowns:
-        print 'unknown type', type(start), start
+        sys.stdout.write('unknown type %s %s\n' % (type(start), start))
     return paths
 
 

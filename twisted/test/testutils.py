@@ -12,11 +12,19 @@ don't-use-it-outside-Twisted-we-won't-maintain-compatibility rule!
     their own test cases.
 """
 
-from io import BytesIO
+import os
+import sys
 
+from io import BytesIO
 from xml.dom import minidom as dom
 
+from twisted.internet import utils
 from twisted.internet.protocol import FileWrapper
+from twisted.python import usage
+from twisted.python.filepath import FilePath
+from twisted.trial.unittest import SkipTest
+
+
 
 class IOPump:
     """Utility to pump data between clients and servers for protocol testing.
@@ -167,3 +175,213 @@ class ComparisonTestsMixin(object):
         self.assertFalse(firstValueOne != _Equal())
         self.assertFalse(firstValueOne == _NotEqual())
         self.assertTrue(firstValueOne != _NotEqual())
+
+
+
+def getBranchFilePath(branchRelativePath):
+    """
+    Return a L{FilePath} instance for the path to a file in the
+    current branch.
+
+    @type branchRelativePath: C{str}
+    @param branchRelativePath: The path to a file relative to a
+        twisted branch root.
+    @return: A L{FilePath} containing the full path to
+        C{branchRelativePath} in the current branch.
+    @raises: L{IOError} if C{branchRelativePath} does not exist in the
+        current branch.
+    """
+    # Get branch root
+    here = FilePath(__file__).parent().parent().parent()
+
+    # Find the example script within this branch
+    for childName in branchRelativePath.split('/'):
+        here = here.child(childName)
+        if not here.exists():
+            raise IOError(2, 'No such file or directory: %r' % (here.path,))
+    return here
+
+
+
+class ScriptLoader(object):
+    """
+    Handle the loading and unloading of a script which is not
+    importable from the current path.
+
+    Test cases which test example code and documentation listings should use
+    this.
+
+    @since: 13.1
+    """
+    def __init__(self, filePath):
+        """
+        @type filePath: L{FilePath}
+        @param filePath: A L{FilePath} instance containing the full
+            path to a script which will be loaded.
+        """
+        self.filePath = filePath
+
+
+    def load(self):
+        """
+        Add the script directory to L{sys.path} and load the script as
+        a module. The original L{sys.path} and L{sys.modules} are
+        saved so that they can be restored later by calling L{unload}.
+        """
+        self._originalPath = sys.path[:]
+        self._originalModules = sys.modules.copy()
+
+        # Add the script parent folder to the Python path
+        sys.path.append(self.filePath.parent().path)
+
+        # Import the script as a module
+        moduleName = self.filePath.basename().split('.')[0]
+        self.module = __import__(moduleName)
+
+
+    def unload(self):
+        """
+        Remove the script directory from L{sys.path} and remove all
+        modules loaded by the script from L{sys.modules}.
+        """
+        sys.modules.clear()
+        sys.modules.update(self._originalModules)
+        sys.path[:] = self._originalPath
+
+
+
+def loadScriptForTest(testCase, scriptRelativePath):
+    """
+    Load a script for a testCase and add a cleanup handler to unload
+    the script after the test.
+
+    @type testCase: L{twisted.trial.unittest.SynchronousTestCase}
+    @param testCase: A L{twisted.trial.unittest.SynchronousTestCase}
+        instance to which a cleanup handler will be added in order to
+        unload the script.
+    @type scriptRelativePath: C{str}
+    @param scriptRelativePath: The path to a script relative to a
+        twisted branch root.
+    @return: The imported script module.
+    """
+    scriptLoader = ScriptLoader(getBranchFilePath(scriptRelativePath))
+    scriptLoader.load()
+    testCase.addCleanup(scriptLoader.unload)
+    return scriptLoader.module
+
+
+
+class ExecutableExampleTestMixin(object):
+    """
+    Tests for consistency and executability in executable example
+    scripts.
+
+    @since: 13.1
+    """
+    def setUp(self):
+        """
+        The doc directory will not be present if the tests are run on
+        a twisted which has been installed with setuptools.
+        Skip all example script tests in this case.
+        """
+        try:
+            getBranchFilePath('doc')
+        except IOError as e:
+            raise SkipTest(
+                'Example tests skipped '
+                'due to missing doc directory: %s' % (e,))
+
+
+    def test_executableModule(self):
+        """
+        The example scripts should have an if __name__ ==
+        '__main__' so that they do something when called.
+        """
+        exampleModule = loadScriptForTest(self, self.examplePath)
+        args = [exampleModule.__file__, '--help']
+
+        # Give the subprocess access to the same Python paths as the
+        # parent process
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+
+        d = utils.getProcessOutputAndValue(sys.executable, args, env=env)
+        def whenComplete(res):
+            out, err, code = res
+            self.assertEqual(
+                out.splitlines()[0],
+                exampleModule.Options().synopsis)
+        d.addCallback(whenComplete)
+        return d
+
+
+    def test_shebang(self):
+        """
+        The example scripts start with the standard shebang line.
+        """
+        exampleFilePath = getBranchFilePath(self.examplePath)
+        self.assertEquals(
+            exampleFilePath.open().readline().rstrip(),
+            '#!/usr/bin/env python')
+
+
+    def test_definedOptions(self):
+        """
+        Example scripts contain an Options class which is a subclass
+        of L{twisted.python.usage.Options}
+        """
+        exampleModule = loadScriptForTest(self, self.examplePath)
+        self.assertIsInstance(exampleModule.Options(), usage.Options)
+
+
+    def test_usageMessageConsistency(self):
+        """
+        The example script usage message should begin with a "Usage:"
+        summary line.
+        """
+        exampleModule = loadScriptForTest(self, self.examplePath)
+        out = exampleModule.Options.synopsis
+        self.assertTrue(
+            out.startswith('Usage:'),
+            'Usage message first line should start with "Usage:". '
+            'Actual: %r' % (out,))
+
+
+    def test_usageErrorsBeginWithUsage(self):
+        """
+        The example script first prints a full usage message to stderr
+        if it is passed incorrect command line arguments.
+        """
+        exampleModule = loadScriptForTest(self, self.examplePath)
+        fakeErr = BytesIO()
+        self.patch(sys, 'stderr', fakeErr)
+
+        self.assertRaises(
+            SystemExit,
+            exampleModule.main,
+            None, '--unexpected_option')
+        err = fakeErr.getvalue()
+        usageMessage = str(exampleModule.Options())
+        self.assertEqual(
+            err[:len(usageMessage)],
+            usageMessage)
+
+
+    def test_usageErrorsEndWithError(self):
+        """
+        The example script prints an "Error:" summary on the last line
+        of stderr when incorrect arguments are supplied.
+        """
+        exampleModule = loadScriptForTest(self, self.examplePath)
+        fakeErr = BytesIO()
+        self.patch(sys, 'stderr', fakeErr)
+
+        self.assertRaises(
+            SystemExit,
+            exampleModule.main,
+            None, '--unexpected_option')
+        err = fakeErr.getvalue().splitlines()
+        self.assertTrue(
+            err[-1].startswith('ERROR:'),
+            'Usage message last line should start with "ERROR:" '
+            'Actual: %r' % (err[-1],))
