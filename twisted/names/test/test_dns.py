@@ -414,7 +414,7 @@ class RoundtripDNSTestCase(unittest.TestCase):
                     '%s does not implement IRecord. %s' % (cls, e))
 
 
-    def test_ttlOverride(self):
+    def test_ttlDefault(self):
         """
         All record types have a public C{ttl} argument whose default
         value is C{None}.
