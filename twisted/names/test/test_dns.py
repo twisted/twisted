@@ -2131,6 +2131,9 @@ class DNSKEY_TEST_DATA(object):
 class DNSKEYRecordTests(unittest.TestCase):
     def test_encode(self):
         """
+        L{dns.Record_DNSKEY.encode} packs the header fields and the
+        key and writes them to a file like object passed in as an
+        argument.
         """
         record = DNSKEY_TEST_DATA.OBJECT()
         actualBytes = BytesIO()
@@ -2141,8 +2144,35 @@ class DNSKEYRecordTests(unittest.TestCase):
 
     def test_decode(self):
         """
+        L{dns.Record_DNSKEY.decode} unpacks the header fields from a file
+        like object and populates the attributes of an existing
+        L{dns.Record_DNSKEY} instance.
         """
+        expectedBytes = DNSKEY_TEST_DATA.BYTES()
         record = dns.Record_DNSKEY()
-        record.decode(BytesIO(DNSKEY_TEST_DATA.BYTES()))
+        record.decode(BytesIO(expectedBytes), length=len(expectedBytes))
 
         self.assertEqual(record, DNSKEY_TEST_DATA.OBJECT())
+
+
+    def test_decodeShorterThanHeader(self):
+        """
+        L{dns.Record_DNSKEY.decode} raises L{EOFError} if the provided
+        file object is shorter than the fixed length header parts. ie
+        everything except key.
+        """
+        record = dns.Record_DNSKEY()
+
+        self.assertRaises(EOFError, record.decode, BytesIO('x'), length=1)
+
+
+    def test_decodeShorterThanKey(self):
+        """
+        L{dns.Record_DNSKEY.decode} raises L{EOFError} if the provided
+        file object is shorter than length provided in the length
+        argument.
+        """
+        expectedBytes = DNSKEY_TEST_DATA.BYTES()
+        record = dns.Record_DNSKEY()
+
+        self.assertRaises(EOFError, record.decode, BytesIO(expectedBytes[:-1]), length=len(expectedBytes))

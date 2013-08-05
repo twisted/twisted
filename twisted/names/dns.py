@@ -1677,6 +1677,9 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     compareAttributes = ('flags', 'protocol', 'algorithm', 'key', 'ttl')
     showAttributes = compareAttributes
 
+    _fmt = '!HBB'
+    _fmt_size = struct.calcsize(_fmt)
+
     def __init__(self, flags=None, protocol=None, algorithm=None, key=None, ttl=None):
         self.flags = flags
         self.protocol = protocol
@@ -1686,11 +1689,16 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
 
     def encode(self, strio, compDict=None):
-        return
+        strio.write(struct.pack(self._fmt, self.flags, self.protocol, self.algorithm))
+        strio.write(self.key)
 
 
     def decode(self, strio, length=None):
-        return
+        hdr = readPrecisely(strio, self._fmt_size)
+        self.flags, self.protocol, self.algorithm = struct.unpack(self._fmt, hdr)
+        length -= self._fmt_size
+
+        self.key = readPrecisely(strio, length)
 
 
     def __hash__(self):
