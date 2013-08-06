@@ -595,6 +595,9 @@ class MaildirMailbox(pop3.Mailbox):
 
         @type i: C{int}
         @param i: The 0-based index of a message.
+
+        @raise IndexError: When the index does not correspond to a message in
+            the mailbox.
         """
         trashFile = os.path.join(
             self.path, '.Trash', 'cur', os.path.basename(self.list[i])
