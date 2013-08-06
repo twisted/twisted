@@ -44,6 +44,8 @@ __all__ = [
 
 
 # System imports
+import base64
+
 import warnings
 
 import struct, random, types, socket
@@ -1669,6 +1671,19 @@ class Record_SPF(Record_TXT):
 
 
 
+def _base64Format(bytes):
+    """
+    Base64 encode C{bytes} without any line breaks
+
+    @param bytes: The bytestring to encode.
+    @type bytes: L{bytes}
+
+    @return: The formatted base64 bytestring.
+    """
+    return nativeString(base64.encodestring(bytes).replace(b'\n', b''))
+
+
+
 @implementer(IEncodable, IRecord)
 class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     """
@@ -1712,7 +1727,7 @@ class Record_DNSKEY(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
     showAttributes = (
         'zoneKey', 'secureEntryPoint', 'revoked', 'protocol',
-        'algorithm', ('publicKey', nativeString), 'ttl')
+        'algorithm', ('publicKey', _base64Format), 'ttl')
 
     compareAttributes = (
         'zoneKey', 'secureEntryPoint', 'revoked', 'protocol',

@@ -8,6 +8,7 @@ Tests for twisted.names.dns.
 
 from __future__ import division, absolute_import
 
+import base64
 from io import BytesIO
 
 import struct
@@ -16,6 +17,7 @@ import types
 from zope.interface.verify import verifyClass
 from zope.interface.exceptions import BrokenImplementation
 
+from twisted.python.compat import nativeString
 from twisted.python.failure import Failure
 from twisted.internet import address, task
 from twisted.internet.error import CannotListenError, ConnectionDone
@@ -1225,19 +1227,43 @@ class ReprTests(unittest.TestCase):
 
     def test_dnskey(self):
         """
-        The repr of a L{dns.Record_DNSKEY} instance includes
-        fields of the record.
+        The repr of a L{dns.Record_DNSKEY} instance includes fields of
+        the record and a base64 encoded representation of the
+        publicKey.
+
+        https://tools.ietf.org/html/rfc4034#section-2.3
+
+        XXX: I still get confused about Python3 and nativeString. Is
+        it appropriate to use it here? And how can I make the test
+        data static without having to call nativeString here
+        too...which I assume isn't ideal.
+        I want to show that the encoded public key is included in the
+        repr without any surrounding quotes or string type prefixes
+        (b'', u'', etc).
         """
+        encodedKey = (
+            b'AQPSKmynfzW4kyBv015MUG2DeIQ3'
+            b'Cbl+BBZH4b/0PY1kxkmvHjcZc8no'
+            b'kfzj31GajIQKY+5CptLr3buXA10h'
+            b'WqTkF7H6RfoRqXQeogmMHfpftf6z'
+            b'Mv1LyBUgia7za6ZEzOJBOztyvhjL'
+            b'742iU/TpPSEDhm2SNKLijfUppn1U'
+            b'aNvv4w=='
+            )
+
+        record = dns.Record_DNSKEY(
+            publicKey=base64.decodestring(encodedKey))
+
         self.assertEqual(
-            repr(dns.Record_DNSKEY(publicKey=b'foobar')),
+            repr(record),
             ("<DNSKEY "
              "zoneKey=True "
              "secureEntryPoint=True "
              "revoked=False "
              "protocol=3 "
              "algorithm=5 "
-             "publicKey=foobar "
-             "ttl=None>"))
+             "publicKey=%s "
+             "ttl=None>") % (nativeString(encodedKey),))
 
 
     def test_unknown(self):
