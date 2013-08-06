@@ -12,7 +12,6 @@ import base64
 from io import BytesIO
 
 import struct
-import types
 
 from zope.interface.verify import verifyClass
 from zope.interface.exceptions import BrokenImplementation
