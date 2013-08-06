@@ -77,7 +77,7 @@ def main(reactor, *argv):
         raise SystemExit(1)
 
     domainname = options['domainname']
-    r = client.Resolver('/etc/resolv.conf')
+    r = client.Resolver(servers=[('8.8.8.8', 53)])
     d = defer.gatherResults([
             r.lookupAddress(domainname).addCallback(
                 formatRecords, 'Addresses'),
@@ -85,6 +85,8 @@ def main(reactor, *argv):
                 formatRecords, 'Mail Exchangers'),
             r.lookupNameservers(domainname).addCallback(
                 formatRecords, 'Nameservers'),
+            r.lookupDNSKEY(domainname).addCallback(
+                formatRecords, 'DNSKEY Records'),
             ], consumeErrors=True)
 
     d.addCallback(printResults, domainname)
