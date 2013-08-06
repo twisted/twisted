@@ -846,6 +846,16 @@ class ClientTestCase(unittest.TestCase):
         d.addCallback(self.checkResult, dns.SPF)
         return d
 
+
+    def test_lookupDNSKEY(self):
+        """
+        See L{test_lookupAddress}
+        """
+        d = client.lookupDNSKEY(self.hostname)
+        d.addCallback(self.checkResult, dns.DNSKEY)
+        return d
+
+
     def test_lookupResponsibility(self):
         """
         See L{test_lookupAddress}
