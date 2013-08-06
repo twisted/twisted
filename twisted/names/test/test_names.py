@@ -356,8 +356,12 @@ class ServerDNSTestCase(unittest.TestCase):
         """
         return self.namesTest(
             self.resolver.lookupSenderPolicy('test-domain.com'),
-            [dns.Record_SPF('v=spf1 mx/30 mx:example.org/30 -all', ttl=19283784),
-             dns.Record_SPF('v=spf1 +mx a:\0colo', '.example.com/28 -all not valid', ttl=19283784)]
+            [dns.Record_SPF(
+                    'v=spf1 mx/30 mx:example.org/30 -all',
+                    ttl=19283784),
+             dns.Record_SPF(
+                    'v=spf1 +mx a:\0colo', '.example.com/28 -all not valid',
+                    ttl=19283784)]
         )
 
 
