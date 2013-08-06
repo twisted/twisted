@@ -702,6 +702,11 @@ def lookupResponsibility(name, timeout=None):
 
 
 
+def lookupDNSKEY(name, timeout=None):
+    return getResolver().lookupDNSKEY(name, timeout)
+
+
+
 def lookupAFSDatabase(name, timeout=None):
     return getResolver().lookupAFSDatabase(name, timeout)
 
