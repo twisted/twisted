@@ -1972,6 +1972,8 @@ class OPTNonStandardAttributes(object):
     @classmethod
     def bytes(cls, excludeName=False, excludeOptions=False):
         """
+        Return L{bytes} representing an encoded OPT record.
+
         @param excludeName: A flag that controls whether to exclude
             the name field. This allows a non-standard name to be
             prepended during the test.
@@ -2002,6 +2004,8 @@ class OPTNonStandardAttributes(object):
     @classmethod
     def object(cls):
         """
+        Return a new L{dns._OPTHeader} instance.
+
         @return: A L{dns._OPTHeader} instance with attributes that
             match the encoded record returned by L{bytes}.
         """
