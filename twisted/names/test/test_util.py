@@ -147,6 +147,11 @@ class SNATest(unittest.TestCase):
 
 
 
+# XXX: I wonder if we even need snaMax? It's purpose seems to be to
+# allow comparison of SNA and None values. But that could (and probably
+# should) be added SNA.__gt__ etc.
+# eg uncomment the following and run the tests.
+# snaMax = max
 class SnaMaxTests(unittest.TestCase):
     """
     Tests for L{snaMax}.
@@ -171,7 +176,7 @@ class SnaMaxTests(unittest.TestCase):
         L{snaMax} accepts a list of L{SNA} instances and returns the
         one with the highest value.
         """
-        self.assertEqual(snaMax([self.s2, self.s1]), self.s2)
+        self.assertEqual(snaMax([self.s1, self.s2]), self.s2)
 
 
     def test_snaMaxEqual(self):
