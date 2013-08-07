@@ -27,7 +27,13 @@ class SNA(object):
     MAXADD = (2**(serialBits-1)-1)
 
 
-    def __init__(self, number):
+    def __init__(self, number, serialBits=32):
+        self.serialBits = serialBits
+
+        self.MODULOVAL = 2**serialBits
+        self.HLFRNG = 2**(serialBits-1)
+        self.MAXADD = (2**(serialBits-1)-1)
+
         self._number = int(number)%self.MODULOVAL
 
 

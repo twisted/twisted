@@ -25,6 +25,14 @@ class SNATest(unittest.TestCase):
         self.assertEqual(SNA(1).serialBits, 32)
 
 
+    def test_serialBitsOverride(self):
+        """
+        L{SNA.__init__} accepts a C{serialBits} argument whose value
+        is assigned to L{SNA.serialBits}.
+        """
+        self.assertEqual(SNA(1, serialBits=8).serialBits, 8)
+
+
     def test_equality(self):
         """
         Test SNA equality
