@@ -586,7 +586,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         attribute is a readonly property.
 
     @ivar type: The DNS record type. This is a fixed value of 41
-        (L{OPT} for OPT Record. This attribute is a readonly
+        (C{dns.OPT} for OPT Record. This attribute is a readonly
         property.
 
     @see: L{_OPTHeader.__init__} for documentation of other public
@@ -660,7 +660,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         this record.
 
         @return: The DNS record type. This is a fixed value of 41
-            (L{OPT} for OPT Record.
+            (C{dns.OPT} for OPT Record.
         """
         return OPT
 
