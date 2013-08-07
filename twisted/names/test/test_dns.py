@@ -2213,7 +2213,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         decoded. Trailing bytes are not consumed.
         """
         b = BytesIO(OPTNonStandardAttributes.bytes()
-                    +  b'xxxx') # Trailing bytes
+                    + b'xxxx') # Trailing bytes
 
         decodedHeader = dns._OPTHeader()
         decodedHeader.decode(b)
@@ -2228,7 +2228,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader} instance will always be L{dns.Name(b'')}.
         """
         b = BytesIO(OPTNonStandardAttributes.bytes(excludeName=True)
-                    +b'\x07example\x03com\x00')
+                    + b'\x07example\x03com\x00')
 
         h = dns._OPTHeader()
         h.decode(b)
