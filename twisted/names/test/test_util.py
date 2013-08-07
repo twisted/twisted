@@ -261,6 +261,20 @@ class DateSNATests(unittest.TestCase):
         self.assertEqual(date4.asInt(),  date3.asInt() + sna1.asInt())
 
 
+    def test_addTooFar(self):
+        """
+        L{DateSNA} cannot be added to dates more than 68 years
+        in the future.
+        """
+        self.assertEqual(
+            str(DateSNA() + SNA((2 ** (32-1)) - 1)),
+            '20380119031407')
+
+        self.assertRaises(
+            ArithmeticError,
+            lambda: DateSNA() + SNA((2 ** (32-1))))
+
+
     def test_asDate(self):
         """
         L{DateSNA.asDate} returns a date string in the form
