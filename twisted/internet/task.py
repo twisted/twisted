@@ -147,6 +147,36 @@ class LoopingCall:
         return intervalNum
 
 
+    def _cancelScheduledCall(self, callbackDeferred=False, reschedule=False):
+        """
+        Cancel the scheduled function call.
+
+        @type callbackDeferred: C{bool}
+        @param callbackDeferred: Whether to callback the L{defer.Deferred} or
+            or not after cancelling the scheduled function call. This can only
+            be C{True} when C{reschedule} is C{False}.
+
+        @type reschedule: C{bool}
+        @param reschedule: Whether to reschedule the function call or not after
+            cancelling the scheduled function call. This can only be C{True}
+            when C{callbackDeferred} is C{False}.
+        """
+        if callbackDeferred and reschedule:
+            raise ValueError(
+                "Only one of callbackDeferred and reschedule can be True")
+        if self.call is not None:
+            self.call.cancel()
+            self.call = None
+            if callbackDeferred:
+                deferred, self.deferred = self.deferred, None
+                deferred.callback(self)
+            elif reschedule:
+                self._expectNextCallAt = self.clock.seconds()
+                self._reschedule()
+            else:
+                self.deferred = None
+
+
     def _cancel(self, defered):
         """
         Cancel the looping call.
@@ -160,10 +190,7 @@ class LoopingCall:
         """
         if self.running:
             self.running = False
-            if self.call is not None:
-                self.call.cancel()
-                self.call = None
-                self.deferred = None
+            self._cancelScheduledCall()
             if self._deferredOfFunction is not None:
                 self._deferredOfFunction.cancel()
                 self._deferredOfFunction = None
@@ -203,17 +230,16 @@ class LoopingCall:
             self._reschedule()
         return d
 
+
     def stop(self):
-        """Stop running function.
+        """
+        Stop running function.
         """
         assert self.running, ("Tried to stop a LoopingCall that was "
                               "not running.")
         self.running = False
-        if self.call is not None:
-            self.call.cancel()
-            self.call = None
-            d, self.deferred = self.deferred, None
-            d.callback(self)
+        self._cancelScheduledCall(callbackDeferred=True)
+
 
     def reset(self):
         """
@@ -223,11 +249,8 @@ class LoopingCall:
         """
         assert self.running, ("Tried to reset a LoopingCall that was "
                               "not running.")
-        if self.call is not None:
-            self.call.cancel()
-            self.call = None
-            self._expectNextCallAt = self.clock.seconds()
-            self._reschedule()
+        self._cancelScheduledCall(reschedule=True)
+
 
     def __call__(self):
         def cb(result):
