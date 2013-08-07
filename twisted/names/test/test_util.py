@@ -39,6 +39,14 @@ class SNATest(unittest.TestCase):
         self.assertEqual(SNA(1, serialBits=8).serialBits, 8)
 
 
+    def test_str(self):
+        """
+        L{SNA.__str__} returns a string representation of the current
+        value.
+        """
+        self.assertEqual(str(SNA(123)), '123')
+
+
     def test_equality(self):
         """
         L{SNA.__eq__} provides rich equality comparison.
@@ -202,6 +210,15 @@ class DateSNATests(unittest.TestCase):
         form 'YYYYMMDDhhmmss'
         """
         self.assertEqual(DateSNA('20120101000000'), SNA(1325376000))
+
+
+    def test_str(self):
+        """
+        L{DateSNA.__str__} returns a string representation of the
+        current date value.
+        """
+        self.assertEqual(
+            str(DateSNA('20120101000000')), '20120101000000')
 
 
     def test_lt(self):
