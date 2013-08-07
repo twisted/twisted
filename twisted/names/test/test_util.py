@@ -159,6 +159,13 @@ class SnaMaxTests(unittest.TestCase):
         self.sMaxVal = SNA(SNA.halfRing + SNA.halfRing - 1)
 
 
+    def test_emptyList(self):
+        """
+        L{snaMax} returns C{None} when provided with an empty list.
+        """
+        self.assertIdentical(snaMax([]), None)
+
+
     def test_snaMax(self):
         """
         L{snaMax} accepts a list of L{SNA} instances and returns the
