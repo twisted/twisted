@@ -1961,7 +1961,7 @@ class IsSubdomainOfTests(unittest.SynchronousTestCase):
 
 
 
-class OPT_NON_STANDARD_ATTRIBUTES(object):
+class OPTNonStandardAttributes(object):
     """
     Generate byte and instance representations of an L{dns._OPTHeader}
     where all attributes are set to non-default values.
@@ -1970,7 +1970,7 @@ class OPT_NON_STANDARD_ATTRIBUTES(object):
     string during decoding.
     """
     @classmethod
-    def BYTES(cls, excludeName=False, excludeOptions=False):
+    def bytes(cls, excludeName=False, excludeOptions=False):
         """
         @param excludeName: A flag that controls whether to exclude
             the name field. This allows a non-standard name to be
@@ -1983,7 +1983,7 @@ class OPT_NON_STANDARD_ATTRIBUTES(object):
         @type excludeOptions: L{bool}
 
         @return: L{bytes} representing the encoded OPT record returned
-            by L{OBJECT}.
+            by L{object}.
         """
         rdlen = b'\x00\x00' # RDLEN 0
         if excludeOptions:
@@ -2000,10 +2000,10 @@ class OPT_NON_STANDARD_ATTRIBUTES(object):
 
 
     @classmethod
-    def OBJECT(cls):
+    def object(cls):
         """
         @return: A L{dns._OPTHeader} instance with attributes that
-            match the encoded record returned by L{BYTES}.
+            match the encoded record returned by L{bytes}.
         """
         return dns._OPTHeader(
             udpPayloadSize=512,
@@ -2142,10 +2142,10 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         b = BytesIO()
 
-        OPT_NON_STANDARD_ATTRIBUTES.OBJECT().encode(b)
+        OPTNonStandardAttributes.object().encode(b)
         self.assertEqual(
             b.getvalue(),
-            OPT_NON_STANDARD_ATTRIBUTES.BYTES()
+            OPTNonStandardAttributes.bytes()
             )
 
 
@@ -2154,7 +2154,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader.options} is a list of L{dns._OPTVariableOption}
         instances which are packed into the rdata area of the header.
         """
-        h = OPT_NON_STANDARD_ATTRIBUTES.OBJECT()
+        h = OPTNonStandardAttributes.object()
         h.options = [
             dns._OPTVariableOption(1, b'foobarbaz'),
             dns._OPTVariableOption(2, b'qux'),
@@ -2165,7 +2165,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(
             b.getvalue(),
 
-            OPT_NON_STANDARD_ATTRIBUTES.BYTES(excludeOptions=True) + (
+            OPTNonStandardAttributes.bytes(excludeOptions=True) + (
                 b'\x00\x14' # RDLEN 20
 
                 b'\x00\x01' # OPTION-CODE
@@ -2185,11 +2185,11 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         L{dns._OPTHeader} instance.
         """
         decodedHeader = dns._OPTHeader()
-        decodedHeader.decode(BytesIO(OPT_NON_STANDARD_ATTRIBUTES.BYTES()))
+        decodedHeader.decode(BytesIO(OPTNonStandardAttributes.bytes()))
 
         self.assertEqual(
             decodedHeader,
-            OPT_NON_STANDARD_ATTRIBUTES.OBJECT())
+            OPTNonStandardAttributes.object())
 
 
     def test_decodeAllExpectedBytes(self):
@@ -2198,7 +2198,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         that is being decoded.
         """
         # Check that all the input data has been consumed.
-        b = BytesIO(OPT_NON_STANDARD_ATTRIBUTES.BYTES())
+        b = BytesIO(OPTNonStandardAttributes.bytes())
 
         decodedHeader = dns._OPTHeader()
         decodedHeader.decode(b)
@@ -2212,7 +2212,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         file position to the end of the record that is being
         decoded. Trailing bytes are not consumed.
         """
-        b = BytesIO(OPT_NON_STANDARD_ATTRIBUTES.BYTES()
+        b = BytesIO(OPTNonStandardAttributes.bytes()
                     +  b'xxxx') # Trailing bytes
 
         decodedHeader = dns._OPTHeader()
@@ -2227,7 +2227,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         the supplied bytes. The name attribute of the resulting
         L{dns._OPTHeader} instance will always be L{dns.Name(b'')}.
         """
-        b = BytesIO(OPT_NON_STANDARD_ATTRIBUTES.BYTES(excludeName=True)
+        b = BytesIO(OPTNonStandardAttributes.bytes(excludeName=True)
                     +b'\x07example\x03com\x00')
 
         h = dns._OPTHeader()
@@ -2241,7 +2241,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         RDLEN is too short.
         """
         b = BytesIO(
-            OPT_NON_STANDARD_ATTRIBUTES.BYTES(excludeOptions=True) + (
+            OPTNonStandardAttributes.bytes(excludeOptions=True) + (
                 b'\x00\x05' # RDLEN 5 Too short - should be 6
 
                 b'\x00\x01' # OPTION-CODE
@@ -2258,7 +2258,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         RDLEN is too long.
         """
         b = BytesIO(
-            OPT_NON_STANDARD_ATTRIBUTES.BYTES(excludeOptions=True) + (
+            OPTNonStandardAttributes.bytes(excludeOptions=True) + (
 
                 b'\x00\x07' # RDLEN 7 Too long - should be 6
 
@@ -2279,7 +2279,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
 
         b = BytesIO(
-            OPT_NON_STANDARD_ATTRIBUTES.BYTES(excludeOptions=True) + (
+            OPTNonStandardAttributes.bytes(excludeOptions=True) + (
 
                 b'\x00\x14' # RDLEN 20
 
