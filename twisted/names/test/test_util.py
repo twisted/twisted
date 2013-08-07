@@ -114,9 +114,9 @@ class SNATest(unittest.TestCase):
         self.assertEqual(sna_max([self.s1, self.s1a]), self.s1)
         self.assertEqual(sna_max([self.s2, self.s1a, self.s1, None]), self.s2)
         self.assertEqual(sna_max([SNA(SNA.maxAdd), self.s2, self.s1a, self.s1, None]),
-                          SNA(SNA.maxAdd))
+                         SNA(SNA.maxAdd))
         self.assertEqual(sna_max([self.s2, self.s1a, self.s1, None, self.sMaxVal]),
-                          self.s2)
+                         self.s2)
 
 
     def test_dateSNA(self):
@@ -133,7 +133,7 @@ class SNATest(unittest.TestCase):
         Test DateSNA addition
         """
         date3 = DateSNA('20370101000000')
-        sna1  = SNA(365*24*60*60)
+        sna1  = SNA(365 * 24 * 60 * 60)
         date4 = date3 + sna1
         self.assertEqual(date4.asInt(),  date3.asInt() + sna1.asInt())
 

@@ -22,19 +22,19 @@ class SNA(object):
     implements RFC 1982 - DNS Serial Number Arithmetic
     """
     serialBits = 32
-    _modulo = 2**serialBits
-    halfRing = 2**(serialBits-1)
-    maxAdd = (2**(serialBits-1)-1)
+    _modulo = 2 ** serialBits
+    halfRing = 2 ** (serialBits-1)
+    maxAdd = (2 ** (serialBits-1)-1)
 
 
     def __init__(self, number, serialBits=32):
         self.serialBits = serialBits
 
-        self._modulo = 2**serialBits
-        self.halfRing = 2**(serialBits-1)
-        self.maxAdd = (2**(serialBits-1)-1)
+        self._modulo = 2 ** serialBits
+        self.halfRing = 2 ** (serialBits - 1)
+        self.maxAdd = (2 ** (serialBits - 1) - 1)
 
-        self._number = int(number)%self._modulo
+        self._number = int(number) % self._modulo
 
 
     def __repr__(self):
@@ -96,7 +96,7 @@ class SNA(object):
         define the addition operator
         """
         if sna2 <= SNA(self.maxAdd):
-            return SNA( (self._number + sna2._number)%self._modulo )
+            return SNA( (self._number + sna2._number) % self._modulo )
         else:
             raise ArithmeticError
 
@@ -155,7 +155,7 @@ class DateSNA(SNA):
 
         if (sna2 <= SNA(self.maxAdd) and
             (self._number + sna2._number < self._modulo)):
-            sna = SNA((self._number + sna2._number)%self._modulo)
+            sna = SNA((self._number + sna2._number) % self._modulo)
             return DateSNA.fromSNA(sna)
         else:
             raise ArithmeticError
