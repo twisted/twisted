@@ -233,6 +233,13 @@ class DateSNATests(unittest.TestCase):
             str(DateSNA('20120101000000')), '20120101000000')
 
 
+    def test_additionWithDifferentType(self):
+        """
+        L{DateSNA.__add__} can only be used with another L{SNA} subclass.
+        """
+        self.assertRaises(TypeError, lambda: DateSNA() + 1)
+
+
     def test_lt(self):
         """
         L{DateSNA.__lt__} provides rich < comparison.
