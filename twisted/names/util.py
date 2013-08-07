@@ -109,7 +109,7 @@ class SNA(object):
 
 
 
-def max(snaList):
+def snaMax(snaList):
     """
     takes a list of sna's from which it will pick the one
     with the highest value

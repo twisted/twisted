@@ -7,8 +7,7 @@ Test cases for L{twisted.names.util}.
 
 from functools import partial
 
-from twisted.names.util import SNA, DateSNA
-from twisted.names.util import max as sna_max
+from twisted.names.util import SNA, DateSNA, snaMax
 from twisted.trial import unittest
 
 
@@ -109,13 +108,13 @@ class SNATest(unittest.TestCase):
         """
         Test the SNA max function
         """
-        self.assertEqual(sna_max([None, self.s1]), self.s1)
-        self.assertEqual(sna_max([self.s1, None]), self.s1)
-        self.assertEqual(sna_max([self.s1, self.s1a]), self.s1)
-        self.assertEqual(sna_max([self.s2, self.s1a, self.s1, None]), self.s2)
-        self.assertEqual(sna_max([SNA(SNA.maxAdd), self.s2, self.s1a, self.s1, None]),
+        self.assertEqual(snaMax([None, self.s1]), self.s1)
+        self.assertEqual(snaMax([self.s1, None]), self.s1)
+        self.assertEqual(snaMax([self.s1, self.s1a]), self.s1)
+        self.assertEqual(snaMax([self.s2, self.s1a, self.s1, None]), self.s2)
+        self.assertEqual(snaMax([SNA(SNA.maxAdd), self.s2, self.s1a, self.s1, None]),
                          SNA(SNA.maxAdd))
-        self.assertEqual(sna_max([self.s2, self.s1a, self.s1, None, self.sMaxVal]),
+        self.assertEqual(snaMax([self.s2, self.s1a, self.s1, None, self.sMaxVal]),
                          self.s2)
 
 
