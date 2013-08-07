@@ -13,6 +13,9 @@ from twisted.trial import unittest
 
 
 class SNATest(unittest.TestCase):
+    """
+    Tests for L{SNA}.
+    """
 
     def setUp(self):
         self.s1 = SNA(1)
