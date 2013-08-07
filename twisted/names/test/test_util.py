@@ -62,9 +62,9 @@ class SNATest(unittest.TestCase):
         """
         L{SNA.__le__} provides rich <= comparison.
         """
-        self.assertLessEqual(self.s1, self.s1)
-        self.assertLessEqual(self.s1, self.s1a)
-        self.assertLessEqual(self.s1, self.s2)
+        self.assertTrue(self.s1 <= self.s1)
+        self.assertTrue(self.s1 <= self.s1a)
+        self.assertTrue(self.s1 <= self.s2)
         # XXX: Remove this test?
         # self.assertFalse(self.s2 <= self.s1)
 
@@ -73,11 +73,11 @@ class SNATest(unittest.TestCase):
         """
         L{SNA.__ge__} provides rich >= comparison.
         """
-        self.assertGreaterEqual(self.s1, self.s1)
-        self.assertGreaterEqual(self.s1, self.s1a)
+        self.assertTrue(self.s1 >= self.s1)
+        self.assertTrue(self.s1 >= self.s1a)
         # XXX: Remove this test?
         # self.assertFalse(self.s1 >= self.s2)
-        self.assertGreaterEqual(self.s2, self.s1)
+        self.assertTrue(self.s2 >= self.s1)
 
 
     def test_lt(self):
@@ -99,7 +99,7 @@ class SNATest(unittest.TestCase):
         # self.assertFalse(self.s1 > self.s1)
         # self.assertFalse(self.s1 > self.s1a)
         # self.assertFalse(self.s1 > self.s2)
-        self.assertGreater(self.s2, self.s1)
+        self.assertTrue(self.s2 > self.s1)
 
 
     def test_add(self):
@@ -134,7 +134,7 @@ class SNATest(unittest.TestCase):
         results vary with different s2 values.
         """
         smaxplus1 = self.sMaxVal + self.s1
-        self.assertGreater(smaxplus1, self.sMaxVal)
+        self.assertTrue(smaxplus1 > self.sMaxVal)
         self.assertEqual(smaxplus1, SNA(0))
 
 
@@ -210,7 +210,7 @@ class DateSNATests(unittest.TestCase):
         """
         date1 = DateSNA('20120101000000')
         date2 = DateSNA('20130101000000')
-        self.assertLess(date1, date2)
+        self.assertTrue(date1 < date2)
 
 
     def test_add(self):
@@ -319,10 +319,10 @@ class SNA2BitTests(unittest.TestCase):
         """
         Further, 1 > 0, 2 > 1, 3 > 2, and 0 > 3.
         """
-        self.assertGreater(sna2(1), sna2(0))
-        self.assertGreater(sna2(2), sna2(1))
-        self.assertGreater(sna2(3), sna2(2))
-        self.assertGreater(sna2(0), sna2(3))
+        self.assertTrue(sna2(1) > sna2(0))
+        self.assertTrue(sna2(2) > sna2(1))
+        self.assertTrue(sna2(3) > sna2(2))
+        self.assertTrue(sna2(0) > sna2(3))
 
 
     def test_undefined(self):
@@ -375,15 +375,15 @@ class SNA8BitTests(unittest.TestCase):
         Comparison is more interesting, 1 > 0, 44 > 0, 100 > 0, 100 > 44,
         200 > 100, 255 > 200, 0 > 255, 100 > 255, 0 > 200, and 44 > 200.
         """
-        self.assertGreater(sna8(1), sna8(0))
-        self.assertGreater(sna8(44), sna8(0))
-        self.assertGreater(sna8(100), sna8(0))
-        self.assertGreater(sna8(100), sna8(44))
-        self.assertGreater(sna8(200), sna8(100))
-        self.assertGreater(sna8(255), sna8(200))
-        self.assertGreater(sna8(100), sna8(255))
-        self.assertGreater(sna8(0), sna8(200))
-        self.assertGreater(sna8(44), sna8(200))
+        self.assertTrue(sna8(1) > sna8(0))
+        self.assertTrue(sna8(44) > sna8(0))
+        self.assertTrue(sna8(100) > sna8(0))
+        self.assertTrue(sna8(100) > sna8(44))
+        self.assertTrue(sna8(200) > sna8(100))
+        self.assertTrue(sna8(255) > sna8(200))
+        self.assertTrue(sna8(100) > sna8(255))
+        self.assertTrue(sna8(0) > sna8(200))
+        self.assertTrue(sna8(44) > sna8(200))
 
 
     def test_surprisingAddition(self):
@@ -395,12 +395,12 @@ class SNA8BitTests(unittest.TestCase):
         aware of, it can cause surprising errors, or be useful as it is the
         only defined way to actually cause a serial number to decrease.
         """
-        self.assertGreater(sna8(100) + sna8(100), sna8(100))
+        self.assertTrue(sna8(100) + sna8(100) > sna8(100))
 
         # XXX: This test should succeed according to description
         # above, but fails. Can't work out what's wrong, test or
         # implementation.
-        # self.assertLess((sna8(100) + sna8(100)) + sna8(100), sna8(100))
+        # self.assertTrue((sna8(100) + sna8(100)) + sna8(100) < sna8(100))
         self.assertRaises(
             ArithmeticError,
             lambda: (sna8(100) + sna8(100)) + sna8(100))
