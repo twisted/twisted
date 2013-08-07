@@ -5,6 +5,7 @@
 Tests for (new code in) L{twisted.application.internet}.
 """
 
+import pickle
 
 from zope.interface import implements
 from zope.interface.verify import verifyClass
@@ -18,6 +19,14 @@ from twisted.internet.interfaces import IStreamServerEndpoint, IListeningPort
 from twisted.internet.defer import Deferred, CancelledError
 from twisted.internet import task
 from twisted.python.failure import Failure
+
+
+def fakeTargetFunction():
+    """
+    A fake target function for testing TimerService which does nothing.
+    """
+    pass
+
 
 class FakeServer(object):
     """
@@ -364,7 +373,12 @@ class TestTimerService(TestCase):
         When pickling L{internet.TimerService}, it won't pickle
         L{internet.TimerService._loop}.
         """
-        self.assertIn("_loop", self.timer.volatile)
+        # We need a pickleable callable to test pickling TimerService. So we
+        # can't use self.timer
+        timer = TimerService(1, fakeTargetFunction)
+        dumpedTimer = pickle.dumps(timer)
+        loadedTimer = pickle.loads(dumpedTimer)
+        self.assertRaises(AttributeError, lambda: loadedTimer._loop)
 
 
     def test_pickleTimerServiceNotPickleLoopFinished(self):
@@ -372,4 +386,9 @@ class TestTimerService(TestCase):
         When pickling L{internet.TimerService}, it won't pickle
         L{internet.TimerService._loopFinished}.
         """
-        self.assertIn("_loopFinished", self.timer.volatile)
+        # We need a pickleable callable to test pickling TimerService. So we
+        # can't use self.timer
+        timer = TimerService(1, fakeTargetFunction)
+        dumpedTimer = pickle.dumps(timer)
+        loadedTimer = pickle.loads(dumpedTimer)
+        self.assertRaises(AttributeError, lambda: loadedTimer._loopFinished)
