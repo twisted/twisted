@@ -615,6 +615,16 @@ class LoopTestCase(unittest.TestCase):
         self.failureResultOf(deferredOfLoopingCall, defer.CancelledError)
 
 
+    def test_cancelStoppedCall(self):
+        """
+        Cancelling an already stopped L{task.LoopingCall} will do nothing.
+        """
+        loopingCall = self.setUpForCancellationTests(returned=True)
+        deferredOfLoopingCall = loopingCall.deferred
+        loopingCall.stop()
+        deferredOfLoopingCall.cancel()
+
+
     def test_reset(self):
         """
         Test that L{LoopingCall} can be reset.
