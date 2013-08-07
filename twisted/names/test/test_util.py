@@ -30,19 +30,19 @@ class SNATest(unittest.TestCase):
         """
         Test SNA less than or equal
         """
-        self.assertTrue(self.s1 <= self.s1)
-        self.assertTrue(self.s1 <= self.s1a)
-        self.assertTrue(self.s1 <= self.s2)
+        self.assertLessEqual(self.s1, self.s1)
+        self.assertLessEqual(self.s1, self.s1a)
+        self.assertLessEqual(self.s1, self.s2)
         self.assertFalse(self.s2 <= self.s1)
 
     def test_ge(self):
         """
         Test SNA greater than or equal
         """
-        self.assertTrue(self.s1 >= self.s1)
-        self.assertTrue(self.s1 >= self.s1a)
+        self.assertGreaterEqual(self.s1, self.s1)
+        self.assertGreaterEqual(self.s1, self.s1a)
         self.assertFalse(self.s1 >= self.s2)
-        self.assertTrue(self.s2 >= self.s1)
+        self.assertGreaterEqual(self.s2, self.s1)
 
 
     def test_lt(self):
