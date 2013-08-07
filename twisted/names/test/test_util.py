@@ -38,98 +38,181 @@ class SNATest(unittest.TestCase):
 
     def test_equality(self):
         """
-        Test SNA equality
+        L{SNA.__eq__} provides rich equality comparison.
         """
         self.assertEqual(self.s1, self.s1a)
-        self.assertNotIdentical(self.s1, self.s1a)
+
+        # XXX: Remove this test?
+        # self.assertNotIdentical(self.s1, self.s1a)
+
+
+    def test_hash(self):
+        """
+        L{SNA.__hash__} allows L{SNA} instances to be hashed for use
+        as dictionary keys.
+        """
         self.assertEqual(hash(self.s1), hash(self.s1a))
         self.assertNotEqual(hash(self.s1), hash(self.s2))
 
 
     def test_le(self):
         """
-        Test SNA less than or equal
+        L{SNA.__le__} provides rich <= comparison.
         """
         self.assertLessEqual(self.s1, self.s1)
         self.assertLessEqual(self.s1, self.s1a)
         self.assertLessEqual(self.s1, self.s2)
-        self.assertFalse(self.s2 <= self.s1)
+        # XXX: Remove this test?
+        # self.assertFalse(self.s2 <= self.s1)
 
 
     def test_ge(self):
         """
-        Test SNA greater than or equal
+        L{SNA.__ge__} provides rich >= comparison.
         """
         self.assertGreaterEqual(self.s1, self.s1)
         self.assertGreaterEqual(self.s1, self.s1a)
-        self.assertFalse(self.s1 >= self.s2)
+        # XXX: Remove this test?
+        # self.assertFalse(self.s1 >= self.s2)
         self.assertGreaterEqual(self.s2, self.s1)
 
 
     def test_lt(self):
         """
-        Test SNA less than
+        L{SNA.__lt__} provides rich < comparison.
         """
-        self.assertFalse(self.s1 < self.s1)
-        self.assertFalse(self.s1 < self.s1a)
+        # XXX: Remove these tests?
+        # self.assertFalse(self.s1 < self.s1)
+        # self.assertFalse(self.s1 < self.s1a)
         self.assertLess(self.s1, self.s2)
-        self.assertFalse(self.s2 < self.s1)
+        # self.assertFalse(self.s2 < self.s1)
 
 
     def test_gt(self):
         """
-        Test SNA greater than
+        L{SNA.__gt__} provides rich > comparison.
         """
-        self.assertFalse(self.s1 > self.s1)
-        self.assertFalse(self.s1 > self.s1a)
-        self.assertFalse(self.s1 > self.s2)
+        # XXX: Remove these tests?
+        # self.assertFalse(self.s1 > self.s1)
+        # self.assertFalse(self.s1 > self.s1a)
+        # self.assertFalse(self.s1 > self.s2)
         self.assertGreater(self.s2, self.s1)
 
 
     def test_add(self):
         """
-        Test SNA addition
+        L{SNA.__add__} allows L{SNA} instances to be summed.
         """
         self.assertEqual(self.s1 + self.s1, self.s2)
+
+
+    def test_addWhy(self):
+        """
+        L{SNA.__add__}
+        XXX: Explain this test.
+        """
         self.assertEqual(self.s1 + SNA(SNA.maxAdd), SNA(SNA.maxAdd + 1))
+
+
+    def test_addWhy2(self):
+        """
+        L{SNA.__add__}
+        XXX: Explain this test.
+        """
         self.assertEqual(SNA(SNA.maxAdd) + SNA(SNA.maxAdd) + SNA(2), SNA(0))
 
 
-    def test_maxval(self):
+    def test_maxVal(self):
         """
-        Test SNA maxval
+        L{SNA.__add__} returns a wrapped value when s1 plus the s2
+        would result in a value greater than the C{maxVal}.
+
+        XXX: I've got a feeling we need more tests demonstrating how
+        results vary with different s2 values.
         """
         smaxplus1 = self.sMaxVal + self.s1
         self.assertGreater(smaxplus1, self.sMaxVal)
         self.assertEqual(smaxplus1, SNA(0))
 
 
-    def test_max(self):
+
+
+class SnaMaxTests(unittest.TestCase):
+    """
+    Tests for L{snaMax}.
+    """
+
+    def setUp(self):
+        self.s1 = SNA(1)
+        self.s1a = SNA(1)
+        self.s2 = SNA(2)
+        self.sMaxVal = SNA(SNA.halfRing + SNA.halfRing - 1)
+
+
+    def test_snaMax(self):
         """
-        Test the SNA max function
+        L{snaMax} accepts a list of L{SNA} instances and returns the
+        one with the highest value.
+        """
+        self.assertEqual(snaMax([self.s2, self.s1]), self.s2)
+
+
+    def test_snaMaxEqual(self):
+        """
+        If the list provided to L{snaMax} contains multiple equal
+        L{SNA} instances, the first such instance is returned.
+        """
+        self.assertEqual(snaMax([self.s1, self.s1a]), self.s1)
+
+
+    def test_snaMaxMixed(self):
+        """
+        L{snaMax} accepts mixed lists containing L{SNA} instances and
+        C{None}. L{SNA} is always greater than C{None}.
         """
         self.assertEqual(snaMax([None, self.s1]), self.s1)
         self.assertEqual(snaMax([self.s1, None]), self.s1)
-        self.assertEqual(snaMax([self.s1, self.s1a]), self.s1)
-        self.assertEqual(snaMax([self.s2, self.s1a, self.s1, None]), self.s2)
+        # XXX: Remove this test?
+        # self.assertEqual(snaMax([self.s2, self.s1a, self.s1, None]), self.s2)
+
+
+    def test_why(self):
+        """
+        XXX: These tests need explaining.
+        """
         self.assertEqual(snaMax([SNA(SNA.maxAdd), self.s2, self.s1a, self.s1, None]),
                          SNA(SNA.maxAdd))
         self.assertEqual(snaMax([self.s2, self.s1a, self.s1, None, self.sMaxVal]),
                          self.s2)
 
 
-    def test_dateSNA(self):
+
+class DateSNATests(unittest.TestCase):
+    """
+    Tests for L{DateSNA}.
+    """
+    def test_dateStringArgument(self):
         """
-        Test DateSNA construction and comparison
+        L{DateSNA.__init__} accepts a datetime string argument of the
+        form 'YYYYMMDDhhmmss'
+        """
+        self.assertEqual(DateSNA('20120101000000'), SNA(1325376000))
+
+
+    def test_lt(self):
+        """
+        L{DateSNA.__lt__} provides rich < comparison.
         """
         date1 = DateSNA('20120101000000')
         date2 = DateSNA('20130101000000')
         self.assertLess(date1, date2)
 
 
-    def test_dateAdd(self):
+    def test_add(self):
         """
-        Test DateSNA addition
+        L{DateSNA.__add__} wraps dates in the year 2038.
+
+        XXX: Is that right? https://en.wikipedia.org/wiki/Year_2038_problem
         """
         date3 = DateSNA('20370101000000')
         sna1  = SNA(365 * 24 * 60 * 60)
@@ -139,7 +222,8 @@ class SNATest(unittest.TestCase):
 
     def test_asDate(self):
         """
-        Test DateSNA conversion
+        L{DateSNA.asDate} returns a date string in the form
+        'YYYYMMDDhhmmss'.
         """
         date1 = '20120101000000'
         date1Sna = DateSNA(date1)
@@ -148,7 +232,8 @@ class SNATest(unittest.TestCase):
 
     def test_roundTrip(self):
         """
-        Test DateSNA conversion
+        L{DateSNA} instances can be converted to L{SNA} and back
+        without loss.
         """
         date1 = '20370101000000'
         date1Sna = DateSNA(date1)
@@ -165,7 +250,18 @@ class SNATest(unittest.TestCase):
 
 def assertUndefinedComparison(testCase, a, b):
     """
-    C{a} and C{b} cannot be meaningfully compared.
+    A custom assertion for L{SNA} values that cannot be meaningfully
+    compared.
+
+    "Note that there are some pairs of values s1 and s2 for which s1 is
+    not equal to s2, but for which s1 is neither greater than, nor less
+    than, s2.  An attempt to use these ordering operators on such pairs
+    of values produces an undefined result."
+
+    @see: U{https://tools.ietf.org/html/rfc1982#section-3.2}
+
+    @type a: L{SNA}
+    @type b: L{SNA}
     """
     testCase.assertFalse(a == b)
     testCase.assertFalse(a <= b)
@@ -181,6 +277,8 @@ sna2 = partial(SNA, serialBits=2)
 
 class SNA2BitTests(unittest.TestCase):
     """
+    Tests for correct answers to example calculations in RFC1982 5.1.
+
     The simplest meaningful serial number space has SERIAL_BITS == 2.  In
     this space, the integers that make up the serial number space are 0,
     1, 2, and 3.  That is, 3 == 2^SERIAL_BITS - 1.
@@ -233,6 +331,8 @@ sna8 = partial(SNA, serialBits=8)
 
 class SNA8BitTests(unittest.TestCase):
     """
+    Tests for correct answers to example calculations in RFC1982 5.2.
+
     Consider the case where SERIAL_BITS == 8.  In this space the integers
     that make up the serial number space are 0, 1, 2, ... 254, 255.
     255 == 2^SERIAL_BITS - 1.
