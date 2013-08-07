@@ -16,7 +16,8 @@ __all__ = [
 
     'A', 'A6', 'AAAA', 'AFSDB', 'CNAME', 'DNAME', 'HINFO',
     'MAILA', 'MAILB', 'MB', 'MD', 'MF', 'MG', 'MINFO', 'MR', 'MX',
-    'NAPTR', 'NS', 'NULL', 'PTR', 'RP', 'SOA', 'SPF', 'SRV', 'TXT', 'WKS',
+    'NAPTR', 'NS', 'NULL', 'OPT', 'PTR', 'RP', 'SOA', 'SPF', 'SRV', 'TXT',
+    'WKS',
 
     'ANY', 'CH', 'CS', 'HS', 'IN',
 
@@ -43,9 +44,7 @@ __all__ = [
 
 
 # System imports
-import warnings
-
-import struct, random, types, socket
+import struct, random, socket
 from itertools import chain
 
 from io import BytesIO
@@ -119,6 +118,7 @@ SRV = 33
 NAPTR = 35
 A6 = 38
 DNAME = 39
+OPT = 41
 SPF = 99
 
 QUERY_TYPES = {
@@ -148,6 +148,7 @@ QUERY_TYPES = {
     NAPTR: 'NAPTR',
     A6: 'A6',
     DNAME: 'DNAME',
+    OPT: 'OPT',
     SPF: 'SPF'
 }
 
@@ -571,6 +572,247 @@ class Query:
 
     def __repr__(self):
         return 'Query(%r, %r, %r)' % (str(self.name), self.type, self.cls)
+
+
+
+@implementer(IEncodable)
+class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
+    """
+    An OPT record header.
+
+    @ivar name: The DNS name associated with this record. Since this
+        is a pseudo record, the name is always an L{Name} instance
+        with value b'', which represents the DNS root zone. This
+        attribute is a readonly property.
+
+    @ivar type: The DNS record type. This is a fixed value of 41
+        (C{dns.OPT} for OPT Record. This attribute is a readonly
+        property.
+
+    @see: L{_OPTHeader.__init__} for documentation of other public
+        instance attributes.
+
+    @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
+
+    @since: 13.2
+    """
+    showAttributes = (
+        ('name', lambda n: nativeString(n.name)), 'type', 'udpPayloadSize',
+        'extendedRCODE', 'version', 'dnssecOK', 'options')
+
+    compareAttributes = (
+        'name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
+        'dnssecOK', 'options')
+
+    def __init__(self, udpPayloadSize=4096, extendedRCODE=0, version=0,
+                 dnssecOK=False, options=None):
+        """
+        @type udpPayloadSize: L{int}
+        @param payload: The number of octets of the largest UDP
+            payload that can be reassembled and delivered in the
+            requestor's network stack.
+
+        @type extendedRCODE: L{int}
+        @param extendedRCODE: Forms the upper 8 bits of extended
+            12-bit RCODE (together with the 4 bits defined in
+            [RFC1035].  Note that EXTENDED-RCODE value 0 indicates
+            that an unextended RCODE is in use (values 0 through 15).
+
+        @type version: L{int}
+        @param version: Indicates the implementation level of the
+            setter.  Full conformance with this specification is
+            indicated by version C{0}.
+
+        @type dnssecOK: L{bool}
+        @param dnssecOK: DNSSEC OK bit as defined by [RFC3225].
+
+        @type options: L{list}
+        @param options: A L{list} of 0 or more L{_OPTVariableOption}
+            instances.
+        """
+        self.udpPayloadSize = udpPayloadSize
+        self.extendedRCODE = extendedRCODE
+        self.version = version
+        self.dnssecOK = dnssecOK
+
+        if options is None:
+            options = []
+        self.options = options
+
+
+    @property
+    def name(self):
+        """
+        A readonly property for accessing the C{name} attribute of
+        this record.
+
+        @return: The DNS name associated with this record. Since this
+            is a pseudo record, the name is always an L{Name} instance
+            with value b'', which represents the DNS root zone.
+        """
+        return Name(b'')
+
+
+    @property
+    def type(self):
+        """
+        A readonly property for accessing the C{type} attribute of
+        this record.
+
+        @return: The DNS record type. This is a fixed value of 41
+            (C{dns.OPT} for OPT Record.
+        """
+        return OPT
+
+
+    def encode(self, strio, compDict=None):
+        """
+        Encode this L{_OPTHeader} instance to bytes.
+
+        @type strio: L{file}
+        @param strio: the byte representation of this L{_OPTHeader}
+            will be written to this file.
+
+        @type compDict: L{dict} or L{None}
+        @param compDict: A dictionary of backreference addresses that
+            have have already been written to this stream and that may
+            be used for DNS name compression.
+        """
+        b = BytesIO()
+        for o in self.options:
+            o.encode(b)
+        optionBytes = b.getvalue()
+
+        RRHeader(
+            name=self.name.name,
+            type=self.type,
+            cls=self.udpPayloadSize,
+            ttl=(
+                self.extendedRCODE << 24
+                | self.version << 16
+                | self.dnssecOK << 15),
+            payload=UnknownRecord(optionBytes)
+        ).encode(strio, compDict)
+
+
+    def decode(self, strio, length=None):
+        """
+        Decode bytes into an L{_OPTHeader} instance.
+
+        @type strio: L{file}
+        @param strio: Bytes will be read from this file until the full
+            L{_OPTHeader} is decoded.
+
+        @type length: L{int} or L{None}
+        @param length: Not used.
+        """
+
+        h = RRHeader()
+        h.decode(strio, length)
+        h.payload = UnknownRecord(readPrecisely(strio, h.rdlength))
+
+        newOptHeader = self.fromRRHeader(h)
+
+        for attrName in self.compareAttributes:
+            if attrName not in ('name', 'type'):
+                setattr(self, attrName, getattr(newOptHeader, attrName))
+
+
+    @classmethod
+    def fromRRHeader(cls, rrHeader):
+        """
+        A classmethod for constructing a new L{_OPTHeader} from the
+        attributes and payload of an existing L{RRHeader} instance.
+
+        @type rrHeader: L{RRHeader}
+        @param rrHeader: An L{RRHeader} instance containing an
+            L{UnknownRecord} payload.
+
+        @return: An instance of L{_OPTHeader}.
+        @rtype: L{_OPTHeader}
+        """
+        options = None
+        if rrHeader.payload is not None:
+            options = []
+            optionsBytes = BytesIO(rrHeader.payload.data)
+            optionsBytesLength = len(rrHeader.payload.data)
+            while optionsBytes.tell() < optionsBytesLength:
+                o = _OPTVariableOption()
+                o.decode(optionsBytes)
+                options.append(o)
+
+        # Decode variable options if present
+        return cls(
+            udpPayloadSize=rrHeader.cls,
+            extendedRCODE=rrHeader.ttl >> 24,
+            version=rrHeader.ttl >> 16 & 0xff,
+            dnssecOK=(rrHeader.ttl & 0xffff) >> 15,
+            options=options
+            )
+
+
+
+@implementer(IEncodable)
+class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
+    """
+    A class to represent OPT record variable options.
+
+    @see: L{_OPTVariableOption.__init__} for documentation of public
+        instance attributes.
+
+    @see: L{https://tools.ietf.org/html/rfc6891#section-6.1.2}
+
+    @since: 13.2
+    """
+    showAttributes = ('code', ('data', nativeString))
+    compareAttributes = ('code', 'data')
+
+    _fmt = '!HH'
+
+    def __init__(self, code=0, data=b''):
+        """
+        @type code: L{int}
+        @param code: The option code
+
+        @type data: L{bytes}
+        @param data: The option data
+        """
+        self.code = code
+        self.data = data
+
+
+    def encode(self, strio, compDict=None):
+        """
+        Encode this L{_OPTVariableOption} to bytes.
+
+        @type strio: L{file}
+        @param strio: the byte representation of this
+            L{_OPTVariableOption} will be written to this file.
+
+        @type compDict: L{dict} or L{None}
+        @param compDict: A dictionary of backreference addresses that
+            have have already been written to this stream and that may
+            be used for DNS name compression.
+        """
+        strio.write(
+            struct.pack(self._fmt, self.code, len(self.data)) + self.data)
+
+
+    def decode(self, strio, length=None):
+        """
+        Decode bytes into an L{_OPTVariableOption} instance.
+
+        @type strio: L{file}
+        @param strio: Bytes will be read from this file until the full
+            L{_OPTVariableOption} is decoded.
+
+        @type length: L{int} or L{None}
+        @param length: Not used.
+        """
+        l = struct.calcsize(self._fmt)
+        buff = readPrecisely(strio, l)
+        self.code, length = struct.unpack(self._fmt, buff)
+        self.data = readPrecisely(strio, length)
 
 
 
@@ -1602,6 +1844,7 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     def __hash__(self):
         return hash(tuple(self.data))
+
 
 
 @implementer(IEncodable, IRecord)
