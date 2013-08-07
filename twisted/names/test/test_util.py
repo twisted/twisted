@@ -147,3 +147,68 @@ class SNATest(unittest.TestCase):
 
         dateSna2 = DateSNA.fromInt(intval)
         self.assertEqual(date1Sna, dateSna2)
+
+
+
+def assertUndefinedComparison(testCase, a, b):
+    """
+    C{a} and C{b} cannot be meaningfully compared.
+    """
+    testCase.assertFalse(a == b)
+    testCase.assertFalse(a <= b)
+    testCase.assertFalse(a < b)
+    testCase.assertFalse(a > b)
+    testCase.assertFalse(a >= b)
+
+
+
+from functools import partial
+sna2 = partial(SNA, serialBits=2)
+
+
+
+class SNA2BitTests(unittest.TestCase):
+    """
+    The simplest meaningful serial number space has SERIAL_BITS == 2.  In
+    this space, the integers that make up the serial number space are 0,
+    1, 2, and 3.  That is, 3 == 2^SERIAL_BITS - 1.
+
+    https://tools.ietf.org/html/rfc1982#section-5.1
+    """
+    def test_maxadd(self):
+        """
+        In this space, the largest integer that it is meaningful to add to a
+        sequence number is 2^(SERIAL_BITS - 1) - 1, or 1.
+        """
+        self.assertEqual(SNA(0, serialBits=2).MAXADD, 1)
+
+
+    def test_add(self):
+        """
+        Then, as defined 0+1 == 1, 1+1 == 2, 2+1 == 3, and 3+1 == 0.
+        """
+        self.assertEqual(sna2(0) + sna2(1), sna2(1))
+        self.assertEqual(sna2(1) + sna2(1), sna2(2))
+        self.assertEqual(sna2(2) + sna2(1), sna2(3))
+        self.assertEqual(sna2(3) + sna2(1), sna2(0))
+
+
+    def test_gt(self):
+        """
+        Further, 1 > 0, 2 > 1, 3 > 2, and 0 > 3.
+        """
+        self.assertGreater(sna2(1), sna2(0))
+        self.assertGreater(sna2(2), sna2(1))
+        self.assertGreater(sna2(3), sna2(2))
+        self.assertGreater(sna2(0), sna2(3))
+
+
+    def test_undefined(self):
+        """
+        It is undefined whether
+        2 > 0 or 0 > 2, and whether 1 > 3 or 3 > 1.
+        """
+        assertUndefinedComparison(self, sna2(2), sna2(0))
+        assertUndefinedComparison(self, sna2(0), sna2(2))
+        assertUndefinedComparison(self, sna2(1), sna2(3))
+        assertUndefinedComparison(self, sna2(3), sna2(1))
