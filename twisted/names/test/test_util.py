@@ -51,7 +51,7 @@ class SNATest(unittest.TestCase):
         """
         self.assertFalse(self.s1 < self.s1)
         self.assertFalse(self.s1 < self.s1a)
-        self.assertTrue(self.s1 < self.s2)
+        self.assertLess(self.s1, self.s2)
         self.assertFalse(self.s2 < self.s1)
 
     def test_gt(self):
@@ -61,7 +61,7 @@ class SNATest(unittest.TestCase):
         self.assertFalse(self.s1 > self.s1)
         self.assertFalse(self.s1 > self.s1a)
         self.assertFalse(self.s1 > self.s2)
-        self.assertTrue(self.s2 > self.s1)
+        self.assertGreater(self.s2, self.s1)
 
     def test_add(self):
         """
@@ -76,7 +76,7 @@ class SNATest(unittest.TestCase):
         Test SNA maxval
         """
         smaxplus1 = self.sMaxVal + self.s1
-        self.assertTrue(smaxplus1 > self.sMaxVal)
+        self.assertGreater(smaxplus1, self.sMaxVal)
         self.assertEqual(smaxplus1, SNA(0))
 
     def test_max(self):
@@ -98,7 +98,7 @@ class SNATest(unittest.TestCase):
         """
         date1 = DateSNA('20120101000000')
         date2 = DateSNA('20130101000000')
-        self.assertTrue(date1 < date2)
+        self.assertLess(date1, date2)
 
     def test_dateAdd(self):
         """
