@@ -26,8 +26,8 @@ class SNA(object):
     """
     serialBits = 32
     _modulo = 2 ** serialBits
-    halfRing = 2 ** (serialBits-1)
-    maxAdd = (2 ** (serialBits-1)-1)
+    halfRing = 2 ** (serialBits - 1)
+    maxAdd = (2 ** (serialBits - 1) - 1)
 
 
     def __init__(self, number, serialBits=32):
@@ -63,8 +63,7 @@ class SNA(object):
 
     def asInt(self):
         """
-        Return the integer value of this L{SNA} instance.
-
+        @return: The integer value of this L{SNA} instance.
         @rtype: L{int}
         """
         return self._number
@@ -158,7 +157,11 @@ def snaMax(snaList):
     Take a list of L{SNA} instances and return the one with the
     highest value.
 
+    @param snaList: The list of objects to examine.
     @type snaList: L{list} of L{SNA}
+
+    @return: The L{SNA} object with the highest value.
+    @rtype: L{SNA}
     """
     if len(snaList) == 0:
         return None
@@ -224,8 +227,7 @@ class DateSNA(SNA):
 
     def asDate(self):
         """
-        Return a date string representation of the object.
-
+        @return: a date string representation of the object.
         @rtype: L{str}
         """
         dateStruct = time.gmtime(self._number)
@@ -237,7 +239,10 @@ class DateSNA(SNA):
         """
         Create a L{DateSNA} object from an L{SNA}.
 
+        @param sna: The source L{SNA} instance.
         @type sna: L{SNA}
+
+        @return: The resulting L{DateSNA} instance.
         @rtype: L{DateSNA}
         """
         d = cls()
@@ -250,7 +255,10 @@ class DateSNA(SNA):
         """
         Create an DateSNA object from an L{int}.
 
+        @param i: The source L{int}.
         @type i: L{int}
+
+        @return: The resulting L{DateSNA} instance.
         @rtype: L{DateSNA}
         """
         return cls.fromSNA(SNA(i))

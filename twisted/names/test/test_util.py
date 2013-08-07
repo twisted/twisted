@@ -87,8 +87,8 @@ class SNATest(unittest.TestCase):
         # XXX: Remove these tests?
         # self.assertFalse(self.s1 < self.s1)
         # self.assertFalse(self.s1 < self.s1a)
-        self.assertLess(self.s1, self.s2)
         # self.assertFalse(self.s2 < self.s1)
+        self.assertTrue(self.s1 < self.s2)
 
 
     def test_gt(self):
@@ -139,7 +139,6 @@ class SNATest(unittest.TestCase):
 
 
 
-
 class SnaMaxTests(unittest.TestCase):
     """
     Tests for L{snaMax}.
@@ -183,10 +182,13 @@ class SnaMaxTests(unittest.TestCase):
         """
         XXX: These tests need explaining.
         """
-        self.assertEqual(snaMax([SNA(SNA.maxAdd), self.s2, self.s1a, self.s1, None]),
-                         SNA(SNA.maxAdd))
-        self.assertEqual(snaMax([self.s2, self.s1a, self.s1, None, self.sMaxVal]),
-                         self.s2)
+        self.assertEqual(
+            snaMax([SNA(SNA.maxAdd), self.s2, self.s1a, self.s1, None]),
+            SNA(SNA.maxAdd))
+
+        self.assertEqual(
+            snaMax([self.s2, self.s1a, self.s1, None, self.sMaxVal]),
+            self.s2)
 
 
 
@@ -251,7 +253,7 @@ class DateSNATests(unittest.TestCase):
 
 
 
-def assertUndefinedComparison(testCase, a, b):
+def assertUndefinedComparison(testCase, s1, s2):
     """
     A custom assertion for L{SNA} values that cannot be meaningfully
     compared.
@@ -263,14 +265,21 @@ def assertUndefinedComparison(testCase, a, b):
 
     @see: U{https://tools.ietf.org/html/rfc1982#section-3.2}
 
-    @type a: L{SNA}
-    @type b: L{SNA}
+    @param testCase: The L{unittest.TestCase} on which to call
+        assertion methods.
+    @type testCase: L{unittest.TestCase}
+
+    @param s1: The first value to compare.
+    @type s1: L{SNA}
+
+    @param s2: The second value to compare.
+    @type s2: L{SNA}
     """
-    testCase.assertFalse(a == b)
-    testCase.assertFalse(a <= b)
-    testCase.assertFalse(a < b)
-    testCase.assertFalse(a > b)
-    testCase.assertFalse(a >= b)
+    testCase.assertFalse(s1 == s2)
+    testCase.assertFalse(s1 <= s2)
+    testCase.assertFalse(s1 < s2)
+    testCase.assertFalse(s1 > s2)
+    testCase.assertFalse(s1 >= s2)
 
 
 
@@ -388,9 +397,13 @@ class SNA8BitTests(unittest.TestCase):
         """
         self.assertGreater(sna8(100) + sna8(100), sna8(100))
 
-        # XXX: This test fails
-#        self.assertLess((sna8(100) + sna8(100)) + sna8(100), sna8(100))
-        self.assertRaises(ArithmeticError, lambda: (sna8(100) + sna8(100)) + sna8(100))
+        # XXX: This test should succeed according to description
+        # above, but fails. Can't work out what's wrong, test or
+        # implementation.
+        # self.assertLess((sna8(100) + sna8(100)) + sna8(100), sna8(100))
+        self.assertRaises(
+            ArithmeticError,
+            lambda: (sna8(100) + sna8(100)) + sna8(100))
 
 
     def test_undefined(self):
