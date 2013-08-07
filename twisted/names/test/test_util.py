@@ -4,11 +4,14 @@
 """
 Test cases for L{twisted.names.util}.
 """
+
 from functools import partial
 
 from twisted.names.util import SNA, DateSNA
 from twisted.names.util import max as sna_max
 from twisted.trial import unittest
+
+
 
 class SNATest(unittest.TestCase):
 
@@ -43,6 +46,7 @@ class SNATest(unittest.TestCase):
         self.assertEqual(hash(self.s1), hash(self.s1a))
         self.assertNotEqual(hash(self.s1), hash(self.s2))
 
+
     def test_le(self):
         """
         Test SNA less than or equal
@@ -51,6 +55,7 @@ class SNATest(unittest.TestCase):
         self.assertLessEqual(self.s1, self.s1a)
         self.assertLessEqual(self.s1, self.s2)
         self.assertFalse(self.s2 <= self.s1)
+
 
     def test_ge(self):
         """
@@ -71,6 +76,7 @@ class SNATest(unittest.TestCase):
         self.assertLess(self.s1, self.s2)
         self.assertFalse(self.s2 < self.s1)
 
+
     def test_gt(self):
         """
         Test SNA greater than
@@ -80,6 +86,7 @@ class SNATest(unittest.TestCase):
         self.assertFalse(self.s1 > self.s2)
         self.assertGreater(self.s2, self.s1)
 
+
     def test_add(self):
         """
         Test SNA addition
@@ -88,6 +95,7 @@ class SNATest(unittest.TestCase):
         self.assertEqual(self.s1 + SNA(SNA.MAXADD), SNA(SNA.MAXADD + 1))
         self.assertEqual(SNA(SNA.MAXADD) + SNA(SNA.MAXADD) + SNA(2), SNA(0))
 
+
     def test_maxval(self):
         """
         Test SNA maxval
@@ -95,6 +103,7 @@ class SNATest(unittest.TestCase):
         smaxplus1 = self.sMaxVal + self.s1
         self.assertGreater(smaxplus1, self.sMaxVal)
         self.assertEqual(smaxplus1, SNA(0))
+
 
     def test_max(self):
         """
@@ -109,6 +118,7 @@ class SNATest(unittest.TestCase):
         self.assertEqual(sna_max([self.s2, self.s1a, self.s1, None, self.sMaxVal]),
                           self.s2)
 
+
     def test_dateSNA(self):
         """
         Test DateSNA construction and comparison
@@ -116,6 +126,7 @@ class SNATest(unittest.TestCase):
         date1 = DateSNA('20120101000000')
         date2 = DateSNA('20130101000000')
         self.assertLess(date1, date2)
+
 
     def test_dateAdd(self):
         """
@@ -126,6 +137,7 @@ class SNATest(unittest.TestCase):
         date4 = date3 + sna1
         self.assertEqual(date4.asInt(),  date3.asInt() + sna1.asInt())
 
+
     def test_asDate(self):
         """
         Test DateSNA conversion
@@ -133,6 +145,7 @@ class SNATest(unittest.TestCase):
         date1 = '20120101000000'
         date1Sna = DateSNA(date1)
         self.assertEqual(date1Sna.asDate(), date1)
+
 
     def test_roundTrip(self):
         """
@@ -212,6 +225,7 @@ class SNA2BitTests(unittest.TestCase):
         assertUndefinedComparison(self, sna2(0), sna2(2))
         assertUndefinedComparison(self, sna2(1), sna2(3))
         assertUndefinedComparison(self, sna2(3), sna2(1))
+
 
 
 sna8 = partial(SNA, serialBits=8)
