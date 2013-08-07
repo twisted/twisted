@@ -92,8 +92,8 @@ class SNATest(unittest.TestCase):
         Test SNA addition
         """
         self.assertEqual(self.s1 + self.s1, self.s2)
-        self.assertEqual(self.s1 + SNA(SNA.MAXADD), SNA(SNA.MAXADD + 1))
-        self.assertEqual(SNA(SNA.MAXADD) + SNA(SNA.MAXADD) + SNA(2), SNA(0))
+        self.assertEqual(self.s1 + SNA(SNA.maxAdd), SNA(SNA.maxAdd + 1))
+        self.assertEqual(SNA(SNA.maxAdd) + SNA(SNA.maxAdd) + SNA(2), SNA(0))
 
 
     def test_maxval(self):
@@ -113,8 +113,8 @@ class SNATest(unittest.TestCase):
         self.assertEqual(sna_max([self.s1, None]), self.s1)
         self.assertEqual(sna_max([self.s1, self.s1a]), self.s1)
         self.assertEqual(sna_max([self.s2, self.s1a, self.s1, None]), self.s2)
-        self.assertEqual(sna_max([SNA(SNA.MAXADD), self.s2, self.s1a, self.s1, None]),
-                          SNA(SNA.MAXADD))
+        self.assertEqual(sna_max([SNA(SNA.maxAdd), self.s2, self.s1a, self.s1, None]),
+                          SNA(SNA.maxAdd))
         self.assertEqual(sna_max([self.s2, self.s1a, self.s1, None, self.sMaxVal]),
                           self.s2)
 
@@ -193,7 +193,7 @@ class SNA2BitTests(unittest.TestCase):
         In this space, the largest integer that it is meaningful to add to a
         sequence number is 2^(SERIAL_BITS - 1) - 1, or 1.
         """
-        self.assertEqual(SNA(0, serialBits=2).MAXADD, 1)
+        self.assertEqual(SNA(0, serialBits=2).maxAdd, 1)
 
 
     def test_add(self):
@@ -246,7 +246,7 @@ class SNA8BitTests(unittest.TestCase):
         In this space, the largest integer that it is meaningful to add to a
         sequence number is 2^(SERIAL_BITS - 1) - 1, or 127.
         """
-        self.assertEqual(SNA(0, serialBits=8).MAXADD, 127)
+        self.assertEqual(SNA(0, serialBits=8).maxAdd, 127)
 
 
     def test_add(self):

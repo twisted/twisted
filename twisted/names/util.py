@@ -24,7 +24,7 @@ class SNA(object):
     serialBits = 32
     _modulo = 2**serialBits
     halfRing = 2**(serialBits-1)
-    MAXADD = (2**(serialBits-1)-1)
+    maxAdd = (2**(serialBits-1)-1)
 
 
     def __init__(self, number, serialBits=32):
@@ -32,7 +32,7 @@ class SNA(object):
 
         self._modulo = 2**serialBits
         self.halfRing = 2**(serialBits-1)
-        self.MAXADD = (2**(serialBits-1)-1)
+        self.maxAdd = (2**(serialBits-1)-1)
 
         self._number = int(number)%self._modulo
 
@@ -95,7 +95,7 @@ class SNA(object):
         """
         define the addition operator
         """
-        if sna2 <= SNA(self.MAXADD):
+        if sna2 <= SNA(self.maxAdd):
             return SNA( (self._number + sna2._number)%self._modulo )
         else:
             raise ArithmeticError
@@ -153,7 +153,7 @@ class DateSNA(SNA):
         if not isinstance(sna2, SNA):
             return NotImplemented
 
-        if (sna2 <= SNA(self.MAXADD) and
+        if (sna2 <= SNA(self.maxAdd) and
             (self._number + sna2._number < self._modulo)):
             sna = SNA((self._number + sna2._number)%self._modulo)
             return DateSNA.fromSNA(sna)
