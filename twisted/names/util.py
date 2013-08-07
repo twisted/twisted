@@ -21,10 +21,10 @@ class SNA(object):
     """
     implements RFC 1982 - DNS Serial Number Arithmetic
     """
-    SERIAL_BITS = 32
-    MODULOVAL = 2**SERIAL_BITS
-    HLFRNG = 2**(SERIAL_BITS-1)
-    MAXADD = (2**(SERIAL_BITS-1)-1)
+    serialBits = 32
+    MODULOVAL = 2**serialBits
+    HLFRNG = 2**(serialBits-1)
+    MAXADD = (2**(serialBits-1)-1)
 
 
     def __init__(self, number):

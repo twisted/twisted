@@ -17,6 +17,14 @@ class SNATest(unittest.TestCase):
         self.s2 = SNA(2)
         self.sMaxVal = SNA(SNA.HLFRNG+SNA.HLFRNG-1)
 
+
+    def test_serialBitsDefault(self):
+        """
+        L{SNA.serialBits} has default value 32.
+        """
+        self.assertEqual(SNA(1).serialBits, 32)
+
+
     def test_equality(self):
         """
         Test SNA equality
