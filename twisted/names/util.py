@@ -23,7 +23,7 @@ class SNA(object):
     """
     serialBits = 32
     _modulo = 2**serialBits
-    HLFRNG = 2**(serialBits-1)
+    halfRing = 2**(serialBits-1)
     MAXADD = (2**(serialBits-1)-1)
 
 
@@ -31,7 +31,7 @@ class SNA(object):
         self.serialBits = serialBits
 
         self._modulo = 2**serialBits
-        self.HLFRNG = 2**(serialBits-1)
+        self.halfRing = 2**(serialBits-1)
         self.MAXADD = (2**(serialBits-1)-1)
 
         self._number = int(number)%self._modulo
@@ -61,9 +61,9 @@ class SNA(object):
         """
         return ((self != sna2) and
                ((self._number < sna2._number) and
-                ((sna2._number - self._number) < self.HLFRNG) or
+                ((sna2._number - self._number) < self.halfRing) or
                (self._number > sna2._number) and
-                ((self._number - sna2._number) > self.HLFRNG)))
+                ((self._number - sna2._number) > self.halfRing)))
 
 
     def __gt__(self, sna2):
@@ -72,9 +72,9 @@ class SNA(object):
         """
         return ((self != sna2) and
                ((self._number < sna2._number) and
-               ((sna2._number - self._number) > self.HLFRNG) or
+               ((sna2._number - self._number) > self.halfRing) or
                (self._number > sna2._number) and
-               ((self._number - sna2._number) < self.HLFRNG)))
+               ((self._number - sna2._number) < self.halfRing)))
 
 
     def __le__(self, sna2):

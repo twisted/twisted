@@ -19,7 +19,7 @@ class SNATest(unittest.TestCase):
         self.s1 = SNA(1)
         self.s1a = SNA(1)
         self.s2 = SNA(2)
-        self.sMaxVal = SNA(SNA.HLFRNG+SNA.HLFRNG-1)
+        self.sMaxVal = SNA(SNA.halfRing + SNA.halfRing - 1)
 
 
     def test_serialBitsDefault(self):
