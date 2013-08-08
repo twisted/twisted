@@ -370,11 +370,11 @@ class PathModificationTest(TwistedModulesTestCase):
         self.packagePath = self.pathExtension.child(self.packageName)
         self.packagePath.createDirectory()
         self.packagePath.child("__init__.py").setContent("")
-        self.packagePath.child("a.py").setContent(sampleModuleContents)
-        self.packagePath.child("b.py").setContent(
+        self.packagePath.child("sample.py").setContent(sampleModuleContents)
+        self.packagePath.child("sample_exports.py").setContent(
             sampleModuleWithExportsContents)
-        self.packagePath.child("c__init__.py").setContent("")
-        self.packagePath.child("d.py").setContent(
+        self.packagePath.child("sample__init__.py").setContent("")
+        self.packagePath.child("sample_exported_imports.py").setContent(
             sampleModuleWithExportedImportsContents)
 
         self.pathSetUp = False
@@ -428,7 +428,9 @@ class PathModificationTest(TwistedModulesTestCase):
         nfni = [modinfo.name.split(".")[-1] for modinfo in
                 pkginfo.iterModules()]
         nfni.sort()
-        self.assertEqual(nfni, ['a', 'b', 'c__init__', 'd'])
+        self.assertEqual(nfni,
+                         ['sample', 'sample__init__',
+                         'sample_exported_imports', 'sample_exports'])
 
 
     def test_listingModules(self):
@@ -456,7 +458,7 @@ class PathModificationTest(TwistedModulesTestCase):
         Module attributes can be iterated over without executing the code.
         """
         self._setupSysPath()
-        modinfo = modules.getModule(self.packageName + ".a")
+        modinfo = modules.getModule(self.packageName + ".sample")
         attrs = sorted(modinfo.iterAttributes(), key=lambda a: a.name)
         names = sorted(["_foo", "foo",  "doFoo", "Foo"])
         for attr, name in zip(attrs, names):
@@ -473,7 +475,7 @@ class PathModificationTest(TwistedModulesTestCase):
         loaded.
         """
         self._setupSysPath()
-        modinfo = modules.getModule(self.packageName + ".a")
+        modinfo = modules.getModule(self.packageName + ".sample")
         modinfo.load()
         attrs = sorted([a for a in modinfo.iterAttributes()
                         if '_' not in a.name],
@@ -494,7 +496,7 @@ class PathModificationTest(TwistedModulesTestCase):
         of and returns the attribute value.
         """
         self._setupSysPath()
-        modinfo = modules.getModule(self.packageName + ".a")
+        modinfo = modules.getModule(self.packageName + ".sample")
         attr = [x for x in modinfo.iterAttributes()
                 if x.name.endswith('.foo')][0]
 
@@ -514,7 +516,7 @@ class PathModificationTest(TwistedModulesTestCase):
         The fully qualified names imported by a module can be inspected.
         """
         self._setupSysPath()
-        modinfo = modules.getModule(self.packageName + ".a")
+        modinfo = modules.getModule(self.packageName + ".sample")
         self.assertEqual(sorted(modinfo.importedNames()),
                          sorted(["sys", "os", "datetime",
                                  "twisted.python.reflect",
@@ -528,7 +530,7 @@ class PathModificationTest(TwistedModulesTestCase):
         have no leading underscore.
         """
         self._setupSysPath()
-        modinfo = modules.getModule(self.packageName + ".a")
+        modinfo = modules.getModule(self.packageName + ".sample")
         self.assertEqual(sorted([x.name for x in modinfo.exported()]),
                          sorted(["foo", "doFoo", "Foo"]))
 
@@ -539,7 +541,7 @@ class PathModificationTest(TwistedModulesTestCase):
         are used as the list of the module's exports.
         """
         self._setupSysPath()
-        modinfo = modules.getModule(self.packageName + ".b")
+        modinfo = modules.getModule(self.packageName + ".sample_exports")
         self.assertEqual([x.name for x in modinfo.exported()],
                          ["foo"])
 
@@ -550,7 +552,8 @@ class PathModificationTest(TwistedModulesTestCase):
         defined names.
         """
         self._setupSysPath()
-        modinfo = modules.getModule(self.packageName + ".d")
+        modinfo = modules.getModule(
+            self.packageName + ".sample_exported_imports")
         self.assertEqual(sorted([x.name.rsplit('.', 1)[1] for x in
                                  modinfo.iterAttributes()]),
                          sorted(["foo", "registerAdapter", "reflect"]))
