@@ -467,11 +467,7 @@ class PythonModule(_ModuleIteratorHelper):
         Scan a module for imports, exports, and attributes.
         """
         if self._finder is None:
-            try:
-                tree = ast.parse(self.filePath.getContent())
-            except TypeError:
-                raise ValueError("Static analysis of module attributes can "
-                                 "only be done on Python source.")
+            tree = ast.parse(self.filePath.getContent())
             self._finder = _ImportExportFinder()
             self._finder.visit(tree)
 
