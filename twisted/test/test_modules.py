@@ -546,6 +546,19 @@ class PathModificationTest(TwistedModulesTestCase):
                          ["foo"])
 
 
+    def test_exportedError(self):
+        """
+        L{PythonModule.exported} doesn't succeed the second time if the first
+        time failed to parse the AST.
+        """
+        errorContent = "__all__ = ['a']\n__all__ = ['a', 'b']"
+        self.packagePath.child("error.py").setContent(errorContent)
+        self._setupSysPath()
+        modinfo = modules.getModule(self.packageName + ".error")
+        self.assertRaises(SyntaxError, modinfo.exported)
+        self.assertRaises(SyntaxError, modinfo.exported)
+
+
     def test_exportedImports(self):
         """
         If __all__ mentions imports, they're included in the collection of

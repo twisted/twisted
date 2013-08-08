@@ -468,8 +468,9 @@ class PythonModule(_ModuleIteratorHelper):
         """
         if self._finder is None:
             tree = ast.parse(self.filePath.getContent())
-            self._finder = _ImportExportFinder()
-            self._finder.visit(tree)
+            finder = _ImportExportFinder()
+            finder.visit(tree)
+            self._finder = finder
 
 
     def iterAttributes(self):
