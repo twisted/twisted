@@ -816,17 +816,24 @@ class MiscTests(TestCase):
     Tests for L{modules} utilities.
     """
 
-    def test_isPythonIdentifier(self):
+    def test_isPythonIdentifierGood(self):
         """
         L{modules._isPythonIdentifier} correctly identifies which strings are
-        and aren't valid python identifiers.
+        valid python identifiers.
         """
         good = ["__init__", "foo", "_foo", "foo_baz", "Foo", "FooBaz_",
                 "foo1", "foo_1", "F00"]
-        bad = ["1f", "-foo", "foo-baz", "a foo", "foo.baz", 3, ["foo"], ()]
 
         for n in good:
             self.assertTrue(modules._isPythonIdentifier(n))
+
+
+    def test_isPythonIdentifierBad(self):
+        """
+        L{modules._isPythonIdentifier} correctly identifies which strings
+        aren't valid python identifiers.
+        """
+        bad = ["1f", "-foo", "foo-baz", "a foo", "foo.baz", 3, ["foo"], ()]
 
         for n in bad:
             self.assertFalse(modules._isPythonIdentifier(n))
