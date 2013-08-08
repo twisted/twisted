@@ -533,7 +533,9 @@ class PathModificationTest(TwistedModulesTestCase):
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".sample")
         self.assertEqual(sorted([x.name for x in modinfo.exported()]),
-                         sorted(["foo", "doFoo", "Foo"]))
+                         sorted([self.packageName + ".sample.foo",
+                                 self.packageName + ".sample.doFoo",
+                                 self.packageName + ".sample.Foo"]))
 
 
     def test_moduleExportAll(self):

@@ -527,14 +527,14 @@ class PythonModule(_ModuleIteratorHelper):
         @since: 13.2
         """
         self._maybeLoadFinder()
-        if self._finder.exports:
-            return [
-                PythonAttribute(self.name + "." + name, self, False, _nothing)
-                for name in self._finder.exports]
-        else:
-            return [PythonAttribute(name, self, False, _nothing)
-                    for name in self._finder.definedNames
-                    if not name.startswith('_')]
+        source = self._finder.exports
+        if not source:
+            source = [name for name in self._finder.definedNames
+                      if not name.startswith('_')]
+
+        return [
+            PythonAttribute(self.name + "." + name, self, False, _nothing)
+            for name in source]
 
 
     def isPackage(self):
