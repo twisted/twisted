@@ -890,8 +890,6 @@ class PythonPath:
                     self._findEntryPathString(moduleObject)),
                 self)
             path = inspect.getsourcefile(moduleObject)
-            if path is None:
-                path = moduleObject.__file__
             mp = self._smartPath(path)
             return PythonModule(modname, mp, pe)
 
