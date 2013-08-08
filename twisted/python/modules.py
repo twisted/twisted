@@ -340,15 +340,14 @@ class _ImportExportFinder(ast.NodeVisitor):
 
 class PythonAttribute:
     """
-    I represent a function, class, or other object that is present.
+    Represent a function, class, or other object that is present.
 
     @ivar name: the fully-qualified python name of this attribute.
 
+    @ivar basename: the python name of this attribute.
+
     @ivar onObject: a reference to a PythonModule or other PythonAttribute
         that is this attribute's logical parent.
-
-    @ivar name: the fully qualified python name of the attribute represented
-        by this class.
     """
 
     def __init__(self, name, onObject, loaded, pythonValue):
@@ -362,6 +361,7 @@ class PythonAttribute:
         @param pythonValue: the value of the attribute we're pointing to.
         """
         self.name = name
+        self.basename = name.split(".")[-1]
         self.onObject = onObject
         self._loaded = loaded
         self.pythonValue = pythonValue
@@ -528,8 +528,9 @@ class PythonModule(_ModuleIteratorHelper):
         """
         self._maybeLoadFinder()
         if self._finder.exports:
-            return [PythonAttribute(name, self, False, _nothing)
-                    for name in self._finder.exports]
+            return [
+                PythonAttribute(self.name + "." + name, self, False, _nothing)
+                for name in self._finder.exports]
         else:
             return [PythonAttribute(name, self, False, _nothing)
                     for name in self._finder.definedNames

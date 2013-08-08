@@ -465,6 +465,7 @@ class PathModificationTest(TwistedModulesTestCase):
             self.assertEqual(attr.onObject, modinfo)
             self.assertFalse(attr.isLoaded())
             self.assertEqual(attr.name, modinfo.name + '.' + name)
+            self.assertEqual(attr.basename, name)
             self.assertRaises(NotImplementedError,
                               lambda: list(attr.iterAttributes()))
 
@@ -543,7 +544,7 @@ class PathModificationTest(TwistedModulesTestCase):
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName + ".sample_exports")
         self.assertEqual([x.name for x in modinfo.exported()],
-                         ["foo"])
+                         [self.packageName + ".sample_exports.foo"])
 
 
     def test_exportedError(self):
