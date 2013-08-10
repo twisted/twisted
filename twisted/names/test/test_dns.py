@@ -2780,8 +2780,118 @@ class MESSAGE_EDNS_QUERY(TestMessage):
             recAv=0,
             rCode=0,
             ednsVersion=3,
+            dnssecOK=False,
             queries=[dns.Query(b'www.example.com', dns.A)],
             additional=[])
+
+
+class EDNS_MESSAGE_COMPLETE:
+    """
+    An example of a fully populated edns response message.
+
+    Contains name compression, answers, authority, and
+    additional records.
+    """
+    bytes = (
+        b'\x01\x00' # id: 256
+        b'\x95' # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
+        b'\x8f' # RA: 1, Z, RCODE: 15
+        b'\x00\x01' # query count
+        b'\x00\x01' # answer count
+        b'\x00\x01' # authorities count
+        b'\x00\x01' # additionals count
+
+        # Query begins at Byte 12
+        b'\x07example\x03com\x00' # QNAME
+        b'\x00\x06' # QTYPE 6 (SOA)
+        b'\x00\x01' # QCLASS 1 (IN)
+
+        # Answers
+        b'\xc0\x0c' # RR NAME (compression ref b12)
+        b'\x00\x06' # RR TYPE 6 (SOA)
+        b'\x00\x01' # RR CLASS 1 (IN)
+        b'\xff\xff\xff\xff' # RR TTL
+        b'\x00\x27' # RDLENGTH 39
+        b'\x03ns1\xc0\x0c' # mname (ns1.example.com (compression ref b15)
+        b'\x0ahostmaster\xc0\x0c' # rname (hostmaster.example.com)
+        b'\xff\xff\xff\xfe' # serial
+        b'\x7f\xff\xff\xfd' # refresh
+        b'\x7f\xff\xff\xfc' # retry
+        b'\x7f\xff\xff\xfb' # expire
+        b'\xff\xff\xff\xfa' # minimum
+
+        # Authority
+        b'\xc0\x0c' # RR NAME (example.com compression ref b12)
+        b'\x00\x02' # RR TYPE 2 (NS)
+        b'\x00\x01' # RR CLASS 1 (IN)
+        b'\xff\xff\xff\xff' # RR TTL
+        b'\x00\x02' # RDLENGTH
+        b'\xc0\x29' # RDATA (ns1.example.com (compression ref b41)
+
+        # Additional
+        b'\xc0\x29' # RR NAME (ns1.example.com compression ref b41)
+        b'\x00\x01' # RR TYPE 1 (A)
+        b'\x00\x01' # RR CLASS 1 (IN)
+        b'\xff\xff\xff\xff' # RR TTL
+        b'\x00\x04' # RDLENGTH
+        b'\x05\x06\x07\x08' # RDATA 5.6.7.8
+
+        # Additional OPT record
+        b'\x00' # NAME (.)
+        b'\x00\x29' # TYPE (OPT 41)
+        b'\x10\x00' # UDP Payload Size (4096)
+        b'\x00' # Extended RCODE
+        b'\x03' # EDNS version
+        b'\x00\x00' # DO bit + Z
+        b'\x00\x00' # RDLENGTH
+        )
+
+
+    @staticmethod
+    def kwargs():
+        return dict(
+            id=256,
+            answer=1,
+            opCode=dns.OP_STATUS,
+            auth=1,
+            recDes=1,
+            recAv=1,
+            rCode=15,
+            ednsVersion=None,
+            dnssecOK=True,
+            queries=[dns.Query(b'example.com', dns.SOA)],
+            answers=[
+                dns.RRHeader(
+                    b'example.com',
+                    type=dns.SOA,
+                    ttl=0xffffffff,
+                    auth=True,
+                    payload=dns.Record_SOA(
+                        ttl=0xffffffff,
+                        mname=b'ns1.example.com',
+                        rname=b'hostmaster.example.com',
+                        serial=0xfffffffe,
+                        refresh=0x7ffffffd,
+                        retry=0x7ffffffc,
+                        expire=0x7ffffffb,
+                        minimum=0xfffffffa,
+                        ))],
+            authority=[
+                dns.RRHeader(
+                    b'example.com',
+                    type=dns.NS,
+                    ttl=0xffffffff,
+                    auth=True,
+                    payload=dns.Record_NS(
+                        'ns1.example.com', ttl=0xffffffff))],
+            additional=[
+                dns.RRHeader(
+                    b'ns1.example.com',
+                    type=dns.A,
+                    ttl=0xffffffff,
+                    auth=True,
+                    payload=dns.Record_A(
+                        '5.6.7.8', ttl=0xffffffff))])
 
 
 
@@ -2931,6 +3041,17 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
             self.messageFactory(ednsVersion=None).ednsVersion, None)
 
 
+    def test_dnssecOK(self):
+        """
+        L{dns._EDNSMessage.__init__} accepts an optional dnssecOK argument
+        whose default value is False and which is saved as a public
+        instance attribute.
+        """
+        self.assertFalse(self.messageFactory().dnssecOK)
+        self.assertTrue(
+            self.messageFactory(dnssecOK=True).dnssecOK)
+
+
     def test_queries(self):
         """
         L{dns._EDNSMessage.__init__} accepts an optional queries argument
@@ -3007,7 +3128,7 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
         auth, trunc, recDes, recAv attributes of the message.
         """
         self.assertEqual(
-            repr(self.messageFactory(**MESSAGE_COMPLETE.kwargs())),
+            repr(self.messageFactory(**EDNS_MESSAGE_COMPLETE.kwargs())),
             '<_EDNSMessage '
             'id=256 '
             'answer=1 '
@@ -3018,6 +3139,7 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
             'recAv=1 '
             'rCode=15 '
             'ednsVersion=None '
+            'dnssecOK=True '
             "queries=[Query('example.com', 6, 1)] "
             'answers=['
             '<RR name=example.com type=SOA class=IN ttl=4294967295s auth=True>'
@@ -3159,6 +3281,18 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
             self.messageFactory(ednsVersion=1),
             self.messageFactory(ednsVersion=1),
             self.messageFactory(ednsVersion=None),
+            )
+
+
+    def test_dnssecOK(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        dnssecOK.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(dnssecOK=True),
+            self.messageFactory(dnssecOK=True),
+            self.messageFactory(dnssecOK=False),
             )
 
 
