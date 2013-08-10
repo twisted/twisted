@@ -2859,6 +2859,7 @@ class EDNS_MESSAGE_COMPLETE:
             rCode=15,
             ednsVersion=3,
             dnssecOK=True,
+            maxSize=1024,
             queries=[dns.Query(b'example.com', dns.SOA)],
             answers=[
                 dns.RRHeader(
@@ -3150,6 +3151,7 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
             'rCode=15 '
             'ednsVersion=3 '
             'dnssecOK=True '
+            'maxSize=1024 '
             "queries=[Query('example.com', 6, 1)] "
             'answers=['
             '<RR name=example.com type=SOA class=IN ttl=4294967295s auth=True>'
@@ -3303,6 +3305,18 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
             self.messageFactory(dnssecOK=True),
             self.messageFactory(dnssecOK=True),
             self.messageFactory(dnssecOK=False),
+            )
+
+
+    def test_maxSize(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        maxSize.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(maxSize=2048),
+            self.messageFactory(maxSize=2048),
+            self.messageFactory(maxSize=1024),
             )
 
 
