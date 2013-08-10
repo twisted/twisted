@@ -3396,6 +3396,27 @@ class MessageStandardEncodingTests(EDNSMessageStandardEncodingTests):
         return m
 
 
+
+class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
+    """
+    Tests for the encoding and decoding of various EDNS messages.
+
+    These test will not work with L{dns.Message}.
+    """
+    messageFactory = dns._EDNSMessage
+
+    def test_ednsMessageDecodeStripsOptRecords(self):
+        """
+        The L(_EDNSMessage} instance created by
+        L{dns._EDNSMessage.decode} from an EDNS query never includes
+        OPT records in the additional section.
+        """
+        m = self.messageFactory()
+        m.fromStr(MESSAGE_EDNS_QUERY.bytes)
+
+        self.assertEqual(m.additional, [])
+
+
     def test_ednsMessageDecodeMultipleOptRecords(self):
         """
         An L(_EDNSMessage} instance created from a byte string
@@ -3508,24 +3529,3 @@ def sendMessage():
     p = dns.DNSDatagramProtocol(None)
     p.startListening()
     p.writeMessage(m, ('199.6.0.30', 53))
-
-
-
-class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
-    """
-    Tests for the encoding and decoding of various EDNS messages.
-
-    These test will not work with L{dns.Message}.
-    """
-    messageFactory = dns._EDNSMessage
-
-    def test_ednsMessageDecodeStripsOptRecords(self):
-        """
-        The L(_EDNSMessage} instance created by
-        L{dns._EDNSMessage.decode} from an EDNS query never includes
-        OPT records in the additional section.
-        """
-        m = self.messageFactory()
-        m.fromStr(MESSAGE_EDNS_QUERY.bytes)
-
-        self.assertEqual(m.additional, [])
