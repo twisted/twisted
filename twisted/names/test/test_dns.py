@@ -2999,6 +2999,16 @@ class EDNSMessageTests(unittest.SynchronousTestCase):
         self.assertEqual(self.messageFactory(rCode=123).rCode, 123)
 
 
+    def test_maxSize(self):
+        """
+        L{dns._EDNSMessage.__init__} accepts an optional maxSize argument
+        whose default value is 512 and which is saved as a public
+        instance attribute.
+        """
+        self.assertEqual(self.messageFactory().maxSize, 512)
+        self.assertEqual(self.messageFactory(maxSize=1024).maxSize, 1024)
+
+
     def test_rrLists(self):
         """
         L{dns._EDNSMessage} instances have public list attributes for

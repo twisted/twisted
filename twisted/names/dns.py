@@ -2187,7 +2187,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     def __init__(self, id=0, answer=0,
                  opCode=OP_QUERY, auth=0,
                  trunc=0, recDes=0,
-                 recAv=0, rCode=0, ednsVersion=0, dnssecOK=False,
+                 recAv=0, rCode=0, ednsVersion=0, dnssecOK=False, maxSize=512,
                  queries=None, answers=None, authority=None, additional=None):
         """
         All arguments are stored as attributes with the same names.
@@ -2205,6 +2205,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @type rCode: C{int}
         @type ednsVersion: C{int} or C{None}
         @type dnssecOK: C{bool}
+        @type maxSize: C{int}
         @type queries: C{list} of L{Query}
         @type answers: C{list} of L{RRHeader}
         @type authority: C{list} of L{RRHeader}
@@ -2228,6 +2229,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.rCode = rCode
         self.ednsVersion = ednsVersion
         self.dnssecOK = dnssecOK
+        self.maxSize = maxSize
 
         self.queries = queries or []
         self.answers = answers or []
