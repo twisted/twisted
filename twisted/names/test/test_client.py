@@ -766,6 +766,35 @@ class ResolverTests(unittest.TestCase):
         self.assertIdentical(f, f2)
 
 
+    def test_pendingEmptiedInPlaceOnError(self):
+        """
+        When the TCP connection attempt fails, the
+        L{client.Resolver.pending} list is emptied in place. It is not
+        replaced with a new empty list.
+        """
+        reactor = proto_helpers.MemoryReactor()
+        resolver = client.Resolver(
+            servers=[('192.0.2.100', 53)],
+            reactor=reactor)
+
+        d = resolver.queryTCP(dns.Query('example.com'))
+
+        host, port, factory, timeout, bindAddress = reactor.tcpClients[0]
+
+        prePending = resolver.pending
+        self.assertEqual(len(prePending), 1)
+
+        class SentinelException(Exception):
+            pass
+
+        factory.clientConnectionFailed(
+            reactor.connectors[0], failure.Failure(SentinelException()))
+
+        self.failureResultOf(d, SentinelException)
+        self.assertIdentical(resolver.pending, prePending)
+        self.assertEqual(len(prePending), 0)
+
+
 
 class ClientTestCase(unittest.TestCase):
 

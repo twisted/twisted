@@ -530,7 +530,8 @@ class DNSClientFactory(protocol.ClientFactory):
         # pending list. This prevents triggering new deferreds which
         # may be added by callback or errback functions on the current
         # deferreds.
-        pending, self.controller.pending = self.controller.pending, []
+        pending = self.controller.pending[:]
+        del self.controller.pending[:]
         for d, query, timeout in pending:
             d.errback(reason)
 
