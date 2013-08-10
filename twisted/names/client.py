@@ -498,6 +498,8 @@ class ThreadedResolver(_ThreadedResolverImpl):
             "instead.",
             category=DeprecationWarning, stacklevel=2)
 
+
+
 class DNSClientFactory(protocol.ClientFactory):
     def __init__(self, controller, timeout = 10):
         self.controller = controller
@@ -506,6 +508,32 @@ class DNSClientFactory(protocol.ClientFactory):
 
     def clientConnectionLost(self, connector, reason):
         pass
+
+
+    def clientConnectionFailed(self, connector, reason):
+        """
+        Fail all pending TCP DNS queries if the TCP connection attempt
+        fails.
+
+        @see: L{twisted.internet.protocol.ClientFactory}
+
+        @param connector: Not used.
+        @type connector: L{twisted.internet.interfaces.IConnector}
+
+        @param reason: A C{Failure} containing information about the
+            cause of the connection failure. This will be passed as the
+            argument to C{errback} on every pending TCP query
+            C{deferred}.
+        @type reason: L{twisted.python.failure.Failure}
+        """
+        # Copy the current pending deferreds then reset the master
+        # pending list. This prevents triggering new deferreds which
+        # may be added by callback or errback functions on the current
+        # deferreds.
+        pending = self.controller.pending[:]
+        del self.controller.pending[:]
+        for d, query, timeout in pending:
+            d.errback(reason)
 
 
     def buildProtocol(self, addr):
