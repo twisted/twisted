@@ -3523,9 +3523,3 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         self.assertEqual(
             self.messageFactory(**MESSAGE_EDNS_QUERY.kwargs()).toStr(),
             MESSAGE_EDNS_QUERY.bytes)
-
-
-def sendMessage():
-    p = dns.DNSDatagramProtocol(None)
-    p.startListening()
-    p.writeMessage(m, ('199.6.0.30', 53))
