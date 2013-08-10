@@ -330,7 +330,7 @@ class Resolver(common.ResolverBase):
         return d
 
 
-    def queryTCP(self, queries, timeout = 10):
+    def queryTCP(self, queries, timeout=10):
         """
         Make a number of DNS queries via TCP.
 
@@ -339,6 +339,9 @@ class Resolver(common.ResolverBase):
 
         @type timeout: C{int}
         @param timeout: The number of seconds after which to fail.
+            XXX: This is not an overall timeout. It is applied
+            independently to the TCP connection and then to the
+            DNSProtocol response.
 
         @rtype: C{Deferred}
         """
@@ -347,7 +350,7 @@ class Resolver(common.ResolverBase):
             if address is None:
                 return defer.fail(IOError("No domain name servers available"))
             host, port = address
-            self._reactor.connectTCP(host, port, self.factory)
+            self._reactor.connectTCP(host, port, self.factory, timeout=timeout)
             self.pending.append((defer.Deferred(), queries, timeout))
             return self.pending[-1][0]
         else:
