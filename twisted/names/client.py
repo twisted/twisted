@@ -412,6 +412,13 @@ class Resolver(common.ResolverBase):
 
     # This one doesn't ever belong on UDP
     def lookupZone(self, name, timeout=10):
+        """
+        XXX: In this instance, the timeout is used as an overall
+        timeout. But here again, the timeout is not passed to
+        connectTCP so the default 30s applies for the TCP connection
+        step, regardless of the lookupZone timeout. Shall I fix that
+        here or in a separate ticket.
+        """
         address = self.pickServer()
         if address is None:
             return defer.fail(IOError('No domain name servers available'))
@@ -421,6 +428,7 @@ class Resolver(common.ResolverBase):
         factory = DNSClientFactory(controller, timeout)
         factory.noisy = False #stfu
 
+        # XXX: timeout not used for connectTCP...
         connector = self._reactor.connectTCP(host, port, factory)
         controller.timeoutCall = self._reactor.callLater(
             timeout or 10, self._timeoutZone, d, controller,
