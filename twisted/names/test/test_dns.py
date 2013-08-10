@@ -2839,7 +2839,7 @@ class EDNS_MESSAGE_COMPLETE:
         # Additional OPT record
         b'\x00' # NAME (.)
         b'\x00\x29' # TYPE (OPT 41)
-        b'\x10\x00' # UDP Payload Size (4096)
+        b'\x04\x00' # UDP Payload Size (1024)
         b'\x00' # Extended RCODE
         b'\x03' # EDNS version
         b'\x80\x00' # DO: True + Z

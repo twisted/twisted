@@ -2270,7 +2270,8 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
         if self.ednsVersion is not None:
             o = _OPTHeader(version=self.ednsVersion,
-                           dnssecOK=self.dnssecOK)
+                           dnssecOK=self.dnssecOK,
+                           udpPayloadSize=self.maxSize)
             m.additional.append(o)
 
         return m.toStr()
@@ -2330,6 +2331,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
                 opt = optRecords[0]
                 newMessage.ednsVersion = opt.version
                 newMessage.dnssecOK = opt.dnssecOK
+                newMessage.maxSize = opt.udpPayloadSize
 
         return newMessage
 
