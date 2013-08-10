@@ -795,6 +795,23 @@ class ResolverTests(unittest.TestCase):
         self.assertEqual(len(prePending), 0)
 
 
+    def test_queryTCPTimeoutUsedForConnection(self):
+        """
+        L{client.Resolver.queryTCP} accepts an integer timeout
+        argument which is used as the C{timeout} argument to
+        L{IReactorTCP.connectTCP} when attempting a TCP connection to
+        a DNS server.
+        """
+        reactor = proto_helpers.MemoryReactor()
+        resolver = client.Resolver(
+            servers=[('192.0.2.100', 53)],
+            reactor=reactor)
+
+        resolver.queryTCP(dns.Query('example.com'), timeout=4561)
+        host, port, factory, timeout, bindAddress = reactor.tcpClients[0]
+        self.assertEqual(timeout, 4561)
+
+
 
 class ClientTestCase(unittest.TestCase):
 
