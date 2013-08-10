@@ -1,0 +1,4 @@
+The deferred returned by twisted.names.client.Resolver.queryTCP now
+fires with twisted.internet.error.TimeoutError if the TCP connection
+cannot be established within the time specified in the timeout
+argument.
