@@ -2461,7 +2461,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         Read a datagram, extract the message in it and trigger the associated
         Deferred.
         """
-        m = _EDNSMessage()
+        m = Message()
         try:
             m.fromStr(data)
         except EOFError:
