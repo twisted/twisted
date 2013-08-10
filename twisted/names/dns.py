@@ -2267,7 +2267,8 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         m.additional = list(self.additional)
 
         if self.ednsVersion is not None:
-            o = _OPTHeader(version=self.ednsVersion)
+            o = _OPTHeader(version=self.ednsVersion,
+                           dnssecOK=self.dnssecOK)
             m.additional.append(o)
 
         return m.toStr()
@@ -2313,6 +2314,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             # Default to None, it will be updated later when the OPT
             # records are parsed.
             ednsVersion=None,
+            dnssecOK=False,
             queries=list(message.queries),
             answers=list(message.answers),
             authority=list(message.authority),
@@ -2325,6 +2327,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             else:
                 opt = optRecords[0]
                 newMessage.ednsVersion = opt.version
+                newMessage.dnssecOK = opt.dnssecOK
 
         return newMessage
 

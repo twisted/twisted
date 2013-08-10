@@ -2764,7 +2764,7 @@ class MESSAGE_EDNS_QUERY(TestMessage):
         b'\x10\x00' # UDP Payload Size (4096)
         b'\x00' # Extended RCODE
         b'\x03' # EDNS version
-        b'\x00\x00' # DO bit + Z
+        b'\x00\x00' # DO: False + Z
         b'\x00\x00' # RDLENGTH
         )
 
@@ -2799,7 +2799,7 @@ class EDNS_MESSAGE_COMPLETE:
         b'\x00\x01' # query count
         b'\x00\x01' # answer count
         b'\x00\x01' # authorities count
-        b'\x00\x01' # additionals count
+        b'\x00\x02' # additionals count
 
         # Query begins at Byte 12
         b'\x07example\x03com\x00' # QNAME
@@ -2842,7 +2842,7 @@ class EDNS_MESSAGE_COMPLETE:
         b'\x10\x00' # UDP Payload Size (4096)
         b'\x00' # Extended RCODE
         b'\x03' # EDNS version
-        b'\x00\x00' # DO bit + Z
+        b'\x80\x00' # DO: True + Z
         b'\x00\x00' # RDLENGTH
         )
 
@@ -2857,7 +2857,7 @@ class EDNS_MESSAGE_COMPLETE:
             recDes=1,
             recAv=1,
             rCode=15,
-            ednsVersion=None,
+            ednsVersion=3,
             dnssecOK=True,
             queries=[dns.Query(b'example.com', dns.SOA)],
             answers=[
@@ -3138,7 +3138,7 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
             'recDes=1 '
             'recAv=1 '
             'rCode=15 '
-            'ednsVersion=None '
+            'ednsVersion=3 '
             'dnssecOK=True '
             "queries=[Query('example.com', 6, 1)] "
             'answers=['
@@ -3642,9 +3642,9 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         (C{ednsVersion}, etc) from the supplied OPT record.
         """
         m = self.messageFactory()
-        m.fromStr(MESSAGE_EDNS_QUERY.bytes)
+        m.fromStr(EDNS_MESSAGE_COMPLETE.bytes)
 
-        self.assertEqual(m, self.messageFactory(**MESSAGE_EDNS_QUERY.kwargs()))
+        self.assertEqual(m, self.messageFactory(**EDNS_MESSAGE_COMPLETE.kwargs()))
 
 
     def test_ednsEncode(self):
@@ -3655,5 +3655,5 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         additional section.
         """
         self.assertEqual(
-            self.messageFactory(**MESSAGE_EDNS_QUERY.kwargs()).toStr(),
-            MESSAGE_EDNS_QUERY.bytes)
+            self.messageFactory(**EDNS_MESSAGE_COMPLETE.kwargs()).toStr(),
+            EDNS_MESSAGE_COMPLETE.bytes)
