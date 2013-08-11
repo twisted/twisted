@@ -366,7 +366,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         reactor.callWhenRunning(
             reactor.spawnProcess, proto, sys.executable,
             [sys.executable, "-Wignore", "-c", "\n".join(source)],
-            usePTY=self.usePTY)
+            env=os.environ, usePTY=self.usePTY)
         self.runReactor(reactor)
 
     if platformType != "posix":
