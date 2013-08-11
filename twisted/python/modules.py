@@ -91,8 +91,6 @@ def _isPythonIdentifier(string):
 
     @return: True or False
     """
-    if string == '':
-        return True
     try:
         return re.match('[a-zA-Z_][a-zA-Z0-9_]*$', string) is not None
     except TypeError:
@@ -161,8 +159,7 @@ class _ModuleIteratorHelper:
                         assert pm != self
                         yield pm
                 else:
-                    if (ext or not _isPythonIdentifier(potentialBasename)
-                        or not potentialTopLevel.isdir()):
+                    if (ext or not potentialTopLevel.isdir()):
                         continue
                     modname = self._subModuleName(potentialTopLevel.basename())
                     for ext in PYTHON_EXTENSIONS:
