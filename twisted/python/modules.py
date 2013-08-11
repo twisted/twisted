@@ -159,11 +159,11 @@ class _ModuleIteratorHelper:
                         assert pm != self
                         yield pm
                 else:
-                    if (ext or not potentialTopLevel.isdir()):
+                    if ext or not potentialTopLevel.isdir():
                         continue
                     modname = self._subModuleName(potentialTopLevel.basename())
                     for ext in PYTHON_EXTENSIONS:
-                        initpy = potentialTopLevel.child("__init__"+ext)
+                        initpy = potentialTopLevel.child("__init__" + ext)
                         if initpy.exists() and modname not in yielded:
                             yielded[modname] = True
                             pm = PythonModule(modname, initpy, self._getEntry())
@@ -365,7 +365,7 @@ class PythonAttribute:
 
 
     def __repr__(self):
-        return 'PythonAttribute<%r>'%(self.name,)
+        return 'PythonAttribute<%r>' % (self.name,)
 
 
     def isLoaded(self):
@@ -588,8 +588,8 @@ class PythonModule(_ModuleIteratorHelper):
     def walkModules(self, importPackages=False):
         if importPackages and self.isPackage():
             self.load()
-        return super(PythonModule, self
-                     ).walkModules(importPackages=importPackages)
+        return super(PythonModule, self).walkModules(
+            importPackages=importPackages)
 
 
     def _subModuleName(self, mn):
