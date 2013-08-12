@@ -76,29 +76,30 @@ class LatexSpitterTests(TestCase):
         """
         pre = Element('pre')
         text = Text()
-        text.data = u"\nfoo\n"
+        text.data = u"\n\n\nfoo\nbar\n\n\n"
         pre.appendChild(text)
 
         self.spitter.visitNode(pre)
         self.assertEqual(
             ''.join(self.output),
-            "\\begin{verbatim}\nfoo\n\\end{verbatim}\n")
+            '\\begin{verbatim}\nfoo\nbar\n\\end{verbatim}\n')
 
 
     def test_code(self):
         """
         L{LatexSpitter.visitNode} emits a C{texttt} block when it encounters a
-        I{code} element.
+        I{code} element and inserts optional linebreaks at sensible places in
+        absolute python names.
         """
         code = Element('code')
         text = Text()
-        text.data = u"print"
+        text.data = u"print this: twisted.lore.latex"
         code.appendChild(text)
 
         self.spitter.visitNode(code)
         self.assertEqual(
             ''.join(self.output),
-            "\\texttt{print}")
+            "\\texttt{print this: twisted.\\linebreak[1]lore.\\linebreak[1]latex}")
 
 
     def test_skipComments(self):

@@ -61,29 +61,30 @@ d = options
 
 class RemoveBlanksTests(unittest.TestCase):
     """
-    Tests for L{tree._removeLeadingBlanks} and
-    L{tree._removeLeadingTrailingBlanks}.
+    Tests for L{tree._removeLeadingBlankLines} and
+    L{tree._removeLeadingTrailingBlankLines}.
     """
-
-    def test_removeLeadingBlanks(self):
-        """
-        L{tree._removeLeadingBlanks} removes leading and trailing whitespace
-        from each string in the C{lines} list and returns them as a list.
-        """
-        lines = [' a', 'b ', ' c ']
-        result = tree._removeLeadingBlanks(lines)
-        self.assertEqual(lines, result)
+    def setUp(self):
+        self.inputString = '\n\n\n\nfoo\nbar\n\n\n'
 
 
-    def test_removeLeadingTrailingBlanks(self):
+    def test_removeLeadingBlankLines(self):
         """
-        L{tree._removeLeadingTrailingBlanks} breaks a string into lines, strips
-        leading and trailing whitespace from each line, and returns a string
-        with all lines joined, separated by a newline character.
+        L{tree._removeLeadingBlankLines} removes leading blank lines from a
+        a string and returns a list containing the remaining characters.
         """
-        inputString = 'a b c'
-        result = tree._removeLeadingTrailingBlanks(inputString)
-        self.assertEqual(result, 'a b c\n')
+        result = tree._removeLeadingBlankLines(self.inputString)
+        self.assertEqual(result,
+            ['f', 'o', 'o', '\n', 'b', 'a', 'r', '\n', '\n', '\n'])
+
+
+    def test_removeLeadingTrailingBlankLines(self):
+        """
+        L{tree._removeLeadingTrailingBlankLines} removes leading and trailing
+        blank lines from a string and returns a string with all lines joined.
+        """
+        result = tree._removeLeadingTrailingBlankLines(self.inputString)
+        self.assertEqual(result, 'foo\nbar\n')
 
 
 

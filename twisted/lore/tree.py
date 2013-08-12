@@ -206,7 +206,7 @@ def addPyListings(document, dir):
         howManyLines = len(lines)
         data = '\n'.join(lines)
 
-        data = cStringIO.StringIO(_removeLeadingTrailingBlanks(data))
+        data = cStringIO.StringIO(_removeLeadingTrailingBlankLines(data))
         htmlizer.filter(data, outfile, writer=htmlizer.SmallerHTMLWriter)
         sourceNode = dom.parseString(outfile.getvalue()).documentElement
         sourceNode.insertBefore(_makeLineNumbers(howManyLines), sourceNode.firstChild)
@@ -251,15 +251,15 @@ def _replaceWithListing(node, val, filename, class_):
 
 
 
-def _removeLeadingBlanks(lines):
+def _removeLeadingBlankLines(lines):
     """
-    Removes leading and trailing whitespace from each string
-    in the C{lines} list and returns them as a list.
+    Removes leading blank lines from C{lines} and returns a list containing the
+    remaining characters.
 
-    @param lines: A list of strings.
-    @type lines: C{list}
+    @param lines: Input string.
+    @type lines: L{str}
     @rtype: C{list}
-    @return: List of lines.
+    @return: List of characters.
     """
     ret = []
     for line in lines:
@@ -269,20 +269,20 @@ def _removeLeadingBlanks(lines):
 
 
 
-def _removeLeadingTrailingBlanks(inputString):
+def _removeLeadingTrailingBlankLines(inputString):
     """
-    Breaks input string C{inputString} into lines, strips leading and trailing
-    whitespace from each line, and returns a string with all lines joined,
+    Splits input string C{inputString} into lines, strips leading and trailing
+    blank lines, and returns a string with all lines joined, each line
     separated by a newline character.
 
     @param inputString: The input string.
     @type inputString: L{str}
     @rtype: L{str}
-    @return: String containing concencated lines.
+    @return: String containing normalized lines.
     """
-    lines = _removeLeadingBlanks(inputString.split('\n'))
+    lines = _removeLeadingBlankLines(inputString.split('\n'))
     lines.reverse()
-    lines = _removeLeadingBlanks(lines)
+    lines = _removeLeadingBlankLines(lines)
     lines.reverse()
     return '\n'.join(lines) + '\n'
 

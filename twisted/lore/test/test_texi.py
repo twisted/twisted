@@ -23,7 +23,8 @@ class TexiSpitterTests(TestCase):
 
     def test_title(self):
         """
-        L{TexiSpitter.visitNode} writes out title information.
+        L{TexiSpitter.visitNode} emits I{@node} and I{@section} blocks when it
+        encounters a I{title} element.
         """
         titleElement = Element('title')
         text = Text()
@@ -32,6 +33,29 @@ class TexiSpitterTests(TestCase):
 
         self.spitter.visitNode(titleElement)
         self.assertEqual(''.join(self.output), '@node bar\n@section bar\n')
+
+
+    def test_titleWithHeader(self):
+        """
+        L{TexiSpitter.visitNode} emits I{@subsection} and I{@menu} blocks when
+        it encounters a header (h2 or h3) in a I{title} element.
+        """
+        titleElement = Element('title')
+        text = Text()
+        text.data = u'bar'
+        titleElement.appendChild(text)
+
+        head = Element('h2')
+        first = Text()
+        first.data = u'header1'
+        head.appendChild(first)
+        titleElement.appendChild(head)
+
+        self.spitter.visitNode(titleElement)
+        self.assertEqual(''.join(self.output),
+            '@node bar\n\n@node header1\n\n\n@subsection header1\n\n'
+            '@section bar\n\n@node header1\n\n\n@subsection header1\n\n'
+            '@menu\n* header1::\n@end menu\n')
 
 
     def test_pre(self):
