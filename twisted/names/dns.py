@@ -2086,95 +2086,39 @@ class Message:
 
 class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
-    An C{EDNS} message.
+    An I{EDNS} message.
 
     Designed for compatibility with L{Message} but with a narrower
     public interface.
 
     Most importantly, L{_EDNSMessage.fromStr} will interpret and
-    remove OPT records that are present in the additional records
+    remove I{OPT} records that are present in the additional records
     section.
 
-    The OPT records are used to populate certain EDNS specific
+    The I{OPT} records are used to populate certain I{EDNS} specific
     attributes.
 
-    L{_EDNSMessage.toStr} will add suitable OPT records to the
+    L{_EDNSMessage.toStr} will add suitable I{OPT} records to the
     additional section to represent the extended EDNS information.
 
     @see: U{https://tools.ietf.org/html/rfc6891}
 
-    @ivar id: A 16 bit identifier assigned by the program that
-        generates any kind of query.  This identifier is copied the
-        corresponding reply and can be used by the requester to match
-        up replies to outstanding queries.
+    @ivar id: See L{__init__}
+    @ivar answer: See L{__init__}
+    @ivar opCode: See L{__init__}
+    @ivar auth: See L{__init__}
+    @ivar trunc: See L{__init__}
+    @ivar recDes: See L{__init__}
+    @ivar recAv: See L{__init__}
+    @ivar rCode: See L{__init__}
+    @ivar ednsVersion: See L{__init__}
+    @ivar dnssecOK: See L{__init__}
+    @ivar maxSize: See L{__init__}
 
-    @ivar answer: A one bit field that specifies whether this message
-        is a query (0), or a response (1).
-
-    @ivar opCode: A four bit field that specifies kind of query in
-        this message.  This value is set by the originator of a query
-        and copied into the response.  The values are:
-                0               a standard query (QUERY)
-                1               an inverse query (IQUERY)
-                2               a server status request (STATUS)
-                3-15            reserved for future use
-
-    @ivar auth: Authoritative Answer - this bit is valid in responses,
-        and specifies that the responding name server is an authority
-        for the domain name in question section.
-
-    @ivar trunc: TrunCation - specifies that this message was
-        truncated due to length greater than that permitted on the
-        transmission channel.
-
-    @ivar recDes: Recursion Desired - this bit may be set in a query
-        and is copied into the response.  If RD is set, it directs the
-        name server to pursue the query recursively.  Recursive query
-        support is optional.
-
-    @ivar recAv: Recursion Available - this be is set or cleared in a
-        response, and denotes whether recursive query support is
-        available in the name server.
-
-    @ivar rCode: Response code - this 4 bit field is set as part of
-        responses.  The values have the following interpretation:
-                0               No error condition
-
-                1               Format error - The name server was
-                                unable to interpret the query.
-                2               Server failure - The name server was
-                                unable to process this query due to a
-                                problem with the name server.
-
-                3               Name Error - Meaningful only for
-                                responses from an authoritative name
-                                server, this code signifies that the
-                                domain name referenced in the query does
-                                not exist.
-
-                4               Not Implemented - The name server does
-                                not support the requested kind of query.
-
-                5               Refused - The name server refuses to
-                                perform the specified operation for
-                                policy reasons.  For example, a name
-                                server may not wish to provide the
-                                information to the particular requester,
-                                or a name server may not wish to perform
-                                a particular operation (e.g., zone
-                                transfer) for particular data.
-
-    @ivar ednsVersion: Indicates the EDNS implementation level. Set to
-        C{None} to prevent any EDNS attributes and options being added
-        to the encoded byte string.
-
-    @ivar queries: A L{list} of L{Query} instances.
-
-    @ivar answers: A L{list} of L{RRHeader} instances.
-
-    @ivar authority: A L{list} of L{RRHeader} instances.
-
-    @ivar additional: A L{list} of L{RRHeader} instances.
+    @ivar queries: See L{__init__}
+    @ivar answers: See L{__init__}
+    @ivar authority: See L{__init__}
+    @ivar additional: See L{__init__}
     """
 
     showAttributes = (
@@ -2184,46 +2128,78 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     compareAttributes = showAttributes
 
-    def __init__(self, id=0, answer=0,
-                 opCode=OP_QUERY, auth=0,
-                 trunc=0, recDes=0,
-                 recAv=0, rCode=0, ednsVersion=0, dnssecOK=False, maxSize=512,
+    def __init__(self, id=0, answer=False,
+                 opCode=OP_QUERY, auth=False,
+                 trunc=False, recDes=False,
+                 recAv=False, rCode=0, ednsVersion=0, dnssecOK=False, maxSize=512,
                  queries=None, answers=None, authority=None, additional=None):
         """
-        All arguments are stored as attributes with the same names.
+        @param id: A 16 bit identifier assigned by the program that
+            generates any kind of query.  This identifier is copied
+            the corresponding reply and can be used by the requester
+            to match up replies to outstanding queries.
+        @type id: L{int}
 
-        @see: L{_EDNSMessage} for an explanation of the meaning of
-            each attribute.
+        @param answer: A one bit field that specifies whether this
+            message is a query (0), or a response (1).
+        @type answer: L{bool}
 
-        @type id: C{int}
-        @type answer: C{int}
-        @type opCode: C{int}
-        @type auth: C{int}
-        @type trunc: C{int}
-        @type recDes: C{int}
-        @type recAv: C{int}
-        @type rCode: C{int}
-        @type ednsVersion: C{int} or C{None}
+        @param opCode: A four bit field that specifies kind of query in
+            this message.  This value is set by the originator of a query
+            and copied into the response.
+        @type opCode: L{int}
+
+        @param auth: Authoritative Answer - this bit is valid in
+            responses, and specifies that the responding name server
+            is an authority for the domain name in question section.
+        @type auth: L{bool}
+
+        @param trunc: TrunCation - specifies that this message was
+            truncated due to length greater than that permitted on the
+            transmission channel.
+        @type trunc: L{bool}
+
+        @param recDes: Recursion Desired - this bit may be set in a
+            query and is copied into the response.  If RD is set, it
+            directs the name server to pursue the query recursively.
+            Recursive query support is optional.
+        @type recDes: L{bool}
+
+        @param recAv: Recursion Available - this bit is set or cleared
+            in a response, and denotes whether recursive query support
+            is available in the name server.
+        @type recAv: L{bool}
+
+        @param rCode: Extended 12-bit RCODE (together with the 4 bits
+            defined in [RFC1035].  Note that EXTENDED-RCODE value 0
+            indicates that an unextended RCODE is in use (values 0
+            through 15).
+        @type rCode: L{int}
+
+        @param ednsVersion: Indicates the EDNS implementation level. Set to
+            L{None} to prevent any EDNS attributes and options being added
+            to the encoded byte string.
+        @type ednsVersion: L{int} or L{None}
+
+        @param dnssecOK: DNSSEC OK bit as defined by [RFC3225].
         @type dnssecOK: C{bool}
-        @type maxSize: C{int}
-        @type queries: C{list} of L{Query}
-        @type answers: C{list} of L{RRHeader}
-        @type authority: C{list} of L{RRHeader}
-        @type additional: C{list} of L{RRHeader}
+
+        @param maxSize: The requestor's UDP payload size is the number
+            of octets of the largest UDP payload that can be
+            reassembled and delivered in the requestor's network
+            stack.
+        @type maxSize: L{int}
+
+        @type queries: L{list} of L{Query}
+        @type answers: L{list} of L{RRHeader}
+        @type authority: L{list} of L{RRHeader}
+        @type additional: L{list} of L{RRHeader}
         """
         self.id = id
         self.answer = answer
         self.opCode = opCode
-
-        # XXX: AA bit can be determined by checking for an
-        # authoritative answer record whose name matches the query
-        # name - perhaps in a higher level EDNSResponse class?
         self.auth = auth
-
-        # XXX: TC bit can be determined during encoding based on EDNS max
-        # packet size.
         self.trunc = trunc
-
         self.recDes = recDes
         self.recAv = recAv
         self.rCode = rCode
@@ -2231,10 +2207,21 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.dnssecOK = dnssecOK
         self.maxSize = maxSize
 
-        self.queries = queries or []
-        self.answers = answers or []
-        self.authority = authority or []
-        self.additional = additional or []
+        if queries is None:
+            queries = []
+        self.queries = queries
+
+        if answers is None:
+            answers = []
+        self.answers = answers
+
+        if authority is None:
+            authority = []
+        self.authority = authority
+
+        if additional is None:
+            additional = []
+        self.additional = additional
 
         self._decodingErrors = []
 
@@ -2253,20 +2240,18 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         """
         m = Message(
             id=self.id,
-            answer=self.answer,
+            answer=int(self.answer),
             opCode=self.opCode,
-            auth=self.auth,
-            trunc=self.trunc,
-            recDes=self.recDes,
-            recAv=self.recAv,
-            rCode=self.rCode,
+            auth=int(self.auth),
+            trunc=int(self.trunc),
+            recDes=int(self.recDes),
+            recAv=int(self.recAv),
+            rCode=self.rCode)
 
-            maxSize=512)
-
-        m.queries = list(self.queries)
-        m.answers = list(self.answers)
-        m.authority = list(self.authority)
-        m.additional = list(self.additional)
+        m.queries = self.queries[:]
+        m.answers = self.answers[:]
+        m.authority = self.authority[:]
+        m.additional = self.additional[:]
 
         if self.ednsVersion is not None:
             o = _OPTHeader(version=self.ednsVersion,
@@ -2293,9 +2278,15 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         and assigned to C{self.rCode}.
 
         If multiple I{OPT} records are found, this is considered an
-        error and no EDNS specific attributes will be
+        error and no I{EDNS} specific attributes will be
         set. Additionally, an L{EFORMAT} error will be appended to
         C{_decodingErrors}.
+
+        @param message: The source L{Message}.
+        @type message: L{Message}
+
+        @return: A new L{_EDNSMessage}
+        @rtype: L{_EDNSMessage}
         """
         additional = []
         optRecords = []
@@ -2307,20 +2298,20 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
         newMessage = cls(
             id=message.id,
-            answer=message.answer,
+            answer=bool(message.answer),
             opCode=message.opCode,
-            auth=message.auth,
-            trunc=message.trunc,
-            recDes=message.recDes,
-            recAv=message.recAv,
+            auth=bool(message.auth),
+            trunc=bool(message.trunc),
+            recDes=bool(message.recDes),
+            recAv=bool(message.recAv),
             rCode=message.rCode,
             # Default to None, it will be updated later when the OPT
             # records are parsed.
             ednsVersion=None,
             dnssecOK=False,
-            queries=list(message.queries),
-            answers=list(message.answers),
-            authority=list(message.authority),
+            queries=message.queries[:],
+            answers=message.answers[:],
+            authority=message.authority[:],
             additional=additional,
             )
 
@@ -2341,14 +2332,15 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         Decode from wire format, saving flags, values and records to
         this L{_EDNSMessage} instance in place.
 
-        @type bytes: L{bytes}
         @param bytes: The full byte string to be decoded.
+        @type bytes: L{bytes}
         """
         m = Message()
         m.fromStr(bytes)
 
         ednsMessage = self.fromMessage(m)
-        self.__dict__ = ednsMessage.__dict__
+        for attrName in self.compareAttributes + ('_decodingErrors',):
+            setattr(self, attrName, getattr(ednsMessage, attrName))
 
 
 

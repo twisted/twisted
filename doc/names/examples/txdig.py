@@ -15,10 +15,7 @@ methods because I want to choose the transport protocol and because
 these functions return a message instance instead of just the record
 sections.
 
-This example relies on _EDNSMessage, which I've temporarily copied
-from ticket:5675 into twisted.names.edns.
-
-I've also hacked together some supporting classes in that module which
+I've hacked together some supporting classes in that module which
 demonstrate how _EDNSMessage can be integrated with the existing
 protocol and factory classes with some subclasses. More comments in
 edns.py.

@@ -9,7 +9,7 @@ Usage: twistd -noy doc/names/examples/edns_auth_server.tac.py
 This server uses the protocol hacks from edns.py
 
 The important thing is that because messages are decoded using
-EDNSMessage rather than dns.Message, OPT records are extracted from
+dns._EDNSMessage rather than dns.Message, OPT records are extracted from
 the additional section of EDNS query messages during decoding.
 
 This is one way of fixing #6645.
@@ -23,7 +23,7 @@ Ultimately, DNSServerFactory will need modifying or replacing so that
 it can dynamically respond using the correct EDNS settings and RCODE
 based on the client request.
 
-EDNSMessage will also need to be made aware of RRSets so that it can
+dns._EDNSMessage will also need to be made aware of RRSets so that it can
 correctly limit the size of (or truncate) responses based on the
 chosen maxSize.
  * https://twistedmatrix.com/trac/wiki/EDNS0#Selectivetruncate

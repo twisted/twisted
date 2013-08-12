@@ -2492,72 +2492,59 @@ class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
 
 
 
-class TestMessage(object):
+class MessageEmpty(object):
     """
-    A container class containing an I{EDNS message} byte string and a
-    C{kwargs} function which returns a L{dict} containing arguments
-    for constructing the corresponding L{dns._EDNSMessage} instance.
-
-    @ivar bytes: A L{bytes} instance containing the encoded I{EDNS}
-        message byte string.
+    Generate byte string and constructor arguments for an empty
+    L{dns._EDNSMessage}.
     """
-    bytes = b''
-
-    @staticmethod
-    def kwargs():
-        """
-        @return: a L{dict} of keyword arguments suitable for the
-            constructor of L{dns._EDNSMessage}.
-        """
-        raise NotImplemented()
-
-
-
-class MESSAGE_EMPTY(TestMessage):
-    """
-    A non-edns message without any queries or records.
-    """
-    bytes = (
-        b'\x01\x00' # id: 256
-        b'\x91' # QR: 1, OPCODE: 2, AA: 0, TC: 0, RD: 1
-        b'\x8f' # RA: 1, Z, RCODE: 15
-        b'\x00\x00' # number of queries
-        b'\x00\x00' # number of answers
-        b'\x00\x00' # number of authorities
-        b'\x00\x00' # number of additionals
+    @classmethod
+    def bytes(cls):
+        return (
+            b'\x01\x00' # id: 256
+            b'\x97' # QR: 1, OPCODE: 2, AA: 0, TC: 0, RD: 1
+            b'\x8f' # RA: 1, Z, RCODE: 15
+            b'\x00\x00' # number of queries
+            b'\x00\x00' # number of answers
+            b'\x00\x00' # number of authorities
+            b'\x00\x00' # number of additionals
         )
 
 
-    @staticmethod
-    def kwargs():
+    @classmethod
+    def kwargs(cls):
         return dict(
             id=256,
-            answer=1,
+            answer=True,
             opCode=dns.OP_STATUS,
-            recDes=1,
-            recAv=1,
+            auth=True,
+            trunc=True,
+            recDes=True,
+            recAv=True,
             rCode=15,
-            ednsVersion=None,)
+            ednsVersion=None,
+        )
 
 
 
-class MESSAGE_TRUNCATED(TestMessage):
+class MessageTruncated(object):
     """
     An empty response message whose TR bit is set to 1.
     """
-    bytes = (
-        b'\x01\x00' # id: 256
-        b'\x82' # QR: 1, OPCODE: 0, AA: 0, TC: 1, RD: 0
-        b'\x00' # RA: 0, Z, RCODE: 0
-        b'\x00\x00' # number of queries
-        b'\x00\x00' # number of answers
-        b'\x00\x00' # number of authorities
-        b'\x00\x00' # number of additionals
+    @classmethod
+    def bytes(cls):
+        return (
+            b'\x01\x00' # id: 256
+            b'\x82' # QR: 1, OPCODE: 0, AA: 0, TC: 1, RD: 0
+            b'\x00' # RA: 0, Z, RCODE: 0
+            b'\x00\x00' # number of queries
+            b'\x00\x00' # number of answers
+            b'\x00\x00' # number of authorities
+            b'\x00\x00' # number of additionals
         )
 
 
-    @staticmethod
-    def kwargs():
+    @classmethod
+    def kwargs(cls):
         return dict(
             id=256,
             answer=1,
@@ -2571,30 +2558,32 @@ class MESSAGE_TRUNCATED(TestMessage):
 
 
 
-class MESSAGE_NONAUTHORITATIVE(TestMessage):
+class MessageNonAuthoritative(object):
     """
     A minimal non-authoritative message.
     """
-    bytes = (
-        b'\x01\x00' #id 256
-        b'\x00' # QR: 0, OPCODE: 0, AA: 0, TC: 0, RD: 0
-        b'\x00' # RA: 0, Z, RCODE: 0
-        b'\x00\x00' # query count
-        b'\x00\x01' # answer count
-        b'\x00\x00' # authorities count
-        b'\x00\x00' # additionals count
-        # Answer
-        b'\x00' # RR NAME (root)
-        b'\x00\x01' # RR TYPE 1 (A)
-        b'\x00\x01' # RR CLASS 1 (IN)
-        b'\x00\x00\x00\x00' # RR TTL
-        b'\x00\x04' # RDLENGTH 4
-        b'\x01\x02\x03\x04' # IPv4 1.2.3.4
+    @classmethod
+    def bytes(cls):
+        return (
+            b'\x01\x00' #id 256
+            b'\x00' # QR: 0, OPCODE: 0, AA: 0, TC: 0, RD: 0
+            b'\x00' # RA: 0, Z, RCODE: 0
+            b'\x00\x00' # query count
+            b'\x00\x01' # answer count
+            b'\x00\x00' # authorities count
+            b'\x00\x00' # additionals count
+            # Answer
+            b'\x00' # RR NAME (root)
+            b'\x00\x01' # RR TYPE 1 (A)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\x00\x00\x00\x00' # RR TTL
+            b'\x00\x04' # RDLENGTH 4
+            b'\x01\x02\x03\x04' # IPv4 1.2.3.4
         )
 
 
-    @staticmethod
-    def kwargs():
+    @classmethod
+    def kwargs(cls):
         return dict(
             id=256,
             auth=0,
@@ -2607,30 +2596,32 @@ class MESSAGE_NONAUTHORITATIVE(TestMessage):
 
 
 
-class MESSAGE_AUTHORITATIVE:
+class MessageAuthoritative(object):
     """
     A minimal authoritative message.
     """
-    bytes = (
-        b'\x01\x00' #id 256
-        b'\x04' # QR: 0, OPCODE: 0, AA: 1, TC: 0, RD: 0
-        b'\x00' # RA: 0, Z, RCODE: 0
-        b'\x00\x00' # query count
-        b'\x00\x01' # answer count
-        b'\x00\x00' # authorities count
-        b'\x00\x00' # additionals count
-        # Answer
-        b'\x00' # RR NAME (root)
-        b'\x00\x01' # RR TYPE 1 (A)
-        b'\x00\x01' # RR CLASS 1 (IN)
-        b'\x00\x00\x00\x00' # RR TTL
-        b'\x00\x04' # RDLENGTH 4
-        b'\x01\x02\x03\x04' # IPv4 1.2.3.4
+    @classmethod
+    def bytes(cls):
+        return (
+            b'\x01\x00' #id 256
+            b'\x04' # QR: 0, OPCODE: 0, AA: 1, TC: 0, RD: 0
+            b'\x00' # RA: 0, Z, RCODE: 0
+            b'\x00\x00' # query count
+            b'\x00\x01' # answer count
+            b'\x00\x00' # authorities count
+            b'\x00\x00' # additionals count
+            # Answer
+            b'\x00' # RR NAME (root)
+            b'\x00\x01' # RR TYPE 1 (A)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\x00\x00\x00\x00' # RR TTL
+            b'\x00\x04' # RDLENGTH 4
+            b'\x01\x02\x03\x04' # IPv4 1.2.3.4
         )
 
 
-    @staticmethod
-    def kwargs():
+    @classmethod
+    def kwargs(cls):
         return dict(
             id=256,
             auth=1,
@@ -2642,61 +2633,63 @@ class MESSAGE_AUTHORITATIVE:
                     auth=True)])
 
 
-class MESSAGE_COMPLETE:
+class MessageComplete:
     """
     An example of a fully populated non-edns response message.
 
     Contains name compression, answers, authority, and
     additional records.
     """
-    bytes = (
-        b'\x01\x00' # id: 256
-        b'\x95' # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
-        b'\x8f' # RA: 1, Z, RCODE: 15
-        b'\x00\x01' # query count
-        b'\x00\x01' # answer count
-        b'\x00\x01' # authorities count
-        b'\x00\x01' # additionals count
+    @classmethod
+    def bytes(cls):
+        return (
+            b'\x01\x00' # id: 256
+            b'\x95' # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
+            b'\x8f' # RA: 1, Z, RCODE: 15
+            b'\x00\x01' # query count
+            b'\x00\x01' # answer count
+            b'\x00\x01' # authorities count
+            b'\x00\x01' # additionals count
 
-        # Query begins at Byte 12
-        b'\x07example\x03com\x00' # QNAME
-        b'\x00\x06' # QTYPE 6 (SOA)
-        b'\x00\x01' # QCLASS 1 (IN)
+            # Query begins at Byte 12
+            b'\x07example\x03com\x00' # QNAME
+            b'\x00\x06' # QTYPE 6 (SOA)
+            b'\x00\x01' # QCLASS 1 (IN)
 
-        # Answers
-        b'\xc0\x0c' # RR NAME (compression ref b12)
-        b'\x00\x06' # RR TYPE 6 (SOA)
-        b'\x00\x01' # RR CLASS 1 (IN)
-        b'\xff\xff\xff\xff' # RR TTL
-        b'\x00\x27' # RDLENGTH 39
-        b'\x03ns1\xc0\x0c' # mname (ns1.example.com (compression ref b15)
-        b'\x0ahostmaster\xc0\x0c' # rname (hostmaster.example.com)
-        b'\xff\xff\xff\xfe' # serial
-        b'\x7f\xff\xff\xfd' # refresh
-        b'\x7f\xff\xff\xfc' # retry
-        b'\x7f\xff\xff\xfb' # expire
-        b'\xff\xff\xff\xfa' # minimum
+            # Answers
+            b'\xc0\x0c' # RR NAME (compression ref b12)
+            b'\x00\x06' # RR TYPE 6 (SOA)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\xff\xff\xff\xff' # RR TTL
+            b'\x00\x27' # RDLENGTH 39
+            b'\x03ns1\xc0\x0c' # mname (ns1.example.com (compression ref b15)
+            b'\x0ahostmaster\xc0\x0c' # rname (hostmaster.example.com)
+            b'\xff\xff\xff\xfe' # serial
+            b'\x7f\xff\xff\xfd' # refresh
+            b'\x7f\xff\xff\xfc' # retry
+            b'\x7f\xff\xff\xfb' # expire
+            b'\xff\xff\xff\xfa' # minimum
 
-        # Authority
-        b'\xc0\x0c' # RR NAME (example.com compression ref b12)
-        b'\x00\x02' # RR TYPE 2 (NS)
-        b'\x00\x01' # RR CLASS 1 (IN)
-        b'\xff\xff\xff\xff' # RR TTL
-        b'\x00\x02' # RDLENGTH
-        b'\xc0\x29' # RDATA (ns1.example.com (compression ref b41)
+            # Authority
+            b'\xc0\x0c' # RR NAME (example.com compression ref b12)
+            b'\x00\x02' # RR TYPE 2 (NS)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\xff\xff\xff\xff' # RR TTL
+            b'\x00\x02' # RDLENGTH
+            b'\xc0\x29' # RDATA (ns1.example.com (compression ref b41)
 
-        # Additional
-        b'\xc0\x29' # RR NAME (ns1.example.com compression ref b41)
-        b'\x00\x01' # RR TYPE 1 (A)
-        b'\x00\x01' # RR CLASS 1 (IN)
-        b'\xff\xff\xff\xff' # RR TTL
-        b'\x00\x04' # RDLENGTH
-        b'\x05\x06\x07\x08' # RDATA 5.6.7.8
+            # Additional
+            b'\xc0\x29' # RR NAME (ns1.example.com compression ref b41)
+            b'\x00\x01' # RR TYPE 1 (A)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\xff\xff\xff\xff' # RR TTL
+            b'\x00\x04' # RDLENGTH
+            b'\x05\x06\x07\x08' # RDATA 5.6.7.8
         )
 
 
-    @staticmethod
-    def kwargs():
+    @classmethod
+    def kwargs(cls):
         return dict(
             id=256,
             answer=1,
@@ -2742,35 +2735,39 @@ class MESSAGE_COMPLETE:
 
 
 
-class MESSAGE_EDNS_QUERY(TestMessage):
+class MessageEDNSQuery(object):
     """
     A minimal EDNS query message.
     """
-    bytes = (
-        b'\x00\x00' # id: 0
-        b'\x00' # QR: 0, OPCODE: 0, AA: 0, TC: 0, RD: 0
-        b'\x00' # RA: 0, Z, RCODE: 0
-        b'\x00\x01' # queries count
-        b'\x00\x00' # anwers count
-        b'\x00\x00' # authority count
-        b'\x00\x01' # additionals count
-        # Queries
-        b'\x03www\x07example\x03com\x00' # QNAME
-        b'\x00\x01' # QTYPE (A)
-        b'\x00\x01' # QCLASS (IN)
-        # Additional
-        b'\x00' # NAME (.)
-        b'\x00\x29' # TYPE (OPT 41)
-        b'\x10\x00' # UDP Payload Size (4096)
-        b'\x00' # Extended RCODE
-        b'\x03' # EDNS version
-        b'\x00\x00' # DO: False + Z
-        b'\x00\x00' # RDLENGTH
+    @classmethod
+    def bytes(cls):
+        return (
+            b'\x00\x00' # id: 0
+            b'\x00' # QR: 0, OPCODE: 0, AA: 0, TC: 0, RD: 0
+            b'\x00' # RA: 0, Z, RCODE: 0
+            b'\x00\x01' # queries count
+            b'\x00\x00' # anwers count
+            b'\x00\x00' # authority count
+            b'\x00\x01' # additionals count
+
+            # Queries
+            b'\x03www\x07example\x03com\x00' # QNAME
+            b'\x00\x01' # QTYPE (A)
+            b'\x00\x01' # QCLASS (IN)
+
+            # Additional OPT record
+            b'\x00' # NAME (.)
+            b'\x00\x29' # TYPE (OPT 41)
+            b'\x10\x00' # UDP Payload Size (4096)
+            b'\x00' # Extended RCODE
+            b'\x03' # EDNS version
+            b'\x00\x00' # DO: False + Z
+            b'\x00\x00' # RDLENGTH
         )
 
 
-    @staticmethod
-    def kwargs():
+    @classmethod
+    def kwargs(cls):
         return dict(
             id=0,
             answer=0,
@@ -2785,75 +2782,78 @@ class MESSAGE_EDNS_QUERY(TestMessage):
             additional=[])
 
 
-class EDNS_MESSAGE_COMPLETE:
+class MessageEDNSComplete(object):
     """
     An example of a fully populated edns response message.
 
     Contains name compression, answers, authority, and
     additional records.
     """
-    bytes = (
-        b'\x01\x00' # id: 256
-        b'\x95' # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
-        b'\x8f' # RA: 1, Z, RCODE: 15
-        b'\x00\x01' # query count
-        b'\x00\x01' # answer count
-        b'\x00\x01' # authorities count
-        b'\x00\x02' # additionals count
+    @classmethod
+    def bytes(cls):
+        return (
+            b'\x01\x00' # id: 256
+            b'\x95' # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
+            b'\x8f' # RA: 1, Z, RCODE: 15
+            b'\x00\x01' # query count
+            b'\x00\x01' # answer count
+            b'\x00\x01' # authorities count
+            b'\x00\x02' # additionals count
 
-        # Query begins at Byte 12
-        b'\x07example\x03com\x00' # QNAME
-        b'\x00\x06' # QTYPE 6 (SOA)
-        b'\x00\x01' # QCLASS 1 (IN)
+            # Query begins at Byte 12
+            b'\x07example\x03com\x00' # QNAME
+            b'\x00\x06' # QTYPE 6 (SOA)
+            b'\x00\x01' # QCLASS 1 (IN)
 
-        # Answers
-        b'\xc0\x0c' # RR NAME (compression ref b12)
-        b'\x00\x06' # RR TYPE 6 (SOA)
-        b'\x00\x01' # RR CLASS 1 (IN)
-        b'\xff\xff\xff\xff' # RR TTL
-        b'\x00\x27' # RDLENGTH 39
-        b'\x03ns1\xc0\x0c' # mname (ns1.example.com (compression ref b15)
-        b'\x0ahostmaster\xc0\x0c' # rname (hostmaster.example.com)
-        b'\xff\xff\xff\xfe' # serial
-        b'\x7f\xff\xff\xfd' # refresh
-        b'\x7f\xff\xff\xfc' # retry
-        b'\x7f\xff\xff\xfb' # expire
-        b'\xff\xff\xff\xfa' # minimum
+            # Answers
+            b'\xc0\x0c' # RR NAME (compression ref b12)
+            b'\x00\x06' # RR TYPE 6 (SOA)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\xff\xff\xff\xff' # RR TTL
+            b'\x00\x27' # RDLENGTH 39
+            b'\x03ns1\xc0\x0c' # mname (ns1.example.com (compression ref b15)
+            b'\x0ahostmaster\xc0\x0c' # rname (hostmaster.example.com)
+            b'\xff\xff\xff\xfe' # serial
+            b'\x7f\xff\xff\xfd' # refresh
+            b'\x7f\xff\xff\xfc' # retry
+            b'\x7f\xff\xff\xfb' # expire
+            b'\xff\xff\xff\xfa' # minimum
 
-        # Authority
-        b'\xc0\x0c' # RR NAME (example.com compression ref b12)
-        b'\x00\x02' # RR TYPE 2 (NS)
-        b'\x00\x01' # RR CLASS 1 (IN)
-        b'\xff\xff\xff\xff' # RR TTL
-        b'\x00\x02' # RDLENGTH
-        b'\xc0\x29' # RDATA (ns1.example.com (compression ref b41)
+            # Authority
+            b'\xc0\x0c' # RR NAME (example.com compression ref b12)
+            b'\x00\x02' # RR TYPE 2 (NS)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\xff\xff\xff\xff' # RR TTL
+            b'\x00\x02' # RDLENGTH
+            b'\xc0\x29' # RDATA (ns1.example.com (compression ref b41)
 
-        # Additional
-        b'\xc0\x29' # RR NAME (ns1.example.com compression ref b41)
-        b'\x00\x01' # RR TYPE 1 (A)
-        b'\x00\x01' # RR CLASS 1 (IN)
-        b'\xff\xff\xff\xff' # RR TTL
-        b'\x00\x04' # RDLENGTH
-        b'\x05\x06\x07\x08' # RDATA 5.6.7.8
+            # Additional
+            b'\xc0\x29' # RR NAME (ns1.example.com compression ref b41)
+            b'\x00\x01' # RR TYPE 1 (A)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\xff\xff\xff\xff' # RR TTL
+            b'\x00\x04' # RDLENGTH
+            b'\x05\x06\x07\x08' # RDATA 5.6.7.8
 
-        # Additional OPT record
-        b'\x00' # NAME (.)
-        b'\x00\x29' # TYPE (OPT 41)
-        b'\x04\x00' # UDP Payload Size (1024)
-        b'\x00' # Extended RCODE
-        b'\x03' # EDNS version
-        b'\x80\x00' # DO: True + Z
-        b'\x00\x00' # RDLENGTH
+            # Additional OPT record
+            b'\x00' # NAME (.)
+            b'\x00\x29' # TYPE (OPT 41)
+            b'\x04\x00' # UDP Payload Size (1024)
+            b'\x00' # Extended RCODE
+            b'\x03' # EDNS version
+            b'\x80\x00' # DO: True + Z
+            b'\x00\x00' # RDLENGTH
         )
 
 
-    @staticmethod
-    def kwargs():
+    @classmethod
+    def kwargs(cls):
         return dict(
             id=256,
             answer=1,
             opCode=dns.OP_STATUS,
             auth=1,
+            trunc=0,
             recDes=1,
             recAv=1,
             rCode=15,
@@ -2910,9 +2910,8 @@ class MessageComparable(FancyEqMixin, FancyStrMixin, dns.Message):
 
 class EDNSMessageTests(unittest.SynchronousTestCase):
     """
-    Tests for L{twisted.names.dns._EDNSMessage}.
-
-    These tests are for APIs that are shared with L{dns.Message}.
+    Tests for aspects of L{twisted.names.dns._EDNSMessage} that are
+    shared with L{dns.Message}.
 
     These tests should pass when C{messageFactory = dns.Message}
     """
@@ -2920,31 +2919,43 @@ class EDNSMessageTests(unittest.SynchronousTestCase):
 
     def test_id(self):
         """
-        L{dns._EDNSMessage.__init__} accepts an optional id argument
-        whose default value is 0 and which is saved as a public
-        instance attribute.
+        L{dns._EDNSMessage.id} defaults to C{0}.
         """
         self.assertEqual(self.messageFactory().id, 0)
-        self.assertEqual(self.messageFactory(1).id, 1)
+
+
+    def test_idOverride(self):
+        """
+        L{dns._EDNSMessage.id} can be overridden in the constructor.
+        """
+        self.assertEqual(self.messageFactory(id=1).id, 1)
 
 
     def test_answer(self):
         """
-        L{dns._EDNSMessage.__init__} accepts an optional answer argument
-        whose default value is 0 and which
-        is saved as a public instance attribute.
+        L{dns._EDNSMessage.answer} defaults to C{False}.
         """
-        self.assertIdentical(self.messageFactory().answer, 0)
-        self.assertIdentical(self.messageFactory(answer=1).answer, 1)
+        self.assertEqual(self.messageFactory().answer, False)
+
+
+    def test_answerOverride(self):
+        """
+        L{dns._EDNSMessage.answer} can be overridden in the constructor.
+        """
+        self.assertEqual(self.messageFactory(answer=True).answer, True)
 
 
     def test_opCode(self):
         """
-        L{dns._EDNSMessage.__init__} accepts an optional opCode argument
-        whose default value is L{dns.OP_QUERY} and which
-        is saved as a public instance attribute.
+        L{dns._EDNSMessage.opCode} defaults to L{dns.OP_QUERY}.
         """
         self.assertIdentical(self.messageFactory().opCode, dns.OP_QUERY)
+
+
+    def test_opCodeOverride(self):
+        """
+        L{dns._EDNSMessage.opCode} can be overridden in the constructor.
+        """
         self.assertIdentical(
             self.messageFactory(opCode=dns.OP_STATUS).opCode,
             dns.OP_STATUS)
@@ -2952,75 +2963,114 @@ class EDNSMessageTests(unittest.SynchronousTestCase):
 
     def test_auth(self):
         """
-        L{dns._EDNSMessage.__init__} accepts an optional auth argument
-        whose default value is 0 and which is saved as a public
-        instance attribute.
+        L{dns._EDNSMessage.auth} defaults to C{False}.
         """
-        self.assertIdentical(self.messageFactory().auth, 0)
-        self.assertIdentical(self.messageFactory(auth=1).auth, 1)
+        self.assertEqual(self.messageFactory().auth, False)
+
+
+    def test_authOverride(self):
+        """
+        L{dns._EDNSMessage.auth} can be overridden in the constructor.
+        """
+        self.assertEqual(self.messageFactory(auth=True).auth, True)
 
 
     def test_trunc(self):
         """
-        L{dns._EDNSMessage.__init__} accepts an optional trunc argument
-        whose default value is 0 and which is saved as a public
-        instance attribute.
+        L{dns._EDNSMessage.trunc} defaults to C{False}.
         """
-        self.assertIdentical(self.messageFactory().trunc, 0)
-        self.assertIdentical(self.messageFactory(trunc=1).trunc, 1)
+        self.assertEqual(self.messageFactory().trunc, False)
+
+
+    def test_truncOverride(self):
+        """
+        L{dns._EDNSMessage.trunc} can be overridden in the constructor.
+        """
+        self.assertIdentical(self.messageFactory(trunc=True).trunc, True)
 
 
     def test_recDes(self):
         """
-        L{dns._EDNSMessage.__init__} accepts an optional recDes argument
-        whose default value is 0 and which is saved as a public
-        instance attribute.
+        L{dns._EDNSMessage.recDes} defaults to C{False}.
         """
-        self.assertIdentical(self.messageFactory().recDes, 0)
-        self.assertIdentical(self.messageFactory(recDes=1).recDes, 1)
+        self.assertEqual(self.messageFactory().recDes, False)
+
+
+    def test_recDesOverride(self):
+        """
+        L{dns._EDNSMessage.recDes} can be overridden in the constructor.
+        """
+        self.assertEqual(self.messageFactory(recDes=True).recDes, True)
 
 
     def test_recAv(self):
         """
-        L{dns._EDNSMessage.__init__} accepts an optional recAv argument
-        whose default value is 0 and which is saved as a public
-        instance attribute.
+        L{dns._EDNSMessage.recAv} defaults to C{False}.
         """
-        self.assertEqual(self.messageFactory().recAv, 0)
-        self.assertEqual(self.messageFactory(recAv=True).recAv, 1)
+        self.assertEqual(self.messageFactory().recAv, False)
+
+
+    def test_recAvOverride(self):
+        """
+        L{dns._EDNSMessage.recAv} can be overridden in the constructor.
+        """
+        self.assertEqual(self.messageFactory(recAv=True).recAv, True)
 
 
     def test_rCode(self):
         """
-        L{dns._EDNSMessage.__init__} accepts an optional rCode argument
-        whose default value is 0 and which is saved as a public
-        instance attribute.
+        L{dns._EDNSMessage.rCode} defaults to C{0}.
         """
         self.assertEqual(self.messageFactory().rCode, 0)
+
+
+    def test_rCodeOverride(self):
+        """
+        L{dns._EDNSMessage.rCode} can be overridden in the constructor.
+        """
         self.assertEqual(self.messageFactory(rCode=123).rCode, 123)
 
 
     def test_maxSize(self):
         """
-        L{dns._EDNSMessage.__init__} accepts an optional maxSize argument
-        whose default value is 512 and which is saved as a public
-        instance attribute.
+        L{dns._EDNSMessage.maxSize} defaults to C{512}.
         """
         self.assertEqual(self.messageFactory().maxSize, 512)
+
+
+    def test_maxSizeOverride(self):
+        """
+        L{dns._EDNSMessage.maxSize} can be overridden in the constructor.
+        """
         self.assertEqual(self.messageFactory(maxSize=1024).maxSize, 1024)
 
 
-    def test_rrLists(self):
+    def test_queries(self):
         """
-        L{dns._EDNSMessage} instances have public list attributes for
-        C{queries}, C{answers}, C{authority}, C{additional} which are
-        empty by default.
+        L{dns._EDNSMessage.queries} defaults to C{[]}.
         """
-        m = self.messageFactory()
-        self.assertEqual(m.queries, [])
-        self.assertEqual(m.answers, [])
-        self.assertEqual(m.authority, [])
-        self.assertEqual(m.additional, [])
+        self.assertEqual(self.messageFactory().queries, [])
+
+
+    def test_answers(self):
+        """
+        L{dns._EDNSMessage.answers} defaults to C{[]}.
+        """
+        self.assertEqual(self.messageFactory().answers, [])
+
+
+    def test_authority(self):
+        """
+        L{dns._EDNSMessage.authority} defaults to C{[]}.
+        """
+        self.assertEqual(self.messageFactory().authority, [])
+
+
+    def test_additional(self):
+        """
+        L{dns._EDNSMessage.additional} defaults to C{[]}.
+        """
+        self.assertEqual(self.messageFactory().additional, [])
 
 
 
@@ -3041,35 +3091,75 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
     """
     messageFactory = dns._EDNSMessage
 
+    def test_answer(self):
+        """
+        L{dns._EDNSMessage.answer} defaults to C{False}.
+        """
+        self.assertIdentical(self.messageFactory().answer, False)
+
+
+    def test_auth(self):
+        """
+        L{dns._EDNSMessage.auth} defaults to C{False}.
+        """
+        self.assertIdentical(self.messageFactory().auth, False)
+
+
+    def test_trunc(self):
+        """
+        L{dns._EDNSMessage.trunc} defaults to C{False}.
+        """
+        self.assertIdentical(self.messageFactory().trunc, False)
+
+
+    def test_recDes(self):
+        """
+        L{dns._EDNSMessage.recDes} defaults to C{False}.
+        """
+        self.assertIdentical(self.messageFactory().recDes, False)
+
+
+    def test_recAv(self):
+        """
+        L{dns._EDNSMessage.recAv} defaults to C{False}.
+        """
+        self.assertIdentical(self.messageFactory().recAv, False)
+
+
     def test_ednsVersion(self):
         """
-        L{dns._EDNSMessage.__init__} accepts an optional ednsVersion argument
-        whose default value is 0 and which is saved as a public
-        instance attribute.
+        L{dns._EDNSMessage.ednsVersion} defaults to C{0}.
         """
         self.assertEqual(self.messageFactory().ednsVersion, 0)
-        self.assertEqual(
+
+
+    def test_ednsVersionOverride(self):
+        """
+        L{dns._EDNSMessage.ednsVersion} can be overridden in the constructor.
+        """
+        self.assertIdentical(
             self.messageFactory(ednsVersion=None).ednsVersion, None)
 
 
     def test_dnssecOK(self):
         """
-        L{dns._EDNSMessage.__init__} accepts an optional dnssecOK argument
-        whose default value is False and which is saved as a public
-        instance attribute.
+        L{dns._EDNSMessage.dnssecOK} defaults to C{False}.
         """
-        self.assertFalse(self.messageFactory().dnssecOK)
-        self.assertTrue(
-            self.messageFactory(dnssecOK=True).dnssecOK)
+        self.assertIdentical(self.messageFactory().dnssecOK, False)
 
 
-    def test_queries(self):
+    def test_dnssecOKOverride(self):
         """
-        L{dns._EDNSMessage.__init__} accepts an optional queries argument
-        whose default value is [] and which is saved as a public
-        instance attribute.
+        L{dns._EDNSMessage.dnssecOK} can be overridden in the constructor.
         """
-        self.assertEqual(self.messageFactory().queries, [])
+        self.assertIdentical(
+            self.messageFactory(dnssecOK=True).dnssecOK, True)
+
+
+    def test_queriesOverride(self):
+        """
+        L{dns._EDNSMessage.queries} can be overridden in the constructor.
+        """
         msg = self.messageFactory(queries=[dns.Query(b'example.com')])
 
         self.assertEqual(
@@ -3077,13 +3167,10 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
             [dns.Query(b'example.com')])
 
 
-    def test_answers(self):
+    def test_answersOverride(self):
         """
-        L{dns._EDNSMessage.__init__} accepts an optional answers argument
-        whose default value is [] and which is saved as a public
-        instance attribute.
+        L{dns._EDNSMessage.answers} can be overridden in the constructor.
         """
-        self.assertEqual(self.messageFactory().answers, [])
         msg = self.messageFactory(
             answers=[
                 dns.RRHeader(
@@ -3095,13 +3182,10 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
             [dns.RRHeader(b'example.com', payload=dns.Record_A('1.2.3.4'))])
 
 
-    def test_authority(self):
+    def test_authorityOverride(self):
         """
-        L{dns._EDNSMessage.__init__} accepts an optional authority argument
-        whose default value is [] and which is saved as a public
-        instance attribute.
+        L{dns._EDNSMessage.authority} can be overridden in the constructor.
         """
-        self.assertEqual(self.messageFactory().authority, [])
         msg = self.messageFactory(
             authority=[
                 dns.RRHeader(
@@ -3115,13 +3199,10 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
                           payload=dns.Record_SOA())])
 
 
-    def test_additional(self):
+    def test_additionalOverride(self):
         """
-        L{dns._EDNSMessage.__init__} accepts an optional additional argument
-        whose default value is [] and which is saved as a public
-        instance attribute.
+        L{dns._EDNSMessage.authority} can be overridden in the constructor.
         """
-        self.assertEqual(self.messageFactory().additional, [])
         msg = self.messageFactory(
             additional=[
                 dns.RRHeader(
@@ -3139,29 +3220,23 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
         auth, trunc, recDes, recAv attributes of the message.
         """
         self.assertEqual(
-            repr(self.messageFactory(**EDNS_MESSAGE_COMPLETE.kwargs())),
+            repr(self.messageFactory()),
             '<_EDNSMessage '
-            'id=256 '
-            'answer=1 '
-            'opCode=2 '
-            'auth=1 '
-            'trunc=0 '
-            'recDes=1 '
-            'recAv=1 '
-            'rCode=15 '
-            'ednsVersion=3 '
-            'dnssecOK=True '
-            'maxSize=1024 '
-            "queries=[Query('example.com', 6, 1)] "
-            'answers=['
-            '<RR name=example.com type=SOA class=IN ttl=4294967295s auth=True>'
-            '] '
-            'authority=['
-            '<RR name=example.com type=NS class=IN ttl=4294967295s auth=True>'
-            '] '
-            'additional=['
-            '<RR name=ns1.example.com type=A class=IN ttl=4294967295s auth=True>'
-            ']'
+            'id=0 '
+            'answer=False '
+            'opCode=0 '
+            'auth=False '
+            'trunc=False '
+            'recDes=False '
+            'recAv=False '
+            'rCode=0 '
+            'ednsVersion=0 '
+            'dnssecOK=False '
+            'maxSize=512 '
+            'queries=[] '
+            'answers=[] '
+            'authority=[] '
+            'additional=[]'
             '>')
 
 
@@ -3176,6 +3251,7 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
 
         ednsMessage = dns._EDNSMessage.fromMessage(m)
         self.assertEqual(ednsMessage.rCode, 0xabcd)
+
 
 
 class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCase):
@@ -3206,9 +3282,9 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
         answer flag.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(answer=1),
-            self.messageFactory(answer=1),
-            self.messageFactory(answer=0),
+            self.messageFactory(answer=True),
+            self.messageFactory(answer=True),
+            self.messageFactory(answer=False),
             )
 
 
@@ -3230,9 +3306,9 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
         auth flag.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(auth=1),
-            self.messageFactory(auth=1),
-            self.messageFactory(auth=0),
+            self.messageFactory(auth=True),
+            self.messageFactory(auth=True),
+            self.messageFactory(auth=False),
             )
 
 
@@ -3242,9 +3318,9 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
         trunc flag.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(trunc=1),
-            self.messageFactory(trunc=1),
-            self.messageFactory(trunc=0),
+            self.messageFactory(trunc=True),
+            self.messageFactory(trunc=True),
+            self.messageFactory(trunc=False),
             )
 
 
@@ -3254,9 +3330,9 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
         recDes flag.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(recDes=1),
-            self.messageFactory(recDes=1),
-            self.messageFactory(recDes=0),
+            self.messageFactory(recDes=True),
+            self.messageFactory(recDes=True),
+            self.messageFactory(recDes=False),
             )
 
 
@@ -3266,9 +3342,9 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
         recAv flag.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(recAv=1),
-            self.messageFactory(recAv=1),
-            self.messageFactory(recAv=0),
+            self.messageFactory(recAv=True),
+            self.messageFactory(recAv=True),
+            self.messageFactory(recAv=False),
             )
 
 
@@ -3391,32 +3467,32 @@ class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
     """
     messageFactory = dns._EDNSMessage
 
-    def test_emptyQueryEncode(self):
+    def test_emptyMessageEncode(self):
         """
-        An empty query message can be encoded.
+        An empty message can be encoded.
         """
-        b = self.messageFactory(**MESSAGE_EMPTY.kwargs()).toStr()
+        self.assertEqual(
+            self.messageFactory(**MessageEmpty.kwargs()).toStr(),
+            MessageEmpty.bytes())
 
-        self.assertEqual(b, MESSAGE_EMPTY.bytes)
 
-
-    def test_emptyQueryDecode(self):
+    def test_emptyMessageDecode(self):
         """
-        An empty query byte sequence can be decoded.
+        An empty message byte sequence can be decoded.
         """
         m = self.messageFactory()
-        m.fromStr(MESSAGE_EMPTY.bytes)
+        m.fromStr(MessageEmpty.bytes())
 
-        self.assertEqual(m, self.messageFactory(**MESSAGE_EMPTY.kwargs()))
+        self.assertEqual(m, self.messageFactory(**MessageEmpty.kwargs()))
 
 
     def test_completeQueryEncode(self):
         """
         A fully populated query message can be encoded.
         """
-        b = self.messageFactory(**MESSAGE_COMPLETE.kwargs()).toStr()
-
-        self.assertEqual(b, MESSAGE_COMPLETE.bytes)
+        self.assertEqual(
+            self.messageFactory(**MessageComplete.kwargs()).toStr(),
+            MessageComplete.bytes())
 
 
     def test_completeQueryDecode(self):
@@ -3424,9 +3500,9 @@ class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
         A fully populated message byte string can be decoded.
         """
         m = self.messageFactory()
-        m.fromStr(MESSAGE_COMPLETE.bytes),
+        m.fromStr(MessageComplete.bytes()),
 
-        self.assertEqual(m, self.messageFactory(**MESSAGE_COMPLETE.kwargs()))
+        self.assertEqual(m, self.messageFactory(**MessageComplete.kwargs()))
 
 
     def test_NULL(self):
@@ -3448,6 +3524,16 @@ class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
         self.assertEqual(msg2.answers[0].payload.payload, bytes)
 
 
+    def test_nonAuthoritativeMessageEncode(self):
+        """
+        If the message C{authoritative} attribute is set to 0, the
+        encoded bytes will have AA bit 0.
+        """
+        self.assertEqual(
+            self.messageFactory(**MessageNonAuthoritative.kwargs()).toStr(),
+            MessageNonAuthoritative.bytes())
+
+
     def test_nonAuthoritativeMessageDecode(self):
         """
         The L{dns.RRHeader} instances created by a message from a
@@ -3455,21 +3541,20 @@ class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
         authoritative.
         """
         m = self.messageFactory()
-        m.fromStr(MESSAGE_NONAUTHORITATIVE.bytes)
+        m.fromStr(MessageNonAuthoritative.bytes())
 
         self.assertEqual(
-            m, self.messageFactory(**MESSAGE_NONAUTHORITATIVE.kwargs()))
+            m, self.messageFactory(**MessageNonAuthoritative.kwargs()))
 
 
-    def test_nonAuthoritativeMessageEncode(self):
+    def test_authoritativeMessageEncode(self):
         """
-        If the message C{authoritative} attribute is set to 0, the
-        encoded bytes will have AA bit 0.
+        If the message C{authoritative} attribute is set to 1, the
+        encoded bytes will have AA bit 1.
         """
-        m = self.messageFactory(**MESSAGE_NONAUTHORITATIVE.kwargs())
-        b = m.toStr()
-
-        self.assertEqual(b, MESSAGE_NONAUTHORITATIVE.bytes)
+        self.assertEqual(
+            self.messageFactory(**MessageAuthoritative.kwargs()).toStr(),
+            MessageAuthoritative.bytes())
 
 
     def test_authoritativeMessageDecode(self):
@@ -3479,21 +3564,20 @@ class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
         marked as authoritative.
         """
         m = self.messageFactory()
-        m.fromStr(MESSAGE_AUTHORITATIVE.bytes)
+        m.fromStr(MessageAuthoritative.bytes())
 
         self.assertEqual(
-            m, self.messageFactory(**MESSAGE_AUTHORITATIVE.kwargs()))
+            m, self.messageFactory(**MessageAuthoritative.kwargs()))
 
 
-    def test_authoritativeMessageEncode(self):
+    def test_truncatedMessageEncode(self):
         """
-        If the message C{authoritative} attribute is set to 1, the
-        encoded bytes will have AA bit 1.
+        If the message C{trunc} attribute is set to 1 the encoded
+        bytes will have TR bit 1.
         """
-        m = self.messageFactory(**MESSAGE_AUTHORITATIVE.kwargs())
-        b = m.toStr()
-
-        self.assertEqual(b, MESSAGE_AUTHORITATIVE.bytes)
+        self.assertEqual(
+            self.messageFactory(**MessageTruncated.kwargs()).toStr(),
+            MessageTruncated.bytes())
 
 
     def test_truncatedMessageDecode(self):
@@ -3502,20 +3586,9 @@ class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
         is marked as truncated.
         """
         m = self.messageFactory()
-        m.fromStr(MESSAGE_TRUNCATED.bytes)
+        m.fromStr(MessageTruncated.bytes())
 
-        self.assertEqual(m, self.messageFactory(**MESSAGE_TRUNCATED.kwargs()))
-
-
-    def test_truncatedMessageEncode(self):
-        """
-        If the message C{trunc} attribute is set to 1 the encoded
-        bytes will have TR bit 1.
-        """
-        m = self.messageFactory(**MESSAGE_TRUNCATED.kwargs())
-        b = m.toStr()
-
-        self.assertEqual(b, MESSAGE_TRUNCATED.bytes)
+        self.assertEqual(m, self.messageFactory(**MessageTruncated.kwargs()))
 
 
 
@@ -3531,14 +3604,25 @@ class MessageStandardEncodingTests(EDNSMessageStandardEncodingTests):
     @staticmethod
     def messageFactory(*args, **kwargs):
         """
-        A factory function to handle the fact that unlike
-        L{dns._EDNSMessage}, L{dns.Message.__init__} does not accept
-        queries, answers etc as arguments.
+        This function adapts constructor arguments expected by
+        _EDNSMessage.__init__ to arguments suitable for use with the
+        Message.__init__.
+
+        Also handles the fact that unlike L{dns._EDNSMessage},
+        L{dns.Message.__init__} does not accept queries, answers etc
+        as arguments.
+
+        _EDNSMessage also expects bool arguments for flag parameters so
+        here we convert those to ints
 
         Also removes any L{dns._EDNSMessage} specific arguments.
 
         @return: An L{dns.Message} instance.
         """
+        for field in ('answer', 'auth', 'trunc', 'recDes', 'recAv'):
+            if field in kwargs:
+                kwargs[field] = int(kwargs[field])
+
         queries = kwargs.pop('queries', [])
         answers = kwargs.pop('answers', [])
         authority = kwargs.pop('authority', [])
@@ -3570,7 +3654,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         OPT records in the additional section.
         """
         m = self.messageFactory()
-        m.fromStr(MESSAGE_EDNS_QUERY.bytes)
+        m.fromStr(MessageEDNSQuery.bytes())
 
         self.assertEqual(m.additional, [])
 
@@ -3618,7 +3702,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         lists.
         """
         standardMessage = dns.Message()
-        standardMessage.fromStr(MESSAGE_EDNS_QUERY.bytes)
+        standardMessage.fromStr(MessageEDNSQuery.bytes())
 
         ednsMessage = dns._EDNSMessage.fromMessage(standardMessage)
 
@@ -3666,9 +3750,9 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         (C{ednsVersion}, etc) from the supplied OPT record.
         """
         m = self.messageFactory()
-        m.fromStr(EDNS_MESSAGE_COMPLETE.bytes)
+        m.fromStr(MessageEDNSComplete.bytes())
 
-        self.assertEqual(m, self.messageFactory(**EDNS_MESSAGE_COMPLETE.kwargs()))
+        self.assertEqual(m, self.messageFactory(**MessageEDNSComplete.kwargs()))
 
 
     def test_ednsEncode(self):
@@ -3679,5 +3763,5 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         additional section.
         """
         self.assertEqual(
-            self.messageFactory(**EDNS_MESSAGE_COMPLETE.kwargs()).toStr(),
-            EDNS_MESSAGE_COMPLETE.bytes)
+            self.messageFactory(**MessageEDNSComplete.kwargs()).toStr(),
+            MessageEDNSComplete.bytes())
