@@ -117,7 +117,7 @@ class LatexSpitterTests(TestCase):
         code listing (represented by an I{a} element with a I{listing} class).
         """
         path = FilePath(self.mktemp())
-        path.setContent('foo\nbar\n')
+        path.setContent('\n\nfoo\nbar\n\n\n')
         listing = Element('a')
         listing.setAttribute('class', 'listing')
         listing.setAttribute('href', path.path)

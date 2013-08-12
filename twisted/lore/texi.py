@@ -39,12 +39,20 @@ class TexiSpitter(latex.BaseLatexSpitter):
             self.writer('* %s::\n' % domhelpers.getNodeText(header))
         self.writer('@end menu\n')
 
+
     def visitNode_pre(self, node):
+        """
+        Writes a I{verbatim} block when it encounters a I{pre} element.
+
+        @param node: The element to process.
+        @type node: C{xml.dom.minidom.Element}
+        """
         self.writer('@verbatim\n')
         buf = StringIO()
         latex.getLatexText(node, buf.write, entities=entities)
         self.writer(tree._removeLeadingTrailingBlankLines(buf.getvalue()))
         self.writer('@end verbatim\n')
+
 
     def visitNode_code(self, node):
         fout = StringIO()

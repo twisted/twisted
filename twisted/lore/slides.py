@@ -111,7 +111,15 @@ class MagicpointOutput(BaseLatexSpitter):
     def visitNode_div_pause(self, node):
         self.writer('%pause\n')
 
+
     def visitNode_pre(self, node):
+        """
+        Writes Latex block using the 'typewriter' font when it encounters a
+        I{pre} element.
+
+        @param node: The element to process.
+        @type node: C{xml.dom.minidom.Element}
+        """
         # TODO: Syntax highlighting
         buf = StringIO()
         getLatexText(node, buf.write, entities=entities)
@@ -124,6 +132,7 @@ class MagicpointOutput(BaseLatexSpitter):
             self.writer(' ' + line + '\n')
         del self.fontStack[-1]
         self.writer('%' + self.fontName() + '\n')
+
 
     def visitNode_ul(self, node):
         if self.bulletDepth > 0:
