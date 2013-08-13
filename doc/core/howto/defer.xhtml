@@ -435,7 +435,6 @@ hit the cancel button, disconnected from your server or sent a "stop" network
 message, you will want to announce your indifference to the result of that
 operation so that the originator of the Deferred can clean everything up and
 free those resources to be put to better use.</p>
-
 <h3>Cancellation for Applications which Consume Deferreds</h3>
 
 <p>Here's a simple example.  You're connecting to an external host with an <a
@@ -491,8 +490,28 @@ is that anyone who instantiates a Deferred may supply it with a cancellation
 function; that function can do absolutely anything that it wants to.  Ideally,
 anything it does will be in the service of stopping the operation your
 requested, but there's no way to guarantee any exact behavior across all
-Deferreds that might be cancelled; it really depends what created the Deferred
-in the first place and what operation it's waiting for.</p>
+Deferreds that might be cancelled. Cancellation of Deferreds is best effort. This may be the case for a number of
+reasons:</p>
+<ol>
+    <li>The <code>Deferred</code> doesn't know how to cancel the underlying
+    operation.</li>
+    <li>The underlying operation may have reached an uncancellable state,
+    because some irreversible operation has been done.</li>
+    <li>The <code>Deferred</code> may already have a result, and so there's
+    nothing to cancel.</li>
+</ol>
+
+<p>Calling <code>cancel()</code> will always succeed without an error
+regardless of whether or not cancellation was possible. In cases 1 and 2 the
+<code>Deferred</code> may well errback with a
+<code>twisted.internet.defer.CancelledError</code> while the underlying
+operation continues. <code>Deferred</code>s that support cancellation should
+document what they do when cancelled, if they are uncancellable in certain edge
+cases, etc..</p>
+
+<p>If the cancelled <code>Deferred</code> is waiting on another
+<code>Deferred</code>, the cancellation will be forwarded to the other
+<code>Deferred</code>.</p>
 
 <h3>Creating a Deferred which supports cancellation</h3>
 
@@ -537,6 +556,28 @@ call it multiple times, you will still get an <code>AlreadyCalledError</code>
 exception.</li> </ol>
 
 <h4>Actually cancelling things: customizing the canceller</h4>
+<p>Let's imagine you are implementing an HTTP client, which returns a Deferred
+firing with the response from the server. Cancellation is best achieved by
+closing the connection. In order to make cancellation do that, all you have to
+do is pass a function to the constructor of the Deferred (it will get called
+with the Deferred that is being cancelled):</p>
+<pre class="python">
+class HTTPClient(Protocol):
+    def request(self, method, path):
+        self.resultDeferred = Deferred(
+            lambda ignore: self.transport.abortConnection())
+        request = b"%s %s HTTP/1.0\r\n\r\n" % (method, path)
+        self.transport.write(request)
+        return self.resultDeferred
+
+    def dataReceived(self, data):
+        # ... parse HTTP response ...
+        # ... eventually call self.resultDeferred.callback() ...
+</pre>
+<p>Now if someone calls <code>cancel()</code> on the <code>Deferred</code>
+returned from <code>HTTPClient.request()</code>, the HTTP request will be
+cancelled (assuming it's not too late to do so). Care should be taken not to
+<code>callback()</code> a Deferred that has already been cancelled.</p>
 
 <a name="deferredlist" />
 <h2>DeferredList</h2>
