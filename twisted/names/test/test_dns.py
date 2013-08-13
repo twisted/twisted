@@ -2014,7 +2014,7 @@ class OPTNonStandardAttributes(object):
             udpPayloadSize=512,
             extendedRCODE=3,
             version=4,
-            dnssecOK=1)
+            dnssecOK=True)
 
 
 
@@ -2346,7 +2346,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             udpPayloadSize=0xffff,
             extendedRCODE=0xfe,
             version=0xfd,
-            dnssecOK=1,
+            dnssecOK=True,
             options=[dns._OPTVariableOption(code=0xffff, data=b'abc')])
 
         self.assertEqual(decodedOptHeader, expectedOptHeader)
@@ -2408,9 +2408,9 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         dnssecOK flags.
         """
         self.assertNormalEqualityImplementation(
-            dns._OPTHeader(dnssecOK=1),
-            dns._OPTHeader(dnssecOK=1),
-            dns._OPTHeader(dnssecOK=0))
+            dns._OPTHeader(dnssecOK=True),
+            dns._OPTHeader(dnssecOK=True),
+            dns._OPTHeader(dnssecOK=False))
 
 
     def test_equalityOptions(self):
@@ -3172,6 +3172,24 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
         """
         self.assertIdentical(
             self.messageFactory(dnssecOK=True).dnssecOK, True)
+
+
+    def test_dnssecOKBooleanCoercion(self):
+        """
+        L{dns._EDNSMessage.__init__} recasts the supplied C{dnssecOK} value
+        as L{bool}.
+        """
+        self.assertIdentical(self.messageFactory(dnssecOK=0).dnssecOK, False)
+        self.assertIdentical(self.messageFactory(dnssecOK=1).dnssecOK, True)
+
+
+    def test_dnssecOKInputAssertion(self):
+        """
+        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
+        with a C{dnssecOK} value which is not C{True}, C{False}, C{1},
+        C{0}.
+        """
+        self.assertRaises(AssertionError, self.messageFactory, dnssecOK=2)
 
 
     def test_queriesOverride(self):

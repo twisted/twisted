@@ -2206,7 +2206,10 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.recAv = recAv
         self.rCode = rCode
         self.ednsVersion = ednsVersion
-        self.dnssecOK = dnssecOK
+
+        assert dnssecOK in (True, False)
+        self.dnssecOK = bool(dnssecOK)
+
         self.maxSize = maxSize
 
         if queries is None:
