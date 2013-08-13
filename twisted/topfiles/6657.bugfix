@@ -1,1 +1,1 @@
-"_loopFinshed" in twisted.application.internet.TimerService.volatile is corrected to "_loopFinished" now.
+twisted.application.internet.TimerService is now pickleable in all cases.
