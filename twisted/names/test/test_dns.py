@@ -713,7 +713,7 @@ class TestController(object):
         self.messages = []
 
 
-    def messageReceived(self, msg, proto, addr):
+    def messageReceived(self, msg, proto, addr=None):
         """
         Save the message so that it can be checked during the tests.
         """
@@ -804,6 +804,21 @@ class DatagramProtocolTestCase(unittest.TestCase):
 
         d = self.proto.query(('127.0.0.1', 21345), [dns.Query(b'foo')])
         return self.assertFailure(d, CannotListenError)
+
+
+    def test_receiveMessageNotInLiveMessages(self):
+        """
+        When receiving a message whose id is not in
+        L{DNSDatagramProtocol.liveMessages} or L{DNSDatagramProtocol.resends},
+        the message will be received by L{DNSDatagramProtocol.controller}.
+        """
+        message = dns.Message()
+        message.id = 1
+        message.answers = [dns.RRHeader(
+            payload=dns.Record_A(address='1.2.3.4'))]
+        self.proto.datagramReceived(message.toStr(), ('127.0.0.1', 21345))
+        self.assertEqual(self.controller.messages[-1][0].toStr(),
+                         message.toStr())
 
 
 
@@ -899,6 +914,22 @@ class DNSProtocolTestCase(unittest.TestCase):
 
         d = self.proto.query([dns.Query(b'foo')])
         return self.assertFailure(d, RuntimeError)
+
+
+    def test_receiveMessageNotInLiveMessages(self):
+        """
+        When receiving a message whose id is not in L{DNSProtocol.liveMessages}
+        the message will be received by L{DNSProtocol.controller}.
+        """
+        message = dns.Message()
+        message.id = 1
+        message.answers = [dns.RRHeader(
+            payload=dns.Record_A(address='1.2.3.4'))]
+        string = message.toStr()
+        string = struct.pack('!H', len(string)) + string
+        self.proto.dataReceived(string)
+        self.assertEqual(self.controller.messages[-1][0].toStr(),
+                         message.toStr())
 
 
 
