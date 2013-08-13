@@ -2116,6 +2116,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     @ivar rCode: See L{__init__}
     @ivar ednsVersion: See L{__init__}
     @ivar dnssecOK: See L{__init__}
+    @ivar authenticData: See L{__init__}
     @ivar maxSize: See L{__init__}
 
     @ivar queries: See L{__init__}
