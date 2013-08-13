@@ -2244,6 +2244,15 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
 
     def toMessage(self):
+        """
+        Convert to a standard L{dns.Message}.
+
+        If C{ednsVersion} is not None, an L{_OPTHeader} instance
+        containing all the I{EDNS} specific attributes and options
+        will be appended to the list of C{additional} records.
+
+        @rtype: L{dns.Message}
+        """
         m = Message(
             id=self.id,
             answer=int(self.answer),
@@ -2273,13 +2282,8 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     def toStr(self):
         """
-        Encode to wire format.
-
-        If C{ednsVersion} is not None, an L{_OPTHeader} instance
-        containing all the I{EDNS} specific attributes and options
-        will be appended to the list of C{additional} records and this
-        will be encoded into the byte string as an C{OPT} record byte
-        string.
+        Encode to wire format by first converting to a standard
+        L{dns.Message}.
 
         @return: A L{bytes} string.
         """

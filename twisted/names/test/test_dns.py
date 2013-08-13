@@ -3981,7 +3981,10 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
     def test_extendedRcodeZero(self):
         """
+        Note that EXTENDED-RCODE value 0 indicates that an unextended
+        RCODE is in use (values 0 through 15).
 
+        https://tools.ietf.org/html/rfc6891#section-6.1.3
         """
         ednsMessage = self.messageFactory(rCode=15, ednsVersion=0)
         standardMessage = ednsMessage.toMessage()
