@@ -2263,7 +2263,8 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             trunc=int(self.trunc),
             recDes=int(self.recDes),
             recAv=int(self.recAv),
-            rCode=self.rCode)
+            # Assign the lower 4 bits to the message
+            rCode=self.rCode & 0xf)
 
         m.queries = self.queries[:]
         m.answers = self.answers[:]
@@ -2273,7 +2274,9 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         if self.ednsVersion is not None:
             o = _OPTHeader(version=self.ednsVersion,
                            dnssecOK=self.dnssecOK,
-                           udpPayloadSize=self.maxSize)
+                           udpPayloadSize=self.maxSize,
+                           # Assign the upper 8 bits to the OPT record
+                           extendedRCODE=self.rCode >> 4)
             m.additional.append(o)
 
         return m.toStr()
@@ -2340,6 +2343,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
                 newMessage.ednsVersion = opt.version
                 newMessage.dnssecOK = opt.dnssecOK
                 newMessage.maxSize = opt.udpPayloadSize
+                newMessage.rCode = opt.extendedRCODE << 4 | message.rCode
 
         return newMessage
 
