@@ -378,7 +378,9 @@ class TestTimerService(TestCase):
         timer = TimerService(1, fakeTargetFunction)
         dumpedTimer = pickle.dumps(timer)
         loadedTimer = pickle.loads(dumpedTimer)
-        self.assertRaises(AttributeError, lambda: loadedTimer._loop)
+        nothing = object()
+        value = getattr(timer, "_loop", nothing)
+        self.assertIdentical(nothing, value)
 
 
     def test_pickleTimerServiceNotPickleLoopFinished(self):
@@ -391,4 +393,6 @@ class TestTimerService(TestCase):
         timer = TimerService(1, fakeTargetFunction)
         dumpedTimer = pickle.dumps(timer)
         loadedTimer = pickle.loads(dumpedTimer)
-        self.assertRaises(AttributeError, lambda: loadedTimer._loopFinished)
+        nothing = object()
+        value = getattr(timer, "_loop", nothing)
+        self.assertIdentical(nothing, value)
