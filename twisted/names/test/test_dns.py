@@ -816,7 +816,7 @@ class DatagramProtocolTestCase(unittest.TestCase):
         message.answers = [dns.RRHeader(
             payload=dns.Record_A(address='1.2.3.4'))]
         self.proto.datagramReceived(message.toStr(), ('127.0.0.1', 21345))
-        self.assertEqual(self.proto.controller.messages[-1][0].toStr(),
+        self.assertEqual(self.controller.messages[-1][0].toStr(),
                          message.toStr())
 
 
@@ -927,7 +927,7 @@ class DNSProtocolTestCase(unittest.TestCase):
         string = message.toStr()
         string = struct.pack('!H', len(string)) + string
         self.proto.dataReceived(string)
-        self.assertEqual(self.proto.controller.messages[-1][0].toStr(),
+        self.assertEqual(self.controller.messages[-1][0].toStr(),
                          message.toStr())
 
 
