@@ -28,6 +28,7 @@ def fakeTargetFunction():
     pass
 
 
+
 class FakeServer(object):
     """
     In-memory implementation of L{IStreamServerEndpoint}.
