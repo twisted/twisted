@@ -633,7 +633,9 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.udpPayloadSize = udpPayloadSize
         self.extendedRCODE = extendedRCODE
         self.version = version
-        self.dnssecOK = dnssecOK
+
+        assert dnssecOK in (True, False)
+        self.dnssecOK = bool(dnssecOK)
 
         if options is None:
             options = []
