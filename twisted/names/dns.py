@@ -23,7 +23,7 @@ __all__ = [
 
     'ALL_RECORDS', 'AXFR', 'IXFR',
 
-    'EFORMAT', 'ENAME', 'ENOTIMP', 'EREFUSED', 'ESERVER',
+    'EFORMAT', 'ENAME', 'ENOTIMP', 'EREFUSED', 'ESERVER', 'EBADVERSION',
 
     'Record_A', 'Record_A6', 'Record_AAAA', 'Record_AFSDB', 'Record_CNAME',
     'Record_DNAME', 'Record_HINFO', 'Record_MB', 'Record_MD', 'Record_MF',
@@ -190,6 +190,7 @@ OP_UPDATE = 5 # RFC 2136
 
 # Response Codes
 OK, EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED = range(6)
+EBADVERSION = 16
 
 class IRecord(Interface):
     """

@@ -18,7 +18,7 @@ This example should be run using trial eg
 import os
 
 from twisted.internet import reactor
-from twisted.names import dns
+from twisted.names import dns, edns
 from twisted.trial import unittest
 
 
@@ -101,7 +101,7 @@ SERVERS = [
     ('213.154.224.1', 53, 'NSD4'),
 
     # DJBDNS (uz5dz39x8xk8wyq3dzn7vpt670qmvzx0zd9zg4ldwldkv6kx9ft090.ns.yp.to.)
-    ('131.155.71.143', 53, 'DJBDNS')
+    # ('131.155.71.143', 53, 'DJBDNS')
 ]
 
 
@@ -213,6 +213,26 @@ class RFC6891Tests(DNSComplianceTestBuilder):
 
         d.addCallback(
             lambda message: self.assertEqual(message.rCode, dns.EFORMAT))
+
+        return d
+
+
+    def test_613_badVersion(self):
+        """
+        If a responder does not implement the VERSION level of the
+        request, then it MUST respond with RCODE=BADVERS.
+
+        https://tools.ietf.org/html/rfc6891#section-6.1.3
+        """
+        proto = edns.EDNSDatagramProtocol(
+            controller=None, ednsVersion=255)
+
+        self.connectProtocol(proto)
+
+        d = proto.query(self.server, [dns.Query('.', dns.NS, dns.IN)])
+
+        d.addCallback(
+            lambda message: self.assertEqual(message.rCode, dns.EBADVERSION))
 
         return d
 
