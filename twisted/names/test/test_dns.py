@@ -3116,11 +3116,47 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
         self.assertIdentical(self.messageFactory().answer, False)
 
 
+    def test_answerBooleanCoercion(self):
+        """
+        L{dns._EDNSMessage.__init__} recasts the supplied C{answer} value
+        as L{bool}.
+        """
+        self.assertIdentical(self.messageFactory(answer=0).answer, False)
+        self.assertIdentical(self.messageFactory(answer=1).answer, True)
+
+
+    def test_answerInputAssertion(self):
+        """
+        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
+        with a C{answer} value which is not C{True}, C{False}, C{1},
+        C{0}.
+        """
+        self.assertRaises(AssertionError, self.messageFactory, answer=2)
+
+
     def test_auth(self):
         """
         L{dns._EDNSMessage.auth} defaults to C{False}.
         """
         self.assertIdentical(self.messageFactory().auth, False)
+
+
+    def test_authBooleanCoercion(self):
+        """
+        L{dns._EDNSMessage.__init__} recasts the supplied C{auth} value
+        as L{bool}.
+        """
+        self.assertIdentical(self.messageFactory(auth=0).auth, False)
+        self.assertIdentical(self.messageFactory(auth=1).auth, True)
+
+
+    def test_authInputAssertion(self):
+        """
+        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
+        with a C{auth} value which is not C{True}, C{False}, C{1},
+        C{0}.
+        """
+        self.assertRaises(AssertionError, self.messageFactory, auth=2)
 
 
     def test_trunc(self):
@@ -3130,6 +3166,24 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
         self.assertIdentical(self.messageFactory().trunc, False)
 
 
+    def test_truncBooleanCoercion(self):
+        """
+        L{dns._EDNSMessage.__init__} recasts the supplied C{trunc} value
+        as L{bool}.
+        """
+        self.assertIdentical(self.messageFactory(trunc=0).trunc, False)
+        self.assertIdentical(self.messageFactory(trunc=1).trunc, True)
+
+
+    def test_truncInputAssertion(self):
+        """
+        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
+        with a C{trunc} value which is not C{True}, C{False}, C{1},
+        C{0}.
+        """
+        self.assertRaises(AssertionError, self.messageFactory, trunc=2)
+
+
     def test_recDes(self):
         """
         L{dns._EDNSMessage.recDes} defaults to C{False}.
@@ -3137,11 +3191,47 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
         self.assertIdentical(self.messageFactory().recDes, False)
 
 
+    def test_recDesBooleanCoercion(self):
+        """
+        L{dns._EDNSMessage.__init__} recasts the supplied C{recDes} value
+        as L{bool}.
+        """
+        self.assertIdentical(self.messageFactory(recDes=0).recDes, False)
+        self.assertIdentical(self.messageFactory(recDes=1).recDes, True)
+
+
+    def test_recDesInputAssertion(self):
+        """
+        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
+        with a C{recDes} value which is not C{True}, C{False}, C{1},
+        C{0}.
+        """
+        self.assertRaises(AssertionError, self.messageFactory, recDes=2)
+
+
     def test_recAv(self):
         """
         L{dns._EDNSMessage.recAv} defaults to C{False}.
         """
         self.assertIdentical(self.messageFactory().recAv, False)
+
+
+    def test_recAcBooleanCoercion(self):
+        """
+        L{dns._EDNSMessage.__init__} recasts the supplied C{recAv} value
+        as L{bool}.
+        """
+        self.assertIdentical(self.messageFactory(recAv=0).recAv, False)
+        self.assertIdentical(self.messageFactory(recAv=1).recAv, True)
+
+
+    def test_recAvInputAssertion(self):
+        """
+        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
+        with a C{recAv} value which is not C{True}, C{False}, C{1},
+        C{0}.
+        """
+        self.assertRaises(AssertionError, self.messageFactory, recAv=2)
 
 
     def test_ednsVersion(self):

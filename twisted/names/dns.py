@@ -2198,13 +2198,26 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @type additional: L{list} of L{RRHeader}
         """
         self.id = id
-        self.answer = answer
+
+        assert answer in (True, False)
+        self.answer = bool(answer)
+
         self.opCode = opCode
-        self.auth = auth
-        self.trunc = trunc
-        self.recDes = recDes
-        self.recAv = recAv
+
+        assert auth in (True, False)
+        self.auth = bool(auth)
+
+        assert trunc in (True, False)
+        self.trunc = bool(trunc)
+
+        assert recDes in (True, False)
+        self.recDes = bool(recDes)
+
+        assert recAv in (True, False)
+        self.recAv = bool(recAv)
+
         self.rCode = rCode
+
         self.ednsVersion = ednsVersion
 
         assert dnssecOK in (True, False)
