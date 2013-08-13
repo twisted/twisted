@@ -376,10 +376,12 @@ class TestTimerService(TestCase):
         # We need a pickleable callable to test pickling TimerService. So we
         # can't use self.timer
         timer = TimerService(1, fakeTargetFunction)
+        timer.startService()
         dumpedTimer = pickle.dumps(timer)
+        timer.stopService()
         loadedTimer = pickle.loads(dumpedTimer)
         nothing = object()
-        value = getattr(timer, "_loop", nothing)
+        value = getattr(loadedTimer, "_loop", nothing)
         self.assertIdentical(nothing, value)
 
 
@@ -391,8 +393,10 @@ class TestTimerService(TestCase):
         # We need a pickleable callable to test pickling TimerService. So we
         # can't use self.timer
         timer = TimerService(1, fakeTargetFunction)
+        timer.startService()
         dumpedTimer = pickle.dumps(timer)
+        timer.stopService()
         loadedTimer = pickle.loads(dumpedTimer)
         nothing = object()
-        value = getattr(timer, "_loop", nothing)
+        value = getattr(loadedTimer, "_loopFinished", nothing)
         self.assertIdentical(nothing, value)
