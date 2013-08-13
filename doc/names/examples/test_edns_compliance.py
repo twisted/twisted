@@ -17,7 +17,7 @@ This example should be run using trial eg
 
 import os
 
-from twisted.internet import reactor
+from twisted.internet import defer, reactor
 from twisted.names import dns, edns
 from twisted.trial import unittest
 
@@ -233,6 +233,40 @@ class RFC6891Tests(DNSComplianceTestBuilder):
 
         d.addCallback(
             lambda message: self.assertEqual(message.rCode, dns.EBADVERSION))
+
+        return d
+
+
+    def test_623_minPayloadSize(self):
+        """
+        Requestor's Payload Size
+
+        Values lower than 512 MUST be treated as equal to 512.
+
+        https://tools.ietf.org/html/rfc6891#section-6.2.3
+        """
+        proto512 = edns.EDNSDatagramProtocol(
+            controller=None, maxSize=512)
+        self.connectProtocol(proto512)
+
+        proto128 = edns.EDNSDatagramProtocol(
+            controller=None, maxSize=128)
+        self.connectProtocol(proto128)
+
+        d512 = proto512.query(self.server, [dns.Query('.', dns.NS, dns.IN)])
+        d128 = proto128.query(self.server, [dns.Query('.', dns.NS, dns.IN)])
+
+        d = defer.gatherResults([d512, d128])
+
+        def compareMessages(messages):
+            m1, m2 = messages
+            self.assertEqual(len(m1.answers), len(m2.answers),
+                             'Different answers.')
+            self.assertEqual(len(m1.authority), len(m2.authority),
+                             'Different authority')
+            self.assertEqual(len(m1.additional), len(m2.additional),
+                             'Different additional')
+        d.addCallback(compareMessages)
 
         return d
 
