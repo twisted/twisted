@@ -3336,6 +3336,39 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
         self.assertRaises(AssertionError, self.messageFactory, dnssecOK=2)
 
 
+    def test_authenticData(self):
+        """
+        L{dns._EDNSMessage.authenticData} defaults to C{False}.
+        """
+        self.assertIdentical(self.messageFactory().authenticData, False)
+
+
+    def test_authenticDataOverride(self):
+        """
+        L{dns._EDNSMessage.authenticData} can be overridden in the constructor.
+        """
+        self.assertIdentical(
+            self.messageFactory(authenticData=True).authenticData, True)
+
+
+    def test_authenticDataBooleanCoercion(self):
+        """
+        L{dns._EDNSMessage.__init__} recasts the supplied C{authenticData} value
+        as L{bool}.
+        """
+        self.assertIdentical(self.messageFactory(authenticData=0).authenticData, False)
+        self.assertIdentical(self.messageFactory(authenticData=1).authenticData, True)
+
+
+    def test_authenticDataInputAssertion(self):
+        """
+        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
+        with a C{authenticData} value which is not C{True}, C{False}, C{1},
+        C{0}.
+        """
+        self.assertRaises(AssertionError, self.messageFactory, authenticData=2)
+
+
     def test_queriesOverride(self):
         """
         L{dns._EDNSMessage.queries} can be overridden in the constructor.
