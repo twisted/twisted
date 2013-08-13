@@ -147,32 +147,20 @@ class LoopingCall:
         return intervalNum
 
 
-    def _cancelScheduledCall(self, callbackDeferred=False, reschedule=False):
+    def _cancelScheduledCall(self, callbackDeferred=False):
         """
         Cancel the scheduled function call.
 
         @type callbackDeferred: C{bool}
         @param callbackDeferred: Whether to callback the L{defer.Deferred} or
-            or not after cancelling the scheduled function call. This can only
-            be C{True} when C{reschedule} is C{False}.
-
-        @type reschedule: C{bool}
-        @param reschedule: Whether to reschedule the function call or not after
-            cancelling the scheduled function call. This can only be C{True}
-            when C{callbackDeferred} is C{False}.
+            or not after cancelling the scheduled function call.
         """
-        if callbackDeferred and reschedule:
-            raise ValueError(
-                "Only one of callbackDeferred and reschedule can be True")
         if self.call is not None:
             self.call.cancel()
             self.call = None
             if callbackDeferred:
                 deferred, self.deferred = self.deferred, None
                 deferred.callback(self)
-            elif reschedule:
-                self._expectNextCallAt = self.clock.seconds()
-                self._reschedule()
             else:
                 self.deferred = None
 
@@ -249,7 +237,10 @@ class LoopingCall:
         """
         assert self.running, ("Tried to reset a LoopingCall that was "
                               "not running.")
-        self._cancelScheduledCall(reschedule=True)
+        if self.call is not None:
+            self._cancelScheduledCall()
+            self._expectNextCallAt = self.clock.seconds()
+            self._reschedule()
 
 
     def __call__(self):
