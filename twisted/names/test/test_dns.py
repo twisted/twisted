@@ -805,7 +805,7 @@ class DatagramProtocolTestCase(unittest.TestCase):
         return self.assertFailure(d, CannotListenError)
 
 
-    def test_receiveMessageNotInLiveMessage(self):
+    def test_receiveMessageNotInLiveMessages(self):
         """
         When receiving a message whose id is not in
         L{DNSDatagramProtocol.liveMessages} and L{DNSDatagramProtocol.resends},
@@ -915,7 +915,7 @@ class DNSProtocolTestCase(unittest.TestCase):
         return self.assertFailure(d, RuntimeError)
 
 
-    def test_receiveMessageNotInLiveMessage(self):
+    def test_receiveMessageNotInLiveMessages(self):
         """
         When receiving a message whose id is not in L{DNSProtocol.liveMessages}
         the message will be received by L{DNSProtocol.controller}.
