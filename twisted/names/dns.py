@@ -2126,7 +2126,8 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     showAttributes = (
         'id', 'answer', 'opCode', 'auth', 'trunc',
-        'recDes', 'recAv', 'rCode', 'ednsVersion', 'dnssecOK', 'maxSize',
+        'recDes', 'recAv', 'rCode', 'ednsVersion', 'dnssecOK',
+        'authenticData', 'maxSize',
         'queries', 'answers', 'authority', 'additional')
 
     compareAttributes = showAttributes

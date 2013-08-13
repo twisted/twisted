@@ -3445,6 +3445,7 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
             'rCode=0 '
             'ednsVersion=0 '
             'dnssecOK=False '
+            'authenticData=False '
             'maxSize=512 '
             'queries=[] '
             'answers=[] '
@@ -3606,6 +3607,18 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
             self.messageFactory(dnssecOK=True),
             self.messageFactory(dnssecOK=True),
             self.messageFactory(dnssecOK=False),
+            )
+
+
+    def test_authenticData(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        authenticData flags.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(authenticData=True),
+            self.messageFactory(authenticData=True),
+            self.messageFactory(authenticData=False),
             )
 
 
