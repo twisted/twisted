@@ -172,22 +172,15 @@ class RFC6891Tests(DNSComplianceTestBuilder):
             message.additional.append(dns._OPTHeader(version=1))
             return message
 
-        proto = DNSMessageManglingProtocol(
-            controller=None, mangler=addOptRecord)
+        proto = edns.EDNSDatagramProtocol(
+            controller=None, ednsVersion=0)
         self.connectProtocol(proto)
 
         d = proto.query(self.server, [dns.Query('.', dns.NS, dns.IN)])
 
-        def checkForOpt(message):
-            self.assertTrue(
-                hasAdditionalOptRecord(message),
-                'Message did not contain an OPT record '
-                + 'in its additional section. '
-                + 'rCode: %s, ' % (message.rCode,)
-                + 'answers: %s, ' % (message.answers,)
-                + 'authority: %s, ' % (message.authority,)
-                + 'additional: %s ' % (message.additional,))
-        d.addCallback(checkForOpt)
+        def checkEdnsVersion(message):
+            self.assertEqual(message.ednsVersion, 0)
+        d.addCallback(checkEdnsVersion)
 
         return d
 
@@ -244,6 +237,7 @@ class RFC6891Tests(DNSComplianceTestBuilder):
         Values lower than 512 MUST be treated as equal to 512.
 
         https://tools.ietf.org/html/rfc6891#section-6.2.3
+        https://tools.ietf.org/html/rfc6891#section-6.2.5
         """
         proto512 = edns.EDNSDatagramProtocol(
             controller=None, maxSize=512)
@@ -281,20 +275,13 @@ class RFC6891Tests(DNSComplianceTestBuilder):
         https://tools.ietf.org/html/rfc6891#section-7
         """
 
-        proto = dns.DNSDatagramProtocol(controller=None)
+        proto = edns.EDNSDatagramProtocol(controller=None, ednsVersion=None)
         self.connectProtocol(proto)
 
         d = proto.query(self.server, [dns.Query('.', dns.NS, dns.IN)])
 
         def checkForOpt(message):
-            self.assertFalse(
-                hasAdditionalOptRecord(message),
-                'Message contained an OPT record '
-                + 'in its additional section. '
-                + 'rCode: %s, ' % (message.rCode,)
-                + 'answers: %s, ' % (message.answers,)
-                + 'authority: %s, ' % (message.authority,)
-                + 'additional: %s ' % (message.additional,))
+            self.assertIdentical(message.ednsVersion, None)
         d.addCallback(checkForOpt)
 
         return d
