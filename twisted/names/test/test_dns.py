@@ -808,7 +808,7 @@ class DatagramProtocolTestCase(unittest.TestCase):
     def test_receiveMessageNotInLiveMessages(self):
         """
         When receiving a message whose id is not in
-        L{DNSDatagramProtocol.liveMessages} and L{DNSDatagramProtocol.resends},
+        L{DNSDatagramProtocol.liveMessages} or L{DNSDatagramProtocol.resends},
         the message will be received by L{DNSDatagramProtocol.controller}.
         """
         message = dns.Message()
