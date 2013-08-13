@@ -712,7 +712,7 @@ class TestController(object):
         self.messages = []
 
 
-    def messageReceived(self, msg, proto, addr):
+    def messageReceived(self, msg, proto, addr=None):
         """
         Save the message so that it can be checked during the tests.
         """
@@ -840,13 +840,6 @@ class TestTCPController(TestController):
 
     def connectionLost(self, proto):
         self.connections.remove(proto)
-
-
-    def messageReceived(self, msg, proto):
-        """
-        Save the message so that it can be checked during the tests.
-        """
-        self.messages.append((msg, proto))
 
 
 
