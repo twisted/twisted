@@ -2172,10 +2172,9 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             is available in the name server.
         @type recAv: L{bool}
 
-        @param rCode: Extended 12-bit RCODE (together with the 4 bits
-            defined in [RFC1035].  Note that EXTENDED-RCODE value 0
-            indicates that an unextended RCODE is in use (values 0
-            through 15).
+        @param rCode: Extended 12-bit RCODE. Derived from the 4 bits
+            defined in [RFC1035] and the upper 8bits defined in
+            [RFC6891 section-6.1.3]
         @type rCode: L{int}
 
         @param ednsVersion: Indicates the EDNS implementation level. Set to

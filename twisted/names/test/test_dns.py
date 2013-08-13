@@ -2914,6 +2914,54 @@ class MessageEDNSComplete(object):
 
 
 
+class MessageEDNSExtendedRCODE(object):
+    """
+    An example of an EDNS message with an extended RCODE.
+    """
+    @classmethod
+    def bytes(cls):
+        return (
+            b'\x00\x00'
+            b'\x00'
+            b'\x0c' # RA: 0, Z, RCODE: 12
+            b'\x00\x00'
+            b'\x00\x00'
+            b'\x00\x00'
+            b'\x00\x01' # 1 additionals
+
+            # Additional OPT record
+            b'\x00'
+            b'\x00\x29'
+            b'\x10\x00'
+            b'\xab' # Extended RCODE: 171
+            b'\x00'
+            b'\x00\x00'
+            b'\x00\x00'
+        )
+
+
+    @classmethod
+    def kwargs(cls):
+        return dict(
+            id=0,
+            answer=False,
+            opCode=dns.OP_QUERY,
+            auth=False,
+            trunc=False,
+            recDes=False,
+            recAv=False,
+            rCode=0xabc, # Combined OPT extended RCODE + Message RCODE
+            ednsVersion=0,
+            dnssecOK=False,
+            maxSize=4096,
+            queries=[],
+            answers=[],
+            authority=[],
+            additional=[],
+        )
+
+
+
 class MessageComparable(FancyEqMixin, FancyStrMixin, dns.Message):
     """
     A version of L{dns.Message} which is comparable so that it can be
@@ -3891,3 +3939,23 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         self.assertEqual(
             self.messageFactory(**MessageEDNSComplete.kwargs()).toStr(),
             MessageEDNSComplete.bytes())
+
+
+    def test_extendedRcodeEncode(self):
+        """
+        """
+        self.assertEqual(
+            self.messageFactory(**MessageEDNSExtendedRCODE.kwargs()).toStr(),
+            MessageEDNSExtendedRCODE.bytes())
+
+
+    def test_extendedRcodeDecode(self):
+        """
+        The L(_EDNSMessage} instance created by
+        L{dns._EDNSMessage.fromStr} derives RCODE
+        from the supplied OPT record.
+        """
+        m = self.messageFactory()
+        m.fromStr(MessageEDNSExtendedRCODE.bytes())
+
+        self.assertEqual(m, self.messageFactory(**MessageEDNSExtendedRCODE.kwargs()))
