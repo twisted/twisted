@@ -2962,9 +2962,9 @@ class MessageEDNSExtendedRCODE(object):
 
 
 
-class MessageComparable(FancyEqMixin, FancyStrMixin, dns.Message):
+class MessageComparable(FancyEqMixin, FancyStrMixin, object):
     """
-    A version of L{dns.Message} which is comparable so that it can be
+    A wrapper around L{dns.Message} which is comparable so that it can be
     tested using some of the L{dns._EDNSMessage} tests.
     """
     showAttributes = compareAttributes = (
@@ -2972,6 +2972,12 @@ class MessageComparable(FancyEqMixin, FancyStrMixin, dns.Message):
         'recDes', 'recAv', 'rCode',
         'queries', 'answers', 'authority', 'additional')
 
+    def __init__(self, original):
+        self.original = original
+
+
+    def __getattr__(self, key):
+        return getattr(self.original, key)
 
 
 class EDNSMessageTests(unittest.SynchronousTestCase):
@@ -3427,6 +3433,18 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
         self.assertEqual(ednsMessage.rCode, 0xabcd)
 
 
+    def test_toMessage(self):
+        """
+        L{dns._EDNSMessage.toMessage} constructs a new
+        L{dns.Message} using the attributes and records from an
+        existing L{dns._EDNSMessage} instance.
+        """
+        ednsMessage = dns._EDNSMessage(id=1234, ednsVersion=None)
+        self.assertEqual(
+            MessageComparable(ednsMessage.toMessage()),
+            MessageComparable(dns.Message(id=1234)))
+
+
 
 class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCase):
     """
@@ -3804,12 +3822,12 @@ class MessageStandardEncodingTests(EDNSMessageStandardEncodingTests):
 
         kwargs.pop('ednsVersion', None)
 
-        m = MessageComparable(*args, **kwargs)
+        m = dns.Message(*args, **kwargs)
         m.queries = queries
         m.answers = answers
         m.authority = authority
         m.additional = additional
-        return m
+        return MessageComparable(m)
 
 
 
@@ -3959,3 +3977,13 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         m.fromStr(MessageEDNSExtendedRCODE.bytes())
 
         self.assertEqual(m, self.messageFactory(**MessageEDNSExtendedRCODE.kwargs()))
+
+
+    def test_extendedRcodeZero(self):
+        """
+
+        """
+        ednsMessage = self.messageFactory(rCode=15, ednsVersion=0)
+        standardMessage = ednsMessage.toMessage()
+        self.assertEqual(standardMessage.rCode, 15)
+        self.assertEqual(standardMessage.additional[0].extendedRCODE, 0)
