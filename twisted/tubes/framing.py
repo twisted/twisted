@@ -38,12 +38,12 @@ class _StringsToData(Pump):
 
 
 
-
 class _NotDisconnecting(object):
     """
     Enough of a transport to pretend to not be disconnecting.
     """
     disconnecting = False
+
 
 
 @implementer(ISwitchablePump)
