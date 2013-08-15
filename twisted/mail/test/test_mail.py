@@ -590,7 +590,11 @@ class TestMaildirDomain(mail.maildir.AbstractMaildirDomain):
 
         @type root: C{str}
         @param root: The maildir root directory
+
+        @type users: C{list}
+        @ivar users: Users in the domain.
         """
+        self.users = []
         mail.maildir.AbstractMaildirDomain.__init__(self, service, root)
         if not os.path.exists(root):
             os.makedirs(root)
@@ -598,15 +602,17 @@ class TestMaildirDomain(mail.maildir.AbstractMaildirDomain):
 
     def userDirectory(self, user):
         """
-        Return the maildir directory for a user.  Any username is considered
-        valid.
+        Return the maildir directory for a user.  
 
         @type name: C{str}
         @param user: A username.
 
-        @rtype: C{str}
-        @return: The user's mail directory.
+        @rtype: C{str} or C{None}
+        @return: The user's mail directory or None for an invalid user.
         """
+        if user not in self.users:
+            return None
+
         dir = os.path.join(self.root, user)
         if not os.path.exists(dir):
             mail.maildir.initializeMaildir(dir)
@@ -623,6 +629,7 @@ class TestMaildirDomain(mail.maildir.AbstractMaildirDomain):
         @type password: C{str}
         @param password: A password.
         """
+        self.users.append(user)
         self.userDirectory(user)
 
 
@@ -692,6 +699,15 @@ class AbstractMaildirDomainTestCase(unittest.TestCase):
         msg2 = f()
         self.assertTrue(msg1 != msg2)
         self.assertTrue(msg1.finalName != msg2.finalName)
+
+
+    def test_doesntexist(self):
+        """
+        Verify that L{mail.maildir.AbstractMaildirDomain.exists} raises
+        L{mail.smtp.SMTPBadRcpt} if the user doesn't exist. 
+        """
+        self.assertRaises(mail.smtp.SMTPBadRcpt, self.domain.exists,
+                mail.smtp.User("nonexistentuser@", None, None, None))
 
 
 
