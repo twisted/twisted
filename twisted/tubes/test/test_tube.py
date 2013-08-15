@@ -10,6 +10,7 @@ from twisted.tubes.test.util import (TesterPump, FakeFount,
                                      FakeDrain, IFakeInput)
 from twisted.tubes.test.util import SwitchableTesterPump
 from twisted.tubes.itube import ISwitchableTube
+from twisted.python.failure import Failure
 from twisted.tubes.tube import Pump, series
 
 
@@ -59,6 +60,25 @@ class TubeTest(TestCase):
 
         self.ff.flowTo(series(Starter(), self.fd))
         self.assertEquals(self.fd.received, ["greeting"])
+
+
+    def test_pumpStopped(self):
+        """
+        The L{_Tube} stops its L{Pump} upon C{flowStopped}.
+        """
+        reasons = []
+        class Ender(Pump):
+            def stopped(self, reason):
+                reasons.append(reason)
+                self.tube.deliver("conclusion")
+
+        self.ff.flowTo(series(Ender(), self.fd))
+        self.assertEquals(reasons, [])
+        self.assertEquals(self.fd.received, [])
+        self.ff.drain.flowStopped(Failure(ZeroDivisionError()))
+        self.assertEquals(self.fd.received, ["conclusion"])
+        self.assertEquals(len(reasons), 1)
+        self.assertIdentical(reasons[0].type, ZeroDivisionError)
 
 
     def test_pumpFlowSwitching(self):
