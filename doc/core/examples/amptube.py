@@ -1,6 +1,6 @@
 
 
-from zope.interface import Interface, implements
+from zope.interface import implementer
 
 from ampserver import Math
 
@@ -57,9 +57,8 @@ class BoxesToData(Pump):
 
 
 
+@implementer(IBoxSender)
 class BoxConsumer(Pump):
-
-    implements(IBoxSender)
 
     inputType = None # AmpBox
     outputType = None # AmpBox
