@@ -33,14 +33,14 @@ If your program receives <code>b"hello\r"</code>, and then <em>later</em> receiv
 
 <p>
 Also, when dealing with streams of data from networks, it's common to want to send data somewhere as well as receiving it from somewhere.
-Even if your program is concerned with converting a sequence bytes into a sequence of lines, it needs to be aware of the fact that its output may be full, and unprepared receive any more lines.
+Even if your program is concerned with converting a sequence bytes into a sequence of lines, it needs to be aware of the fact that its output buffer may be full, and unprepared to receive any more lines.
 For example, the line-splitting code above might be used in a proxy that relays output from a cloud server with a very fast datacenter uplink, to computers on very slow consumer networks.
 The cloud server's output will easily outpace a home network's input, which means that if the line parser is going as fast as it can, lines will pile up in outgoing buffers while waiting to be sent out, and consume all of the proxy's memory.
 When this happens, the line parsing program needs to tell <em>its</em> input to slow down, by indicating that it should no longer produce bytes, until the program consuming the line parser's output is ready again.
 </p>
 
 <p>
-The <code>twisted.tubes</code> package contains several interfaces and utilities for dealing with passing inputs to outputs, buffering intermediary data, and dealing with flow-control.
+The <code>twisted.tubes</code> package contains several interfaces and utilities for passing inputs to outputs, buffering intermediary data, and dealing with flow-control.
 <code>tubes</code> will solve some of the problems above for you automatically, and for those problems you need to solve yourself, it will provide common abstractions that make solving them easier.
 This document will teach you how to use the <code>twisted.tubes</code> package.
 </p>
@@ -63,7 +63,7 @@ There are three ways in which <code>tubes</code> is better than using producers,
     </li>
     <li>
     <code>twisted.tubes</code> <em>handles flow control automatically</em>.
-    The manual flow-control notifications provided by <code>IProducer</code> and <code>IConsumer</code> are still used internnally in <code>tubes</code> to hook up to <code>twisted.internet</code>, but the interfaces defined in <code>tubes</code> itself are considerably more flexible, as they allow you to hook together chains of arbitrary length, as opposed to just get buffer notifications for a single connection.
+    The manual flow-control notifications provided by <code>IProducer</code> and <code>IConsumer</code> are still used internally in <code>tubes</code> to hook up to <code>twisted.internet</code>, but the interfaces defined in <code>tubes</code> itself are considerably more flexible, as they allow you to hook together chains of arbitrary length, as opposed to just getting buffer notifications for a single connection.
     </li>
 </ol>
 </div>
@@ -86,7 +86,7 @@ Most often, the arguments to such a function are the two parts of the same netwo
 </p>
 
 <p>
-Let's do exactly that, and get <code>echoFlow</code> called with a real, network-facing <code>fount</code> and <code>drain</code>.
+Let's do exactly that, and call <code>echoFlow</code> with a real, network-facing <code>fount</code> and <code>drain</code>.
 </p>
 
 <a href="listings/tubes/echotube.py" class="py-listing">echotube.py</a>
@@ -125,7 +125,7 @@ Each <code>Pump</code> in the <code>series</code> will be responsible for proces
 <p>
 To demonstrate this, we'll build a little network-based calculator.
 This program will take input, provided as a series of lines.
-These lines will contain data (numbers) and instructions (arithmetic operations, in this case "SUM" and "PRODUCT" for addition and multipliciation respectively) and produce output data (lines containing an equal sign and then results).
+These lines will contain data (numbers) and instructions (arithmetic operations, in this case "SUM" and "PRODUCT" for addition and multiplication respectively) and produce output data (lines containing an equal sign and then results).
 </p>
 
 <p>
@@ -191,7 +191,7 @@ A more interesting example might demonstrate the use of tubes to send data to an
 <a href="listings/tubes/portforward.py" class="py-listing">portforward.py</a>
 
 <p>
-For each incoming connection on port <code>6543</code>, we creating an outgoing connection to the echo server in our previous example.
+For each incoming connection on port <code>6543</code>, we create an outgoing connection to the echo server in our previous example.
 When we have successfully connected to the echo server we connect our incoming <code>listeningFount</code> to our outgoing <code>connectingDrain</code> and our <code>connectingFount</code> to our <code>listeningDrain</code>.
 This forwards all bytes from your <code>telnet</code> client to our echo server, and all bytes from our echo server to your client.
 </p>
