@@ -49,11 +49,13 @@ class NetstringTests(TestCase):
         ff.flowTo(cascade(stringsToNetstrings())).flowTo(fd)
         ff.drain.receive("hello")
         ff.drain.receive("world")
-        self.assertEquals(b"".join(fd.received),
+        self.assertEquals(
+            b"".join(fd.received),
             "{len:d}:{data:s},{len2:d}:{data2:s},".format(
-            len=len("hello"), data="hello",
-            len2=len("world"), data2="world",
-        ))
+                len=len("hello"), data="hello",
+                len2=len("world"), data2="world",
+            )
+        )
 
 
     def test_netstringToString(self):
