@@ -602,7 +602,7 @@ class TestMaildirDomain(mail.maildir.AbstractMaildirDomain):
 
     def userDirectory(self, user):
         """
-        Return the maildir directory for a user.  
+        Return the maildir directory for a user.
 
         @type name: C{str}
         @param user: A username.
@@ -704,7 +704,7 @@ class AbstractMaildirDomainTestCase(unittest.TestCase):
     def test_doesntexist(self):
         """
         Verify that L{mail.maildir.AbstractMaildirDomain.exists} raises
-        L{mail.smtp.SMTPBadRcpt} if the user doesn't exist. 
+        L{mail.smtp.SMTPBadRcpt} if the user doesn't exist.
         """
         self.assertRaises(mail.smtp.SMTPBadRcpt, self.domain.exists,
                 mail.smtp.User("nonexistentuser@", None, None, None))
