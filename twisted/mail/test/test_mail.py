@@ -575,7 +575,7 @@ class MaildirTestCase(unittest.TestCase):
 
 class TestMaildirDomain(mail.maildir.AbstractMaildirDomain):
     """
-    Maildir-backed domain that does no authentication.
+    Maildir-backed domain. 
 
     An implementation of L{mail.maildir.AbstractMaildirDomain} for testing
     purposes.
