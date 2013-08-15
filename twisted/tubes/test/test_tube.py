@@ -11,6 +11,13 @@ from twisted.tubes.test.util import SwitchableTesterPump
 from twisted.tubes.itube import ISwitchableTube
 from twisted.tubes.tube import Pump, series
 
+
+class ReprPump(Pump):
+    def __repr__(self):
+        return '<Pump For Testing>'
+
+
+
 class TubeTest(TestCase):
     """
     Tests for L{series}.
@@ -55,7 +62,7 @@ class TubeTest(TestCase):
 
     def test_pumpFlowSwitching(self):
         """
-
+        XXX direct tests
         """
 
 
@@ -437,3 +444,34 @@ class TubeTest(TestCase):
         thirdPump = SwitchableTesterPump()
         tube.pump = thirdPump
         self.assertTrue(ISwitchableTube.providedBy(tube))
+
+
+    def test_tubeDrainRepr(self):
+        """
+        repr for L{_TubeDrain} includes a reference to its pump.
+        """
+
+        self.assertEqual(repr(series(ReprPump())),
+                         '<Drain for <Pump For Testing>>')
+
+
+    def test_tubeFountRepr(self):
+        """
+        repr for L{_TubeFount} includes a reference to its pump.
+        """
+
+        fount = FakeFount()
+
+        self.assertEqual(repr(fount.flowTo(series(ReprPump()))),
+                         '<Fount for <Pump For Testing>>')
+
+
+    def test_tubeRepr(self):
+        """
+        repr for L{_Tube} includes a reference to its pump.
+        """
+
+        pump = ReprPump()
+        series(pump)
+
+        self.assertEqual(repr(pump.tube), '<Tube for <Pump For Testing>>')

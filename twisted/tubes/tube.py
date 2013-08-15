@@ -48,10 +48,8 @@ class _TubeFount(_TubePiece):
     def __repr__(self):
         """
         Nice string representation.
-
-        XXX test me.
         """
-        return "<Fount for {0}>".format(repr(self._tube))
+        return "<Fount for {0}>".format(repr(self._tube.pump))
 
 
     @property
@@ -112,10 +110,8 @@ class _TubeDrain(_TubePiece):
     def __repr__(self):
         """
         Nice string representation.
-
-        XXX test me.
         """
-        return '<Drain for {0}>'.format(self._tube)
+        return '<Drain for {0}>'.format(self._tube.pump)
 
 
     @property
@@ -309,10 +305,8 @@ class _Tube(object):
     def __repr__(self):
         """
         Nice string representation.
-
-        XXX testme.
         """
-        return '<Tube for pump {0}>'.format(repr(self.pump))
+        return '<Tube for {0}>'.format(repr(self.pump))
 
 
     def _get_pump(self):
