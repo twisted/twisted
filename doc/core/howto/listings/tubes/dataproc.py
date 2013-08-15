@@ -8,7 +8,9 @@ from output import IntegersToLines
 
 def dataProcessor():
     return series(
-        bytesToLines(), LinesToIntegersOrCommands(),
-        CommandsAndIntegersToResultIntegers(), IntegersToLines(),
+        bytesToLines(),
+        LinesToIntegersOrCommands(),
+        CommandsAndIntegersToResultIntegers(),
+        IntegersToLines(),
         linesToBytes()
     )
