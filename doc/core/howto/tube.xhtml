@@ -42,13 +42,16 @@ When this happens, the line parsing program needs to tell <em>its</em> input to 
 <p>
 The <code>twisted.tubes</code> package contains several interfaces and utilities for dealing with passing inputs to outputs, buffering intermediary data, and dealing with flow-control.
 <code>tubes</code> will solve some of the problems above for you automatically, and for those problems you need to solve yourself, it will provide common abstractions that make solving them easier.
+This document will teach you how to use the <code>twisted.tubes</code> package.
 </p>
 
 <div class="note">
 If you've used Twisted before, you may notice that half of this is exactly what <code class="API" base="twisted.protocols.basic">LineReceiver</code> does, and that there are lots of related classes that can do similar things for other message types.
 The other half is handled by <a href="producers.xhtml"><code>IProducer</code> and <code>IConsumer</code></a>.
+<code>tubes</code> is a <em>newer</em> interface than those things, and you will find it somewhat improved.
+If you're writing new code, you should generally prefer to use <code>tubes</code>.
 
-There are three important distinctions here:
+There are three ways in which <code>tubes</code> is better than using producers, consumers, and the various <code>XXXReceiver</code> classes directly.
 <ol>
     <li>
     <code>twisted.tubes</code> is <em>general purpose</em>.
@@ -116,8 +119,18 @@ To demonstrate both receiving and processing data, let's write a server that:
 
 <p>
 In order to implement this program, we will construct a <em>cascade</em> of objects which process the data; or, in the parlance of the <code>tubes</code> package, "<code>Pump</code>s".
-Each <code>Pump</code> in the <code>cascade</code> will be responsible for processing part of the data.</p>
-<p>First we will create a pump that transforms arbitrary segments of a TCP stream into lines, then from lines into a combination of integers and callables (functions that perform the work of the <code>SUM</code> and <code>PRODUCT commands</code>), then from integers and callables into more integers - sums and products - from those integers into lines, and finally from those lines into CRLF-terminated segments of TCP data that are sent back out over the network.
+Each <code>Pump</code> in the <code>cascade</code> will be responsible for processing part of the data.
+</p>
+
+<p>
+To demonstrate this, we'll build a little network-based calculator.
+This program will take input, provided as a series of lines.
+These lines will contain data (numbers) and instructions (arithmetic operations, in this case "SUM" and "PRODUCT" for addition and multipliciation respectively) and produce output data (lines containing an equal sign and then results).
+</p>
+
+<p>
+First we will create a pump that transforms arbitrary segments of a TCP stream into lines.
+Then, a pump that will transform lines into a combination of integers and callables (functions that perform the work of the <code>SUM</code> and <code>PRODUCT commands</code>), then from integers and callables into more integers - sums and products - from those integers into lines, and finally from those lines into CRLF-terminated segments of TCP data that are sent back out over the network.
 </p>
 
 <p>
@@ -133,6 +146,7 @@ So what is <code>dataProcessor</code> and what does it return?  We need to write
 </p>
 
 <a href="listings/tubes/dataproc.py" class="py-listing">computube2.py</a>
+
 <p>
 
 </p>
