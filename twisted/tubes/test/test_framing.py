@@ -10,7 +10,7 @@ from twisted.tubes.framing import stringsToNetstrings
 
 from twisted.tubes.test.util import FakeFount
 from twisted.tubes.test.util import FakeDrain
-from twisted.tubes.tube import cascade
+from twisted.tubes.tube import series
 
 from twisted.tubes.tube import Pump
 
@@ -33,7 +33,7 @@ class NetstringTests(TestCase):
         """
         ff = FakeFount()
         fd = FakeDrain()
-        ff.flowTo(cascade(stringsToNetstrings())).flowTo(fd)
+        ff.flowTo(series(stringsToNetstrings())).flowTo(fd)
         ff.drain.receive("hello")
         self.assertEquals(fd.received, ["{len:d}:{data:s},".format(
             len=len("hello"), data="hello"
@@ -46,7 +46,7 @@ class NetstringTests(TestCase):
         """
         ff = FakeFount()
         fd = FakeDrain()
-        ff.flowTo(cascade(stringsToNetstrings())).flowTo(fd)
+        ff.flowTo(series(stringsToNetstrings())).flowTo(fd)
         ff.drain.receive("hello")
         ff.drain.receive("world")
         self.assertEquals(
@@ -64,7 +64,7 @@ class NetstringTests(TestCase):
         """
         ff = FakeFount()
         fd = FakeDrain()
-        ff.flowTo(cascade(netstringsToStrings())).flowTo(fd)
+        ff.flowTo(series(netstringsToStrings())).flowTo(fd)
         ff.drain.receive("1:x,2:yz,3:")
         self.assertEquals(fd.received, ["x", "yz"])
 
@@ -81,7 +81,7 @@ class LineTests(TestCase):
         """
         ff = FakeFount()
         fd = FakeDrain()
-        ff.flowTo(cascade(bytesToLines())).flowTo(fd)
+        ff.flowTo(series(bytesToLines())).flowTo(fd)
         ff.drain.receive(b"alpha\r\nbeta\r\ngamma")
         self.assertEquals(fd.received, [b"alpha", b"beta"])
 
@@ -92,7 +92,7 @@ class LineTests(TestCase):
         """
         ff = FakeFount()
         fd = FakeDrain()
-        ff.flowTo(cascade(linesToBytes())).flowTo(fd)
+        ff.flowTo(series(linesToBytes())).flowTo(fd)
         ff.drain.receive(b"hello")
         ff.drain.receive(b"world")
         self.assertEquals(b"".join(fd.received), b"hello\r\nworld\r\n")
@@ -114,7 +114,7 @@ class LineTests(TestCase):
                 if splitted[0] == 'switch':
                     length = int(splitted[1])
                     # XXX document downstream
-                    lines.tube.switch(cascade(Switchee(length), fd))
+                    lines.tube.switch(series(Switchee(length), fd))
                 return ()
 
         class Switchee(Pump):
@@ -124,7 +124,7 @@ class LineTests(TestCase):
             def received(self, data):
                 self.datums.append(data)
 
-        cc = cascade(lines, Switcher())
+        cc = series(lines, Switcher())
         ff.flowTo(cc).flowTo(fd)
         ff.drain.receive("hello\r\nworld\r\nswitch 10\r\nabcde\r\nfgh"
                          # + '\r\nagain\r\n'
@@ -144,11 +144,11 @@ class LineTests(TestCase):
         class Switcher(Pump):
             def received(self, line):
                 if 'switch' in line:
-                    lines.tube.switch(cascade(netstringsToStrings(), fd2))
+                    lines.tube.switch(series(netstringsToStrings(), fd2))
                 else:
                     self.tube.deliver(line)
 
-        cc = cascade(lines, Switcher())
+        cc = series(lines, Switcher())
         ff.flowTo(cc).flowTo(fd1)
         ff.drain.receive('switch\r\n7:hello\r\n,5:world,')
         self.assertEquals(fd1.received, [])
@@ -184,7 +184,7 @@ class LineTests(TestCase):
 
         downstream = Downstream()
 
-        cc = cascade(lines, SwitchAfterFirstLine(), downstream, fd1)
+        cc = series(lines, SwitchAfterFirstLine(), downstream, fd1)
         ff.flowTo(cc)
         ff.drain.receive('spam\r\neggs\r\nspameggs\r\nspamspam\r\n')
         self.assertEquals(fd1.received, ['spam(downstream)'])
@@ -204,7 +204,7 @@ class PackedPrefixTests(TestCase):
         packed = packedPrefixToStrings(8)
         ff = FakeFount()
         fd = FakeDrain()
-        ff.flowTo(cascade(packed)).flowTo(fd)
+        ff.flowTo(series(packed)).flowTo(fd)
         ff.drain.receive(b"\x0812345678\x02")
         self.assertEquals(fd.received, ["12345678"])
 
@@ -216,7 +216,7 @@ class PackedPrefixTests(TestCase):
         packed = stringsToPackedPrefix(8)
         ff = FakeFount()
         fd = FakeDrain()
-        ff.flowTo(cascade(packed, fd))
+        ff.flowTo(series(packed, fd))
         ff.drain.receive('a')
         ff.drain.receive('bc')
         ff.drain.receive('def')

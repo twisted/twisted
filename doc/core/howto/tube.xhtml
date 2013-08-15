@@ -118,8 +118,8 @@ To demonstrate both receiving and processing data, let's write a server that:
 </p>
 
 <p>
-In order to implement this program, we will construct a <em>cascade</em> of objects which process the data; or, in the parlance of the <code>tubes</code> package, "<code>Pump</code>s".
-Each <code>Pump</code> in the <code>cascade</code> will be responsible for processing part of the data.
+In order to implement this program, we will construct a <em>series</em> of objects which process the data; or, in the parlance of the <code>tubes</code> package, "<code>Pump</code>s".
+Each <code>Pump</code> in the <code>series</code> will be responsible for processing part of the data.
 </p>
 
 <p>
@@ -140,7 +140,7 @@ Here's a sketch of the overall structure of such a program:
 <a href="listings/tubes/computube.py" class="py-listing">computube.py</a>
 
 <p>
-As with <code>echoFlow</code>, <code>mathFlow</code> takes a fount and a drain.  
+As with <code>echoFlow</code>, <code>mathFlow</code> takes a fount and a drain.
 Rather than connecting them directly, it puts an object between them to process the data.
 So what is <code>dataProcessor</code> and what does it return?  We need to write it, and it would look something like this:
 </p>
@@ -167,7 +167,7 @@ Let's implement them.  First, <code>LinesToIntegersOrCommands</code> receives li
 <a href="listings/tubes/intparse.py" class="py-listing">intparse.py</a>
 
 <p>
-Next, <code>CommandsAndIntegersToResultIntegers</code> takes that output 
+Next, <code>CommandsAndIntegersToResultIntegers</code> takes that output
 </p>
 
 <a href="listings/tubes/worker.py" class="py-listing">worker.py</a>

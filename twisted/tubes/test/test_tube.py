@@ -9,11 +9,11 @@ from twisted.trial.unittest import TestCase
 from twisted.tubes.test.util import TesterPump, FakeFount, FakeDrain, IFakeInput
 from twisted.tubes.test.util import SwitchableTesterPump
 from twisted.tubes.itube import ISwitchableTube
-from twisted.tubes.tube import Pump, cascade
+from twisted.tubes.tube import Pump, series
 
 class TubeTest(TestCase):
     """
-    Tests for L{cascade}.
+    Tests for L{series}.
     """
 
     def setUp(self):
@@ -21,7 +21,7 @@ class TubeTest(TestCase):
         Create a tube, and a fake drain and fount connected to it.
         """
         self.pump = TesterPump()
-        self.tubeDrain = cascade(self.pump)
+        self.tubeDrain = series(self.pump)
         self.tube = self.pump.tube
         self.ff = FakeFount()
         self.fd = FakeDrain()
@@ -49,7 +49,7 @@ class TubeTest(TestCase):
             def started(self):
                 self.tube.deliver("greeting")
 
-        self.ff.flowTo(cascade(Starter(), self.fd))
+        self.ff.flowTo(series(Starter(), self.fd))
         self.assertEquals(self.fd.received, ["greeting"])
 
 
@@ -125,7 +125,7 @@ class TubeTest(TestCase):
         class ProgressingPump(Pump):
             def progressed(self, amount=None):
                 got.append(amount)
-        self.ff.flowTo(self.tubeDrain).flowTo(cascade(ProgressingPump()))
+        self.ff.flowTo(self.tubeDrain).flowTo(series(ProgressingPump()))
         self.tubeDrain.receive(2)
         self.assertEquals(got, [None])
 
@@ -149,7 +149,7 @@ class TubeTest(TestCase):
             def received(self, item):
                 got.append(item)
         self.tube.pump = ReceivingPump()
-        self.ff.flowTo(self.tubeDrain).flowTo(cascade(ProgressingPump()))
+        self.ff.flowTo(self.tubeDrain).flowTo(series(ProgressingPump()))
         self.tubeDrain.receive(2)
         # sanity check
         self.assertEquals(got, [3])
@@ -162,7 +162,7 @@ class TubeTest(TestCase):
         to L{_Tube.flowTo} will have its L{flowingFrom} called when
         L{_Tube.flowingFrom} is called.
         """
-        cascade(self.tube, self.fd)
+        series(self.tube, self.fd)
         self.ff.flowTo(self.tubeDrain)
         self.ff.drain.receive(3)
         self.tube.deliver(self.pump.allReceivedItems.pop())
@@ -313,7 +313,7 @@ class TubeTest(TestCase):
         a = A()
         b = B()
         c = C()
-        ab = cascade(a, b, c)
+        ab = series(a, b, c)
         self.ff.flowTo(ab).flowTo(self.fd)
         a.tube.deliver("received by B")
         b.tube.deliver("receved by C")
@@ -376,7 +376,7 @@ class TubeTest(TestCase):
         """
 
         pump = SwitchableTesterPump()
-        cascade(pump)
+        series(pump)
         self.assertTrue(ISwitchableTube.providedBy(pump.tube))
 
 
@@ -387,7 +387,7 @@ class TubeTest(TestCase):
         """
 
         pump = SwitchableTesterPump()
-        cascade(pump)
+        series(pump)
         otherPump = TesterPump()
         tube = pump.tube
         tube.pump = otherPump
@@ -401,7 +401,7 @@ class TubeTest(TestCase):
         """
 
         pump = SwitchableTesterPump()
-        cascade(pump)
+        series(pump)
         otherPump = SwitchableTesterPump()
         tube = pump.tube
         tube.pump = otherPump
@@ -415,7 +415,7 @@ class TubeTest(TestCase):
         """
 
         pump = TesterPump()
-        cascade(pump)
+        series(pump)
         otherPump = TesterPump()
         tube = pump.tube
         tube.pump = otherPump
@@ -430,7 +430,7 @@ class TubeTest(TestCase):
         """
 
         pump = SwitchableTesterPump()
-        cascade(pump)
+        series(pump)
         otherPump = TesterPump()
         tube = pump.tube
         tube.pump = otherPump

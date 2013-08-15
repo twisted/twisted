@@ -182,7 +182,7 @@ class _TubeDrain(_TubePiece):
 
 
 
-def cascade(start, *plumbing):
+def series(start, *plumbing):
     """
     Connect up a series of objects capable of transforming inputs to outputs;
     convert a sequence of L{IPump} objects into a sequence of connected
@@ -196,13 +196,13 @@ def cascade(start, *plumbing):
 
     is roughly analagous to::
 
-        x = cascade(a, b, c)
+        x = series(a, b, c)
 
-    with the additional feature that C{cascade} will convert C{a}, C{b}, and
+    with the additional feature that C{series} will convert C{a}, C{b}, and
     C{c} to the requisite L{IDrain} objects first.
 
     @param start: The initial element in the chain; the object that will
-        consume inputs passed to the result of this call to C{cascade}.
+        consume inputs passed to the result of this call to C{series}.
     @type start: an L{IPump}, or anything adaptable to L{IFount}, as well as
         L{IDrain}.
 

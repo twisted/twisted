@@ -11,7 +11,7 @@ from twisted.internet import reactor
 
 from twisted.protocols.amp import AmpBox, IBoxSender
 from twisted.tubes.itube import ISegment
-from twisted.tubes.tube import Pump, cascade
+from twisted.tubes.tube import Pump, series
 from twisted.tubes.framing import packedPrefixToStrings
 
 class StringsToBoxes(Pump):
@@ -86,7 +86,7 @@ class BoxConsumer(Pump):
 
 
 def mathFlow(fount, drain):
-    fount.flowTo(cascade(packedPrefixToStrings(16), StringsToBoxes(),
+    fount.flowTo(series(packedPrefixToStrings(16), StringsToBoxes(),
                          BoxConsumer(Math()), BoxesToData(), drain))
 
 

@@ -10,7 +10,7 @@ from twisted.tubes.test.util import StringEndpoint
 from twisted.trial.unittest import TestCase
 from twisted.tubes.protocol import factoryFromFlow
 from twisted.tubes.tube import Pump
-from twisted.tubes.tube import cascade
+from twisted.tubes.tube import series
 from twisted.python.failure import Failure
 from twisted.tubes.test.util import FakeDrain
 from twisted.tubes.test.util import FakeFount
@@ -57,7 +57,7 @@ class FlowingAdapterTests(TestCase, ResultProducingMixin):
         )
 
         self.pump = RememberingPump()
-        self.tube = cascade(self.pump)
+        self.tube = series(self.pump)
 
 
     def test_flowToSetsDrain(self):
