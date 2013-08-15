@@ -292,6 +292,8 @@ class _Tube(object):
     _pumpReceiving = False
     _delivered = False
     _pump = None
+    _tubeUnbuffering = False
+    _switchFlush = False
 
     def __init__(self, pump):
         """
@@ -339,7 +341,6 @@ class _Tube(object):
     pump = property(_get_pump, _set_pump)
 
 
-    _tubeUnbuffering = False
     def _unbufferSome(self):
         """
         Un-buffer some pending output into the downstream drain.
@@ -373,8 +374,6 @@ class _Tube(object):
         else:
             return drain.receive(item)
 
-
-    _switchFlush = False
 
     def switch(self, drain):
         if not ISwitchableTube.providedBy(self):
