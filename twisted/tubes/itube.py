@@ -68,8 +68,11 @@ class IFount(Interface):
 
     def stopFlow():
         """
-        End the flow from this L{IFount}; it should never call L{IDrain.receive}
-        again.
+        End the flow from this L{IFount}; after this invocation, this L{IFount}
+        should never call any methods on its C{drain} other than
+        L{self.drain.flowStopped() <IDrain.flowStopped>}.  It will invoke
+        C{flowStopped} once, when the resources associated with this L{IFount}
+        flowing have been released.
         """
 
 
@@ -105,10 +108,11 @@ class IDrain(Interface):
 
         @param item: an instance of L{IDrain.receiveType}
 
-        @return: a floating point number between 0.0 and 1.0, indicating the how
-            full any buffers on the way to processing the data are (0-100%).
-            Note that this may be greater than 100%, in which case you should
-            probably stop sending for a while and give it a chance to recover.
+        @return: a floating point number between 0.0 and 1.0, indicating the
+            how full any buffers on the way to processing the data are
+            (0-100%).  Note that this may be greater than 100%, in which case
+            you should probably stop sending for a while and give it a chance
+            to recover.
         """
 
 
@@ -154,11 +158,12 @@ class IDrain(Interface):
         The flow has stopped.  The given L{Failure
         <twisted.internet.failure.Failure>} object indicates why.  After a
         L{IFount} invokes this method, it must stop invoking all other methods
-        on this L{IDrain}.
+        on this L{IDrain}; similarly, this L{IDrain} must stop invoking all
+        methods on its L{IFount}.
 
-        @param reason: The reason why the flow has terminated.  This may be any
-            exception type, depending on the L{IFount} delivering data to this
-            L{IDrain}.
+        @param reason: The reason why the flow has terminated.  This may
+            contain any exception type, depending on the L{IFount} delivering
+            data to this L{IDrain}.
         @type reason: L{Failure <twisted.internet.failure.Failure>}
         """
 
@@ -187,6 +192,16 @@ class IPump(Interface):
               =========> direction of flow =========>
 
     (Image credit Nam Nguyen)
+
+    @note: L{IPump} providers participate in I{data processing} not in I{flow
+        control}.  That is to say, an L{IPump} provider can translate its input
+        to output, but cannot impact the rate at which that output is
+        delivered.  If you want to implement flow-control modifications,
+        implement L{IDrain} directly.  L{IDrain} providers may be easily
+        connected up to L{IPump} providers with L{series
+        <twisted.tubes.tube.series>}, so you may implement flow-control in an
+        L{IDrain} that passes on its input unmodified and data-processing in an
+        L{IPump} and hook them together.
     """
 
     inputType = Attribute(
@@ -229,7 +244,13 @@ class IPump(Interface):
 
     def stopped(reason):
         """
-        The flow of data was stopped.
+        The flow of data from this L{IPump}'s input has ceased; this
+        corresponds to L{IDrain.flowStopped}.
+
+        @note: L{IPump} I{has} no notification corresponding to
+            L{IFount.stopFlow}, since it has no control over whether additional
+            data will be synthesized / processed by I{its} fount, there's no
+            useful work it can do.
         """
 
 
@@ -295,6 +316,7 @@ class ITube(Interface):
         Deliver the given item to this L{ITube}'s L{IDrain}, if something is
         flowing from the L{IDrain}.
         """
+
 
 
 class ISwitchableTube(ITube):

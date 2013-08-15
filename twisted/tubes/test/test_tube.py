@@ -6,7 +6,8 @@ Tests for L{twisted.tubes.tube}.
 """
 
 from twisted.trial.unittest import TestCase
-from twisted.tubes.test.util import TesterPump, FakeFount, FakeDrain, IFakeInput
+from twisted.tubes.test.util import (TesterPump, FakeFount,
+                                     FakeDrain, IFakeInput)
 from twisted.tubes.test.util import SwitchableTesterPump
 from twisted.tubes.itube import ISwitchableTube
 from twisted.tubes.tube import Pump, series

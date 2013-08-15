@@ -68,7 +68,7 @@ class _ProtocolDrain(object):
         ceased.  Perform a half-close on the transport if possible so that it
         knows no further data is forthcoming.
         """
-        # Hrm.  Not exactly sure what this would mean - we're not going to get
+        # XXX.  Not exactly sure what this would mean - we're not going to get
         # more data delievered to us... so... time to go away?  Actually, this
         # is ostensibly a half-close since the other end of the connection may
         # feel free to continue to deliver data to *us*...
