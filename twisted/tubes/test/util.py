@@ -17,57 +17,6 @@ from twisted.tubes.itube import ISwitchablePump
 from twisted.tubes.tube import Pump
 
 
-class Result(object):
-    """
-    The pending result of a L{Deferred}.  Useful in tests which want to
-    synchronously fire L{Deferreds} and then assert that they've been fired (up
-    to that point in their callback chain).
-    """
-
-    def __init__(self, test, deferred, propagate=False):
-        """
-        Create with a given L{Deferred}.
-
-        @param propagate: if true, propagate results (and failures) through to
-            subsequent callbacks.
-        """
-        self.deferred = deferred
-        self.hasResult = False
-        self.result = None
-        self.test = test
-
-        def completed(result):
-            self.hasResult = True
-            self.result = result
-            if propagate:
-                return result
-        self.deferred.addBoth(completed)
-
-
-    def now(self):
-        """
-        The L{Deferred} should have fired by now.  Return its result, or fail
-        the test.
-        """
-        if not self.hasResult:
-            self.test.fail("Deferred didn't get a result yet.")
-        return self.result
-
-
-
-class ResultProducingMixin(object):
-    """
-    Test case mixin for producing L{Result}s conveniently.
-    """
-
-    def result(self, d):
-        """
-        Get a L{Result} for this L{Deferred} for this test.
-        """
-        return Result(self, d)
-
-
-
 class StringEndpoint(object):
     """
     An endpoint which connects to a L{StringTransport}

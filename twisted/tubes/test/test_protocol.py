@@ -5,7 +5,6 @@
 Tests for L{twisted.tubes.protocol}.
 """
 
-from twisted.tubes.test.util import ResultProducingMixin
 from twisted.tubes.test.util import StringEndpoint
 from twisted.trial.unittest import TestCase
 from twisted.tubes.protocol import factoryFromFlow
@@ -38,7 +37,7 @@ class RememberingPump(Pump):
 
 
 
-class FlowingAdapterTests(TestCase, ResultProducingMixin):
+class FlowingAdapterTests(TestCase):
     """
     Tests for L{factoryFromFlow} and the drain/fount/factory adapters it
     constructs.
