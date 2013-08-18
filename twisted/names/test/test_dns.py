@@ -591,6 +591,22 @@ class MessageTestCase(unittest.SynchronousTestCase):
         self.assertIdentical(dns.Message(authenticData=1).authenticData, 1)
 
 
+    def test_checkingDisabledDefault(self):
+        """
+        L{dns.Message.checkingDisabled} has default value 0.
+        """
+        self.assertIdentical(dns.Message().checkingDisabled, 0)
+
+
+    def test_checkingDisabledOverride(self):
+        """
+        L{dns.Message.__init__} accepts a C{checkingDisabled} argument which
+        is assigned to L{dns.Message.checkingDisabled}.
+        """
+        self.assertIdentical(
+            dns.Message(checkingDisabled=1).checkingDisabled, 1)
+
+
     def testEmptyMessage(self):
         """
         Test that a message which has been truncated causes an EOFError to
