@@ -591,6 +591,14 @@ class MessageTestCase(unittest.SynchronousTestCase):
         self.assertIdentical(dns.Message(authenticData=1).authenticData, 1)
 
 
+    def test_authenticDataPosition(self):
+        """
+        C{authenticData} is the tenth argument of L{dns.Message.__init__}.
+        """
+        args = [None] * 9 + [1]
+        self.assertIdentical(dns.Message(*args).authenticData, 1)
+
+
     def test_authenticDataEncode(self):
         """
         L{dns.Message.toStr} encodes L{dns.Message.authenticData} into
@@ -641,6 +649,15 @@ class MessageTestCase(unittest.SynchronousTestCase):
         """
         self.assertIdentical(
             dns.Message(checkingDisabled=1).checkingDisabled, 1)
+
+
+    def test_checkingDisabledPosition(self):
+        """
+        C{checkingDisabled} is the eleventh argument of
+        L{dns.Message.__init__}.
+        """
+        args = [None] * 10 + [1]
+        self.assertIdentical(dns.Message(*args).checkingDisabled, 1)
 
 
     def test_checkingDisabledEncode(self):

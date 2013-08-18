@@ -1920,11 +1920,11 @@ class Message:
     @ivar recDes: See L{__init__}
     @ivar recAv: See L{__init__}
     @ivar auth: See L{__init__}
-    @ivar authenticData: See L{__init__}
-    @ivar checkingDisabled: See L{__init__}
     @ivar rCode: See L{__init__}
     @ivar trunc: See L{__init__}
     @ivar maxSize: See L{__init__}
+    @ivar authenticData: See L{__init__}
+    @ivar checkingDisabled: See L{__init__}
 
     @ivar queries: The queries which are being asked of or answered by
         DNS server.
@@ -1949,8 +1949,8 @@ class Message:
     queries = answers = add = ns = None
 
     def __init__(self, id=0, answer=0, opCode=0, recDes=0, recAv=0,
-                       auth=0, authenticData=0, checkingDisabled=0, rCode=OK,
-                       trunc=0, maxSize=512):
+                       auth=0, rCode=OK, trunc=0, maxSize=512,
+                       authenticData=0, checkingDisabled=0):
         """
         @param id: A 16 bit identifier assigned by the program that
             generates any kind of query.  This identifier is copied
@@ -1983,14 +1983,6 @@ class Message:
             is an authority for the domain name in question section.
         @type auth: L{int}
 
-        @param authenticData: Authentic data bit as defined by
-            [RFC2535 section-6.1].
-        @type authenticData: C{int}
-
-        @param checkingDisabled: Checking Disabled bit as defined by
-            [RFC2535 section-6.1].
-        @type authenticData: C{int}
-
         @ivar rCode: A response code, used to indicate success or failure in a
             message which is a response from a server to a client request.
         @type rCode: C{0 <= int < 16}
@@ -2005,6 +1997,14 @@ class Message:
             reassembled and delivered in the requestor's network
             stack.
         @type maxSize: L{int}
+
+        @param authenticData: Authentic data bit as defined by
+            [RFC2535 section-6.1].
+        @type authenticData: C{int}
+
+        @param checkingDisabled: Checking Disabled bit as defined by
+            [RFC2535 section-6.1].
+        @type authenticData: C{int}
         """
         self.maxSize = maxSize
         self.id = id
@@ -2014,9 +2014,10 @@ class Message:
         self.trunc = trunc
         self.recDes = recDes
         self.recAv = recAv
+        self.rCode = rCode
         self.authenticData = authenticData
         self.checkingDisabled = checkingDisabled
-        self.rCode = rCode
+
         self.queries = []
         self.answers = []
         self.authority = []
