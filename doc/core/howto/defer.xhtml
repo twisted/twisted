@@ -513,13 +513,12 @@ cases, etc..</p>
 <code>Deferred</code>, the cancellation will be forwarded to the other
 <code>Deferred</code>.</p>
 
-<h3>Creating a Deferred which supports cancellation</h3>
+<h3>Default Cancellation Behavior</h3>
 
-<h4>Default Behavior</h4>
-
-<p>This section might as well be empty, because all Deferreds support
-cancellation.  However, they support a very rudimentary form of cancellation
-which doesn't free any resources.</p>
+<p>
+All Deferreds support cancellation.
+However, by default, they support a very rudimentary form of cancellation which doesn't free any resources.
+</p>
 
 <p>Consider this example of a Deferred which is ignorant of cancellation:</p>
 <pre class="python">
@@ -555,7 +554,8 @@ would cause an ugly traceback that could not be caught.  Therefore,
 call it multiple times, you will still get an <code>AlreadyCalledError</code>
 exception.</li> </ol>
 
-<h4>Actually cancelling things: customizing the canceller</h4>
+<h3>Creating Cancellable Deferreds: Custom Cancellation Functions</h3>
+
 <p>Let's imagine you are implementing an HTTP client, which returns a Deferred
 firing with the response from the server. Cancellation is best achieved by
 closing the connection. In order to make cancellation do that, all you have to
