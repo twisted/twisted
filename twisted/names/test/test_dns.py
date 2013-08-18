@@ -576,6 +576,21 @@ class MessageTestCase(unittest.SynchronousTestCase):
     Tests for L{twisted.names.dns.Message}.
     """
 
+    def test_authenticDataDefault(self):
+        """
+        L{dns.Message.authenticData} has default value 0.
+        """
+        self.assertIdentical(dns.Message().authenticData, 0)
+
+
+    def test_authenticDataOverride(self):
+        """
+        L{dns.Message.__init__} accepts a C{authenticData} argument which
+        is assigned to L{dns.Message.authenticData}.
+        """
+        self.assertIdentical(dns.Message(authenticData=1).authenticData, 1)
+
+
     def testEmptyMessage(self):
         """
         Test that a message which has been truncated causes an EOFError to

@@ -1925,7 +1925,8 @@ class Message:
     queries = answers = add = ns = None
 
     def __init__(self, id=0, answer=0, opCode=0, recDes=0, recAv=0,
-                       auth=0, rCode=OK, trunc=0, maxSize=512):
+                       auth=0, authenticData=0, rCode=OK,
+                       trunc=0, maxSize=512):
         self.maxSize = maxSize
         self.id = id
         self.answer = answer
@@ -1934,6 +1935,7 @@ class Message:
         self.trunc = trunc
         self.recDes = recDes
         self.recAv = recAv
+        self.authenticData = authenticData
         self.rCode = rCode
         self.queries = []
         self.answers = []
