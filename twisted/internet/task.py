@@ -782,7 +782,7 @@ def deferLater(clock, delay, callable, *args, **kw):
 
 
 
-def addDeferredTimeout(reactor, deferred, timeout):
+def addDeferredTimeout(reactor, deferred, seconds):
     """
     Timeout a L{defer.Deferred} if it does not have a result available within
     the given amount of time.
@@ -802,12 +802,12 @@ def addDeferredTimeout(reactor, deferred, timeout):
 
     @param deferred: The L{defer.Deferred} to time out.
 
-    @param timeout: The number of seconds before the timeout will happen.
+    @param seconds: The number of seconds before the timeout will happen.
     """
     # Schedule timeout, making sure we know when it happened:
     def timedOutCall():
         deferred.cancel()
-    delayedTimeOutCall = reactor.callLater(timeout, timedOutCall)
+    delayedTimeOutCall = reactor.callLater(seconds, timedOutCall)
 
     # If Deferred has result, cancel the timeout:
     def cancelTimeout(result):
