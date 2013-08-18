@@ -787,12 +787,11 @@ def addDeferredTimeout(reactor, deferred, seconds):
     Timeout a L{defer.Deferred} if it does not have a result available within
     the given amount of time.
 
-    The timeout is aware only of callbacks and errbacks added up until the
-    point this function is called. If a callback function which returns a
-    L{defer.Deferred} is added after the timeout was set, the timeout will not
-    be aware of it. In particular, it will not be able to time it out if all
-    callbacks added before the timeout was added have fired, since it will
-    believe that the timeout is no longer necessary.
+    There are two different cases about waiting on another L{defer.Deferred}.
+    If the waited L{defer.Deferred} is returned by a callback that added before
+    setting the timeout, the timeout will still happen when time arrives.
+    If the waited L{defer.Deferred} is returned by a callback that added after
+    setting the timeout, the timeout is already cancelled by then.
 
     If the L{defer.Deferred} times out, it will be cancelled.
     @see: L{defer.Deferred.cancel}.
