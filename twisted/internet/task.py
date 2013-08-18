@@ -805,9 +805,7 @@ def addDeferredTimeout(reactor, deferred, timeout):
     @param timeout: The number of seconds before the timeout will happen.
     """
     # Schedule timeout, making sure we know when it happened:
-    timedOut = [] # This is used by convertException below
     def timedOutCall():
-        timedOut.append(True)
         deferred.cancel()
     callID = reactor.callLater(timeout, timedOutCall)
 
