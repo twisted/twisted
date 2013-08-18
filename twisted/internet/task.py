@@ -796,8 +796,7 @@ def addDeferredTimeout(reactor, deferred, seconds):
     If the L{defer.Deferred} times out, it will be cancelled.
     @see: L{defer.Deferred.cancel}.
 
-    @param reactor: A provider of L{twisted.internet.interfaces.IReactorTime},
-        typically the reactor, or a L{Clock} for testing.
+    @param reactor: A provider of L{twisted.internet.interfaces.IReactorTime}.
 
     @param deferred: The L{defer.Deferred} to time out.
 
