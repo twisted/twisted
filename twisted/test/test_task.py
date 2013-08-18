@@ -746,7 +746,7 @@ class AddDeferredTimeoutTests(unittest.TestCase):
 
     def test_noTimeoutIfCallback(self):
         """
-        L{task.addDeferredTimeout} will not not cause a timeout if the
+        The timeout set by L{task.addDeferredTimeout} will be cancelled if the
         L{defer.Deferred}'s C{callback()} is called.
         """
         reactor = Clock()
@@ -765,7 +765,7 @@ class AddDeferredTimeoutTests(unittest.TestCase):
 
     def test_noTimeoutIfErrback(self):
         """
-        L{task.addDeferredTimeout} will not not cause a timeout if the
+        The timeout set by L{task.addDeferredTimeout} will be cancelled if the
         L{defer.Deferred}'s C{errback()} is called.
         """
         reactor = Clock()
@@ -785,7 +785,7 @@ class AddDeferredTimeoutTests(unittest.TestCase):
 
     def test_noTimeoutIfCancel(self):
         """
-        L{task.addDeferredTimeout} will not not cause a timeout if the
+        The timeout set by L{task.addDeferredTimeout} will be cancelled if the
         L{defer.Deferred}'s C{cancel()} method is called.
         """
         reactor = Clock()
@@ -803,8 +803,8 @@ class AddDeferredTimeoutTests(unittest.TestCase):
 
     def test_timeout(self):
         """
-        If the L{defer.Deferred} is not fired in time,
-        L{task.addDeferredTimeout} will cancel it.
+        If the L{defer.Deferred} is not fired in the time given by
+        L{task.addDeferredTimeout}, L{task.addDeferredTimeout} will cancel it.
         """
         reactor = Clock()
         cancelled = []
