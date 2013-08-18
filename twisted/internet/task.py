@@ -794,8 +794,8 @@ def addDeferredTimeout(reactor, deferred, seconds):
     callbacks added before the timeout was added have fired, since it will
     believe that the timeout is no longer necessary.
 
-    If the L{defer.Deferred} times out, it will be cancelled, so registering a
-    custom canceller is recommended.
+    If the L{defer.Deferred} times out, it will be cancelled.
+    @see: L{defer.Deferred.cancel}.
 
     @param reactor: A provider of L{twisted.internet.interfaces.IReactorTime},
         typically the reactor, or a L{Clock} for testing.
