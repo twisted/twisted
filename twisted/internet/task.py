@@ -782,7 +782,7 @@ def deferLater(clock, delay, callable, *args, **kw):
 
 
 
-def addDeferredTimeout(reactor, deferred, timeout, exception=None):
+def addDeferredTimeout(reactor, deferred, timeout):
     """
     Timeout a L{defer.Deferred} if it does not have a result available within
     the given amount of time.
@@ -803,12 +803,6 @@ def addDeferredTimeout(reactor, deferred, timeout, exception=None):
     @param deferred: The L{defer.Deferred} to time out.
 
     @param timeout: The number of seconds before the timeout will happen.
-
-    @param exception: If not C{None}, the L{defer.CancelledError} caused by
-        the timeout will be converted into the given exception instance,
-        assuming an errback earlier in the callback stack hasn't already
-        handled it. This only affects errbacks added after this function is
-        called.
     """
     # Schedule timeout, making sure we know when it happened:
     timedOut = [] # This is used by convertException below
@@ -823,16 +817,6 @@ def addDeferredTimeout(reactor, deferred, timeout, exception=None):
             callID.cancel()
         return result
     deferred.addBoth(cancelTimeout)
-
-    # If Deferred timed out and we have custom exception, use it:
-    if exception is not None:
-        def convertException(reason):
-            if timedOut:
-                reason.trap(defer.CancelledError)
-                return Failure(exception)
-            else:
-                return reason
-        deferred.addErrback(convertException)
 
     return callID
 

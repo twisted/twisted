@@ -853,62 +853,6 @@ class AddDeferredTimeoutTests(unittest.TestCase):
         self.assertIsInstance(result[0].value, defer.CancelledError)
 
 
-    def test_customException(self):
-        """
-        L{task.addDeferredTimeout} can specify a custom exception which will
-        be used if the timeout is hit.
-        """
-        reactor = Clock()
-        result = []
-        d = defer.Deferred()
-
-        customException = RuntimeError()
-        task.addDeferredTimeout(reactor, d, 10, customException)
-        d.addErrback(result.append)
-
-        reactor.advance(10)
-        self.assertIdentical(result[0].value, customException)
-
-
-    def test_multipleCustomExceptions(self):
-        """
-        If L{task.addDeferredTimeout} is called multiple times, the custom
-        exception used is the one specified by the timeout that was hit.
-        """
-        reactor = Clock()
-        result = []
-        d = defer.Deferred()
-
-        customException = RuntimeError()
-        customException2 = ZeroDivisionError()
-        task.addDeferredTimeout(reactor, d, 10, customException)
-        # We want the second timeout to happen first, just to prove that it's
-        # time order that matters, not who got added first.
-        task.addDeferredTimeout(reactor, d, 1, customException2)
-        d.addErrback(result.append)
-
-        reactor.advance(1)
-        self.assertIdentical(result[0].value, customException2)
-
-
-    def test_cancelStaysWithCorrectException(self):
-        """
-        If L{task.addDeferredTimeout} specifies a custom exception, cancelling
-        the L{defer.Deferred} will still have a C{defer.CancelledError}
-        exception.
-        """
-        reactor = Clock()
-        result = []
-        d = defer.Deferred()
-
-        customException = RuntimeError()
-        task.addDeferredTimeout(reactor, d, 10, customException)
-        d.addErrback(result.append)
-        d.cancel()
-
-        self.assertIsInstance(result[0].value, defer.CancelledError)
-
-
     def test_cancelReturnedDelayedCall(self):
         """
         L{task.addDeferredTimeout} returns the C{IDelayedCall} for the
