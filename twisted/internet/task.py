@@ -796,11 +796,17 @@ def addDeferredTimeout(reactor, deferred, seconds):
     If the L{defer.Deferred} times out, it will be cancelled.
     @see: L{defer.Deferred.cancel}.
 
+    @type reactor: L{IReactorTime}
     @param reactor: A provider of L{twisted.internet.interfaces.IReactorTime}.
 
+    @type deferred: L{defer.Deferred}
     @param deferred: The L{defer.Deferred} to time out.
 
+    @type seconds: C{float}
     @param seconds: The number of seconds before the timeout will happen.
+
+    @rtype: L{twisted.internet.interface.IDelayedCall}
+    @return: The scheduled timeout call.
     """
     # Schedule timeout, making sure we know when it happened:
     def timedOutCall():
