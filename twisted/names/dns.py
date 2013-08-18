@@ -2095,7 +2095,11 @@ class Message:
                 return
             self.queries.append(q)
 
-        items = ((self.answers, nans), (self.authority, nns), (self.additional, nadd))
+        items = (
+            (self.answers, nans),
+            (self.authority, nns),
+            (self.additional, nadd))
+
         for (l, n) in items:
             self.parseRecords(l, n, strio)
 
