@@ -807,16 +807,16 @@ def addDeferredTimeout(reactor, deferred, timeout):
     # Schedule timeout, making sure we know when it happened:
     def timedOutCall():
         deferred.cancel()
-    callID = reactor.callLater(timeout, timedOutCall)
+    delayedTimeOutCall = reactor.callLater(timeout, timedOutCall)
 
     # If Deferred has result, cancel the timeout:
     def cancelTimeout(result):
-        if callID.active():
-            callID.cancel()
+        if delayedTimeOutCall.active():
+            delayedTimeOutCall.cancel()
         return result
     deferred.addBoth(cancelTimeout)
 
-    return callID
+    return delayedTimeOutCall
 
 
 
