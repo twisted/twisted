@@ -660,7 +660,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
         )
 
 
-    def test_authenticDataDecode(self):
+    def test_checkingDisabledDecode(self):
         """
         L{dns.Message.fromStr} decodes byte4 and assigns bit4 to
         L{dns.Message.checkingDisabled}.
