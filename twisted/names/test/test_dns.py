@@ -643,6 +643,42 @@ class MessageTestCase(unittest.SynchronousTestCase):
             dns.Message(checkingDisabled=1).checkingDisabled, 1)
 
 
+    def test_checkingDisabledEncode(self):
+        """
+        L{dns.Message.toStr} encodes L{dns.Message.checkingDisabled} into
+        byte4 of the byte string.
+        """
+        self.assertEqual(
+            dns.Message(checkingDisabled=1).toStr(),
+            b'\x00\x00' # ID
+            b'\x00' #
+            b'\x10' # RA, Z, AD, CD=1, RCODE
+            b'\x00\x00' # Query count
+            b'\x00\x00' # Answer count
+            b'\x00\x00' # Authority count
+            b'\x00\x00' # Additional count
+        )
+
+
+    def test_authenticDataDecode(self):
+        """
+        L{dns.Message.fromStr} decodes byte4 and assigns bit4 to
+        L{dns.Message.checkingDisabled}.
+        """
+        m = dns.Message()
+        m.fromStr(
+            b'\x00\x00' # ID
+            b'\x00' #
+            b'\x10' # RA, Z, AD, CD=1, RCODE
+            b'\x00\x00' # Query count
+            b'\x00\x00' # Answer count
+            b'\x00\x00' # Authority count
+            b'\x00\x00' # Additional count
+        )
+
+        self.assertIdentical(m.checkingDisabled, 1)
+
+
     def testEmptyMessage(self):
         """
         Test that a message which has been truncated causes an EOFError to

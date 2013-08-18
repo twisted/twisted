@@ -1983,6 +1983,7 @@ class Message:
                  | ( self.recDes & 1 ) )
         byte4 = ( ( (self.recAv & 1 ) << 7 )
                   | ((self.authenticData & 1) << 5)
+                  | ((self.checkingDisabled & 1) << 4)
                   | (self.rCode & 0xf ) )
 
         strio.write(struct.pack(self.headerFmt, self.id, byte3, byte4,
@@ -2003,6 +2004,7 @@ class Message:
         self.recDes = byte3 & 1
         self.recAv = ( byte4 >> 7 ) & 1
         self.authenticData = ( byte4 >> 5 ) & 1
+        self.checkingDisabled = ( byte4 >> 4 ) & 1
         self.rCode = byte4 & 0xf
 
         self.queries = []
