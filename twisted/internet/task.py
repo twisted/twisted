@@ -882,7 +882,7 @@ def addDeferredTimeout(reactor, deferred, seconds):
     @type seconds: C{float}
     @param seconds: The number of seconds before the timeout will happen.
 
-    @rtype: L{twisted.internet.interface.IDelayedCall}
+    @rtype: L{twisted.internet.interfaces.IDelayedCall}
     @return: The scheduled timeout call.
     """
     # Schedule timeout, making sure we know when it happened:
