@@ -784,17 +784,16 @@ def deferLater(clock, delay, callable, *args, **kw):
 
 def addDeferredTimeout(reactor, deferred, seconds):
     """
-    Timeout a L{defer.Deferred} if it does not have a result available within
+    Cancel a L{defer.Deferred} if it does not have a result available within
     the given amount of time.
+
+    @see: L{defer.Deferred.cancel}.
 
     There are two different cases about waiting on another L{defer.Deferred}.
     If the waited L{defer.Deferred} is returned by a callback that added before
     setting the timeout, the timeout will still happen when time arrives.
     If the waited L{defer.Deferred} is returned by a callback that added after
     setting the timeout, the timeout is already cancelled by then.
-
-    If the L{defer.Deferred} times out, it will be cancelled.
-    @see: L{defer.Deferred.cancel}.
 
     @type reactor: L{IReactorTime}
     @param reactor: A provider of L{twisted.internet.interfaces.IReactorTime}.
