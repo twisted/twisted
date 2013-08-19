@@ -859,6 +859,48 @@ def react(main, argv=(), _reactor=None):
     sys.exit(codes[0])
 
 
+
+def addDeferredTimeout(reactor, deferred, seconds):
+    """
+    Cancel a L{defer.Deferred} if it does not have a result available within
+    the given amount of time.
+
+    @see: L{defer.Deferred.cancel}.
+
+    There are two different cases about waiting on another L{defer.Deferred}.
+    If the waited L{defer.Deferred} is returned by a callback that added before
+    setting the timeout, the timeout will still happen when time arrives.
+    If the waited L{defer.Deferred} is returned by a callback that added after
+    setting the timeout, the timeout is already cancelled by then.
+
+    @type reactor: L{IReactorTime}
+    @param reactor: A provider of L{twisted.internet.interfaces.IReactorTime}.
+
+    @type deferred: L{defer.Deferred}
+    @param deferred: The L{defer.Deferred} to time out.
+
+    @type seconds: C{float}
+    @param seconds: The number of seconds before the timeout will happen.
+
+    @rtype: L{twisted.internet.interface.IDelayedCall}
+    @return: The scheduled timeout call.
+    """
+    # Schedule timeout, making sure we know when it happened:
+    def timedOutCall():
+        deferred.cancel()
+    delayedTimeOutCall = reactor.callLater(seconds, timedOutCall)
+
+    # If Deferred has result, cancel the timeout:
+    def cancelTimeout(result):
+        if delayedTimeOutCall.active():
+            delayedTimeOutCall.cancel()
+        return result
+    deferred.addBoth(cancelTimeout)
+
+    return delayedTimeOutCall
+
+
+
 __all__ = [
     'LoopingCall',
 
@@ -866,4 +908,7 @@ __all__ = [
 
     'SchedulerStopped', 'Cooperator', 'coiterate',
 
-    'deferLater', 'react']
+    'deferLater', 'react',
+
+    'addDeferredTimeout',
+    ]
