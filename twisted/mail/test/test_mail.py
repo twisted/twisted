@@ -149,7 +149,8 @@ class BounceTestCase(unittest.TestCase):
 
 
     def testExists(self):
-        self.assertRaises(smtp.AddressError, self.domain.exists, "any user")
+        self.assertRaises(smtp.AddressError, self.domain.exists, "any user",
+                {})
 
 
     def testRelay(self):
@@ -1897,21 +1898,6 @@ class ProcessAliasTestCase(unittest.TestCase):
         self.assertFalse(os.WIFEXITED(status))
 
         return status
-
-
-    def setUp(self):
-        """
-        Replace L{smtp.DNSNAME} with a well-known value.
-        """
-        self.DNSNAME = smtp.DNSNAME
-        smtp.DNSNAME = ''
-
-
-    def tearDown(self):
-        """
-        Restore the original value of L{smtp.DNSNAME}.
-        """
-        smtp.DNSNAME = self.DNSNAME
 
 
     def test_processAlias(self):
