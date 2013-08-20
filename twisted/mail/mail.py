@@ -135,9 +135,9 @@ class IDomain(Interface):
         message when it arrives.
 
         @type memo: L{NoneType} or L{dict} of L{AliasBase}
-        @param: (optional) A record of the addresses already considered while
-        resolving aliases.  The default value should be used by all external
-        code.
+        @param memo: (optional) A record of the addresses already considered
+        while resolving aliases.  The default value should be used by all
+        external code.
 
         @raise twisted.mail.smtp.SMTPBadRcpt: Raised if the given
         user does not exist in this domain.
@@ -184,8 +184,8 @@ class BounceDomain:
         @param user: A user.
 
         @type memo: L{NoneType} or L{dict} of L{AliasBase}
-        @param: (optional) A record of the addresses already considered while
-        resolving aliases.
+        @param memo: (optional) A record of the addresses already considered
+        while resolving aliases.
 
         @raise SMTPBadRcpt: When the given user does not exist in this domain.
         """
