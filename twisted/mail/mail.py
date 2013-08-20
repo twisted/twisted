@@ -134,7 +134,7 @@ class IDomain(Interface):
         This will be called and the returned object used to deliver the
         message when it arrives.
 
-        @type memo: L{NoneType} or L{dict} of L{AliasBase}
+        @type memo: C{NoneType} or L{dict} of L{AliasBase}
         @param memo: (optional) A record of the addresses already considered
         while resolving aliases.  The default value should be used by all
         external code.
@@ -183,7 +183,7 @@ class BounceDomain:
         @type user: L{User}
         @param user: A user.
 
-        @type memo: L{NoneType} or L{dict} of L{AliasBase}
+        @type memo: C{NoneType} or L{dict} of L{AliasBase}
         @param memo: (optional) A record of the addresses already considered
         while resolving aliases.
 
