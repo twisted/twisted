@@ -165,7 +165,7 @@ class LoopingCall:
                 self.deferred = None
 
 
-    def _cancel(self, defered):
+    def _cancel(self, deferred):
         """
         Cancel the looping call.
 
