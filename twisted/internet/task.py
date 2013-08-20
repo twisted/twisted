@@ -196,8 +196,8 @@ class LoopingCall:
             the interval has elapsed before beginning.
 
         @return: A L{defer.Deferred} whose callback will be invoked with
-            L{self} when L{self.stop} is called, or whose errback will be
-            invoked when the function raises an exception or returned a
+            L{LoopingCall} when L{LoopingCall.stop} is called, or whose errback
+            will be invoked when the function raises an exception or returned a
             L{defer.Deferred} that has its errback invoked. The looping call
             can be cancelled by calling the C{cancel} method of the
             L{defer.Deferred}.
