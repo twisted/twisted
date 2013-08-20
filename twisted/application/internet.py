@@ -244,7 +244,7 @@ class TimerService(_VolatileDataService):
     @type call: L{tuple} of C{(callable, args, kwargs)}
     """
 
-    volatile = ['_loop', '_loopFinshed']
+    volatile = ['_loop', '_loopFinished']
 
     def __init__(self, step, callable, *args, **kwargs):
         """

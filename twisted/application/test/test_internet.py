@@ -5,6 +5,7 @@
 Tests for (new code in) L{twisted.application.internet}.
 """
 
+import pickle
 
 from zope.interface import implements
 from zope.interface.verify import verifyClass
@@ -18,6 +19,15 @@ from twisted.internet.interfaces import IStreamServerEndpoint, IListeningPort
 from twisted.internet.defer import Deferred, CancelledError
 from twisted.internet import task
 from twisted.python.failure import Failure
+
+
+def fakeTargetFunction():
+    """
+    A fake target function for testing TimerService which does nothing.
+    """
+    pass
+
+
 
 class FakeServer(object):
     """
@@ -357,3 +367,37 @@ class TestTimerService(TestCase):
         self.assertEqual(1, len(errors))
         d = self.timer.stopService()
         self.assertIdentical(self.successResultOf(d), None)
+
+
+    def test_pickleTimerServiceNotPickleLoop(self):
+        """
+        When pickling L{internet.TimerService}, it won't pickle
+        L{internet.TimerService._loop}.
+        """
+        # We need a pickleable callable to test pickling TimerService. So we
+        # can't use self.timer
+        timer = TimerService(1, fakeTargetFunction)
+        timer.startService()
+        dumpedTimer = pickle.dumps(timer)
+        timer.stopService()
+        loadedTimer = pickle.loads(dumpedTimer)
+        nothing = object()
+        value = getattr(loadedTimer, "_loop", nothing)
+        self.assertIdentical(nothing, value)
+
+
+    def test_pickleTimerServiceNotPickleLoopFinished(self):
+        """
+        When pickling L{internet.TimerService}, it won't pickle
+        L{internet.TimerService._loopFinished}.
+        """
+        # We need a pickleable callable to test pickling TimerService. So we
+        # can't use self.timer
+        timer = TimerService(1, fakeTargetFunction)
+        timer.startService()
+        dumpedTimer = pickle.dumps(timer)
+        timer.stopService()
+        loadedTimer = pickle.loads(dumpedTimer)
+        nothing = object()
+        value = getattr(loadedTimer, "_loopFinished", nothing)
+        self.assertIdentical(nothing, value)
