@@ -57,6 +57,10 @@ class LoopingCall:
     @type _runAtStart: C{bool}
     @ivar _runAtStart: A flag indicating whether the 'now' argument was passed
         to L{LoopingCall.start}.
+
+    @ivar _deferredOfFunction: A L{defer.Deferred} returned by a call of L{f}.
+        If the L{f} hasn't been called yet or the L{defer.Deferred} has fired
+        the value will be set to C{None}.
     """
 
     call = None
@@ -143,28 +147,67 @@ class LoopingCall:
         return intervalNum
 
 
+    def _cancelScheduledCall(self, callbackDeferred=False):
+        """
+        Cancel the scheduled function call.
+
+        @type callbackDeferred: C{bool}
+        @param callbackDeferred: Whether to callback the L{defer.Deferred} or
+            or not after cancelling the scheduled function call.
+        """
+        if self.call is not None:
+            self.call.cancel()
+            self.call = None
+            if callbackDeferred:
+                deferred, self.deferred = self.deferred, None
+                deferred.callback(self)
+            else:
+                self.deferred = None
+
+
+    def _cancel(self, defered):
+        """
+        Cancel the looping call.
+
+        If a call of the target function hasn't returned yet, cancel the
+        running call. If a call of the target function has been scheduled,
+        cancel the scheduled call. The C{running} flag will be set to
+        C{False}.
+
+        @param deferred: The cancelled L{defer.Deferred}.
+        """
+        if self.running:
+            self.running = False
+            self._cancelScheduledCall()
+            if self._deferredOfFunction is not None:
+                self._deferredOfFunction.cancel()
+                self._deferredOfFunction = None
+
+
     def start(self, interval, now=True):
         """
         Start running function every interval seconds.
 
-        @param interval: The number of seconds between calls.  May be
-        less than one.  Precision will depend on the underlying
-        platform, the available hardware, and the load on the system.
+        @param interval: The number of seconds between calls. May be less than
+            one. Precision will depend on the underlying platform, the
+            available hardware, and the load on the system.
 
-        @param now: If True, run this call right now.  Otherwise, wait
-        until the interval has elapsed before beginning.
+        @param now: If C{True}, run this call right now. Otherwise, wait until
+            the interval has elapsed before beginning.
 
-        @return: A Deferred whose callback will be invoked with
-        C{self} when C{self.stop} is called, or whose errback will be
-        invoked when the function raises an exception or returned a
-        deferred that has its errback invoked.
+        @return: A L{defer.Deferred} whose callback will be invoked with
+            L{self} when L{self.stop} is called, or whose errback will be
+            invoked when the function raises an exception or returned a
+            L{defer.Deferred} that has its errback invoked. The looping call
+            can be cancelled by calling the C{cancel} method of the
+            L{defer.Deferred}.
         """
         assert not self.running, ("Tried to start an already running "
                                   "LoopingCall.")
         if interval < 0:
             raise ValueError("interval must be >= 0")
         self.running = True
-        d = self.deferred = defer.Deferred()
+        d = self.deferred = defer.Deferred(self._cancel)
         self.starttime = self.clock.seconds()
         self._expectNextCallAt = self.starttime
         self.interval = interval
@@ -175,17 +218,16 @@ class LoopingCall:
             self._reschedule()
         return d
 
+
     def stop(self):
-        """Stop running function.
+        """
+        Stop running function.
         """
         assert self.running, ("Tried to stop a LoopingCall that was "
                               "not running.")
         self.running = False
-        if self.call is not None:
-            self.call.cancel()
-            self.call = None
-            d, self.deferred = self.deferred, None
-            d.callback(self)
+        self._cancelScheduledCall(callbackDeferred=True)
+
 
     def reset(self):
         """
@@ -196,13 +238,14 @@ class LoopingCall:
         assert self.running, ("Tried to reset a LoopingCall that was "
                               "not running.")
         if self.call is not None:
-            self.call.cancel()
-            self.call = None
+            self._cancelScheduledCall()
             self._expectNextCallAt = self.clock.seconds()
             self._reschedule()
 
+
     def __call__(self):
         def cb(result):
+            self._deferredOfFunction = None
             if self.running:
                 self._reschedule()
             else:
@@ -210,14 +253,15 @@ class LoopingCall:
                 d.callback(self)
 
         def eb(failure):
+            self._deferredOfFunction = None
             self.running = False
             d, self.deferred = self.deferred, None
             d.errback(failure)
 
         self.call = None
-        d = defer.maybeDeferred(self.f, *self.a, **self.kw)
-        d.addCallback(cb)
-        d.addErrback(eb)
+        self._deferredOfFunction = defer.maybeDeferred(
+            self.f, *self.a, **self.kw)
+        self._deferredOfFunction.addCallbacks(cb, eb)
 
 
     def _reschedule(self):

@@ -528,6 +528,103 @@ class LoopTestCase(unittest.TestCase):
         return self._stoppingTest(10)
 
 
+    def setUpForCancellationTests(self, returned):
+        """
+        Start a looping call with a testing target function for cancellation
+        tests.
+
+        @type returned: C{bool}
+        @param returned: Is the test target function returned or not.
+
+        @return: An instance of L{TestableLoopingCall}.
+        """
+        def targetFunction():
+            """
+            A target function for testing.
+
+            @return: None if L{returned} is C{True}, otherwise an instance of
+                L{defer.Deferred}.
+            """
+            if returned:
+                return None
+            else:
+                def cancel(deferred):
+                    """
+                    Cancel the target function.
+
+                    @param deferred: The cancelled L{defer.Deferred}.
+                    """
+                    targetFunction.cancelled = True
+                return defer.Deferred(cancel)
+        clock = task.Clock()
+        loopingCall = TestableLoopingCall(clock, targetFunction)
+        loopingCall.start(10)
+        return loopingCall
+
+
+    def test_cancelRunningCall(self):
+        """
+        If a call of the targe function hasn't returned yet when cancelling the
+        L{defer.Deferred} returned by L{task.LoopingCall.start}, cancel the
+        running call.
+        """
+        loopingCall = self.setUpForCancellationTests(returned=False)
+        deferredOfLoopingCall = loopingCall.deferred
+        deferredOfLoopingCall.cancel()
+        self.assertTrue(loopingCall.f.cancelled)
+        self.failureResultOf(deferredOfLoopingCall, defer.CancelledError)
+
+
+    def test_cancelRunningCallSetsRunningFalse(self):
+        """
+        If a call of the targe function hasn't returned yet when cancelling the
+        L{defer.Deferred} returned by L{task.LoopingCall.start}, set
+        L{task.LoopingCall.running} to C{False}.
+        """
+        loopingCall = self.setUpForCancellationTests(returned=False)
+        deferredOfLoopingCall = loopingCall.deferred
+        deferredOfLoopingCall.cancel()
+        self.assertFalse(loopingCall.running)
+        self.failureResultOf(deferredOfLoopingCall, defer.CancelledError)
+
+
+    def test_cancelScheduledCall(self):
+        """
+        If a call of the target function has scheduled when cancelling the
+        L{defer.Deferred} returned by L{task.LoopingCall.start}, cancel the
+        scheduled call.
+        """
+        loopingCall = self.setUpForCancellationTests(returned=True)
+        scheduledCall = loopingCall.call
+        deferredOfLoopingCall = loopingCall.deferred
+        deferredOfLoopingCall.cancel()
+        self.assertFalse(scheduledCall.active())
+        self.failureResultOf(deferredOfLoopingCall, defer.CancelledError)
+
+
+    def test_cancelScheduledCallSetsRunningFalse(self):
+        """
+        If a call of the target function has scheduled when cancelling the
+        L{defer.Deferred} returned by L{task.LoopingCall.start}, set
+        L{task.LoopingCall.running} to C{False}.
+        """
+        loopingCall = self.setUpForCancellationTests(returned=True)
+        deferredOfLoopingCall = loopingCall.deferred
+        deferredOfLoopingCall.cancel()
+        self.assertFalse(loopingCall.running)
+        self.failureResultOf(deferredOfLoopingCall, defer.CancelledError)
+
+
+    def test_cancelStoppedCall(self):
+        """
+        Cancelling an already stopped L{task.LoopingCall} will do nothing.
+        """
+        loopingCall = self.setUpForCancellationTests(returned=True)
+        deferredOfLoopingCall = loopingCall.deferred
+        loopingCall.stop()
+        deferredOfLoopingCall.cancel()
+
+
     def test_reset(self):
         """
         Test that L{LoopingCall} can be reset.
