@@ -1481,6 +1481,33 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(
             req.received_cookies, {b"test": b'"lemur"', b"test2": b'"panda"'})
 
+    def test_parseCookiesNoCookie(self):
+        """
+        L{http.Request.parseCookies} returns None if the Cookies are not part 
+        of the header.
+        """
+        req = http.Request(DummyChannel(), None)
+        self.assertEqual(req.parseCookies(), None)
+
+
+    def test_parseCookiesMalformedCookie(self):
+        """
+        L{http.Request.parseCookies} ignores malformed cookie pairs. Cookies 
+        set before or after the malformed cookie-pair are properly parsed.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders(
+            b"cookie", [b'12345; test="lemur"; 12345; test2="panda"; 12345'])
+        req.parseCookies()
+        self.assertEqual(
+            req.received_cookies, {b"test": b'"lemur"', b"test2": b'"panda"'})
+        req.requestHeaders.setRawHeaders(
+            b"cookie", [b'12345', b'test="lemur"', b'12345',
+            b'test2="panda"', b'12345'])
+        req.parseCookies()
+        self.assertEqual(
+            req.received_cookies, {b"test": b'"lemur"', b"test2": b'"panda"'})
+
 
     def test_connectionLost(self):
         """
