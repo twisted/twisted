@@ -394,13 +394,13 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
             @param deferred: The cancelled L{defer.Deferred}.
             """
-            raise Exception("test")
+            raise RuntimeError("test")
         deferredOne = defer.Deferred(cancellerRaisesException)
         deferredTwo = defer.Deferred()
         deferredList = defer.DeferredList([deferredOne, deferredTwo])
         deferredList.cancel()
         self.failureResultOf(deferredTwo, defer.CancelledError)
-        errors = self.flushLoggedErrors(Exception)
+        errors = self.flushLoggedErrors(RuntimeError)
         self.assertEqual(len(errors), 1)
 
 
