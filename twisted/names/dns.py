@@ -2135,10 +2135,12 @@ class DNSMixin(object):
         @type writeMessage: C{callable}
         @param writeMessage: One-parameter callback which writes the message
 
-        @rtype: C{Deferred}
-        @return: a C{Deferred} which will be fired with the result of the
+        @rtype: L{defer.Deferred}
+        @return: a L{defer.Deferred} which will be fired with the result of the
             query, or errbacked with any errors that could happen (exceptions
-            during writing of the query, timeout errors, ...).
+            during writing of the query, timeout errors, ...). The queries can
+            be cancelled by calling the C{cancel} method of the
+            L{defer.Deferred}.
         """
         m = Message(id, recDes=1)
         m.queries = queries
@@ -2148,7 +2150,18 @@ class DNSMixin(object):
         except:
             return defer.fail()
 
-        resultDeferred = defer.Deferred()
+        def cancel(deferred):
+            """
+            Cancel the query.
+
+            Remove the C{resultDeferred} and C{cancelCall} from
+            L{self.liveMessages}. Cancel the C{cancelCall}.
+
+            @param deferred: The cancelled L{defer.Deferred}.
+            """
+            del self.liveMessages[id]
+            cancelCall.cancel()
+        resultDeferred = defer.Deferred(cancel)
         cancelCall = self.callLater(timeout, self._clearFailed, resultDeferred, id)
         self.liveMessages[id] = (resultDeferred, cancelCall)
 
@@ -2249,7 +2262,12 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         @type queries: C{list} of C{Query} instances
         @param queries: The queries to transmit
 
-        @rtype: C{Deferred}
+        @rtype: L{defer.Deferred}
+        @return: a L{defer.Deferred} which will be fired with the result of the
+            query, or errbacked with any errors that could happen (exceptions
+            during writing of the query, timeout errors, ...). The queries can
+            be cancelled by calling the C{cancel} method of the
+            L{defer.Deferred}.
         """
         if not self.transport:
             # XXX transport might not get created automatically, use callLater?
@@ -2340,7 +2358,12 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
         @type queries: C{list} of C{Query} instances
         @param queries: The queries to transmit
 
-        @rtype: C{Deferred}
+        @rtype: L{defer.Deferred}
+        @return: a L{defer.Deferred} which will be fired with the result of the
+            query, or errbacked with any errors that could happen (exceptions
+            during writing of the query, timeout errors, ...). The queries can
+            be cancelled by calling the C{cancel} method of the
+            L{defer.Deferred}.
         """
         id = self.pickID()
         return self._query(queries, timeout, id, self.writeMessage)

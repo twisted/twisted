@@ -15,7 +15,7 @@ import struct
 from zope.interface.verify import verifyClass
 
 from twisted.python.failure import Failure
-from twisted.internet import address, task
+from twisted.internet import address, defer, task
 from twisted.internet.error import CannotListenError, ConnectionDone
 from twisted.trial import unittest
 from twisted.names import dns
@@ -841,6 +841,48 @@ class TestTCPController(TestController):
 
     def connectionLost(self, proto):
         self.connections.remove(proto)
+
+
+
+class DNSMixinTestCase(unittest.TestCase):
+    """
+    Tests for L{dns.DNSMixin}.
+    """
+
+    def setUp(self):
+        """
+        Set up L{dns.DNSMixin} protocol for testing.
+        """
+        self.protocol = dns.DNSMixin(None, None)
+        self.protocol.liveMessages = {}
+
+
+    def test_cancelQueryRemoveResultDeferredAndCancelCall(self):
+        """
+        When cancelling the L{defer.Deferred} returned by
+        L{dns.DNSMixin._query}, the C{resultDeferred} and C{cancelCall} should
+        be removed from L{dns.DNSMixin.liveMessages}.
+        """
+        queryId = self.protocol.pickID()
+        deferred = self.protocol._query(
+            [dns.Query(b'foo')], 20, queryId, lambda message: None)
+        deferred.cancel()
+        self.failureResultOf(deferred, defer.CancelledError)
+        self.assertNotIn(queryId, self.protocol.liveMessages)
+
+
+    def test_cancelQueryCancelTheCancelCall(self):
+        """
+        When cancelling the L{defer.Deferred} returned by
+        L{dns.DNSMixin._query}, the C{cancelCall} should be cancelled.
+        """
+        queryId = self.protocol.pickID()
+        self.protocol._query(
+            [dns.Query(b'foo')], 20, queryId, lambda message: None)
+        (resultDeferred, cancelCall) = self.protocol.liveMessages[queryId]
+        resultDeferred.cancel()
+        self.failureResultOf(resultDeferred, defer.CancelledError)
+        self.assertFalse(cancelCall.active())
 
 
 
