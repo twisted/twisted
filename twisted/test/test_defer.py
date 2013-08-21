@@ -436,6 +436,7 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         deferredList.cancel()
         self.assertNoResult(deferredTwo)
         self.failureResultOf(deferredOne, GenericError)
+        self.failureResultOf(deferredList, defer.FirstError)
 
 
     def testImmediateSuccess(self):
