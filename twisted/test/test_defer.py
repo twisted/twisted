@@ -343,7 +343,10 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         deferredList.cancel()
         self.failureResultOf(deferredOne, defer.CancelledError)
         self.failureResultOf(deferredTwo, defer.CancelledError)
-        self.failureResultOf(deferredList, defer.FirstError)
+        deferredListFailure = self.failureResultOf(deferredList,
+                                                   defer.FirstError)
+        firstError = deferredListFailure.value
+        self.assertTrue(firstError.subFailure.check(defer.CancelledError))
 
 
     def test_cancelDeferredListWithFireOnOneErrbackAllDeferredsCallback(self):
@@ -433,7 +436,6 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         deferredList.cancel()
         self.assertNoResult(deferredTwo)
         self.failureResultOf(deferredOne, GenericError)
-        self.failureResultOf(deferredList, defer.FirstError)
 
 
     def testImmediateSuccess(self):
@@ -575,7 +577,9 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
         result.cancel()
         self.failureResultOf(deferredOne, defer.CancelledError)
         self.failureResultOf(deferredTwo, defer.CancelledError)
-        self.failureResultOf(result, defer.FirstError)
+        gatherResultsFailure = self.failureResultOf(result, defer.FirstError)
+        firstError = gatherResultsFailure.value
+        self.assertTrue(firstError.subFailure.check(defer.CancelledError))
 
 
     def test_cancelGatherResultsWithAllDeferredsCallback(self):
