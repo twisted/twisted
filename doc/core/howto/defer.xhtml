@@ -725,20 +725,20 @@ manually, there is also a convenience method to help you.</p>
 <p>Sometimes you want to get the result of a Deferred in a given amount of time.
 If the time arrives and you haven't got the result, you just have no interest
 in it any more or it indicates that the result is unavailable, so you want to
-cancel the Deferred. <code class="API">twisted.internet.task.addDeferredTimeout</code>
+cancel the Deferred. <code class="API">twisted.internet.task.timeOutDeferred</code>
 provides such funtionality.</p>
 
-<p><code>addDeferredTimeout</code> cancels a Deferred if it does not have a result
+<p><code>timeOutDeferred</code> cancels a Deferred if it does not have a result
 available within the given amount of time, more specifically the given amount of
 seconds.</p>
 
 <pre class="python">
 from twisted.internet import reactor
-from twisted.internet.task import addDeferredTimeout
+from twisted.internet.task import timeOutDeferred
 
 deferred = makeSomeRequest()
 # Cancel the Deferred if you don't get the result in 10 seconds.
-addDeferredTimeout(reactor, deferred, 10)
+timeOutDeferred(reactor, deferred, 10)
 </pre>
 
 <p>So if the request doesn't have a result in 10 seconds, the
@@ -746,12 +746,12 @@ addDeferredTimeout(reactor, deferred, 10)
 
 <p>One thing should be noticed, a Deferred can be put back into waiting state
 by a callback returning another Deferred. If the callback is added before
-adding the timeout, <code>addDeferredTimeout</code> will try to cancel the
+adding the timeout, <code>timeOutDeferred</code> will try to cancel the
 waited Deferred when time arrives.</p>
 
 <pre class="python">
 from twisted.internet import reactor
-from twisted.internet.task import addDeferredTimeout
+from twisted.internet.task import timeOutDeferred
 
 def waitOnAnotherDeferred(result):
     ...
@@ -761,7 +761,7 @@ def waitOnAnotherDeferred(result):
 deferred = makeSomeRequest()
 deferred.addCallback(waitOnAnotherDeferred)
 
-addDeferredTimeout(reactor, deferred, 10)
+timeOutDeferred(reactor, deferred, 10)
 
 deferred.callback(result)
 </pre>
@@ -777,7 +777,7 @@ cancelled because it has already saw the result of the Deferred.</p>
 <pre class="python">
 >>> from twisted.internet import reactor
 >>> from twisted.internet.defer import Deferred
->>> from twisted.internet.task import addDeferredTimeout
+>>> from twisted.internet.task import timeOutDeferred
 >>> 
 >>> def makeSomeRequest():
 ...     return Deferred()
@@ -787,7 +787,7 @@ cancelled because it has already saw the result of the Deferred.</p>
 ...     return waitedDeferred
 ... 
 >>> deferred = makeSomeRequest()
->>> delayedTimeoutCall = addDeferredTimeout(reactor, deferred, 10)
+>>> delayedTimeoutCall = timeOutDeferred(reactor, deferred, 10)
 >>> deferred.addCallback(waitOnAnotherDeferred)
 >>> deferred.callback(1)
 >>> delayedTimeoutCall.active()

@@ -860,7 +860,7 @@ def react(main, argv=(), _reactor=None):
 
 
 
-def addDeferredTimeout(reactor, deferred, seconds):
+def timeOutDeferred(reactor, deferred, seconds):
     """
     Cancel a L{defer.Deferred} if it does not have a result available within
     the given amount of time.
@@ -910,5 +910,5 @@ __all__ = [
 
     'deferLater', 'react',
 
-    'addDeferredTimeout',
+    'timeOutDeferred',
     ]

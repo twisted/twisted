@@ -1030,12 +1030,12 @@ class ReactTests(unittest.SynchronousTestCase):
 
 class AddDeferredTimeoutTests(unittest.TestCase):
     """
-    Tests for L{task.addDeferredTimeout}.
+    Tests for L{task.timeOutDeferred}.
     """
 
     def test_noTimeoutIfCallback(self):
         """
-        The timeout set by L{task.addDeferredTimeout} will be cancelled if the
+        The timeout set by L{task.timeOutDeferred} will be cancelled if the
         L{defer.Deferred}'s C{callback()} is called.
         """
         reactor = Clock()
@@ -1044,7 +1044,7 @@ class AddDeferredTimeoutTests(unittest.TestCase):
         d = defer.Deferred(cancelled.append)
         d.addCallback(result.append)
 
-        task.addDeferredTimeout(reactor, d, 10)
+        task.timeOutDeferred(reactor, d, 10)
         d.callback("success")
         self.assertEqual(result, ["success"])
         self.assertEqual(cancelled, [])
@@ -1054,7 +1054,7 @@ class AddDeferredTimeoutTests(unittest.TestCase):
 
     def test_noTimeoutIfErrback(self):
         """
-        The timeout set by L{task.addDeferredTimeout} will be cancelled if the
+        The timeout set by L{task.timeOutDeferred} will be cancelled if the
         L{defer.Deferred}'s C{errback()} is called.
         """
         reactor = Clock()
@@ -1063,7 +1063,7 @@ class AddDeferredTimeoutTests(unittest.TestCase):
         d = defer.Deferred(cancelled.append)
         d.addErrback(result.append)
 
-        task.addDeferredTimeout(reactor, d, 10)
+        task.timeOutDeferred(reactor, d, 10)
         f = failure.Failure(RuntimeError())
         d.errback(f)
         self.assertEqual(result, [f])
@@ -1074,7 +1074,7 @@ class AddDeferredTimeoutTests(unittest.TestCase):
 
     def test_noTimeoutIfCancel(self):
         """
-        The timeout set by L{task.addDeferredTimeout} will be cancelled if the
+        The timeout set by L{task.timeOutDeferred} will be cancelled if the
         L{defer.Deferred}'s C{cancel()} method is called.
         """
         reactor = Clock()
@@ -1082,7 +1082,7 @@ class AddDeferredTimeoutTests(unittest.TestCase):
         d = defer.Deferred()
         d.addErrback(result.append)
 
-        task.addDeferredTimeout(reactor, d, 10)
+        task.timeOutDeferred(reactor, d, 10)
         d.cancel()
         self.assertIsInstance(result[0].value, defer.CancelledError)
 
@@ -1093,7 +1093,7 @@ class AddDeferredTimeoutTests(unittest.TestCase):
     def test_timeout(self):
         """
         If the L{defer.Deferred} is not fired in the time given by
-        L{task.addDeferredTimeout}, L{task.addDeferredTimeout} will cancel it.
+        L{task.timeOutDeferred}, L{task.timeOutDeferred} will cancel it.
         """
         reactor = Clock()
         cancelled = []
@@ -1101,7 +1101,7 @@ class AddDeferredTimeoutTests(unittest.TestCase):
         d = defer.Deferred(cancelled.append)
         d.addErrback(result.append)
 
-        task.addDeferredTimeout(reactor, d, 10)
+        task.timeOutDeferred(reactor, d, 10)
         reactor.advance(10.1)
         self.assertIsInstance(result[0].value, defer.CancelledError)
         self.assertEqual(cancelled, [d])
@@ -1110,7 +1110,7 @@ class AddDeferredTimeoutTests(unittest.TestCase):
 
     def test_callbackStack(self):
         """
-        L{task.addDeferredTimeout} will not timeout the L{defer.Deferred} if
+        L{task.timeOutDeferred} will not timeout the L{defer.Deferred} if
         the callbacks that were added before it was called have fired, even if
         later callbacks mean it's back in a waiting state.
         """
@@ -1118,14 +1118,14 @@ class AddDeferredTimeoutTests(unittest.TestCase):
         reactor = Clock()
 
         # Add the initial timeout:
-        task.addDeferredTimeout(reactor, original, 1)
+        task.timeOutDeferred(reactor, original, 1)
 
         # Add another callback, waiting for another Deferred:
         waiting = defer.Deferred()
         original.addCallback(lambda ign: waiting)
 
         # Add a second timeout:
-        task.addDeferredTimeout(reactor, original, 2)
+        task.timeOutDeferred(reactor, original, 2)
 
         # If we fire the original Deferred, this will cancel the first
         # timeout, even though the Deferred is now waiting again for a second
@@ -1144,7 +1144,7 @@ class AddDeferredTimeoutTests(unittest.TestCase):
 
     def test_cancelReturnedDelayedCall(self):
         """
-        L{task.addDeferredTimeout} returns the C{IDelayedCall} for the
+        L{task.timeOutDeferred} returns the C{IDelayedCall} for the
         scheduled timeout, allowing the caller to cancel the timeout manually.
         """
         reactor = Clock()
@@ -1152,7 +1152,7 @@ class AddDeferredTimeoutTests(unittest.TestCase):
         d = defer.Deferred()
         d.addCallback(result.append)
 
-        delayedCall = task.addDeferredTimeout(reactor, d, 10)
+        delayedCall = task.timeOutDeferred(reactor, d, 10)
         self.assertTrue(interfaces.IDelayedCall.providedBy(delayedCall))
 
         # If we cancel delayedCall, timeout is no longer active:
