@@ -759,6 +759,8 @@ class DeferredList(Deferred):
     they see.
 
     See the documentation for the C{__init__} arguments for more information.
+
+    @ivar _deferredList: The C{list} of L{Deferred}s to track.
     """
 
     fireOnOneCallback = False
@@ -799,9 +801,10 @@ class DeferredList(Deferred):
             logged.  This does not prevent C{fireOnOneErrback} from working.
         @type consumeErrors: C{bool}
         """
-        self.resultList = [None] * len(deferredList)
+        self._deferredList = list(deferredList)
+        self.resultList = [None] * len(self._deferredList)
         Deferred.__init__(self)
-        if len(deferredList) == 0 and not fireOnOneCallback:
+        if len(self._deferredList) == 0 and not fireOnOneCallback:
             self.callback(self.resultList)
 
         # These flags need to be set *before* attaching callbacks to the
@@ -813,7 +816,7 @@ class DeferredList(Deferred):
         self.finishedCount = 0
 
         index = 0
-        for deferred in deferredList:
+        for deferred in self._deferredList:
             deferred.addCallbacks(self._cbDeferred, self._cbDeferred,
                                   callbackArgs=(index,SUCCESS),
                                   errbackArgs=(index,FAILURE))
@@ -841,6 +844,26 @@ class DeferredList(Deferred):
         return result
 
 
+    def cancel(self):
+        """
+        Cancel this L{DeferredList}.
+
+        If the L{DeferredList} hasn't fired yet, cancel every L{Deferred} in
+        the list.
+
+        If the L{DeferredList} has fired, including the case where the
+        C{fireOnOneCallback}/C{fireOnOneErrback} flag is set and the
+        L{DeferredList} fires because one L{Deferred} in the list fires with a
+        non-failure/failure result, do nothing in the C{cancel} method.
+        """
+        if not self.called:
+            for deferred in self._deferredList:
+                try:
+                    deferred.cancel()
+                except:
+                    log.err(
+                        _why="Exception raised from user supplied canceller")
+
 
 def _parseDListResult(l, fireOnOneErrback=False):
     if __debug__:
@@ -857,6 +880,9 @@ def gatherResults(deferredList, consumeErrors=False):
 
     The returned L{Deferred} will fire when I{all} of the provided L{Deferred}s
     have fired, or when any one of them has failed.
+
+    This method can be cancelled by calling the C{cancel} method of the
+    L{Deferred}, all the L{Deferred}s in the list will be cancelled.
 
     This differs from L{DeferredList} in that you don't need to parse
     the result for success/failure.
