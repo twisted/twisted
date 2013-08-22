@@ -1953,7 +1953,7 @@ class Message:
                        authenticData=0, checkingDisabled=0):
         """
         @param id: A 16 bit identifier assigned by the program that
-            generates any kind of query.  This identifier is copied
+            generates any kind of query.  This identifier is copied to
             the corresponding reply and can be used by the requester
             to match up replies to outstanding queries.
         @type id: L{int}
