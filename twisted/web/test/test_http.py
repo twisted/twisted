@@ -1525,6 +1525,18 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             req.received_cookies, {})
 
 
+    def test_parseCookiesEmptyValue(self):
+        """
+        L{http.Request.parseCookies} parses cookies with an empty value.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders(
+            b"cookie", [b'foo='])
+        req.parseCookies()
+        self.assertEqual(
+            req.received_cookies, {b'foo': b''})
+
+
     def test_parseCookiesRetainRightSpace(self):
         """
         L{http.Request.parseCookies} leaves trailing whitespace in the
