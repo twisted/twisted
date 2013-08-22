@@ -1456,6 +1456,14 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
               b"Hello")])
 
 
+    def test_receivedCookiesDefault(self):
+        """
+        L{http.Request.received_cookies} defaults to an empty L{dict}.
+        """
+        req = http.Request(DummyChannel(), None)
+        self.assertEqual(req.received_cookies, {})
+
+
     def test_parseCookies(self):
         """
         L{http.Request.parseCookies} extracts cookies from C{requestHeaders}
@@ -1484,11 +1492,24 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_parseCookiesNoCookie(self):
         """
-        L{http.Request.parseCookies} returns L{None} if the cookies are
-        not part of the header.
+        L{http.Request.parseCookies} can be called on a request without a
+        cookie header.
         """
         req = http.Request(DummyChannel(), None)
-        self.assertEqual(req.parseCookies(), None)
+        req.parseCookies()
+        self.assertEqual(req.received_cookies, {})
+
+
+    def test_parseCookiesEmptyCookie(self):
+        """
+        L{http.Request.parseCookies} can be called on a request with an
+        empty cookie header.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders(
+            b"cookie", [])
+        req.parseCookies()
+        self.assertEqual(req.received_cookies, {})
 
 
     def test_parseCookiesMalformedCookie(self):
@@ -1504,7 +1525,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             req.received_cookies, {b"test": b'"lemur"', b"test2": b'"panda"'})
         req.requestHeaders.setRawHeaders(
             b"cookie", [b'12345', b'test="lemur"', b'12345',
-            b'test2="panda"', b'12345'])
+                        b'test2="panda"', b'12345'])
         req.parseCookies()
         self.assertEqual(
             req.received_cookies, {b"test": b'"lemur"', b"test2": b'"panda"'})
