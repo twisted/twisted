@@ -31,11 +31,12 @@ class GeneralOptions(usage.Options):
                      ['type', 't', None, 'Specify type of key to create.'],
                      ['comment', 'C', None, 'Provide new comment.'],
                      ['newpass', 'N', None, 'Provide new passphrase.'],
-                     ['pass', 'P', None, 'Provide old passphrase']]
+                     ['pass', 'P', None, 'Provide old passphrase.']]
 
     optFlags = [['fingerprint', 'l', 'Show fingerprint of key file.'],
                 ['changepass', 'p', 'Change passphrase of private key file.'],
                 ['quiet', 'q', 'Quiet.'],
+                ['no-passphrase', None, "Create the key with no passphrase."],
                 ['showpub', 'y', 'Read private key file and print public key.']]
 
     compData = usage.Completions(
@@ -193,7 +194,9 @@ def _saveKey(key, options):
         yn = raw_input('Overwrite (y/n)? ')
         if yn[0].lower() != 'y':
             sys.exit()
-    if not options['pass']:
+    if options.get('no-passphrase'):
+        options['pass'] = b''
+    elif not options['pass']:
         while 1:
             p1 = getpass.getpass('Enter passphrase (empty for no passphrase): ')
             p2 = getpass.getpass('Enter same passphrase again: ')

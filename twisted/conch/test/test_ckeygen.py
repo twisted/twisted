@@ -99,6 +99,24 @@ class KeyGenTests(TestCase):
             key.public())
 
 
+    def test_saveKeyEmptyPassphrase(self):
+        """
+        L{_saveKey} will choose an empty string for the passphrase if
+        no-passphrase is C{True}.
+        """
+        base = FilePath(self.mktemp())
+        base.makedirs()
+        filename = base.child('id_rsa').path
+        key = Key.fromString(privateRSA_openssh)
+        _saveKey(
+            key.keyObject,
+            {'filename': filename, 'no-passphrase': True})
+        self.assertEqual(
+            key.fromString(
+                base.child('id_rsa').getContent(), None, b''),
+            key)
+
+
     def test_displayPublicKey(self):
         """
         L{displayPublicKey} prints out the public key associated with a given

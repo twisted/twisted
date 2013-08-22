@@ -1,0 +1,1 @@
+ckeygen now accepts --no-passphrase to generate unprotected keys.
