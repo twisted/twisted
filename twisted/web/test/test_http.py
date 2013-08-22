@@ -1484,8 +1484,8 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_parseCookiesNoCookie(self):
         """
-        L{http.Request.parseCookies} returns None if the Cookies are not part
-        of the header.
+        L{http.Request.parseCookies} returns L{None} if the cookies are
+        not part of the header.
         """
         req = http.Request(DummyChannel(), None)
         self.assertEqual(req.parseCookies(), None)
