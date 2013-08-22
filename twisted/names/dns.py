@@ -1998,13 +1998,18 @@ class Message:
             stack.
         @type maxSize: L{int}
 
-        @param authenticData: Authentic data bit as defined by
-            [RFC2535 section-6.1].
-        @type authenticData: C{int}
+        @param authenticData: A flag indicating in a response that all
+            the data included in the answer and authority portion of
+            the response has been authenticated by the server
+            according to the policies of that server.
+            See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
+        @type authenticData: L{int}
 
-        @param checkingDisabled: Checking Disabled bit as defined by
-            [RFC2535 section-6.1].
-        @type authenticData: C{int}
+        @param checkingDisabled: A flag indicating in a query that
+            pending (non-authenticated) data is acceptable to the
+            resolver sending the query.
+            See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
+        @type authenticData: L{int}
         """
         self.maxSize = maxSize
         self.id = id
