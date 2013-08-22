@@ -1987,7 +1987,7 @@ class Message:
             message which is a response from a server to a client request.
         @type rCode: C{0 <= int < 16}
 
-        @param trunc: TrunCation - specifies that this message was
+        @param trunc: A flag indicating that this message was
             truncated due to length greater than that permitted on the
             transmission channel.
         @type trunc: L{int}
