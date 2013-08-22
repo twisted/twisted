@@ -1974,12 +1974,12 @@ class Message:
         @type recDes: L{int}
 
         @param recAv: Recursion Available - this bit is set or cleared
-            in a response, and denotes whether recursive query support
+            in a response and denotes whether recursive query support
             is available in the name server.
         @type recAv: L{int}
 
         @param auth: Authoritative Answer - this bit is valid in
-            responses, and specifies that the responding name server
+            responses and specifies that the responding name server
             is an authority for the domain name in question section.
         @type auth: L{int}
 
