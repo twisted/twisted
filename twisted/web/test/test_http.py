@@ -1481,9 +1481,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(
             req.received_cookies, {b"test": b'"lemur"', b"test2": b'"panda"'})
 
+
     def test_parseCookiesNoCookie(self):
         """
-        L{http.Request.parseCookies} returns None if the Cookies are not part 
+        L{http.Request.parseCookies} returns None if the Cookies are not part
         of the header.
         """
         req = http.Request(DummyChannel(), None)
@@ -1492,7 +1493,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_parseCookiesMalformedCookie(self):
         """
-        L{http.Request.parseCookies} ignores malformed cookie pairs. Cookies 
+        L{http.Request.parseCookies} ignores malformed cookie pairs. Cookies
         set before or after the malformed cookie-pair are properly parsed.
         """
         req = http.Request(DummyChannel(), None)
