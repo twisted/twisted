@@ -580,7 +580,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
         """
         L{dns.Message.authenticData} has default value 0.
         """
-        self.assertIdentical(dns.Message().authenticData, 0)
+        self.assertEqual(dns.Message().authenticData, 0)
 
 
     def test_authenticDataOverride(self):
@@ -588,7 +588,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
         L{dns.Message.__init__} accepts a C{authenticData} argument which
         is assigned to L{dns.Message.authenticData}.
         """
-        self.assertIdentical(dns.Message(authenticData=1).authenticData, 1)
+        self.assertEqual(dns.Message(authenticData=1).authenticData, 1)
 
 
     def test_authenticDataPosition(self):
@@ -639,7 +639,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
         """
         L{dns.Message.checkingDisabled} has default value 0.
         """
-        self.assertIdentical(dns.Message().checkingDisabled, 0)
+        self.assertEqual(dns.Message().checkingDisabled, 0)
 
 
     def test_checkingDisabledOverride(self):
@@ -647,7 +647,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
         L{dns.Message.__init__} accepts a C{checkingDisabled} argument which
         is assigned to L{dns.Message.checkingDisabled}.
         """
-        self.assertIdentical(
+        self.assertEqual(
             dns.Message(checkingDisabled=1).checkingDisabled, 1)
 
 
