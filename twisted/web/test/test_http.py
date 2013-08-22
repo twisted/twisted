@@ -1512,20 +1512,27 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         self.assertEqual(req.received_cookies, {})
 
 
-    def test_parseCookiesMalformedCookie(self):
+    def test_parseCookiesIgnoreValueless(self):
         """
-        L{http.Request.parseCookies} ignores malformed cookie pairs. Cookies
-        set before or after the malformed cookie-pair are properly parsed.
+        L{http.Request.parseCookies} ignores cookies which don't have a
+        value.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders(
+            b"cookie", [b'foo; bar; baz;'])
+        req.parseCookies()
+        self.assertEqual(
+            req.received_cookies, {})
+
+
+    def test_parseCookiesContinueAfterMalformedCookie(self):
+        """
+        L{http.Request.parseCookies} parses valid cookies set before or
+        after malformed cookies.
         """
         req = http.Request(DummyChannel(), None)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b'12345; test="lemur"; 12345; test2="panda"; 12345'])
-        req.parseCookies()
-        self.assertEqual(
-            req.received_cookies, {b"test": b'"lemur"', b"test2": b'"panda"'})
-        req.requestHeaders.setRawHeaders(
-            b"cookie", [b'12345', b'test="lemur"', b'12345',
-                        b'test2="panda"', b'12345'])
         req.parseCookies()
         self.assertEqual(
             req.received_cookies, {b"test": b'"lemur"', b"test2": b'"panda"'})
