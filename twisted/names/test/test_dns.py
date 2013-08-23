@@ -624,7 +624,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
             b'\x00\x00' # Additional count
         )
 
-        self.assertIdentical(m.authenticData, 1)
+        self.assertEqual(m.authenticData, 1)
 
 
     def test_checkingDisabledDefault(self):
@@ -676,7 +676,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
             b'\x00\x00' # Additional count
         )
 
-        self.assertIdentical(m.checkingDisabled, 1)
+        self.assertEqual(m.checkingDisabled, 1)
 
 
     def testEmptyMessage(self):
