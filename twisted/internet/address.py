@@ -10,7 +10,6 @@ from __future__ import division, absolute_import
 import warnings, os
 
 from zope.interface import implementer
-
 from twisted.internet.interfaces import IAddress
 from twisted.python.util import FancyEqMixin
 
@@ -85,6 +84,34 @@ class _ProcessAddress(object):
     """
     An L{interfaces.IAddress} provider for process transports.
     """
+
+
+
+@implementer(IAddress)
+class HostnameAddress(FancyEqMixin, object):
+    """
+    A L{HostnameAddress} represents the address of a L{HostnameEndpoint}.
+
+    @ivar hostname: A hostname byte string; for example, b"example.com".
+    @type hostname: L{bytes}
+
+    @ivar port: An integer representing the port number.
+    @type port: L{int}
+    """
+    compareAttributes = ('hostname', 'port')
+
+    def __init__(self, hostname, port):
+        self.hostname = hostname
+        self.port = port
+
+
+    def __repr__(self):
+        return '%s(%s, %d)' % (
+            self.__class__.__name__, self.hostname, self.port)
+
+
+    def __hash__(self):
+        return hash((self.hostname, self.port))
 
 
 
