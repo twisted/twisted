@@ -2005,8 +2005,11 @@ class DeferredHistoryTests(unittest.TestCase):
         """
         Ensure cleaning up of the global deferred debugging features state.
         """
-        self.addCleanup(defer.enableDeferredDebugging,
-                        defer.getDeferredDebugging())
+        defer.enableDeferredDebugging(
+            [defer.DebuggingFeatures.historyTracking])
+        self.addCleanup(
+            defer.disableDeferredDebugging,
+            [defer.DebuggingFeatures.historyTracking])
 
     def test_noItems(self):
         """

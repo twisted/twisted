@@ -293,8 +293,7 @@ class Deferred:
     # Keep this class attribute for now, for compatibility with code that
     # sets it directly.
     debug = False
-    _debugFeatures = set([
-        DebuggingFeatures.historyTracking])
+    _debugFeatures = set()
 
     _chainedTo = None
 

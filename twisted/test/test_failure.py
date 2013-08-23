@@ -17,7 +17,9 @@ from twisted.python.compat import NativeStringIO, _PY3
 from twisted.python import _reflectpy3 as reflect
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python import failure
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import (
+    Deferred, enableDeferredDebugging, disableDeferredDebugging,
+    DebuggingFeatures)
 
 from twisted.trial.unittest import SynchronousTestCase
 
@@ -43,95 +45,10 @@ def getDivisionFailure(*args, **kwargs):
     return f
 
 
-class FailureTestCase(SynchronousTestCase):
+class FailureFormattingAssertions(object):
     """
-    Tests for L{failure.Failure}.
+    A mixin that provides assertion methods for Failure formatting.
     """
-
-    def test_failAndTrap(self):
-        """
-        Trapping a L{Failure}.
-        """
-        try:
-            raise NotImplementedError('test')
-        except:
-            f = failure.Failure()
-        error = f.trap(SystemExit, RuntimeError)
-        self.assertEqual(error, RuntimeError)
-        self.assertEqual(f.type, NotImplementedError)
-
-
-    def test_trapRaisesCurrentFailure(self):
-        """
-        If the wrapped C{Exception} is not a subclass of one of the
-        expected types, L{failure.Failure.trap} raises the current
-        L{failure.Failure} ie C{self}.
-        """
-        exception = ValueError()
-        try:
-            raise exception
-        except:
-            f = failure.Failure()
-        untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
-        self.assertIdentical(f, untrapped)
-
-
-    if _PY3:
-        test_trapRaisesCurrentFailure.skip = (
-            "In Python3, Failure.trap raises the wrapped Exception "
-            "instead of the original Failure instance.")
-
-
-    def test_trapRaisesWrappedException(self):
-        """
-        If the wrapped C{Exception} is not a subclass of one of the
-        expected types, L{failure.Failure.trap} raises the wrapped
-        C{Exception}.
-        """
-        exception = ValueError()
-        try:
-            raise exception
-        except:
-            f = failure.Failure()
-
-        untrapped = self.assertRaises(ValueError, f.trap, OverflowError)
-        self.assertIdentical(exception, untrapped)
-
-
-    if not _PY3:
-        test_trapRaisesWrappedException.skip = (
-            "In Python2, Failure.trap raises the current Failure instance "
-            "instead of the wrapped Exception.")
-
-
-    def test_failureValueFromFailure(self):
-        """
-        A L{failure.Failure} constructed from another
-        L{failure.Failure} instance, has its C{value} property set to
-        the value of that L{failure.Failure} instance.
-        """
-        exception = ValueError()
-        f1 = failure.Failure(exception)
-        f2 = failure.Failure(f1)
-        self.assertIdentical(f2.value, exception)
-
-
-    def test_failureValueFromFoundFailure(self):
-        """
-        A L{failure.Failure} constructed without a C{exc_value}
-        argument, will search for an "original" C{Failure}, and if
-        found, its value will be used as the value for the new
-        C{Failure}.
-        """
-        exception = ValueError()
-        f1 = failure.Failure(exception)
-        try:
-            f1.trap(OverflowError)
-        except:
-            f2 = failure.Failure()
-
-        self.assertIdentical(f2.value, exception)
-
 
     def assertStartsWith(self, s, prefix):
         """
@@ -342,6 +259,96 @@ class FailureTestCase(SynchronousTestCase):
             self.assertEqual(None, re.search('exampleLocalVar.*xyzzy', tb))
 
 
+class FailureTestCase(SynchronousTestCase, FailureFormattingAssertions):
+    """
+    Tests for L{failure.Failure}.
+    """
+
+    def test_failAndTrap(self):
+        """
+        Trapping a L{Failure}.
+        """
+        try:
+            raise NotImplementedError('test')
+        except:
+            f = failure.Failure()
+        error = f.trap(SystemExit, RuntimeError)
+        self.assertEqual(error, RuntimeError)
+        self.assertEqual(f.type, NotImplementedError)
+
+
+    def test_trapRaisesCurrentFailure(self):
+        """
+        If the wrapped C{Exception} is not a subclass of one of the
+        expected types, L{failure.Failure.trap} raises the current
+        L{failure.Failure} ie C{self}.
+        """
+        exception = ValueError()
+        try:
+            raise exception
+        except:
+            f = failure.Failure()
+        untrapped = self.assertRaises(failure.Failure, f.trap, OverflowError)
+        self.assertIdentical(f, untrapped)
+
+
+    if _PY3:
+        test_trapRaisesCurrentFailure.skip = (
+            "In Python3, Failure.trap raises the wrapped Exception "
+            "instead of the original Failure instance.")
+
+
+    def test_trapRaisesWrappedException(self):
+        """
+        If the wrapped C{Exception} is not a subclass of one of the
+        expected types, L{failure.Failure.trap} raises the wrapped
+        C{Exception}.
+        """
+        exception = ValueError()
+        try:
+            raise exception
+        except:
+            f = failure.Failure()
+
+        untrapped = self.assertRaises(ValueError, f.trap, OverflowError)
+        self.assertIdentical(exception, untrapped)
+
+
+    if not _PY3:
+        test_trapRaisesWrappedException.skip = (
+            "In Python2, Failure.trap raises the current Failure instance "
+            "instead of the wrapped Exception.")
+
+
+    def test_failureValueFromFailure(self):
+        """
+        A L{failure.Failure} constructed from another
+        L{failure.Failure} instance, has its C{value} property set to
+        the value of that L{failure.Failure} instance.
+        """
+        exception = ValueError()
+        f1 = failure.Failure(exception)
+        f2 = failure.Failure(f1)
+        self.assertIdentical(f2.value, exception)
+
+
+    def test_failureValueFromFoundFailure(self):
+        """
+        A L{failure.Failure} constructed without a C{exc_value}
+        argument, will search for an "original" C{Failure}, and if
+        found, its value will be used as the value for the new
+        C{Failure}.
+        """
+        exception = ValueError()
+        f1 = failure.Failure(exception)
+        try:
+            f1.trap(OverflowError)
+        except:
+            f2 = failure.Failure()
+
+        self.assertIdentical(f2.value, exception)
+
+
     def test_printDetailedTraceback(self):
         """
         L{printDetailedTraceback} returns a detailed traceback including the
@@ -401,131 +408,6 @@ class FailureTestCase(SynchronousTestCase):
         the stack after C{cleanFailure} has been called.
         """
         self.assertDetailedTraceback(captureVars=True, cleanFailure=True)
-
-
-    def test_printDefaultTracebackWithHistory(self):
-        """
-        If a Failure has a Deferred history, it will include the formatted
-        history items in the default traceback output.
-        """
-        d = Deferred()
-        def callback1(result):
-            return None
-        def callback2(result):
-            1 / 0
-        d.addCallback(callback1)
-        d.addCallback(callback2)
-        d.callback(None)
-        f = self.failureResultOf(d)
-        tb = f.getTraceback()
-        self.assertStartsWith(
-            tb,
-            "Failing Deferred History:\n"
-            "    [callback %s]\n"
-            "    [callback %s]\n"
-            % (fullyQualifiedName(callback1),
-               fullyQualifiedName(callback2)))
-
-
-    def test_formatErrbackHistory(self):
-        """
-        Errbacks in history are explicitly indicated as such.
-        """
-        d = Deferred()
-        
-        def errback(failure):
-            return failure
-
-        d.addErrback(errback)
-        d.errback(failure.Failure(Exception("Boo")))
-        f = self.failureResultOf(d)
-        tb = f.getTraceback()
-        self.assertStartsWith(
-            tb,
-            "Failing Deferred History:\n"
-            "    [errback %s]"
-            % (fullyQualifiedName(errback),))
-
-
-    def test_printDefaultTracebackWithNestedHistory(self):
-        """
-        If a Failure's Deferred history has an item with a chained history,
-        that chained history will me rendered along with its parent.
-        """
-        outer = Deferred()
-        inner = Deferred()
-        def callback1(result):
-            return inner
-        def innerCallback(result):
-            return None
-        def callback2(result):
-            1 / 0
-        outer.addCallback(callback1)
-        outer.addCallback(callback2)
-        inner.addCallback(innerCallback)
-        outer.callback(None)
-        inner.callback(None)
-        f = self.failureResultOf(outer)
-        tb = f.getTraceback()
-        self.assertStartsWith(
-            tb,
-            "Failing Deferred History:\n"
-            "    [callback %s ->\n"
-            "        [callback %s]]\n"
-            "    [callback %s]\n"
-            % (fullyQualifiedName(callback1),
-               fullyQualifiedName(innerCallback),
-               fullyQualifiedName(callback2)))
-
-    def test_outerHistoryWithInnerFailureShowsOuterCallbacks(self):
-        """
-        When a Deferred has a callback that returns a Deferred which fails,
-        the failure will ultimately include the history of the outer Deferred,
-        since the Failure will traverse the outer Deferred.
-        """
-        outer = Deferred()
-        inner = Deferred()
-        def callback1(result):
-            return inner
-        def innerCallback(result):
-            1 / 0
-        outer.addCallback(callback1)
-        inner.addCallback(innerCallback)
-        outer.callback(None)
-        inner.callback(None)
-        f = self.failureResultOf(outer)
-        tb = f.getTraceback()
-        # only inner's history is being included in the failure. that's a problem.
-        self.assertStartsWith(
-            tb,
-            "Failing Deferred History:\n"
-            "    [callback %s ->\n"
-            "        [callback %s]]\n"
-            % (fullyQualifiedName(callback1),
-               fullyQualifiedName(innerCallback)))
-
-
-    def test_injectHistoryIntoReturnedFailure(self):
-        """
-        Failures that are returned from a callback will have the Deferred
-        history injected into them.
-        """
-        outer = Deferred()
-        
-        def callback(result):
-            return failure.Failure(ZeroDivisionError("hello"))
-
-        outer.addCallback(callback)
-        outer.callback(None)
-
-        f = self.failureResultOf(outer)
-        tb = f.getTraceback()
-        f.trap(ZeroDivisionError)
-        self.assertStartsWith(
-            tb,
-            "Failing Deferred History:\n"
-            "    [callback %s]\n"
-            % (fullyQualifiedName(callback)))
 
 
     def test_invalidFormatFramesDetail(self):
@@ -677,6 +559,145 @@ class FailureTestCase(SynchronousTestCase):
     if not _PY3:
         test_tracebackFromExceptionInPython3.skip = "Python 3 only."
         test_cleanFailureRemovesTracebackInPython3.skip = "Python 3 only."
+
+
+
+class FailureHistoryTests(SynchronousTestCase, FailureFormattingAssertions):
+    """
+    Tests for history rendering in Failures.
+    """
+
+    def setUp(self):
+        enableDeferredDebugging(
+            [DebuggingFeatures.historyTracking])
+        self.addCleanup(
+            disableDeferredDebugging,
+            [DebuggingFeatures.historyTracking])
+
+
+    def test_printDefaultTracebackWithHistory(self):
+        """
+        If a Failure has a Deferred history, it will include the formatted
+        history items in the default traceback output.
+        """
+        d = Deferred()
+        def callback1(result):
+            return None
+        def callback2(result):
+            1 / 0
+        d.addCallback(callback1)
+        d.addCallback(callback2)
+        d.callback(None)
+        f = self.failureResultOf(d)
+        tb = f.getTraceback()
+        self.assertStartsWith(
+            tb,
+            "Failing Deferred History:\n"
+            "    [callback %s]\n"
+            "    [callback %s]\n"
+            % (fullyQualifiedName(callback1),
+               fullyQualifiedName(callback2)))
+
+
+    def test_formatErrbackHistory(self):
+        """
+        Errbacks in history are explicitly indicated as such.
+        """
+        d = Deferred()
+        
+        def errback(failure):
+            return failure
+
+        d.addErrback(errback)
+        d.errback(failure.Failure(Exception("Boo")))
+        f = self.failureResultOf(d)
+        tb = f.getTraceback()
+        self.assertStartsWith(
+            tb,
+            "Failing Deferred History:\n"
+            "    [errback %s]"
+            % (fullyQualifiedName(errback),))
+
+
+    def test_printDefaultTracebackWithNestedHistory(self):
+        """
+        If a Failure's Deferred history has an item with a chained history,
+        that chained history will me rendered along with its parent.
+        """
+        outer = Deferred()
+        inner = Deferred()
+        def callback1(result):
+            return inner
+        def innerCallback(result):
+            return None
+        def callback2(result):
+            1 / 0
+        outer.addCallback(callback1)
+        outer.addCallback(callback2)
+        inner.addCallback(innerCallback)
+        outer.callback(None)
+        inner.callback(None)
+        f = self.failureResultOf(outer)
+        tb = f.getTraceback()
+        self.assertStartsWith(
+            tb,
+            "Failing Deferred History:\n"
+            "    [callback %s ->\n"
+            "        [callback %s]]\n"
+            "    [callback %s]\n"
+            % (fullyQualifiedName(callback1),
+               fullyQualifiedName(innerCallback),
+               fullyQualifiedName(callback2)))
+
+    def test_outerHistoryWithInnerFailureShowsOuterCallbacks(self):
+        """
+        When a Deferred has a callback that returns a Deferred which fails,
+        the failure will ultimately include the history of the outer Deferred,
+        since the Failure will traverse the outer Deferred.
+        """
+        outer = Deferred()
+        inner = Deferred()
+        def callback1(result):
+            return inner
+        def innerCallback(result):
+            1 / 0
+        outer.addCallback(callback1)
+        inner.addCallback(innerCallback)
+        outer.callback(None)
+        inner.callback(None)
+        f = self.failureResultOf(outer)
+        tb = f.getTraceback()
+        # only inner's history is being included in the failure. that's a problem.
+        self.assertStartsWith(
+            tb,
+            "Failing Deferred History:\n"
+            "    [callback %s ->\n"
+            "        [callback %s]]\n"
+            % (fullyQualifiedName(callback1),
+               fullyQualifiedName(innerCallback)))
+
+
+    def test_injectHistoryIntoReturnedFailure(self):
+        """
+        Failures that are returned from a callback will have the Deferred
+        history injected into them.
+        """
+        outer = Deferred()
+        
+        def callback(result):
+            return failure.Failure(ZeroDivisionError("hello"))
+
+        outer.addCallback(callback)
+        outer.callback(None)
+
+        f = self.failureResultOf(outer)
+        tb = f.getTraceback()
+        f.trap(ZeroDivisionError)
+        self.assertStartsWith(
+            tb,
+            "Failing Deferred History:\n"
+            "    [callback %s]\n"
+            % (fullyQualifiedName(callback)))
 
 
 
