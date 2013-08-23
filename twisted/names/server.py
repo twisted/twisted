@@ -208,7 +208,26 @@ class DNSServerFactory(protocol.ServerFactory):
             log.msg("Unknown op code (%d) from %r" % (message.opCode, address))
 
 
-    def messageReceived(self, message, proto, address = None):
+    def messageReceived(self, message, proto, address=None):
+        """
+        L{DNSServerFactory.messageReceived} is called by protocols which
+        are under the control of this L{DNSServerFactory} whenever
+        they receive a DNS query message or an unexpected / duplicate
+        / late DNS response message.
+
+        @param message: The DNS message that was received.
+        @type message: L{dns.Message}
+
+        @param proto: The DNS protocol instance which received the message
+        @type proto: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
+
+        @param address: The address from which the message was
+            received. Only provided for messages received by datagram
+            protocols. The origin of Messages received from stream
+            protocols can be gleaned from the protocol C{transport}
+            attribute.
+        @type address: L{tuple} or L{None}
+        """
         message.timeReceived = time.time()
 
         if self.verbose:
