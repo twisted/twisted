@@ -29,6 +29,21 @@ class DNSServerFactory(protocol.ServerFactory):
     Server factory and tracker for L{DNSProtocol} connections.  This
     class also provides records for responses to DNS queries.
 
+    @ivar cache: A L{cache.Cache} instance whose C{cacheResult} method
+        is called when a response is received from one of C{clients}.
+    @type cache: L{cache.Cache}
+
+    @ivar canRecurse: A flag indicating whether this server is capable
+        of performing recursive DNS resolution.
+    @type canRecurse: L{bool}
+
+    @ivar resolver: A L{resolve.ResolverChain} containing an ordered
+        list of C{authorities}, C{caches} and C{clients} to which
+        queries will be dispatched.
+    @type resolver: L{resolve.ResolverChain}
+
+    @ivar verbose: See L{__init__}
+
     @ivar connections: A list of all the connected L{DNSProtocol}
         instances using this object as their controller.
     @type connections: C{list} of L{DNSProtocol}
@@ -37,7 +52,26 @@ class DNSServerFactory(protocol.ServerFactory):
     protocol = dns.DNSProtocol
     cache = None
 
-    def __init__(self, authorities = None, caches = None, clients = None, verbose = 0):
+    def __init__(self, authorities=None, caches=None, clients=None, verbose=0):
+        """
+        @param authorities: Resolvers which provide authoritative answers.
+        @type authorities: L{list} of L{IResolver}
+
+        @param caches: Resolvers which provide cached
+            non-authoritative answers. The first cache instance is
+            assigned to L{DNSServerFactory.cache} and its
+            C{cacheResult} method will be called when a response is
+            received from one of C{clients}.
+        @type caches: L{list} of L{cache.Cache}
+
+        @param clients: Resolvers which are capable of performing
+            recursive DNS lookups.
+        @type clients: L{list} of {IResolver}
+
+        @param verbose: A flag which if L{True} will enable verbose
+            logging of queries and responses.
+        @param verbose: L{bool}
+        """
         resolvers = []
         if authorities is not None:
             resolvers.extend(authorities)

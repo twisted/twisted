@@ -6,7 +6,7 @@ Test cases for L{twisted.names.server}.
 """
 
 from twisted.names.dns import Message
-from twisted.names import server
+from twisted.names import resolve, server
 from twisted.trial import unittest
 
 
@@ -15,6 +15,116 @@ class DNSServerFactoryTests(unittest.TestCase):
     """
     Tests for L{server.DNSServerFactory}.
     """
+
+    def test_resolverType(self):
+        """
+        L{server.DNSServerFactory.resolver} is a
+        L{resolve.ResolverChain} instance
+        """
+        self.assertIsInstance(
+            server.DNSServerFactory().resolver,
+            resolve.ResolverChain)
+
+
+    def test_resolverDefaultEmpty(self):
+        """
+        L{server.DNSServerFactory.resolver} is an empty
+        L{resolve.ResolverChain} by default.
+        """
+        self.assertEqual(
+            server.DNSServerFactory().resolver.resolvers,
+            [])
+
+
+    def test_authorities(self):
+        """
+        L{server.DNSServerFactory.__init__} accepts an C{authorities}
+        argument. The value of this argument is a list and is used to
+        extend the C{resolver} L{resolve.ResolverChain}.
+        """
+        dummyResolver = object()
+        self.assertEqual(
+            server.DNSServerFactory(
+                authorities=[dummyResolver]).resolver.resolvers,
+            [dummyResolver])
+
+
+    def test_caches(self):
+        """
+        L{server.DNSServerFactory.__init__} accepts a C{caches}
+        argument. The value of this argument is a list and is used to
+        extend the C{resolver} L{resolve.ResolverChain}.
+        """
+        dummyResolver = object()
+        self.assertEqual(
+            server.DNSServerFactory(
+                caches=[dummyResolver]).resolver.resolvers,
+            [dummyResolver])
+
+
+    def test_clients(self):
+        """
+        L{server.DNSServerFactory.__init__} accepts a C{clients}
+        argument. The value of this argument is a list and is used to
+        extend the C{resolver} L{resolve.ResolverChain}.
+        """
+        dummyResolver = object()
+        self.assertEqual(
+            server.DNSServerFactory(
+                clients=[dummyResolver]).resolver.resolvers,
+            [dummyResolver])
+
+
+    def test_cacheDefault(self):
+        """
+        L{server.DNSServerFactory.cache} is L{None} by default.
+        """
+        self.assertIdentical(server.DNSServerFactory().cache, None)
+
+
+    def test_cacheOverride(self):
+        """
+        L{server.DNSServerFactory.__init__} assigns the first object in
+        the C{caches} list to L{server.DNSServerFactory.cache}.
+        """
+        dummyResolver = object()
+        self.assertEqual(
+            server.DNSServerFactory(caches=[dummyResolver]).cache,
+            dummyResolver)
+
+
+    def test_canRecurseDefault(self):
+        """
+        L{server.DNSServerFactory.canRecurse} is a flag indicating that
+        this server is capable of performing recursive DNS lookups. It
+        defaults to L{False}.
+        """
+        self.assertEqual(server.DNSServerFactory().canRecurse, False)
+
+
+    def test_canRecurseOverride(self):
+        """
+        L{server.DNSServerFactory.__init__} sets C{canRecurse} to L{True}
+        if it is supplied with C{clients}.
+        """
+        self.assertEqual(server.DNSServerFactory(clients=[None]).canRecurse, True)
+
+
+    def test_verboseDefault(self):
+        """
+        L{server.DNSServerFactory.verbose} defaults to L{False}.
+        """
+        self.assertEqual(server.DNSServerFactory().verbose, False)
+
+
+    def test_verboseOverride(self):
+        """
+        L{server.DNSServerFactory.__init__} accepts a C{verbose} argument
+        which overrides L{server.DNSServerFactory.verbose}.
+        """
+        self.assertEqual(server.DNSServerFactory(verbose=True).verbose, True)
+
+
     def _messageReceivedTest(self, methodName, message):
         """
         Assert that the named method is called with the given message when
