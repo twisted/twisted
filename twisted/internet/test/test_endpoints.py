@@ -1395,14 +1395,6 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
         self.assertEqual(ep._deferToThread, threads.deferToThread)
 
 
-    def test_defaultGAI(self):
-        """
-        By default, L{HostnameEndpoint._getaddrinfo} is L{socket.getaddrinfo}.
-        """
-        ep = endpoints.TCP6ClientEndpoint(None, 'www.example.com', 1234)
-        self.assertEqual(ep._getaddrinfo, socket.getaddrinfo)
-
-
     def test_nameResolution(self):
         """
         While resolving hostnames, _nameResolution calls
@@ -1512,6 +1504,17 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
                 mreactor, clientFactory)
 
         self.assertEqual(ep._deferToThread, threads.deferToThread)
+
+
+    def test_defaultGAI(self):
+        """
+        By default, L{HostnameEndpoint._getaddrinfo} is L{socket.getaddrinfo}.
+        """
+        mreactor = None
+        clientFactory = None
+        ep, ignoredArgs, address = self.createClientEndpoint(mreactor,
+                clientFactory)
+        self.assertEqual(ep._getaddrinfo, socket.getaddrinfo)
 
 
     def test_endpointConnectingCancelled(self):
