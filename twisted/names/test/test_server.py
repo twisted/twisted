@@ -9,7 +9,7 @@ from zope.interface.verify import verifyClass
 
 from twisted.internet import defer
 from twisted.internet.interfaces import IProtocolFactory
-from twisted.names import dns, resolve, server
+from twisted.names import dns, error, resolve, server
 from twisted.python import failure, log
 from twisted.trial import unittest
 
@@ -658,6 +658,66 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertIdentical(answers, expectedAnswers)
         self.assertIdentical(authority, expectedAuthority)
         self.assertIdentical(additional, expectedAdditional)
+
+
+    def _assertMessageRcodeForError(self, responseError, expectedMessageCode):
+        """
+        L{server.DNSServerFactory.gotResolver} accepts a
+        L{failure.Failure} and triggers a response message whose rCode
+        corresponds to the DNS error contained in the C{Failure}.
+        """
+        f = server.DNSServerFactory()
+        e = self.assertRaises(
+            RaisingProtocol.WriteMessageArguments,
+            f.gotResolverError,
+            failure.Failure(responseError),
+            protocol=RaisingProtocol(), message=dns.Message(), address=None)
+        (message,), kwargs = e.args
+
+        self.assertEqual(message.rCode, expectedMessageCode)
+
+
+    def test_gotResolverErrorDomainError(self):
+        """
+        L{server.DNSServerFactory.gotResolver} triggers a response message
+        with an C{rCode} of L{dns.ENAME} if supplied with a
+        L{error.DomainError}.
+        """
+        self._assertMessageRcodeForError(error.DomainError(), dns.ENAME)
+
+
+    def test_gotResolverErrorAuthoritativeDomainError(self):
+        """
+        L{server.DNSServerFactory.gotResolver} triggers a response message
+        with an C{rCode} of L{dns.ENAME} if supplied with a
+        L{error.AuthoritativeDomainError}.
+        """
+        self._assertMessageRcodeForError(error.AuthoritativeDomainError(), dns.ENAME)
+
+
+    def test_gotResolverErrorOtherError(self):
+        """
+        L{server.DNSServerFactory.gotResolver} triggers a response message
+        with an C{rCode} of L{dns.ESERVER} if supplied with another
+        type of error and logs the error.
+        """
+        self._assertMessageRcodeForError(KeyError(), dns.ESERVER)
+        e = self.flushLoggedErrors(KeyError)
+        self.assertEqual(len(e), 1)
+
+
+    def test_gotResolverErrorLogging(self):
+        """
+        L{server.DNSServerFactory.gotResolver} logs a message if
+        C{verbose > 0}.
+        """
+        f = server.DNSServerFactory(verbose=1)
+        assertLogMessage(
+            self,
+            ["Lookup failed"],
+            f.gotResolverError,
+            failure.Failure(error.DomainError()),
+            protocol=NoopProtocol(), message=dns.Message(), address=None)
 
 
     def test_handleInverseQuery(self):
