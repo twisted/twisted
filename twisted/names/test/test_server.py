@@ -23,6 +23,23 @@ class NoresponseDNSServerFactory(server.DNSServerFactory):
 
 
 
+class WriteMessageException(Exception):
+    pass
+
+
+
+class RaisingProtocol:
+    def writeMessage(self, *args, **kwargs):
+        raise WriteMessageException(args, kwargs)
+
+
+
+class NoopProtocol:
+    def writeMessage(self, *args, **kwargs):
+        pass
+
+
+
 def assertLogMessage(testCase, expectedMessages, callable, *args, **kwargs):
     """
     Assert that the callable logs the expected messages when called.
@@ -443,4 +460,111 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_handleInverseQuery(self):
         """
+        L{server.DNSServerFactory.handleInverseQuery} triggers the sending
+        of a response message with C{rCode} set to L{dns.ENOTIMP}.
         """
+        f = server.DNSServerFactory()
+        e = self.assertRaises(
+            WriteMessageException,
+            f.handleInverseQuery,
+            message=dns.Message(), protocol=RaisingProtocol(), address=None)
+        (message,), kwargs = e.args
+
+        self.assertEqual(message.rCode, dns.ENOTIMP)
+
+
+    def test_handleInverseQueryLogging(self):
+        """
+        L{server.DNSServerFactory.handleInverseQuery} logs the message
+        origin address if C{verbose > 0}.
+        """
+        f = server.DNSServerFactory(verbose=1)
+        assertLogMessage(
+            self,
+            ["Inverse query from ('::1', 53)"],
+            f.handleInverseQuery,
+            message=dns.Message(), protocol=NoopProtocol(), address=('::1', 53))
+
+
+    def test_handleStatus(self):
+        """
+        L{server.DNSServerFactory.handleStatus} triggers the sending
+        of a response message with C{rCode} set to L{dns.ENOTIMP}.
+        """
+        f = server.DNSServerFactory()
+        e = self.assertRaises(
+            WriteMessageException,
+            f.handleStatus,
+            message=dns.Message(), protocol=RaisingProtocol(), address=None)
+        (message,), kwargs = e.args
+
+        self.assertEqual(message.rCode, dns.ENOTIMP)
+
+
+    def test_handleStatusLogging(self):
+        """
+        L{server.DNSServerFactory.handleStatus} logs the message
+        origin address if C{verbose > 0}.
+        """
+        f = server.DNSServerFactory(verbose=1)
+        assertLogMessage(
+            self,
+            ["Status request from ('::1', 53)"],
+            f.handleStatus,
+            message=dns.Message(), protocol=NoopProtocol(), address=('::1', 53))
+
+
+    def test_handleNotify(self):
+        """
+        L{server.DNSServerFactory.handleNotify} triggers the sending
+        of a response message with C{rCode} set to L{dns.ENOTIMP}.
+        """
+        f = server.DNSServerFactory()
+        e = self.assertRaises(
+            WriteMessageException,
+            f.handleNotify,
+            message=dns.Message(), protocol=RaisingProtocol(), address=None)
+        (message,), kwargs = e.args
+
+        self.assertEqual(message.rCode, dns.ENOTIMP)
+
+
+    def test_handleNotifyLogging(self):
+        """
+        L{server.DNSServerFactory.handleNotify} logs the message
+        origin address if C{verbose > 0}.
+        """
+        f = server.DNSServerFactory(verbose=1)
+        assertLogMessage(
+            self,
+            ["Notify message from ('::1', 53)"],
+            f.handleNotify,
+            message=dns.Message(), protocol=NoopProtocol(), address=('::1', 53))
+
+
+    def test_handleOther(self):
+        """
+        L{server.DNSServerFactory.handleOther} triggers the sending
+        of a response message with C{rCode} set to L{dns.ENOTIMP}.
+        """
+        f = server.DNSServerFactory()
+        e = self.assertRaises(
+            WriteMessageException,
+            f.handleOther,
+            message=dns.Message(), protocol=RaisingProtocol(), address=None)
+        (message,), kwargs = e.args
+
+        self.assertEqual(message.rCode, dns.ENOTIMP)
+
+
+    def test_handleOtherLogging(self):
+        """
+        L{server.DNSServerFactory.handleOther} logs the message
+        origin address if C{verbose > 0}.
+        """
+        f = server.DNSServerFactory(verbose=1)
+        assertLogMessage(
+            self,
+            ["Unknown op code (0) from ('::1', 53)"],
+            f.handleOther,
+            message=dns.Message(), protocol=NoopProtocol(), address=('::1', 53))
