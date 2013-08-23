@@ -6,8 +6,9 @@ Test the C{I...Endpoint} implementations that wrap the L{IReactorTCP},
 L{IReactorSSL}, and L{IReactorUNIX} interfaces found in
 L{twisted.internet.endpoints}.
 """
-
 from __future__ import division, absolute_import
+
+import socket
 
 from errno import EPERM
 from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP
@@ -1392,6 +1393,14 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
         """
         ep = endpoints.TCP6ClientEndpoint(None, 'www.example.com', 1234)
         self.assertEqual(ep._deferToThread, threads.deferToThread)
+
+
+    def test_defaultGAI(self):
+        """
+        By default, L{HostnameEndpoint._getaddrinfo} is L{socket.getaddrinfo}.
+        """
+        ep = endpoints.TCP6ClientEndpoint(None, 'www.example.com', 1234)
+        self.assertEqual(ep._getaddrinfo, socket.getaddrinfo)
 
 
     def test_nameResolution(self):
