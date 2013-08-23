@@ -571,6 +571,30 @@ class RoundtripDNSTestCase(unittest.TestCase):
 
 
 
+MESSAGE_AUTHENTIC_DATA_BYTES = (
+    b'\x00\x00' # ID
+    b'\x00' #
+    b'\x20' # RA, Z, AD=1, CD, RCODE
+    b'\x00\x00' # Query count
+    b'\x00\x00' # Answer count
+    b'\x00\x00' # Authority count
+    b'\x00\x00' # Additional count
+)
+
+
+
+MESSAGE_CHECKING_DISABLED_BYTES = (
+    b'\x00\x00' # ID
+    b'\x00' #
+    b'\x10' # RA, Z, AD, CD=1, RCODE
+    b'\x00\x00' # Query count
+    b'\x00\x00' # Answer count
+    b'\x00\x00' # Authority count
+    b'\x00\x00' # Additional count
+)
+
+
+
 class MessageTestCase(unittest.SynchronousTestCase):
     """
     Tests for L{twisted.names.dns.Message}.
@@ -598,13 +622,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
         """
         self.assertEqual(
             dns.Message(authenticData=1).toStr(),
-            b'\x00\x00' # ID
-            b'\x00' #
-            b'\x20' # RA, Z, AD=1, CD, RCODE
-            b'\x00\x00' # Query count
-            b'\x00\x00' # Answer count
-            b'\x00\x00' # Authority count
-            b'\x00\x00' # Additional count
+            MESSAGE_AUTHENTIC_DATA_BYTES
         )
 
 
@@ -614,15 +632,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
         L{dns.Message.authenticData}.
         """
         m = dns.Message()
-        m.fromStr(
-            b'\x00\x00' # ID
-            b'\x00' #
-            b'\x20' # RA, Z, AD=1, CD, RCODE
-            b'\x00\x00' # Query count
-            b'\x00\x00' # Answer count
-            b'\x00\x00' # Authority count
-            b'\x00\x00' # Additional count
-        )
+        m.fromStr(MESSAGE_AUTHENTIC_DATA_BYTES)
 
         self.assertEqual(m.authenticData, 1)
 
@@ -650,13 +660,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
         """
         self.assertEqual(
             dns.Message(checkingDisabled=1).toStr(),
-            b'\x00\x00' # ID
-            b'\x00' #
-            b'\x10' # RA, Z, AD, CD=1, RCODE
-            b'\x00\x00' # Query count
-            b'\x00\x00' # Answer count
-            b'\x00\x00' # Authority count
-            b'\x00\x00' # Additional count
+            MESSAGE_CHECKING_DISABLED_BYTES
         )
 
 
@@ -666,15 +670,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
         L{dns.Message.checkingDisabled}.
         """
         m = dns.Message()
-        m.fromStr(
-            b'\x00\x00' # ID
-            b'\x00' #
-            b'\x10' # RA, Z, AD, CD=1, RCODE
-            b'\x00\x00' # Query count
-            b'\x00\x00' # Answer count
-            b'\x00\x00' # Authority count
-            b'\x00\x00' # Additional count
-        )
+        m.fromStr(MESSAGE_CHECKING_DISABLED_BYTES)
 
         self.assertEqual(m.checkingDisabled, 1)
 
