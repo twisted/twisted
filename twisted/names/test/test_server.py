@@ -282,14 +282,40 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertEqual(receivedMessages, [(message, protocol, None)])
 
 
+    def test_queryMessageReceived(self):
+        """
+        L{DNSServerFactory.messageReceived} passes messages with an opcode
+        of C{OP_QUERY} on to L{DNSServerFactory.handleQuery}.
+        """
+        self._messageReceivedTest(
+            'handleQuery', dns.Message(opCode=dns.OP_QUERY))
+
+
+    def test_inverseQueryMessageReceived(self):
+        """
+        L{DNSServerFactory.messageReceived} passes messages with an opcode
+        of C{OP_INVERSE} on to L{DNSServerFactory.handleInverseQuery}.
+        """
+        self._messageReceivedTest(
+            'handleInverseQuery', dns.Message(opCode=dns.OP_INVERSE))
+
+
+    def test_statusMessageReceived(self):
+        """
+        L{DNSServerFactory.messageReceived} passes messages with an opcode
+        of C{OP_STATUS} on to L{DNSServerFactory.handleStatus}.
+        """
+        self._messageReceivedTest(
+            'handleStatus', dns.Message(opCode=dns.OP_STATUS))
+
+
     def test_notifyMessageReceived(self):
         """
         L{DNSServerFactory.messageReceived} passes messages with an opcode
         of C{OP_NOTIFY} on to L{DNSServerFactory.handleNotify}.
         """
-        # RFC 1996, section 4.5
-        opCode = 4
-        self._messageReceivedTest('handleNotify', dns.Message(opCode=opCode))
+        self._messageReceivedTest(
+            'handleNotify', dns.Message(opCode=dns.OP_NOTIFY))
 
 
     def test_updateMessageReceived(self):
@@ -299,9 +325,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
         This may change if the implementation ever covers update messages.
         """
-        # RFC 2136, section 1.3
-        opCode = 5
-        self._messageReceivedTest('handleOther', dns.Message(opCode=opCode))
+        self._messageReceivedTest(
+            'handleOther', dns.Message(opCode=dns.OP_UPDATE))
 
 
     def test_connectionTracking(self):
