@@ -200,8 +200,8 @@ class NameTests(unittest.TestCase):
             b'\x01\x00' # Message ID
             b'\x00' # answer bit, opCode nibble, auth bit, trunc bit, recursive
                     # bit
-            b'\x00' # recursion bit, empty bit, empty bit, empty bit, response
-                    # code nibble
+            b'\x00' # recursion bit, empty bit, authenticData bit,
+                    # checkingDisabled bit, response code nibble
             b'\x00\x01' # number of queries
             b'\x00\x01' # number of answers
             b'\x00\x00' # number of authorities
@@ -571,10 +571,109 @@ class RoundtripDNSTestCase(unittest.TestCase):
 
 
 
+MESSAGE_AUTHENTIC_DATA_BYTES = (
+    b'\x00\x00' # ID
+    b'\x00' #
+    b'\x20' # RA, Z, AD=1, CD, RCODE
+    b'\x00\x00' # Query count
+    b'\x00\x00' # Answer count
+    b'\x00\x00' # Authority count
+    b'\x00\x00' # Additional count
+)
+
+
+
+MESSAGE_CHECKING_DISABLED_BYTES = (
+    b'\x00\x00' # ID
+    b'\x00' #
+    b'\x10' # RA, Z, AD, CD=1, RCODE
+    b'\x00\x00' # Query count
+    b'\x00\x00' # Answer count
+    b'\x00\x00' # Authority count
+    b'\x00\x00' # Additional count
+)
+
+
+
 class MessageTestCase(unittest.SynchronousTestCase):
     """
     Tests for L{twisted.names.dns.Message}.
     """
+
+    def test_authenticDataDefault(self):
+        """
+        L{dns.Message.authenticData} has default value 0.
+        """
+        self.assertEqual(dns.Message().authenticData, 0)
+
+
+    def test_authenticDataOverride(self):
+        """
+        L{dns.Message.__init__} accepts a C{authenticData} argument which
+        is assigned to L{dns.Message.authenticData}.
+        """
+        self.assertEqual(dns.Message(authenticData=1).authenticData, 1)
+
+
+    def test_authenticDataEncode(self):
+        """
+        L{dns.Message.toStr} encodes L{dns.Message.authenticData} into
+        byte4 of the byte string.
+        """
+        self.assertEqual(
+            dns.Message(authenticData=1).toStr(),
+            MESSAGE_AUTHENTIC_DATA_BYTES
+        )
+
+
+    def test_authenticDataDecode(self):
+        """
+        L{dns.Message.fromStr} decodes byte4 and assigns bit3 to
+        L{dns.Message.authenticData}.
+        """
+        m = dns.Message()
+        m.fromStr(MESSAGE_AUTHENTIC_DATA_BYTES)
+
+        self.assertEqual(m.authenticData, 1)
+
+
+    def test_checkingDisabledDefault(self):
+        """
+        L{dns.Message.checkingDisabled} has default value 0.
+        """
+        self.assertEqual(dns.Message().checkingDisabled, 0)
+
+
+    def test_checkingDisabledOverride(self):
+        """
+        L{dns.Message.__init__} accepts a C{checkingDisabled} argument which
+        is assigned to L{dns.Message.checkingDisabled}.
+        """
+        self.assertEqual(
+            dns.Message(checkingDisabled=1).checkingDisabled, 1)
+
+
+    def test_checkingDisabledEncode(self):
+        """
+        L{dns.Message.toStr} encodes L{dns.Message.checkingDisabled} into
+        byte4 of the byte string.
+        """
+        self.assertEqual(
+            dns.Message(checkingDisabled=1).toStr(),
+            MESSAGE_CHECKING_DISABLED_BYTES
+        )
+
+
+    def test_checkingDisabledDecode(self):
+        """
+        L{dns.Message.fromStr} decodes byte4 and assigns bit4 to
+        L{dns.Message.checkingDisabled}.
+        """
+        m = dns.Message()
+        m.fromStr(MESSAGE_CHECKING_DISABLED_BYTES)
+
+        self.assertEqual(m.checkingDisabled, 1)
+
 
     def testEmptyMessage(self):
         """
@@ -594,7 +693,8 @@ class MessageTestCase(unittest.SynchronousTestCase):
         msg.fromStr(
             b'\x01\x00' # Message ID
             b'\x00' # answer bit, opCode nibble, auth bit, trunc bit, recursive bit
-            b'\x00' # recursion bit, empty bit, empty bit, empty bit, response code nibble
+            b'\x00' # recursion bit, empty bit, authenticData bit,
+                    # checkingDisabled bit, response code nibble
             b'\x00\x00' # number of queries
             b'\x00\x00' # number of answers
             b'\x00\x00' # number of authorities
@@ -657,8 +757,8 @@ class MessageTestCase(unittest.SynchronousTestCase):
             b'\x01\x00' # Message ID
             # answer bit, opCode nibble, auth bit, trunc bit, recursive bit
             b'\x00'
-            # recursion bit, empty bit, empty bit, empty bit, response code
-            # nibble
+            # recursion bit, empty bit, authenticData bit,
+            # checkingDisabled bit, response code nibble
             b'\x00'
             b'\x00\x00' # number of queries
             b'\x00\x01' # number of answers
@@ -683,8 +783,8 @@ class MessageTestCase(unittest.SynchronousTestCase):
             b'\x01\x00' # Message ID
             # answer bit, opCode nibble, auth bit, trunc bit, recursive bit
             b'\x04'
-            # recursion bit, empty bit, empty bit, empty bit, response code
-            # nibble
+            # recursion bit, empty bit, authenticData bit,
+            # checkingDisabled bit, response code nibble
             b'\x00'
             b'\x00\x00' # number of queries
             b'\x00\x01' # number of answers
