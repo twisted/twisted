@@ -720,6 +720,88 @@ class DNSServerFactoryTests(unittest.TestCase):
             protocol=NoopProtocol(), message=dns.Message(), address=None)
 
 
+    def test_sendReplyWithAddress(self):
+        """
+        If L{server.DNSServerFactory.sendReply} is supplied with a
+        protocol *and* an address tuple it will supply that address to
+        C{protocol.writeMessage}.
+        """
+        m = dns.Message()
+        stubAddress = object()
+        f = server.DNSServerFactory()
+        e = self.assertRaises(
+            RaisingProtocol.WriteMessageArguments,
+            f.sendReply,
+            protocol=RaisingProtocol(),
+            message=m,
+            address=stubAddress)
+        args, kwargs = e.args
+        self.assertEqual(args, (m, stubAddress))
+        self.assertEqual(kwargs, {})
+
+
+    def test_sendReplyWithoutAddress(self):
+        """
+        If L{server.DNSServerFactory.sendReply} is supplied with a
+        protocol but no address tuple it will supply only a message to
+        C{protocol.writeMessage}.
+        """
+        m = dns.Message()
+        f = server.DNSServerFactory()
+        e = self.assertRaises(
+            RaisingProtocol.WriteMessageArguments,
+            f.sendReply,
+            protocol=RaisingProtocol(),
+            message=m,
+            address=None)
+        args, kwargs = e.args
+        self.assertEqual(args, (m,))
+        self.assertEqual(kwargs, {})
+
+
+    def test_sendReplyLoggingNoAnswers(self):
+        """
+        If L{server.DNSServerFactory.sendReply} logs a "no answers"
+        message if the supplied message has no answers.
+        """
+        self.patch(server.time, 'time', lambda: 2)
+        m = dns.Message()
+        m.timeReceived = 1
+        f = server.DNSServerFactory(verbose=2)
+        assertLogMessage(
+            self,
+            ["Replying with no answers", "Processed query in 1.000 seconds"],
+            f.sendReply,
+            protocol=NoopProtocol(),
+            message=m,
+            address=None)
+
+
+    def test_sendReplyLoggingWithAnswers(self):
+        """
+        If L{server.DNSServerFactory.sendReply} logs a message for
+        answers, authority, additional if the supplied a message has
+        records in any of those sections.
+        """
+        self.patch(server.time, 'time', lambda: 2)
+        m = dns.Message()
+        m.answers.append(dns.RRHeader(payload=dns.Record_A('127.0.0.1')))
+        m.authority.append(dns.RRHeader(payload=dns.Record_A('127.0.0.1')))
+        m.additional.append(dns.RRHeader(payload=dns.Record_A('127.0.0.1')))
+        m.timeReceived = 1
+        f = server.DNSServerFactory(verbose=2)
+        assertLogMessage(
+            self,
+            ['Answers are <A address=127.0.0.1 ttl=None>',
+             'Authority is <A address=127.0.0.1 ttl=None>',
+             'Additional is <A address=127.0.0.1 ttl=None>',
+             'Processed query in 1.000 seconds'],
+            f.sendReply,
+            protocol=NoopProtocol(),
+            message=m,
+            address=None)
+
+
     def test_handleInverseQuery(self):
         """
         L{server.DNSServerFactory.handleInverseQuery} triggers the sending
