@@ -1993,10 +1993,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 raise TypeError("Requested subpart of non-multipart message")
 
         if part.partialBegin or part.partialBegin == 0:
-            str_part = str(part).split('<')[0]
-            str_part += "<%s> " % (part.partialBegin,)
+            strPart = str(part).split('<')[0]
+            strPart += "<%s> " % (part.partialBegin,)
         else:
-            str_part = str(part) + ' '
+            strPart = str(part) + ' '
 
         if part.header:
             hdrs = msg.getHeaders(part.header.negate, *part.header.fields)
@@ -2004,9 +2004,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             if part.partialLength:
                 end = part.partialBegin + part.partialLength
                 hdrs = hdrs[part.partialBegin:end]
-            _w(str_part + _literal(hdrs))
+            _w(strPart + _literal(hdrs))
         elif part.text:
-            _w(str_part)
+            _w(strPart)
             _f()
             return FileProducer(msg.getBodyFile(),
                                 part.partialBegin, part.partialLength
@@ -2016,9 +2016,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             if part.partialLength:
                 end = part.partialBegin + part.partialLength
                 hdrs = hdrs[part.partialBegin:end]
-            _w(str_part + _literal(hdrs))
+            _w(strPart + _literal(hdrs))
         elif part.empty:
-            _w(str_part)
+            _w(strPart)
             _f()
             if part.part:
                 return FileProducer(msg.getBodyFile(),
@@ -2031,7 +2031,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                     return FileProducer(mf.open(),
                                         part.partialBegin, part.partialLength
                                        ).beginProducing(self.transport)
-                return MessageProducer(msg, None, self._scheduler, 
+                return MessageProducer(msg, None, self._scheduler,
                                        part.partialBegin, part.partialLength
                                       ).beginProducing(self.transport)
 
@@ -6104,11 +6104,11 @@ class FileProducer:
         self.start = start
         self.length = length
         if self.length:
-            file_size = self._size()
-            if file_size < self.length:
-                self.length = file_size-self.start
+            fileSize = self._size()
+            if fileSize < self.length:
+                self.length = fileSize-self.start
 
-            if file_size >= self.start:
+            if fileSize >= self.start:
                 self.f.seek(self.start, 0)
                 self.f.truncate(self.start + self.length)
                 self.f.seek(self.start, 0)

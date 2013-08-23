@@ -3390,12 +3390,27 @@ class FakeyServer(imap4.IMAP4Server):
 
 
 class FakeyMessageNonMIME(object):
+    """
+    Fake message with a non-MIME interface.
+
+    @ivar _body: See L{__init__}
+    """
     implements(imap4.IMessageFile)
 
     def __init__(self, body):
+        """
+        @type body: L{bytes}
+        @param body: The message body.
+        """
         self._body = body
 
     def open(self):
+        """
+        Return a file-like object containing the body of the message.
+
+        @rtype: file-like object
+        @return: A file-like object containing the body of the message.
+        """
         return StringIO(self._body)
 
 
@@ -4123,6 +4138,9 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
         See U{RFC 2060<http://tools.ietf.org/html/rfc2060#section-6.4.5>},
         section 6.4.5, for details.
+
+        @rtype: L{Deferred}
+        @return: Deferred
         """
         self.function = self.client.fetchSpecific
         self.messages = '1'
@@ -4136,8 +4154,8 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             headers, (), None, outerBody, 123, None)]
         self.expected = {0: [['BODY', ['HEADER'], '<0>', 'From: sender@host']]}
 
-        def result(R):
-            self.result = R
+        def result(r):
+            self.result = r
 
         self.connected.addCallback(
             lambda _: self.function(self.messages,
@@ -4158,6 +4176,9 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
         See U{RFC 2060<http://tools.ietf.org/html/rfc2060#section-6.4.5>},
         section 6.4.5, for details.
+
+        @rtype: L{Deferred}
+        @return: Deferred
         """
         self.function = self.client.fetchSpecific
         self.messages = '1'
@@ -4171,8 +4192,8 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             headers, (), None, outerBody, 123, None)]
         self.expected = {0: [['BODY', ['TEXT'], '<8>', 'Fetch Body Text!']]}
 
-        def result(R):
-            self.result = R
+        def result(r):
+            self.result = r
 
         self.connected.addCallback(
             lambda _: self.function(self.messages,
@@ -4194,6 +4215,9 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
         See U{RFC 2060<http://tools.ietf.org/html/rfc2060#section-6.4.5>},
         section 6.4.5, for details.
+
+        @rtype: L{Deferred}
+        @return: Deferred
         """
         self.function = self.client.fetchSpecific
         self.messages = '1'
@@ -4207,8 +4231,8 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             headers, (), None, outerBody, 123, None)]
         self.expected = {0: [['BODY', ['MIME'], '<41>', 'Subject: booga booga boo']]}
 
-        def result(R):
-            self.result = R
+        def result(r):
+            self.result = r
 
         self.connected.addCallback(
             lambda _: self.function(self.messages,
@@ -4230,6 +4254,9 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
         See U{RFC 2060<http://tools.ietf.org/html/rfc2060#section-6.4.5>},
         section 6.4.5, for details.
+
+        @rtype: L{Deferred}
+        @return: Deferred
         """
         self.function = self.client.fetchSpecific
         self.messages = '1'
@@ -4255,8 +4282,8 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             0: [['BODY', ['2'], '<10>', '<i>message</i> for the test.']]
         }
 
-        def result(R):
-            self.result = R
+        def result(r):
+            self.result = r
 
         self.connected.addCallback(
             lambda _: self.function(self.messages, headerNumber=2,
@@ -4276,6 +4303,9 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
         See U{RFC 2060<http://tools.ietf.org/html/rfc2060#section-6.4.5>},
         section 6.4.5, for details.
+
+        @rtype: L{Deferred}
+        @return: Deferred
         """
         self.function = self.client.fetchSpecific
         self.messages = '1'
@@ -4289,8 +4319,8 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             headers, (), None, outerBody, 123, None)]
         self.expected = {0: [['BODY', [], '<41>', 'Subject: booga booga boo']]}
 
-        def result(R):
-            self.result = R
+        def result(r):
+            self.result = r
 
         self.connected.addCallback(
             lambda _: self.function(self.messages,
@@ -4311,6 +4341,9 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
         See U{RFC 2060<http://tools.ietf.org/html/rfc2060#section-6.4.5>},
         section 6.4.5, for details.
+
+        @rtype: L{Deferred}
+        @return: Deferred
         """
         self.function = self.client.fetchSpecific
         self.messages = '1'
@@ -4322,8 +4355,8 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
         self.msgObjs = [FakeyMessageNonMIME(body)]
         self.expected = {0: [['BODY', [], '<41>', 'Subject: booga booga boo']]}
 
-        def result(R):
-            self.result = R
+        def result(r):
+            self.result = r
 
         self.connected.addCallback(
             lambda _: self.function(self.messages,
@@ -4344,6 +4377,9 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
         See U{RFC 2060<http://tools.ietf.org/html/rfc2060#section-6.4.5>},
         section 6.4.5, for details.
+
+        @rtype: L{Deferred}
+        @return: Deferred
         """
         self.function = self.client.fetchSpecific
         self.messages = '1'
@@ -4357,8 +4393,8 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
             headers, (), None, outerBody, 123, None)]
         self.expected = {0: [['BODY', ['1'], '<100>', '']]}
 
-        def result(R):
-            self.result = R
+        def result(r):
+            self.result = r
 
         self.connected.addCallback(
             lambda _: self.function(self.messages, headerNumber=1,
