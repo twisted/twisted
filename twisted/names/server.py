@@ -74,9 +74,11 @@ class DNSServerFactory(protocol.ServerFactory):
             recursive DNS lookups.
         @type clients: L{list} of {IResolver}
 
-        @param verbose: A flag which if L{True} will enable verbose
-            logging of queries and responses.
-        @param verbose: L{bool}
+        @param verbose: An integer controlling the verbosity of
+            logging of queries and responses. Default is C{0} which
+            means no logging. Set to C{2} to enable logging of full
+            query and response messages.
+        @param verbose: L{int}
         """
         resolvers = []
         if authorities is not None:

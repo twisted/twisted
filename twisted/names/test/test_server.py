@@ -9,7 +9,16 @@ from zope.interface.verify import verifyClass
 
 from twisted.internet.interfaces import IProtocolFactory
 from twisted.names import dns, resolve, server
+from twisted.python import log
 from twisted.trial import unittest
+
+
+
+class NoresponseDNSServerFactory(server.DNSServerFactory):
+    def allowQuery(*args):
+        return False
+    def sendReply(*args):
+        pass
 
 
 
@@ -185,6 +194,68 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertIsInstance(p, StubProtocol)
         self.assertEqual(p.args, (f,))
         self.assertEqual(p.kwargs, {})
+
+
+    def test_messageReceivedLoggingNoQuery(self):
+        """
+        L{server.DNSServerFactory.messageReceived} logs about an empty query
+        if the message had no queries and C{verbose} is  C{>0}.
+        """
+        m = dns.Message()
+
+        loggedMessages = []
+        log.addObserver(loggedMessages.append)
+
+        f = NoresponseDNSServerFactory(verbose=1)
+
+        f.messageReceived(message=m, proto=None, address=('192.0.2.100', 53))
+        self.assertEqual(len(loggedMessages), 1)
+        self.assertEqual(
+            loggedMessages[0]['message'],
+            ("Empty query from ('192.0.2.100', 53)",))
+
+
+    def test_messageReceivedLogging1(self):
+        """
+        L{server.DNSServerFactory.messageReceived} logs the query types of
+        all queries in the message if C{verbose} is set to C{1}.
+        """
+        m = dns.Message()
+        m.addQuery(name='example.com', type=dns.MX)
+        m.addQuery(name='example.com', type=dns.AAAA)
+
+        loggedMessages = []
+        log.addObserver(loggedMessages.append)
+
+        f = NoresponseDNSServerFactory(verbose=1)
+
+        f.messageReceived(message=m, proto=None, address=('192.0.2.100', 53))
+        self.assertEqual(len(loggedMessages), 1)
+        self.assertEqual(
+            loggedMessages[0]['message'],
+            ("MX AAAA query from ('192.0.2.100', 53)",))
+
+
+    def test_messageReceivedLogging2(self):
+        """
+        L{server.DNSServerFactory.messageReceived} logs the repr of all
+        queries in the message if C{verbose} is set to C{2}.
+        """
+        m = dns.Message()
+        m.addQuery(name='example.com', type=dns.MX)
+        m.addQuery(name='example.com', type=dns.AAAA)
+
+        loggedMessages = []
+        log.addObserver(loggedMessages.append)
+
+        f = NoresponseDNSServerFactory(verbose=2)
+
+        f.messageReceived(message=m, proto=None, address=('192.0.2.100', 53))
+        self.assertEqual(len(loggedMessages), 1)
+        self.assertEqual(
+            loggedMessages[0]['message'],
+            ("<Query example.com MX IN> "
+             "<Query example.com AAAA IN> query from ('192.0.2.100', 53)",))
 
 
     def _messageReceivedTest(self, methodName, message):
