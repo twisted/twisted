@@ -659,7 +659,7 @@ class HostnameEndpoint(object):
     def connect(self, protocolFactory):
         """
         Attempts a connection to each address returned by gai, and returns a
-        connection that is the fastest.
+        connection which is established first.
         """
         wf = protocolFactory
         pending = []
@@ -734,8 +734,7 @@ class HostnameEndpoint(object):
                 return None
 
             def checkDone():
-                if endpointsListExhausted and not pending and\
-                    not successful:
+                if endpointsListExhausted and not pending and not successful:
                     winner.errback(failures.pop())
 
             def connectFailed(reason):
