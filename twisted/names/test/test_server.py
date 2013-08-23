@@ -7,9 +7,10 @@ Test cases for L{twisted.names.server}.
 
 from zope.interface.verify import verifyClass
 
+from twisted.internet import defer
 from twisted.internet.interfaces import IProtocolFactory
 from twisted.names import dns, resolve, server
-from twisted.python import log
+from twisted.python import failure, log
 from twisted.trial import unittest
 
 
@@ -23,20 +24,32 @@ class NoresponseDNSServerFactory(server.DNSServerFactory):
 
 
 
-class WriteMessageException(Exception):
+class RaisedArguments(Exception):
     pass
+
+
+
+class RaisingDNSServerFactory(server.DNSServerFactory):
+    def allowQuery(self, *args, **kwargs):
+        raise RaisedArguments(args, kwargs)
 
 
 
 class RaisingProtocol:
     def writeMessage(self, *args, **kwargs):
-        raise WriteMessageException(args, kwargs)
+        raise RaisedArguments(args, kwargs)
 
 
 
 class NoopProtocol:
     def writeMessage(self, *args, **kwargs):
         pass
+
+
+
+class RaisingResolver:
+    def query(self, *args, **kwargs):
+        raise RaisedArguments(args, kwargs)
 
 
 
@@ -320,20 +333,13 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.allowQuery} along with the receiving
         protocol and origin address.
         """
-        class AllowQueryException(Exception):
-            pass
-
-        class RaisingDNSServerFactory(server.DNSServerFactory):
-            def allowQuery(self, *args, **kwargs):
-                raise AllowQueryException(args, kwargs)
-
         message = dns.Message()
         stubProtocol = object()
         stubAddress = object()
 
         f = RaisingDNSServerFactory()
         e = self.assertRaises(
-            AllowQueryException,
+            RaisedArguments,
             f.messageReceived,
             message=message, proto=stubProtocol, address=stubAddress)
         args, kwargs = e.args
@@ -458,6 +464,101 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertEqual(factory.connections, [])
 
 
+    def test_handleQuery(self):
+        """
+        L{server.DNSServerFactory.handleQuery} takes the first query from
+        the supplied message and dispatches it to
+        L{server.DNSServerFactory.resolver.query}.
+        """
+        m = dns.Message()
+        m.addQuery(b'one.example.com')
+        m.addQuery(b'two.example.com')
+        f = server.DNSServerFactory()
+        f.resolver = RaisingResolver()
+
+        e = self.assertRaises(
+            RaisedArguments,
+            f.handleQuery,
+            message=m, protocol=NoopProtocol(), address=None)
+        (query,), kwargs = e.args
+        self.assertEqual(query, m.queries[0])
+
+
+    def test_handleQueryCallback(self):
+        """
+        L{server.DNSServerFactory.handleQuery} adds
+        L{server.DNSServerFactory.resolver.gotResolverResponse} as a
+        callback to the deferred returned by
+        L{server.DNSServerFactory.resolver.query}. It is called with
+        the query response, the original protocol, message and origin
+        address.
+        """
+        f = server.DNSServerFactory()
+
+        d = defer.Deferred()
+        class FakeResolver:
+            def query(self, *args, **kwargs):
+                return d
+        f.resolver = FakeResolver()
+
+        gotResolverResponseArgs = []
+        def fakeGotResolverResponse(*args, **kwargs):
+            gotResolverResponseArgs.append((args, kwargs))
+        f.gotResolverResponse = fakeGotResolverResponse
+
+        m = dns.Message()
+        m.addQuery(b'one.example.com')
+        stubProtocol = NoopProtocol()
+        stubAddress = object()
+
+        f.handleQuery(message=m, protocol=stubProtocol, address=stubAddress)
+
+        stubResponse = object()
+        d.callback(stubResponse)
+
+        self.assertEqual(
+            gotResolverResponseArgs,
+            [((stubResponse, stubProtocol, m, stubAddress), {})])
+
+
+    def test_handleQueryErrback(self):
+        """
+        L{server.DNSServerFactory.handleQuery} adds
+        L{server.DNSServerFactory.resolver.gotResolverError} as an
+        errback to the deferred returned by
+        L{server.DNSServerFactory.resolver.query}. It is called with
+        the query failure, the original protocol, message and origin
+        address.
+        """
+        f = server.DNSServerFactory()
+
+        d = defer.Deferred()
+        class FakeResolver:
+            def query(self, *args, **kwargs):
+                return d
+        f.resolver = FakeResolver()
+
+        gotResolverErrorArgs = []
+        def fakeGotResolverError(*args, **kwargs):
+            gotResolverErrorArgs.append((args, kwargs))
+        f.gotResolverError = fakeGotResolverError
+
+        m = dns.Message()
+        m.addQuery(b'one.example.com')
+        stubProtocol = NoopProtocol()
+        stubAddress = object()
+
+        f.handleQuery(message=m, protocol=stubProtocol, address=stubAddress)
+
+        stubFailure = failure.Failure(Exception())
+        d.errback(stubFailure)
+
+        self.assertEqual(
+            gotResolverErrorArgs,
+            [((stubFailure, stubProtocol, m, stubAddress), {})])
+
+
+
     def test_handleInverseQuery(self):
         """
         L{server.DNSServerFactory.handleInverseQuery} triggers the sending
@@ -465,7 +566,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         f = server.DNSServerFactory()
         e = self.assertRaises(
-            WriteMessageException,
+            RaisedArguments,
             f.handleInverseQuery,
             message=dns.Message(), protocol=RaisingProtocol(), address=None)
         (message,), kwargs = e.args
@@ -493,7 +594,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         f = server.DNSServerFactory()
         e = self.assertRaises(
-            WriteMessageException,
+            RaisedArguments,
             f.handleStatus,
             message=dns.Message(), protocol=RaisingProtocol(), address=None)
         (message,), kwargs = e.args
@@ -521,7 +622,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         f = server.DNSServerFactory()
         e = self.assertRaises(
-            WriteMessageException,
+            RaisedArguments,
             f.handleNotify,
             message=dns.Message(), protocol=RaisingProtocol(), address=None)
         (message,), kwargs = e.args
@@ -549,7 +650,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         f = server.DNSServerFactory()
         e = self.assertRaises(
-            WriteMessageException,
+            RaisedArguments,
             f.handleOther,
             message=dns.Message(), protocol=RaisingProtocol(), address=None)
         (message,), kwargs = e.args
