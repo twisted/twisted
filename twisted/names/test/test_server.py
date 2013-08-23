@@ -36,8 +36,12 @@ class RaisingDNSServerFactory(server.DNSServerFactory):
 
 
 class RaisingProtocol:
+    class WriteMessageArguments(RaisedArguments):
+        pass
+
+
     def writeMessage(self, *args, **kwargs):
-        raise RaisedArguments(args, kwargs)
+        raise RaisingProtocol.WriteMessageArguments(args, kwargs)
 
 
 
@@ -50,6 +54,16 @@ class NoopProtocol:
 class RaisingResolver:
     def query(self, *args, **kwargs):
         raise RaisedArguments(args, kwargs)
+
+
+
+class RaisingCache:
+    class CacheResultArguments(RaisedArguments):
+        pass
+
+
+    def cacheResult(self, *args, **kwargs):
+        raise RaisingCache.CacheResultArguments(args, kwargs)
 
 
 
@@ -558,6 +572,93 @@ class DNSServerFactoryTests(unittest.TestCase):
             [((stubFailure, stubProtocol, m, stubAddress), {})])
 
 
+    def test_gotResolverResponse(self):
+        """
+        L{server.DNSServerFactory.gotResolverResponse} accepts a tuple of
+        resource record lists and triggers a response message
+        containing those resource record lists.
+        """
+        f = server.DNSServerFactory()
+        answers = []
+        authority = []
+        additional = []
+        e = self.assertRaises(
+            RaisingProtocol.WriteMessageArguments,
+            f.gotResolverResponse,
+            (answers, authority, additional),
+            protocol=RaisingProtocol(), message=dns.Message(), address=None)
+        (message,), kwargs = e.args
+
+        self.assertIdentical(message.answers, answers)
+        self.assertIdentical(message.authority, authority)
+        self.assertIdentical(message.additional, additional)
+
+
+    def test_gotResolverResponseAuthoritativeMessage(self):
+        """
+        L{server.DNSServerFactory.gotResolverResponse} marks the response
+        message as authoritative if any of the answer records are
+        authoritative.
+        """
+        f = server.DNSServerFactory()
+        answers = [dns.RRHeader(auth=True)]
+        authority = []
+        additional = []
+        e = self.assertRaises(
+            RaisingProtocol.WriteMessageArguments,
+            f.gotResolverResponse,
+            (answers, authority, additional),
+            protocol=RaisingProtocol(), message=dns.Message(), address=None)
+        (message,), kwargs = e.args
+
+        self.assertTrue(
+            message.auth,
+            'Message is not authoritative. message.auth=%r' % (message.auth,))
+
+
+    def test_gotResolverResponseLogging(self):
+        """
+        L{server.DNSServerFactory.gotResolverResponse} logs the total
+        number of records in the response if C{verbose > 0}.
+        """
+        f = server.DNSServerFactory(verbose=1)
+        answers = [dns.RRHeader()]
+        authority = [dns.RRHeader()]
+        additional = [dns.RRHeader()]
+
+        assertLogMessage(
+            self,
+            ["Lookup found 3 records"],
+            f.gotResolverResponse,
+            (answers, authority, additional),
+            protocol=NoopProtocol(), message=dns.Message(), address=None)
+
+
+    def test_gotResolverResponseCaching(self):
+        """
+        L{server.DNSServerFactory.gotResolverResponse} caches the response
+        if at least one cache was provided in the constructor.
+        """
+        f = server.DNSServerFactory(caches=[RaisingCache()])
+
+        m = dns.Message()
+        m.addQuery(b'example.com')
+        expectedAnswers = [dns.RRHeader()]
+        expectedAuthority = []
+        expectedAdditional = []
+
+        e = self.assertRaises(
+            RaisingCache.CacheResultArguments,
+            f.gotResolverResponse,
+            (expectedAnswers, expectedAuthority, expectedAdditional),
+            protocol=NoopProtocol(), message=m, address=None)
+        (query, (answers, authority, additional)), kwargs = e.args
+
+        self.assertEqual(query.name.name, b'example.com')
+        self.assertIdentical(answers, expectedAnswers)
+        self.assertIdentical(authority, expectedAuthority)
+        self.assertIdentical(additional, expectedAdditional)
+
 
     def test_handleInverseQuery(self):
         """
@@ -566,7 +667,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         f = server.DNSServerFactory()
         e = self.assertRaises(
-            RaisedArguments,
+            RaisingProtocol.WriteMessageArguments,
             f.handleInverseQuery,
             message=dns.Message(), protocol=RaisingProtocol(), address=None)
         (message,), kwargs = e.args
@@ -594,7 +695,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         f = server.DNSServerFactory()
         e = self.assertRaises(
-            RaisedArguments,
+            RaisingProtocol.WriteMessageArguments,
             f.handleStatus,
             message=dns.Message(), protocol=RaisingProtocol(), address=None)
         (message,), kwargs = e.args
@@ -622,7 +723,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         f = server.DNSServerFactory()
         e = self.assertRaises(
-            RaisedArguments,
+            RaisingProtocol.WriteMessageArguments,
             f.handleNotify,
             message=dns.Message(), protocol=RaisingProtocol(), address=None)
         (message,), kwargs = e.args
@@ -650,7 +751,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         f = server.DNSServerFactory()
         e = self.assertRaises(
-            RaisedArguments,
+            RaisingProtocol.WriteMessageArguments,
             f.handleOther,
             message=dns.Message(), protocol=RaisingProtocol(), address=None)
         (message,), kwargs = e.args
