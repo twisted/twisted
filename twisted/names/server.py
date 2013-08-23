@@ -217,6 +217,22 @@ class DNSServerFactory(protocol.ServerFactory):
         they receive a DNS query message or an unexpected / duplicate
         / late DNS response message.
 
+        L{DNSServerFactory.allowQuery} is called with the received
+        message, protocol and origin address. If it returns L{False},
+        a L{dns.EREFUSED} response is sent back to the client.
+
+        Otherwise the received message is dispatched to one of
+        L{DNSServerFactory.handleQuery},
+        L{DNSServerFactory.handleInverseQuery},
+        L{DNSServerFactory.handleStatus},
+        L{DNSServerFactory.handleNotify}, or
+        L{DNSServerFactory.handleOther} depending on the I{OPCODE} of
+        the received message.
+
+        If L{DNSServerFactory.verbose} is C{>0} all received messages
+        will be logged in more or less detail depending on the value
+        of C{verbose}.
+
         @param message: The DNS message that was received.
         @type message: L{dns.Message}
 
@@ -262,5 +278,29 @@ class DNSServerFactory(protocol.ServerFactory):
 
 
     def allowQuery(self, message, protocol, address):
-        # Allow anything but empty queries
+        """
+        Called by L{DNSServerFactory.messageReceived} to decide whether to
+        process a received message or to reply with L{dns.EREFUSED}.
+
+        This default implementation permits anything but empty queries.
+
+        Override in a subclass to implement alternative policies.
+
+        @param message: The DNS message that was received.
+        @type message: L{dns.Message}
+
+        @param proto: The DNS protocol instance which received the message
+        @type proto: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
+
+        @param address: The address from which the message was
+            received. Only provided for messages received by datagram
+            protocols. The origin of Messages received from stream
+            protocols can be gleaned from the protocol C{transport}
+            attribute.
+        @type address: L{tuple} or L{None}
+
+        @return: L{True} if the received message contained one or more
+            queries, else L{False}.
+        @rtype: L{bool}
+        """
         return len(message.queries)
