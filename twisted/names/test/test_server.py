@@ -5,8 +5,10 @@
 Test cases for L{twisted.names.server}.
 """
 
-from twisted.names.dns import Message
-from twisted.names import resolve, server
+from zope.interface.verify import verifyClass
+
+from twisted.internet.interfaces import IProtocolFactory
+from twisted.names import dns, resolve, server
 from twisted.trial import unittest
 
 
@@ -141,6 +143,50 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertEqual(server.DNSServerFactory(verbose=True).verbose, True)
 
 
+    def test_interface(self):
+        """
+        L{server.DNSServerFactory} implements L{IProtocolFactory}.
+        """
+        self.assertTrue(verifyClass(IProtocolFactory, server.DNSServerFactory))
+
+
+    def test_defaultProtocol(self):
+        """
+        L{server.DNSServerFactory.protocol} defaults to
+        L{dns.DNSProtocol}.
+        """
+        self.assertIdentical(server.DNSServerFactory.protocol, dns.DNSProtocol)
+
+
+    def test_buildProtocolDefaultProtocolType(self):
+        """
+        L{server.DNSServerFactory.buildProtocol} returns an instance of
+        L{server.DNSServerFactory.protocol} by default.
+        """
+        self.assertIsInstance(
+            server.DNSServerFactory().buildProtocol(addr=None),
+            server.DNSServerFactory.protocol)
+
+
+    def test_buildProtocolProtocolOverride(self):
+        """
+        L{server.DNSServerFactory.buildProtocol} builds a protocol by
+        calling L{server.DNSServerFactory.protocol} with its self as a
+        positional argument.
+        """
+        class StubProtocol:
+            def __init__(self, *args, **kwargs):
+                self.args = args
+                self.kwargs = kwargs
+
+        f = server.DNSServerFactory()
+        f.protocol = StubProtocol
+        p = f.buildProtocol(addr=None)
+        self.assertIsInstance(p, StubProtocol)
+        self.assertEqual(p.args, (f,))
+        self.assertEqual(p.kwargs, {})
+
+
     def _messageReceivedTest(self, methodName, message):
         """
         Assert that the named method is called with the given message when
@@ -172,7 +218,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         # RFC 1996, section 4.5
         opCode = 4
-        self._messageReceivedTest('handleNotify', Message(opCode=opCode))
+        self._messageReceivedTest('handleNotify', dns.Message(opCode=opCode))
 
 
     def test_updateMessageReceived(self):
@@ -184,7 +230,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         # RFC 2136, section 1.3
         opCode = 5
-        self._messageReceivedTest('handleOther', Message(opCode=opCode))
+        self._messageReceivedTest('handleOther', dns.Message(opCode=opCode))
 
 
     def test_connectionTracking(self):

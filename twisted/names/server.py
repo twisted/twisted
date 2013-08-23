@@ -47,6 +47,12 @@ class DNSServerFactory(protocol.ServerFactory):
     @ivar connections: A list of all the connected L{DNSProtocol}
         instances using this object as their controller.
     @type connections: C{list} of L{DNSProtocol}
+
+    @ivar protocol: A callable used for building a DNS stream
+        protocol. Called by L{DNSServerFactory.buildProtocol} and
+        passed the L{DNSServerFactory} instance as the one and only
+        positional argument.  Defaults to L{dns.DNSProtocol}.
+    @type protocol: A L{callable} which returns L{IProtocolFactory}
     """
 
     protocol = dns.DNSProtocol
