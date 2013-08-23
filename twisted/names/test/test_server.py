@@ -75,6 +75,22 @@ class DNSServerFactoryTests(unittest.TestCase):
             [dummyResolver])
 
 
+    def test_resolverOrder(self):
+        """
+        L{server.DNSServerFactory.resolver} contains an ordered list of
+        authorities, caches and clients.
+        """
+        class DummyAuthority: pass
+        class DummyCache: pass
+        class DummyClient: pass
+        self.assertEqual(
+            server.DNSServerFactory(
+                authorities=[DummyAuthority],
+                caches=[DummyCache],
+                clients=[DummyClient]).resolver.resolvers,
+            [DummyAuthority, DummyCache, DummyClient])
+
+
     def test_cacheDefault(self):
         """
         L{server.DNSServerFactory.cache} is L{None} by default.
