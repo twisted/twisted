@@ -1,0 +1,1 @@
+twisted.mail.imap4IMAP4Server now correctly responds to a partial fetch.

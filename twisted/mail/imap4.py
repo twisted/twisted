@@ -1992,31 +1992,48 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
                 # other parts - reject any request for any other part.
                 raise TypeError("Requested subpart of non-multipart message")
 
+        if part.partialBegin or part.partialBegin == 0:
+            str_part = str(part).split('<')[0]
+            str_part += "<%s> " % (part.partialBegin,)
+        else:
+            str_part = str(part) + ' '
+
         if part.header:
             hdrs = msg.getHeaders(part.header.negate, *part.header.fields)
             hdrs = _formatHeaders(hdrs)
-            _w(str(part) + ' ' + _literal(hdrs))
+            if part.partialLength:
+                end = part.partialBegin + part.partialLength
+                hdrs = hdrs[part.partialBegin:end]
+            _w(str_part + _literal(hdrs))
         elif part.text:
-            _w(str(part) + ' ')
+            _w(str_part)
             _f()
-            return FileProducer(msg.getBodyFile()
-                ).beginProducing(self.transport
-                )
+            return FileProducer(msg.getBodyFile(),
+                                part.partialBegin, part.partialLength
+                               ).beginProducing(self.transport)
         elif part.mime:
             hdrs = _formatHeaders(msg.getHeaders(True))
-            _w(str(part) + ' ' + _literal(hdrs))
+            if part.partialLength:
+                end = part.partialBegin + part.partialLength
+                hdrs = hdrs[part.partialBegin:end]
+            _w(str_part + _literal(hdrs))
         elif part.empty:
-            _w(str(part) + ' ')
+            _w(str_part)
             _f()
             if part.part:
-                return FileProducer(msg.getBodyFile()
-                    ).beginProducing(self.transport
-                    )
+                return FileProducer(msg.getBodyFile(),
+                                    part.partialBegin, part.partialLength
+                                   ).beginProducing(self.transport)
             else:
+                # The full message
                 mf = IMessageFile(msg, None)
                 if mf is not None:
-                    return FileProducer(mf.open()).beginProducing(self.transport)
-                return MessageProducer(msg, None, self._scheduler).beginProducing(self.transport)
+                    return FileProducer(mf.open(),
+                                        part.partialBegin, part.partialLength
+                                       ).beginProducing(self.transport)
+                return MessageProducer(msg, None, self._scheduler, 
+                                       part.partialBegin, part.partialLength
+                                      ).beginProducing(self.transport)
 
         else:
             _w('BODY ' + collapseNestedLists([getBodyStructure(msg)]))
@@ -2051,6 +2068,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             finish()
             flush()
         return self._scheduler(spew())
+
 
     def __ebFetch(self, failure, tag):
         self.setTimeout(self._oldTimeout)
@@ -3787,7 +3805,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             header = '.' + headerType
         else:
             header = headerType
-        if header and headerType not in ('TEXT', 'MIME'):
+        if header and headerType not in ('TEXT', 'MIME', 'HEADER'):
             if headerArgs is not None:
                 payload = ' (%s)' % ' '.join(headerArgs)
             else:
@@ -5683,7 +5701,8 @@ def iterateInReactor(i):
 class MessageProducer:
     CHUNK_SIZE = 2 ** 2 ** 2 ** 2
 
-    def __init__(self, msg, buffer = None, scheduler = None):
+    def __init__(self, msg, buffer=None, scheduler=None,
+                 start=None, length=None):
         """Produce this message.
 
         @param msg: The message I am to produce.
@@ -5700,6 +5719,8 @@ class MessageProducer:
         if scheduler is None:
             scheduler = iterateInReactor
         self.scheduler = scheduler
+        self.start = start
+        self.length = length
         self.write = self.buffer.write
 
     def beginProducing(self, consumer):
@@ -5742,7 +5763,7 @@ class MessageProducer:
                     break
         if self.consumer:
             self.buffer.seek(0, 0)
-            yield FileProducer(self.buffer
+            yield FileProducer(self.buffer, self.start, self.length
                 ).beginProducing(self.consumer
                 ).addCallback(lambda _: self
                 )
@@ -6068,8 +6089,33 @@ class FileProducer:
 
     firstWrite = True
 
-    def __init__(self, f):
+    def __init__(self, f, start=None, length=None):
+        """
+        @type f: C{file}
+        @param f: The file-like object to read data from
+
+        @type start: C{int}
+        @param start: The starting position of desired octet
+
+        @type length: C{int}
+        @param length: The number of octects wanted
+        """
         self.f = f
+        self.start = start
+        self.length = length
+        if self.length:
+            file_size = self._size()
+            if file_size < self.length:
+                self.length = file_size-self.start
+
+            if file_size >= self.start:
+                self.f.seek(self.start, 0)
+                self.f.truncate(self.start + self.length)
+                self.f.seek(self.start, 0)
+            else:
+                # Return an empty string if the starting octet is
+                # larger than the size of the message
+                self.f = StringIO.StringIO('')
 
     def beginProducing(self, consumer):
         self.consumer = consumer
