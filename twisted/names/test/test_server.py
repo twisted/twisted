@@ -5,6 +5,8 @@
 Test cases for L{twisted.names.server}.
 """
 
+import time
+
 from zope.interface.verify import verifyClass
 
 from twisted.internet.interfaces import IProtocolFactory
@@ -256,6 +258,48 @@ class DNSServerFactoryTests(unittest.TestCase):
             loggedMessages[0]['message'],
             ("<Query example.com MX IN> "
              "<Query example.com AAAA IN> query from ('192.0.2.100', 53)",))
+
+
+    def test_messageReceivedTimestamp(self):
+        """
+        L{server.DNSServerFactory.messageReceived} assigns a unix
+        timestamp to the received message.
+        """
+        m = dns.Message()
+        f = NoresponseDNSServerFactory()
+        t = object()
+        self.patch(server.time, 'time', lambda: t)
+        f.messageReceived(message=m, proto=None, address=None)
+
+        self.assertEqual(m.timeReceived, t)
+
+
+
+    def test_messageReceivedAllowQuery(self):
+        """
+        L{server.DNSServerFactory.messageReceived} passes all messages to
+        L{server.DNSServerFactory.allowQuery} along with the receiving
+        protocol and origin address.
+        """
+        class AllowQueryException(Exception):
+            pass
+
+        class RaisingDNSServerFactory(server.DNSServerFactory):
+            def allowQuery(self, *args, **kwargs):
+                raise AllowQueryException(args, kwargs)
+
+        message = dns.Message()
+        stubProtocol = object()
+        stubAddress = object()
+
+        f = RaisingDNSServerFactory()
+        e = self.assertRaises(
+            AllowQueryException,
+            f.messageReceived,
+            message=message, proto=stubProtocol, address=stubAddress)
+        args, kwargs = e.args
+        self.assertEqual(args, (message, stubProtocol, stubAddress))
+        self.assertEqual(kwargs, {})
 
 
     def _messageReceivedTest(self, methodName, message):
