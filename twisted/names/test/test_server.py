@@ -23,6 +23,41 @@ class NoresponseDNSServerFactory(server.DNSServerFactory):
 
 
 
+def assertLogMessage(testCase, expectedMessages, callable, *args, **kwargs):
+    """
+    Assert that the callable logs the expected messages when called.
+
+    XXX: Put this somewhere where it can be re-used elsewhere. #6677.
+
+    @param testCase: The test case controlling the test which triggers
+        the logged messages and on which assertions will be called.
+    @type testCase: L{unittest.SynchronousTestCase}
+
+    @param expectedMessages: A L{list} of the expected log messages
+    @type expectedMessages: L{list}
+
+    @param callable: The function which is expected to produce the
+        C{expectedMessages} when called.
+    @type callable: L{callable}
+
+    @param args: Positional arguments to be passed to C{callable}.
+    @type args: L{list}
+
+    @param kwargs: Keyword arguments to be passed to C{callable}.
+    @type kwargs: L{dict}
+    """
+    loggedMessages = []
+    log.addObserver(loggedMessages.append)
+    testCase.addCleanup(log.removeObserver, loggedMessages.append)
+
+    callable(*args, **kwargs)
+
+    testCase.assertEqual(
+        [m['message'][0] for m in loggedMessages],
+        expectedMessages)
+
+
+
 class DNSServerFactoryTests(unittest.TestCase):
     """
     Tests for L{server.DNSServerFactory}.
@@ -203,17 +238,13 @@ class DNSServerFactoryTests(unittest.TestCase):
         if the message had no queries and C{verbose} is  C{>0}.
         """
         m = dns.Message()
-
-        loggedMessages = []
-        log.addObserver(loggedMessages.append)
-
         f = NoresponseDNSServerFactory(verbose=1)
 
-        f.messageReceived(message=m, proto=None, address=('192.0.2.100', 53))
-        self.assertEqual(len(loggedMessages), 1)
-        self.assertEqual(
-            loggedMessages[0]['message'],
-            ("Empty query from ('192.0.2.100', 53)",))
+        assertLogMessage(
+            self,
+            ["Empty query from ('192.0.2.100', 53)"],
+            f.messageReceived,
+            message=m, proto=None, address=('192.0.2.100', 53))
 
 
     def test_messageReceivedLogging1(self):
@@ -224,17 +255,13 @@ class DNSServerFactoryTests(unittest.TestCase):
         m = dns.Message()
         m.addQuery(name='example.com', type=dns.MX)
         m.addQuery(name='example.com', type=dns.AAAA)
-
-        loggedMessages = []
-        log.addObserver(loggedMessages.append)
-
         f = NoresponseDNSServerFactory(verbose=1)
 
-        f.messageReceived(message=m, proto=None, address=('192.0.2.100', 53))
-        self.assertEqual(len(loggedMessages), 1)
-        self.assertEqual(
-            loggedMessages[0]['message'],
-            ("MX AAAA query from ('192.0.2.100', 53)",))
+        assertLogMessage(
+            self,
+            ["MX AAAA query from ('192.0.2.100', 53)"],
+            f.messageReceived,
+            message=m, proto=None, address=('192.0.2.100', 53))
 
 
     def test_messageReceivedLogging2(self):
@@ -245,18 +272,14 @@ class DNSServerFactoryTests(unittest.TestCase):
         m = dns.Message()
         m.addQuery(name='example.com', type=dns.MX)
         m.addQuery(name='example.com', type=dns.AAAA)
-
-        loggedMessages = []
-        log.addObserver(loggedMessages.append)
-
         f = NoresponseDNSServerFactory(verbose=2)
 
-        f.messageReceived(message=m, proto=None, address=('192.0.2.100', 53))
-        self.assertEqual(len(loggedMessages), 1)
-        self.assertEqual(
-            loggedMessages[0]['message'],
-            ("<Query example.com MX IN> "
-             "<Query example.com AAAA IN> query from ('192.0.2.100', 53)",))
+        assertLogMessage(
+            self,
+            ["<Query example.com MX IN> "
+             "<Query example.com AAAA IN> query from ('192.0.2.100', 53)"],
+            f.messageReceived,
+            message=m, proto=None, address=('192.0.2.100', 53))
 
 
     def test_messageReceivedTimestamp(self):
@@ -416,3 +439,8 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertEqual(factory.connections, [protoB])
         factory.connectionLost(protoB)
         self.assertEqual(factory.connections, [])
+
+
+    def test_handleInverseQuery(self):
+        """
+        """
