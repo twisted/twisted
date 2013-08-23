@@ -1814,6 +1814,122 @@ def readBody(response):
 
 
 
+@implementer(IAgent)
+class VirtualHostAgent(object):
+    def __init__(self, agents):
+        self.agents = agents
+
+
+    def request(self, method, url, headers=None, bodyProducer=None):
+        location = urlparse(url)
+        if b":" in location.netloc:
+            host, port = location.netloc.split(b":", 1)
+            port = int(port)
+        else:
+            host, port = location.netloc, 80
+        return self.agents[host, port].request(method, url, headers, bodyProducer)
+
+
+
+# This is a really weak Agent-alike.  It would be nice to have something that
+# took a root IResource and actually dispatched a request against it - in
+# memory! http://twistedmatrix.com/trac/ticket/4024
+@implementer(IAgent)
+class DummyAgent(object):
+    def __init__(self):
+        self.requests = []
+
+    def request(self, method, url, headers=None, bodyProducer=None):
+        self.requests.append(url)
+        return defer.succeed(DummyResponse())
+
+
+class _Request(object):
+    method = b"GET"
+
+    def __init__(self, postpath):
+        self.postpath = postpath
+        self.prepath = []
+        self.response = BytesIO()
+        self._finished = EventChannel()
+
+
+    def setResponseCode(self, code):
+        pass
+
+
+    def setHeader(self, name, value):
+        pass
+
+
+    def write(self, data):
+        self.response.write(data)
+
+
+    def finish(self):
+        self._finished.callback(None)
+
+
+    def notifyFinish(self):
+        return self._finished.subscribe()
+
+
+
+@implementer(IAgent)
+class ResourceTraversalAgent(object):
+    def __init__(self, root):
+        self.root = root
+
+
+    def request(self, method, url, headers=None, bodyProducer=None):
+        location = urlparse(url)
+        request = _Request(location.path[1:].split(b"/"))
+        resource = getChildForRequest(self.root, request)
+        result = resource.render(request)
+        if isinstance(result, bytes):
+            return defer.succeed(DummyResponse(result))
+        elif result is NOT_DONE_YET:
+            d = request.notifyFinish()
+            d.addCallback(lambda ignored: DummyResponse(request.response.getvalue()))
+            return d
+        else:
+            assert False
+
+
+
+# This goes along with DummyAgent.
+@implementer(IResponse)
+class DummyResponse(object):
+    code = 200
+    phrase = b"OK"
+
+    def __init__(self, body=None):
+        self.body = body
+
+
+    def deliverBody(self, protocol):
+        protocol.makeConnection(StringTransport())
+        if self.body is not None:
+            protocol.dataReceived(self.body)
+        protocol.connectionLost(Failure(ResponseDone()))
+
+
+
+# Ooh, here's a different kind of Agent-alike.
+@implementer(IAgent)
+class FailingAgent(object):
+    def __init__(self, reason):
+        self.reason = reason
+
+
+    def request(self, method, url, headers=None, bodyProducer=None):
+        return defer.fail(self.reason)
+
+
+
+
+
+
 __all__ = [
     'PartialDownloadError', 'HTTPPageGetter', 'HTTPPageDownloader',
     'HTTPClientFactory', 'HTTPDownloader', 'getPage', 'downloadPage',

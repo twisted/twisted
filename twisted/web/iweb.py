@@ -622,6 +622,12 @@ class IClientRequest(Interface):
 
 
 
+class IAgent(Interface):
+    def request(method, url, headers=None, bodyProducer=None):
+        pass
+
+
+
 UNKNOWN_LENGTH = u"twisted.web.iweb.UNKNOWN_LENGTH"
 
 __all__ = [
