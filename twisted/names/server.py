@@ -169,7 +169,7 @@ class DNSServerFactory(protocol.ServerFactory):
                             protocol, message, address):
         """
         A callback used by L{DNSServerFactory.handleQuery} for handling
-        the deferred response from L{DNSServerFactory.resolver}.C{query}.
+        the deferred response from C{self.resolver.query}.
 
         Constructs a response message by combining the original query
         message with the resolved answer, authority and additional
@@ -225,7 +225,7 @@ class DNSServerFactory(protocol.ServerFactory):
     def gotResolverError(self, failure, protocol, message, address):
         """
         A callback used by L{DNSServerFactory.handleQuery} for handling
-        deferred errors from L{DNSServerFactory.resolver}.C{query}.
+        deferred errors from L{self.resolver.query}.
 
         Constructs a response message from the original query
         message by assigning a suitable error code to C{rCode}.
@@ -234,8 +234,7 @@ class DNSServerFactory(protocol.ServerFactory):
         is C{>1}.
 
         @param failure: A C{failure} wrapping the L{Exception}
-            returned by the C{query} method of
-            L{DNSServerFactory.resolver}.
+            returned by C{self.resolver.query}
         @type failure: L{Failure<twisted.python.failure.Failure>}
 
         @param protocol: The DNS protocol instance to which to send a
@@ -267,7 +266,7 @@ class DNSServerFactory(protocol.ServerFactory):
         is received.
 
         Takes the first query from the received message and dispatches
-        it to L{DNSServerFactory.resolver}.C{query}.
+        it to C{self.resolver.query}.
 
         Adds callbacks L{DNSServerFactory.gotResolverResponse} and
         L{DNSServerFactory.gotResolverError} to the resulting

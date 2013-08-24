@@ -1010,7 +1010,9 @@ class DNSServerFactoryTests(unittest.TestCase):
             self,
             ["Notify message from ('::1', 53)"],
             f.handleNotify,
-            message=dns.Message(), protocol=NoopProtocol(), address=('::1', 53))
+            message=dns.Message(),
+            protocol=NoopProtocol(),
+            address=('::1', 53))
 
 
     def test_handleOther(self):
@@ -1038,4 +1040,6 @@ class DNSServerFactoryTests(unittest.TestCase):
             self,
             ["Unknown op code (0) from ('::1', 53)"],
             f.handleOther,
-            message=dns.Message(), protocol=NoopProtocol(), address=('::1', 53))
+            message=dns.Message(),
+            protocol=NoopProtocol(),
+            address=('::1', 53))
