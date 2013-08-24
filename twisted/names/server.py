@@ -233,6 +233,11 @@ class DNSServerFactory(protocol.ServerFactory):
         An error message will be logged if L{DNSServerFactory.verbose}
         is C{>1}.
 
+        @param failure: A C{failure} wrapping the L{Exception}
+            returned by the C{query} method of
+            L{DNSServerFactory.resolver}.
+        @type failure: L{Failure<twisted.python.failure.Failure>}
+
         @param protocol: The DNS protocol instance to which to send a
             response message.
         @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
@@ -286,6 +291,10 @@ class DNSServerFactory(protocol.ServerFactory):
         @param address: The address to which the response message will
             be sent or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
+
+        @return: A C{deferred} which fires with the resolved result or
+            error of the first query in C{message}.
+        @rtype: L{Deferred<twisted.internet.defer.Deferred>}
         """
         query = message.queries[0]
 

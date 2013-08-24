@@ -980,7 +980,9 @@ class DNSServerFactoryTests(unittest.TestCase):
             self,
             ["Status request from ('::1', 53)"],
             f.handleStatus,
-            message=dns.Message(), protocol=NoopProtocol(), address=('::1', 53))
+            message=dns.Message(),
+            protocol=NoopProtocol(),
+            address=('::1', 53))
 
 
     def test_handleNotify(self):
