@@ -48,6 +48,7 @@ class Options(usage.Options):
         ["noedns", None, "Disable EDNS."],
         ["noadflag", None, ("Do not set the AD "
                             "(authentic data) bit in the query.")],
+        ["cdflag", None, "Set the CD (checking disabled) bit in the query."],
         ["dnssec", None, ("Requests DNSSEC records be sent "
                           "by setting the DNSSEC OK bit (DO) "
                           "in the OPT record in the additional section "
@@ -167,7 +168,7 @@ def printMessage(message):
 
 
 def dig(reactor, queryName='', queryType=dns.ALL_RECORDS, queryClass=dns.IN,
-        edns=0, bufsize=4096, dnssec=False, noadflag=False,
+        edns=0, bufsize=4096, dnssec=False, noadflag=False, cdflag=False,
         tcp=False, timeout=5, tries=3,
         server='127.0.0.1', port=53, **kwargs):
     """
@@ -178,7 +179,8 @@ def dig(reactor, queryName='', queryType=dns.ALL_RECORDS, queryClass=dns.IN,
                      ednsVersion=edns,
                      maxSize=bufsize,
                      dnssecOK=dnssec,
-                     authenticData=not noadflag)
+                     authenticData=not noadflag,
+                     checkingDisabled=cdflag)
 
     if tcp:
         queryMethod = partial(r.queryTCP, timeout=timeout)
