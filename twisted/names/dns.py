@@ -2382,7 +2382,8 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             recAv=int(self.recAv),
             # Assign the lower 4 bits to the message
             rCode=self.rCode & 0xf,
-            authenticData=int(self.authenticData))
+            authenticData=int(self.authenticData),
+            checkingDisabled=int(self.checkingDisabled))
 
         m.queries = self.queries[:]
         m.answers = self.answers[:]
@@ -2454,6 +2455,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             recAv=bool(message.recAv),
             rCode=message.rCode,
             authenticData=bool(message.authenticData),
+            checkingDisabled=bool(message.checkingDisabled),
             # Default to None, it will be updated later when the OPT
             # records are parsed.
             ednsVersion=None,

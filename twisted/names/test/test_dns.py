@@ -2943,7 +2943,7 @@ class MessageEDNSComplete(object):
         return (
             b'\x01\x00' # id: 256
             b'\x95' # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
-            b'\xaf' # RA: 1, AD: 1, RCODE: 15
+            b'\xbf' # RA: 1, AD: 1, RCODE: 15
             b'\x00\x01' # query count
             b'\x00\x01' # answer count
             b'\x00\x01' # authorities count
@@ -3009,6 +3009,7 @@ class MessageEDNSComplete(object):
             ednsVersion=3,
             dnssecOK=True,
             authenticData=True,
+            checkingDisabled=True,
             maxSize=1024,
             queries=[dns.Query(b'example.com', dns.SOA)],
             answers=[
