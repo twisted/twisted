@@ -164,7 +164,39 @@ class DNSServerFactory(protocol.ServerFactory):
 
     def gotResolverResponse(self, (ans, auth, add), protocol, message, address):
         """
+        A callback used by L{DNSServerFactory.handleQuery} for handling
+        the deferred response from L{DNSServerFactory.resolver.query}.
 
+        Constructs a response message by combining the original query
+        message with the resolved answer, authority and additional
+        records.
+
+        Marks the response message as authoritative if any of the
+        resolved answers are found to be authoritative.
+
+        The resolved answers count will be logged if
+        L{DNSServerFactory.verbose} is C{>1}.
+
+        @param ans: A list of answer records
+        @type ans: L{list} of L{dns.RRHeader}
+
+        @param auth: A list of authority records
+        @type auth: L{list} of L{dns.RRHeader}
+
+        @param add: A list of additional records
+        @type add: L{list} of L{dns.RRHeader}
+
+        @param protocol: The DNS protocol instance to which to send a
+            response message.
+        @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
+
+        @param message: The original DNS query message for which a
+            response message will be constructed.
+        @type message: L{dns.Message}
+
+        @param address: The address to which the response message will
+            be sent or L{None} if C{protocol} is a stream protocol.
+        @type address: L{tuple} or L{None}
         """
         message.rCode = dns.OK
         message.answers = ans
