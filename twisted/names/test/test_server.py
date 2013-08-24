@@ -16,56 +16,161 @@ from twisted.trial import unittest
 
 
 class NoresponseDNSServerFactory(server.DNSServerFactory):
+    """
+    A L{server.DNSServerFactory} subclass which does not attempt to
+    reply to any received messages.
+
+    Used for testing logged messages in C{messageReceived} without
+    having to fake or patch the preceding code which attempts to
+    deliver a response message.
+    """
     def allowQuery(*args):
+        """
+        Deny all queries.
+
+        @param args: Positional arguments
+        @type args: L{tuple}
+
+        @return: L{False}
+        @rtype: L{bool}
+        """
         return False
 
+
     def sendReply(*args):
+        """
+        A noop send reply.
+
+        @param args: Positional arguments
+        @type args: L{tuple}
+        """
         pass
 
 
 
 class RaisingDNSServerFactory(server.DNSServerFactory):
+    """
+    A L{server.DNSServerFactory} subclass whose methods raise an
+    exception containing the supplied arguments.
+
+    Used for stopping L{messageReceived} and testing the arguments
+    supplied to L{allowQuery}.
+    """
+
     class AllowQueryArguments(Exception):
+        """
+        Contains positional and keyword arguments in C{args}.
+        """
         pass
 
 
     def allowQuery(self, *args, **kwargs):
+        """
+        Raise the arguments supplied to L{allowQuery}.
+
+        @param args: Positional arguments
+        @type args: L{tuple}
+
+        @param kwargs: Keyword args
+        @type kwargs: L{dict}
+        """
         raise self.AllowQueryArguments(args, kwargs)
 
 
 
 class RaisingProtocol:
+    """
+    A partial fake L{IProtocol} whose methods raise an exception
+    containing the supplied arguments.
+    """
     class WriteMessageArguments(Exception):
+        """
+        Contains positional and keyword arguments in C{args}.
+        """
         pass
 
 
     def writeMessage(self, *args, **kwargs):
+        """
+        Raises the supplied arguments.
+
+        @param args: Positional arguments
+        @type args: L{tuple}
+
+        @param kwargs: Keyword args
+        @type kwargs: L{dict}
+        """
         raise self.WriteMessageArguments(args, kwargs)
 
 
 
 class NoopProtocol:
+    """
+    A partial fake L{dns.DNSProtocolMixin} with a noop L{writeMessage}
+    method.
+    """
     def writeMessage(self, *args, **kwargs):
+        """
+        A noop version of L{dns.DNSProtocolMixin.writeMessage}.
+
+        @param args: Positional arguments
+        @type args: L{tuple}
+
+        @param kwargs: Keyword args
+        @type kwargs: L{dict}
+        """
         pass
 
 
 
 class RaisingResolver:
+    """
+    A partial fake L{IResolver} whose methods raise an exception
+    containing the supplied arguments.
+    """
     class QueryArguments(Exception):
+        """
+        Contains positional and keyword arguments in C{args}.
+        """
         pass
 
 
     def query(self, *args, **kwargs):
+        """
+        Raises the supplied arguments.
+
+        @param args: Positional arguments
+        @type args: L{tuple}
+
+        @param kwargs: Keyword args
+        @type kwargs: L{dict}
+        """
         raise self.QueryArguments(args, kwargs)
 
 
 
 class RaisingCache:
+    """
+    A partial fake L{twisted.names.cache.Cache} whose methods raise an
+    exception containing the supplied arguments.
+    """
     class CacheResultArguments(Exception):
+        """
+        Contains positional and keyword arguments in C{args}.
+        """
         pass
 
 
     def cacheResult(self, *args, **kwargs):
+        """
+        Raises the supplied arguments.
+
+        @param args: Positional arguments
+        @type args: L{tuple}
+
+        @param kwargs: Keyword args
+        @type kwargs: L{dict}
+        """
         raise self.CacheResultArguments(args, kwargs)
 
 
