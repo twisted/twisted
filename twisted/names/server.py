@@ -225,7 +225,7 @@ class DNSServerFactory(protocol.ServerFactory):
     def gotResolverError(self, failure, protocol, message, address):
         """
         A callback used by L{DNSServerFactory.handleQuery} for handling
-        deferred errors from L{self.resolver.query}.
+        deferred errors from C{self.resolver.query}.
 
         Constructs a response message from the original query
         message by assigning a suitable error code to C{rCode}.
