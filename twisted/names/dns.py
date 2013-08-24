@@ -2368,7 +2368,8 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             recDes=int(self.recDes),
             recAv=int(self.recAv),
             # Assign the lower 4 bits to the message
-            rCode=self.rCode & 0xf)
+            rCode=self.rCode & 0xf,
+            authenticData=int(self.authenticData))
 
         m.queries = self.queries[:]
         m.answers = self.answers[:]
@@ -2439,6 +2440,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             recDes=bool(message.recDes),
             recAv=bool(message.recAv),
             rCode=message.rCode,
+            authenticData=bool(message.authenticData),
             # Default to None, it will be updated later when the OPT
             # records are parsed.
             ednsVersion=None,
