@@ -3501,6 +3501,39 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
         self.assertRaises(AssertionError, self.messageFactory, authenticData=2)
 
 
+    def test_checkingDisabled(self):
+        """
+        L{dns._EDNSMessage.checkingDisabled} defaults to C{False}.
+        """
+        self.assertIdentical(self.messageFactory().checkingDisabled, False)
+
+
+    def test_checkingDisabledOverride(self):
+        """
+        L{dns._EDNSMessage.checkingDisabled} can be overridden in the constructor.
+        """
+        self.assertIdentical(
+            self.messageFactory(checkingDisabled=True).checkingDisabled, True)
+
+
+    def test_checkingDisabledBooleanCoercion(self):
+        """
+        L{dns._EDNSMessage.__init__} recasts the supplied C{checkingDisabled} value
+        as L{bool}.
+        """
+        self.assertIdentical(self.messageFactory(checkingDisabled=0).checkingDisabled, False)
+        self.assertIdentical(self.messageFactory(checkingDisabled=1).checkingDisabled, True)
+
+
+    def test_checkingDisabledInputAssertion(self):
+        """
+        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
+        with a C{checkingDisabled} value which is not C{True}, C{False}, C{1},
+        C{0}.
+        """
+        self.assertRaises(AssertionError, self.messageFactory, checkingDisabled=2)
+
+
     def test_queriesOverride(self):
         """
         L{dns._EDNSMessage.queries} can be overridden in the constructor.
@@ -3578,6 +3611,7 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
             'ednsVersion=0 '
             'dnssecOK=False '
             'authenticData=False '
+            'checkingDisabled=False '
             'maxSize=512 '
             'queries=[] '
             'answers=[] '
@@ -3751,6 +3785,18 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
             self.messageFactory(authenticData=True),
             self.messageFactory(authenticData=True),
             self.messageFactory(authenticData=False),
+            )
+
+
+    def test_checkingDisabled(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        checkingDisabled flags.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(checkingDisabled=True),
+            self.messageFactory(checkingDisabled=True),
+            self.messageFactory(checkingDisabled=False),
             )
 
 

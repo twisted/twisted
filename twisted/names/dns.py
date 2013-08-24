@@ -2213,6 +2213,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     @ivar ednsVersion: See L{__init__}
     @ivar dnssecOK: See L{__init__}
     @ivar authenticData: See L{__init__}
+    @ivar checkingDisabled: See L{__init__}
     @ivar maxSize: See L{__init__}
 
     @ivar queries: See L{__init__}
@@ -2224,7 +2225,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     showAttributes = (
         'id', 'answer', 'opCode', 'auth', 'trunc',
         'recDes', 'recAv', 'rCode', 'ednsVersion', 'dnssecOK',
-        'authenticData', 'maxSize',
+        'authenticData', 'checkingDisabled', 'maxSize',
         'queries', 'answers', 'authority', 'additional')
 
     compareAttributes = showAttributes
@@ -2232,7 +2233,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     def __init__(self, id=0, answer=False, opCode=OP_QUERY, auth=False,
                  trunc=False, recDes=False, recAv=False, rCode=0,
                  ednsVersion=0, dnssecOK=False, authenticData=False,
-                 maxSize=512,
+                 checkingDisabled=False, maxSize=512,
                  queries=None, answers=None, authority=None, additional=None):
         """
         @param id: A 16 bit identifier assigned by the program that
@@ -2284,9 +2285,18 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @param dnssecOK: DNSSEC OK bit as defined by [RFC3225].
         @type dnssecOK: C{bool}
 
-        @param authenticData: Authentic data bit as defined by
-            [RFC2535 section-6.1].
-        @type authenticData: C{bool}
+        @param authenticData: A flag indicating in a response that all
+            the data included in the answer and authority portion of
+            the response has been authenticated by the server
+            according to the policies of that server.
+            See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
+        @type authenticData: L{bool}
+
+        @param checkingDisabled: A flag indicating in a query that
+            pending (non-authenticated) data is acceptable to the
+            resolver sending the query.
+            See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
+        @type authenticData: L{bool}
 
         @param maxSize: The requestor's UDP payload size is the number
             of octets of the largest UDP payload that can be
@@ -2327,6 +2337,9 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
         assert authenticData in (True, False)
         self.authenticData = bool(authenticData)
+
+        assert checkingDisabled in (True, False)
+        self.checkingDisabled = bool(checkingDisabled)
 
         self.maxSize = maxSize
 
