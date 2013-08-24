@@ -253,8 +253,36 @@ class DNSServerFactory(protocol.ServerFactory):
 
 
     def handleQuery(self, message, protocol, address):
-        # Discard all but the first query!  HOO-AAH HOOOOO-AAAAH
-        # (no other servers implement multi-query messages, so we won't either)
+        """
+        Called by L{DNSServerFactory.messageReceived} when a query message
+        is received.
+
+        Takes the first query from the received message and dispatches
+        it to L{DNSServerFactory.resolver.query}.
+
+        Adds callbacks L{DNSServerFactory.gotResolverResponse} and
+        L{DNSServerFactory.gotResolverError} to the resulting
+        deferred.
+
+        Note: Multiple queries in a single message are not supported
+        because there is no standard way to respond with multiple
+        rCodes, auth, etc. This is consistent with other DNS server
+        implementations. See
+        U{http://tools.ietf.org/html/draft-ietf-dnsext-edns1-03} for a
+        proposed solution.
+
+        @param protocol: The DNS protocol instance to which to send a
+            response message.
+        @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
+
+        @param message: The original DNS query message for which a
+            response message will be constructed.
+        @type message: L{dns.Message}
+
+        @param address: The address to which the response message will
+            be sent or L{None} if C{protocol} is a stream protocol.
+        @type address: L{tuple} or L{None}
+        """
         query = message.queries[0]
 
         return self.resolver.query(query).addCallback(
