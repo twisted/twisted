@@ -665,6 +665,16 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.gotResolver} accepts a
         L{failure.Failure} and triggers a response message whose rCode
         corresponds to the DNS error contained in the C{Failure}.
+
+        @param responseError: The L{Exception} instance which is
+            expected to trigger C{expectedMessageCode} when it is supplied
+            to C{gotResolverError}
+        @type responseError: L{Exception}
+
+        @param expectedMessageCode: The C{rCode} which is expected in
+            the message returned by C{gotResolverError} in response to
+            C{responseError}.
+        @type expectedMessageCode: L{int}
         """
         f = server.DNSServerFactory()
         e = self.assertRaises(
@@ -692,7 +702,8 @@ class DNSServerFactoryTests(unittest.TestCase):
         with an C{rCode} of L{dns.ENAME} if supplied with a
         L{error.AuthoritativeDomainError}.
         """
-        self._assertMessageRcodeForError(error.AuthoritativeDomainError(), dns.ENAME)
+        self._assertMessageRcodeForError(
+            error.AuthoritativeDomainError(), dns.ENAME)
 
 
     def test_gotResolverErrorOtherError(self):
@@ -827,7 +838,9 @@ class DNSServerFactoryTests(unittest.TestCase):
             self,
             ["Inverse query from ('::1', 53)"],
             f.handleInverseQuery,
-            message=dns.Message(), protocol=NoopProtocol(), address=('::1', 53))
+            message=dns.Message(),
+            protocol=NoopProtocol(),
+            address=('::1', 53))
 
 
     def test_handleStatus(self):
