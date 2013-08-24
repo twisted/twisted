@@ -129,7 +129,7 @@ class DNSServerFactory(protocol.ServerFactory):
         Send a response C{message} to a given C{address} via the supplied
         C{protocol}.
 
-        Message payload will be logged if L{DNSServerFactory.verbose}
+        Message payload will be logged if C{DNSServerFactory.verbose}
         is C{>1}.
 
         @param protocol: The DNS protocol instance to which to send the
@@ -169,7 +169,7 @@ class DNSServerFactory(protocol.ServerFactory):
                             protocol, message, address):
         """
         A callback used by L{DNSServerFactory.handleQuery} for handling
-        the deferred response from L{DNSServerFactory.resolver.query}.
+        the deferred response from L{DNSServerFactory.resolver}.C{query}.
 
         Constructs a response message by combining the original query
         message with the resolved answer, authority and additional
@@ -179,7 +179,7 @@ class DNSServerFactory(protocol.ServerFactory):
         resolved answers are found to be authoritative.
 
         The resolved answers count will be logged if
-        L{DNSServerFactory.verbose} is C{>1}.
+        C{DNSServerFactory.verbose} is C{>1}.
 
         @param ans: A list of answer records
         @type ans: L{list} of L{dns.RRHeader}
@@ -225,12 +225,12 @@ class DNSServerFactory(protocol.ServerFactory):
     def gotResolverError(self, failure, protocol, message, address):
         """
         A callback used by L{DNSServerFactory.handleQuery} for handling
-        deferred errors from L{DNSServerFactory.resolver.query}.
+        deferred errors from L{DNSServerFactory.resolver}.C{query}.
 
         Constructs a response message from the original query
         message by assigning a suitable error code to C{rCode}.
 
-        An error message will be logged if L{DNSServerFactory.verbose}
+        An error message will be logged if C{DNSServerFactory.verbose}
         is C{>1}.
 
         @param failure: A C{failure} wrapping the L{Exception}
@@ -267,7 +267,7 @@ class DNSServerFactory(protocol.ServerFactory):
         is received.
 
         Takes the first query from the received message and dispatches
-        it to L{DNSServerFactory.resolver.query}.
+        it to L{DNSServerFactory.resolver}.C{query}.
 
         Adds callbacks L{DNSServerFactory.gotResolverResponse} and
         L{DNSServerFactory.gotResolverError} to the resulting
@@ -312,7 +312,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         Replies with a I{Not Implemented} error by default.
 
-        An error message will be logged if L{DNSServerFactory.verbose}
+        An error message will be logged if C{DNSServerFactory.verbose}
         is C{>1}.
 
         Override in a subclass.
@@ -342,7 +342,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         Replies with a I{Not Implemented} error by default.
 
-        An error message will be logged if L{DNSServerFactory.verbose}
+        An error message will be logged if C{DNSServerFactory.verbose}
         is C{>1}.
 
         Override in a subclass.
@@ -372,7 +372,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         Replies with a I{Not Implemented} error by default.
 
-        An error message will be logged if L{DNSServerFactory.verbose}
+        An error message will be logged if C{DNSServerFactory.verbose}
         is C{>1}.
 
         Override in a subclass.
@@ -402,7 +402,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         Replies with a I{Not Implemented} error by default.
 
-        An error message will be logged if L{DNSServerFactory.verbose}
+        An error message will be logged if C{DNSServerFactory.verbose}
         is C{>1}.
 
         Override in a subclass.
@@ -445,7 +445,7 @@ class DNSServerFactory(protocol.ServerFactory):
         L{DNSServerFactory.handleOther} depending on the I{OPCODE} of
         the received message.
 
-        If L{DNSServerFactory.verbose} is C{>0} all received messages
+        If C{DNSServerFactory.verbose} is C{>0} all received messages
         will be logged in more or less detail depending on the value
         of C{verbose}.
 
