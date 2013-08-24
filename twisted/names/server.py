@@ -219,6 +219,28 @@ class DNSServerFactory(protocol.ServerFactory):
 
 
     def gotResolverError(self, failure, protocol, message, address):
+        """
+        A callback used by L{DNSServerFactory.handleQuery} for handling
+        deferred errors from L{DNSServerFactory.resolver.query}.
+
+        Constructs a response message from the original query
+        message by assigning a suitable error code to C{rCode}.
+
+        An error message will be logged if L{DNSServerFactory.verbose}
+        is C{>1}.
+
+        @param protocol: The DNS protocol instance to which to send a
+            response message.
+        @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
+
+        @param message: The original DNS query message for which a
+            response message will be constructed.
+        @type message: L{dns.Message}
+
+        @param address: The address to which the response message will
+            be sent or L{None} if C{protocol} is a stream protocol.
+        @type address: L{tuple} or L{None}
+        """
         if failure.check(dns.DomainError, dns.AuthoritativeDomainError):
             message.rCode = dns.ENAME
         else:
