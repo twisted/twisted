@@ -105,6 +105,9 @@ class DNSServerFactory(protocol.ServerFactory):
     def connectionMade(self, protocol):
         """
         Track a newly connected L{DNSProtocol}.
+
+        @param protocol: The protocol instance to be tracked.
+        @type protocol: L{dns.DNSProtocol}
         """
         self.connections.append(protocol)
 
@@ -112,11 +115,33 @@ class DNSServerFactory(protocol.ServerFactory):
     def connectionLost(self, protocol):
         """
         Stop tracking a no-longer connected L{DNSProtocol}.
+
+        @param protocol: The tracked protocol instance to be which has
+            been lost.
+        @type protocol: L{dns.DNSProtocol}
         """
         self.connections.remove(protocol)
 
 
     def sendReply(self, protocol, message, address):
+        """
+        Send a response C{message} to a given C{address} via the supplied
+        C{protocol}.
+
+        Message payload will be logged if L{DNSServerFactory.verbose}
+        is C{>1}.
+
+        @param protocol: The DNS protocol instance to which to send the
+            message.
+        @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
+
+        @param message: The DNS message to be sent.
+        @type message: L{dns.Message}
+
+        @param address: The address to which the message will be
+            sent or L{None} if C{protocol} is a stream protocol.
+        @type address: L{tuple} or L{None}
+        """
         if self.verbose > 1:
             s = ' '.join([str(a.payload) for a in message.answers])
             auth = ' '.join([str(a.payload) for a in message.authority])
@@ -138,6 +163,9 @@ class DNSServerFactory(protocol.ServerFactory):
 
 
     def gotResolverResponse(self, (ans, auth, add), protocol, message, address):
+        """
+
+        """
         message.rCode = dns.OK
         message.answers = ans
         for x in ans:
