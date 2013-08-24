@@ -32,6 +32,7 @@ class EDNSDatagramProtocol(dns.DNSDatagramProtocol):
         self.ednsVersion = kwargs.pop('ednsVersion', 0)
         self.maxSize = kwargs.pop('maxSize', 4096)
         self.dnssecOK = kwargs.pop('dnssecOK', False)
+        self.authenticData = kwargs.pop('authenticData', False)
 
         dns.DNSDatagramProtocol.__init__(self, *args, **kwargs)
 
@@ -49,6 +50,7 @@ class EDNSDatagramProtocol(dns.DNSDatagramProtocol):
         message.ednsVersion = self.ednsVersion
         message.maxSize = self.maxSize
         message.dnssecOK = self.dnssecOK
+        message.authenticData = self.authenticData
 
         return dns.DNSDatagramProtocol.writeMessage(self, message, address)
 
@@ -129,6 +131,7 @@ class EDNSResolver(client.Resolver):
         self.ednsVersion = kwargs.pop('ednsVersion', 0)
         self.maxSize = kwargs.pop('maxSize', 4096)
         self.dnssecOK = kwargs.pop('dnssecOK', False)
+        self.authenticData = kwargs.pop('authenticData', False)
 
         client.Resolver.__init__(self, *args, **kwargs)
 
@@ -140,6 +143,7 @@ class EDNSResolver(client.Resolver):
             ednsVersion=self.ednsVersion,
             maxSize=self.maxSize,
             dnssecOK=self.dnssecOK,
+            authenticData=self.authenticData,
             controller=self,
             reactor=self._reactor)
 

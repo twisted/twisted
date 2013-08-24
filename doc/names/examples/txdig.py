@@ -46,6 +46,8 @@ class Options(usage.Options):
     optFlags = [
         ["tcp", None, "Use TCP when querying name servers."],
         ["noedns", None, "Disable EDNS."],
+        ["noadflag", None, ("Do not set the AD "
+                            "(authentic data) bit in the query.")],
         ["dnssec", None, ("Requests DNSSEC records be sent "
                           "by setting the DNSSEC OK bit (DO) "
                           "in the OPT record in the additional section "
@@ -165,7 +167,7 @@ def printMessage(message):
 
 
 def dig(reactor, queryName='', queryType=dns.ALL_RECORDS, queryClass=dns.IN,
-        edns=0, bufsize=4096, dnssec=False,
+        edns=0, bufsize=4096, dnssec=False, noadflag=False,
         tcp=False, timeout=5, tries=3,
         server='127.0.0.1', port=53, **kwargs):
     """
@@ -175,7 +177,8 @@ def dig(reactor, queryName='', queryType=dns.ALL_RECORDS, queryClass=dns.IN,
                      reactor=reactor,
                      ednsVersion=edns,
                      maxSize=bufsize,
-                     dnssecOK=dnssec)
+                     dnssecOK=dnssec,
+                     authenticData=not noadflag)
 
     if tcp:
         queryMethod = partial(r.queryTCP, timeout=timeout)
