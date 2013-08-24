@@ -24,24 +24,23 @@ class NoresponseDNSServerFactory(server.DNSServerFactory):
 
 
 
-class RaisedArguments(Exception):
-    pass
-
-
-
 class RaisingDNSServerFactory(server.DNSServerFactory):
+    class AllowQueryArguments(Exception):
+        pass
+
+
     def allowQuery(self, *args, **kwargs):
-        raise RaisedArguments(args, kwargs)
+        raise self.AllowQueryArguments(args, kwargs)
 
 
 
 class RaisingProtocol:
-    class WriteMessageArguments(RaisedArguments):
+    class WriteMessageArguments(Exception):
         pass
 
 
     def writeMessage(self, *args, **kwargs):
-        raise RaisingProtocol.WriteMessageArguments(args, kwargs)
+        raise self.WriteMessageArguments(args, kwargs)
 
 
 
@@ -52,18 +51,22 @@ class NoopProtocol:
 
 
 class RaisingResolver:
+    class QueryArguments(Exception):
+        pass
+
+
     def query(self, *args, **kwargs):
-        raise RaisedArguments(args, kwargs)
+        raise self.QueryArguments(args, kwargs)
 
 
 
 class RaisingCache:
-    class CacheResultArguments(RaisedArguments):
+    class CacheResultArguments(Exception):
         pass
 
 
     def cacheResult(self, *args, **kwargs):
-        raise RaisingCache.CacheResultArguments(args, kwargs)
+        raise self.CacheResultArguments(args, kwargs)
 
 
 
@@ -71,7 +74,7 @@ def assertLogMessage(testCase, expectedMessages, callable, *args, **kwargs):
     """
     Assert that the callable logs the expected messages when called.
 
-    XXX: Put this somewhere where it can be re-used elsewhere. #6677.
+    XXX: Put this somewhere where it can be re-used elsewhere. See #6677.
 
     @param testCase: The test case controlling the test which triggers
         the logged messages and on which assertions will be called.
@@ -214,7 +217,8 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.__init__} sets C{canRecurse} to L{True}
         if it is supplied with C{clients}.
         """
-        self.assertEqual(server.DNSServerFactory(clients=[None]).canRecurse, True)
+        self.assertEqual(
+            server.DNSServerFactory(clients=[None]).canRecurse, True)
 
 
     def test_verboseDefault(self):
@@ -340,7 +344,6 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertEqual(m.timeReceived, t)
 
 
-
     def test_messageReceivedAllowQuery(self):
         """
         L{server.DNSServerFactory.messageReceived} passes all messages to
@@ -353,7 +356,7 @@ class DNSServerFactoryTests(unittest.TestCase):
 
         f = RaisingDNSServerFactory()
         e = self.assertRaises(
-            RaisedArguments,
+            RaisingDNSServerFactory.AllowQueryArguments,
             f.messageReceived,
             message=message, proto=stubProtocol, address=stubAddress)
         args, kwargs = e.args
@@ -392,6 +395,14 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         Assert that the named method is called with the given message when
         it is passed to L{DNSServerFactory.messageReceived}.
+
+        @param methodName: The name of the method which is expected to
+            be called.
+        @type methodName: L{str}
+
+        @param message: The message which is expected to be passed to
+            the C{methodName} method.
+        @type message: L{dns.Message}
         """
         # Make it appear to have some queries so that
         # DNSServerFactory.allowQuery allows it.
@@ -401,11 +412,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         def fakeHandler(message, protocol, address):
             receivedMessages.append((message, protocol, address))
 
-        class FakeProtocol(object):
-            def writeMessage(self, message):
-                pass
-
-        protocol = FakeProtocol()
+        protocol = NoopProtocol()
         factory = server.DNSServerFactory(None)
         setattr(factory, methodName, fakeHandler)
         factory.messageReceived(message, protocol)
@@ -491,7 +498,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         f.resolver = RaisingResolver()
 
         e = self.assertRaises(
-            RaisedArguments,
+            RaisingResolver.QueryArguments,
             f.handleQuery,
             message=m, protocol=NoopProtocol(), address=None)
         (query,), kwargs = e.args
