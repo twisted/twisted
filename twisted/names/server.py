@@ -159,10 +159,13 @@ class DNSServerFactory(protocol.ServerFactory):
             protocol.writeMessage(message, address)
 
         if self.verbose > 1:
-            log.msg("Processed query in %0.3f seconds" % (time.time() - message.timeReceived))
+            log.msg(
+                "Processed query in %0.3f seconds" % (
+                    time.time() - message.timeReceived))
 
 
-    def gotResolverResponse(self, (ans, auth, add), protocol, message, address):
+    def gotResolverResponse(self, (ans, auth, add),
+                            protocol, message, address):
         """
         A callback used by L{DNSServerFactory.handleQuery} for handling
         the deferred response from L{DNSServerFactory.resolver.query}.
@@ -409,7 +412,8 @@ class DNSServerFactory(protocol.ServerFactory):
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
         if self.verbose:
-            log.msg("Unknown op code (%d) from %r" % (message.opCode, address))
+            log.msg(
+                "Unknown op code (%d) from %r" % (message.opCode, address))
 
 
     def messageReceived(self, message, proto, address=None):
@@ -454,12 +458,17 @@ class DNSServerFactory(protocol.ServerFactory):
             if self.verbose > 1:
                 s = ' '.join([str(q) for q in message.queries])
             elif self.verbose > 0:
-                s = ' '.join([dns.QUERY_TYPES.get(q.type, 'UNKNOWN') for q in message.queries])
+                s = ' '.join([dns.QUERY_TYPES.get(q.type, 'UNKNOWN')
+                              for q in message.queries])
 
             if not len(s):
-                log.msg("Empty query from %r" % ((address or proto.transport.getPeer()),))
+                log.msg(
+                    "Empty query from %r" % (
+                        (address or proto.transport.getPeer()),))
             else:
-                log.msg("%s query from %r" % (s, address or proto.transport.getPeer()))
+                log.msg(
+                    "%s query from %r" % (
+                        s, address or proto.transport.getPeer()))
 
         message.recAv = self.canRecurse
         message.answer = 1
@@ -491,8 +500,8 @@ class DNSServerFactory(protocol.ServerFactory):
         @param message: The DNS message that was received.
         @type message: L{dns.Message}
 
-        @param proto: The DNS protocol instance which received the message
-        @type proto: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
+        @param protocol: The DNS protocol instance which received the message
+        @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
 
         @param address: The address from which the message was
             received. Only provided for messages received by datagram
