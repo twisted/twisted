@@ -29,9 +29,10 @@ class DNSServerFactory(protocol.ServerFactory):
     Server factory and tracker for L{DNSProtocol} connections.  This
     class also provides records for responses to DNS queries.
 
-    @ivar cache: A L{cache.Cache} instance whose C{cacheResult} method
-        is called when a response is received from one of C{clients}.
-    @type cache: L{cache.Cache}
+    @ivar cache: A L{Cache<twisted.names.cache.Cache>} instance whose
+        C{cacheResult} method is called when a response is received
+        from one of C{clients}.
+    @type cache: L{Cache<twisted.names.cache.Cache}
 
     @ivar canRecurse: A flag indicating whether this server is capable
         of performing recursive DNS resolution.
@@ -68,7 +69,7 @@ class DNSServerFactory(protocol.ServerFactory):
             assigned to L{DNSServerFactory.cache} and its
             C{cacheResult} method will be called when a response is
             received from one of C{clients}.
-        @type caches: L{list} of L{cache.Cache}
+        @type caches: L{list} of L{Cache<twisted.names.cache.Cache}
 
         @param clients: Resolvers which are capable of performing
             recursive DNS lookups.
@@ -425,7 +426,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         L{DNSServerFactory.allowQuery} is called with the received
         message, protocol and origin address. If it returns L{False},
-        a L{dns.EREFUSED} response is sent back to the client.
+        a C{dns.EREFUSED} response is sent back to the client.
 
         Otherwise the received message is dispatched to one of
         L{DNSServerFactory.handleQuery},
@@ -491,7 +492,7 @@ class DNSServerFactory(protocol.ServerFactory):
     def allowQuery(self, message, protocol, address):
         """
         Called by L{DNSServerFactory.messageReceived} to decide whether to
-        process a received message or to reply with L{dns.EREFUSED}.
+        process a received message or to reply with C{dns.EREFUSED}.
 
         This default implementation permits anything but empty queries.
 
