@@ -8,6 +8,7 @@ Tests for twisted.names.dns.
 
 from __future__ import division, absolute_import
 
+from functools import partial
 from io import BytesIO
 
 import struct
@@ -3113,7 +3114,158 @@ class MessageComparable(FancyEqMixin, FancyStrMixin, object):
         return getattr(self.original, key)
 
 
-class EDNSMessageTests(unittest.SynchronousTestCase):
+
+def assertTypeEqual(testCase, testVal, expectedVal, msg):
+    """
+    Assert that C{testVal} and C{expectedVal} are equal and have same
+    type.
+
+    @param testCase: The L{TestCase} whose assert methods will be
+        called.
+    @type testCase: L{unittest.TestCase}
+
+    @param expectedVal: The expected value.
+    @type expectedVal: Mixed
+
+    @param testVal: The value under test whose type is also expected
+        to be the same as C{expectedVal}
+    @type testVal: Mixed.
+
+    @param msg: A message to be printed if the assertion fails.
+    @type msg: L{str}
+    """
+    testCase.assertEqual(
+        (expectedVal, type(expectedVal)),
+        (testVal, type(testVal)), msg)
+
+
+
+def verifyConstructorArgument(testCase, cls,
+                              argName, defaultVal, inputTests,
+                              invalidInputs=None, attrName=None,
+                              assertEqual=None):
+    """
+    Verify that an attribute has the expected default value and that a
+    corresponding argument passed to a constructor is assigned to that
+    attribute.
+
+    @param testCase: The L{TestCase} whose assert methods will be
+        called.
+    @type testCase: L{unittest.TestCase}
+
+    @param cls: The constructor under test.
+    @type cls: L{type}
+
+    @param argName: The name of the constructor argument under test.
+    @type argName: L{str}
+
+    @param defaultVal: The expected default value of C{attrName} /
+        C{argName}
+    @type defaultlVal: Mixed
+
+    @param inputTests: A list of 2tuple(validArgumentValue,
+        expectedAttributeValue)
+    @type inputTests: L{list}
+
+    @param invalidInputs: A list of 2tuple(invalidArgumentValue,
+        expectedException)
+    @type invalidInputs: L{list}
+
+    @param attrName: The name of the attribute under test if different
+        from C{argName}. Defaults to C{argName}
+    @type attrName: L{str}
+
+    @param assertEqual: The equality assertion function to
+        use. Defaults to C{testCase.assertEqual}.
+    @type assertEqual: L{callable}
+    """
+    if invalidInputs is None:
+        invalidInputs = []
+
+    if attrName is None:
+        attrName = argName
+
+    if assertEqual is None:
+        assertEqual = testCase.assertEqual
+
+    o = cls()
+    actualVal = getattr(o, attrName)
+
+    assertEqual(
+        defaultVal, actualVal,
+        '%s().%s has unexpected default value %r. Expected %r.' % (
+            cls.__name__, attrName, actualVal, defaultVal))
+
+    for argVal, expectedVal in inputTests:
+        o = cls(**dict([(argName, argVal)]))
+        actualVal = getattr(o, attrName)
+        assertEqual(
+            expectedVal, actualVal,
+            '%s(%s=%r).%s gave unexpected value %r. Expected %r.' % (
+                cls.__name__, argName, argVal, attrName, actualVal, expectedVal))
+
+    for val, expectedException in invalidInputs:
+        try:
+            testCase.assertRaises(
+                expectedException, cls, **dict([(argName, val)]))
+        except testCase.failureException as e:
+            testCase.fail(
+                '%s(%s=%r) did not raise expected exception %r. Got %r.' % (
+                    cls.__name__, argName, val, expectedException, e))
+
+
+
+class ConstructorTestsMixin(object):
+    """
+    Helper methods for verifying default attribute values and
+    corresponding constructor arguments.
+    """
+    def _verifyConstructorArgument(self, argName, defaultVal, altVal):
+        """
+        Wrap L{verifyConstructorArgument} to provide simpler interface for
+        testing Message and _EDNSMessage constructor arguments.
+        """
+        verifyConstructorArgument(testCase=self, cls=self.messageFactory,
+                                  argName=argName, defaultVal=defaultVal,
+                                  inputTests=[(altVal, altVal)])
+
+
+    def _verifyConstructorFlag(self, argName, defaultVal,
+                               invalidInputs=None, assertEqual=None):
+        """
+        Wrap L{verifyConstructorArgument} to provide simpler interface for
+        testing  _EDNSMessage constructor flags.
+
+        Tests the coercion to bool by using L{assertTypeEqual}.
+
+        Tests the assertion errors raised for non-bool flag arguments.
+        """
+        assert defaultVal in (True, False)
+        inputTests = [
+            (False, False),
+            (True, True),
+            (0, False),
+            (1, True)]
+
+        if invalidInputs is None:
+            invalidInputs = [
+                (object(), AssertionError),
+                (-1, AssertionError),
+                (2, AssertionError)]
+
+
+        if assertEqual is None:
+            assertEqual = partial(assertTypeEqual, self)
+
+        verifyConstructorArgument(testCase=self, cls=self.messageFactory,
+                                  argName=argName, defaultVal=defaultVal,
+                                  inputTests=inputTests,
+                                  invalidInputs=invalidInputs,
+                                  assertEqual=assertEqual)
+
+
+
+class EDNSMessageTests(unittest.SynchronousTestCase, ConstructorTestsMixin):
     """
     Tests for aspects of L{twisted.names.dns._EDNSMessage} that are
     shared with L{dns.Message}.
@@ -3124,130 +3276,75 @@ class EDNSMessageTests(unittest.SynchronousTestCase):
 
     def test_id(self):
         """
-        L{dns._EDNSMessage.id} defaults to C{0}.
+        L{dns._EDNSMessage.id} defaults to C{0} and can be overridden in
+        the constructor.
         """
-        self.assertEqual(self.messageFactory().id, 0)
-
-
-    def test_idOverride(self):
-        """
-        L{dns._EDNSMessage.id} can be overridden in the constructor.
-        """
-        self.assertEqual(self.messageFactory(id=1).id, 1)
+        self._verifyConstructorArgument('id', defaultVal=0, altVal=1)
 
 
     def test_answer(self):
         """
-        L{dns._EDNSMessage.answer} defaults to C{False}.
+        L{dns._EDNSMessage.answer} defaults to C{False} and can be
+        overridden in the constructor.
         """
-        self.assertEqual(self.messageFactory().answer, False)
-
-
-    def test_answerOverride(self):
-        """
-        L{dns._EDNSMessage.answer} can be overridden in the constructor.
-        """
-        self.assertEqual(self.messageFactory(answer=True).answer, True)
+        self._verifyConstructorFlag('answer', defaultVal=False)
 
 
     def test_opCode(self):
         """
-        L{dns._EDNSMessage.opCode} defaults to L{dns.OP_QUERY}.
+        L{dns._EDNSMessage.opCode} defaults to L{dns.OP_QUERY} and can be
+        overridden in the constructor.
         """
-        self.assertIdentical(self.messageFactory().opCode, dns.OP_QUERY)
-
-
-    def test_opCodeOverride(self):
-        """
-        L{dns._EDNSMessage.opCode} can be overridden in the constructor.
-        """
-        self.assertIdentical(
-            self.messageFactory(opCode=dns.OP_STATUS).opCode,
-            dns.OP_STATUS)
+        self._verifyConstructorArgument(
+            'opCode', defaultVal=dns.OP_QUERY, altVal=dns.OP_STATUS)
 
 
     def test_auth(self):
         """
-        L{dns._EDNSMessage.auth} defaults to C{False}.
+        L{dns._EDNSMessage.auth} defaults to C{False} and can be
+        overridden in the constructor.
         """
-        self.assertEqual(self.messageFactory().auth, False)
-
-
-    def test_authOverride(self):
-        """
-        L{dns._EDNSMessage.auth} can be overridden in the constructor.
-        """
-        self.assertEqual(self.messageFactory(auth=True).auth, True)
+        self._verifyConstructorFlag('auth', defaultVal=False)
 
 
     def test_trunc(self):
         """
-        L{dns._EDNSMessage.trunc} defaults to C{False}.
+        L{dns._EDNSMessage.trunc} defaults to C{False} and can be
+        overridden in the constructor.
         """
-        self.assertEqual(self.messageFactory().trunc, False)
-
-
-    def test_truncOverride(self):
-        """
-        L{dns._EDNSMessage.trunc} can be overridden in the constructor.
-        """
-        self.assertIdentical(self.messageFactory(trunc=True).trunc, True)
+        self._verifyConstructorFlag('trunc', defaultVal=False)
 
 
     def test_recDes(self):
         """
-        L{dns._EDNSMessage.recDes} defaults to C{False}.
+        L{dns._EDNSMessage.recDes} defaults to C{False} and can be
+        overridden in the constructor.
         """
-        self.assertEqual(self.messageFactory().recDes, False)
-
-
-    def test_recDesOverride(self):
-        """
-        L{dns._EDNSMessage.recDes} can be overridden in the constructor.
-        """
-        self.assertEqual(self.messageFactory(recDes=True).recDes, True)
+        self._verifyConstructorFlag('recDes', defaultVal=False)
 
 
     def test_recAv(self):
         """
-        L{dns._EDNSMessage.recAv} defaults to C{False}.
+        L{dns._EDNSMessage.recAv} defaults to C{False} and can be
+        overridden in the constructor.
         """
-        self.assertEqual(self.messageFactory().recAv, False)
-
-
-    def test_recAvOverride(self):
-        """
-        L{dns._EDNSMessage.recAv} can be overridden in the constructor.
-        """
-        self.assertEqual(self.messageFactory(recAv=True).recAv, True)
+        self._verifyConstructorFlag('recAv', defaultVal=False)
 
 
     def test_rCode(self):
         """
-        L{dns._EDNSMessage.rCode} defaults to C{0}.
+        L{dns._EDNSMessage.rCode} defaults to C{0} and can be overridden
+        in the constructor.
         """
-        self.assertEqual(self.messageFactory().rCode, 0)
-
-
-    def test_rCodeOverride(self):
-        """
-        L{dns._EDNSMessage.rCode} can be overridden in the constructor.
-        """
-        self.assertEqual(self.messageFactory(rCode=123).rCode, 123)
+        self._verifyConstructorArgument('rCode', defaultVal=0, altVal=123)
 
 
     def test_maxSize(self):
         """
-        L{dns._EDNSMessage.maxSize} defaults to C{512}.
+        L{dns._EDNSMessage.maxSize} defaults to C{512} and can be
+        overridden in the constructor.
         """
-        self.assertEqual(self.messageFactory().maxSize, 512)
-
-
-    def test_maxSizeOverride(self):
-        """
-        L{dns._EDNSMessage.maxSize} can be overridden in the constructor.
-        """
-        self.assertEqual(self.messageFactory(maxSize=1024).maxSize, 1024)
+        self._verifyConstructorArgument('maxSize', defaultVal=512, altVal=1024)
 
 
     def test_queries(self):
@@ -3285,9 +3382,18 @@ class EDNSMessageTestsUsingMessage(EDNSMessageTests):
     """
     messageFactory = dns.Message
 
+    def _verifyConstructorFlag(self, argName, defaultVal):
+        """
+        dns.Message doesn't do any input coercion or validation of flags
+        so we disable those tests.
+        """
+        EDNSMessageTests._verifyConstructorFlag(
+            self, argName, defaultVal,
+            invalidInputs=[], assertEqual=self.assertEqual)
 
 
-class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
+
+class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase, ConstructorTestsMixin):
     """
     Tests for L{dns._EDNSMessage}.
 
@@ -3296,243 +3402,36 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase):
     """
     messageFactory = dns._EDNSMessage
 
-    def test_answer(self):
-        """
-        L{dns._EDNSMessage.answer} defaults to C{False}.
-        """
-        self.assertIdentical(self.messageFactory().answer, False)
-
-
-    def test_answerBooleanCoercion(self):
-        """
-        L{dns._EDNSMessage.__init__} recasts the supplied C{answer} value
-        as L{bool}.
-        """
-        self.assertIdentical(self.messageFactory(answer=0).answer, False)
-        self.assertIdentical(self.messageFactory(answer=1).answer, True)
-
-
-    def test_answerInputAssertion(self):
-        """
-        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
-        with a C{answer} value which is not C{True}, C{False}, C{1},
-        C{0}.
-        """
-        self.assertRaises(AssertionError, self.messageFactory, answer=2)
-
-
-    def test_auth(self):
-        """
-        L{dns._EDNSMessage.auth} defaults to C{False}.
-        """
-        self.assertIdentical(self.messageFactory().auth, False)
-
-
-    def test_authBooleanCoercion(self):
-        """
-        L{dns._EDNSMessage.__init__} recasts the supplied C{auth} value
-        as L{bool}.
-        """
-        self.assertIdentical(self.messageFactory(auth=0).auth, False)
-        self.assertIdentical(self.messageFactory(auth=1).auth, True)
-
-
-    def test_authInputAssertion(self):
-        """
-        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
-        with a C{auth} value which is not C{True}, C{False}, C{1},
-        C{0}.
-        """
-        self.assertRaises(AssertionError, self.messageFactory, auth=2)
-
-
-    def test_trunc(self):
-        """
-        L{dns._EDNSMessage.trunc} defaults to C{False}.
-        """
-        self.assertIdentical(self.messageFactory().trunc, False)
-
-
-    def test_truncBooleanCoercion(self):
-        """
-        L{dns._EDNSMessage.__init__} recasts the supplied C{trunc} value
-        as L{bool}.
-        """
-        self.assertIdentical(self.messageFactory(trunc=0).trunc, False)
-        self.assertIdentical(self.messageFactory(trunc=1).trunc, True)
-
-
-    def test_truncInputAssertion(self):
-        """
-        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
-        with a C{trunc} value which is not C{True}, C{False}, C{1},
-        C{0}.
-        """
-        self.assertRaises(AssertionError, self.messageFactory, trunc=2)
-
-
-    def test_recDes(self):
-        """
-        L{dns._EDNSMessage.recDes} defaults to C{False}.
-        """
-        self.assertIdentical(self.messageFactory().recDes, False)
-
-
-    def test_recDesBooleanCoercion(self):
-        """
-        L{dns._EDNSMessage.__init__} recasts the supplied C{recDes} value
-        as L{bool}.
-        """
-        self.assertIdentical(self.messageFactory(recDes=0).recDes, False)
-        self.assertIdentical(self.messageFactory(recDes=1).recDes, True)
-
-
-    def test_recDesInputAssertion(self):
-        """
-        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
-        with a C{recDes} value which is not C{True}, C{False}, C{1},
-        C{0}.
-        """
-        self.assertRaises(AssertionError, self.messageFactory, recDes=2)
-
-
-    def test_recAv(self):
-        """
-        L{dns._EDNSMessage.recAv} defaults to C{False}.
-        """
-        self.assertIdentical(self.messageFactory().recAv, False)
-
-
-    def test_recAcBooleanCoercion(self):
-        """
-        L{dns._EDNSMessage.__init__} recasts the supplied C{recAv} value
-        as L{bool}.
-        """
-        self.assertIdentical(self.messageFactory(recAv=0).recAv, False)
-        self.assertIdentical(self.messageFactory(recAv=1).recAv, True)
-
-
-    def test_recAvInputAssertion(self):
-        """
-        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
-        with a C{recAv} value which is not C{True}, C{False}, C{1},
-        C{0}.
-        """
-        self.assertRaises(AssertionError, self.messageFactory, recAv=2)
-
-
     def test_ednsVersion(self):
         """
-        L{dns._EDNSMessage.ednsVersion} defaults to C{0}.
+        L{dns._EDNSMessage.ednsVersion} defaults to C{0} and can be
+        overridden in the constructor.
         """
-        self.assertEqual(self.messageFactory().ednsVersion, 0)
-
-
-    def test_ednsVersionOverride(self):
-        """
-        L{dns._EDNSMessage.ednsVersion} can be overridden in the constructor.
-        """
-        self.assertIdentical(
-            self.messageFactory(ednsVersion=None).ednsVersion, None)
+        self._verifyConstructorArgument('ednsVersion', defaultVal=0, altVal=None)
 
 
     def test_dnssecOK(self):
         """
-        L{dns._EDNSMessage.dnssecOK} defaults to C{False}.
+        L{dns._EDNSMessage.dnssecOK} defaults to C{False} and can be
+        overridden in the constructor.
         """
-        self.assertIdentical(self.messageFactory().dnssecOK, False)
-
-
-    def test_dnssecOKOverride(self):
-        """
-        L{dns._EDNSMessage.dnssecOK} can be overridden in the constructor.
-        """
-        self.assertIdentical(
-            self.messageFactory(dnssecOK=True).dnssecOK, True)
-
-
-    def test_dnssecOKBooleanCoercion(self):
-        """
-        L{dns._EDNSMessage.__init__} recasts the supplied C{dnssecOK} value
-        as L{bool}.
-        """
-        self.assertIdentical(self.messageFactory(dnssecOK=0).dnssecOK, False)
-        self.assertIdentical(self.messageFactory(dnssecOK=1).dnssecOK, True)
-
-
-    def test_dnssecOKInputAssertion(self):
-        """
-        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
-        with a C{dnssecOK} value which is not C{True}, C{False}, C{1},
-        C{0}.
-        """
-        self.assertRaises(AssertionError, self.messageFactory, dnssecOK=2)
+        self._verifyConstructorFlag('dnssecOK', defaultVal=False)
 
 
     def test_authenticData(self):
         """
-        L{dns._EDNSMessage.authenticData} defaults to C{False}.
+        L{dns._EDNSMessage.authenticData} defaults to C{False} and can be
+        overridden in the constructor.
         """
-        self.assertIdentical(self.messageFactory().authenticData, False)
-
-
-    def test_authenticDataOverride(self):
-        """
-        L{dns._EDNSMessage.authenticData} can be overridden in the constructor.
-        """
-        self.assertIdentical(
-            self.messageFactory(authenticData=True).authenticData, True)
-
-
-    def test_authenticDataBooleanCoercion(self):
-        """
-        L{dns._EDNSMessage.__init__} recasts the supplied C{authenticData} value
-        as L{bool}.
-        """
-        self.assertIdentical(self.messageFactory(authenticData=0).authenticData, False)
-        self.assertIdentical(self.messageFactory(authenticData=1).authenticData, True)
-
-
-    def test_authenticDataInputAssertion(self):
-        """
-        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
-        with a C{authenticData} value which is not C{True}, C{False}, C{1},
-        C{0}.
-        """
-        self.assertRaises(AssertionError, self.messageFactory, authenticData=2)
+        self._verifyConstructorFlag('authenticData', defaultVal=False)
 
 
     def test_checkingDisabled(self):
         """
-        L{dns._EDNSMessage.checkingDisabled} defaults to C{False}.
+        L{dns._EDNSMessage.checkingDisabled} defaults to C{False} and can
+        be overridden in the constructor.
         """
-        self.assertIdentical(self.messageFactory().checkingDisabled, False)
-
-
-    def test_checkingDisabledOverride(self):
-        """
-        L{dns._EDNSMessage.checkingDisabled} can be overridden in the constructor.
-        """
-        self.assertIdentical(
-            self.messageFactory(checkingDisabled=True).checkingDisabled, True)
-
-
-    def test_checkingDisabledBooleanCoercion(self):
-        """
-        L{dns._EDNSMessage.__init__} recasts the supplied C{checkingDisabled} value
-        as L{bool}.
-        """
-        self.assertIdentical(self.messageFactory(checkingDisabled=0).checkingDisabled, False)
-        self.assertIdentical(self.messageFactory(checkingDisabled=1).checkingDisabled, True)
-
-
-    def test_checkingDisabledInputAssertion(self):
-        """
-        L{dns._EDNSMessage.__init__} raises L{AssertionError} if supplied
-        with a C{checkingDisabled} value which is not C{True}, C{False}, C{1},
-        C{0}.
-        """
-        self.assertRaises(AssertionError, self.messageFactory, checkingDisabled=2)
+        self._verifyConstructorFlag('checkingDisabled', defaultVal=False)
 
 
     def test_queriesOverride(self):
