@@ -27,6 +27,7 @@ from zope.interface import implementer
 from twisted.python.compat import _PY3, nativeString, intToBytes
 from twisted.python import log
 from twisted.python.failure import Failure
+from twisted.python.urlpath import URLPath
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
 from twisted.internet.interfaces import IProtocol
@@ -35,7 +36,7 @@ from twisted.python import failure
 from twisted.python.util import InsensitiveDict
 from twisted.python.components import proxyForInterface
 from twisted.web import error
-from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
+from twisted.web.iweb import UNKNOWN_LENGTH, IRequest, IAgent, IBodyProducer, IResponse
 from twisted.web.http_headers import Headers
 
 
@@ -1190,6 +1191,7 @@ class _AgentBase(object):
 
 
 
+@implementer(IAgent)
 class Agent(_AgentBase):
     """
     L{Agent} is a very basic HTTP client.  It supports I{HTTP} and I{HTTPS}
@@ -1306,6 +1308,7 @@ class Agent(_AgentBase):
 
 
 
+@implementer(IAgent)
 class ProxyAgent(_AgentBase):
     """
     An HTTP agent able to cross HTTP proxies.
@@ -1420,6 +1423,7 @@ class _FakeUrllib2Response(object):
 
 
 
+@implementer(IAgent)
 class CookieAgent(object):
     """
     L{CookieAgent} extends the basic L{Agent} to add RFC-compliant
@@ -1558,6 +1562,7 @@ class _GzipProtocol(proxyForInterface(IProtocol)):
 
 
 
+@implementer(IAgent)
 class ContentDecoderAgent(object):
     """
     An L{Agent} wrapper to handle encoded content.
@@ -1621,6 +1626,7 @@ class ContentDecoderAgent(object):
 
 
 
+@implementer(IAgent)
 class RedirectAgent(object):
     """
     An L{Agent} wrapper which handles HTTP redirects.
@@ -1844,34 +1850,44 @@ class DummyAgent(object):
         return defer.succeed(DummyResponse())
 
 
-class _Request(object):
-    method = b"GET"
+@implementer(IRequest)
+class MemoryRequest(object):
+    # method = b"GET"
 
-    def __init__(self, postpath):
-        self.postpath = postpath
-        self.prepath = []
-        self.response = BytesIO()
-        self._finished = EventChannel()
-
-
-    def setResponseCode(self, code):
+    def __init__(self, url):
+        # self._url = url
+        # self.postpath = []
+        # self.prepath = []
+        # self.response = BytesIO()
+        # self._finished = EventChannel()
         pass
 
 
-    def setHeader(self, name, value):
-        pass
+    def prePathURL(self):
+        return 
+
+    def URLPath(self):
+        return URLPath.fromRequest(self)
 
 
-    def write(self, data):
-        self.response.write(data)
+    # def setResponseCode(self, code):
+    #     pass
 
 
-    def finish(self):
-        self._finished.callback(None)
+    # def setHeader(self, name, value):
+    #     pass
 
 
-    def notifyFinish(self):
-        return self._finished.subscribe()
+    # def write(self, data):
+    #     self.response.write(data)
+
+
+    # def finish(self):
+    #     self._finished.callback(None)
+
+
+    # def notifyFinish(self):
+    #     return self._finished.subscribe()
 
 
 
@@ -1882,24 +1898,32 @@ class ResourceTraversalAgent(object):
 
 
     def request(self, method, url, headers=None, bodyProducer=None):
-        location = urlparse(url)
+
+        location = http.urlparse(url)
         request = _Request(location.path[1:].split(b"/"))
-        resource = getChildForRequest(self.root, request)
+        # resource = getChildForRequest(self.root, request)
+        resource = self.root
         result = resource.render(request)
-        if isinstance(result, bytes):
-            return defer.succeed(DummyResponse(result))
-        elif result is NOT_DONE_YET:
-            d = request.notifyFinish()
-            d.addCallback(lambda ignored: DummyResponse(request.response.getvalue()))
-            return d
-        else:
-            assert False
+        return defer.succeed(ResourceObjectResponse())
+
+        # if isinstance(result, bytes):
+        #     return defer.succeed(DummyResponse(result))
+        # elif result is NOT_DONE_YET:
+        #     d = request.notifyFinish()
+        #     d.addCallback(lambda ignored: DummyResponse(request.response.getvalue()))
+        #     return d
+        # else:
+        #     assert False
 
 
 
 # This goes along with DummyAgent.
 @implementer(IResponse)
-class DummyResponse(object):
+class ResourceObjectResponse(object):
+    """
+    An L{IResponse} implementation which is generated from an L{IResource}
+    provider.
+    """
     code = 200
     phrase = b"OK"
 
