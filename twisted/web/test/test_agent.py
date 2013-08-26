@@ -682,17 +682,6 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         self.agent = client.Agent(self.reactor)
 
 
-    def completeConnection(self):
-        """
-        Do whitebox stuff to finish any outstanding connection attempts the
-        agent may have initiated.
-
-        This spins the fake reactor clock just enough to get L{ClientCreator},
-        which agent is implemented in terms of, to fire its Deferreds.
-        """
-        self.reactor.advance(0)
-
-
     def test_defaultPool(self):
         """
         If no pool is passed in, the L{Agent} creates a non-persistent pool.
@@ -790,7 +779,6 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
         # Cause the connection to be refused
         host, port, factory = self.reactor.tcpClients.pop()[:3]
         factory.clientConnectionFailed(None, Failure(ConnectionRefusedError()))
-        self.completeConnection()
         return self.assertFailure(result, ConnectionRefusedError)
 
 
