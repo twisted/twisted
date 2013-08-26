@@ -920,7 +920,7 @@ class FileSender:
 
     lastSent = b''
     deferred = None
-    _sendfile = sendfile
+    _sendfile = staticmethod(sendfile)
     _producer = None
 
 
