@@ -30,7 +30,6 @@ from twisted.web.test.requesthelper import DummyChannel
 
 
 
-
 class DateTimeTest(unittest.TestCase):
     """Test date parsing functions."""
 
@@ -1923,3 +1922,94 @@ class Expect100ContinueServerTests(unittest.TestCase, ResponseTestMixin):
               b"Version: HTTP/1.1",
               b"Request: /foo",
               b"'''\n4\ndefg'''\n")])
+
+
+
+def sub(keys, d):
+    return dict([(k, d[k]) for k in keys])
+
+
+
+class DeprecatedRequestAttributesTests(unittest.TestCase):
+    """
+    Tests for deprecated attributes of L{twisted.web.http.Request}.
+    """
+    def test_readHeaders(self):
+        """
+        Reading from the C{headers} attribute is deprecated in favor of use of
+        the C{responseHeaders} attribute.
+        """
+        request = http.Request(DummyChannel(), True)
+        request.headers
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_readHeaders])
+
+        self.assertEqual({
+                "category": DeprecationWarning,
+                "message": (
+                    "twisted.web.http.Request.headers was deprecated in "
+                    "Twisted 13.2.0: Please use twisted.web.http.Request."
+                    "responseHeaders instead.")},
+                         sub(["category", "message"], warnings[0]))
+
+
+    def test_writeHeaders(self):
+        """
+        Writing to the C{headers} attribute is deprecated in favor of use of
+        the C{responseHeaders} attribute.
+        """
+        request = http.Request(DummyChannel(), True)
+        request.headers = {b"foo": b"bar"}
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_writeHeaders])
+
+        self.assertEqual({
+                "category": DeprecationWarning,
+                "message": (
+                    "twisted.web.http.Request.headers was deprecated in "
+                    "Twisted 13.2.0: Please use twisted.web.http.Request."
+                    "responseHeaders instead.")},
+                         sub(["category", "message"], warnings[0]))
+
+
+    def test_readReceivedHeaders(self):
+        """
+        Reading from the C{received_headers} attribute is deprecated in favor
+        of use of the C{requestHeaders} attribute.
+        """
+        request = http.Request(DummyChannel(), True)
+        request.received_headers
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_readReceivedHeaders])
+
+        def sub(keys, d):
+            return dict([(k, d[k]) for k in keys])
+
+        self.assertEqual({
+                "category": DeprecationWarning,
+                "message": (
+                    "twisted.web.http.Request.received_headers was deprecated "
+                    "in Twisted 13.2.0: Please use twisted.web.http.Request."
+                    "requestHeaders instead.")},
+                         sub(["category", "message"], warnings[0]))
+
+
+    def test_writeReceivedHeaders(self):
+        """
+        Writing to the C{received_headers} attribute is deprecated in favor of use of
+        the C{requestHeaders} attribute.
+        """
+        request = http.Request(DummyChannel(), True)
+        request.received_headers = {b"foo": b"bar"}
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_writeReceivedHeaders])
+
+        self.assertEqual({
+                "category": DeprecationWarning,
+                "message": (
+                    "twisted.web.http.Request.received_headers was deprecated "
+                    "in Twisted 13.2.0: Please use twisted.web.http.Request."
+                    "requestHeaders instead.")},
+                         sub(["category", "message"], warnings[0]))
+
+

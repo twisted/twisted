@@ -94,6 +94,8 @@ from twisted.internet import interfaces, reactor, protocol, address
 from twisted.internet.defer import Deferred
 from twisted.protocols import policies, basic
 from twisted.python import log
+from twisted.python.versions import Version
+from twisted.python.deprecate import getDeprecationWarningString
 
 from twisted.web.http_headers import _DictHeaders, Headers
 
@@ -606,6 +608,28 @@ class Request:
             self.transport = self.channel.transport
 
 
+    def _warnHeaders(self, old, new):
+        warnings.warn(
+            category=DeprecationWarning,
+            message=(
+                "twisted.web.http.Request.%(old)s was deprecated in "
+                "Twisted 13.2.0: Please use twisted.web.http.Request."
+                "%(new)s instead." % dict(old=old, new=new)),
+            stacklevel=3)
+
+
+    @property
+    def headers(self):
+        self._warnHeaders("headers", "responseHeaders")
+        return _DictHeaders(self.responseHeaders)
+
+
+    @property
+    def received_headers(self):
+        self._warnHeaders("received_headers", "requestHeaders")
+        return _DictHeaders(self.requestHeaders)
+
+
     def __setattr__(self, name, value):
         """
         Support assignment of C{dict} instances to C{received_headers} for
@@ -616,16 +640,12 @@ class Request:
             self.requestHeaders = headers = Headers()
             for k, v in value.items():
                 headers.setRawHeaders(k, [v])
-        elif name == 'requestHeaders':
-            self.__dict__[name] = value
-            self.__dict__['received_headers'] = _DictHeaders(value)
+            self._warnHeaders("received_headers", "requestHeaders")
         elif name == 'headers':
             self.responseHeaders = headers = Headers()
             for k, v in value.items():
                 headers.setRawHeaders(k, [v])
-        elif name == 'responseHeaders':
-            self.__dict__[name] = value
-            self.__dict__['headers'] = _DictHeaders(value)
+            self._warnHeaders("headers", "responseHeaders")
         else:
             self.__dict__[name] = value
 

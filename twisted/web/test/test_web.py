@@ -914,7 +914,7 @@ class ServerAttributesTestCase(unittest.TestCase):
         twisted.web.server.date_time_string should not be used; instead use
         twisted.web.http.datetimeToString directly
         """
-        deprecated_func = server.date_time_string
+        server.date_time_string
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_deprecatedAttributeDateTimeString])
 
@@ -931,7 +931,7 @@ class ServerAttributesTestCase(unittest.TestCase):
         twisted.web.server.string_date_time should not be used; instead use
         twisted.web.http.stringToDatetime directly
         """
-        deprecated_func = server.string_date_time
+        server.string_date_time
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_deprecatedAttributeStringDateTime])
 
