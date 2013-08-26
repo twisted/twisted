@@ -40,9 +40,10 @@ class IRequest(Interface):
         "'quux': ['spam']}}.")
 
     received_headers = Attribute(
-        "Backwards-compatibility access to C{requestHeaders}.  Use "
-        "C{requestHeaders} instead.  C{received_headers} behaves mostly "
-        "like a C{dict} and does not provide access to all header values.")
+        "Backwards-compatibility access to C{requestHeaders}, deprecated in "
+        "Twisted 13.2.0.  Use C{requestHeaders} instead.  C{received_headers} "
+        "behaves mostly like a C{dict} and does not provide access to all "
+        "header values.")
 
     requestHeaders = Attribute(
         "A L{http_headers.Headers} instance giving all received HTTP request "
@@ -54,10 +55,10 @@ class IRequest(Interface):
         "to decide on a per-request basis.")
 
     headers = Attribute(
-        "Backwards-compatibility access to C{responseHeaders}.  Use"
-        "C{responseHeaders} instead.  C{headers} behaves mostly like a "
-        "C{dict} and does not provide access to all header values nor "
-        "does it allow multiple values for one header to be set.")
+        "Backwards-compatibility access to C{responseHeaders}, deprecated in "
+        "Twisted 13.2.0.  Use C{responseHeaders} instead.  C{headers} behaves "
+        "mostly like a C{dict} and does not provide access to all header "
+        "values nor does it allow multiple values for one header to be set.")
 
     responseHeaders = Attribute(
         "A L{http_headers.Headers} instance holding all HTTP response "
