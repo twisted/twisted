@@ -35,7 +35,7 @@ from twisted.python import failure
 from twisted.python.util import InsensitiveDict
 from twisted.python.components import proxyForInterface
 from twisted.web import error
-from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
+from twisted.web.iweb import UNKNOWN_LENGTH, IAgent, IBodyProducer, IResponse
 from twisted.web.http_headers import Headers
 
 
@@ -1190,6 +1190,7 @@ class _AgentBase(object):
 
 
 
+@implementer(IAgent)
 class Agent(_AgentBase):
     """
     L{Agent} is a very basic HTTP client.  It supports I{HTTP} and I{HTTPS}
@@ -1306,6 +1307,7 @@ class Agent(_AgentBase):
 
 
 
+@implementer(IAgent)
 class ProxyAgent(_AgentBase):
     """
     An HTTP agent able to cross HTTP proxies.
@@ -1420,6 +1422,7 @@ class _FakeUrllib2Response(object):
 
 
 
+@implementer(IAgent)
 class CookieAgent(object):
     """
     L{CookieAgent} extends the basic L{Agent} to add RFC-compliant
@@ -1558,6 +1561,7 @@ class _GzipProtocol(proxyForInterface(IProtocol)):
 
 
 
+@implementer(IAgent)
 class ContentDecoderAgent(object):
     """
     An L{Agent} wrapper to handle encoded content.
@@ -1621,6 +1625,7 @@ class ContentDecoderAgent(object):
 
 
 
+@implementer(IAgent)
 class RedirectAgent(object):
     """
     An L{Agent} wrapper which handles HTTP redirects.
