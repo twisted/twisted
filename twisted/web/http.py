@@ -94,8 +94,6 @@ from twisted.internet import interfaces, reactor, protocol, address
 from twisted.internet.defer import Deferred
 from twisted.protocols import policies, basic
 from twisted.python import log
-from twisted.python.versions import Version
-from twisted.python.deprecate import getDeprecationWarningString
 
 from twisted.web.http_headers import _DictHeaders, Headers
 
