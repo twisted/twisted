@@ -1982,9 +1982,6 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_readReceivedHeaders])
 
-        def sub(keys, d):
-            return dict([(k, d[k]) for k in keys])
-
         self.assertEqual({
                 "category": DeprecationWarning,
                 "message": (
