@@ -64,7 +64,7 @@ def loadAliasFile(domains, filename=None, fp=None):
     Aliases beginning with a C{:} will be treated as a file containing
     additional aliases for the username.
 
-    Aliases beginning with a / will be treated as the full pathname to a file
+    Aliases beginning with a C{/} will be treated as the full pathname to a file
     to which the message will be appended.
 
     Aliases without a host part will be assumed to be addresses on localhost.
