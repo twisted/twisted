@@ -28,8 +28,7 @@ int
 """)
 
     def sendfile(out_fd, in_fd, offset, nbytes):
-        length = ffi.new("off_t *")
-        length[0] = nbytes
+        length = ffi.new("off_t *", nbytes)
         ret = libc.sendfile(in_fd, out_fd, offset, length, ffi.NULL, 0)
         if ret < 0:
             if length[0] and not ffi.errno in (errno.EBUSY, errno.EAGAIN,
@@ -47,8 +46,7 @@ ssize_t
 """)
 
     def sendfile(out_fd, in_fd, offset, nbytes):
-        off_t = ffi.new("off_t *")
-        off_t[0] = offset
+        off_t = ffi.new("off_t *", offset)
         sent = libc.sendfile(out_fd, in_fd, off_t, nbytes)
         if sent == -1:
             raise OSError(os.strerror(ffi.errno))
