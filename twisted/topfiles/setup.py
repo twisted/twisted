@@ -35,15 +35,6 @@ extensions = [
     Extension("twisted.python.sendmsg",
               sources=["twisted/python/sendmsg.c"],
               condition=lambda _: sys.platform != "win32"),
-    Extension("twisted.python._sendfile",
-              ["twisted/python/_sendfile.c"],
-              condition=lambda builder:
-                  # Linux
-                  builder._check_header("sys/sendfile.h") or
-                  # OS X >= 10.5
-                  sys.platform == "darwin" or
-                  # FreeBSD
-                  'freebsd' in sys.platform),
 ]
 
 if sys.version_info[:2] <= (2, 6):
@@ -51,6 +42,14 @@ if sys.version_info[:2] <= (2, 6):
         Extension(
             "twisted.python._initgroups",
             ["twisted/python/_initgroups.c"]))
+
+try:
+    from twisted.python import _sendfile
+    extension = _sendfile.ffi.verifier.get_extension()
+    extension.condition = lambda builder: True
+    extensions.append(extension)
+except ImportError:
+    pass
 
 
 # Figure out which plugins to include: all plugins except subproject ones
