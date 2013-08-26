@@ -29,12 +29,7 @@ class EDNSDatagramProtocol(dns.DNSDatagramProtocol):
         explicitly to the DNS protocols. Instead just pass
         partial(EDNSMessage, ednsVersion=x, maxSize=y).
         """
-        self.ednsVersion = kwargs.pop('ednsVersion', 0)
-        self.maxSize = kwargs.pop('maxSize', 4096)
-        self.dnssecOK = kwargs.pop('dnssecOK', False)
-        self.authenticData = kwargs.pop('authenticData', False)
-        self.checkingDisabled = kwargs.pop('checkingDisabled', False)
-
+        self._messageOptions = kwargs.pop('messageOptions', {})
         dns.DNSDatagramProtocol.__init__(self, *args, **kwargs)
 
 
@@ -47,13 +42,8 @@ class EDNSDatagramProtocol(dns.DNSDatagramProtocol):
         keyword arguments to fromMessage - ednsVersion, maxSize, etc.
         """
         message = _EDNSMessage.fromMessage(message)
-
-        message.ednsVersion = self.ednsVersion
-        message.maxSize = self.maxSize
-        message.dnssecOK = self.dnssecOK
-        message.authenticData = self.authenticData
-        message.checkingDisabled = self.checkingDisabled
-
+        for k, v in self._messageOptions.items():
+            setattr(message, k, v)
         return dns.DNSDatagramProtocol.writeMessage(self, message, address)
 
 
@@ -77,19 +67,14 @@ class EDNSStreamProtocol(dns.DNSProtocol):
     wouldn't be necessary.
     """
     def __init__(self, *args, **kwargs):
-        self.ednsVersion = kwargs.pop('ednsVersion', 0)
-        self.maxSize = kwargs.pop('maxSize', 4096)
-        self.dnssecOK = kwargs.pop('dnssecOK', False)
-
+        self._messageOptions = kwargs.pop('messageOptions', {})
         dns.DNSProtocol.__init__(self, *args, **kwargs)
 
 
     def writeMessage(self, message):
         message = _EDNSMessage.fromMessage(message)
-        message.ednsVersion = self.controller.ednsVersion
-        message.maxSize = self.controller.maxSize
-        message.dnssecOK = self.controller.dnssecOK
-
+        for k, v in self._messageOptions.items():
+            setattr(message, k, v)
         return dns.DNSProtocol.writeMessage(self, message)
 
 
@@ -101,8 +86,13 @@ class EDNSStreamProtocol(dns.DNSProtocol):
 
 
 class EDNSClientFactory(client.DNSClientFactory):
+    def __init__(self, *args, **kwargs):
+        self._messageOptions = kwargs.pop('messageOptions', {})
+        client.DNSClientFactory.__init__(self, *args, **kwargs)
+
     def buildProtocol(self, addr):
-        p = EDNSStreamProtocol(controller=self.controller)
+        p = EDNSStreamProtocol(controller=self.controller,
+                               messageOptions=self._messageOptions)
         p.factory = self
         return p
 
@@ -130,27 +120,17 @@ class EDNSResolver(client.Resolver):
      * https://www.dns-oarc.net/oarc/services/replysizetest
     """
     def __init__(self, *args, **kwargs):
-        self.ednsVersion = kwargs.pop('ednsVersion', 0)
-        self.maxSize = kwargs.pop('maxSize', 4096)
-        self.dnssecOK = kwargs.pop('dnssecOK', False)
-        self.authenticData = kwargs.pop('authenticData', False)
-        self.checkingDisabled = kwargs.pop('checkingDisabled', False)
-
+        self._messageOptions = kwargs.pop('messageOptions', {})
         client.Resolver.__init__(self, *args, **kwargs)
-
-        self.factory = EDNSClientFactory(self, self.timeout)
+        self.factory = EDNSClientFactory(self,
+                                         timeout=self.timeout,
+                                         messageOptions=self._messageOptions)
 
 
     def _connectedProtocol(self):
-        proto = EDNSDatagramProtocol(
-            ednsVersion=self.ednsVersion,
-            maxSize=self.maxSize,
-            dnssecOK=self.dnssecOK,
-            authenticData=self.authenticData,
-            checkingDisabled=self.checkingDisabled,
-            controller=self,
-            reactor=self._reactor)
-
+        proto = EDNSDatagramProtocol(controller=self,
+                                     reactor=self._reactor,
+                                     messageOptions=self._messageOptions)
         while True:
             try:
                 self._reactor.listenUDP(dns.randomSource(), proto)

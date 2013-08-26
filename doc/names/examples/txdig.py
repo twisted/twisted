@@ -174,13 +174,16 @@ def dig(reactor, queryName='', queryType=dns.ALL_RECORDS, queryClass=dns.IN,
     """
     Query a DNS server.
     """
+    messageOptions = dict(
+        ednsVersion=edns,
+        maxSize=bufsize,
+        dnssecOK=dnssec,
+        authenticData=not noadflag,
+        checkingDisabled=cdflag)
+
     r = EDNSResolver(servers=[(server, port)],
                      reactor=reactor,
-                     ednsVersion=edns,
-                     maxSize=bufsize,
-                     dnssecOK=dnssec,
-                     authenticData=not noadflag,
-                     checkingDisabled=cdflag)
+                     messageOptions=messageOptions)
 
     if tcp:
         queryMethod = partial(r.queryTCP, timeout=timeout)
