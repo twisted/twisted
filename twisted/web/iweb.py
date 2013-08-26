@@ -632,7 +632,7 @@ class IAgent(Interface):
     configuration.
 
     Processing of responses is also left very widely specified.  An
-    implementation may perform no specially handling of responses, or it may
+    implementation may perform no special handling of responses, or it may
     implement redirect following or content negotiation, it may implement a
     cookie store or automatically response to authentication challenges.
 
