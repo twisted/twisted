@@ -30,7 +30,6 @@ class DomainWithDefaultDict:
     @ivar domains: See L{__init__}
     @ivar default: See L{__init__}
     """
-
     def __init__(self, domains, default):
         """
         @type domains: L{dict} of L{bytes} -> L{IDomain} provider
@@ -358,7 +357,6 @@ class IDomain(Interface):
     """
     An interface for email domains.
     """
-
     def exists(user):
         """
         Check whether a user exists in this domain.
@@ -402,7 +400,6 @@ class IAliasableDomain(IDomain):
     """
     An interface for email domains which can be aliased to other domains.
     """
-
     def setAliasGroup(aliases):
         """
         Set the group of defined aliases for this domain.
@@ -441,7 +438,6 @@ class BounceDomain:
 
     This can be used to block off a domain.
     """
-
     implements(IDomain)
 
     def exists(self, user):
@@ -506,7 +502,6 @@ class FileMessage:
     @ivar name: See L{__init__}.
     @ivar finalName: See L{__init__}.
     """
-
     implements(smtp.IMessage)
 
     def __init__(self, fp, name, finalName):
@@ -582,7 +577,6 @@ class MailService(service.MultiService):
     @type monitor: L{FileMonitoringService}
     @ivar monitor: A service to monitor changes to files.
     """
-
     queue = None
     domains = None
     portals = None
@@ -737,7 +731,6 @@ class FileMonitoringService(internet.TimerService):
     @type index: L{int}
     @ivar index: The index of the next file to be checked.
     """
-
     def __init__(self):
         """
         Initialize the file monitoring service.
