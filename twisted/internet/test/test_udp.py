@@ -295,6 +295,27 @@ class UDPPortTestsMixin(object):
         self.assertEqual(packet[1][:2], (cAddr.host, cAddr.port))
 
 
+    def test_writingToHostnameRaisesValueError(self):
+        """
+        Writing to a hostname instead of an IP address will raise a ValueError.
+        """
+
+        reactor = self.buildReactor()
+        port = self.getListeningPort(reactor, DatagramProtocol())
+        self.assertRaises(ValueError, port.write, 'spam', ('eggs.com', 1))
+
+
+    def test_connectingToHostnameRaisesValueError(self):
+        """
+        Connecting to a hostname instead of an IP address will raise a
+        ValueError.
+        """
+
+        reactor = self.buildReactor()
+        port = self.getListeningPort(reactor, DatagramProtocol())
+        self.assertRaises(ValueError, port.connect, 'eggs.com', 1)
+
+
 
 class UDPServerTestsBuilder(ReactorBuilder,
                             UDPPortTestsMixin, DatagramTransportTestsMixin):
