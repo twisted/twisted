@@ -59,18 +59,19 @@ class TLSNotSupportedError(POP3ClientError):
 
 class ServerErrorResponse(POP3ClientError):
     """
-    An error indicating that the server returned an error response to a request.
+    An error indicating that the server returned an error response to a
+    request.
 
     @ivar consumer: See L{__init__}
     """
     def __init__(self, reason, consumer=None):
         """
-        @type reason: C{str}
+        @type reason: L{bytes}
         @param reason: The server response minus the status indicator.
 
-        @type consumer: callable that takes C{object}
-        @param consumer: (optional) The function meant to handle the values
-            for a multi-line response.
+        @type consumer: callable that takes L{object}
+        @param consumer: The function meant to handle the values for a
+            multi-line response.
         """
         POP3ClientError.__init__(self, reason)
         self.consumer = consumer
@@ -98,10 +99,9 @@ class _ListSetter:
 
     @ivar L: See L{__init__}
     """
-
     def __init__(self, L):
         """
-        @type L: C{list} of C{object}
+        @type L: L{list} of L{object}
         @param L: The list being constructed.  An empty list should be
             passed in.
         """
@@ -110,13 +110,13 @@ class _ListSetter:
 
     def setitem(self, (item, value)):
         """
-        Add the value at the specified position padding out missing entries.
+        Add the value at the specified position, padding out missing entries.
 
-        @type item: C{int}
+        @type item: L{int}
         @param item: The 0-based index in the list at which the value should
             be placed.
 
-        @type value: C{object}
+        @type value: L{object}
         @param value: The value to put in the list.
         """
         diff = item - len(self.L) + 1
@@ -130,11 +130,11 @@ def _statXform(line):
     """
     Parse the response to a STAT command.
 
-    @type line: C{str}
+    @type line: L{bytes}
     @param line: The response from the server to a STAT command minus the
         status indicator.
 
-    @rtype: (C{int}, C{int})
+    @rtype: 2-L{tuple} of (E{1}) L{int}, (E{2}) L{int}
     @return: The number of messages in the mailbox and the size of the mailbox.
     """
     numMsgs, totalSize = line.split(None, 1)
@@ -149,11 +149,11 @@ def _listXform(line):
     The line from the LIST response consists of a 1-based message number
     followed by a size.
 
-    @type line: C{str}
+    @type line: L{bytes}
     @param line: A non-initial line from the multi-line response to a LIST
         command.
 
-    @rtype: (C{int}, C{int})
+    @rtype: 2-L{tuple} of (E{1}) L{int}, (E{2}) L{int}
     @return: The 0-based index of the message and the size of the message.
     """
     index, size = line.split(None, 1)
@@ -168,11 +168,11 @@ def _uidXform(line):
     The line from the UIDL response consists of a 1-based message number
     followed by a unique id.
 
-    @type line: C{str}
+    @type line: L{bytes}
     @param line: A non-initial line from the multi-line response to a UIDL
         command.
 
-    @rtype: (C{int}, C{str})
+    @rtype: 2-L{tuple} of (E{1}) L{int}, (E{2}) L{bytes}
     @return: The 0-based index of the message and the unique identifier
         for the message.
     """
@@ -185,10 +185,10 @@ def _codeStatusSplit(line):
     """
     Parse the first line of a multi-line server response.
 
-    @type line: C{str}
+    @type line: L{bytes}
     @param line: The first line of a multi-line server response.
 
-    @rtype: (C{str}, C{str})
+    @rtype: (L{bytes}, L{bytes})
     @return: The status indicator and the rest of the server response.
     """
     parts = line.split(' ', 1)
@@ -207,10 +207,10 @@ def _dotUnquoter(line):
     the server byte-stuffs it by adding another termination character to
     avoid confusion with the terminating sequence (C{'.\\r\\n'}).
 
-    @type line: C{str}
+    @type line: L{bytes}
     @param line: A received line.
 
-    @rtype: C{str}
+    @rtype: L{bytes}
     @return: The line without the byte-stuffed termination character at the
         beginning if it was present. Otherwise, the line unchanged.
     """
@@ -230,36 +230,38 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
     This API provides a pipelining interface but POP3 pipelining
     on the network is not yet supported.
 
-    @type startedTLS: C{bool}
+    @type startedTLS: L{bool}
     @ivar startedTLS: An indication of whether TLS has been negotiated
         successfully.
 
-    @type allowInsecureLogin: C{bool}
+    @type allowInsecureLogin: L{bool}
     @ivar allowInsecureLogin: An indication of whether plaintext login should
         be allowed if the server offers no authentication challenge and if the
         transport does not offer any protection via encryption.
 
-    @type serverChallenge: C{str} or C{None}
+    @type serverChallenge: L{bytes} or L{NoneType <types.NoneType>}
     @ivar serverChallenge: The challenge received in the server greeting.
 
-    @type timeout: C{int}
+    @type timeout: L{int}
     @ivar timeout: The number of seconds to wait on a response from the server
         before timing out a connection.  If the number is <= 0, no timeout
         checking will be performed.
 
-    @type _capCache: C{NoneType} or C{dict} of C{str} -> C{NoneType}
-        or C{list} of C{str}
+    @type _capCache: L{NoneType <types.NoneType>} or L{dict} of
+        L{bytes} -> L{list} of L{bytes} and/or L{bytes} ->
+        L{NoneType <types.NoneType>}
     @ivar _capCache: The cached server capabilities.  Capabilities are not
         allowed to change during the session (except when TLS is negotiated),
         so the first response to a capabilities command can be used for
         later lookups.
 
-    @type _challengeMagicRe: regular expression object
+    @type _challengeMagicRe: L{re.RegexObject}
     @ivar _challengeMagicRe: A regular expression which matches the
         challenge in the server greeting.
 
-    @type _blockedQueue: C{NoneType} or C{list} of (L{Deferred},
-        callable which results in a L{Deferred}, C{tuple})
+    @type _blockedQueue: L{NoneType <types.NoneType>} or L{list} of 3-L{tuple}
+        of (E{1}) L{Deferred <defer.Deferred>}, (E{2}) callable which results
+        in a L{Deferred <defer.Deferred>}, f(E{3}) L{tuple}
     @ivar _blockedQueue: A list of blocked commands.  While a command is
         awaiting a response from the server, other commands are blocked.  When
         no command is outstanding, C{_blockedQueue} is set to None.  Otherwise,
@@ -269,32 +271,33 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         received, the function that sends the command, and the arguments to
         the function.
 
-    @type _waiting: L{Deferred} or C{NoneType}
+    @type _waiting: L{Deferred <defer.Deferred>} or
+        L{NoneType <types.NoneType>}
     @ivar _waiting: A deferred which fires when the response to the
         outstanding command is received from the server.
 
-    @type _timedOut: C{bool}
+    @type _timedOut: L{bool}
     @ivar _timedOut: An indication of whether the connection was dropped
         because of a timeout.
 
-    @type _greetingError: C{str} or C{NoneType}
+    @type _greetingError: L{bytes} or L{NoneType <types.NoneType>}
     @ivar _greetingError: The server greeting minus the status indicator, when
         the connection was dropped because of an error in the server greeting.
         Otherwise, None.
 
-    @type state: C{str}
+    @type state: L{bytes}
     @ivar state: The state which indicates what type of response is expected
         from the server.  Valid states are: 'WELCOME', 'WAITING', 'SHORT',
         'LONG_INITIAL', 'LONG'.
 
-    @type _xform: C{NoneType} or callable that takes C{str} and
-        returns C{object}
+    @type _xform: L{NoneType<types.NoneType>} or callable that takes L{bytes}
+        and returns L{object}
     @ivar _xform: The transform function which is used to convert each
         line of a multi-line response into usable values for use by the
         consumer function.  If None, each line of the multi-line response
         is sent directly to the consumer function.
 
-    @type _consumer: callable that takes C{object}
+    @type _consumer: callable that takes L{object}
     @ivar _consumer: The consumer function which is used to store the
         values derived by the transform function from each line of a
         multi-line response into a list.
@@ -324,10 +327,10 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @type f: callable
         @param f: A function which sends a command.
 
-        @type a: C{tuple}
+        @type a: L{tuple}
         @param a: Arguments to the function.
 
-        @rtype: C{NoneType} or L{Deferred}
+        @rtype: L{NoneType <types.NoneType>} or L{Deferred <defer.Deferred>}
         @return: None if the command can run immediately.  Otherwise,
             a deferred that will eventually trigger with the return value of
             the function.
@@ -370,14 +373,14 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         Block all further commands from being sent until the response is
         received.  Transition the state to SHORT.
 
-        @type cmd: C{str}
+        @type cmd: L{bytes}
         @param cmd: A POP3 command.
 
-        @type args: C{str}
+        @type args: L{bytes}
         @param args: The command arguments.
 
-        @rtype: L{Deferred} which successfully fires with C{str} or fails with
-            L{ServerErrorResponse}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the entire response is received.
             On an okay response, it returns the response from the server minus
             the status indicator.  On an error response, it issues a server
@@ -404,26 +407,26 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         Block all further commands from being sent until the entire response is
         received.  Transition the state to LONG_INITIAL.
 
-        @type cmd: C{str}
+        @type cmd: L{bytes}
         @param cmd: A POP3 command.
 
-        @type args: C{str}
+        @type args: L{bytes}
         @param args: The command arguments.
 
-        @type consumer: callable that takes C{object}
+        @type consumer: callable that takes L{object}
         @param consumer: A consumer function which should be used to put
             the values derived by a transform function from each line of the
             multi-line response into a list.
 
-        @type xform: C{NoneType} or callable that takes C{str} and
-            returns C{object}
+        @type xform: L{NoneType <types.NoneType>} or callable that takes
+            L{bytes} and returns L{object}
         @param xform: A transform function which should be used to transform
             each line of the multi-line response into usable values for use by
             a consumer function.  If None, each line of the multi-line response
             should be sent directly to the consumer function.
 
-        @rtype: L{Deferred} which successfully fires with callable that takes
-            C{object} and fails with L{ServerErrorResponse}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            callable that takes L{object} and fails with L{ServerErrorResponse}
         @return: A deferred which fires when the entire response is received.
             On an okay response, it returns the consumer function.  On an error
             response, it issues a server error response failure with the
@@ -503,7 +506,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         Pass a received line to a state machine function and
         transition to the next state.
 
-        @type line: C{str}
+        @type line: L{bytes}
         @param line: A received line.
         """
         if self.timeout > 0:
@@ -520,7 +523,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         Drop the connection when a server response is too long.
 
-        @type buffer: C{str}
+        @type buffer: L{bytes}
         @param buffer: A received line which exceeds the maximum line length.
         """
         # XXX - We need to be smarter about this
@@ -540,10 +543,10 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         with a greeting and possibly an APOP challenge.  Transition the state
         to WAITING.
 
-        @type line: C{str}
+        @type line: L{bytes}
         @param line: A line received from the server.
 
-        @rtype: C{str}
+        @rtype: L{bytes}
         @return: The next state.
         """
         code, status = _codeStatusSplit(line)
@@ -567,7 +570,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         Log an error for server responses received in the WAITING state during
         which the server is not expected to send anything.
 
-        @type line: C{str}
+        @type line: L{bytes}
         @param line: A line received from the server.
         """
         log.msg("Illegal line from server: " + repr(line))
@@ -581,10 +584,10 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         Parse the response and fire the deferred which is waiting on receipt of
         a complete response.  Transition the state back to WAITING.
 
-        @type line: C{str}
+        @type line: L{bytes}
         @param line: A line received from the server.
 
-        @rtype: C{str}
+        @rtype: L{bytes}
         @return: The next state.
         """
         code, status = _codeStatusSplit(line)
@@ -607,10 +610,10 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         LONG.  On an error response, cleanup and transition the state to
         WAITING.
 
-        @type line: C{str}
+        @type line: L{bytes}
         @param line: A line received from the server.
 
-        @rtype: C{str}
+        @rtype: L{bytes}
         @return: The next state.
         """
         code, status = _codeStatusSplit(line)
@@ -634,10 +637,10 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         transition the state to WAITING. Otherwise, pass the line to the
         transform function, if provided, and then the consumer function.
 
-        @type line: C{str}
+        @type line: L{bytes}
         @param line: A line received from the server.
 
-        @rtype: C{str}
+        @rtype: L{bytes}
         @return: The next state.
         """
         # This is the state for each line of a long response.
@@ -661,7 +664,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         Handle the server greeting.
 
-        @type greeting: C{str}
+        @type greeting: L{bytes}
         @param greeting: The server greeting minus the status indicator.
             For servers implementing APOP authentication, this will contain a
             challenge string.
@@ -677,15 +680,16 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         the server's capabilities.  When that is complete, the L{_startTLS}
         callback function continues the switching process.
 
-        @type contextFactory: L{ClientContextFactory} or C{NoneType}
-        @param contextFactory: (optional) The context factory with which to
-        negotiate TLS.  If not provided, try to create a new one.
+        @type contextFactory: L{NoneType <types.NoneType>} or
+            L{ClientContextFactory <twisted.internet.ssl.ClientContextFactory>}
+        @param contextFactory: The context factory with which to negotiate TLS.
+            If not provided, try to create a new one.
 
-        @rtype: L{Deferred} which successfully results in a
-            C{dict} of C{str} -> C{NoneType} or C{list} of C{str} or fails with
-            L{TLSError}
+        @rtype: L{Deferred <defer.Deferred>} which successfully results in
+            L{dict} of L{bytes} -> L{list} of L{bytes} and/or L{bytes} ->
+            L{NoneType <types.NoneType>} or fails with L{TLSError}
         @return: A deferred which fires when the transport has been
-            secured according to the given contextFactory with the server
+            secured according to the given context factory with the server
             capabilities, or which fails with a TLS error if the transport
             cannot be secured.
         """
@@ -719,18 +723,20 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         the L{_startedTLS} callback function completes the switch to encrypted
         communication. Then, the new server capabilities are requested.
 
-        @type caps: C{dict} of C{str} -> C{NoneType} or C{list} of C{str}
+        @type caps: L{dict} of L{bytes} -> L{list} of L{bytes} and/or
+            L{bytes} -> L{NoneType <types.NoneType>}
         @param caps: The server capabilities.
 
-        @type contextFactory: L{ClientContextFactory}
+        @type contextFactory: L{ClientContextFactory
+            <twisted.internet.ssl.ClientContextFactory>}
         @param contextFactory: A context factory with which to negotiate TLS.
 
-        @type tls: L{ITLSTransport}
+        @type tls: L{ITLSTransport <interfaces.ITLSTransport>}
         @param tls: A TCP transport that supports switching to TLS midstream.
 
-        @rtype: L{Deferred} which successfully triggers with
-            C{dict} of C{str} -> C{NoneType} or C{list} of C{str} or fails with
-            L{TLSNotSupportedError}
+        @rtype: L{Deferred <defer.Deferred>} which successfully triggers with
+            L{dict} of L{bytes} -> L{list} of L{bytes} and/or L{bytes} ->
+            L{NoneType <types.NoneType>} or fails with L{TLSNotSupportedError}
         @return: A deferred which successfully fires when the response from
             the server to the request to start TLS has been received and the
             new server capabilities have been received or fails when the server
@@ -759,16 +765,19 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         The final steps are discarding the cached capabilities and initiating
         TLS negotiation on the transport.
 
-        @type result: C{dict} of C{str} -> C{NoneType} or C{list} of C{str}
+        @type result: L{dict} of L{bytes} -> L{list} of L{bytes} and/or
+            L{bytes} -> L{NoneType <types.NoneType>}
         @param result: The server capabilities.
 
-        @type context: L{ClientContextFactory}
+        @type context: L{ClientContextFactory
+            <twisted.internet.ssl.ClientContextFactory>}
         @param context: A context factory with which to negotiate TLS.
 
-        @type tls: L{ITLSTransport}
+        @type tls: L{ITLSTransport <interfaces.ITLSTransport>}
         @param tls: A TCP transport that supports switching to TLS midstream.
 
-        @rtype: C{dict} of C{str} -> C{NoneType} or C{list} of C{str}
+        @rtype: L{dict} of L{bytes} -> L{list} of L{bytes} and/or L{bytes} ->
+            L{NoneType <types.NoneType>}
         @return: The server capabilities.
         """
         self.transport = tls
@@ -782,7 +791,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         Get a context factory with which to negotiate TLS.
 
-        @rtype: L{ClientContextFactory} or C{NoneType}
+        @rtype: L{NoneType <types.NoneType>} or
+            L{ClientContextFactory <twisted.internet.ssl.ClientContextFactory>}
         @return: A context factory or None if TLS is not supported on the
             client.
         """
@@ -798,7 +808,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def login(self, username, password):
         """
-        Log into the server.
+        Log in to the server.
 
         If APOP is available it will be used.  Otherwise, if TLS is
         available, an encrypted session will be started and plaintext
@@ -810,13 +820,14 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         capabilities.  When that is complete, the L{_login} callback function
         continues the login process.
 
-        @type username: C{str}
+        @type username: L{bytes}
         @param username: The username with which to log in.
 
-        @type password: C{str}
+        @type password: L{bytes}
         @param password: The password with which to log in.
 
-        @rtype: C{Deferred} which successfully fires with C{str}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            L{bytes}
         @return: A deferred which fires when the login process is complete.
             On a successful login, it returns the server's response minus the
             status indicator.
@@ -828,7 +839,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def _login(self, caps, username, password):
         """
-        Continue the process of logging into the server.
+        Continue the process of logging in to the server.
 
         This callback function runs after the server capabilities are received.
 
@@ -839,16 +850,18 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         if insecure authentication is allowed, do a plaintext login.
         Otherwise, fail with an L{InsecureAuthenticationDisallowed} error.
 
-        @type caps: C{dict} of C{str} -> C{NoneType} or C{list} of C{str}
+        @type caps: L{dict} of L{bytes} -> L{list} of L{bytes} and/or
+            L{bytes} -> L{NoneType <types.NoneType>}
         @param caps: The server capabilities.
 
-        @type username: C{str}
+        @type username: L{bytes}
         @param username: The username with which to log in.
 
-        @type password: C{str}
+        @type password: L{bytes}
         @param password: The password with which to log in.
 
-        @rtype: C{Deferred} which successfully fires with C{str}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            L{bytes}
         @return: A deferred which fires when the login process is complete.
             On a successful login, it returns the server's response minus the
             status indicator.
@@ -858,10 +871,12 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         tryTLS = 'STLS' in caps
 
-        #If our transport supports switching to TLS, we might want to try to switch to TLS.
+        # If our transport supports switching to TLS, we might want to
+        # try to switch to TLS.
         tlsableTransport = interfaces.ITLSTransport(self.transport, None) is not None
 
-        # If our transport is not already using TLS, we might want to try to switch to TLS.
+        # If our transport is not already using TLS, we might want to
+        # try to switch to TLS.
         nontlsTransport = interfaces.ISSLTransport(self.transport, None) is None
 
         if not self.startedTLS and tryTLS and tlsableTransport and nontlsTransport:
@@ -883,17 +898,18 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         This callback function runs after the transport switches to encrypted
         communication.
 
-        @type res: C{dict} of C{str} -> C{NoneType} or C{list} of C{str}
+        @type res: L{dict} of L{bytes} -> L{list} of L{bytes} and/or
+            L{bytes} -> L{NoneType <types.NoneType>}
         @param res: The server capabilities.
 
-        @type username: C{str}
+        @type username: L{bytes}
         @param username: The username with which to log in.
 
-        @type password: C{str}
+        @type password: L{bytes}
         @param password: The password with which to log in.
 
-        @rtype: C{Deferred} which successfully fires with C{str} or fails with
-            L{ServerErrorResponse}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server accepts the username
             and password or fails when the server rejects either.  On a
             successful login, it returns the server's response minus the
@@ -906,14 +922,14 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         Perform a plaintext login.
 
-        @type username: C{str}
+        @type username: L{bytes}
         @param username: The username with which to log in.
 
-        @type password: C{str}
+        @type password: L{bytes}
         @param password: The password with which to log in.
 
-        @rtype: C{Deferred} which successfully fires with C{str} or fails with
-            L{ServerErrorResponse}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server accepts the username
             and password or fails when the server rejects either.  On a
             successful login, it returns the server's response minus the
@@ -926,17 +942,17 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         Perform an APOP login.
 
-        @type username: C{str}
+        @type username: L{bytes}
         @param username: The username with which to log in.
 
-        @type password: C{str}
+        @type password: L{bytes}
         @param password: The password with which to log in.
 
-        @type challenge: C{str}
+        @type challenge: L{bytes}
         @param challenge: A challenge string.
 
-        @rtype: L{Deferred} which successfully fires with C{str} or fails with
-            L{ServerErrorResponse}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
             On a successful login, it returns the server response minus
             the status indicator.
@@ -954,14 +970,14 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         authentication is absolutely required.  For the common case,
         use L{login} instead.
 
-        @type username: C{str}
+        @type username: L{bytes}
         @param username: The username with which to log in.
 
-        @type digest: C{str}
+        @type digest: L{bytes}
         @param digest: The challenge response to authenticate with.
 
-        @rtype: L{Deferred} which successfully fires with C{str} or fails with
-            L{ServerErrorResponse}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
             On an okay response, the deferred succeeds with the server
             response minus the status indicator.  On an error response, the
@@ -976,11 +992,11 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         Unless this is absolutely required, use the L{login} method instead.
 
-        @type username: C{str}
+        @type username: L{bytes}
         @param username: The username with which to log in.
 
-        @rtype: L{Deferred} which successfully fires with C{str} or fails with
-            L{ServerErrorResponse}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
             On an okay response, the deferred succeeds with the server
             response minus the status indicator.  On an error response, the
@@ -995,11 +1011,11 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         Unless this is absolutely required, use the L{login} method instead.
 
-        @type password: C{str}
+        @type password: L{bytes}
         @param password: The plaintext password with which to authenticate.
 
-        @rtype: L{Deferred} which successfully fires with C{str} or fails with
-            L{ServerErrorResponse}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
             On an okay response, the deferred succeeds with the server
             response minus the status indicator.  On an error response, the
@@ -1012,11 +1028,11 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         Send a DELE command to delete a message from the server.
 
-        @type index: C{int}
+        @type index: L{int}
         @param index: The 0-based index of the message to delete.
 
-        @rtype: C{Deferred} which successfully fires with C{str} or fails with
-            L{ServerErrorResponse}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
             On an okay response, the deferred succeeds with the server
             response minus the status indicator.  On an error response, the
@@ -1030,28 +1046,28 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         Send a command to which a long response is expected and process the
         multi-line response into a list accounting for deleted messages.
 
-        @type cmd: C{str}
+        @type cmd: L{bytes}
         @param cmd: A POP3 command to which a long response is expected.
 
-        @type args: C{str}
+        @type args: L{bytes}
         @param args: The command arguments.
 
-        @type consumer: C{NoneType} or callable that takes C{object}
+        @type consumer: L{NoneType <types.NoneType>} or callable that takes
+            L{object}
         @param consumer: None or a function that consumes the output from
             the transform function.
 
-        @type xform: callable that takes C{str} and returns (C{int}, C{object})
-            if no consumer is specified, or callable that takes
-            C{str} and returns C{object} if consumer is specified, or
-            C{NoneType}
+        @type xform: L{NoneType <types.NoneType>}, callable that takes
+            L{bytes} and returns 2-L{tuple} of (E{1}) L{int}, (E{2}) L{object},
+            or callable that takes L{bytes} and returns L{object}
         @param xform: A function that parses a line from a multi-line response
             and transforms the values into usable form for input to the
             consumer function.  If no consumer function is specified, the
             output must be a message index and corresponding value.  If no
             transform function is specified, the line is used as is.
 
-        @rtype: L{Deferred} which fires with C{list} of C{object} or
-            C{callable} that takes C{list} of C{object}
+        @rtype: L{Deferred <defer.Deferred>} which fires with L{list} of
+            L{object} or callable that takes L{list} of L{object}
         @return: A deferred which fires when the entire response has been
             received.  When a consumer is not provided, the return value is a
             list of the value for each message or None for deleted messages.
@@ -1063,31 +1079,34 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return self.sendLong(cmd, args, consumer, xform).addCallback(lambda r: L)
         return self.sendLong(cmd, args, consumer, xform)
 
+
     def _consumeOrAppend(self, cmd, args, consumer, xform):
         """
         Send a command to which a long response is expected and process the
         multi-line response into a list.
 
-        @type cmd: C{str}
+        @type cmd: L{bytes}
         @param cmd: A POP3 command which expects a long response.
 
-        @type args: C{str}
+        @type args: L{bytes}
         @param args: The command arguments.
 
-        @type consumer: C{NoneType} or callable that takes C{object}
+        @type consumer: L{NoneType <types.NoneType>} or callable that takes
+            L{object}
         @param consumer: None or a function that consumes the output from the
             transform function.
 
-        @type xform: C{NoneType} or callable that takes C{str} and returns
-            C{object}
+        @type xform: L{NoneType <types.NoneType>} or callable that takes
+            L{bytes} and returns L{object}
         @param xform: A function that transforms a line from a multi-line
             response into usable form for input to the consumer function.  If
             no transform function is specified, the line is used as is.
 
-        @rtype: L{Deferred} which fires with C{list} of (C{int}, C{object}) or
-            C{callable} that takes (C{int}, C{object})
+        @rtype: L{Deferred <defer.Deferred>} which fires with L{list} of
+            2-L{tuple} of (E{1}) L{int}, (E{2}) L{object} or callable that
+            takes 2-L{tuple} of (E{1}) L{int}, (E{2}) L{object}
         @return: A deferred which fires when the entire response has been
-            received.  When a consumer is not provided the return value is a
+            received.  When a consumer is not provided, the return value is a
             list of the transformed lines.  Otherwise, it returns the consumer
             itself.
         """
@@ -1111,12 +1130,13 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         so, and only if there are servers still in use which do not support
         CAPA but which do support POP3 extensions that are useful).
 
-        @type useCache: C{bool}
+        @type useCache: L{bool}
         @param useCache: A flag that determines whether previously retrieved
             results should be used if available.
 
-        @rtype: L{Deferred} which successfully results in a
-            C{dict} of C{str} -> C{NoneType} or C{list} of C{str}
+        @rtype: L{Deferred <defer.Deferred>} which successfully results in
+            L{dict} of L{bytes} -> L{list} of L{bytes} and/or L{bytes} ->
+            L{NoneType <types.NoneType>}
         @return: A deferred which fires with a mapping of capability name to
         parameters.  For example::
 
@@ -1173,8 +1193,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         Send a NOOP command asking the server to do nothing but respond.
 
-        @rtype: L{Deferred} which successfully fires with C{str} or fails with
-            L{ServerErrorResponse}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
             On an okay response, the deferred succeeds with the server
             response minus the status indicator.  On an error response, the
@@ -1188,8 +1208,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         Send a RSET command to unmark any messages that have been flagged
         for deletion on the server.
 
-        @rtype: L{Deferred} which successfully fires with C{str} or fails with
-            L{ServerErrorResponse}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
             On an okay response, the deferred succeeds with the server
             response minus the status indicator.  On an error response, the
@@ -1203,22 +1223,23 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         Send a RETR or TOP command to retrieve all or part of a message from
         the server.
 
-        @type index: C{int}
+        @type index: L{int}
         @param index: A 0-based message index.
 
-        @type consumer: C{NoneType} or callable that takes C{str}
-        @param consumer: (optional) A function which consumes each transformed
-            line from a multi-line response as it is received.
+        @type consumer: L{NoneType <types.NoneType>} or callable that takes
+            L{bytes}
+        @param consumer: A function which consumes each transformed line from a
+            multi-line response as it is received.
 
-        @type lines: C{NoneType} or C{int}
-        @param lines: (optional) If specified, the number of lines of the
-            message to be retrieved.  Otherwise, the entire message is
-            retrieved.
+        @type lines: L{NoneType <types.NoneType>} or L{int}
+        @param lines: If specified, the number of lines of the message to be
+            retrieved.  Otherwise, the entire message is retrieved.
 
-        @rtype: L{Deferred} which fires with C{callable} that takes
-            (C{int}, C{object}) or C{list} of C{str}
+        @rtype: L{Deferred <defer.Deferred>} which fires with L{list} of
+            L{bytes}, or callable that takes 2-L{tuple} of (E{1}) L{int},
+            (E{2}) L{object}
         @return: A deferred which fires when the entire response has been
-            received.  When a consumer is not provided the return value is a
+            received.  When a consumer is not provided, the return value is a
             list of the transformed lines.  Otherwise, it returns the consumer
             itself.
         """
@@ -1233,8 +1254,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         Send a STAT command to get information about the size of the mailbox.
 
-        @rtype: L{Deferred} which successfully fires with (C{int}, C{int}) or
-            fails with L{ServerErrorResponse}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            (L{int}, L{int}) or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
             On an okay response, the deferred succeds with the number of
             messages in the mailbox and the size of the mailbox in octets.
@@ -1249,15 +1270,15 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         Send a LIST command to retrieve the sizes of all messages on the
         server.
 
-        @type consumer: C{NoneType} or callable that takes (C{int}, C{int})
-        @param consumer: (optional) A function which consumes the 0-based
-            message index and message size derived from the server
-            response.
+        @type consumer: L{NoneType <types.NoneType>} or callable that takes
+            2-L{tuple} of (E{1}) L{int}, (E{2}) L{int}
+        @param consumer: A function which consumes the 0-based message index
+            and message size derived from the server response.
 
-        @rtype: L{Deferred} which fires C{list} of C{int} or
-            callable that takes (C{int}, C{int})
+        @rtype: L{Deferred <defer.Deferred>} which fires L{list} of L{int} or
+            callable that takes 2-L{tuple} of (E{1}) L{int}, (E{2}) L{int}
         @return: A deferred which fires when the entire response has been
-            received.  When a consumer is not provided the return value is a
+            received.  When a consumer is not provided, the return value is a
             list of message sizes.  Otherwise, it returns the consumer itself.
         """
         return self._consumeOrSetItem('LIST', None, consumer, _listXform)
@@ -1267,14 +1288,16 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         Send a UIDL command to retrieve the UIDs of all messages on the server.
 
-        @type consumer: C{NoneType} or callable that takes (C{int}, C{str})
-        @param consumer: (optional) A function which consumes the 0-based
-        message index and UID derived from the server response.
+        @type consumer: L{NoneType <types.NoneType>} or callable that takes
+            2-L{tuple} of (E{1}) L{int}, (E{2}) L{bytes}
+        @param consumer: A function which consumes the 0-based message index
+            and UID derived from the server response.
 
-        @rtype: L{Deferred} which fires with C{list} of C{object} or
-            C{callable} that takes (C{int}, C{str})
+        @rtype: L{Deferred <defer.Deferred>} which fires with L{list} of
+            L{object} or callable that takes 2-L{tuple} of (E{1}) L{int},
+            (E{2}) L{bytes}
         @return: A deferred which fires when the entire response has been
-            received.  When a consumer is not provided the return value is a
+            received.  When a consumer is not provided, the return value is a
             list of message sizes.  Otherwise, it returns the consumer itself.
         """
         return self._consumeOrSetItem('UIDL', None, consumer, _uidXform)
@@ -1284,8 +1307,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         Send a QUIT command to disconnect from the server.
 
-        @rtype: L{Deferred} which successfully fires with C{str} or fails with
-            L{ServerErrorResponse}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
             On an okay response, the deferred succeeds with the server
             response minus the status indicator.  On an error response, the
