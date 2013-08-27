@@ -34,10 +34,9 @@ class DomainDeliveryBase:
     @ivar user: See L{__init__}
     @ivar host: See L{__init__}
 
-    @type protocolName: C{str} or C{NoneType}
+    @type protocolName: L{bytes} or L{NoneType <types.NoneType>}
     @ivar protocolName: The protocol being used to deliver the mail.
     """
-
     implements(smtp.IMessageDelivery)
 
     service = None
@@ -48,10 +47,10 @@ class DomainDeliveryBase:
         @type service: L{MailService}
         @param service: A mail service.
 
-        @type user: C{str} or C{NoneType}
+        @type user: L{bytes} or L{NoneType <types.NoneType>}
         @param user: The authenticated SMTP user.
 
-        @type host: C{str}
+        @type host: L{bytes}
         @param host: The hostname.
         """
         self.service = service
@@ -60,6 +59,22 @@ class DomainDeliveryBase:
 
 
     def receivedHeader(self, helo, origin, recipients):
+        """
+        Generate a received header string for a message.
+
+        @type helo: 2-L{tuple} of (E{1}) L{bytes}, (E{2}) L{bytes}
+        @param helo: The client's identity as sent in the HELO command and its
+            IP address.
+
+        @type origin: L{Address}
+        @param origin: The origination address of the message.
+
+        @type recipients: L{list} of L{User}
+        @param recipients: The destination addresses for the message.
+
+        @rtype: L{bytes}
+        @return: A received header string.
+        """
         authStr = heloStr = ""
         if self.user:
             authStr = " auth=%s" % (self.user.encode('xtext'),)
@@ -74,6 +89,23 @@ class DomainDeliveryBase:
 
 
     def validateTo(self, user):
+        """
+        Validate the address for which a message is destined.
+
+        @type user: L{User}
+        @param user: The destination address.
+
+        @rtype: no-argument callable which returns L{IMessage <smtp.IMessage>}
+            provider or L{Deferred <defer.Deferred>} which successfully fires
+            with no-argument callable which returns L{IMessage <smtp.IMessage>}
+            provider.
+        @return: A no-argument callable which returns a message receiver for
+            the destination or a deferred which successfully fires with the
+            same thing.
+
+        @raise SMTPBadRcpt: When messages cannot be accepted for the
+            destination address.
+        """
         # XXX - Yick.  This needs cleaning up.
         if self.user and self.service.queue:
             d = self.service.domains.get(user.dest.domain, None)
@@ -85,6 +117,22 @@ class DomainDeliveryBase:
 
 
     def validateFrom(self, helo, origin):
+        """
+        Validate the address from which a message originates.
+
+        @type helo: 2-L{tuple} of (E{1}) L{bytes}, (E{2}) L{bytes}
+        @param helo: The client's identity as sent in the HELO command and its
+            IP address.
+
+        @type origin: L{Address}
+        @param origin: The origination address of the message.
+
+        @rtype: L{Address}
+        @return: The origination address.
+
+        @raise SMTPBadSender: When messages cannot be accepted from the
+            origination address.
+        """
         if not helo:
             raise smtp.SMTPBadSender(origin, 503, "Who are you?  Say HELO first.")
         if origin.local != '' and origin.domain == '':
@@ -97,7 +145,6 @@ class SMTPDomainDelivery(DomainDeliveryBase):
     """
     A domain delivery base class for use in an SMTP server.
     """
-
     protocolName = 'smtp'
 
 
@@ -106,7 +153,6 @@ class ESMTPDomainDelivery(DomainDeliveryBase):
     """
     A domain delivery base class for use in an ESMTP server.
     """
-
     protocolName = 'esmtp'
 
 
@@ -119,12 +165,15 @@ class DomainSMTP(SMTPDomainDelivery, smtp.SMTP):
 
     def __init__(self, *args, **kw):
         """
-        @type args: (C{IMessageDelivery} provider or C{NoneType},
-            C{IMessageDeliveryFactory} provider or C{NoneType})
-        @param args: Positional arguments for L{SMTP}
+        Initialize the SMTP server.
 
-        @type kw: C{dict}
-        @param kw: Keyword arguments for L{SMTP}.
+        @type args: 2-L{tuple} of (E{1}) L{IMessageDelivery} provider or
+            L{NoneType <types.NoneType>}, (E{2}) L{IMessageDeliveryFactory}
+            provider or L{NoneType <types.NoneType>}
+        @param args: Positional arguments for L{SMTP.__init__}
+
+        @type kw: L{dict}
+        @param kw: Keyword arguments for L{SMTP.__init__}.
         """
         import warnings
         warnings.warn(
@@ -145,12 +194,15 @@ class DomainESMTP(ESMTPDomainDelivery, smtp.ESMTP):
 
     def __init__(self, *args, **kw):
         """
-        @type args: (C{IMessageDelivery} provider or C{NoneType},
-            C{IMessageDeliveryFactory} provider or C{NoneType})
-        @param args: Positional arguments for L{ESMTP}
+        Initialize the ESMTP server.
 
-        @type kw: C{dict}
-        @param kw: Keyword arguments for L{ESMTP}.
+        @type args: 2-L{tuple} of (E{1}) L{IMessageDelivery} provider or
+            L{NoneType <types.NoneType>}, (E{2}) L{IMessageDeliveryFactory}
+            provider or L{NoneType <types.NoneType>})
+        @param args: Positional arguments for L{ESMTP.__init__}
+
+        @type kw: L{dict}
+        @param kw: Keyword arguments for L{ESMTP.__init__}.
         """
         import warnings
         warnings.warn(
@@ -170,11 +222,10 @@ class SMTPFactory(smtp.SMTPFactory):
     @ivar service: See L{__init__}
     @ivar portal: See L{__init__}
 
-    @type protocol: L{SMTP} C{class}
+    @type protocol: L{type} of a L{Protocol <protocol.Protocol>} subclass
     @ivar protocol: The class of protocol to be created by the factory.  The
-        default value is L{SMTP}
+        default value is L{SMTP}.
     """
-
     protocol = smtp.SMTP
     portal = None
 
@@ -183,8 +234,9 @@ class SMTPFactory(smtp.SMTPFactory):
         @type service: L{MailService}
         @param service: An email service.
 
-        @type portal: C{NoneType} or L{Portal}
-        @param portal: (optional) A portal to use for authentication.
+        @type portal: L{Portal <twisted.cred.portal.Portal>} or
+            L{NoneType <types.NoneType>}
+        @param portal: A portal to use for authentication.
         """
         smtp.SMTPFactory.__init__(self)
         self.service = service
@@ -195,7 +247,7 @@ class SMTPFactory(smtp.SMTPFactory):
         """
         Create an instance of an SMTP server protocol.
 
-        @type addr: L{IAddress} provider
+        @type addr: L{IAddress <twisted.internet.interfaces.IAddress>} provider
         @param addr: The address of the SMTP client.
 
         @rtype: L{SMTP}
@@ -213,16 +265,18 @@ class ESMTPFactory(SMTPFactory):
     """
     An ESMTP server protocol factory.
 
-    @type protocol: L{ESMTP} class
+    @type protocol: L{type} of a L{Protocol <protocol.Protocol>} subclass
     @ivar protocol: The class of protocol to be created by the factory.  The
-        default value is L{ESMTP}
+        default value is L{ESMTP}.
 
-    @type context: L{ContextFactory} or C{NoneType}
+    @type context: L{ContextFactory <twisted.internet.ssl.ContextFactory>} or
+        L{NoneType <types.NoneType>}
     @ivar context: A factory to generate contexts to be used in negotiating
         encrypted communication.
 
-    @type challengers: C{dict} of C{str} -> C{class} which implements
-        an L{ICredentials} sub-interface.
+    @type challengers: L{dict} of L{bytes} -> L{type} of an
+        L{ICredentials <twisted.cred.credentials.ICredentials>} subclass
+        provider.
     @ivar challengers: A mapping of acceptable authorization mechanisms to
         the credentials class to use for authentication.
     """
@@ -231,8 +285,9 @@ class ESMTPFactory(SMTPFactory):
 
     def __init__(self, *args):
         """
-        @type args: (L{MailService}, L{Portal} or C{NoneType})
-        @param args: Arguments for L{SMTPFactory}
+        @type args: 2-L{tuple} of (E{1}) L{MailService}, (E{2}) L{Portal
+            <twisted.cred.portal.Portal>} or L{NoneType <types.NoneType>}
+        @param args: Arguments for L{SMTPFactory.__init__}
         """
         SMTPFactory.__init__(self, *args)
         self.challengers = {
@@ -244,7 +299,7 @@ class ESMTPFactory(SMTPFactory):
         """
         Create an instance of an ESMTP server protocol.
 
-        @type addr: L{IAddress} provider
+        @type addr: L{IAddress <twisted.internet.interfaces.IAddress>} provider
         @param addr: The address of the ESMTP client.
 
         @rtype: L{ESMTP}
@@ -264,11 +319,10 @@ class VirtualPOP3(pop3.POP3):
     @type service: L{MailService}
     @ivar service: An email service.
 
-    @type domainSpecifier: C{str}
+    @type domainSpecifier: L{bytes}
     @ivar domainSpecifier: The character to use to split an email address into
         local-part and domain. The default is '@'.
     """
-
     service = None
 
     domainSpecifier = '@' # Gaagh! I hate POP3. No standardized way
@@ -281,18 +335,20 @@ class VirtualPOP3(pop3.POP3):
 
         Override the default lookup scheme to allow virtual domains.
 
-        @type user: C{str}
+        @type user: L{bytes}
         @param user: The name of the user attempting to log in.
 
-        @type digest: C{str}
+        @type digest: L{bytes}
         @param digest: The challenge response.
 
-        @rtype: L{Deferred} which successfully results in (L{pop3.IMailbox},
-            L{pop3.IMailbox} provider, no-argument callable).
-        @return: A deferred which fires when the authentication is complete.
-            If successful, it returns a L{pop3.IMailbox} interface, a mailbox
-            and a logout function. If authentication fails, the deferred fails
-            with an L{UnauthorizedLogin} error.
+        @rtype: L{Deferred} which successfully results in 3-L{tuple} of
+            (E{1}) L{IMailbox <pop3.IMailbox>}, (E{2}) L{IMailbox
+            <pop3.IMailbox>} provider, (E{3}) no-argument callable
+        @return: A deferred which fires when authentication is complete.u
+            If successful, it returns an L{IMailbox <pop3.IMailbox>} interface,
+            a mailbox and a logout function. If authentication fails, the
+            deferred fails with an L{UnauthorizedLogin
+            <twisted.cred.error.UnauthorizedLogin>} error.
         """
         user, domain = self.lookupDomain(user)
         try:
@@ -313,18 +369,20 @@ class VirtualPOP3(pop3.POP3):
 
         Override the default lookup scheme to allow virtual domains.
 
-        @type user: C{str}
+        @type user: L{bytes}
         @param user: The name of the user attempting to log in.
 
-        @type password: C{str}
+        @type password: L{bytes}
         @param password: The password to authenticate with.
 
-        @rtype: L{Deferred} which successfully results in (L{pop3.IMailbox},
-            L{pop3.IMailbox} provider, no-argument callable).
-        @return: A deferred which fires when the authentication is complete.
-            If successful, it returns a L{pop3.IMailbox} interface, a mailbox
-            and a logout function. If authentication fails, the deferred fails
-            with an L{UnauthorizedLogin} error.
+        @rtype: L{Deferred} which successfully results in 3-L{tuple} of
+            (E{1}) L{IMailbox <pop3.IMailbox>}, (E{2}) L{IMailbox
+            <pop3.IMailbox>} provider, (E{3}) no-argument callable
+        @return: A deferred which fires when authentication is complete.
+            If successful, it returns an L{IMailbox <pop3.IMailbox>} interface,
+            a mailbox and a logout function. If authentication fails, the
+            deferred fails with an L{UnauthorizedLogin
+            <twisted.cred.error.UnauthorizedLogin>} error.
         """
 
         user, domain = self.lookupDomain(user)
@@ -345,10 +403,10 @@ class VirtualPOP3(pop3.POP3):
         Check whether a domain is among the virtual domains supported by the
         mail service.
 
-        @type user: C{str}
+        @type user: L{bytes}
         @param user: An email address.
 
-        @rtype: (C{str}, C{str})
+        @rtype: 2-L{tuple} of (E{1}) L{bytes}, (E{2}) L{bytes}
         @return: The local part and the domain part of the email address if the
             domain is supported.
 
@@ -370,11 +428,10 @@ class POP3Factory(protocol.ServerFactory):
 
     @ivar service: See L{__init__}
 
-    @type protocol: L{POP3} C{class}
+    @type protocol: L{type} of L{Protocol <protocol.Protocol>} subclass
     @ivar protocol: The class of protocol to be created by the factory.  The
         default value is L{VirtualPOP3}.
     """
-
     protocol = VirtualPOP3
     service = None
 
@@ -390,7 +447,7 @@ class POP3Factory(protocol.ServerFactory):
         """
         Create an instance of a POP3 server protocol.
 
-        @type addr: L{IAddress} provider
+        @type addr: L{IAddress <twisted.internet.interfaces.IAddress>} provider
         @param addr: The address of the POP3 client.
 
         @rtype: L{POP3}
@@ -418,7 +475,6 @@ class SSLContextFactory:
 
     @ivar filename: See L{__init__}
     """
-
     deprecatedModuleAttribute(
         Version("Twisted", 12, 2, 0),
         "Use twisted.internet.ssl.DefaultOpenSSLContextFactory instead.",
@@ -426,7 +482,7 @@ class SSLContextFactory:
 
     def __init__(self, filename):
         """
-        @type filename: C{str}
+        @type filename: L{bytes}
         @param filename: The name of a file containing a certificate and
             private key.
         """
@@ -437,7 +493,7 @@ class SSLContextFactory:
         """
         Create an SSL context.
 
-        @rtype: C{SSL.Context}
+        @rtype: C{OpenSSL.SSL.Context}
         @return: An SSL context configured with the certificate and private key
             from the file.
         """
