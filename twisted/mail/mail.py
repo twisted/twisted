@@ -371,7 +371,6 @@ class IDomain(Interface):
 
         @raise SMTPBadRcpt: When the given user does not exist in this domain.
         """
-        pass
 
 
     def addUser(user, password):
@@ -384,7 +383,6 @@ class IDomain(Interface):
         @type password: L{bytes}
         @param password: A password.
         """
-        pass
 
 
     def getCredentialsCheckers():
@@ -395,7 +393,6 @@ class IDomain(Interface):
             <twisted.cred.checkers.ICredentialsChecker>} provider
         @return: Credentials checkers for this domain.
         """
-        pass
 
 
 
