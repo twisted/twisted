@@ -459,7 +459,6 @@ class POP3Factory(protocol.ServerFactory):
 
 
 
-#
 # It is useful to know, perhaps, that the required file for this to work can
 # be created thusly:
 #
@@ -488,6 +487,7 @@ class SSLContextFactory:
         """
 
         self.filename = filename
+
 
     def getContext(self):
         """
