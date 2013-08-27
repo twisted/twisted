@@ -221,7 +221,8 @@ class Port(abstract.FileHandle):
                 "already connected, reconnecting is not currently supported "
                 "(talk to itamar if you want this)")
         if not isIPAddress(host) and not isIPv6Address(host):
-            raise ValueError("please pass only IP addresses, not domain names")
+            raise ValueError(
+                "please pass only IP addresses, not domain names", host)
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
 

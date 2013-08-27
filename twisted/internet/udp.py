@@ -296,7 +296,8 @@ class Port(base.BasePort):
         if self._connectedAddr:
             raise RuntimeError("already connected, reconnecting is not currently supported")
         if not abstract.isIPAddress(host) and not abstract.isIPv6Address(host):
-            raise ValueError("please pass only IP addresses, not domain names")
+            raise ValueError(
+                "please pass only IP addresses, not domain names", host)
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
 
