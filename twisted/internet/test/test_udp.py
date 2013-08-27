@@ -263,6 +263,7 @@ class UDPPortTestsMixin(object):
 
         packet = server.packets[0]
         self.assertEqual(packet[0], b'spam')
+        # slice off the flow info and scope ID, leaving just the host and port
         self.assertEqual(packet[1][:2], (cAddr.host, cAddr.port))
 
 
@@ -314,6 +315,7 @@ class UDPPortTestsMixin(object):
 
         packet = server.packets[0]
         self.assertEqual(packet[0], b'spam')
+        # slice off the flow info and scope ID, leaving just the host and port
         self.assertEqual(packet[1][:2], (cAddr.host, cAddr.port))
 
 
