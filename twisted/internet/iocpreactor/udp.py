@@ -281,9 +281,10 @@ class Port(abstract.FileHandle):
 
     def getHost(self):
         """
-        Returns an L{IPv4Address} or L{IPv6Address}.
-
         This indicates the address from which I am connecting.
+
+        @returns: the address from which I am connecting
+        @rtype: L{IPv4Address} or L{IPv6Address}
         """
         addr = self.socket.getsockname()
         if self.addressFamily == socket.AF_INET:

@@ -246,7 +246,7 @@ class Port(base.BasePort):
 
         @type addr: C{tuple} containing C{str} as first element and C{int} as
             second element, or C{None}
-        @param addr: A tuple of (I{stringified dotted-quad IP address},
+        @param addr: A tuple of (I{stringified IPv4 or IPv6 address},
             I{integer port number}); can be C{None} in connected mode.
         """
         if self._connectedAddr:
@@ -361,9 +361,10 @@ class Port(base.BasePort):
 
     def getHost(self):
         """
-        Returns an L{IPv4Address} or L{IPv6Address}.
-
         This indicates the address from which I am connecting.
+
+        @returns: the address from which I am connecting
+        @rtype: L{IPv4Address} or L{IPv6Address}
         """
         addr = self.socket.getsockname()
         if self.addressFamily == socket.AF_INET:

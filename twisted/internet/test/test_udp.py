@@ -234,14 +234,25 @@ class UDPPortTestsMixin(object):
         cAddr = client.transport.getHost()
 
         def cbClientStarted(ignored):
-            """Send a datagram from the client once it's started."""
+            """
+            Send a datagram from the client once it's started.
+
+            @param ignored: a list of C{[None, None]}, which is ignored
+            @returns: a deferred which fires when the server has received a
+                datagram.
+            """
             client.transport.write(
                 b"spam", ("::1", server.transport.getHost().port))
             serverReceived = server.packetReceived = defer.Deferred()
             return serverReceived
 
         def cbServerReceived(ignored):
-            """Stop the reactor after a datagram is received."""
+            """
+            Stop the reactor after a datagram is received.
+
+            @param ignored: C{None}, which is ignored
+            @returns: C{None}
+            """
             reactor.stop()
 
         d = defer.gatherResults([serverStarted, clientStarted])
@@ -273,15 +284,26 @@ class UDPPortTestsMixin(object):
 
         def cbClientStarted(ignored):
             """
-            Send a datagram from the client once it's started and connected.
+            Send a datagram from the client once it's started.
+
+            @param ignored: a list of C{[None, None]}, which is ignored
+            @returns: a deferred which fires when the server has received a
+                datagram.
             """
+
             client.transport.connect("::1", server.transport.getHost().port)
             client.transport.write(b"spam")
             serverReceived = server.packetReceived = defer.Deferred()
             return serverReceived
 
         def cbServerReceived(ignored):
-            """Stop the reactor after a datagram is received."""
+            """
+            Stop the reactor after a datagram is received.
+
+            @param ignored: C{None}, which is ignored
+            @returns: C{None}
+            """
+
             reactor.stop()
 
         d = defer.gatherResults([serverStarted, clientStarted])
