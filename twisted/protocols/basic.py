@@ -891,6 +891,14 @@ class StatefulStringProtocol:
 
 
 
+class FileSenderStopped(Exception):
+    """
+    Exception passed to the returned L{Deferred} of
+    C{FileSender.beginFileTransfer} if the user called C{stopProducing}.
+    """
+
+
+
 @implementer(interfaces.IProducer)
 class FileSender:
     """
@@ -953,7 +961,7 @@ class FileSender:
 
         self.deferred = deferred = defer.Deferred()
 
-        if self._trySendFile():
+        if self._shouldTrySendFile():
             self._producer = _FileSenderNoOp(self)
         else:
             self._producer = _FileSenderWrite(self)
@@ -966,7 +974,7 @@ class FileSender:
         return deferred
 
 
-    def _trySendFile(self):
+    def _shouldTrySendFile(self):
         """
         Check if we should try to use sendfile for the transfer.
 
@@ -1011,7 +1019,7 @@ class FileSender:
         L{beginFileTransfer}'s L{Deferred}.
         """
         self._fire(
-            Failure(Exception("Consumer asked us to stop producing")))
+            Failure(FileSenderStopped("Consumer asked us to stop producing")))
 
 
     def _fire(self, value):
