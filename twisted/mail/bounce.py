@@ -40,20 +40,19 @@ def generateBounce(message, failedFrom, failedTo, transcript=''):
     """
     Generate a bounce message for an undeliverable email message.
 
-    @type message: C{str}
+    @type message: L{bytes}
     @param message: The undeliverable message.
 
-    @type failedFrom: C{str}
+    @type failedFrom: L{bytes}
     @param failedFrom: The originator of the undeliverable message.
 
-    @type failedTo: C{str}
+    @type failedTo: L{bytes}
     @param failedTo: The destination of the undeliverable message.
 
-    @type transcript: C{str}
-    @param transcript: (optional) An error message to include in the
-        bounce message.
+    @type transcript: L{bytes}
+    @param transcript: An error message to include in the bounce message.
 
-    @rtype: (C{str}, C{str}, C{str})
+    @rtype: 3-L{tuple} of (E{1}) L{bytes}, (E{2}) L{bytes}, (E{3}) L{bytes}
     @return: The originator, the destination and the contents of the bounce
         message.  The destination of the bounce message is the originator of
         the undeliverable message.
