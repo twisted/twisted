@@ -30,40 +30,42 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     """
     An options list parser for twistd mail.
 
-    @type synopsis: C{str}
+    @type synopsis: L{bytes}
     @ivar synopsis: A description of options for use in the usage message.
 
-    @type optParameters: C{list} of [C{str}, C{str}, C{object}, C{str},
-    C{NoneType} or callable which takes C{str} and returns C{object}]
+    @type optParameters: L{list} of L{list} of (E{1}) L{bytes},
+        (E{2}) L{bytes}, (E{3}) L{object}, (E{4}) L{bytes},
+        (E{5}) L{NoneType <types.NoneType>} or callable which takes L{bytes}
+        and returns L{object}
     @ivar optParameters: Information about supported parameters.  Each list
         entry provides the following information for a parameter: long
-        parameter name, short parameter name, default value, description and
-        optional coerce function.  The coerce function takes the string
+        parameter name, short parameter name, default value, description, and
+        optional coerce function.  The coerce function takes a string
         argument and converts it into the value that will be stored for the
         parameter.
 
-    @type optFlags: C{list} of [C{str}, C{object}, C{str}]
+    @type optFlags: L{list} of L{list} of (E{1}) L{bytes}, (E{2}) L{object},
+        (E{3}) L{bytes}
     @ivar optFlags: Information about supported flags.  Each list
         entry provides the following information about a flag: long flag
-        name, short flag name, description.
+        name, short flag name, and description.
 
-    @type _protoDefaults: C{dict} of C{str} -> C{int}
+    @type _protoDefaults: L{dict} of L{bytes} -> L{int}
     @ivar _protoDefaults: A mapping of default service to port.
 
-    @type compData: L{Completions}
+    @type compData: L{Completions <usage.Completions>}
     @ivar compData: Metadata for the shell tab completion system.
 
-    @type longdesc: C{str}
+    @type longdesc: L{bytes}
     @ivar longdesc: A long description of the plugin for use in the usage
         message.
 
     @type service: L{MailService}
     @ivar service: The email service.
 
-    @type last_domain: L{IDomain} provider or C{NoneType}
+    @type last_domain: L{IDomain} provider or L{NoneType <types.NoneType>}
     @ivar last_domain: The most recently specified domain.
     """
-
     synopsis = "[options]"
 
     optParameters = [
@@ -144,16 +146,15 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         """
         Add an endpoint to a service.
 
-        @type service: C{str}
+        @type service: L{bytes}
         @param service: A service, either C{"smtp"} or C{"pop3"}.
 
-        @type description: C{str}
+        @type description: L{bytes}
         @param description: An endpoint description string or a TCP port
             number.
 
-        @type certificate: C{str} or C{NoneType}
-        @param certificate: (optional) The name of a file containing an
-            SSL certificate.
+        @type certificate: L{bytes} or L{NoneType <types.NoneType>}
+        @param certificate: The name of a file containing an SSL certificate.
         """
         self[service].append(
             _toEndpoint(description, certificate=certificate))
@@ -162,8 +163,9 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     def opt_pop3(self, description):
         """
         Add a POP3 port listener on the specified endpoint.
-        
-        You can listen on multiple ports by specifying multiple --pop3 options.         For backwards compatibility, a bare TCP port number can be specified,
+
+        You can listen on multiple ports by specifying multiple --pop3 options.
+        For backwards compatibility, a bare TCP port number can be specified,
         but this is deprecated.  [SSL Example: ssl:8995:privateKey=mycert.pem]
         [default: tcp:8110]
         """
@@ -174,7 +176,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     def opt_smtp(self, description):
         """
         Add an SMTP port listener on the specified endpoint.
-        
+
         You can listen on multiple ports by specifying multiple --smtp options.
         For backwards compatibility, a bare TCP port number can be specified,
         but this is deprecated.  [SSL Example: ssl:8465:privateKey=mycert.pem]
@@ -198,7 +200,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     def opt_maildirdbmdomain(self, domain):
         """
         Generate an SMTP/POP3 virtual domain.
-        
+
         This option requires an argument of the form 'NAME=PATH' where NAME is
         the DNS domain name for which email will be accepted and where PATH is
         a the filesystem path to a Maildir folder.
@@ -226,6 +228,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         else:
             raise usage.UsageError("Specify a domain before specifying users")
     opt_u = opt_user
+
 
     def opt_bounce_to_postmaster(self):
         """
@@ -267,15 +270,17 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         was not explicitly disabled with a I{--no-*} option, a default
         endpoint for the service is created.
 
-        @type reactor: L{IReactorTCP} provider
-        @param reactor: If any endpoints are created, this is the reactor with
+        @type reactor: L{IReactorTCP <twisted.internet.interfaces.IReactorTCP>}
+            provider
+        @param reactor: If any endpoints are created, the reactor with
             which they are created.
 
-        @type service: C{str}
+        @type service: L{bytes}
         @param service: The type of service for which to retrieve endpoints,
             either C{"pop3"} or C{"smtp"}.
 
-        @rtype: C{list} of L{IStreamServerEndpoint} provider
+        @rtype: L{list} of L{IStreamServerEndpoint
+            <twisted.internet.interfaces.IStreamServerEndpoint>} provider
         @return: The endpoints for the specified service as configured by the
             command line parameters.
         """
@@ -353,7 +358,7 @@ class AliasUpdater:
     """
     def __init__(self, domains, domain):
         """
-        @type domains: C{dict} of C{str} -> L{IDomain} provider
+        @type domains: L{dict} of L{bytes} -> L{IDomain} provider
         @param domains: A mapping of domain name to domain object
 
         @type domain: L{IAliasableDomain} provider
@@ -367,7 +372,7 @@ class AliasUpdater:
         """
         Update the aliases for a domain from an aliases(5) file.
 
-        @type new: C{str}
+        @type new: L{bytes}
         @param new: The name of an aliases(5) file.
         """
         self.domain.setAliasGroup(alias.loadAliasFile(self.domains, new))
@@ -378,15 +383,15 @@ def _toEndpoint(description, certificate=None):
     """
     Create an endpoint based on a description.
 
-    @type description: C{str}
+    @type description: L{bytes}
     @param description: An endpoint description string or a TCP port
         number.
 
-    @type certificate: C{str} or C{NoneType}
-    @param certificate: (optional) The name of a file containing an
-        SSL certificate.
+    @type certificate: L{bytes} or L{NoneType <types.NoneType>}
+    @param certificate: The name of a file containing an SSL certificate.
 
-    @rtype: L{IStreamServerEndpoint} provider
+    @rtype: L{IStreamServerEndpoint
+        <twisted.internet.interfaces.IStreamServerEndpoint>} provider
     @return: An endpoint.
     """
     from twisted.internet import reactor
@@ -414,14 +419,14 @@ def makeService(config):
 
     The returned service may include POP3 servers, SMTP servers, or both,
     depending on the configuration passed in.  If there are multiple servers,
-    they will share all of their non-network state (ie. the same user accounts
+    they will share all of their non-network state (i.e. the same user accounts
     are available on all of them).
 
-    @type config: L{Options}
+    @type config: L{Options <usage.Options>}
     @param config: Configuration options specifying which servers to include in
         the returned service and where they should keep mail data.
 
-    @rtype: L{application.service.IService} provider
+    @rtype: L{IService <twisted.application.service.IService>} provider
     @return: A service which contains the requested mail servers.
     """
     if config['esmtp']:
