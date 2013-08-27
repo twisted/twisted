@@ -75,7 +75,7 @@ def loadAliasFile(domains, filename=None, fp=None):
     Lines beginning with a space or a tab are continuations of the previous
     line.
 
-    Lines beginning with  C{#} are comments.
+    Lines beginning with # are comments.
 
     @type domains: L{dict} of L{bytes} -> L{IDomain} provider
     @param domains: A mapping of domain name to domain object.
