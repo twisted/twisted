@@ -268,8 +268,8 @@ class Port(base.BasePort):
             if (not abstract.isIPAddress(addr[0])
                     and not abstract.isIPv6Address(addr[0])
                     and addr[0] != "<broadcast>"):
-                warnings.warn("Please only pass IPs to write(), not hostnames",
-                              DeprecationWarning, stacklevel=2)
+                raise ValueError(
+                    "Please only pass IPs to write(), not hostnames", addr[0])
             try:
                 return self.socket.sendto(datagram, addr)
             except socket.error as se:

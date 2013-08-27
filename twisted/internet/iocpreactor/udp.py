@@ -188,8 +188,8 @@ class Port(abstract.FileHandle):
         else:
             assert addr != None
             if not isIPAddress(addr[0]) and not isIPv6Address(addr[0]):
-                warnings.warn("Please only pass IPs to write(), not hostnames",
-                              DeprecationWarning, stacklevel=2)
+                raise ValueError(
+                    "Please only pass IPs to write(), not hostnames", addr[0])
             try:
                 return self.socket.sendto(datagram, addr)
             except socket.error, se:
