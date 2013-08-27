@@ -263,8 +263,7 @@ class UDPPortTestsMixin(object):
 
         packet = server.packets[0]
         self.assertEqual(packet[0], b'spam')
-        # slice off the flow info and scope ID, leaving just the host and port
-        self.assertEqual(packet[1][:2], (cAddr.host, cAddr.port))
+        self.assertEqual(packet[1], (cAddr.host, cAddr.port))
 
 
     def test_connectedWriteToIPv6Interface(self):
@@ -315,8 +314,7 @@ class UDPPortTestsMixin(object):
 
         packet = server.packets[0]
         self.assertEqual(packet[0], b'spam')
-        # slice off the flow info and scope ID, leaving just the host and port
-        self.assertEqual(packet[1][:2], (cAddr.host, cAddr.port))
+        self.assertEqual(packet[1], (cAddr.host, cAddr.port))
 
 
     def test_writingToHostnameRaisesValueError(self):

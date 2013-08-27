@@ -231,6 +231,12 @@ class Port(base.BasePort):
                 raise
             else:
                 read += len(data)
+                if self.addressFamily == socket.AF_INET6:
+                    # Remove the flow and scope ID from the address tuple,
+                    # reducing it to a tuple of just (host, port). This should
+                    # be amended later to return an object that can unpack to
+                    # (host, port) but also includes the flow and scope ID.
+                    addr = addr[:2]
                 try:
                     self.protocol.datagramReceived(data, addr)
                 except:
