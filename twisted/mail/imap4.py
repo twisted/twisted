@@ -6091,14 +6091,14 @@ class FileProducer:
 
     def __init__(self, f, start=None, length=None):
         """
-        @type f: C{file}
-        @param f: The file-like object to read data from
+        @type f: file-like object
+        @param f: The file-like object to read data from.
 
-        @type start: C{int}
-        @param start: The starting position of desired octet
+        @type start: L{int}
+        @param start: The starting position of desired octet.
 
-        @type length: C{int}
-        @param length: The number of octects wanted
+        @type length: L{int}
+        @param length: The number of octects wanted.
         """
         self.f = f
         self.start = start
