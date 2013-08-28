@@ -9,9 +9,11 @@ from twisted.trial.unittest import TestCase
 from twisted.tubes.test.util import (TesterPump, FakeFount,
                                      FakeDrain, IFakeInput)
 from twisted.tubes.test.util import SwitchableTesterPump
-from twisted.tubes.itube import ISwitchableTube
+from twisted.tubes.itube import ISwitchableTube, ISwitchablePump
 from twisted.python.failure import Failure
 from twisted.tubes.tube import Pump, series
+
+from zope.interface import implementer
 
 
 class ReprPump(Pump):
@@ -83,8 +85,35 @@ class TubeTest(TestCase):
 
     def test_pumpFlowSwitching(self):
         """
-        XXX direct tests
+        The L{_Tube} of a L{Pump} delivers data to a newly specified L{IDrain}
+        when its L{ITube.switch} method is called.
         """
+        @implementer(ISwitchablePump)
+        class PassthruPump(Pump):
+            def received(self, data):
+                self.tube.deliver(data)
+
+            def reassemble(self, data):
+                return data
+
+        sourcePump = PassthruPump()
+        fakeDrain = self.fd
+
+        class Switcher(Pump):
+            def received(self, data):
+                if data == "switch":
+                    sourcePump.tube.switch(series(Switchee(), fakeDrain))
+
+        class Switchee(Pump):
+            def received(self, data):
+                self.tube.deliver("switched " + data)
+
+        firstDrain = series(sourcePump)
+
+        self.ff.flowTo(firstDrain).flowTo(series(Switcher(), fakeDrain))
+        self.ff.drain.receive("switch")
+        self.ff.drain.receive("to switchee")
+        self.assertEquals(fakeDrain.received, ["switched to switchee"])
 
 
     def test_flowingFromFirst(self):
