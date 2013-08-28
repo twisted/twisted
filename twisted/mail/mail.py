@@ -134,8 +134,8 @@ class IDomain(Interface):
         This will be called and the returned object used to deliver the
         message when it arrives.
 
-        @type memo: C{NoneType} or L{dict} of L{AliasBase}
-        @param memo: (optional) A record of the addresses already considered
+        @type memo: L{NoneType <types.NoneType>} or L{dict} of L{AliasBase}
+        @param memo: A record of the addresses already considered
         while resolving aliases.  The default value should be used by all
         external code.
 
@@ -183,8 +183,8 @@ class BounceDomain:
         @type user: L{User}
         @param user: A user.
 
-        @type memo: C{NoneType} or L{dict} of L{AliasBase}
-        @param memo: (optional) A record of the addresses already considered
+        @type memo: L{NoneType <types.NoneType>} or L{dict} of L{AliasBase}
+        @param memo: A record of the addresses already considered
         while resolving aliases.
 
         @raise SMTPBadRcpt: When the given user does not exist in this domain.
