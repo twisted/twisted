@@ -1,12 +1,22 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Deprecated in Twisted 13.1.0; please use a real mail protocol, e.g., imap.
+"""
 
 from twisted.spread import pb
 from twisted.spread import banana
 
 import os
 import types
+import warnings
+
+warnings.warn(
+    "twisted.mail.pb was deprecated in Twisted 13.1.0: "
+    "Please use a real mail protocol, e.g., imap or pop.",
+    DeprecationWarning,
+    stacklevel=2)
 
 class Maildir(pb.Referenceable):
 
