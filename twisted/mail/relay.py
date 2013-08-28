@@ -23,7 +23,6 @@ class AbstractRelayRules(object):
     A base class for relay rules which determine whether a message should be
     relayed.
     """
-
     def willRelay(self, address, protocol, authorized):
         """
         Determine whether a message should be relayed.
@@ -31,14 +30,14 @@ class AbstractRelayRules(object):
         @type address: L{Address}
         @param address: The destination address.
 
-        @type protocol: L{Protocol}
+        @type protocol: L{Protocol <twisted.internet.Protocol>}
         @param protocol: The protocol over which the message was received.
 
-        @type authorized: C{bool}
+        @type authorized: L{bool}
         @param authorized: A flag indicating whether the originator has been
             authorized.
 
-        @rtype: C{bool}
+        @rtype: L{bool}
         @return: An indication of whether a message should be relayed.
         """
         return False
@@ -49,7 +48,6 @@ class DomainQueuerRelayRules(object):
     """
     The default relay rules for a L{DomainQueuer}.
     """
-
     def willRelay(self, address, protocol, authorized):
         """
         Determine whether a message should be relayed.
@@ -60,14 +58,14 @@ class DomainQueuerRelayRules(object):
         @type address: L{Address}
         @param address: The destination address.
 
-        @type protocol: L{Protocol}
+        @type protocol: L{Protocol <twisted.internet.Protocol>}
         @param protocol: The protocol over which the message was received.
 
-        @type authorized: C{bool}
+        @type authorized: L{bool}
         @param authorized: A flag indicating whether the originator has been
             authorized.
 
-        @rtype: C{bool}
+        @rtype: L{bool}
         @return: An indication of whether a message should be relayed.
         """
         peer = protocol.transport.getPeer()
@@ -82,7 +80,7 @@ class DomainQueuer:
 
     @ivar service: See L{__init__}
 
-    @type authed: C{bool}
+    @type authed: L{bool}
     @ivar authed: A flag indicating whether the originator of the message has
         been authenticated.
 
@@ -90,18 +88,17 @@ class DomainQueuer:
     @ivar relayRules: The rules to determine whether a message should be
         relayed.
     """
-
     def __init__(self, service, authenticated=False, relayRules=None):
         """
         @type service: L{MailService}
         @param service: An email service.
 
-        @type authenticated: C{bool}
-        @param authenticated: (optional) A flag indicating whether the
+        @type authenticated: L{bool}
+        @param authenticated: A flag indicating whether the
             originator of the message has been authenticated.
 
-        @type relayRules: C{NoneType} or L{AbstractRelayRules}
-        @param relayRules: (optional) The rules to determine whether a message
+        @type relayRules: L{NoneType <types.NoneType>} or L{AbstractRelayRules}
+        @param relayRules: The rules to determine whether a message
             should be relayed.
         """
         self.service = service
@@ -136,10 +133,10 @@ class DomainQueuer:
         @type address: L{Address}
         @param address: The destination address.
 
-        @type protocol: L{Protocol}
+        @type protocol: L{Protocol <twisted.internet.Protocol>}
         @param protocol: The protocol over which the message was received.
 
-        @rtype: C{bool}
+        @rtype: L{bool}
         @return: An indication of whether a message should be relayed.
         """
         return self.relayRules.willRelay(address, protocol, self.authed)

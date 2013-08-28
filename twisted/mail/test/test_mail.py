@@ -588,10 +588,10 @@ class TestMaildirDomain(mail.maildir.AbstractMaildirDomain):
         @type service: L{MailService}
         @param service: An email service
 
-        @type root: C{str}
+        @type root: L{bytes}
         @param root: The maildir root directory
 
-        @type users: C{list}
+        @type users: L{list}
         @ivar users: Users in the domain.
         """
         self.users = []
@@ -604,10 +604,10 @@ class TestMaildirDomain(mail.maildir.AbstractMaildirDomain):
         """
         Return the maildir directory for a user.
 
-        @type name: C{str}
+        @type name: L{bytes}
         @param user: A username.
 
-        @rtype: C{str} or C{None}
+        @rtype: L{bytes} or L{NoneType <types.NoneType>}
         @return: The user's mail directory or None for an invalid user.
         """
         if user not in self.users:
@@ -623,10 +623,10 @@ class TestMaildirDomain(mail.maildir.AbstractMaildirDomain):
         """
         Add a user to this domain.
 
-        @type user: C{str}
+        @type user: L{bytes}
         @param user: A username.
 
-        @type password: C{str}
+        @type password: L{bytes}
         @param password: A password.
         """
         self.users.append(user)
@@ -720,7 +720,7 @@ class TestRelayRules(mail.relay.AbstractRelayRules):
     """
     def __init__(self, relay):
         """
-        @type relay: C{bool}
+        @type relay: L{bool}
         @param relay: A flag indicating whether the rules should allow
             relaying or not.
         """
@@ -737,7 +737,7 @@ class TestRelayRules(mail.relay.AbstractRelayRules):
         @type protocol: L{Protocol}
         @param protocol: The protocol over which the message was received.
 
-        @type authorized: C{bool}
+        @type authorized: L{bool}
         @param authorized: A flag indicating whether the originator has been
         authorized.
 
@@ -752,7 +752,7 @@ class DomainQueuerTestCase(unittest.TestCase):
     """
     Tests for L{mail.relay.DomainQueuer}
 
-    @type root: C{str}
+    @type root: L{bytes}
     @ivar root: The maildir root directory
 
     @type service: L{MailService}
@@ -872,7 +872,7 @@ class DummyTransport(object):
         """
         Ignore data.
 
-        @type data: C{str}
+        @type data: L{bytes}
         @param data: The data to write.
         """
         pass
