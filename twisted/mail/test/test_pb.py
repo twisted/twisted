@@ -27,5 +27,5 @@ class ModuleDeprecatedTest(unittest.TestCase):
         self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
-            "twisted.mail.pb was deprecated in Twisted 13.1.0: "
+            "twisted.mail.pb was deprecated in Twisted 13.2.0: "
             "Please use a real mail protocol, e.g., imap or pop.")

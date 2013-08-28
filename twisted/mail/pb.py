@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Deprecated in Twisted 13.1.0; please use a real mail protocol, e.g., imap.
+Deprecated in Twisted 13.2.0; please use a real mail protocol, e.g., imap.
 """
 
 from twisted.spread import pb
@@ -13,7 +13,7 @@ import types
 import warnings
 
 warnings.warn(
-    "twisted.mail.pb was deprecated in Twisted 13.1.0: "
+    "twisted.mail.pb was deprecated in Twisted 13.2.0: "
     "Please use a real mail protocol, e.g., imap or pop.",
     DeprecationWarning,
     stacklevel=2)
