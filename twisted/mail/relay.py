@@ -30,7 +30,7 @@ class AbstractRelayRules(object):
         @type address: L{Address}
         @param address: The destination address.
 
-        @type protocol: L{Protocol <twisted.internet.Protocol>}
+        @type protocol: L{Protocol <twisted.internet.protocol.Protocol>}
         @param protocol: The protocol over which the message was received.
 
         @type authorized: L{bool}
@@ -58,7 +58,7 @@ class DomainQueuerRelayRules(object):
         @type address: L{Address}
         @param address: The destination address.
 
-        @type protocol: L{Protocol <twisted.internet.Protocol>}
+        @type protocol: L{Protocol <twisted.internet.protocol.Protocol>}
         @param protocol: The protocol over which the message was received.
 
         @type authorized: L{bool}
@@ -133,7 +133,7 @@ class DomainQueuer:
         @type address: L{Address}
         @param address: The destination address.
 
-        @type protocol: L{Protocol <twisted.internet.Protocol>}
+        @type protocol: L{Protocol <twisted.internet.protocol.Protocol>}
         @param protocol: The protocol over which the message was received.
 
         @rtype: L{bool}
