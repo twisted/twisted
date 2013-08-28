@@ -113,9 +113,7 @@ class LineTests(TestCase):
                 splitted = line.split(" ", 1)
                 if splitted[0] == 'switch':
                     length = int(splitted[1])
-                    # XXX document downstream
                     lines.tube.switch(series(Switchee(length), fd))
-                return ()
 
         class Switchee(Pump):
             datums = []
