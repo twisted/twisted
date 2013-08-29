@@ -74,6 +74,10 @@ class ProxyServer(Proxy):
         if self.reactor is None:
             from twisted.internet import reactor
             self.reactor = reactor
+
+        self.connectProxyClient(client)
+
+    def connectProxyClient(self, client)
         self.reactor.connectTCP(self.factory.host, self.factory.port, client)
 
 
