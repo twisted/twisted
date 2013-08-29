@@ -711,7 +711,8 @@ class AliasGroup(AliasBase):
     """
     An alias which points to multiple destination aliases.
 
-    @type processAliasFactory: no-argument callable which returns L{ProcessAlias}
+    @type processAliasFactory: no-argument callable which returns
+        L{ProcessAlias}
     @ivar processAliasFactory: A factory for process aliases.
 
     @type aliases: L{list} of L{AliasBase} which implements L{IAlias}
