@@ -206,7 +206,7 @@ class AddressAlias(AliasBase):
 
         @type args: 2-L{tuple} of (E{1}) L{dict} of L{bytes} -> L{IDomain}
             provider, (E{2}) L{bytes}
-        @param args: Parameters for L{AliasBase.__init__}.
+        @param args: Arguments for L{AliasBase.__init__}.
         """
         AliasBase.__init__(self, *args)
         self.alias = smtp.Address(alias)
@@ -354,7 +354,7 @@ class FileAlias(AliasBase):
 
         @type args: 2-L{tuple} of (E{1}) L{dict} of L{bytes} -> L{IDomain}
             provider, (E{2}) L{bytes}
-        @param args: Parameters for L{AliasBase.__init__}.
+        @param args: Arguments for L{AliasBase.__init__}.
         """
         AliasBase.__init__(self, *args)
         self.filename = filename
@@ -585,7 +585,7 @@ class ProcessAlias(AliasBase):
 
         @type args: 2-L{tuple} of (E{1}) L{dict} of L{bytes} -> L{IDomain}
             provider, (E{2}) L{bytes}
-        @param args: Parameters for L{AliasBase.__init__}.
+        @param args: Arguments for L{AliasBase.__init__}.
         """
 
         AliasBase.__init__(self, *args)
@@ -734,7 +734,7 @@ class AliasGroup(AliasBase):
 
         @type args: n-L{tuple} of (E{1}) L{dict} of L{bytes} -> L{IDomain}
             provider, (E{2}) L{bytes}
-        @param args: Parameters for L{AliasBase.__init__}.
+        @param args: Arguments for L{AliasBase.__init__}.
         """
 
         AliasBase.__init__(self, *args)
