@@ -1515,7 +1515,7 @@ class LoadMimeTypesTests(TestCase):
         """
         By default, C{None} is passed to C{mimetypes.init}.
         """
-        static.loadMimeTypes(_init=self._fakeInit)
+        static.loadMimeTypes(init=self._fakeInit)
         self.assertIdentical(self.paths, None)
 
 
@@ -1524,7 +1524,7 @@ class LoadMimeTypesTests(TestCase):
         Passed MIME type files are passed to C{mimetypes.init}.
         """
         paths = ["x", "y", "z"]
-        static.loadMimeTypes(paths, _init=self._fakeInit)
+        static.loadMimeTypes(paths, init=self._fakeInit)
         self.assertIdentical(self.paths, paths)
 
 
@@ -1536,5 +1536,5 @@ class LoadMimeTypesTests(TestCase):
         # something, somewhere, calls mimetypes.init. Yay global
         # mutable state :)
         args, _, _, defaults = inspect.getargspec(static.loadMimeTypes)
-        defaultInit = defaults[args.index("_init")]
+        defaultInit = defaults[args.index("init")]
         self.assertIdentical(defaultInit, mimetypes.init)

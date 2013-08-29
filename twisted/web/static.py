@@ -98,7 +98,7 @@ class Registry(components.Componentized, styles.Versioned):
         return self._pathCache.get(path)
 
 
-def loadMimeTypes(mimetype_locations=None, _init=mimetypes.init):
+def loadMimeTypes(mimetype_locations=None, init=mimetypes.init):
     """
     Produces a mapping of extensions (with leading dot) to MIME types.
 
@@ -114,11 +114,11 @@ def loadMimeTypes(mimetype_locations=None, _init=mimetypes.init):
     @param mimetype_locations: Optional. List of paths to C{mime.types} style
         files that should be used.
     @type mimetype_locations: iterable of paths or C{None}
-    @param _init: The init function to call. Defaults to the global C{init}
+    @param init: The init function to call. Defaults to the global C{init}
         function of the C{mimetypes} module. For internal use (testing) only.
-    @type _init: callable
+    @type init: callable
     """
-    _init(mimetype_locations)
+    init(mimetype_locations)
     mimetypes.types_map.update(
         {
             '.conf':  'text/plain',
