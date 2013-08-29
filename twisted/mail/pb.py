@@ -6,10 +6,8 @@ Deprecated in Twisted 13.2.0; please use a real mail protocol, e.g., imap.
 """
 
 from twisted.spread import pb
-from twisted.spread import banana
 
 import os
-import types
 import warnings
 
 warnings.warn(

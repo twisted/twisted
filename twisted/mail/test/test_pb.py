@@ -8,7 +8,6 @@ the deprecation warning is triggered correctly.
 
 from twisted.trial import unittest
 
-from twisted import mail
 
 class ModuleDeprecatedTest(unittest.TestCase):
     """
@@ -17,11 +16,11 @@ class ModuleDeprecatedTest(unittest.TestCase):
 
     def test_deprecation(self):
         """
-        Tests that a DeprecationWarning is signalled if the 
+        Tests that a DeprecationWarning is signalled if the
         L{mail.twisted.pb} module is loaded.
         """
-
-        import twisted.mail.pb 
+        import twisted.mail.pb
+        twisted  # Suppress pyflakes warnings about "twisted" being unused
         warningsShown = self.flushWarnings([self.test_deprecation])
         self.assertEqual(len(warningsShown), 1)
         self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
