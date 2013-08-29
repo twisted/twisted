@@ -499,6 +499,26 @@ class CooperativeTask(object):
 class Cooperator(object):
     """
     Cooperative task scheduler.
+
+    A cooperative task is just an iterator where, as far as C{Cooperator} is
+    concerned, each iteration represents an atomic unit of work.  When the
+    iterator yields, it allows the C{Cooperator} to decide which unit of work
+    to do next.  If the iterator yields a L{defer.Deferred}, then work will
+    only resume after it fires and completes its callback chain.
+
+    There are two ways to add iterators to a C{Cooperator}, L{cooperate} and
+    L{coiterate}.  Both are equivalent, but C{coiterate} returns a
+    L{defer.Deferred} that fires when the task is done.
+
+    When a C{Cooperator} has more than one task, it distribute work between
+    all tasks.
+
+    C{Cooperator} can be used for many things, including but not limited to:
+
+      - run one or more computationally intensive tasks without blocking
+      - execute a particular number of tasks in parellel (i.e. limit
+        parallelism)
+      - do one thing, wait for a Deferred to fire, do the next thing, repeat
     """
 
     def __init__(self,
@@ -535,6 +555,9 @@ class Cooperator(object):
         """
         Add an iterator to the list of iterators this L{Cooperator} is
         currently running.
+
+        Equivalent to L{cooperate}, but returns a L{defer.Deferred} that will
+        be fired when the task is done.
 
         @param doneDeferred: If specified, this will be the Deferred used as
             the completion deferred.  It is suggested that you use the default,

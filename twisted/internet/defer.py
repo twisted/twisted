@@ -1350,6 +1350,9 @@ class DeferredSemaphore(_ConcurrencyPrimitive):
     """
     A semaphore for event driven systems.
 
+    If you are looking into this as a means of limiting parallelism, you might
+    find L{twisted.internet.task.Cooperator} more useful.
+
     @ivar tokens: At most this many users may acquire this semaphore at
         once.
     @type tokens: C{int}
