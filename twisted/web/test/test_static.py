@@ -7,12 +7,12 @@ Tests for L{twisted.web.static}.
 
 import os, re, StringIO
 
-from zope.interface.verify import verifyObject
+from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.internet import abstract, interfaces
 from twisted.python.runtime import platform
-from twisted.python.filepath import FilePath
-from twisted.python import log
+from twisted.python.filepath import FilePath, IFilePath
+from twisted.python import log, components
 from twisted.trial.unittest import TestCase
 from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
@@ -1483,3 +1483,331 @@ class DirectoryListerTest(TestCase):
         self.assertEqual(static.formatFileSize(1234000000), "1G")
         self.assertEqual(static.formatFileSize(1234567890000), "1149G")
 
+
+
+class RaisedArgs(Exception):
+    def __init__(self, callee, args, kwargs):
+        self.callee
+        self.args = args
+        self.kwargs = kwargs
+
+
+
+class _MemoryPath(object):
+    def __init__(self, isdir=RaisedArgs):
+        self._isdir = isdir
+
+    def isdir(self, *args, **kwargs):
+        if self._isdir is RaisedArgs:
+            raise RaisedArgs(self.isdir, args, kwargs)
+        return self._isdir
+
+
+
+class MemoryPath(components.proxyForInterface(IFilePath)):
+    def __init__(self, *args, **kwargs):
+        self.original = _MemoryPath(*args, **kwargs)
+
+
+
+class MemoryFile(MemoryPath):
+    def isdir(self):
+        return False
+
+
+
+class MemoryDir(MemoryPath):
+    def isdir(self):
+        return True
+
+
+
+class DummyRequestHead(DummyRequest):
+    method = b'HEAD'
+
+
+
+class DummyRequestGet(DummyRequest):
+    method = b'GET'
+
+
+
+class DummyRequestPost(DummyRequest):
+    method = b'POST'
+
+
+
+class PathTests(TestCase):
+    """
+    Tests for L{Path}.
+    """
+    def test_filePath(self):
+        """
+        L{Path._filePath} defaults to C{FilePath('.')}
+        """
+        self.assertEqual(static.Path()._filePath,
+                         FilePath('.'))
+
+
+    def test_filePathOverride(self):
+        """
+        L{Path.__init__} accepts a C{filePath} argument
+        which is assigned to the C{_filePath} attribute.
+        """
+        dummy = object()
+        self.assertIdentical(
+            static.Path(filePath=dummy)._filePath,
+            dummy)
+
+
+    def test_fileRenderer(self):
+        """
+        L{Path._fileRenderer} defaults to L{static.FilePathRenderer}
+        """
+        self.assertIdentical(
+            static.Path()._fileRenderer,
+            static.FilePathRenderer)
+
+
+    def test_fileRendererOverride(self):
+        """
+        L{Path.__init__} accepts a C{fileRenderer} argument
+        which is assigned to the C{_fileRenderer} attribute.
+        """
+        dummy = object()
+        self.assertIdentical(
+            static.Path(fileRenderer=dummy)._fileRenderer,
+            dummy)
+
+
+    def test_directoryRenderer(self):
+        """
+        L{Path._directoryRenderer} defaults to
+        L{static.DirectoryPathRenderer}.
+        """
+        self.assertIdentical(
+            static.Path()._directoryRenderer,
+            static.DirectoryPathRenderer)
+
+
+    def test_directoryRendererOverride(self):
+        """
+        L{Path.__init__} accepts a C{directoryRenderer} argument
+        which is assigned to the C{_directoryRenderer} attribute.
+        """
+        dummy = object()
+        self.assertIdentical(
+            static.Path(directoryRenderer=dummy)._directoryRenderer,
+            dummy)
+
+
+    def test_interface(self):
+        """
+        L{Path} implements L{IResource}.
+        """
+        self.assertTrue(
+            verifyClass(resource.IResource, static.Path))
+
+
+    def test_getChildWithDefaultFileRenderer(self):
+        """
+        """
+        dummy = object()
+        self.assertEqual(
+            static.Path(
+                filePath=MemoryFile(),
+                fileRenderer=lambda f: dummy).getChildWithDefault(
+                    name='', request=None),
+            dummy)
+
+
+    def test_getChildWithDefaultDirectoryRenderer(self):
+        """
+        """
+        dummy = object()
+        self.assertEqual(
+            static.Path(
+                filePath=MemoryDir(),
+                directoryRenderer=lambda f: dummy).getChildWithDefault(
+                    name='', request=None),
+            dummy)
+
+
+    def test_notFound(self):
+        """
+        If a request is made which encounters a L{File} before a final segment
+        which does not correspond to any file in the path the L{File} was
+        created with, a not found response is sent.
+        """
+        self.fail('TODO')
+
+
+
+class FilePathRendererTests(TestCase):
+    """
+    Tests for L{FilePathRenderer}.
+    """
+    def test_interface(self):
+        """
+        L{FilePathRenderer} implements L{IResource}.
+        """
+        self.assertTrue(
+            verifyClass(resource.IResource, static.FilePathRenderer))
+
+
+
+class DirectoryPathRendererTests(TestCase):
+    """
+    Tests for L{DirectoryPathRenderer}.
+    """
+
+    def test_filePath(self):
+        """
+        L{DirectoryPathRenderer._filePath} defaults to C{FilePath('.')}
+        """
+        self.assertEqual(static.DirectoryPathRenderer()._filePath,
+                         FilePath('.'))
+
+
+    def test_filePathDirectoryAssertion(self):
+        """
+        L{DirectoryPathRenderer.__init__} raises an L{ValueError} if
+        C{filePath} argument is not a directory.
+        """
+        self.assertRaises(
+            ValueError,
+            static.DirectoryPathRenderer, filePath=MemoryFile())
+
+
+    def test_filePathOverride(self):
+        """
+        L{DirectoryPathRenderer.__init__} accepts a C{filePath} argument
+        which is assigned to the C{_filePath} attribute.
+        """
+        dummy = MemoryDir()
+        self.assertIdentical(
+            static.DirectoryPathRenderer(filePath=dummy)._filePath,
+            dummy)
+
+
+    def test_forbiddenResourceFactory(self):
+        """
+        L{DirectoryPathRenderer._forbiddenResourceFactory} defaults to
+        L{resource.ForbiddenResource}.
+        """
+        self.assertIdentical(
+            static.DirectoryPathRenderer()._forbiddenResourceFactory,
+            resource.ForbiddenResource)
+
+
+    def test_forbiddenResourceFactoryOverride(self):
+        """
+        L{DirectoryPathRenderer.__init__} accepts a
+        C{forbiddenResourceFactory} argument which is assigned to the
+        C{_forbiddenResouceFactory} attribute.
+        """
+        dummy = lambda: None
+        self.assertIdentical(
+            static.DirectoryPathRenderer(
+                forbiddenResourceFactory=dummy)._forbiddenResourceFactory,
+            dummy)
+
+
+    def test_interface(self):
+        """
+        L{DirectoryPathRenderer} implements L{IResource}.
+        """
+        self.assertTrue(
+            verifyClass(resource.IResource, static.DirectoryPathRenderer))
+
+
+    def test_renderRefuseUnsupportedMethod(self):
+        """
+        L{DirectoryPathRenderer.render} raises L{UnsupportedMethod} in
+        response to a non-I{GET}, non-I{HEAD} request.
+        """
+        e = self.assertRaises(
+            UnsupportedMethod,
+            static.DirectoryPathRenderer().render, DummyRequestPost(postpath=None))
+        self.assertEqual(e.allowedMethods, (b'GET', b'HEAD'))
+
+
+    def test_renderHeadStatus(self):
+        """
+        L{DirectoryPathRenderer.render} sets the request responseCode to
+        C{FORBIDDEN}.
+        """
+        request = DummyRequestHead(postpath=None)
+        static.DirectoryPathRenderer().render(request=request)
+        self.assertEqual(request.responseCode, resource.FORBIDDEN)
+
+
+    def test_renderHeadContent(self):
+        """
+        L{DirectoryPathRenderer.render} returns C{b''} for I{HEAD} requests.
+        """
+        self.assertEqual(
+            static.DirectoryPathRenderer().render(
+                    request=DummyRequestHead(postpath=None)),
+            b'')
+
+
+    def test_renderGetStatus(self):
+        """
+        L{DirectoryPathRenderer.render} sets the request responseCode to
+        C{FORBIDDEN}.
+        """
+        request = DummyRequestGet(postpath=None)
+        static.DirectoryPathRenderer().render(request=request)
+        self.assertEqual(request.responseCode, resource.FORBIDDEN)
+
+
+    def test_renderGetContent(self):
+        """
+        L{DirectoryPathRenderer.render} returns the result of
+        L{resource._forbiddenResourceFactory} for I{GET} requests.
+        """
+        dummy = object()
+        class DummyForbiddenResource(object):
+            def render(self, request):
+                return dummy
+
+        self.assertEqual(
+            static.DirectoryPathRenderer(
+                forbiddenResourceFactory=DummyForbiddenResource).render(
+                    request=DummyRequestGet(postpath=None)),
+            dummy)
+
+
+
+class FilePathTests(object):
+    def _assertHttpMethodDispatch(self, resource, methodName):
+        """
+        Assert that C{resource} dispatches C{methodName} requests to
+        corresponding C{self.render_methodName}.
+        """
+        request = DummyRequest([''])
+        request.method = methodName
+
+        requests = []
+        p = self.patch(resource, 'render_' + methodName,  lambda r: requests.append(r))
+        resource.render(request)
+        p.restore()
+
+        self.assertEqual([request], requests)
+
+
+    def test_renderDispatchGetMethod(self):
+        """
+        L{Path.render} dispatches to L{Path.render_GET} for I{GET}
+        requests.
+        """
+        self._assertHttpMethodDispatch(static.DirectoryPathRenderer(), b'GET')
+
+
+    def test_renderDispatchHeadMethod(self):
+        """
+        L{Path.render} dispatches to L{Path.render_HEAD} for I{HEAD}
+        requests.
+        """
+        self._assertHttpMethodDispatch(static.DirectoryPathRenderer(), b'HEAD')

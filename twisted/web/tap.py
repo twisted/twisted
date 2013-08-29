@@ -206,7 +206,7 @@ def makeService(config):
         # This really ought to be web.Admin or something
         root = demo.Test()
 
-    if isinstance(root, static.File):
+    if isinstance(root, (static.File,)):
         root.registry.setComponent(interfaces.IServiceCollection, s)
 
     if config['logfile']:

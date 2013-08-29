@@ -14,14 +14,14 @@ import itertools
 import cgi
 import time
 
-from zope.interface import implements
+from zope.interface import implementer, implements
 
 from twisted.web import server
 from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
 
-from twisted.python import components, filepath, log
+from twisted.python import compat, components, filepath, log
 from twisted.internet import abstract, interfaces
 from twisted.persisted import styles
 from twisted.python.util import InsensitiveDict
@@ -1031,3 +1031,119 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
         return '<DirectoryLister of %r>' % self.path
 
     __str__ = __repr__
+
+
+
+@implementer(resource.IResource)
+class Path(object):
+    """
+    A L{FilePath} traversal resource.
+    """
+    isLeaf = False
+
+    def __init__(self, filePath=None, fileRenderer=None,
+                 directoryRenderer=None):
+        """
+        """
+        if filePath is None:
+            filePath = filepath.FilePath('.')
+        self._filePath = filePath
+
+        if fileRenderer is None:
+            fileRenderer = FilePathRenderer
+        self._fileRenderer = fileRenderer
+
+        if directoryRenderer is None:
+            directoryRenderer = DirectoryPathRenderer
+        self._directoryRenderer = directoryRenderer
+
+
+    def getChildWithDefault(self, name, request):
+        """
+        Return a File or Directory resource.
+
+        Only called if C{self.isLeaf} is C{False}.
+        """
+        if self._filePath.isdir():
+            return self._directoryRenderer(self._filePath)
+        else:
+            return self._fileRenderer(self._filePath)
+
+
+    def putChild(self, path, child):
+        pass
+
+
+    def render(self, request):
+        pass
+
+
+
+@implementer(resource.IResource)
+class FilePathRenderer(object):
+    def getChildWithDefault(self, name, request):
+        """
+        """
+        pass
+
+
+    def putChild(self, path, child):
+        pass
+
+
+    def render(self, request):
+        pass
+
+
+@implementer(resource.IResource)
+class DirectoryPathRenderer(object):
+    """
+    """
+
+    isLeaf = True
+
+    _allowedMethods = (b'GET', b'HEAD')
+
+    def __init__(self, filePath=None, forbiddenResourceFactory=None):
+        if filePath is None:
+            filePath = filepath.FilePath('.')
+        else:
+            if not filePath.isdir():
+                raise ValueError(
+                    'Expected a path to a directory. Found %r' % (filePath,))
+        self._filePath = filePath
+
+        if forbiddenResourceFactory is None:
+            forbiddenResourceFactory = resource.ForbiddenResource
+        self._forbiddenResourceFactory = forbiddenResourceFactory
+
+
+    def getChildWithDefault(self, name, request):
+        """
+        Return a File or Directory resource.
+
+        Only called if C{self.isLeaf} is C{False}.
+        """
+        pass
+
+
+    def putChild(self, path, child):
+        pass
+
+
+    def render(self, request):
+        """
+        Return status code FORBIDDEN and render a Forbidden message if
+        this directory is being viewed rather than traversed.
+
+        This will only be called if C{self.isLeaf} is C{True}.
+        """
+        if compat.nativeString(request.method) not in self._allowedMethods:
+            raise resource.UnsupportedMethod(
+                allowedMethods=self._allowedMethods)
+
+        request.setResponseCode(resource.FORBIDDEN)
+        returnVal = b''
+        if request.method == b'GET':
+            returnVal = self._forbiddenResourceFactory().render(request)
+        return returnVal
