@@ -19,5 +19,3 @@ https://twistedmatrix.com/trac/newticket
 
 Twisted uses Trac to keep track of bugs, feature requests, and associated
 patches because GitHub doesn't provide adequate tooling for its community.
-Patches can be submitted as pull requests, but if you don't file a ticket,
-it's unlikely that we'll notice your contribution.
