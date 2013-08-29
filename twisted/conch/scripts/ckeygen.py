@@ -102,7 +102,9 @@ def generateDSAkey(options):
 def printFingerprint(options):
     if not options['filename']:
         filename = os.path.expanduser('~/.ssh/id_rsa')
-        options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
+        options['filename'] = raw_input('Enter file in which the key is (default: %s): ' % filename)
+        if not options['filename']:
+            options['filename'] = filename
     if os.path.exists(options['filename']+'.pub'):
         options['filename'] += '.pub'
     try:
