@@ -222,9 +222,10 @@ class SMTPFactory(smtp.SMTPFactory):
     @ivar service: See L{__init__}
     @ivar portal: See L{__init__}
 
-    @type protocol: L{type} of a L{Protocol <protocol.Protocol>} subclass
-    @ivar protocol: The class of protocol to be created by the factory.  The
-        default value is L{SMTP}.
+    @type protocol: no-argument callable which returns a L{Protocol
+        <protocol.Protocol>} subclass
+    @ivar protocol: A callable which creates a protocol.  The default value is
+        L{SMTP}.
     """
     protocol = smtp.SMTP
     portal = None
@@ -265,20 +266,21 @@ class ESMTPFactory(SMTPFactory):
     """
     An ESMTP server protocol factory.
 
-    @type protocol: L{type} of a L{Protocol <protocol.Protocol>} subclass
-    @ivar protocol: The class of protocol to be created by the factory.  The
-        default value is L{ESMTP}.
+    @type protocol: no-argument callable which returns a L{Protocol
+        <protocol.Protocol>} subclass
+    @ivar protocol: A callable which creates a protocol.  The default value is
+        L{ESMTP}.
 
     @type context: L{ContextFactory <twisted.internet.ssl.ContextFactory>} or
         L{NoneType <types.NoneType>}
     @ivar context: A factory to generate contexts to be used in negotiating
         encrypted communication.
 
-    @type challengers: L{dict} of L{bytes} -> L{type} of an
-        L{ICredentials <twisted.cred.credentials.ICredentials>} subclass
-        provider.
-    @ivar challengers: A mapping of acceptable authorization mechanisms to
-        the credentials class to use for authentication.
+    @type challengers: L{dict} of L{bytes} -> no-argument callable which
+        returns L{ICredentials <twisted.cred.credentials.ICredentials>}
+        subclass provider.
+    @ivar challengers: A mapping of acceptable authorization mechanism to
+        callable which creates credentials to use for authentication.
     """
     protocol = smtp.ESMTP
     context = None
@@ -428,9 +430,10 @@ class POP3Factory(protocol.ServerFactory):
 
     @ivar service: See L{__init__}
 
-    @type protocol: L{type} of L{Protocol <protocol.Protocol>} subclass
-    @ivar protocol: The class of protocol to be created by the factory.  The
-        default value is L{VirtualPOP3}.
+    @type protocol: no-argument callable which returns a L{Protocol
+        <protocol.Protocol>} subclass
+    @ivar protocol: A callable which creates a protocol.  The default value is
+        L{VirtualPOP3}.
     """
     protocol = VirtualPOP3
     service = None
