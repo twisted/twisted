@@ -634,8 +634,8 @@ class IAgent(Interface):
     Processing of responses is also left very widely specified.  An
     implementation may perform no special handling of responses, or it may
     implement redirect following or content negotiation, it may implement a
-    cookie store or automatically response to authentication challenges.  It
-    may implement many other unforeseen behaviors as well.
+    cookie store or automatically respond to authentication challenges.  It may
+    implement many other unforeseen behaviors as well.
 
     It is also intended that L{IAgent} implementations be composable.  An
     implementation which provides cookie handling features should re-use an
