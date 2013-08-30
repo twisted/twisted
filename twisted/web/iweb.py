@@ -649,7 +649,7 @@ class IAgent(Interface):
 
     This allows for great flexibility in the behavior an L{IAgent} will
     provide.  For example, an L{IAgent} with web browser-like behavior could be
-    obtained by combining a number of (hypothetical) implementations:
+    obtained by combining a number of (hypothetical) implementations::
 
         baseAgent = Agent(reactor)
         redirect = BrowserLikeRedirectAgent(baseAgent, limit=10)
