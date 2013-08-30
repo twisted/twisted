@@ -687,7 +687,7 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
     """
     def makeAgent(self):
         """
-        Create and return a new L{twisted.web.client.Agent} instance.
+        @return: a new L{twisted.web.client.Agent} instance
         """
         return client.Agent(self.reactor)
 
@@ -1371,7 +1371,7 @@ class CookieJarTests(TestCase, CookieTestsMixin):
     """
     def makeCookieJar(self):
         """
-        Create a C{cookielib.CookieJar} with some sample cookies.
+        @return: a C{cookielib.CookieJar} with some sample cookies
         """
         cookieJar = cookielib.CookieJar()
         reqres = self.addCookies(
@@ -1432,7 +1432,7 @@ class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
     """
     def makeAgent(self):
         """
-        Create and return a new L{twisted.web.client.CookieAgent}.
+        @return: a new L{twisted.web.client.CookieAgent}
         """
         return client.CookieAgent(
             self.buildAgentForWrapperTest(self.reactor),
@@ -1596,7 +1596,7 @@ class ContentDecoderAgentTests(TestCase, FakeReactorAndConnectMixin,
     """
     def makeAgent(self):
         """
-        Create and return a new L{twisted.web.client.ContentDecoderAgent}.
+        @return: a new L{twisted.web.client.ContentDecoderAgent}
         """
         return client.ContentDecoderAgent(self.agent, [])
 
@@ -1940,7 +1940,7 @@ class ProxyAgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
     """
     def makeAgent(self):
         """
-        Create and return a new L{twisted.web.client.ProxyAgent}.
+        @return: a new L{twisted.web.client.ProxyAgent}
         """
         return client.ProxyAgent(
             TCP4ClientEndpoint(self.reactor, "127.0.0.1", 1234),
@@ -2320,7 +2320,7 @@ class RedirectAgentTests(TestCase, FakeReactorAndConnectMixin,
     """
     def makeAgent(self):
         """
-        Create and return a new L{twisted.web.client.RedirectAgent}.
+        @return: a new L{twisted.web.client.RedirectAgent}
         """
         return client.RedirectAgent(
             self.buildAgentForWrapperTest(self.reactor))
@@ -2359,7 +2359,7 @@ class BrowserLikeRedirectAgentTests(TestCase,
     """
     def makeAgent(self):
         """
-        Create and return a new L{twisted.web.client.BrowserLikeRedirectAgent}.
+        @return: a new L{twisted.web.client.BrowserLikeRedirectAgent}
         """
         return client.BrowserLikeRedirectAgent(
             self.buildAgentForWrapperTest(self.reactor))
