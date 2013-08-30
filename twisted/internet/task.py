@@ -523,6 +523,9 @@ class Cooperator(object):
         simultaneously
       - doing one thing, waiting for a L{Deferred<defer.Deferred>} to fire,
         doing the next thing, repeat
+
+    Multiple L{Cooperator}'s do not cooperate with each other, so for most
+    cases you should use the L{global cooperator<task.cooperate>}.
     """
 
     def __init__(self,
