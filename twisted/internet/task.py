@@ -497,7 +497,8 @@ class CooperativeTask(object):
 
 
 class Cooperator(object):
-    """Cooperative task scheduler.
+    """
+    Cooperative task scheduler.
 
     A cooperative task is an iterator where each iteration represents an
     atomic unit of work.  When the iterator yields, it allows the
