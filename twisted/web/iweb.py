@@ -634,12 +634,32 @@ class IAgent(Interface):
     Processing of responses is also left very widely specified.  An
     implementation may perform no special handling of responses, or it may
     implement redirect following or content negotiation, it may implement a
-    cookie store or automatically response to authentication challenges.
+    cookie store or automatically response to authentication challenges.  It
+    may implement many other unforeseen behaviors as well.
 
     It is also intended that L{IAgent} implementations be composable.  An
     implementation which provides cookie handling features should re-use an
     implementation that provides connection pooling and this combination could
     be used by an implementation which adds content negotiation functionality.
+    Some implementations will be completely self-contained, such as those which
+    actually perform the network operations to send and receive requests, but
+    most or all other implementations should implement a small number of new
+    features (perhaps one new feature) and delegate the rest of the
+    request/response machinery to another implementation.
+
+    This allows for great flexibility in the behavior an L{IAgent} will
+    provide.  For example, an L{IAgent} with web browser-like behavior could be
+    obtained by combining a number of (hypothetical) implementations:
+
+        baseAgent = Agent(reactor)
+        redirect = BrowserLikeRedirectAgent(baseAgent, limit=10)
+        authenticate = AuthenticateAgent(
+            redirect, [diskStore.credentials, GtkAuthInterface()])
+        cookie = CookieAgent(authenticate, diskStore.cookie)
+        decode = ContentDecoderAgent(cookie, [(b"gzip", GzipDecoder())])
+        cache = CacheAgent(decode, diskStore.cache)
+
+        doSomeRequests(cache)
     """
     def request(method, url, headers=None, bodyProducer=None):
         """
