@@ -506,12 +506,15 @@ class Cooperator(object):
     iterator yields a L{defer.Deferred} then work will only resume after it
     fires and completes its callback chain.
 
-    There are two ways to add iterators to a L{Cooperator}, L{cooperate} and
-    L{coiterate}.  They are equivalent, but L{coiterate} returns a
-    L{defer.Deferred} that fires when the task is done.
-
     When a L{Cooperator} has more than one task, it distributes work between
     all tasks.
+
+    There are two ways to add tasks to a L{Cooperator}, L{cooperate} and
+    L{coiterate}.  L{cooperate} is the more useful of the two, as it returns a
+    L{CooperativeTask}, which can be L{paused<CooperativeTask.pause>},
+    L{resumed<CooperativeTask.resume>} and L{waited
+    on<CooperativeTask.whenDone>}.  L{coiterate} has the same effect, but
+    returns only a L{defer.Deferred} that fires when the task is done.
 
     L{Cooperator} can be used for many things, including but not limited to:
 
