@@ -1487,15 +1487,20 @@ class DirectoryListerTest(TestCase):
 
 class RaisedArgs(Exception):
     def __init__(self, callee, args, kwargs):
-        self.callee
+        self.callee = callee
         self.args = args
         self.kwargs = kwargs
 
 
 
 class _MemoryPath(object):
-    def __init__(self, isdir=RaisedArgs):
+    def __init__(self, path='', isdir=RaisedArgs, child=RaisedArgs,
+                 exists=True):
+        self.path = path
         self._isdir = isdir
+        self._child = child
+        self._exists = exists
+
 
     def isdir(self, *args, **kwargs):
         if self._isdir is RaisedArgs:
@@ -1503,11 +1508,26 @@ class _MemoryPath(object):
         return self._isdir
 
 
+    def child(self, *args, **kwargs):
+        if self._child is RaisedArgs:
+            raise RaisedArgs(self.child, args, kwargs)
+        return self._child
+
+
+    def exists(self, *args, **kwargs):
+        if self._exists is RaisedArgs:
+            raise RaisedArgs(self.exists, args, kwargs)
+        return self._exists
+
+
 
 class MemoryPath(components.proxyForInterface(IFilePath)):
     def __init__(self, *args, **kwargs):
         self.original = _MemoryPath(*args, **kwargs)
 
+    @property
+    def path(self):
+        return self.original.path
 
 
 class MemoryFile(MemoryPath):
@@ -1554,10 +1574,23 @@ class PathTests(TestCase):
         L{Path.__init__} accepts a C{filePath} argument
         which is assigned to the C{_filePath} attribute.
         """
-        dummy = object()
+        dummy = MemoryPath()
         self.assertIdentical(
             static.Path(filePath=dummy)._filePath,
             dummy)
+
+
+    def test_filePathNonExistentValueError(self):
+        """
+        L{Path.__init__} raises L{ValueError} if the supplied
+        C{filePath} argument represents a path that does not
+        exist.
+        """
+        e = self.assertRaises(
+            IOError,
+            static.Path, filePath=MemoryPath(path='foo', exists=False))
+        self.assertEqual(e.errno, 2)
+        self.assertEqual(e.filename, 'foo')
 
 
     def test_fileRenderer(self):
@@ -1601,6 +1634,67 @@ class PathTests(TestCase):
             dummy)
 
 
+    def test_pathNotFoundRenderer(self):
+        """
+        L{Path._pathNotFoundRenderer} defaults to
+        L{resource.NoResource}.
+        """
+        self.assertIdentical(
+            static.Path()._pathNotFoundRenderer,
+            resource.NoResource)
+
+
+    def test_pathNotFoundRendererOverride(self):
+        """
+        L{Path.__init__} accepts a C{pathNotFoundRenderer} argument
+        which is assigned to the C{_pathNotFoundRenderer} attribute.
+        """
+        dummy = object()
+        self.assertIdentical(
+            static.Path(pathNotFoundRenderer=dummy)._pathNotFoundRenderer,
+            dummy)
+
+
+    def test_pathFactory(self):
+        """
+        L{Path._pathFactory} defaults to L{Path}.
+        """
+        self.assertIdentical(
+            static.Path()._pathFactory,
+            static.Path)
+
+
+    def test_pathFactoryOverride(self):
+        """
+        L{Path.__init__} accepts a C{pathFactory} argument
+        which is assigned to the C{_pathFactory} attribute.
+        """
+        dummy = object()
+        self.assertIdentical(
+            static.Path(pathFactory=dummy)._pathFactory,
+            dummy)
+
+
+    def test_redirectRenderer(self):
+        """
+        L{Path._redirectRenderer} defaults to L{static.redirectTo}.
+        """
+        self.assertIdentical(
+            static.Path()._redirectRenderer,
+            static.redirectTo)
+
+
+    def test_redirectRendererOverride(self):
+        """
+        L{Path.__init__} accepts a C{redirectRenderer} argument
+        which is assigned to the C{_redirectRenderer} attribute.
+        """
+        dummy = object()
+        self.assertIdentical(
+            static.Path(redirectRenderer=dummy)._redirectRenderer,
+            dummy)
+
+
     def test_interface(self):
         """
         L{Path} implements L{IResource}.
@@ -1609,37 +1703,142 @@ class PathTests(TestCase):
             verifyClass(resource.IResource, static.Path))
 
 
-    def test_getChildWithDefaultFileRenderer(self):
+    def test_getChildWithDefaultTrailingSlashDispatch(self):
         """
+        L{Path.getChildWithDefault} dispatches the supplied C{request} to
+        L{Path._trailingSlashResponder} if the supplied C{name} is an
+        empty string. (ie the URL contained a trailing slash)
+        """
+        dummyRequest = object()
+        path = static.Path(filePath=MemoryPath())
+
+        def fakeTrailingSlashResponder(*a, **kw):
+            raise RaisedArgs(path._trailingSlashResponder, a, kw)
+        path._trailingSlashResponder = fakeTrailingSlashResponder
+
+        e = self.assertRaises(
+            RaisedArgs,
+            path.getChildWithDefault,  name='', request=dummyRequest)
+
+        self.assertEqual(e.callee, fakeTrailingSlashResponder)
+        self.assertEqual(e.args, (dummyRequest,))
+        self.assertEqual(e.kwargs, {})
+
+
+    def test_trailingSlashFileRenderer(self):
+        """
+        L{Path._trailingSlashResponder} returns a fileRenderer for files.
         """
         dummy = object()
         self.assertEqual(
             static.Path(
                 filePath=MemoryFile(),
-                fileRenderer=lambda f: dummy).getChildWithDefault(
-                    name='', request=None),
+                pathNotFoundRenderer=lambda: dummy)._trailingSlashResponder(
+                    request=None),
             dummy)
 
 
-    def test_getChildWithDefaultDirectoryRenderer(self):
+    def test_trailingSlashDirectoryRenderer(self):
         """
+        L{Path._trailingSlashResponder} returns a directoryRenderer for
+        directories.
         """
         dummy = object()
         self.assertEqual(
             static.Path(
                 filePath=MemoryDir(),
-                directoryRenderer=lambda f: dummy).getChildWithDefault(
-                    name='', request=None),
+                directoryRenderer=lambda f: dummy)._trailingSlashResponder(
+                    request=None),
             dummy)
 
 
-    def test_notFound(self):
+    def test_getChildWithDefaultNotFound(self):
         """
-        If a request is made which encounters a L{File} before a final segment
-        which does not correspond to any file in the path the L{File} was
-        created with, a not found response is sent.
+        If the requested name is not a child of the current directory
+        a 404 renderer is returned.
         """
-        self.fail('TODO')
+        dummy = object()
+
+        self.assertEqual(
+            static.Path(
+                filePath=MemoryDir(child=MemoryPath(exists=False)),
+                pathNotFoundRenderer=lambda: dummy).getChildWithDefault(
+                    name='nonexistent', request=None),
+            dummy)
+
+
+    def test_getChildWithDefaultFound(self):
+        """
+        If the requested name is a child, a new instance of L{Path} is
+        returned.
+        """
+        class DummyPathFactory(object):
+            def __init__(self, filePath):
+                self.filePath = filePath
+
+        dummyFile = MemoryPath(exists=True)
+
+        f = static.Path(
+            filePath=MemoryDir(child=dummyFile),
+            pathFactory=DummyPathFactory)
+
+        child = f.getChildWithDefault(name='exists', request=None)
+
+        self.assertEqual(child.filePath, dummyFile)
+
+
+    def test_renderDirectory(self):
+        """
+        L{Path.render} calls C{redirectResource} if the path is a
+        directory passing a request url and the original request.
+        """
+        dummyResponse = object()
+        dummyRequest = object()
+        urls = []
+        requests = []
+        def fakeRedirectFactory(url, request):
+            urls.append(url)
+            requests.append(request)
+            return dummyResponse
+
+        self.patch(
+            static, 'addSlash',
+            lambda request: b'http://www.example.com/foo/')
+
+        response = static.Path(
+            filePath=MemoryDir(),
+            redirectRenderer=fakeRedirectFactory).render(request=dummyRequest)
+
+        self.assertEqual(
+            (response, urls, requests),
+            (dummyResponse, [b'http://www.example.com/foo/'], [dummyRequest]))
+
+
+    def test_renderFile(self):
+        """
+        L{Path.render} calls C{fileRenderer} if the path is a
+        file passing the current file as an argument.
+        """
+        dummyResponse = object()
+        dummyFile = MemoryFile()
+        dummyRequest = object()
+        files = []
+        requests = []
+        class DummyFileRenderer(object):
+            def __init__(self, f):
+                files.append(f)
+
+            def render(self, request):
+                requests.append(request)
+                return dummyResponse
+
+        response = static.Path(
+            filePath=dummyFile,
+            fileRenderer=DummyFileRenderer).render(request=dummyRequest)
+
+        self.assertEqual(
+            (response, files, requests),
+            (dummyResponse, [dummyFile], [dummyRequest]))
 
 
 
@@ -1780,34 +1979,42 @@ class DirectoryPathRendererTests(TestCase):
 
 
 
-class FilePathTests(object):
-    def _assertHttpMethodDispatch(self, resource, methodName):
+class StaticUtilitiesTests(TestCase):
+    def test_addSlash(self):
         """
-        Assert that C{resource} dispatches C{methodName} requests to
-        corresponding C{self.render_methodName}.
+        L{static.addSlash} takes an L{http.Request} object and returns the
+        url of the request with an added slash.
         """
-        request = DummyRequest([''])
-        request.method = methodName
-
-        requests = []
-        p = self.patch(resource, 'render_' + methodName,  lambda r: requests.append(r))
-        resource.render(request)
-        p.restore()
-
-        self.assertEqual([request], requests)
+        dummyRequest = DummyRequestGet(postpath=None)
+        dummyRequest.uri = b'/foo'
+        dummyRequest.headers['host'] = b'www.example.com'
+        self.assertEqual(
+            static.addSlash(dummyRequest),
+            b'http://www.example.com/foo/')
 
 
-    def test_renderDispatchGetMethod(self):
+    def test_addSlashWithTrailingSlash(self):
         """
-        L{Path.render} dispatches to L{Path.render_GET} for I{GET}
-        requests.
+        If the supplied L{http.Request} object already represents a url
+        with a trailing slash L{static.addSlash} adds another slash.
         """
-        self._assertHttpMethodDispatch(static.DirectoryPathRenderer(), b'GET')
+        dummyRequest = DummyRequestGet(postpath=None)
+        dummyRequest.uri = b'/foo/'
+        dummyRequest.headers['host'] = b'www.example.com'
+        self.assertEqual(
+            static.addSlash(dummyRequest),
+            b'http://www.example.com/foo//')
 
 
-    def test_renderDispatchHeadMethod(self):
+    def test_addSlashWithQueryString(self):
         """
-        L{Path.render} dispatches to L{Path.render_HEAD} for I{HEAD}
-        requests.
+        If the supplied L{http.Request} object has a url with a
+        querystring L{static.addSlash} adds the slash between the path
+        and the querystring.
         """
-        self._assertHttpMethodDispatch(static.DirectoryPathRenderer(), b'HEAD')
+        dummyRequest = DummyRequestGet(postpath=None)
+        dummyRequest.uri = b'/foo?bar=baz'
+        dummyRequest.headers['host'] = b'www.example.com'
+        self.assertEqual(
+            static.addSlash(dummyRequest),
+            b'http://www.example.com/foo/?bar=baz')

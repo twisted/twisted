@@ -104,7 +104,7 @@ class DummyRequest(object):
         self.go = 0
 
 
-    def __init__(self, postpath, session=None):
+    def __init__(self, postpath, session=None, _forceSSL=False):
         self.sitepath = []
         self.written = []
         self.finished = 0
@@ -118,6 +118,11 @@ class DummyRequest(object):
         self.responseCode = None
         self.headers = {}
         self._finishedDeferreds = []
+        self._forceSSL = _forceSSL
+
+
+    def isSecure(self):
+        return self._forceSSL
 
 
     def getHeader(self, name):

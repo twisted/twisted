@@ -80,12 +80,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         of the web server. Use this if you have a directory full of HTML, cgi,
         epy, or rpy files or any other files that you want to be served up raw.
         """
-        self['root'] = static.File(os.path.abspath(path))
-        self['root'].processors = {
-            '.cgi': twcgi.CGIScript,
-            '.epy': script.PythonScript,
-            '.rpy': script.ResourceScript,
-            }
+        self['path'] = os.path.abspath(path)
 
 
     def opt_processor(self, proc):
@@ -104,7 +99,7 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         Create a Resource subclass with a zero-argument constructor.
         """
         classObj = reflect.namedClass(className)
-        self['root'] = classObj()
+        self['class'] = classObj
 
 
     def opt_resource_script(self, name):
@@ -169,6 +164,17 @@ demo webserver that has the Test class from twisted.web.demo in it."""
         If no server port was supplied, select a default appropriate for the
         other options supplied.
         """
+        if 'class' in self:
+            self['root'] = self['class'](self)
+        elif 'path' in self:
+            self['root'] = static.File(self['path'])
+            self['root'].processors = {
+                '.cgi': twcgi.CGIScript,
+                '.epy': script.PythonScript,
+                '.rpy': script.ResourceScript,
+            }
+
+
         if self['https']:
             try:
                 from twisted.internet.ssl import DefaultOpenSSLContextFactory
@@ -206,7 +212,7 @@ def makeService(config):
         # This really ought to be web.Admin or something
         root = demo.Test()
 
-    if isinstance(root, (static.File,)):
+    if isinstance(root, static.File):
         root.registry.setComponent(interfaces.IServiceCollection, s)
 
     if config['logfile']:

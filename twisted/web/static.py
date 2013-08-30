@@ -54,7 +54,17 @@ class Data(resource.Resource):
     render_HEAD = render_GET
 
 
+
 def addSlash(request):
+    """
+    Return the I{URL} of C{request} with an added trailing slash.
+
+    @param request: The request containing the I{URL}
+    @type request: L{http.Request}
+
+    @return: The I{URL} with added trailing C{"/"}
+    @rtype: L{bytes}
+    """
     qs = ''
     qindex = request.uri.find('?')
     if qindex != -1:
@@ -65,6 +75,8 @@ def addSlash(request):
         request.getHeader("host"),
         (request.uri.split('?')[0]),
         qs)
+
+
 
 class Redirect(resource.Resource):
     def __init__(self, request):
@@ -1042,11 +1054,15 @@ class Path(object):
     isLeaf = False
 
     def __init__(self, filePath=None, fileRenderer=None,
-                 directoryRenderer=None):
+                 directoryRenderer=None, pathNotFoundRenderer=None,
+                 pathFactory=None, redirectRenderer=None):
         """
         """
         if filePath is None:
             filePath = filepath.FilePath('.')
+        else:
+            if not filePath.exists():
+                raise IOError(2, 'No such file or directory', filePath.path)
         self._filePath = filePath
 
         if fileRenderer is None:
@@ -1057,6 +1073,30 @@ class Path(object):
             directoryRenderer = DirectoryPathRenderer
         self._directoryRenderer = directoryRenderer
 
+        if pathNotFoundRenderer is None:
+            pathNotFoundRenderer = resource.NoResource
+        self._pathNotFoundRenderer = pathNotFoundRenderer
+
+        if pathFactory is None:
+            pathFactory = self.__class__
+        self._pathFactory = pathFactory
+
+        if redirectRenderer is None:
+            redirectRenderer = redirectTo
+        self._redirectRenderer = redirectRenderer
+
+
+    def _trailingSlashResponder(self, request):
+        """
+        Called for urls with a trailing slash.
+
+        Override in a subclass to customise trailing slash behaviour.
+        """
+        if self._filePath.isdir():
+            return self._directoryRenderer(self._filePath)
+        else:
+            return self._pathNotFoundRenderer()
+
 
     def getChildWithDefault(self, name, request):
         """
@@ -1064,10 +1104,14 @@ class Path(object):
 
         Only called if C{self.isLeaf} is C{False}.
         """
-        if self._filePath.isdir():
-            return self._directoryRenderer(self._filePath)
+        if name == '':
+            return self._trailingSlashResponder(request)
         else:
-            return self._fileRenderer(self._filePath)
+            child = self._filePath.child(name)
+            if child.exists():
+                return self._pathFactory(child)
+            else:
+                return self._pathNotFoundRenderer()
 
 
     def putChild(self, path, child):
@@ -1075,12 +1119,21 @@ class Path(object):
 
 
     def render(self, request):
-        pass
+        if self._filePath.isdir():
+            return self._redirectRenderer(addSlash(request), request)
+        else:
+            return self._fileRenderer(self._filePath).render(request)
 
 
 
 @implementer(resource.IResource)
 class FilePathRenderer(object):
+    """
+    """
+    def __init__(self, filePath):
+        self._filePath = filePath
+
+
     def getChildWithDefault(self, name, request):
         """
         """
@@ -1092,14 +1145,14 @@ class FilePathRenderer(object):
 
 
     def render(self, request):
-        pass
+        return self._filePath.getContent()
+
 
 
 @implementer(resource.IResource)
 class DirectoryPathRenderer(object):
     """
     """
-
     isLeaf = True
 
     _allowedMethods = (b'GET', b'HEAD')
@@ -1147,3 +1200,16 @@ class DirectoryPathRenderer(object):
         if request.method == b'GET':
             returnVal = self._forbiddenResourceFactory().render(request)
         return returnVal
+
+
+
+from twisted.python.zippath import ZipArchive
+def zipDemo(config):
+    """
+    A demonstration of static.Path with a different IFilePath
+    provider. eg:
+
+        twistd -n web --class=twisted.web.static.zipDemo \
+                      --path=/home/richard/Downloads/bootstrap.zip
+    """
+    return Path(filePath=ZipArchive(config['path']))
