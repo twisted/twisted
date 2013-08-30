@@ -661,7 +661,7 @@ class IAgent(Interface):
 
         doSomeRequests(cache)
     """
-    def request(method, url, headers=None, bodyProducer=None):
+    def request(method, uri, headers=None, bodyProducer=None):
         """
         Request the resource at the given location.
 
@@ -669,11 +669,11 @@ class IAgent(Interface):
             C{"PUT"}, C{"POST"}, etc.
         @type method: L{bytes}
 
-        @param url: The location of the resource to request.  This should be an
-            absolute URL but some implementations may support relative URLs
+        @param uri: The location of the resource to request.  This should be an
+            absolute URI but some implementations may support relative URIs
             (with absolute or relative paths).  I{HTTP} and I{HTTPS} are the
             schemes most likely to be supported but others may be as well.
-        @type url: L{bytes}
+        @type uri: L{bytes}
 
         @param headers: The headers to send with the request (or C{None} to
             send no extra headers).  An implementation may add its own headers
