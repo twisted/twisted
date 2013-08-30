@@ -11,7 +11,7 @@ from StringIO import StringIO
 
 from zope.interface.verify import verifyObject
 
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 from twisted.web import client, error, http_headers
 from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
 from twisted.web._newclient import ResponseNeverReceived, ResponseFailed
@@ -29,7 +29,7 @@ from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
 from twisted.web.client import FileBodyProducer, Request, HTTPConnectionPool
 from twisted.web.client import _WebToNormalContextFactory, ResponseDone
 from twisted.web.client import WebClientContextFactory, _HTTP11ClientFactory
-from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
+from twisted.web.iweb import UNKNOWN_LENGTH, IAgent, IBodyProducer, IResponse
 from twisted.web.http_headers import Headers
 from twisted.web._newclient import HTTP11ClientProtocol, Response
 from twisted.web.error import SchemeNotSupported
@@ -77,7 +77,7 @@ class FileConsumer(object):
 
 
 
-class FileBodyProducerTests(unittest.TestCase):
+class FileBodyProducerTests(TestCase):
     """
     Tests for the L{FileBodyProducer} which reads bytes from a file and writes
     them to an L{IConsumer}.
@@ -361,7 +361,7 @@ class DummyFactory(Factory):
 
 
 
-class HTTPConnectionPoolTests(unittest.TestCase, FakeReactorAndConnectMixin):
+class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
     """
     Tests for the L{HTTPConnectionPool} class.
     """
@@ -669,17 +669,35 @@ class HTTPConnectionPoolTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
 
 
+class AgentTestsMixin(object):
+    """
+    Tests for any L{IAgent} implementation.
+    """
+    def test_interface(self):
+        """
+        The agent object provides L{IAgent}.
+        """
+        self.assertTrue(verifyObject(IAgent, self.makeAgent()))
 
-class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
+
+
+class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
     """
     Tests for the new HTTP client API provided by L{Agent}.
     """
+    def makeAgent(self):
+        """
+        @return: a new L{twisted.web.client.Agent} instance
+        """
+        return client.Agent(self.reactor)
+
+
     def setUp(self):
         """
         Create an L{Agent} wrapped around a fake reactor.
         """
         self.reactor = self.Reactor()
-        self.agent = client.Agent(self.reactor)
+        self.agent = self.makeAgent()
 
 
     def test_defaultPool(self):
@@ -1062,7 +1080,7 @@ class AgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
 
 
 
-class HTTPConnectionPoolRetryTests(unittest.TestCase, FakeReactorAndConnectMixin):
+class HTTPConnectionPoolRetryTests(TestCase, FakeReactorAndConnectMixin):
     """
     L{client.HTTPConnectionPool}, by using
     L{client._RetryingHTTP11ClientProtocol}, supports retrying requests done
@@ -1345,7 +1363,7 @@ class CookieTestsMixin(object):
 
 
 
-class CookieJarTests(unittest.TestCase, CookieTestsMixin):
+class CookieJarTests(TestCase, CookieTestsMixin):
     """
     Tests for L{twisted.web.client._FakeUrllib2Response} and
     L{twisted.web.client._FakeUrllib2Request}'s interactions with
@@ -1353,7 +1371,7 @@ class CookieJarTests(unittest.TestCase, CookieTestsMixin):
     """
     def makeCookieJar(self):
         """
-        Create a C{cookielib.CookieJar} with some sample cookies.
+        @return: a C{cookielib.CookieJar} with some sample cookies
         """
         cookieJar = cookielib.CookieJar()
         reqres = self.addCookies(
@@ -1407,11 +1425,20 @@ class CookieJarTests(unittest.TestCase, CookieTestsMixin):
 
 
 
-class CookieAgentTests(unittest.TestCase, CookieTestsMixin,
-                       FakeReactorAndConnectMixin):
+class CookieAgentTests(TestCase, CookieTestsMixin, FakeReactorAndConnectMixin,
+                       AgentTestsMixin):
     """
     Tests for L{twisted.web.client.CookieAgent}.
     """
+    def makeAgent(self):
+        """
+        @return: a new L{twisted.web.client.CookieAgent}
+        """
+        return client.CookieAgent(
+            self.buildAgentForWrapperTest(self.reactor),
+            cookielib.CookieJar())
+
+
     def setUp(self):
         self.reactor = self.Reactor()
 
@@ -1562,10 +1589,17 @@ class Decoder2(Decoder1):
 
 
 
-class ContentDecoderAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
+class ContentDecoderAgentTests(TestCase, FakeReactorAndConnectMixin,
+                               AgentTestsMixin):
     """
     Tests for L{client.ContentDecoderAgent}.
     """
+    def makeAgent(self):
+        """
+        @return: a new L{twisted.web.client.ContentDecoderAgent}
+        """
+        return client.ContentDecoderAgent(self.agent, [])
+
 
     def setUp(self):
         """
@@ -1710,7 +1744,7 @@ class SimpleAgentProtocol(Protocol):
 
 
 
-class ContentDecoderAgentWithGzipTests(unittest.TestCase,
+class ContentDecoderAgentWithGzipTests(TestCase,
                                        FakeReactorAndConnectMixin):
 
     def setUp(self):
@@ -1900,10 +1934,18 @@ class ContentDecoderAgentWithGzipTests(unittest.TestCase,
 
 
 
-class ProxyAgentTests(unittest.TestCase, FakeReactorAndConnectMixin):
+class ProxyAgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
     """
     Tests for L{client.ProxyAgent}.
     """
+    def makeAgent(self):
+        """
+        @return: a new L{twisted.web.client.ProxyAgent}
+        """
+        return client.ProxyAgent(
+            TCP4ClientEndpoint(self.reactor, "127.0.0.1", 1234),
+            self.reactor)
+
 
     def setUp(self):
         self.reactor = self.Reactor()
@@ -2271,16 +2313,22 @@ class _RedirectAgentTestsMixin(object):
 
 
 
-class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin,
-                         _RedirectAgentTestsMixin):
+class RedirectAgentTests(TestCase, FakeReactorAndConnectMixin,
+                         _RedirectAgentTestsMixin, AgentTestsMixin):
     """
     Tests for L{client.RedirectAgent}.
     """
+    def makeAgent(self):
+        """
+        @return: a new L{twisted.web.client.RedirectAgent}
+        """
+        return client.RedirectAgent(
+            self.buildAgentForWrapperTest(self.reactor))
+
 
     def setUp(self):
         self.reactor = self.Reactor()
-        self.agent = client.RedirectAgent(
-            self.buildAgentForWrapperTest(self.reactor))
+        self.agent = self.makeAgent()
 
 
     def test_301OnPost(self):
@@ -2302,16 +2350,24 @@ class RedirectAgentTests(unittest.TestCase, FakeReactorAndConnectMixin,
 
 
 
-class BrowserLikeRedirectAgentTests(unittest.TestCase,
+class BrowserLikeRedirectAgentTests(TestCase,
                                     FakeReactorAndConnectMixin,
-                                    _RedirectAgentTestsMixin):
+                                    _RedirectAgentTestsMixin,
+                                    AgentTestsMixin):
     """
     Tests for L{client.BrowserLikeRedirectAgent}.
     """
+    def makeAgent(self):
+        """
+        @return: a new L{twisted.web.client.BrowserLikeRedirectAgent}
+        """
+        return client.BrowserLikeRedirectAgent(
+            self.buildAgentForWrapperTest(self.reactor))
+
+
     def setUp(self):
         self.reactor = self.Reactor()
-        self.agent = client.BrowserLikeRedirectAgent(
-            self.buildAgentForWrapperTest(self.reactor))
+        self.agent = self.makeAgent()
 
 
     def test_redirectToGet301(self):
@@ -2363,7 +2419,7 @@ class DummyResponse(object):
 
 
 
-class ReadBodyTests(unittest.TestCase):
+class ReadBodyTests(TestCase):
     """
     Tests for L{client.readBody}
     """

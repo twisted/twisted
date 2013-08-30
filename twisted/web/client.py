@@ -35,7 +35,7 @@ from twisted.python import failure
 from twisted.python.util import InsensitiveDict
 from twisted.python.components import proxyForInterface
 from twisted.web import error
-from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer, IResponse
+from twisted.web.iweb import UNKNOWN_LENGTH, IAgent, IBodyProducer, IResponse
 from twisted.web.http_headers import Headers
 
 
@@ -1190,6 +1190,7 @@ class _AgentBase(object):
 
 
 
+@implementer(IAgent)
 class Agent(_AgentBase):
     """
     L{Agent} is a very basic HTTP client.  It supports I{HTTP} and I{HTTPS}
@@ -1270,28 +1271,13 @@ class Agent(_AgentBase):
 
     def request(self, method, uri, headers=None, bodyProducer=None):
         """
-        Issue a new request.
+        Issue a request to the server indicated by the given C{uri}.
 
-        @param method: The request method to send.
-        @type method: C{str}
+        An existing connection from the connection pool may be used or a new one may be created.
 
-        @param uri: The request URI send.
-        @type uri: C{str}
+        I{HTTP} and I{HTTPS} schemes are supported in C{uri}.
 
-        @param headers: The request headers to send.  If no I{Host} header is
-            included, one will be added based on the request URI.
-        @type headers: L{Headers}
-
-        @param bodyProducer: An object which will produce the request body or,
-            if the request body is to be empty, L{None}.
-        @type bodyProducer: L{IBodyProducer} provider
-
-        @return: A L{Deferred} which fires with the result of the request (a
-            L{twisted.web.iweb.IResponse} provider), or fails if there is a
-            problem setting up a connection over which to issue the request.
-            It may also fail with L{SchemeNotSupported} if the scheme of the
-            given URI is not supported.
-        @rtype: L{Deferred}
+        @see: L{twisted.web.iweb.IAgent.request}
         """
         parsedURI = _URI.fromBytes(uri)
         try:
@@ -1306,6 +1292,7 @@ class Agent(_AgentBase):
 
 
 
+@implementer(IAgent)
 class ProxyAgent(_AgentBase):
     """
     An HTTP agent able to cross HTTP proxies.
@@ -1420,6 +1407,7 @@ class _FakeUrllib2Response(object):
 
 
 
+@implementer(IAgent)
 class CookieAgent(object):
     """
     L{CookieAgent} extends the basic L{Agent} to add RFC-compliant
@@ -1558,6 +1546,7 @@ class _GzipProtocol(proxyForInterface(IProtocol)):
 
 
 
+@implementer(IAgent)
 class ContentDecoderAgent(object):
     """
     An L{Agent} wrapper to handle encoded content.
@@ -1621,6 +1610,7 @@ class ContentDecoderAgent(object):
 
 
 
+@implementer(IAgent)
 class RedirectAgent(object):
     """
     An L{Agent} wrapper which handles HTTP redirects.
