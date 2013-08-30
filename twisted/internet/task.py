@@ -519,10 +519,10 @@ class Cooperator(object):
     L{Cooperator} can be used for many things, including but not limited to:
 
       - running one or more computationally intensive tasks without blocking
-      - limitting parallelism by running a subset of the total tasks
+      - limiting parallelism by running a subset of the total tasks
         simultaneously
-      - doing one thing, waiting for a Deferred to fire, doing the next thing,
-        repeat
+      - doing one thing, waiting for a L{Deferred<defer.Deferred>} to fire,
+        doing the next thing, repeat
     """
 
     def __init__(self,
