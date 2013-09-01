@@ -50,7 +50,7 @@ class StringTransportWithConnectionLosing(StringTransport):
 
 class MemoryPOP3Client(POP3Client):
     """
-    A version of L{POP3Client} that can memory the L{defer.Deferred} returned
+    A version of L{POP3Client} that can record the L{defer.Deferred} returned
     by L{POP3Client.sendShort} and L{POP3Client.sendLong}.
 
     @ivar sendShortDeferreds: An instance of C{list} that keeps all the
