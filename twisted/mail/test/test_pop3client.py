@@ -163,10 +163,8 @@ class POP3ClientCancelTestCase(unittest.TestCase):
         pop3client.dataReceived("+OK No-op to you too!\r\n")
         deferredOfCommand.cancel()
         self.assertEqual(transport.aborting, True)
-        failureOfCommand = self.failureResultOf(deferredOfCommand)
-        self.assertTrue(failureOfCommand.check(defer.CancelledError))
-        failureOfNoop = self.failureResultOf(deferredOfNoop)
-        self.assertTrue(failureOfNoop.check(error.ConnectionAborted))
+        self.failureResultOf(deferredOfCommand, defer.CancelledError)
+        self.failureResultOf(deferredOfNoop, error.ConnectionAborted)
 
 
     def test_cancelCommandSentDirectlyBySendShort(self):
@@ -183,10 +181,10 @@ class POP3ClientCancelTestCase(unittest.TestCase):
         deferredOfNoop = pop3client.noop()
         deferredOfCommand.cancel()
         self.assertEqual(transport.aborting, True)
-        failureOfCommand = self.failureResultOf(deferredOfCommand)
-        self.assertTrue(failureOfCommand.check(defer.CancelledError))
-        failureOfNoop = self.failureResultOf(deferredOfNoop)
-        self.assertTrue(failureOfNoop.check(error.ConnectionAborted))
+        failureOfCommand = self.failureResultOf(deferredOfCommand,
+                                                defer.CancelledError)
+        failureOfNoop = self.failureResultOf(deferredOfNoop,
+                                             error.ConnectionAborted)
 
 
     def test_cancelCommandInQueueReturnedBySendLong(self):
@@ -224,10 +222,10 @@ class POP3ClientCancelTestCase(unittest.TestCase):
         pop3client.dataReceived("+OK No-op to you too!\r\n")
         deferredOfCommand.cancel()
         self.assertEqual(transport.aborting, True)
-        failureOfCommand = self.failureResultOf(deferredOfCommand)
-        self.assertTrue(failureOfCommand.check(defer.CancelledError))
-        failureOfNoop = self.failureResultOf(deferredOfNoop)
-        self.assertTrue(failureOfNoop.check(error.ConnectionAborted))
+        failureOfCommand = self.failureResultOf(deferredOfCommand,
+                                                defer.CancelledError)
+        failureOfNoop = self.failureResultOf(deferredOfNoop,
+                                             error.ConnectionAborted)
 
 
     def test_cancelCommandSentDirectlyBySendLong(self):
@@ -244,10 +242,10 @@ class POP3ClientCancelTestCase(unittest.TestCase):
         deferredOfNoop = pop3client.noop()
         deferredOfCommand.cancel()
         self.assertEqual(transport.aborting, True)
-        failureOfCommand = self.failureResultOf(deferredOfCommand)
-        self.assertTrue(failureOfCommand.check(defer.CancelledError))
-        failureOfNoop = self.failureResultOf(deferredOfNoop)
-        self.assertTrue(failureOfNoop.check(error.ConnectionAborted))
+        failureOfCommand = self.failureResultOf(deferredOfCommand,
+                                                defer.CancelledError)
+        failureOfNoop = self.failureResultOf(deferredOfNoop,
+                                             error.ConnectionAborted)
 
 
 
