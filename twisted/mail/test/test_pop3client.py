@@ -150,7 +150,7 @@ class POP3ClientCancelTestCase(unittest.TestCase):
         been popped out from the queue and sent over the network, L{POP3Client}
         will errback the L{defer.Deferred} of the executing command with
         {defer.CancelledError} then errback the L{defer.Deferred}s of all the
-        waiting commands in the queue with
+        commands waiting in the queue with
         L{twisted.internet.error.ConnectionAborted} and disconnect the
         connection immediately.
         """
@@ -174,7 +174,7 @@ class POP3ClientCancelTestCase(unittest.TestCase):
         When cancelling a command sent directly by L{POP3Client.sendShort},
         L{POP3Client} will errback the L{defer.Deferred} of the executing
         command with {defer.CancelledError} then errback the L{defer.Deferred}s
-        of all the waiting commands in the queue with
+        of all the commands waiting in the queue with
         L{twisted.internet.error.ConnectionAborted} and disconnect the
         connection immediately.
         """
@@ -211,7 +211,7 @@ class POP3ClientCancelTestCase(unittest.TestCase):
         been popped out from the queue and sent over the network, L{POP3Client}
         will errback the L{defer.Deferred} of the executing command with
         {defer.CancelledError} then errback the L{defer.Deferred}s of all the
-        waiting commands in the queue with
+        commands waiting in the queue with
         L{twisted.internet.error.ConnectionAborted} and disconnect the
         connection immediately.
         """
@@ -235,7 +235,7 @@ class POP3ClientCancelTestCase(unittest.TestCase):
         When cancelling a command sent directly by L{POP3Client.sendLong},
         L{POP3Client} will errback the L{defer.Deferred} of the executing
         command with {defer.CancelledError} then errback the L{defer.Deferred}s
-        of all the waiting commands in the queue with
+        of all the commands waiting in the queue with
         L{twisted.internet.error.ConnectionAborted} and disconnect the
         connection immediately.
         """
