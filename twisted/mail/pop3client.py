@@ -479,7 +479,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         the client due to an error in the server greeting, L{_greetingError}
         will be set to the server response minus the status indicator.
 
-        @type reason: L{Failure}
+        @type reason: L{Failure <twisted.python.failure.Failure>}
         @param reason: The reason the connection was terminated.
         """
         if self.timeout > 0:
