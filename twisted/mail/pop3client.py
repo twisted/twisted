@@ -179,7 +179,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             deferred.errback(reason)
 
 
-    def _cancelTryingCommand(self, deferred):
+    def _cancelExecutingCommand(self, deferred):
         """
         Cancel the executing command. Errorback the L{defer.Deferred} of the
         executing command with the L{defer.CancelledError}. Errorback the
@@ -211,7 +211,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 If the command is in blocked queue, remove it from the queue.
                 If the command has been popped out and the deferred is being
                 cancelled then the command has been sent and is waiting for a
-                response, see docstring of L{POP3Client._cancelTryingCommand}.
+                response, see docstring of
+                L{POP3Client._cancelExecutingCommand}.
 
                 @param deferred: The L{defer.Deferred} whose C{cancel} method
                     is called.
@@ -220,7 +221,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
                     self._blockedQueue.remove(command)
                 except ValueError:
                     # The command has been popped out.
-                    self._cancelTryingCommand(deferred)
+                    self._waiting.cancel()
             d = defer.Deferred(cancel)
             command = (d, f, a)
             self._blockedQueue.append(command)
@@ -262,7 +263,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         else:
             self.sendLine(cmd)
         self.state = 'SHORT'
-        self._waiting = defer.Deferred(self._cancelTryingCommand)
+        self._waiting = defer.Deferred(self._cancelExecutingCommand)
         return self._waiting
 
     def sendLong(self, cmd, args, consumer, xform):
@@ -282,7 +283,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.state = 'LONG_INITIAL'
         self._xform = xform
         self._consumer = consumer
-        self._waiting = defer.Deferred(self._cancelTryingCommand)
+        self._waiting = defer.Deferred(self._cancelExecutingCommand)
         return self._waiting
 
     # Twisted protocol callback
