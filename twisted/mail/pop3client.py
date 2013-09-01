@@ -181,8 +181,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def _cancelTryingCommand(self, deferred):
         """
-        Cancel the trying command. Errorback the L{defer.Deferred} of the
-        trying command with the L{defer.CancelledError}. Errorback the
+        Cancel the executing command. Errorback the L{defer.Deferred} of the
+        executing command with the L{defer.CancelledError}. Errorback the
         L{defer.Deferred} of all the commands in the blocked queue with
         L{twisted.internet.error.ConnectionAborted}. Disconnect the connection
         immediately.
