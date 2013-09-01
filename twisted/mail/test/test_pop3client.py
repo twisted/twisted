@@ -141,8 +141,7 @@ class POP3ClientCancelTestCase(unittest.TestCase):
         deferred.cancel()
         self.assertEqual(transport.disconnecting, False)
         self.assertEqual(pop3client._blockedQueue, [])
-        failure = self.failureResultOf(deferred)
-        self.assertTrue(failure.check(defer.CancelledError))
+        self.failureResultOf(deferred, defer.CancelledError)
 
 
     def test_cancelCommandPoppedOutFromQueueBySendShort(self):
@@ -203,8 +202,7 @@ class POP3ClientCancelTestCase(unittest.TestCase):
         deferred.cancel()
         self.assertEqual(transport.disconnecting, False)
         self.assertEqual(pop3client._blockedQueue, [])
-        failure = self.failureResultOf(deferred)
-        self.assertTrue(failure.check(defer.CancelledError))
+        self.failureResultOf(deferred, defer.CancelledError)
 
 
     def test_cancelCommandPoppedOutFromQueueBySendLong(self):
