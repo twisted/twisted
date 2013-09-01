@@ -281,7 +281,8 @@ class POP3ClientLoginTestCase(unittest.TestCase):
 
     def test_userUseSendShort(self):
         """
-        The C{user} command uses L{POP3Client.sendShort} to send the command.
+        The L{POP3Client.user} uses L{POP3Client.sendShort} to send the
+        command.
         """
         pop3client, transport = setUp()
         deferred = pop3client.user("username")
@@ -307,7 +308,8 @@ class POP3ClientLoginTestCase(unittest.TestCase):
 
     def test_passwordUseSendShort(self):
         """
-        The C{password} command uses L{POP3Client.sendShort} to send the command.
+        The L{POP3Client.password} uses L{POP3Client.sendShort} to send the
+        command.
         """
         pop3client, transport = setUp()
         deferred = pop3client.password("password")
@@ -442,7 +444,8 @@ class POP3ClientListTestCase(unittest.TestCase):
 
     def test_listSizeUseSendLong(self):
         """
-        The C{listSize} command uses L{POP3Client.sendLong} to send the command.
+        The L{POP3Client.listSize} uses L{POP3Client.sendLong} to send the
+        command.
         """
         pop3client, transport = setUp()
         deferred = pop3client.listSize()
@@ -481,7 +484,8 @@ class POP3ClientListTestCase(unittest.TestCase):
 
     def test_listUIDUseSendLong(self):
         """
-        The C{listUID} command uses L{POP3Client.sendLong} to send the command.
+        The L{POP3Client.listUID} uses L{POP3Client.sendLong} to send the
+        command.
         """
         pop3client, transport = setUp()
         deferred = pop3client.listUID()
@@ -587,7 +591,8 @@ class POP3ClientMessageTestCase(unittest.TestCase):
 
     def test_retrieveUseSendLong(self):
         """
-        The C{retrieve} command uses L{POP3Client.sendLong} to send the command.
+        The L{POP3Client.retrieve} uses L{POP3Client.sendLong} to send the
+        command.
         """
         pop3client, transport = setUp()
         deferred = pop3client.retrieve(7)
@@ -619,7 +624,7 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
     def test_capabilitiesUseSendLong(self):
         """
-        The C{capabilities} command uses L{POP3Client.sendLong} to send the
+        The L{POP3Client.capabilities} uses L{POP3Client.sendLong} to send the
         command.
         """
         pop3client, transport = setUp()
@@ -646,7 +651,8 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
     def test_statUseSendShort(self):
         """
-        The C{stat} command uses L{POP3Client.sendShort} to send the command.
+        The L{POP3Client.stat} uses L{POP3Client.sendShort} to send the
+        command.
         """
         pop3client, transport = setUp()
         deferred = pop3client.stat()
@@ -672,7 +678,8 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
     def test_noopUseSendShort(self):
         """
-        The C{noop} command uses L{POP3Client.sendShort} to send the command.
+        The L{POP3Client.noop} uses L{POP3Client.sendShort} to send the
+        command.
         """
         pop3client, transport = setUp()
         deferred = pop3client.noop()
@@ -698,7 +705,8 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
     def test_resetUseSendShort(self):
         """
-        The C{reset} command uses L{POP3Client.sendShort} to send the command.
+        The L{POP3Client.reset} uses L{POP3Client.sendShort} to send the
+        command.
         """
         pop3client, transport = setUp()
         deferred = pop3client.reset()
@@ -724,7 +732,8 @@ class POP3ClientMiscTestCase(unittest.TestCase):
 
     def test_deleteUseSendShort(self):
         """
-        The C{delete} command uses L{POP3Client.sendShort} to send the command.
+        The L{POP3Client.delete} uses L{POP3Client.sendShort} to send the
+        command.
         """
         pop3client, transport = setUp()
         deferred = pop3client.delete(3)
