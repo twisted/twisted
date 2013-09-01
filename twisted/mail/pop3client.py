@@ -209,8 +209,9 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
                 Cancel the command.
 
                 If the command is in blocked queue, remove it from the queue.
-                If the command has been popped out and is trying to send the
-                message, see docstring of L{POP3Client._cancelTryingCommand}.
+                If the command has been popped out and the deferred is being
+                cancelled then the command has been sent and is waiting for a
+                response, see docstring of L{POP3Client._cancelTryingCommand}.
 
                 @param deferred: The L{defer.Deferred} whose C{cancel} method
                     is called.
