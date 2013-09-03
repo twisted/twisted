@@ -8,128 +8,93 @@ POSIX implementation of local network interface enumeration.
 from __future__ import division, absolute_import
 
 import sys, socket
+from os import strerror
 
 from socket import AF_INET, AF_INET6, inet_ntop
-from ctypes import (
-    CDLL, POINTER, Structure, c_char_p, c_ushort, c_int,
-    c_uint32, c_uint8, c_void_p, c_ubyte, pointer, cast)
-from ctypes.util import find_library
 
-from twisted.python.compat import _PY3, nativeString
+from cffi import FFI
 
-if _PY3:
-    # Once #6070 is implemented, this can be replaced with the implementation
-    # from that ticket:
-    def chr(i):
-        """
-        Python 3 implementation of Python 2 chr(), i.e. convert an integer to
-        corresponding byte.
-        """
-        return bytes([i])
-
-
-libc = CDLL(find_library("c"))
-
-if sys.platform == 'darwin':
-    _sockaddrCommon = [
-        ("sin_len", c_uint8),
-        ("sin_family", c_uint8),
-        ]
-else:
-    _sockaddrCommon = [
-        ("sin_family", c_ushort),
-        ]
+from twisted.python.compat import nativeString
 
 
 
-class in_addr(Structure):
-    _fields_ = [
-        ("in_addr", c_ubyte * 4),
-        ]
+ffi = FFI()
+ffi.cdef("""
+    struct sockaddr {
+         short int sa_family;
+         ...;
+    };
+
+    struct ifaddrs {
+        struct ifaddrs  *ifa_next;    /* Next item in list */
+        char            *ifa_name;    /* Name of interface */
+        struct sockaddr *ifa_addr;    /* Address of interface */
+        ...;
+    };
+
+    typedef size_t socklen_t;
+
+    int getifaddrs(struct ifaddrs **ifap);
+    void freeifaddrs(struct ifaddrs *ifa);
+    int getnameinfo(const struct sockaddr *sa, socklen_t salen, char *host,
+        size_t hostlen, char *serv, size_t servlen, int flags);
+    const char *gai_strerror(int errcode);
+
+    static const int AF_INET;
+    static const int AF_INET6;
+    static const size_t NI_MAXHOST;
+    static const int NI_NUMERICHOST;
+    const int sockaddr_in_size;
+    const int sockaddr_in6_size;
+""")
+lib = ffi.verify("""
+    #include <sys/types.h>
+    #include <ifaddrs.h>
+    #include <sys/socket.h>
+    #include <netdb.h>
+
+    const int sockaddr_in_size = sizeof(struct sockaddr_in);
+    const int sockaddr_in6_size = sizeof(struct sockaddr_in6);
+""")
 
 
-
-class in6_addr(Structure):
-    _fields_ = [
-        ("in_addr", c_ubyte * 16),
-        ]
-
-
-
-class sockaddr(Structure):
-    _fields_ = _sockaddrCommon + [
-        ("sin_port", c_ushort),
-        ]
-
-
-
-class sockaddr_in(Structure):
-    _fields_ = _sockaddrCommon + [
-        ("sin_port", c_ushort),
-        ("sin_addr", in_addr),
-        ]
-
-
-
-class sockaddr_in6(Structure):
-    _fields_ = _sockaddrCommon + [
-        ("sin_port", c_ushort),
-        ("sin_flowinfo", c_uint32),
-        ("sin_addr", in6_addr),
-        ]
-
-
-
-class ifaddrs(Structure):
-    pass
-
-ifaddrs_p = POINTER(ifaddrs)
-ifaddrs._fields_ = [
-    ('ifa_next', ifaddrs_p),
-    ('ifa_name', c_char_p),
-    ('ifa_flags', c_uint32),
-    ('ifa_addr', POINTER(sockaddr)),
-    ('ifa_netmask', POINTER(sockaddr)),
-    ('ifa_dstaddr', POINTER(sockaddr)),
-    ('ifa_data', c_void_p)]
-
-getifaddrs = libc.getifaddrs
-getifaddrs.argtypes = [POINTER(ifaddrs_p)]
-getifaddrs.restype = c_int
-
-freeifaddrs = libc.freeifaddrs
-freeifaddrs.argtypes = [ifaddrs_p]
 
 def _interfaces():
     """
     Call C{getifaddrs(3)} and return a list of tuples of interface name, address
     family, and human-readable address representing its results.
     """
-    ifaddrs = ifaddrs_p()
-    if getifaddrs(pointer(ifaddrs)) < 0:
-        raise OSError()
+    ifaddrs = ffi.new('struct ifaddrs **')
+    err = lib.getifaddrs(ifaddrs)
+    if err != 0:
+        raise OSError(ffi.errno, strerror(ffi.errno))
     results = []
     try:
-        while ifaddrs:
-            if ifaddrs[0].ifa_addr:
-                family = ifaddrs[0].ifa_addr[0].sin_family
-                if family == AF_INET:
-                    addr = cast(ifaddrs[0].ifa_addr, POINTER(sockaddr_in))
-                elif family == AF_INET6:
-                    addr = cast(ifaddrs[0].ifa_addr, POINTER(sockaddr_in6))
+        ifa = ifaddrs[0]
+        while ifa != ffi.NULL:
+            if ifa.ifa_addr != ffi.NULL:
+                family = ifa.ifa_addr.sa_family
+                if family == lib.AF_INET:
+                    salen = lib.sockaddr_in_size
+                elif family == lib.AF_INET6:
+                    salen = lib.sockaddr_in6_size
                 else:
-                    addr = None
+                    salen = None
 
-                if addr:
-                    packed = b''.join(map(chr, addr[0].sin_addr.in_addr[:]))
+                if salen is not None:
+                    addr = ffi.new('char[]', lib.NI_MAXHOST)
+                    err = lib.getnameinfo(
+                        ifa.ifa_addr, salen, addr, len(addr), ffi.NULL, 0,
+                        lib.NI_NUMERICHOST)
+                    if err != 0:
+                        raise OSError(err, ffi.string(lib.gai_strerror(err)))
                     results.append((
-                            ifaddrs[0].ifa_name,
-                            family,
-                            inet_ntop(family, packed)))
-
-            ifaddrs = ifaddrs[0].ifa_next
+                        ffi.string(ifa.ifa_name),
+                        family,
+                        ffi.string(addr)))
+            ifa = ifa.ifa_next
     finally:
-        freeifaddrs(ifaddrs)
+        lib.freeifaddrs(ifaddrs[0])
     return results
 
 
@@ -141,8 +106,7 @@ def posixGetLinkLocalIPv6Addresses():
     """
     retList = []
     for (interface, family, address) in _interfaces():
-        interface = nativeString(interface)
         address = nativeString(address)
-        if family == socket.AF_INET6 and address.startswith('fe80:'):
-            retList.append('%s%%%s' % (address, interface))
+        if family == lib.AF_INET6 and address.startswith(b'fe80:'):
+            retList.append(address)
     return retList
