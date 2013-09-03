@@ -1636,7 +1636,7 @@ class TestRelayQueue(object):
             queue.
         """
         self.directory = directory
-        self.n = 10
+        self.num = 10
         self.waiting = {}
         self.relayed = {}
         self.messages = []
@@ -1757,6 +1757,9 @@ class TestRelayQueue(object):
 
         @type message: L{bytes}
         @param message: The base filename of a message.
+
+        @rtype: L{bytes}
+        @return: The full base pathname of the message.
         """
         return os.path.join(self.directory, message)
 
@@ -1767,6 +1770,10 @@ class TestRelayQueue(object):
 
         @type message: L{bytes}
         @param message: The base filename of a message.
+
+        @rtype: L{list} of (E{1}) L{bytes}, (E{2}) L{bytes}
+        @return: A list containing the origination and destination addresses
+            for the message.
         """
         return pickle.load(self.getEnvelopeFile(message))
 
@@ -1792,8 +1799,8 @@ class TestRelayQueue(object):
         @return: The envelope file and a message receiver for a new message in
             the queue.
         """
-        fname = "%s_%s_%s_%s" % (os.getpid(), time.time(), self.n, id(self))
-        self.n = self.n + 1
+        fname = "%s_%s" % (self.num, id(self))
+        self.num += 1 
         headerFile = open(os.path.join(self.directory, fname+'-H'), 'wb')
         tempFilename = os.path.join(self.directory, fname+'-C')
         finalFilename = os.path.join(self.directory, fname+'-D')
@@ -1871,6 +1878,7 @@ class SmartHostSMTPRelayingManagerTestCase(unittest.TestCase):
         self.assertEqual(len(exchanges['a']), 5)
         self.assertEqual(len(exchanges['b']), 5)
         self.assertEqual(len(exchanges), 2)
+
 
     def test_messageAllocation2(self):
         """

@@ -412,7 +412,7 @@ class SmartHostSMTPRelayingManager:
         fullExchanges = []
 
         for msg in nextMessages:
-            from_, to = self.queue.getEnvelope(msg)
+            _, to = self.queue.getEnvelope(msg)
             name, addr = rfc822.parseaddr(to)
             parts = addr.split('@', 1)
             if len(parts) != 2:
