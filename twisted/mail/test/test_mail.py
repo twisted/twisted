@@ -13,7 +13,6 @@ import StringIO
 import rfc822
 import tempfile
 import signal
-import time
 from hashlib import md5
 
 from zope.interface.verify import verifyClass
@@ -1647,7 +1646,9 @@ class TestRelayQueue(object):
         """
         Scan the message directory for new messages.
         """
-        for message in os.listdir(self.directory):
+        messages = os.listdir(self.directory)
+        messages.sort()
+        for message in messages: 
             if message[-2:]!='-D':
                 continue
             self.addMessage(message[:-2])
@@ -1800,7 +1801,7 @@ class TestRelayQueue(object):
             the queue.
         """
         fname = "%s_%s" % (self.num, id(self))
-        self.num += 1 
+        self.num += 1
         headerFile = open(os.path.join(self.directory, fname+'-H'), 'wb')
         tempFilename = os.path.join(self.directory, fname+'-C')
         finalFilename = os.path.join(self.directory, fname+'-D')
