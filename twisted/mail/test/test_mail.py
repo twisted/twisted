@@ -1723,7 +1723,7 @@ class TestMessage(FancyEqMixin):
     """
     Message receiver for use by TestDomain.
 
-    @ivar user: See L{__init__} 
+    @ivar user: See L{__init__}
     """
     compareAttributes = ('user',)
 
@@ -1742,18 +1742,34 @@ class TestMessage(FancyEqMixin):
         @rtype: L{bytes}
         @return: A string containing the user.
         """
-        return "<Message for %s>" % self.user
+        return "<Message for %s>" % (self.user,)
 
 
     def lineReceived(self, line):
+        """
+        Receive a line of the message
+
+        @type line: L{bytes}
+        @param line: A received line.
+        """
         pass
 
 
     def eomReceived(self):
+        """
+        Receive an end of message.
+
+        @rtype: L{Deferred} which successfully results in L{bytes}
+        @return: A deferred which returns a string related somehow to the
+            message.
+        """
         pass
 
 
     def connectionLost(self):
+        """
+        The connection has been lost.
+        """
         pass
 
 
@@ -1792,13 +1808,13 @@ class AddressAliasTests(unittest.TestCase):
 
         self.alias4to2 = mail.alias.AddressAlias(self.user2, domains,
                 user4)
-            
+
 
     def test_createMessageReceiver(self):
         """
         L{createMessageReceiver} on an alias from C{user1} to C{user2@bar}
-        should get a L{TestMessage} for C{user2@bar} 
-        """ 
+        should get a L{TestMessage} for C{user2@bar}
+        """
         messageReceiver = self.alias1to2.createMessageReceiver()
         self.assertTrue(messageReceiver == TestMessage(str(self.user2)))
 
@@ -1806,7 +1822,7 @@ class AddressAliasTests(unittest.TestCase):
     def test_str(self):
         """
         The string presentation of L{AddressAlias} should include the target
-        address. 
+        address.
         """
         self.assertEqual(str(self.alias1to2), '<Address %s>' % (self.user2,))
 
