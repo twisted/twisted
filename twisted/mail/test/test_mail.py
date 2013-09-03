@@ -16,7 +16,7 @@ import signal
 from hashlib import md5
 
 from zope.interface.verify import verifyClass
-from zope.interface import Interface, implements
+from zope.interface import Interface, implements, implementer
 
 from twisted.trial import unittest
 from twisted.mail import smtp
@@ -33,6 +33,7 @@ from twisted.internet.error import ProcessDone, ProcessTerminated
 from twisted.internet import address
 from twisted.python import failure
 from twisted.python.filepath import FilePath
+from twisted.python.util import FancyEqMixin
 
 from twisted import mail
 import twisted.mail.mail
@@ -1717,90 +1718,125 @@ class AliasTestCase(unittest.TestCase):
 
 
 
-class TestMessage(object):
+@implementer(smtp.IMessage)
+class TestMessage(FancyEqMixin):
     """
     Message receiver for use by TestDomain.
 
-    @type user: L{smtp.Address}
-    @ivar user: The user for whom the message is destined.
+    @ivar user: See L{__init__} 
     """
-
-    implements (smtp.IMessage)
+    compareAttributes = ('user',)
 
     def __init__(self, user):
         """
-        @type user: C{str}
+        @type user: L{bytes}
         @param user: The user for whom the message is destined.
         """
-        self.user = smtp.Address(user)
+        self.user = str(smtp.Address(user))
+
 
     def __str__(self):
         """
         Return a string representation of this L{TestMessage} instance.
 
-        @rtype: C{str}
-        @return: A string containing the user. 
+        @rtype: L{bytes}
+        @return: A string containing the user.
         """
         return "<Message for %s>" % self.user
+
 
     def lineReceived(self, line):
         pass
 
+
     def eomReceived(self):
         pass
 
+
     def connectionLost(self):
         pass
+
 
 
 class AddressAliasTests(unittest.TestCase):
     """
     Tests for L{twisted.mail.alias.AddressAlias}.
 
-    @type DNSNAME C{str}
-    @ivar DNSNAME: The local host name.
+    @type alias1to2: L{mail.alias.AddressAlias}
+    @ivar alias1to2: An alias that translates from C{user1} to C{user2@bar}
 
-    @type destination: L{smtp.Address}
-    @ivar destination: The destination of the alias.
+    @type alias1to4: L{mail.alias.AddressAlias}
+    @ivar alias1to4: An alias that translates from C{user1} to C{user4@bar}
+
+    @type alias4to2: L{mail.alias.AddressAlias}
+    @ivar alias4to2: An alias that translates from C{user4@bar} to C{user2@bar}
+
+    @type user2: L{mail.smtp.Address}
+    @ivar user2: The address of C{user2@bar}
     """
-
     def setUp(self):
         """
-        Setup an L{AddressAlias} which translates user1 to user2 on the default
-        domain and change the value of L{smtp.DNSNAME} to the default domain.  
+        Setup some address aliases.
         """
-        self.DNSNAME = smtp.DNSNAME
-        smtp.DNSNAME = ''
+        user1 = mail.smtp.Address('user1', '')
+        user4 = mail.smtp.Address('user4@bar')
 
-        origin = mail.smtp.Address('user1')
-        self.destination = mail.smtp.Address('user2')
-        domains = {'': TestDomain({}, ['user1', 'user2'])}
-        self.alias = mail.alias.AddressAlias(self.destination, domains, origin)
+        self.user2 = mail.smtp.Address('user2@bar')
+        testDomain = TestDomain({}, ['user1', 'user2'])
+        domains = {'': testDomain, 'bar': testDomain}
 
+        self.alias1to2 = mail.alias.AddressAlias(self.user2, domains,
+            user1)
 
-    def tearDown(self):
-        """
-        Restore the original value of L{smtp.DNSNAME}.
-        """
-        smtp.DNSNAME = self.DNSNAME
+        self.alias1to4 = mail.alias.AddressAlias(user4, domains, user1)
 
+        self.alias4to2 = mail.alias.AddressAlias(self.user2, domains,
+                user4)
+            
 
     def test_createMessageReceiver(self):
         """
-        C{createMessageReceiver} should call C{exists} on the domain and
-        get a C{TestMessage} for the alias destination user.
-        """
-        messageReceiver = self.alias.createMessageReceiver()
-        self.assertEqual(str(messageReceiver),
-                str(TestMessage(str(self.destination))))
+        L{createMessageReceiver} on an alias from C{user1} to C{user2@bar}
+        should get a L{TestMessage} for C{user2@bar} 
+        """ 
+        messageReceiver = self.alias1to2.createMessageReceiver()
+        self.assertTrue(messageReceiver == TestMessage(str(self.user2)))
 
 
     def test_str(self):
         """
-        The string presentation of L{AddressAlias} includes the alias.
+        The string presentation of L{AddressAlias} should include the target
+        address. 
         """
-        self.assertEqual(str(self.alias), 
-            '<Address %s>' % str(self.destination))
+        self.assertEqual(str(self.alias1to2), '<Address %s>' % (self.user2,))
+
+
+    def test_resolve(self):
+        """
+        Resolving an alias from C{user1} to C{user4@bar} should fail because
+        C{user4} is not valid user for domain C{bar} and the C{aliasmap} does
+        not map C{user4} to another address.
+        """
+        self.assertEqual(self.alias1to4.resolve({'foo': self.alias4to2}), None)
+
+
+    def test_resolveWithAliasmap(self):
+        """
+        Resolving an alias from C{user1} to C{user4@bar} with an C{aliasmap}
+        that maps C{user4} to C{user2@bar} should return a L{TestMessage} for
+        C{user2@bar}.
+        """
+        messageReceiver = self.alias1to4.resolve({'user4': self.alias4to2})
+        self.assertTrue(messageReceiver == TestMessage(str(self.user2)))
+
+
+    def test_resolveWithoutAliasmap(self):
+        """
+        Resolving an alias from C{user1} to C{user4@bar} should fail because
+        C{user4} is not valid user for domain C{bar} and no C{aliasmap} is
+        provided.
+        """
+        self.assertEqual(self.alias1to4.resolve({}), None)
 
 
 
@@ -2127,7 +2163,6 @@ class TestDomain:
 
     def exists(self, user, memo=None):
         if user.dest.local in self.users:
-            #return lambda: mail.alias.AddressAlias(user, None, None)
             return lambda: TestMessage(user)
         try:
             a = self.aliases[user.dest.local]
