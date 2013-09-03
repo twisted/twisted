@@ -1646,9 +1646,7 @@ class TestRelayQueue(object):
         """
         Scan the message directory for new messages.
         """
-        messages = os.listdir(self.directory)
-        messages.sort()
-        for message in messages: 
+        for message in os.listdir(self.directory):
             if message[-2:]!='-D':
                 continue
             self.addMessage(message[:-2])
@@ -1806,6 +1804,8 @@ class TestRelayQueue(object):
         tempFilename = os.path.join(self.directory, fname+'-C')
         finalFilename = os.path.join(self.directory, fname+'-D')
         messageFile = open(tempFilename, 'wb')
+
+        self.messages.append(fname)
 
         return headerFile, twisted.mail.mail.FileMessage(messageFile,
             tempFilename, finalFilename)
