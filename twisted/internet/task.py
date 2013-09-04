@@ -499,6 +499,34 @@ class CooperativeTask(object):
 class Cooperator(object):
     """
     Cooperative task scheduler.
+
+    A cooperative task is an iterator where each iteration represents an
+    atomic unit of work.  When the iterator yields, it allows the
+    L{Cooperator} to decide which of its tasks to execute next.  If the
+    iterator yields a L{defer.Deferred} then work will pause until the
+    L{defer.Deferred} fires and completes its callback chain.
+
+    When a L{Cooperator} has more than one task, it distributes work between
+    all tasks.
+
+    There are two ways to add tasks to a L{Cooperator}, L{cooperate} and
+    L{coiterate}.  L{cooperate} is the more useful of the two, as it returns a
+    L{CooperativeTask}, which can be L{paused<CooperativeTask.pause>},
+    L{resumed<CooperativeTask.resume>} and L{waited
+    on<CooperativeTask.whenDone>}.  L{coiterate} has the same effect, but
+    returns only a L{defer.Deferred} that fires when the task is done.
+
+    L{Cooperator} can be used for many things, including but not limited to:
+
+      - running one or more computationally intensive tasks without blocking
+      - limiting parallelism by running a subset of the total tasks
+        simultaneously
+      - doing one thing, waiting for a L{Deferred<defer.Deferred>} to fire,
+        doing the next thing, repeat (i.e. serializing a sequence of
+        asynchronous tasks)
+
+    Multiple L{Cooperator}s do not cooperate with each other, so for most
+    cases you should use the L{global cooperator<task.cooperate>}.
     """
 
     def __init__(self,
@@ -535,6 +563,9 @@ class Cooperator(object):
         """
         Add an iterator to the list of iterators this L{Cooperator} is
         currently running.
+
+        Equivalent to L{cooperate}, but returns a L{defer.Deferred} that will
+        be fired when the task is done.
 
         @param doneDeferred: If specified, this will be the Deferred used as
             the completion deferred.  It is suggested that you use the default,
@@ -675,6 +706,12 @@ def cooperate(iterator):
     """
     Start running the given iterator as a long-running cooperative task, by
     calling next() on it as a periodic timed event.
+
+    This is very useful if you have computationally expensive tasks that you
+    want to run without blocking the reactor.  Just break each task up so that
+    it yields frequently, pass it in here and the global L{Cooperator} will
+    make sure work is distributed between them without blocking longer than a
+    single iteration of a single task.
 
     @param iterator: the iterator to invoke.
 
