@@ -708,10 +708,10 @@ def cooperate(iterator):
     calling next() on it as a periodic timed event.
 
     This is very useful if you have computationally expensive tasks that you
-    want to run without blocking the reactor.  Just break each task up into so
-    that it yields frequently, pass it in here and the global L{Cooperator}
-    will make sure work is distributed between them without blocking longer
-    than a single iteration of a single task.
+    want to run without blocking the reactor.  Just break each task up so that
+    it yields frequently, pass it in here and the global L{Cooperator} will
+    make sure work is distributed between them without blocking longer than a
+    single iteration of a single task.
 
     @param iterator: the iterator to invoke.
 
