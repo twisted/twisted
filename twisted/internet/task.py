@@ -503,8 +503,8 @@ class Cooperator(object):
     A cooperative task is an iterator where each iteration represents an
     atomic unit of work.  When the iterator yields, it allows the
     L{Cooperator} to decide which of its tasks to execute next.  If the
-    iterator yields a L{defer.Deferred} then work will only resume after it
-    fires and completes its callback chain.
+    iterator yields a L{defer.Deferred} then work will pause until the
+    L{defer.Deferred} fires and completes its callback chain.
 
     When a L{Cooperator} has more than one task, it distributes work between
     all tasks.
@@ -522,9 +522,10 @@ class Cooperator(object):
       - limiting parallelism by running a subset of the total tasks
         simultaneously
       - doing one thing, waiting for a L{Deferred<defer.Deferred>} to fire,
-        doing the next thing, repeat
+        doing the next thing, repeat (i.e. serializing a sequence of
+        asynchronous tasks)
 
-    Multiple L{Cooperator}'s do not cooperate with each other, so for most
+    Multiple L{Cooperator}s do not cooperate with each other, so for most
     cases you should use the L{global cooperator<task.cooperate>}.
     """
 
