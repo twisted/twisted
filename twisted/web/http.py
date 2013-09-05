@@ -129,7 +129,7 @@ CACHED = """Magic constant returned by http.Request methods to set cache
 validation headers when the request is conditional and the value fails
 the condition."""
 
-# backwards compatability
+# backwards compatibility
 responses = RESPONSES
 
 

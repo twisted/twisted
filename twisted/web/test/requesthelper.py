@@ -7,7 +7,8 @@ Helpers related to HTTP requests, used by tests.
 
 from __future__ import division, absolute_import
 
-__all__ = ['DummyChannel', 'DummyRequest']
+__all__ = ['DummyChannel', 'DummyRequest',
+           'DummyRequestHead', 'DummyRequestPost', 'requestFromUrl']
 
 from io import BytesIO
 
@@ -17,6 +18,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import ISSLTransport
 
+from twisted.web import http
 from twisted.web.http_headers import Headers
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Session, Site
@@ -104,10 +106,12 @@ class DummyRequest(object):
         self.go = 0
 
 
-    def __init__(self, postpath, session=None, _forceSSL=False):
+    def __init__(self, postpath=None, session=None):
         self.sitepath = []
         self.written = []
         self.finished = 0
+        if postpath is None:
+            postpath = []
         self.postpath = postpath
         self.prepath = []
         self.session = None
@@ -118,7 +122,7 @@ class DummyRequest(object):
         self.responseCode = None
         self.headers = {}
         self._finishedDeferreds = []
-        self._forceSSL = _forceSSL
+        self._forceSSL = False
 
 
     def isSecure(self):
@@ -242,3 +246,44 @@ class DummyRequest(object):
         if isinstance(self.client, IPv4Address):
             return self.client.host
         return None
+
+
+
+class DummyRequestHead(DummyRequest):
+    method = b'HEAD'
+
+
+
+class DummyRequestPost(DummyRequest):
+    method = b'POST'
+
+
+
+def requestFromUrl(url, *args, **kwargs):
+    """
+    Return a DummyRequest with the given url.
+    """
+    requestFactory = kwargs.pop('requestFactory', DummyRequest)
+
+    url = http.urlparse(url)
+
+    assert url.scheme in ('http', 'https'), (
+        'Unexpected scheme %r' % (url.scheme,))
+
+    dummyRequest = requestFactory(*args, **kwargs)
+
+    if url.scheme == 'https':
+        dummyRequest._forceSSL = True
+
+    query = b''
+    if url.query:
+        query = b'?' + url.query
+
+    fragment = b''
+    if url.fragment:
+        fragment = b'#' + url.fragment
+
+    dummyRequest.uri = url.path + query + fragment
+    dummyRequest.headers['host'] = url.netloc
+
+    return dummyRequest

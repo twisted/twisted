@@ -13,12 +13,14 @@ import urllib
 import itertools
 import cgi
 import time
+from functools import partial
 
 from zope.interface import implementer, implements
 
 from twisted.web import server
 from twisted.web import resource
 from twisted.web import http
+from twisted.web import util
 from twisted.web.util import redirectTo
 
 from twisted.python import compat, components, filepath, log
@@ -78,7 +80,34 @@ def addSlash(request):
 
 
 
+def removeSlash(request):
+    """
+    Return the I{URL} of C{request} with trailing slashes removed.
+
+    @param request: The request containing the I{URL}
+    @type request: L{http.Request}
+
+    @return: The I{URL} with trailing C{"/"} removed.
+    @rtype: L{bytes}
+    """
+    scheme = 'http'
+    if request.isSecure():
+        scheme = 'https'
+
+    parts = request.uri.split('?', 1)
+    path = parts.pop(0).rstrip('/')
+    qs = ''
+    if parts:
+        qs = '?' + parts[0]
+
+    return "%s://%s%s%s" % (scheme, request.getHeader("host"), path, qs)
+
+
+
 class Redirect(resource.Resource):
+    """
+    XXX: This is misnamed. It should be called AddSlashRedirect
+    """
     def __init__(self, request):
         resource.Resource.__init__(self)
         self.url = addSlash(request)
@@ -957,6 +986,8 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
 </tr>
 """
 
+    _filePathFactory = filepath.FilePath
+
     def __init__(self, pathname, dirs=None,
                  contentTypes=File.contentTypes,
                  contentEncodings=File.contentEncodings,
@@ -967,7 +998,13 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
         self.defaultType = defaultType
         # dirs allows usage of the File to specify what gets listed
         self.dirs = dirs
-        self.path = pathname
+
+        if filepath.IFilePath.providedBy(pathname):
+            self.path = pathname.path
+            self._path = pathname
+        else:
+            self.path = pathname
+            self._path = self._filePathFactory(pathname)
 
 
     def _getFilesAndDirectories(self, directory):
@@ -982,19 +1019,20 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
         files = []
         dirs = []
         for path in directory:
-            url = urllib.quote(path, "/")
-            escapedPath = cgi.escape(path)
-            if os.path.isdir(os.path.join(self.path, path)):
+            segments = path.segmentsFrom(self._path)
+            url = '/'.join(urllib.quote(s) for s in segments)
+            escapedPath = '/'.join(cgi.escape(s) for s in segments)
+            if path.isdir():
                 url = url + '/'
                 dirs.append({'text': escapedPath + "/", 'href': url,
                              'size': '', 'type': '[Directory]',
                              'encoding': ''})
             else:
-                mimetype, encoding = getTypeAndEncoding(path, self.contentTypes,
+                mimetype, encoding = getTypeAndEncoding(path.path, self.contentTypes,
                                                         self.contentEncodings,
                                                         self.defaultType)
                 try:
-                    size = os.stat(os.path.join(self.path, path)).st_size
+                    size = path.getsize()
                 except OSError:
                     continue
                 files.append({
@@ -1020,14 +1058,13 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
 
     def render(self, request):
         """
-        Render a listing of the content of C{self.path}.
+        Render a listing of the content of C{self._path}.
         """
         request.setHeader("content-type", "text/html; charset=utf-8")
         if self.dirs is None:
-            directory = os.listdir(self.path)
-            directory.sort()
+            directory = sorted(self._path.children())
         else:
-            directory = self.dirs
+            directory = [self._path.child(d) for d in self.dirs]
 
         dirs, files = self._getFilesAndDirectories(directory)
 
@@ -1036,11 +1073,11 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
         header = "Directory listing for %s" % (
             cgi.escape(urllib.unquote(request.uri)),)
 
-        return self.template % {"header": header, "tableContent": tableContent}
+        return (self.template % {"header": header, "tableContent": tableContent}).encode('utf-8')
 
 
     def __repr__(self):
-        return '<DirectoryLister of %r>' % self.path
+        return '<DirectoryLister of %r>' % self._path.path
 
     __str__ = __repr__
 
@@ -1049,7 +1086,17 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
 @implementer(resource.IResource)
 class Path(object):
     """
-    A L{FilePath} traversal resource.
+    A L{IFilePath} traversal resource.
+
+    L{Path} handles URL traversal for locating files and
+    sub-directories.
+
+    If the target is found, L{Path} dispatches to a
+    C{filePathRenderer} or C{directoryPathRenderer} depending on the
+    target type.
+
+    If the target is not found, L{Path} dispatches to a separate
+    C{pathNotFoundRenderer}.
     """
     isLeaf = False
 
@@ -1057,6 +1104,35 @@ class Path(object):
                  directoryRenderer=None, pathNotFoundRenderer=None,
                  pathFactory=None, redirectRenderer=None):
         """
+        The constructor accepts various factory arguments partly for ease
+        of testing, but also for "composability" (XXX: as I understand it).
+
+        You ...
+
+        @param filePath: The L{FilePath} instance to be traversed. Default
+            to current working directory (".")
+
+        @param fileRenderer: An L{IResource} class (or factory
+            function) which returns a resource for rendering
+            files. Passed C{filePath}. Default
+            L{FilePathRenderer}. Pass in L{File} to get I{range
+            request} handling.
+
+        @param directoryRenderer: An L{IResource} class (or factory
+            function) which returns a resource for rendering
+            directories. Passed C{filePath}. Default
+            L{DirectoryPathRenderer}.
+
+        @param pathNotFoundRenderer: An L{IResource} class (or factory
+            function) which returns a resource for handling and
+            rendering I{FILE NOT FOUND} responses. Passed
+            C{filePath}. Default L{resource.NotFound}.
+
+        @param pathFactory: A class (or factory function) which
+            returns a new L{Path} instance. Called at each round of
+            traversal. Default L{Path}. Passed the child C{filePath}
+            plus all the keyword arguments provided to the parent
+            L{Path}.
         """
         if filePath is None:
             filePath = filepath.FilePath('.')
@@ -1079,56 +1155,118 @@ class Path(object):
 
         if pathFactory is None:
             pathFactory = self.__class__
-        self._pathFactory = pathFactory
+
+        # XXX: File.createSimilarFile Is this is equivalent? Perhaps
+        # it should be a separate method so it can be overridden in
+        # subclasses. Forcing the same arguments may cause problems
+        # for anyone wanting to subclass. See https://tm.tl/3762.
+        self._pathFactory = partial(
+            pathFactory,
+            fileRenderer=fileRenderer,
+            directoryRenderer=directoryRenderer,
+            pathNotFoundRenderer=pathNotFoundRenderer,
+            pathFactory=pathFactory,
+            redirectRenderer=redirectRenderer)
 
         if redirectRenderer is None:
-            redirectRenderer = redirectTo
+            redirectRenderer = util.Redirect
         self._redirectRenderer = redirectRenderer
-
-
-    def _trailingSlashResponder(self, request):
-        """
-        Called for urls with a trailing slash.
-
-        Override in a subclass to customise trailing slash behaviour.
-        """
-        if self._filePath.isdir():
-            return self._directoryRenderer(self._filePath)
-        else:
-            return self._pathNotFoundRenderer()
 
 
     def getChildWithDefault(self, name, request):
         """
-        Return a File or Directory resource.
+        Handle traversal of this path.
 
-        Only called if C{self.isLeaf} is C{False}.
+        In the special case of C{name == ''} means that the request
+        URL has a trailing slash. In this case, we delegate to
+        C{_trailingSlashResponder} which decides how to handle
+        trailing slashes for directories and files.
+
+        Else, we check whether the requested name is an existing child
+        of this directory and if so return it wrapped in a new
+        instance of this class for further traversal and rendering.
+
+        If the requested name is for a file which does not exist we
+        call C{pathNotFoundRenderer} with the requested filePath and
+        return it for further rendering.
         """
+        # Specialcase handling for root slash
         if name == '':
-            return self._trailingSlashResponder(request)
-        else:
-            child = self._filePath.child(name)
-            if child.exists():
-                return self._pathFactory(child)
+#            import pdb; pdb.set_trace()
+            if self._filePath.isdir():
+                return self._directoryRenderer(self._filePath)
             else:
-                return self._pathNotFoundRenderer()
+                return self._fileRenderer(self._filePath)
+
+        # XXX: File.getChild Is this needed?
+        # self.restat(reraise=False)
+        try:
+            child = self._filePath.child(name)
+        except filepath.InsecurePath:
+            return self._pathNotFoundRenderer()
+
+        if child.exists():
+            # XXX: File.getChild This should probably be part of (or a wrapper around) FilePathRenderer
+            # if platformType == "win32":
+            #     # don't want .RPY to be different than .rpy, since that would allow
+            #     # source disclosure.
+            #     processor = InsensitiveDict(self.processors).get(fpath.splitext()[1])
+            # else:
+            #     processor = self.processors.get(fpath.splitext()[1])
+            # if processor:
+            #     return resource.IResource(processor(fpath.path, self.registry))
+            if request.postpath:
+                # We are handling an intermediate segment
+                if request.postpath[0] == '':
+                    # We are handling the penultimate segment before a
+                    # trailing slash
+                    if child.isdir():
+                        # Trailing slash is only expected for directories
+                        return self._directoryRenderer(child)
+                    else:
+                        # Trailing slash not expected on files
+                        return self._pathNotFoundRenderer()
+                else:
+                    # The next segment is a name of a file or directory
+                    return self._pathFactory(child)
+            else:
+#                import pdb;pdb.set_trace()
+                # We are handling the final segment
+                if child.isdir():
+                    # Directory without trailing slash - redirect
+                    return self._redirectRenderer(addSlash(request))
+                else:
+                    return self._fileRenderer(child)
+        else:
+            # XXX: File.getChild Where should this go? Here or in the pathNotFoundRenderer?
+            # if not fpath.exists():
+            #     fpath = fpath.siblingExtensionSearch(*self.ignoredExts)
+            #     if fpath is None:
+            #         return self.childNotFound
+            return self._pathNotFoundRenderer()
 
 
     def putChild(self, path, child):
-        pass
+        """
+        XXX: Consider inheriting from Resource to get the default putChild
+        behaviour.  Would then also need to rename getChildWithDefault
+        to getChild I think.
+        """
 
 
     def render(self, request):
-        if self._filePath.isdir():
-            return self._redirectRenderer(addSlash(request), request)
-        else:
-            return self._fileRenderer(self._filePath).render(request)
+        """
+        Never called
+        """
 
 
 
 @implementer(resource.IResource)
 class FilePathRenderer(object):
     """
+    An {IResource} for rendering files.
+
+    @param filePath: The I{IFilePath} provider to be rendered.
     """
     def __init__(self, filePath):
         self._filePath = filePath
@@ -1145,6 +1283,42 @@ class FilePathRenderer(object):
 
 
     def render(self, request):
+        # XXX: File.render_GET Is this necessary?
+        # self.restat(False)
+
+        # XXX: File.render_GET
+        # if self.type is None:
+        #     self.type, self.encoding = getTypeAndEncoding(self.basename(),
+        #                                                   self.contentTypes,
+        #                                                   self.contentEncodings,
+        #                                                   self.defaultType)
+
+
+        # request.setHeader('accept-ranges', 'bytes')
+
+        # try:
+        #     fileForReading = self.openForReading()
+        # except IOError, e:
+        #     import errno
+        #     if e[0] == errno.EACCES:
+        #         return resource.ForbiddenResource().render(request)
+        #     else:
+        #         raise
+
+        # if request.setLastModified(self.getmtime()) is http.CACHED:
+        #     return ''
+
+
+        # producer = self.makeProducer(request, fileForReading)
+
+        # if request.method == 'HEAD':
+        #     return ''
+
+        # producer.start()
+        # # and make sure the connection doesn't get closed
+        # return server.NOT_DONE_YET
+
+
         return self._filePath.getContent()
 
 
@@ -1152,12 +1326,37 @@ class FilePathRenderer(object):
 @implementer(resource.IResource)
 class DirectoryPathRenderer(object):
     """
+    An {IResource} for rendering directories.
+
+    @param filePath: The I{FilePath} object to be rendered. Must be a
+        directory.
+
+    @param indexNames: A L{list} of file names which will be
+        considered to be directory index files. If a file with one of
+        these names is found in C{filePath}, it will be rendered and
+        returned to the client using C{fileRenderer}.
+
+    @param fileRenderer: An L{IResource} class (or factory function)
+        which returns a resource for rendering files. Default
+        L{FilePathRenderer}. (Pass in L{File} to get full range request
+        handling.)
+
+    @param pathNotFoundRenderer: An L{IResource} class (or factory
+        function) which returns a resource for handling and rendering
+        responses when an index file is not found. Passed
+        C{filePath}. Default L{resource.ForbiddenResource}. (Pass
+        L{DirectoryLister} to generate a directory listing instead of
+        generating an error.)
     """
     isLeaf = True
 
     _allowedMethods = (b'GET', b'HEAD')
+    _indexNames = ("index", "index.html", "index.htm", "index.rpy")
 
-    def __init__(self, filePath=None, forbiddenResourceFactory=None):
+    def __init__(self, filePath=None, indexNames=None, fileRenderer=None,
+                 pathNotFoundRenderer=None):
+        """
+        """
         if filePath is None:
             filePath = filepath.FilePath('.')
         else:
@@ -1166,9 +1365,16 @@ class DirectoryPathRenderer(object):
                     'Expected a path to a directory. Found %r' % (filePath,))
         self._filePath = filePath
 
-        if forbiddenResourceFactory is None:
-            forbiddenResourceFactory = resource.ForbiddenResource
-        self._forbiddenResourceFactory = forbiddenResourceFactory
+        if indexNames is not None:
+            self._indexNames = indexNames
+
+        if fileRenderer is None:
+            fileRenderer = FilePathRenderer
+        self._fileRenderer = fileRenderer
+
+        if pathNotFoundRenderer is None:
+            pathNotFoundRenderer = resource.ForbiddenResource
+        self._pathNotFoundRenderer = pathNotFoundRenderer
 
 
     def getChildWithDefault(self, name, request):
@@ -1186,30 +1392,59 @@ class DirectoryPathRenderer(object):
 
     def render(self, request):
         """
-        Return status code FORBIDDEN and render a Forbidden message if
-        this directory is being viewed rather than traversed.
+        Check that the C{request} uses a supported I{HTTP} I{method} and
+        raise L{resource.UnsupportedMethod} if not.
 
-        This will only be called if C{self.isLeaf} is C{True}.
+        Check for a child with a name in C{indexNames}, wrap it in
+        C{fileRenderer} and return the result of its C{render} method.
+
+        If an index child is not found, instantiate
+        C{pathNotFoundRenderer} and return the result of its C{render}
+        method.
         """
         if compat.nativeString(request.method) not in self._allowedMethods:
             raise resource.UnsupportedMethod(
                 allowedMethods=self._allowedMethods)
 
-        request.setResponseCode(resource.FORBIDDEN)
-        returnVal = b''
-        if request.method == b'GET':
-            returnVal = self._forbiddenResourceFactory().render(request)
-        return returnVal
+        for index in self._indexNames:
+            child = self._filePath.child(index)
+            if child.exists():
+                return self._fileRenderer(child).render(request)
+
+        return self._pathNotFoundRenderer(self._filePath).render(request)
 
 
 
 from twisted.python.zippath import ZipArchive
 def zipDemo(config):
     """
-    A demonstration of static.Path with a different IFilePath
-    provider. eg:
+    A demonstration of static.Path with a ZipFile IFilePath provider
+    and directoryRenderer customised to serve directory listings when
+    an index file is not found.  eg:
 
         twistd -n web --class=twisted.web.static.zipDemo \
-                      --path=/home/richard/Downloads/bootstrap.zip
+                      --path=/home/richard/Downloads/apidocs.zip
     """
-    return Path(filePath=ZipArchive(config['path']))
+    return Path(
+        filePath=ZipArchive(config['path']),
+        directoryRenderer=partial(DirectoryPathRenderer,
+                                  pathNotFoundRenderer=DirectoryLister),
+    )
+
+
+
+def pathDemo(config):
+    """
+    A demonstration of static.Path which uses the original static.File
+    to render files and a non-listing DirectoryPathRenderer with
+    custom index names for directories. eg
+
+        twistd -n web --class=twisted.web.static.pathDemo \
+                      --path=/home/richard/Downloads
+    """
+    return Path(
+        filePath=filepath.FilePath(config['path']),
+        fileRenderer=lambda f: File(f.path),
+        directoryRenderer=partial(DirectoryPathRenderer,
+                                  pathNotFoundRenderer=DirectoryLister,
+                                  indexNames=["index.html"]))
