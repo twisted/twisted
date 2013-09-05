@@ -1178,13 +1178,25 @@ class Path(object):
         Handle traversal of this path.
 
         In the special case of C{name == ''} means that the request
-        URL has a trailing slash. In this case, we delegate to
-        C{_trailingSlashResponder} which decides how to handle
-        trailing slashes for directories and files.
+        URL has a trailing slash and is the root path eg
+        http://example.com/
 
-        Else, we check whether the requested name is an existing child
-        of this directory and if so return it wrapped in a new
-        instance of this class for further traversal and rendering.
+        If we are handling a name and the next URL segment is C{''} we
+        are dealing with a non-root URL that has a trailing slash. In
+        this case if the requested name is for a directory then return
+        a C{directoryRenderer} otherwise return a
+        C{pathNotFoundRenderer}.
+
+        If we are handling a non-empty name and there are no remaining
+        URL segments it means there is no trailing slash. In this case
+        if the requested name is for a directory, we return a
+        C{redirectRenderer} which adds a trailing slash. This allows
+        HTML links relative to the directory to work as expected.  If
+        the requested name is for a file, we return a C{fileRenderer}.
+
+        If the requested name is an intermediate segment of the URL we
+        return the named child path wrapped in a new instance of this
+        class for further traversal and rendering.
 
         If the requested name is for a file which does not exist we
         call C{pathNotFoundRenderer} with the requested filePath and
