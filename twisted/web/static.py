@@ -1019,9 +1019,8 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
         files = []
         dirs = []
         for path in directory:
-            segments = path.segmentsFrom(self._path)
-            url = '/'.join(urllib.quote(s) for s in segments)
-            escapedPath = '/'.join(cgi.escape(s) for s in segments)
+            url = urllib.quote(path.basename())
+            escapedPath = cgi.escape(path.basename())
             if path.isdir():
                 url = url + '/'
                 dirs.append({'text': escapedPath + "/", 'href': url,
@@ -1427,6 +1426,14 @@ class DirectoryPathRenderer(object):
 
 
 
+_zipDemoConstructor = partial(
+    Path,
+    directoryRenderer=partial(DirectoryPathRenderer,
+                              pathNotFoundRenderer=DirectoryLister),
+)
+
+
+
 from twisted.python.zippath import ZipArchive
 def zipDemo(config):
     """
@@ -1437,11 +1444,16 @@ def zipDemo(config):
         twistd -n web --class=twisted.web.static.zipDemo \
                       --path=/home/richard/Downloads/apidocs.zip
     """
-    return Path(
-        filePath=ZipArchive(config['path']),
-        directoryRenderer=partial(DirectoryPathRenderer,
-                                  pathNotFoundRenderer=DirectoryLister),
-    )
+    return _zipDemoConstructor(filePath=ZipArchive(config['path']))
+
+
+
+_pathDemoConstructor = partial(
+    Path,
+    fileRenderer=lambda f: File(f.path),
+    directoryRenderer=partial(DirectoryPathRenderer,
+                              pathNotFoundRenderer=DirectoryLister,
+                              indexNames=["index.html"]))
 
 
 
@@ -1454,9 +1466,36 @@ def pathDemo(config):
         twistd -n web --class=twisted.web.static.pathDemo \
                       --path=/home/richard/Downloads
     """
-    return Path(
-        filePath=filepath.FilePath(config['path']),
-        fileRenderer=lambda f: File(f.path),
-        directoryRenderer=partial(DirectoryPathRenderer,
-                                  pathNotFoundRenderer=DirectoryLister,
-                                  indexNames=["index.html"]))
+    return _pathDemoConstructor(
+        filePath=filepath.FilePath(config['path']))
+
+
+
+class ZipPathExplorer(components.proxyForInterface(filepath.IFilePath)):
+    """
+    An IFilePath which treats zip files as if they are folders.
+    """
+    @property
+    def path(self):
+        return self.original.path
+
+    def child(self, path):
+        path = self.original.child(path)
+        if path.splitext()[1] == '.zip':
+            return ZipArchive(path.path)
+
+        return self.__class__(path)
+
+
+
+def zipPathExplorer(config):
+    """
+    Serve a filesystem directory and automatically open and serve the
+    contents of the zip files within. eg
+
+        twistd -n web --class=twisted.web.static.zipPathExplorer \
+                      --path=/home/richard/Downloads
+    """
+    return _zipDemoConstructor(
+        filePath=ZipPathExplorer(filepath.FilePath(config['path'])),
+    )
