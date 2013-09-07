@@ -26,7 +26,7 @@ from twisted.internet.error import ConnectionLost
 from twisted.protocols import loopback
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.test_internet import DummyProducer
-from twisted.web.test.requesthelper import DummyChannel, DummyRequest
+from twisted.web.test.requesthelper import DummyChannel
 
 
 
@@ -1701,49 +1701,58 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
     def test_unregisterNonQueuedNonStreamingProducer(self):
         """
-        L{Request.unregisterProducer} unregisters a non-queued non-streaming 
-        producer. It also unregisters the requests' transport producer.
+        L{Request.unregisterProducer} unregisters a non-queued non-streaming
+        producer from the request and the request's transport.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.transport = StringTransport()
         req.registerProducer(DummyProducer(), False)
         req.unregisterProducer()
-        self.assertEqual(req.transport.producer, None)
-        self.assertEqual(req.producer, None)
+        self.assertEqual((None, None), (req.producer, req.transport.producer))
 
 
     def test_unregisterNonQueuedStreamingProducer(self):
         """
-        L{Request.unregisterProducer} unregisters a non-queued streaming 
-        producer. Its also unregisters the requests' transport producer.
+        L{Request.unregisterProducer} unregisters a non-queued streaming
+        producer from the request and the request's transport.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.transport = StringTransport()
         req.registerProducer(DummyProducer(), True)
         req.unregisterProducer()
-        self.assertEqual(req.transport.producer, None)
-        self.assertEqual(req.producer, None)
+        self.assertEqual((None, None), (req.producer, req.transport.producer))
 
 
     def test_unregisterQueuedNonStreamingProducer(self):
         """
         L{Request.unregisterProducer} unregisters a queued non-streaming
-        producer.
+        producer from the request but not from the transport.
         """
-        req = http.Request(DummyChannel(), True)
+        existing = DummyProducer()
+        channel = DummyChannel()
+        transport = StringTransport()
+        channel.transport = transport
+        transport.registerProducer(existing, True)
+        req = http.Request(channel, True)
         req.registerProducer(DummyProducer(), False)
         req.unregisterProducer()
-        self.assertEqual(req.producer, None)
+        self.assertEqual((None, existing), (req.producer, transport.producer))
 
 
     def test_unregisterQueuedStreamingProducer(self):
         """
-        L{Request.unregisterProducer} unregisters a queued streaming producer.
+        L{Request.unregisterProducer} unregisters a queued streaming producer
+        from the request but not from the transport.
         """
-        req = http.Request(DummyChannel(), True)
+        existing = DummyProducer()
+        channel = DummyChannel()
+        transport = StringTransport()
+        channel.transport = transport
+        transport.registerProducer(existing, True)
+        req = http.Request(channel, True)
         req.registerProducer(DummyProducer(), True)
         req.unregisterProducer()
-        self.assertEqual(req.producer, None)
+        self.assertEqual((None, existing), (req.producer, transport.producer))
 
 
 
