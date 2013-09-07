@@ -67,12 +67,11 @@ else:
         pydoctorSkip = skip
 
 
-try:
-    import sphinx
-except ImportError:
-    sphinxSkip = "Sphinx not available."
-else:
+if which("sphinx-build"):
     sphinxSkip = None
+else:
+    sphinxSkip = "Sphinx not available."
+
 
 
 if which("latex") and which("dvips") and which("ps2pdf13"):
@@ -85,6 +84,7 @@ if which("svn") and which("svnadmin"):
     svnSkip = skip
 else:
     svnSkip = "svn or svnadmin is not present."
+
 
 
 def genVersion(*args, **kwargs):
