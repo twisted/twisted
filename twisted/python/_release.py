@@ -967,26 +967,26 @@ class SphinxBuilder(object):
 
     Generates and runs a shell command that looks something like::
 
-        sphinx-build -b html -d [BUILDDIR]/doctrees [DOCDIR]/source [BUILDDIR]/html
+        sphinx-build -b html -d [BUILDDIR]/doctrees
+                                [DOCDIR]/source
+                                [BUILDDIR]/html
 
-    where DOCDIR is a directory containing another directory called
-    "source" which contains the Sphinx source files, and BUILDDIR is the
-    directory in which the Sphinx output will be created.
+    where DOCDIR is a directory containing another directory called "source"
+    which contains the Sphinx source files, and BUILDDIR is the directory in
+    which the Sphinx output will be created.
     """
 
     def build(self, docDir, buildDir=None, version=''):
         """
         Build the documentation in C{docDir} with Sphinx.
 
-        @param docDir: The directory of the documentation.  This is a
-            directory which contains another directory called "source"
-            which contains the Sphinx "conf.py" file and sphinx source
-            documents.
+        @param docDir: The directory of the documentation.  This is a directory
+            which contains another directory called "source" which contains the
+            Sphinx "conf.py" file and sphinx source documents.
         @type docDir: L{twisted.python.filepath.FilePath}
 
-        @param buildDir: The directory to build the documentation in.
-            By default this will be a child directory of {docDir}
-            named "build".
+        @param buildDir: The directory to build the documentation in.  By
+            default this will be a child directory of {docDir} named "build".
         @type buildDir: L{twisted.python.filepath.FilePath}
 
         @param version: The version of Twisted to set in the docs.
@@ -1012,7 +1012,7 @@ class SphinxBuilder(object):
         argsList.extend(allSphinxOpts)
         argsList.append(outDir.path)
 
-        cmdOutput = runCommand(argsList)
+        runCommand(argsList)
 
 
 

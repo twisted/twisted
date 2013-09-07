@@ -2138,7 +2138,6 @@ class NewsBuilderTests(TestCase, StructureAssertingMixin):
         self.assertIn("Old boring stuff from the past", aggregateContent)
 
 
-
     def test_changeVersionInNews(self):
         """
         L{NewsBuilder._changeVersions} gets the release date for a given
@@ -2201,15 +2200,17 @@ class SphinxBuilderTests(TestCase):
     """
     Tests for L{SphinxBuilder}.
 
-    NOTE: this test case depends on twisted.web, which violates the standard
-          Twisted practice of not having anything in twisted.python depend
-          on other Twisted packages and opens up the possibility of creating
-          circular dependencies.  Do not use this as an example of
-          how to structure your dependencies.
+    @note: This test case depends on twisted.web, which violates the standard
+        Twisted practice of not having anything in twisted.python depend on
+        other Twisted packages and opens up the possibility of creating
+        circular dependencies.  Do not use this as an example of how to
+        structure your dependencies.
 
     @ivar builder: A plain L{SphinxBuilder}.
+
     @ivar sphinxDir: A L{FilePath} representing a directory to be used for
         containing a Sphinx project.
+
     @ivar sourceDir: A L{FilePath} representing a directory to be used for
         containing the source files for a Sphinx project.
     """
@@ -2251,9 +2252,9 @@ class SphinxBuilderTests(TestCase):
         """
         Create a fake Sphinx project for test purposes.
 
-        Creates a fake Sphinx project with the absolute minimum of source files.
-        This includes a single source file ('index.rst') and the smallest
-        'conf.py' file possible in order to find that source file.
+        Creates a fake Sphinx project with the absolute minimum of source
+        files.  This includes a single source file ('index.rst') and the
+        smallest 'conf.py' file possible in order to find that source file.
         """
         self.sourceDir.child("conf.py").setContent(self.confContent)
         self.sourceDir.child("index.rst").setContent(self.indexContent)
@@ -2262,8 +2263,8 @@ class SphinxBuilderTests(TestCase):
     def verifyFileExists(self, fileDir, fileName):
         """
         Helper which verifies that fileName exists in fileDir, has some
-        content, and that the content is parseable by parseXMLString if
-        the file extension indicates that it should be html.
+        content, and that the content is parseable by parseXMLString if the
+        file extension indicates that it should be html.
         """
         # check that file exists
         fpath = fileDir.child(fileName)
