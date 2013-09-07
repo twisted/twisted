@@ -2167,12 +2167,7 @@ class SphinxBuilderTests(TestCase):
         # check that the html files are at least html-ish
         # this is not a terribly rigorous check
         if fpath.path.endswith('.html'):
-            try:
-                parseXMLString(fcontents)
-            except:
-                # any exception probably means some kind of parse error
-                raise
-                self.fail("Sphinx output not parsed")
+            parseXMLString(fcontents)
 
 
     def test_build(self):
