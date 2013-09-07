@@ -2262,9 +2262,29 @@ class SphinxBuilderTests(TestCase):
 
     def verifyFileExists(self, fileDir, fileName):
         """
-        Helper which verifies that fileName exists in fileDir, has some
-        content, and that the content is parseable by parseXMLString if the
+        Helper which verifies that C{fileName} exists in C{fileDir}, has some
+        content, and that the content is parseable by L{parseXMLString} if the
         file extension indicates that it should be html.
+
+        @param fileDir: A path to a directory.
+        @type fileDir: L{FilePath}
+
+        @param fileName: The last path segment of a file which may exist within
+            C{fileDir}.
+        @type fileName: L{str}
+
+        @raise: L{FailTest <twisted.trial.unittest.FailTest>} if
+            C{fileDir.child(fileName)}:
+
+                1. Does not exist.
+
+                2. Is empty.
+
+                3. In the case where it's a path to a C{.html} file, the
+                   contents at least look enough like HTML to parse according
+                   to microdom's generous criteria.
+
+        @return: C{None}
         """
         # check that file exists
         fpath = fileDir.child(fileName)
