@@ -302,30 +302,6 @@ a'''
         self.assertEqual(b'x' * limit, b''.join(proto.lines))
 
 
-    def test_maximumLineLength(self):
-        """
-        C{LineReceiver} disconnects the transport if it receives a line longer
-        than its C{MAX_LENGTH}.
-        """
-        proto = basic.LineReceiver()
-        transport = proto_helpers.StringTransport()
-        proto.makeConnection(transport)
-        proto.dataReceived(b'x' * (proto.MAX_LENGTH + 1) + b'\r\nr')
-        self.assertTrue(transport.disconnecting)
-
-
-    def test_maximumLineLengthRemaining(self):
-        """
-        C{LineReceiver} disconnects the transport it if receives a non-finished
-        line longer than its C{MAX_LENGTH}.
-        """
-        proto = basic.LineReceiver()
-        transport = proto_helpers.StringTransport()
-        proto.makeConnection(transport)
-        proto.dataReceived(b'x' * (proto.MAX_LENGTH + 1))
-        self.assertTrue(transport.disconnecting)
-
-
     def test_rawDataError(self):
         """
         C{LineReceiver.dataReceived} forwards errors returned by
@@ -442,6 +418,30 @@ class LineReceiverLineLengthExceededTests(unittest.SynchronousTestCase):
             b'x' * (self.proto.MAX_LENGTH * 2 + 2) + self.proto.delimiter) * 2
         self.proto.dataReceived(excessive)
         self.assertEqual([excessive], self.proto.longLines)
+
+
+    def test_maximumLineLength(self):
+        """
+        C{LineReceiver} disconnects the transport if it receives a line longer
+        than its C{MAX_LENGTH}.
+        """
+        proto = basic.LineReceiver()
+        transport = proto_helpers.StringTransport()
+        proto.makeConnection(transport)
+        proto.dataReceived(b'x' * (proto.MAX_LENGTH + 1) + b'\r\nr')
+        self.assertTrue(transport.disconnecting)
+
+
+    def test_maximumLineLengthRemaining(self):
+        """
+        C{LineReceiver} disconnects the transport it if receives a non-finished
+        line longer than its C{MAX_LENGTH}.
+        """
+        proto = basic.LineReceiver()
+        transport = proto_helpers.StringTransport()
+        proto.makeConnection(transport)
+        proto.dataReceived(b'x' * (proto.MAX_LENGTH + 1))
+        self.assertTrue(transport.disconnecting)
 
 
 
