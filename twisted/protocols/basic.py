@@ -565,7 +565,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
                     else:
                         lineLength = len(line)
                         if lineLength > self.MAX_LENGTH:
-                            exceeded = line + self._buffer
+                            exceeded = line + self.delimiter + self._buffer
                             self._buffer = b''
                             return self.lineLengthExceeded(exceeded)
                         why = self.lineReceived(line)
