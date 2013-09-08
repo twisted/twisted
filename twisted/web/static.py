@@ -123,17 +123,13 @@ def loadMimeTypes(mimetype_locations=None, init=mimetypes.init):
         {
             '.conf':  'text/plain',
             '.diff':  'text/plain',
-            '.exe':   'application/x-executable',
             '.flac':  'audio/x-flac',
             '.java':  'text/plain',
-            '.ogg':   'application/ogg',
             '.oz':    'text/x-oz',
             '.swf':   'application/x-shockwave-flash',
-            '.tgz':   'application/x-gtar',
             '.wml':   'text/vnd.wap.wml',
             '.xul':   'application/vnd.mozilla.xul+xml',
-            '.py':    'text/plain',
-            '.patch': 'text/plain',
+            '.patch': 'text/plain'
         }
     )
     return mimetypes.types_map
