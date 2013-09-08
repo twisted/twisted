@@ -191,22 +191,28 @@ class ServerDNSTestCase(unittest.TestCase):
             conn.transport.loseConnection()
 
 
-    def namesTest(self, d, r):
-        self.response = None
-        def setDone(response):
-            self.response = response
+    def namesTest(self, querying, expectedRecords):
+        """
+        Assert that the DNS response C{querying} will eventually fire with
+        contains exactly a certain collection of records.
 
-        def checkResults(ignored):
-            if isinstance(self.response, failure.Failure):
-                return self.response
-            results = justPayload(self.response)
-            assert len(results) == len(r), "%s != %s" % (map(str, results), map(str, r))
-            for rec in results:
-                assert rec in r, "%s not in %s" % (rec, map(str, r))
+        @param querying: A L{Deferred} returned from one of the DNS client
+            I{lookup} methods.
 
-        d.addBoth(setDone)
-        d.addCallback(checkResults)
-        return d
+        @param expectedRecords: A L{list} of L{IRecord} providers which must be
+            in the response or the test will be failed.
+
+        @return: A L{Deferred} that fires when the assertion has been made.  It
+            fires with a success result if the assertion succeeds and with a
+            L{Failure} if it fails.
+        """
+        def checkResults(response):
+            receivedRecords = justPayload(response)
+            self.assertEqual(set(expectedRecords), set(receivedRecords))
+
+        querying.addCallback(checkResults)
+        return querying
+
 
     def testAddressRecord1(self):
         """Test simple DNS 'A' record queries"""
@@ -240,12 +246,16 @@ class ServerDNSTestCase(unittest.TestCase):
         )
 
 
-    def testMailExchangeRecord(self):
-        """Test DNS 'MX' record queries"""
+    def test_mailExchangeRecord(self):
+        """
+        The DNS client can issue an MX query and receive a response including
+        an MX record as well as any A record hints.
+        """
         return self.namesTest(
-            self.resolver.lookupMailExchange('test-domain.com'),
-            [dns.Record_MX(10, 'host.test-domain.com', ttl=19283784)]
-        )
+            self.resolver.lookupMailExchange(b"test-domain.com"),
+            [dns.Record_MX(10, b"host.test-domain.com", ttl=19283784),
+             dns.Record_A(b"123.242.1.5", ttl=19283784),
+             dns.Record_A(b"0.255.0.255", ttl=19283784)])
 
 
     def testNameserver(self):
