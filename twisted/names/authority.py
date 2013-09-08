@@ -177,7 +177,8 @@ class FileAuthority(common.ResolverBase):
                 results = cnames
 
             # https://tools.ietf.org/html/rfc1034#section-4.3.2 - sort of.
-            additionalInformation = self._additionalRecords(results, authority, default_ttl)
+            additionalInformation = self._additionalRecords(
+                results, authority, default_ttl)
             if cnames:
                 results.extend(additionalInformation)
             else:
