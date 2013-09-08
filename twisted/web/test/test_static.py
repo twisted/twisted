@@ -4,8 +4,11 @@
 """
 Tests for L{twisted.web.static}.
 """
-
-import os, re, StringIO
+import inspect
+import mimetypes
+import os
+import re
+import StringIO
 
 from zope.interface.verify import verifyObject
 
@@ -1483,3 +1486,55 @@ class DirectoryListerTest(TestCase):
         self.assertEqual(static.formatFileSize(1234000000), "1G")
         self.assertEqual(static.formatFileSize(1234567890000), "1149G")
 
+
+
+class LoadMimeTypesTests(TestCase):
+    """
+    Tests for the MIME type loading routine.
+
+    @cvar UNSET: A sentinel to signify that C{self.paths} has not been set by
+        the mock init.
+    """
+    UNSET = object()
+
+    def setUp(self):
+        self.paths = self.UNSET
+
+
+    def _fakeInit(self, paths):
+        """
+        A mock L{mimetypes.init} that records the value of the passed C{paths}
+        argument.
+
+        @param paths: The paths that will be recorded.
+        """
+        self.paths = paths
+
+
+    def test_defaultArgumentIsNone(self):
+        """
+        By default, C{None} is passed to C{mimetypes.init}.
+        """
+        static.loadMimeTypes(init=self._fakeInit)
+        self.assertIdentical(self.paths, None)
+
+
+    def test_extraLocationsWork(self):
+        """
+        Passed MIME type files are passed to C{mimetypes.init}.
+        """
+        paths = ["x", "y", "z"]
+        static.loadMimeTypes(paths, init=self._fakeInit)
+        self.assertIdentical(self.paths, paths)
+
+
+    def test_usesGlobalInitFunction(self):
+        """
+        By default, C{mimetypes.init} is called.
+        """
+        # Checking mimetypes.inited doesn't always work, because
+        # something, somewhere, calls mimetypes.init. Yay global
+        # mutable state :)
+        args, _, _, defaults = inspect.getargspec(static.loadMimeTypes)
+        defaultInit = defaults[args.index("init")]
+        self.assertIdentical(defaultInit, mimetypes.init)

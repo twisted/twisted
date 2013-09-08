@@ -13,6 +13,7 @@ import urllib
 import itertools
 import cgi
 import time
+import mimetypes
 
 from zope.interface import implements
 
@@ -97,44 +98,42 @@ class Registry(components.Componentized, styles.Versioned):
         return self._pathCache.get(path)
 
 
-def loadMimeTypes(mimetype_locations=['/etc/mime.types']):
+def loadMimeTypes(mimetype_locations=None, init=mimetypes.init):
     """
+    Produces a mapping of extensions (with leading dot) to MIME types.
+
+    It does this by calling the C{init} function of the L{mimetypes} module.
+    This will have the side effect of modifying the global MIME types cache
+    in that module.
+
     Multiple file locations containing mime-types can be passed as a list.
     The files will be sourced in that order, overriding mime-types from the
     files sourced beforehand, but only if a new entry explicitly overrides
     the current entry.
+
+    @param mimetype_locations: Optional. List of paths to C{mime.types} style
+        files that should be used.
+    @type mimetype_locations: iterable of paths or C{None}
+    @param init: The init function to call. Defaults to the global C{init}
+        function of the C{mimetypes} module. For internal use (testing) only.
+    @type init: callable
     """
-    import mimetypes
-    # Grab Python's built-in mimetypes dictionary.
-    contentTypes = mimetypes.types_map
-    # Update Python's semi-erroneous dictionary with a few of the
-    # usual suspects.
-    contentTypes.update(
+    init(mimetype_locations)
+    mimetypes.types_map.update(
         {
             '.conf':  'text/plain',
             '.diff':  'text/plain',
-            '.exe':   'application/x-executable',
             '.flac':  'audio/x-flac',
             '.java':  'text/plain',
-            '.ogg':   'application/ogg',
             '.oz':    'text/x-oz',
             '.swf':   'application/x-shockwave-flash',
-            '.tgz':   'application/x-gtar',
             '.wml':   'text/vnd.wap.wml',
             '.xul':   'application/vnd.mozilla.xul+xml',
-            '.py':    'text/plain',
-            '.patch': 'text/plain',
+            '.patch': 'text/plain'
         }
     )
-    # Users can override these mime-types by loading them out configuration
-    # files (this defaults to ['/etc/mime.types']).
-    for location in mimetype_locations:
-        if os.path.exists(location):
-            more = mimetypes.read_mime_types(location)
-            if more is not None:
-                contentTypes.update(more)
+    return mimetypes.types_map
 
-    return contentTypes
 
 def getTypeAndEncoding(filename, types, encodings, defaultType):
     p, ext = os.path.splitext(filename)
