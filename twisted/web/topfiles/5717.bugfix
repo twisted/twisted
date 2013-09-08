@@ -1,0 +1,1 @@
+twisted.web.static.loadMimeTypes now uses all available system MIME types.
