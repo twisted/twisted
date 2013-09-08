@@ -177,6 +177,7 @@ class FileAuthority(common.ResolverBase):
                 results = cnames
 
             # https://tools.ietf.org/html/rfc1034#section-4.3.2 - sort of.
+            # See https://twistedmatrix.com/trac/ticket/6732
             additionalInformation = self._additionalRecords(
                 results, authority, default_ttl)
             if cnames:
