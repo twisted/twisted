@@ -326,42 +326,6 @@ a'''
         self.assertTrue(transport.disconnecting)
 
 
-    def test_lineLengthExceeded(self):
-        """
-        C{LineReceiver} calls C{lineLengthExceeded} with the entire
-        remaining contents of its buffer.
-        """
-        caught_line = []
-        class ExcessivelyLargeLineCatcher(basic.LineReceiver):
-            def lineReceived(self, line):
-                pass
-            def lineLengthExceeded(self, line):
-                caught_line.append(line)
-
-        proto = ExcessivelyLargeLineCatcher()
-        proto.MAX_LENGTH=6
-        transport = proto_helpers.StringTransport()
-        proto.makeConnection(transport)
-        excessive_input = b'x' * (proto.MAX_LENGTH * 2 + 2)
-        proto.dataReceived(excessive_input)
-        self.assertEqual(caught_line[0], excessive_input)
-        del caught_line[:]
-
-        excessive_input = b'x' * (proto.MAX_LENGTH * 2 + 2)
-        proto.dataReceived(b'x'+proto.delimiter + excessive_input)
-        self.assertEqual(caught_line[0], excessive_input)
-        del caught_line[:]
-
-        excessive_input = b'x' * (proto.MAX_LENGTH * 2 + 2) + proto.delimiter + b'x' * (proto.MAX_LENGTH * 2 + 2)
-        proto.dataReceived(excessive_input)
-        self.assertEqual(caught_line[0], excessive_input)
-        del caught_line[:]
-
-        excessive_input = b'x' * (proto.MAX_LENGTH * 2 + 2) + proto.delimiter + b'x' * (proto.MAX_LENGTH * 2 + 2) + proto.delimiter
-        proto.dataReceived(excessive_input)
-        self.assertEqual(caught_line[0], excessive_input)
-        del caught_line[:]
-
     def test_rawDataError(self):
         """
         C{LineReceiver.dataReceived} forwards errors returned by
@@ -392,6 +356,81 @@ a'''
         """
         proto = basic.LineReceiver()
         self.assertRaises(NotImplementedError, proto.lineReceived, 'foo')
+
+
+
+class ExcessivelyLargeLineCatcher(basic.LineReceiver):
+    def connectionMade(self):
+        self.longLines = []
+
+
+    def lineReceived(self, line):
+        pass
+
+
+    def lineLengthExceeded(self, line):
+        self.longLines.append(line)
+
+
+
+class LineReceiverLineLengthExceededTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{twisted.protocols.basic.LineReceiver.lineLengthExceeded}.
+    """
+    def setUp(self):
+        self.proto = ExcessivelyLargeLineCatcher()
+        self.proto.MAX_LENGTH = 6
+        self.transport = proto_helpers.StringTransport()
+        self.proto.makeConnection(self.transport)
+
+
+    def test_longUnendedLine(self):
+        """
+        If more bytes than C{LineReceiver.MAX_LENGTH} arrive containing no line
+        delimiter, all of the bytes are passed as a single string to
+        L{LineReceiver.lineLengthExceeded}.
+        """
+        excessive = b'x' * (self.proto.MAX_LENGTH * 2 + 2)
+        self.proto.dataReceived(excessive)
+        self.assertEqual([excessive], self.proto.longLines)
+
+
+    def test_longLineAfterShortLine(self):
+        """
+        If L{LineReceiver.dataReceived} is called with bytes representing a
+        short line followed by bytes that exceed the length limit without a
+        line delimiter, L{LineReceiver.lineLengthExceeded} is called with all
+        of the bytes following the short line's delimiter.
+        """
+        excessive = b'x' * (self.proto.MAX_LENGTH * 2 + 2)
+        self.proto.dataReceived(b'x' + self.proto.delimiter + excessive)
+        self.assertEqual([excessive], self.proto.longLines)
+
+
+    def test_longLineWithDelimiter(self):
+        """
+        If L{LineReceiver.dataReceived} is called with more than
+        C{LineReceiver.MAX_LENGTH} bytes containing a line delimiter somewhere
+        not in the first C{MAX_LENGTH} bytes, the entire byte string is passed
+        to L{LineReceiver.lineLengthExceeded}.
+        """
+        excessive = self.proto.delimiter.join(
+            [b'x' * (self.proto.MAX_LENGTH * 2 + 2)] * 2)
+        self.proto.dataReceived(excessive)
+        self.assertEqual([excessive], self.proto.longLines)
+
+
+    def test_multipleLongLines(self):
+        """
+        If L{LineReceiver.dataReceived} is called with more than
+        C{LineReceiver.MAX_LENGTH} bytes containing multiple line delimiters
+        somewhere not in the first C{MAX_LENGTH} bytes, the entire byte string
+        is passed to L{LineReceiver.lineLengthExceeded}.
+        """
+        excessive = (
+            b'x' * (self.proto.MAX_LENGTH * 2 + 2) + self.proto.delimiter) * 2
+        self.proto.dataReceived(excessive)
+        self.assertEqual([excessive], self.proto.longLines)
 
 
 

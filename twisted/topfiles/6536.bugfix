@@ -1,0 +1,1 @@
+twisted.protocols.basic.LineReceiver no longer passes incorrect data (a buffer missing a delimiter) to lineLengthExceeded in certain cases.
