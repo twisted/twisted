@@ -326,6 +326,42 @@ a'''
         self.assertTrue(transport.disconnecting)
 
 
+    def test_lineLengthExceeded(self):
+        """
+        C{LineReceiver} calls C{lineLengthExceeded} with the entire
+        remaining contents of its buffer.
+        """
+        caught_line = []
+        class ExcessivelyLargeLineCatcher(basic.LineReceiver):
+            def lineReceived(self, line):
+                pass
+            def lineLengthExceeded(self, line):
+                caught_line.append(line)
+
+        proto = ExcessivelyLargeLineCatcher()
+        proto.MAX_LENGTH=6
+        transport = proto_helpers.StringTransport()
+        proto.makeConnection(transport)
+        excessive_input = b'x' * (proto.MAX_LENGTH * 2 + 2)
+        proto.dataReceived(excessive_input)
+        self.assertEqual(caught_line[0], excessive_input)
+        del caught_line[:]
+
+        excessive_input = b'x' * (proto.MAX_LENGTH * 2 + 2)
+        proto.dataReceived(b'x'+proto.delimiter + excessive_input)
+        self.assertEqual(caught_line[0], excessive_input)
+        del caught_line[:]
+
+        excessive_input = b'x' * (proto.MAX_LENGTH * 2 + 2) + proto.delimiter + b'x' * (proto.MAX_LENGTH * 2 + 2)
+        proto.dataReceived(excessive_input)
+        self.assertEqual(caught_line[0], excessive_input)
+        del caught_line[:]
+
+        excessive_input = b'x' * (proto.MAX_LENGTH * 2 + 2) + proto.delimiter + b'x' * (proto.MAX_LENGTH * 2 + 2) + proto.delimiter
+        proto.dataReceived(excessive_input)
+        self.assertEqual(caught_line[0], excessive_input)
+        del caught_line[:]
+
     def test_rawDataError(self):
         """
         C{LineReceiver.dataReceived} forwards errors returned by
