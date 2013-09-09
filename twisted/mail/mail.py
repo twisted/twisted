@@ -57,7 +57,7 @@ class DomainWithDefaultDict:
         Test for the presence of a domain name in this dictionary.
 
         This always returns C{True} because a default value will be returned
-        if the name doesn't exists in this dictionary.
+        if the name doesn't exist in this dictionary.
 
         @type name: L{bytes}
         @param name: A domain name.
@@ -95,7 +95,7 @@ class DomainWithDefaultDict:
         Test for the presence of a domain name in this dictionary.
 
         This always returns C{True} because a default value will be returned
-        if the name doesn't exists in this dictionary.
+        if the name doesn't exist in this dictionary.
 
         @type name: L{bytes}
         @param name: A domain name.
