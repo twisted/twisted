@@ -2343,6 +2343,7 @@ class DeferredFilesystemLockTestCase(unittest.TestCase):
         deferred.cancel()
         self.assertFalse(tryLockCall.active())
         self.assertEqual(self.lock._tryLockCall, None)
+        self.failureResultOf(deferred, defer.CancelledError)
 
 
     def test_cancelDeferUntilLockedWithTimeout(self):
@@ -2357,3 +2358,4 @@ class DeferredFilesystemLockTestCase(unittest.TestCase):
         deferred.cancel()
         self.assertFalse(timeoutCall.active())
         self.assertEqual(self.lock._timeoutCall, None)
+        self.failureResultOf(deferred, defer.CancelledError)
