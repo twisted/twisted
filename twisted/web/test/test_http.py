@@ -1456,6 +1456,14 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
               b"Hello")])
 
 
+    def test_receivedCookiesDefault(self):
+        """
+        L{http.Request.received_cookies} defaults to an empty L{dict}.
+        """
+        req = http.Request(DummyChannel(), None)
+        self.assertEqual(req.received_cookies, {})
+
+
     def test_parseCookies(self):
         """
         L{http.Request.parseCookies} extracts cookies from C{requestHeaders}
@@ -1477,6 +1485,92 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req = http.Request(DummyChannel(), None)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b'test="lemur"', b'test2="panda"'])
+        req.parseCookies()
+        self.assertEqual(
+            req.received_cookies, {b"test": b'"lemur"', b"test2": b'"panda"'})
+
+
+    def test_parseCookiesNoCookie(self):
+        """
+        L{http.Request.parseCookies} can be called on a request without a
+        cookie header.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.parseCookies()
+        self.assertEqual(req.received_cookies, {})
+
+
+    def test_parseCookiesEmptyCookie(self):
+        """
+        L{http.Request.parseCookies} can be called on a request with an
+        empty cookie header.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders(
+            b"cookie", [])
+        req.parseCookies()
+        self.assertEqual(req.received_cookies, {})
+
+
+    def test_parseCookiesIgnoreValueless(self):
+        """
+        L{http.Request.parseCookies} ignores cookies which don't have a
+        value.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders(
+            b"cookie", [b'foo; bar; baz;'])
+        req.parseCookies()
+        self.assertEqual(
+            req.received_cookies, {})
+
+
+    def test_parseCookiesEmptyValue(self):
+        """
+        L{http.Request.parseCookies} parses cookies with an empty value.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders(
+            b"cookie", [b'foo='])
+        req.parseCookies()
+        self.assertEqual(
+            req.received_cookies, {b'foo': b''})
+
+
+    def test_parseCookiesRetainRightSpace(self):
+        """
+        L{http.Request.parseCookies} leaves trailing whitespace in the
+        cookie value.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders(
+            b"cookie", [b'foo=bar '])
+        req.parseCookies()
+        self.assertEqual(
+            req.received_cookies, {b'foo': b'bar '})
+
+
+    def test_parseCookiesStripLeftSpace(self):
+        """
+        L{http.Request.parseCookies} strips leading whitespace in the
+        cookie key.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders(
+            b"cookie", [b' foo=bar'])
+        req.parseCookies()
+        self.assertEqual(
+            req.received_cookies, {b'foo': b'bar'})
+
+
+    def test_parseCookiesContinueAfterMalformedCookie(self):
+        """
+        L{http.Request.parseCookies} parses valid cookies set before or
+        after malformed cookies.
+        """
+        req = http.Request(DummyChannel(), None)
+        req.requestHeaders.setRawHeaders(
+            b"cookie", [b'12345; test="lemur"; 12345; test2="panda"; 12345'])
         req.parseCookies()
         self.assertEqual(
             req.received_cookies, {b"test": b'"lemur"', b"test2": b'"panda"'})
