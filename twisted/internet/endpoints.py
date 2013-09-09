@@ -689,7 +689,7 @@ class HostnameEndpoint(object):
 
         def _endpoints(gaiResult):
             """
-            This method matches the host address famliy with an endpoint for
+            This method matches the host address family with an endpoint for
             every address returned by GAI.
 
             @param gaiResult: A list of 5-tuples as returned by GAI.
