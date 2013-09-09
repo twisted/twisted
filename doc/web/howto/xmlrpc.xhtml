@@ -234,6 +234,8 @@ and <code>system.methodSignature</code> respectively. If
 no <code class="python">help</code> attribute is specified, the
 method's documentation string is used instead.</p>
 
+
+ 
 <h2>SOAP Support</h2>
 
 <p>From the point of view of a Twisted developer, there is little difference
@@ -294,6 +296,75 @@ reactor.run()
 <pre>
 [8, 15]
 </pre>
+
+<h3>Using multicall Objects</h3>
+<p>Another informal pattern commonly used along with xmlrpc
+introspection is the use of a multicall object to boxcar several 
+rpc calls in a single http request. 
+
+An instance of a <code base="twisted.web.xmlrpc" class="API">MultiCall</code> object is created on the client side and several RPC calls are queued by 
+calling them on this <code base="twisted.web.xmlrpc" class="API">MultiCall</code> instance. Every RPC called on the <code base="twisted.web.xmlrpc" class="API">MultiCall</code> returns a <code class="API" base="twisted.internet.defer">Deferred</code> that you can use to attach callbacks to each queued rpc response.
+
+Executing the <code base="twisted.web.xmlrpc" class="API">MultiCall</code> instance itself triggers a request to 
+<code class="python">system.multicall</code> (<code class="API" base="twisted.web.xmlrpc">XMLRPCIntrospection.multicall</code>) with a list of dictionaries representing each of the procedures to call, returning a <code class="API" base="twisted.internet.defer">DeferredList</code> of the deferreds corresponding to each individual call. 
+
+Let's see an example to talk to the server above using a <code base="twisted.web.xmlrpc" class="API">MultiCall</code>:</p>
+
+<pre class="python">
+from twisted.web.xmlrpc import Proxy, MultiCall, NoSuchFunction
+from twisted.internet import reactor
+
+def printResults(results):
+    for result in results:
+        print result[1]
+    reactor.stop()
+
+proxy = Proxy('http://127.0.0.1:7080')
+
+multiRPC = MultiCall(proxy)
+
+# queue a few echo calls, with a callback to square the results
+for x in range(10):
+    multiRPC.echo(x).addCallback(lambda x: x*x)
+
+# you can of course use the <code>callRemote</code> method instead
+# for a better twisted-like feeling
+for x in range(10,20):
+    multiRPC.callRemote('echo', x).addCallback(lambda x: x*x)
+
+# now queue a few more echo calls with a callback that will 
+# indicate the echoed letter and their index in the original string
+for index, x in enumerate('hello'):
+    multiRPC.echo(x).addCallback(lambda result, index: '%s found at %d' % (result, index))
+
+# individual deferreds ideally should also handle errors
+def handleErrors(error):
+    error.trap(xmlrpclib.Fault)
+    print "yay! The server said %s" % error.value.faultString
+multiRPC.foo().addErrback(handleErrors)
+
+# finally execute the multiRPC instance, to send the request, 
+# then handle the returned DeferredList 
+# results with the printResults callback
+multiRPC().addCallback(printResults)
+reactor.run()
+</pre>
+
+The <code class="API">twisted.web.XMLRPCIntrospection.multicall</code> method is also 100% compatible with the xmlrpclib MultiCall, so you can also use xmlrpclib as the client:
+
+<pre class="python">
+from xmlrpclib import ServerProxy, Multicall
+
+proxy = ServerProxy('http://127.0.0.1:7080')
+
+multiRPC = MultiCall(proxy)
+for x in range(10):
+    multiRPC.echo(x)
+
+for result in multiRPC():
+    print result * result
+</pre>
+
 
 <h2>Serving SOAP and XML-RPC simultaneously</h2>
 
