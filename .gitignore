@@ -1,6 +1,7 @@
-*.py[co]
 *.egg-info/
-build/
-*.cache
+*.o
+*.py[co]
 *.so
-_trial_temp/
+_trial_temp*/
+build/
+dropin.cache
