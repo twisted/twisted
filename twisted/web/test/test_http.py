@@ -1460,7 +1460,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         L{http.Request.received_cookies} defaults to an empty L{dict}.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         self.assertEqual(req.received_cookies, {})
 
 
@@ -1469,7 +1469,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} extracts cookies from C{requestHeaders}
         and adds them to C{received_cookies}.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b'test="lemur"; test2="panda"'])
         req.parseCookies()
@@ -1482,7 +1482,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} can extract cookies from multiple Cookie
         headers.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b'test="lemur"', b'test2="panda"'])
         req.parseCookies()
@@ -1495,7 +1495,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} can be called on a request without a
         cookie header.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.parseCookies()
         self.assertEqual(req.received_cookies, {})
 
@@ -1505,7 +1505,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} can be called on a request with an
         empty cookie header.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [])
         req.parseCookies()
@@ -1517,7 +1517,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} ignores cookies which don't have a
         value.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b'foo; bar; baz;'])
         req.parseCookies()
@@ -1529,7 +1529,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         L{http.Request.parseCookies} parses cookies with an empty value.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b'foo='])
         req.parseCookies()
@@ -1542,7 +1542,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} leaves trailing whitespace in the
         cookie value.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b'foo=bar '])
         req.parseCookies()
@@ -1555,7 +1555,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} strips leading whitespace in the
         cookie key.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b' foo=bar'])
         req.parseCookies()
@@ -1568,7 +1568,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} parses valid cookies set before or
         after malformed cookies.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b'12345; test="lemur"; 12345; test2="panda"; 12345'])
         req.parseCookies()
@@ -1581,7 +1581,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.connectionLost} closes L{Request.content} and drops the
         reference to the L{HTTPChannel} to assist with garbage collection.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
 
         # Cause Request.content to be created at all.
         req.gotLength(10)
@@ -1603,7 +1603,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         Calling L{Request.registerProducer} when a producer is already
         registered raises ValueError.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.registerProducer(DummyProducer(), True)
         self.assertRaises(
             ValueError, req.registerProducer, DummyProducer(), True)
