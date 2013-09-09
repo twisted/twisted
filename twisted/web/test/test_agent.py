@@ -2474,7 +2474,6 @@ class ReadBodyTests(TestCase):
         self.assertTrue(response.transport.aborting)
 
 
-
     def test_withPotentialDataLoss(self):
         """
         If the full body of the L{IResponse} passed to L{client.readBody} is
