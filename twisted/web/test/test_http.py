@@ -292,7 +292,7 @@ def _prequest(**headers):
     """
     Make a request with the given request headers for the persistence tests.
     """
-    request = http.Request(DummyChannel(), None)
+    request = http.Request(DummyChannel(), False)
     for headerName, v in headers.items():
         request.requestHeaders.setRawHeaders(networkString(headerName), v)
     return request
@@ -1161,7 +1161,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         This is used to test that the C{headers}/C{responseHeaders} and
         C{received_headers}/C{requestHeaders} pairs interact properly.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         getattr(req, newName).setRawHeaders(b"test", [b"lemur"])
         self.assertEqual(getattr(req, oldName)[b"test"], b"lemur")
         setattr(req, oldName, {b"foo": b"bar"})
@@ -1193,7 +1193,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.getHeader} returns the value of the named request
         header.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(b"test", [b"lemur"])
         self.assertEqual(req.getHeader(b"test"), b"lemur")
 
@@ -1203,7 +1203,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         When there are multiple values for a single request header,
         L{http.Request.getHeader} returns the last value.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(b"test", [b"lemur", b"panda"])
         self.assertEqual(req.getHeader(b"test"), b"panda")
 
@@ -1213,7 +1213,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.getHeader} returns C{None} when asked for the value of a
         request header which is not present.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         self.assertEqual(req.getHeader(b"test"), None)
 
 
@@ -1222,7 +1222,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.getAllheaders} returns a C{dict} mapping all request
         header names to their corresponding values.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(b"test", [b"lemur"])
         self.assertEqual(req.getAllHeaders(), {b"test": b"lemur"})
 
@@ -1232,7 +1232,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.getAllHeaders} returns an empty C{dict} if there are no
         request headers.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         self.assertEqual(req.getAllHeaders(), {})
 
 
@@ -1241,7 +1241,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         When there are multiple values for a single request header,
         L{http.Request.getAllHeaders} returns only the last value.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(b"test", [b"lemur", b"panda"])
         self.assertEqual(req.getAllHeaders(), {b"test": b"panda"})
 
@@ -1252,7 +1252,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         used as the response status.
         """
         channel = DummyChannel()
-        req = http.Request(channel, None)
+        req = http.Request(channel, False)
         req.setResponseCode(201)
         req.write(b'')
         self.assertEqual(
@@ -1266,7 +1266,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         causes them to be used as the response status.
         """
         channel = DummyChannel()
-        req = http.Request(channel, None)
+        req = http.Request(channel, False)
         req.setResponseCode(202, "happily accepted")
         req.write(b'')
         self.assertEqual(
@@ -1279,7 +1279,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.setResponseCode} accepts C{int} for the code parameter
         and raises L{TypeError} if passed anything else.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.setResponseCode(1)
         self.assertRaises(TypeError, req.setResponseCode, "1")
 
@@ -1289,7 +1289,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.setResponseCode} accepts C{long} for the code
         parameter.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.setResponseCode(long(1))
     if _PY3:
         test_setResponseCodeAcceptsLongIntegers.skip = (
@@ -1301,7 +1301,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.setHost} sets the value of the host request header.
         The port should not be added because it is the default.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.setHost(b"example.com", 80)
         self.assertEqual(
             req.requestHeaders.getRawHeaders(b"host"), [b"example.com"])
@@ -1314,7 +1314,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
-        req = http.Request(d, None)
+        req = http.Request(d, False)
         req.setHost(b"example.com", 443)
         self.assertEqual(
             req.requestHeaders.getRawHeaders(b"host"), [b"example.com"])
@@ -1325,7 +1325,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.setHost} sets the value of the host request header.
         The port should be added because it is not the default.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.setHost(b"example.com", 81)
         self.assertEqual(
             req.requestHeaders.getRawHeaders(b"host"), [b"example.com:81"])
@@ -1338,7 +1338,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         d = DummyChannel()
         d.transport = DummyChannel.SSL()
-        req = http.Request(d, None)
+        req = http.Request(d, False)
         req.setHost(b"example.com", 81)
         self.assertEqual(
             req.requestHeaders.getRawHeaders(b"host"), [b"example.com:81"])
@@ -1348,7 +1348,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         L{http.Request.setHeader} sets the value of the given response header.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.setHeader(b"test", b"lemur")
         self.assertEqual(req.responseHeaders.getRawHeaders(b"test"), [b"lemur"])
 
@@ -1358,7 +1358,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         For an HTTP 1.0 request, L{http.Request.write} sends an HTTP 1.0
         Response-Line and whatever response headers are set.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         trans = StringTransport()
 
         req.transport = trans
@@ -1380,7 +1380,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.write} casts non-bytes header value to bytes
         transparently.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         trans = StringTransport()
 
         req.transport = trans
@@ -1412,7 +1412,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         Response-Line, whatever response headers are set, and uses chunked
         encoding for the response body.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         trans = StringTransport()
 
         req.transport = trans
@@ -1437,7 +1437,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.write} sends an HTTP Response-Line, whatever response
         headers are set, and a last-modified header with that time.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         trans = StringTransport()
 
         req.transport = trans
@@ -1460,7 +1460,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         L{http.Request.received_cookies} defaults to an empty L{dict}.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         self.assertEqual(req.received_cookies, {})
 
 
@@ -1469,7 +1469,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} extracts cookies from C{requestHeaders}
         and adds them to C{received_cookies}.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b'test="lemur"; test2="panda"'])
         req.parseCookies()
@@ -1482,7 +1482,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} can extract cookies from multiple Cookie
         headers.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b'test="lemur"', b'test2="panda"'])
         req.parseCookies()
@@ -1495,7 +1495,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} can be called on a request without a
         cookie header.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.parseCookies()
         self.assertEqual(req.received_cookies, {})
 
@@ -1505,7 +1505,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} can be called on a request with an
         empty cookie header.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [])
         req.parseCookies()
@@ -1517,7 +1517,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} ignores cookies which don't have a
         value.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b'foo; bar; baz;'])
         req.parseCookies()
@@ -1529,7 +1529,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         L{http.Request.parseCookies} parses cookies with an empty value.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b'foo='])
         req.parseCookies()
@@ -1542,7 +1542,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} leaves trailing whitespace in the
         cookie value.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b'foo=bar '])
         req.parseCookies()
@@ -1555,7 +1555,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} strips leading whitespace in the
         cookie key.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b' foo=bar'])
         req.parseCookies()
@@ -1568,7 +1568,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.parseCookies} parses valid cookies set before or
         after malformed cookies.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.requestHeaders.setRawHeaders(
             b"cookie", [b'12345; test="lemur"; 12345; test2="panda"; 12345'])
         req.parseCookies()
@@ -1581,7 +1581,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         L{http.Request.connectionLost} closes L{Request.content} and drops the
         reference to the L{HTTPChannel} to assist with garbage collection.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
 
         # Cause Request.content to be created at all.
         req.gotLength(10)
@@ -1603,7 +1603,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         Calling L{Request.registerProducer} when a producer is already
         registered raises ValueError.
         """
-        req = http.Request(DummyChannel(), None)
+        req = http.Request(DummyChannel(), False)
         req.registerProducer(DummyProducer(), True)
         self.assertRaises(
             ValueError, req.registerProducer, DummyProducer(), True)
