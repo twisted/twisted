@@ -1798,8 +1798,17 @@ def readBody(response):
 
     @return: A L{Deferred} which will fire with the body of the response.
     """
-    d = defer.Deferred()
-    response.deliverBody(_ReadBodyProtocol(response.code, response.phrase, d))
+    def cancel(deferred):
+        """
+        Cancel a L{readBody} call, close the connection to the HTTP server
+        immediately.
+
+        @param deferred: The cancelled L{defer.Deferred}.
+        """
+        protocol.transport.abortConnection()
+    d = defer.Deferred(cancel)
+    protocol = _ReadBodyProtocol(response.code, response.phrase, d)
+    response.deliverBody(protocol)
     return d
 
 
