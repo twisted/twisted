@@ -119,16 +119,7 @@ def loadAliasFile(domains, filename=None, fp=None):
 
 
 class IAlias(Interface):
-    """
-    An interface for aliases.
-    """
     def createMessageReceiver():
-        """
-        Create a message receiver.
-
-        @rtype: L{IMessage <smtp.IMessage>} provider
-        @return: A message receiver.
-        """
         pass
 
 
