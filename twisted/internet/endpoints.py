@@ -36,6 +36,7 @@ from twisted.internet.address import _ProcessAddress, HostnameAddress
 from twisted.python.components import proxyForInterface
 from socket import AF_INET6, AF_INET
 from twisted.internet.task import LoopingCall
+from twisted.internet._statemachine import StateMachine, NOTHING
 
 if not _PY3:
     from twisted.plugin import IPlugin, getPlugins
@@ -549,6 +550,56 @@ class TCP4ClientEndpoint(object):
             return wf._onConnection
         except:
             return defer.fail()
+
+
+
+class _TCP6ClientConnect(StateMachine, object):
+    """
+    An explicit state machine for L{TCP6ClientEndpoint.connect}.
+
+    dict, mapping state to dict of input: (output, new-state)
+    """
+    # States
+
+    START = 'START'
+    NAME_RESOLUTION = 'NAME_RESOLUTION'
+    CONNECTION_ATTEMPT = 'CONNECTION_ATTEMPT'
+    CONNECTION_DONE = 'CONNECTION_DONE'     # Final State
+    CONNECTION_FAILED = 'CONNECTION_FAILED' # Final State
+
+    # Inputs
+
+    IS_HOSTNAME = 'Hostname provided'
+    IS_ADDRESS = 'Host address provided'
+
+    RESOLUTION_SUCCESSFUL = 'Name resolved successfully'
+    RESOLUTION_FAILED = 'Error resolving name'
+    RESOLUTION_TIMEOUT = 'Timeout resolving name'
+
+    CONNECTION_SUCCESSFUL = 'Connection attempt successful'
+    CONNECTION_ERROR = 'Connection attempt failed with an error'
+
+    # Outputs
+
+    # TODO
+
+    states = {
+            START: {
+                IS_HOSTNAME: (NOTHING, NAME_RESOLUTION),
+                IS_ADDRESS: (NOTHING, CONNECTION_ATTEMPT),
+                },
+            NAME_RESOLUTION: {
+                RESOLUTION_SUCCESSFUL: (NOTHING, CONNECTION_ATTEMPT),
+                RESOLUTION_FAILED: (NOTHING, CONNECTION_FAILED),
+                RESOLUTION_TIMEOUT: (NOTHING, CONNECTION_FAILED),
+                },
+            CONNECTION_ATTEMPT: {
+                CONNECTION_SUCCESSFUL: (NOTHING, CONNECTION_DONE),
+                CONNECTION_ERROR: (NOTHING, CONNECTION_FAILED),
+                },
+            }
+
+    initialState = START
 
 
 
