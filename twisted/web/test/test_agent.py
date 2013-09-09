@@ -2393,12 +2393,12 @@ class AbortableStringTransport(StringTransport):
     """
     # This should be replaced by a common version in #6530.
     aborting = False
-    
-    
+
+
     def abortConnection(self):
         """
         A testable version of the C{ITCPTransport.abortConnection} method.
-    
+
         Since this is a special case of closing the connection,
         C{loseConnection} is also called.
         """
@@ -2460,7 +2460,6 @@ class ReadBodyTests(TestCase):
         response.protocol.dataReceived("second")
         response.protocol.connectionLost(Failure(ResponseDone()))
         self.assertEqual(self.successResultOf(d), "firstsecond")
-
 
 
     def test_cancel(self):
