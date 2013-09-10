@@ -61,8 +61,6 @@ class _ContinuousPolling(posixbase._PollLikeMixin,
         self._loop = None
         self._readers = set()
         self._writers = set()
-        self.isReading = self._readers.__contains__
-        self.isWriting = self._writers.__contains__
 
 
     def _checkLoop(self):
@@ -158,6 +156,22 @@ class _ContinuousPolling(posixbase._PollLikeMixin,
         return list(self._writers)
 
 
+    def isReading(self, fd):
+        """
+        Returns weather or not the C{FileDescriptor} is currently being
+        observed for read readiness.
+        """
+        return fd in self._readers
+
+
+    def isWriting(self, fd):
+        """
+        Returns weather or not the C{FileDescriptor} is currently being
+        observed for write readiness.
+        """
+        return fd in self._writers
+
+
 
 @implementer(IReactorFDSet)
 class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
@@ -173,17 +187,15 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         write readiness notifications will be present as values in this
         dictionary.
 
-    @ivar _reads: A dictionary mapping integer file descriptors to arbitrary
-        values (this is essentially a set).  Keys in this dictionary will be
-        registered with C{_poller} for read readiness notifications which will
-        be dispatched to the corresponding C{FileDescriptor} instances in
-        C{_selectables}.
+    @ivar _reads: A set containing integer file descriptors.  Values in this
+        set will be registered with C{_poller} for read readiness notifications
+        which will be dispatched to the corresponding C{FileDescriptor}
+        instances in C{_selectables}.
 
-    @ivar _writes: A dictionary mapping integer file descriptors to arbitrary
-        values (this is essentially a set).  Keys in this dictionary will be
-        registered with C{_poller} for write readiness notifications which will
-        be dispatched to the corresponding C{FileDescriptor} instances in
-        C{_selectables}.
+    @ivar _writes: A set containing integer file descriptors.  Values in this
+        set will be registered with C{_poller} for write readiness
+        notifications which will be dispatched to the corresponding
+        C{FileDescriptor} instances in C{_selectables}.
 
     @ivar _continuousPolling: A L{_ContinuousPolling} instance, used to handle
         file descriptors (e.g. filesytem files) that are not supported by
@@ -204,8 +216,8 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         # to the kernel, it is not a hard maximum.  After Linux 2.6.8, the size
         # argument is completely ignored.
         self._poller = epoll(1024)
-        self._reads = {}
-        self._writes = {}
+        self._reads = set()
+        self._writes = set()
         self._selectables = {}
         self._continuousPolling = _ContinuousPolling(self)
         posixbase.PosixReactorBase.__init__(self)
@@ -234,7 +246,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
 
             # Update our own tracking state *only* after the epoll call has
             # succeeded.  Otherwise we may get out of sync.
-            primary[fd] = 1
+            primary.add(fd)
             selectables[fd] = xer
 
 
@@ -295,7 +307,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
                 del selectables[fd]
                 # See comment above _control call in _add.
                 self._poller.unregister(fd)
-            del primary[fd]
+            primary.remove(fd)
 
 
     def removeReader(self, reader):
