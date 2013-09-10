@@ -38,7 +38,7 @@ class AbstractRelayRules(object):
             authorized.
 
         @rtype: L{bool}
-        @return: An indication of whether a message should be relayed.
+        @return: An indication of whether the message should be relayed.
         """
         return False
 
@@ -66,7 +66,7 @@ class DomainQueuerRelayRules(object):
             authorized.
 
         @rtype: L{bool}
-        @return: An indication of whether a message should be relayed.
+        @return: An indication of whether the message should be relayed.
         """
         peer = protocol.transport.getPeer()
         return (authorized or isinstance(peer, UNIXAddress) or
@@ -76,7 +76,7 @@ class DomainQueuerRelayRules(object):
 
 class DomainQueuer:
     """
-    An SMTP domain which adds messages to a queue intended for relaying.
+    A domain which adds messages to a queue for relaying.
 
     @ivar service: See L{__init__}
 
@@ -94,8 +94,8 @@ class DomainQueuer:
         @param service: An email service.
 
         @type authenticated: L{bool}
-        @param authenticated: A flag indicating whether the
-            originator of the message has been authenticated.
+        @param authenticated: A flag indicating whether the originator of the
+            message has been authenticated.
 
         @type relayRules: L{NoneType <types.NoneType>} or L{AbstractRelayRules}
         @param relayRules: The rules to determine whether a message
@@ -137,7 +137,7 @@ class DomainQueuer:
         @param protocol: The protocol over which the message was received.
 
         @rtype: L{bool}
-        @return: An indication of whether a message should be relayed.
+        @return: An indication of whether the message should be relayed.
         """
         return self.relayRules.willRelay(address, protocol, self.authed)
 
