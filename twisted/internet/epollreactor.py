@@ -158,16 +158,16 @@ class _ContinuousPolling(posixbase._PollLikeMixin,
 
     def isReading(self, fd):
         """
-        Returns weather or not the C{FileDescriptor} is currently being
-        observed for read readiness.
+        Checks if the file descriptor is currently being observed for read
+        readiness.
         """
         return fd in self._readers
 
 
     def isWriting(self, fd):
         """
-        Returns weather or not the C{FileDescriptor} is currently being
-        observed for write readiness.
+        Checks if the file descriptor is currently being observed for write
+        readiness.
         """
         return fd in self._writers
 
@@ -396,4 +396,3 @@ def install():
 
 
 __all__ = ["EPollReactor", "install"]
-
