@@ -160,6 +160,12 @@ class _ContinuousPolling(posixbase._PollLikeMixin,
         """
         Checks if the file descriptor is currently being observed for read
         readiness.
+
+        @param fd: The file descriptor being checked.
+        @type fd: L{twisted.internet.abstract.FileDescriptor}
+        @return: C{True} if the file descriptor is being observed for read
+            readiness, C{False} otherwise.
+        @rtype: C{bool}
         """
         return fd in self._readers
 
@@ -168,6 +174,12 @@ class _ContinuousPolling(posixbase._PollLikeMixin,
         """
         Checks if the file descriptor is currently being observed for write
         readiness.
+
+        @param fd: The file descriptor being checked.
+        @type fd: L{twisted.internet.abstract.FileDescriptor}
+        @return: C{True} if the file descriptor is being observed for write
+            readiness, C{False} otherwise.
+        @rtype: C{bool}
         """
         return fd in self._writers
 
