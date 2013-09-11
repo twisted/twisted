@@ -49,19 +49,21 @@ from cStringIO import StringIO
 
 from twisted.lore import default
 from twisted.web import domhelpers
-from twisted.python import text
 # These should be factored out
 from twisted.lore.latex import BaseLatexSpitter, LatexSpitter, processFile
 from twisted.lore.latex import getLatexText, HeadingLatexSpitter
-from twisted.lore.tree import getHeaders
+from twisted.lore.tree import getHeaders, _removeLeadingTrailingBlankLines
 from twisted.lore.tree import removeH1, fixAPI, fontifyPython
 from twisted.lore.tree import addPyListings, addHTMLListings, setTitle
+
 
 hacked_entities = { 'amp': ' &', 'gt': ' >', 'lt': ' <', 'quot': ' "',
                     'copy': ' (c)'}
 
 entities = { 'amp': '&', 'gt': '>', 'lt': '<', 'quot': '"',
              'copy': '(c)'}
+
+
 
 class MagicpointOutput(BaseLatexSpitter):
     bulletDepth = 0
@@ -109,12 +111,20 @@ class MagicpointOutput(BaseLatexSpitter):
     def visitNode_div_pause(self, node):
         self.writer('%pause\n')
 
+
     def visitNode_pre(self, node):
+        """
+        Writes Latex block using the 'typewriter' font when it encounters a
+        I{pre} element.
+
+        @param node: The element to process.
+        @type node: L{xml.dom.minidom.Element}
+        """
         # TODO: Syntax highlighting
         buf = StringIO()
         getLatexText(node, buf.write, entities=entities)
         data = buf.getvalue()
-        data = text.removeLeadingTrailingBlanks(data)
+        data = _removeLeadingTrailingBlankLines(data)
         lines = data.split('\n')
         self.fontStack.append(('typewriter', 4))
         self.writer('%' + self.fontName() + '\n')
@@ -122,6 +132,7 @@ class MagicpointOutput(BaseLatexSpitter):
             self.writer(' ' + line + '\n')
         del self.fontStack[-1]
         self.writer('%' + self.fontName() + '\n')
+
 
     def visitNode_ul(self, node):
         if self.bulletDepth > 0:

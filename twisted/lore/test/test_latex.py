@@ -69,6 +69,40 @@ class LatexSpitterTests(TestCase):
             '\\author{alice \\and $<$http://example.com/bob$>$ \\and $<$carol@example.com$>$}')
 
 
+    def test_pre(self):
+        """
+        L{LatexSpitter.visitNode} emits a verbatim block when it encounters a
+        I{pre} element.
+        """
+        pre = Element('pre')
+        text = Text()
+        text.data = u"\n\n\nfoo\nbar\n\n\n"
+        pre.appendChild(text)
+
+        self.spitter.visitNode(pre)
+        self.assertEqual(
+            ''.join(self.output),
+            '\\begin{verbatim}\nfoo\nbar\n\\end{verbatim}\n')
+
+
+    def test_code(self):
+        """
+        L{LatexSpitter.visitNode} emits a C{texttt} block when it encounters a
+        I{code} element and inserts optional linebreaks at sensible places in
+        absolute python names.
+        """
+        code = Element('code')
+        text = Text()
+        text.data = u"print this: twisted.lore.latex"
+        code.appendChild(text)
+
+        self.spitter.visitNode(code)
+        self.assertEqual(
+            ''.join(self.output),
+            "\\texttt{print this: twisted.\\linebreak[1]lore.\\"
+            "linebreak[1]latex}")
+
+
     def test_skipComments(self):
         """
         L{LatexSpitter.visitNode} writes nothing to its output stream for
@@ -84,7 +118,7 @@ class LatexSpitterTests(TestCase):
         code listing (represented by an I{a} element with a I{listing} class).
         """
         path = FilePath(self.mktemp())
-        path.setContent('foo\nbar\n')
+        path.setContent('\n\nfoo\nbar\n\n\n')
         listing = Element('a')
         listing.setAttribute('class', 'listing')
         listing.setAttribute('href', path.path)

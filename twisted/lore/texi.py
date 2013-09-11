@@ -1,11 +1,10 @@
+# -*- test-case-name: twisted.lore.test.test_texi -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
-
 from cStringIO import StringIO
 import os, re
-from twisted.python import text
+
 from twisted.web import domhelpers
 import latex, tree
 
@@ -40,12 +39,20 @@ class TexiSpitter(latex.BaseLatexSpitter):
             self.writer('* %s::\n' % domhelpers.getNodeText(header))
         self.writer('@end menu\n')
 
+
     def visitNode_pre(self, node):
+        """
+        Writes a I{verbatim} block when it encounters a I{pre} element.
+
+        @param node: The element to process.
+        @type node: L{xml.dom.minidom.Element}
+        """
         self.writer('@verbatim\n')
         buf = StringIO()
         latex.getLatexText(node, buf.write, entities=entities)
-        self.writer(text.removeLeadingTrailingBlanks(buf.getvalue()))
+        self.writer(tree._removeLeadingTrailingBlankLines(buf.getvalue()))
         self.writer('@end verbatim\n')
+
 
     def visitNode_code(self, node):
         fout = StringIO()

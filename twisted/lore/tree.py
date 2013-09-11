@@ -10,10 +10,12 @@ from xml.dom.pulldom import SAX2DOM
 from xml.sax import make_parser
 from xml.sax.xmlreader import InputSource
 
-from twisted.python import htmlizer, text
+from twisted.python import htmlizer
 from twisted.python.filepath import FilePath
 from twisted.web import domhelpers
 import process, latex, indexer, numberer, htmlbook
+
+
 
 # relative links to html files
 def fixLinks(document, ext):
@@ -204,7 +206,7 @@ def addPyListings(document, dir):
         howManyLines = len(lines)
         data = '\n'.join(lines)
 
-        data = cStringIO.StringIO(text.removeLeadingTrailingBlanks(data))
+        data = cStringIO.StringIO(_removeLeadingTrailingBlankLines(data))
         htmlizer.filter(data, outfile, writer=htmlizer.SmallerHTMLWriter)
         sourceNode = dom.parseString(outfile.getvalue()).documentElement
         sourceNode.insertBefore(_makeLineNumbers(howManyLines), sourceNode.firstChild)
@@ -246,6 +248,43 @@ def _replaceWithListing(node, val, filename, class_):
             (class_, val, captionTitle, filename, filename))
     newnode = dom.parseString(text).documentElement
     node.parentNode.replaceChild(newnode, node)
+
+
+
+def _removeLeadingBlankLines(lines):
+    """
+    Removes leading blank lines from C{lines} and returns a list containing the
+    remaining characters.
+
+    @param lines: Input string.
+    @type lines: L{str}
+    @rtype: C{list}
+    @return: List of characters.
+    """
+    ret = []
+    for line in lines:
+        if ret or line.strip():
+            ret.append(line)
+    return ret
+
+
+
+def _removeLeadingTrailingBlankLines(inputString):
+    """
+    Splits input string C{inputString} into lines, strips leading and trailing
+    blank lines, and returns a string with all lines joined, each line
+    separated by a newline character.
+
+    @param inputString: The input string.
+    @type inputString: L{str}
+    @rtype: L{str}
+    @return: String containing normalized lines.
+    """
+    lines = _removeLeadingBlankLines(inputString.split('\n'))
+    lines.reverse()
+    lines = _removeLeadingBlankLines(lines)
+    lines.reverse()
+    return '\n'.join(lines) + '\n'
 
 
 

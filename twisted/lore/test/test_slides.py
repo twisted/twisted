@@ -8,7 +8,8 @@ Tests for L{twisted.lore.slides}.
 from xml.dom.minidom import Element, Text
 
 from twisted.trial.unittest import TestCase
-from twisted.lore.slides import HTMLSlide, splitIntoSlides, insertPrevNextLinks
+from twisted.lore.slides import (
+    HTMLSlide, splitIntoSlides, insertPrevNextLinks, MagicpointOutput)
 
 
 class SlidesTests(TestCase):
@@ -83,3 +84,70 @@ class SlidesTests(TestCase):
             next.toxml(), '<span class="next">second</span>')
         self.assertEqual(
             previous.toxml(), '<span class="previous">first</span>')
+
+
+
+class MagicpointOutputTests(TestCase):
+    """
+    Tests for L{lore.slides.MagicpointOutput}.
+    """
+    def setUp(self):
+        self.filename = self.mktemp()
+        self.output = []
+        self.spitter = MagicpointOutput(self.output.append,
+            filename=self.filename)
+
+        self.parent = Element('html')
+        title = Element('title')
+        text = Text()
+        text.data = "My Title"
+        title.appendChild(text)
+        self.body = Element('body')
+        self.parent.appendChild(title)
+        self.parent.appendChild(self.body)
+
+
+    def test_body(self):
+        """
+        L{MagicpointOutput.visitNode} emits a verbatim block when it encounters
+        a I{body} element.
+        """
+        link = Element('link')
+        link.setAttribute('class', 'author')
+        text = Text()
+        text.data = u"John Doe"
+        link.appendChild(text)
+        self.body.appendChild(link)
+
+        head = Element('h2')
+        first = Text()
+        first.data = u'My Header'
+        head.appendChild(first)
+        self.body.appendChild(head)
+
+        self.spitter.visitNode(self.parent)
+        self.assertEqual(
+            ''.join(self.output),
+            '%page\n\nMy Title\n\n\n%center\n\n\n\n\nJohn Doe\n%page\n\n'
+            'My Title\n\n\n\tMy Header\nJohn Doe%page\n\nMy Header\n\n\n')
+
+
+    def test_pre(self):
+        """
+        L{MagicpointOutput.visitNode} emits the 'typewriter' font when it
+        encounters a I{pre} element.
+        """
+        pre = Element('pre')
+        text = Text()
+        text.data = u"\nfirst line\nsecond line\n\n"
+        pre.appendChild(text)
+        self.body.appendChild(pre)
+
+        self.spitter.visitNode(self.parent)
+        self.assertEqual(
+            ''.join(self.output),
+            '%page\n\nMy Title\n\n\n%center\n\n\n\n\n%page\n\nMy Title\n\n\n'
+            '%font "typewriter", size 4\n first line\n second line\n \n'
+            '%font "standard"\n')
+
+

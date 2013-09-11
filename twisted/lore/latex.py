@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.lore.test.test_latex -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -11,7 +12,7 @@ from cStringIO import StringIO
 import urlparse
 
 from twisted.web import domhelpers
-from twisted.python import text, procutils
+from twisted.python import procutils
 
 import tree
 
@@ -115,6 +116,7 @@ class LatexSpitter(BaseLatexSpitter):
         getLatexText(node, buf.write, latexEscape)
         self.writer(buf.getvalue().replace('<', '$<$').replace('>', '$>$'))
 
+
     def visitNode_head(self, node):
         authorNodes = domhelpers.findElementsWithAttribute(node, 'rel', 'author')
         authorNodes = [n for n in authorNodes if n.tagName == 'link']
@@ -139,12 +141,20 @@ class LatexSpitter(BaseLatexSpitter):
 
         self.visitNodeDefault(node)
 
+
     def visitNode_pre(self, node):
+        """
+        Writes a I{verbatim} block when it encounters a I{pre} element.
+
+        @param node: The element to process.
+        @type node: L{xml.dom.minidom.Element}
+        """
         self.writer('\\begin{verbatim}\n')
         buf = StringIO()
         getLatexText(node, buf.write)
-        self.writer(text.removeLeadingTrailingBlanks(buf.getvalue()))
+        self.writer(tree._removeLeadingTrailingBlankLines(buf.getvalue()))
         self.writer('\\end{verbatim}\n')
+
 
     def visitNode_code(self, node):
         fout = StringIO()
@@ -204,13 +214,21 @@ class LatexSpitter(BaseLatexSpitter):
         spitter.visitNodeDefault(node)
         self.writer('}\n')
 
+
     def visitNode_a_listing(self, node):
+        """
+        Writes a I{verbatim} block when it encounters a code listing
+        (represented by an I{a} element with a I{listing} class).
+
+        @param node: The element to process.
+        @type node: C{xml.dom.minidom.Element}
+        """
         fileName = os.path.join(self.currDir, node.getAttribute('href'))
         self.writer('\\begin{verbatim}\n')
         lines = map(str.rstrip, open(fileName).readlines())
         skipLines = int(node.getAttribute('skipLines') or 0)
         lines = lines[skipLines:]
-        self.writer(text.removeLeadingTrailingBlanks('\n'.join(lines)))
+        self.writer(tree._removeLeadingTrailingBlankLines('\n'.join(lines)))
         self.writer('\\end{verbatim}')
 
         # Write a caption for this source listing
@@ -221,6 +239,7 @@ class LatexSpitter(BaseLatexSpitter):
         self.writer('\parbox[b]{\linewidth}{\\begin{center}%s --- '
                     '\\begin{em}%s\\end{em}\\end{center}}'
                     % (latexEscape(caption), latexEscape(fileName)))
+
 
     def visitNode_a_href(self, node):
         supported_schemes=['http', 'https', 'ftp', 'mailto']
