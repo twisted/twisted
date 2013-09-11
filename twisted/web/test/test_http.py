@@ -1926,6 +1926,19 @@ class Expect100ContinueServerTests(unittest.TestCase, ResponseTestMixin):
 
 
 def sub(keys, d):
+    """
+    Create a new dict containing only a subset of the items of an existing
+    dict.
+
+    @param keys: An iterable of the keys which will be added (with values from
+        C{d}) to the result.
+
+    @param d: The existing L{dict} from which to copy items.
+
+    @return: The new L{dict} with keys given by C{keys} and values given by the
+        corresponding values in C{d}.
+    @rtype: L{dict}
+    """
     return dict([(k, d[k]) for k in keys])
 
 
