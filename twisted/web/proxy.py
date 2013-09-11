@@ -207,7 +207,7 @@ class ReverseProxyRequest(Request):
         it there, then forwarding the response back as the response to this
         request.
         """
-        self.received_headers['host'] = self.factory.host
+        self.requestHeaders.setRawHeaders(b"host", [self.factory.host])
         clientFactory = self.proxyClientFactoryClass(
             self.method, self.uri, self.clientproto, self.getAllHeaders(),
             self.content.read(), self)
@@ -289,7 +289,7 @@ class ReverseProxyResource(Resource):
             host = self.host
         else:
             host = "%s:%d" % (self.host, self.port)
-        request.received_headers['host'] = host
+        request.requestHeaders.setRawHeaders(b"host", [host])
         request.content.seek(0, 0)
         qs = urlparse.urlparse(request.uri)[4]
         if qs:

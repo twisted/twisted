@@ -606,6 +606,46 @@ class Request:
             self.transport = self.channel.transport
 
 
+    def _warnHeaders(self, old, new):
+        """
+        Emit a warning related to use of one of the deprecated C{headers} or
+        C{received_headers} attributes.
+
+        @param old: The name of the deprecated attribute to which the warning
+            pertains.
+
+        @param new: The name of the preferred attribute which replaces the old
+            attribute.
+        """
+        warnings.warn(
+            category=DeprecationWarning,
+            message=(
+                "twisted.web.http.Request.%(old)s was deprecated in "
+                "Twisted 13.2.0: Please use twisted.web.http.Request."
+                "%(new)s instead." % dict(old=old, new=new)),
+            stacklevel=3)
+
+
+    @property
+    def headers(self):
+        """
+        Transform the L{Headers}-style C{responseHeaders} attribute into a
+        deprecated C{dict}-style C{headers} attribute.
+        """
+        self._warnHeaders("headers", "responseHeaders")
+        return _DictHeaders(self.responseHeaders)
+
+
+    @property
+    def received_headers(self):
+        """
+        Transform the L{Headers}-style C{requestHeaders} attribute into a
+        deprecated C{dict}-style C{received_headers} attribute.
+        """
+        self._warnHeaders("received_headers", "requestHeaders")
+        return _DictHeaders(self.requestHeaders)
+
+
     def __setattr__(self, name, value):
         """
         Support assignment of C{dict} instances to C{received_headers} for
@@ -616,16 +656,12 @@ class Request:
             self.requestHeaders = headers = Headers()
             for k, v in value.items():
                 headers.setRawHeaders(k, [v])
-        elif name == 'requestHeaders':
-            self.__dict__[name] = value
-            self.__dict__['received_headers'] = _DictHeaders(value)
+            self._warnHeaders("received_headers", "requestHeaders")
         elif name == 'headers':
             self.responseHeaders = headers = Headers()
             for k, v in value.items():
                 headers.setRawHeaders(k, [v])
-        elif name == 'responseHeaders':
-            self.__dict__[name] = value
-            self.__dict__['headers'] = _DictHeaders(value)
+            self._warnHeaders("headers", "responseHeaders")
         else:
             self.__dict__[name] = value
 

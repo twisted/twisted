@@ -150,7 +150,7 @@ class HostHeaderResource(resource.Resource):
     from the request.
     """
     def render(self, request):
-        return request.received_headers[b'host']
+        return request.requestHeaders.getRawHeaders(b"host")[0]
 
 
 
@@ -162,7 +162,7 @@ class PayloadResource(resource.Resource):
     """
     def render(self, request):
         data = request.content.read()
-        contentLength = request.received_headers[b'content-length']
+        contentLength = request.requestHeaders.getRawHeaders(b"content-length")[0]
         if len(data) != 100 or int(contentLength) != 100:
             return b"ERROR"
         return data
