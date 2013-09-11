@@ -13,28 +13,44 @@ from twisted.protocols.basic import (
 )
 
 class _Transporter(object):
-    def __init__(self, deliver):
-        self.deliver = deliver
+    def __init__(self, stuff):
+        self._stuff = stuff
 
 
     def write(self, data):
-        self.deliver(data)
+        self._stuff(data)
 
 
     def writeSequence(self, dati):
         for data in dati:
-            self.deliver(data)
+            self._stuff(data)
 
 
 
 class _StringsToData(Pump):
     def __init__(self, stringReceiverClass, sendMethodName="sendString"):
         self._stringReceiver = stringReceiverClass()
-        self.received = getattr(self._stringReceiver, sendMethodName)
+        self._received = getattr(self._stringReceiver, sendMethodName)
 
 
     def started(self):
-        self._stringReceiver.makeConnection(_Transporter(self.tube.deliver))
+        self._buf = []
+        self._stringReceiver.makeConnection(_Transporter(self._unflush))
+        return self._flush()
+
+
+    def received(self, data):
+        self._received(data)
+        return self._flush()
+
+
+    def _unflush(self, input):
+        self._buf.append(input)
+
+
+    def _flush(self):
+        self._buf, x = [], self._buf
+        return x
 
 
 
