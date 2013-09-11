@@ -341,25 +341,6 @@ class _Tube(object):
             self._tubeUnbuffering = False
 
 
-    def deliver(self, item):
-        """
-        Deliver the given item to this L{_Tube}'s C{drain} attribute, if it has
-        yet been set by L{flowingFrom}.
-        """
-        self._delivered = True
-        drain = self._tfount.drain
-        if drain is None:
-            if not self._pendingOutput:
-                self._tfount.pauseFlow()
-            self._pendingOutput.append(item)
-            return 1.0
-        elif self._pumpReceiving:
-            self._pendingOutput.append(item)
-            return 0.5
-        else:
-            return drain.receive(item)
-
-
     def _deliverFrom(self, deliverySource):
         assert self._pendingIterator is None
         iterableOrNot = deliverySource()
