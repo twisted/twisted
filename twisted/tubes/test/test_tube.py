@@ -91,7 +91,7 @@ class TubeTest(TestCase):
 
     def test_pumpFlowSwitching(self):
         """
-        The L{_Tube} of a L{Pump} delivers data to a newly specified L{IDrain}
+        The L{_Tube} of a L{Pump} sends on data to a newly specified L{IDrain}
         when its L{ITube.switch} method is called.
         """
         @implementer(ISwitchablePump)
@@ -123,7 +123,7 @@ class TubeTest(TestCase):
     def test_pumpFlowSwitching_WithCheese(self):
         # XXX RENAME
         """
-        The L{_Tube} of a L{Pump} delivers reassembled data to a newly
+        The L{_Tube} of a L{Pump} sends on reassembled data to a newly
         specified L{Drain}.
         """
         @implementer(ISwitchablePump)
@@ -292,134 +292,13 @@ class TubeTest(TestCase):
         self.assertEquals(self.fd.received, [7])
 
 
-    def test_deliverWaitsUntilThereIsADownstream(self):
-        """
-        L{_Tube.deliver} on a disconnected tube will buffer its input until
-        there's an active drain to deliver to.
-        """
-        self.tube.deliver("hi")
-        nextFount = self.ff.flowTo(self.tubeDrain)
-        nextFount.flowTo(self.fd)
-        self.assertEquals(self.fd.received, ["hi"])
-
-
-    def test_deliverWithoutDownstreamPauses(self):
-        """
-        L{_Tube.deliver} on a tube with an upstream L{IFount} but no downstream
-        L{IDrain} will pause its L{IFount}.  This is because the L{_Tube} has
-        to buffer everything downstream, and it doesn't want to buffer
-        infinitely; if it has nowhere to deliver onward to, then it issues a
-        pause.  Note also that this happens when data is delivered via the
-        L{_Tube} and I{not} when data arrives via the L{_Tube}'s C{receive}
-        method, since C{receive} delivers onwards to the L{Pump} immediately,
-        and does not require any buffering.
-        """
-        self.nextFount = self.ff.flowTo(self.tubeDrain)
-        self.assertEquals(self.ff.flowIsPaused, False)
-        self.tube.deliver("abc")
-        self.assertEquals(self.ff.flowIsPaused, True)
-
-
-    def test_preDeliveryPausesWhenUpstreamAdded(self):
-        """
-        If L{_Tube.deliver} has been called already (and the item it was called
-        with is still buffered) when L{_Tube.flowingFrom} is called, it will
-        pause the fount it is being added to.
-        """
-        self.tube.deliver('value')
-        self.assertEqual(self.ff.flowIsPaused, False)
-        self.ff.flowTo(self.tubeDrain)
-        self.assertEqual(self.ff.flowIsPaused, True)
-
-
-    def test_deliverPausesJustOnce(self):
-        """
-        L{_Tube.deliver} on a tube with an upstream L{IFount} will not call
-        its C{pauseFlow} method twice.
-        """
-        self.test_deliverWithoutDownstreamPauses()
-        self.tube.deliver("def")
-
-
-    def test_addingDownstreamUnpauses(self):
-        """
-        When a L{_Tube} that is not flowing to a drain yet pauses its upstream
-        fount, it will I{resume} its upstream fount when a new downstream
-        arrives to un-buffer to.
-        """
-        self.test_deliverWithoutDownstreamPauses()
-        self.nextFount.flowTo(self.fd)
-        self.assertEquals(self.ff.flowIsPaused, False)
-
-
-    def test_pauseFlowWhileUnbuffering(self):
-        """
-        When a L{_Tube} is unbuffering its inputs received while it didn't have
-        a downstream drain, it may be interrupted by its downstream drain
-        pausing it.
-
-        If this happens, it should stop delivering.  It also shouldn't pause
-        any upstream fount.
-        """
-        test = self
-        class SlowDrain(FakeDrain):
-            def __init__(self):
-                super(SlowDrain, self).__init__()
-                self.ready = True
-            def receive(self, item):
-                result = super(SlowDrain, self).receive(item)
-                self.fount.pauseFlow()
-                if not self.ready:
-                    test.fail("Received twice.")
-                self.ready = False
-                return result
-            def nextOne(self):
-                self.ready = True
-                self.fount.resumeFlow()
-        sd = SlowDrain()
-        nextFount = self.ff.flowTo(self.tubeDrain)
-        # Buffer.
-        self.tube.deliver(1)
-        self.tube.deliver(2)
-        self.tube.deliver(3)
-        # Unbuffer.
-        nextFount.flowTo(sd)
-        self.assertEquals(sd.received, [1])
-        sd.nextOne()
-        self.assertEquals(sd.received, [1, 2])
-        sd.nextOne()
-        self.assertEquals(sd.received, [1, 2, 3])
-
-
     def test_receiveCallsPumpReceived(self):
         """
-        L{_TubeDrain.receive} will deliver its input to L{IPump.received} on
-        its pump.
+        L{_TubeDrain.receive} will send its input to L{IPump.received} on its
+        pump.
         """
         self.tubeDrain.receive("one-item")
-        self.assertEquals(self.tube.pump.allReceivedItems,
-                          ["one-item"])
-
-
-    def test_multiStageTubeReturnsLastStage(self):
-        """
-        XXX explain the way tubes hook together.
-        """
-        class A(Pump):
-            pass
-        class B(Pump):
-            pass
-        class C(Pump):
-            pass
-        a = A()
-        b = B()
-        c = C()
-        ab = series(a, b, c)
-        self.ff.flowTo(ab).flowTo(self.fd)
-        a.tube.deliver("received by B")
-        b.tube.deliver("receved by C")
-        c.tube.deliver("received by FD")
-        self.assertEquals(self.fd.received, ["received by FD"])
+        self.assertEquals(self.tube.pump.allReceivedItems, ["one-item"])
 
 
     def test_flowToWillNotResumeFlowPausedInFlowingFrom(self):
@@ -449,11 +328,9 @@ class TubeTest(TestCase):
                 self.fount = fount
                 self.fount.flowTo(test_fd)
 
-        self.ff.flowTo(self.tubeDrain).flowTo(ReflowingDrain())
+        self.ff.flowTo(series(PassthruPump())).flowTo(ReflowingDrain())
 
-        self.assertIdentical(self.tube._tfount.drain, self.fd)
-
-        self.tube.deliver("hello")
+        self.ff.drain.receive("hello")
         self.assertEqual(self.fd.received, ["hello"])
 
 
