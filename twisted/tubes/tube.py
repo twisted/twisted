@@ -390,8 +390,9 @@ class _Tube(object):
         upstream = self._tdrain.fount
         upstream.pauseFlow()
         upstream.flowTo(drain)
-        for element in self.pump.reassemble(self._pendingIterator):
-            drain.receive(element)
+        if self._pendingIterator is not None:
+            for element in self.pump.reassemble(self._pendingIterator):
+                drain.receive(element)
 
 
 
