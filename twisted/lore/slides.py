@@ -118,7 +118,7 @@ class MagicpointOutput(BaseLatexSpitter):
         I{pre} element.
 
         @param node: The element to process.
-        @type node: C{xml.dom.minidom.Element}
+        @type node: L{xml.dom.minidom.Element}
         """
         # TODO: Syntax highlighting
         buf = StringIO()

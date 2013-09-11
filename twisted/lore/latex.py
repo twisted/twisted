@@ -147,7 +147,7 @@ class LatexSpitter(BaseLatexSpitter):
         Writes a I{verbatim} block when it encounters a I{pre} element.
 
         @param node: The element to process.
-        @type node: C{xml.dom.minidom.Element}
+        @type node: L{xml.dom.minidom.Element}
         """
         self.writer('\\begin{verbatim}\n')
         buf = StringIO()

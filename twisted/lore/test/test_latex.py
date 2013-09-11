@@ -99,7 +99,8 @@ class LatexSpitterTests(TestCase):
         self.spitter.visitNode(code)
         self.assertEqual(
             ''.join(self.output),
-            "\\texttt{print this: twisted.\\linebreak[1]lore.\\linebreak[1]latex}")
+            "\\texttt{print this: twisted.\\linebreak[1]lore.\\"
+            "linebreak[1]latex}")
 
 
     def test_skipComments(self):
