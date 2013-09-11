@@ -44,6 +44,11 @@ class _NotDisconnecting(object):
     """
     disconnecting = False
 
+    def loseConnection(self):
+        """
+        Hah.
+        """
+
 
 
 @implementer(ISwitchablePump)
