@@ -154,20 +154,10 @@ class _TubeDrain(_TubePiece):
         """
         An item was received.  Pass it on to the pump for processing.
         """
-        self._tube._pumpReceiving = True
-        try:
-            result = self._pump.received(item)
-        finally:
-            self._tube._pumpReceiving = False
-        self._tube._unbufferSome()
-        if result is None:
-            # postel principle, let pumps be as lax as possible
-            result = 0.5
+        delivered = self._tube._deliverFrom(lambda: self._pump.received(item))
         drain = self._tube._tfount.drain
-        if drain is not None:
-            if not self._tube._delivered:
-                drain.progress()
-        return result
+        if drain is not None and delivered == 0:
+            drain.progress()
 
 
     def flowStopped(self, reason):
@@ -374,19 +364,22 @@ class _Tube(object):
         assert self._pendingIterator is None
         iterableOrNot = deliverySource()
         if iterableOrNot is None:
-            return
+            return 0
         self._pendingIterator = iter(iterableOrNot)
-        self._unbufferIterator()
+        return self._unbufferIterator()
 
 
     def _unbufferIterator(self):
         whatever = object()
+        i = 0
         while not self._currentlyPaused:
             value = next(self._pendingIterator, whatever)
             if value is whatever:
                 self._pendingIterator = None
                 break
             self._tfount.drain.receive(value)
+            i += 1
+        return i
 
 
     def switch(self, drain):

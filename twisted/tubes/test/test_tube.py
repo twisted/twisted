@@ -136,25 +136,8 @@ class TubeTest(TestCase):
             def received(self, item):
                 got.append(item)
         self.tube.pump = ReceivingPump()
-        result = self.tubeDrain.receive("sample item")
-        self.assertEqual(result, 0.5)
+        self.tubeDrain.receive("sample item")
         self.assertEqual(got, ["sample item"])
-
-
-    def test_tubeReceiveRelaysPumpReceivedResult(self):
-        """
-        L{_TubeDrain.receive} will call C{Pump.received} and relay its
-        resulting progress value if one is provided.
-        """
-        got = []
-        class ReceivingPumpWithProgress(Pump):
-            def received(self, item):
-                got.append(item)
-                return 0.8
-        self.tube.pump = ReceivingPumpWithProgress()
-        result = self.tubeDrain.receive("some input")
-        self.assertEqual(result, 0.8)
-        self.assertEqual(got, ["some input"])
 
 
     def test_tubeProgressRelaysPumpProgress(self):
@@ -199,7 +182,7 @@ class TubeTest(TestCase):
         got = []
         class ReceivingPump(Pump):
             def received(self, item):
-                self.tube.deliver(item + 1)
+                yield item + 1
         class ProgressingPump(Pump):
             def progressed(self, amount=None):
                 progged.append(amount)
