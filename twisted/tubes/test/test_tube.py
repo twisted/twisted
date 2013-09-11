@@ -106,6 +106,7 @@ class TubeTest(TestCase):
             def received(self, data):
                 if data == "switch":
                     sourcePump.tube.switch(series(Switchee(), fakeDrain))
+                return ()
 
         class Switchee(Pump):
             def received(self, data):
@@ -117,6 +118,44 @@ class TubeTest(TestCase):
         self.ff.drain.receive("switch")
         self.ff.drain.receive("to switchee")
         self.assertEquals(fakeDrain.received, ["switched to switchee"])
+
+
+    def test_pumpFlowSwitching_WithCheese(self):
+        """
+        The L{_Tube} of a L{Pump} delivers reassembled data to a newly
+        specified L{Drain}.
+        """
+        @implementer(ISwitchablePump)
+        class ReassemblingPump(Pump):
+            def received(self, datum):
+                nonBorks = datum.split("BORK")
+                return nonBorks
+
+            def reassemble(self, data):
+                for element in data:
+                    yield data
+                    yield 'BORK'
+
+        class Switcher(Pump):
+            def received(self, data):
+                if data == "switch":
+                    sourcePump.tube.switch(series(Switchee(), fakeDrain))
+                return ()
+
+        class Switchee(Pump):
+            def received(self, data):
+                yield "switched " + data
+
+        sourcePump = ReassemblingPump()
+        fakeDrain = self.fd
+        firstDrain = series(sourcePump)
+        self.ff.flowTo(firstDrain).flowTo(series(Switcher(), fakeDrain))
+
+        self.ff.drain.receive("switchBORKto switchee")
+
+        self.assertEquals(self.fd.received, ["switched to switchee",
+                                             "switched BORK"])
+
 
 
     def test_flowingFromFirst(self):
