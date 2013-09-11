@@ -23,6 +23,8 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+from twisted.python.compat import _PY3
+from twisted.python.deprecate import deprecated
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.versions import Version
 
@@ -128,6 +130,38 @@ def isinst(inst,clazz):
 
 
 ## the following were factored out of usage
+
+if not _PY3:
+    # These functions are still imported by libraries used in turn by Twisted,
+    # like Nevow 0.10. Since they are deprecated, there's no need to port them
+    # to Python 3 (hence the condition above).
+    # https://code.launchpad.net/~multani/divmod.org/remove-deprecated-twisted.python.reflect
+    # removes the dependency in Nevow. Once this gets merged and released, these
+    # functions can be safely removed from Twisted.
+
+    @deprecated(Version("Twisted", 11, 0, 0), "inspect.getmro")
+    def allYourBase(classObj, baseClass=None):
+        """
+        allYourBase(classObj, baseClass=None) -> list of all base
+        classes that are subclasses of baseClass, unless it is None,
+        in which case all bases will be added.
+        """
+        l = []
+        _accumulateBases(classObj, l, baseClass)
+        return l
+
+
+    @deprecated(Version("Twisted", 11, 0, 0), "inspect.getmro")
+    def accumulateBases(classObj, l, baseClass=None):
+        _accumulateBases(classObj, l, baseClass)
+
+
+    def _accumulateBases(classObj, l, baseClass=None):
+        for base in classObj.__bases__:
+            if baseClass is None or issubclass(base, baseClass):
+                l.append(base)
+            _accumulateBases(base, l, baseClass)
+
 
 def accumulateClassDict(classObj, attr, adict, baseClass=None):
     """
