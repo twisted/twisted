@@ -167,7 +167,7 @@ class TubeTest(TestCase):
         @implementer(ISwitchablePump)
         class SwitchablePassthruPump(PassthruPump):
             def reassemble(self, data):
-                return data
+                raise NotImplementedError("Should not actually be called.")
 
         class Switcher(Pump):
             def received(self, data):
