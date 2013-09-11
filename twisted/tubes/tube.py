@@ -174,7 +174,7 @@ class _TubeDrain(_TubePiece):
         """
         This tube has now stopped.
         """
-        self._pump.stopped(reason)
+        self._tube._deliverFrom(lambda: self._pump.stopped(reason))
 
 
 

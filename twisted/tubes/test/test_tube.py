@@ -72,7 +72,7 @@ class TubeTest(TestCase):
         class Ender(Pump):
             def stopped(self, reason):
                 reasons.append(reason)
-                self.tube.deliver("conclusion")
+                yield "conclusion"
 
         self.ff.flowTo(series(Ender(), self.fd))
         self.assertEquals(reasons, [])
