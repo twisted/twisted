@@ -390,14 +390,8 @@ class _Tube(object):
         upstream = self._tdrain.fount
         upstream.pauseFlow()
         upstream.flowTo(drain)
-        self._finishSwitching()
-
-
-    def _finishSwitching(self):
-        reassembled = self.pump.reassemble(self._pendingOutput)
-        self._pendingOutput[:] = []
-        for value in reassembled:
-            self._tdrain.fount.drain.receive(value)
+        for element in self.pump.reassemble(self._pendingIterator):
+            drain.receive(element)
 
 
 
