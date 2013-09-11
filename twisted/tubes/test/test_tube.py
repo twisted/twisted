@@ -210,13 +210,13 @@ class TubeTest(TestCase):
         self.failUnlessRaises(TypeError, self.ff.flowTo, self.tubeDrain)
 
 
-    def test_deliverPostsDownstream(self):
+    def test_receiveIterableDeliversDownstream(self):
         """
-        L{_Tube.deliver} on a connected tube will call '.receive()' on its
-        drain.
+        When L{Pump.received} yields a value, L{_Tube} will call L{receive} on
+        its downstream drain.
         """
-        self.ff.flowTo(self.tubeDrain).flowTo(self.fd)
-        self.tube.deliver(7)
+        self.ff.flowTo(series(PassthruPump())).flowTo(self.fd)
+        self.ff.drain.receive(7)
         self.assertEquals(self.fd.received, [7])
 
 
