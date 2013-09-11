@@ -22,6 +22,12 @@ class ReprPump(Pump):
 
 
 
+class PassthruPump(Pump):
+    def received(self, data):
+        yield data
+
+
+
 class TubeTest(TestCase):
     """
     Tests for L{series}.
@@ -89,14 +95,11 @@ class TubeTest(TestCase):
         when its L{ITube.switch} method is called.
         """
         @implementer(ISwitchablePump)
-        class PassthruPump(Pump):
-            def received(self, data):
-                self.tube.deliver(data)
-
+        class SwitchablePassthruPump(PassthruPump):
             def reassemble(self, data):
                 return data
 
-        sourcePump = PassthruPump()
+        sourcePump = SwitchablePassthruPump()
         fakeDrain = self.fd
 
         class Switcher(Pump):
@@ -106,7 +109,7 @@ class TubeTest(TestCase):
 
         class Switchee(Pump):
             def received(self, data):
-                self.tube.deliver("switched " + data)
+                yield "switched " + data
 
         firstDrain = series(sourcePump)
 
@@ -159,7 +162,7 @@ class TubeTest(TestCase):
     def test_tubeReceiveRelaysProgressDownStream(self):
         """
         L{_TubeDrain.receive} will call its downstream L{IDrain}'s C{progress}
-        method if its L{Pump} does not call its C{deliver} method.
+        method if its L{Pump} does not produce any output.
         """
         got = []
         class ProgressingPump(Pump):
@@ -173,8 +176,8 @@ class TubeTest(TestCase):
     def test_tubeReceiveDoesntRelayUnnecessaryProgress(self):
         """
         L{_TubeDrain.receive} will not call its downstream L{IDrain}'s
-        C{progress} method if its L{Pump} I{does} call its C{deliver} method,
-        because the progress notification is redundant in that case; input was
+        C{progress} method if its L{Pump} I{does} produce some output, because
+        the progress notification is redundant in that case; input was
         received, output was sent on.  A call to C{progress} would imply that
         I{more} data had come in, and that isn't necessarily true.
         """
@@ -194,20 +197,6 @@ class TubeTest(TestCase):
         # sanity check
         self.assertEquals(got, [3])
         self.assertEquals(progged, [])
-
-
-    def test_flowToFirst(self):
-        """
-        If L{_Tube.flowTo} is called before L{_Tube.flowingFrom}, the argument
-        to L{_Tube.flowTo} will have its L{flowingFrom} called when
-        L{_Tube.flowingFrom} is called.
-        """
-        series(self.tube, self.fd)
-        self.ff.flowTo(self.tubeDrain)
-        self.ff.drain.receive(3)
-        self.tube.deliver(self.pump.allReceivedItems.pop())
-        self.assertEquals(self.fd.received, [3])
-        # self.assertIdentical(self.fd.fount, self.tube)
 
 
     def test_flowFromTypeCheck(self):
