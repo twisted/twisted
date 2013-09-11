@@ -639,7 +639,7 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
             'CHANTYPES': tuple('#&'),
             'MODES': 3,
             'NICKLEN': 9,
-            'PREFIX': self._parsePrefixParam('(ovh)@+%'),
+            'PREFIX': self._parsePrefixParam('(qaovh)~&@+%'),
             # The ISUPPORT draft explicitly says that there is no default for
             # CHANMODES, but we're defaulting it here to handle the case where
             # the IRC server doesn't send us any ISUPPORT information, since
@@ -1090,6 +1090,9 @@ class IRCClient(basic.LineReceiver):
     _heartbeat = None
     heartbeatInterval = 120
 
+    # cache of nickname prefixes from ServerSupportedFeatures, extracted by irc_RPL_NAMREPLY
+    _nickprefixes = None
+
 
     def _reallySendLine(self, line):
         return basic.LineReceiver.sendLine(self, lowQuote(line) + '\r')
@@ -1262,6 +1265,17 @@ class IRCClient(basic.LineReceiver):
         intact.
         """
 
+        
+    def channelNames(self, channel, names):
+        """Called when a list of users in the channel has been requested.
+
+        Also called when first joining a channel.
+
+        @param channel: the name of the channel where the users are in.
+        @param names: a list of users that are in the specified channel.
+        """
+
+
     def left(self, channel):
         """
         Called when I have left a channel.
@@ -1418,6 +1432,21 @@ class IRCClient(basic.LineReceiver):
             self.sendLine("JOIN %s %s" % (channel, key))
         else:
             self.sendLine("JOIN %s" % (channel,))
+
+    def names(self, *channels):
+        """
+        Tells the server to give a list of users in the specified channels.
+
+        Multiple channels can be specified at one time, `channelNames` will be 
+        called multiple times, once for each channel.
+        """
+        # dump all names of all visible channels
+        if not channels:
+            self.sendLine("NAMES")
+        else:
+            # some servers do not support multiple channel names at once
+            for channel in channels:
+                self.sendLine("NAMES %s" % channel)
 
     def leave(self, channel, reason=None):
         """
@@ -1834,6 +1863,42 @@ class IRCClient(basic.LineReceiver):
         Called when the login was incorrect.
         """
         raise IRCPasswordMismatch("Password Incorrect.")
+ 
+
+    def irc_RPL_NAMREPLY(self, prefix, params):
+        """
+        Handles the raw NAMREPLY that is returned as answer to
+        the NAMES command. Accumulates users until ENDOFNAMES.
+        """
+        # cache nickname prefixes if not already parsed from ServerSupportedFeatures instance
+        if not self._nickprefixes:
+            self._nickprefixes = ''
+            prefixes = self.supported.getFeature('PREFIX', {})
+            for prefix_tuple in prefixes.itervalues():
+                self._nickprefixes = self._nickprefixes + prefix_tuple[0]
+        channel = params[2]
+        prefixed_users = params[3].split()
+        users = []
+        for prefixed_user in prefixed_users:
+            users.append(prefixed_user.lstrip(self._nickprefixes))
+        self._namreply.setdefault(channel, []).extend(users)
+
+
+    def irc_RPL_ENDOFNAMES(self, prefix, params):
+        """
+        Handles the end of the NAMREPLY. This is called when all
+        NAMREPLYs have finished. It gathers one, or all depending
+        on the NAMES request, channel names lists gathered from
+        RPL_NAMREPLY responses.
+        """
+        channel = params[1]
+        if channel not in self._namreply:
+            for channel, users in self._namreply.iteritems():
+                self.channelNames(channel, users)
+            self._namreply = {}
+        else:
+            users = self._namreply.pop(channel, [])
+            self.channelNames(channel, users)
 
 
     def irc_RPL_WELCOME(self, prefix, params):
@@ -2418,10 +2483,12 @@ class IRCClient(basic.LineReceiver):
         """
         log.msg(s + '\n')
 
-    ### Protocool methods
+    ### Protocol methods
 
     def connectionMade(self):
         self.supported = ServerSupportedFeatures()
+        # container for NAMES replies
+        self._namreply = {}
         self._queue = []
         if self.performLogin:
             self.register(self.nickname)
