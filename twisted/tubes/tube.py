@@ -135,7 +135,7 @@ class _TubeDrain(_TubePiece):
         self.fount = fount
         if self._tube._pendingOutput or self._tube._currentlyPaused:
             fount.pauseFlow()
-        self._pump.started()
+        self._tube._deliverFrom(self._pump.started)
         nextFount = self._tube._tfount
         nextDrain = nextFount.drain
         if nextDrain is None:
@@ -280,8 +280,8 @@ class _Tube(object):
         set the C{tube} attribute of said L{Pump} as well, as well as
         un-setting the C{tube} attribute of the old pump.)
 
-    @ivar _currentlyPaused: is this L{_Tube} currently paused?  Boolean: C{True}
-        if paused, C{False} if not.
+    @ivar _currentlyPaused: is this L{_Tube} currently paused?  Boolean:
+        C{True} if paused, C{False} if not.
     """
 
     _currentlyPaused = False
@@ -290,6 +290,7 @@ class _Tube(object):
     _pump = None
     _tubeUnbuffering = False
     _switchFlush = False
+    _pendingIterator = None
 
     def __init__(self, pump):
         """
@@ -367,6 +368,25 @@ class _Tube(object):
             return 0.5
         else:
             return drain.receive(item)
+
+
+    def _deliverFrom(self, deliverySource):
+        assert self._pendingIterator is None
+        iterableOrNot = deliverySource()
+        if iterableOrNot is None:
+            return
+        self._pendingIterator = iter(iterableOrNot)
+        self._unbufferIterator()
+
+
+    def _unbufferIterator(self):
+        whatever = object()
+        while not self._currentlyPaused:
+            value = next(self._pendingIterator, whatever)
+            if value is whatever:
+                self._pendingIterator = None
+                break
+            self._tfount.drain.receive(value)
 
 
     def switch(self, drain):

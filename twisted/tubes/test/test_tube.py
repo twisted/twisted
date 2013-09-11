@@ -58,7 +58,7 @@ class TubeTest(TestCase):
         """
         class Starter(Pump):
             def started(self):
-                self.tube.deliver("greeting")
+                yield "greeting"
 
         self.ff.flowTo(series(Starter(), self.fd))
         self.assertEquals(self.fd.received, ["greeting"])
