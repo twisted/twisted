@@ -144,7 +144,7 @@ class LineTests(TestCase):
                 if 'switch' in line:
                     lines.tube.switch(series(netstringsToStrings(), fd2))
                 else:
-                    self.tube.deliver(line)
+                    yield line
 
         cc = series(lines, Switcher())
         ff.flowTo(cc).flowTo(fd1)
@@ -170,12 +170,12 @@ class LineTests(TestCase):
                     self.seenFirstLine = True
                 else:
                     downstream.tube.switch(fd2)
-                self.tube.deliver(line)
+                yield line
 
         @implementer(ISwitchablePump)
         class Downstream(Pump):
             def received(self, line):
-                self.tube.deliver(line + "(downstream)")
+                yield (line + "(downstream)")
 
             def reassemble(self, data):
                 return data
