@@ -61,12 +61,15 @@ class _DataToStrings(Pump):
 
 
     def started(self):
+        self._ugh = []
         setattr(self._stringReceiver, self._receivedMethodName,
-                self.tube.deliver)
+                lambda aaaugh: self._ugh.append(aaaugh))
 
 
     def received(self, string):
         self._stringReceiver.dataReceived(string)
+        u, self._ugh = self._ugh, []
+        return u
 
 
     def reassemble(self, datas):
@@ -74,7 +77,7 @@ class _DataToStrings(Pump):
         convert these outputs into one of my inputs XXX describe better
         """
         delimiter = self._stringReceiver.delimiter
-        return delimiter.join(datas + [self._stringReceiver._buffer])
+        return delimiter.join(list(datas) + [self._stringReceiver._buffer])
 
 
 
