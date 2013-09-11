@@ -4,7 +4,7 @@
 
 
 """
-Protocol support for mail.
+Mail protocol support.
 """
 
 from twisted.mail import pop3
@@ -34,8 +34,9 @@ class DomainDeliveryBase:
     @ivar user: See L{__init__}
     @ivar host: See L{__init__}
 
-    @type protocolName: L{bytes} or L{NoneType <types.NoneType>}
+    @type protocolName: L{bytes}
     @ivar protocolName: The protocol being used to deliver the mail.
+        Sub-classes should set this appropriately.
     """
     implements(smtp.IMessageDelivery)
 
@@ -319,7 +320,8 @@ class VirtualPOP3(pop3.POP3):
     A virtual hosting POP3 server.
 
     @type service: L{MailService}
-    @ivar service: An email service.
+    @ivar service: The email service that created this server.  This must be
+        set by the service.
 
     @type domainSpecifier: L{bytes}
     @ivar domainSpecifier: The character to use to split an email address into
