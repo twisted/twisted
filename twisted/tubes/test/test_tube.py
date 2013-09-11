@@ -121,6 +121,7 @@ class TubeTest(TestCase):
 
 
     def test_pumpFlowSwitching_WithCheese(self):
+        # XXX RENAME
         """
         The L{_Tube} of a L{Pump} delivers reassembled data to a newly
         specified L{Drain}.
@@ -133,8 +134,8 @@ class TubeTest(TestCase):
 
             def reassemble(self, data):
                 for element in data:
-                    yield data
                     yield 'BORK'
+                    yield element
 
         class Switcher(Pump):
             def received(self, data):
@@ -153,9 +154,41 @@ class TubeTest(TestCase):
 
         self.ff.drain.receive("switchBORKto switchee")
 
-        self.assertEquals(self.fd.received, ["switched to switchee",
-                                             "switched BORK"])
+        self.assertEquals(self.fd.received, ["switched BORK",
+                                             "switched to switchee"])
 
+
+    def test_pumpFlowSwitching_TheWorks(self):
+        # XXX RENAME
+        """
+        Switching a pump that has never received data works I{just fine} thank
+        you very much.
+        """
+        @implementer(ISwitchablePump)
+        class SwitchablePassthruPump(PassthruPump):
+            def reassemble(self, data):
+                return data
+
+        class Switcher(Pump):
+            def received(self, data):
+                if data == "switch":
+                    destinationPump.tube.switch(series(Switchee(), fakeDrain))
+                else:
+                    return [data]
+
+        class Switchee(Pump):
+            def received(self, data):
+                yield "switched " + data
+
+        fakeDrain = self.fd
+        destinationPump = SwitchablePassthruPump()
+
+        firstDrain = series(Switcher(), destinationPump)
+        self.ff.flowTo(firstDrain).flowTo(fakeDrain)
+        self.ff.drain.receive("before")
+        self.ff.drain.receive("switch")
+        self.ff.drain.receive("after")
+        self.assertEquals(self.fd.received, ["before", "switched after"])
 
 
     def test_flowingFromFirst(self):
