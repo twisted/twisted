@@ -789,6 +789,16 @@ class TestTemporaryDirectoryDecorator(unittest.SynchronousTestCase):
     Tests for L{_TemporaryDirectoryDecorator}.
     """
     def runOneTest(self, case):
+        """
+        Run a single test and verify it completes successfully.
+
+        @param case: An L{ITestCase} provider to run.
+
+        @raise: If the test is not successful, raise the first failure or error
+            it reported.
+
+        @return: C{None} if the test is successful.
+        """
         result = reporter.TestResult()
         case.run(result)
         if not result.wasSuccessful():
