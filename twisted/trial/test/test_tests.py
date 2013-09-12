@@ -832,7 +832,7 @@ class TestTemporaryDirectoryDecorator(unittest.SynchronousTestCase):
         case = Mktemp("test_tempfile")
         temp = _TemporaryDirectoryDecorator(case)
         self.runOneTest(temp)
-        self.assertEqual(temp._directory().parent(), case.path.parent().parent())
+        self.assertEqual(temp._directory(), case.path.parent())
 
 
     def test_mktemp(self):

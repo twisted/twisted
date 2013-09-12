@@ -171,14 +171,17 @@ class _TemporaryDirectoryDecorator(TestDecorator):
         @return: A L{FilePath} giving a suitable directory in which to create
             temporary files for this test.
         """
-        case = self._originalTest
         MAX_FILENAME = 32 # some platforms limit lengths of filenames
-        base = os.path.join(case.__class__.__module__[:MAX_FILENAME],
-                            case.__class__.__name__[:MAX_FILENAME],
-                            case._testMethodName[:MAX_FILENAME])
-        if not os.path.exists(base):
-            os.makedirs(base)
-        return FilePath(tempfile.mkdtemp('', '', base))
+
+        case = self._originalTest
+        here = FilePath(b".")
+        base = here.descendant([
+                case.__class__.__module__[:MAX_FILENAME],
+                case.__class__.__name__[:MAX_FILENAME],
+                case._testMethodName[:MAX_FILENAME]])
+        if not base.isdir():
+            base.makedirs()
+        return base
 
 
     def run(self, result):
