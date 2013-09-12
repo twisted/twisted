@@ -114,7 +114,7 @@ class TemporaryDirectory(unittest.SynchronousTestCase):
         By default, L{tempfile} is made to return paths beneath the working
         directory.
         """
-        self.config.postOptions()
+        self.config.parseOptions([])
 
         test = pyunit.FunctionTestCase(self.tempfileUser)
         runner = makeRunner(self.config)
