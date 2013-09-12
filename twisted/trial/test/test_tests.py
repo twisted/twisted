@@ -26,13 +26,19 @@ from __future__ import division, absolute_import
 import gc, sys, weakref
 import unittest as pyunit
 
+from zope.interface.verify import verifyClass
+
 from twisted.python.compat import _PY3, NativeStringIO
+from twisted.python.filepath import FilePath
 from twisted.internet import defer, reactor
 from twisted.trial import unittest, reporter, util
+from twisted.trial.itrial import ITestCase
 if not _PY3:
     from twisted.trial import runner
 from twisted.trial.test import erroneous
 from twisted.trial.test.test_suppression import SuppressionMixin
+
+from twisted.trial._asyncrunner import _TemporaryDirectoryDecorator
 
 
 # Skip messages that are used in multiple places:
@@ -775,6 +781,40 @@ class TestGarbageCollection(GCMixin, unittest.SynchronousTestCase):
         self.assertEqual(
             self._collectCalled,
             ['collect', 'setUp', 'test', 'tearDown', 'collect'])
+
+
+
+class TestTemporaryDirectoryDecorator(unittest.SynchronousTestCase):
+    """
+    Tests for L{_TemporaryDirectoryDecorator}.
+    """
+    def test_interface(self):
+        """
+        L{_TemporaryDirectoryDecorator} implements L{ITestCase}.
+        """
+        self.assertTrue(verifyClass(ITestCase, _TemporaryDirectoryDecorator))
+
+
+    def test_childOfWorkingDirectory(self):
+        """
+        L{_TemporaryDirectoryDecorator._directory} returns a L{FilePath} which
+        is a descendent of the working directory.
+        """
+        from twisted.trial.test.sample import FooTest
+        temp = _TemporaryDirectoryDecorator(FooTest("test_foo"))
+        path = temp._directory()
+        self.assertTrue(path.segmentsFrom(FilePath(".")))
+
+
+    def test_dependsOnTest(self):
+        """
+        L{_TemporaryDirectoryDecorator._directory} returns a path which is
+        different for different wrapped test methods.
+        """
+        from twisted.trial.test.sample import FooTest
+        one = _TemporaryDirectoryDecorator(FooTest("test_foo"))
+        another = _TemporaryDirectoryDecorator(FooTest("test_bar"))
+        self.assertNotEqual(one._directory(), another._directory())
 
 
 class TestUnhandledDeferred(unittest.SynchronousTestCase):

@@ -6,10 +6,10 @@
 Infrastructure for test running and suites.
 """
 
-import doctest
-import gc
+import os, doctest, gc, tempfile
 
 from twisted.python import components
+from twisted.python.filepath import FilePath
 
 from twisted.trial import itrial, reporter
 from twisted.trial._synctest import _logObserver
@@ -153,6 +153,19 @@ class _ForceGarbageCollectionDecorator(TestDecorator):
             result.addError(self, error)
         _logObserver.flushErrors()
         _logObserver._remove()
+
+
+class _TemporaryDirectoryDecorator(TestDecorator):
+    def _directory(self):
+        case = self._originalTest
+        MAX_FILENAME = 32 # some platforms limit lengths of filenames
+        base = os.path.join(case.__class__.__module__[:MAX_FILENAME],
+                            case.__class__.__name__[:MAX_FILENAME],
+                            case._testMethodName[:MAX_FILENAME])
+        if not os.path.exists(base):
+            os.makedirs(base)
+        return FilePath(tempfile.mkdtemp('', '', base))
+
 
 
 components.registerAdapter(
