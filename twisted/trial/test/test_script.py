@@ -133,8 +133,7 @@ class TemporaryDirectory(unittest.SynchronousTestCase):
         # results should still match.
         expected = FilePath(tempfile.mktemp()).parent()
 
-        self.config['no-tempfile-customization'] = True
-        self.config.postOptions()
+        self.config.parseOptions([b"--no-tempfile-customization"])
 
         test = pyunit.FunctionTestCase(self.tempfileUser)
         runner = makeRunner(self.config)
