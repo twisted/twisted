@@ -758,6 +758,10 @@ class TrialRunner(object):
 
 
     def _runWithoutDecoration(self, test, forceGarbageCollection=False):
+        """
+        Run a test after possibly decorating it with the garbage collection
+        forcing decorator.
+        """
         decorators = []
         if forceGarbageCollection:
             decorators.append(unittest.Forcegarbagecollection)
@@ -766,7 +770,7 @@ class TrialRunner(object):
 
     def _runWithDecoration(self, test, decorators):
         """
-        Private helper that runs the given test but doesn't decorate it.
+        Run a test after decorating it with all of the given test decorators.
         """
         result = self._makeResult()
         # decorate the suite with reactor cleanup and log starting
