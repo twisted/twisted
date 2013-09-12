@@ -434,6 +434,18 @@ def _listToPhrase(things, finalDelimiter, delimiter=', '):
 
 
 def _directoryForCase(case, root):
+    """
+    Create a new directory suitable for use for temporary files related to a
+    particular test case.
+
+    @param case: An instance of the test case class being run.  This is used to
+        construct a path which can easily be associated with the test.
+
+    @param root: A L{FilePath} beneath which the directory should be created.
+
+    @return: A L{FilePath} representing a directory which exists and can be
+        used to hold temporary files for C{case}.
+    """
     MAX_FILENAME = 32 # some platforms limit lengths of filenames
     base = root.descendant([
             case.__class__.__module__[:MAX_FILENAME],
