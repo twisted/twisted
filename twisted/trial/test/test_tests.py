@@ -23,7 +23,7 @@ of course.
 
 from __future__ import division, absolute_import
 
-import gc, sys, weakref
+import os, gc, sys, weakref, tempfile
 import unittest as pyunit
 
 from zope.interface.verify import verifyClass
@@ -815,6 +815,63 @@ class TestTemporaryDirectoryDecorator(unittest.SynchronousTestCase):
         one = _TemporaryDirectoryDecorator(FooTest("test_foo"))
         another = _TemporaryDirectoryDecorator(FooTest("test_bar"))
         self.assertNotEqual(one._directory(), another._directory())
+
+
+    def runOneTest(self, case):
+        result = reporter.TestResult()
+        case.run(result)
+        if not result.wasSuccessful():
+            (result.failures + result.errors)[0][1].raiseException()
+
+
+    def _tempTest(self, which):
+        class Mktemp(pyunit.TestCase):
+            def test_tempfile(self):
+                self.path = FilePath(which())
+
+        case = Mktemp("test_tempfile")
+        temp = _TemporaryDirectoryDecorator(case)
+        self.runOneTest(temp)
+        self.assertEqual(temp._directory().parent(), case.path.parent().parent())
+
+
+    def test_mktemp(self):
+        """
+        When a test has been decorated with L{_TemporaryDirectoryDecorator},
+        the result of L{tempfile.mktemp} in that test is a path beneath the
+        working directory.
+        """
+        self._tempTest(tempfile.mktemp)
+
+
+    def test_mkdtemp(self):
+        """
+        Like L{test_mktemp} but for L{tempfile.mkdtemp}.
+        """
+        self._tempTest(tempfile.mkdtemp)
+
+
+    def test_mkstemp(self):
+        """
+        Like L{test_mktemp} but for L{tempfile.mkstemp}.
+        """
+        def wrapper():
+            fd, name = tempfile.mkstemp()
+            os.close(fd)
+            return name
+        self._tempTest(wrapper)
+
+
+    def test_namedTemporaryFile(self):
+        """
+        Like L{test_mktemp} but for L{tempfile.NamedTemporaryFile}.
+        """
+        def wrapper():
+            temp = tempfile.NamedTemporaryFile()
+            temp.close()
+            return temp.name
+        self._tempTest(wrapper)
+
 
 
 class TestUnhandledDeferred(unittest.SynchronousTestCase):

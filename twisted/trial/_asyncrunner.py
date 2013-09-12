@@ -167,6 +167,11 @@ class _TemporaryDirectoryDecorator(TestDecorator):
         return FilePath(tempfile.mkdtemp('', '', base))
 
 
+    def run(self, result):
+        tempfile.tempdir = self._directory().path
+        return TestDecorator.run(self, result)
+
+
 
 components.registerAdapter(
     _PyUnitTestCaseAdapter, pyunit.TestCase, itrial.ITestCase)
