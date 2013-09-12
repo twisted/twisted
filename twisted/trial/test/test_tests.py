@@ -788,6 +788,13 @@ class TestTemporaryDirectoryDecorator(unittest.SynchronousTestCase):
     """
     Tests for L{_TemporaryDirectoryDecorator}.
     """
+    def runOneTest(self, case):
+        result = reporter.TestResult()
+        case.run(result)
+        if not result.wasSuccessful():
+            (result.failures + result.errors)[0][1].raiseException()
+
+
     def test_interface(self):
         """
         L{_TemporaryDirectoryDecorator} implements L{ITestCase}.
@@ -815,13 +822,6 @@ class TestTemporaryDirectoryDecorator(unittest.SynchronousTestCase):
         one = _TemporaryDirectoryDecorator(FooTest("test_foo"))
         another = _TemporaryDirectoryDecorator(FooTest("test_bar"))
         self.assertNotEqual(one._directory(), another._directory())
-
-
-    def runOneTest(self, case):
-        result = reporter.TestResult()
-        case.run(result)
-        if not result.wasSuccessful():
-            (result.failures + result.errors)[0][1].raiseException()
 
 
     def _tempTest(self, which):
@@ -871,6 +871,21 @@ class TestTemporaryDirectoryDecorator(unittest.SynchronousTestCase):
             temp.close()
             return temp.name
         self._tempTest(wrapper)
+
+
+    def test_restoreOriginalTempDirectory(self):
+        """
+        After the test case is run the original directory used by L{tempfile}
+        is restored.
+        """
+        from twisted.trial.test.sample import FooTest
+
+        before = FilePath(tempfile.mktemp()).parent()
+        temp = _TemporaryDirectoryDecorator(FooTest("test_foo"))
+        self.runOneTest(temp)
+        after = FilePath(tempfile.mktemp()).parent()
+
+        self.assertEqual(before, after)
 
 
 

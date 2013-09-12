@@ -168,8 +168,12 @@ class _TemporaryDirectoryDecorator(TestDecorator):
 
 
     def run(self, result):
-        tempfile.tempdir = self._directory().path
-        return TestDecorator.run(self, result)
+        original = tempfile.tempdir
+        try:
+            tempfile.tempdir = self._directory().path
+            return TestDecorator.run(self, result)
+        finally:
+            tempfile.tempdir = original
 
 
 
