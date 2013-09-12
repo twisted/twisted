@@ -14,6 +14,7 @@ import errno, os
 from time import time as _uniquefloat
 
 from twisted.python.runtime import platform
+from twisted.python.compat import _PY3
 
 def unique():
     return str(int(_uniquefloat() * 1000))
@@ -49,14 +50,22 @@ else:
             else:
                 raise RuntimeError("OpenProcess is required to fail.")
 
-    _open = file
+    _open = open
 
     # XXX Implement an atomic thingamajig for win32
     def symlink(value, filename):
-        newlinkname = filename+"."+unique()+'.newlink'
+        newlinkname = filename + "." + unique() + '.newlink'
         newvalname = os.path.join(newlinkname,"symlink")
         os.mkdir(newlinkname)
-        f = _open(newvalname,'wcb')
+
+        # Python 3 does not support the 'commit' flag of fopen in the MSVCRT
+        # (see http://msdn.microsoft.com/en-us/library/yeby3zcb%28VS.71%29.aspx)
+        if _PY3:
+            mode = 'w'
+        else:
+            mode = 'wc'
+
+        f = _open(newvalname, mode)
         f.write(value)
         f.flush()
         f.close()
@@ -69,7 +78,7 @@ else:
 
     def readlink(filename):
         try:
-            fObj = _open(os.path.join(filename,'symlink'), 'rb')
+            fObj = _open(os.path.join(filename, 'symlink'), 'r')
         except IOError as e:
             if e.errno == errno.ENOENT or e.errno == errno.EIO:
                 raise OSError(e.errno, None)
@@ -134,14 +143,12 @@ class FilesystemLock:
                 if e.errno == errno.EEXIST:
                     try:
                         pid = readlink(self.name)
-                    except OSError as e:
+                    except (IOError, OSError) as e:
                         if e.errno == errno.ENOENT:
                             # The lock has vanished, try to claim it in the
                             # next iteration through the loop.
                             continue
-                        raise
-                    except IOError as e:
-                        if _windows and e.errno == errno.EACCES:
+                        elif _windows and e.errno == errno.EACCES:
                             # The lock is in the middle of being
                             # deleted because we're on Windows where
                             # lock removal isn't atomic.  Give up, we
