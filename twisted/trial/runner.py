@@ -190,12 +190,14 @@ class TrialSuite(TestSuite):
     what context they are run in.
     """
 
-    def __init__(self, tests=(), forceGarbageCollection=False):
+    def __init__(self, tests=(), forceGarbageCollection=False, decorators=None):
         if forceGarbageCollection:
+            decorators = [unittest._ForceGarbageCollectionDecorator]
+        if decorators:
             newTests = []
             for test in tests:
-                test = unittest.decorate(
-                    test, unittest._ForceGarbageCollectionDecorator)
+                for decorator in decorators:
+                    test = unittest.decorate(test, decorator)
                 newTests.append(test)
             tests = newTests
         suite = LoggedSuite(tests)
@@ -684,7 +686,8 @@ class TrialRunner(object):
                  workingDirectory=None,
                  forceGarbageCollection=False,
                  debugger=None,
-                 exitFirst=False):
+                 exitFirst=False,
+                 customizeTempfile=True):
         self.reporterFactory = reporterFactory
         self.logfile = logfile
         self.mode = mode
@@ -697,6 +700,7 @@ class TrialRunner(object):
         self._logFileObserver = None
         self._logFileObject = None
         self._forceGarbageCollection = forceGarbageCollection
+        self._customizeTempfile = customizeTempfile
         self.debugger = debugger
         self._exitFirst = exitFirst
         if profile:
@@ -725,11 +729,22 @@ class TrialRunner(object):
         """
         Run the test or suite and return a result object.
         """
-        test = unittest.decorate(test, ITestCase)
-        return self._runWithoutDecoration(test, self._forceGarbageCollection)
+        decorators = [ITestCase]
+        if self._forceGarbageCollection:
+            decorators.append(unittest._ForceGarbageCollectionDecorator)
+        if self._customizeTempfile:
+            decorators.append(unittest._TemporaryDirectoryDecorator)
+        return self._runWithDecoration(test, decorators)
 
 
     def _runWithoutDecoration(self, test, forceGarbageCollection=False):
+        decorators = []
+        if forceGarbageCollection:
+            decorators.append(unittest.Forcegarbagecollection)
+        return self._runWithDecoration(test, decorators)
+
+
+    def _runWithDecoration(self, test, decorators):
         """
         Private helper that runs the given test but doesn't decorate it.
         """
@@ -737,7 +752,7 @@ class TrialRunner(object):
         # decorate the suite with reactor cleanup and log starting
         # This should move out of the runner and be presumed to be
         # present
-        suite = TrialSuite([test], forceGarbageCollection)
+        suite = TrialSuite([test], decorators=decorators)
         startTime = time.time()
         if self.mode == self.DRY_RUN:
             for single in unittest._iterateTests(suite):

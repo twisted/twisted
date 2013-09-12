@@ -633,8 +633,11 @@ class TestUntilFailure(unittest.SynchronousTestCase):
         result = self.runner.runUntilFailure(self.test)
         self.assertEqual(result.testsRun, 1)
 
-        self.assertEqual(len(decorated), 1)
-        self.assertEqual(decorated, [(self.test, ITestCase)])
+        self.assertEqual(len(decorated), 2)
+        self.assertEqual(
+            decorated,
+            [(self.test, ITestCase),
+             (self.test, unittest._TemporaryDirectoryDecorator)])
 
 
     def test_runUntilFailureForceGCDecorate(self):
@@ -651,10 +654,11 @@ class TestUntilFailure(unittest.SynchronousTestCase):
         result = self.runner.runUntilFailure(self.test)
         self.assertEqual(result.testsRun, 1)
 
-        self.assertEqual(len(decorated), 2)
+        self.assertEqual(len(decorated), 3)
         self.assertEqual(decorated,
             [(self.test, ITestCase),
-             (self.test, unittest._ForceGarbageCollectionDecorator)])
+             (self.test, unittest._ForceGarbageCollectionDecorator),
+             (self.test, unittest._TemporaryDirectoryDecorator)])
 
 
 

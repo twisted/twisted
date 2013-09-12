@@ -185,6 +185,8 @@ class _BasicOptions(object):
                 ["exitfirst", "x",
                  "Exit after the first non-successful result (cannot be "
                  "specified along with --jobs)."],
+                ["no-tempfile-customization", None,
+                 "Don't change the directory used by the tempfile module"],
                 ]
 
     optParameters = [
@@ -588,6 +590,7 @@ def _makeRunner(config):
         args['exitFirst'] = config['exitfirst']
         args['profile'] = config['profile']
         args['forceGarbageCollection'] = config['force-gc']
+        args['customizeTempfile'] = not config['no-tempfile-customization']
 
     return cls(**args)
 

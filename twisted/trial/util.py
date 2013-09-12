@@ -446,11 +446,11 @@ def _directoryForCase(case, root):
     @return: A L{FilePath} representing a directory which exists and can be
         used to hold temporary files for C{case}.
     """
-    MAX_FILENAME = 32 # some platforms limit lengths of filenames
-    base = root.descendant([
-            case.__class__.__module__[:MAX_FILENAME],
-            case.__class__.__name__[:MAX_FILENAME],
-            case._testMethodName[:MAX_FILENAME]])
+    parts = case.id().split(".")
+    if len(parts) >= 3:
+        base = root.descendant([".".join(parts[:-2]), parts[-2], parts[-1]])
+    else:
+        base = root.child(case.id())
     if not base.isdir():
         base.makedirs()
     return base

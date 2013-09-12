@@ -1,12 +1,18 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+"""
+Tests for L{twisted.scripts.trial}, the implementation of the command line
+I{trial} tool, and other supporting functionality.
+"""
+
 import StringIO
 import gc
 import re
 import sys
 import textwrap
 import types
+import tempfile
 
 from twisted.trial import unittest
 from twisted.trial.runner import (
@@ -27,6 +33,16 @@ def sibpath(filename):
     For finding files in twisted/trial/test
     """
     return util.sibpath(__file__, filename)
+
+
+
+def makeRunner(config):
+    """
+    Return a L{TrialRunner} object that is safe to use in tests.
+    """
+    runner = trial._makeRunner(config)
+    runner.stream = StringIO.StringIO()
+    return runner
 
 
 
@@ -57,15 +73,6 @@ class ForceGarbageCollection(unittest.SynchronousTestCase):
         self.log.append('collect')
 
 
-    def makeRunner(self):
-        """
-        Return a L{TrialRunner} object that is safe to use in tests.
-        """
-        runner = trial._makeRunner(self.config)
-        runner.stream = StringIO.StringIO()
-        return runner
-
-
     def test_forceGc(self):
         """
         Passing the --force-gc option to the trial script forces the garbage
@@ -73,7 +80,7 @@ class ForceGarbageCollection(unittest.SynchronousTestCase):
         """
         self.config['force-gc'] = True
         self.config.postOptions()
-        runner = self.makeRunner()
+        runner = makeRunner(self.config)
         runner.run(self.test)
         self.assertEqual(self.log, ['collect', 'test', 'collect',
                                     'collect', 'test', 'collect'])
@@ -84,9 +91,55 @@ class ForceGarbageCollection(unittest.SynchronousTestCase):
         By default, no garbage collection is forced.
         """
         self.config.postOptions()
-        runner = self.makeRunner()
+        runner = makeRunner(self.config)
         runner.run(self.test)
         self.assertEqual(self.log, ['test', 'test'])
+
+
+
+class TemporaryDirectory(unittest.SynchronousTestCase):
+    """
+    Check the behavior of L{tempfile} based on different command-line options.
+    """
+    def setUp(self):
+        self.config = trial.Options()
+
+
+    def tempfileUser(self):
+        self.path = tempfile.mktemp()
+
+
+    def test_changedByDefault(self):
+        """
+        By default, L{tempfile} is made to return paths beneath the working
+        directory.
+        """
+        self.config.postOptions()
+
+        test = pyunit.FunctionTestCase(self.tempfileUser)
+        runner = makeRunner(self.config)
+        runner.run(test)
+        self.assertTrue(
+            FilePath(self.path).segmentsFrom(FilePath(b".")))
+
+
+    def test_disabled(self):
+        """
+        If the I{--no-tempfile-customization} command line flag is given,
+        L{tempfile} is left to return paths in whatever directory it chooses.
+        """
+        # The outer test runner may be customizing the tempfile directory but
+        # that's okay.  If the inner runner did not customize it, then the two
+        # results should still match.
+        expected = FilePath(tempfile.mktemp()).parent()
+
+        self.config['no-tempfile-customization'] = True
+        self.config.postOptions()
+
+        test = pyunit.FunctionTestCase(self.tempfileUser)
+        runner = makeRunner(self.config)
+        runner.run(test)
+        self.assertEqual(expected, FilePath(self.path).parent())
 
 
 
