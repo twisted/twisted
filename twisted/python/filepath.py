@@ -33,8 +33,7 @@ from zope.interface import Interface, Attribute, implementer
 from twisted.python.compat import comparable, cmp
 from twisted.python.runtime import platform
 
-from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
-from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
+from twisted.python.win32 import O_BINARY
 from twisted.python.win32 import WindowsError
 
 from twisted.python.util import FancyEqMixin
@@ -324,43 +323,24 @@ class AbstractFilePath(object):
         """
         try:
             subnames = self.listdir()
-        except WindowsError as winErrObj:
-            # WindowsError is an OSError subclass, so if not for this clause
-            # the OSError clause below would be handling these.  Windows error
-            # codes aren't the same as POSIX error codes, so we need to handle
-            # them differently.
 
-            # Under Python 2.5 on Windows, WindowsError has a winerror
-            # attribute and an errno attribute.  The winerror attribute is
-            # bound to the Windows error code while the errno attribute is
-            # bound to a translation of that code to a perhaps equivalent POSIX
-            # error number.
-
-            # Under Python 2.4 on Windows, WindowsError only has an errno
-            # attribute.  It is bound to the Windows error code.
-
-            # For simplicity of code and to keep the number of paths through
-            # this suite minimal, we grab the Windows error code under either
-            # version.
-
-            # Furthermore, attempting to use os.listdir on a non-existent path
-            # in Python 2.4 will result in a Windows error code of
-            # ERROR_PATH_NOT_FOUND.  However, in Python 2.5,
-            # ERROR_FILE_NOT_FOUND results instead. -exarkun
-            winerror = getattr(winErrObj, 'winerror', winErrObj.errno)
-            if winerror not in (ERROR_PATH_NOT_FOUND,
-                                ERROR_FILE_NOT_FOUND,
-                                ERROR_INVALID_NAME,
-                                ERROR_DIRECTORY):
-                raise
-            raise _WindowsUnlistableError(winErrObj)
         except OSError as ose:
-            if ose.errno not in (errno.ENOENT, errno.ENOTDIR):
+            # Fun fact: Python 2.6-3.2 maps Windows ERROR_DIRECTORY (267) to
+            # EINVAL, but 3.3 more "correctly" maps it to ENOTDIR.
+            # Handle EINVAL to catch older Python versions.
+            if ose.errno not in (errno.ENOENT, errno.ENOTDIR, errno.EINVAL):
                 # Other possible errors here, according to linux manpages:
                 # EACCES, EMIFLE, ENFILE, ENOMEM.  None of these seem like the
                 # sort of thing which should be handled normally. -glyph
                 raise
-            raise UnlistableError(ose)
+            # Although this is no longer needed in Windows, we will support
+            # legacy users of this API who catch WindowsError explicitly
+            # in Python < 3.x (where WindowsError is not OSError).
+            if platform.isWindows():
+                raise _WindowsUnlistableError(ose)
+            else:
+                raise UnlistableError(ose)
+
         return map(self.child, subnames)
 
     def walk(self, descend=None):

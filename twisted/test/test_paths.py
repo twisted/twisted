@@ -245,10 +245,10 @@ class FakeWindowsPath(filepath.FilePath):
 
     def listdir(self):
         """
-        @raise WindowsError: always.
+        @raise OSError(errno.EINVAL, xxx): always.
         """
-        raise WindowsError(
-            ERROR_DIRECTORY,
+        raise OSError(
+            errno.EINVAL,
             "A directory's validness was called into question")
 
 
