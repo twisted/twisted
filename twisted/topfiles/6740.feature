@@ -1,0 +1,1 @@
+twisted.trial.runner.TrialRunner, unless given a flag to disable this behavior, now overrides the default directory in which the stdlib tempfile module creates temporary files.  The new default directory is inside the _trial_temp directory so temporary test files created with tempfile are cleaned up with other temporary test files.
