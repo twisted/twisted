@@ -646,6 +646,8 @@ class DryRunVisitor(object):
 class TrialRunner(object):
     """
     A specialised runner that the trial front end uses.
+
+    @ivar _customizeTempfile: See L{__init__} parameter C{customizeTempfile}.
     """
 
     DEBUG = 'debug'
@@ -688,6 +690,12 @@ class TrialRunner(object):
                  debugger=None,
                  exitFirst=False,
                  customizeTempfile=True):
+        """
+        @param customizeTempfile: If C{True}, run tests decorated such that the
+            L{tempfile} module creates temporary files in the trial tempora ry
+            directory.  If C{False}, don't run tests decorated this way.
+        @type customizeTempfile: L{bool}
+        """
         self.reporterFactory = reporterFactory
         self.logfile = logfile
         self.mode = mode
