@@ -252,7 +252,7 @@ class _AttemptManager(object):
         if not reactor:
             from twisted.internet import reactor as globalReactor
             reactor = globalReactor
-        self.reactor = reactor 
+        self.reactor = reactor
 
 
     def getCompletionDeferred(self):

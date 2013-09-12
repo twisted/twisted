@@ -2171,7 +2171,7 @@ class DummyQueue(object):
     def done(self, message):
         """
         Remove a message from the queue.
-        
+
         @type message: L{bytes}
         @param message: The base filename of a message.
         """
@@ -2199,10 +2199,13 @@ class DummyQueue(object):
 
         @type message: L{bytes}
         @param message: The base filename of a message.
+
+        @rtype: L{bytes}
+        @return: The full base pathname of the message.
         """
         return os.path.join(self.directory, message)
 
-    
+
     def createNewMessage(self):
         """
         Create a new message in the queue.
@@ -2237,7 +2240,7 @@ class DummySmartHostSMTPRelayingManager(object):
     A fake smart host to use for testing.
 
     @type queue: L{DummyQueue}
-    @param queue: A queue that can be used for testing purposes 
+    @param queue: A queue that can be used for testing purposes
 
     @type managed: L{dict} of L{bytes} -> L{list} of
         L{list} of L{bytes}
@@ -2246,10 +2249,10 @@ class DummySmartHostSMTPRelayingManager(object):
     """
     def __init__(self, queue):
         """
-        Initialize the minimum necessary members of a smart host. 
+        Initialize the minimum necessary members of a smart host.
         """
         self.managed = {}
-        self.queue = queue 
+        self.queue = queue
 
 
 
@@ -2343,9 +2346,9 @@ class _AttemptManagerTests(unittest.TestCase):
         """
         A log observer.
 
-        @type eventLog: L{dict} of L{bytes} -> L{object}
-        @ivar eventLog: Information about the last informational log message
-            generated. 
+        @type eventDict: L{dict} of L{bytes} -> L{object}
+        @param eventDict: Information about the last informational log message
+            generated.
         """
         self.eventLog = eventDict
 
@@ -2363,7 +2366,7 @@ class _AttemptManagerTests(unittest.TestCase):
     def test_initNoisy(self):
         """
         When an attempt manager is created with the noisy parameter set to
-        true, the noisy instance variable should be set to true. 
+        true, the noisy instance variable should be set to true.
         """
         self.assertTrue(self.noisyAttemptMgr.noisy)
 
@@ -2371,7 +2374,7 @@ class _AttemptManagerTests(unittest.TestCase):
     def test_initQuiet(self):
         """
         When an attempt manager is created with the noisy parameter set to
-        false, the noisy instance variable should be set to false. 
+        false, the noisy instance variable should be set to false.
         """
         self.assertFalse(self.quietAttemptMgr.noisy)
 
@@ -2385,30 +2388,30 @@ class _AttemptManagerTests(unittest.TestCase):
             DummyQueue(self.tmpdir)))
         self.assertEqual(am.reactor, reactor)
 
-    
+
     def test_initReactor(self):
         """
         When an attempt manager is created with a reactor provided, the
         reactor instance variable should default to that reactor.
         """
         self.assertEqual(self.noisyAttemptMgr.reactor, self.reactor)
-    
+
 
     def test_notifySuccessNoisy(self):
         """
         For an attempt manager with the noisy flag set, notifySuccess should
         result in a log message.
         """
-        self.noisyAttemptMgr.notifySuccess('noisyRelayer', self.noisyMessage) 
+        self.noisyAttemptMgr.notifySuccess('noisyRelayer', self.noisyMessage)
         self.assertTrue(self.eventLog)
-        
+
 
     def test_notifySuccessQuiet(self):
         """
         For an attempt manager with the noisy flag not set, notifySuccess
         should result in no log message.
         """
-        self.quietAttemptMgr.notifySuccess('quietRelayer', self.quietMessage) 
+        self.quietAttemptMgr.notifySuccess('quietRelayer', self.quietMessage)
         self.assertFalse(self.eventLog)
 
 
@@ -2417,7 +2420,7 @@ class _AttemptManagerTests(unittest.TestCase):
         For an attempt manager with the noisy flag set, notifyFailure should
         result in a log message.
         """
-        self.noisyAttemptMgr.notifyFailure('noisyRelayer', self.noisyMessage) 
+        self.noisyAttemptMgr.notifyFailure('noisyRelayer', self.noisyMessage)
         self.assertTrue(self.eventLog)
 
 
@@ -2426,7 +2429,7 @@ class _AttemptManagerTests(unittest.TestCase):
         For an attempt manager with the noisy flag not set, notifyFailure
         should result in no log message.
         """
-        self.quietAttemptMgr.notifyFailure('quietRelayer', self.quietMessage) 
+        self.quietAttemptMgr.notifyFailure('quietRelayer', self.quietMessage)
         self.assertFalse(self.eventLog)
 
 
@@ -2466,7 +2469,8 @@ class _AttemptManagerTests(unittest.TestCase):
         self.quietAttemptMgr.notifyNoConnection('quietRelayer')
         self.assertFalse(self.eventLog)
         self.reactor.advance(60)
-    
+
+
 
 
 from twisted.python.runtime import platformType
