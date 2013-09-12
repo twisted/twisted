@@ -13,7 +13,6 @@ from twisted.python.filepath import FilePath
 
 from twisted.trial import itrial, reporter
 from twisted.trial._synctest import _logObserver
-from twisted.trial.util import _directoryForCase
 
 pyunit = __import__('unittest')
 
@@ -172,7 +171,10 @@ class _TemporaryDirectoryDecorator(TestDecorator):
         @return: A L{FilePath} giving a suitable directory in which to create
             temporary files for this test.
         """
-        return _directoryForCase(self._originalTest, FilePath(b"."))
+        d = FilePath(b"tempfile")
+        if not d.isdir():
+            d.makedirs()
+        return d
 
 
     def run(self, result):

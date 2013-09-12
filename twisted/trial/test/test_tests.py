@@ -813,17 +813,6 @@ class TestTemporaryDirectoryDecorator(unittest.SynchronousTestCase):
         self.assertTrue(path.segmentsFrom(FilePath(".")))
 
 
-    def test_dependsOnTest(self):
-        """
-        L{_TemporaryDirectoryDecorator._directory} returns a path which is
-        different for different wrapped test methods.
-        """
-        from twisted.trial.test.sample import FooTest
-        one = _TemporaryDirectoryDecorator(FooTest("test_foo"))
-        another = _TemporaryDirectoryDecorator(FooTest("test_bar"))
-        self.assertNotEqual(one._directory(), another._directory())
-
-
     def _tempTest(self, which):
         class Mktemp(pyunit.TestCase):
             def test_tempfile(self):

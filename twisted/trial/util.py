@@ -446,11 +446,10 @@ def _directoryForCase(case, root):
     @return: A L{FilePath} representing a directory which exists and can be
         used to hold temporary files for C{case}.
     """
-    parts = case.id().split(".")
-    if len(parts) >= 3:
-        base = root.descendant([".".join(parts[:-2]), parts[-2], parts[-1]])
-    else:
-        base = root.child(case.id())
-    if not base.isdir():
-        base.makedirs()
-    return base
+    # Create the directory with a descriptive name that leads back to the
+    # originating test case for ease of inspection.
+    testId = case.id().rsplit(".", 2)
+    descriptive = root.descendant(testId)
+    if not descriptive.exists():
+        descriptive.makedirs()
+    return descriptive
