@@ -191,6 +191,18 @@ class TrialSuite(TestSuite):
     """
 
     def __init__(self, tests=(), forceGarbageCollection=False, decorators=None):
+        """
+        @param forceGarbageCollection: If C{True}, decorate the tests to run so
+            that a full garbage collection is triggered after each test.  If
+            C{False}, don't.  This is mutually exclusive with use of the
+            C{decorators} parameter.  Generally, prefer to use C{decorators}
+            instead.
+        @type forceGarbageCollection: L{bool}
+
+        @param decorators: A sequence of test decorators (often
+            L{TestDecorator} subclasses) to apply to the tests when running
+            them as part of this suite.
+        """
         if forceGarbageCollection:
             decorators = [unittest._ForceGarbageCollectionDecorator]
         if decorators:
@@ -393,7 +405,7 @@ class TestLoader(object):
         @return: If C{name} is a filename, return the module. If C{name} is a
         fully-qualified Python name, return the object it refers to.
         """
-        if os.path.isfile(name):
+        if os.path.exists(name):
             return filenameToModule(name)
         return reflect.namedAny(name)
 
