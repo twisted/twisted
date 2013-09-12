@@ -393,7 +393,7 @@ class TestLoader(object):
         @return: If C{name} is a filename, return the module. If C{name} is a
         fully-qualified Python name, return the object it refers to.
         """
-        if os.path.exists(name):
+        if os.path.isfile(name):
             return filenameToModule(name)
         return reflect.namedAny(name)
 
