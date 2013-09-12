@@ -156,7 +156,21 @@ class _ForceGarbageCollectionDecorator(TestDecorator):
 
 
 class _TemporaryDirectoryDecorator(TestDecorator):
+    """
+    Sets the temporary directory used by the L{tempfile} module to a path
+    dedicated to the test being run while the test is running.
+
+    This makes cleanup of temporary testing artifacts easier by avoiding
+    dumping them into /tmp or a similar path used by all processes system-wide.
+    """
     def _directory(self):
+        """
+        Construct (and create, if necessary) a new directory to contain
+        temporary files for the wrapped test case.
+
+        @return: A L{FilePath} giving a suitable directory in which to create
+            temporary files for this test.
+        """
         case = self._originalTest
         MAX_FILENAME = 32 # some platforms limit lengths of filenames
         base = os.path.join(case.__class__.__module__[:MAX_FILENAME],
