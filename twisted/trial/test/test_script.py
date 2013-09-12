@@ -105,7 +105,11 @@ class TemporaryDirectory(unittest.SynchronousTestCase):
         self.config = trial.Options()
 
 
-    def tempfileUser(self):
+    def usesTempfile(self):
+        """
+        A test method which can be run explicitly by other test methods to
+        observe the behavior of L{tempfile.mktemp} in different configurations.
+        """
         self.path = tempfile.mktemp()
 
 
@@ -116,7 +120,7 @@ class TemporaryDirectory(unittest.SynchronousTestCase):
         """
         self.config.parseOptions([])
 
-        test = pyunit.FunctionTestCase(self.tempfileUser)
+        test = pyunit.FunctionTestCase(self.usesTempfile)
         runner = makeRunner(self.config)
         runner.run(test)
         self.assertTrue(
@@ -125,7 +129,7 @@ class TemporaryDirectory(unittest.SynchronousTestCase):
 
     def test_disabled(self):
         """
-        If the I{--no-tempfile-customization} command line flag is given,
+        If the I{--no-tempfile-override} command line flag is given,
         L{tempfile} is left to return paths in whatever directory it chooses.
         """
         # The outer test runner may be customizing the tempfile directory but
@@ -133,9 +137,9 @@ class TemporaryDirectory(unittest.SynchronousTestCase):
         # results should still match.
         expected = FilePath(tempfile.mktemp()).parent()
 
-        self.config.parseOptions([b"--no-tempfile-customization"])
+        self.config.parseOptions([b"--no-tempfile-override"])
 
-        test = pyunit.FunctionTestCase(self.tempfileUser)
+        test = pyunit.FunctionTestCase(self.usesTempfile)
         runner = makeRunner(self.config)
         runner.run(test)
         self.assertEqual(expected, FilePath(self.path).parent())

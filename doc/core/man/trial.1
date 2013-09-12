@@ -168,6 +168,12 @@ Stop the test run after the first test which does not succeed. This includes
 failures, errors, or unexpected successes. Won't work with the --jobs option
 currently.
 .TP
+\fB--no-tempfile-override\fR
+Trial will override the default directory in which files are created by the
+stdlib tempfile module, setting it to the temporary trial execution directory
+(see --temp-directory).  If this flag is given, trial will not do this and the
+tempfile module will create temporary files in the platform-defined location.
+.TP
 \fB--spew\fR
 Print an insanely verbose log of everything that happens. Useful when
 debugging freezes or locks in complex code.
