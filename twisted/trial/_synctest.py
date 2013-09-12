@@ -15,6 +15,7 @@ import os, warnings, sys, tempfile, types
 from pprint import pformat
 from dis import findlinestarts as _findlinestarts
 
+from twisted.python.filepath import FilePath
 from twisted.python import failure, log, monkey
 from twisted.python.util import runWithWarningsSuppressed
 from twisted.python.deprecate import (
@@ -1152,14 +1153,11 @@ class SynchronousTestCase(_Assertions):
         @return: The newly created path
         @rtype: C{str}
         """
-        MAX_FILENAME = 32 # some platforms limit lengths of filenames
-        base = os.path.join(self.__class__.__module__[:MAX_FILENAME],
-                            self.__class__.__name__[:MAX_FILENAME],
-                            self._testMethodName[:MAX_FILENAME])
-        if not os.path.exists(base):
-            os.makedirs(base)
-        dirname = tempfile.mkdtemp('', '', base)
-        return os.path.join(dirname, 'temp')
+        here = FilePath(b".")
+        base = util._directoryForCase(self, here)
+        dirpath = FilePath(tempfile.mkdtemp('', '', base.path))
+        temp = dirpath.child(b"temp")
+        return os.sep.join(temp.segmentsFrom(here))
 
 
     def _getSuppress(self):

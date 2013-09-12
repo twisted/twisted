@@ -430,3 +430,15 @@ def _listToPhrase(things, finalDelimiter, delimiter=', '):
             strThings.append(str(thing))
         return "%s%s%s %s" % (delimiter.join(strThings[:-1]),
             delimiter, finalDelimiter, strThings[-1])
+
+
+
+def _directoryForCase(case, root):
+    MAX_FILENAME = 32 # some platforms limit lengths of filenames
+    base = root.descendant([
+            case.__class__.__module__[:MAX_FILENAME],
+            case.__class__.__name__[:MAX_FILENAME],
+            case._testMethodName[:MAX_FILENAME]])
+    if not base.isdir():
+        base.makedirs()
+    return base
