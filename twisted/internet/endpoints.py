@@ -553,7 +553,7 @@ class TCP4ClientEndpoint(object):
 
 
 
-class _TCP6ConnectDFA(StateMachine, object):
+class TCP6ConnectDFA(StateMachine, object):
     """
     An explicit state machine for L{TCP6ClientEndpoint.connect}.
 
@@ -610,15 +610,17 @@ class _TCP6ConnectDFA(StateMachine, object):
 
 
 
-class TCP6EndpointConnect(_TCP6ConnectDFA):
+class TCP6EndpointConnect(TCP6ConnectDFA):
     """
     State machine implementation for L{TCP6ClientEndpoint.connect}.
     """
     def __init__(self, protocolFactory, endpoint):
-        _TCP6ClientConnect.__init__(self)
+        TCP6ConnectDFA.__init__(self)
         self.protocolFactory = protocolFactory
         self.endpoint = endpoint
         self.host = self.endpoint._host
+        self.connected = False
+        self.resolved = False
 
 
     def _nameResolution(self, host):
@@ -653,34 +655,11 @@ class TCP6EndpointConnect(_TCP6ConnectDFA):
     def enter_RESOLVE(self):
         self.resolved = False
         d = self._nameResolution(self.host)
-
         def getResolvedHost(self, result):
             self.host = result[0][self._GAI_ADDRESS][self._GAI_ADDRESS_HOST]
             self.resolved = True
-
         d.addCallback(getResolvedHost)
 
-
-    # goes in the calling function:
-
-#   if isIPv6Address(host):
-#      self.input(_TCP6ConnectDFA.IS_ADDRESS)
-#   else:
-#       self.input(_TCP6ConnectDFA.IS_HOSTNAME)
-
-
-#   if self.state == _TCP6ConnectDFA.RESOLVE:
-#       if self.resolved:
-#           self.input(_TCP6ConnectDFA.RESOLUTION_SUCCESSFUL)
-#       else:
-#           self.input(_TCP6ConnectDFA.RESOLUTION_FAILED)
-
-
-#   if self.state == _TCP6ConnectDFA.CONNECT:
-#       if self.connected:
-#           self.input(_TCP6ConnectDFA.CONNECTED)
-#       else:
-#           self.input(_TCP6ConnectDFA.NOT_CONNECTED)
 
 
 @implementer(interfaces.IStreamClientEndpoint)
@@ -723,36 +702,27 @@ class TCP6ClientEndpoint(object):
         Implement L{IStreamClientEndpoint.connect} to connect via TCP,
         once the hostname resolution is done.
         """
+        conn = TCP6EndpointConnect(protocolFactory, self)
+
         if isIPv6Address(self._host):
-            d = self._resolvedHostConnect(self._host, protocolFactory)
+            conn.input(TCP6ConnectDFA.IS_ADDRESS)
         else:
-            d = self._nameResolution(self._host)
-            d.addCallback(lambda result: result[0][self._GAI_ADDRESS]
-                          [self._GAI_ADDRESS_HOST])
-            d.addCallback(self._resolvedHostConnect, protocolFactory)
-        return d
+            conn.input(TCP6ConnectDFA.IS_HOSTNAME)
 
+        if conn.state == TCP6ConnectDFA.RESOLVE:
+            if conn.resolved:
+                conn.input(TCP6ConnectDFA.RESOLUTION_SUCCESSFUL)
+            else:
+                conn.input(TCP6ConnectDFA.RESOLUTION_FAILED)
 
-    def _nameResolution(self, host):
-        """
-        Resolve the hostname string into a tuple containing the host
-        IPv6 address.
-        """
-        return self._deferToThread(
-            self._getaddrinfo, host, 0, socket.AF_INET6)
+        if conn.state == TCP6ConnectDFA.CONNECT:
+            if conn.connected:
+               conn.input(TCP6ConnectDFA.CONNECTED)
+            else:
+               conn.input(TCP6ConnectDFA.NOT_CONNECTED)
 
-
-    def _resolvedHostConnect(self, resolvedHost, protocolFactory):
-        """
-        Connect to the server using the resolved hostname.
-        """
-        try:
-            wf = _WrappingFactory(protocolFactory)
-            self._reactor.connectTCP(resolvedHost, self._port, wf,
-                timeout=self._timeout, bindAddress=self._bindAddress)
-            return wf._onConnection
-        except:
-            return defer.fail()
+        if conn.state == TCP6ConnectDFA.CONNECTED or conn.state == TCP6ConnectDFA.NOT_CONNECTED:
+            return conn.afterConnectionAttempt
 
 
 
