@@ -562,28 +562,27 @@ class _TCP6ClientConnect(StateMachine, object):
     # States
 
     START = 'START'
-    RESOLVING = 'NAME_RESOLUTION'
-    CONNECT = 'CONNECTION_ATTEMPT'
+    RESOLVE = 'RESOLVING'
+    CONNECT = 'CONNECTING'
     CONNECTION_DONE = 'CONNECTION_DONE'     # Final State
     CONNECTION_FAILED = 'CONNECTION_FAILED' # Final State
 
     # Inputs
 
-    IS_HOSTNAME = 'Hostname provided'
-    IS_ADDRESS = 'Host address provided'
-    CONNECTED = 'Connection established'
-    NOT_CONNECTED = 'Connection attempt failed'
-    RESOLUTION_SUCCESSFUL = 'Name resolved successfully'
-    RESOLUTION_FAILED = 'Error resolving name'
-#    RESOLUTION_TIMEOUT = 'Timeout resolving name'
+    IS_HOSTNAME = 'IS_HOSTNAME'
+    IS_ADDRESS = 'IS_ADDRESS'
+    CONNECTED = 'CONNECTED'
+    NOT_CONNECTED = 'NOT_CONNECTED'
+    RESOLUTION_SUCCESSFUL = 'RESOLUTION_SUCCESSFUL'
+    RESOLUTION_FAILED = 'RESOLUTION_FAILED'
+#    RESOLUTION_TIMEOUT = 'RESOLUTION_TIMEOUT'
 
     # Outputs
 
-    CONNECTING = 'Attempting to connect'
-    RESOLVE_NAME = 'Hostname needs to be resolved to get the host address'
-    SUCCESS_CONN =
-        'A successful connection, the connected protocol needs to be returned'
-    ERROR_CONN = 'Connection attempt failed with an error'
+    CONNECTING = 'CONNECTING'
+    RESOLVING_NAME = 'RESOLVE_NAME'
+    SUCCESS_CONN = 'SUCCESS_CONN'
+    ERROR_CONN = 'ERROR_CONN'
 
 # TODO: Failing with error and failing with a timeout can be separated.
 
@@ -593,10 +592,10 @@ class _TCP6ClientConnect(StateMachine, object):
 
     states = {
             START: {
-                IS_HOSTNAME: (RESOLVE_NAME, RESOLVING),
+                IS_HOSTNAME: (RESOLVING_NAME, RESOLVE),
                 IS_ADDRESS: (CONNECTING, CONNECT),
                 },
-            RESOLVING: {
+            RESOLVE: {
                 RESOLUTION_SUCCESSFUL: (CONNECTING, CONNECT),
                 RESOLUTION_FAILED: (ERROR_CONN, CONNECTION_FAILED),
                 },
