@@ -562,41 +562,47 @@ class _TCP6ClientConnect(StateMachine, object):
     # States
 
     START = 'START'
-    NAME_RESOLUTION = 'NAME_RESOLUTION'
-    CONNECTION_ATTEMPT = 'CONNECTION_ATTEMPT'
+    RESOLVING = 'NAME_RESOLUTION'
+    CONNECT = 'CONNECTION_ATTEMPT'
     CONNECTION_DONE = 'CONNECTION_DONE'     # Final State
     CONNECTION_FAILED = 'CONNECTION_FAILED' # Final State
 
-    # Inputs and Outputs
+    # Inputs
 
     IS_HOSTNAME = 'Hostname provided'
     IS_ADDRESS = 'Host address provided'
-
+    CONNECTED = 'Connection established'
+    NOT_CONNECTED = 'Connection attempt failed'
     RESOLUTION_SUCCESSFUL = 'Name resolved successfully'
     RESOLUTION_FAILED = 'Error resolving name'
-    RESOLUTION_TIMEOUT = 'Timeout resolving name'
+#    RESOLUTION_TIMEOUT = 'Timeout resolving name'
 
+    # Outputs
+
+    CONNECTING = 'Attempting to connect'
     RESOLVE_NAME = 'Hostname needs to be resolved to get the host address'
     SUCCESS_CONN =
         'A successful connection, the connected protocol needs to be returned'
+    ERROR_CONN = 'Connection attempt failed with an error'
 
-    CONNECTION_SUCCESSFUL = 'Connection attempt successful'
-    CONNECTION_ERROR = 'Connection attempt failed with an error'
+# TODO: Failing with error and failing with a timeout can be separated.
 
+# TODO: Failed connection due to failure in resolving hostname and failed
+#       connection due to failure in establishing connection after successful
+#       resolution may be separated.
 
     states = {
             START: {
-                IS_HOSTNAME: (RESOLVE_NAME, NAME_RESOLUTION),
-                IS_ADDRESS: (NOTHING, CONNECTION_ATTEMPT),
+                IS_HOSTNAME: (RESOLVE_NAME, RESOLVING),
+                IS_ADDRESS: (CONNECTING, CONNECT),
                 },
-            NAME_RESOLUTION: {
-                RESOLUTION_SUCCESSFUL: (NOTHING, CONNECTION_ATTEMPT),
-                RESOLUTION_FAILED: (CONNECTION_ERROR, CONNECTION_FAILED),
-                RESOLUTION_TIMEOUT: (CONNECTION_ERROR, CONNECTION_FAILED),
+            RESOLVING: {
+                RESOLUTION_SUCCESSFUL: (CONNECTING, CONNECT),
+                RESOLUTION_FAILED: (ERROR_CONN, CONNECTION_FAILED),
                 },
-            CONNECTION_ATTEMPT: {
-                CONNECTION_SUCCESSFUL: (SUCCESS_CONN, CONNECTION_DONE),
-                CONNECTION_ERROR: (CONNECTION_ERROR, CONNECTION_FAILED),
+            CONNECT: {
+                CONNECTED: (SUCCESS_CONN, CONNECTION_DONE),
+                NOT_CONNECTED: (ERROR_CONN, CONNECTION_FAILED),
                 },
             }
 
