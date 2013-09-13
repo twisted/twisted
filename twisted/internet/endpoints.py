@@ -618,9 +618,10 @@ class TCP6EndpointConnect(TCP6ConnectDFA):
         TCP6ConnectDFA.__init__(self)
         self.protocolFactory = protocolFactory
         self.endpoint = endpoint
-        self.host = self.endpoint._host
+        self.host = endpoint._host
         self.connected = False
         self.resolved = False
+        self.result = None
 
 
     def _nameResolution(self, host):
@@ -628,18 +629,18 @@ class TCP6EndpointConnect(TCP6ConnectDFA):
         Resolve the hostname string into a tuple containing the host
         IPv6 address.
         """
-        return self._deferToThread(
-            self._getaddrinfo, host, 0, socket.AF_INET6)
+        return self.endpoint._deferToThread(
+            self.endpoint._getaddrinfo, host, 0, socket.AF_INET6)
 
 
-    def _resolvedHostConnect(self, resolvedHost, protocolFactory):
+    def _resolvedHostConnect(self, host, factory):
         """
         Connect to the server using the resolved hostname.
         """
         try:
-            wf = _WrappingFactory(protocolFactory)
-            self._reactor.connectTCP(resolvedHost, self._port, wf,
-                timeout=self._timeout, bindAddress=self._bindAddress)
+            wf = _WrappingFactory(factory)
+            self.endpoint._reactor.connectTCP(host, self.endpoint._port,
+                    wf, timeout=self.endpoint._timeout, bindAddress=self.endpoint._bindAddress)
             self.connected = True
             return wf._onConnection
         except:
@@ -648,17 +649,18 @@ class TCP6EndpointConnect(TCP6ConnectDFA):
 
 
     def enter_CONNECT(self):
-        self.afterConnectionAttempt = self._resolvedHostConnect(self.host,
-                self.protocolFactory)
+        self.result = self._resolvedHostConnect(self.host, self.protocolFactory)
 
 
     def enter_RESOLVE(self):
         self.resolved = False
-        d = self._nameResolution(self.host)
+        self.result = self._nameResolution(self.host)
         def getResolvedHost(self, result):
             self.host = result[0][self._GAI_ADDRESS][self._GAI_ADDRESS_HOST]
             self.resolved = True
-        d.addCallback(getResolvedHost)
+            return self.host
+        self.result.addCallback(self.getResolvedHost)
+        return self.result
 
 
 
@@ -721,8 +723,8 @@ class TCP6ClientEndpoint(object):
             else:
                conn.input(TCP6ConnectDFA.NOT_CONNECTED)
 
-        if conn.state == TCP6ConnectDFA.CONNECTED or conn.state == TCP6ConnectDFA.NOT_CONNECTED:
-            return conn.afterConnectionAttempt
+        if conn.state == TCP6ConnectDFA.CONNECTION_DONE or conn.state == TCP6ConnectDFA.CONNECTION_FAILED:
+            return conn.result
 
 
 
