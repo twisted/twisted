@@ -553,12 +553,13 @@ class TCP4ClientEndpoint(object):
 
 
 
-class _TCP6ClientConnect(StateMachine, object):
+class _TCP6ConnectDFA(StateMachine, object):
     """
     An explicit state machine for L{TCP6ClientEndpoint.connect}.
 
     dict, mapping state to dict of input: (output, new-state)
     """
+
     # States
 
     START = 'START'
@@ -606,6 +607,50 @@ class _TCP6ClientConnect(StateMachine, object):
             }
 
     initialState = START
+
+
+
+class TCP6EndpointConnect(_TCP6ConnectDFA):
+    """
+    State machine implementation for L{TCP6ClientEndpoint.connect}.
+    """
+
+    def __init__(self, protocolFactory, endpoint):
+        _TCP6ClientConnect.__init__(self)
+        self.protocolFactory = protocolFactory
+        self.endpoint = endpoint
+        self.host = self.endpoint._host
+
+
+    def _resolvedHostConnect(self, resolvedHost, protocolFactory):
+        """
+        Connect to the server using the resolved hostname.
+        """
+        try:
+            wf = _WrappingFactory(protocolFactory)
+            self._reactor.connectTCP(resolvedHost, self._port, wf,
+                timeout=self._timeout, bindAddress=self._bindAddress)
+            self.connected = true
+            return wf._onConnection
+        except:
+            self.connected = false
+            return defer.fail()
+
+
+    def enter_CONNECT(self):
+        self.afterConnectionAttempt = self._resolvedHostConnect(self.host, self.protocolFactory)
+
+    def exit_CONNECT(self):
+        if self.connected:
+            self.input(_TCP6ConnectDFA.CONNECTED)
+        else:
+            self.input(_TCP6ConnectDFA.NOT_CONNECTED)
+
+
+    if isIPv6Address(self.endpoint._host):
+        self.input(_TCP6ConnectDFA.IS_ADDRESS)
+    else
+        self.input(_TCP6ConnectDFA.IS_HOSTNAME)
 
 
 

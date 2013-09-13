@@ -10,6 +10,7 @@ class StateError(Exception):
 
 
 class StateMachine:
+    # TODO: Class decorator instead of a superclass.
 
     initialState = None         # a str describing initial state
 
