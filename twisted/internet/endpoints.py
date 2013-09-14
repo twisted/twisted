@@ -1562,7 +1562,7 @@ def _caFilesInDir(directoryPath, recognizedExtensions):
 
 
 
-def _loadCAsFromDir(directoryPath):
+def _loadCAsFromDir(directoryPath, pemLoader=None):
     """
     Load certificate-authority certificate objects in a given directory.
 
@@ -1571,7 +1571,11 @@ def _loadCAsFromDir(directoryPath):
 
     @return: a C{list} of L{OpenSSL.crypto.X509} objects.
     """
-    from twisted.internet import ssl
+    if pemLoader is None:
+        from twisted.internet.ssl import Certificate
+        pemLoader = Certificate.loadPEM
+
+    import OpenSSL
 
     caCerts = {}
     for child in _caFilesInDir(directoryPath, _CA_FILE_EXTENSIONS):
@@ -1581,8 +1585,8 @@ def _loadCAsFromDir(directoryPath):
             # Permission denied, corrupt disk, we don't care.
             continue
         try:
-            theCert = ssl.Certificate.loadPEM(data)
-        except ssl.SSL.Error:
+            theCert = pemLoader(data)
+        except (OpenSSL.SSL.Error,OpenSSL.crypto.Error):
             # Duplicate certificate, invalid certificate, etc.  We don't care.
             pass
         else:

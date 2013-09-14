@@ -52,6 +52,7 @@ try:
     from twisted.test.test_sslverify import makeCertificate
     from twisted.internet.ssl import CertificateOptions, Certificate, \
         KeyPair, PrivateCertificate
+    import OpenSSL
     from OpenSSL.SSL import ContextType, SSLv23_METHOD, TLSv1_METHOD
     testCertificate = Certificate.loadPEM(pemPath.getContent())
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
@@ -2925,6 +2926,42 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(
             [Certificate(x) for x in endpoints._loadCAsFromDir(casPathClone)],
             [Certificate.loadPEM(casPath.child("thing1.pem").getContent())])
+
+
+    def test_loadCAsFromDirIgnoreOpenSSLSSLError(self):
+        """
+        L{endpoints._loadCAsFromDir} ignores L{OpenSSL.SSL.Error} raised
+        by C{loadPem}.
+        """
+        fakeCertDir = FilePath(self.mktemp())
+        fakeCertDir.makedirs()
+        fakeBadCert = fakeCertDir.child('badcert.pem')
+        fakeBadCert.setContent(b'fake')
+
+        def raisingPemLoader(data):
+            raise OpenSSL.SSL.Error(data)
+
+        res = endpoints._loadCAsFromDir(fakeCertDir,
+                                        pemLoader=raisingPemLoader)
+        self.assertEqual([], res)
+
+
+    def test_loadCAsFromDirIgnoreOpenSSLCryptError(self):
+        """
+        L{endpoints._loadCAsFromDir} ignores L{OpenSSL.crypto.Error} raised
+        by C{loadPem}.
+        """
+        fakeCertDir = FilePath(self.mktemp())
+        fakeCertDir.makedirs()
+        fakeBadCert = fakeCertDir.child('badcert.pem')
+        fakeBadCert.setContent(b'fake')
+
+        def raisingPemLoader(data):
+            raise OpenSSL.crypto.Error(data)
+
+        res = endpoints._loadCAsFromDir(fakeCertDir,
+                                        pemLoader=raisingPemLoader)
+        self.assertEqual([], res)
 
 
     def test_sslSimple(self):
