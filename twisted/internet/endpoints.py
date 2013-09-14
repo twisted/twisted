@@ -1569,6 +1569,11 @@ def _loadCAsFromDir(directoryPath, pemLoader=None):
     @param directoryPath: a L{FilePath} pointing at a directory to load .pem
         files from.
 
+    @param pemLoader: A L{callable} which will return an
+        L{OpenSSL.crypto.X509} object when supplied with PEM formatted
+        L{bytes}. Defaults to
+        L{twisted.internet.ssl.Certificate.loadPEM}.
+
     @return: a C{list} of L{OpenSSL.crypto.X509} objects.
     """
     if pemLoader is None:
