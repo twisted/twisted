@@ -63,6 +63,10 @@ __all3__ = ["TCP4ServerEndpoint", "TCP6ServerEndpoint",
             "SSL4ServerEndpoint", "SSL4ClientEndpoint",
             "connectProtocol", "HostnameEndpoint"]
 
+# File extensions of potential Certificate Authority files.
+_CA_FILE_EXTENSIONS = ('.crt', '.pem')
+
+
 
 class _WrappingProtocol(Protocol):
     """
@@ -1539,6 +1543,25 @@ def _parseClientTCP(*args, **kwargs):
 
 
 
+def _caFilesInDir(directoryPath, recognizedExtensions):
+    """
+    An iterator of child files with recognized certificate authority
+    extensions.
+
+    @param directoryPath: The directory in which to search for candidate files.
+    @type directoryPath: L{FilePath}
+
+    @param recognizedExtensions: A list of file extensions which are
+        expected for CA files.
+    @type recognizedExtensions: L{list} or L{str}
+    """
+    for child in directoryPath.children():
+        basename, ext = child.splitext()
+        if ext.lower() in recognizedExtensions:
+            yield child
+
+
+
 def _loadCAsFromDir(directoryPath):
     """
     Load certificate-authority certificate objects in a given directory.
@@ -1551,9 +1574,7 @@ def _loadCAsFromDir(directoryPath):
     from twisted.internet import ssl
 
     caCerts = {}
-    for child in directoryPath.children():
-        if not child.basename().split('.')[-1].lower() == 'pem':
-            continue
+    for child in _caFilesInDir(directoryPath, _CA_FILE_EXTENSIONS):
         try:
             data = child.getContent()
         except IOError:

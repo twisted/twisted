@@ -2672,6 +2672,23 @@ class ClientStringTests(unittest.TestCase):
 
 
 
+class RaisedArgs(Exception):
+    """
+    Raised by fake functions to test that the fake has been called and
+    to record the supplied arguments.
+    """
+    def __init__(self, args, kwargs):
+        """
+        Assign the positional and keyword arguments.
+
+        @param args: The positional arguments.
+        @param kwargs: The keyword arguments.
+        """
+        self.args = args
+        self.kwargs = kwargs
+
+
+
 class SSLClientStringTests(unittest.TestCase):
     """
     Tests for L{twisted.internet.endpoints.clientFromString} which require SSL.
@@ -2735,6 +2752,140 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(client._port, 4321)
         self.assertEqual(client._timeout, 3)
         self.assertEqual(client._bindAddress, ("10.0.0.3", 0))
+
+
+    def test_parseClientSSLDefault(self):
+        """
+        L{endpoints.clientFromString} calls L{endpoints._parseClientSSL}
+        to parse the remaining arguments in an endpoint descriptions
+        with an C{"ssl"} prefix. It supplies the remaining parsed
+        arguments.
+        """
+        def fakeParseClientSSL(*args, **kwargs):
+            raise RaisedArgs(args, kwargs)
+        self.patch(endpoints, '_clientParsers', dict(SSL=fakeParseClientSSL))
+
+        e = self.assertRaises(
+            RaisedArgs,
+            endpoints.clientFromString,
+            reactor=None, description='ssl:foo:bar=baz')
+
+        self.assertEquals(
+            (('foo',), {'bar': 'baz'}),
+            (e.args, e.kwargs)
+        )
+
+
+    def test_loadCAsFromDir(self):
+        """
+        L{endpoints._parseClientSSL} calls L{endpoints._loadCAsFromDir}
+        when an ssl endpoint description contains the C{"caCertsDir"}
+        keyword argument. It supplies a L{FilePath} instance
+        representing the C{caCertsDir} path.
+        """
+        def fakeLoadCAsFromDir(*args, **kwargs):
+            raise RaisedArgs(args, kwargs)
+        self.patch(endpoints, '_loadCAsFromDir', fakeLoadCAsFromDir)
+
+        dummyDir = self.mktemp()
+        e = self.assertRaises(
+            RaisedArgs,
+            endpoints._parseClientSSL,
+            caCertsDir=dummyDir)
+
+        self.assertEquals(
+            ((FilePath(dummyDir),), {}),
+            (e.args, e.kwargs)
+        )
+
+
+    def test_loadCAsFromDirCallsCaFilesInDir(self):
+        """
+        L{endpoints._loadCAsFromDir} calls L{endpoints._caFilesInDir} to
+        enumerate candidate CA files. It supplies the directoryPath
+        object and the list of recognized CA file extensions defined
+        in L{endpoints._CA_FILE_EXTENIONS}
+        """
+        def fakeCaFilesInDir(*args, **kwargs):
+            raise RaisedArgs(args, kwargs)
+
+        self.patch(endpoints, '_caFilesInDir', fakeCaFilesInDir)
+
+        fakeCAFileExtensions = ['.foo', '.bar']
+        self.patch(endpoints, '_CA_FILE_EXTENSIONS', fakeCAFileExtensions)
+
+        dummyDir = object()
+
+        e = self.assertRaises(RaisedArgs, endpoints._loadCAsFromDir, dummyDir)
+
+        self.assertEqual(
+            ((dummyDir, fakeCAFileExtensions), {}),
+            (e.args, e.kwargs)
+        )
+
+
+    def test_caFilesInDirRecognized(self):
+        """
+        L{endpoints._caFilesInDir} returns direct children of the supplied
+        C{directoryPath} whose file extension matches one of the
+        supplied C{recognizedExtensions}.
+        """
+        fakeFile = FilePath(self.mktemp()).child('foo.bar')
+        fakeFile.makedirs()
+        res = endpoints._caFilesInDir(directoryPath=fakeFile.parent(),
+                                      recognizedExtensions=['.bar'])
+        self.assertEqual(
+            [fakeFile],
+            list(res)
+        )
+
+
+    def test_caFilesInDirCaseInsensitiveExtensionMatch(self):
+        """
+        L{endpoints._caFilesInDir} matches file extensions
+        case-insensitively.
+        """
+        fakeFile = FilePath(self.mktemp()).child('foo.BAr')
+        fakeFile.makedirs()
+        res = endpoints._caFilesInDir(directoryPath=fakeFile.parent(),
+                                      recognizedExtensions=['.bar'])
+        self.assertEqual(
+            [fakeFile],
+            list(res)
+        )
+
+
+    def test_caFilesInDirOther(self):
+        """
+        L{endpoints._caFilesInDir} ignores children of the supplied
+        C{directoryPath} whose file extensions to not match any of the
+        C{recognizedExtensions}
+        """
+        fakeOther = FilePath(self.mktemp()).child('foo.other')
+        fakeOther.makedirs()
+        res = endpoints._caFilesInDir(directoryPath=fakeOther.parent(),
+                                      recognizedExtensions=['.baz'])
+        self.assertEqual(
+            [],
+            list(res)
+        )
+
+
+    def test_caFilesInDirNoExtension(self):
+        """
+        L{endpoints._caFilesInDir} ignores children of the supplied
+        C{directoryPath} without a file extension, even if the
+        filename happens to be the same as one of the recognised
+        extensions.
+        """
+        fakeOther = FilePath(self.mktemp()).child('pem')
+        fakeOther.makedirs()
+        res = endpoints._caFilesInDir(directoryPath=fakeOther.parent(),
+                                      recognizedExtensions=['.pem'])
+        self.assertEqual(
+            [],
+            list(res)
+        )
 
 
     def test_sslWithDefaults(self):
