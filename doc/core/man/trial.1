@@ -16,6 +16,7 @@ arguments.  Thus `trial myproject/foo.py', `trial myproject.foo' and
 invoke trial. Multiple such arguments are also accepted, and their order will
 determine the order in which the corresponding tests are run.
 .PP
+.SS Results
 After running the given test suite, the default test reporter prints a summary
 of the test run. This consists of the word "PASSED" (if all tests ran as
 expected) or "FAILED" (if any test behaved unexpectedly) followed by a count of
@@ -57,6 +58,14 @@ unexpectedSuccesses
 Tests that should have been listed under expectedFailures, except that
 for some reason the test succeeded. These are marked "SUCCESS!?!" in
 the normal test output.
+.SS Working Directory
+.PP
+Before running any tests trial changes its working directory to
+\fB_trial_temp\fR (or the path given to the \fB--temp-directory\fR option).
+.PP
+Any temporary files created by trial are created beneath \fB_trial_temp\fR.
+Additionally, trial sets the stdlib \fBtempfile\fR module's default directory
+to this path (unless \fB--no-tempfile-override\fR is given).
 .SH OPTIONS
 .TP
 \fB-j\fR, \fB--jobs\fR \fInumber\fR
@@ -169,10 +178,8 @@ failures, errors, or unexpected successes. Won't work with the --jobs option
 currently.
 .TP
 \fB--no-tempfile-override\fR
-Trial will override the default directory in which files are created by the
-stdlib tempfile module, setting it to the temporary trial execution directory
-(see --temp-directory).  If this flag is given, trial will not do this and the
-tempfile module will create temporary files in the platform-defined location.
+Disable the behavior of overriding the default directory in which the stdlib
+tempfile module creates temporary files.
 .TP
 \fB--spew\fR
 Print an insanely verbose log of everything that happens. Useful when
