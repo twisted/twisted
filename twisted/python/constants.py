@@ -11,12 +11,11 @@ __all__ = [
     'NamedConstant', 'ValueConstant', 'FlagConstant',
     'Names', 'Values', 'Flags']
 
-from functools import partial
 from itertools import count
 from operator import and_, or_, xor
 
 _unspecified = object()
-_constantOrder = partial(next, count())
+_constantOrder = count().next
 
 
 class _Constant(object):
