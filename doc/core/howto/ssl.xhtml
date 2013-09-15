@@ -25,6 +25,76 @@
     verify that you do is to run <code>from OpenSSL import SSL</code> at a
     python prompt and not get an error.</p>
 
+
+    <h2>Generating Keys and Certificates</h2>
+    <p>
+      Before embarking on this tutorial you're going to need some keys and certificates.
+
+      Creating certificates using the OpenSSL command line tools is complicated and error prone.
+
+      Fortunately, the Twisted <code class="API" base="twisted.internet">ssl</code> module
+      includes user friendly classes that make it really easy to work with PyOpenSSL objects.
+
+      And there's even a fully working example script
+      that demonstrates how to generate a self-signed certificate.
+
+      You can use to it to generate certificates for use later in this tutorial.
+    </p>
+
+    <a href="listings/ssl/make_certificate.py" class="listing">make_certificate.py</a>
+
+    <h2>SSL in Twistd plugins</h2>
+    <p>
+      Many of the builtin twistd plugins accept endpoint description strings.
+
+      This means that it's very easy to configure
+      a Twisted web server to accept SSL connections, for example.
+
+      An endpoint description string can be used to specify
+      the SSL server key file,
+      the certificate file (if different)
+      and other SSL options.
+
+      Here's an example of how to start a twistd web server
+      serving static files from /srv/www.example.com/public_html
+      and listening for SSL connections on port 10443
+      using a combined private key and certificate PEM file
+      located in /srv/www.example.com/server.pem
+    </p>
+
+    <p>First generate a certificate:</p>
+    <pre class="shell">
+      $ python doc/core/howto/listings/ssl/make_certificate.py \
+          --common-name=www.example.com \
+          --subject="My Example Company Website" | sudo tee /srv/www/www.example.com/server.pem
+    </pre>
+
+    <p>Then start the web server:</p>
+    <pre class="shell">
+      $ twistd -n web \
+          --port=ssl:10443:privateKey=/srv/www/www.example.com/server.pem \
+          --path /srv/www/www.example.com/static
+    </pre>
+
+    <p>
+      Many other twistd plugins accept endpoint strings
+      so it is easy to SSL-enable a twistd FTP, POP3 or IMAP server for example.
+
+      If you are writing your own twistd plugin,
+      consider adding a command line endpoint option
+      instead of a less flexible "listening port" option.
+
+      That way, your users can easily configure your plugin
+      to accept SSL encrypted connections,
+      using a key and certificate of their choice.
+    </p>
+
+    <p>
+      The following sections describe SSL endpoints in more detail.
+    </p>
+
+    <h2>SSL and Endpoints</h2>
+
     <p>
       Twisted provides SSL support as a transport - that is, as an alternative
       to TCP.  When using SSL, use of the TCP APIs you're already familiar
