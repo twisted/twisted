@@ -379,7 +379,8 @@ class WrappingFactoryTests(unittest.TestCase):
 
 class ClientEndpointTestCaseMixin(object):
     """
-    Generic test methods to be mixed into all client endpoint test classes.
+    Generic test methods to be mixed into all stream client endpoint test
+    classes.
     """
     def test_interface(self):
         """
@@ -521,8 +522,12 @@ class ClientEndpointTestCaseMixin(object):
 
 class ServerEndpointTestCaseMixin(object):
     """
-    Generic test methods to be mixed into all client endpoint test classes.
+    Generic test methods to be mixed into all stream server endpoint test
+    classes.
     """
+    expectedEndpointInterface = interfaces.IStreamServerEndpoint
+
+
     def test_interface(self):
         """
         The endpoint provides L{interfaces.IStreamServerEndpoint}.
@@ -530,7 +535,7 @@ class ServerEndpointTestCaseMixin(object):
         factory = object()
         ep, ignoredArgs, ignoredDest = self.createServerEndpoint(
             MemoryReactor(), factory)
-        self.assertTrue(verifyObject(interfaces.IStreamServerEndpoint, ep))
+        self.assertTrue(verifyObject(self.expectedEndpointInterface, ep))
 
 
     def test_endpointListenSuccess(self):
@@ -600,6 +605,15 @@ class ServerEndpointTestCaseMixin(object):
         expectedServers = self.expectedServers(mreactor)
 
         self.assertEqual(expectedServers, [expectedArgs])
+
+
+
+class DatagramServerEndpointTestCaseMixin(ServerEndpointTestCaseMixin):
+    """
+    Generic test methods to be mixed into all datagram server endpoint test
+    classes.
+    """
+    expectedEndpointInterface = interfaces.IDatagramServerEndpoint
 
 
 
@@ -2180,6 +2194,78 @@ class UNIXEndpointsTestCase(EndpointTestCaseMixin,
 
 
 
+class UDPEndpointsTestCase(DatagramServerEndpointTestCaseMixin,
+                           unittest.TestCase):
+    """
+    Tests for UDP endpoints.
+    """
+
+    def expectedServers(self, reactor):
+        """
+        @return: List of calls to L{IReactorUDP.listenUDP}
+        """
+        return reactor.udpServers
+
+
+    def assertConnectArgs(self, receivedArgs, expectedArgs):
+        """
+        Compare host, port, timeout, and bindAddress in C{receivedArgs}
+        to C{expectedArgs}.  We ignore the factory because we don't
+        only care what protocol comes out of the
+        C{IStreamClientEndpoint.connect} call.
+
+        @param receivedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{timeout}, C{bindAddress}) that was passed to
+            L{IReactorTCP.connectTCP}.
+        @param expectedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{timeout}, C{bindAddress}) that we expect to have been passed
+            to L{IReactorTCP.connectTCP}.
+        """
+        (host, port, ignoredFactory, timeout, bindAddress) = receivedArgs
+        (expectedHost, expectedPort, _ignoredFactory,
+         expectedTimeout, expectedBindAddress) = expectedArgs
+
+        self.assertEqual(host, expectedHost)
+        self.assertEqual(port, expectedPort)
+        self.assertEqual(timeout, expectedTimeout)
+        self.assertEqual(bindAddress, expectedBindAddress)
+
+
+    def listenArgs(self):
+        """
+        @return: C{dict} of keyword arguments to pass to listen
+        """
+        return {'maxPacketSize': 4096, 'interface': '127.0.0.1'}
+
+
+    def createServerEndpoint(self, reactor, factory, **listenArgs):
+        """
+        Create a L{UDPServerEndpoint} and return the values needed to verify
+        its behaviour.
+
+        @param reactor: A fake L{IReactorUDP} that L{UDPServerEndpoint} can
+            call L{IReactorUDP.listenUDP} on.
+        @param protocol: The thing that we expect to be passed to our
+            L{IDatagramServerEndpoint.listen} implementation.
+        @param listenArgs: Optional dictionary of arguments to
+            L{IReactorUDP.listenUDP}.
+        """
+        interface = listenArgs.get('interface', '')
+        address = IPv4Address('UDP', interface, 0)
+
+        if listenArgs is None:
+            listenArgs = {}
+
+        return (endpoints.UDPServerEndpoint(reactor,
+                                            address.port,
+                                            **listenArgs),
+                (address.port, factory,
+                 listenArgs.get('maxPacketSize', 8192),
+                 interface),
+                address)
+
+
+
 class ParserTestCase(unittest.TestCase):
     """
     Tests for L{endpoints._parseServer}, the low-level parsing logic.
@@ -3094,6 +3180,62 @@ class StandardIOEndpointPluginTests(unittest.TestCase):
 
 
 
+class UDPEndpointPluginTests(unittest.TestCase):
+    """
+    Unit tests for the UDP stream server endpoint string description parser.
+    """
+    _parserClass = endpoints._UDPServerParser
+
+    def test_pluginDiscovery(self):
+        """
+        L{endpoints._UDPServerParser} is found as a plugin for
+        L{interfaces.IDatagramServerEndpointStringParser} interface.
+        """
+        parsers = list(getPlugins(
+            interfaces.IDatagramServerEndpointStringParser))
+        for p in parsers:
+            if isinstance(p, self._parserClass):
+                break
+        else:
+            self.fail(
+                "Did not find UDPServerEndpoint parser in %r" % (parsers,))
+
+
+    def test_interface(self):
+        """
+        L{endpoints._UDPServerParser} instances provide
+        L{interfaces.IDatagramServerEndpointStringParser}.
+        """
+        parser = self._parserClass()
+        self.assertTrue(verifyObject(
+            interfaces.IDatagramServerEndpointStringParser, parser))
+
+
+    def test_notStreamServer(self):
+        """
+        L{serverFromString} is for stream servers and fails to recognize
+        C{'udp'} as an acceptable endpoint type.
+        """
+        exc = self.assertRaises(
+            ValueError, endpoints.serverFromString, MemoryReactor(), "udp:8080")
+        self.assertEqual("Unknown endpoint type: 'udp'", str(exc))
+
+
+    def test_stringDescription(self):
+        """
+        L{datagramServerFromString} returns a L{UDPServerEndpoint} instance
+        with a C{'udp'} endpoint string description.
+        """
+        ep = endpoints.datagramServerFromString(
+            MemoryReactor(), "udp:8080:maxPacketSize=4096:interface=127.0.0.1")
+        self.assertIsInstance(ep, endpoints.UDPServerEndpoint)
+        self.assertIsInstance(ep._reactor, MemoryReactor)
+        self.assertEqual(ep._port, 8080)
+        self.assertEqual(ep._maxPacketSize, 4096)
+        self.assertEqual(ep._interface, '127.0.0.1')
+
+
+
 class ConnectProtocolTests(unittest.TestCase):
     """
     Tests for C{connectProtocol}.
@@ -3141,4 +3283,5 @@ if _PY3:
          AdoptedStreamServerEndpointTestCase, SystemdEndpointPluginTests,
          TCP6ServerEndpointPluginTests, StandardIOEndpointPluginTests,
          ProcessEndpointsTestCase, WrappedIProtocolTests,
+         UDPEndpointPluginTests,
          )
