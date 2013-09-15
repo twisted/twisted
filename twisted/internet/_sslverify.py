@@ -763,11 +763,11 @@ class OpenSSLCertificateOptions(object):
         self.__dict__ = state
 
 
-    def getContext(self, _contextFactory=SSL.Context):
+    def getContext(self):
         """Return a SSL.Context object.
         """
         if self._context is None:
-            self._context = self._makeContext(_contextFactory)
+            self._context = self._makeContext()
         return self._context
 
 

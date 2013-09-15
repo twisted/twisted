@@ -689,7 +689,8 @@ class OpenSSLOptions(unittest.TestCase):
             def set_default_verify_paths(self):
                 SSL.Context.set_default_verify_paths(self)
                 called.append(self)
-        context = opts.getContext(_contextFactory=TestContext)
+        opts._contextFactory = TestContext
+        context = opts.getContext()
         self.assertEqual(called, [context])
 
 
