@@ -776,6 +776,11 @@ class OpenSSLOptions(unittest.TestCase):
 
         return d.addCallback(afterLost)
 
+    if not platform.isLinux():
+        test_caCertsPlatformRejectsRandomCA.skip = (
+            "CASources.PLATFORM is currently only supported on Linux")
+
+
 
 if interfaces.IReactorSSL(reactor, None) is None:
     OpenSSLOptions.skip = "Reactor does not support SSL, cannot run SSL tests"
