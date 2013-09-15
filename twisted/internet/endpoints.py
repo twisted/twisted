@@ -548,48 +548,6 @@ class UDPServerEndpoint(object):
 
 
 
-class TCP4ServerEndpoint(_TCPServerEndpoint):
-    """
-    Implements TCP server endpoint with an IPv4 configuration
-    """
-    def __init__(self, reactor, port, backlog=50, interface=''):
-        """
-        @param reactor: An L{IReactorTCP} provider.
-
-        @param port: The port number used for listening
-        @type port: int
-
-        @param backlog: Size of the listen queue
-        @type backlog: int
-
-        @param interface: The hostname to bind to, defaults to '' (all)
-        @type interface: str
-        """
-        _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface)
-
-
-
-class TCP6ServerEndpoint(_TCPServerEndpoint):
-    """
-    Implements TCP server endpoint with an IPv6 configuration
-    """
-    def __init__(self, reactor, port, backlog=50, interface='::'):
-        """
-        @param reactor: An L{IReactorTCP} provider.
-
-        @param port: The port number used for listening
-        @type port: int
-
-        @param backlog: Size of the listen queue
-        @type backlog: int
-
-        @param interface: The hostname to bind to, defaults to '' (all)
-        @type interface: str
-        """
-        _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface)
-
-
-
 @implementer(interfaces.IStreamClientEndpoint)
 class TCP4ClientEndpoint(object):
     """
