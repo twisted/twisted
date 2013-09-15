@@ -12,6 +12,8 @@ from OpenSSL import SSL, crypto
 
 from twisted.python.compat import nativeString, networkString
 from twisted.python import _reflectpy3 as reflect, util
+from twisted.python.runtime import platform
+from twisted.python.constants import Names, NamedConstant
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
 
@@ -620,6 +622,16 @@ class KeyPair(PublicKey):
 
 
 
+class CASources(Names):
+    """
+    Constants defining sources for trusted certificate authorities.
+    """
+    # Indicates that OpenSSLCertificateOptions should use the platform-provided
+    # database of trusted CAs.
+    PLATFORM = NamedConstant()
+
+
+
 class OpenSSLCertificateOptions(object):
     """
     A factory for SSL context objects for both SSL servers and clients.
@@ -665,11 +677,14 @@ class OpenSSLCertificateOptions(object):
             validation.  By default this is C{False}.
 
         @param caCerts: List of certificate authority certificate objects to
-            use to verify the peer's certificate.  Only used if verify is
-            C{True} and will be ignored otherwise.  Since verify is C{False} by
-            default, this is C{None} by default.
+            use to verify the peer's certificate, or L{CASources.PLATFORM}
+            indicating that platform-provided trusted certificates should be
+            used.  Only used if verify is C{True} and will be ignored
+            otherwise.  Since verify is C{False} by default, this is C{None}
+            by default.
 
-        @type caCerts: C{list} of L{OpenSSL.crypto.X509}
+        @type caCerts: C{list} of L{OpenSSL.crypto.X509}, or
+             L{CASources} constants.
 
         @param verifyDepth: Depth in certificate chain down to which to verify.
         If unspecified, use the underlying default (9).
@@ -748,11 +763,11 @@ class OpenSSLCertificateOptions(object):
         self.__dict__ = state
 
 
-    def getContext(self):
+    def getContext(self, _contextFactory=SSL.Context):
         """Return a SSL.Context object.
         """
         if self._context is None:
-            self._context = self._makeContext()
+            self._context = self._makeContext(_contextFactory)
         return self._context
 
 
@@ -777,9 +792,17 @@ class OpenSSLCertificateOptions(object):
             if self.verifyOnce:
                 verifyFlags |= SSL.VERIFY_CLIENT_ONCE
             if self.caCerts:
-                store = ctx.get_cert_store()
-                for cert in self.caCerts:
-                    store.add_cert(cert)
+                if self.caCerts is CASources.PLATFORM:
+                    if platform.isLinux():
+                        ctx.set_default_verify_paths()
+                    else:
+                        raise NotImplementedError(
+                            "Only Linux supports platform-trusted CAs "
+                            "(see #6371, #6372, #6334 for other plaforms)")
+                else:
+                    store = ctx.get_cert_store()
+                    for cert in self.caCerts:
+                        store.add_cert(cert)
 
         # It'd be nice if pyOpenSSL let us pass None here for this behavior (as
         # the underlying OpenSSL API call allows NULL to be passed).  It

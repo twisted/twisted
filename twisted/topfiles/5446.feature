@@ -1,0 +1,1 @@
+twisted.internet.ssl.CertificateOptions now accepts an option, ssl.CASources.PLATFORM, that allows using trusted platform certificate authorities on Linux.

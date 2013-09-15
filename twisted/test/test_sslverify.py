@@ -13,12 +13,13 @@ import itertools
 try:
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
-    from OpenSSL.crypto import TYPE_RSA
+    from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
     from twisted.internet import _sslverify as sslverify
 except ImportError:
     pass
 
 from twisted.python.compat import nativeString
+from twisted.python.runtime import platform
 from twisted.trial import unittest
 from twisted.internet import protocol, defer, reactor
 
@@ -673,6 +674,106 @@ class OpenSSLOptions(unittest.TestCase):
         ctx = opts.getContext()
         self.assertEqual(SSL.OP_NO_SSLv2, ctx.set_options(0) & SSL.OP_NO_SSLv2)
 
+
+    def test_caCertsPlatformLinux(self):
+        """
+        Specifying a C{caCerts} of L{sslverify.CASources.PLATFORM} when
+        initializing C{OpenSSLCertificateOptions} loads the platform-provided
+        trusted certificates.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            caCerts=sslverify.CASources.PLATFORM,
+            verify=True)
+        called = []
+        class TestContext(SSL.Context):
+            def set_default_verify_paths(self):
+                SSL.Context.set_default_verify_paths(self)
+                called.append(self)
+        context = opts.getContext(_contextFactory=TestContext)
+        self.assertEqual(called, [context])
+
+
+    def test_caCertsPlatformOther(self):
+        """
+        Specifying a C{caCerts} of L{sslverify.CASources.PLATFORM} when
+        initializing C{OpenSSLCertificateOptions} raises
+        C{NotImplementedError} on non-Linux platforms, pending implementation
+        of this functionality in other tickets.
+        """
+        self.assertRaises(NotImplementedError,
+                          sslverify.OpenSSLCertificateOptions,
+                          caCerts=sslverify.CASources.PLATFORM, verify=True)
+
+    if platform.isLinux():
+        test_caCertsPlatformOther.skip = "Non-Linux test"
+    else:
+        test_caCertsPlatformLinux.skip = "Linux test"
+
+
+    def _buildCAandServerCertificates(self):
+        """
+        Create a self-signed CA certificate and server certificate signed by
+        the CA.
+        """
+        serverDN = sslverify.DistinguishedName(commonName='example.com')
+        serverKey = sslverify.KeyPair.generate()
+        serverCertReq = serverKey.certificateRequest(serverDN)
+
+        caDN = sslverify.DistinguishedName(commonName='CA')
+        caKey= sslverify.KeyPair.generate()
+        caCertReq = caKey.certificateRequest(caDN)
+        caSelfCertData = caKey.signCertificateRequest(
+                caDN, caCertReq, lambda dn: True, 516)
+        caSelfCert = caKey.newCertificate(caSelfCertData)
+
+        serverCertData = caKey.signCertificateRequest(
+                caDN, serverCertReq, lambda dn: True, 516)
+        serverCert = serverKey.newCertificate(serverCertData)
+        return caSelfCert, serverCert
+
+
+    def test_caCertsPlatformRejectsRandomCA(self):
+        """
+        Specifying a C{caCerts} of L{sslverify.CASources.PLATFORM} when
+        initializing C{OpenSSLCertificateOptions} causes certificates issued
+        by a newly created CA to be rejected by an SSL connection using these
+        options.
+        """
+        caSelfCert, serverCert = self._buildCAandServerCertificates()
+        chainedCert = self.mktemp()
+        with file(chainedCert, "wb") as f:
+            f.write(serverCert.dump(FILETYPE_PEM) + caSelfCert.dump(FILETYPE_PEM))
+        privateKey = self.mktemp()
+        with file(privateKey, "wb") as f:
+            f.write(serverCert.privateKey.dump(FILETYPE_PEM))
+
+        class ContextFactory(object):
+            def getContext(self):
+                ctx = SSL.Context(SSL.TLSv1_METHOD)
+                ctx.use_certificate_chain_file(chainedCert)
+                ctx.use_privatekey_file(privateKey)
+                return ctx
+
+        serverOpts = ContextFactory()
+        clientOpts = sslverify.OpenSSLCertificateOptions(
+            verify=True,
+            caCerts=sslverify.CASources.PLATFORM)
+
+        onServerLost = defer.Deferred()
+        onClientLost = defer.Deferred()
+        self.loopback(serverOpts,
+                      clientOpts,
+                      onServerLost=onServerLost,
+                      onClientLost=onClientLost)
+
+        d = defer.DeferredList([onClientLost, onServerLost],
+                               consumeErrors=True)
+        def afterLost(result):
+            ((cSuccess, cResult), (sSuccess, sResult)) = result
+            self.failIf(cSuccess)
+            self.failIf(sSuccess)
+
+        return d.addCallback(afterLost)
 
 
 if interfaces.IReactorSSL(reactor, None) is None:
