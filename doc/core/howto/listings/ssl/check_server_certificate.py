@@ -29,17 +29,6 @@ from twisted.python import usage
 
 
 
-def connectProtocol(endpoint, proto):
-    """
-    XXX: delete after merging forward.
-    """
-    class OneShotFactory(protocol.Factory):
-        def buildProtocol(self, addr):
-            return proto
-    return endpoint.connect(OneShotFactory())
-
-
-
 class DelayedDisconnectProtocol(protocol.Protocol):
     """
     A protocol which schedules its disconnection and fires a deferred
@@ -145,7 +134,7 @@ def connectAndCheckCertificate(reactor, options):
 
     proto = DelayedDisconnectProtocol(reactor, delay=0.5)
 
-    d = connectProtocol(ep, proto)
+    d = endpoints.connectProtocol(ep, proto)
     d.addCallback(lambda proto: proto.onConnectionLost)
     d.addCallback(printCertificate)
     return d
