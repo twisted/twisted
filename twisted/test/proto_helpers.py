@@ -19,7 +19,7 @@ from twisted.python.compat import unicode
 from twisted.internet.interfaces import (
     ITransport, IConsumer, IPushProducer, IConnector)
 from twisted.internet.interfaces import (
-    IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
+    IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket, IReactorUDP)
 from twisted.internet.interfaces import IListeningPort
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.error import UnsupportedAddressFamily
@@ -370,7 +370,8 @@ class _FakeConnector(object):
 
 
 
-@implementer(IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
+@implementer(
+    IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket, IReactorUDP)
 class MemoryReactor(object):
     """
     A fake reactor to be used in tests.  This reactor doesn't actually do
@@ -381,9 +382,13 @@ class MemoryReactor(object):
         to C{connectTCP}).
     @type tcpClients: C{list}
 
-    @ivar tcpServers: a list that keeps track of server listen attempts (ie, calls
-        to C{listenTCP}).
+    @ivar tcpServers: a list that keeps track of server listen attempts (ie,
+        calls to C{listenTCP}).
     @type tcpServers: C{list}
+
+    @ivar udpServers: a list that keeps track of server listen attempts (ie,
+        calls to C{listenUDP}).
+    @type udpServers: C{list}
 
     @ivar sslClients: a list that keeps track of connection attempts (ie,
         calls to C{connectSSL}).
@@ -414,6 +419,7 @@ class MemoryReactor(object):
         """
         self.tcpClients = []
         self.tcpServers = []
+        self.udpServers = []
         self.sslClients = []
         self.sslServers = []
         self.unixClients = []
@@ -542,6 +548,20 @@ class MemoryReactor(object):
         factory.startedConnecting(conn)
         self.connectors.append(conn)
         return conn
+
+
+    def listenUDP(self, port, factory, maxPacketSize=8192, interface=''):
+        """
+        Fake L{reactor.listenUDP}, that logs the call and returns an
+        L{IListeningPort}.
+        """
+        self.udpServers.append((port, factory, maxPacketSize, interface))
+        if isIPv6Address(interface):
+            address = IPv6Address('UDP', interface, port)
+        else:
+            address = IPv4Address('UDP', interface, port)
+        return _FakePort(address)
+
 for iface in implementedBy(MemoryReactor):
     verifyClass(iface, MemoryReactor)
 
@@ -554,10 +574,11 @@ class MemoryReactorClock(MemoryReactor, Clock):
 
 
 
-@implementer(IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
+@implementer(
+    IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket, IReactorUDP)
 class RaisingMemoryReactor(object):
     """
-    A fake reactor to be used in tests.  It accepts TCP connection setup
+    A fake reactor to be used in tests.  It accepts TCP or UDP connection setup
     attempts, but they will fail.
 
     @ivar _listenException: An instance of an L{Exception}
@@ -627,3 +648,10 @@ class RaisingMemoryReactor(object):
         Fake L{reactor.connectUNIX}, that raises L{self._connectException}.
         """
         raise self._connectException
+
+
+    def listenUDP(self, port, factory, maxPacketSize=8192, interface=''):
+        """
+        Fake L{reactor.listenUDP}, that raises L{self._listenException}.
+        """
+        raise self._listenException
