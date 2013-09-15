@@ -677,7 +677,7 @@ class OpenSSLCertificateOptions(object):
             validation.  By default this is C{False}.
 
         @param caCerts: List of certificate authority certificate objects to
-            use to verify the peer's certificate, or L{CASources.PLATFORM}
+            use to verify the peer's certificate, or L{CASources}C{.PLATFORM}
             indicating that platform-provided trusted certificates should be
             used.  Only used if verify is C{True} and will be ignored
             otherwise.  Since verify is C{False} by default, this is C{None}
