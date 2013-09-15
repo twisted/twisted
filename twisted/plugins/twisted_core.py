@@ -2,8 +2,10 @@
 # See LICENSE for details.
 
 
-from twisted.internet.endpoints import _SystemdParser, _TCP6ServerParser, _StandardIOParser
+from twisted.internet.endpoints import (
+    _SystemdParser, _TCP6ServerParser, _StandardIOParser, _UDPServerParser)
 
 systemdEndpointParser = _SystemdParser()
 tcp6ServerEndpointParser = _TCP6ServerParser()
 stdioEndpointParser = _StandardIOParser()
+udpServerEndpointParser = _UDPServerParser()

@@ -7,7 +7,8 @@ Implementations of L{IStreamServerEndpoint} and L{IStreamClientEndpoint} that
 wrap the L{IReactorTCP}, L{IReactorSSL}, and L{IReactorUNIX} interfaces.
 
 This also implements an extensible mini-language for describing endpoints,
-parsed by the L{clientFromString} and L{serverFromString} functions.
+parsed by the L{clientFromString}, L{serverFromString} and
+L{datagramServerFromString} functions.
 
 @since: 10.1
 """
@@ -25,7 +26,8 @@ from twisted.python.compat import _PY3
 from twisted.internet import interfaces, defer, error, fdesc, threads
 from twisted.internet.protocol import (
         ClientFactory, Protocol, ProcessProtocol, Factory)
-from twisted.internet.interfaces import IStreamServerEndpointStringParser
+from twisted.internet.interfaces import (
+    IStreamServerEndpointStringParser, IDatagramServerEndpointStringParser)
 from twisted.internet.interfaces import IStreamClientEndpointStringParser
 from twisted.python.filepath import FilePath
 from twisted.python.systemd import ListenFDs
@@ -49,13 +51,14 @@ else:
     NamedConstant = object
     Names = object
 
-__all__ = ["clientFromString", "serverFromString",
+__all__ = ["clientFromString", "serverFromString", "datagramServerFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
            "TCP4ClientEndpoint", "TCP6ClientEndpoint",
            "UNIXServerEndpoint", "UNIXClientEndpoint",
            "SSL4ServerEndpoint", "SSL4ClientEndpoint",
            "AdoptedStreamServerEndpoint", "StandardIOEndpoint",
            "ProcessEndpoint", "HostnameEndpoint",
+           "UDPServerEndpoint",
            "StandardErrorBehavior", "connectProtocol"]
 
 __all3__ = ["TCP4ServerEndpoint", "TCP6ServerEndpoint",
@@ -461,6 +464,87 @@ class _TCPServerEndpoint(object):
                              protocolFactory,
                              backlog=self._backlog,
                              interface=self._interface)
+
+
+
+class TCP4ServerEndpoint(_TCPServerEndpoint):
+    """
+    Implements TCP server endpoint with an IPv4 configuration
+    """
+    def __init__(self, reactor, port, backlog=50, interface=''):
+        """
+        @param reactor: An L{IReactorTCP} provider.
+
+        @param port: The port number used for listening
+        @type port: int
+
+        @param backlog: Size of the listen queue
+        @type backlog: int
+
+        @param interface: The hostname to bind to, defaults to '' (all)
+        @type interface: str
+        """
+        _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface)
+
+
+
+class TCP6ServerEndpoint(_TCPServerEndpoint):
+    """
+    Implements TCP server endpoint with an IPv6 configuration
+    """
+    def __init__(self, reactor, port, backlog=50, interface='::'):
+        """
+        @param reactor: An L{IReactorTCP} provider.
+
+        @param port: The port number used for listening
+        @type port: int
+
+        @param backlog: Size of the listen queue
+        @type backlog: int
+
+        @param interface: The hostname to bind to, defaults to '' (all)
+        @type interface: str
+        """
+        _TCPServerEndpoint.__init__(self, reactor, port, backlog, interface)
+
+
+
+@implementer(interfaces.IDatagramServerEndpoint)
+class UDPServerEndpoint(object):
+    """
+    A UDP server endpoint interface
+
+    @since: 13.2.0
+    """
+    def __init__(self, reactor, port, interface='', maxPacketSize=8192):
+        """
+        @param reactor: An L{IReactorUDP} provider.
+
+        @param port: The port number used for listening
+        @type port: int
+
+        @param interface: The hostname to bind to.
+        @type interface: str
+
+        @param maxPacketSize: The maximum packet size to accept.
+        @type maxPacketSize: C{int}
+        """
+        self._reactor = reactor
+        self._port = port
+        self._interface = interface
+        self._maxPacketSize = maxPacketSize
+
+
+    def listen(self, protocol):
+        """
+        Implement L{IDatagramServerEndpoint.listen} to listen on a TCP
+        socket
+        """
+        return defer.execute(self._reactor.listenUDP,
+                             self._port,
+                             protocol,
+                             interface=self._interface,
+                             maxPacketSize=self._maxPacketSize)
 
 
 
@@ -1247,6 +1331,43 @@ class _TCP6ServerParser(object):
 
 
 
+@implementer(IPlugin, IDatagramServerEndpointStringParser)
+class _UDPServerParser(object):
+    """
+    Stream server endpoint string parser for the UDPServerEndpoint type.
+
+    @ivar prefix: See L{IDatagramServerEndpointStringParser.prefix}.
+    """
+    prefix = "udp"     # Used in _parseServer to identify the plugin with the endpoint type
+
+    def _parseServer(self, reactor, port, interface='', maxPacketSize=8192):
+        """
+        Internal parser function for L{_parseServer} to convert the string
+        arguments into structured arguments for the L{UDPServerEndpoint}
+
+        @param reactor: An L{IReactorUDP} provider.
+
+        @param port: The port number used for listening.
+        @type port: int
+
+        @param interface: The hostname to bind to.
+        @type interface: str
+
+        @param maxPacketSize: The maximum packet size to accept.
+        @type maxPacketSize: C{int}
+        """
+        port = int(port)
+        maxPacketSize = int(maxPacketSize)
+        return UDPServerEndpoint(reactor, port, interface, maxPacketSize)
+
+
+    def parseDatagramServer(self, reactor, *args, **kwargs):
+        # Redirects to another function (self._parseServer), tricks zope.interface
+        # into believing the interface is correctly implemented.
+        return self._parseServer(reactor, *args, **kwargs)
+
+
+
 _serverParsers = {"tcp": _parseTCP,
                   "unix": _parseUNIX,
                   "ssl": _parseSSL,
@@ -1258,8 +1379,8 @@ def _tokenize(description):
     """
     Tokenize a strports string and yield each token.
 
-    @param description: a string as described by L{serverFromString} or
-        L{clientFromString}.
+    @param description: a string as described by L{serverFromString},
+        L{datagramServerFromString} or L{clientFromString}.
 
     @return: an iterable of 2-tuples of (L{_OP} or L{_STRING}, string).  Tuples
         starting with L{_OP} will contain a second element of either ':' (i.e.
@@ -1296,8 +1417,8 @@ def _parse(description):
     Convert a description string into a list of positional and keyword
     parameters, using logic vaguely like what Python does.
 
-    @param description: a string as described by L{serverFromString} or
-        L{clientFromString}.
+    @param description: a string as described by L{serverFromString},
+        L{datagramServerFromString} or L{clientFromString}.
 
     @return: a 2-tuple of C{(args, kwargs)}, where 'args' is a list of all
         ':'-separated C{str}s not containing an '=' and 'kwargs' is a map of
@@ -1326,6 +1447,7 @@ _endpointServerFactories = {
     'TCP': TCP4ServerEndpoint,
     'SSL': SSL4ServerEndpoint,
     'UNIX': UNIXServerEndpoint,
+    'UDP': UDPServerEndpoint,
     }
 
 _endpointClientFactories = {
@@ -1337,7 +1459,8 @@ _endpointClientFactories = {
 
 _NO_DEFAULT = object()
 
-def _parseServer(description, factory, default=None):
+def _parseServer(description, factory, default=None,
+                 pluginInterfaces=[IStreamServerEndpointStringParser]):
     """
     Parse a strports description into a 2-tuple of arguments and keyword
     values.
@@ -1377,9 +1500,10 @@ def _parseServer(description, factory, default=None):
     if parser is None:
         # If the required parser is not found in _server, check if
         # a plugin exists for the endpointType
-        for plugin in getPlugins(IStreamServerEndpointStringParser):
-            if plugin.prefix == endpointType:
-                return (plugin, args[1:], kw)
+        for iface in pluginInterfaces:
+            for plugin in getPlugins(iface):
+                if plugin.prefix == endpointType:
+                    return (plugin, args[1:], kw)
         raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
     return (endpointType.upper(),) + parser(factory, *args[1:], **kw)
 
@@ -1466,12 +1590,57 @@ def serverFromString(reactor, description):
 
 
 
+def datagramServerFromString(reactor, description):
+    """
+    Construct a datagram server endpoint from an endpoint description string.
+
+    The format for server endpoint descriptions follows the same structure as
+    that specified in L{serverFromString}.
+
+    For example, you can call it like this to create an endpoint that will
+    listen on UDP port 53::
+
+        datagramServerFromString(reactor, "udp:53")
+
+    This function is also extensible; new endpoint types may be registered as
+    L{IDatagramServerEndpointStringParser} plugins.  See that interface for
+    more information.
+
+    @param reactor: The server endpoint will be constructed with this reactor.
+
+    @param description: The strports description to parse.
+
+    @return: A new endpoint which can be used to listen with the parameters
+        given by by C{description}.
+
+    @rtype: L{IDatagramServerEndpoint<twisted.internet.interfaces.IDatagramServerEndpoint>}
+
+    @raise ValueError: when the 'description' string cannot be parsed.
+
+    @see: L{serverFromString}
+
+    @since: 13.2.0
+    """
+    nameOrPlugin, args, kw = _parseServer(
+        description, None, _NO_DEFAULT, [IDatagramServerEndpointStringParser])
+    if type(nameOrPlugin) is not str:
+        plugin = nameOrPlugin
+        return plugin.parseDatagramServer(reactor, *args, **kw)
+    else:
+        name = nameOrPlugin
+    # Chop out the factory.
+    args = args[:1] + args[2:]
+    return _endpointServerFactories[name](reactor, *args, **kw)
+
+
+
 def quoteStringArgument(argument):
     """
-    Quote an argument to L{serverFromString} and L{clientFromString}.  Since
-    arguments are separated with colons and colons are escaped with
-    backslashes, some care is necessary if, for example, you have a pathname,
-    you may be tempted to interpolate into a string like this::
+    Quote an argument to L{serverFromString}, L{datagramServerFromString} and
+    L{clientFromString}.  Since arguments are separated with colons and colons
+    are escaped with backslashes, some care is necessary if, for example, you
+    have a pathname, you may be tempted to interpolate into a string like
+    this::
 
         serverFromString("ssl:443:privateKey=%s" % (myPathName,))
 
