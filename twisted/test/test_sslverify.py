@@ -743,7 +743,8 @@ class OpenSSLOptions(unittest.TestCase):
         caSelfCert, serverCert = self._buildCAandServerCertificates()
         chainedCert = self.mktemp()
         with file(chainedCert, "wb") as f:
-            f.write(serverCert.dump(FILETYPE_PEM) + caSelfCert.dump(FILETYPE_PEM))
+            f.write(
+                serverCert.dump(FILETYPE_PEM) + caSelfCert.dump(FILETYPE_PEM))
         privateKey = self.mktemp()
         with file(privateKey, "wb") as f:
             f.write(serverCert.privateKey.dump(FILETYPE_PEM))
