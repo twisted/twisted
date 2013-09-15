@@ -39,20 +39,53 @@ from twisted.mail import smtp
 from twisted.application import internet
 
 class ManagedRelayerMixin:
-    """SMTP Relayer which notifies a manager
+    """
+    A mixin for managed relayers.
 
-    Notify the manager about successful mail, failed mail
-    and broken connections
+    The mixin provides functionality to notify an attempt manager about lost
+    connections and the results of attempts to send messages.
+
+    Use along with L{SMTPRelayer <relay.SMTPRelayer>} or L{ESMTPRelayer
+    <relay.ESMTPRelayer>}.
+
+    @ivar manager: See L{__init__}.
     """
 
     def __init__(self, manager):
+        """
+        @type manager: L{_AttemptManager}
+        @param manager: An attempt manager.
+        """
         self.manager = manager
 
     def sentMail(self, code, resp, numOk, addresses, log):
-        """called when e-mail has been sent
-
-        we will always get 0 or 1 addresses.
         """
+        Remove a message from the set of messages to be relayed and notify the
+        attempt manager that the attempt to send the message is complete.
+
+        If the attempt is successful, the message header and contents files
+        will be removed from the relay queue.  Otherwise, they will be left
+        there to be resent.
+
+        @type code: L{int}
+        @param code: The response code from the server.
+
+        @type resp: L{bytes}
+        @param resp: The response string from the server.
+
+        @type numOk: L{int}
+        @param numOk: The number of addresses accepted by the server.
+
+        @type addresses: L{list} of 3-L{tuple} of (E{1}) L{bytes},
+            (E{2}) L{int}, (E{3}) L{bytes}
+        @param addresses: The address, response code and response string from
+            the server for each destination address.  Since the message was
+            sent to just one address, the list will have just one entry.
+
+        @type log: L{LineLog <twisted.python.util.LineLog>}
+        @param log: A log of the SMTP transaction.
+        """
+        self.messages[0][2].close()
         message = self.names[0]
         if code in smtp.SUCCESS:
             self.manager.notifySuccess(self.factory, message)
@@ -62,10 +95,14 @@ class ManagedRelayerMixin:
         del self.names[0]
 
     def connectionLost(self, reason):
-        """called when connection is broken
-
-        notify manager we will try to send no more e-mail
         """
+        Notify the attempt manager that the connection has been lost.
+
+        @type reason: L{Failure}
+        @param reason: The reason the connection was lost.
+        """
+        if self.messages and self.messages[0][2]:
+            self.messages[0][2].close()
         self.manager.notifyDone(self.factory)
 
 class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):

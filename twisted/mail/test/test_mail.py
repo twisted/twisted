@@ -895,12 +895,14 @@ class RelayerTestCase(unittest.TestCase):
     def testMailFrom(self):
         for i in range(10):
             self.assertEqual(self.R.getMailFrom(), 'from-%d' % (i,))
+            self.R.getMailData()
             self.R.sentMail(250, None, None, None, None)
         self.assertEqual(self.R.getMailFrom(), None)
 
     def testMailTo(self):
         for i in range(10):
             self.assertEqual(self.R.getMailTo(), ['to-%d' % (i,)])
+            self.R.getMailData()
             self.R.sentMail(250, None, None, None, None)
         self.assertEqual(self.R.getMailTo(), None)
 
@@ -910,6 +912,155 @@ class RelayerTestCase(unittest.TestCase):
             self.assertEqual(self.R.getMailData().read(), name)
             self.R.sentMail(250, None, None, None, None)
         self.assertEqual(self.R.getMailData(), None)
+
+
+
+class RelayerMixinOpenFilesTestCase(unittest.TestCase):
+    """
+    Tests for the treatment of open files in the L{mail.relay.RelayerMixin}.
+
+    @type tmpdir: L{bytes}
+    @ivar tmpdir: The path to a temporary directory holding the message
+        files.
+
+    @type messageFiles: L{list} of L{bytes}
+    @ivar messageFiles: The base names of the message files.
+
+    @type relayer: L{TestRelayerMixin}
+    @ivar relayer: The relayer mixin under test.
+    """
+    class TestRelayerMixin(mail.relay.RelayerMixin):
+        """
+        L{mail.relay.relayerMixin} opens all files through its C{_openFile}
+        method.  By overwriting that function in this subclass, we can count
+        the number of files open at any time.
+
+        @type files: L{list} of L{file}
+        @ivar files: Files that have ever been opened by C{_openFile}
+        """
+        def __init__(self):
+            """
+            Initialize instance variables.
+            """
+            self.files = []
+
+
+        def _openFile(self, path):
+            """
+            Open a file and keep a copy of the file object.
+
+            @type path: L{bytes}
+            @param path: The path of a file to open.
+
+            @rtype: L{file}
+            @return: A file object.
+
+            @raise IOError: When the file cannot be opened.
+            """
+            fd = FilePath(path).open()
+            self.files.append(fd)
+            return fd
+
+
+        def numOpenFiles(self):
+            """
+            Return the number of files opened by C{_openFile} that are still
+            open.
+
+            @rtype: L{int}
+            @return: The number of files opened by C{_openFile} that are still
+                open.
+            """
+            return len(self.files) - sum([f.closed for f in self.files])
+
+
+    def setUp(self):
+        """
+        Create a set of message files in a temporary directory and a
+        RelayerMixin to test.
+        """
+        self.tmpdir = self.mktemp()
+        os.mkdir(self.tmpdir)
+        self.messageFiles = []
+        for i in range(10):
+            name = os.path.join(self.tmpdir, 'body-%d' % (i,))
+            f = file(name + '-H', 'w')
+            pickle.dump(['from-%d' % (i,), 'to-%d' % (i,)], f)
+            f.close()
+
+            f = file(name + '-D', 'w')
+            f.write(name)
+            f.seek(0, 0)
+            self.messageFiles.append(name)
+
+        self.relayer = self.TestRelayerMixin()
+
+
+    def tearDown(self):
+        """
+        Remove the temporary directory.
+        """
+        shutil.rmtree(self.tmpdir)
+
+
+    def test_loadMessages(self):
+        """
+        No files should be opened by loadMessage.
+        """
+        before = self.relayer.numOpenFiles()
+        self.relayer.loadMessages(self.messageFiles)
+        after = self.relayer.numOpenFiles()
+        self.assertEqual(before, after)
+
+
+    def test_getMailData(self):
+        """
+        One file should be opened by getMailData.
+        """
+        self.relayer.loadMessages(self.messageFiles)
+        before = self.relayer.numOpenFiles()
+        self.relayer.getMailData()
+        after = self.relayer.numOpenFiles()
+        self.assertEqual(before+1, after)
+
+
+    def test_sentMail(self):
+        """
+        One file should be closed by sentMail.
+        """
+        self.relayer.loadMessages(self.messageFiles)
+        self.relayer.getMailData()
+        before = self.relayer.numOpenFiles()
+        self.relayer.sentMail(250, None, None, None, None)
+        after = self.relayer.numOpenFiles()
+        self.assertEqual(before-1, after)
+
+
+    def test_connectionLostFile(self):
+        """
+        When the connection is lost while a file is open, the file should be
+        closed by connectionLost.
+        """
+        self.relayer.loadMessages(self.messageFiles)
+        self.relayer.getMailData()
+        before = self.relayer.numOpenFiles()
+        self.relayer.connectionLost(failure.Failure(Exception()))
+        after = self.relayer.numOpenFiles()
+        self.assertEqual(before-1, after)
+
+
+    def test_connectionLostClosedFile(self):
+        """
+        When the connection is lost while no file is open, no file should be
+        closed.
+        """
+        self.relayer.loadMessages(self.messageFiles)
+        before = self.relayer.numOpenFiles()
+        self.relayer.connectionLost(failure.Failure(Exception()))
+        after = self.relayer.numOpenFiles()
+        self.assertEqual(before, after)
+
+
 
 class Manager:
     def __init__(self):
@@ -926,18 +1077,116 @@ class Manager:
     def notifyDone(self, factory):
         self.done.append(factory)
 
+
+
 class ManagedRelayerTestCase(unittest.TestCase):
+    """
+    Tests for L{mail.relaymanager.SMTPManagedRelayer}.
+
+    @type tmpdir: L{bytes}
+    @ivar tmpdir: The path to a temporary directory holding the message
+        files.
+
+    @type message: L{list} of L{bytes}
+    @ivar message: The base names of the message files.
+
+    @type manager: L{Manager}
+    @ivar manager: A fake manager.
+
+    @type factory: L{object}
+    @ivar factory: A placeholder for an SMTPManagedRelayerFactory
+
+    @type relay: L{mail.relaymanager.SMTPManagedRelayer}
+    @ivar relay: The relayer under test.
+    """
+    class TestManagedRelayer(mail.relaymanager.SMTPManagedRelayer):
+        """
+        L{mail.relayerManager.SMTPManagedRelayer} is a subclass of both
+        L{mail.relay.RelayerMixin} and L{mail.relayamanger.ManagedRelayerMixin}
+        and opens all files through its C{_openFile} method.  By overwriting
+        that function in this subclass, we can count the number of files open
+        at any time.
+
+        @type files: L{list} of L{file}
+        @ivar files: Files that have ever been opened by C{_openFile}
+        """
+        def __init__(self, messages, manager, *args, **kw):
+            """
+            @type message: L{list} of L{bytes}
+            @param messages: The base filenames of messages to be relayed.
+
+            @type manager: L{Manager}
+            @param manager: A fake attempt manager.
+
+            @type args: 1-L{tuple} of (E{1}) L{bytes} or 2-L{tuple} of (
+                (E{1}) L{bytes}, (E{2}) L{int}
+            @param args: Positional arguments for L{SMTPClient.__init__}
+
+            @type kw: L{dict}
+            @param kw: Keyword arguments for L{SMTPClient.__init__}
+            """
+            self.files = []
+            mail.relaymanager.SMTPManagedRelayer.__init__(self, messages,
+                    manager, *args, **kw)
+
+
+        def _openFile(self, path):
+            """
+            Open a file and keep a copy of the file object.
+
+            @type path: L{bytes}
+            @param path: The path of a file to open.
+
+            @rtype: L{file}
+            @return: A file object.
+
+            @raise IOError: When the file cannot be opened.
+            """
+            fd = FilePath(path).open()
+            self.files.append(fd)
+            return fd
+
+
+        def numOpenFiles(self):
+            """
+            Return the number of files opened by C{_openFile} that are still
+            open.
+
+            @rtype: L{int}
+            @return: The number of files opened by C{_openFile} that are still
+                open.
+            """
+            return len(self.files) - sum([f.closed for f in self.files])
+
+
     def setUp(self):
+        """
+        Create a set of message files in a temporary directory and an
+        L{mail.relaymanager.SMTPManagedRelayer} to test.
+        """
+        self.tmpdir = self.mktemp()
+        os.mkdir(self.tmpdir)
+        self.messages = []
+        for i in range(10):
+            name = os.path.join(self.tmpdir, 'body-%d' % (i,))
+            f = file(name + '-H', 'w')
+            pickle.dump(['from-%d' % (i,), 'to-%d' % (i,)], f)
+            f.close()
+
+            f = file(name + '-D', 'w')
+            f.write(name)
+            f.seek(0, 0)
+            self.messages.append(name)
+
         self.manager = Manager()
-        self.messages = range(0, 20, 2)
         self.factory = object()
-        self.relay = mail.relaymanager.ManagedRelayerMixin(self.manager)
-        self.relay.messages = self.messages[:]
-        self.relay.names = self.messages[:]
+        self.relay = self.TestManagedRelayer(self.messages, self.manager,
+                ("me",))
         self.relay.factory = self.factory
 
     def testSuccessfulSentMail(self):
         for i in self.messages:
+            self.relay.getMailData()
             self.relay.sentMail(250, None, None, None, None)
 
         self.assertEqual(
@@ -947,6 +1196,7 @@ class ManagedRelayerTestCase(unittest.TestCase):
 
     def testFailedSentMail(self):
         for i in self.messages:
+            self.relay.getMailData()
             self.relay.sentMail(550, None, None, None, None)
 
         self.assertEqual(
@@ -957,6 +1207,42 @@ class ManagedRelayerTestCase(unittest.TestCase):
     def testConnectionLost(self):
         self.relay.connectionLost(failure.Failure(Exception()))
         self.assertEqual(self.manager.done, [self.factory])
+
+
+    def test_sentMailOpenFiles(self):
+        """
+        One file should be closed by sentMail.
+        """
+        self.relay.getMailData()
+        before = self.relay.numOpenFiles()
+        self.relay.sentMail(250, None, None, None, None)
+        after = self.relay.numOpenFiles()
+        self.assertEqual(before-1, after)
+
+
+    def test_connectionLostOpenFile(self):
+        """
+        When the connection is lost while a file is open, the file should be
+        close by connectionLost.
+        """
+        self.relay.getMailData()
+        before = self.relay.numOpenFiles()
+        self.relay.connectionLost(failure.Failure(Exception()))
+        after = self.relay.numOpenFiles()
+        self.assertEqual(before-1, after)
+
+
+    def test_connectionLostClosedFile(self):
+        """
+        When the connection is lost while no file is open, no file should be
+        closed.
+        """
+        before = self.relay.numOpenFiles()
+        self.relay.connectionLost(failure.Failure(Exception()))
+        after = self.relay.numOpenFiles()
+        self.assertEqual(before, after)
+
+
 
 class DirectoryQueueTestCase(unittest.TestCase):
     def setUp(self):

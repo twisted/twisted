@@ -9,8 +9,7 @@ Support for relaying mail for L{twisted.mail}.
 from twisted.mail import smtp
 from twisted.python import log
 from twisted.internet.address import UNIXAddress
-
-import os
+from twisted.python.filepath import FilePath
 
 try:
     import cPickle as pickle
@@ -74,51 +73,141 @@ class DomainQueuer:
 
 
 class RelayerMixin:
+    """
+    A mixin for relayers.
 
-    # XXX - This is -totally- bogus
-    # It opens about a -hundred- -billion- files
-    # and -leaves- them open!
+    @type messages: L{list} of 3-L{tuple} of (E{1}) L{bytes}, (E{2}) L{bytes},
+        (E{3}) L{NoneType <types.NoneType>} or L{file}
+    @ivar messages: The origination address, the destination address, and, when
+        open, the file containing the contents for each message to be relayed
+        by this relayer.
 
+    @type names: L{list} of L{bytes}
+    @ivar names: The base filenames of messages to be relayed by this relayer.
+    """
     def loadMessages(self, messagePaths):
+        """
+        Load information about messages to be relayed by this relayer.
+
+        @type messagePaths: L{list} of L{bytes}
+        @param messagePaths: The base filenames for messages to be relayed by
+            this relayer.
+        """
         self.messages = []
         self.names = []
         for message in messagePaths:
-            fp = open(message+'-H')
+            fp = self._openFile(message+'-H')
             try:
                 messageContents = pickle.load(fp)
             finally:
                 fp.close()
-            fp = open(message+'-D')
-            messageContents.append(fp)
+            messageContents.append(None)
             self.messages.append(messageContents)
             self.names.append(message)
     
     def getMailFrom(self):
+        """
+        Return the origination address of the next message to be relayed.
+
+        @rtype: L{bytes}
+        @return: The origination address of the next message to be relayed.
+        """
         if not self.messages:
             return None
         return self.messages[0][0]
 
     def getMailTo(self):
+        """
+        Return the destination address of the next message to be relayed.
+
+        @rtype: L{bytes}
+        @return: The destination address of the next message to be relayed.
+        """
         if not self.messages:
             return None
         return [self.messages[0][1]]
 
     def getMailData(self):
+        """
+        Return the file containing the contents of the next message to be
+        relayed.
+
+        @rtype: L{file}
+        @return: The file containing the contents of the next message to be
+            relayed.
+        """
         if not self.messages:
             return None
+        fp = self._openFile(self.names[0]+'-D')
+        self.messages[0][2] = fp
         return self.messages[0][2]
 
     def sentMail(self, code, resp, numOk, addresses, log):
-        """Since we only use one recipient per envelope, this
-        will be called with 0 or 1 addresses. We probably want
-        to do something with the error message if we failed.
         """
+        Remove a message from the set of messages to be relayed when the
+        attempt to send it is complete.
+
+        If the attempt is successful, the message header and contents files
+        will be removed from the relay queue.  Otherwise, they will be left
+        there to be resent.
+
+        @type code: L{int}
+        @param code: The response code from the server.
+
+        @type resp: L{bytes}
+        @param resp: The response string from the server.
+
+        @type numOk: L{int}
+        @param numOk: The number of addresses accepted by the server.
+
+        @type addresses: L{list} of 3-L{tuple} of (E{1}) L{bytes},
+            (E{2}) L{int}, (E{3}) L{bytes}
+        @param addresses: The address, response code and response string from
+            the server for each destination address.  Since the message was
+            sent to just one address, the list will have just one entry.
+
+        @type log: L{LineLog <twisted.python.util.LineLog>}
+        @param log: A log of the SMTP transaction.
+        """
+        # We probably want to do something with the error message if we failed.
+        self.messages[0][2].close()
         if code in smtp.SUCCESS:
             # At least one, i.e. all, recipients successfully delivered
-            os.remove(self.names[0]+'-D')
-            os.remove(self.names[0]+'-H')
+            FilePath(self.names[0]+'-D').remove()
+            FilePath(self.names[0]+'-H').remove()
         del self.messages[0]
         del self.names[0]
+
+
+    def connectionLost(self, reason):
+        """
+        Close any open files when the connection is lost.
+
+        @type reason: L{Failure <twisted.python.failure.Failure>}
+        @param reason: The reason the connection was terminated.
+        """
+        if self.messages and self.messages[0][2]:
+            self.messages[0][2].close()
+
+
+    def _openFile(self, path):
+        """
+        Open a file.
+
+        This function wraps opening files within the class for unit testing
+        purposes.
+
+        @type path: L{bytes}
+        @param path: The path of a file to open.
+
+        @rtype: L{file}
+        @return: A file object.
+
+        @raise IOError: When the file cannot be opened.
+        """
+        return FilePath(path).open()
+
+
 
 class SMTPRelayer(RelayerMixin, smtp.SMTPClient):
     def __init__(self, messagePaths, *args, **kw):
