@@ -696,14 +696,15 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_caCertsPlatformOther(self):
         """
-        Specifying a C{caCerts} of L{sslverify.CASources.PLATFORM} when
-        initializing C{OpenSSLCertificateOptions} raises
-        C{NotImplementedError} on non-Linux platforms, pending implementation
-        of this functionality in other tickets.
+        If L{OpenSSLCertificateOptions} is initialized with C{caCerts} set
+        to L{sslverify.CASources.PLATFORM}, a subsequent call to
+        L{OpenSSLCertificateOptions.getContext} will currently raise
+        C{NotImplementedError} on non-Linux platforms.
         """
-        self.assertRaises(NotImplementedError,
-                          sslverify.OpenSSLCertificateOptions,
-                          caCerts=sslverify.CASources.PLATFORM, verify=True)
+        opts = sslverify.OpenSSLCertificateOptions(
+            caCerts=sslverify.CASources.PLATFORM,
+            verify=True)
+        self.assertRaises(NotImplementedError, opts.getContext)
 
     if platform.isLinux():
         test_caCertsPlatformOther.skip = "Non-Linux test"
