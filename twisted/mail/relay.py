@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-Support for relaying mail for L{twisted.mail}.
+Support for relaying mail.
 """
 
 from twisted.mail import smtp
@@ -18,6 +18,7 @@ except ImportError:
     import pickle
 
 
+
 class DomainQueuer:
     """
     An SMTP domain which add messages to a queue intended for relaying.
@@ -30,11 +31,17 @@ class DomainQueuer:
 
     def exists(self, user):
         """
-        Check whether we will relay.
+        Check whether mail can be relayed to a user.
 
-        Calls overridable L{willRelay} method.
+        @type user: L{User}
+        @param user: A user.
 
-        @raise smtp.SMTPBadRcpt: Raised if the given C{user} will not relay.
+        @rtype: no-argument callable which returns L{IMessage <smtp.IMessage>}
+            provider
+        @return: A function which takes no arguments and returns a message
+            receiver for the user.
+
+        @raise SMTPBadRcpt: When mail cannot be relayed to the user.
         """
         if self.willRelay(user.dest, user.protocol):
             # The most cursor form of verification of the addresses
@@ -59,7 +66,13 @@ class DomainQueuer:
 
     def startMessage(self, user):
         """
-        Add envelope to queue and returns an SMTP message.
+        Create an envelope and a message receiver for the relay queue.
+
+        @type user: L{User}
+        @param user: A user.
+
+        @rtype: L{IMessage <smtp.IMessage>}
+        @return: A message receiver.
         """
         queue = self.service.queue
         envelopeFile, smtpMessage = queue.createNewMessage()
@@ -92,21 +105,25 @@ class RelayerMixin:
             messageContents.append(fp)
             self.messages.append(messageContents)
             self.names.append(message)
-    
+
+
     def getMailFrom(self):
         if not self.messages:
             return None
         return self.messages[0][0]
+
 
     def getMailTo(self):
         if not self.messages:
             return None
         return [self.messages[0][1]]
 
+
     def getMailData(self):
         if not self.messages:
             return None
         return self.messages[0][2]
+
 
     def sentMail(self, code, resp, numOk, addresses, log):
         """Since we only use one recipient per envelope, this
@@ -120,12 +137,49 @@ class RelayerMixin:
         del self.messages[0]
         del self.names[0]
 
+
+
 class SMTPRelayer(RelayerMixin, smtp.SMTPClient):
+    """
+    A base class for SMTP relayers.
+    """
     def __init__(self, messagePaths, *args, **kw):
+        """
+        @type messagePaths: L{list} of L{bytes}
+        @param messagePaths: The base filename for each message to be relayed.
+
+        @type args: 1-L{tuple} of (E{1}) L{bytes} or 2-L{tuple} of
+            (E{1}) L{bytes}, (E{2}) L{int}
+        @param args: Positional arguments for L{SMTPClient.__init__}
+
+        @type kw: L{dict}
+        @param kw: Keyword arguments for L{SMTPClient.__init__}
+        """
         smtp.SMTPClient.__init__(self, *args, **kw)
         self.loadMessages(messagePaths)
 
+
+
 class ESMTPRelayer(RelayerMixin, smtp.ESMTPClient):
+    """
+    A base class for ESMTP relayers.
+    """
     def __init__(self, messagePaths, *args, **kw):
+        """
+        @type messagePaths: L{list} of L{bytes}
+        @param messagePaths: The base filename for each message to be relayed.
+
+        @type args: 3-L{tuple} of (E{1}) L{bytes}, (E{2}) L{NoneType
+            <types.NoneType>} or L{ClientContextFactory
+            <twisted.internet.ssl.ClientContextFactory>}, (E{3}) L{bytes} or
+            4-L{tuple} of (E{1}) L{bytes}, (E{2}) L{NoneType <types.NoneType>}
+            or L{ClientContextFactory
+            <twisted.internet.ssl.ClientContextFactory>}, (E{3}) L{bytes},
+            (E{4}) L{int}
+        @param args: Positional arguments for L{ESMTPClient.__init__}
+
+        @type kw: L{dict}
+        @param kw: Keyword arguments for L{ESMTPClient.__init__}
+        """
         smtp.ESMTPClient.__init__(self, *args, **kw)
         self.loadMessages(messagePaths)
