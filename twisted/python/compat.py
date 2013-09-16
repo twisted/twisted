@@ -310,16 +310,7 @@ else:
 
 # Functions for dealing with Python 3's bytes type, which is somewhat
 # different than Python 2's:
-if _PY3:
-    def iterbytes(originalBytes):
-        for i in range(len(originalBytes)):
-            yield originalBytes[i:i+1]
-
-
-    def intToBytes(i):
-        return ("%d" % i).encode("ascii")
-
-
+if sys.platform.startswith('java') or _PY3:
     # Ideally we would use memoryview, but it has a number of differences from
     # the Python 2 buffer() that make that impractical
     # (http://bugs.python.org/issue15945, incompatiblity with pyOpenSSL due to
@@ -342,6 +333,18 @@ if _PY3:
             return object[offset:]
         else:
             return object[offset:(offset + size)]
+else:
+
+    lazyByteSlice = buffer
+
+if _PY3:
+    def iterbytes(originalBytes):
+        for i in range(len(originalBytes)):
+            yield originalBytes[i:i+1]
+
+
+    def intToBytes(i):
+        return ("%d" % i).encode("ascii")
 
 
     def networkString(s):
@@ -356,8 +359,6 @@ else:
     def intToBytes(i):
         return b"%d" % i
 
-
-    lazyByteSlice = buffer
 
     def networkString(s):
         if not isinstance(s, str):
