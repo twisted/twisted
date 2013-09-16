@@ -1292,7 +1292,7 @@ class _TCP6ServerParser(object):
 @implementer(IPlugin, IDatagramServerEndpointStringParser)
 class _UDPServerParser(object):
     """
-    Stream server endpoint string parser for the UDPServerEndpoint type.
+    Datagram server endpoint string parser for the UDPServerEndpoint type.
 
     @ivar prefix: See L{IDatagramServerEndpointStringParser.prefix}.
     """
@@ -1320,8 +1320,8 @@ class _UDPServerParser(object):
 
 
     def parseDatagramServer(self, reactor, *args, **kwargs):
-        # Redirects to another function (self._parseServer), tricks zope.interface
-        # into believing the interface is correctly implemented.
+        # Redirects to another function (self._parseServer), tricks
+        # zope.interface into believing the interface is correctly implemented.
         return self._parseServer(reactor, *args, **kwargs)
 
 

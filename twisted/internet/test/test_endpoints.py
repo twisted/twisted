@@ -377,14 +377,14 @@ class WrappingFactoryTests(unittest.TestCase):
 
 
 
-class ClientEndpointTestCaseMixin(object):
+class StreamClientEndpointTestCaseMixin(object):
     """
     Generic test methods to be mixed into all stream client endpoint test
     classes.
     """
-    def test_interface(self):
+    def test_clientInterface(self):
         """
-        The endpoint provides L{interfaces.IStreamClientEndpoint}
+        The endpoint provides L{interfaces.IStreamClientEndpoint}.
         """
         clientFactory = object()
         ep, ignoredArgs, address = self.createClientEndpoint(
@@ -520,22 +520,22 @@ class ClientEndpointTestCaseMixin(object):
 
 
 
-class ServerEndpointTestCaseMixin(object):
+class _ServerEndpointTestCaseMixin(object):
     """
-    Generic test methods to be mixed into all stream server endpoint test
-    classes.
+    Generic test methods to be mixed into all server endpoint test classes.
     """
-    expectedEndpointInterface = interfaces.IStreamServerEndpoint
+    expectedServerEndpointInterface = None
 
 
-    def test_interface(self):
+    def test_serverInterface(self):
         """
-        The endpoint provides L{interfaces.IStreamServerEndpoint}.
+        The endpoint provides the interfaces described by
+        L{_ServerEndpointTestCaseMixin.expectedServerEndpointInterface}.
         """
         factory = object()
         ep, ignoredArgs, ignoredDest = self.createServerEndpoint(
             MemoryReactor(), factory)
-        self.assertTrue(verifyObject(self.expectedEndpointInterface, ep))
+        self.assertTrue(verifyObject(self.expectedServerEndpointInterface, ep))
 
 
     def test_endpointListenSuccess(self):
@@ -608,17 +608,26 @@ class ServerEndpointTestCaseMixin(object):
 
 
 
-class DatagramServerEndpointTestCaseMixin(ServerEndpointTestCaseMixin):
+class StreamServerEndpointTestCaseMixin(_ServerEndpointTestCaseMixin):
+    """
+    Generic test methods to be mixed into all stream server endpoint test
+    classes.
+    """
+    expectedServerEndpointInterface = interfaces.IStreamServerEndpoint
+
+
+
+class DatagramServerEndpointTestCaseMixin(_ServerEndpointTestCaseMixin):
     """
     Generic test methods to be mixed into all datagram server endpoint test
     classes.
     """
-    expectedEndpointInterface = interfaces.IDatagramServerEndpoint
+    expectedServerEndpointInterface = interfaces.IDatagramServerEndpoint
 
 
 
-class EndpointTestCaseMixin(ServerEndpointTestCaseMixin,
-                            ClientEndpointTestCaseMixin):
+class StreamEndpointTestCaseMixin(StreamServerEndpointTestCaseMixin,
+                                  StreamClientEndpointTestCaseMixin):
     """
     Generic test methods to be mixed into all endpoint test classes.
     """
@@ -1107,7 +1116,7 @@ class WrappedIProtocolTests(unittest.TestCase):
 
 
 
-class TCP4EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
+class TCP4EndpointsTestCase(StreamEndpointTestCaseMixin, unittest.TestCase):
     """
     Tests for TCP IPv4 Endpoints.
     """
@@ -1215,7 +1224,7 @@ class TCP4EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
 
 
 
-class TCP6EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
+class TCP6EndpointsTestCase(StreamEndpointTestCaseMixin, unittest.TestCase):
     """
     Tests for TCP IPv6 Endpoints.
     """
@@ -1324,7 +1333,7 @@ class TCP6EndpointsTestCase(EndpointTestCaseMixin, unittest.TestCase):
 
 
 
-class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
+class TCP6EndpointNameResolutionTestCase(StreamClientEndpointTestCaseMixin,
                                          unittest.TestCase):
     """
     Tests for a TCP IPv6 Client Endpoint pointed at a hostname instead
@@ -1441,8 +1450,8 @@ class RaisingMemoryReactorWithClock(RaisingMemoryReactor, Clock):
 
 
 
-class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
-                                unittest.TestCase):
+class HostnameEndpointsOneIPv4TestCase(StreamClientEndpointTestCaseMixin,
+                                       unittest.TestCase):
     """
     Tests for the hostname based endpoints when GAI returns only one
     (IPv4) address.
@@ -1669,8 +1678,8 @@ class HostnameEndpointsOneIPv4TestCase(ClientEndpointTestCaseMixin,
 
 
 
-class HostnameEndpointsOneIPv6TestCase(ClientEndpointTestCaseMixin,
-                                unittest.TestCase):
+class HostnameEndpointsOneIPv6TestCase(StreamClientEndpointTestCaseMixin,
+                                       unittest.TestCase):
     """
     Tests for the hostname based endpoints when GAI returns only one
     (IPv6) address.
@@ -1950,8 +1959,7 @@ class HostnameEndpointsFasterConnectionTestCase(unittest.TestCase):
 
 
 
-class SSL4EndpointsTestCase(EndpointTestCaseMixin,
-                            unittest.TestCase):
+class SSL4EndpointsTestCase(StreamEndpointTestCaseMixin, unittest.TestCase):
     """
     Tests for SSL Endpoints.
     """
@@ -2085,18 +2093,18 @@ class SSL4EndpointsTestCase(EndpointTestCaseMixin,
 
 
 
-class UNIXEndpointsTestCase(EndpointTestCaseMixin,
-                            unittest.TestCase):
+class UNIXEndpointsTestCase(StreamEndpointTestCaseMixin, unittest.TestCase):
     """
     Tests for UnixSocket Endpoints.
     """
 
     def retrieveConnectedFactory(self, reactor):
         """
-        Override L{EndpointTestCaseMixin.retrieveConnectedFactory} to account
-        for different index of 'factory' in C{connectUNIX} args.
+        Override L{StreamEndpointTestCaseMixin.retrieveConnectedFactory} to
+        account for different index of 'factory' in C{connectUNIX} args.
         """
         return self.expectedClients(reactor)[0][1]
+
 
     def expectedServers(self, reactor):
         """
@@ -2879,7 +2887,7 @@ class SSLClientStringTests(unittest.TestCase):
 
 
 
-class AdoptedStreamServerEndpointTestCase(ServerEndpointTestCaseMixin,
+class AdoptedStreamServerEndpointTestCase(StreamServerEndpointTestCaseMixin,
                                           unittest.TestCase):
     """
     Tests for adopted socket-based stream server endpoints.
@@ -3182,7 +3190,7 @@ class StandardIOEndpointPluginTests(unittest.TestCase):
 
 class UDPEndpointPluginTests(unittest.TestCase):
     """
-    Unit tests for the UDP stream server endpoint string description parser.
+    Unit tests for the UDP datagram server endpoint string description parser.
     """
     _parserClass = endpoints._UDPServerParser
 
@@ -3209,16 +3217,6 @@ class UDPEndpointPluginTests(unittest.TestCase):
         parser = self._parserClass()
         self.assertTrue(verifyObject(
             interfaces.IDatagramServerEndpointStringParser, parser))
-
-
-    def test_notStreamServer(self):
-        """
-        L{serverFromString} is for stream servers and fails to recognize
-        C{'udp'} as an acceptable endpoint type.
-        """
-        exc = self.assertRaises(
-            ValueError, endpoints.serverFromString, MemoryReactor(), "udp:8080")
-        self.assertEqual("Unknown endpoint type: 'udp'", str(exc))
 
 
     def test_stringDescription(self):
