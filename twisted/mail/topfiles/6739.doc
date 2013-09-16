@@ -1,1 +1,1 @@
-twisted.mail.relay now has full API documentation.
+twisted.mail.relay and twisted.mail.relaymanager now have full API documentation.
