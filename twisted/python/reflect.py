@@ -23,8 +23,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-from twisted.python.compat import _PY3
-from twisted.python.deprecate import deprecated
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.versions import Version
 
@@ -36,6 +35,246 @@ from twisted.python._reflectpy3 import InvalidName, ModuleNotFound
 from twisted.python._reflectpy3 import ObjectNotFound, namedAny
 from twisted.python._reflectpy3 import filenameToModuleName
 from twisted.python._reflectpy3 import qual, safe_str, safe_repr
+
+class Settable:
+    """
+    A mixin class for syntactic sugar.  Lets you assign attributes by
+    calling with keyword arguments; for example, C{x(a=b,c=d,y=z)} is the
+    same as C{x.a=b;x.c=d;x.y=z}.  The most useful place for this is
+    where you don't want to name a variable, but you do want to set
+    some attributes; for example, C{X()(y=z,a=b)}.
+    """
+
+    deprecatedModuleAttribute(
+        Version("Twisted", 12, 1, 0),
+        "Settable is old and untested. Please write your own version of this "
+        "functionality if you need it.", "twisted.python.reflect", "Settable")
+
+    def __init__(self, **kw):
+        self(**kw)
+
+    def __call__(self,**kw):
+        for key,val in kw.items():
+            setattr(self,key,val)
+        return self
+
+
+class AccessorType(type):
+    """
+    Metaclass that generates properties automatically.
+
+    This is for Python 2.2 and up.
+
+    Using this metaclass for your class will give you explicit accessor
+    methods; a method called set_foo, will automatically create a property
+    'foo' that uses set_foo as a setter method. Same for get_foo and del_foo.
+
+    Note that this will only work on methods that are present on class
+    creation. If you add methods after the class is defined they will not
+    automatically become properties. Likewise, class attributes will only
+    be used if they are present upon class creation, and no getter function
+    was set - if a getter is present, the class attribute will be ignored.
+
+    This is a 2.2-only alternative to the Accessor mixin - just set in your
+    class definition::
+
+        __metaclass__ = AccessorType
+
+    """
+
+    deprecatedModuleAttribute(
+        Version("Twisted", 12, 1, 0),
+        "AccessorType is old and untested. Please write your own version of "
+        "this functionality if you need it.", "twisted.python.reflect",
+        "AccessorType")
+
+    def __init__(self, name, bases, d):
+        type.__init__(self, name, bases, d)
+        accessors = {}
+        prefixs = ["get_", "set_", "del_"]
+        for k in d.keys():
+            v = getattr(self, k)
+            for i in range(3):
+                if k.startswith(prefixs[i]):
+                    accessors.setdefault(k[4:], [None, None, None])[i] = v
+        for name, (getter, setter, deler) in accessors.items():
+            # create default behaviours for the property - if we leave
+            # the getter as None we won't be able to getattr, etc..
+            if getter is None:
+                if hasattr(self, name):
+                    value = getattr(self, name)
+                    def getter(this, value=value, name=name):
+                        if name in this.__dict__:
+                            return this.__dict__[name]
+                        else:
+                            return value
+                else:
+                    def getter(this, name=name):
+                        if name in this.__dict__:
+                            return this.__dict__[name]
+                        else:
+                            raise AttributeError("no such attribute %r" % name)
+            if setter is None:
+                def setter(this, value, name=name):
+                    this.__dict__[name] = value
+            if deler is None:
+                def deler(this, name=name):
+                    del this.__dict__[name]
+            setattr(self, name, property(getter, setter, deler, ""))
+
+
+class PropertyAccessor(object):
+    """
+    A mixin class for Python 2.2 that uses AccessorType.
+
+    This provides compatability with the pre-2.2 Accessor mixin, up
+    to a point.
+
+    Extending this class will give you explicit accessor methods; a
+    method called set_foo, for example, is the same as an if statement
+    in __setattr__ looking for 'foo'.  Same for get_foo and del_foo.
+
+    There are also reallyDel and reallySet methods, so you can
+    override specifics in subclasses without clobbering __setattr__
+    and __getattr__, or using non-2.1 compatible code.
+
+    There is are incompatibilities with Accessor - accessor
+    methods added after class creation will *not* be detected. OTOH,
+    this method is probably way faster.
+
+    In addition, class attributes will only be used if no getter
+    was defined, and instance attributes will not override getter methods
+    whereas in original Accessor the class attribute or instance attribute
+    would override the getter method.
+    """
+    # addendum to above:
+    # The behaviour of Accessor is wrong IMHO, and I've found bugs
+    # caused by it.
+    #  -- itamar
+
+    deprecatedModuleAttribute(
+        Version("Twisted", 12, 1, 0),
+        "PropertyAccessor is old and untested. Please write your own version "
+        "of this functionality if you need it.", "twisted.python.reflect",
+        "PropertyAccessor")
+    __metaclass__ = AccessorType
+
+    def reallySet(self, k, v):
+        self.__dict__[k] = v
+
+    def reallyDel(self, k):
+        del self.__dict__[k]
+
+
+class Accessor:
+    """
+    Extending this class will give you explicit accessor methods; a
+    method called C{set_foo}, for example, is the same as an if statement
+    in L{__setattr__} looking for C{'foo'}.  Same for C{get_foo} and
+    C{del_foo}.  There are also L{reallyDel} and L{reallySet} methods,
+    so you can override specifics in subclasses without clobbering
+    L{__setattr__} and L{__getattr__}.
+
+    This implementation is for Python 2.1.
+    """
+
+    deprecatedModuleAttribute(
+        Version("Twisted", 12, 1, 0),
+        "Accessor is an implementation for Python 2.1 which is no longer "
+        "supported by Twisted.", "twisted.python.reflect", "Accessor")
+
+    def __setattr__(self, k,v):
+        kstring='set_%s'%k
+        if hasattr(self.__class__,kstring):
+            return getattr(self,kstring)(v)
+        else:
+            self.reallySet(k,v)
+
+    def __getattr__(self, k):
+        kstring='get_%s'%k
+        if hasattr(self.__class__,kstring):
+            return getattr(self,kstring)()
+        raise AttributeError("%s instance has no accessor for: %s" % (qual(self.__class__),k))
+
+    def __delattr__(self, k):
+        kstring='del_%s'%k
+        if hasattr(self.__class__,kstring):
+            getattr(self,kstring)()
+            return
+        self.reallyDel(k)
+
+    def reallySet(self, k,v):
+        """
+        *actually* set self.k to v without incurring side-effects.
+        This is a hook to be overridden by subclasses.
+        """
+        if k == "__dict__":
+            self.__dict__.clear()
+            self.__dict__.update(v)
+        else:
+            self.__dict__[k]=v
+
+    def reallyDel(self, k):
+        """
+        *actually* del self.k without incurring side-effects.  This is a
+        hook to be overridden by subclasses.
+        """
+        del self.__dict__[k]
+
+# just in case
+OriginalAccessor = Accessor
+deprecatedModuleAttribute(
+    Version("Twisted", 12, 1, 0),
+    "OriginalAccessor is a reference to class twisted.python.reflect.Accessor "
+    "which is deprecated.", "twisted.python.reflect", "OriginalAccessor")
+
+
+class Summer(Accessor):
+    """
+    Extend from this class to get the capability to maintain 'related
+    sums'.  Have a tuple in your class like the following::
+
+        sums=(('amount','credit','credit_total'),
+              ('amount','debit','debit_total'))
+
+    and the 'credit_total' member of the 'credit' member of self will
+    always be incremented when the 'amount' member of self is
+    incremented, similiarly for the debit versions.
+    """
+
+    deprecatedModuleAttribute(
+        Version("Twisted", 12, 1, 0),
+        "Summer is a child class of twisted.python.reflect.Accessor which is " 
+        "deprecated.", "twisted.python.reflect", "Summer")
+
+    def reallySet(self, k,v):
+        "This method does the work."
+        for sum in self.sums:
+            attr=sum[0]
+            obj=sum[1]
+            objattr=sum[2]
+            if k == attr:
+                try:
+                    oldval=getattr(self, attr)
+                except:
+                    oldval=0
+                diff=v-oldval
+                if hasattr(self, obj):
+                    ob=getattr(self,obj)
+                    if ob is not None:
+                        try:oldobjval=getattr(ob, objattr)
+                        except:oldobjval=0.0
+                        setattr(ob,objattr,oldobjval+diff)
+
+            elif k == obj:
+                if hasattr(self, attr):
+                    x=getattr(self,attr)
+                    setattr(self,attr,0)
+                    y=getattr(self,k)
+                    Accessor.reallySet(self,k,v)
+                    setattr(self,attr,x)
+                    Accessor.reallySet(self,y,v)
+        Accessor.reallySet(self,k,v)
 
 
 class QueueMethod:
@@ -131,36 +370,28 @@ def isinst(inst,clazz):
 
 ## the following were factored out of usage
 
-if not _PY3:
-    # These functions are still imported by libraries used in turn by the
-    # Twisted unit tests, like Nevow 0.10. Since they are deprecated,
-    # there's no need to port them to Python 3 (hence the condition above).
-    # https://bazaar.launchpad.net/~divmod-dev/divmod.org/trunk/revision/2716
-    # removed the dependency in Nevow. Once that is released, these functions
-    # can be safely removed from Twisted.
-
-    @deprecated(Version("Twisted", 11, 0, 0), "inspect.getmro")
-    def allYourBase(classObj, baseClass=None):
-        """
-        allYourBase(classObj, baseClass=None) -> list of all base
-        classes that are subclasses of baseClass, unless it is None,
-        in which case all bases will be added.
-        """
-        l = []
-        _accumulateBases(classObj, l, baseClass)
-        return l
+@deprecated(Version("Twisted", 11, 0, 0), "inspect.getmro")
+def allYourBase(classObj, baseClass=None):
+    """
+    allYourBase(classObj, baseClass=None) -> list of all base
+    classes that are subclasses of baseClass, unless it is None,
+    in which case all bases will be added.
+    """
+    l = []
+    _accumulateBases(classObj, l, baseClass)
+    return l
 
 
-    @deprecated(Version("Twisted", 11, 0, 0), "inspect.getmro")
-    def accumulateBases(classObj, l, baseClass=None):
-        _accumulateBases(classObj, l, baseClass)
+@deprecated(Version("Twisted", 11, 0, 0), "inspect.getmro")
+def accumulateBases(classObj, l, baseClass=None):
+    _accumulateBases(classObj, l, baseClass)
 
 
-    def _accumulateBases(classObj, l, baseClass=None):
-        for base in classObj.__bases__:
-            if baseClass is None or issubclass(base, baseClass):
-                l.append(base)
-            _accumulateBases(base, l, baseClass)
+def _accumulateBases(classObj, l, baseClass=None):
+    for base in classObj.__bases__:
+        if baseClass is None or issubclass(base, baseClass):
+            l.append(base)
+        _accumulateBases(base, l, baseClass)
 
 
 def accumulateClassDict(classObj, attr, adict, baseClass=None):
@@ -288,7 +519,8 @@ __all__ = [
 
     'ISNT', 'WAS', 'IS',
 
-    'QueueMethod',
+    'Settable', 'AccessorType', 'PropertyAccessor', 'Accessor', 'Summer',
+    'QueueMethod', 'OriginalAccessor',
 
     'funcinfo', 'fullFuncName', 'qual', 'getcurrent', 'getClass', 'isinst',
     'namedModule', 'namedObject', 'namedClass', 'namedAny',
