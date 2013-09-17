@@ -132,12 +132,12 @@ def isinst(inst,clazz):
 ## the following were factored out of usage
 
 if not _PY3:
-    # These functions are still imported by libraries used in turn by Twisted,
-    # like Nevow 0.10. Since they are deprecated, there's no need to port them
-    # to Python 3 (hence the condition above).
-    # https://code.launchpad.net/~multani/divmod.org/remove-deprecated-twisted.python.reflect
-    # removes the dependency in Nevow. Once this gets merged and released, these
-    # functions can be safely removed from Twisted.
+    # These functions are still imported by libraries used in turn by the
+    # Twisted unit tests, like Nevow 0.10. Since they are deprecated,
+    # there's no need to port them to Python 3 (hence the condition above).
+    # https://bazaar.launchpad.net/~divmod-dev/divmod.org/trunk/revision/2716
+    # removed the dependency in Nevow. Once this released, these functions can
+    # be safely removed from Twisted.
 
     @deprecated(Version("Twisted", 11, 0, 0), "inspect.getmro")
     def allYourBase(classObj, baseClass=None):
@@ -292,7 +292,7 @@ __all__ = [
 
     'funcinfo', 'fullFuncName', 'qual', 'getcurrent', 'getClass', 'isinst',
     'namedModule', 'namedObject', 'namedClass', 'namedAny',
-    'safe_repr', 'safe_str',
+    'safe_repr', 'safe_str', 'allYourBase', 'accumulateBases',
     'prefixedMethodNames', 'addMethodNamesToDict', 'prefixedMethods',
     'accumulateMethods',
     'accumulateClassDict', 'accumulateClassList', 'isSame', 'isLike',
