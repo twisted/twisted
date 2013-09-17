@@ -57,7 +57,7 @@ def run(args=None):
 
     @param args: List of strings representing the C{tap2deb} configuration
         options.
-    @type args: C{list}
+    @type args: L{list}
     """
     try:
         config = MyOptions()
@@ -209,11 +209,6 @@ Description: %(description)s
  %(longDescription)s
 ''' % vars())
 
-    debianDir.child('compat').setContent(
-    '''\
-7
-''' % vars())
-
     debianDir.child('copyright').setContent(
     '''\
 This package was auto-debianized by %(maintainer)s on
@@ -294,7 +289,6 @@ binary: binary-indep binary-arch
 ''' % vars())
 
     debianDir.child('rules').chmod(0755)
-    os.chdir(buildDir.path)
 
     args = ["dpkg-buildpackage", "-rfakeroot"]
     if config['unsigned']:
@@ -302,6 +296,6 @@ binary: binary-indep binary-arch
 
     # Build deb
     job = subprocess.Popen(args, stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
+                           stderr=subprocess.STDOUT, cwd=buildDir.path)
     stdout, _ = job.communicate()
 

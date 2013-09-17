@@ -5,11 +5,8 @@
 Tests for L{twisted.scripts.tap2deb}.
 """
 
-import os
-
 from twisted.scripts import tap2deb
-from twisted.python import usage
-from twisted.python import procutils
+from twisted.python import usage, procutils
 from twisted.python.filepath import FilePath
 
 from twisted.trial.unittest import TestCase, SkipTest
@@ -70,30 +67,28 @@ class TestTap2DEB(TestCase):
 
         baseDir = FilePath(self.mktemp())
         baseDir.makedirs()
-        self.addCleanup(os.chdir, os.getcwd())
-        os.chdir(baseDir.path)
 
         # Make a temporary .tap file
         version = '1.0'
         tapName = 'lemon'
         tapFile = baseDir.child("%s.tap" % (tapName,))
         tapFile.setContent("# Dummy .tap file")
-        buildDir = baseDir.child('.build')
-        inputDir = buildDir.child('twisted-%s-%s' % (tapName, version))
-        inputName = 'twisted-%s_%s' % (tapName, version)
+
+        buildDir = FilePath('.build')
+        outputDir = buildDir.child('twisted-%s-%s' % (tapName, version))
 
         # Run
         args = ["--tapfile", tapFile.path, "--maintainer", self.maintainer]
         tap2deb.run(args)
 
         # Verify input files were created
-        self.assertEqual(sorted(inputDir.listdir()),
+        self.assertEqual(sorted(outputDir.listdir()),
             ['build-stamp', 'debian', 'install-stamp', 'lemon.tap'])
 
-        debianDir = inputDir.child('debian')
+        debianDir = outputDir.child('debian')
         for name in ['README.Debian', 'conffiles', 'default', 'init.d',
                      'postinst', 'prerm', 'postrm', 'changelog', 'control',
-                     'compat', 'copyright', 'dirs', 'rules']:
+                     'copyright', 'dirs', 'rules']:
             self.assertTrue(debianDir.child(name).exists())
 
         # Verify 4 output files were created
