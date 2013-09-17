@@ -37,8 +37,8 @@ class _Constant(object):
 
     def __repr__(self):
         """
-        Return text identifying both which constant this is and which
-        collection it belongs to.
+        Return text identifying both which constant this is and which collection
+        it belongs to.
         """
         return "<%s=%s>" % (self._container.__name__, self.name)
 
@@ -62,8 +62,8 @@ class _Constant(object):
 
 class _ConstantsContainerType(type):
     """
-    L{_ConstantsContainerType} is a metaclass for creating constants
-    container classes.
+    L{_ConstantsContainerType} is a metaclass for creating constants container
+    classes.
     """
     def __new__(self, name, bases, attributes):
         """
@@ -104,10 +104,9 @@ class _ConstantsContainerType(type):
             descriptor._realize(cls, enumerant, value)
             enumerants[enumerant] = descriptor
 
-        # Save the dictionary which contains *only* constants
-        # (distinct from any other attributes the application may have
-        # given the container) where the class can use it later (eg
-        # for lookupByName).
+        # Save the dictionary which contains *only* constants (distinct from any
+        # other attributes the application may have given the container) where
+        # the class can use it later (eg for lookupByName).
         cls._enumerants = enumerants
 
         return cls
@@ -158,8 +157,8 @@ class _ConstantsContainer(object):
         Retrieve a constant by its name or raise a C{ValueError} if there is no
         constant associated with that name.
 
-        @param name: A C{str} giving the name of one of the constants
-            defined by C{cls}.
+        @param name: A C{str} giving the name of one of the constants defined by
+            C{cls}.
 
         @raise ValueError: If C{name} is not the name of one of the constants
             defined by C{cls}.
@@ -237,8 +236,8 @@ class Values(_ConstantsContainer):
     @classmethod
     def lookupByValue(cls, value):
         """
-        Retrieve a constant by its value or raise a C{ValueError} if there
-        is no constant associated with that value.
+        Retrieve a constant by its value or raise a C{ValueError} if there is no
+        constant associated with that value.
 
         @param value: The value of one of the constants defined by C{cls}.
 
@@ -299,11 +298,10 @@ class FlagConstant(_Constant):
         @param container: The L{Flags} subclass this constant is part of.
 
         @param names: When a single-flag value is being initialized, a C{str}
-            giving the name of that flag.  This is the case which happens when
-            a L{Flags} subclass is being initialized and L{FlagConstant}
-            instances from its body are being realized.  Otherwise, a C{set} of
-            C{str} giving names of all the flags set on this L{FlagConstant}
-            instance.
+            giving the name of that flag.  This is the case which happens when a
+            L{Flags} subclass is being initialized and L{FlagConstant} instances
+            from its body are being realized.  Otherwise, a C{set} of C{str}
+            giving names of all the flags set on this L{FlagConstant} instance.
             This is the case when two flags are combined using C{|}, for
             example.
         """
