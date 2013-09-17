@@ -112,6 +112,7 @@ class _ConstantsContainerType(type):
         return cls
 
 
+
 class _ConstantsContainer(object):
     """
     L{_ConstantsContainer} is a class with attributes used as symbolic
@@ -144,6 +145,9 @@ class _ConstantsContainer(object):
         Construct the value for a new constant to add to this container.
 
         @param name: The name of the constant to create.
+
+        @param descriptor: An instance of a L{_Constant} subclass (eg
+            L{NamedConstant}) which is assigned to C{name}.
 
         @return: L{NamedConstant} instances have no value apart from identity,
             so return a meaningless dummy value.
@@ -184,7 +188,7 @@ class _ConstantsContainer(object):
         return iter(
             sorted(constants, key=lambda descriptor: descriptor._index))
 
-# An way to set __metaclass__, for compatibility with python2 and python3
+# An alternative to __metaclass__ which is compatible with python2 and python3
 # See http://mikewatkins.ca/2008/11/29/python-2-and-3-metaclasses/
 _ConstantsContainer = _ConstantsContainerType(
     '_ConstantsContainer', (_ConstantsContainer, ), {})
@@ -398,6 +402,16 @@ class Flags(Values):
         """
         For L{FlagConstant} instances with no explicitly defined value, assign
         the next power of two as its value.
+
+        @param name: The name of the constant to create.
+
+        @param descriptor: An instance of a L{FlagConstant} which is
+            assigned to C{name}.
+
+        @return: Either the value passed to the C{descriptor}
+            constructor, or the next power of 2 value which will be
+            assigned to C{descriptor}, relative to the value of the
+            last defined L{FlagConstant}.
         """
         if descriptor.value is _unspecified:
             value = cls._value
