@@ -6,7 +6,6 @@ Test cases for the L{twisted.python.reflect} module.
 """
 
 import weakref
-import warnings
 from collections import deque
 
 try:
@@ -16,7 +15,6 @@ except ImportError:
 
 from twisted.trial import unittest
 from twisted.python import reflect
-from twisted.python.versions import Version
 from twisted.python.test.test_reflectpy3 import LookupsTestCase
 
 

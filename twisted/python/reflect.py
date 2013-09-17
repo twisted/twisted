@@ -136,8 +136,8 @@ if not _PY3:
     # Twisted unit tests, like Nevow 0.10. Since they are deprecated,
     # there's no need to port them to Python 3 (hence the condition above).
     # https://bazaar.launchpad.net/~divmod-dev/divmod.org/trunk/revision/2716
-    # removed the dependency in Nevow. Once this released, these functions can
-    # be safely removed from Twisted.
+    # removed the dependency in Nevow. Once that is released, these functions
+    # can be safely removed from Twisted.
 
     @deprecated(Version("Twisted", 11, 0, 0), "inspect.getmro")
     def allYourBase(classObj, baseClass=None):
