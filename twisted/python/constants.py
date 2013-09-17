@@ -379,6 +379,7 @@ class FlagConstant(_Constant):
         @return: C{False} if this flag's value is 0, else C{True}.
         """
         return bool(self.value)
+    __bool__ = __nonzero__
 
 
 
