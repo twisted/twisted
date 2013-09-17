@@ -15,6 +15,7 @@ except ImportError:
 
 from twisted.trial import unittest
 from twisted.python import reflect
+from twisted.python.versions import Version
 from twisted.python.test.test_reflectpy3 import LookupsTestCase
 
 
