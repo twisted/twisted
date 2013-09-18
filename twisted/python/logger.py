@@ -41,7 +41,6 @@ __all__ = [
     "Logger",
     "LegacyLogger",
     "ILogObserver",
-    "ILegacyLogObserver",
     "LogPublisher",
     "PredicateResult",
     "ILogFilterPredicate",
@@ -63,7 +62,6 @@ from twisted.python.failure import Failure
 from twisted.python.reflect import safe_str, safe_repr
 import twisted.python.log
 from twisted.python.log import msg as twistedLogMessage
-from twisted.python.log import ILogObserver as ILegacyLogObserver
 
 OBSERVER_REMOVED = (
     "Temporarily removing observer {observer} due to exception: {e}"
@@ -698,13 +696,13 @@ class LogLevelFilterPredicate(object):
 @implementer(ILogObserver)
 class LegacyLogObserver(object):
     """
-    L{ILogObserver} that wraps an L{ILegacyLogObserver}.
+    L{ILogObserver} that wraps an L{twisted.python.log.ILogObserver}.
     """
 
     def __init__(self, legacyObserver):
         """
-        @param legacyObserver: an L{ILegacyLogObserver} to which this
-            observer will forward events.
+        @param legacyObserver: an L{twisted.python.log.ILogObserver} to which
+            this observer will forward events.
         """
         self.legacyObserver = legacyObserver
 
