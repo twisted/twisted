@@ -6,7 +6,6 @@ Test cases for the L{twisted.python.reflect} module.
 """
 
 import weakref
-import warnings
 from collections import deque
 
 try:
@@ -18,134 +17,6 @@ from twisted.trial import unittest
 from twisted.python import reflect
 from twisted.python.versions import Version
 from twisted.python.test.test_reflectpy3 import LookupsTestCase
-
-with warnings.catch_warnings():
-    warnings.filterwarnings(action="ignore", category=DeprecationWarning,
-            message="twisted.python.reflect.Accessor was deprecated")
-    warnings.filterwarnings(action="ignore", category=DeprecationWarning,
-            message="twisted.python.reflect.PropertyAccessor was deprecated")
-    warnings.filterwarnings(action="ignore", category=DeprecationWarning,
-            message="twisted.python.reflect.Settable was deprecated")
-
-    from twisted.python.reflect import Accessor, PropertyAccessor, Settable
-
-
-class SettableTest(unittest.TestCase):
-    def setUp(self):
-        self.setter = Settable()
-
-    def tearDown(self):
-        del self.setter
-
-    def testSet(self):
-        self.setter(a=1, b=2)
-        self.assertEqual(self.setter.a, 1)
-        self.assertEqual(self.setter.b, 2)
-
-
-
-class AccessorTester(Accessor):
-
-    def set_x(self, x):
-        self.y = x
-        self.reallySet('x', x)
-
-
-    def get_z(self):
-        self.q = 1
-        return 1
-
-
-    def del_z(self):
-        self.reallyDel("q")
-
-
-
-class PropertyAccessorTester(PropertyAccessor):
-    """
-    Test class to check L{reflect.PropertyAccessor} functionalities.
-    """
-    r = 0
-
-    def set_r(self, r):
-        self.s = r
-
-
-    def set_x(self, x):
-        self.y = x
-        self.reallySet('x', x)
-
-
-    def get_z(self):
-        self.q = 1
-        return 1
-
-
-    def del_z(self):
-        self.reallyDel("q")
-
-
-
-class AccessorTest(unittest.TestCase):
-    def setUp(self):
-        self.tester = AccessorTester()
-
-    def testSet(self):
-        self.tester.x = 1
-        self.assertEqual(self.tester.x, 1)
-        self.assertEqual(self.tester.y, 1)
-
-    def testGet(self):
-        self.assertEqual(self.tester.z, 1)
-        self.assertEqual(self.tester.q, 1)
-
-    def testDel(self):
-        self.tester.z
-        self.assertEqual(self.tester.q, 1)
-        del self.tester.z
-        self.assertEqual(hasattr(self.tester, "q"), 0)
-        self.tester.x = 1
-        del self.tester.x
-        self.assertEqual(hasattr(self.tester, "x"), 0)
-
-
-
-class PropertyAccessorTest(AccessorTest):
-    """
-    Tests for L{reflect.PropertyAccessor}, using L{PropertyAccessorTester}.
-    """
-
-    def setUp(self):
-        self.tester = PropertyAccessorTester()
-
-
-    def test_setWithDefaultValue(self):
-        """
-        If an attribute is present in the class, it can be retrieved by
-        default.
-        """
-        self.assertEqual(self.tester.r, 0)
-        self.tester.r = 1
-        self.assertEqual(self.tester.r, 0)
-        self.assertEqual(self.tester.s, 1)
-
-
-    def test_getValueInDict(self):
-        """
-        The attribute value can be overriden by directly modifying the value in
-        C{__dict__}.
-        """
-        self.tester.__dict__["r"] = 10
-        self.assertEqual(self.tester.r, 10)
-
-
-    def test_notYetInDict(self):
-        """
-        If a getter is defined on an attribute but without any default value,
-        it raises C{AttributeError} when trying to access it.
-        """
-        self.assertRaises(AttributeError, getattr, self.tester, "x")
-
 
 
 class ImportHooksLookupTests(unittest.TestCase, LookupsTestCase):
@@ -309,7 +180,6 @@ class GetClass(unittest.TestCase):
         self.assertEqual(reflect.getClass(new).__name__, 'NewClass')
 
 
-
 class DeprecationTestCase(unittest.TestCase):
     """
     Test deprecations in twisted.python.reflect
@@ -332,94 +202,3 @@ class DeprecationTestCase(unittest.TestCase):
         self.callDeprecated(
             (Version("Twisted", 11, 0, 0), "inspect.getmro"),
             reflect.accumulateBases, DeprecationTestCase, l, None)
-
-
-    def lookForDeprecationWarning(self, testMethod, attributeName, warningMsg):
-        """
-        Test deprecation of attribute 'reflect.attributeName' by calling
-        'reflect.testMethod' and verifying the warning message
-        'reflect.warningMsg'
-
-        @param testMethod: Name of the offending function to be used with
-            flushWarnings
-        @type testmethod: C{str}
-
-        @param attributeName: Name of attribute to be checked for deprecation
-        @type attributeName: C{str}
-
-        @param warningMsg: Deprecation warning message
-        @type warningMsg: C{str}
-        """
-        warningsShown = self.flushWarnings([testMethod])
-        self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warningsShown[0]['message'],
-            "twisted.python.reflect." + attributeName + " "
-            "was deprecated in Twisted 12.1.0: " + warningMsg + ".")
-
-
-    def test_settable(self):
-        """
-        Test deprecation of L{reflect.Settable}.
-        """
-        reflect.Settable()
-        self.lookForDeprecationWarning(
-            self.test_settable, "Settable",
-            "Settable is old and untested. Please write your own version of this "
-            "functionality if you need it")
-
-
-    def test_accessorType(self):
-        """
-        Test deprecation of L{reflect.AccessorType}.
-        """
-        reflect.AccessorType(' ', ( ), { })
-        self.lookForDeprecationWarning(
-            self.test_accessorType, "AccessorType",
-            "AccessorType is old and untested. Please write your own version of "
-            "this functionality if you need it")
-
-
-    def test_propertyAccessor(self):
-        """
-        Test deprecation of L{reflect.PropertyAccessor}.
-        """
-        reflect.PropertyAccessor()
-        self.lookForDeprecationWarning(
-            self.test_propertyAccessor, "PropertyAccessor",
-            "PropertyAccessor is old and untested. Please write your own "
-            "version of this functionality if you need it")
-
-
-    def test_accessor(self):
-        """
-        Test deprecation of L{reflect.Accessor}.
-        """
-        reflect.Accessor()
-        self.lookForDeprecationWarning(
-            self.test_accessor, "Accessor",
-            "Accessor is an implementation for Python 2.1 which is no longer "
-            "supported by Twisted")
-
-
-    def test_originalAccessor(self):
-        """
-        Test deprecation of L{reflect.OriginalAccessor}.
-        """
-        reflect.OriginalAccessor()
-        self.lookForDeprecationWarning(
-            self.test_originalAccessor, "OriginalAccessor",
-            "OriginalAccessor is a reference to class "
-            "twisted.python.reflect.Accessor which is deprecated")
-
-
-    def test_summer(self):
-        """
-        Test deprecation of L{reflect.Summer}.
-        """
-        reflect.Summer()
-        self.lookForDeprecationWarning(
-            self.test_summer, "Summer",
-            "Summer is a child class of twisted.python.reflect.Accessor which "
-            "is deprecated")
