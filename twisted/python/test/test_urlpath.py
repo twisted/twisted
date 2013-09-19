@@ -101,7 +101,6 @@ class URLPathTestCase(unittest.TestCase):
                          'http://example.com/foo/bar?yes=no&no=yes')
 
 
-
     def test_up(self):
         """
         L{up<URLPath.up>} should return a new L{URLPath} with the last segment
