@@ -7,7 +7,11 @@
 import urlparse
 import urllib
 
+
+
 class URLPath:
+
+
     def __init__(self, scheme='', netloc='localhost', path='',
                  query='', fragment=''):
         self.scheme = scheme or 'http'
@@ -18,6 +22,7 @@ class URLPath:
 
     _qpathlist = None
     _uqpathlist = None
+
     
     def pathList(self, unquote=0, copy=1):
         if self._qpathlist is None:
@@ -32,6 +37,7 @@ class URLPath:
         else:
             return result
 
+
     def fromString(klass, st):
         t = urlparse.urlsplit(st)
         u = klass(*t)
@@ -39,25 +45,50 @@ class URLPath:
 
     fromString = classmethod(fromString)
 
+
     def fromRequest(klass, request):
         return klass.fromString(request.prePathURL())
 
     fromRequest = classmethod(fromRequest)
 
-    def _pathMod(self, newpathsegs, keepQuery):
+
+    def _pathMod(self, newpathsegs, keepQuery, keepFragment=False):
+        """
+        Create a new L{URLPath} from a list of path segments and optionally
+        this instance's query and fragment.
+
+        @param newpathsegs: A list of path segment strings to use in creating
+            the new L{URLPath} object.
+        @type newpathsegs: iterable
+
+        @param keepQuery: Flag indicating that the query portion of this
+            L{URLPath} should be included in the new instance.
+        @type keepQuery: bool
+
+        @param keepFragment: Flag indicating that the fragment portion of this
+            L{URLPath} sohuld be included in the new instance.
+        @type keepFragment: bool
+        """
         if keepQuery:
             query = self.query
         else:
             query = ''
+        if keepFragment:
+            fragment = self.fragment
+        else:
+            fragment = ''
         return URLPath(self.scheme,
                         self.netloc,
                         '/'.join(newpathsegs),
-                        query)
+                        query,
+                        fragment)
+
 
     def sibling(self, path, keepQuery=0):
         l = self.pathList()
         l[-1] = path
         return self._pathMod(l, keepQuery)
+
 
     def child(self, path, keepQuery=0):
         l = self.pathList()
@@ -66,6 +97,7 @@ class URLPath:
         else:
             l.append(path)
         return self._pathMod(l, keepQuery)
+
 
     def parent(self, keepQuery=0):
         l = self.pathList()
@@ -78,11 +110,44 @@ class URLPath:
             l[-1] = ''
         return self._pathMod(l, keepQuery)
 
+
+    def clone(self, keepQuery=True, keepFragment=True):
+        """
+        Get a copy of this path (including the query and fragment by default).
+
+        C{URLPath('http://example.com/foo/bar?hey=ho').clone(False)} is
+        equivalent to C{URLPath('http://example.com/foo/bar')}.
+
+        @param keepQuery: If C{False} then don't include the query parameters.
+        @param keepFragment: If C{False} then don't include the fragment.
+
+        @return: A L{URLPath} identical to me (but without the query portion
+            depending on C{keepQuery})
+        """
+        return self._pathMod(self.pathList(), keepQuery, keepFragment)
+
+
+    def up(self, keepQuery=0):
+        """
+        Inverse of L{child}.  This differs from L{parent} in that this will not
+        return a path with a trailing slash.
+
+        For instance, the path "up" from C{http://example.com/foo/bar} is
+        C{http://example.com/foo}.
+
+        @return: A new L{URLPath} one segment up from this path.
+        """
+        l = self.pathList()
+        del l[-1]
+        return self._pathMod(l, keepQuery)
+
+
     def here(self, keepQuery=0):
         l = self.pathList()
         if l[-1] != '':
             l[-1] = ''
         return self._pathMod(l, keepQuery)
+
 
     def click(self, st):
         """Return a path which is the URL where a browser would presumably take
@@ -108,13 +173,13 @@ class URLPath:
                         query,
                         fragment)
 
-
     
     def __str__(self):
         x = urlparse.urlunsplit((
             self.scheme, self.netloc, self.path,
             self.query, self.fragment))
         return x
+
 
     def __repr__(self):
         return ('URLPath(scheme=%r, netloc=%r, path=%r, query=%r, fragment=%r)'
