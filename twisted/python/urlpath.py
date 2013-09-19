@@ -10,8 +10,6 @@ import urllib
 
 
 class URLPath:
-
-
     def __init__(self, scheme='', netloc='localhost', path='',
                  query='', fragment=''):
         self.scheme = scheme or 'http'
@@ -23,7 +21,7 @@ class URLPath:
     _qpathlist = None
     _uqpathlist = None
 
-    
+
     def pathList(self, unquote=0, copy=1):
         if self._qpathlist is None:
             self._qpathlist = self.path.split('/')
@@ -59,15 +57,15 @@ class URLPath:
 
         @param newpathsegs: A list of path segment strings to use in creating
             the new L{URLPath} object.
-        @type newpathsegs: iterable
+        @type newpathsegs: I{iterable}
 
         @param keepQuery: Flag indicating that the query portion of this
             L{URLPath} should be included in the new instance.
-        @type keepQuery: bool
+        @type keepQuery: L{bool}
 
         @param keepFragment: Flag indicating that the fragment portion of this
             L{URLPath} sohuld be included in the new instance.
-        @type keepFragment: bool
+        @type keepFragment: L{bool}
         """
         if keepQuery:
             query = self.query
@@ -115,8 +113,8 @@ class URLPath:
         """
         Get a copy of this path (including the query and fragment by default).
 
-        C{URLPath('http://example.com/foo/bar?hey=ho').clone(False)} is
-        equivalent to C{URLPath('http://example.com/foo/bar')}.
+        C{URLPath.fromString('http://example.com/foo/bar?hey=ho').clone(False)}
+        is equivalent to C{URLPath.fromString('http://example.com/foo/bar')}.
 
         @param keepQuery: If C{False} then don't include the query parameters.
         @param keepFragment: If C{False} then don't include the fragment.
@@ -129,13 +127,17 @@ class URLPath:
 
     def up(self, keepQuery=0):
         """
-        Inverse of L{child}.  This differs from L{parent} in that this will not
-        return a path with a trailing slash.
+        Remove the final URL path segment, and remaining I{/}.
+
+        Counter-intuitively this is the inverse of L{child}, it differs from
+        L{parent} in that it removes the final path segment and then any
+        remaining I{/}s.
 
         For instance, the path "up" from C{http://example.com/foo/bar} is
-        C{http://example.com/foo}.
+        C{http://example.com/foo} and the path "up" from
+        C{http://example.com/foo/} is C{http://example.com/foo}.
 
-        @return: A new L{URLPath} one segment up from this path.
+        @return: A new L{URLPath} one segment "up" from this path.
         """
         l = self.pathList()
         del l[-1]

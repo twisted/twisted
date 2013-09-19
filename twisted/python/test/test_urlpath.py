@@ -12,19 +12,27 @@ from twisted.python.urlpath import URLPath
 
 
 class URLPathTestCase(unittest.TestCase):
-
-
+    """
+    Tests for L{twisted.python.urlpath.URLPath}.
+    """
     def setUp(self):
         url = "http://example.com/foo/bar?yes=no&no=yes#footer"
         self.path = URLPath.fromString(url)
 
 
     def test_stringConversion(self):
+        """
+        Passing a L{URLPath} to L{str} produces a byte string of the URL.
+        """
         self.assertEqual(str(self.path),
                          "http://example.com/foo/bar?yes=no&no=yes#footer")
 
 
     def test_childString(self):
+        """
+        L{URLPath.child} adds a new segment, a child of the existing path, to
+        the URL path component.
+        """
         self.assertEqual(str(self.path.child('hello')),
                          "http://example.com/foo/bar/hello")
         self.assertEqual(str(self.path.child('hello').child('')),
@@ -33,10 +41,10 @@ class URLPathTestCase(unittest.TestCase):
 
     def test_siblingString(self):
         """
-        The sibling of http://example.com/foo/bar/
-            is http://example.comf/foo/bar/baz
-        because really we are constructing a sibling of
-        http://example.com/foo/bar/index.html
+        L{URLPath.sibling} adds a new segment, a sibling of the existing path,
+        to the URL path component. In the case where the final component ends
+        with I{/} this has the same effect as L{URLPath.child}, since it is
+        effectively a sibling of I{.../index.html}.
         """
         self.assertEqual(str(self.path.sibling('baz')),
                          'http://example.com/foo/baz')
@@ -110,4 +118,5 @@ class URLPathTestCase(unittest.TestCase):
         path = URLPath.fromString('http://example.com/foo/')
         self.assertEqual(str(path.up()), 'http://example.com/foo')
 
-
+        path = URLPath.fromString('http://example.com/foo/bar')
+        self.assertEqual(str(path.up()), 'http://example.com/foo')
