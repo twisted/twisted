@@ -1259,7 +1259,7 @@ def _tokenize(description):
     Tokenize a strports string and yield each token.
 
     @param description: a string as described by L{serverFromString} or
-        L{clientFromString}.
+        L{clientFromString} with quoting disabled.
 
     @return: an iterable of 2-tuples of (L{_OP} or L{_STRING}, string).  Tuples
         starting with L{_OP} will contain a second element of either ':' (i.e.
@@ -1291,7 +1291,55 @@ def _tokenize(description):
 
 
 
-def _parse(description):
+def _tokenizeWithQuoting(description):
+    """
+    Tokenize a strports string and yield each token.
+
+    @param description: a string as described by L{serverFromString} or
+        L{clientFromString} with quoting enabled.
+
+    @return: an iterable of 2-tuples of (L{_OP} or L{_STRING}, string).  Tuples
+        starting with L{_OP} will contain a second element of either ':' (i.e.
+        'next parameter') or '=' (i.e. 'assign parameter value').  For example,
+        the string 'hello:{greet=ing}=world' would result in a generator
+        yielding these values::
+
+            _STRING, 'hello'
+            _OP, ':'
+            _STRING, 'greet=ing'
+            _OP, '='
+            _STRING, 'world'
+    """
+    current = ''
+    depth = 0
+    ops = ':='
+    nextOps = {':': ':=', '=': ':'}
+    description = iter(description)
+    for n in description:
+        if depth == 0 and n == '{':
+            depth = 1
+        elif depth == 1 and n == '}':
+            depth = 0
+        elif depth:
+            if n == '{':
+                depth += 1
+            if n == '}':
+                depth -= 1
+            current += n
+        elif n in ops:
+            yield _STRING, current
+            yield _OP, n
+            current = ''
+            ops = nextOps[n]
+        elif n == '\\':
+            current += description.next()
+        else:
+            current += n
+    yield _STRING, current
+
+
+
+def _parse(description, quoting=False):
     """
     Convert a description string into a list of positional and keyword
     parameters, using logic vaguely like what Python does.
@@ -1299,11 +1347,15 @@ def _parse(description):
     @param description: a string as described by L{serverFromString} or
         L{clientFromString}.
 
+    @param quoting: a boolean that determines which tokenization function
+        to use. 
+
     @return: a 2-tuple of C{(args, kwargs)}, where 'args' is a list of all
         ':'-separated C{str}s not containing an '=' and 'kwargs' is a map of
         all C{str}s which do contain an '='.  For example, the result of
         C{_parse('a:b:d=1:c')} would be C{(['a', 'b', 'c'], {'d': '1'})}.
     """
+    tokenFunction = _tokenizeWithQuoting if quoting else _tokenize
     args, kw = [], {}
     def add(sofar):
         if len(sofar) == 1:
@@ -1311,7 +1363,7 @@ def _parse(description):
         else:
             kw[sofar[0]] = sofar[1]
     sofar = ()
-    for (type, value) in _tokenize(description):
+    for (type, value) in tokenFunction(description):
         if type is _STRING:
             sofar += (value,)
         elif value == ':':
@@ -1337,7 +1389,7 @@ _endpointClientFactories = {
 
 _NO_DEFAULT = object()
 
-def _parseServer(description, factory, default=None):
+def _parseServer(description, factory, default=None, quoting=False):
     """
     Parse a strports description into a 2-tuple of arguments and keyword
     values.
@@ -1355,9 +1407,12 @@ def _parseServer(description, factory, default=None):
         and prefix).
     @type default: C{str} or C{NoneType}
 
+    @param quoting: Whether to allow quoting in the description string or not.
+    @type quoting: C{bool}
+
     @return: a 3-tuple of (plugin or name, arguments, keyword arguments)
     """
-    args, kw = _parse(description)
+    args, kw = _parse(description, quoting)
     if not args or (len(args) == 1 and not kw):
         deprecationMessage = (
             "Unqualified strport description passed to 'service'."
@@ -1385,12 +1440,12 @@ def _parseServer(description, factory, default=None):
 
 
 
-def _serverFromStringLegacy(reactor, description, default):
+def _serverFromStringLegacy(reactor, description, default, quoting=False):
     """
     Underlying implementation of L{serverFromString} which avoids exposing the
     deprecated 'default' argument to anything but L{strports.service}.
     """
-    nameOrPlugin, args, kw = _parseServer(description, None, default)
+    nameOrPlugin, args, kw = _parseServer(description, None, default, quoting)
     if type(nameOrPlugin) is not str:
         plugin = nameOrPlugin
         return plugin.parseStreamServer(reactor, *args, **kw)
@@ -1402,7 +1457,7 @@ def _serverFromStringLegacy(reactor, description, default):
 
 
 
-def serverFromString(reactor, description):
+def serverFromString(reactor, description, quoting=False):
     """
     Construct a stream server endpoint from an endpoint description string.
 
@@ -1420,6 +1475,12 @@ def serverFromString(reactor, description):
     bind to like this::
 
         serverFromString(reactor, "tcp:80:interface=127.0.0.1")
+
+    If quoting is set to True, you can declare literals by surrounding them in
+    braces. For example, you can specify the interface for a TCP6 server
+    endpoint to bind to like this::
+
+        serverFromString(reactor, "tcp6:80:interface={::1}", quoting=True)
 
     SSL server endpoints may be specified with the 'ssl' prefix, and the
     private key and certificate files may be specified by the C{privateKey} and
@@ -1453,6 +1514,8 @@ def serverFromString(reactor, description):
 
     @param description: The strports description to parse.
 
+    @param quoting: Whether to allow quoting in the description string or not.
+
     @return: A new endpoint which can be used to listen with the parameters
         given by by C{description}.
 
@@ -1462,7 +1525,7 @@ def serverFromString(reactor, description):
 
     @since: 10.2
     """
-    return _serverFromStringLegacy(reactor, description, _NO_DEFAULT)
+    return _serverFromStringLegacy(reactor, description, _NO_DEFAULT, quoting)
 
 
 
@@ -1657,7 +1720,7 @@ _clientParsers = {
 
 
 
-def clientFromString(reactor, description):
+def clientFromString(reactor, description, quoting=False):
     """
     Construct a client endpoint from a description string.
 
@@ -1721,13 +1784,15 @@ def clientFromString(reactor, description):
 
     @param description: The strports description to parse.
 
+    @param quoting: Whether to allow quoting in the description string or not.
+
     @return: A new endpoint which can be used to connect with the parameters
         given by by C{description}.
     @rtype: L{IStreamClientEndpoint<twisted.internet.interfaces.IStreamClientEndpoint>}
 
     @since: 10.2
     """
-    args, kwargs = _parse(description)
+    args, kwargs = _parse(description, quoting)
     aname = args.pop(0)
     name = aname.upper()
     for plugin in getPlugins(IStreamClientEndpointStringParser):

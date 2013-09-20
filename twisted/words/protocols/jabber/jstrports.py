@@ -21,11 +21,11 @@ _funcs = { "tcp"  : _parseTCPSSL,
            "ssl"  : _parseTCPSSL }
 
 
-def parse(description, factory):
-    args, kw = _parse(description)
+def parse(description, factory, quoting=False):
+    args, kw = _parse(description, quoting)
     return (args[0].upper(),) + _funcs[args[0]](factory, *args[1:], **kw)
 
-def client(description, factory):
+def client(description, factory, quoting=False):
     from twisted.application import internet
-    name, args, kw = parse(description, factory)
+    name, args, kw = parse(description, factory, quoting)
     return getattr(internet, name + 'Client')(*args, **kw)

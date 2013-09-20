@@ -18,13 +18,13 @@ from twisted.application.internet import StreamServerEndpointService
 
 
 
-def parse(description, factory, default='tcp'):
+def parse(description, factory, default='tcp', quoting=False):
     """
     This function is deprecated as of Twisted 10.2.
 
-    @see: L{twisted.internet.endpoints.server}
+    @see: L{twisted.internet.endpoints.serverFromString}
     """
-    return endpoints._parseServer(description, factory, default)
+    return endpoints._parseServer(description, factory, default, quoting)
 
 deprecatedModuleAttribute(
     Version("Twisted", 10, 2, 0),
@@ -35,12 +35,12 @@ deprecatedModuleAttribute(
 
 _DEFAULT = object()
 
-def service(description, factory, default=_DEFAULT, reactor=None):
+def service(description, factory, default=_DEFAULT, quoting=False, reactor=None):
     """
     Return the service corresponding to a description.
 
     @param description: The description of the listening port, in the syntax
-        described by L{twisted.internet.endpoints.server}.
+        described by L{twisted.internet.endpoints.serverFromString}.
 
     @type description: C{str}
 
@@ -53,6 +53,10 @@ def service(description, factory, default=_DEFAULT, reactor=None):
 
     @param default: Do not use this parameter. It has been deprecated since
         Twisted 10.2.0.
+
+    @param quoting: Whether to allow quoting in the description string or not.
+    
+    @type quoting: C{bool}
 
     @rtype: C{twisted.application.service.IService}
 
@@ -74,14 +78,14 @@ def service(description, factory, default=_DEFAULT, reactor=None):
         warnings.warn(
             message=message, category=DeprecationWarning, stacklevel=2)
     svc = StreamServerEndpointService(
-        endpoints._serverFromStringLegacy(reactor, description, default),
+        endpoints._serverFromStringLegacy(reactor, description, default, quoting),
         factory)
     svc._raiseSynchronously = True
     return svc
 
 
 
-def listen(description, factory, default=None):
+def listen(description, factory, default=None, quoting=False):
     """Listen on a port corresponding to a description
 
     @type description: C{str}
@@ -95,7 +99,7 @@ def listen(description, factory, default=None):
     of the semantics of the arguments.
     """
     from twisted.internet import reactor
-    name, args, kw = parse(description, factory, default)
+    name, args, kw = parse(description, factory, default, quoting)
     return getattr(reactor, 'listen'+name)(*args, **kw)
 
 
