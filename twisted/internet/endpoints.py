@@ -1348,7 +1348,7 @@ def _parse(description, quoting=False):
         L{clientFromString}.
 
     @param quoting: a boolean that determines which tokenization function
-        to use. 
+        to use.
 
     @return: a 2-tuple of C{(args, kwargs)}, where 'args' is a list of all
         ':'-separated C{str}s not containing an '=' and 'kwargs' is a map of
@@ -1444,6 +1444,28 @@ def _serverFromStringLegacy(reactor, description, default, quoting=False):
     """
     Underlying implementation of L{serverFromString} which avoids exposing the
     deprecated 'default' argument to anything but L{strports.service}.
+
+    @param reactor: The server endpoint will be constructed with this reactor.
+    @type reactor: L{twisted.internet.interfaces.IReactorCore}
+
+    @param description: The strports description to parse.
+    @type description: C{str}
+
+    @param default: Deprecated argument, specifying the default parser mode to
+        use for unqualified description strings (those which do not have a ':'
+        and prefix).
+    @type default: C{str} or C{NoneType}
+
+    @param quoting: Whether to allow quoting in the description string or not.
+    @type quoting: C{bool}
+
+    @return: A new endpoint which can be used to listen with the parameters
+        given by by C{description}.
+    @rtype: L{IStreamServerEndpoint<twisted.internet.interfaces.IStreamServerEndpoint>}
+
+    @raise ValueError: when the 'description' string cannot be parsed.
+
+    @see: L{twisted.internet.endpoints.serverFromString}
     """
     nameOrPlugin, args, kw = _parseServer(description, None, default, quoting)
     if type(nameOrPlugin) is not str:
@@ -1511,14 +1533,16 @@ def serverFromString(reactor, description, quoting=False):
     information.
 
     @param reactor: The server endpoint will be constructed with this reactor.
+    @type reactor: L{twisted.internet.interfaces.IReactorCore}
 
     @param description: The strports description to parse.
+    @type description: C{str}
 
     @param quoting: Whether to allow quoting in the description string or not.
+    @type quoting: C{bool}
 
     @return: A new endpoint which can be used to listen with the parameters
         given by by C{description}.
-
     @rtype: L{IStreamServerEndpoint<twisted.internet.interfaces.IStreamServerEndpoint>}
 
     @raise ValueError: when the 'description' string cannot be parsed.

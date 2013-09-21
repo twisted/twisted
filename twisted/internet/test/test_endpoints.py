@@ -2199,10 +2199,7 @@ class ParserTestCase(unittest.TestCase):
         Simple strings with a 'tcp:' prefix should be parsed as TCP.
         """
         self.assertEqual(
-            self.parse('tcp:80', self.f, quoting=False),
-            ('TCP', (80, self.f), {'interface': '', 'backlog': 50}))
-        self.assertEqual(
-            self.parse('tcp:80', self.f, quoting=True),
+            self.parse('tcp:80', self.f),
             ('TCP', (80, self.f), {'interface': '', 'backlog': 50}))
 
 
@@ -2211,10 +2208,7 @@ class ParserTestCase(unittest.TestCase):
         TCP port descriptions parse their 'interface' argument as a string.
         """
         self.assertEqual(
-            self.parse('tcp:80:interface=127.0.0.1', self.f, quoting=False),
-            ('TCP', (80, self.f), {'interface': '127.0.0.1', 'backlog': 50}))
-        self.assertEqual(
-            self.parse('tcp:80:interface=127.0.0.1', self.f, quoting=True),
+            self.parse('tcp:80:interface=127.0.0.1', self.f),
             ('TCP', (80, self.f), {'interface': '127.0.0.1', 'backlog': 50}))
 
 
@@ -2223,10 +2217,7 @@ class ParserTestCase(unittest.TestCase):
         TCP port descriptions parse their 'backlog' argument as an integer.
         """
         self.assertEqual(
-            self.parse('tcp:80:backlog=6', self.f, quoting=False),
-            ('TCP', (80, self.f), {'interface': '', 'backlog': 6}))
-        self.assertEqual(
-            self.parse('tcp:80:backlog=6', self.f, quoting=True),
+            self.parse('tcp:80:backlog=6', self.f),
             ('TCP', (80, self.f), {'interface': '', 'backlog': 6}))
 
 
@@ -2237,11 +2228,7 @@ class ParserTestCase(unittest.TestCase):
         string with the C{'unix:'} prefix and no other parameter values.
         """
         self.assertEqual(
-            self.parse('unix:/var/run/finger', self.f, quoting=False),
-            ('UNIX', ('/var/run/finger', self.f),
-             {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
-        self.assertEqual(
-            self.parse('unix:/var/run/finger', self.f, quoting=True),
+            self.parse('unix:/var/run/finger', self.f),
             ('UNIX', ('/var/run/finger', self.f),
              {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
 
@@ -2251,11 +2238,7 @@ class ParserTestCase(unittest.TestCase):
         C{mode} can be set by including C{"mode=<some integer>"}.
         """
         self.assertEqual(
-            self.parse('unix:/var/run/finger:mode=0660', self.f, quoting=False),
-            ('UNIX', ('/var/run/finger', self.f),
-             {'mode': 0o660, 'backlog': 50, 'wantPID': True}))
-        self.assertEqual(
-            self.parse('unix:/var/run/finger:mode=0660', self.f, quoting=True),
+            self.parse('unix:/var/run/finger:mode=0660', self.f),
             ('UNIX', ('/var/run/finger', self.f),
              {'mode': 0o660, 'backlog': 50, 'wantPID': True}))
 
@@ -2265,11 +2248,7 @@ class ParserTestCase(unittest.TestCase):
         C{wantPID} can be set to false by included C{"lockfile=0"}.
         """
         self.assertEqual(
-            self.parse('unix:/var/run/finger:lockfile=0', self.f, quoting=False),
-            ('UNIX', ('/var/run/finger', self.f),
-             {'mode': 0o666, 'backlog': 50, 'wantPID': False}))
-        self.assertEqual(
-            self.parse('unix:/var/run/finger:lockfile=0', self.f, quoting=True),
+            self.parse('unix:/var/run/finger:lockfile=0', self.f),
             ('UNIX', ('/var/run/finger', self.f),
              {'mode': 0o666, 'backlog': 50, 'wantPID': False}))
 
@@ -2280,11 +2259,7 @@ class ParserTestCase(unittest.TestCase):
         descriptions.
         """
         self.assertEqual(
-            self.parse(r'unix:foo\:bar\=baz\:qux\\', self.f, quoting=False),
-            ('UNIX', ('foo:bar=baz:qux\\', self.f),
-             {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
-        self.assertEqual(
-            self.parse(r'unix:foo\:bar\=baz\:qux\\', self.f, quoting=True),
+            self.parse(r'unix:foo\:bar\=baz\:qux\\', self.f),
             ('UNIX', ('foo:bar=baz:qux\\', self.f),
              {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
 
@@ -2305,11 +2280,7 @@ class ParserTestCase(unittest.TestCase):
         quoted; it will simply be parsed as part of the value.
         """
         self.assertEqual(
-            self.parse(r'unix:address=foo=bar', self.f, quoting=False),
-            ('UNIX', ('foo=bar', self.f),
-             {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
-        self.assertEqual(
-            self.parse(r'unix:address=foo=bar', self.f, quoting=True),
+            self.parse(r'unix:address=foo=bar', self.f),
             ('UNIX', ('foo=bar', self.f),
              {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
 
@@ -2321,11 +2292,7 @@ class ParserTestCase(unittest.TestCase):
         indicate a default other than TCP.
         """
         self.assertEqual(
-            self.parse('filename', self.f, default='unix', quoting=False),
-            ('UNIX', ('filename', self.f),
-             {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
-        self.assertEqual(
-            self.parse('filename', self.f, default='unix', quoting=True),
+            self.parse('filename', self.f, 'unix'),
             ('UNIX', ('filename', self.f),
              {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
 
@@ -2335,20 +2302,20 @@ class ParserTestCase(unittest.TestCase):
         L{strports.parse} raises C{ValueError} when given an unknown endpoint
         type.
         """
-        self.assertRaises(ValueError, self.parse, "bogus-type:nothing", self.f, quoting=False)
-        self.assertRaises(ValueError, self.parse, "bogus-type:nothing", self.f, quoting=True)
+        self.assertRaises(ValueError, self.parse, "bogus-type:nothing", self.f)
+
 
     def test_quoting(self):
         """
-        Test a variety of use cases for quoting.
+        When quoting=True, everything within braces should be considered a
+        literal. It should even work for the endpoint type.
         """
         self.assertEqual(
-            self.parse('{tcp}:{80}:{interface}={::}', self.f, quoting=True),
-            ('TCP', (80, self.f), {'interface': '::', 'backlog': 50}))
-        self.assertEqual(
-            self.parse('{unix}:{/var/run/finger:={}=:}', self.f, quoting=True),
-            ('UNIX', ('/var/run/finger:={}=:', self.f),
+            self.parse('{unix}:{/var/run/finger\\::\\={}=\\::\\}', self.f,
+                quoting=True),
+            ('UNIX', ('/var/run/finger\\::\\={}=\\::\\', self.f),
              {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
+
 
 
 class ServerStringTests(unittest.TestCase):
