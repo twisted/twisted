@@ -2226,7 +2226,7 @@ class DummyQueue(object):
 
     def setWaiting(self, message):
         """
-        Ignore the request to mark a message as waiting to be realyed.
+        Ignore the request to mark a message as waiting to be relayed.
 
         @type message: L{bytes}
         @param message: The base filename of a message.
@@ -2239,17 +2239,19 @@ class DummySmartHostSMTPRelayingManager(object):
     """
     A fake smart host to use for testing.
 
-    @type queue: L{DummyQueue}
-    @param queue: A queue that can be used for testing purposes
-
     @type managed: L{dict} of L{bytes} -> L{list} of
         L{list} of L{bytes}
     @ivar managed: A mapping of a string identifying a managed relayer to
         filenames of messages the managed relayer is responsible for.
+
+    @ivar queue: See L{__init__}.
     """
     def __init__(self, queue):
         """
         Initialize the minimum necessary members of a smart host.
+
+        @type queue: L{DummyQueue}
+        @param queue: A queue that can be used for testing purposes.
         """
         self.managed = {}
         self.queue = queue
@@ -2258,7 +2260,7 @@ class DummySmartHostSMTPRelayingManager(object):
 
 class _AttemptManagerTests(unittest.TestCase):
     """
-    Test the behavior of L{_AttemptManager}
+    Test the behavior of L{_AttemptManager}.
 
     @type tmpdir: L{bytes}
     @ivar tmpdir: The path to a temporary directory holding the message files.

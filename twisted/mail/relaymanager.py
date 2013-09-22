@@ -317,12 +317,13 @@ class _AttemptManager(object):
         fp = self.manager.queue.getEnvelopeFile(message)
         from_, to = pickle.load(fp)
         fp.close()
-        from_, to, bounceMessage = bounce.generateBounce(open(self.manager.queue.getPath(message)+'-D'), from_, to)
+        from_, to, bounceMessage = bounce.generateBounce(
+            open(self.manager.queue.getPath(message)+'-D'), from_, to)
         fp, outgoingMessage = self.manager.queue.createNewMessage()
         pickle.dump([from_, to], fp)
         fp.close()
         for line in bounceMessage.splitlines():
-             outgoingMessage.lineReceived(line)
+            outgoingMessage.lineReceived(line)
         outgoingMessage.eomReceived()
         self._finish(relay, self.manager.queue.getPath(message))
 
