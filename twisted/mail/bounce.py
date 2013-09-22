@@ -4,6 +4,10 @@
 # See LICENSE for details.
 
 
+"""
+Support for bounce message generation.
+"""
+
 import StringIO
 import rfc822
 import time
@@ -30,7 +34,29 @@ Arrival-Date: %(ctime)s
 Final-Recipient: RFC822; %(failedTo)s
 """
 
+
+
 def generateBounce(message, failedFrom, failedTo, transcript=''):
+    """
+    Generate a bounce message for an undeliverable email message.
+
+    @type message: L{bytes}
+    @param message: The undeliverable message.
+
+    @type failedFrom: L{bytes}
+    @param failedFrom: The originator of the undeliverable message.
+
+    @type failedTo: L{bytes}
+    @param failedTo: The destination of the undeliverable message.
+
+    @type transcript: L{bytes}
+    @param transcript: An error message to include in the bounce message.
+
+    @rtype: 3-L{tuple} of (E{1}) L{bytes}, (E{2}) L{bytes}, (E{3}) L{bytes}
+    @return: The originator, the destination and the contents of the bounce
+        message.  The destination of the bounce message is the originator of
+        the undeliverable message.
+    """
     if not transcript:
         transcript = '''\
 I'm sorry, the following address has permanent errors: %(failedTo)s.
