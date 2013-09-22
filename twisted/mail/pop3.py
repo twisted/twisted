@@ -553,6 +553,9 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         If there are no more blocked commands, set up for the next command to
         be sent immediately.
+
+        @type _: L{object}
+        @param _: Ignored.
         """
         commands = self.blocked
         self.blocked = None
@@ -1253,6 +1256,10 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         Handle an RPOP command.
 
         RPOP is not supported.  Send an error response.
+
+        @type user: L{bytes}
+        @param user: A username.
+
         """
         self.failResponse('permission denied, sucker')
 
@@ -1504,8 +1511,8 @@ class Mailbox:
         Retrieve the size of a message, or, if none is specified, the size of
         each message in the mailbox.
 
-        @type index: L{int} or L{NoneType <types.NoneType>}
-        @param index: The 0-based index of the message.
+        @type i: L{int} or L{NoneType <types.NoneType>}
+        @param i: The 0-based index of the message.
 
         @rtype: L{int}, sequence of L{int}, or L{Deferred <defer.Deferred>}
         @return: The number of octets in the specified message, or, if an
@@ -1524,8 +1531,8 @@ class Mailbox:
         """
         Retrieve a file containing the contents of a message.
 
-        @type index: L{int}
-        @param index: The 0-based index of a message.
+        @type i: L{int}
+        @param i: The 0-based index of a message.
 
         @rtype: file-like object
         @return: A file containing the message.
@@ -1540,8 +1547,8 @@ class Mailbox:
         """
         Get a unique identifier for a message.
 
-        @type index: L{int}
-        @param index: The 0-based index of a message.
+        @type i: L{int}
+        @param i: The 0-based index of a message.
 
         @rtype: L{bytes}
         @return: A string of printable characters uniquely identifying the
@@ -1561,8 +1568,8 @@ class Mailbox:
         requests for the size of the deleted message should return 0.  Further
         requests for the message itself may raise an exception.
 
-        @type index: L{int}
-        @param index: The 0-based index of a message.
+        @type i: L{int}
+        @param i: The 0-based index of a message.
 
         @raise ValueError or IndexError: When the index does not correspond to
             a message in the mailbox.  The use of ValueError is preferred.
@@ -1610,7 +1617,7 @@ class POP3Client(basic.LineOnlyReceiver):
     @type command: L{bytes}
     @ivar command: The command most recently sent to the server.
 
-    @type welcomeRe: L{re.RegexObject}
+    @type welcomeRe: L{RegexObject <re.RegexObject>}
     @ivar welcomeRe: A regular expression which matches the APOP challenge in
         the server greeting.
 
