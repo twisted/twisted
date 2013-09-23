@@ -468,6 +468,22 @@ class CapabilityTestCase(unittest.TestCase):
         for c in caps:
             self.assertIn(s, c)
 
+
+    def notContained(self, cap, *capLists):
+        """
+        Verify that a capability is not included in any of the lists of
+        capabilities.
+
+        @type cap: L{bytes}
+        @param cap: A capability.
+
+        @type capLists: L{tuple} of L{list} of L{bytes}
+        @param capLists: Lists of capabilities.
+        """
+        for capList in capLists:
+            self.assertNotIn(cap, capList)
+
+
     def testUIDL(self):
         self.contained("UIDL", self.caps, self.pcaps, self.lpcaps)
 
@@ -496,6 +512,34 @@ class CapabilityTestCase(unittest.TestCase):
     def testLOGIN_DELAY(self):
         self.contained("LOGIN-DELAY 120 USER", self.caps, self.pcaps)
         self.assertIn("LOGIN-DELAY 100", self.lpcaps)
+
+
+    def testPIPELINING(self):
+        """
+        PIPELINING should be a capability of the POP3 server.
+        """
+        self.contained("PIPELINING", self.caps, self.pcaps, self.lpcaps)
+
+
+    def testAUSPEX(self):
+        """
+        AUSPEX should not be a capability of the POP3 server.
+        """
+        self.notContained("AUSPEX", self.caps, self.pcaps, self.lpcaps)
+
+
+    def testPOTENCE(self):
+        """
+        POTENCE should not be a capability of the POP3 server.
+        """
+        self.notContained("POTENCE", self.caps, self.pcaps, self.lpcaps)
+
+
+    def testCELERITY(self):
+        """
+        CELERITY should not be a capability of the POP3 server.
+        """
+        self.notContained("CELERITY", self.caps, self.pcaps, self.lpcaps)
 
 
 
