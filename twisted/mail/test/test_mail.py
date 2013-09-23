@@ -596,6 +596,11 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         shutil.rmtree(self.P)
 
     def test_addUser(self):
+	"""
+	L{MaildirDirdbmDomain.addUser} accepts a user and password argument and makes
+	those available through a dictionary like object, and also creates a directory
+	for that user.
+	"""
         toAdd = (('user1', 'pwd1'), ('user2', 'pwd2'), ('user3', 'pwd3'))
         for (u, p) in toAdd:
             self.D.addUser(u, p)
@@ -606,6 +611,10 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
             self.failUnless(os.path.exists(os.path.join(self.P, u)))
 
     def test_credentials(self):
+        """
+        L{MaildirDirdbmDomain.getCredentialsCheckers} has one
+        L{IUsernamePassword} checker by default.
+        """
         creds = self.D.getCredentialsCheckers()
 
         self.assertEqual(len(creds), 1)
@@ -613,6 +622,12 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         self.failUnless(cred.credentials.IUsernamePassword in creds[0].credentialInterfaces)
 
     def test_requestAvatar(self):
+        """
+        L{MaildirDirdbmDomain.requestAvatar} raises L{NotImplementedError} if
+        supplied with an unrecognized interface. When called with a recognized
+        interface it returns a 3-tuple containing the interface, an
+        implementation of that interface and a callable.
+        """
         class ISomething(Interface):
             pass
 
@@ -630,6 +645,11 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         t[2]()
 
     def test_requestAvatarId(self):
+        """
+        L{requestAvatarId} raises L{UnauthorizedLogin} if supplied with invalid
+        user credentials. When called with valid credentials checks that
+        L{requestAvatarId} returns the expected user.
+        """
         self.D.addUser('user', 'password')
         database = self.D.getCredentialsCheckers()[0]
 
@@ -643,6 +663,13 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         self.assertEqual(database.requestAvatarId(creds), 'user')
 
     def test_userDirectory(self):
+        """
+        Adds a user and calls L{MaildirDirdbmDomain.userDirectory} to checks
+        that the directory structure is as expected.  Calling
+        L{MaildirDirdbmDomain.userDirectory} with a non-existent user should
+        return the 'postmaster' directory if there is a postmaster or return
+        L{None} if there is no postmaster.
+        """
         self.D.addUser('user', 'password')
         self.assertEqual(self.D.userDirectory('user'),
                          os.path.join(self.D.root, 'user'))
