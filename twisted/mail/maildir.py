@@ -127,10 +127,10 @@ class MaildirMessage(mail.FileMessage):
             received.
 
         @type a: 2-L{tuple} of (E{1}) L{bytes}, (E{2}) L{bytes}
-        @param a: Positional arguments for L{FileMessage.__init__}
+        @param a: Positional arguments for L{FileMessage.__init__}.
 
         @type kw: L{dict}
-        @param kw: Keyword arguments for L{FileMessage.__init__}
+        @param kw: Keyword arguments for L{FileMessage.__init__}.
         """
         header = "Delivered-To: %s\n" % address
         fp.write(header)
@@ -181,7 +181,7 @@ class AbstractMaildirDomain:
     def __init__(self, service, root):
         """
         @type service: L{MailService}
-        @param service: An email service
+        @param service: An email service.
 
         @type root: L{bytes}
         @param root: The maildir root directory.
@@ -197,7 +197,8 @@ class AbstractMaildirDomain:
         @param user: A username.
 
         @rtype: L{bytes} or L{NoneType <types.NoneType>}
-        @return: The user's mail directory for a valid user. Otherwise, None.
+        @return: The user's mail directory for a valid user. Otherwise,
+            C{None}.
         """
         return None
 
@@ -290,6 +291,8 @@ class AbstractMaildirDomain:
         """
         Add a user to this domain.
 
+        Subclasses should override this method.
+
         @type user: L{bytes}
         @param user: A username.
 
@@ -302,6 +305,8 @@ class AbstractMaildirDomain:
     def getCredentialsCheckers(self):
         """
         Return credentials checkers for this domain.
+
+        Subclasses should override this method.
 
         @rtype: L{list} of L{ICredentialsChecker
             <checkers.ICredentialsChecker>} provider
@@ -808,7 +813,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         @rtype: L{bytes} or L{NoneType <types.NoneType>}
         @return: The path to the user's mail directory for a valid user. For
             an invalid user, the path to the postmaster's mailbox if bounces
-            are redirected there. Otherwise, None.
+            are redirected there. Otherwise, C{None}.
         """
         if not self.dbm.has_key(name):
             if not self.postmaster:
