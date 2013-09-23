@@ -607,7 +607,9 @@ class TextOutputArea(TextOutput):
         outputLines = []
         while inputLines:
             if self.longLines == self.WRAP:
-                wrappedLines = textwrap.wrap(inputLines.pop(0), width)
+                wrapper = textwrap.TextWrapper(width=width,
+                    break_long_words=False)
+                wrappedLines = wrapper.wrap(inputLines.pop(0))
                 outputLines.extend(wrappedLines or [''])
             else:
                 outputLines.append(inputLines.pop(0)[:width])

@@ -55,9 +55,9 @@ class TopWindowTests(TestCase):
 
 class DummyTerminal(object):
     """
-    Fake terminal, used for storing lines and position.
+    Fake terminal, used for storing lines with row/column positions.
 
-    @ivar lines: List with three-tuples of C{(text, column, line)}.
+    @ivar lines: List with three-tuples of C{(text, row, column)}.
     @type lines: C{list}
     """
     def __init__(self):
@@ -69,22 +69,22 @@ class DummyTerminal(object):
         Stores a new line.
 
         @param data: A new line.
-        @type data: C{str}
+        @type data: L{str}
         """
-        self.lines.append((data, self.column, self.line))
+        self.lines.append((data, self.row, self.column))
 
 
-    def cursorPosition(self, column, line):
+    def cursorPosition(self, column, row):
         """
-        Move the cursor to the given C{line} and C{column}.
+        Move the cursor to the given C{row} and C{column}.
 
         @param column: Column position of the cursor.
-        @type column: C{int}
-        @param line: Line position of the cursor.
-        @type line: C{str}
+        @type column: L{int}
+        @param row: Row/Line position of the cursor.
+        @type row: L{int}
         """
         self.column = column
-        self.line = line
+        self.row = row
 
 
 
@@ -133,7 +133,7 @@ class TextOutputTests(TestCase):
         self.output.render(len(self.inputString), 1, self.terminal)
 
         self.assertEqual(self.terminal.column, 0)
-        self.assertEqual(self.terminal.line, 0)
+        self.assertEqual(self.terminal.row, 0)
         self.assertEqual(self.terminal.lines, [(self.inputString, 0, 0)])
 
 
@@ -191,9 +191,9 @@ class TextOutputAreaTests(TestCase):
         self.output.render(4, 10, self.terminal)
 
         self.assertEqual(self.terminal.lines, [
-            ('this', 0, 0), ('is a', 0, 1), ('test', 0, 2)])
+            ('this', 0, 0), ('is a', 1, 0), ('test', 2, 0)])
         self.assertEqual(self.terminal.column, 0)
-        self.assertEqual(self.terminal.line, 2)
+        self.assertEqual(self.terminal.row, 2)
 
 
     def test_renderTruncate(self):
@@ -205,10 +205,36 @@ class TextOutputAreaTests(TestCase):
         self.assertEqual(self.output.longLines, TextOutputArea.TRUNCATE)
 
         self.output.setText(self.inputString)
-        self.output.render(4, 10, self.terminal)
-        self.assertEqual(self.terminal.lines, [('this', 0, 0)])
+        self.output.render(5, 10, self.terminal)
+        self.assertEqual(self.terminal.lines, [('this ', 0, 0)])
         self.assertEqual(self.terminal.column, 0)
-        self.assertEqual(self.terminal.line, 0)
+        self.assertEqual(self.terminal.row, 0)
+
+
+    def test_multiline(self):
+        """
+        Multiline strings are broken into multiple lines.
+        """
+        self.inputString = "this is a\nlong\nlong test\ncase\n"
+        self.output.setText(self.inputString)
+        self.output.render(4, 4, self.terminal)
+        self.assertEqual(self.terminal.lines,
+           [('this', 0, 0), ('is a', 1, 0), ('long', 2, 0), ('long', 3, 0)])
+
+
+    def test_dontWrapLongWord(self):
+        """
+        L{TextOutputArea.render} does not break a single word into multiple
+        lines when it's length is greater than the widget's size.
+        """
+        size = 10
+        inputString = "*" * (size + 2)
+        self.output = TextOutputArea(size)
+        self.output.setText(inputString)
+        self.output.render(4, 3, self.terminal)
+
+        self.assertEqual(self.terminal.lines,
+            [('************', 0, 0)])
 
 
 
