@@ -66,7 +66,7 @@ import pickle
 import types
 import warnings
 import decimal
-import functools
+from functools import reduce
 from types import StringType
 from types import UnicodeType
 from types import IntType
@@ -585,7 +585,7 @@ class _Jellier:
         @rtype: C{list}
         """
         sign, guts, exponent = d.as_tuple()
-        value = functools.reduce(lambda left, right: left * 10 + right, guts)
+        value = reduce(lambda left, right: left * 10 + right, guts)
         if sign:
             value = -value
         return ['decimal', value, exponent]

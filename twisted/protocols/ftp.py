@@ -15,7 +15,6 @@ import stat
 import errno
 import fnmatch
 import warnings
-import functools
 
 try:
     import pwd, grp
@@ -1793,8 +1792,7 @@ class FTPAnonymousShell(object):
 
 
     def _path(self, path):
-        return functools.reduce(filepath.FilePath.child, path,
-                                self.filesystemRoot)
+        return self.filesystemRoot.descendant(path)
 
 
     def makeDirectory(self, path):

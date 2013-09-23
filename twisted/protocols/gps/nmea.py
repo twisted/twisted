@@ -2,7 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""NMEA 0183 implementation
+"""
+NMEA 0183 implementation
 
 Maintainer: Bob Ippolito
 
@@ -19,8 +20,9 @@ Other desired features::
     - A NMEA 0183 producer to emulate GPS devices (?)
 """
 
-import functools
 import operator
+from functools import reduce
+
 from twisted.protocols import basic
 
 POSFIX_INVALID, POSFIX_SPS, POSFIX_DGPS, POSFIX_PPS = 0, 1, 2, 3
@@ -34,7 +36,9 @@ class InvalidChecksum(Exception):
     pass
 
 class NMEAReceiver(basic.LineReceiver):
-    """This parses most common NMEA-0183 messages, presumably from a serial GPS device at 4800 bps
+    """
+    This parses most common NMEA-0183 messages, presumably from a serial GPS
+    device at 4800 bps.
     """
     delimiter = '\r\n'
     dispatch = {
@@ -64,7 +68,8 @@ class NMEAReceiver(basic.LineReceiver):
             if self.ignore_invalid_sentence:
                 return
             raise InvalidSentence("%r does not begin with $" % (line,))
-        # message is everything between $ and *, checksum is xor of all ASCII values of the message
+        # message is everything between $ and *, checksum is xor of all ASCII
+        # values of the message
         strmessage, checksum = line[1:].strip().split('*')
         message = strmessage.split(',')
         sentencetype, message = message[0], message[1:]
@@ -73,9 +78,10 @@ class NMEAReceiver(basic.LineReceiver):
             raise InvalidSentence("sentencetype %r" % (sentencetype,))
         if not self.ignore_checksum_mismatch:
             checksum = int(checksum, 16)
-            calculated_checksum = functools.reduce(operator.xor, map(ord, strmessage))
+            calculated_checksum = reduce(operator.xor, map(ord, strmessage))
             if checksum != calculated_checksum:
-                raise InvalidChecksum("Given 0x%02X != 0x%02X" % (checksum, calculated_checksum))
+                raise InvalidChecksum("Given 0x%02X != 0x%02X" % (checksum,
+                    calculated_checksum))
         handler = getattr(self, "handle_%s" % dispatch, None)
         decoder = getattr(self, "decode_%s" % dispatch, None)
         if not (dispatch and handler and decoder):
@@ -85,7 +91,8 @@ class NMEAReceiver(basic.LineReceiver):
         try:
             decoded = decoder(*message)
         except Exception, e:
-            raise InvalidSentence("%r is not a valid %s (%s) sentence" % (line, sentencetype, dispatch))
+            raise InvalidSentence("%r is not a valid %s (%s) sentence" % (
+                line, sentencetype, dispatch))
         return handler(*decoded)
 
     def decode_position(self, latitude, ns, longitude, ew, utc, status):
