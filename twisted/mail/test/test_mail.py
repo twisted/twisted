@@ -980,7 +980,7 @@ class RelayerMixinOpenFilesTestCase(unittest.TestCase):
         RelayerMixin to test.
         """
         self.tmpdir = FilePath(self.mktemp())
-        self.tmpdir.makedirs() 
+        self.tmpdir.makedirs()
         self.messageFiles = []
         for i in range(10):
             name = self.tmpdir.path + ('/body-%d' % (i,))
