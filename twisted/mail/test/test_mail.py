@@ -979,19 +979,20 @@ class RelayerMixinOpenFilesTestCase(unittest.TestCase):
         Create a set of message files in a temporary directory and a
         RelayerMixin to test.
         """
-        self.tmpdir = self.mktemp()
-        os.mkdir(self.tmpdir)
+        self.tmpdir = FilePath(self.mktemp())
+        self.tmpdir.makedirs() 
         self.messageFiles = []
         for i in range(10):
-            name = os.path.join(self.tmpdir, 'body-%d' % (i,))
-            f = file(name + '-H', 'w')
+            name = self.tmpdir.path + ('/body-%d' % (i,))
+            f = FilePath(name + '-H').open('w')
             pickle.dump(['from-%d' % (i,), 'to-%d' % (i,)], f)
             f.close()
 
-            f = file(name + '-D', 'w')
+            f = FilePath(name + '-D').open('w')
             f.write(name)
             f.seek(0, 0)
             self.messageFiles.append(name)
+            f.close()
 
         self.relayer = self.TestRelayerMixin()
 
@@ -1000,7 +1001,7 @@ class RelayerMixinOpenFilesTestCase(unittest.TestCase):
         """
         Remove the temporary directory.
         """
-        shutil.rmtree(self.tmpdir)
+        shutil.rmtree(self.tmpdir.path)
 
 
     def test_loadMessages(self):
@@ -1164,25 +1165,34 @@ class ManagedRelayerTestCase(unittest.TestCase):
         Create a set of message files in a temporary directory and an
         L{mail.relaymanager.SMTPManagedRelayer} to test.
         """
-        self.tmpdir = self.mktemp()
-        os.mkdir(self.tmpdir)
+        self.tmpdir = FilePath(self.mktemp())
+        self.tmpdir.makedirs()
         self.messages = []
         for i in range(10):
-            name = os.path.join(self.tmpdir, 'body-%d' % (i,))
-            f = file(name + '-H', 'w')
+            name = self.tmpdir.path + ('/body-%d' % (i,))
+            f = FilePath(name + '-H').open('w')
             pickle.dump(['from-%d' % (i,), 'to-%d' % (i,)], f)
             f.close()
 
-            f = file(name + '-D', 'w')
+            f = FilePath(name + '-D').open('w')
             f.write(name)
             f.seek(0, 0)
             self.messages.append(name)
+            f.close()
 
         self.manager = Manager()
         self.factory = object()
         self.relay = self.TestManagedRelayer(self.messages, self.manager,
                 ("me",))
         self.relay.factory = self.factory
+
+
+    def tearDown(self):
+        """
+        Remove the temporary directory.
+        """
+        shutil.rmtree(self.tmpdir.path)
+
 
     def testSuccessfulSentMail(self):
         for i in self.messages:

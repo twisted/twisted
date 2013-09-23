@@ -1,1 +1,1 @@
-twisted.mail.relay.RelayerMixin now opens the file for a message when it is being sent and explicitly closes it.
+twisted.mail.relay.RelayerMixin now opens the file for a message just before it is sent and explicitly closes it.

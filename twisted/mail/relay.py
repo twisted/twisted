@@ -96,7 +96,7 @@ class RelayerMixin:
         self.messages = []
         self.names = []
         for message in messagePaths:
-            fp = self._openFile(message+'-H')
+            fp = self._openFile(message + '-H')
             try:
                 messageContents = pickle.load(fp)
             finally:
@@ -138,7 +138,7 @@ class RelayerMixin:
         """
         if not self.messages:
             return None
-        fp = self._openFile(self.names[0]+'-D')
+        fp = self._openFile(self.names[0] + '-D')
         self.messages[0][2] = fp
         return self.messages[0][2]
 
@@ -173,8 +173,8 @@ class RelayerMixin:
         self.messages[0][2].close()
         if code in smtp.SUCCESS:
             # At least one, i.e. all, recipients successfully delivered
-            FilePath(self.names[0]+'-D').remove()
-            FilePath(self.names[0]+'-H').remove()
+            FilePath(self.names[0] + '-D').remove()
+            FilePath(self.names[0] + '-H').remove()
         del self.messages[0]
         del self.names[0]
 
