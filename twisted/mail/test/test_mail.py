@@ -596,11 +596,11 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         shutil.rmtree(self.P)
 
     def test_addUser(self):
-	"""
-	L{MaildirDirdbmDomain.addUser} accepts a user and password argument and makes
-	those available through a dictionary like object, and also creates a directory
-	for that user.
-	"""
+        """
+        L{MaildirDirdbmDomain.addUser} accepts a user and password argument and makes
+        those available through a dictionary like object, and also creates a directory
+        for that user.
+        """
         toAdd = (('user1', 'pwd1'), ('user2', 'pwd2'), ('user3', 'pwd3'))
         for (u, p) in toAdd:
             self.D.addUser(u, p)
