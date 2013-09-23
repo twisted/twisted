@@ -17,8 +17,8 @@ to ensure that your code remains correct as you add new functionality.</p>
 <p><a href="http://en.wikipedia.org/wiki/Unit_test">Unit testing</a> is a
 modern, light-weight testing methodology in widespread use in many
 programming languages. Development that relies on unit tests is often
-referred to as Test-Driven Development 
-(<a href="http://en.wikipedia.org/wiki/Test-driven_development">TDD</a>). 
+referred to as Test-Driven Development
+(<a href="http://en.wikipedia.org/wiki/Test-driven_development">TDD</a>).
 Most Twisted code is tested using TDD.</p>
 
 <p>To gain a solid understanding of unit testing in Python, you should read
@@ -359,8 +359,8 @@ version of the remote test code is:</p>
 
 <a href="listings/trial/calculus/test/test_remote_1.py" class="py-listing">test_remote_1.py</a>
 
-<p>To fully understand this client, being comfortable with
-the Factory/Protocol/Transport pattern used in Twisted would be helpful.</p>
+<p>To fully understand this client, it helps a lot to be comfortable with
+the Factory/Protocol/Transport pattern used in Twisted.</p>
 
 <p>We first create a protocol factory object. Note that we have yet to see
 the <code class="python">RemoteCalculationFactory</code> class. It is in
@@ -488,7 +488,7 @@ is to create the clock, and assign <code class="python">proto.callLater</code> t
  call in the protocol will finish before <code class="python">clock.advance()</code> returns.</p>
 
 <p>In the new test (test_timeout), we call <code
-class="python">clock.advance</code>, that simulates and advances in time
+class="python">clock.advance</code>, that simulates an advance in time
 (logically it's similar to a <code class="python">time.sleep</code> call). And
 we just have to verify that our Deferred got a timeout error.</p>
 
@@ -496,8 +496,12 @@ we just have to verify that our Deferred got a timeout error.</p>
 
 <a href="listings/trial/calculus/client_2.py" class="py-listing">client_2.py</a>
 
-<p>It is important not to forget to cancel the 
-<code class="python">callLater</code> after everything went fine.</p>
+<p>
+  If everything completed successfully,
+  it is important to remember to cancel the
+  <code class="python">DelayedCall</code>
+  returned by <code class="python">callLater</code>.
+</p>
 
 <h3>Cleaning up after tests</h3>
 
@@ -513,7 +517,7 @@ of automated tests.</p>
 class="py-listing">test_remote_2.py</a>
 
 <p>Recent versions of trial will fail loudly if you remove the
- <code class="python">stopListening</code> call (which is good).</p>
+ <code class="python">stopListening</code> call, which is good.</p>
 
 <p>Also, you should be aware that <code class="python">tearDown</code> will
 be called in any case, after success or failure. So don't expect every
@@ -522,7 +526,7 @@ have failed in the middle.</p>
 
 <p>Trial also has a <code class="python">addCleanup</code> method, which makes
 these kind of cleanups easy and removes the need for <code class="python">tearDown
-</code>. For example, you could remove the code in <code class="python">_test</code> 
+</code>. For example, you could remove the code in <code class="python">_test</code>
 this way:</p>
 
 <pre class="python">
@@ -548,7 +552,7 @@ created.</p>
 <p>Currently, if you send an invalid command or invalid arguments to our
 server, it logs an exception and closes the connection. This is a perfectly
 valid behavior, but for the sake of this tutorial, we want to return an error
-to the user if he sends invalid operators, and log any errors on server side. 
+to the user if he sends invalid operators, and log any errors on server side.
 So we'll want a test like this:</p>
 
 <pre class="python">
@@ -602,11 +606,11 @@ class="py-listing">test_remote_3.py</a>
 bugs, but that's not the point), concerning the reuse of the protocol when you
 got a timeout: the connection is not dropped, so you can get timeout forever.
 Generally a user will come to you saying &quot;I have this strange problem on
-my crappy networking environment. It seems you could solve it with doing XXX at
+my crappy network. It seems you could solve it with doing XXX at
 YYY.&quot;</p>
 
-<p>Actually, this bug can be corrected several ways. But if you correct it 
-without adding tests, one day you'll face a big problem: regression. 
+<p>Actually, this bug can be corrected several ways. But if you correct it
+without adding tests, one day you'll face a big problem: regression.
 So the first step is adding a failing test.</p>
 
 <a href="listings/trial/calculus/test/test_client_3.py" class="py-listing">test_client_3.py</a>
@@ -614,7 +618,7 @@ So the first step is adding a failing test.</p>
 <ul>
     <li>We switched to StringTransportWithDisconnection. This transport manages
     <code class="python">loseConnection</code> and forwards it to its protocol.</li>
-    <li>We assign the protocol to the transport via the <code class="python">protocol 
+    <li>We assign the protocol to the transport via the <code class="python">protocol
    </code> attribute.</li>
     <li>We check that after a timeout our connection has closed.</li>
 </ul>
@@ -701,7 +705,7 @@ consider statement coverage here, whether a line has been executed or not.
 This option is --coverage. It creates a coverage directory in _trial_temp,
 with a file .cover for every module used during the tests. The ones
 interesting for us are calculus.base.cover and calculus.remote.cover. Each line
-starts with the number of times you went through during the
+starts with a counter showing how many times the line was executed during the
 tests, or the marker '&gt;&gt;&gt;&gt;&gt;&gt;' if the line was not
 covered. If you went through the whole tutorial to this point, you should
 have complete coverage :).</p>
