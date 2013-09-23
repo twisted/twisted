@@ -54,10 +54,11 @@ __all__ = [
 from string import Formatter
 import inspect
 import logging
-import time
+from time import time, localtime, strftime
 
 from zope.interface import Interface, implementer
 from twisted.python.constants import NamedConstant, Names
+from twisted.python.util import untilConcludes
 from twisted.python.failure import Failure
 from twisted.python.reflect import safe_str, safe_repr
 import twisted.python.log
@@ -66,6 +67,8 @@ from twisted.python.log import msg as twistedLogMessage
 OBSERVER_REMOVED = (
     "Temporarily removing observer {observer} due to exception: {e}"
 )
+
+TIME_FORMAT_RFC3339 = "%Y-%m-%dT%H:%M:%S%z"
 
 
 
@@ -332,7 +335,7 @@ class Logger(object):
 
         kwargs.update(
             log_logger=self, log_level=level, log_namespace=self.namespace,
-            log_source=self.source, log_format=format, log_time=time.time(),
+            log_source=self.source, log_format=format, log_time=time(),
         )
 
         self.publisher(kwargs)
@@ -690,6 +693,45 @@ class LogLevelFilterPredicate(object):
             return PredicateResult.no
 
         return PredicateResult.maybe
+
+
+
+@implementer(ILogObserver)
+class FileLogObserver(object):
+    """
+    Log observer that writes to a file-like object.
+    """
+
+    def __init__(self, fileHandle, encoding="utf-8", timeFormat=TIME_FORMAT_RFC3339):
+        """
+        @param fileHandle: a file-like object to write events to.
+
+        @param encoding: the encoding to use when writing events to
+            C{fileHandle}.
+
+        @param timeFormat: the format to use when adding timestamp
+            prefixes to logged events.  If C{None}, no timestamp
+            prefix is added.
+        """
+        self.fileHandle = fileHandle
+        self.encoding = encoding
+        self.timeFormat = timeFormat
+
+
+    def __call__(self, event):
+        if self.timeFormat is not None and event.get("log_time", None) is not None:
+            t = localtime(event["log_time"])
+            timeStamp = strftime(self.timeFormat + " ", t)
+        else:
+            timeStamp = ""
+
+        text = "{timeStamp}{event}\n".format(
+            timeStamp=timeStamp,
+            event=formatEvent(event).encode(self.encoding),
+        )
+
+        untilConcludes(self.fileHandle.write, text)
+        untilConcludes(self.fileHandle.flush)
 
 
 

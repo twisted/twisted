@@ -5,6 +5,8 @@
 Test cases for L{twisted.python.logger}.
 """
 
+from cStringIO import StringIO
+
 from zope.interface.verify import verifyObject, BrokenMethodImplementation
 
 from twisted.python import log as twistedLogging
@@ -18,6 +20,7 @@ from twisted.python.logger import (
     Logger, LegacyLogger,
     ILogObserver, LogPublisher, DefaultLogPublisher,
     FilteringLogObserver, PredicateResult,
+    FileLogObserver,
     LogLevelFilterPredicate, OBSERVER_REMOVED
 )
 
@@ -618,6 +621,10 @@ class LogPublisherTests(SetUpTearDown, unittest.TestCase):
 
 
 class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
+    """
+    Tests for L{DefaultLogPublisher}.
+    """
+
     def test_addObserver(self):
         o1 = lambda e: None
         o2 = lambda e: None
@@ -849,6 +856,108 @@ class FilteringLogObserverTests(SetUpTearDown, unittest.TestCase):
         self.assertIn(e, callWithPredicateResult(PredicateResult.yes))
         self.assertIn(e, callWithPredicateResult(PredicateResult.maybe))
         self.assertNotIn(e, callWithPredicateResult(PredicateResult.no))
+
+
+
+class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
+    """
+    Tests for L{FileLogObserver}.
+    """
+
+    def test_interface(self):
+        """
+        L{FileLogObserver} is an L{ILogObserver}.
+        """
+        try:
+            fileHandle = StringIO()
+            observer = FileLogObserver(fileHandle)
+            try:
+                verifyObject(ILogObserver, observer)
+            except BrokenMethodImplementation as e:
+                self.fail(e)
+        finally:
+            fileHandle.close()
+
+
+    def _testScaffold(self, logTime, logFormat, observerKwargs, expectedOutput):
+        """
+        Default time stamp format is RFC 3339
+        """
+        event = dict(log_time=logTime, log_format=logFormat)
+        fileHandle = StringIO()
+        try:
+            observer = FileLogObserver(fileHandle, **observerKwargs)
+            observer(event)
+            output = fileHandle.getvalue()
+            self.assertEquals(output, expectedOutput)
+        finally:
+            fileHandle.close()
+
+
+    def test_defaultTimeStamp(self):
+        """
+        Default time stamp format is RFC 3339
+        """
+        return self._testScaffold(
+            1379954439.813977, u"XYZZY",
+            dict(),
+            b"2013-09-23T18:40:39+0200 XYZZY\n",
+        )
+
+
+    def test_noTimeFormat(self):
+        """
+        Time format is None == no time stamp.
+        """
+        return self._testScaffold(
+            1379954439.813977, u"XYZZY",
+            dict(timeFormat=None),
+            b"XYZZY\n",
+        )
+
+
+    def test_alternateTimeFormat(self):
+        """
+        Alternate time format in output.
+        """
+        return self._testScaffold(
+            1379954439.813977, u"",
+            dict(timeFormat="%Y/%w"),
+            b"2013/1 \n",
+        )
+
+
+    def test_noEventTime(self):
+        """
+        Event lacks a time == no time stamp.
+        """
+        return self._testScaffold(
+            None, u"XYZZY",
+            dict(),
+            b"XYZZY\n",
+        )
+
+
+    def test_defaultEncoding(self):
+        """
+        Default encoding is UTF-8.
+        """
+        return self._testScaffold(
+            None, u"S\xe1nchez",
+            dict(),
+            b"S\xc3\xa1nchez\n",
+        )
+
+
+    def test_alternateEncoding(self):
+        """
+        Alternate encoding in output.
+        """
+        return self._testScaffold(
+            None, u"S\xe1nchez",
+            dict(encoding="utf-16"),
+            b"\xff\xfeS\x00\xe1\x00n\x00c\x00h\x00e\x00z\x00\n",
+        )
 
 
 
