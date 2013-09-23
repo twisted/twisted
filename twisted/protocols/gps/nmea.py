@@ -19,9 +19,9 @@ Other desired features::
     - A NMEA 0183 producer to emulate GPS devices (?)
 """
 
+import functools
 import operator
 from twisted.protocols import basic
-from twisted.python.compat import reduce
 
 POSFIX_INVALID, POSFIX_SPS, POSFIX_DGPS, POSFIX_PPS = 0, 1, 2, 3
 MODE_AUTO, MODE_FORCED = 'A', 'M'
@@ -72,7 +72,8 @@ class NMEAReceiver(basic.LineReceiver):
         if (not dispatch) and (not self.ignore_unknown_sentencetypes):
             raise InvalidSentence("sentencetype %r" % (sentencetype,))
         if not self.ignore_checksum_mismatch:
-            checksum, calculated_checksum = int(checksum, 16), reduce(operator.xor, map(ord, strmessage))
+            checksum = int(checksum, 16)
+            calculated_checksum = functools.reduce(operator.xor, map(ord, strmessage))
             if checksum != calculated_checksum:
                 raise InvalidChecksum("Given 0x%02X != 0x%02X" % (checksum, calculated_checksum))
         handler = getattr(self, "handle_%s" % dispatch, None)

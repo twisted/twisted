@@ -11,7 +11,7 @@ Resource limiting policies.
 from __future__ import division, absolute_import
 
 # system imports
-import sys, operator
+import sys
 
 from zope.interface import directlyProvides, providedBy
 
@@ -196,7 +196,7 @@ class ThrottlingProtocol(ProtocolWrapper):
         ProtocolWrapper.write(self, data)
 
     def writeSequence(self, seq):
-        self.factory.registerWritten(reduce(operator.add, map(len, seq)))
+        self.factory.registerWritten(sum(map(len, seq)))
         ProtocolWrapper.writeSequence(self, seq)
 
     def dataReceived(self, data):

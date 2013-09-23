@@ -66,6 +66,7 @@ import pickle
 import types
 import warnings
 import decimal
+import functools
 from types import StringType
 from types import UnicodeType
 from types import IntType
@@ -101,7 +102,6 @@ from twisted.python.reflect import namedObject, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
 from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
 from twisted.persisted.crefutil import _Container
-from twisted.python.compat import reduce
 
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 
@@ -585,7 +585,7 @@ class _Jellier:
         @rtype: C{list}
         """
         sign, guts, exponent = d.as_tuple()
-        value = reduce(lambda left, right: left * 10 + right, guts)
+        value = functools.reduce(lambda left, right: left * 10 + right, guts)
         if sign:
             value = -value
         return ['decimal', value, exponent]

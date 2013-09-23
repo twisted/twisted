@@ -15,6 +15,7 @@ import stat
 import errno
 import fnmatch
 import warnings
+import functools
 
 try:
     import pwd, grp
@@ -29,7 +30,6 @@ from twisted.internet import reactor, interfaces, protocol, error, defer
 from twisted.protocols import basic, policies
 
 from twisted.python import log, failure, filepath
-from twisted.python.compat import reduce
 
 from twisted.cred import error as cred_error, portal, credentials, checkers
 
@@ -1793,7 +1793,8 @@ class FTPAnonymousShell(object):
 
 
     def _path(self, path):
-        return reduce(filepath.FilePath.child, path, self.filesystemRoot)
+        return functools.reduce(filepath.FilePath.child, path,
+                                self.filesystemRoot)
 
 
     def makeDirectory(self, path):

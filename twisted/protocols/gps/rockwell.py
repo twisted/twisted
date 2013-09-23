@@ -21,7 +21,8 @@ Other desired features::
     - Compatability with the DeLorme Tripmate and other devices with this chipset (?)
 """
 
-import struct, operator, math
+import math
+import struct
 from twisted.internet import protocol
 from twisted.python import log
 
@@ -93,7 +94,7 @@ class Zodiac(protocol.Protocol):
       sync, msg_id, length, acknak, checksum = struct.unpack('<HHHHh', self.recvd[:10])
       
       # verify checksum
-      cksum = -(reduce(operator.add, (sync, msg_id, length, acknak)) & 0xFFFF)
+      cksum = -(sum(sync, msg_id, length, acknak) & 0xFFFF)
       cksum, = struct.unpack('<h', struct.pack('<h', cksum))
       if cksum != checksum:
         if DEBUG:
@@ -120,7 +121,7 @@ class Zodiac(protocol.Protocol):
       # does this message have data ?
       if length:
         message, checksum = self.recvd[10:10+length], struct.unpack('<h', self.recvd[10+length:neededBytes])[0]
-        cksum = 0x10000 - (reduce(operator.add, struct.unpack('<%dH' % (length/2), message)) & 0xFFFF)
+        cksum = 0x10000 - (sum(struct.unpack('<%dH' % (length/2), message)) & 0xFFFF)
         cksum, = struct.unpack('<h', struct.pack('<h', cksum))
         if cksum != checksum:
           if DEBUG:
