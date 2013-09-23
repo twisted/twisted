@@ -1,4 +1,6 @@
 # -*- test-case-name: twisted.conch.test.test_window -*-
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 """
 Simple insults-based widget library
@@ -7,13 +9,18 @@ Simple insults-based widget library
 """
 
 import array
+import textwrap
 
 from twisted.conch.insults import insults, helper
-from twisted.python import text as tptext
+
+
 
 class YieldFocus(Exception):
-    """Input focus manipulation exception
     """
+    Input focus manipulation exception
+    """
+
+
 
 class BoundedTerminalWrapper(object):
     def __init__(self, terminal, width, height, xoff, yoff):
@@ -561,6 +568,8 @@ class PasswordInput(TextInput):
     def _renderText(self):
         return '*' * len(self.buffer)
 
+
+
 class TextOutput(Widget):
     text = ''
 
@@ -583,6 +592,8 @@ class TextOutput(Widget):
     def focusReceived(self):
         raise YieldFocus()
 
+
+
 class TextOutputArea(TextOutput):
     WRAP, TRUNCATE = range(2)
 
@@ -596,7 +607,7 @@ class TextOutputArea(TextOutput):
         outputLines = []
         while inputLines:
             if self.longLines == self.WRAP:
-                wrappedLines = tptext.greedyWrap(inputLines.pop(0), width)
+                wrappedLines = textwrap.wrap(inputLines.pop(0), width)
                 outputLines.extend(wrappedLines or [''])
             else:
                 outputLines.append(inputLines.pop(0)[:width])
@@ -605,6 +616,8 @@ class TextOutputArea(TextOutput):
         for n, L in enumerate(outputLines[:height]):
             terminal.cursorPosition(0, n)
             terminal.write(L)
+
+
 
 class Viewport(Widget):
     _xOffset = 0
