@@ -975,6 +975,17 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         )
 
 
+    def test_timeFormat_f(self):
+        """
+        "%f" supported in time format.
+        """
+        self._testObserver(
+            1.234567, u"",
+            dict(timeFormat="%f"),
+            b"234567 \n",
+        )
+
+
     def test_noEventTime(self):
         """
         Event lacks a time == no time stamp.

@@ -53,9 +53,10 @@ __all__ = [
 
 
 from string import Formatter
-import inspect
-import logging
-from time import time, localtime, strftime
+from inspect import currentframe
+import logging as py_logging
+from time import time
+from datetime import datetime as DateTime, tzinfo as TZInfo, timedelta as TimeDelta
 
 from zope.interface import Interface, implementer
 from twisted.python.constants import NamedConstant, Names
@@ -151,11 +152,11 @@ LogLevel._levelPriorities = dict(
 # Mappings to Python's logging module
 #
 pythonLogLevelMapping = {
-    LogLevel.debug: logging.DEBUG,
-    LogLevel.info:  logging.INFO,
-    LogLevel.warn:  logging.WARNING,
-    LogLevel.error: logging.ERROR,
-    # LogLevel.critical: logging.CRITICAL,
+    LogLevel.debug: py_logging.DEBUG,
+    LogLevel.info:  py_logging.INFO,
+    LogLevel.warn:  py_logging.WARNING,
+    LogLevel.error: py_logging.ERROR,
+    # LogLevel.critical: py_logging.CRITICAL,
 }
 
 
@@ -255,7 +256,7 @@ class Logger(object):
 
         @return: a namespace
         """
-        return inspect.currentframe().f_back.f_back.f_globals["__name__"]
+        return currentframe().f_back.f_back.f_globals["__name__"]
 
 
     def __init__(self, namespace=None, source=None):
@@ -721,8 +722,10 @@ class FileLogObserver(object):
 
     def __call__(self, event):
         if self.timeFormat is not None and event.get("log_time", None) is not None:
-            t = localtime(event["log_time"])
-            timeStamp = strftime(self.timeFormat + " ", t)
+            t = event["log_time"]
+            tz = MagicTimeZone(t)
+            datetime = DateTime.fromtimestamp(t, tz)
+            timeStamp = datetime.strftime(self.timeFormat + " ")
         else:
             timeStamp = ""
 
@@ -930,3 +933,23 @@ def formatWithCall(formatString, mapping):
     )
 
 theFormatter = Formatter()
+
+
+
+class MagicTimeZone(TZInfo):
+    """
+    Magic TimeZone.
+    """
+    def __init__(self, t):
+        self._offset = DateTime.fromtimestamp(t) - DateTime.utcfromtimestamp(t)
+
+    def utcoffset(self, dt):
+        return self._offset
+
+    def tzname(self, dt):
+        return "Magic"
+
+    def dst(self, dt):
+        return timeDeltaZero
+
+timeDeltaZero = TimeDelta(0)
