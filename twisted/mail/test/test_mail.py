@@ -587,15 +587,33 @@ class AbstractMaildirDomainTestCase(unittest.TestCase):
 
 
 class MaildirDirdbmDomainTestCase(unittest.TestCase):
+    """
+    Tests for L{MaildirDirdbmDomain}.
+    """
     def setUp(self):
+        """
+        Create a temporary L{MaildirDirdbmDomain} and parent
+        L{MailService} before running each test.
+        """
         self.P = self.mktemp()
         self.S = mail.mail.MailService()
         self.D = mail.maildir.MaildirDirdbmDomain(self.S, self.P)
 
+
     def tearDown(self):
+        """
+        Remove the temporary C{maildir} directory when the test has
+        finished.
+        """
         shutil.rmtree(self.P)
 
-    def testAddUser(self):
+
+    def test_addUser(self):
+        """
+        L{MaildirDirdbmDomain.addUser} accepts a user and password
+        argument. It stores those in a C{dbm} dictionary
+        attribute and creates a directory for each user.
+        """
         toAdd = (('user1', 'pwd1'), ('user2', 'pwd2'), ('user3', 'pwd3'))
         for (u, p) in toAdd:
             self.D.addUser(u, p)
@@ -605,14 +623,27 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
             self.assertEqual(self.D.dbm[u], p)
             self.failUnless(os.path.exists(os.path.join(self.P, u)))
 
-    def testCredentials(self):
+
+    def test_credentials(self):
+        """
+        L{MaildirDirdbmDomain.getCredentialsCheckers} initializes and
+        returns one L{ICredentialsChecker} checker by default.
+        """
         creds = self.D.getCredentialsCheckers()
 
         self.assertEqual(len(creds), 1)
         self.failUnless(cred.checkers.ICredentialsChecker.providedBy(creds[0]))
         self.failUnless(cred.credentials.IUsernamePassword in creds[0].credentialInterfaces)
 
-    def testRequestAvatar(self):
+
+    def test_requestAvatar(self):
+        """
+        L{MaildirDirdbmDomain.requestAvatar} raises L{NotImplementedError}
+        unless it is supplied with an L{pop3.IMailbox} interface.
+        When called with an L{pop3.IMailbox}, it returns a 3-tuple
+        containing L{pop3.IMailbox}, an implementation of that interface
+        and a NOOP callable.
+        """
         class ISomething(Interface):
             pass
 
@@ -629,7 +660,14 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
 
         t[2]()
 
-    def testRequestAvatarId(self):
+
+    def test_requestAvatarId(self):
+        """
+        L{DirdbmDatabase.requestAvatarId} raises L{UnauthorizedLogin} if
+        supplied with invalid user credentials.
+        When called with valid credentials, L{requestAvatarId} returns
+        the username associated with the supplied credentials.
+        """
         self.D.addUser('user', 'password')
         database = self.D.getCredentialsCheckers()[0]
 
@@ -641,6 +679,27 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
 
         creds = cred.credentials.UsernamePassword('user', 'password')
         self.assertEqual(database.requestAvatarId(creds), 'user')
+
+
+    def test_userDirectory(self):
+        """
+        L{MaildirDirdbmDomain.userDirectory} is supplied with a user name
+        and returns the path to that user's maildir subdirectory.
+        Calling L{MaildirDirdbmDomain.userDirectory} with a
+        non-existent user returns the 'postmaster' directory if there
+        is a postmaster or returns L{None} if there is no postmaster.
+        """
+        self.D.addUser('user', 'password')
+        self.assertEqual(self.D.userDirectory('user'),
+                         os.path.join(self.D.root, 'user'))
+
+        self.D.postmaster = False
+        self.assertIdentical(self.D.userDirectory('nouser'), None)
+
+        self.D.postmaster = True
+        self.assertEqual(self.D.userDirectory('nouser'),
+                         os.path.join(self.D.root, 'postmaster'))
+
 
 
 class StubAliasableDomain(object):
@@ -720,7 +779,7 @@ class ServiceDomainTestCase(unittest.TestCase):
          fp = StringIO.StringIO(hdr)
          m = rfc822.Message(fp)
          self.assertEqual(len(m.items()), 1)
-         self.failUnless(m.has_key('Received'))
+         self.assertIn('Received', m)
 
     def testValidateTo(self):
         user = smtp.User('user@test.domain', 'helo', None, 'wherever@whatever')

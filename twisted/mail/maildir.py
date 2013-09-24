@@ -477,7 +477,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         Otherwise, returns postmaster's mailbox instead if bounces
         go to postmaster, otherwise return None
         """
-        if not self.dbm.has_key(name):
+        if name not in self.dbm:
             if not self.postmaster:
                 return None
             name = 'postmaster'
