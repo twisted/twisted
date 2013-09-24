@@ -395,8 +395,8 @@ class LoggerTests(SetUpTearDown, unittest.TestCase):
             format = "This is a {level_name} message"
             message = format.format(level_name=level.name)
 
-            method = getattr(log, level.name)
-            method(format, junk=message, level_name=level.name)
+            log_method = getattr(log, level.name)
+            log_method(format, junk=message, level_name=level.name)
 
             # Ensure that test_emit got called with expected arguments
             self.assertEquals(log.emitted["level"], level)
@@ -422,7 +422,8 @@ class LoggerTests(SetUpTearDown, unittest.TestCase):
                     message
                 )
             else:
-                self.assertFalse(hasattr(log, "event"))
+                if hasattr(log, "event"):
+                    self.fail("Unexpected event observed: {0!r}".format(log.event))
 
 
     def test_defaultFailure(self):
