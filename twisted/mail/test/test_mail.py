@@ -597,9 +597,9 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
 
     def test_addUser(self):
         """
-        L{MaildirDirdbmDomain.addUser} accepts a user and password argument and makes
-        those available through a dictionary like object, and also creates a directory
-        for that user.
+        L{MaildirDirdbmDomain.addUser} accepts a user and password
+        argument and makes those available through a dictionary like
+        object, and also creates a directory for that user.
         """
         toAdd = (('user1', 'pwd1'), ('user2', 'pwd2'), ('user3', 'pwd3'))
         for (u, p) in toAdd:
@@ -623,10 +623,10 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
 
     def test_requestAvatar(self):
         """
-        L{MaildirDirdbmDomain.requestAvatar} raises L{NotImplementedError} if
-        supplied with an unrecognized interface. When called with a recognized
-        interface it returns a 3-tuple containing the interface, an
-        implementation of that interface and a callable.
+        L{MaildirDirdbmDomain.requestAvatar} raises L{NotImplementedError}
+        if supplied with an unrecognized interface. When called with a
+        recognized interface it returns a 3-tuple containing the
+        interface, an implementation of that interface and a callable.
         """
         class ISomething(Interface):
             pass
