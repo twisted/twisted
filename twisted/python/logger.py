@@ -63,8 +63,6 @@ from twisted.python.constants import NamedConstant, Names
 from twisted.python.util import untilConcludes
 from twisted.python.failure import Failure
 from twisted.python.reflect import safe_str, safe_repr
-import twisted.python.log
-from twisted.python.log import msg as twistedLogMessage
 
 OBSERVER_REMOVED = (
     "Temporarily removing observer {observer} due to exception: {e}"
@@ -390,12 +388,15 @@ class LegacyLogger(object):
         else:
             self.newStyleLogger = logger
 
+        import twisted.python.log as oldStyleLogger
+        self.oldStyleLogger = oldStyleLogger
+
 
     def __getattribute__(self, name):
         try:
             return super(LegacyLogger, self).__getattribute__(name)
         except AttributeError:
-            return getattr(twisted.python.log, name)
+            return getattr(self.oldStyleLogger, name)
 
 
     def msg(self, *message, **kwargs):
@@ -836,6 +837,8 @@ class DefaultLogPublisher(object):
     """
 
     def __init__(self):
+        from twisted.python.log import msg as twistedLogMessage
+
         self.legacyLogObserver = LegacyLogObserver(twistedLogMessage)
         self.filteredPublisher = LogPublisher(self.legacyLogObserver)
         self.levels            = LogLevelFilterPredicate()
