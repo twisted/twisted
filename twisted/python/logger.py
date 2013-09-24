@@ -46,6 +46,7 @@ __all__ = [
     "ILogFilterPredicate",
     "FilteringLogObserver",
     "LogLevelFilterPredicate",
+    "FileLogObserver",
     "LegacyLogObserver",
 ]
 
