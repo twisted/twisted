@@ -24,7 +24,7 @@ def parse(description, factory, default='tcp', quoting=False):
 
     @param description: The description of the listening port, in the syntax
         described by L{twisted.internet.endpoints.serverFromString}.
-    @type description: C{str}
+    @type description: L{str}
 
     @param factory: The protocol factory which will build protocols for
         connections to this service.
@@ -32,14 +32,16 @@ def parse(description, factory, default='tcp', quoting=False):
 
     @param default: Do not use this parameter. It has been deprecated since
         Twisted 10.2.0.
-    @type default: C{str} or C{None}
+    @type default: L{str} or L{None}
 
     @param quoting: Whether to allow quoting in the description string or not.
-    @type quoting: C{bool}
+    @type quoting: L{bool}
 
     @return: a 3-tuple of (plugin or name, arguments, keyword arguments)
 
     @see: L{twisted.internet.endpoints.serverFromString}
+
+    @since: 13.2
     """
     return endpoints._parseServer(description, factory, default, quoting)
 
@@ -59,7 +61,7 @@ def service(description, factory, default=_DEFAULT, quoting=False,
 
     @param description: The description of the listening port, in the syntax
         described by L{twisted.internet.endpoints.serverFromString}.
-    @type description: C{str}
+    @type description: L{str}
 
     @param factory: The protocol factory which will build protocols for
         connections to this service.
@@ -67,19 +69,21 @@ def service(description, factory, default=_DEFAULT, quoting=False,
 
     @param default: Do not use this parameter. It has been deprecated since
         Twisted 10.2.0.
-    @type default: C{str} or C{None}
+    @type default: L{str} or L{None}
 
     @param quoting: Whether to allow quoting in the description string or not.
-    @type quoting: C{bool}
+    @type quoting: L{bool}
 
     @param reactor: The server endpoint will be constructed with this reactor.
-    @type reactor: L{twisted.internet.interfaces.IReactorCore} or C{None}
+    @type reactor: L{twisted.internet.interfaces.IReactorCore} or L{None}
 
     @return: the service corresponding to a description of a reliable
         stream server.
-    @rtype: C{twisted.application.service.IService}
+    @rtype: L{twisted.application.service.IService}
 
     @see: L{twisted.internet.endpoints.serverFromString}
+
+    @since: 13.2
     """
     if reactor is None:
         from twisted.internet import reactor
@@ -106,9 +110,12 @@ def listen(description, factory, default=None, quoting=False):
     """
     Listen on a port corresponding to a description
 
+    See the documentation of the L{parse} function for description
+    of the semantics of the arguments.
+
     @param description: The description of the listening port, in the syntax
         described by L{twisted.internet.endpoints.serverFromString}.
-    @type description: C{str}
+    @type description: L{str}
 
     @param factory: The protocol factory which will build protocols for
         connections to this service.
@@ -116,17 +123,16 @@ def listen(description, factory, default=None, quoting=False):
 
     @param default: Do not use this parameter. It has been deprecated since
         Twisted 10.2.0.
-    @type default: C{str} or C{None}
+    @type default: L{str} or L{None}
 
     @param quoting: Whether to allow quoting in the description string or not.
-    @type quoting: C{bool}
+    @type quoting: L{bool}
 
     @return: the port corresponding to a description of a reliable
     virtual circuit server.
-    @rtype: C{twisted.internet.interfaces.IListeningPort}
+    @rtype: L{twisted.internet.interfaces.IListeningPort}
 
-    See the documentation of the C{parse} function for description
-    of the semantics of the arguments.
+    @since: 13.2
     """
     from twisted.internet import reactor
     name, args, kw = parse(description, factory, default, quoting)

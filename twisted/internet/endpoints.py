@@ -1260,9 +1260,10 @@ def _tokenize(description):
 
     @param description: a string as described by L{serverFromString} or
         L{clientFromString} with quoting disabled.
+    @type description: L{str}
 
-    @return: an iterable of 2-tuples of (L{_OP} or L{_STRING}, string).  Tuples
-        starting with L{_OP} will contain a second element of either ':' (i.e.
+    @return: an iterable of 2-tuples of (C{_OP} or C{_STRING}, string).  Tuples
+        starting with C{_OP} will contain a second element of either ':' (i.e.
         'next parameter') or '=' (i.e. 'assign parameter value').  For example,
         the string 'hello:greet\=ing=world' would result in a generator
         yielding these values::
@@ -1297,9 +1298,10 @@ def _tokenizeWithQuoting(description):
 
     @param description: a string as described by L{serverFromString} or
         L{clientFromString} with quoting enabled.
+    @type description: L{str}
 
-    @return: an iterable of 2-tuples of (L{_OP} or L{_STRING}, string).  Tuples
-        starting with L{_OP} will contain a second element of either ':' (i.e.
+    @return: an iterable of 2-tuples of (C{_OP} or C{_STRING}, string).  Tuples
+        starting with C{_OP} will contain a second element of either ':' (i.e.
         'next parameter') or '=' (i.e. 'assign parameter value').  For example,
         the string 'hello:{greet=ing}=world' would result in a generator
         yielding these values::
@@ -1335,6 +1337,8 @@ def _tokenizeWithQuoting(description):
             current += description.next()
         else:
             current += n
+    if depth != 0:
+        raise ValueError("Malformed endpoint description: Unmatched braces.")
     yield _STRING, current
 
 
@@ -1346,13 +1350,15 @@ def _parse(description, quoting=False):
 
     @param description: a string as described by L{serverFromString} or
         L{clientFromString}.
+    @type description: L{str}
 
     @param quoting: a boolean that determines which tokenization function
         to use.
+    @type quoting: L{bool}
 
     @return: a 2-tuple of C{(args, kwargs)}, where 'args' is a list of all
-        ':'-separated C{str}s not containing an '=' and 'kwargs' is a map of
-        all C{str}s which do contain an '='.  For example, the result of
+        ':'-separated L{str}s not containing an '=' and 'kwargs' is a map of
+        all L{str}s which do contain an '='.  For example, the result of
         C{_parse('a:b:d=1:c')} would be C{(['a', 'b', 'c'], {'d': '1'})}.
     """
     tokenFunction = _tokenizeWithQuoting if quoting else _tokenize
@@ -1396,7 +1402,7 @@ def _parseServer(description, factory, default=None, quoting=False):
 
     @param description: A description in the format explained by
         L{serverFromString}.
-    @type description: C{str}
+    @type description: L{str}
 
     @param factory: A 'factory' argument; this is left-over from
         twisted.application.strports, it's not really used.
@@ -1405,10 +1411,10 @@ def _parseServer(description, factory, default=None, quoting=False):
     @param default: Deprecated argument, specifying the default parser mode to
         use for unqualified description strings (those which do not have a ':'
         and prefix).
-    @type default: C{str} or C{NoneType}
+    @type default: L{str} or L{None}
 
     @param quoting: Whether to allow quoting in the description string or not.
-    @type quoting: C{bool}
+    @type quoting: L{bool}
 
     @return: a 3-tuple of (plugin or name, arguments, keyword arguments)
     """
@@ -1449,15 +1455,15 @@ def _serverFromStringLegacy(reactor, description, default, quoting=False):
     @type reactor: L{twisted.internet.interfaces.IReactorCore}
 
     @param description: The strports description to parse.
-    @type description: C{str}
+    @type description: L{str}
 
     @param default: Deprecated argument, specifying the default parser mode to
         use for unqualified description strings (those which do not have a ':'
         and prefix).
-    @type default: C{str} or C{NoneType}
+    @type default: L{str} or L{None}
 
     @param quoting: Whether to allow quoting in the description string or not.
-    @type quoting: C{bool}
+    @type quoting: L{bool}
 
     @return: A new endpoint which can be used to listen with the parameters
         given by by C{description}.
@@ -1536,10 +1542,10 @@ def serverFromString(reactor, description, quoting=False):
     @type reactor: L{twisted.internet.interfaces.IReactorCore}
 
     @param description: The strports description to parse.
-    @type description: C{str}
+    @type description: L{str}
 
     @param quoting: Whether to allow quoting in the description string or not.
-    @type quoting: C{bool}
+    @type quoting: L{bool}
 
     @return: A new endpoint which can be used to listen with the parameters
         given by by C{description}.
@@ -1547,7 +1553,7 @@ def serverFromString(reactor, description, quoting=False):
 
     @raise ValueError: when the 'description' string cannot be parsed.
 
-    @since: 10.2
+    @since: 13.2
     """
     return _serverFromStringLegacy(reactor, description, _NO_DEFAULT, quoting)
 
@@ -1800,21 +1806,33 @@ def clientFromString(reactor, description, quoting=False):
         clientFromString(reactor, "unix:/var/foo/bar")
         clientFromString(reactor, "unix:/var/foo/bar:lockfile=1:timeout=9")
 
+    If quoting is set to True, you can declare literals by surrounding them in
+    braces. For example, you can specify the bindAddress for a TCP6 client
+    endpoint like this::
+
+        clientFromString(reactor, "tcp6:www.example.com:80:"
+                                  "bindAddress={::1}", quoting=True)
+
     This function is also extensible; new endpoint types may be registered as
     L{IStreamClientEndpointStringParser} plugins.  See that interface for more
     information.
 
     @param reactor: The client endpoint will be constructed with this reactor.
+    @type reactor: L{twisted.internet.interfaces.IReactorCore}
 
     @param description: The strports description to parse.
+    @type description: L{str}
 
     @param quoting: Whether to allow quoting in the description string or not.
+    @type quoting: L{bool}
 
     @return: A new endpoint which can be used to connect with the parameters
         given by by C{description}.
     @rtype: L{IStreamClientEndpoint<twisted.internet.interfaces.IStreamClientEndpoint>}
 
-    @since: 10.2
+    @raise ValueError: when the 'description' string cannot be parsed.
+
+    @since: 13.2
     """
     args, kwargs = _parse(description, quoting)
     aname = args.pop(0)

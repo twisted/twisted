@@ -2317,6 +2317,14 @@ class ParserTestCase(unittest.TestCase):
              {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
 
 
+    def test_malformedQuoting(self):
+        """
+        When quoting=True, braces are unescapable and must be properly paired.
+        """
+        self.assertRaises(ValueError, self.parse, "unix:{/var/run/finger\\{}",
+            self.f, quoting=True)
+
+
 
 class ServerStringTests(unittest.TestCase):
     """

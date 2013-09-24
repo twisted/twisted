@@ -267,5 +267,19 @@ conn = endpoint.connect(Factory.forProtocol(Protocol))</pre>
   also <a href="systemd.xhtml">Deploying Twisted with systemd</a>.
   </li>
 </ul>
+
+<h2>Allowing Quoting in Endpoint Descriptions</h2>
+
+<p>Since Twisted 13.2 <code class="API" base="twisted.internet.endpoints">clientFromString</code>, <code class="API" base="twisted.internet.endpoints">serverFromString</code>, and <code class="API" base="twisted.application">strports.service</code> support the keyword parameter <code>quoting=True</code> to enable an expanded syntax for endpoint descriptions. When enabled, users can quote literals with braces. This is intended to make entering arguments with multiple special characters, such as IPv6 addresses, easier for end users. However, in this syntax it is impossible to escape braces and all opened braces must be closed.</p>
+
+<h3>Normal Syntax</h3>
+<code>tcp6:port=80:interface=2001\:0DB8\:f00e\:eb00\:\:1</code>
+
+<h3>Expanded Syntax</h3>
+<code>tcp6:port=80:interface={2001:0DB8:f00e:eb00::1}</code>
+
+<h3>Invalid Expanded Syntax</h3>
+<code>tcp6:port=80:interface={2001:0DB8:f00e:eb00::1</code>
+
 </body>
 </html>
