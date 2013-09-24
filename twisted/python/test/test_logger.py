@@ -5,13 +5,21 @@
 Test cases for L{twisted.python.logger}.
 """
 
+from os import environ
 from cStringIO import StringIO
+from time import mktime
+
+try:
+    from time import tzset
+except ImportError:
+    tzset = None
 
 from zope.interface.verify import verifyObject, BrokenMethodImplementation
 
 from twisted.python import log as twistedLogging
 from twisted.python.failure import Failure
 from twisted.trial import unittest
+from twisted.trial.unittest import SkipTest
 
 from twisted.python.logger import (
     LogLevel, InvalidLogLevelError,
@@ -879,7 +887,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
             fileHandle.close()
 
 
-    def _testScaffold(self, logTime, logFormat, observerKwargs, expectedOutput):
+    def _testObserver(self, logTime, logFormat, observerKwargs, expectedOutput):
         """
         Default time stamp format is RFC 3339
         """
@@ -896,21 +904,60 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
 
     def test_defaultTimeStamp(self):
         """
-        Default time stamp format is RFC 3339
+        Default time stamp format is RFC 3339 and offset is correct.
         """
-        return self._testScaffold(
-            1379954439.813977, u"XYZZY",
-            dict(),
-            b"2013-09-23T18:40:39+0200 XYZZY\n",
-        )
+        if tzset is None:
+            raise SkipTest("Platform cannot change timezone; unable to verify offsets.")
+
+        localDST = mktime((2006, 6, 30, 0, 0, 0, 4, 181, 1))
+        localSTD = mktime((2007, 1, 31, 0, 0, 0, 2,  31, 0))
+
+        def setTZ(name):
+            if name is None:
+                del environ["TZ"]
+            else:
+                environ["TZ"] = name
+            tzset()
+
+        def testObserver(t_int, t_str):
+            self._testObserver(
+                t_int, u"",
+                dict(),
+                t_str + " \n",
+            )
+
+        tzIn = environ.get("TZ", None)
+        try:
+            # UTC
+            setTZ("UTC")
+            testObserver(localDST, "2006-06-29T22:00:00+0000")
+            testObserver(localSTD, "2007-01-30T23:00:00+0000")
+
+            # West of UTC
+            setTZ("America/New_York")
+            testObserver(localDST, "2006-06-29T18:00:00-0400")
+            testObserver(localSTD, "2007-01-30T18:00:00-0500")
+
+            # East of UTC
+            setTZ("Europe/Berlin")
+            testObserver(localDST, "2006-06-30T00:00:00+0200")
+            testObserver(localSTD, "2007-01-31T00:00:00+0100")
+
+            # No DST
+            setTZ("Canada/Saskatchewan")
+            testObserver(localDST, "2006-06-29T16:00:00-0600")
+            testObserver(localSTD, "2007-01-30T17:00:00-0600")
+        finally:
+            setTZ(tzIn)
 
 
     def test_noTimeFormat(self):
         """
         Time format is None == no time stamp.
         """
-        return self._testScaffold(
-            1379954439.813977, u"XYZZY",
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        self._testObserver(
+            t, u"XYZZY",
             dict(timeFormat=None),
             b"XYZZY\n",
         )
@@ -920,10 +967,11 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         """
         Alternate time format in output.
         """
-        return self._testScaffold(
-            1379954439.813977, u"",
-            dict(timeFormat="%Y/%w"),
-            b"2013/1 \n",
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        self._testObserver(
+            t, u"",
+            dict(timeFormat="%Y/%W"),
+            b"2013/38 \n",
         )
 
 
@@ -931,7 +979,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         """
         Event lacks a time == no time stamp.
         """
-        return self._testScaffold(
+        self._testObserver(
             None, u"XYZZY",
             dict(),
             b"XYZZY\n",
@@ -942,7 +990,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         """
         Default encoding is UTF-8.
         """
-        return self._testScaffold(
+        self._testObserver(
             None, u"S\xe1nchez",
             dict(),
             b"S\xc3\xa1nchez\n",
@@ -953,7 +1001,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         """
         Alternate encoding in output.
         """
-        return self._testScaffold(
+        self._testObserver(
             None, u"S\xe1nchez",
             dict(encoding="utf-16"),
             b"\xff\xfeS\x00\xe1\x00n\x00c\x00h\x00e\x00z\x00\n",
