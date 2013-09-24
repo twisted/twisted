@@ -54,7 +54,7 @@ class TestLogger(Logger):
         def observer(event):
             self.event = event
 
-        Logger.publisher.addObserver(observer)
+        Logger.publisher.addObserver(observer, filtered=False)
         try:
             Logger.emit(self, level, format, **kwargs)
         finally:
@@ -403,22 +403,15 @@ class LoggerTests(SetUpTearDown, unittest.TestCase):
             self.assertEquals(log.emitted["format"], format)
             self.assertEquals(log.emitted["kwargs"]["junk"], message)
 
-            if level >= logLevelForNamespace(log.namespace):
-                self.assertTrue(hasattr(log, "event"), "No event observed.")
-                self.assertEquals(log.event["log_format"], format)
-                self.assertEquals(log.event["log_level"], level)
-                self.assertEquals(log.event["log_namespace"], __name__)
-                self.assertEquals(log.event["log_source"], None)
+            self.assertTrue(hasattr(log, "event"), "No event observed.")
 
-                self.assertEquals(log.event["logLevel"],
-                                  pythonLogLevelMapping[level])
+            self.assertEquals(log.event["log_format"], format)
+            self.assertEquals(log.event["log_level"], level)
+            self.assertEquals(log.event["log_namespace"], __name__)
+            self.assertEquals(log.event["log_source"], None)
+            self.assertEquals(log.event["junk"], message)
 
-                self.assertEquals(log.event["junk"], message)
-
-                self.assertEquals(formatEvent(log.event), message)
-            else:
-                if hasattr(log, "event"):
-                    self.fail("Unexpected event observed: {0!r}".format(log.event))
+            self.assertEquals(formatEvent(log.event), message)
 
 
     def test_defaultFailure(self):
