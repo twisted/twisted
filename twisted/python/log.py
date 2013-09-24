@@ -11,7 +11,6 @@ from __future__ import division, absolute_import
 import sys
 import time
 import warnings
-from datetime import datetime
 import logging
 
 from zope.interface import Interface
@@ -326,70 +325,40 @@ class FileLogObserver:
     @type timeFormat: C{str} or C{NoneType}
     @ivar timeFormat: If not C{None}, the format string passed to strftime().
     """
-    timeFormat = None
+    defaultTimeFormat = "%d-%02d-%02d %02d:%02d:%02d%s%02d%02d%z"
 
     def __init__(self, f):
-        self.write = f.write
-        self.flush = f.flush
+        self._f = f
+        self._timeFormat = None
+        self._initObserver()
 
+    def _initObserver(self):
+        timeFormat = self.timeFormat
+        if timeFormat is None:
+            timeFormat = self.defaultTimeFormat
 
-    def getTimezoneOffset(self, when):
-        """
-        Return the current local timezone offset from UTC.
+        from twisted.python.logger import FileLogObserver as NewFLO
+        self._newFLO = NewFLO(self._f, timeFormat=timeFormat)
 
-        @type when: C{int}
-        @param when: POSIX (ie, UTC) timestamp for which to find the offset.
+    @property
+    def timeFormat(self):
+        return self._timeFormat
 
-        @rtype: C{int}
-        @return: The number of seconds offset from UTC.  West is positive,
-        east is negative.
-        """
-        offset = datetime.utcfromtimestamp(when) - datetime.fromtimestamp(when)
-        return offset.days * (60 * 60 * 24) + offset.seconds
-
-
-    def formatTime(self, when):
-        """
-        Format the given UTC value as a string representing that time in the
-        local timezone.
-
-        By default it's formatted as a ISO8601-like string (ISO8601 date and
-        ISO8601 time separated by a space). It can be customized using the
-        C{timeFormat} attribute, which will be used as input for the underlying
-        L{datetime.datetime.strftime} call.
-
-        @type when: C{int}
-        @param when: POSIX (ie, UTC) timestamp for which to find the offset.
-
-        @rtype: C{str}
-        """
-        if self.timeFormat is not None:
-            return datetime.fromtimestamp(when).strftime(self.timeFormat)
-
-        tzOffset = -self.getTimezoneOffset(when)
-        when = datetime.utcfromtimestamp(when + tzOffset)
-        tzHour = abs(int(tzOffset / 60 / 60))
-        tzMin = abs(int(tzOffset / 60 % 60))
-        if tzOffset < 0:
-            tzSign = '-'
-        else:
-            tzSign = '+'
-        return '%d-%02d-%02d %02d:%02d:%02d%s%02d%02d' % (
-            when.year, when.month, when.day,
-            when.hour, when.minute, when.second,
-            tzSign, tzHour, tzMin)
+    @timeFormat.setter
+    def timeFormat(self, timeFormat):
+        self._timeFormat = timeFormat
+        self._initObserver()
 
     def emit(self, eventDict):
         text = textFromEventDict(eventDict)
         if text is None:
             return
 
-        timeStr = self.formatTime(eventDict['time'])
-        fmtDict = {'system': eventDict['system'], 'text': text.replace("\n", "\n\t")}
-        msgStr = _safeFormat("[%(system)s] %(text)s\n", fmtDict)
+        eventDict["log_text"] = text.replace("\n", "\n\t")
+        eventDict["log_format"] = "[{system}] {log_text}"
 
-        util.untilConcludes(self.write, timeStr + " " + msgStr)
-        util.untilConcludes(self.flush)  # Hoorj!
+        self._newFLO(eventDict)
+        return
 
     def start(self):
         """
@@ -609,4 +578,3 @@ try:
 except NameError:
     defaultObserver = DefaultObserver()
     defaultObserver.start()
-
