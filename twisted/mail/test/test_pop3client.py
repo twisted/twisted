@@ -609,7 +609,7 @@ class POP3ClientMiscTestCase(unittest.TestCase):
         """
         publicClasses = [c[0] for c in inspect.getmembers(
                                        sys.modules['twisted.mail.pop3client'],
-                                       inspect.isclass) 
+                                       inspect.isclass)
                          if not c[0][0] == '_']
 
         for pc in publicClasses:
