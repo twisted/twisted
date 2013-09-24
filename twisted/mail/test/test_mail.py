@@ -598,8 +598,8 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
     def test_addUser(self):
         """
         L{MaildirDirdbmDomain.addUser} accepts a user and password
-        argument and makes those available through a dictionary like
-        object, and also creates a directory for that user.
+        argument. It stores those in a C{dbm} dictionary
+        attribute and creates a directory for each user.
         """
         toAdd = (('user1', 'pwd1'), ('user2', 'pwd2'), ('user3', 'pwd3'))
         for (u, p) in toAdd:
@@ -612,8 +612,8 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
 
     def test_credentials(self):
         """
-        L{MaildirDirdbmDomain.getCredentialsCheckers} has one
-        L{IUsernamePassword} checker by default.
+        L{MaildirDirdbmDomain.getCredentialsCheckers} initializes and
+        returns one L{ICredentialsChecker} checker by default.
         """
         creds = self.D.getCredentialsCheckers()
 
@@ -624,9 +624,10 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
     def test_requestAvatar(self):
         """
         L{MaildirDirdbmDomain.requestAvatar} raises L{NotImplementedError}
-        if supplied with an unrecognized interface. When called with a
-        recognized interface it returns a 3-tuple containing the
-        interface, an implementation of that interface and a callable.
+        unless it is supplied with an L{pop3.IMailbox} interface.
+        When called with an L{pop3.IMailbox}, it returns a 3-tuple
+        containing L{pop3.IMailbox}, an implementation of that interface
+        and a NOOP callable.
         """
         class ISomething(Interface):
             pass
@@ -646,9 +647,10 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
 
     def test_requestAvatarId(self):
         """
-        L{requestAvatarId} raises L{UnauthorizedLogin} if supplied with invalid
-        user credentials. When called with valid credentials checks that
-        L{requestAvatarId} returns the expected user.
+        L{DirdbmDatabase.requestAvatarId} raises L{UnauthorizedLogin} if
+        supplied with invalid user credentials.
+        When called with valid credentials, L{requestAvatarId} returns
+        the username associated with the supplied credentials.
         """
         self.D.addUser('user', 'password')
         database = self.D.getCredentialsCheckers()[0]
@@ -664,11 +666,11 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
 
     def test_userDirectory(self):
         """
-        Adds a user and calls L{MaildirDirdbmDomain.userDirectory} to checks
-        that the directory structure is as expected.  Calling
-        L{MaildirDirdbmDomain.userDirectory} with a non-existent user should
-        return the 'postmaster' directory if there is a postmaster or return
-        L{None} if there is no postmaster.
+        L{MaildirDirdbmDomain.userDirectory} is supplied with a user name
+        and returns the path to that user's maildir subdirectory.
+        Calling L{MaildirDirdbmDomain.userDirectory} with a
+        non-existent user returns the 'postmaster' directory if there
+        is a postmaster or returns L{None} if there is no postmaster.
         """
         self.D.addUser('user', 'password')
         self.assertEqual(self.D.userDirectory('user'),
