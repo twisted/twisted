@@ -96,13 +96,11 @@ class DomainDeliveryBase:
         @type user: L{User}
         @param user: The destination address.
 
-        @rtype: no-argument callable which returns L{IMessage <smtp.IMessage>}
-            provider or L{Deferred <defer.Deferred>} which successfully fires
-            with no-argument callable which returns L{IMessage <smtp.IMessage>}
+        @rtype: L{Deferred <defer.Deferred>} which successfully fires with
+            no-argument callable which returns L{IMessage <smtp.IMessage>}
             provider.
-        @return: A no-argument callable which returns a message receiver for
-            the destination or a deferred which successfully fires with the
-            same thing.
+        @return: A deferred which successfully fires with a no-argument
+            callable which returns a message receiver for the destination.
 
         @raise SMTPBadRcpt: When messages cannot be accepted for the
             destination address.
