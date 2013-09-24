@@ -323,7 +323,6 @@ class Logger(object):
         @param kwargs: additional keyword parameters to include with
             the event.
         """
-        # FIXME: Updated Twisted supports 'in' on constants container
         if level not in LogLevel.iterconstants():
             self.failure(
                 "Got invalid log level {invalidLevel!r} in {logger}.emit().",
@@ -622,12 +621,10 @@ class LogLevelFilterPredicate(object):
 
     Events that not not have a log level or namespace are also dropped.
     """
+    defaultLogLevel = LogLevel.info
+
 
     def __init__(self):
-        # FIXME: Make this a class variable. But that raises an
-        # _initializeEnumerants constants error in Twisted 12.2.0.
-        self.defaultLogLevel = LogLevel.info
-
         self._logLevelsByNamespace = {}
         self.clearLogLevels()
 
