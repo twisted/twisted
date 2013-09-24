@@ -54,11 +54,11 @@ class TestLogger(Logger):
         def observer(event):
             self.event = event
 
-        twistedLogging.addObserver(observer)
+        Logger.publisher.addObserver(observer)
         try:
             Logger.emit(self, level, format, **kwargs)
         finally:
-            twistedLogging.removeObserver(observer)
+            Logger.publisher.removeObserver(observer)
 
         self.emitted = {
             "level":  level,
@@ -415,12 +415,7 @@ class LoggerTests(SetUpTearDown, unittest.TestCase):
 
                 self.assertEquals(log.event["junk"], message)
 
-                # FIXME: this checks the end of message because we do
-                # formatting in emit()
-                self.assertEquals(
-                    formatEvent(log.event),
-                    message
-                )
+                self.assertEquals(formatEvent(log.event), message)
             else:
                 if hasattr(log, "event"):
                     self.fail("Unexpected event observed: {0!r}".format(log.event))
