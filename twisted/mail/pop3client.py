@@ -697,10 +697,4 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         return self.sendShort('QUIT', None)
 
-__all__ = [
-    # Exceptions
-    'InsecureAuthenticationDisallowed', 'LineTooLong', 'POP3ClientError',
-    'ServerErrorResponse', 'TLSError', 'TLSNotSupportedError',
-
-    # Protocol classes
-    'POP3Client']
+__all__ = []
