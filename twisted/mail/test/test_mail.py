@@ -587,13 +587,26 @@ class AbstractMaildirDomainTestCase(unittest.TestCase):
 
 
 class MaildirDirdbmDomainTestCase(unittest.TestCase):
+    """
+    Tests for L{MaildirDirdbmDomain}.
+    """
     def setUp(self):
+        """
+        Create a temporary L{MaildirDirdbmDomain} and parent
+        L{MailService} before running each test.
+        """
         self.P = self.mktemp()
         self.S = mail.mail.MailService()
         self.D = mail.maildir.MaildirDirdbmDomain(self.S, self.P)
 
+
     def tearDown(self):
+        """
+        Remove the temporary C{maildir} directory when the test has
+        finished.
+        """
         shutil.rmtree(self.P)
+
 
     def test_addUser(self):
         """
@@ -610,6 +623,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
             self.assertEqual(self.D.dbm[u], p)
             self.failUnless(os.path.exists(os.path.join(self.P, u)))
 
+
     def test_credentials(self):
         """
         L{MaildirDirdbmDomain.getCredentialsCheckers} initializes and
@@ -620,6 +634,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         self.assertEqual(len(creds), 1)
         self.failUnless(cred.checkers.ICredentialsChecker.providedBy(creds[0]))
         self.failUnless(cred.credentials.IUsernamePassword in creds[0].credentialInterfaces)
+
 
     def test_requestAvatar(self):
         """
@@ -645,6 +660,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
 
         t[2]()
 
+
     def test_requestAvatarId(self):
         """
         L{DirdbmDatabase.requestAvatarId} raises L{UnauthorizedLogin} if
@@ -664,6 +680,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         creds = cred.credentials.UsernamePassword('user', 'password')
         self.assertEqual(database.requestAvatarId(creds), 'user')
 
+
     def test_userDirectory(self):
         """
         L{MaildirDirdbmDomain.userDirectory} is supplied with a user name
@@ -682,6 +699,7 @@ class MaildirDirdbmDomainTestCase(unittest.TestCase):
         self.D.postmaster = True
         self.assertEqual(self.D.userDirectory('nouser'),
                          os.path.join(self.D.root, 'postmaster'))
+
 
 
 class StubAliasableDomain(object):
