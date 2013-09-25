@@ -125,7 +125,7 @@ class _ConstantsContainerType(type):
 # See:
 # * http://docs.python.org/2/library/functions.html#type
 # * http://docs.python.org/3/reference/datamodel.html#customizing-class-creation
-class _ConstantsContainer(_ConstantsContainerType('Py3TmpBase', (object,), {})):
+class _ConstantsContainer(_ConstantsContainerType('', (object,), {})):
     """
     L{_ConstantsContainer} is a class with attributes used as symbolic
     constants.  It is up to subclasses to specify what kind of constants are
