@@ -121,9 +121,9 @@ class RelayerMixin:
         """
         Return the destination address of the next message to be relayed.
 
-        @rtype: L{bytes} or L{NoneType <types.NoneType>}
-        @return: The destination address of the next message to be relayed or
-            C{None} if there are no further messages.
+        @rtype: L{NoneType <types.NoneType>} or L{list} of L{bytes}
+        @return: A list containing the destination address of the next message
+            to be relayed or C{None} if there are no further messages.
         """
         if not self.messages:
             return None
