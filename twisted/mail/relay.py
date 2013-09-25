@@ -109,8 +109,9 @@ class RelayerMixin:
         """
         Return the origination address of the next message to be relayed.
 
-        @rtype: L{bytes}
-        @return: The origination address of the next message to be relayed.
+        @rtype: L{bytes} or L{NoneType <types.NoneType>}
+        @return: The origination address of the next message to be relayed or
+            C{None} if there are no further messages.
         """
         if not self.messages:
             return None
@@ -120,8 +121,9 @@ class RelayerMixin:
         """
         Return the destination address of the next message to be relayed.
 
-        @rtype: L{bytes}
-        @return: The destination address of the next message to be relayed.
+        @rtype: L{bytes} or L{NoneType <types.NoneType>}
+        @return: The destination address of the next message to be relayed or
+            C{None} if there are no further messages.
         """
         if not self.messages:
             return None
@@ -132,9 +134,9 @@ class RelayerMixin:
         Return the file containing the contents of the next message to be
         relayed.
 
-        @rtype: L{file}
+        @rtype: L{file} or L{NoneType <types.NoneType>}
         @return: The file containing the contents of the next message to be
-            relayed.
+            relayed or L{None} if there are no further messages.
         """
         if not self.messages:
             return None
