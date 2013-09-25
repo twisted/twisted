@@ -534,6 +534,9 @@ class LogPublisher(object):
 
 
     def __call__(self, event):
+        """
+        Forward events to contained observers.
+        """
         for observer in self.observers:
             try:
                 observer(event)
@@ -617,6 +620,9 @@ class FilteringLogObserver(object):
 
 
     def __call__(self, event):
+        """
+        Forward to next observer if predicate allows it.
+        """
         if self.shouldLogEvent(event):
             self.observer(event)
 
@@ -727,6 +733,9 @@ class FileLogObserver(object):
 
 
     def __call__(self, event):
+        """
+        Write event to file.
+        """
         if self.timeFormat is not None and event.get("log_time", None) is not None:
             t = event["log_time"]
             tz = MagicTimeZone(t)
