@@ -839,7 +839,7 @@ class LegacyLogObserver(object):
                 prefix=prefix, message=formatEvent(event)
             )
 
-        self.legacyObserver(**event)
+        self.legacyObserver(event)
 
 
 
@@ -893,7 +893,7 @@ class DefaultLogPublisher(object):
     def __init__(self):
         from twisted.python.log import msg as twistedLogMessage
 
-        self.legacyLogObserver = LegacyLogObserver(twistedLogMessage)
+        self.legacyLogObserver = LegacyLogObserver(lambda e: twistedLogMessage(**e))
         self.filteredPublisher = LogPublisher(self.legacyLogObserver)
         self.levels            = LogLevelFilterPredicate()
         self.filters           = FilteringLogObserver(self.filteredPublisher,
