@@ -362,11 +362,12 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
 
     # Old errors
     ERROR_INVALID_FORMAT = 'Invalid format string'
-    ERROR_UNFORMATTABLE = 'UNFORMATTABLE OBJECT'
+    ERROR_UNFORMATTABLE_OBJECT = 'UNFORMATTABLE OBJECT'
     ERROR_FORMAT = 'Invalid format string or unformattable object in log message'
     ERROR_PATHOLOGICAL = 'PATHOLOGICAL ERROR'
 
     ERROR_NO_FORMAT = 'Unable to format event'
+    ERROR_UNFORMATTABLE_SYSTEM = "[UNFORMATTABLE]"
     ERROR_MESSAGE_LOST = 'MESSAGE LOST: unformattable object logged'
 
     def test_loggingAnObjectWithBroken__str__(self):
@@ -374,7 +375,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
         self.lp.msg(EvilStr())
         self.assertEqual(len(self.out), 1)
         # Logging system shouldn't need to crap itself for this trivial case
-        self.assertNotIn(self.ERROR_UNFORMATTABLE, self.out[0])
+        self.assertNotIn(self.ERROR_UNFORMATTABLE_OBJECT, self.out[0])
 
 
     def test_formattingAnObjectWithBroken__str__(self):
@@ -386,19 +387,19 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
     def test_brokenSystem__str__(self):
         self.lp.msg('huh', system=EvilStr())
         self.assertEqual(len(self.out), 1)
-        self.assertIn(self.ERROR_NO_FORMAT, self.out[0])
+        self.assertIn(self.ERROR_UNFORMATTABLE_SYSTEM, self.out[0])
 
 
     def test_formattingAnObjectWithBroken__repr__Indirect(self):
         self.lp.msg(format='%(blat)s', blat=[EvilRepr()])
         self.assertEqual(len(self.out), 1)
-        self.assertIn(self.ERROR_UNFORMATTABLE, self.out[0])
+        self.assertIn(self.ERROR_UNFORMATTABLE_OBJECT, self.out[0])
 
 
     def test_systemWithBroker__repr__Indirect(self):
         self.lp.msg('huh', system=[EvilRepr()])
         self.assertEqual(len(self.out), 1)
-        self.assertIn(self.ERROR_MESSAGE_LOST, self.out[0])
+        self.assertIn(self.ERROR_UNFORMATTABLE_SYSTEM, self.out[0])
 
 
     def test_simpleBrokenFormat(self):

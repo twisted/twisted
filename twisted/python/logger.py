@@ -731,12 +731,27 @@ class FileLogObserver(object):
             t = event["log_time"]
             tz = MagicTimeZone(t)
             datetime = DateTime.fromtimestamp(t, tz)
-            timeStamp = datetime.strftime(self.timeFormat + " ")
+            timeStamp = datetime.strftime(self.timeFormat)
         else:
-            timeStamp = ""
+            timeStamp = b"-"
 
-        text = "{timeStamp}{event}\n".format(
+        system = event.get("log_system", None)
+
+        if system is not None:
+            try:
+                system = str(system)
+            except BaseException:
+                system = b"UNFORMATTABLE"
+
+        if system is None:
+            system = b"{namespace}#{level}".format(
+                namespace=event.get("log_namespace", b"-"),
+                level=event.get("log_level", b"-"),
+            )
+
+        text = b"{timeStamp} [{system}] {event}\n".format(
             timeStamp=timeStamp,
+            system=system,
             event=formatEvent(event).encode(self.encoding),
         )
 
@@ -821,23 +836,21 @@ class LegacyLogObserverWrapper(object):
         Forward events to the legacy observer after editing them to
         ensure compatibility.
         """
-        level = event.get("log_level", None)
-
-        event["system"] = "{namespace}#{level}".format(
-            namespace=event.get("log_namespace", "-"),
-            level=level.name if level is not None else "-",
-        )
-
         #
         # Twisted's logging supports indicating a python log level, so let's
         # provide the equivalent to our logging levels.
         #
+        level = event.get("log_level", None)
         if level in pythonLogLevelMapping:
             event["logLevel"] = pythonLogLevelMapping[level]
 
         # The "message" key is required by textFromEventDict()
         if "message" not in event:
             event["message"] = ""
+
+        system = event.get("log_system", None)
+        if system is not None:
+            event["system"] = system
 
         # Format new style -> old style
         if event.get("log_format", None) is not None:

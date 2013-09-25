@@ -873,6 +873,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
     """
     Tests for L{FileLogObserver}.
     """
+    DEFAULT_SYSTEM = b"[-#-]"
 
     def test_interface(self):
         """
@@ -899,7 +900,10 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
             observer = FileLogObserver(fileHandle, **observerKwargs)
             observer(event)
             output = fileHandle.getvalue()
-            self.assertEquals(output, expectedOutput)
+            self.assertTrue(
+                output.endswith(expectedOutput),
+                "{0!r} != {1!r}".format(expectedOutput, output)
+            )
         finally:
             fileHandle.close()
 
@@ -921,34 +925,34 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
                 environ["TZ"] = name
             tzset()
 
-        def testObserver(t_int, t_str):
+        def testObserver(t_int, t_bytes):
             self._testObserver(
                 t_int, u"",
                 dict(),
-                t_str + " \n",
+                t_bytes + b" " + self.DEFAULT_SYSTEM + b" \n",
             )
 
         tzIn = environ.get("TZ", None)
         try:
             # UTC
             setTZ("UTC")
-            testObserver(localDST, "2006-06-29T22:00:00+0000")
-            testObserver(localSTD, "2007-01-30T23:00:00+0000")
+            testObserver(localDST, b"2006-06-29T22:00:00+0000")
+            testObserver(localSTD, b"2007-01-30T23:00:00+0000")
 
             # West of UTC
             setTZ("America/New_York")
-            testObserver(localDST, "2006-06-29T18:00:00-0400")
-            testObserver(localSTD, "2007-01-30T18:00:00-0500")
+            testObserver(localDST, b"2006-06-29T18:00:00-0400")
+            testObserver(localSTD, b"2007-01-30T18:00:00-0500")
 
             # East of UTC
             setTZ("Europe/Berlin")
-            testObserver(localDST, "2006-06-30T00:00:00+0200")
-            testObserver(localSTD, "2007-01-31T00:00:00+0100")
+            testObserver(localDST, b"2006-06-30T00:00:00+0200")
+            testObserver(localSTD, b"2007-01-31T00:00:00+0100")
 
             # No DST
             setTZ("Canada/Saskatchewan")
-            testObserver(localDST, "2006-06-29T16:00:00-0600")
-            testObserver(localSTD, "2007-01-30T17:00:00-0600")
+            testObserver(localDST, b"2006-06-29T16:00:00-0600")
+            testObserver(localSTD, b"2007-01-30T17:00:00-0600")
         finally:
             setTZ(tzIn)
 
@@ -973,7 +977,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             t, u"",
             dict(timeFormat="%Y/%W"),
-            b"2013/38 \n",
+            b"2013/38 " + self.DEFAULT_SYSTEM + " \n",
         )
 
 
@@ -984,7 +988,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             1.234567, u"",
             dict(timeFormat="%f"),
-            b"234567 \n",
+            b"234567 " + self.DEFAULT_SYSTEM + b" \n",
         )
 
 
@@ -1141,23 +1145,10 @@ class LegacyLogObserverWrapperTests(SetUpTearDown, unittest.TestCase):
 
     def test_system(self):
         """
-        Namespace/level is put into the C{"system"} key.
+        Translate: C{"log_system"} -> C{"system"}
         """
-        event = self.forwardAndVerify(dict(
-            log_namespace="test_ns",
-            log_level=LogLevel.info,
-            log_format="+",
-        ))
-        self.assertEquals(event["system"], "test_ns#info")
-
-
-    def test_prefixNoNamespaceNoLevel(self):
-        """
-        Namespace/level is put into the C{"system"} key, and handles
-        missing keys.
-        """
-        event = self.forwardAndVerify(dict(log_format="+"))
-        self.assertEquals(event["system"], "-#-")
+        event = self.forwardAndVerify(dict(log_system="foo"))
+        self.assertEquals(event["system"], "foo")
 
 
     def test_pythonLogLevel(self):
@@ -1165,7 +1156,6 @@ class LegacyLogObserverWrapperTests(SetUpTearDown, unittest.TestCase):
         Python log level is added.
         """
         event = self.forwardAndVerify(dict(log_level=LogLevel.info))
-        self.assertIn("logLevel", event)
         self.assertEquals(event["logLevel"], py_logging.INFO)
 
 
@@ -1174,7 +1164,6 @@ class LegacyLogObserverWrapperTests(SetUpTearDown, unittest.TestCase):
         C{"message"} key is added.
         """
         event = self.forwardAndVerify(dict())
-        self.assertIn("message", event)
         self.assertEquals(event["message"], "")
 
 
@@ -1196,10 +1185,8 @@ class LegacyLogObserverWrapperTests(SetUpTearDown, unittest.TestCase):
             log_failure=failure,
             log_format=why,
         ))
-        self.assertIn("failure", event)
         self.assertIdentical(event["failure"], failure)
         self.assertTrue(event["isError"])
-        self.assertIn("why", event)
         self.assertEquals(event["why"], why)
 
 

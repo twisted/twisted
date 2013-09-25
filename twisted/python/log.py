@@ -354,7 +354,8 @@ class FileLogObserver:
             return
 
         eventDict["log_text"] = text.replace("\n", "\n\t")
-        eventDict["log_format"] = "[{system}] {log_text}"
+        eventDict["log_format"] = "{log_text}"
+        eventDict["log_system"] = eventDict["system"]
 
         self._newFLO(eventDict)
         return
