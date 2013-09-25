@@ -405,13 +405,12 @@ class Flags(Values):
 
         @param name: The name of the constant to create.
 
-        @param descriptor: An instance of a L{FlagConstant} which is
-            assigned to C{name}.
+        @param descriptor: An instance of a L{FlagConstant} which is assigned to
+            C{name}.
 
-        @return: Either the value passed to the C{descriptor}
-            constructor, or the next power of 2 value which will be
-            assigned to C{descriptor}, relative to the value of the
-            last defined L{FlagConstant}.
+        @return: Either the value passed to the C{descriptor} constructor, or
+            the next power of 2 value which will be assigned to C{descriptor},
+            relative to the value of the last defined L{FlagConstant}.
         """
         if descriptor.value is _unspecified:
             value = cls._value
