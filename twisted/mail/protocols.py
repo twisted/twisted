@@ -346,7 +346,7 @@ class VirtualPOP3(pop3.POP3):
         @rtype: L{Deferred} which successfully results in 3-L{tuple} of
             (E{1}) L{IMailbox <pop3.IMailbox>}, (E{2}) L{IMailbox
             <pop3.IMailbox>} provider, (E{3}) no-argument callable
-        @return: A deferred which fires when authentication is complete.u
+        @return: A deferred which fires when authentication is complete.
             If successful, it returns an L{IMailbox <pop3.IMailbox>} interface,
             a mailbox and a logout function. If authentication fails, the
             deferred fails with an L{UnauthorizedLogin
