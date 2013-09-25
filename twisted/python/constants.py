@@ -88,7 +88,10 @@ class _ConstantsContainerType(type):
         cls = super(_ConstantsContainerType, self).__new__(
             self, name, bases, attributes)
 
-        if cls._constantType is None:
+        # Only realize constants in concrete _ConstantsContainer subclasses.
+        # Ignore intermediate base classes.
+        constantType = getattr(cls, '_constantType', None)
+        if constantType is None:
             return cls
 
         constants = []
@@ -115,7 +118,14 @@ class _ConstantsContainerType(type):
 
 
 
-class _ConstantsContainer(object):
+# In Python3 metaclasses are defined using a C{metaclass} keyword argument in
+# the class definition. This would cause a syntax error in Python2.
+# So we use L{type} to introduce an intermediate base class with the desired
+# metaclass.
+# See:
+# * http://docs.python.org/2/library/functions.html#type
+# * http://docs.python.org/3/reference/datamodel.html#customizing-class-creation
+class _ConstantsContainer(_ConstantsContainerType('Py3TmpBase', (object,), {})):
     """
     L{_ConstantsContainer} is a class with attributes used as symbolic
     constants.  It is up to subclasses to specify what kind of constants are
@@ -189,11 +199,6 @@ class _ConstantsContainer(object):
 
         return iter(
             sorted(constants, key=lambda descriptor: descriptor._index))
-
-# An alternative to __metaclass__ which is compatible with python2 and python3
-# See http://mikewatkins.ca/2008/11/29/python-2-and-3-metaclasses/
-_ConstantsContainer = _ConstantsContainerType(
-    '_ConstantsContainer', (_ConstantsContainer, ), {})
 
 
 
