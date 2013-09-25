@@ -47,7 +47,7 @@ __all__ = [
     "FilteringLogObserver",
     "LogLevelFilterPredicate",
     "FileLogObserver",
-    "LegacyLogObserver",
+    "LegacyLogObserverWrapper",
 ]
 
 
@@ -792,7 +792,7 @@ class RingBufferLogObserver(object):
 
 
 @implementer(ILogObserver)
-class LegacyLogObserver(object):
+class LegacyLogObserverWrapper(object):
     """
     L{ILogObserver} that wraps an L{twisted.python.log.ILogObserver}.
     """
@@ -854,7 +854,7 @@ class DefaultLogPublisher(object):
 
         3. B{filteredPublisher} - a L{LogPublisher}
 
-        4. B{legacyLogObserver} - a L{LegacyLogObserver} wired up to
+        4. B{legacyLogObserver} - a L{LegacyLogObserverWrapper} wired up to
            L{twisted.python.log.msg}.  This allows any observers registered
            with Twisted's logging (that is, most observers in presently use) to
            receive (filtered) events.
@@ -893,7 +893,7 @@ class DefaultLogPublisher(object):
     def __init__(self):
         from twisted.python.log import msg as twistedLogMessage
 
-        self.legacyLogObserver = LegacyLogObserver(lambda e: twistedLogMessage(**e))
+        self.legacyLogObserver = LegacyLogObserverWrapper(lambda e: twistedLogMessage(**e))
         self.filteredPublisher = LogPublisher(self.legacyLogObserver)
         self.levels            = LogLevelFilterPredicate()
         self.filters           = FilteringLogObserver(self.filteredPublisher,
