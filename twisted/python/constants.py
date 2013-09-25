@@ -7,6 +7,8 @@ Symbolic constant support, including collections and constants with text,
 numeric, and bit flag values.
 """
 
+from __future__ import division, absolute_import
+
 __all__ = [
     'NamedConstant', 'ValueConstant', 'FlagConstant',
     'Names', 'Values', 'Flags']
