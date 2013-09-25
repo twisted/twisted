@@ -8,6 +8,7 @@ Test cases for L{twisted.python.logger}.
 from os import environ
 from cStringIO import StringIO
 from time import mktime
+import logging as py_logging
 
 try:
     from time import tzset
@@ -28,6 +29,7 @@ from twisted.python.logger import (
     ILogObserver, LogPublisher, DefaultLogPublisher,
     FilteringLogObserver, PredicateResult,
     FileLogObserver, RingBufferLogObserver,
+    LegacyLogObserverWrapper,
     LogLevelFilterPredicate, OBSERVER_REMOVED
 )
 
@@ -697,10 +699,16 @@ class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
     def test_filteredObserver(self):
         namespace = __name__
 
-        event_debug = dict(log_namespace=namespace,
-                           log_level=LogLevel.debug, log_format="")
-        event_error = dict(log_namespace=namespace,
-                           log_level=LogLevel.error, log_format="")
+        event_debug = dict(
+            log_namespace=namespace,
+            log_level=LogLevel.debug,
+            log_format="",
+        )
+        event_error = dict(
+            log_namespace=namespace,
+            log_level=LogLevel.error,
+            log_format="",
+        )
         events = []
 
         observer = lambda e: events.append(e)
@@ -735,10 +743,16 @@ class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
     def test_unfilteredObserver(self):
         namespace = __name__
 
-        event_debug = dict(log_namespace=namespace, log_level=LogLevel.debug,
-                           log_format="")
-        event_error = dict(log_namespace=namespace, log_level=LogLevel.error,
-                           log_format="")
+        event_debug = dict(
+            log_namespace=namespace,
+            log_level=LogLevel.debug,
+            log_format="",
+        )
+        event_error = dict(
+            log_namespace=namespace,
+            log_level=LogLevel.error,
+            log_format="",
+        )
         events = []
 
         observer = lambda e: events.append(e)
@@ -1066,6 +1080,127 @@ class RingBufferLogObserverTests(SetUpTearDown, unittest.TestCase):
         observer.clear()
         self.assertEquals(0, len(observer))
         self.assertEquals([], list(observer))
+
+
+
+class LegacyLogObserverWrapperTests(SetUpTearDown, unittest.TestCase):
+    """
+    Tests for L{LegacyLogObserverWrapper}.
+    """
+    
+    def test_interface(self):
+        """
+        L{FileLogObserver} is an L{ILogObserver}.
+        """
+        legacyObserver = lambda e: None
+        observer = LegacyLogObserverWrapper(legacyObserver)
+        try:
+            verifyObject(ILogObserver, observer)
+        except BrokenMethodImplementation as e:
+            self.fail(e)
+
+
+    def observe(self, event):
+        """
+        Send an event to a wrapped legacy observer.
+        @return: the event as observed by the legacy wrapper
+        """
+        events = []
+
+        legacyObserver = lambda e: events.append(e)
+        observer = LegacyLogObserverWrapper(legacyObserver)
+        observer(event)
+        self.assertEquals(len(events), 1)
+
+        return events[0]
+
+
+    def forwardAndVerify(self, event):
+        """
+        Send an event to a wrapped legacy observer and verify that its
+        data is preserved.
+        @return: the event as observed by the legacy wrapper
+        """
+        # Send a copy: don't mutate me, bro
+        observed = self.observe(dict(event))
+
+        # Don't expect modifications
+        for key, value in event.iteritems():
+            self.assertIn(key, observed)
+            self.assertEquals(observed[key], value)
+
+        return observed
+
+
+    def test_forward(self):
+        """
+        Basic forwarding.
+        """
+        self.forwardAndVerify(dict(foo=1, bar=2))
+
+
+    def test_system(self):
+        """
+        Namespace/level is put into the C{"system"} key.
+        """
+        event = self.forwardAndVerify(dict(
+            log_namespace="test_ns",
+            log_level=LogLevel.info,
+            log_format="+",
+        ))
+        self.assertEquals(event["system"], "test_ns#info")
+
+
+    def test_prefixNoNamespaceNoLevel(self):
+        """
+        Namespace/level is put into the C{"system"} key, and handles
+        missing keys.
+        """
+        event = self.forwardAndVerify(dict(log_format="+"))
+        self.assertEquals(event["system"], "-#-")
+
+
+    def test_pythonLogLevel(self):
+        """
+        Python log level is added.
+        """
+        event = self.forwardAndVerify(dict(log_level=LogLevel.info))
+        self.assertIn("logLevel", event)
+        self.assertEquals(event["logLevel"], py_logging.INFO)
+
+
+    def test_message(self):
+        """
+        C{"message"} key is added.
+        """
+        event = self.forwardAndVerify(dict())
+        self.assertIn("message", event)
+        self.assertEquals(event["message"], "")
+
+
+    def test_format(self):
+        """
+        Formatting is translated properly.
+        """
+        event = self.forwardAndVerify(dict(log_format="Hello, {who}!", who="world"))
+        self.assertEquals(twistedLogging.textFromEventDict(event), "Hello, world!")
+
+
+    def test_failure(self):
+        """
+        Failures are handled, including setting isError and why.
+        """
+        failure = Failure(RuntimeError("nyargh!"))
+        why = "oopsie..."
+        event = self.forwardAndVerify(dict(
+            log_failure=failure,
+            log_format=why,
+        ))
+        self.assertIn("failure", event)
+        self.assertIdentical(event["failure"], failure)
+        self.assertTrue(event["isError"])
+        self.assertIn("why", event)
+        self.assertEquals(event["why"], why)
 
 
 

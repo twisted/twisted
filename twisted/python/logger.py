@@ -381,9 +381,16 @@ class LegacyLogger(object):
     """
     A logging object that provides some compatibility with the
     L{twisted.python.log} module.
+
+    Specifically, it provides compatible C{msg()} and C{err()} which
+    forwards events to a L{Logger}'s C{emit()}, which will in turn
+    produce new-style events.
     """
 
     def __init__(self, logger=None):
+        """
+        @param logger: a L{Logger}
+        """
         if logger is None:
             self.newStyleLogger = Logger(Logger._namespaceFromCallingContext())
         else:
@@ -795,6 +802,10 @@ class RingBufferLogObserver(object):
 class LegacyLogObserverWrapper(object):
     """
     L{ILogObserver} that wraps an L{twisted.python.log.ILogObserver}.
+
+    Received (new-style) events are modified prior to forwarding to
+    the legacy observer to ensure compatibility with observers that
+    expect legacy events.
     """
 
     def __init__(self, legacyObserver):
@@ -806,9 +817,16 @@ class LegacyLogObserverWrapper(object):
 
 
     def __call__(self, event):
-        prefix = "[{log_namespace}#{log_level.name}] ".format(**event)
+        """
+        Forward events to the legacy observer after editing them to
+        ensure compatibility.
+        """
+        level = event.get("log_level", None)
 
-        level = event["log_level"]
+        event["system"] = "{namespace}#{level}".format(
+            namespace=event.get("log_namespace", "-"),
+            level=level.name if level is not None else "-",
+        )
 
         #
         # Twisted's logging supports indicating a python log level, so let's
@@ -817,8 +835,12 @@ class LegacyLogObserverWrapper(object):
         if level in pythonLogLevelMapping:
             event["logLevel"] = pythonLogLevelMapping[level]
 
+        # The "message" key is required by textFromEventDict()
+        if "message" not in event:
+            event["message"] = ""
+
         # Format new style -> old style
-        if event["log_format"]:
+        if event.get("log_format", None) is not None:
             #
             # Create an object that implements __str__() in order to
             # defer the work of formatting until it's needed by a
@@ -828,16 +850,16 @@ class LegacyLogObserverWrapper(object):
                 def __str__(oself):
                     return formatEvent(event).encode("utf-8")
 
-            event["format"] = prefix + "%(log_legacy)s"
+            event["format"] = "%(log_legacy)s"
             event["log_legacy"] = LegacyFormatStub()
 
         # log.failure() -> isError blah blah
         if "log_failure" in event:
             event["failure"] = event["log_failure"]
             event["isError"] = 1
-            event["why"] = "{prefix}{message}".format(
-                prefix=prefix, message=formatEvent(event)
-            )
+            event["why"] = formatEvent(event)
+        elif "isError" not in event:
+            event["isError"] = 0
 
         self.legacyObserver(event)
 
