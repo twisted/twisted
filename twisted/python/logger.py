@@ -198,7 +198,7 @@ def formatEvent(event):
 
         return formatWithCall(format, event)
 
-    except BaseException as e:
+    except Exception as e:
         return formatUnformattableEvent(event, e)
 
 
@@ -221,7 +221,7 @@ def formatUnformattableEvent(event, error):
             u"Unable to format event {event!r}: {error}"
             .format(event=event, error=error)
         )
-    except BaseException:
+    except Exception:
         # Yikes, something really nasty happened.
         #
         # Try to recover as much formattable data as possible; hopefully at
@@ -541,7 +541,7 @@ class LogPublisher(object):
         for observer in self.observers:
             try:
                 observer(event)
-            except BaseException as e:
+            except Exception as e:
                 #
                 # We have to remove the offending observer because
                 # we're going to badmouth it to all of its friends
@@ -551,7 +551,7 @@ class LogPublisher(object):
                 self.removeObserver(observer)
                 try:
                     self.log.failure(OBSERVER_REMOVED, observer=observer, e=e)
-                except BaseException:
+                except Exception:
                     pass
                 finally:
                     self.addObserver(observer)
@@ -750,7 +750,7 @@ class FileLogObserver(object):
         if system is not None:
             try:
                 system = str(system)
-            except BaseException:
+            except Exception:
                 system = b"UNFORMATTABLE"
 
         if system is None:
