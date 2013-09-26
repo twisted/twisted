@@ -367,7 +367,7 @@ class FileLogObserver(StartStopMixIn):
         if text is None:
             return
 
-        eventDict["log_text"] = text.replace("\n", "\n\t")
+        eventDict["log_text"] = text
         eventDict["log_format"] = "{log_text}"
         eventDict["log_system"] = eventDict["system"]
 

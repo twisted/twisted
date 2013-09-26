@@ -759,10 +759,13 @@ class FileLogObserver(object):
                 level=event.get("log_level", b"-"),
             )
 
+        eventText = formatEvent(event).encode(self.encoding)
+        eventText = eventText.replace(b"\n", b"\n\t")
+
         text = b"{timeStamp} [{system}] {event}\n".format(
             timeStamp=timeStamp,
             system=system,
-            event=formatEvent(event).encode(self.encoding),
+            event=eventText,
         )
 
         untilConcludes(self.fileHandle.write, text)

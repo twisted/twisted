@@ -874,7 +874,25 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
     """
     Tests for L{FileLogObserver}.
     """
+    DEFAULT_TIMESTAMP = b"-"
     DEFAULT_SYSTEM = b"[-#-]"
+
+    def buildOutput(self, timeStamp, system, text):
+        """
+        Build an expected output string from components.
+        """
+        return b" ".join((timeStamp, system, text)) + "\n"
+
+    def buildDefaultOutput(self, text):
+        """
+        Build an expected output string with the default time stamp
+        and system.
+        """
+        return self.buildOutput(
+            self.DEFAULT_TIMESTAMP,
+            self.DEFAULT_SYSTEM,
+            text
+        )
 
     def test_interface(self):
         """
@@ -901,8 +919,8 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
             observer = FileLogObserver(fileHandle, **observerKwargs)
             observer(event)
             output = fileHandle.getvalue()
-            self.assertTrue(
-                output.endswith(expectedOutput),
+            self.assertEquals(
+                output, expectedOutput,
                 "{0!r} != {1!r}".format(expectedOutput, output)
             )
         finally:
@@ -930,7 +948,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
             self._testObserver(
                 t_int, u"",
                 dict(),
-                t_bytes + b" " + self.DEFAULT_SYSTEM + b" \n",
+                self.buildOutput(t_bytes, self.DEFAULT_SYSTEM, b""),
             )
 
         tzIn = environ.get("TZ", None)
@@ -966,7 +984,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             t, u"XYZZY",
             dict(timeFormat=None),
-            b"XYZZY\n",
+            self.buildDefaultOutput(b"XYZZY"),
         )
 
 
@@ -978,7 +996,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             t, u"",
             dict(timeFormat="%Y/%W"),
-            b"2013/38 " + self.DEFAULT_SYSTEM + " \n",
+            self.buildOutput(b"2013/38", self.DEFAULT_SYSTEM, b"")
         )
 
 
@@ -989,7 +1007,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             1.234567, u"",
             dict(timeFormat="%f"),
-            b"234567 " + self.DEFAULT_SYSTEM + b" \n",
+            self.buildOutput(b"234567", self.DEFAULT_SYSTEM, b""),
         )
 
 
@@ -1000,7 +1018,18 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             None, u"XYZZY",
             dict(),
-            b"XYZZY\n",
+            self.buildDefaultOutput(b"XYZZY"),
+        )
+
+
+    def test_multiLine(self):
+        """
+        Additional lines are indented.
+        """
+        self._testObserver(
+            None, u'XYZZY\nA hollow voice says:\n"Plugh"',
+            dict(),
+            self.buildDefaultOutput(b'XYZZY\n\tA hollow voice says:\n\t"Plugh"'),
         )
 
 
@@ -1011,7 +1040,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             None, u"S\xe1nchez",
             dict(),
-            b"S\xc3\xa1nchez\n",
+            self.buildDefaultOutput(b"S\xc3\xa1nchez"),
         )
 
 
@@ -1022,7 +1051,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             None, u"S\xe1nchez",
             dict(encoding="utf-16"),
-            b"\xff\xfeS\x00\xe1\x00n\x00c\x00h\x00e\x00z\x00\n",
+            self.buildDefaultOutput(b"\xff\xfeS\x00\xe1\x00n\x00c\x00h\x00e\x00z\x00"),
         )
 
 
