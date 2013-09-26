@@ -23,20 +23,6 @@ class StateMachine:
         self.state = self.initialState
 
 
-    def transition(self, oldstate, newstate, datum, *a, **kw):
-        if oldstate == newstate:
-            return
-        # print hex(id(self)), 'Going from', oldstate, 'to', newstate, 'because', datum
-        exitmeth = getattr(self, 'exit_%s' % (oldstate,), None)
-        entermeth = getattr(self, 'enter_%s' % (newstate,), None)
-        transmeth = getattr(self, 'transition_%s_to_%s' % (
-                oldstate, newstate), None)
-        for meth in exitmeth, entermeth, transmeth:
-            if meth is not None:
-                meth(*a, **kw)
-        self.state = newstate
-
-
     def input(self, datum, *a, **kw):
         if datum == NOTHING:
             return
@@ -48,7 +34,6 @@ class StateMachine:
             OLDSTATE = self.state.upper()
             NEWSTATE = newstate.upper()
             DATUM = datum.upper()
-            self.transition(OLDSTATE, NEWSTATE, DATUM, *a, **kw)
             self.output(output, *a, **kw)
 
 
