@@ -20,6 +20,8 @@ from twisted.python import context
 from twisted.python import _reflectpy3 as reflect
 from twisted.python import failure
 from twisted.python.threadable import synchronize
+from twisted.python.logger import FileLogObserver as NewFileLogObserver
+
 
 
 class ILogContext:
@@ -350,8 +352,7 @@ class FileLogObserver(StartStopMixIn):
         if timeFormat is None:
             timeFormat = self.defaultTimeFormat
 
-        from twisted.python.logger import FileLogObserver as NewFLO
-        self._newFLO = NewFLO(self._f, timeFormat=timeFormat)
+        self._newFLO = NewFileLogObserver(self._f, timeFormat=timeFormat)
 
     @property
     def timeFormat(self):
@@ -359,6 +360,7 @@ class FileLogObserver(StartStopMixIn):
 
     @timeFormat.setter
     def timeFormat(self, timeFormat):
+        # If timeFormat is set, we need to replace the NewFLO
         self._timeFormat = timeFormat
         self._initObserver()
 
