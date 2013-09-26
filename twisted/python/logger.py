@@ -47,6 +47,7 @@ __all__ = [
     "FilteringLogObserver",
     "LogLevelFilterPredicate",
     "FileLogObserver",
+    "PythonLogObserver",
     "LegacyLogObserverWrapper",
 ]
 
@@ -770,6 +771,35 @@ class FileLogObserver(object):
 
 
 @implementer(ILogObserver)
+class PythonLogObserver(object):
+    """
+    Log observer that writes to the python standard library's
+    L{logging} module.
+
+    WARNING: specific logging configurations (example: network) can
+    lead to a blocking system. Nothing is done here to prevent that,
+    so be sure to not use this: code within Twisted, such as
+    twisted.web, assumes that logging does not block.
+    """
+
+    def __init__(self, name="twisted"):
+        """
+        @param loggerName: logger identifier.
+        @type loggerName: C{str}
+        """
+        self.logger = py_logging.getLogger(name)
+
+    def __call__(self, event):
+        """
+        Format an event and bridge it to Python logging.
+        """
+        level = event.get("log_level", LogLevel.info)
+        py_level = pythonLogLevelMapping.get(level, py_logging.INFO)
+        self.logger.log(py_level, StringifiableFromEvent(event))
+
+
+
+@implementer(ILogObserver)
 class RingBufferLogObserver(object):
     """
     L{ILogObserver} that stores events in a ring buffer of a fixed
@@ -868,12 +898,8 @@ class LegacyLogObserverWrapper(object):
             # defer the work of formatting until it's needed by a
             # legacy log observer.
             #
-            class LegacyFormatStub(object):
-                def __str__(oself):
-                    return formatEvent(event).encode("utf-8")
-
             event["format"] = "%(log_legacy)s"
-            event["log_legacy"] = LegacyFormatStub()
+            event["log_legacy"] = StringifiableFromEvent(event)
 
         # log.failure() -> isError blah blah
         if "log_failure" in event:
@@ -984,6 +1010,24 @@ Logger.publisher = DefaultLogPublisher()
 #
 # Utilities
 #
+
+class StringifiableFromEvent(object):
+    """
+    An object that implements C{__str__()} in order to defer the work of
+    formatting until it's converted into a C{str}.
+    """
+    def __init__(self, event):
+        self.event = event
+
+
+    def __unicode__(self):
+        return formatEvent(self.event)
+
+
+    def __str__(self):
+        return unicode(self).encode("utf-8")
+
+
 
 class CallMapping(object):
     def __init__(self, submapping):

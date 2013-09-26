@@ -9,6 +9,7 @@ from os import environ
 from cStringIO import StringIO
 from time import mktime
 import logging as py_logging
+from inspect import currentframe
 
 try:
     from time import tzset
@@ -28,7 +29,7 @@ from twisted.python.logger import (
     Logger, LegacyLogger,
     ILogObserver, LogPublisher, DefaultLogPublisher,
     FilteringLogObserver, PredicateResult,
-    FileLogObserver, RingBufferLogObserver,
+    FileLogObserver, PythonLogObserver, RingBufferLogObserver,
     LegacyLogObserverWrapper,
     LogLevelFilterPredicate, OBSERVER_REMOVED
 )
@@ -444,7 +445,7 @@ class LoggerTests(SetUpTearDown, unittest.TestCase):
         log = TestLogger()
 
         log.warn(
-            "*",
+            u"*",
             log_format="#",
             log_level=LogLevel.error,
             log_namespace="*namespace*",
@@ -453,7 +454,7 @@ class LoggerTests(SetUpTearDown, unittest.TestCase):
 
         # FIXME: Should conflicts log errors?
 
-        self.assertEquals(log.event["log_format"], "*")
+        self.assertEquals(log.event["log_format"], u"*")
         self.assertEquals(log.event["log_level"], LogLevel.warn)
         self.assertEquals(log.event["log_namespace"], log.namespace)
         self.assertEquals(log.event["log_source"], None)
@@ -1026,6 +1027,187 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
 
 
 
+class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
+    """
+    Tests for L{PythonLogObserver}.
+    """
+
+    def test_interface(self):
+        """
+        L{PythonLogObserver} is an L{ILogObserver}.
+        """
+        observer = PythonLogObserver()
+        try:
+            verifyObject(ILogObserver, observer)
+        except BrokenMethodImplementation as e:
+            self.fail(e)
+
+
+    def py_logger(self):
+        """
+        Create a logging object we can use to test with.
+        """
+        class BufferedHandler(py_logging.Handler):
+            def __init__(self):
+                py_logging.Handler.__init__(self)
+                self.records = []
+
+            def emit(self, record):
+                self.records.append(record)
+
+        class Container(object):
+            def __init__(pl):
+                pl.rootLogger = py_logging.getLogger("")
+
+                pl.originalLevel = pl.rootLogger.getEffectiveLevel()
+                pl.rootLogger.setLevel(py_logging.DEBUG)
+
+                pl.bufferedHandler = BufferedHandler()
+                pl.rootLogger.addHandler(pl.bufferedHandler)
+
+                formatter = py_logging.Formatter(py_logging.BASIC_FORMAT)
+                pl.output = StringIO()
+                pl.streamHandler = py_logging.StreamHandler(pl.output)
+                pl.streamHandler.setFormatter(formatter)
+                pl.rootLogger.addHandler(pl.streamHandler)
+
+            def close(pl):
+                pl.rootLogger.setLevel(pl.originalLevel)
+                pl.rootLogger.removeHandler(pl.bufferedHandler)
+                pl.rootLogger.removeHandler(pl.streamHandler)
+                pl.output.close()
+
+        return Container()
+
+
+            #print "*"*80
+            #print repr(record)
+            #print repr(record.name)
+            #print repr(record.levelno)
+            #print repr(record.levelname)
+            #print repr(record.msg)
+            #print "*"*80
+
+
+    def logEvent(self, *events):
+        """
+        Send one or more events to Python's logging module, and
+        capture the emitted L{logging.LogRecord}s and output stream as
+        a string.
+
+        @return: a tuple: (records, output)
+        """
+        pl = self.py_logger()
+        try:
+            observer = PythonLogObserver()
+            for event in events:
+                observer(event)
+            return pl.bufferedHandler.records, pl.output.getvalue()
+        finally:
+            pl.close()
+
+
+    def test_name(self):
+        """
+        Logger name.
+        """
+        records, output = self.logEvent({})
+
+        self.assertEquals(len(records), 1)
+        self.assertEquals(records[0].name, "twisted")
+
+
+    def test_levels(self):
+        """
+        Log levels.
+        """
+        levelMapping = {
+            None: py_logging.INFO, # default
+            LogLevel.debug: py_logging.DEBUG,
+            LogLevel.info: py_logging.INFO,
+            LogLevel.warn: py_logging.WARNING,
+            LogLevel.error: py_logging.ERROR,
+            # LogLevel.critical: py_logging.CRITICAL,
+        }
+
+        # Build a set of events for each log level
+        events = []
+        for level, py_level in levelMapping.iteritems():
+            event = {}
+
+            # Set the log level on the event, except for default
+            if level is not None:
+                event["log_level"] = level
+
+            # Remeber the Python log level we expect to see for this
+            # event (as an int)
+            event["py_levelno"] = int(py_level)
+
+            events.append(event)
+
+        records, output = self.logEvent(*events)
+        self.assertEquals(len(records), len(levelMapping))
+
+        # Check that each event has the correct level
+        for i in range(len(records)):
+            self.assertEquals(records[i].levelno, events[i]["py_levelno"])
+
+
+    def test_callerInfo(self):
+        """
+        C{pathname}, C{lineno}, C{exc_info}, C{func} should
+        be set properly on records.
+        """
+        records, output = self.logEvent({})
+
+        self.assertEquals(len(records), 1)
+        self.assertEquals(records[0].pathname, __file__)
+        self.assertEquals(records[0].lineno, currentframe().f_lineno)
+        self.assertEquals(records[0].exc_info, None)
+        #self.assertEquals(records[0].func, "test_callerInfo") # func is missing from record (?!)
+
+    test_callerInfo.todo = "Caller frame is always be PythonLogObserver.__call__(). Meh."
+
+
+    def test_basic_format(self):
+        """
+        Basic formattable event passes the format along correctly.
+        """
+        event = dict(log_format="Hello, {who}!", who="dude")
+        records, output = self.logEvent(event)
+
+        self.assertEquals(len(records), 1)
+        self.assertEquals(str(records[0].msg), "Hello, dude!")
+        self.assertEquals(records[0].args, ())
+
+
+    def test_basic_formatRendered(self):
+        """
+        Basic formattable event renders correctly.
+        """
+        event = dict(log_format="Hello, {who}!", who="dude")
+        records, output = self.logEvent(event)
+
+        self.assertEquals(len(records), 1)
+        self.assertTrue(output.endswith(":Hello, dude!\n"))
+
+
+    def test_noFormat(self):
+        """
+        Event with no format.
+        """
+        records, output = self.logEvent({})
+
+        self.assertEquals(len(records), 1)
+        self.assertEquals(
+            str(records[0].msg),
+            "Unable to format event {}: No log format provided"
+        )
+
+
+    # Test levels
+
+
 class RingBufferLogObserverTests(SetUpTearDown, unittest.TestCase):
     """
     Tests for L{RingBufferLogObserver}.
@@ -1033,7 +1215,7 @@ class RingBufferLogObserverTests(SetUpTearDown, unittest.TestCase):
 
     def test_interface(self):
         """
-        L{FileLogObserver} is an L{ILogObserver}.
+        L{RingBufferLogObserver} is an L{ILogObserver}.
         """
         observer = RingBufferLogObserver(0)
         try:
