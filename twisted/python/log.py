@@ -317,7 +317,21 @@ def textFromEventDict(eventDict):
     return text
 
 
-class FileLogObserver:
+class StartStopMixIn:
+    def start(self):
+        """
+        Start observing log events.
+        """
+        addObserver(self.emit)
+
+    def stop(self):
+        """
+        Stop observing log events.
+        """
+        removeObserver(self.emit)
+
+
+class FileLogObserver(StartStopMixIn):
     """
     Log observer that writes to a file-like object.
 
@@ -358,22 +372,9 @@ class FileLogObserver:
         eventDict["log_system"] = eventDict["system"]
 
         self._newFLO(eventDict)
-        return
-
-    def start(self):
-        """
-        Start observing log events.
-        """
-        addObserver(self.emit)
-
-    def stop(self):
-        """
-        Stop observing log events.
-        """
-        removeObserver(self.emit)
 
 
-class PythonLoggingObserver(object):
+class PythonLoggingObserver(object, StartStopMixIn):
     """
     Output twisted messages to Python standard library L{logging} module.
 
@@ -411,17 +412,6 @@ class PythonLoggingObserver(object):
             return
         self.logger.log(level, text)
 
-    def start(self):
-        """
-        Start observing log events.
-        """
-        addObserver(self.emit)
-
-    def stop(self):
-        """
-        Stop observing log events.
-        """
-        removeObserver(self.emit)
 
 
 class StdioOnnaStick:
@@ -545,7 +535,7 @@ except NameError:
 
 
 
-class DefaultObserver:
+class DefaultObserver(StartStopMixIn):
     """
     Default observer.
 
@@ -554,7 +544,7 @@ class DefaultObserver:
     """
     stderr = sys.stderr
 
-    def _emit(self, eventDict):
+    def emit(self, eventDict):
         if eventDict["isError"]:
             if 'failure' in eventDict:
                 text = ((eventDict.get('why') or 'Unhandled Error')
@@ -564,12 +554,6 @@ class DefaultObserver:
 
             self.stderr.write(text)
             self.stderr.flush()
-
-    def start(self):
-        addObserver(self._emit)
-
-    def stop(self):
-        removeObserver(self._emit)
 
 
 
