@@ -963,9 +963,11 @@ class DefaultLogPublisher(object):
     """
 
     def __init__(self):
-        from twisted.python.log import msg as twistedLogMessage
+        def toOldLogging(event):
+            from twisted.python.log import msg as twistedLogMessage
+            twistedLogMessage(**event)
 
-        self.legacyLogObserver = LegacyLogObserverWrapper(lambda e: twistedLogMessage(**e))
+        self.legacyLogObserver = LegacyLogObserverWrapper(toOldLogging)
         self.filteredPublisher = LogPublisher(self.legacyLogObserver)
         self.levels            = LogLevelFilterPredicate()
         self.filters           = FilteringLogObserver(self.filteredPublisher,

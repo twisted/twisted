@@ -20,7 +20,11 @@ from twisted.python import context
 from twisted.python import _reflectpy3 as reflect
 from twisted.python import failure
 from twisted.python.threadable import synchronize
-from twisted.python.logger import FileLogObserver as NewFileLogObserver
+from twisted.python.logger import (
+    LogLevel as NewLogLevel,
+    FileLogObserver as NewFileLogObserver,
+    PythonLogObserver as NewPythonLogObserver,
+)
 
 
 
@@ -365,18 +369,10 @@ class FileLogObserver(StartStopMixIn):
         self._initObserver()
 
     def emit(self, eventDict):
-        text = textFromEventDict(eventDict)
-        if text is None:
-            return
-
-        eventDict["log_text"] = text
-        eventDict["log_format"] = "{log_text}"
-        eventDict["log_system"] = eventDict["system"]
-
-        self._newFLO(eventDict)
+        publishToNewObserver(self._newFLO, eventDict)
 
 
-class PythonLoggingObserver(object, StartStopMixIn):
+class PythonLoggingObserver(NewPythonLogObserver, StartStopMixIn):
     """
     Output twisted messages to Python standard library L{logging} module.
 
@@ -391,7 +387,7 @@ class PythonLoggingObserver(object, StartStopMixIn):
         @param loggerName: identifier used for getting logger.
         @type loggerName: C{str}
         """
-        self.logger = logging.getLogger(loggerName)
+        NewPythonLogObserver.__init__(self, loggerName)
 
     def emit(self, eventDict):
         """
@@ -404,15 +400,25 @@ class PythonLoggingObserver(object, StartStopMixIn):
 
         """
         if 'logLevel' in eventDict:
-            level = eventDict['logLevel']
+            level = {
+                logging.DEBUG: NewLogLevel.debug,
+                logging.INFO: NewLogLevel.info,
+                logging.WARNING: NewLogLevel.warn,
+                logging.ERROR: NewLogLevel.error,
+                logging.CRITICAL: NewLogLevel.error,
+            }[eventDict['logLevel']]
         elif eventDict['isError']:
-            level = logging.ERROR
+            level = NewLogLevel.error
         else:
-            level = logging.INFO
+            level = NewLogLevel.info
+
+        eventDict['log_level'] = level
+
         text = textFromEventDict(eventDict)
         if text is None:
             return
-        self.logger.log(level, text)
+
+        publishToNewObserver(self, eventDict)
 
 
 
@@ -564,3 +570,16 @@ try:
 except NameError:
     defaultObserver = DefaultObserver()
     defaultObserver.start()
+
+
+
+def publishToNewObserver(observer, eventDict):
+    text = textFromEventDict(eventDict)
+    if text is None:
+        return
+
+    eventDict["log_text"] = text
+    eventDict["log_format"] = "{log_text}"
+    eventDict["log_system"] = eventDict["system"]
+
+    observer(eventDict)
