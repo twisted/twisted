@@ -519,6 +519,8 @@ class LogPublisher(object):
 
         @param observer: An L{ILogObserver} to add.
         """
+        if not callable(observer):
+            raise TypeError("Observer is not callable: {0!r}".format(observer))
         self._observers.add(observer)
 
 

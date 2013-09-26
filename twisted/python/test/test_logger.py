@@ -513,6 +513,15 @@ class LogPublisherTests(SetUpTearDown, unittest.TestCase):
         self.assertEquals(set((o1, o2, o3)), set(publisher.observers))
 
 
+    def test_addObserverNotCallable(self):
+        """
+        L{LogPublisher.addObserver} refuses to add an observer that's
+        not callable.
+        """
+        publisher = LogPublisher()
+        self.assertRaises(TypeError, publisher.addObserver, object())
+
+
     def test_removeObserver(self):
         """
         L{LogPublisher.removeObserver} removes an observer.
