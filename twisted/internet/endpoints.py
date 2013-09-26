@@ -648,12 +648,15 @@ class TCP6EndpointConnect(TCP6ConnectDFA):
             return defer.fail()
 
 
-    def enter_CONNECT(self):
+    def output_CONNECTING(self):
         self.result = self._resolvedHostConnect(self.host, self.protocolFactory)
 
 
     def enter_RESOLVE(self):
         self.resolved = False
+
+
+    def output_RESOLVING_NAME(self):
         self.result = self._nameResolution(self.host)
         def getResolvedHost(self, result):
             self.host = result[0][self._GAI_ADDRESS][self._GAI_ADDRESS_HOST]
