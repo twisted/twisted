@@ -747,17 +747,16 @@ class FileLogObserver(object):
 
         system = event.get("log_system", None)
 
-        if system is not None:
-            try:
-                system = str(system)
-            except Exception:
-                system = b"UNFORMATTABLE"
-
         if system is None:
             system = b"{namespace}#{level}".format(
                 namespace=event.get("log_namespace", b"-"),
                 level=event.get("log_level", b"-"),
             )
+        else:
+            try:
+                system = str(system)
+            except Exception:
+                system = b"UNFORMATTABLE"
 
         eventText = formatEvent(event).encode(self.encoding)
         eventText = eventText.replace(b"\n", b"\n\t")
