@@ -2751,10 +2751,10 @@ class MessageNonAuthoritative(object):
             b'\x01\x00' # ID 256
             b'\x00' # QR: 0, OPCODE: 0, AA: 0, TC: 0, RD: 0
             b'\x00' # RA: 0, Z, RCODE: 0
-            b'\x00\x00' # query count
-            b'\x00\x01' # answer count
-            b'\x00\x00' # authorities count
-            b'\x00\x00' # additionals count
+            b'\x00\x00' # Query count
+            b'\x00\x01' # Answer count
+            b'\x00\x00' # Authorities count
+            b'\x00\x00' # Additionals count
             # Answer
             b'\x00' # RR NAME (root)
             b'\x00\x01' # RR TYPE 1 (A)
@@ -2799,13 +2799,13 @@ class MessageAuthoritative(object):
         @return: The L{bytes} of a wire encoded message.
         """
         return (
-            b'\x01\x00' #id 256
+            b'\x01\x00' # ID: 256
             b'\x04' # QR: 0, OPCODE: 0, AA: 1, TC: 0, RD: 0
             b'\x00' # RA: 0, Z, RCODE: 0
-            b'\x00\x00' # query count
-            b'\x00\x01' # answer count
-            b'\x00\x00' # authorities count
-            b'\x00\x00' # additionals count
+            b'\x00\x00' # Query count
+            b'\x00\x01' # Answer count
+            b'\x00\x00' # Authorities count
+            b'\x00\x00' # Additionals count
             # Answer
             b'\x00' # RR NAME (root)
             b'\x00\x01' # RR TYPE 1 (A)
@@ -2853,13 +2853,13 @@ class MessageComplete:
         @return: The L{bytes} of a wire encoded message.
         """
         return (
-            b'\x01\x00' # id: 256
+            b'\x01\x00' # ID: 256
             b'\x95' # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
             b'\x8f' # RA: 1, Z, RCODE: 15
-            b'\x00\x01' # query count
-            b'\x00\x01' # answer count
-            b'\x00\x01' # authorities count
-            b'\x00\x01' # additionals count
+            b'\x00\x01' # Query count
+            b'\x00\x01' # Answer count
+            b'\x00\x01' # Authorities count
+            b'\x00\x01' # Additionals count
 
             # Query begins at Byte 12
             b'\x07example\x03com\x00' # QNAME
@@ -2872,13 +2872,13 @@ class MessageComplete:
             b'\x00\x01' # RR CLASS 1 (IN)
             b'\xff\xff\xff\xff' # RR TTL
             b'\x00\x27' # RDLENGTH 39
-            b'\x03ns1\xc0\x0c' # mname (ns1.example.com (compression ref b15)
+            b'\x03ns1\xc0\x0c' # Mname (ns1.example.com (compression ref b15)
             b'\x0ahostmaster\xc0\x0c' # rname (hostmaster.example.com)
-            b'\xff\xff\xff\xfe' # serial
-            b'\x7f\xff\xff\xfd' # refresh
-            b'\x7f\xff\xff\xfc' # retry
-            b'\x7f\xff\xff\xfb' # expire
-            b'\xff\xff\xff\xfa' # minimum
+            b'\xff\xff\xff\xfe' # Serial
+            b'\x7f\xff\xff\xfd' # Refresh
+            b'\x7f\xff\xff\xfc' # Retry
+            b'\x7f\xff\xff\xfb' # Expire
+            b'\xff\xff\xff\xfa' # Minimum
 
             # Authority
             b'\xc0\x0c' # RR NAME (example.com compression ref b12)
@@ -2965,13 +2965,13 @@ class MessageEDNSQuery(object):
         @return: The L{bytes} of a wire encoded message.
         """
         return (
-            b'\x00\x00' # id: 0
+            b'\x00\x00' # ID: 0
             b'\x00' # QR: 0, OPCODE: 0, AA: 0, TC: 0, RD: 0
             b'\x00' # RA: 0, Z, RCODE: 0
-            b'\x00\x01' # queries count
-            b'\x00\x00' # anwers count
-            b'\x00\x00' # authority count
-            b'\x00\x01' # additionals count
+            b'\x00\x01' # Queries count
+            b'\x00\x00' # Anwers count
+            b'\x00\x00' # Authority count
+            b'\x00\x01' # Additionals count
 
             # Queries
             b'\x03www\x07example\x03com\x00' # QNAME
@@ -3011,6 +3011,7 @@ class MessageEDNSQuery(object):
             additional=[])
 
 
+
 class MessageEDNSComplete(object):
     """
     An example of a fully populated edns response message.
@@ -3028,13 +3029,13 @@ class MessageEDNSComplete(object):
         @return: The L{bytes} of a wire encoded message.
         """
         return (
-            b'\x01\x00' # id: 256
+            b'\x01\x00' # ID: 256
             b'\x95' # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
             b'\xbf' # RA: 1, AD: 1, RCODE: 15
-            b'\x00\x01' # query count
-            b'\x00\x01' # answer count
-            b'\x00\x01' # authorities count
-            b'\x00\x02' # additionals count
+            b'\x00\x01' # Query count
+            b'\x00\x01' # Answer count
+            b'\x00\x01' # Authorities count
+            b'\x00\x02' # Additionals count
 
             # Query begins at Byte 12
             b'\x07example\x03com\x00' # QNAME
@@ -3049,11 +3050,11 @@ class MessageEDNSComplete(object):
             b'\x00\x27' # RDLENGTH 39
             b'\x03ns1\xc0\x0c' # mname (ns1.example.com (compression ref b15)
             b'\x0ahostmaster\xc0\x0c' # rname (hostmaster.example.com)
-            b'\xff\xff\xff\xfe' # serial
-            b'\x7f\xff\xff\xfd' # refresh
-            b'\x7f\xff\xff\xfc' # retry
-            b'\x7f\xff\xff\xfb' # expire
-            b'\xff\xff\xff\xfa' # minimum
+            b'\xff\xff\xff\xfe' # Serial
+            b'\x7f\xff\xff\xfd' # Refresh
+            b'\x7f\xff\xff\xfc' # Retry
+            b'\x7f\xff\xff\xfb' # Expire
+            b'\xff\xff\xff\xfa' # Minimum
 
             # Authority
             b'\xc0\x0c' # RR NAME (example.com compression ref b12)
