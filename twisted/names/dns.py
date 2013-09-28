@@ -2366,10 +2366,11 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         """
         Convert to a standard L{dns.Message}.
 
-        If C{ednsVersion} is not None, an L{_OPTHeader} instance
-        containing all the I{EDNS} specific attributes and options
-        will be appended to the list of C{additional} records.
+        If C{ednsVersion} is not None, an L{_OPTHeader} instance containing all
+        the I{EDNS} specific attributes and options will be appended to the list
+        of C{additional} records.
 
+        @return: A L{dns.Message}
         @rtype: L{dns.Message}
         """
         m = Message(

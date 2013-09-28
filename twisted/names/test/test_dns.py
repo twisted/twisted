@@ -2649,6 +2649,13 @@ class MessageEmpty(object):
     """
     @classmethod
     def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
         return (
             b'\x01\x00' # id: 256
             b'\x97' # QR: 1, OPCODE: 2, AA: 0, TC: 0, RD: 1
@@ -2662,6 +2669,12 @@ class MessageEmpty(object):
 
     @classmethod
     def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
         return dict(
             id=256,
             answer=True,
@@ -2682,19 +2695,32 @@ class MessageTruncated(object):
     """
     @classmethod
     def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
         return (
-            b'\x01\x00' # id: 256
+            b'\x01\x00' # ID: 256
             b'\x82' # QR: 1, OPCODE: 0, AA: 0, TC: 1, RD: 0
             b'\x00' # RA: 0, Z, RCODE: 0
-            b'\x00\x00' # number of queries
-            b'\x00\x00' # number of answers
-            b'\x00\x00' # number of authorities
-            b'\x00\x00' # number of additionals
+            b'\x00\x00' # Number of queries
+            b'\x00\x00' # Number of answers
+            b'\x00\x00' # Number of authorities
+            b'\x00\x00' # Number of additionals
         )
 
 
     @classmethod
     def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
         return dict(
             id=256,
             answer=1,
@@ -2714,8 +2740,15 @@ class MessageNonAuthoritative(object):
     """
     @classmethod
     def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
         return (
-            b'\x01\x00' #id 256
+            b'\x01\x00' # ID 256
             b'\x00' # QR: 0, OPCODE: 0, AA: 0, TC: 0, RD: 0
             b'\x00' # RA: 0, Z, RCODE: 0
             b'\x00\x00' # query count
@@ -2734,6 +2767,12 @@ class MessageNonAuthoritative(object):
 
     @classmethod
     def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
         return dict(
             id=256,
             auth=0,
@@ -2752,6 +2791,13 @@ class MessageAuthoritative(object):
     """
     @classmethod
     def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
         return (
             b'\x01\x00' #id 256
             b'\x04' # QR: 0, OPCODE: 0, AA: 1, TC: 0, RD: 0
@@ -2772,6 +2818,12 @@ class MessageAuthoritative(object):
 
     @classmethod
     def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
         return dict(
             id=256,
             auth=1,
@@ -2783,6 +2835,7 @@ class MessageAuthoritative(object):
                     auth=True)])
 
 
+
 class MessageComplete:
     """
     An example of a fully populated non-edns response message.
@@ -2792,6 +2845,13 @@ class MessageComplete:
     """
     @classmethod
     def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
         return (
             b'\x01\x00' # id: 256
             b'\x95' # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
@@ -2840,6 +2900,12 @@ class MessageComplete:
 
     @classmethod
     def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
         return dict(
             id=256,
             answer=1,
@@ -2891,6 +2957,13 @@ class MessageEDNSQuery(object):
     """
     @classmethod
     def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
         return (
             b'\x00\x00' # id: 0
             b'\x00' # QR: 0, OPCODE: 0, AA: 0, TC: 0, RD: 0
@@ -2918,6 +2991,12 @@ class MessageEDNSQuery(object):
 
     @classmethod
     def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
         return dict(
             id=0,
             answer=0,
@@ -2941,6 +3020,13 @@ class MessageEDNSComplete(object):
     """
     @classmethod
     def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
         return (
             b'\x01\x00' # id: 256
             b'\x95' # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
@@ -2998,6 +3084,12 @@ class MessageEDNSComplete(object):
 
     @classmethod
     def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
         return dict(
             id=256,
             answer=1,
@@ -3054,6 +3146,13 @@ class MessageEDNSExtendedRCODE(object):
     """
     @classmethod
     def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
         return (
             b'\x00\x00'
             b'\x00'
@@ -3076,6 +3175,12 @@ class MessageEDNSExtendedRCODE(object):
 
     @classmethod
     def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
         return dict(
             id=0,
             answer=False,
@@ -3202,7 +3307,8 @@ def verifyConstructorArgument(testCase, cls,
         assertEqual(
             expectedVal, actualVal,
             '%s(%s=%r).%s gave unexpected value %r. Expected %r.' % (
-                cls.__name__, argName, argVal, attrName, actualVal, expectedVal))
+                cls.__name__, argName, argVal, attrName,
+                actualVal, expectedVal))
 
     for val, expectedException in invalidInputs:
         try:
@@ -3224,6 +3330,11 @@ class ConstructorTestsMixin(object):
         """
         Wrap L{verifyConstructorArgument} to provide simpler interface for
         testing Message and _EDNSMessage constructor arguments.
+
+        @param argName: The name of the constructor argument.
+        @param defaultVal: The expected default value.
+        @param altVal: An alternative value which is expected to be assigned to
+            a correspondingly named attribute.
         """
         verifyConstructorArgument(testCase=self, cls=self.messageFactory,
                                   argName=argName, defaultVal=defaultVal,
@@ -3239,6 +3350,14 @@ class ConstructorTestsMixin(object):
         Tests the coercion to bool by using L{assertTypeEqual}.
 
         Tests the assertion errors raised for non-bool flag arguments.
+
+        @param argName: The name of the constructor flag argument
+        @param defaultVal: The expected default value of the flag
+        @param invalidInputs: A list of values which are expected to raise a
+            validation exception.
+        @param assertEqual: The assertion function which will be used for
+            testing the value of the flag. Defaults to assertTypeEqual which
+            tests both the value and type of the value under test.
         """
         assert defaultVal in (True, False)
         inputTests = [
@@ -3252,7 +3371,6 @@ class ConstructorTestsMixin(object):
                 (object(), AssertionError),
                 (-1, AssertionError),
                 (2, AssertionError)]
-
 
         if assertEqual is None:
             assertEqual = partial(assertTypeEqual, self)
@@ -3393,7 +3511,8 @@ class EDNSMessageTestsUsingMessage(EDNSMessageTests):
 
 
 
-class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase, ConstructorTestsMixin):
+class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
+                                   ConstructorTestsMixin):
     """
     Tests for L{dns._EDNSMessage}.
 
@@ -3407,7 +3526,8 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase, ConstructorTest
         L{dns._EDNSMessage.ednsVersion} defaults to C{0} and can be
         overridden in the constructor.
         """
-        self._verifyConstructorArgument('ednsVersion', defaultVal=0, altVal=None)
+        self._verifyConstructorArgument(
+            'ednsVersion', defaultVal=0, altVal=None)
 
 
     def test_dnssecOK(self):
@@ -3933,6 +4053,12 @@ class MessageStandardEncodingTests(EDNSMessageStandardEncodingTests):
 
         Also removes any L{dns._EDNSMessage} specific arguments.
 
+        @param args: The positional arguments which will be passed to
+            L{dns.Message.__init__}.
+
+        @param kwargs: The keyword arguments which will be stripped of EDNS
+            specific arguments before being passed to L{dns.Message.__init__}.
+
         @return: An L{dns.Message} instance.
         """
         for field in ('answer', 'auth', 'trunc', 'recDes', 'recAv'):
@@ -4085,6 +4211,9 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
     def test_extendedRcodeEncode(self):
         """
+        The L(_EDNSMessage.toStr} encodes the extended I{RCODE} (>=16) by
+        assigning the lower 4bits to the message RCODE field and the upper 4bits
+        to the OPT pseudo record.
         """
         self.assertEqual(
             self.messageFactory(**MessageEDNSExtendedRCODE.kwargs()).toStr(),
@@ -4100,7 +4229,8 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         m = self.messageFactory()
         m.fromStr(MessageEDNSExtendedRCODE.bytes())
 
-        self.assertEqual(m, self.messageFactory(**MessageEDNSExtendedRCODE.kwargs()))
+        self.assertEqual(
+            m, self.messageFactory(**MessageEDNSExtendedRCODE.kwargs()))
 
 
     def test_extendedRcodeZero(self):
