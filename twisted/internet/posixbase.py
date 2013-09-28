@@ -610,9 +610,13 @@ class _PollLikeMixin(object):
                     why = _NO_FILEDESC
                 else:
                     if event & self._POLL_IN:
-                        # Handle a read event.
-                        why = selectable.doRead()
-                        inRead = True
+                        if hasattr(self, '_reads') and fd not in self._reads:
+                            why = CONNECTION_LOST
+                        else:
+                            #Handle a read even.
+                            why = selectable.doRead()
+                            inRead = True
+                            
                     if not why and event & self._POLL_OUT:
                         # Handle a write event, as long as doRead didn't
                         # disconnect us.

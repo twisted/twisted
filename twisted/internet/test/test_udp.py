@@ -26,6 +26,9 @@ from twisted.internet.protocol import DatagramProtocol
 
 from twisted.internet.test.connectionmixins import (LogObserverMixin,
                                                     findFreePort)
+from twisted.internet.glib2reactor import Glib2Reactor
+from twisted.internet.gtk2reactor import Gtk2Reactor
+from twisted.internet.pollreactor import PollReactor
 from twisted.trial.unittest import SkipTest
 
 
@@ -270,6 +273,33 @@ class UDPFDServerTestsBuilder(ReactorBuilder,
                 portSock.close()
         else:
             raise SkipTest("Reactor does not provide IReactorSocket")
+
+
+
+    def test_connnectionRefusedAfterWrite(self):
+        class RefuseProtocol(DatagramProtocol):
+            refused = None
+            def startProtocol(self):
+                self.transport.connect('127.0.0.1', 8000)
+                self.sendDatagram()
+            def sendDatagram(self):
+                self.transport.write('a')
+            def connectionRefused(self):
+                reactor.callLater(0, self.refused.callback, None)
+            def datagramReceived(self, datagram, host):
+                pass
+
+        def cbClean(ignore):
+            reactor.stop()
+        reactor = self.buildReactor()
+        if type(reactor) in [Glib2Reactor, Gtk2Reactor, PollReactor]:
+            raise SkipTest("Reactor does not support refusing after writing")
+        protocol = RefuseProtocol()
+        protocol.refused = Deferred()
+        protocol.refused.addCallback(cbClean)
+        port = reactor.listenUDP(0, protocol)
+        self.runReactor(reactor)
+        return port.stopListening()
 
 
 

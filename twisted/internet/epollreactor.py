@@ -191,8 +191,8 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     """
 
     # Attributes for _PollLikeMixin
-    _POLL_DISCONNECTED = (EPOLLHUP | EPOLLERR)
-    _POLL_IN = EPOLLIN
+    _POLL_DISCONNECTED = EPOLLHUP
+    _POLL_IN = (EPOLLIN  | EPOLLERR)
     _POLL_OUT = EPOLLOUT
 
     def __init__(self):
