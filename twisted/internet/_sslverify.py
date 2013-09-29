@@ -620,6 +620,44 @@ class KeyPair(PublicKey):
 
 
 
+class OpenSSLAcceptableCiphers(object):
+    """
+    A class to create and save acceptable ciphers.
+
+    Uses a secure cipher suite by default.
+
+    @ivar DEFAULT_CIPHER_LIST: The default cipher list that is used when
+        this class is instantiated.
+    """
+    DEFAULT_CIPHER_LIST = (
+        "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:"
+        "ECDH+3DES:DH+3DES:RSA+AES:RSA+3DES:!ADH:!AECDH:!MD5:!DSS"
+    )
+    # Private place to save ciphers.
+    _cipherList = DEFAULT_CIPHER_LIST
+
+    @classmethod
+    def fromOpenSSLCipherString(cls, cipherString):
+        """
+        Create a new instance using an OpenSSL cipher string.
+
+        @param cipherString: An OpenSSL cipher string that describes what
+            cipher suites are acceptable.
+            See the documentation of U{OpenSSL
+            <http://www.openssl.org/docs/apps/ciphers.html#CIPHER_STRINGS>} or
+            U{Apache
+            <http://httpd.apache.org/docs/2.4/mod/mod_ssl.html#sslciphersuite>}
+            for details.
+
+        @type cipherString: L{list} of L{bytes} or L{unicode}
+
+        @return: L{twisted.internet.ssl.AcceptableCiphers}
+        """
+        ac = cls()
+        ac._cipherList = cipherString
+        return ac
+
+
 class OpenSSLCertificateOptions(object):
     """
     A factory for SSL context objects for both SSL servers and clients.
@@ -648,7 +686,8 @@ class OpenSSLCertificateOptions(object):
                  enableSessions=True,
                  fixBrokenPeers=False,
                  enableSessionTickets=False,
-                 extraCertChain=None):
+                 extraCertChain=None,
+                 acceptableCiphers=None):
         """
         Create an OpenSSL context SSL connection context factory.
 
@@ -703,6 +742,11 @@ class OpenSSLCertificateOptions(object):
             C{certificate} to it.
 
         @type extraCertChain: C{list} of L{OpenSSL.crypto.X509}
+
+        @param acceptableCiphers: Ciphers that are acceptable for connections.
+            Uses a secure default if left L{None}.
+
+        @type acceptableCiphers: L{twisted.internet.ssl.AcceptableCiphers}
         """
 
         if (privateKey is None) != (certificate is None):
@@ -724,6 +768,10 @@ class OpenSSLCertificateOptions(object):
             self.extraCertChain = extraCertChain
         else:
             self.extraCertChain = []
+        if acceptableCiphers is not None:
+            self.acceptableCiphers = acceptableCiphers
+        else:
+            self.acceptableCiphers = OpenSSLAcceptableCiphers
 
         self.caCerts = caCerts
         self.verifyDepth = verifyDepth
@@ -749,7 +797,10 @@ class OpenSSLCertificateOptions(object):
 
 
     def getContext(self):
-        """Return a SSL.Context object.
+        """
+        Return a context object.
+
+        @return: L{SSL.Context}
         """
         if self._context is None:
             self._context = self._makeContext()
@@ -757,9 +808,16 @@ class OpenSSLCertificateOptions(object):
 
 
     def _makeContext(self):
+        """
+        Build context according to options.
+
+        @return: L{SSL.Context}
+        """
         ctx = self._contextFactory(self.method)
         # Disallow insecure SSLv2. Applies only for SSLv23_METHOD.
         ctx.set_options(SSL.OP_NO_SSLv2)
+
+        ctx.set_cipher_list(self.acceptableCiphers._cipherList)
 
         if self.certificate is not None and self.privateKey is not None:
             ctx.use_certificate(self.certificate)

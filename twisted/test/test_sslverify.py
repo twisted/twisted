@@ -137,6 +137,7 @@ class FakeContext(object):
     @ivar _sessionID: Set by L{set_session_id}.
     @ivar _extraCertChain: Accumulated C{list} of all extra certificates added
         by L{add_extra_chain_cert}.
+    @ivar _ciphers: The cipher suite set.
     """
     _options = 0
 
@@ -167,6 +168,44 @@ class FakeContext(object):
 
     def add_extra_chain_cert(self, cert):
         self._extraCertChain.append(cert)
+
+    def set_cipher_list(self, ciphers):
+        self._ciphers = ciphers
+
+
+
+class OpenSSLAcceptableCiphers(unittest.TestCase):
+    def test_constructorSetsToSecureCiphersByDefault(self):
+        """
+        OpenSSLAcceptableCiphers comes with a secure cipher string.  Use it by
+        default.
+        """
+        ac = sslverify.OpenSSLAcceptableCiphers()
+        self.assertEqual(
+            sslverify.OpenSSLAcceptableCiphers.DEFAULT_CIPHER_LIST,
+            ac._cipherList
+        )
+
+    def test_fromOpenSSLCipherString(self):
+        """
+        OpenSSLAcceptableCiphers.fromOpenSSLCipherString saves the cipher
+        string.
+        """
+        ac = sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString('HIGH')
+        self.assertEqual('HIGH', ac._cipherList)
+
+    def test_acceptsUnicode(self):
+        ac = sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString(
+            u'HIGH'
+        )
+        self.assertEqual(u'HIGH', ac._cipherList)
+
+
+
+if interfaces.IReactorSSL(reactor, None) is None:
+    OpenSSLAcceptableCiphers.skip = (
+        "Reactor does not support SSL, cannot run SSL tests"
+    )
 
 
 
@@ -673,6 +712,30 @@ class OpenSSLOptions(unittest.TestCase):
         ctx = opts.getContext()
         self.assertEqual(SSL.OP_NO_SSLv2, ctx.set_options(0) & SSL.OP_NO_SSLv2)
 
+
+    def test_usesSecureCiphersByDefault(self):
+        """
+        Not passing a list of acceptable ciphers results in using secure
+        defaults.
+        """
+        opts = sslverify.OpenSSLCertificateOptions()
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        self.assertEqual(
+            sslverify.OpenSSLAcceptableCiphers.DEFAULT_CIPHER_LIST,
+            ctx._ciphers
+        )
+
+
+    def test_honorsAcceptableCiphers(self):
+        """
+        If a acceptable cipher suite has been passed, it's also used.
+        """
+        ac = sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString("LOW")
+        opts = sslverify.OpenSSLCertificateOptions(acceptableCiphers=ac)
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        self.assertEqual('LOW', ctx._ciphers)
 
 
 if interfaces.IReactorSSL(reactor, None) is None:
