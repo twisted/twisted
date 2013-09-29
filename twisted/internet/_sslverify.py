@@ -800,7 +800,7 @@ class OpenSSLCertificateOptions(object):
         """
         Return a context object.
 
-        @return: L{SSL.Context}
+        @return: C{OpenSSL.SSL.Context}
         """
         if self._context is None:
             self._context = self._makeContext()
@@ -811,7 +811,7 @@ class OpenSSLCertificateOptions(object):
         """
         Build context according to options.
 
-        @return: L{SSL.Context}
+        @return: C{OpenSSL.SSL.Context}
         """
         ctx = self._contextFactory(self.method)
         # Disallow insecure SSLv2. Applies only for SSLv23_METHOD.
