@@ -8,7 +8,7 @@ Test cases for twisted.names.
 
 import socket, operator, copy
 from StringIO import StringIO
-from functools import partial
+from functools import partial, reduce
 
 from twisted.trial import unittest
 
@@ -21,7 +21,6 @@ from twisted.names.client import Resolver
 from twisted.names.secondary import (
     SecondaryAuthorityService, SecondaryAuthority)
 
-from twisted.python.compat import reduce
 from twisted.test.proto_helpers import StringTransport, MemoryReactorClock
 
 def justPayload(results):
