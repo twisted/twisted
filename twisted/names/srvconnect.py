@@ -2,15 +2,15 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import random
+from functools import reduce
 
 from zope.interface import implements
 
 from twisted.internet import error, interfaces
-
 from twisted.names import client, dns
 from twisted.names.error import DNSNameError
-from twisted.python.compat import reduce, unicode
+from twisted.python.compat import unicode
+
 
 class _SRVConnector_ClientFactoryWrapper:
     def __init__(self, connector, wrappedFactory):
@@ -28,6 +28,8 @@ class _SRVConnector_ClientFactoryWrapper:
 
     def __getattr__(self, key):
         return getattr(self.__wrappedFactory, key)
+
+
 
 class SRVConnector:
     """A connector that looks up DNS SRV records. See RFC2782."""
@@ -159,7 +161,6 @@ class SRVConnector:
         weightIndex = zip(xrange(len(self.servers)), [x[1] for x in self.servers
                                                       if x[0]==minPriority])
         weightSum = reduce(lambda x, y: (None, x[1]+y[1]), weightIndex, (None, 0))[1]
-        rand = random.randint(0, weightSum)
 
         for index, weight in weightIndex:
             weightSum -= weight
