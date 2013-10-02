@@ -456,7 +456,7 @@ class LegacyLogger(object):
 
 
 
-def bindEmit(level):
+def bindEmitters(level):
     doc = """
     Emit a log event at log level L{{{level}}}.
 
@@ -482,7 +482,7 @@ def bindEmit(level):
 
 def _bindLevels():
     for level in LogLevel.iterconstants():
-        bindEmit(level)
+        bindEmitters(level)
 
 _bindLevels()
 
