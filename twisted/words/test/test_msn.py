@@ -408,43 +408,67 @@ class NotificationTests(unittest.TestCase):
         return d.addCallback(assertErrorCode)
 
 
+
 class MessageHandlingTests(unittest.TestCase):
-    """ testing various message handling methods from SwichboardClient """
+    """
+    Testing various message handling methods from C{SwichboardClient}.
+    """
 
     def setUp(self):
         self.client = DummySwitchboardClient()
         self.client.state = 'START'
 
+
     def tearDown(self):
         self.client = None
+
 
     def testClientCapabilitiesCheck(self):
         m = msn.MSNMessage()
         m.setHeader('Content-Type', 'text/x-clientcaps')
-        self.assertEqual(self.client.checkMessage(m), 0, 'Failed to detect client capability message')
+        self.assertEqual(self.client.checkMessage(m), 0,
+            'Failed to detect client capability message')
+
 
     def testTypingCheck(self):
         m = msn.MSNMessage()
         m.setHeader('Content-Type', 'text/x-msmsgscontrol')
         m.setHeader('TypingUser', 'foo@bar')
         self.client.checkMessage(m)
-        self.failUnless((self.client.state == 'TYPING'), msg='Failed to detect typing notification')
+        self.failUnless((self.client.state == 'TYPING'),
+            msg='Failed to detect typing notification')
+
+
+    def test_calcMessageLen(self):
+        """
+        L{MSNMessage._calcMessageLen} calculates and returns the message
+        length.
+        """
+        m = msn.MSNMessage()
+        m.setHeader('Content-Type', 'text/x-msmsgscontrol')
+        m.message += 'foo'
+        self.assertEqual(m._calcMessageLen(), 60)
+
 
     def testFileInvitation(self, lazyClient=False):
         m = msn.MSNMessage()
         m.setHeader('Content-Type', 'text/x-msmsgsinvite; charset=UTF-8')
         m.message += 'Application-Name: File Transfer\r\n'
         if not lazyClient:
-            m.message += 'Application-GUID: {5D3E02AB-6190-11d3-BBBB-00C04F795683}\r\n'
+            m.message += """Application-GUID: 
+                {5D3E02AB-6190-11d3-BBBB-00C04F795683}\r\n"""
         m.message += 'Invitation-Command: Invite\r\n'
         m.message += 'Invitation-Cookie: 1234\r\n'
         m.message += 'Application-File: foobar.ext\r\n'
         m.message += 'Application-FileSize: 31337\r\n\r\n'
         self.client.checkMessage(m)
-        self.failUnless((self.client.state == 'INVITATION'), msg='Failed to detect file transfer invitation')
+        self.failUnless((self.client.state == 'INVITATION'),
+            msg='Failed to detect file transfer invitation')
+
 
     def testFileInvitationMissingGUID(self):
         return self.testFileInvitation(True)
+
 
     def testFileResponse(self):
         d = Deferred()
@@ -455,7 +479,9 @@ class MessageHandlingTests(unittest.TestCase):
         m.message += 'Invitation-Command: ACCEPT\r\n'
         m.message += 'Invitation-Cookie: 1234\r\n\r\n'
         self.client.checkMessage(m)
-        self.failUnless((self.client.state == 'RESPONSE'), msg='Failed to detect file transfer response')
+        self.failUnless((self.client.state == 'RESPONSE'),
+            msg='Failed to detect file transfer response')
+
 
     def testFileInfo(self):
         d = Deferred()
@@ -469,13 +495,18 @@ class MessageHandlingTests(unittest.TestCase):
         m.message += 'Port: 6891\r\n'
         m.message += 'AuthCookie: 4321\r\n\r\n'
         self.client.checkMessage(m)
-        self.failUnless((self.client.state == 'INFO'), msg='Failed to detect file transfer info')
+        self.failUnless((self.client.state == 'INFO'),
+            msg='Failed to detect file transfer info')
+
 
     def fileResponse(self, (accept, cookie, info)):
         if accept and cookie == 1234: self.client.state = 'RESPONSE'
 
+
     def fileInfo(self, (accept, ip, port, aCookie, info)):
-        if accept and ip == '192.168.0.1' and port == 6891 and aCookie == 4321: self.client.state = 'INFO'
+        if accept and ip == '192.168.0.1' and port == 6891 and aCookie == 4321:
+            self.client.state = 'INFO'
+
 
 
 class FileTransferTestCase(unittest.TestCase):

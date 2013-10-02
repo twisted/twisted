@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.words.test -*-
+# -*- test-case-name: twisted.words.test.test_msn -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -72,6 +72,7 @@ TODO
 """
 
 import types, operator, os
+from functools import reduce
 from random import randint
 from urllib import quote, unquote
 from hashlib import md5
@@ -333,12 +334,12 @@ class MSNMessage:
     I am the class used to represent an 'instant' message.
 
     @ivar userHandle: The user handle (passport) of the sender
-                      (this is only used when receiving a message)
+                      (this is only used when receiving a message).
     @ivar screenName: The screen name of the sender (this is only used
-                      when receiving a message)
-    @ivar message: The message
-    @ivar headers: The message headers
-    @type headers: dict
+                      when receiving a message).
+    @ivar message: The message.
+    @ivar headers: The message headers.
+    @type headers: L{dict}
     @ivar length: The message length (including headers and line endings)
     @ivar ack: This variable is used to tell the server how to respond
                once the message has been sent. If set to MESSAGE_ACK
@@ -362,42 +363,60 @@ class MSNMessage:
         self.userHandle = userHandle
         self.screenName = screenName
         self.message = message
-        self.headers = {'MIME-Version' : '1.0', 'Content-Type' : 'text/plain'}
+        self.headers = {'MIME-Version': '1.0', 'Content-Type': 'text/plain'}
         self.length = length
         self.readPos = 0
 
+
     def _calcMessageLen(self):
         """
-        used to calculte the number to send
-        as the message length when sending a message.
+        Used to calculate the number to send as the message length when sending
+        a message.
         """
-        return reduce(operator.add, [len(x[0]) + len(x[1]) + 4  for x in self.headers.items()]) + len(self.message) + 2
+        return reduce(operator.add,
+            [len(x[0]) + len(x[1]) + 4 for x in self.headers.items()]) + \
+            len(self.message) + 2
+
 
     def setHeader(self, header, value):
-        """ set the desired header """
+        """
+        Set the desired header.
+        """
         self.headers[header] = value
+
 
     def getHeader(self, header):
         """
-        get the desired header value
-        @raise KeyError: if no such header exists.
+        Get the desired header value.
+
+        @raise KeyError: If no such header exists.
         """
         return self.headers[header]
 
+
     def hasHeader(self, header):
-        """ check to see if the desired header exists """
+        """
+        Check to see if the desired header exists.
+        """
         return header in self.headers
 
+
     def getMessage(self):
-        """ return the message - not including headers """
+        """
+        Return the message - not including headers.
+        """
         return self.message
 
+
     def setMessage(self, message):
-        """ set the message text """
+        """
+        Set the message text.
+        """
         self.message = message
 
-class MSNContact:
 
+
+class MSNContact:
     """
     This class represents a contact (user).
 

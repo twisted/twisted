@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.words.test -*-
+# -*- test-case-name: twisted.words.test.test_oscar -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -15,10 +15,12 @@ import socket
 import random
 import types
 import re
+from functools import reduce
 from hashlib import md5
 
 from twisted.internet import reactor, defer, protocol
 from twisted.python import log
+
 
 def logPacketData(data):
     lines = len(data)/16
@@ -198,10 +200,13 @@ class SSIGroup:
         self.users.append(user)
         user.group = self
 
+
     def oscarRep(self, groupID, buddyID):
-        tlvData = TLV(0xc8, reduce(lambda x,y:x+y, [struct.pack('!H',self.usersToID[x]) for x in self.users]))
+        tlvData = TLV(0xc8, reduce(lambda x, y: x + y,
+            [struct.pack('!H', self.usersToID[x]) for x in self.users]))
         return struct.pack('!H', len(self.name)) + self.name + \
                struct.pack('!HH', groupID, buddyID) + '\000\001' + tlvData
+
 
 
 class SSIBuddy:
@@ -229,10 +234,13 @@ class SSIBuddy:
             elif k == 0x013e:
                 self.alertSound = v
  
+
     def oscarRep(self, groupID, buddyID):
-        tlvData = reduce(lambda x,y: x+y, map(lambda (k,v):TLV(k,v), self.tlvs.items()), '\000\000')
+        tlvData = reduce(lambda x, y: x + y,
+            map(lambda (k, v): TLV(k, v), self.tlvs.items()), '\000\000')
         return struct.pack('!H', len(self.name)) + self.name + \
                struct.pack('!HH', groupID, buddyID) + '\000\000' + tlvData
+
 
 
 class OscarConnection(protocol.Protocol):
