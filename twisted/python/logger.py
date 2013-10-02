@@ -526,7 +526,8 @@ class LogPublisher(object):
 
     @property
     def observers(self):
-        return frozenset(self._observers)
+        # Don't return a mutable object
+        return iter(self._observers)
 
 
     def addObserver(self, observer):
