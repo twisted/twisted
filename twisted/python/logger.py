@@ -386,6 +386,22 @@ class LegacyLogger(object):
     Specifically, it provides compatible C{msg()} and C{err()} which
     forwards events to a L{Logger}'s C{emit()}, which will in turn
     produce new-style events.
+
+    This allows existing code to use this module without changes::
+
+        from twisted.python.logger import LegacyLogger
+        log = LegacyLogger()
+
+        log.msg("blah")
+
+        log.msg(warning=message, category=reflect.qual(category),
+                filename=filename, lineno=lineno,
+                format="%(filename)s:%(lineno)s: %(category)s: %(warning)s")
+
+        try:
+            1/0
+        except Exception as e:
+            log.err(e, "Math is hard")
     """
 
     def __init__(self, logger=None):
