@@ -930,9 +930,6 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         if tzset is None:
             raise SkipTest("Platform cannot change timezone; unable to verify offsets.")
 
-        localDST = mktime((2006, 6, 30, 0, 0, 0, 4, 181, 1))
-        localSTD = mktime((2007, 1, 31, 0, 0, 0, 2,  31, 0))
-
         def setTZ(name):
             if name is None:
                 del environ["TZ"]
@@ -947,31 +944,46 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
                 self.buildOutput(t_bytes, self.DEFAULT_SYSTEM, b"XYZZY"),
             )
 
+        def testForTimeZone(name, expectedDST, expectedSTD):
+            setTZ(name)
+
+            localDST = mktime((2006, 6, 30, 0, 0, 0, 4, 181, 1))
+            localSTD = mktime((2007, 1, 31, 0, 0, 0, 2,  31, 0))
+
+            testObserver(localDST, expectedDST)
+            testObserver(localSTD, expectedSTD)
+
         tzIn = environ.get("TZ", None)
         try:
             # UTC
-            setTZ("UTC")
-            testObserver(localDST, b"2006-06-29T22:00:00+0000")
-            testObserver(localSTD, b"2007-01-30T23:00:00+0000")
+            testForTimeZone(
+                "UTC",
+                b"2006-06-30T00:00:00+0000",
+                b"2007-01-31T00:00:00+0000",
+            )
 
             # West of UTC
-            setTZ("America/New_York")
-            testObserver(localDST, b"2006-06-29T18:00:00-0400")
-            testObserver(localSTD, b"2007-01-30T18:00:00-0500")
+            testForTimeZone(
+                "America/New_York",
+                b"2006-06-30T00:00:00-0400",
+                b"2007-01-31T00:00:00-0500",
+            )
 
             # East of UTC
-            setTZ("Europe/Berlin")
-            testObserver(localDST, b"2006-06-30T00:00:00+0200")
-            testObserver(localSTD, b"2007-01-31T00:00:00+0100")
+            testForTimeZone(
+                "Europe/Berlin",
+                b"2006-06-30T00:00:00+0200",
+                b"2007-01-31T00:00:00+0100",
+            )
 
             # No DST
-            setTZ("Canada/Saskatchewan")
-            testObserver(localDST, b"2006-06-29T16:00:00-0600")
-            testObserver(localSTD, b"2007-01-30T17:00:00-0600")
+            testForTimeZone(
+                "Canada/Saskatchewan",
+                b"2006-06-30T00:00:00-0600",
+                b"2007-01-31T00:00:00-0600",
+            )
         finally:
             setTZ(tzIn)
-
-    test_defaultTimeStamp.todo = "Broken."
 
 
     def test_emptyFormat(self):
