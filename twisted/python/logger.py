@@ -562,7 +562,7 @@ class LogPublisher(object):
         for observer in self.observers:
             try:
                 observer(event)
-            except Exception as e:
+            except Exception:
                 #
                 # We have to remove the offending observer because
                 # we're going to badmouth it to all of its friends
@@ -571,7 +571,7 @@ class LogPublisher(object):
                 #
                 self.removeObserver(observer)
                 try:
-                    self.log.failure(OBSERVER_REMOVED, observer=observer, e=e)
+                    self.log.failure(OBSERVER_REMOVED, observer=observer)
                 except Exception:
                     pass
                 finally:
