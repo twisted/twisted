@@ -45,14 +45,6 @@ setLogLevelForNamespace = Logger.publisher.levels.setLogLevelForNamespace
 
 class TestLogger(Logger):
     def emit(self, level, format=None, **kwargs):
-        if False:
-            print "*"*60
-            print "level =", level
-            print "format =", format
-            for key, value in kwargs.items():
-                print key, "=", value
-            print "*"*60
-
         def observer(event):
             self.event = event
 
@@ -426,11 +418,6 @@ class LoggerTests(SetUpTearDown, unittest.TestCase):
         except RuntimeError:
             log.failure("Whoops")
 
-        #
-        # log.failure() will cause trial to complain, so here we check that
-        # trial saw the correct error and remove it from the list of things to
-        # complain about.
-        #
         errors = self.flushLoggedErrors(RuntimeError)
         self.assertEquals(len(errors), 1)
 
@@ -1132,15 +1119,6 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
         return Container()
 
 
-            #print "*"*80
-            #print repr(record)
-            #print repr(record.name)
-            #print repr(record.levelno)
-            #print repr(record.levelname)
-            #print repr(record.msg)
-            #print "*"*80
-
-
     def logEvent(self, *events):
         """
         Send one or more events to Python's logging module, and
@@ -1216,8 +1194,13 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
         self.assertEquals(records[0].pathname, __file__)
         self.assertEquals(records[0].lineno, currentframe().f_lineno)
         self.assertEquals(records[0].exc_info, None)
-        #self.assertEquals(records[0].func, "test_callerInfo") # func is missing from record (?!)
 
+        # func is missing from record, which is weird because it's
+        # documented.
+        #self.assertEquals(records[0].func, "test_callerInfo")
+
+    # This isn't a regression from twisted.python.log; it just wasn't
+    # tested there.
     test_callerInfo.todo = "Caller frame is always be PythonLogObserver.__call__(). Meh."
 
 
@@ -1256,8 +1239,6 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
             "Unable to format event {}: No log format provided"
         )
 
-
-    # Test levels
 
 
 class RingBufferLogObserverTests(SetUpTearDown, unittest.TestCase):
@@ -1398,7 +1379,7 @@ class LegacyLogObserverWrapperTests(SetUpTearDown, unittest.TestCase):
         C{"message"} key is added.
         """
         event = self.forwardAndVerify(dict())
-        self.assertEquals(event["message"], "")
+        self.assertEquals(event["message"], ())
 
 
     def test_format(self):
@@ -1562,11 +1543,6 @@ class LegacyLoggerTests(SetUpTearDown, unittest.TestCase):
 
 
     def legacy_err(self, log, kwargs, why, exception):
-        #
-        # log.failure() will cause trial to complain, so here we check that
-        # trial saw the correct error and remove it from the list of things to
-        # complain about.
-        #
         errors = self.flushLoggedErrors(exception.__class__)
         self.assertEquals(len(errors), 1)
 
