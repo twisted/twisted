@@ -277,7 +277,7 @@ class LogTest(unittest.SynchronousTestCase):
         publisher.addObserver(fail)
 
         publisher.msg("Hello!")
-        self.assertEqual(publisher.observers, [logError, fail])
+        self.assertEqual(set(publisher.observers), set([logError, fail]))
         self.assertEqual(len(errors), 1)
         self.assertIsInstance(errors[0], RuntimeError)
 
