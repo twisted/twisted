@@ -583,9 +583,9 @@ class PythonLoggingObserverTestCase(unittest.SynchronousTestCase):
         """
         Test the logLevel keyword for customizing level used.
         """
-        self.lp.msg("Spam egg.", logLevel=logging.DEBUG)
+        self.lp.msg("Spam egg.", logLevel=logging.ERROR)
         self.assertIn("Spam egg.", self.out.getvalue())
-        self.assertIn("DEBUG", self.out.getvalue())
+        self.assertIn("ERROR", self.out.getvalue())
         self.out.seek(0, 0)
         self.out.truncate()
         self.lp.msg("Foo bar.", logLevel=logging.WARNING)
