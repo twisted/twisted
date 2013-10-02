@@ -955,9 +955,9 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
 
         def testObserver(t_int, t_bytes):
             self._testObserver(
-                t_int, u"",
+                t_int, u"XYZZY",
                 dict(),
-                self.buildOutput(t_bytes, self.DEFAULT_SYSTEM, b""),
+                self.buildOutput(t_bytes, self.DEFAULT_SYSTEM, b"XYZZY"),
             )
 
         tzIn = environ.get("TZ", None)
@@ -987,6 +987,18 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
     test_defaultTimeStamp.todo = "Broken."
 
 
+    def test_emptyFormat(self):
+        """
+        Empty format == empty log output == nothing to log.
+        """
+        t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
+        self._testObserver(
+            t, u"",
+            dict(),
+            b"",
+        )
+
+
     def test_noTimeFormat(self):
         """
         Time format is None == no time stamp.
@@ -1005,9 +1017,9 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         """
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
         self._testObserver(
-            t, u"",
+            t, u"XYZZY",
             dict(timeFormat="%Y/%W"),
-            self.buildOutput(b"2013/38", self.DEFAULT_SYSTEM, b"")
+            self.buildOutput(b"2013/38", self.DEFAULT_SYSTEM, b"XYZZY")
         )
 
 
@@ -1016,9 +1028,9 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         "%f" supported in time format.
         """
         self._testObserver(
-            1.234567, u"",
+            1.234567, u"XYZZY",
             dict(timeFormat="%f"),
-            self.buildOutput(b"234567", self.DEFAULT_SYSTEM, b""),
+            self.buildOutput(b"234567", self.DEFAULT_SYSTEM, b"XYZZY"),
         )
 
 

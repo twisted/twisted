@@ -756,6 +756,12 @@ class FileLogObserver(object):
         """
         Write event to file.
         """
+        eventText = formatEvent(event).encode(self.encoding)
+        eventText = eventText.replace(b"\n", b"\n\t")
+
+        if not eventText:
+            return
+
         if self.timeFormat is not None and event.get("log_time", None) is not None:
             t = event["log_time"]
             tz = MagicTimeZone(t)
@@ -776,9 +782,6 @@ class FileLogObserver(object):
                 system = str(system)
             except Exception:
                 system = b"UNFORMATTABLE"
-
-        eventText = formatEvent(event).encode(self.encoding)
-        eventText = eventText.replace(b"\n", b"\n\t")
 
         text = b"{timeStamp} [{system}] {event}\n".format(
             timeStamp=timeStamp,
