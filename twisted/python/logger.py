@@ -909,7 +909,7 @@ class LegacyLogObserverWrapper(object):
 
         # The "message" key is required by textFromEventDict()
         if "message" not in event:
-            event["message"] = ""
+            event["message"] = ()
 
         system = event.get("log_system", None)
         if system is not None:
