@@ -110,10 +110,33 @@ class LogTest(unittest.SynchronousTestCase):
             self.assertEqual(len(L1), 2)
             self.assertEqual(len(L2), 2)
 
-            # The order is slightly wrong here.  The first event should be
+            # The order is slightly variable here.  The first event should be
             # delivered to all observers; then, errors should be delivered.
-            self.assertEqual(L1[1]['message'], ("Howdy, y'all.",))
-            self.assertEqual(L2[0]['message'], ("Howdy, y'all.",))
+
+            #print("\n\t"+"="*70)
+            #print(
+            #    ("\n\t"+"="*70+"\n").join([
+            #        ("\n\t"+"-"*70+"\n").join([
+            #            "\t"+repr(event)
+            #            for event in events
+            #        ])
+            #        for events in (L1, L2)
+            #    ])
+            #)
+            #print("\t"+"="*70)
+
+            #self.assertEqual(L1[1]['message'], ("Howdy, y'all.",))
+            #self.assertEqual(L2[0]['message'], ("Howdy, y'all.",))
+            # Don't rely on the order
+            for l in (L1, L2):
+                gotMessage = False
+                for event in l:
+                    if event["message"] == ("Howdy, y'all.",):
+                        self.assertFalse(gotMessage, "Already saw message")
+                        gotMessage = True
+                self.assertTrue(gotMessage, "Didn't see message")
+
+    test_erroneousErrors.todo = "Consider using an ordered set so that publishers deliver events to observers in a fixed order."
 
 
     def test_doubleErrorDoesNotRemoveObserver(self):
