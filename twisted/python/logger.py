@@ -62,7 +62,7 @@ from collections import deque
 
 from zope.interface import Interface, implementer
 from twisted.python.constants import NamedConstant, Names
-from twisted.python.util import untilConcludes
+from twisted.python.util import untilConcludes, OrderedDict
 from twisted.python.failure import Failure
 from twisted.python.reflect import safe_str, safe_repr
 
@@ -521,13 +521,15 @@ class LogPublisher(object):
     log = Logger()
 
     def __init__(self, *observers):
-        self._observers = set(observers)
+        self._observers = OrderedDict()
+        for observer in observers:
+            self._observers[observer] = None
 
 
     @property
     def observers(self):
         # Don't return a mutable object
-        return iter(self._observers)
+        return self._observers.keys()
 
 
     def addObserver(self, observer):
@@ -538,7 +540,7 @@ class LogPublisher(object):
         """
         if not callable(observer):
             raise TypeError("Observer is not callable: {0!r}".format(observer))
-        self._observers.add(observer)
+        self._observers[observer] = None
 
 
     def removeObserver(self, observer):
@@ -548,7 +550,7 @@ class LogPublisher(object):
         @param observer: An L{ILogObserver} to remove.
         """
         try:
-            self._observers.remove(observer)
+            del self._observers[observer]
         except KeyError:
             pass
 
