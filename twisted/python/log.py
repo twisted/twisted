@@ -566,9 +566,6 @@ def publishToNewObserver(observer, eventDict):
         eventDict["log_text"] = text
         eventDict["log_format"] = "{log_text}"
 
-    if "log_system" not in eventDict and "system" in eventDict:
-        eventDict["log_system"] = eventDict["system"]
-
     if "log_level" not in eventDict:
         if "logLevel" in eventDict:
             level = pythonLogLevelToNewLogLevelMapping[eventDict["logLevel"]]
@@ -578,5 +575,11 @@ def publishToNewObserver(observer, eventDict):
             level = NewLogLevel.info
 
         eventDict["log_level"] = level
+
+    if "log_namespace" not in eventDict:
+        eventDict["log_namespace"] = "log_legacy"
+
+    if "log_system" not in eventDict and "system" in eventDict:
+        eventDict["log_system"] = eventDict["system"]
 
     observer(eventDict)
