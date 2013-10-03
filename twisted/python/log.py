@@ -382,25 +382,6 @@ class PythonLoggingObserver(NewPythonLogObserver, StartStopMixIn):
         >>> log.msg('debugging', logLevel=logging.DEBUG)
 
         """
-        if 'logLevel' in eventDict:
-            level = {
-                logging.DEBUG: NewLogLevel.debug,
-                logging.INFO: NewLogLevel.info,
-                logging.WARNING: NewLogLevel.warn,
-                logging.ERROR: NewLogLevel.error,
-                logging.CRITICAL: NewLogLevel.error,
-            }[eventDict['logLevel']]
-        elif eventDict['isError']:
-            level = NewLogLevel.error
-        else:
-            level = NewLogLevel.info
-
-        eventDict['log_level'] = level
-
-        text = textFromEventDict(eventDict)
-        if text is None:
-            return
-
         publishToNewObserver(self, eventDict)
 
 
