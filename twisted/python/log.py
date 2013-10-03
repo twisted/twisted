@@ -22,8 +22,10 @@ from twisted.python import failure
 from twisted.python.threadable import synchronize
 from twisted.python.logger import (
     LogLevel as NewLogLevel,
+    Logger as NewLogger,
     FileLogObserver as NewFileLogObserver,
     PythonLogObserver as NewPythonLogObserver,
+    LegacyLogObserverWrapper,
 )
 
 
@@ -150,8 +152,15 @@ class LogPublisher:
 
     synchronized = ['msg']
 
-    def __init__(self):
-        self.observers = []
+
+    @property
+    def observers(self):
+        return [
+            observer.legacyObserver for observer
+            in NewLogger.publisher.filteredPublisher.observers
+            if getattr(observer, "originator", None) == self
+        ]
+
 
     def addObserver(self, other):
         """
@@ -161,14 +170,23 @@ class LogPublisher:
         @param other: A callable object that will be called with each new log
             message (a dict).
         """
-        assert callable(other)
-        self.observers.append(other)
+        wrapped = LegacyLogObserverWrapper(other)
+        wrapped.originator = self
+        NewLogger.publisher.filteredPublisher.addObserver(wrapped)
+
 
     def removeObserver(self, other):
         """
         Remove an observer.
         """
-        self.observers.remove(other)
+        for observer in NewLogger.publisher.filteredPublisher.observers:
+            if (
+                getattr(observer, "originator", None) == self and
+                observer.legacyObserver == other
+            ):
+                NewLogger.publisher.filteredPublisher.removeObserver(observer)
+                break
+
 
     def msg(self, *message, **kw):
         """
@@ -190,44 +208,8 @@ class LogPublisher:
         actualEventDict.update(kw)
         actualEventDict['message'] = message
         actualEventDict['time'] = time.time()
-        for i in range(len(self.observers) - 1, -1, -1):
-            try:
-                self.observers[i](actualEventDict)
-            except KeyboardInterrupt:
-                # Don't swallow keyboard interrupt!
-                raise
-            except UnicodeEncodeError:
-                raise
-            except:
-                observer = self.observers[i]
-                self.observers[i] = lambda event: None
-                try:
-                    self._err(failure.Failure(),
-                        "Log observer %s failed." % (observer,))
-                except:
-                    # Sometimes err() will throw an exception,
-                    # e.g. RuntimeError due to blowing the stack; if that
-                    # happens, there's not much we can do...
-                    pass
-                self.observers[i] = observer
 
-
-    def _err(self, failure, why):
-        """
-        Log a failure.
-
-        Similar in functionality to the global {err} function, but the failure
-        gets published only to observers attached to this publisher.
-
-        @param failure: The failure to log.
-        @type failure: L{Failure}.
-
-        @param why: The source of this failure.  This will be logged along with
-            the C{failure} and should describe the context in which the failure
-            occurred.
-        @type why: C{str}
-        """
-        self.msg(failure=failure, why=why, isError=1)
+        publishToNewObserver(NewLogger.publisher, actualEventDict)
 
 
     def showwarning(self, message, category, filename, lineno, file=None,
@@ -248,6 +230,7 @@ class LogPublisher:
                 _oldshowwarning(message, category, filename, lineno, file)
             else:
                 _oldshowwarning(message, category, filename, lineno, file, line)
+
 
 synchronize(LogPublisher)
 
@@ -573,13 +556,46 @@ except NameError:
 
 
 
-def publishToNewObserver(observer, eventDict):
-    text = textFromEventDict(eventDict)
-    if text is None:
-        return
+pythonLogLevelToNewLogLevelMapping = {
+    logging.DEBUG: NewLogLevel.debug,
+    logging.INFO: NewLogLevel.info,
+    logging.WARNING: NewLogLevel.warn,
+    logging.ERROR: NewLogLevel.error,
+    logging.CRITICAL: NewLogLevel.error,
+}
 
-    eventDict["log_text"] = text
-    eventDict["log_format"] = "{log_text}"
-    eventDict["log_system"] = eventDict["system"]
+
+def publishToNewObserver(observer, eventDict):
+    """
+    Publish an event to a new-style observer.
+    """
+    #
+    # Note that it's possible that a new-style event was sent to a
+    # LegacyLogObserverWrapper, and may now be getting sent back to a new-style
+    # observer.  In this case, it's already a new-style event, adapted to also
+    # look like an old-style event, and we don't need to tweak it again to be a
+    # new-style event, hence the checks for already-defined new-style keys.
+    #
+
+    if "log_format" not in eventDict:
+        text = textFromEventDict(eventDict)
+        if text is None:
+            return
+
+        eventDict["log_text"] = text
+        eventDict["log_format"] = "{log_text}"
+
+    if "log_system" not in eventDict and "system" in eventDict:
+        eventDict["log_system"] = eventDict["system"]
+
+    if "log_level" not in eventDict:
+        if "logLevel" in eventDict:
+            level = pythonLogLevelToNewLogLevelMapping[eventDict["logLevel"]]
+        elif eventDict["isError"]:
+            level = NewLogLevel.error
+        else:
+            level = NewLogLevel.info
+
+        eventDict["log_level"] = level
 
     observer(eventDict)
