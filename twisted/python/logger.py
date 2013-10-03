@@ -1003,6 +1003,10 @@ class DefaultLogPublisher(object):
                                                       (self.levels,))
         self.rootPublisher     = LogPublisher(self.filters)
 
+        self.filteredPublisher.name = "default filtered publisher"
+        self.filters.name = "default filtering observer"
+        self.rootPublisher.name = "default root publisher"
+
 
     def addObserver(self, observer, filtered=True):
         """
@@ -1131,3 +1135,32 @@ class MagicTimeZone(TZInfo):
         return timeDeltaZero
 
 timeDeltaZero = TimeDelta(0)
+
+
+
+def formatTrace(trace):
+    def formatWithName(obj):
+        if hasattr(obj, "name"):
+            return "{0} ({1})".format(obj, obj.name)
+        else:
+            return "{0}".format(obj)
+
+    result = []
+    lineage = []
+
+    for parent, child in trace:
+        if not lineage or lineage[-1] is not parent:
+            if parent in lineage:
+                while lineage[-1] is not parent:
+                    lineage.pop()
+
+            else:
+                if not lineage:
+                    result.append(u"{0}\n".format(formatWithName(parent)))
+
+                lineage.append(parent)
+
+        result.append(u"  " * len(lineage))
+        result.append(u"-> {0}\n".format(formatWithName(child)))
+
+    return u"".join(result)

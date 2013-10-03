@@ -31,7 +31,8 @@ from twisted.python.logger import (
     FilteringLogObserver, PredicateResult,
     FileLogObserver, PythonLogObserver, RingBufferLogObserver,
     LegacyLogObserverWrapper,
-    LogLevelFilterPredicate, OBSERVER_REMOVED
+    LogLevelFilterPredicate, OBSERVER_REMOVED,
+    formatTrace,
 )
 
 
@@ -675,6 +676,59 @@ class LogPublisherTests(SetUpTearDown, unittest.TestCase):
         publisher.addObserver(o2)
         publisher.addObserver(o3)
         publisher(event)
+
+
+    def test_formatTrace(self):
+        """
+        Format trace as string.
+        """
+        event = dict(log_trace=[])
+
+        o1 = lambda e: None
+        o2 = lambda e: None
+        o3 = lambda e: None
+        o4 = lambda e: None
+        o5 = lambda e: None
+
+        o1.name = "root/o1"
+        o2.name = "root/p1/o2"
+        o3.name = "root/p1/o3"
+        o4.name = "root/p1/p2/o4"
+        o5.name = "root/o5"
+
+        def testObserver(e):
+            self.assertIdentical(e, event)
+            trace = formatTrace(e["log_trace"])
+            self.assertEquals(
+                trace,
+                (
+                    "{root} ({root.name})\n" +
+                    "  -> {o1} ({o1.name})\n" +
+                    "  -> {p1} ({p1.name})\n" +
+                    "    -> {o2} ({o2.name})\n" +
+                    "    -> {o3} ({o3.name})\n" +
+                    "    -> {p2} ({p2.name})\n" +
+                    "      -> {o4} ({o4.name})\n" +
+                    "  -> {o5} ({o5.name})\n" +
+                    "  -> {oTest}\n"
+                ).format(
+                        root=root,
+                        o1=o1, o2=o2, o3=o3, o4=o4, o5=o5,
+                        p1=p1, p2=p2,
+                        oTest=oTest
+                )
+            )
+        oTest = testObserver
+
+        p2 = LogPublisher(o4)
+        p1 = LogPublisher(o2, o3, p2)
+
+        p2.name = "root/p1/p2/"
+        p1.name = "root/p1/"
+
+        root = LogPublisher(o1, p1, o5, oTest)
+        root.name = "root/"
+        root(event)
 
 
 
