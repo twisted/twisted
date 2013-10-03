@@ -950,11 +950,6 @@ class DefaultLogPublisher(object):
 
         3. B{filteredPublisher} - a L{LogPublisher}
 
-        4. B{legacyLogObserver} - a L{LegacyLogObserverWrapper} wired up to
-           L{twisted.python.log.msg}.  This allows any observers registered
-           with Twisted's logging (that is, most observers in presently use) to
-           receive (filtered) events.
-
     The purpose of this class is to provide a default log observer with
     sufficient hooks to enable applications to add observers that can either
     receive all log messages, or only log messages that are configured to pass
@@ -982,17 +977,12 @@ class DefaultLogPublisher(object):
         # Send filtered events to the FileObserver
         log.publisher.addObserver(AMPObserver())
 
-    With no observers added, the default behavior is that the legacy Twisted
-    logging system sees messages as controlled by L{LogLevelFilterPredicate}.
+    With no observers added, the default behavior is that logged events are
+    dropped.
     """
 
     def __init__(self):
-        def toOldLogging(event):
-            from twisted.python.log import msg as twistedLogMessage
-            twistedLogMessage(**event)
-
-        self.legacyLogObserver = LegacyLogObserverWrapper(toOldLogging)
-        self.filteredPublisher = LogPublisher(self.legacyLogObserver)
+        self.filteredPublisher = LogPublisher()
         self.levels            = LogLevelFilterPredicate()
         self.filters           = FilteringLogObserver(self.filteredPublisher,
                                                       (self.levels,))

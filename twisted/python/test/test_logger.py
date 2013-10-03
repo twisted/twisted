@@ -631,7 +631,7 @@ class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
         publisher.addObserver(o3, filtered=False)
 
         self.assertEquals(
-            set((o1, o2, publisher.legacyLogObserver)),
+            set((o1, o2)),
             set(publisher.filteredPublisher.observers),
             "Filtered observers do not match expected set"
         )
@@ -658,7 +658,7 @@ class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
         publisher.addObserver(o3, filtered=True)
 
         self.assertEquals(
-            set((o1, o3, publisher.legacyLogObserver)),
+            set((o1, o3)),
             set(publisher.filteredPublisher.observers),
             "Filtered observers do not match expected set"
         )
@@ -682,7 +682,7 @@ class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
         publisher.removeObserver(o3)
 
         self.assertEquals(
-            set((o1, publisher.legacyLogObserver)),
+            set((o1,)),
             set(publisher.filteredPublisher.observers),
             "Filtered observers do not match expected set"
         )
