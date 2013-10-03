@@ -246,7 +246,7 @@ class Logger(object):
     Logging object.
     """
 
-    publisher = lambda e: None
+    publisher = lambda self, event: None
 
 
     @staticmethod
@@ -334,12 +334,16 @@ class Logger(object):
             # FIXME: continue to emit?
             return
 
-        kwargs.update(
+        event = kwargs
+        event.update(
             log_logger=self, log_level=level, log_namespace=self.namespace,
             log_source=self.source, log_format=format, log_time=time(),
         )
 
-        self.publisher(kwargs)
+        if "log_trace" in event:
+            event["log_trace"].append((self, self.publisher))
+
+        self.publisher(event)
 
 
     def failure(self, format, failure=None, level=LogLevel.error, **kwargs):
@@ -559,7 +563,16 @@ class LogPublisher(object):
         """
         Forward events to contained observers.
         """
+        if "log_trace" in event:
+            def trace(observer):
+                event["log_trace"].append((self, observer))
+        else:
+            trace = None
+
         for observer in self.observers:
+            if trace is not None:
+                trace(observer)
+
             try:
                 observer(event)
             except Exception:
@@ -646,6 +659,8 @@ class FilteringLogObserver(object):
         Forward to next observer if predicate allows it.
         """
         if self.shouldLogEvent(event):
+            if "log_trace" in event:
+                event["log_trace"].append((self, self.observer))
             self.observer(event)
 
 
@@ -1017,6 +1032,9 @@ class DefaultLogPublisher(object):
 
 
     def __call__(self, event):
+        if "log_trace" in event:
+            event["log_trace"].append((self, self.rootPublisher))
+
         self.rootPublisher(event)
 
 

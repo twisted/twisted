@@ -459,6 +459,22 @@ class LoggerTests(SetUpTearDown, unittest.TestCase):
         self.assertEquals(len(errors), 1)
 
 
+    def test_trace(self):
+        """
+        Tracing keeps track of forwarding to the publisher.
+        """
+        log = TestLogger()
+
+        def publisher(event):
+            observer(event)
+
+        def observer(event):
+            self.assertEquals(event["log_trace"], [(log, publisher)])
+
+        log.publisher = publisher
+        log.info("Hello.", log_trace=[])
+
+
 
 class LogPublisherTests(SetUpTearDown, unittest.TestCase):
     """
@@ -558,6 +574,10 @@ class LogPublisherTests(SetUpTearDown, unittest.TestCase):
 
 
     def test_observerRaises(self):
+        """
+        Observer raises an exception during fan out: a failure should be
+        logged, but not re-raised.  Life goes on.
+        """
         nonTestEvents = []
         Logger.publisher.addObserver(lambda e: nonTestEvents.append(e))
 
@@ -594,6 +614,11 @@ class LogPublisherTests(SetUpTearDown, unittest.TestCase):
 
 
     def test_observerRaisesAndLoggerHatesMe(self):
+        """
+        Observer raises an exception during fan out and thge publisher's Logger
+        pukes when the failure is reported.  Exception should still not
+        propagate back to the caller.
+        """
         nonTestEvents = []
         Logger.publisher.addObserver(lambda e: nonTestEvents.append(e))
 
@@ -614,6 +639,44 @@ class LogPublisherTests(SetUpTearDown, unittest.TestCase):
         # Here, the lack of an exception thus far is a success, of sorts
 
 
+    def test_trace(self):
+        """
+        Tracing keeps track of forwarding done by the publisher.
+        """
+        publisher = LogPublisher()
+
+        event = dict(log_trace=[])
+
+        o1 = lambda e: None
+
+        def o2(e):
+            self.assertIdentical(e, event)
+            self.assertEquals(
+                e["log_trace"],
+                [
+                    (publisher, o1),
+                    (publisher, o2),
+                    # Event hasn't been sent to o3 yet
+                ]
+            )
+
+        def o3(e):
+            self.assertIdentical(e, event)
+            self.assertEquals(
+                e["log_trace"],
+                [
+                    (publisher, o1),
+                    (publisher, o2),
+                    (publisher, o3),
+                ]
+            )
+
+        publisher.addObserver(o1)
+        publisher.addObserver(o2)
+        publisher.addObserver(o3)
+        publisher(event)
+
+
 
 class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
     """
@@ -621,6 +684,9 @@ class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
     """
 
     def test_addObserver(self):
+        """
+        L{DefaultLogPublisher.addObserver} adds an observer.
+        """
         o1 = lambda e: None
         o2 = lambda e: None
         o3 = lambda e: None
@@ -643,6 +709,10 @@ class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
 
 
     def test_addObserverAgain(self):
+        """
+        L{DefaultLogPublisher.addObserver} with the same observer doesn't add
+        it again.
+        """
         o1 = lambda e: None
         o2 = lambda e: None
         o3 = lambda e: None
@@ -670,6 +740,9 @@ class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
 
 
     def test_removeObserver(self):
+        """
+        L{DefaultLogPublisher.removeObserver} removes an observer.
+        """
         o1 = lambda e: None
         o2 = lambda e: None
         o3 = lambda e: None
@@ -694,6 +767,11 @@ class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
 
 
     def test_filteredObserver(self):
+        """
+        L{DefaultLogPublisher.addObserver} with C{filtered=True} adds an
+        observer to the C{filteredPublisher} and events are properly filtered
+        when published.
+        """
         namespace = __name__
 
         event_debug = dict(
@@ -720,6 +798,9 @@ class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
 
 
     def test_filteredObserverNoFilteringKeys(self):
+        """
+        Event with no C{log_level} is filtered out.
+        """
         event_debug = dict(log_level=LogLevel.debug)
         event_error = dict(log_level=LogLevel.error)
         event_none  = dict()
@@ -738,6 +819,10 @@ class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
 
 
     def test_unfilteredObserver(self):
+        """
+        Events are not filtered on their way to an observer added with
+        C{filtered=False}.
+        """
         namespace = __name__
 
         event_debug = dict(
@@ -761,6 +846,44 @@ class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
         publisher(event_error)
         self.assertIn(event_debug, events)
         self.assertIn(event_error, events)
+
+
+    def test_trace(self):
+        """
+        Tracing keeps track of forwarding done by the publisher.
+        """
+        publisher = DefaultLogPublisher()
+
+        event = dict(log_trace=[])
+
+        o1 = lambda e: None
+
+        def o2(e):
+            self.assertIdentical(e, event)
+            self.assertEquals(
+                e["log_trace"],
+                [
+                    (publisher, o1),
+                    (publisher, o2),
+                    # Event hasn't been sent to o3 yet
+                ]
+            )
+
+        def o3(e):
+            self.assertIdentical(e, event)
+            self.assertEquals(
+                e["log_trace"],
+                [
+                    (publisher, o1),
+                    (publisher, o2),
+                    (publisher, o3),
+                ]
+            )
+
+        publisher.addObserver(o1)
+        publisher.addObserver(o2)
+        publisher.addObserver(o3)
+        publisher(event)
 
 
 
@@ -826,31 +949,53 @@ class FilteringLogObserverTests(SetUpTearDown, unittest.TestCase):
 
 
     def test_shouldLogEvent_noFilters(self):
+        """
+        No filters: all events come through.
+        """
         self.assertEquals(self.filterWith(), [0, 1, 2, 3])
 
 
     def test_shouldLogEvent_noFilter(self):
+        """
+        Filter with negative predicate result.
+        """
         self.assertEquals(self.filterWith("notTwo"), [0, 1, 3])
 
 
     def test_shouldLogEvent_yesFilter(self):
+        """
+        Filter with positive predicate result.
+        """
         self.assertEquals(self.filterWith("twoPlus"), [0, 1, 2, 3])
 
 
     def test_shouldLogEvent_yesNoFilter(self):
+        """
+        Series of filters with positive and negative predicate results.
+        """
         self.assertEquals(self.filterWith("twoPlus", "no"), [2, 3])
 
 
     def test_shouldLogEvent_yesYesNoFilter(self):
+        """
+        Series of filters with positive, positive and negative predicate
+        results.
+        """
         self.assertEquals(self.filterWith("twoPlus", "twoMinus", "no"),
                           [0, 1, 2, 3])
 
 
     def test_shouldLogEvent_badPredicateResult(self):
+        """
+        Filter with invalid predicate result.
+        """
         self.assertRaises(TypeError, self.filterWith, "bogus")
 
 
     def test_call(self):
+        """
+        Test filtering results from each predicate type.
+        """
         e = dict(obj=object())
 
         def callWithPredicateResult(result):
@@ -864,6 +1009,35 @@ class FilteringLogObserverTests(SetUpTearDown, unittest.TestCase):
         self.assertIn(e, callWithPredicateResult(PredicateResult.maybe))
         self.assertNotIn(e, callWithPredicateResult(PredicateResult.no))
 
+
+    def test_trace(self):
+        """
+        Tracing keeps track of forwarding through the filtering observer.
+        """
+        event = dict(log_trace=[])
+
+        oYes = lambda e: None
+        oNo = lambda e: None
+
+        def testObserver(e):
+            self.assertIdentical(e, event)
+            self.assertEquals(
+                event["log_trace"],
+                [
+                    (publisher, yesFilter),
+                    (yesFilter, oYes),
+                    (publisher, noFilter),
+                    # noFilter doesn't call oNo
+                    (publisher, oTest),
+                ]
+            )
+        oTest = testObserver
+
+        yesFilter = FilteringLogObserver(oYes, (lambda e: PredicateResult.yes,))
+        noFilter = FilteringLogObserver(oNo, (lambda e: PredicateResult.no,))
+
+        publisher = LogPublisher(yesFilter, noFilter, testObserver)
+        publisher(event)
 
 
 class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
