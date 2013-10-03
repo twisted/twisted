@@ -911,6 +911,13 @@ class LegacyLogObserverWrapper(object):
         self.legacyObserver = legacyObserver
 
 
+    def __repr__(self):
+        return (
+            "{self.__class__.__name__}({self.legacyObserver})"
+            .format(self=self)
+        )
+
+
     def __call__(self, event):
         """
         Forward events to the legacy observer after editing them to
