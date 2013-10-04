@@ -562,8 +562,14 @@ class PythonLoggingObserverTestCase(unittest.SynchronousTestCase):
         """
         Test error output.
         """
-        self.lp.msg(failure=failure.Failure(ValueError("That is bad.")), isError=True)
+        f = failure.Failure(ValueError("That is bad."))
+        self.lp.msg(failure=f, isError=True)
         self.assertIn("ERROR", self.out.getvalue())
+        errors = self.flushLoggedErrors(ValueError)
+        self.assertEqual(len(errors), 1)
+        self.assertIdentical(errors[0], f)
+
+    test_errorString.todo = "Flushing errors wasn't necessary in old module... OK?"
 
     def test_formatString(self):
         """

@@ -301,7 +301,7 @@ class Logger(object):
             source = oself
 
         return self.__class__(
-            '.'.join([type.__module__, type.__name__]),
+            ".".join([type.__module__, type.__name__]),
             source
         )
 
