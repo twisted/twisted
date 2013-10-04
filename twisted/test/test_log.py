@@ -15,6 +15,7 @@ import sys, logging, warnings
 from twisted.trial import unittest
 
 from twisted.python import log, failure
+from twisted.python.logger import LoggingFile, LogLevel as NewLogLevel
 
 
 class FakeWarning(Warning):
@@ -467,14 +468,14 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
         self.addCleanup(observer.stop)
         log.msg("Hello!")
         self.assertIn("Hello!", fakeFile.getvalue())
-        self.assertIsInstance(sys.stdout, log.StdioOnnaStick)
-        self.assertEqual(sys.stdout.isError, False)
+        self.assertIsInstance(sys.stdout, LoggingFile)
+        self.assertEqual(sys.stdout.level, NewLogLevel.info)
         encoding = getattr(origStdout, "encoding", None)
         if not encoding:
             encoding = sys.getdefaultencoding()
         self.assertEqual(sys.stdout.encoding, encoding)
-        self.assertIsInstance(sys.stderr, log.StdioOnnaStick)
-        self.assertEqual(sys.stderr.isError, True)
+        self.assertIsInstance(sys.stderr, LoggingFile)
+        self.assertEqual(sys.stderr.level, NewLogLevel.error)
         encoding = getattr(origStderr, "encoding", None)
         if not encoding:
             encoding = sys.getdefaultencoding()
@@ -502,7 +503,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
         observer = log.startLogging(sys.stdout)
         self.addCleanup(observer.stop)
         # At this point, we expect that sys.stdout is a StdioOnnaStick object.
-        self.assertIsInstance(sys.stdout, log.StdioOnnaStick)
+        self.assertIsInstance(sys.stdout, LoggingFile)
         fakeStdout = sys.stdout
         observer = log.startLogging(sys.stdout)
         self.assertIdentical(sys.stdout, fakeStdout)

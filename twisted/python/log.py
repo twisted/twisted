@@ -25,7 +25,7 @@ from twisted.python.logger import (
     Logger as NewLogger,
     FileLogObserver as NewFileLogObserver,
     PythonLogObserver as NewPythonLogObserver,
-    LegacyLogObserverWrapper,
+    LegacyLogObserverWrapper, LoggingFile,
 )
 
 
@@ -454,7 +454,7 @@ def startLogging(file, *a, **kw):
 
     @return: A L{FileLogObserver} if a new observer is added, None otherwise.
     """
-    if isinstance(file, StdioOnnaStick):
+    if isinstance(file, LoggingFile):
         return
     flo = FileLogObserver(file)
     startLoggingWithObserver(flo.emit, *a, **kw)
@@ -502,8 +502,8 @@ def discardLogs():
 try:
     logfile
 except NameError:
-    logfile = StdioOnnaStick(0, getattr(sys.stdout, "encoding", None))
-    logerr = StdioOnnaStick(1, getattr(sys.stderr, "encoding", None))
+    logfile = LoggingFile(level=NewLogLevel.info, encoding=getattr(sys.stdout, "encoding", None))
+    logerr = LoggingFile(level=NewLogLevel.error, encoding=getattr(sys.stderr, "encoding", None))
 
 
 
