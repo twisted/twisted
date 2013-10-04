@@ -31,7 +31,7 @@ from twisted.python.logger import (
     FilteringLogObserver, PredicateResult,
     FileLogObserver, PythonLogObserver, RingBufferLogObserver,
     LegacyLogObserverWrapper,
-    LogLevelFilterPredicate, OBSERVER_REMOVED,
+    LogLevelFilterPredicate, OBSERVER_DISABLED,
     formatTrace,
 )
 
@@ -605,7 +605,7 @@ class LogPublisherTests(SetUpTearDown, unittest.TestCase):
         # Verify that the exception was logged
         for event in nonTestEvents:
             if (
-                event.get("log_format", None) == OBSERVER_REMOVED and
+                event.get("log_format", None) == OBSERVER_DISABLED and
                 getattr(event.get("failure", None), "value") is exception
             ):
                 break

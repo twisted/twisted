@@ -86,7 +86,7 @@ class LogTest(unittest.SynchronousTestCase):
         """
         L1 = []
         L2 = []
-        def broken(events):
+        def broken(event):
             1 // 0
 
         for observer in [L1.append, broken, L2.append]:
@@ -99,7 +99,7 @@ class LogTest(unittest.SynchronousTestCase):
             L2[:] = []
 
             # Send out the event which will break one of the observers.
-            log.msg("Howdy, y'all.")
+            log.msg("Howdy, y'all.", log_trace=[])
 
             # The broken observer should have caused this to be logged.
             excs = self.flushLoggedErrors(ZeroDivisionError)
@@ -112,20 +112,7 @@ class LogTest(unittest.SynchronousTestCase):
 
             # The order is slightly wrong here.  The first event should be
             # delivered to all observers; then, errors should be delivered.
-
-            #print("\n\t"+"="*70)
-            #print(
-            #    ("\n\t"+"="*70+"\n").join([
-            #        ("\n\t"+"-"*70+"\n").join([
-            #            "\t"+repr(event)
-            #            for event in events
-            #        ])
-            #        for events in (L1, L2)
-            #    ])
-            #)
-            #print("\t"+"="*70)
-
-            self.assertEqual(L1[1]['message'], ("Howdy, y'all.",))
+            self.assertEqual(L1[0]['message'], ("Howdy, y'all.",))
             self.assertEqual(L2[0]['message'], ("Howdy, y'all.",))
 
 

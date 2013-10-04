@@ -66,8 +66,8 @@ from twisted.python.util import untilConcludes, OrderedDict
 from twisted.python.failure import Failure
 from twisted.python.reflect import safe_str, safe_repr
 
-OBSERVER_REMOVED = (
-    "Temporarily removing observer {observer} due to exception: {e}"
+OBSERVER_DISABLED = (
+    "Temporarily disabling observer {observer} due to exception: {e}"
 )
 
 TIME_FORMAT_RFC3339 = "%Y-%m-%dT%H:%M:%S%z"
@@ -528,6 +528,7 @@ class LogPublisher(object):
         self._observers = OrderedDict()
         for observer in observers:
             self._observers[observer] = None
+        self._disabledObservers = set()
 
 
     @property
@@ -569,26 +570,37 @@ class LogPublisher(object):
         else:
             trace = None
 
+        brokenObservers = []
+
         for observer in self.observers:
+            if observer in self._disabledObservers:
+                continue
+
             if trace is not None:
                 trace(observer)
 
             try:
                 observer(event)
             except Exception:
-                #
-                # We have to remove the offending observer because
-                # we're going to badmouth it to all of its friends
-                # (other observers) and it might get offended and
-                # raise again, causing an infinite loop.
-                #
-                self.removeObserver(observer)
-                try:
-                    self.log.failure(OBSERVER_REMOVED, observer=observer)
-                except Exception:
-                    pass
-                finally:
-                    self.addObserver(observer)
+                brokenObservers.append((observer, Failure()))
+
+        for observer, failure in brokenObservers:
+            #
+            # We have to disable the offending observer because we're going to
+            # badmouth it to all of its friends (other observers) and it might
+            # get offended and raise again, causing an infinite loop.
+            #
+            # Don't remove/re-add the observer, as that would change the
+            # registration order.
+            #
+            self._disabledObservers.add(observer)
+            try:
+                self.log.failure(OBSERVER_DISABLED, failure=failure, observer=observer)
+            except Exception:
+                # Wow, what a jerk.  Never mind, then.
+                pass
+            finally:
+                self._disabledObservers.remove(observer)
 
 
 
