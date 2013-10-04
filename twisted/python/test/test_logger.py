@@ -1,10 +1,13 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
+
 """
 Test cases for L{twisted.python.logger}.
 """
 
+import sys
 from os import environ
 from cStringIO import StringIO
 from time import mktime
@@ -30,7 +33,7 @@ from twisted.python.logger import (
     ILogObserver, LogPublisher, DefaultLogPublisher,
     FilteringLogObserver, PredicateResult,
     FileLogObserver, PythonLogObserver, RingBufferLogObserver,
-    LegacyLogObserverWrapper,
+    LegacyLogObserverWrapper, LoggingFile,
     LogLevelFilterPredicate, OBSERVER_DISABLED,
     formatTrace,
 )
@@ -712,10 +715,10 @@ class LogPublisherTests(SetUpTearDown, unittest.TestCase):
                     "  -> {o5} ({o5.name})\n" +
                     "  -> {oTest}\n"
                 ).format(
-                        root=root,
-                        o1=o1, o2=o2, o3=o3, o4=o4, o5=o5,
-                        p1=p1, p2=p2,
-                        oTest=oTest
+                    root=root,
+                    o1=o1, o2=o2, o3=o3, o4=o4, o5=o5,
+                    p1=p1, p2=p2,
+                    oTest=oTest
                 )
             )
         oTest = testObserver
@@ -1087,8 +1090,14 @@ class FilteringLogObserverTests(SetUpTearDown, unittest.TestCase):
             )
         oTest = testObserver
 
-        yesFilter = FilteringLogObserver(oYes, (lambda e: PredicateResult.yes,))
-        noFilter = FilteringLogObserver(oNo, (lambda e: PredicateResult.no,))
+        yesFilter = FilteringLogObserver(
+            oYes,
+            (lambda e: PredicateResult.yes,)
+        )
+        noFilter = FilteringLogObserver(
+            oNo,
+            (lambda e: PredicateResult.no,)
+        )
 
         publisher = LogPublisher(yesFilter, noFilter, testObserver)
         publisher(event)
@@ -1133,7 +1142,10 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
             fileHandle.close()
 
 
-    def _testObserver(self, logTime, logFormat, observerKwargs, expectedOutput):
+    def _testObserver(
+        self, logTime, logFormat,
+        observerKwargs, expectedOutput
+    ):
         """
         Default time stamp format is RFC 3339
         """
@@ -1156,7 +1168,9 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         Default time stamp format is RFC 3339 and offset is correct.
         """
         if tzset is None:
-            raise SkipTest("Platform cannot change timezone; unable to verify offsets.")
+            raise SkipTest(
+                "Platform cannot change timezone; unable to verify offsets."
+            )
 
         def setTZ(name):
             if name is None:
@@ -1279,7 +1293,9 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             None, u'XYZZY\nA hollow voice says:\n"Plugh"',
             dict(),
-            self.buildDefaultOutput(b'XYZZY\n\tA hollow voice says:\n\t"Plugh"'),
+            self.buildDefaultOutput(
+                b'XYZZY\n\tA hollow voice says:\n\t"Plugh"'
+            ),
         )
 
 
@@ -1301,7 +1317,9 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             None, u"S\xe1nchez",
             dict(encoding="utf-16"),
-            self.buildDefaultOutput(b"\xff\xfeS\x00\xe1\x00n\x00c\x00h\x00e\x00z\x00"),
+            self.buildDefaultOutput(
+                b"\xff\xfeS\x00\xe1\x00n\x00c\x00h\x00e\x00z\x00"
+            ),
         )
 
 
@@ -1392,10 +1410,10 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
         Log levels.
         """
         levelMapping = {
-            None: py_logging.INFO, # default
+            None: py_logging.INFO,  # default
             LogLevel.debug: py_logging.DEBUG,
-            LogLevel.info: py_logging.INFO,
-            LogLevel.warn: py_logging.WARNING,
+            LogLevel.info:  py_logging.INFO,
+            LogLevel.warn:  py_logging.WARNING,
             LogLevel.error: py_logging.ERROR,
             # LogLevel.critical: py_logging.CRITICAL,
         }
@@ -1441,7 +1459,9 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
 
     # This isn't a regression from twisted.python.log; it just wasn't
     # tested there.
-    test_callerInfo.todo = "Caller frame is always be PythonLogObserver.__call__(). Meh."
+    test_callerInfo.todo = (
+        "Caller frame is always be PythonLogObserver.__call__(). Meh."
+    )
 
 
     def test_basic_format(self):
@@ -1546,7 +1566,7 @@ class LegacyLogObserverWrapperTests(SetUpTearDown, unittest.TestCase):
     """
     Tests for L{LegacyLogObserverWrapper}.
     """
-    
+
     def test_interface(self):
         """
         L{FileLogObserver} is an L{ILogObserver}.
@@ -1626,8 +1646,13 @@ class LegacyLogObserverWrapperTests(SetUpTearDown, unittest.TestCase):
         """
         Formatting is translated properly.
         """
-        event = self.forwardAndVerify(dict(log_format="Hello, {who}!", who="world"))
-        self.assertEquals(twistedLogging.textFromEventDict(event), "Hello, world!")
+        event = self.forwardAndVerify(
+            dict(log_format="Hello, {who}!", who="world")
+        )
+        self.assertEquals(
+            twistedLogging.textFromEventDict(event),
+            "Hello, world!"
+        )
 
 
     def test_failure(self):
@@ -1643,6 +1668,270 @@ class LegacyLogObserverWrapperTests(SetUpTearDown, unittest.TestCase):
         self.assertIdentical(event["failure"], failure)
         self.assertTrue(event["isError"])
         self.assertEquals(event["why"], why)
+
+
+
+class LoggingFileTests(SetUpTearDown, unittest.TestCase):
+    """
+    Tests for L{LoggingFile}.
+    """
+
+    def test_softspace(self):
+        """
+        L{LoggingFile.softspace} is 0.
+        """
+        self.assertEquals(LoggingFile.softspace, 0)
+
+
+    def test_readOnlyAttributes(self):
+        """
+        Some L{LoggingFile} attributes are read-only.
+        """
+        f = LoggingFile()
+
+        self.assertRaises(AttributeError, setattr, f, "closed", True)
+        self.assertRaises(AttributeError, setattr, f, "encoding", "utf-8")
+        self.assertRaises(AttributeError, setattr, f, "mode", "r")
+        self.assertRaises(AttributeError, setattr, f, "newlines", ["\n"])
+        self.assertRaises(AttributeError, setattr, f, "name", "foo")
+
+
+    def test_unsupportedMethods(self):
+        """
+        Some L{LoggingFile} methods are unsupported.
+        """
+        f = LoggingFile()
+
+        self.assertRaises(IOError, f.read)
+        self.assertRaises(IOError, f.next)
+        self.assertRaises(IOError, f.readline)
+        self.assertRaises(IOError, f.readlines)
+        self.assertRaises(IOError, f.xreadlines)
+        self.assertRaises(IOError, f.seek)
+        self.assertRaises(IOError, f.tell)
+        self.assertRaises(IOError, f.truncate)
+
+
+    def test_level(self):
+        """
+        Default level is L{LogLevel.info} if not set.
+        """
+        f = LoggingFile()
+        self.assertEquals(f.level, LogLevel.info)
+
+        f = LoggingFile(level=LogLevel.error)
+        self.assertEquals(f.level, LogLevel.error)
+
+
+    def test_encoding(self):
+        """
+        Default encoding is C{sys.getdefaultencoding()} if not set.
+        """
+        f = LoggingFile()
+        self.assertEquals(f.encoding, sys.getdefaultencoding())
+
+        f = LoggingFile(encoding="utf-8")
+        self.assertEquals(f.encoding, "utf-8")
+
+
+    def test_mode(self):
+        """
+        Reported mode is C{"w"}.
+        """
+        f = LoggingFile()
+        self.assertEquals(f.mode, "w")
+
+
+    def test_newlines(self):
+        """
+        The C{newlines} attribute is C{None}.
+        """
+        f = LoggingFile()
+        self.assertEquals(f.newlines, None)
+
+
+    def test_name(self):
+        """
+        The C{name} attribute is fixed.
+        """
+        f = LoggingFile()
+        self.assertEquals(
+            f.name,
+            "<LoggingFile twisted.python.logger.LoggingFile#info>"
+        )
+
+
+    def test_log(self):
+        """
+        Default logger is created if not set.
+        """
+        f = LoggingFile()
+        self.assertEquals(f.log.namespace, "twisted.python.logger.LoggingFile")
+
+        log = Logger()
+        f = LoggingFile(logger=log)
+        self.assertEquals(f.log.namespace, "twisted.python.test.test_logger")
+
+
+    def test_close(self):
+        """
+        L{LoggingFile.close} closes the file.
+        """
+        f = LoggingFile()
+        f.close()
+
+        self.assertEquals(f.closed, True)
+        self.assertRaises(ValueError, f.write, "Hello")
+
+
+    def test_flush(self):
+        """
+        L{LoggingFile.flush} does nothing.
+        """
+        f = LoggingFile()
+        f.flush()
+
+
+    def test_fileno(self):
+        """
+        L{LoggingFile.fileno} returns C{-1}.
+        """
+        f = LoggingFile()
+        self.assertEquals(f.fileno(), -1)
+
+
+    def test_isatty(self):
+        """
+        L{LoggingFile.isatty} returns C{False}.
+        """
+        f = LoggingFile()
+        self.assertEquals(f.isatty(), False)
+
+
+    def test_write_buffering(self):
+        """
+        Writing buffers correctly.
+        """
+        f = self.observedFile()
+        f.write("Hello")
+        self.assertEquals(f.messages, [])
+        f.write(", world!\n")
+        self.assertEquals(f.messages, [u"Hello, world!"])
+        f.write("It's nice to meet you.\n\nIndeed.")
+        self.assertEquals(
+            f.messages,
+            [
+                u"Hello, world!",
+                u"It's nice to meet you.",
+                u"",
+            ]
+        )
+
+
+    def test_write_bytes_decoded(self):
+        """
+        Bytes are decoded to unicode.
+        """
+        f = self.observedFile(encoding="utf-8")
+        f.write(b"Hello, Mr. S\xc3\xa1nchez\n")
+        self.assertEquals(f.messages, [u"Hello, Mr. S\xe1nchez"])
+
+
+    def test_write_unicode(self):
+        """
+        Unicode is unmodified.
+        """
+        f = self.observedFile(encoding="utf-8")
+        f.write(u"Hello, Mr. S\xe1nchez\n")
+        self.assertEquals(f.messages, [u"Hello, Mr. S\xe1nchez"])
+
+
+    def test_write_level(self):
+        """
+        Log level is emitted properly.
+        """
+        f = self.observedFile()
+        f.write("Hello\n")
+        self.assertEquals(len(f.events), 1)
+        self.assertEquals(f.events[0]["log_level"], LogLevel.info)
+
+        f = self.observedFile(level=LogLevel.error)
+        f.write("Hello\n")
+        self.assertEquals(len(f.events), 1)
+        self.assertEquals(f.events[0]["log_level"], LogLevel.error)
+
+
+    def test_write_format(self):
+        """
+        Log format is C{u"{message}"}.
+        """
+        f = self.observedFile()
+        f.write("Hello\n")
+        self.assertEquals(len(f.events), 1)
+        self.assertEquals(f.events[0]["log_format"], u"{message}")
+
+
+    def test_write_source(self):
+        """
+        Log source is the L{LoggingFile}.
+        """
+        f = self.observedFile()
+        f.write("Hello\n")
+        self.assertEquals(len(f.events), 1)
+        self.assertEquals(f.events[0]["log_source"], f)
+
+
+    def test_writelines_buffering(self):
+        """
+        C{writelines} does not add newlines.
+        """
+        # Note this is different behavior than t.p.log.StdioOnnaStick.
+        f = self.observedFile()
+        f.writelines(("Hello", ", ", ""))
+        self.assertEquals(f.messages, [])
+        f.writelines(("world!\n",))
+        self.assertEquals(f.messages, [u"Hello, world!"])
+        f.writelines(("It's nice to meet you.\n\n", "Indeed."))
+        self.assertEquals(
+            f.messages,
+            [
+                u"Hello, world!",
+                u"It's nice to meet you.",
+                u"",
+            ]
+        )
+
+
+    def test_print(self):
+        """
+        L{LoggingFile} can replace L{sys.stdout}.
+        """
+        oldStdout = sys.stdout
+        try:
+            f = self.observedFile()
+            sys.stdout = f
+
+            print("Hello,", end=" ")
+            print("world.")
+
+            self.assertEquals(f.messages, [u"Hello, world."])
+        finally:
+            sys.stdout = oldStdout
+
+
+    def observedFile(self, **kwargs):
+        f = LoggingFile(**kwargs)
+        f.events = []
+        f.messages = []
+
+        def observer(event):
+            f.events.append(event)
+            if "message" in event:
+                f.messages.append(event["message"])
+
+        f.log.publisher.addObserver(observer)
+
+        return f
 
 
 

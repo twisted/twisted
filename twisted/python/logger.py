@@ -53,11 +53,13 @@ __all__ = [
 
 
 
+import sys
 from string import Formatter
 from inspect import currentframe
 import logging as py_logging
 from time import time
-from datetime import datetime as DateTime, tzinfo as TZInfo, timedelta as TimeDelta
+from datetime import datetime as DateTime, tzinfo as TZInfo
+from datetime import timedelta as TimeDelta
 from collections import deque
 
 from zope.interface import Interface, implementer
@@ -595,7 +597,11 @@ class LogPublisher(object):
             #
             self._disabledObservers.add(observer)
             try:
-                self.log.failure(OBSERVER_DISABLED, failure=failure, observer=observer)
+                self.log.failure(
+                    OBSERVER_DISABLED,
+                    failure=failure,
+                    observer=observer,
+                )
             except Exception:
                 # Wow, what a jerk.  Never mind, then.
                 pass
@@ -608,9 +614,9 @@ class PredicateResult(Names):
     """
     Predicate results.
     """
-    yes   = NamedConstant() # Log this
-    no    = NamedConstant() # Don't log this
-    maybe = NamedConstant() # No opinion
+    yes   = NamedConstant()  # Log this
+    no    = NamedConstant()  # Don't log this
+    maybe = NamedConstant()  # No opinion
 
 
 
@@ -765,7 +771,10 @@ class FileLogObserver(object):
     Log observer that writes to a file-like object.
     """
 
-    def __init__(self, fileHandle, encoding="utf-8", timeFormat=TIME_FORMAT_RFC3339):
+    def __init__(
+        self, fileHandle,
+        encoding="utf-8", timeFormat=TIME_FORMAT_RFC3339
+    ):
         """
         @param fileHandle: a file-like object to write events to.
 
@@ -791,7 +800,10 @@ class FileLogObserver(object):
         if not eventText:
             return
 
-        if self.timeFormat is not None and event.get("log_time", None) is not None:
+        if (
+            self.timeFormat is not None and
+            event.get("log_time", None) is not None
+        ):
             t = event["log_time"]
             tz = MagicTimeZone(t)
             datetime = DateTime.fromtimestamp(t, tz)
@@ -862,7 +874,7 @@ class RingBufferLogObserver(object):
         >>> observer = RingBufferLogObserver(5)
         >>> for n in range(10):
         ...   observer({"n":n})
-        ... 
+        ...
         >>> len(observer)
         5
         >>> tuple(observer)
@@ -970,6 +982,127 @@ class LegacyLogObserverWrapper(object):
             event["isError"] = 0
 
         self.legacyObserver(event)
+
+
+
+class LoggingFile(object):
+    """
+    File-like object that turns C{write()} calls into logging events.
+
+    Note that because event formats are C{unicode}, C{bytes} received via
+        C{write()} are converted to C{unicode}, which is the opposite of what
+        C{file} does.
+    """
+
+    defaultLogger = Logger()
+    softspace = 0
+
+
+    def __init__(self, level=LogLevel.info, encoding=None, logger=None):
+        """
+        @param level: the log level to emit events with.
+
+        @param encoding: the encoding to expect when receiving bytes via
+            C{write()}.  If C{None}, use C{sys.getdefaultencoding()}.
+
+        @param log: the L{Logger} to send events to.  If C{None}, use
+            L{LoggingFile.defaultLogger}.
+        """
+        self.level = level
+
+        if logger is None:
+            self.log = self.defaultLogger
+        else:
+            self.log = logger
+
+        if encoding is None:
+            self._encoding = sys.getdefaultencoding()
+        else:
+            self._encoding = encoding
+
+        self._buffer = ""
+        self._closed = False
+
+
+    @property
+    def closed(self):
+        return self._closed
+
+
+    @property
+    def encoding(self):
+        return self._encoding
+
+
+    @property
+    def mode(self):
+        return "w"
+
+
+    @property
+    def newlines(self):
+        return None
+
+
+    @property
+    def name(self):
+        return (
+            "<{0} {1}#{2}>".format(
+                self.__class__.__name__,
+                self.log.namespace,
+                self.level.name,
+            )
+        )
+
+
+    def close(self):
+        self._closed = True
+
+
+    def flush(self):
+        pass
+
+
+    def fileno(self):
+        return -1
+
+
+    def isatty(self):
+        return False
+
+
+    def write(self, string):
+        if self._closed:
+            raise ValueError("I/O operation on closed file")
+
+        if isinstance(string, bytes):
+            string = string.decode(self._encoding)
+
+        lines = (self._buffer + string).split("\n")
+        self._buffer = lines[-1]
+        lines = lines[0:-1]
+
+        for line in lines:
+            self.log.emit(self.level, format=u"{message}", message=line)
+
+
+    def writelines(self, lines):
+        for line in lines:
+            self.write(line)
+
+
+    def _unsupported(self, *args):
+        raise IOError("unsupported operation")
+
+
+    read       = _unsupported
+    next       = _unsupported
+    readline   = _unsupported
+    readlines  = _unsupported
+    xreadlines = _unsupported
+    seek       = _unsupported
+    tell       = _unsupported
+    truncate   = _unsupported
 
 
 
