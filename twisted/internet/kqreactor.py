@@ -48,17 +48,15 @@ class KQueueReactor(posixbase.PosixReactorBase):
         write readiness notifications will be present as values in this
         dictionary.
 
-    @ivar _reads: A dictionary mapping integer file descriptors to arbitrary
-        values (this is essentially a set).  Keys in this dictionary will be
-        registered with C{_kq} for read readiness notifications which will be
-        dispatched to the corresponding L{FileDescriptor} instances in
-        C{_selectables}.
+    @ivar _reads: A set containing integer file descriptors.  Values in this
+        set will be registered with C{_kq} for read readiness notifications
+        which will be dispatched to the corresponding L{FileDescriptor}
+        instances in C{_selectables}.
 
-    @ivar _writes: A dictionary mapping integer file descriptors to arbitrary
-        values (this is essentially a set).  Keys in this dictionary will be
-        registered with C{_kq} for write readiness notifications which will be
-        dispatched to the corresponding L{FileDescriptor} instances in
-        C{_selectables}.
+    @ivar _writes: A set containing integer file descriptors.  Values in this
+        set will be registered with C{_kq} for write readiness notifications
+        which will be dispatched to the corresponding L{FileDescriptor}
+        instances in C{_selectables}.
     """
     implements(IReactorFDSet, IReactorDaemonize)
 
@@ -74,8 +72,8 @@ class KQueueReactor(posixbase.PosixReactorBase):
             - people.freebsd.org/~jlemon/papers/kqueue.pdf
         """
         self._kq = kqueue()
-        self._reads = {}
-        self._writes = {}
+        self._reads = set()
+        self._writes = set()
         self._selectables = {}
         posixbase.PosixReactorBase.__init__(self)
 
@@ -133,7 +131,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
                 pass
             finally:
                 self._selectables[fd] = reader
-                self._reads[fd] = 1
+                self._reads.add(fd)
 
 
     def addWriter(self, writer):
@@ -148,7 +146,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
                 pass
             finally:
                 self._selectables[fd] = writer
-                self._writes[fd] = 1
+                self._writes.add(fd)
 
 
     def removeReader(self, reader):
@@ -168,7 +166,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
             else:
                 return
         if fd in self._reads:
-            del self._reads[fd]
+            self._reads.remove(fd)
             if fd not in self._writes:
                 del self._selectables[fd]
             if not wasLost:
@@ -195,7 +193,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
             else:
                 return
         if fd in self._writes:
-            del self._writes[fd]
+            self._writes.remove(fd)
             if fd not in self._reads:
                 del self._selectables[fd]
             if not wasLost:
