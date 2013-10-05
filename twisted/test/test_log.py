@@ -111,8 +111,8 @@ class LogTest(unittest.SynchronousTestCase):
             self.assertEqual(len(L1), 2)
             self.assertEqual(len(L2), 2)
 
-            # The order is slightly wrong here.  The first event should be
-            # delivered to all observers; then, errors should be delivered.
+            # The first event is delivered to all observers; then, errors
+            # are delivered.
             self.assertEqual(L1[0]['message'], ("Howdy, y'all.",))
             self.assertEqual(L2[0]['message'], ("Howdy, y'all.",))
 
