@@ -49,6 +49,7 @@ class ProxyClient(HTTPClient):
         headers.pop('keep-alive', None)
         self.headers = headers
         self.data = data
+        father.notifyFinish().addErrback(self.fatherFailed)
 
 
     def connectionMade(self):
@@ -87,6 +88,12 @@ class ProxyClient(HTTPClient):
             self._finished = True
             self.father.finish()
             self.transport.loseConnection()
+
+
+    def fatherFailed(self, failure):
+        if not self._finished:
+            self.transport.loseConnection()
+            self._finished = True
 
 
 

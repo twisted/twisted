@@ -9,6 +9,7 @@ from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransportWithDisconnection
 from twisted.test.proto_helpers import MemoryReactor
 
+from twisted.internet import main
 from twisted.web.resource import Resource
 from twisted.web.server import Site
 from twisted.web.proxy import ReverseProxyResource, ProxyClientFactory
@@ -326,7 +327,8 @@ class ProxyClientTestCase(TestCase):
         should be added.
         """
         client = ProxyClient('GET', '/foo', 'HTTP/1.0',
-                {"accept": "text/html", "proxy-connection": "foo"}, '', None)
+                {"accept": "text/html", "proxy-connection": "foo"}, '',
+                self.makeRequest('foo'))
         self.assertEqual(client.headers,
                 {"accept": "text/html", "connection": "close"})
 
@@ -345,7 +347,8 @@ class ProxyClientTestCase(TestCase):
         expectedHeaders = headers.copy()
         expectedHeaders['connection'] = 'close'
         del expectedHeaders['keep-alive']
-        client = ProxyClient('GET', '/foo', 'HTTP/1.0', headers, '', None)
+        client = ProxyClient('GET', '/foo', 'HTTP/1.0', headers, '',
+                             self.makeRequest('foo'))
         self.assertForwardsHeaders(
             client, 'GET /foo HTTP/1.0', expectedHeaders)
 
@@ -371,6 +374,21 @@ class ProxyClientTestCase(TestCase):
             self.makeResponseBytes(200, "OK", headers.items(), ''))
         self.assertForwardsResponse(
             request, 200, 'OK', headers.items(), '')
+
+    def test_parentDisconnected(self):
+        """
+        Check that the client disconnects if the parent request is dropped.
+        """
+        request = self.makeRequest('foo')
+        client = self.makeProxyClient(request, headers={"accept": "text/html"})
+
+        self.assertForwardsHeaders(
+            client, 'GET /foo HTTP/1.0',
+            {'connection': 'close', 'accept': 'text/html'})
+
+        self.assertTrue(client.transport.connected)
+        request.processingFailed(main.CONNECTION_LOST)
+        self.assertFalse(client.transport.connected)
 
 
 
@@ -407,7 +425,7 @@ class ProxyClientFactoryTestCase(TestCase):
         """
         factory = ProxyClientFactory('GET', '/foo', 'HTTP/1.0',
                                      {"accept": "text/html"}, 'Some data',
-                                     None)
+                                     DummyRequest('foo'))
         proto = factory.buildProtocol(None)
         self.assertIsInstance(proto, ProxyClient)
         self.assertEqual(proto.command, 'GET')
