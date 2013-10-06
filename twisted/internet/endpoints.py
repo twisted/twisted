@@ -25,13 +25,14 @@ from twisted.python.compat import _PY3
 from twisted.internet import interfaces, defer, error, fdesc, threads
 from twisted.internet.protocol import (
         ClientFactory, Protocol, ProcessProtocol, Factory)
-from twisted.internet.interfaces import IStreamServerEndpointStringParser
-from twisted.internet.interfaces import IStreamClientEndpointStringParser
+from twisted.internet.interfaces import (
+    IStreamServerEndpointStringParser, IStreamClientEndpointStringParser,
+    IStreamClientEndpointStringParserWithReactor)
 from twisted.python.filepath import FilePath
 from twisted.python.systemd import ListenFDs
 from twisted.internet.abstract import isIPv6Address
 from twisted.python.failure import Failure
-from twisted.python import log
+from twisted.python import log, deprecate, versions
 from twisted.internet.address import _ProcessAddress, HostnameAddress
 from twisted.python.components import proxyForInterface
 from socket import AF_INET6, AF_INET
@@ -1714,8 +1715,8 @@ def clientFromString(reactor, description):
         clientFromString(reactor, "unix:/var/foo/bar:lockfile=1:timeout=9")
 
     This function is also extensible; new endpoint types may be registered as
-    L{IStreamClientEndpointStringParser} plugins.  See that interface for more
-    information.
+    L{IStreamClientEndpointStringParserWithReactor} plugins.  See that
+    interface for more information.
 
     @param reactor: The client endpoint will be constructed with this reactor.
 
@@ -1730,8 +1731,21 @@ def clientFromString(reactor, description):
     args, kwargs = _parse(description)
     aname = args.pop(0)
     name = aname.upper()
+    for plugin in getPlugins(IStreamClientEndpointStringParserWithReactor):
+        if plugin.prefix.upper() == name:
+            return plugin.parseStreamClient(reactor, *args, **kwargs)
     for plugin in getPlugins(IStreamClientEndpointStringParser):
         if plugin.prefix.upper() == name:
+            warningFormat = (
+                "The IStreamClientEndpointStringParser interface used for "
+                "%(fqpn)s is deprecated since %(version)s. Please use the "
+                "IStreamClientEndpointStringParserWithReactor interface "
+                "instead.")
+            warningString = deprecate.getDeprecationWarningString(
+                plugin.parseStreamClient,
+                versions.Version('Twisted', 13, 2, 0),
+                format=warningFormat)
+            deprecate.warnAboutFunction(plugin.parseStreamClient, warningString)
             return plugin.parseStreamClient(*args, **kwargs)
     if name not in _clientParsers:
         raise ValueError("Unknown endpoint type: %r" % (aname,))
