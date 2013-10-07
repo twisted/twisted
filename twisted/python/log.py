@@ -11,6 +11,7 @@ from __future__ import division, absolute_import
 import sys
 import time
 import warnings
+from datetime import datetime
 import logging
 
 from zope.interface import Interface
@@ -320,7 +321,7 @@ class StartStopMixIn:
         removeObserver(self.emit)
 
 
-class FileLogObserver(StartStopMixIn):
+class FileLogObserver(NewFileLogObserver, StartStopMixIn):
     """
     Log observer that writes to a file-like object.
 
@@ -332,27 +333,59 @@ class FileLogObserver(StartStopMixIn):
     def __init__(self, f):
         self._f = f
         self._timeFormat = None
-        self._initObserver()
 
-    def _initObserver(self):
-        timeFormat = self.timeFormat
-        if timeFormat is None:
-            timeFormat = self.defaultTimeFormat
+        NewFileLogObserver.__init__(self, f, timeFormat=None)
 
-        self._newFLO = NewFileLogObserver(self._f, timeFormat=timeFormat)
 
-    @property
-    def timeFormat(self):
-        return self._timeFormat
+    def getTimezoneOffset(self, when):
+        """
+        Return the current local timezone offset from UTC.
 
-    @timeFormat.setter
-    def timeFormat(self, timeFormat):
-        # If timeFormat is set, we need to replace the NewFLO
-        self._timeFormat = timeFormat
-        self._initObserver()
+        @type when: C{int}
+        @param when: POSIX (ie, UTC) timestamp for which to find the offset.
+
+        @rtype: C{int}
+        @return: The number of seconds offset from UTC.  West is positive,
+        east is negative.
+        """
+        offset = datetime.utcfromtimestamp(when) - datetime.fromtimestamp(when)
+        return offset.days * (60 * 60 * 24) + offset.seconds
+
+
+    def formatTime(self, when):
+        """
+        Format the given UTC value as a string representing that time in the
+        local timezone.
+
+        By default it's formatted as a ISO8601-like string (ISO8601 date and
+        ISO8601 time separated by a space). It can be customized using the
+        C{timeFormat} attribute, which will be used as input for the underlying
+        L{datetime.datetime.strftime} call.
+
+        @type when: C{int}
+        @param when: POSIX (ie, UTC) timestamp for which to find the offset.
+
+        @rtype: C{str}
+        """
+        if self.timeFormat is not None or when is None:
+            return NewFileLogObserver.formatTime(self, when)
+
+        tzOffset = -self.getTimezoneOffset(when)
+        when = datetime.utcfromtimestamp(when + tzOffset)
+        tzHour = abs(int(tzOffset / 60 / 60))
+        tzMin = abs(int(tzOffset / 60 % 60))
+        if tzOffset < 0:
+            tzSign = '-'
+        else:
+            tzSign = '+'
+        return '%d-%02d-%02d %02d:%02d:%02d%s%02d%02d' % (
+            when.year, when.month, when.day,
+            when.hour, when.minute, when.second,
+            tzSign, tzHour, tzMin)
+
 
     def emit(self, eventDict):
-        publishToNewObserver(self._newFLO, eventDict)
+        publishToNewObserver(self, eventDict)
 
 
 class PythonLoggingObserver(NewPythonLogObserver, StartStopMixIn):

@@ -790,6 +790,25 @@ class FileLogObserver(object):
         self.timeFormat = timeFormat
 
 
+    def formatTime(self, when):
+        """
+        Format a timestamp.
+
+        @param when: A timestamp.
+
+        @return: a formatted time as a str.
+        """
+        if (
+            self.timeFormat is not None and
+            when is not None
+        ):
+            tz = MagicTimeZone(when)
+            datetime = DateTime.fromtimestamp(when, tz)
+            return datetime.strftime(self.timeFormat)
+        else:
+            return "-"
+
+
     def __call__(self, event):
         """
         Write event to file.
@@ -800,16 +819,7 @@ class FileLogObserver(object):
         if not eventText:
             return
 
-        if (
-            self.timeFormat is not None and
-            event.get("log_time", None) is not None
-        ):
-            t = event["log_time"]
-            tz = MagicTimeZone(t)
-            datetime = DateTime.fromtimestamp(t, tz)
-            timeStamp = datetime.strftime(self.timeFormat)
-        else:
-            timeStamp = b"-"
+        timeStamp = self.formatTime(event.get("log_time", None))
 
         system = event.get("log_system", None)
 
