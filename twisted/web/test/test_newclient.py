@@ -27,6 +27,7 @@ from twisted.web._newclient import WrongBodyLength, RequestNotSent
 from twisted.web._newclient import ConnectionAborted, ResponseNeverReceived
 from twisted.web._newclient import BadHeaders, ResponseDone, PotentialDataLoss, ExcessWrite
 from twisted.web._newclient import TransportProxyProducer, LengthEnforcingConsumer, makeStatefulDispatcher
+from twisted.web._newclient import NoBodyResponseDone
 from twisted.web.http_headers import Headers
 from twisted.web.http import _DataLoss
 from twisted.web.iweb import IBodyProducer, IResponse
@@ -410,22 +411,36 @@ class HTTPClientParserTests(TestCase):
         """
         header = {}
         finished = []
-        bodyDataFinished = []
+        reason = []
         protocol = HTTPClientParser(request, finished.append)
         protocol.headerReceived = header.__setitem__
         body = []
         transport = StringTransport()
         protocol.makeConnection(transport)
         protocol.dataReceived(status)
+
+        class StubConsumer(Protocol):
+            def __init__(self, reason):
+                self.reason = reason
+
+            def dataReceived(self, data):
+                pass
+
+            def connectionLost(self, failure=None):
+                if failure:
+                    self.reason.append(failure.value)
+
+        consumer = StubConsumer(reason)
+        protocol.response.deliverBody(consumer)
         protocol.response._bodyDataReceived = body.append
-        protocol.response._bodyDataFinished = (
-            lambda: bodyDataFinished.append(True))
+
         protocol.dataReceived(response)
         self.assertEqual(transport.producerState, 'producing')
         self.assertEqual(protocol.state, DONE)
         self.assertEqual(body, [])
         self.assertEqual(finished, [''])
-        self.assertEquals(bodyDataFinished, [True])
+        self.assertEqual(len(reason), 1)
+        self.assertIsInstance(reason[0], NoBodyResponseDone)
         self.assertEqual(protocol.response.length, 0)
         return header
 
