@@ -27,7 +27,7 @@ from twisted.web._newclient import WrongBodyLength, RequestNotSent
 from twisted.web._newclient import ConnectionAborted, ResponseNeverReceived
 from twisted.web._newclient import BadHeaders, ResponseDone, PotentialDataLoss, ExcessWrite
 from twisted.web._newclient import TransportProxyProducer, LengthEnforcingConsumer, makeStatefulDispatcher
-from twisted.web._newclient import NullResponseDone
+from twisted.web._newclient import NoBodyResponseDone
 from twisted.web.http_headers import Headers
 from twisted.web.http import _DataLoss
 from twisted.web.iweb import IBodyProducer, IResponse
@@ -440,7 +440,7 @@ class HTTPClientParserTests(TestCase):
         self.assertEqual(body, [])
         self.assertEqual(finished, [''])
         self.assertEqual(len(reason), 1)
-        self.assertIsInstance(reason[0], NullResponseDone)
+        self.assertIsInstance(reason[0], NoBodyResponseDone)
         self.assertEqual(protocol.response.length, 0)
         return header
 

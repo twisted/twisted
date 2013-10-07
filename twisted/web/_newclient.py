@@ -144,11 +144,11 @@ class ResponseDone(Exception):
 
 
 
-class NullResponseDone(ResponseDone):
+class NoBodyResponseDone(ResponseDone):
     """
-    L{NullResponseDone} may be passed to L{IProtocol.connectionLost} on the
+    L{NoBodyResponseDone} may be passed to L{IProtocol.connectionLost} on the
     protocol passed to L{Response.deliverBody} and indicates that a response with
-    a zero length body has been delivered.
+    no body (such as 204) has been delivered.
     """
 
 
@@ -463,7 +463,7 @@ class HTTPClientParser(HTTPParser):
             self.response.length = 0
             self._finished(self.clearLineBuffer())
             self.response._bodyDataFinished(
-                Failure(NullResponseDone("Response with no body fully received")))
+                Failure(NoBodyResponseDone("Response with no body fully received")))
         else:
             transferEncodingHeaders = self.connHeaders.getRawHeaders(
                 'transfer-encoding')
