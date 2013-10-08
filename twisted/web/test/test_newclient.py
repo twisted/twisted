@@ -410,12 +410,14 @@ class HTTPClientParserTests(TestCase):
         """
         header = {}
         finished = []
+        body = []
         bodyDataFinished = []
         protocol = HTTPClientParser(request, finished.append)
         protocol.headerReceived = header.__setitem__
-        body = []
         transport = StringTransport()
         protocol.makeConnection(transport)
+        # Deliver just the status to initialize the response object so we can
+        # monkey-patch it to observe progress of the response parser.
         protocol.dataReceived(status)
         protocol.response._bodyDataReceived = body.append
         protocol.response._bodyDataFinished = (
@@ -425,7 +427,7 @@ class HTTPClientParserTests(TestCase):
         self.assertEqual(protocol.state, DONE)
         self.assertEqual(body, [])
         self.assertEqual(finished, [''])
-        self.assertEquals(bodyDataFinished, [True])
+        self.assertEqual(bodyDataFinished, [True])
         self.assertEqual(protocol.response.length, 0)
         return header
 
