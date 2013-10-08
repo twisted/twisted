@@ -66,5 +66,14 @@ class Foo(object):
                        data=data)
     </pre>
 
+    <p>All <code class="API" base="twisted.python.logger">Logger</code>s have a namespace, which can be used to categorize events. Namespaces may be specified by passing in a <code class="python">namespace</code> argument to <code class="API" base="twisted.python.logger">Logger</code>'s initializer, but if none is given, the logger will derive its own namespace by using the module name of the callable that instantiated it, or, in the case of a class, by using the fully qualified name of the class.</p>
+
+    <p>In the first example above, the namespace would be <code class="python">some.module</code>, and in the second example, it would be <code class="python">some.module.Foo</code>.</p>
+
+
+    <h2>Usage for observers</h2>
+
+    <p>...</p>
+
   </body>
 </html>
