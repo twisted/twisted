@@ -413,7 +413,7 @@ class HTTPClientParserTests(TestCase):
         checkParsing('HTTP/1.1 bar OK')
 
 
-    def _noBodyTest(self, request, response):
+    def _noBodyTest(self, request, status, response):
         """
         Assert that L{HTTPClientParser} parses the given C{response} to
         C{request}, resulting in a response with no body and no extra bytes and
@@ -421,23 +421,32 @@ class HTTPClientParserTests(TestCase):
 
         @param request: A L{Request} instance which might have caused a server
             to return the given response.
+        @param status: A string giving the status line of the response to be
+            parsed.
         @param response: A string giving the response to be parsed.
 
         @return: A C{dict} of headers from the response.
         """
         header = {}
         finished = []
+        body = []
+        bodyDataFinished = []
         protocol = HTTPClientParser(request, finished.append)
         protocol.headerReceived = header.__setitem__
-        body = []
-        protocol._bodyDataReceived = body.append
         transport = StringTransport()
         protocol.makeConnection(transport)
+        # Deliver just the status to initialize the response object so we can
+        # monkey-patch it to observe progress of the response parser.
+        protocol.dataReceived(status)
+        protocol.response._bodyDataReceived = body.append
+        protocol.response._bodyDataFinished = (
+            lambda: bodyDataFinished.append(True))
         protocol.dataReceived(response)
         self.assertEqual(transport.producerState, 'producing')
         self.assertEqual(protocol.state, DONE)
         self.assertEqual(body, [])
         self.assertEqual(finished, [''])
+        self.assertEqual(bodyDataFinished, [True])
         self.assertEqual(protocol.response.length, 0)
         return header
 
@@ -449,11 +458,11 @@ class HTTPClientParserTests(TestCase):
         the header callback.
         """
         request = Request('HEAD', '/', _boringHeaders, None)
-        status = (
-            'HTTP/1.1 200 OK\r\n'
+        status = 'HTTP/1.1 200 OK\r\n'
+        response = (
             'Content-Length: 10\r\n'
             '\r\n')
-        header = self._noBodyTest(request, status)
+        header = self._noBodyTest(request, status, response)
         self.assertEqual(header, {'Content-Length': '10'})
 
 
@@ -463,10 +472,9 @@ class HTTPClientParserTests(TestCase):
         the body callback is not invoked.
         """
         request = Request('GET', '/', _boringHeaders, None)
-        status = (
-            'HTTP/1.1 204 NO CONTENT\r\n'
-            '\r\n')
-        self._noBodyTest(request, status)
+        status = 'HTTP/1.1 204 NO CONTENT\r\n'
+        response = '\r\n'
+        self._noBodyTest(request, status, response)
 
 
     def test_notModifiedResponse(self):
@@ -475,10 +483,9 @@ class HTTPClientParserTests(TestCase):
         the body callback is not invoked.
         """
         request = Request('GET', '/', _boringHeaders, None)
-        status = (
-            'HTTP/1.1 304 NOT MODIFIED\r\n'
-            '\r\n')
-        self._noBodyTest(request, status)
+        status = 'HTTP/1.1 304 NOT MODIFIED\r\n'
+        response = '\r\n'
+        self._noBodyTest(request, status, response)
 
 
     def test_responseHeaders(self):

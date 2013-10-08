@@ -454,7 +454,10 @@ class HTTPClientParser(HTTPParser):
         if (self.response.code in self.NO_BODY_CODES
             or self.request.method == 'HEAD'):
             self.response.length = 0
+            # The order of the next two lines might be of interest when adding
+            # support for pipelining.
             self._finished(self.clearLineBuffer())
+            self.response._bodyDataFinished()
         else:
             transferEncodingHeaders = self.connHeaders.getRawHeaders(
                 'transfer-encoding')
