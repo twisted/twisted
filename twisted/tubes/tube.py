@@ -90,7 +90,6 @@ class _TubeFount(_TubePiece):
         fount = self._tube._tdrain.fount
         if fount is not None:
             fount.resumeFlow()
-        self._tube._unbufferSome()
 
 
     def stopFlow(self):
@@ -277,11 +276,7 @@ class _Tube(object):
     """
 
     _currentlyPaused = False
-    _pumpReceiving = False
-    _delivered = False
     _pump = None
-    _tubeUnbuffering = False
-    _switchFlush = False
     _pendingIterator = None
 
     def __init__(self, pump):
@@ -289,7 +284,6 @@ class _Tube(object):
         Initialize this L{_Tube} with the given L{Pump} to control its
         behavior.
         """
-        self._pendingOutput = []
         self._tfount = _TubeFount(self)
         self._tdrain = _TubeDrain(self)
         self.pump = pump
@@ -326,21 +320,6 @@ class _Tube(object):
             noLongerProvides(self, ISwitchableTube)
 
     pump = property(_get_pump, _set_pump)
-
-
-    def _unbufferSome(self):
-        """
-        Un-buffer some pending output into the downstream drain.
-        """
-        if self._pumpReceiving or self._tubeUnbuffering:
-            return
-        self._tubeUnbuffering = True
-        try:
-            while self._pendingOutput and not self._currentlyPaused:
-                item = self._pendingOutput.pop(0)
-                self._tfount.drain.receive(item)
-        finally:
-            self._tubeUnbuffering = False
 
 
     def _deliverFrom(self, deliverySource):
