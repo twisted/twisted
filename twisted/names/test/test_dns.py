@@ -3204,8 +3204,7 @@ class MessageComparable(FancyEqMixin, FancyStrMixin, object):
 
 
 def verifyConstructorArgument(testCase, cls,
-                              argName, defaultVal, inputTests,
-                              invalidInputs=None, attrName=None):
+                              argName, defaultVal, inputTests, attrName=None):
     """
     Verify that an attribute has the expected default value and that a
     corresponding argument passed to a constructor is assigned to that
@@ -3229,17 +3228,10 @@ def verifyConstructorArgument(testCase, cls,
         expectedAttributeValue)
     @type inputTests: L{list}
 
-    @param invalidInputs: A list of 2tuple(invalidArgumentValue,
-        expectedException)
-    @type invalidInputs: L{list}
-
     @param attrName: The name of the attribute under test if different
         from C{argName}. Defaults to C{argName}
     @type attrName: L{str}
     """
-    if invalidInputs is None:
-        invalidInputs = []
-
     if attrName is None:
         attrName = argName
 
@@ -3259,15 +3251,6 @@ def verifyConstructorArgument(testCase, cls,
             '%s(%s=%r).%s gave unexpected value %r. Expected %r.' % (
                 cls.__name__, argName, argVal, attrName,
                 actualVal, expectedVal))
-
-    for val, expectedException in invalidInputs:
-        try:
-            testCase.assertRaises(
-                expectedException, cls, **dict([(argName, val)]))
-        except testCase.failureException as e:
-            testCase.fail(
-                '%s(%s=%r) did not raise expected exception %r. Got %r.' % (
-                    cls.__name__, argName, val, expectedException, e))
 
 
 
@@ -3291,15 +3274,13 @@ class ConstructorTestsMixin(object):
                                   inputTests=[(altVal, altVal)])
 
 
-    def _verifyConstructorFlag(self, argName, defaultVal, invalidInputs=None):
+    def _verifyConstructorFlag(self, argName, defaultVal):
         """
         Wrap L{verifyConstructorArgument} to provide simpler interface for
         testing  _EDNSMessage constructor flags.
 
         @param argName: The name of the constructor flag argument
         @param defaultVal: The expected default value of the flag
-        @param invalidInputs: A list of values which are expected to raise a
-            validation exception.
         """
         assert defaultVal in (True, False)
         inputTests = [
@@ -3310,8 +3291,7 @@ class ConstructorTestsMixin(object):
 
         verifyConstructorArgument(testCase=self, cls=self.messageFactory,
                                   argName=argName, defaultVal=defaultVal,
-                                  inputTests=inputTests,
-                                  invalidInputs=invalidInputs)
+                                  inputTests=inputTests,)
 
 
 
@@ -3437,8 +3417,7 @@ class EDNSMessageTestsUsingMessage(EDNSMessageTests):
         dns.Message doesn't do any input coercion or validation of flags
         so we disable those tests.
         """
-        EDNSMessageTests._verifyConstructorFlag(
-            self, argName, defaultVal, invalidInputs=[])
+        EDNSMessageTests._verifyConstructorFlag(self, argName, defaultVal)
 
 
 
