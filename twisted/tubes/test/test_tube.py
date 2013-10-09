@@ -230,6 +230,32 @@ class TubeTest(TestCase):
         self.assertEquals(self.fd.received, ["hello"])
 
 
+    def test_pumpYieldsMultipleDeferreds(self):
+        """
+        When a pump yields multiple deferreds their results should be delivered
+        in order.
+        """
+
+        d = Deferred()
+
+        class MultiDeferredPump(Pump):
+            didYield = False
+            def received(self, data):
+                yield d
+                MultiDeferredPump.didYield = True
+                yield succeed("goodbye")
+
+        fakeDrain = self.fd
+        self.ff.flowTo(series(MultiDeferredPump())).flowTo(fakeDrain)
+        self.ff.drain.receive("ignored")
+        self.assertEquals(self.fd.received, [])
+
+        d.callback("hello")
+
+        self.assertEquals(self.fd.received, ["hello", "goodbye"])
+
+    test_pumpYieldsMultipleDeferreds.skip = "This shouldn't work yet."
+
     def test_flowingFromFirst(self):
         """
         If L{_Tube.flowingFrom} is called before L{_Tube.flowTo}, the argument
