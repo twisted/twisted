@@ -2822,8 +2822,7 @@ class MessageComplete:
     """
     An example of a fully populated non-edns response message.
 
-    Contains name compression, answers, authority, and
-    additional records.
+    Contains name compression, answers, authority, and additional records.
     """
     @classmethod
     def bytes(cls):
@@ -2998,8 +2997,7 @@ class MessageEDNSComplete(object):
     """
     An example of a fully populated edns response message.
 
-    Contains name compression, answers, authority, and
-    additional records.
+    Contains name compression, answers, authority, and additional records.
     """
     @classmethod
     def bytes(cls):
@@ -3186,8 +3184,8 @@ class MessageEDNSExtendedRCODE(object):
 
 class MessageComparable(FancyEqMixin, FancyStrMixin, object):
     """
-    A wrapper around L{dns.Message} which is comparable so that it can be
-    tested using some of the L{dns._EDNSMessage} tests.
+    A wrapper around L{dns.Message} which is comparable so that it can be tested
+    using some of the L{dns._EDNSMessage} tests.
     """
     showAttributes = compareAttributes = (
         'id', 'answer', 'opCode', 'auth', 'trunc',
@@ -3251,8 +3249,8 @@ def verifyConstructorArgument(testCase, cls, argName, defaultVal, altVal,
 
 class ConstructorTestsMixin(object):
     """
-    Helper methods for verifying default attribute values and
-    corresponding constructor arguments.
+    Helper methods for verifying default attribute values and corresponding
+    constructor arguments.
     """
     def _verifyConstructorArgument(self, argName, defaultVal, altVal):
         """
@@ -3286,8 +3284,8 @@ class ConstructorTestsMixin(object):
 
 class EDNSMessageTests(unittest.SynchronousTestCase, ConstructorTestsMixin):
     """
-    Tests for aspects of L{twisted.names.dns._EDNSMessage} that are
-    shared with L{dns.Message}.
+    Tests for aspects of L{twisted.names.dns._EDNSMessage} that are shared with
+    L{dns.Message}.
 
     These tests should pass when C{messageFactory = dns.Message}
     """
@@ -3303,8 +3301,8 @@ class EDNSMessageTests(unittest.SynchronousTestCase, ConstructorTestsMixin):
 
     def test_answer(self):
         """
-        L{dns._EDNSMessage.answer} defaults to C{False} and can be
-        overridden in the constructor.
+        L{dns._EDNSMessage.answer} defaults to C{False} and can be overridden in
+        the constructor.
         """
         self._verifyConstructorFlag('answer', defaultVal=False)
 
@@ -3320,48 +3318,48 @@ class EDNSMessageTests(unittest.SynchronousTestCase, ConstructorTestsMixin):
 
     def test_auth(self):
         """
-        L{dns._EDNSMessage.auth} defaults to C{False} and can be
-        overridden in the constructor.
+        L{dns._EDNSMessage.auth} defaults to C{False} and can be overridden in
+        the constructor.
         """
         self._verifyConstructorFlag('auth', defaultVal=False)
 
 
     def test_trunc(self):
         """
-        L{dns._EDNSMessage.trunc} defaults to C{False} and can be
-        overridden in the constructor.
+        L{dns._EDNSMessage.trunc} defaults to C{False} and can be overridden in
+        the constructor.
         """
         self._verifyConstructorFlag('trunc', defaultVal=False)
 
 
     def test_recDes(self):
         """
-        L{dns._EDNSMessage.recDes} defaults to C{False} and can be
-        overridden in the constructor.
+        L{dns._EDNSMessage.recDes} defaults to C{False} and can be overridden in
+        the constructor.
         """
         self._verifyConstructorFlag('recDes', defaultVal=False)
 
 
     def test_recAv(self):
         """
-        L{dns._EDNSMessage.recAv} defaults to C{False} and can be
-        overridden in the constructor.
+        L{dns._EDNSMessage.recAv} defaults to C{False} and can be overridden in
+        the constructor.
         """
         self._verifyConstructorFlag('recAv', defaultVal=False)
 
 
     def test_rCode(self):
         """
-        L{dns._EDNSMessage.rCode} defaults to C{0} and can be overridden
-        in the constructor.
+        L{dns._EDNSMessage.rCode} defaults to C{0} and can be overridden in the
+        constructor.
         """
         self._verifyConstructorArgument('rCode', defaultVal=0, altVal=123)
 
 
     def test_maxSize(self):
         """
-        L{dns._EDNSMessage.maxSize} defaults to C{512} and can be
-        overridden in the constructor.
+        L{dns._EDNSMessage.maxSize} defaults to C{512} and can be overridden in
+        the constructor.
         """
         self._verifyConstructorArgument('maxSize', defaultVal=512, altVal=1024)
 
@@ -3408,15 +3406,15 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
     """
     Tests for L{dns._EDNSMessage}.
 
-    These tests are for L{dns._EDNSMessage} APIs which are not shared
-    with L{dns.Message}.
+    These tests are for L{dns._EDNSMessage} APIs which are not shared with
+    L{dns.Message}.
     """
     messageFactory = dns._EDNSMessage
 
     def test_ednsVersion(self):
         """
-        L{dns._EDNSMessage.ednsVersion} defaults to C{0} and can be
-        overridden in the constructor.
+        L{dns._EDNSMessage.ednsVersion} defaults to C{0} and can be overridden
+        in the constructor.
         """
         self._verifyConstructorArgument(
             'ednsVersion', defaultVal=0, altVal=None)
@@ -3424,8 +3422,8 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
 
     def test_dnssecOK(self):
         """
-        L{dns._EDNSMessage.dnssecOK} defaults to C{False} and can be
-        overridden in the constructor.
+        L{dns._EDNSMessage.dnssecOK} defaults to C{False} and can be overridden
+        in the constructor.
         """
         self._verifyConstructorFlag('dnssecOK', defaultVal=False)
 
@@ -3440,8 +3438,8 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
 
     def test_checkingDisabled(self):
         """
-        L{dns._EDNSMessage.checkingDisabled} defaults to C{False} and can
-        be overridden in the constructor.
+        L{dns._EDNSMessage.checkingDisabled} defaults to C{False} and can be
+        overridden in the constructor.
         """
         self._verifyConstructorFlag('checkingDisabled', defaultVal=False)
 
@@ -3506,8 +3504,8 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
 
     def test_repr(self):
         """
-        L{dns._EDNSMessage.__repr__} displays the id, answer, opCode,
-        auth, trunc, recDes, recAv attributes of the message.
+        L{dns._EDNSMessage.__repr__} displays the id, answer, opCode, auth,
+        trunc, recDes, recAv attributes of the message.
         """
         self.assertEqual(
             repr(self.messageFactory()),
@@ -3534,9 +3532,9 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
 
     def test_fromMessage(self):
         """
-        L{dns._EDNSMessage.fromMessage} constructs a new
-        L{dns._EDNSMessage} using the attributes and records from an
-        existing L{dns.Message} instance.
+        L{dns._EDNSMessage.fromMessage} constructs a new L{dns._EDNSMessage}
+        using the attributes and records from an existing L{dns.Message}
+        instance.
         """
         m = dns.Message(rCode=0xabcd)
         m.queries = [dns.Query(b'www.example.com')]
@@ -3547,9 +3545,8 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
 
     def test_toMessage(self):
         """
-        L{dns._EDNSMessage.toMessage} constructs a new
-        L{dns.Message} using the attributes and records from an
-        existing L{dns._EDNSMessage} instance.
+        L{dns._EDNSMessage.toMessage} constructs a new L{dns.Message} using the
+        attributes and records from an existing L{dns._EDNSMessage} instance.
         """
         ednsMessage = dns._EDNSMessage(id=1234, ednsVersion=None)
         self.assertEqual(
@@ -3562,8 +3559,8 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
     """
     Tests for equality between L(dns._EDNSMessage} instances.
 
-    These tests will not work with L{dns.Message} because it does not
-    use L{twisted.python.util.FancyEqMixin}.
+    These tests will not work with L{dns.Message} because it does not use
+    L{twisted.python.util.FancyEqMixin}.
     """
 
     messageFactory = dns._EDNSMessage
@@ -3787,11 +3784,9 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
 
 class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
     """
-    Tests for the encoding and decoding of various standard (not EDNS)
-    messages.
+    Tests for the encoding and decoding of various standard (not EDNS) messages.
 
-    These tests should work with both L{dns._EDNSMessage} and
-    L{dns.Message}.
+    These tests should work with both L{dns._EDNSMessage} and L{dns.Message}.
     """
     messageFactory = dns._EDNSMessage
 
@@ -3854,8 +3849,8 @@ class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
 
     def test_nonAuthoritativeMessageEncode(self):
         """
-        If the message C{authoritative} attribute is set to 0, the
-        encoded bytes will have AA bit 0.
+        If the message C{authoritative} attribute is set to 0, the encoded bytes
+        will have AA bit 0.
         """
         self.assertEqual(
             self.messageFactory(**MessageNonAuthoritative.kwargs()).toStr(),
@@ -3865,8 +3860,7 @@ class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
     def test_nonAuthoritativeMessageDecode(self):
         """
         The L{dns.RRHeader} instances created by a message from a
-        non-authoritative message byte string are marked as not
-        authoritative.
+        non-authoritative message byte string are marked as not authoritative.
         """
         m = self.messageFactory()
         m.fromStr(MessageNonAuthoritative.bytes())
@@ -3877,8 +3871,8 @@ class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
 
     def test_authoritativeMessageEncode(self):
         """
-        If the message C{authoritative} attribute is set to 1, the
-        encoded bytes will have AA bit 1.
+        If the message C{authoritative} attribute is set to 1, the encoded bytes
+        will have AA bit 1.
         """
         self.assertEqual(
             self.messageFactory(**MessageAuthoritative.kwargs()).toStr(),
@@ -3887,9 +3881,8 @@ class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
 
     def test_authoritativeMessageDecode(self):
         """
-        The message and its L{dns.RRHeader} instances created by
-        C{decode} from an authoritative message byte string, are
-        marked as authoritative.
+        The message and its L{dns.RRHeader} instances created by C{decode} from
+        an authoritative message byte string, are marked as authoritative.
         """
         m = self.messageFactory()
         m.fromStr(MessageAuthoritative.bytes())
@@ -3900,8 +3893,8 @@ class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
 
     def test_truncatedMessageEncode(self):
         """
-        If the message C{trunc} attribute is set to 1 the encoded
-        bytes will have TR bit 1.
+        If the message C{trunc} attribute is set to 1 the encoded bytes will
+        have TR bit 1.
         """
         self.assertEqual(
             self.messageFactory(**MessageTruncated.kwargs()).toStr(),
@@ -3910,8 +3903,8 @@ class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
 
     def test_truncatedMessageDecode(self):
         """
-        The message instance created by decoding a truncated message
-        is marked as truncated.
+        The message instance created by decoding a truncated message is marked
+        as truncated.
         """
         m = self.messageFactory()
         m.fromStr(MessageTruncated.bytes())
@@ -3933,8 +3926,8 @@ class MessageStandardEncodingTests(EDNSMessageStandardEncodingTests):
         Message.__init__.
 
         Also handles the fact that unlike L{dns._EDNSMessage},
-        L{dns.Message.__init__} does not accept queries, answers etc
-        as arguments.
+        L{dns.Message.__init__} does not accept queries, answers etc as
+        arguments.
 
         Also removes any L{dns._EDNSMessage} specific arguments.
 
@@ -3972,9 +3965,8 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
     def test_ednsMessageDecodeStripsOptRecords(self):
         """
-        The L(_EDNSMessage} instance created by
-        L{dns._EDNSMessage.decode} from an EDNS query never includes
-        OPT records in the additional section.
+        The L(_EDNSMessage} instance created by L{dns._EDNSMessage.decode} from
+        an EDNS query never includes OPT records in the additional section.
         """
         m = self.messageFactory()
         m.fromStr(MessageEDNSQuery.bytes())
@@ -3984,9 +3976,8 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
     def test_ednsMessageDecodeMultipleOptRecords(self):
         """
-        An L(_EDNSMessage} instance created from a byte string
-        containing multiple I{OPT} records will discard all the C{OPT}
-        records.
+        An L(_EDNSMessage} instance created from a byte string containing
+        multiple I{OPT} records will discard all the C{OPT} records.
 
         C{ednsVersion} will be set to C{None}.
 
@@ -4005,10 +3996,9 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
     def test_fromMessageCopiesSections(self):
         """
-        L{dns._EDNSMessage.fromMessage} returns an L{_EDNSMessage}
-        instance whose queries, answers, authority and additional
-        lists are copies (not references to) the original message
-        lists.
+        L{dns._EDNSMessage.fromMessage} returns an L{_EDNSMessage} instance
+        whose queries, answers, authority and additional lists are copies (not
+        references to) the original message lists.
         """
         standardMessage = dns.Message()
         standardMessage.fromStr(MessageEDNSQuery.bytes())
@@ -4033,8 +4023,8 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
     def test_toMessageCopiesSections(self):
         """
-        L{dns._EDNSMessage.toStr} makes no in place changes to the
-        message instance.
+        L{dns._EDNSMessage.toStr} makes no in place changes to the message
+        instance.
         """
         ednsMessage = dns._EDNSMessage(ednsVersion=1)
         ednsMessage.toStr()
@@ -4043,11 +4033,10 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
     def test_optHeaderPosition(self):
         """
-        L{dns._EDNSMessage} can decode OPT records, regardless of
-        their position in the additional records section.
+        L{dns._EDNSMessage} can decode OPT records, regardless of their position
+        in the additional records section.
 
-        "The OPT RR MAY be placed anywhere within the additional data
-        section."
+        "The OPT RR MAY be placed anywhere within the additional data section."
 
         @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.1}
         """
@@ -4080,9 +4069,9 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
     def test_ednsDecode(self):
         """
-        The L(_EDNSMessage} instance created by
-        L{dns._EDNSMessage.fromStr} derives its edns specific values
-        (C{ednsVersion}, etc) from the supplied OPT record.
+        The L(_EDNSMessage} instance created by L{dns._EDNSMessage.fromStr}
+        derives its edns specific values (C{ednsVersion}, etc) from the supplied
+        OPT record.
         """
         m = self.messageFactory()
         m.fromStr(MessageEDNSComplete.bytes())
@@ -4092,10 +4081,9 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
     def test_ednsEncode(self):
         """
-        The L(_EDNSMessage} instance created by
-        L{dns._EDNSMessage.toStr} encodes its edns specific values
-        (C{ednsVersion}, etc) into an OPT record added to the
-        additional section.
+        The L(_EDNSMessage} instance created by L{dns._EDNSMessage.toStr}
+        encodes its edns specific values (C{ednsVersion}, etc) into an OPT
+        record added to the additional section.
         """
         self.assertEqual(
             self.messageFactory(**MessageEDNSComplete.kwargs()).toStr(),
@@ -4115,9 +4103,8 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
     def test_extendedRcodeDecode(self):
         """
-        The L(_EDNSMessage} instance created by
-        L{dns._EDNSMessage.fromStr} derives RCODE
-        from the supplied OPT record.
+        The L(_EDNSMessage} instance created by L{dns._EDNSMessage.fromStr}
+        derives RCODE from the supplied OPT record.
         """
         m = self.messageFactory()
         m.fromStr(MessageEDNSExtendedRCODE.bytes())
@@ -4128,8 +4115,8 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
     def test_extendedRcodeZero(self):
         """
-        Note that EXTENDED-RCODE value 0 indicates that an unextended
-        RCODE is in use (values 0 through 15).
+        Note that EXTENDED-RCODE value 0 indicates that an unextended RCODE is
+        in use (values 0 through 15).
 
         https://tools.ietf.org/html/rfc6891#section-6.1.3
         """
