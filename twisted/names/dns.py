@@ -2470,7 +2470,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         m.fromStr(bytes)
 
         ednsMessage = self.fromMessage(m)
-        for attrName in self.compareAttributes + ('_decodingErrors',):
+        for attrName in self.compareAttributes:
             setattr(self, attrName, getattr(ednsMessage, attrName))
 
 
