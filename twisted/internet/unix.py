@@ -298,9 +298,15 @@ class Port(_UNIXPort, tcp.Port):
             skt.listen(self.backlog)
             self.connected = True
             self.socket = skt
-            self.fileno = self.socket.fileno
             self.numberAccepts = 100
             self.startReading()
+
+
+    def fileno(self):
+        """
+        Returns the fileno for this listening socket.
+        """
+        return self.socket.fileno()
 
 
     def _logConnectionLostMsg(self):
@@ -390,7 +396,14 @@ class DatagramPort(_UNIXPort, udp.Port):
             os.chmod(self.port, self.mode)
         self.connected = 1
         self.socket = skt
-        self.fileno = self.socket.fileno
+
+
+    def fileno(self):
+        """
+        Returns the fileno for this listening socket.
+        """
+        return self.socket.fileno()
+
 
     def write(self, datagram, address):
         """Write a datagram."""
@@ -422,7 +435,6 @@ class DatagramPort(_UNIXPort, udp.Port):
         self.connected = 0
         self.socket.close()
         del self.socket
-        del self.fileno
         if hasattr(self, "d"):
             self.d.callback(None)
             del self.d

@@ -187,13 +187,19 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
         abstract.FileDescriptor.__init__(self, reactor=reactor)
         self.socket = skt
         self.socket.setblocking(0)
-        self.fileno = skt.fileno
         self.protocol = protocol
 
 
     def getHandle(self):
         """Return the socket for this connection."""
         return self.socket
+
+
+    def fileno(self):
+        """
+        Return the fileno for this connection.
+        """
+        return self.socket.fileno()
 
 
     def doRead(self):
@@ -295,7 +301,6 @@ class Connection(_TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser,
         protocol = self.protocol
         del self.protocol
         del self.socket
-        del self.fileno
         protocol.connectionLost(reason)
 
 
@@ -526,7 +531,7 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
 
         @see: L{_BaseBaseClient}
         """
-        del self.socket, self.fileno
+        del self.socket
 
 
     def createInternetSocket(self):
@@ -998,10 +1003,16 @@ class Port(base.BasePort, _SocketCloser):
         self.factory.doStart()
         self.connected = True
         self.socket = skt
-        self.fileno = self.socket.fileno
         self.numberAccepts = 100
 
         self.startReading()
+
+
+    def fileno(self):
+        """
+        Returns the fileno for this listening socket.
+        """
+        return self.socket.fileno()
 
 
     def _buildAddr(self, address):
@@ -1115,7 +1126,6 @@ class Port(base.BasePort, _SocketCloser):
         self.connected = False
         self._closeSocket(True)
         del self.socket
-        del self.fileno
 
         try:
             self.factory.doStop()

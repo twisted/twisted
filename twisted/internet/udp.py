@@ -203,7 +203,13 @@ class Port(base.BasePort):
 
         self.connected = 1
         self.socket = skt
-        self.fileno = self.socket.fileno
+
+
+    def fileno(self):
+        """
+        Returns the fileno for the listening socket.
+        """
+        return self.socket.fileno()
 
 
     def _connectToProtocol(self):
@@ -324,7 +330,6 @@ class Port(base.BasePort):
         self.protocol.doStop()
         self.socket.close()
         del self.socket
-        del self.fileno
         if hasattr(self, "d"):
             self.d.callback(None)
             del self.d

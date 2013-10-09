@@ -87,7 +87,14 @@ class _SocketWaker(log.Logger):
         reader.setblocking(0)
         self.r = reader
         self.w = client
-        self.fileno = self.r.fileno
+
+
+    def fileno(self):
+        """
+        Returns the fileno for the read socket.
+        """
+        return self.r.fileno()
+
 
     def wakeUp(self):
         """Send a byte to my connection.
@@ -140,7 +147,13 @@ class _FDWaker(log.Logger, object):
         fdesc._setCloseOnExec(self.i)
         fdesc.setNonBlocking(self.o)
         fdesc._setCloseOnExec(self.o)
-        self.fileno = lambda: self.i
+
+
+    def fileno(self):
+        """
+        Returns the fileno for the input side of our pipe.
+        """
+        return self.i
 
 
     def doRead(self):
