@@ -3940,9 +3940,6 @@ class MessageStandardEncodingTests(EDNSMessageStandardEncodingTests):
         L{dns.Message.__init__} does not accept queries, answers etc
         as arguments.
 
-        _EDNSMessage also expects bool arguments for flag parameters so
-        here we convert those to ints
-
         Also removes any L{dns._EDNSMessage} specific arguments.
 
         @param args: The positional arguments which will be passed to
@@ -3953,10 +3950,6 @@ class MessageStandardEncodingTests(EDNSMessageStandardEncodingTests):
 
         @return: An L{dns.Message} instance.
         """
-        for field in ('answer', 'auth', 'trunc', 'recDes', 'recAv'):
-            if field in kwargs:
-                kwargs[field] = int(kwargs[field])
-
         queries = kwargs.pop('queries', [])
         answers = kwargs.pop('answers', [])
         authority = kwargs.pop('authority', [])
