@@ -541,9 +541,8 @@ class LogPublisher(object):
 
     def __init__(self, *observers):
         self._observers = []
-        self.log = Logger(publisher=self)
         self._observers.extend(observers)
-        self._disabledObservers = []
+        self.log = Logger(publisher=self)
 
 
     @property
@@ -589,9 +588,6 @@ class LogPublisher(object):
         brokenObservers = []
 
         for observer in self.observers:
-            if observer in self._disabledObservers:
-                continue
-
             if trace is not None:
                 trace(observer)
 
@@ -600,25 +596,20 @@ class LogPublisher(object):
             except Exception:
                 brokenObservers.append((observer, Failure()))
 
-        for observer, failure in brokenObservers:
-            # We have to disable the offending observer because we're going to
-            # badmouth it to all of its friends (other observers) and it might
-            # get offended and raise again, causing an infinite loop.
-            #
-            # Don't remove/re-add the observer, as that would change the
-            # registration order.
-            self._disabledObservers.append(observer)
-            try:
-                self.log.failure(
-                    OBSERVER_DISABLED,
-                    failure=failure,
-                    observer=observer,
-                )
-            except Exception:
-                # Wow, what a jerk.  Never mind, then.
-                pass
-            finally:
-                self._disabledObservers.remove(observer)
+        for brokenObserver, failure in brokenObservers:
+            errorLogger = self._errorLoggerForObserver(brokenObserver)
+            errorLogger.failure(OBSERVER_DISABLED, failure=failure,
+                                observer=brokenObserver)
+
+
+    def _errorLoggerForObserver(self, observer):
+        """
+        Create an error-logger based on this logger, which does not contain the
+        given bad observer.
+        """
+        errorPublisher = self.__class__(*[obs for obs in self._observers
+                                          if obs is not observer])
+        return Logger(publisher=errorPublisher)
 
 
 
