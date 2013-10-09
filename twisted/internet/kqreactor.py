@@ -47,16 +47,6 @@ class KQueueReactor(posixbase.PosixReactorBase):
         reactor.  All L{FileDescriptors} which are currently receiving read or
         write readiness notifications will be present as values in this
         dictionary.
-
-    @ivar _reads: A set containing integer file descriptors.  Values in this
-        set will be registered with C{_kq} for read readiness notifications
-        which will be dispatched to the corresponding L{FileDescriptor}
-        instances in C{_selectables}.
-
-    @ivar _writes: A set containing integer file descriptors.  Values in this
-        set will be registered with C{_kq} for write readiness notifications
-        which will be dispatched to the corresponding L{FileDescriptor}
-        instances in C{_selectables}.
     """
     implements(IReactorFDSet, IReactorDaemonize)
 
@@ -72,8 +62,6 @@ class KQueueReactor(posixbase.PosixReactorBase):
             - people.freebsd.org/~jlemon/papers/kqueue.pdf
         """
         self._kq = kqueue()
-        self._reads = set()
-        self._writes = set()
         self._selectables = {}
         posixbase.PosixReactorBase.__init__(self)
 
@@ -113,10 +101,11 @@ class KQueueReactor(posixbase.PosixReactorBase):
         # that were added before. Note that you MUST NOT call any reactor methods
         # in between beforeDaemonize() and afterDaemonize()!
         self._kq = kqueue()
-        for fd in self._reads:
-            self._updateRegistration(fd, KQ_FILTER_READ, KQ_EV_ADD)
-        for fd in self._writes:
-            self._updateRegistration(fd, KQ_FILTER_WRITE, KQ_EV_ADD)
+        for fd, fdesc in self._selectables.iteritems():
+            if fdesc._isReading:
+                self._updateRegistration(fd, KQ_FILTER_READ, KQ_EV_ADD)
+            if fdesc._isWriting:
+                self._updateRegistration(fd, KQ_FILTER_WRITE, KQ_EV_ADD)
 
 
     def addReader(self, reader):
@@ -124,14 +113,14 @@ class KQueueReactor(posixbase.PosixReactorBase):
         Implement L{IReactorFDSet.addReader}.
         """
         fd = reader.fileno()
-        if fd not in self._reads:
+        if not reader._isReading:
             try:
                 self._updateRegistration(fd, KQ_FILTER_READ, KQ_EV_ADD)
             except OSError:
                 pass
             finally:
                 self._selectables[fd] = reader
-                self._reads.add(fd)
+                reader._isReading = True
 
 
     def addWriter(self, writer):
@@ -139,37 +128,29 @@ class KQueueReactor(posixbase.PosixReactorBase):
         Implement L{IReactorFDSet.addWriter}.
         """
         fd = writer.fileno()
-        if fd not in self._writes:
+        if not writer._isWriting:
             try:
                 self._updateRegistration(fd, KQ_FILTER_WRITE, KQ_EV_ADD)
             except OSError:
                 pass
             finally:
                 self._selectables[fd] = writer
-                self._writes.add(fd)
+                writer._isWriting = True
 
 
     def removeReader(self, reader):
         """
         Implement L{IReactorFDSet.removeReader}.
         """
-        wasLost = False
         try:
             fd = reader.fileno()
         except:
             fd = -1
-        if fd == -1:
-            for fd, fdes in self._selectables.items():
-                if reader is fdes:
-                    wasLost = True
-                    break
-            else:
-                return
-        if fd in self._reads:
-            self._reads.remove(fd)
-            if fd not in self._writes:
+        if reader._isReading:
+            reader._isReading = False
+            if reader._isWriting:
                 del self._selectables[fd]
-            if not wasLost:
+            if fd != -1:
                 try:
                     self._updateRegistration(fd, KQ_FILTER_READ, KQ_EV_DELETE)
                 except OSError:
@@ -180,23 +161,16 @@ class KQueueReactor(posixbase.PosixReactorBase):
         """
         Implement L{IReactorFDSet.removeWriter}.
         """
-        wasLost = False
         try:
             fd = writer.fileno()
         except:
             fd = -1
-        if fd == -1:
-            for fd, fdes in self._selectables.items():
-                if writer is fdes:
-                    wasLost = True
-                    break
-            else:
-                return
-        if fd in self._writes:
-            self._writes.remove(fd)
-            if fd not in self._reads:
+
+        if writer._isWriting:
+            writer._isWriting = False
+            if not writer._isReading:
                 del self._selectables[fd]
-            if not wasLost:
+            if fd != -1:
                 try:
                     self._updateRegistration(fd, KQ_FILTER_WRITE, KQ_EV_DELETE)
                 except OSError:
@@ -208,22 +182,23 @@ class KQueueReactor(posixbase.PosixReactorBase):
         Implement L{IReactorFDSet.removeAll}.
         """
         return self._removeAll(
-            [self._selectables[fd] for fd in self._reads],
-            [self._selectables[fd] for fd in self._writes])
+            self.getReaders(),
+            self.getWriters(),
+        )
 
 
     def getReaders(self):
         """
         Implement L{IReactorFDSet.getReaders}.
         """
-        return [self._selectables[fd] for fd in self._reads]
+        return [fdes for fdes in self._selectables.itervalues() if fdes._isReading]
 
 
     def getWriters(self):
         """
         Implement L{IReactorFDSet.getWriters}.
         """
-        return [self._selectables[fd] for fd in self._writes]
+        return [fdes for fdes in self._selectables.itervalues() if fdes._isWriting]
 
 
     def doKEvent(self, timeout):

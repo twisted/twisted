@@ -40,18 +40,6 @@ class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         reactor.  All L{FileDescriptors} which are currently receiving read or
         write readiness notifications will be present as values in this
         dictionary.
-
-    @ivar _reads: A dictionary mapping integer file descriptors to arbitrary
-        values (this is essentially a set).  Keys in this dictionary will be
-        registered with C{_poller} for read readiness notifications which will
-        be dispatched to the corresponding L{FileDescriptor} instances in
-        C{_selectables}.
-
-    @ivar _writes: A dictionary mapping integer file descriptors to arbitrary
-        values (this is essentially a set).  Keys in this dictionary will be
-        registered with C{_poller} for write readiness notifications which will
-        be dispatched to the corresponding L{FileDescriptor} instances in
-        C{_selectables}.
     """
 
     _POLL_DISCONNECTED = (POLLHUP | POLLERR | POLLNVAL)
@@ -65,8 +53,6 @@ class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         """
         self._poller = poll()
         self._selectables = {}
-        self._reads = {}
-        self._writes = {}
         posixbase.PosixReactorBase.__init__(self)
 
 
@@ -78,72 +64,58 @@ class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             pass
 
         mask = 0
-        if fd in self._reads:
-            mask = mask | POLLIN
-        if fd in self._writes:
-            mask = mask | POLLOUT
+        if fd._isReading:
+            mask |= POLLIN
+        if fd._isWriting:
+            mask |= POLLOUT
         if mask != 0:
             self._poller.register(fd, mask)
         else:
             if fd in self._selectables:
                 del self._selectables[fd]
 
-    def _dictRemove(self, selectable, mdict):
-        try:
-            # the easy way
-            fd = selectable.fileno()
-            # make sure the fd is actually real.  In some situations we can get
-            # -1 here.
-            mdict[fd]
-        except:
-            # the hard way: necessary because fileno() may disappear at any
-            # moment, thanks to python's underlying sockets impl
-            for fd, fdes in self._selectables.items():
-                if selectable is fdes:
-                    break
-            else:
-                # Hmm, maybe not the right course of action?  This method can't
-                # fail, because it happens inside error detection...
-                return
-        if fd in mdict:
-            del mdict[fd]
-            self._updateRegistration(fd)
-
     def addReader(self, reader):
         """Add a FileDescriptor for notification of data available to read.
         """
         fd = reader.fileno()
-        if fd not in self._reads:
+        if not reader._isReading:
             self._selectables[fd] = reader
-            self._reads[fd] =  1
+            reader._isReading = True
             self._updateRegistration(fd)
 
     def addWriter(self, writer):
         """Add a FileDescriptor for notification of data available to write.
         """
         fd = writer.fileno()
-        if fd not in self._writes:
+        if not writer._isWriting:
             self._selectables[fd] = writer
-            self._writes[fd] =  1
+            writer._isWriting = True
             self._updateRegistration(fd)
+
 
     def removeReader(self, reader):
         """Remove a Selectable for notification of data available to read.
         """
-        return self._dictRemove(reader, self._reads)
+        if reader._isReading:
+            reader._isReading = False
+            self._updateRegistration(reader)
+
 
     def removeWriter(self, writer):
         """Remove a Selectable for notification of data available to write.
         """
-        return self._dictRemove(writer, self._writes)
+        if writer._isWriting:
+            writer._isWriting = False
+            self._updateRegistration(writer)
 
     def removeAll(self):
         """
         Remove all selectables, and return a list of them.
         """
         return self._removeAll(
-            [self._selectables[fd] for fd in self._reads],
-            [self._selectables[fd] for fd in self._writes])
+            self.getReaders(),
+            self.getWriters()
+        )
 
 
     def doPoll(self, timeout):
@@ -171,11 +143,11 @@ class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     doIteration = doPoll
 
     def getReaders(self):
-        return [self._selectables[fd] for fd in self._reads]
+        return [fdes for fdes in self._selectables.itervalues() if fdes._isReading]
 
 
     def getWriters(self):
-        return [self._selectables[fd] for fd in self._writes]
+        return [fdes for fdes in self._selectables.itervalues() if fdes._isWriting]
 
 
 
