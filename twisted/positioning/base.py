@@ -847,7 +847,7 @@ class PositioningBeacon(object):
         @return: The string representation.
         @rtype: C{str}
         """
-        return "<Beacon ({0.identifier})>".format(self)
+        return "<Beacon ({s.identifier})>".format(s=self)
 
 
 
@@ -897,12 +897,12 @@ class Satellite(PositioningBeacon):
         @return: The string representation.
         @rtype: C{str}
         """
-        template = ("<Satellite ({self.identifier}), "
-                    "azimuth: {self.azimuth}, "
-                    "elevation: {self.elevation}, "
-                    "snr: {self.signalToNoiseRatio}>")
+        template = ("<Satellite ({s.identifier}), "
+                    "azimuth: {s.azimuth}, "
+                    "elevation: {s.elevation}, "
+                    "snr: {s.signalToNoiseRatio}>")
 
-        return template.format(self=self)
+        return template.format(s=self)
 
 
 
