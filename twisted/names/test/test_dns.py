@@ -3665,9 +3665,9 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
         rCode.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(rCode=123),
-            self.messageFactory(rCode=123),
-            self.messageFactory(rCode=321),
+            self.messageFactory(rCode=16),
+            self.messageFactory(rCode=16),
+            self.messageFactory(rCode=15),
             )
 
 
