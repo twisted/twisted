@@ -4135,5 +4135,8 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         """
         ednsMessage = self.messageFactory(rCode=15, ednsVersion=0)
         standardMessage = ednsMessage.toMessage()
-        self.assertEqual(standardMessage.rCode, 15)
-        self.assertEqual(standardMessage.additional[0].extendedRCODE, 0)
+
+        self.assertEqual(
+            (15, 0),
+            (standardMessage.rCode, standardMessage.additional[0].extendedRCODE)
+        )
