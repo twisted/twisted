@@ -10,6 +10,8 @@ from zope.interface import implementer
 from zope.interface import directlyProvides
 from zope.interface import noLongerProvides
 
+from twisted.internet.defer import Deferred
+
 from twisted.tubes.itube import IDrain
 from twisted.tubes.itube import IPump
 from twisted.tubes.itube import IFount
@@ -358,7 +360,10 @@ class _Tube(object):
             if value is whatever:
                 self._pendingIterator = None
                 break
-            self._tfount.drain.receive(value)
+            if isinstance(value, Deferred):
+                value.addCallback(self._tfount.drain.receive)
+            else:
+                self._tfount.drain.receive(value)
             i += 1
         return i
 

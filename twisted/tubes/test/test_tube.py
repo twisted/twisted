@@ -12,6 +12,7 @@ from twisted.tubes.test.util import SwitchableTesterPump
 from twisted.tubes.itube import ISwitchableTube, ISwitchablePump
 from twisted.python.failure import Failure
 from twisted.tubes.tube import Pump, series
+from twisted.internet.defer import succeed
 
 from zope.interface import implementer
 
@@ -189,6 +190,22 @@ class TubeTest(TestCase):
         self.ff.drain.receive("switch")
         self.ff.drain.receive("after")
         self.assertEquals(self.fd.received, ["before", "switched after"])
+
+
+    def test_pumpYieldsFiredDeferred(self):
+        """
+        When a pump yields a fired deferred its result is synchronously
+        delivered.
+        """
+
+        class SucceedingPump(Pump):
+            def received(self, data):
+                yield succeed(''.join(reversed(data)))
+
+        fakeDrain = self.fd
+        self.ff.flowTo(series(SucceedingPump())).flowTo(fakeDrain)
+        self.ff.drain.receive("hello")
+        self.assertEquals(self.fd.received, ["olleh"])
 
 
     def test_flowingFromFirst(self):
@@ -446,3 +463,5 @@ class TubeTest(TestCase):
         series(pump)
 
         self.assertEqual(repr(pump.tube), '<Tube for <Pump For Testing>>')
+
+
