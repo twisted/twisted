@@ -2623,6 +2623,23 @@ class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
 
 
 
+class RaisedArgs(Exception):
+    """
+    An exception which can be raised by fakes to test that the fake is called
+    with expected arguments.
+    """
+    def __init__(self, args, kwargs):
+        """
+        Store the positional and keyword arguments as attributes.
+
+        @param args: The positional args.
+        @param kwargs: The keyword args.
+        """
+        self.args = args
+        self.kwargs = kwargs
+
+
+
 class MessageEmpty(object):
     """
     Generate byte string and constructor arguments for an empty
@@ -3529,28 +3546,94 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
             '>')
 
 
-    def test_fromMessage(self):
+    def test_fromStrCallsMessageFactory(self):
         """
-        L{dns._EDNSMessage.fromMessage} constructs a new L{dns._EDNSMessage}
-        using the attributes and records from an existing L{dns.Message}
-        instance.
+        L{dns._EDNSMessage.fromString} calls L{dns._EDNSMessage._messageFactory}
+        to create a new L{dns.Message} instance which is used to decode the
+        supplied bytes.
         """
-        m = dns.Message(rCode=0xabcd)
-        m.queries = [dns.Query(b'www.example.com')]
+        class FakeMessageFactory(object):
+            """
+            Fake message factory.
+            """
+            def fromStr(self, *args, **kwargs):
+                """
+                Fake fromStr method which raises the arguments it was passed.
+                """
+                raise RaisedArgs(args, kwargs)
 
-        ednsMessage = dns._EDNSMessage.fromMessage(m)
-        self.assertEqual(ednsMessage.rCode, 0xabcd)
-
-
-    def test_toMessage(self):
-        """
-        L{dns._EDNSMessage.toMessage} constructs a new L{dns.Message} using the
-        attributes and records from an existing L{dns._EDNSMessage} instance.
-        """
-        ednsMessage = dns._EDNSMessage(id=1234, ednsVersion=None)
+        m = dns._EDNSMessage()
+        m._messageFactory = FakeMessageFactory
+        dummyBytes = object()
+        e = self.assertRaises(RaisedArgs, m.fromStr, dummyBytes)
         self.assertEqual(
-            MessageComparable(ednsMessage.toMessage()),
-            MessageComparable(dns.Message(id=1234)))
+            ((dummyBytes,), {}),
+            (e.args, e.kwargs)
+        )
+
+
+    def test_fromStrCallsFromMessage(self):
+        """
+        L{dns._EDNSMessage.fromString} calls L{dns._EDNSMessage.fromMessage}
+        with a L{dns.Message} instance
+        """
+        m = dns._EDNSMessage()
+        class FakeMessageFactory():
+            def fromStr(self, bytes):
+                pass
+        fakeMessage = FakeMessageFactory()
+        m._messageFactory = lambda: fakeMessage
+
+        def fakeFromMessage(*args, **kwargs):
+            raise RaisedArgs(args, kwargs)
+        m.fromMessage = fakeFromMessage
+        e = self.assertRaises(RaisedArgs, m.fromStr, b'')
+        self.assertEqual(
+            ((fakeMessage,), {}),
+            (e.args, e.kwargs)
+        )
+
+
+    def test_toStrCallsToMessage(self):
+        """
+        L{dns._EDNSMessage.toStr} calls L{dns._EDNSMessage.toMessage}
+        """
+        m = dns._EDNSMessage()
+        def fakeToMessage(*args, **kwargs):
+            raise RaisedArgs(args, kwargs)
+        m.toMessage = fakeToMessage
+        e = self.assertRaises(RaisedArgs, m.toStr)
+        self.assertEqual(
+            ((), {}),
+            (e.args, e.kwargs)
+        )
+
+
+    def test_toStrCallsToMessageToStr(self):
+        """
+        L{dns._EDNSMessage.toStr} calls C{toStr} on the message returned by
+        L{dns._EDNSMessage.toMessage}.
+        """
+        m = dns._EDNSMessage()
+        dummyBytes = object()
+        class FakeMessage(object):
+            """
+            Fake Message
+            """
+            def toStr(self):
+                """
+                Fake toStr which returns dummyBytes.
+                """
+                return dummyBytes
+
+        def fakeToMessage(*args, **kwargs):
+            return FakeMessage()
+        m.toMessage = fakeToMessage
+
+        self.assertEqual(
+            dummyBytes,
+            m.toStr()
+        )
 
 
 

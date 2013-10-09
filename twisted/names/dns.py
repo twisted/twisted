@@ -2227,6 +2227,8 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     compareAttributes = showAttributes
 
+    _messageFactory = Message
+
     def __init__(self, id=0, answer=False, opCode=OP_QUERY, auth=False,
                  trunc=False, recDes=False, recAv=False, rCode=0,
                  ednsVersion=0, dnssecOK=False, authenticData=False,
@@ -2345,7 +2347,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @return: A L{dns.Message}
         @rtype: L{dns.Message}
         """
-        m = Message(
+        m = self._messageFactory(
             id=self.id,
             answer=self.answer,
             opCode=self.opCode,
@@ -2453,7 +2455,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @param bytes: The full byte string to be decoded.
         @type bytes: L{bytes}
         """
-        m = Message()
+        m = self._messageFactory()
         m.fromStr(bytes)
 
         ednsMessage = self.fromMessage(m)
