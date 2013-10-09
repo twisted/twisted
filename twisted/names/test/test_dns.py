@@ -3634,6 +3634,8 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
             def toStr(self):
                 """
                 Fake toStr which returns dummyBytes.
+
+                @return: dummyBytes
                 """
                 return dummyBytes
 
