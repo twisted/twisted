@@ -12,13 +12,17 @@
 
     <h2>The Basics</h2>
 
-    <p>Logging consists of two main components: applications that emit events, and observers that receive and handle those events. Events are simply dictionaries containing the relevant data to describe something interesting that has occurred.  For example: a web server might emit an event after handling each request that includes the URI of requested resource, the response's status code, a count of bytes transferred, etc.  All of that information might be contained in a pair of objects representing the request and response:</p>
+    <p>Logging consists of two main components: applications that emit events, and observers that receive and handle those events.
+    Events are simply dictionaries containing the relevant data to describe something interesting that has occurred.
+    For example: a web server might emit an event after handling each request that includes the URI of requested resource, the response's status code, a count of bytes transferred, etc.
+    All of that information might be contained in a pair of objects representing the request and response:</p>
 
     <pre class="python">
 log.info(request=request, response=response)
     </pre>
 
-    <p>Note that many logging systems are about emitting <i>strings</i>. In such systems, you might expect the API to look like this instead:</p>
+    <p>Note that many logging systems are about emitting <i>strings</i>.
+    In such systems, you might expect the API to look like this instead:</p>
 
     <pre class="python">
 log.info(
@@ -27,9 +31,15 @@ log.info(
 )
     </pre>
 
-    <p>One disadvantage to this is that a strings meant to be human-readable are not necessarily great for software to handle.  An observer receiving the above event as a string would have to resort to parsing the string to extract the URI, which is often unreliable.  Additionally, any information not encoded into the string is simply unavailable.  If the <code class="python">request</code> and <code class="python">response</code> objects are available to the observer, it would be possible to write an observer that accessed any attributes of those objects.  It would also be a lot easier to write an observer that emitted structured information by serializing these objects into a format such as JSON, rows in a database, etc.</p>
+    <p>One disadvantage to this is that a strings meant to be human-readable are not necessarily great for software to handle.
+    An observer receiving the above event as a string would have to resort to parsing the string to extract the URI, which is often unreliable.
+    Additionally, any information not encoded into the string is simply unavailable.
+    If the <code class="python">request</code> and <code class="python">response</code> objects are available to the observer, it would be possible to write an observer that accessed any attributes of those objects.
+    It would also be a lot easier to write an observer that emitted structured information by serializing these objects into a format such as JSON, rows in a database, etc.</p>
 
-    <p>Events-as-string do the advantage that it's obvious what an observer that writes strings (eg. an observer that streams text to a file) would emit here.  Since most people are used to server logs that are human-readonable, this is a reasonable thing to expect. We can solve this more flexibly by providing an optional format string in events that can be used for this purpose:</p>
+    <p>Events-as-string do the advantage that it's obvious what an observer that writes strings (eg. an observer that streams text to a file) would emit here.
+    Since most people are used to server logs that are human-readonable, this is a reasonable thing to expect.
+    We can solve this more flexibly by providing an optional format string in events that can be used for this purpose:</p>
 
     <pre class="python">
 log.info(
@@ -43,7 +53,8 @@ log.info(
 
     <h2>Usage for emitting applications</h2>
 
-    <p>The first thing that an application that emits logging events need to do is to instantiate a <code class="API" base="twisted.python.logger">Logger</code> object, which provides the API to emit events.  A <code class="API" base="twisted.python.logger">Logger</code> is often created globally for each module:</p>
+    <p>The first thing that an application that emits logging events need to do is to instantiate a <code class="API" base="twisted.python.logger">Logger</code> object, which provides the API to emit events.
+    A <code class="API" base="twisted.python.logger">Logger</code> is often created globally for each module:</p>
 
     <pre class="python">
 from twisted.python.logger import Logger
@@ -68,13 +79,18 @@ class Foo(object):
 
     <h3>Namespaces</h3>
 
-    <p>All <code class="API" base="twisted.python.logger">Logger</code>s have a namespace, which can be used to categorize events. Namespaces may be specified by passing in a <code class="python">namespace</code> argument to <code class="API" base="twisted.python.logger">Logger</code>'s initializer, but if none is given, the logger will derive its own namespace by using the module name of the callable that instantiated it, or, in the case of a class, by using the fully qualified name of the class.  A <code class="API" base="twisted.python.logger">Logger</code> will add a <code class="python">log_namespace</code> key to the events it emits.</p>
+    <p>All <code class="API" base="twisted.python.logger">Logger</code>s have a namespace, which can be used to categorize events.
+    Namespaces may be specified by passing in a <code class="python">namespace</code> argument to <code class="API" base="twisted.python.logger">Logger</code>'s initializer, but if none is given, the logger will derive its own namespace by using the module name of the callable that instantiated it, or, in the case of a class, by using the fully qualified name of the class.
+    A <code class="API" base="twisted.python.logger">Logger</code> will add a <code class="python">log_namespace</code> key to the events it emits.</p>
 
     <p>In the first example above, the namespace would be <code class="python">some.module</code>, and in the second example, it would be <code class="python">some.module.Foo</code>.</p>
 
     <h3>Log levels</h3>
 
-    <p><code class="API" base="twisted.python.logger">Logger</code>s provide a number of methods for emitting events.  These methods all have the same signature, but each will attach a specific <code class="python">log_level</code> key to events.  Log levels are defined by the <code class="API" base="twisted.python.logger">LogLevel</code> constants container.  These are:
+    <p><code class="API" base="twisted.python.logger">Logger</code>s provide a number of methods for emitting events.
+    These methods all have the same signature, but each will attach a specific <code class="python">log_level</code> key to events.
+    Log levels are defined by the <code class="API" base="twisted.python.logger">LogLevel</code> constants container.
+    These are:</p>
 
     <dl>
       <dt><code class="API" base="twisted.python.logger.LogLevel">debug</code></dt>
@@ -84,13 +100,16 @@ class Foo(object):
       <dd>Informational events: Routine information about the status of an application, such as incoming connections, startup of a subsystem, etc.</dd>
 
       <dt><code class="API" base="twisted.python.logger.LogLevel">warn</code></dt>
-      <dd>Warning events: Events that may require greater attention than informational events but are not a systemic failure condition, such as authorization failures, bad data from a network client, etc.  Such events are of potential interest to system administrators, and should ideally be phrased in such a way, or documented, so as to indicate an action that an administrator might take to mitigate the warning.</dd>
+      <dd>Warning events: Events that may require greater attention than informational events but are not a systemic failure condition, such as authorization failures, bad data from a network client, etc.
+      Such events are of potential interest to system administrators, and should ideally be phrased in such a way, or documented, so as to indicate an action that an administrator might take to mitigate the warning.</dd>
 
       <dt><code class="API" base="twisted.python.logger.LogLevel">error</code></dt>
-      <dd>Error conditions: Events indicating a systemic failure, such as programming errors in the form of unhandled exceptions, loss of connectivity to an external system without which no useful work can proceed, such as a database or API endpoint, or resource exhaustion. Similarly to warnings, errors that are related to operational parameters may be actionable to system administrators and should provide references to resources which an administrator might use to resolve them.</dd>
+      <dd>Error conditions: Events indicating a systemic failure, such as programming errors in the form of unhandled exceptions, loss of connectivity to an external system without which no useful work can proceed, such as a database or API endpoint, or resource exhaustion.
+      Similarly to warnings, errors that are related to operational parameters may be actionable to system administrators and should provide references to resources which an administrator might use to resolve them.</dd>
     </dl>
 
-    <p>In the first example above, the call to <code class="python">log.debug</code> will add a <code class="python">log_level</code> key to the emitted event with a value of <code class="API" base="twisted.python.logger">LogLevel.debug</code>.  In the second example, calling <code class="python">self.log.error</code> would use a value of <code class="API" base="twisted.python.logger">LogLevel.error</code>.
+    <p>In the first example above, the call to <code class="python">log.debug</code> will add a <code class="python">log_level</code> key to the emitted event with a value of <code class="API" base="twisted.python.logger">LogLevel.debug</code>.
+    In the second example, calling <code class="python">self.log.error</code> would use a value of <code class="API" base="twisted.python.logger">LogLevel.error</code>.</p>
 
 
     <h2>Implementing an observer</h2>
