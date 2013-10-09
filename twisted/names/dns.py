@@ -2352,16 +2352,16 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         """
         m = Message(
             id=self.id,
-            answer=int(self.answer),
+            answer=self.answer,
             opCode=self.opCode,
-            auth=int(self.auth),
-            trunc=int(self.trunc),
-            recDes=int(self.recDes),
-            recAv=int(self.recAv),
+            auth=self.auth,
+            trunc=self.trunc,
+            recDes=self.recDes,
+            recAv=self.recAv,
             # Assign the lower 4 bits to the message
             rCode=self.rCode & 0xf,
-            authenticData=int(self.authenticData),
-            checkingDisabled=int(self.checkingDisabled))
+            authenticData=self.authenticData,
+            checkingDisabled=self.checkingDisabled)
 
         m.queries = self.queries[:]
         m.answers = self.answers[:]
