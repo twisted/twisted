@@ -864,6 +864,7 @@ class PythonLogObserver(object):
         """
         self.logger = py_logging.getLogger(name)
 
+
     def __call__(self, event):
         """
         Format an event and bridge it to Python logging.
@@ -1000,8 +1001,8 @@ class LoggingFile(object):
     File-like object that turns C{write()} calls into logging events.
 
     Note that because event formats are C{unicode}, C{bytes} received via
-        C{write()} are converted to C{unicode}, which is the opposite of what
-        C{file} does.
+    C{write()} are converted to C{unicode}, which is the opposite of what
+    C{file} does.
     """
 
     defaultLogger = Logger()
@@ -1103,7 +1104,6 @@ class LoggingFile(object):
 
     def _unsupported(self, *args):
         raise IOError("unsupported operation")
-
 
     read       = _unsupported
     next       = _unsupported
@@ -1287,11 +1287,14 @@ class MagicTimeZone(TZInfo):
     def __init__(self, t):
         self._offset = DateTime.fromtimestamp(t) - DateTime.utcfromtimestamp(t)
 
+
     def utcoffset(self, dt):
         return self._offset
 
+
     def tzname(self, dt):
         return "Magic"
+
 
     def dst(self, dt):
         return timeDeltaZero
