@@ -1,3 +1,5 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 """
 Receivers for use in tests.
 """
