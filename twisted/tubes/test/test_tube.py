@@ -192,6 +192,53 @@ class TubeTest(TestCase):
         self.assertEquals(self.fd.received, ["before", "switched after"])
 
 
+    def test_pumpFlowSwitching_ReEntrantResumeReceive(self):
+        """
+        Switching a pump that is receiving data from a fount which
+        synchronously produces some data to C{receive} will ... uh .. work.
+        """
+
+        class FakeFountWithBuffer(FakeFount):
+            def __init__(self):
+                self.buffer = []
+
+            def bufferUp(self, item):
+                self.buffer.append(item)
+
+            def resumeFlow(self):
+                super(FakeFountWithBuffer, self).resumeFlow()
+                while not self.flowIsPaused:
+                    item = self.buffer.pop(0)
+                    self.drain.receive(item)
+        @implementer(ISwitchablePump)
+        class SwitchablePassthruPump(PassthruPump):
+            def reassemble(self, data):
+                raise NotImplementedError("Should not actually be called.")
+
+        class Switcher(Pump):
+            def received(self, data):
+                if data == "switch":
+                    destinationPump.tube.switch(series(Switchee(), fakeDrain))
+                else:
+                    return [data]
+
+        class Switchee(Pump):
+            def received(self, data):
+                yield "switched " + data
+
+        fakeDrain = self.fd
+        destinationPump = SwitchablePassthruPump()
+
+        firstDrain = series(Switcher(), destinationPump)
+
+        ff = FakeFountWithBuffer()
+        ff.bufferUp("before")
+        ff.bufferUp("switch")
+        ff.bufferUp("after")
+        ff.flowTo(firstDrain).flowTo(fakeDrain)
+        self.assertEquals(self.fd.received, ["before", "switched after"])
+
+
     def test_pumpYieldsFiredDeferred(self):
         """
         When a pump yields a fired L{Deferred} its result is synchronously
@@ -243,7 +290,9 @@ class TubeTest(TestCase):
             def received(self, data):
                 yield d
                 MultiDeferredPump.didYield = True
+                print "BEARTATO"
                 yield succeed("goodbye")
+                print "TOPATO"
 
         fakeDrain = self.fd
         self.ff.flowTo(series(MultiDeferredPump())).flowTo(fakeDrain)
@@ -254,7 +303,6 @@ class TubeTest(TestCase):
 
         self.assertEquals(self.fd.received, ["hello", "goodbye"])
 
-    test_pumpYieldsMultipleDeferreds.skip = "This shouldn't work yet."
 
     def test_flowingFromFirst(self):
         """

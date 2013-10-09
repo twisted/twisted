@@ -76,9 +76,12 @@ class _TubeFount(_TubePiece):
         Pause the flow from the fount, or remember to do that when the
         fount is attached, if it isn't yet.
         """
-        self._tube._currentlyPaused = True
+        self._tube._currentlyPaused += 1
+        if self._tube._currentlyPaused != 1:
+            return
         fount = self._tube._tdrain.fount
-        if fount is not None:
+        if fount is not None and not self._tube._fountPaused:
+            self._tube._fountPaused = True
             fount.pauseFlow()
 
 
@@ -86,9 +89,15 @@ class _TubeFount(_TubePiece):
         """
         Resume the flow from the fount to this L{_Tube}.
         """
-        self._tube._currentlyPaused = False
+        self._tube._currentlyPaused -= 1
+        if self._tube._currentlyPaused != 0:
+            return
         fount = self._tube._tdrain.fount
-        if fount is not None:
+        if self._tube._pendingIterator is not None:
+            self._tube._unbufferIterator()
+
+        if fount is not None and self._tube._fountPaused:
+            self._tube._fountPaused = False
             fount.resumeFlow()
 
 
@@ -273,9 +282,12 @@ class _Tube(object):
 
     @ivar _currentlyPaused: is this L{_Tube} currently paused?  Boolean:
         C{True} if paused, C{False} if not.
+
+    @ivar _fountPaused: have I{we} paused I{the upstream} fount?
     """
 
-    _currentlyPaused = False
+    _currentlyPaused = 0
+    _fountPaused = False
     _pump = None
     _pendingIterator = None
 
@@ -334,16 +346,28 @@ class _Tube(object):
     def _unbufferIterator(self):
         whatever = object()
         i = 0
+        loooool = []
         while not self._currentlyPaused:
             value = next(self._pendingIterator, whatever)
             if value is whatever:
                 self._pendingIterator = None
                 break
             if isinstance(value, Deferred):
-                value.addCallback(self._tfount.drain.receive)
+                self._tfount.pauseFlow()
+
+                def whenUnclogged(result):
+                    self._tfount.drain.receive(result)
+                    self._tfount.resumeFlow()
+
+                value.pause()
+                loooool.append(value)
+                from twisted.python import log
+                value.addCallback(whenUnclogged).addErrback(log.err, "WHAT")
             else:
                 self._tfount.drain.receive(value)
             i += 1
+        for aaaugh in loooool:
+            aaaugh.unpause()
         return i
 
 
