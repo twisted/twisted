@@ -27,6 +27,7 @@ from twisted.python.logger import (
     FileLogObserver as NewFileLogObserver,
     PythonLogObserver as NewPythonLogObserver,
     LegacyLogObserverWrapper, LoggingFile,
+    LogPublisher as NewPublisher,
 )
 
 
@@ -156,11 +157,25 @@ class LogPublisher:
     synchronized = ['msg']
 
 
+    def __init__(self, observerPublisher=None, publishPublisher=None):
+        if publishPublisher is None:
+            publishPublisher = NewPublisher()
+            if observerPublisher is None:
+                observerPublisher = publishPublisher
+        if observerPublisher is None:
+            observerPublisher = NewPublisher()
+        self._observerPublisher = observerPublisher
+        self._publishPublisher = publishPublisher
+
+
     @property
     def observers(self):
+        """
+        Property returning all observers registered on this L{LogPublisher}.
+        """
         return [
             observer.legacyObserver for observer
-            in NewLogger.publisher.filteredPublisher.observers
+            in self._observerPublisher.observers
             if getattr(observer, "originator", None) == self
         ]
 
@@ -175,19 +190,19 @@ class LogPublisher:
         """
         wrapped = LegacyLogObserverWrapper(other)
         wrapped.originator = self
-        NewLogger.publisher.filteredPublisher.addObserver(wrapped)
+        self._observerPublisher.addObserver(wrapped)
 
 
     def removeObserver(self, other):
         """
         Remove an observer.
         """
-        for observer in NewLogger.publisher.filteredPublisher.observers:
+        for observer in self._observerPublisher.observers:
             if (
                 getattr(observer, "originator", None) == self and
                 observer.legacyObserver == other
             ):
-                NewLogger.publisher.filteredPublisher.removeObserver(observer)
+                self._observerPublisher.removeObserver(observer)
                 break
 
 
@@ -212,7 +227,7 @@ class LogPublisher:
         actualEventDict['message'] = message
         actualEventDict['time'] = time.time()
 
-        publishToNewObserver(NewLogger.publisher, actualEventDict)
+        publishToNewObserver(self._publishPublisher, actualEventDict)
 
 
     def showwarning(self, message, category, filename, lineno, file=None,
@@ -246,7 +261,10 @@ if 'theLogPublisher' not in globals():
         def decorate(thingWithADocstring):
             return something
         return decorate
-    theLogPublisher = LogPublisher()
+    theLogPublisher = LogPublisher(
+        observerPublisher=NewLogger.publisher.filteredPublisher,
+        publishPublisher=NewLogger.publisher
+    )
 
     @_actually(theLogPublisher.addObserver)
     def addObserver(observer):

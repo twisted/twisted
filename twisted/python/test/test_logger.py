@@ -34,7 +34,7 @@ from twisted.python.logger import (
     FilteringLogObserver, PredicateResult,
     FileLogObserver, PythonLogObserver, RingBufferLogObserver,
     LegacyLogObserverWrapper, LoggingFile,
-    LogLevelFilterPredicate, OBSERVER_DISABLED,
+    LogLevelFilterPredicate,
     formatTrace,
 )
 
@@ -582,49 +582,40 @@ class LogPublisherTests(SetUpTearDown, unittest.TestCase):
         Observer raises an exception during fan out: a failure should be
         logged, but not re-raised.  Life goes on.
         """
-        nonTestEvents = []
-        Logger.publisher.addObserver(lambda e: nonTestEvents.append(e))
-
         event = dict(foo=1, bar=2)
         exception = RuntimeError("ARGH! EVIL DEATH!")
 
         events = []
 
         def observer(event):
+            shouldRaise = not events
             events.append(event)
-            raise exception
+            if shouldRaise:
+                raise exception
 
-        publisher = LogPublisher(observer)
+        collector = []
+
+        publisher = LogPublisher(observer, collector.append)
         publisher(event)
 
         # Verify that the observer saw my event
         self.assertIn(event, events)
 
         # Verify that the observer raised my exception
-        errors = self.flushLoggedErrors(exception.__class__)
+        errors = [evt['log_failure'] for evt in collector
+                  if 'log_failure' in evt]
         self.assertEquals(len(errors), 1)
         self.assertIdentical(errors[0].value, exception)
-
-        # Verify that the exception was logged
-        for event in nonTestEvents:
-            if (
-                event.get("log_format", None) == OBSERVER_DISABLED and
-                getattr(event.get("failure", None), "value") is exception
-            ):
-                break
-        else:
-            self.fail("Observer raised an exception "
-                      "and the exception was not logged.")
+        # Make sure the exceptional observer does not receive its own error.
+        self.assertEquals(len(events), 1)
 
 
     def test_observerRaisesAndLoggerHatesMe(self):
         """
-        Observer raises an exception during fan out and thge publisher's Logger
+        Observer raises an exception during fan out and the publisher's Logger
         pukes when the failure is reported.  Exception should still not
         propagate back to the caller.
         """
-        nonTestEvents = []
-        Logger.publisher.addObserver(lambda e: nonTestEvents.append(e))
 
         event = dict(foo=1, bar=2)
         exception = RuntimeError("ARGH! EVIL DEATH!")

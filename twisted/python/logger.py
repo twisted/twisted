@@ -253,11 +253,15 @@ def formatUnformattableEvent(event, error):
 
 class Logger(object):
     """
-    Logging object.
+    A L{Logger} emits log messages to a publisher.  You should instantiate it
+    as a class or module attribute, as documented in L{this module's
+    documentation <twisted.python.logger>}.
+
+    @ivar publisher: The L{publisher <LogPublisher>} which this L{Logger} will
+        publish events to.  By default, a singleton instance of
+        L{DefaultLogPublisher}.
+    @type publisher: L{LogPublisher}
     """
-
-    publisher = lambda self, event: None
-
 
     @staticmethod
     def _namespaceFromCallingContext():
@@ -269,7 +273,7 @@ class Logger(object):
         return currentframe().f_back.f_back.f_globals["__name__"]
 
 
-    def __init__(self, namespace=None, source=None):
+    def __init__(self, namespace=None, source=None, publisher=None):
         """
         @param namespace: The namespace for this logger.  Uses a dotted
             notation, as used by python modules.  If not C{None}, then the name
@@ -284,6 +288,8 @@ class Logger(object):
 
         self.namespace = namespace
         self.source = source
+        if publisher is not None:
+            self.publisher = publisher
 
 
     def __get__(self, oself, type=None):
@@ -532,19 +538,18 @@ class LogPublisher(object):
     Keeps track of a set of L{ILogObserver} objects and forwards
     events to each.
     """
-    log = Logger()
 
     def __init__(self, *observers):
-        self._observers = OrderedDict()
-        for observer in observers:
-            self._observers[observer] = None
-        self._disabledObservers = set()
+        self._observers = []
+        self.log = Logger(publisher=self)
+        self._observers.extend(observers)
+        self._disabledObservers = []
 
 
     @property
     def observers(self):
         # Don't return a mutable object
-        return self._observers.keys()
+        return self._observers[:]
 
 
     def addObserver(self, observer):
@@ -555,7 +560,8 @@ class LogPublisher(object):
         """
         if not callable(observer):
             raise TypeError("Observer is not callable: {0!r}".format(observer))
-        self._observers[observer] = None
+        if observer not in self._observers:
+            self._observers.append(observer)
 
 
     def removeObserver(self, observer):
@@ -565,8 +571,8 @@ class LogPublisher(object):
         @param observer: An L{ILogObserver} to remove.
         """
         try:
-            del self._observers[observer]
-        except KeyError:
+            self._observers.remove(observer)
+        except ValueError:
             pass
 
 
@@ -595,15 +601,13 @@ class LogPublisher(object):
                 brokenObservers.append((observer, Failure()))
 
         for observer, failure in brokenObservers:
-            #
             # We have to disable the offending observer because we're going to
             # badmouth it to all of its friends (other observers) and it might
             # get offended and raise again, causing an infinite loop.
             #
             # Don't remove/re-add the observer, as that would change the
             # registration order.
-            #
-            self._disabledObservers.add(observer)
+            self._disabledObservers.append(observer)
             try:
                 self.log.failure(
                     OBSERVER_DISABLED,

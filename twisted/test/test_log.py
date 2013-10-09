@@ -183,9 +183,7 @@ class LogTest(unittest.SynchronousTestCase):
         to the Twisted logging system.
         """
         publisher = log.LogPublisher()
-        # This is already registered in setUp().  I don't know why this worked
-        # in the old module, but now you get the event twice.
-        # publisher.addObserver(self.observer)
+        publisher.addObserver(self.observer)
 
         publisher.showwarning(
             FakeWarning("unique warning message"), FakeWarning,
@@ -209,9 +207,6 @@ class LogTest(unittest.SynchronousTestCase):
             'warning-filename.py:27: twisted.test.test_log.FakeWarning: '
             'unique warning message')
         self.assertEqual(self.catcher, [])
-
-    test_showwarning.todo = \
-        "Find out why I have to remove a call to addObserver() above"
 
 
     def test_warningToFile(self):
@@ -256,8 +251,6 @@ class LogTest(unittest.SynchronousTestCase):
         Log publisher does not use the global L{log.err} when reporting broken
         observers.
         """
-        raise NotImplementedError()
-
         errors = []
         def logError(eventDict):
             if eventDict.get("isError"):
@@ -274,9 +267,6 @@ class LogTest(unittest.SynchronousTestCase):
         self.assertEqual(set(publisher.observers), set([logError, fail]))
         self.assertEqual(len(errors), 1)
         self.assertIsInstance(errors[0], RuntimeError)
-
-    test_publisherReportsBrokenObserversPrivately.todo = \
-        "Look into why there are side effects..."
 
 
 
