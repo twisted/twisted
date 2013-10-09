@@ -2265,15 +2265,6 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertIdentical(dns._OPTHeader(dnssecOK=1).dnssecOK, True)
 
 
-    def test_dnssecOKInputAssertion(self):
-        """
-        L{dns._OPTHeader.__init__} raises L{AssertionError} if supplied
-        with a C{dnssecOK} value which is not C{True}, C{False}, C{1},
-        C{0}.
-        """
-        self.assertRaises(AssertionError, dns._OPTHeader, dnssecOK=2)
-
-
     def test_options(self):
         """
         L{dns._OPTHeader.options} defaults to empty list.
@@ -3366,12 +3357,6 @@ class ConstructorTestsMixin(object):
             (True, True),
             (0, False),
             (1, True)]
-
-        if invalidInputs is None:
-            invalidInputs = [
-                (object(), AssertionError),
-                (-1, AssertionError),
-                (2, AssertionError)]
 
         if assertEqual is None:
             assertEqual = partial(assertTypeEqual, self)

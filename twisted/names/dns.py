@@ -635,8 +635,6 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.udpPayloadSize = udpPayloadSize
         self.extendedRCODE = extendedRCODE
         self.version = version
-
-        assert dnssecOK in (True, False)
         self.dnssecOK = bool(dnssecOK)
 
         if options is None:
@@ -2311,37 +2309,17 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @type additional: L{list} of L{RRHeader}
         """
         self.id = id
-
-        assert answer in (True, False)
         self.answer = bool(answer)
-
         self.opCode = opCode
-
-        assert auth in (True, False)
         self.auth = bool(auth)
-
-        assert trunc in (True, False)
         self.trunc = bool(trunc)
-
-        assert recDes in (True, False)
         self.recDes = bool(recDes)
-
-        assert recAv in (True, False)
         self.recAv = bool(recAv)
-
         self.rCode = rCode
-
         self.ednsVersion = ednsVersion
-
-        assert dnssecOK in (True, False)
         self.dnssecOK = bool(dnssecOK)
-
-        assert authenticData in (True, False)
         self.authenticData = bool(authenticData)
-
-        assert checkingDisabled in (True, False)
         self.checkingDisabled = bool(checkingDisabled)
-
         self.maxSize = maxSize
 
         if queries is None:
