@@ -119,64 +119,6 @@ class LogTest(unittest.SynchronousTestCase):
             self.assertEqual(L2[0]['message'], ("Howdy, y'all.",))
 
 
-    def test_doubleErrorDoesNotRemoveObserver(self):
-        """
-        If logging causes an error, make sure that if logging the fact that
-        logging failed also causes an error, the log observer is not removed.
-        """
-        # Disabling by raising early, because this has side effects in other
-        # tests.
-        raise NotImplementedError()
-
-        events = []
-        errors = []
-        publisher = log.LogPublisher()
-
-        class FailingObserver(object):
-            calls = 0
-            def log(self, msg, **kwargs):
-                # First call raises RuntimeError:
-                self.calls += 1
-                if self.calls < 2:
-                    raise RuntimeError("Failure #%s" % (self.calls,))
-                else:
-                    events.append(msg)
-
-        observer = FailingObserver()
-        publisher.addObserver(observer.log)
-        self.assertEqual(publisher.observers, [observer.log])
-
-        try:
-            # When observer throws, the publisher attempts to log the fact by
-            # calling self._err()... which also fails with recursion error:
-            oldError = publisher._err
-
-            def failingErr(failure, why, **kwargs):
-                errors.append(failure.value)
-                raise RuntimeError("Fake recursion error")
-
-            publisher._err = failingErr
-            publisher.msg("error in first observer")
-        finally:
-            publisher._err = oldError
-            # Observer should still exist; we do this in finally since before
-            # bug was fixed the test would fail due to uncaught exception, so
-            # we want failing assert too in that case:
-            self.assertEqual(publisher.observers, [observer.log])
-
-        # The next message should succeed:
-        publisher.msg("but this should succeed")
-
-        self.assertEqual(observer.calls, 2)
-        self.assertEqual(len(events), 1)
-        self.assertEqual(events[0]['message'], ("but this should succeed",))
-        self.assertEqual(len(errors), 1)
-        self.assertIsInstance(errors[0], RuntimeError)
-
-    test_doubleErrorDoesNotRemoveObserver.todo = \
-        "LogPublisher no longer has _err. Also: look into side effects."
-
-
     def test_showwarning(self):
         """
         L{twisted.python.log.showwarning} emits the warning as a message
@@ -687,12 +629,7 @@ class PythonLoggingObserverTestCase(unittest.SynchronousTestCase):
         f = failure.Failure(ValueError("That is bad."))
         self.lp.msg(failure=f, isError=True)
         self.assertIn("ERROR", self.out.getvalue())
-        errors = self.flushLoggedErrors(ValueError)
-        self.assertEqual(len(errors), 1)
-        self.assertIdentical(errors[0], f)
 
-    test_errorString.todo = \
-        "Flushing errors wasn't necessary in old module... OK?"
 
     def test_formatString(self):
         """
