@@ -635,7 +635,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.udpPayloadSize = udpPayloadSize
         self.extendedRCODE = extendedRCODE
         self.version = version
-        self.dnssecOK = bool(dnssecOK)
+        self.dnssecOK = dnssecOK
 
         if options is None:
             options = []
@@ -2309,17 +2309,17 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @type additional: L{list} of L{RRHeader}
         """
         self.id = id
-        self.answer = bool(answer)
+        self.answer = answer
         self.opCode = opCode
-        self.auth = bool(auth)
-        self.trunc = bool(trunc)
-        self.recDes = bool(recDes)
-        self.recAv = bool(recAv)
+        self.auth = auth
+        self.trunc = trunc
+        self.recDes = recDes
+        self.recAv = recAv
         self.rCode = rCode
         self.ednsVersion = ednsVersion
-        self.dnssecOK = bool(dnssecOK)
-        self.authenticData = bool(authenticData)
-        self.checkingDisabled = bool(checkingDisabled)
+        self.dnssecOK = dnssecOK
+        self.authenticData = authenticData
+        self.checkingDisabled = checkingDisabled
         self.maxSize = maxSize
 
         if queries is None:
@@ -2427,15 +2427,15 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
         newMessage = cls(
             id=message.id,
-            answer=bool(message.answer),
+            answer=message.answer,
             opCode=message.opCode,
-            auth=bool(message.auth),
-            trunc=bool(message.trunc),
-            recDes=bool(message.recDes),
-            recAv=bool(message.recAv),
+            auth=message.auth,
+            trunc=message.trunc,
+            recDes=message.recDes,
+            recAv=message.recAv,
             rCode=message.rCode,
-            authenticData=bool(message.authenticData),
-            checkingDisabled=bool(message.checkingDisabled),
+            authenticData=message.authenticData,
+            checkingDisabled=message.checkingDisabled,
             # Default to None, it will be updated later when the OPT
             # records are parsed.
             ednsVersion=None,

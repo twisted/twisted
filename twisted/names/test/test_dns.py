@@ -2256,15 +2256,6 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         self.assertEqual(dns._OPTHeader(dnssecOK=True).dnssecOK, True)
 
 
-    def test_dnssecOKBooleanCoercion(self):
-        """
-        L{dns._OPTHeader.__init__} recasts the supplied C{dnssecOK} value
-        as L{bool}.
-        """
-        self.assertIdentical(dns._OPTHeader(dnssecOK=0).dnssecOK, False)
-        self.assertIdentical(dns._OPTHeader(dnssecOK=1).dnssecOK, True)
-
-
     def test_options(self):
         """
         L{dns._OPTHeader.options} defaults to empty list.
@@ -3212,35 +3203,9 @@ class MessageComparable(FancyEqMixin, FancyStrMixin, object):
 
 
 
-def assertTypeEqual(testCase, testVal, expectedVal, msg):
-    """
-    Assert that C{testVal} and C{expectedVal} are equal and have same
-    type.
-
-    @param testCase: The L{TestCase} whose assert methods will be
-        called.
-    @type testCase: L{unittest.TestCase}
-
-    @param expectedVal: The expected value.
-    @type expectedVal: Mixed
-
-    @param testVal: The value under test whose type is also expected
-        to be the same as C{expectedVal}
-    @type testVal: Mixed.
-
-    @param msg: A message to be printed if the assertion fails.
-    @type msg: L{str}
-    """
-    testCase.assertEqual(
-        (expectedVal, type(expectedVal)),
-        (testVal, type(testVal)), msg)
-
-
-
 def verifyConstructorArgument(testCase, cls,
                               argName, defaultVal, inputTests,
-                              invalidInputs=None, attrName=None,
-                              assertEqual=None):
+                              invalidInputs=None, attrName=None):
     """
     Verify that an attribute has the expected default value and that a
     corresponding argument passed to a constructor is assigned to that
@@ -3271,10 +3236,6 @@ def verifyConstructorArgument(testCase, cls,
     @param attrName: The name of the attribute under test if different
         from C{argName}. Defaults to C{argName}
     @type attrName: L{str}
-
-    @param assertEqual: The equality assertion function to
-        use. Defaults to C{testCase.assertEqual}.
-    @type assertEqual: L{callable}
     """
     if invalidInputs is None:
         invalidInputs = []
@@ -3282,13 +3243,10 @@ def verifyConstructorArgument(testCase, cls,
     if attrName is None:
         attrName = argName
 
-    if assertEqual is None:
-        assertEqual = testCase.assertEqual
-
     o = cls()
     actualVal = getattr(o, attrName)
 
-    assertEqual(
+    testCase.assertEqual(
         defaultVal, actualVal,
         '%s().%s has unexpected default value %r. Expected %r.' % (
             cls.__name__, attrName, actualVal, defaultVal))
@@ -3296,7 +3254,7 @@ def verifyConstructorArgument(testCase, cls,
     for argVal, expectedVal in inputTests:
         o = cls(**dict([(argName, argVal)]))
         actualVal = getattr(o, attrName)
-        assertEqual(
+        testCase.assertEqual(
             expectedVal, actualVal,
             '%s(%s=%r).%s gave unexpected value %r. Expected %r.' % (
                 cls.__name__, argName, argVal, attrName,
@@ -3333,23 +3291,15 @@ class ConstructorTestsMixin(object):
                                   inputTests=[(altVal, altVal)])
 
 
-    def _verifyConstructorFlag(self, argName, defaultVal,
-                               invalidInputs=None, assertEqual=None):
+    def _verifyConstructorFlag(self, argName, defaultVal, invalidInputs=None):
         """
         Wrap L{verifyConstructorArgument} to provide simpler interface for
         testing  _EDNSMessage constructor flags.
-
-        Tests the coercion to bool by using L{assertTypeEqual}.
-
-        Tests the assertion errors raised for non-bool flag arguments.
 
         @param argName: The name of the constructor flag argument
         @param defaultVal: The expected default value of the flag
         @param invalidInputs: A list of values which are expected to raise a
             validation exception.
-        @param assertEqual: The assertion function which will be used for
-            testing the value of the flag. Defaults to assertTypeEqual which
-            tests both the value and type of the value under test.
         """
         assert defaultVal in (True, False)
         inputTests = [
@@ -3358,14 +3308,10 @@ class ConstructorTestsMixin(object):
             (0, False),
             (1, True)]
 
-        if assertEqual is None:
-            assertEqual = partial(assertTypeEqual, self)
-
         verifyConstructorArgument(testCase=self, cls=self.messageFactory,
                                   argName=argName, defaultVal=defaultVal,
                                   inputTests=inputTests,
-                                  invalidInputs=invalidInputs,
-                                  assertEqual=assertEqual)
+                                  invalidInputs=invalidInputs)
 
 
 
@@ -3492,8 +3438,7 @@ class EDNSMessageTestsUsingMessage(EDNSMessageTests):
         so we disable those tests.
         """
         EDNSMessageTests._verifyConstructorFlag(
-            self, argName, defaultVal,
-            invalidInputs=[], assertEqual=self.assertEqual)
+            self, argName, defaultVal, invalidInputs=[])
 
 
 
