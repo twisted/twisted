@@ -4015,10 +4015,20 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
         ednsMessage = dns._EDNSMessage.fromMessage(standardMessage)
 
-        self.assertIsNot(ednsMessage.queries, standardMessage.queries)
-        self.assertIsNot(ednsMessage.answers, standardMessage.answers)
-        self.assertIsNot(ednsMessage.authority, standardMessage.authority)
-        self.assertIsNot(ednsMessage.additional, standardMessage.additional)
+        sectionLists = []
+        duplicates = []
+        for attribute_name in ('queries', 'answers', 'authority', 'additional'):
+            for m in (standardMessage, ednsMessage):
+                sectionListId = id(getattr(m, attribute_name))
+                if sectionListId in sectionLists:
+                    duplicates.append(attribute_name)
+                else:
+                    sectionLists.append(sectionListId)
+
+        if duplicates:
+            self.fail(
+                'Message and _EDNSMessage shared references to the following '
+                'section lists after decoding: %s' % (duplicates,))
 
 
     def test_toMessageCopiesSections(self):
