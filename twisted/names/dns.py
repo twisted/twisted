@@ -190,6 +190,7 @@ OP_UPDATE = 5 # RFC 2136
 
 # Response Codes
 OK, EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED = range(6)
+# https://tools.ietf.org/html/rfc6891#section-9
 EBADVERSION = 16
 
 class IRecord(Interface):
