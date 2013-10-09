@@ -3559,6 +3559,9 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
             def fromStr(self, *args, **kwargs):
                 """
                 Fake fromStr method which raises the arguments it was passed.
+
+                @param args: positional arguments
+                @param kwargs: keyword arguments
                 """
                 raise RaisedArgs(args, kwargs)
 
@@ -3579,7 +3582,15 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
         """
         m = dns._EDNSMessage()
         class FakeMessageFactory():
+            """
+            Fake message factory.
+            """
             def fromStr(self, bytes):
+                """
+                A noop fake version of fromStr
+
+                @param bytes: the bytes to be decoded
+                """
                 pass
         fakeMessage = FakeMessageFactory()
         m._messageFactory = lambda: fakeMessage
@@ -4089,11 +4100,11 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
         sectionLists = []
         duplicates = []
-        for attribute_name in ('queries', 'answers', 'authority', 'additional'):
+        for attrName in ('queries', 'answers', 'authority', 'additional'):
             for m in (standardMessage, ednsMessage):
-                sectionListId = id(getattr(m, attribute_name))
+                sectionListId = id(getattr(m, attrName))
                 if sectionListId in sectionLists:
-                    duplicates.append(attribute_name)
+                    duplicates.append(attrName)
                 else:
                     sectionLists.append(sectionListId)
 
