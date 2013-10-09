@@ -48,6 +48,7 @@ __all__ = [
     "LogLevelFilterPredicate",
     "FileLogObserver",
     "PythonLogObserver",
+    "RingBufferLogObserver",
     "LegacyLogObserverWrapper",
 ]
 
