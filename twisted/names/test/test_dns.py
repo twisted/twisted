@@ -4038,21 +4038,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         containing multiple I{OPT} records will discard all the C{OPT}
         records.
 
-        L{dns.EFORMAT} will be appended to C{_decodingErrors} list so
-        that a server responding to this message can respond with the
-        C{rCode = dns.EFORMAT}.
-
         C{ednsVersion} will be set to C{None}.
-
-        "If a query message with more than one
-        OPT RR is received, a FORMERR (RCODE=1) MUST be returned."
-
-        RFC6891 does not say whether any OPT records should be
-        included in the response.
-
-        Querying ISC.ORG Bind servers with a multi OPT message,
-        results in a response message without any OPT records so lets
-        copy that behaviour.
 
         @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.1}
         """
@@ -4063,7 +4049,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
         ednsMessage = dns._EDNSMessage()
         ednsMessage.fromStr(m.toStr())
-        self.assertEqual(ednsMessage._decodingErrors, [dns.EFORMAT])
+
         self.assertEqual(ednsMessage.ednsVersion, None)
 
 

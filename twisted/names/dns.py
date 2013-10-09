@@ -2446,15 +2446,14 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             additional=additional,
             )
 
-        if optRecords:
-            if len(optRecords) > 1:
-                newMessage._decodingErrors.append(EFORMAT)
-            else:
-                opt = optRecords[0]
-                newMessage.ednsVersion = opt.version
-                newMessage.dnssecOK = opt.dnssecOK
-                newMessage.maxSize = opt.udpPayloadSize
-                newMessage.rCode = opt.extendedRCODE << 4 | message.rCode
+        if len(optRecords) == 1:
+            # XXX: If multiple OPT records are received, an EDNS server should
+            # respond with FORMERR. See ticket:5669#comment:1.
+            opt = optRecords[0]
+            newMessage.ednsVersion = opt.version
+            newMessage.dnssecOK = opt.dnssecOK
+            newMessage.maxSize = opt.udpPayloadSize
+            newMessage.rCode = opt.extendedRCODE << 4 | message.rCode
 
         return newMessage
 
