@@ -3922,11 +3922,7 @@ class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
 
 class MessageStandardEncodingTests(EDNSMessageStandardEncodingTests):
     """
-    Tests for the encoding and decoding of various standard (not EDNS)
-    messages.
-
-    These tests should work with both L{dns._EDNSMessage} and
-    L{dns.Message}.
+    Repeat the L{EDNSMessageStandardEncodingTests} using for L{dns.Message}.
     """
 
     @staticmethod
