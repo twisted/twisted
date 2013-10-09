@@ -3401,13 +3401,6 @@ class EDNSMessageTestsUsingMessage(EDNSMessageTests):
     """
     messageFactory = dns.Message
 
-    def _verifyConstructorFlag(self, argName, defaultVal):
-        """
-        dns.Message doesn't do any input coercion or validation of flags
-        so we disable those tests.
-        """
-        EDNSMessageTests._verifyConstructorFlag(self, argName, defaultVal)
-
 
 
 class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
