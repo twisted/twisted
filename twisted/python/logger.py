@@ -95,23 +95,23 @@ class InvalidLogLevelError(Exception):
 
 class LogLevel(Names):
     """
-    Constants denoting log levels:
+    Constants describing log levels.
 
-     - C{debug}: Information of use to a developer of the software, not
-       generally of interest to someone running the software unless they are
-       attempting to diagnose a software issue.
+    @cvar debug: Information of use to a developer of the software, not
+        generally of interest to someone running the software unless they are
+        attempting to diagnose a software issue.
 
-     - C{info}: Informational events: Routine information about the status of
-       an application, such as incoming connections, startup of a subsystem,
-       etc.
+    @cvar info: Informational events: Routine information about the status of
+        an application, such as incoming connections, startup of a subsystem,
+        etc.
 
-     - C{warn}: Warnings events: Events that may require greater attention than
-       informational events but are not a systemic failure condition, such as
-       authorization failures, bad data from a network client, etc.
+    @cvar warn: Warnings events: Events that may require greater attention than
+        informational events but are not a systemic failure condition, such as
+        authorization failures, bad data from a network client, etc.
 
-     - C{error}: Error conditions: Events indicating a systemic failure, such
-       as unhandled exceptions, loss of connectivity to a back-end database,
-       etc.
+    @cvar error: Error conditions: Events indicating a systemic failure, such
+        as unhandled exceptions, loss of connectivity to a back-end database,
+        etc.
     """
     debug = NamedConstant()
     info  = NamedConstant()
