@@ -12,7 +12,7 @@ from os import environ
 from cStringIO import StringIO
 from time import mktime
 import logging as py_logging
-from inspect import currentframe
+from inspect import currentframe, getsourcefile
 
 try:
     from time import tzset
@@ -1387,7 +1387,11 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
         """
         pl = self.py_logger()
         try:
-            observer = PythonLogObserver()
+            observer = PythonLogObserver(
+                # Add 1 to default stack depth to skip *this* frame, since
+                # tests will want to know about their own frames.
+                stackDepth=PythonLogObserver.defaultStackDepth + 1
+            )
             for event in events:
                 observer(event)
             return pl.bufferedHandler.records, pl.output.getvalue()
@@ -1446,11 +1450,13 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
         C{pathname}, C{lineno}, C{exc_info}, C{func} should
         be set properly on records.
         """
+        logLine = currentframe().f_lineno + 1
         records, output = self.logEvent({})
 
         self.assertEquals(len(records), 1)
-        self.assertEquals(records[0].pathname, __file__)
-        self.assertEquals(records[0].lineno, currentframe().f_lineno)
+        self.assertEquals(records[0].pathname,
+                          getsourcefile(sys.modules[__name__]))
+        self.assertEquals(records[0].lineno, logLine)
         self.assertEquals(records[0].exc_info, None)
 
         # func is missing from record, which is weird because it's
@@ -1459,9 +1465,6 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
 
     # This isn't a regression from twisted.python.log; it just wasn't
     # tested there.
-    test_callerInfo.todo = (
-        "Caller frame is always be PythonLogObserver.__call__(). Meh."
-    )
 
 
     def test_basic_format(self):

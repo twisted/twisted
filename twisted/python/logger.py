@@ -856,21 +856,47 @@ class FileLogObserver(object):
 @implementer(ILogObserver)
 class PythonLogObserver(object):
     """
-    Log observer that writes to the python standard library's
-    L{logging} module.
+    Log observer that writes to the python standard library's L{logging}
+    module.
 
-    WARNING: specific logging configurations (example: network) can
-    lead to a blocking system. Nothing is done here to prevent that,
-    so be sure to not use this: code within Twisted, such as
-    twisted.web, assumes that logging does not block.
+    @warning: specific logging configurations (example: network) can lead to
+        this observer blocking.  Nothing is done here to prevent that, so be
+        sure to not to configure the standard library logging module to block
+        when used in conjunction with this module: code within Twisted, such as
+        twisted.web, assumes that logging does not block.
+
+    @cvar defaultStackDepth: This is the default number of frames that it takes
+        to get from L{PythonLogObserver} through the logging module, plus one;
+        in other words, the number of frames if you were to call a
+        L{PythonLogObserver} directly.  This is useful to use as an offset for
+        the C{stackDepth} parameter to C{__init__}, to add frames for other
+        publishers.
     """
 
-    def __init__(self, name="twisted"):
+    defaultStackDepth = 4
+
+    def __init__(self, name="twisted", stackDepth=defaultStackDepth):
         """
         @param loggerName: logger identifier.
         @type loggerName: C{str}
+
+        @param stackDepth: The depth of the stack to investigate for caller
+            metadata.
+        @type stackDepth: L{int}
         """
         self.logger = py_logging.getLogger(name)
+        self.logger.findCaller = self._findCaller
+        self.stackDepth = stackDepth
+
+
+    def _findCaller(self):
+        """
+        Based on the stack depth passed to this L{PythonLogObserver}, identify
+        the calling function.
+        """
+        f = currentframe(self.stackDepth)
+        co = f.f_code
+        return (co.co_filename, f.f_lineno, co.co_name)
 
 
     def __call__(self, event):
