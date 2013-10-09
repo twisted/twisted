@@ -913,7 +913,7 @@ class PythonLogObserver(object):
 class RingBufferLogObserver(object):
     """
     L{ILogObserver} that stores events in a ring buffer of a fixed
-    size:
+    size::
 
         >>> from twisted.python.logger import RingBufferLogObserver
         >>> observer = RingBufferLogObserver(5)
