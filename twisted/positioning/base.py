@@ -242,7 +242,7 @@ class Angle(object, FancyEqMixin):
         @return: The string representation.
         @rtype: C{str}
         """
-        return "<%s (%s)>" % (self._angleTypeNameRepr, self._angleValueRepr)
+        return "<{s._angleTypeNameRepr} ({s._angleValueRepr})>".format(s=self)
 
 
     @property
