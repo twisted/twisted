@@ -182,6 +182,9 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self._tempDataBuffer = [] # will be added to dataBuffer in doWrite
         self._tempDataLen = 0
 
+        self._isReading = False
+        self._isWriting = False
+
 
     def connectionLost(self, reason):
         """The connection was lost.

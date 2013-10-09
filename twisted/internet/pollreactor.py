@@ -56,7 +56,7 @@ class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         posixbase.PosixReactorBase.__init__(self)
 
 
-    def _updateRegistration(self, fd):
+    def _updateRegistration(self, fdesc, fd):
         """Register/unregister an fd with the poller."""
         try:
             self._poller.unregister(fd)
@@ -64,9 +64,9 @@ class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             pass
 
         mask = 0
-        if fd._isReading:
+        if fdesc._isReading:
             mask |= POLLIN
-        if fd._isWriting:
+        if fdesc._isWriting:
             mask |= POLLOUT
         if mask != 0:
             self._poller.register(fd, mask)
@@ -81,7 +81,7 @@ class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         if not reader._isReading:
             self._selectables[fd] = reader
             reader._isReading = True
-            self._updateRegistration(fd)
+            self._updateRegistration(reader, fd)
 
     def addWriter(self, writer):
         """Add a FileDescriptor for notification of data available to write.
@@ -90,23 +90,25 @@ class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         if not writer._isWriting:
             self._selectables[fd] = writer
             writer._isWriting = True
-            self._updateRegistration(fd)
+            self._updateRegistration(writer, fd)
 
 
     def removeReader(self, reader):
         """Remove a Selectable for notification of data available to read.
         """
+        fd = reader.fileno()
         if reader._isReading:
             reader._isReading = False
-            self._updateRegistration(reader)
+            self._updateRegistration(reader, fd)
 
 
     def removeWriter(self, writer):
         """Remove a Selectable for notification of data available to write.
         """
+        fd = writer.fileno()
         if writer._isWriting:
             writer._isWriting = False
-            self._updateRegistration(writer)
+            self._updateRegistration(writer, fd)
 
     def removeAll(self):
         """

@@ -146,15 +146,22 @@ class KQueueReactor(posixbase.PosixReactorBase):
             fd = reader.fileno()
         except:
             fd = -1
+
+        if fd == -1:
+            for fd, fdes in self._selectables.items():
+                if reader is fdes:
+                    break
+            else:
+                return
+
         if reader._isReading:
             reader._isReading = False
-            if reader._isWriting:
+            if not reader._isWriting:
                 del self._selectables[fd]
-            if fd != -1:
-                try:
-                    self._updateRegistration(fd, KQ_FILTER_READ, KQ_EV_DELETE)
-                except OSError:
-                    pass
+            try:
+                self._updateRegistration(fd, KQ_FILTER_READ, KQ_EV_DELETE)
+            except OSError:
+                pass
 
 
     def removeWriter(self, writer):
@@ -166,15 +173,21 @@ class KQueueReactor(posixbase.PosixReactorBase):
         except:
             fd = -1
 
+        if fd == -1:
+            for fd, fdes in self._selectables.items():
+                if writer is fdes:
+                    break
+            else:
+                return
+
         if writer._isWriting:
             writer._isWriting = False
             if not writer._isReading:
                 del self._selectables[fd]
-            if fd != -1:
-                try:
-                    self._updateRegistration(fd, KQ_FILTER_WRITE, KQ_EV_DELETE)
-                except OSError:
-                    pass
+            try:
+                self._updateRegistration(fd, KQ_FILTER_WRITE, KQ_EV_DELETE)
+            except OSError:
+                pass
 
 
     def removeAll(self):

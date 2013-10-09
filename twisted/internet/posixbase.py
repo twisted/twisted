@@ -142,6 +142,9 @@ class _FDWaker(log.Logger, object):
         fdesc._setCloseOnExec(self.o)
         self.fileno = lambda: self.i
 
+        self._isReading = False
+        self._isWriting = False
+
 
     def doRead(self):
         """
@@ -201,9 +204,6 @@ class _SIGCHLDWaker(_FDWaker):
 
     @see: L{twisted.internet._signals}
     """
-    def __init__(self, reactor):
-        _FDWaker.__init__(self, reactor)
-
 
     def install(self):
         """
