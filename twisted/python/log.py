@@ -225,26 +225,61 @@ class LogPublisher:
         if file is None:
             self.msg(warning=message, category=reflect.qual(category),
                      filename=filename, lineno=lineno,
-                     format="%(filename)s:%(lineno)s: %(category)s: %(warning)s")
+                     format="%(filename)s:%(lineno)s: %(category)s: "
+                     "%(warning)s")
         else:
             if sys.version_info < (2, 6):
                 _oldshowwarning(message, category, filename, lineno, file)
             else:
-                _oldshowwarning(message, category, filename, lineno, file, line)
+                _oldshowwarning(message, category, filename, lineno, file,
+                                line)
 
 
 synchronize(LogPublisher)
 
 
 
-try:
-    theLogPublisher
-except NameError:
+if 'theLogPublisher' not in globals():
+    def _actually(something):
+        def decorate(thingWithADocstring):
+            return something
+        return decorate
     theLogPublisher = LogPublisher()
-    addObserver = theLogPublisher.addObserver
-    removeObserver = theLogPublisher.removeObserver
-    msg = theLogPublisher.msg
-    showwarning = theLogPublisher.showwarning
+
+    @_actually(theLogPublisher.addObserver)
+    def addObserver(observer):
+        """
+        Add a log observer to the global publisher.
+
+        @see: L{LogPublisher.addObserver}
+        """
+
+
+    @_actually(theLogPublisher.removeObserver)
+    def removeObserver(observer):
+        """
+        Remove a log observer from the global publisher.
+
+        @see: L{LogPublisher.removeObserver}
+        """
+
+
+    @_actually(theLogPublisher.msg)
+    def msg(*message, **event):
+        """
+        Publish a message to the global log publisher.
+
+        @see: L{LogPublisher.msg}
+        """
+
+
+    @_actually(theLogPublisher.showwarning)
+    def showwarning():
+        """
+        Publish a Python warning through the global log publisher.
+
+        @see: L{LogPublisher.showwarning}
+        """
 
 
 
