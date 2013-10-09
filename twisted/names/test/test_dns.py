@@ -3223,7 +3223,7 @@ def verifyConstructorArgument(testCase, cls,
 
     @param defaultVal: The expected default value of C{attrName} /
         C{argName}
-    @type defaultlVal: Mixed
+    @type defaultlVal: L{object}
 
     @param inputTests: A list of 2tuple(validArgumentValue,
         expectedAttributeValue)
