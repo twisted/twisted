@@ -105,13 +105,21 @@ class LogLevel(Names):
         an application, such as incoming connections, startup of a subsystem,
         etc.
 
-    @cvar warn: Warnings events: Events that may require greater attention than
+    @cvar warn: Warning events: Events that may require greater attention than
         informational events but are not a systemic failure condition, such as
-        authorization failures, bad data from a network client, etc.
+        authorization failures, bad data from a network client, etc.  Such
+        events are of potential interest to system administrators, and should
+        ideally be phrased in such a way, or documented, so as to indicate an
+        action that an administrator might take to mitigate the warning.
 
     @cvar error: Error conditions: Events indicating a systemic failure, such
-        as unhandled exceptions, loss of connectivity to a back-end database,
-        etc.
+        as programming errors in the form of unhandled exceptions, loss of
+        connectivity to an external system without which no useful work can
+        proceed, such as a database or API endpoint, or resource exhaustion.
+        Similarly to warnings, errors that are related to operational
+        parameters may be actionable to system administrators and should
+        provide references to resources which an administrator might use to
+        resolve them.
     """
     debug = NamedConstant()
     info  = NamedConstant()
