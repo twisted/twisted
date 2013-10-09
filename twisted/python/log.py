@@ -79,6 +79,8 @@ def callWithContext(ctx, func, *args, **kw):
     newCtx.update(ctx)
     return context.call({ILogContext: newCtx}, func, *args, **kw)
 
+
+
 def callWithLogger(logger, func, *args, **kw):
     """
     Utility method which wraps a function in a try:/except:, logs a failure if
@@ -300,13 +302,17 @@ def _safeFormat(fmtString, fmtDict):
         raise
     except:
         try:
-            text = ('Invalid format string or unformattable object in log message: %r, %s' % (fmtString, fmtDict))
+            text = ('Invalid format string or unformattable object in '
+                    'log message: %r, %s' % (fmtString, fmtDict))
         except:
             try:
-                text = 'UNFORMATTABLE OBJECT WRITTEN TO LOG with fmt %r, MESSAGE LOST' % (fmtString,)
+                text = ('UNFORMATTABLE OBJECT WRITTEN TO LOG with fmt %r, '
+                        'MESSAGE LOST' % (fmtString,))
             except:
-                text = 'PATHOLOGICAL ERROR IN BOTH FORMAT STRING AND MESSAGE DETAILS, MESSAGE LOST'
+                text = ('PATHOLOGICAL ERROR IN BOTH FORMAT STRING AND '
+                        'MESSAGE DETAILS, MESSAGE LOST')
     return text
+
 
 
 def textFromEventDict(eventDict):
@@ -342,18 +348,25 @@ def textFromEventDict(eventDict):
     return text
 
 
+
 class StartStopMixIn:
+    """
+    Mix-in for global log observers that can start and stop.
+    """
+
     def start(self):
         """
         Start observing log events.
         """
         addObserver(self.emit)
 
+
     def stop(self):
         """
         Stop observing log events.
         """
         removeObserver(self.emit)
+
 
 
 class FileLogObserver(NewFileLogObserver, StartStopMixIn):
@@ -423,6 +436,7 @@ class FileLogObserver(NewFileLogObserver, StartStopMixIn):
         publishToNewObserver(self, eventDict)
 
 
+
 class PythonLoggingObserver(NewPythonLogObserver, StartStopMixIn):
     """
     Output twisted messages to Python standard library L{logging} module.
@@ -439,6 +453,7 @@ class PythonLoggingObserver(NewPythonLogObserver, StartStopMixIn):
         @type loggerName: C{str}
         """
         NewPythonLogObserver.__init__(self, loggerName)
+
 
     def emit(self, eventDict):
         """
@@ -476,15 +491,19 @@ class StdioOnnaStick:
             encoding = sys.getdefaultencoding()
         self.encoding = encoding
         self.buf = ''
-  
+
+
     def close(self):
         pass
+
 
     def fileno(self):
         return -1
 
+
     def flush(self):
         pass
+
 
     def read(self):
         raise IOError("can't read from the log!")
@@ -493,6 +512,7 @@ class StdioOnnaStick:
     readlines = read
     seek = read
     tell = read
+
 
     def write(self, data):
         if not _PY3 and isinstance(data, unicode):
@@ -503,6 +523,7 @@ class StdioOnnaStick:
         for message in messages:
             msg(message, printed=1, isError=self.isError)
 
+
     def writelines(self, lines):
         for line in lines:
             if not _PY3 and isinstance(line, unicode):
@@ -510,10 +531,9 @@ class StdioOnnaStick:
             msg(line, printed=1, isError=self.isError)
 
 
-try:
-    _oldshowwarning
-except NameError:
+if '_oldshowwarning' not in globals():
     _oldshowwarning = None
+
 
 
 def startLogging(file, *a, **kw):
@@ -550,12 +570,28 @@ def startLoggingWithObserver(observer, setStdout=1):
         sys.stderr = logerr
 
 
+
 class NullFile:
+    """
+    A file-like object that discards everything.
+    """
     softspace = 0
-    def read(self): pass
-    def write(self, bytes): pass
-    def flush(self): pass
-    def close(self): pass
+
+    def read(self):
+        "Do nothing."
+
+
+    def write(self, bytes):
+        "Do nothing."
+
+
+    def flush(self):
+        "Do nothing."
+
+
+    def close(self):
+        "Do nothing."
+
 
 
 def discardLogs():
@@ -567,11 +603,11 @@ def discardLogs():
 
 
 # Prevent logfile from being erased on reload.  This only works in cpython.
-try:
-    logfile
-except NameError:
-    logfile = LoggingFile(level=NewLogLevel.info, encoding=getattr(sys.stdout, "encoding", None))
-    logerr = LoggingFile(level=NewLogLevel.error, encoding=getattr(sys.stderr, "encoding", None))
+if 'logfile' not in globals():
+    logfile = LoggingFile(level=NewLogLevel.info,
+                          encoding=getattr(sys.stdout, "encoding", None))
+    logerr = LoggingFile(level=NewLogLevel.error,
+                         encoding=getattr(sys.stderr, "encoding", None))
 
 
 
@@ -597,9 +633,7 @@ class DefaultObserver(StartStopMixIn):
 
 
 
-try:
-    defaultObserver
-except NameError:
+if 'defaultObserver' not in globals():
     defaultObserver = DefaultObserver()
     defaultObserver.start()
 

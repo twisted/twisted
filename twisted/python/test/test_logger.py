@@ -1103,6 +1103,7 @@ class FilteringLogObserverTests(SetUpTearDown, unittest.TestCase):
         publisher(event)
 
 
+
 class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
     """
     Tests for L{FileLogObserver}.
@@ -1116,6 +1117,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         """
         return b" ".join((timeStamp, system, text)) + "\n"
 
+
     def buildDefaultOutput(self, text):
         """
         Build an expected output string with the default time stamp
@@ -1126,6 +1128,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
             self.DEFAULT_SYSTEM,
             text
         )
+
 
     def test_interface(self):
         """
