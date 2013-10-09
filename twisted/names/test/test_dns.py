@@ -3203,8 +3203,8 @@ class MessageComparable(FancyEqMixin, FancyStrMixin, object):
 
 
 
-def verifyConstructorArgument(testCase, cls,
-                              argName, defaultVal, inputTests, attrName=None):
+def verifyConstructorArgument(testCase, cls, argName, defaultVal, altVal,
+                              attrName=None):
     """
     Verify that an attribute has the expected default value and that a
     corresponding argument passed to a constructor is assigned to that
@@ -3222,11 +3222,12 @@ def verifyConstructorArgument(testCase, cls,
 
     @param defaultVal: The expected default value of C{attrName} /
         C{argName}
-    @type defaultlVal: L{object}
+    @type defaultVal: L{object}
 
-    @param inputTests: A list of 2tuple(validArgumentValue,
-        expectedAttributeValue)
-    @type inputTests: L{list}
+    @param altVal: A value which is different from the default. Used to
+        test that supplied constructor arguments are actually assigned to the
+        correct attribute.
+    @type altVal: L{object}
 
     @param attrName: The name of the attribute under test if different
         from C{argName}. Defaults to C{argName}
@@ -3235,22 +3236,16 @@ def verifyConstructorArgument(testCase, cls,
     if attrName is None:
         attrName = argName
 
+    actual = {}
+    expected = {'defaultVal': defaultVal, 'altVal': altVal}
+
     o = cls()
-    actualVal = getattr(o, attrName)
+    actual['defaultVal'] = getattr(o, attrName)
 
-    testCase.assertEqual(
-        defaultVal, actualVal,
-        '%s().%s has unexpected default value %r. Expected %r.' % (
-            cls.__name__, attrName, actualVal, defaultVal))
+    o = cls(**{argName: altVal})
+    actual['altVal'] = getattr(o, attrName)
 
-    for argVal, expectedVal in inputTests:
-        o = cls(**dict([(argName, argVal)]))
-        actualVal = getattr(o, attrName)
-        testCase.assertEqual(
-            expectedVal, actualVal,
-            '%s(%s=%r).%s gave unexpected value %r. Expected %r.' % (
-                cls.__name__, argName, argVal, attrName,
-                actualVal, expectedVal))
+    testCase.assertEqual(expected, actual)
 
 
 
@@ -3271,7 +3266,7 @@ class ConstructorTestsMixin(object):
         """
         verifyConstructorArgument(testCase=self, cls=self.messageFactory,
                                   argName=argName, defaultVal=defaultVal,
-                                  inputTests=[(altVal, altVal)])
+                                  altVal=altVal)
 
 
     def _verifyConstructorFlag(self, argName, defaultVal):
@@ -3283,15 +3278,9 @@ class ConstructorTestsMixin(object):
         @param defaultVal: The expected default value of the flag
         """
         assert defaultVal in (True, False)
-        inputTests = [
-            (False, False),
-            (True, True),
-            (0, False),
-            (1, True)]
-
         verifyConstructorArgument(testCase=self, cls=self.messageFactory,
                                   argName=argName, defaultVal=defaultVal,
-                                  inputTests=inputTests,)
+                                  altVal=not defaultVal,)
 
 
 
