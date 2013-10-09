@@ -1003,6 +1003,14 @@ class LoggingFile(object):
     Note that because event formats are C{unicode}, C{bytes} received via
     C{write()} are converted to C{unicode}, which is the opposite of what
     C{file} does.
+
+    @cvar defaultLogger: The default L{Logger} instance to use when none is
+        supplied to L{LoggingFile.__init__}.
+    @type defaultLogger: L{Logger}
+
+    @ivar softspace: File-like L{'softspace' attribute <file.softspace>}; 0 or
+        1.
+    @type softspace: C{int}
     """
 
     defaultLogger = Logger()
