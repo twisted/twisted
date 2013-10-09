@@ -2338,8 +2338,6 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             additional = []
         self.additional = additional
 
-        self._decodingErrors = []
-
 
     def toMessage(self):
         """
@@ -2405,11 +2403,6 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
         The C{extendedRCODE} will be combined with C{message.rCode}
         and assigned to C{self.rCode}.
-
-        If multiple I{OPT} records are found, this is considered an
-        error and no I{EDNS} specific attributes will be
-        set. Additionally, an L{EFORMAT} error will be appended to
-        C{_decodingErrors}.
 
         @param message: The source L{Message}.
         @type message: L{Message}

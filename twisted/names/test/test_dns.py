@@ -4051,15 +4051,31 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
         @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.1}
         """
+        # XXX: We need an _OPTHeader.toRRHeader method. See #6779.
+        b = BytesIO()
+        optRecord = dns._OPTHeader(version=1)
+        optRecord.encode(b)
+        optRRHeader = dns.RRHeader()
+        b.seek(0)
+        optRRHeader.decode(b)
         m = dns.Message()
-        m.additional = [dns.RRHeader(type=dns.OPT)]
-        self.assertEqual(dns._EDNSMessage.fromMessage(m)._decodingErrors, [])
+        m.additional = [optRRHeader]
+
+        actualMessages = []
+        actualMessages.append(dns._EDNSMessage.fromMessage(m).ednsVersion)
 
         m.additional.append(dns.RRHeader(type=dns.A))
-        self.assertEqual(dns._EDNSMessage.fromMessage(m)._decodingErrors, [])
+        actualMessages.append(
+            dns._EDNSMessage.fromMessage(m).ednsVersion)
 
         m.additional.insert(0, dns.RRHeader(type=dns.A))
-        self.assertEqual(dns._EDNSMessage.fromMessage(m)._decodingErrors, [])
+        actualMessages.append(
+            dns._EDNSMessage.fromMessage(m).ednsVersion)
+
+        self.assertEqual(
+            [1] * 3,
+            actualMessages
+        )
 
 
     def test_ednsDecode(self):
