@@ -64,7 +64,7 @@ from collections import deque
 
 from zope.interface import Interface, implementer
 from twisted.python.constants import NamedConstant, Names
-from twisted.python.util import untilConcludes, OrderedDict
+from twisted.python.util import untilConcludes
 from twisted.python.failure import Failure
 from twisted.python.reflect import safe_str, safe_repr
 
