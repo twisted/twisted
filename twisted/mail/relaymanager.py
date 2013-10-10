@@ -5,15 +5,10 @@
 """
 Infrastructure for relaying mail through a smart host.
 
-Today, internet e-mail has stopped being peer-to-peer for many problems, spam
-(unsolicited bulk mail) among them. Instead, most nodes on the internet send
-all e-mail to a single computer, usually the ISP's, although sometimes other
-schemes, such as SMTP-after-POP, are used. This computer is supposedly
-permanently up and traceable, and will do the work of finding mail exchange
-hosts (MXs) and connecting to them. This kind of configuration is usually
-termed "smart host", since the host we are connecting to is "smart" and will
-find MXs and connect to them rather then just accepting mail for a small set of
-domains.
+Traditional peer-to-peer email has been increasingly replaced by smart host
+configurations.  Instead of sending mail directly to the recipient, a sender
+sends mail to a smart host.  The smart host finds the mail exchange server for
+the recipient and sends on the message.
 """
 
 import rfc822
@@ -288,7 +283,7 @@ class Queue:
 
     @type noisy: L{bool}
     @ivar noisy: A flag which determines whether informational log messages
-        will be generated (L{True}) or not (L{False}).
+        will be generated (C{True}) or not (C{False}).
     """
     noisy = True
 
@@ -363,7 +358,7 @@ class Queue:
         relayed.
 
         @rtype: L{bool}
-        @return: L{True} if messages are waiting to be relayed.  L{False}
+        @return: C{True} if messages are waiting to be relayed.  C{False}
             otherwise.
         """
         return len(self.waiting) > 0
@@ -435,6 +430,9 @@ class Queue:
 
         @type message: L{bytes}
         @param message: The base filename of a message.
+
+        @rtype: L{bytes}
+        @return: The full base pathname of the message. 
         """
         return os.path.join(self.directory, message)
 
@@ -633,7 +631,8 @@ class SmartHostSMTPRelayingManager:
         """
         Initialize a smart host.
 
-        The default values are meant for a small box with 1-5 users.
+        The default values specify connection limits appropriate for a smart 
+        host with 1-5 users.
 
         @type queue: L{Queue}
         @param queue: A relay queue.
@@ -865,8 +864,8 @@ class MXCalculator:
 
     @type fallbackToDomain: L{bool}
     @ivar fallbackToDomain: A flag indicating whether to attempt to use the
-        hostname directly when no mail exchange can be found (L{True}) or
-        not (L{False}).
+        hostname directly when no mail exchange can be found (C{True}) or
+        not (C{False}).
     """
     timeOutBadMX = 60 * 60 # One hour
     fallbackToDomain = True
