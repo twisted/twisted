@@ -262,8 +262,7 @@ class LoggingTests(SetUpTearDown, unittest.TestCase):
         event = dict(foo=1, bar=2)
         result = formatEvent(event)
 
-        self.assertIn("Unable to format event", result)
-        self.assertIn(repr(event), result)
+        self.assertEquals(u"", result)
 
 
     def test_formatEventWeirdFormat(self):
@@ -1490,10 +1489,7 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
         records, output = self.logEvent({})
 
         self.assertEquals(len(records), 1)
-        self.assertEquals(
-            str(records[0].msg),
-            "Unable to format event {}: No log format provided"
-        )
+        self.assertEquals(str(records[0].msg), "")
 
 
 
