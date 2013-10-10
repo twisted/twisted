@@ -480,10 +480,10 @@ class PythonLoggingObserver(NewPythonLogObserver, StartStopMixIn):
         By default the logging level used is info; log.err produces error
         level, and you can customize the level by using the C{logLevel} key::
 
-        >>> log.msg('debugging', logLevel=logging.DEBUG)
-
+            >>> log.msg('debugging', logLevel=logging.DEBUG)
         """
-        publishToNewObserver(self, eventDict)
+        if 'log_format' in eventDict:
+            publishToNewObserver(self, eventDict)
 
 
 
