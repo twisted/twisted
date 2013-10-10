@@ -631,7 +631,7 @@ class SmartHostSMTPRelayingManager:
         """
         Initialize a smart host.
 
-        The default values specify connection limits appropriate for a smart 
+        The default values specify connection limits appropriate for a smart
         host with 1-5 users.
 
         @type queue: L{Queue}
