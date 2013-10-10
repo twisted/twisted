@@ -202,7 +202,7 @@ def formatEvent(event):
         format = event.get("log_format", None)
 
         if format is None:
-            raise ValueError("No log format provided")
+            return u''
 
         # Make sure format is unicode.
         if isinstance(format, bytes):
