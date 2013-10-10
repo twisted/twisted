@@ -389,6 +389,15 @@ class Logger(object):
             d.addErrback(lambda f: log.failure, "While frobbing {knob}",
                          f, knob=knob)
 
+        This method is generally meant to capture unexpected exceptions in
+        code; an exception that is caught and handled somehow should be logged,
+        if appropriate, via L{Logger.error()} instead.  If some unknown
+        exception occurs and your code doesn't know how to handle it, as in the
+        above example, then this method provides a means to describe the
+        failure in nerd-speak.  This is done at L{LogLevel.critical} by
+        default, since no corrective guidance can be offered to an
+        user/administrator, and the impact of the condition is unknown.
+
         @param format: a message format using new-style (PEP 3101)
             formatting.  The logging event (which is a L{dict}) is
             used to render this format string.
