@@ -146,6 +146,14 @@ class Foo(object):
         In the second example, calling <code class="python">self.log.error</code> would use a value of <code class="API" base="twisted.python.logger">LogLevel.error</code>.
     </p>
 
+    <p>
+        The above descriptions are simply guidance, but it is worth noting that log levels have a reduced value if they are used inconsistantly.
+        If one module in an application considers a message informational, and another module considers a similar message an error, then filtering based on log levels becomes harder.
+        This is increasingly likely if the modules in question are developed by different parties, as will often be the case with externally source libraries and frameworks.
+        (If a module tends to use higher levels than another, namespaces may be used to calibrate the relative use of log levels, but that is obviously suboptimal.)
+        Sticking to the above guidelines will hopefully help here.
+    </p>
+
     <h3>Emit method signatures</h3>
 
     <p>
