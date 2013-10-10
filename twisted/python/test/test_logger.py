@@ -1459,9 +1459,6 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
         # documented.
         #self.assertEquals(records[0].func, "test_callerInfo")
 
-    # This isn't a regression from twisted.python.log; it just wasn't
-    # tested there.
-
 
     def test_basic_format(self):
         """
