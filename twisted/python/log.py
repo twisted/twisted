@@ -214,11 +214,11 @@ class LogPublisher:
         Unicode on Python 3. For compatibility with both use the native string
         syntax, for example::
 
-        >>> log.msg('Hello, world.')
+            >>> log.msg('Hello, world.')
 
         You MUST avoid passing in Unicode on Python 2, and the form::
 
-        >>> log.msg('Hello ', 'world.')
+            >>> log.msg('Hello ', 'world.')
 
         This form only works (sometimes) by accident.
         """
