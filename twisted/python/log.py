@@ -362,7 +362,7 @@ def textFromEventDict(eventDict):
             text = _safeFormat(eventDict['format'], eventDict)
         else:
             # we don't know how to log this
-            return
+            return None
     else:
         text = ' '.join(map(reflect.safe_str, edm))
     return text
