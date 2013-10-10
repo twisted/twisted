@@ -372,7 +372,7 @@ class Logger(object):
         self.publisher(event)
 
 
-    def failure(self, format, failure=None, level=LogLevel.error, **kwargs):
+    def failure(self, format, failure=None, level=LogLevel.critical, **kwargs):
         """
         Log an failure and emit a traceback.
 

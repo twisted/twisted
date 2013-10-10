@@ -425,7 +425,7 @@ class LoggerTests(SetUpTearDown, unittest.TestCase):
         errors = self.flushLoggedErrors(RuntimeError)
         self.assertEquals(len(errors), 1)
 
-        self.assertEquals(log.emitted["level"], LogLevel.error)
+        self.assertEquals(log.emitted["level"], LogLevel.critical)
         self.assertEquals(log.emitted["format"], "Whoops")
 
 
