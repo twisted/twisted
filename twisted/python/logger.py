@@ -835,12 +835,11 @@ class FileLogObserver(object):
         """
         Write event to file.
         """
-        eventText = formatEvent(event).encode(self.encoding)
-        eventText = eventText.replace(b"\n", b"\n\t")
-
+        eventText = formatEvent(event)
         if not eventText:
             return
-
+        eventBytes = eventText.encode(self.encoding)
+        eventBytes = eventBytes.replace(b"\n", b"\n\t")
         timeStamp = self.formatTime(event.get("log_time", None))
 
         system = event.get("log_system", None)
