@@ -666,25 +666,33 @@ pythonLogLevelToNewLogLevelMapping = {
 }
 
 
+
 def publishToNewObserver(observer, eventDict):
     """
-    Publish an event to a new-style observer.
+    Publish an old-style (L{twisted.python.log}) event to a new-style
+    (L{twisted.python.logger}) observer.
+
+    @note: It's possible that a new-style event was sent to a
+        L{LegacyLogObserverWrapper}, and may now be getting sent back to a
+        new-style observer.  In this case, it's already a new-style event,
+        adapted to also look like an old-style event, and we don't need to
+        tweak it again to be a new-style event, hence the checks for
+        already-defined new-style keys.
+
+    @param observer: A new-style observer to handle this event.
+    @type observer: L{ILogObserver}
+
+    @param eventDict: An L{old-style <twisted.python.log>}, log event.
+    @type eventDict: L{dict}
+
+    @return: L{None}
     """
-    #
-    # Note that it's possible that a new-style event was sent to a
-    # LegacyLogObserverWrapper, and may now be getting sent back to a new-style
-    # observer.  In this case, it's already a new-style event, adapted to also
-    # look like an old-style event, and we don't need to tweak it again to be a
-    # new-style event, hence the checks for already-defined new-style keys.
-    #
 
     if "log_format" not in eventDict:
         text = textFromEventDict(eventDict)
-        if text is None:
-            return
-
-        eventDict["log_text"] = text
-        eventDict["log_format"] = "{log_text}"
+        if text is not None:
+            eventDict["log_text"] = text
+            eventDict["log_format"] = "{log_text}"
 
     if "log_level" not in eventDict:
         if "logLevel" in eventDict:
