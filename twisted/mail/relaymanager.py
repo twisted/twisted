@@ -432,7 +432,7 @@ class Queue:
         @param message: The base filename of a message.
 
         @rtype: L{bytes}
-        @return: The full base pathname of the message. 
+        @return: The full base pathname of the message.
         """
         return os.path.join(self.directory, message)
 
