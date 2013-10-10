@@ -602,8 +602,10 @@ class LogPublisherTests(SetUpTearDown, unittest.TestCase):
         self.assertIn(event, events)
 
         # Verify that the observer raised my exception
-        errors = [evt['log_failure'] for evt in collector
-                  if 'log_failure' in evt]
+        errors = [
+            e["log_failure"] for e in collector
+            if "log_failure" in e
+        ]
         self.assertEquals(len(errors), 1)
         self.assertIdentical(errors[0].value, exception)
         # Make sure the exceptional observer does not receive its own error.
