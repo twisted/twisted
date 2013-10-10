@@ -838,30 +838,29 @@ class FileLogObserver(object):
         eventText = formatEvent(event)
         if not eventText:
             return
-        eventBytes = eventText.encode(self.encoding)
-        eventBytes = eventBytes.replace(b"\n", b"\n\t")
+        eventText = eventText.replace(u"\n", u"\n\t")
         timeStamp = self.formatTime(event.get("log_time", None))
 
         system = event.get("log_system", None)
 
         if system is None:
-            system = b"{namespace}#{level}".format(
-                namespace=event.get("log_namespace", b"-"),
-                level=event.get("log_level", b"-"),
+            system = u"{namespace}#{level}".format(
+                namespace=event.get("log_namespace", u"-"),
+                level=event.get("log_level", u"-"),
             )
         else:
             try:
-                system = str(system)
+                system = unicode(system)
             except Exception:
-                system = b"UNFORMATTABLE"
+                system = u"UNFORMATTABLE"
 
-        text = b"{timeStamp} [{system}] {event}\n".format(
+        text = u"{timeStamp} [{system}] {event}\n".format(
             timeStamp=timeStamp,
             system=system,
             event=eventText,
         )
 
-        untilConcludes(self.fileHandle.write, text)
+        untilConcludes(self.fileHandle.write, text.encode(self.encoding))
         untilConcludes(self.fileHandle.flush)
 
 

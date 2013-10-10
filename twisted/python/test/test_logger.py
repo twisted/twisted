@@ -1100,17 +1100,17 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
     """
     Tests for L{FileLogObserver}.
     """
-    DEFAULT_TIMESTAMP = b"-"
-    DEFAULT_SYSTEM = b"[-#-]"
+    DEFAULT_TIMESTAMP = u"-"
+    DEFAULT_SYSTEM = u"[-#-]"
 
-    def buildOutput(self, timeStamp, system, text):
+    def buildOutput(self, timeStamp, system, text, encoding):
         """
         Build an expected output string from components.
         """
-        return b" ".join((timeStamp, system, text)) + "\n"
+        return (u" ".join((timeStamp, system, text)) + u"\n").encode(encoding)
 
 
-    def buildDefaultOutput(self, text):
+    def buildDefaultOutput(self, text, encoding='utf-8'):
         """
         Build an expected output string with the default time stamp
         and system.
@@ -1118,7 +1118,8 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         return self.buildOutput(
             self.DEFAULT_TIMESTAMP,
             self.DEFAULT_SYSTEM,
-            text
+            text,
+            encoding
         )
 
 
@@ -1178,7 +1179,8 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
             self._testObserver(
                 t_int, u"XYZZY",
                 dict(),
-                self.buildOutput(t_bytes, self.DEFAULT_SYSTEM, b"XYZZY"),
+                self.buildOutput(t_bytes, self.DEFAULT_SYSTEM, u"XYZZY",
+                                 'utf-8'),
             )
 
         def testForTimeZone(name, expectedDST, expectedSTD):
@@ -1243,7 +1245,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             t, u"XYZZY",
             dict(timeFormat=None),
-            self.buildDefaultOutput(b"XYZZY"),
+            self.buildDefaultOutput(u"XYZZY"),
         )
 
 
@@ -1255,7 +1257,8 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             t, u"XYZZY",
             dict(timeFormat="%Y/%W"),
-            self.buildOutput(b"2013/38", self.DEFAULT_SYSTEM, b"XYZZY")
+            self.buildOutput(u"2013/38", self.DEFAULT_SYSTEM, u"XYZZY",
+                             "utf-8")
         )
 
 
@@ -1266,7 +1269,8 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             1.234567, u"XYZZY",
             dict(timeFormat="%f"),
-            self.buildOutput(b"234567", self.DEFAULT_SYSTEM, b"XYZZY"),
+            self.buildOutput(u"234567", self.DEFAULT_SYSTEM, u"XYZZY",
+                             "utf-8"),
         )
 
 
@@ -1277,7 +1281,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             None, u"XYZZY",
             dict(),
-            self.buildDefaultOutput(b"XYZZY"),
+            self.buildDefaultOutput(u"XYZZY"),
         )
 
 
@@ -1289,7 +1293,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
             None, u'XYZZY\nA hollow voice says:\n"Plugh"',
             dict(),
             self.buildDefaultOutput(
-                b'XYZZY\n\tA hollow voice says:\n\t"Plugh"'
+                u'XYZZY\n\tA hollow voice says:\n\t"Plugh"'
             ),
         )
 
@@ -1301,7 +1305,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             None, u"S\xe1nchez",
             dict(),
-            self.buildDefaultOutput(b"S\xc3\xa1nchez"),
+            self.buildDefaultOutput(u"S\xe1nchez", "utf-8"),
         )
 
 
@@ -1312,9 +1316,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         self._testObserver(
             None, u"S\xe1nchez",
             dict(encoding="utf-16"),
-            self.buildDefaultOutput(
-                b"\xff\xfeS\x00\xe1\x00n\x00c\x00h\x00e\x00z\x00"
-            ),
+            self.buildDefaultOutput(u"S\xe1nchez", "utf-16")
         )
 
 
