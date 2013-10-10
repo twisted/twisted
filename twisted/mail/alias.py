@@ -86,7 +86,6 @@ def loadAliasFile(domains, filename=None, fp=None):
     if prev:
         handle(result, prev, filename, i)
     for (u, a) in result.items():
-        addr = smtp.Address(u)
         result[u] = AliasGroup(a, domains, u)
     return result
 
@@ -97,7 +96,7 @@ class IAlias(Interface):
 class AliasBase:
     def __init__(self, domains, original):
         self.domains = domains
-        self.original = smtp.Address(original)
+        self.original = smtp.Address(original, '')
 
     def domain(self):
         return self.domains[self.original.domain]

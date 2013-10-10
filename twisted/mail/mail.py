@@ -357,7 +357,7 @@ class IDomain(Interface):
     """
     An interface for email domains.
     """
-    def exists(user):
+    def exists(user, memo=None):
         """
         Check whether a user exists in this domain.
 
@@ -368,6 +368,11 @@ class IDomain(Interface):
             provider
         @return: A function which takes no arguments and returns a message
             receiver for the user.
+
+        @type memo: L{NoneType <types.NoneType>} or L{dict} of L{AliasBase}
+        @param memo: A record of the addresses already considered
+        while resolving aliases.  The default value should be used by all
+        external code.
 
         @raise SMTPBadRcpt: When the given user does not exist in this domain.
         """
@@ -440,13 +445,17 @@ class BounceDomain:
     """
     implements(IDomain)
 
-    def exists(self, user):
+    def exists(self, user, memo=None):
         """
         Raise an exception to indicate that the user does not exist in this
         domain.
 
         @type user: L{User}
         @param user: A user.
+
+        @type memo: L{NoneType <types.NoneType>} or L{dict} of L{AliasBase}
+        @param memo: A record of the addresses already considered
+        while resolving aliases.
 
         @raise SMTPBadRcpt: When the given user does not exist in this domain.
         """
