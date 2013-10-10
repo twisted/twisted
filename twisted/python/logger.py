@@ -98,9 +98,9 @@ class LogLevel(Names):
     """
     Constants describing log levels.
 
-    @cvar debug: Information of use to a developer of the software, not
-        generally of interest to someone running the software unless they are
-        attempting to diagnose a software issue.
+    @cvar debug: Debugging events: Information of use to a developer of the
+        software, not generally of interest to someone running the software
+        unless they are attempting to diagnose a software issue.
 
     @cvar info: Informational events: Routine information about the status of
         an application, such as incoming connections, startup of a subsystem,
@@ -121,11 +121,20 @@ class LogLevel(Names):
         parameters may be actionable to system administrators and should
         provide references to resources which an administrator might use to
         resolve them.
+
+    @cvar critical: Critical failures: Errors indicating systemic failure (ie.
+        service outage), data corruption, imminent data loss, etc. which must
+        be handled immediately.  This includes errors unanticipated by the
+        software, such as unhandled exceptions, wherein the cause and
+        consequences are unknown.
     """
-    debug = NamedConstant()
-    info  = NamedConstant()
-    warn  = NamedConstant()
-    error = NamedConstant()
+
+    debug    = NamedConstant()
+    info     = NamedConstant()
+    warn     = NamedConstant()
+    error    = NamedConstant()
+    critical = NamedConstant()
+
 
     @classmethod
     def levelWithName(cls, name):
@@ -163,11 +172,11 @@ LogLevel._levelPriorities = dict(
 # Mappings to Python's logging module
 #
 pythonLogLevelMapping = {
-    LogLevel.debug: py_logging.DEBUG,
-    LogLevel.info:  py_logging.INFO,
-    LogLevel.warn:  py_logging.WARNING,
-    LogLevel.error: py_logging.ERROR,
-    # LogLevel.critical: py_logging.CRITICAL,
+    LogLevel.debug:    py_logging.DEBUG,
+    LogLevel.info:     py_logging.INFO,
+    LogLevel.warn:     py_logging.WARNING,
+    LogLevel.error:    py_logging.ERROR,
+    LogLevel.critical: py_logging.CRITICAL,
 }
 
 

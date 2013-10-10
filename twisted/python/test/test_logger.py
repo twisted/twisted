@@ -1411,11 +1411,11 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
         """
         levelMapping = {
             None: py_logging.INFO,  # default
-            LogLevel.debug: py_logging.DEBUG,
-            LogLevel.info:  py_logging.INFO,
-            LogLevel.warn:  py_logging.WARNING,
-            LogLevel.error: py_logging.ERROR,
-            # LogLevel.critical: py_logging.CRITICAL,
+            LogLevel.debug:    py_logging.DEBUG,
+            LogLevel.info:     py_logging.INFO,
+            LogLevel.warn:     py_logging.WARNING,
+            LogLevel.error:    py_logging.ERROR,
+            LogLevel.critical: py_logging.CRITICAL,
         }
 
         # Build a set of events for each log level

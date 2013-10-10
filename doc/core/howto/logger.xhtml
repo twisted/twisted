@@ -115,7 +115,7 @@ class Foo(object):
     <dl>
         <dt><code class="API" base="twisted.python.logger.LogLevel">debug</code></dt>
         <dd>
-            Information of use to a developer of the software, not generally of interest to someone running the software unless they are attempting to diagnose a software issue.
+            Debugging events: Information of use to a developer of the software, not generally of interest to someone running the software unless they are attempting to diagnose a software issue.
         </dd>
 
         <dt><code class="API" base="twisted.python.logger.LogLevel">info</code></dt>
@@ -133,6 +133,11 @@ class Foo(object):
         <dd>
             Error conditions: Events indicating a systemic failure, such as programming errors in the form of unhandled exceptions, loss of connectivity to an external system without which no useful work can proceed, such as a database or API endpoint, or resource exhaustion.
             Similarly to warnings, errors that are related to operational parameters may be actionable to system administrators and should provide references to resources which an administrator might use to resolve them.
+        </dd>
+
+        <dt><code class="API" base="twisted.python.logger.LogLevel">critical</code></dt>
+        <dd>
+          Critical failures: Errors indicating systemic failure (ie. service outage), data corruption, imminent data loss, etc. which must be handled immediately.  This includes errors unanticipated by the software, such as unhandled exceptions, wherein the cause and consequences are unknown.
         </dd>
     </dl>
 
