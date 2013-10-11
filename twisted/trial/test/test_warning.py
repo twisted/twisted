@@ -493,34 +493,6 @@ class CollectWarningsTests(SynchronousTestCase):
 
 
 
-class GeneratorTestCase(TestCase):
-    """
-    A fake TestCase for testing purposes.
-    """
-
-    def test_generator(self):
-        """
-        A method which is also a generator function, for testing purposes.
-        """
-        self.assert_(False)
-        yield
-
-
-
-class GeneratorSynchronousTestCase(SynchronousTestCase):
-    """
-    A fake SynchronousTestCase for testing purposes.
-    """
-
-    def test_generator(self):
-        """
-        A method which is also a generator function, for testing purposes.
-        """
-        self.assert_(False)
-        yield
-
-
-
 class TrialWarningsTests(SynchronousTestCase):
     """
     Tests for trial-emitted warnings.
@@ -531,6 +503,20 @@ class TrialWarningsTests(SynchronousTestCase):
         In a TestCase, a test method which is a generator function causes trial
         to emit a warning which doesn't get picked up by C{flushWarnings}.
         """
+
+        class GeneratorTestCase(TestCase):
+            """
+            A fake TestCase for testing purposes.
+            """
+
+            def test_generator(self):
+                """
+                A method which is also a generator function, for testing
+                purposes.
+                """
+                self.assert_(False)
+                yield
+
         events = []
         testCase = GeneratorTestCase('test_generator')
         result = TestResult()
@@ -551,6 +537,20 @@ class TrialWarningsTests(SynchronousTestCase):
         causes trial to emit a warning which doesn't get picked up by
         C{flushWarnings}.
         """
+
+        class GeneratorSynchronousTestCase(SynchronousTestCase):
+            """
+            A fake SynchronousTestCase for testing purposes.
+            """
+
+            def test_generator(self):
+                """
+                A method which is also a generator function, for testing
+                purposes.
+                """
+                self.assert_(False)
+                yield
+
         events = []
         testCase = GeneratorSynchronousTestCase('test_generator')
         result = TestResult()
