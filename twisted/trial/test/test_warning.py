@@ -13,7 +13,6 @@ from unittest import TestResult
 
 from twisted.python.compat import NativeStringIO as StringIO
 from twisted.python.filepath import FilePath
-from twisted.trial.reporter import TestResult
 from twisted.trial.unittest import (
     SynchronousTestCase, TestCase, _collectWarnings, _setWarningRegistryToNone)
 
