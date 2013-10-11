@@ -247,7 +247,7 @@ class LoggingTests(SetUpTearDown, unittest.TestCase):
         self.assertEquals(u"no, yes.",
                           format("{not_called}, {called()}.",
                                  not_called="no", called=lambda: "yes"))
-        self.assertEquals(u'S\xe1nchez', format("S\xc3\xa1nchez"))
+        self.assertEquals(u"S\xe1nchez", format("S\xc3\xa1nchez"))
         self.assertIn(u"Unable to format event", format(b"S\xe1nchez"))
         self.assertIn(u"Unable to format event",
                       format(b"S{a}nchez", a=b"\xe1"))
@@ -1110,7 +1110,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         return (u" ".join((timeStamp, system, text)) + u"\n").encode(encoding)
 
 
-    def buildDefaultOutput(self, text, encoding='utf-8'):
+    def buildDefaultOutput(self, text, encoding="utf-8"):
         """
         Build an expected output string with the default time stamp
         and system.
@@ -1180,7 +1180,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
                 t_int, u"XYZZY",
                 dict(),
                 self.buildOutput(t_bytes, self.DEFAULT_SYSTEM, u"XYZZY",
-                                 'utf-8'),
+                                 "utf-8"),
             )
 
         def testForTimeZone(name, expectedDST, expectedSTD):
