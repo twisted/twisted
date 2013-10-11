@@ -268,10 +268,47 @@ class Logger(object):
     documentation <twisted.python.logger>}.
 
     @ivar publisher: The L{publisher <LogPublisher>} which this L{Logger} will
-        publish events to.  By default, a singleton instance of
-        L{DefaultLogPublisher}.
+        publish events to.  If C{None}, use L{Logger}'s default publisher.
     @type publisher: L{LogPublisher}
     """
+
+    @classmethod
+    def _defaultPublisher(cls):
+        """
+        Returns the default log publisher for L{Logger} instances.
+        """
+        if hasattr(cls, "_theDefaultPublisher"):
+            return cls._theDefaultPublisher
+
+        #
+        # If no default log publisher has been set, return a temporary
+        # RingBufferLogObserver which will hold onto events until a
+        # default publisher is set.
+        #
+        if not hasattr(cls, "_theTemporaryPublisher"):
+            cls._theTemporaryPublisher = RingBufferLogObserver(64*1024)
+        return cls._theTemporaryPublisher
+
+
+    @classmethod
+    def setDefaultPublisher(cls, publisher):
+        """
+        Sets the default publisher for L{Logger} instances.
+        """
+        publisher = ILogObserver(publisher)
+
+        if not hasattr(cls, "_theDefaultPublisher"):
+            #
+            # No default publisher has been set before; drain the temporary
+            # buffering publisher into the new one.
+            #
+            if hasattr(cls, "_theTemporaryPublisher"):
+                for event in cls._theTemporaryPublisher:
+                    publisher(event)
+                del cls._theTemporaryPublisher
+
+        cls._theDefaultPublisher = publisher
+
 
     @staticmethod
     def _namespaceFromCallingContext():
@@ -298,8 +335,7 @@ class Logger(object):
 
         self.namespace = namespace
         self.source = source
-        if publisher is not None:
-            self.publisher = publisher
+        self.publisher = publisher
 
 
     def __get__(self, oself, type=None):
@@ -369,7 +405,10 @@ class Logger(object):
         if "log_trace" in event:
             event["log_trace"].append((self, self.publisher))
 
-        self.publisher(event)
+        if self.publisher is None:
+            self._defaultPublisher()(event)
+        else:
+            self.publisher(event)
 
 
     def failure(self, format, failure=None, level=LogLevel.critical, **kwargs):
@@ -941,9 +980,10 @@ class RingBufferLogObserver(object):
         ()
     """
 
-    def __init__(self, size):
+    def __init__(self, size=None):
         """
-        @param size: the maximum number of events to buffer.
+        @param size: the maximum number of events to buffer.  If C{None}, the
+            buffer is unbounded.
         """
         self._buffer = deque(maxlen=size)
 
@@ -1170,6 +1210,7 @@ class LoggingFile(object):
 
 
 
+@implementer(ILogObserver)
 class DefaultLogPublisher(object):
     """
     This observer sets up a set of chained observers as follows:
@@ -1259,7 +1300,7 @@ class DefaultLogPublisher(object):
 
 
 
-Logger.publisher = DefaultLogPublisher()
+Logger.setDefaultPublisher(DefaultLogPublisher())
 
 
 

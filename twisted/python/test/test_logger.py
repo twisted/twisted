@@ -39,11 +39,12 @@ from twisted.python.logger import (
 )
 
 
+defaultLogPublisher = Logger._defaultPublisher()
 
 defaultLogLevel         = LogLevelFilterPredicate().defaultLogLevel
-clearLogLevels          = Logger.publisher.levels.clearLogLevels
-logLevelForNamespace    = Logger.publisher.levels.logLevelForNamespace
-setLogLevelForNamespace = Logger.publisher.levels.setLogLevelForNamespace
+clearLogLevels          = defaultLogPublisher.levels.clearLogLevels
+logLevelForNamespace    = defaultLogPublisher.levels.logLevelForNamespace
+setLogLevelForNamespace = defaultLogPublisher.levels.setLogLevelForNamespace
 
 
 
@@ -52,11 +53,11 @@ class TestLogger(Logger):
         def observer(event):
             self.event = event
 
-        Logger.publisher.addObserver(observer, filtered=False)
+        defaultLogPublisher.addObserver(observer, filtered=False)
         try:
             Logger.emit(self, level, format, **kwargs)
         finally:
-            Logger.publisher.removeObserver(observer)
+            defaultLogPublisher.removeObserver(observer)
 
         self.emitted = {
             "level":  level,
@@ -1923,7 +1924,7 @@ class LoggingFileTests(SetUpTearDown, unittest.TestCase):
             if "message" in event:
                 f.messages.append(event["message"])
 
-        f.log.publisher.addObserver(observer)
+        f.log._defaultPublisher().addObserver(observer)
 
         return f
 

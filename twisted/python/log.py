@@ -75,6 +75,7 @@ context.setDefault(ILogContext,
                    {"isError": 0,
                     "system": "-"})
 
+
 def callWithContext(ctx, func, *args, **kw):
     newCtx = context.get(ILogContext).copy()
     newCtx.update(ctx)
@@ -261,9 +262,10 @@ if 'theLogPublisher' not in globals():
         def decorate(thingWithADocstring):
             return something
         return decorate
+
     theLogPublisher = LogPublisher(
-        observerPublisher=NewLogger.publisher.filteredPublisher,
-        publishPublisher=NewLogger.publisher
+        observerPublisher=NewLogger._defaultPublisher().filteredPublisher,
+        publishPublisher=NewLogger._defaultPublisher()
     )
 
     @_actually(theLogPublisher.addObserver)
