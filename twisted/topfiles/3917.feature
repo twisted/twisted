@@ -1,0 +1,1 @@
+trial now issues a warning if any test case's method is a generator function.

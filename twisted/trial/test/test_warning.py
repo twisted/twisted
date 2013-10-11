@@ -13,8 +13,9 @@ from unittest import TestResult
 
 from twisted.python.compat import NativeStringIO as StringIO
 from twisted.python.filepath import FilePath
+from twisted.trial.reporter import TestResult
 from twisted.trial.unittest import (
-    SynchronousTestCase, _collectWarnings, _setWarningRegistryToNone)
+    SynchronousTestCase, TestCase, _collectWarnings, _setWarningRegistryToNone)
 
 class Mask(object):
     """
@@ -489,3 +490,76 @@ class CollectWarningsTests(SynchronousTestCase):
         # If both key2 and key4 were added, then both A instanced were
         # processed.
         self.assertEqual(set([key1, key2, key3, key4]), set(d.keys()))
+
+
+
+class GeneratorTestCase(TestCase):
+    """
+    A fake TestCase for testing purposes.
+    """
+
+    def test_generator(self):
+        """
+        A method which is also a generator function, for testing purposes.
+        """
+        self.assert_(False)
+        yield
+
+
+
+class GeneratorSynchronousTestCase(SynchronousTestCase):
+    """
+    A fake SynchronousTestCase for testing purposes.
+    """
+
+    def test_generator(self):
+        """
+        A method which is also a generator function, for testing purposes.
+        """
+        self.assert_(False)
+        yield
+
+
+
+class TrialWarningsTests(SynchronousTestCase):
+    """
+    Tests for trial-emitted warnings.
+    """
+
+    def test_warnOnGeneratorFunction(self):
+        """
+        In a TestCase, a test method which is a generator function causes trial
+        to emit a warning which doesn't get picked up by C{flushWarnings}.
+        """
+        events = []
+        testCase = GeneratorTestCase('test_generator')
+        result = TestResult()
+        _collectWarnings(events.append, testCase.run, result)
+        warnings = testCase.flushWarnings()
+        self.assertEqual(warnings, [])
+        self.assertEqual(len(events), 1)
+        self.assertEqual(
+            events[0].message,
+            '<bound method GeneratorTestCase.test_generator of <twisted.trial.'
+            'test.test_warning.GeneratorTestCase testMethod=test_generator>> '
+            'is a generator function')
+
+
+    def test_synchronousTestCaseWarnOnGeneratorFunction(self):
+        """
+        In a SynchronousTestCase, a test method which is a generator function
+        causes trial to emit a warning which doesn't get picked up by
+        C{flushWarnings}.
+        """
+        events = []
+        testCase = GeneratorSynchronousTestCase('test_generator')
+        result = TestResult()
+        _collectWarnings(events.append, testCase.run, result)
+        warnings = testCase.flushWarnings()
+        self.assertEqual(warnings, [])
+        self.assertEqual(len(events), 1)
+        self.assertEqual(
+            events[0].message,
+            '<bound method GeneratorSynchronousTestCase.test_generator of '
+            '<twisted.trial.test.test_warning.GeneratorSynchronousTestCase '
+            'testMethod=test_generator>> is a generator function')

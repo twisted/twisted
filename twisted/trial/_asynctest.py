@@ -10,6 +10,7 @@ Maintainer: Jonathan Lange
 
 from __future__ import division, absolute_import
 
+import inspect
 import warnings
 
 from zope.interface import implementer
@@ -102,6 +103,8 @@ class TestCase(SynchronousTestCase):
         onTimeout = utils.suppressWarnings(
             onTimeout, util.suppress(category=DeprecationWarning))
         method = getattr(self, methodName)
+        if inspect.isgeneratorfunction(method):
+            warnings.warn('%r is a generator function' % (method,))
         d = defer.maybeDeferred(
             utils.runWithWarningsSuppressed, self._getSuppress(), method)
         call = reactor.callLater(timeout, onTimeout, d)
