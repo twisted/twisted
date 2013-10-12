@@ -1,1 +1,1 @@
-trial now issues a warning if any test case's method is a generator function.
+trial now marks a test method as a failure if that test method is a generator function.
