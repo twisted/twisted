@@ -265,6 +265,10 @@ class IRC(protocol.Protocol):
         First argument is the command, all subsequent arguments are parameters
         to that command.  If a prefix is desired, it may be specified with the
         keyword argument 'prefix'.
+        
+        Message tags may be specified using the keyword argument 'tags', passing
+        a list of 1- or 2-tuples.  One-tuples should be passed for tags whose
+        presence has a meaning (i.e. those that do not show a value).
         """
         if not command:
             raise ValueError("IRC message requires a command.")
@@ -278,6 +282,9 @@ class IRC(protocol.Protocol):
         line = ' '.join([command] + list(parameter_list))
         if 'prefix' in prefix:
             line = ":%s %s" % (prefix['prefix'], line)
+        if 'tags' in prefix:
+            line = "@%s %s" % (";".join(
+               ["=".join(tag) for tag in prefix['tags']]), line)
         self.sendLine(line)
 
         if len(parameter_list) > 15:

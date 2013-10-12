@@ -1667,6 +1667,28 @@ class BasicServerFunctionalityTestCase(unittest.TestCase):
             "me:  ")
 
 
+    def test_sendMessageWithPrefix(self):
+        """
+        Passing a command and parameters with a specified prefix to
+        L{IRC.sendMessage} results in a proper query string including the
+        specified line prefix.
+        """
+        self.p.sendMessage('CMD', 'param1', 'param2', prefix='irc.example.com')
+        self.check(':irc.example.com CMD param1 param2\r\n')
+
+
+    def test_sendMessageWithTags(self):
+        """
+        Passing a command and parameters with a specified prefix and tags
+        to L{IRC.sendMessage} results in a proper query string including
+        the specified line prefix and appropriate tags syntax.
+        """
+        self.p.sendMessage('CMD', 'param1', 'param2', prefix='irc.example.com',
+            tags=[('aaa', 'bbb'), ('ccc', ), ('example.com/ddd', 'eee')])
+        self.check('@aaa=bbb;ccc;example.com/ddd=eee :irc.example.com '
+            'CMD param1 param2\r\n')
+
+
     def testPrivmsg(self):
         self.p.privmsg("this-is-sender", "this-is-recip", "this is message")
         self.check(":this-is-sender PRIVMSG this-is-recip :this is message\r\n")
