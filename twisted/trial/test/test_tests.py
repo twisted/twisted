@@ -87,7 +87,7 @@ class SuccessMixin(object):
 
     def assertSuccessful(self, test, result):
         """
-        Utility function -- assert there is one success and the state is 
+        Utility function -- assert there is one success and the state is
         plausable
         """
         self.assertEqual(result.successes, 1)
@@ -676,7 +676,7 @@ class AsynchronousFixtureTest(FixtureMixin, unittest.TestCase):
 
 class AsynchronousSuppressionTest(SuppressionMixin, unittest.TestCase):
     """
-    Tests for the warning suppression features of 
+    Tests for the warning suppression features of
     L{twisted.trial.unittest.TestCase}
 
     See L{twisted.trial.test.test_suppression.SuppressionMixin}
@@ -994,7 +994,7 @@ class SuiteClearingMixin(object):
 
 class SynchronousSuiteClearingTests(SuiteClearingMixin, unittest.SynchronousTestCase):
     """
-    Tests for our extension that allows us to clear out a L{TestSuite} in the 
+    Tests for our extension that allows us to clear out a L{TestSuite} in the
     synchronous case.
 
     See L{twisted.trial.test.test_tests.SuiteClearingMixin}
@@ -1004,7 +1004,7 @@ class SynchronousSuiteClearingTests(SuiteClearingMixin, unittest.SynchronousTest
 
 class AsynchronousSuiteClearingTests(SuiteClearingMixin, unittest.TestCase):
     """
-    Tests for our extension that allows us to clear out a L{TestSuite} in the 
+    Tests for our extension that allows us to clear out a L{TestSuite} in the
     asynchronous case.
 
     See L{twisted.trial.test.test_tests.SuiteClearingMixin}
@@ -1312,7 +1312,7 @@ class IterateTestsMixin(object):
 
 class SynchronousIterateTestsTests(IterateTestsMixin, unittest.SynchronousTestCase):
     """
-    Check that L{_iterateTests} returns a list of all test cases in a test suite 
+    Check that L{_iterateTests} returns a list of all test cases in a test suite
     or test case for synchronous tests.
 
     See L{twisted.trial.test.test_tests.IterateTestsMixin}
@@ -1322,7 +1322,7 @@ class SynchronousIterateTestsTests(IterateTestsMixin, unittest.SynchronousTestCa
 
 class AsynchronousIterateTestsTests(IterateTestsMixin, unittest.TestCase):
     """
-    Check that L{_iterateTests} returns a list of all test cases in a test suite 
+    Check that L{_iterateTests} returns a list of all test cases in a test suite
     or test case for asynchronous tests.
 
     See L{twisted.trial.test.test_tests.IterateTestsMixin}
@@ -1360,7 +1360,7 @@ class TrialWarningsTests(unittest.SynchronousTestCase):
         testCase.run(result)
         self.assertEqual(len(result.failures), 1)
         self.assertEqual(
-            result.failures[0][1].value.message,
+            result.failures[0][1].value.args[0],
             '<bound method GeneratorTestCase.test_generator of <twisted.trial.'
             'test.test_tests.GeneratorTestCase testMethod=test_generator>> is '
             'a generator function')
@@ -1390,7 +1390,7 @@ class TrialWarningsTests(unittest.SynchronousTestCase):
         testCase.run(result)
         self.assertEqual(len(result.failures), 1)
         self.assertEqual(
-            result.failures[0][1].value.message,
+            result.failures[0][1].value.args[0],
             '<bound method GeneratorSynchronousTestCase.test_generator of '
             '<twisted.trial.test.test_tests.GeneratorSynchronousTestCase '
             'testMethod=test_generator>> is a generator function')
