@@ -104,7 +104,9 @@ class TestCase(SynchronousTestCase):
             onTimeout, util.suppress(category=DeprecationWarning))
         method = getattr(self, methodName)
         if inspect.isgeneratorfunction(method):
-            warnings.warn('%r is a generator function' % (method,))
+            exc = self.failureException(
+                '%r is a generator function' % (method,))
+            return defer.fail(exc)
         d = defer.maybeDeferred(
             utils.runWithWarningsSuppressed, self._getSuppress(), method)
         call = reactor.callLater(timeout, onTimeout, d)

@@ -1328,3 +1328,69 @@ class AsynchronousIterateTestsTests(IterateTestsMixin, unittest.TestCase):
     See L{twisted.trial.test.test_tests.IterateTestsMixin}
     """
     TestCase = unittest.TestCase
+
+
+
+class TrialWarningsTests(unittest.SynchronousTestCase):
+    """
+    Tests for trial-emitted warnings.
+    """
+
+    def test_failureOnGeneratorFunction(self):
+        """
+        In a TestCase, a test method which is a generator function fails, as
+        such a method will never run assertions.
+        """
+
+        class GeneratorTestCase(unittest.TestCase):
+            """
+            A fake TestCase for testing purposes.
+            """
+
+            def test_generator(self):
+                """
+                A method which is also a generator function, for testing
+                purposes.
+                """
+                self.assert_(False)
+                yield
+
+        testCase = GeneratorTestCase('test_generator')
+        result = reporter.TestResult()
+        testCase.run(result)
+        self.assertEqual(len(result.failures), 1)
+        self.assertEqual(
+            result.failures[0][1].value.message,
+            '<bound method GeneratorTestCase.test_generator of <twisted.trial.'
+            'test.test_tests.GeneratorTestCase testMethod=test_generator>> is '
+            'a generator function')
+
+
+    def test_synchronousTestCaseFailureOnGeneratorFunction(self):
+        """
+        In a SynchronousTestCase, a test method which is a generator function
+        fails, as such a method will never run assertions.
+        """
+
+        class GeneratorSynchronousTestCase(unittest.SynchronousTestCase):
+            """
+            A fake SynchronousTestCase for testing purposes.
+            """
+
+            def test_generator(self):
+                """
+                A method which is also a generator function, for testing
+                purposes.
+                """
+                self.assert_(False)
+                yield
+
+        testCase = GeneratorSynchronousTestCase('test_generator')
+        result = reporter.TestResult()
+        testCase.run(result)
+        self.assertEqual(len(result.failures), 1)
+        self.assertEqual(
+            result.failures[0][1].value.message,
+            '<bound method GeneratorSynchronousTestCase.test_generator of '
+            '<twisted.trial.test.test_tests.GeneratorSynchronousTestCase '
+            'testMethod=test_generator>> is a generator function')
