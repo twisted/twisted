@@ -594,23 +594,23 @@ class PythonLoggingObserverTestCase(unittest.SynchronousTestCase):
         self.out = StringIO()
 
         rootLogger = logging.getLogger("")
-        self.originalLevel = rootLogger.getEffectiveLevel()
+        originalLevel = rootLogger.getEffectiveLevel()
         rootLogger.setLevel(logging.DEBUG)
+        @self.addCleanup
+        def restoreLevel():
+            rootLogger.setLevel(originalLevel)
         self.hdlr = logging.StreamHandler(self.out)
         fmt = logging.Formatter(logging.BASIC_FORMAT)
         self.hdlr.setFormatter(fmt)
         rootLogger.addHandler(self.hdlr)
+        @self.addCleanup
+        def removeLogger():
+            rootLogger.removeHandler(self.hdlr)
+            self.hdlr.close()
 
         self.lp = log.LogPublisher()
         self.obs = log.PythonLoggingObserver()
         self.lp.addObserver(self.obs.emit)
-
-
-    def tearDown(self):
-        rootLogger = logging.getLogger("")
-        rootLogger.removeHandler(self.hdlr)
-        rootLogger.setLevel(self.originalLevel)
-        logging.shutdown()
 
 
     def test_singleString(self):
