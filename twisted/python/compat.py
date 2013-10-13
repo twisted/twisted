@@ -30,6 +30,20 @@ else:
 
 
 
+def metatype(metacls):
+    """
+    A class decorator to specify a metaclass for the following class.
+    """
+    def decorator(cls):
+        namespace = cls.__dict__.copy()
+        for extraSpecial in (['__dict__', '__weakref__'] +
+                             list(namespace.get('__slots__', []))):
+            del namespace[extraSpecial]
+        return metacls(cls.__name__, cls.__bases__, namespace)
+    return decorator
+
+
+
 def inet_pton(af, addr):
     if af == socket.AF_INET:
         return socket.inet_aton(addr)
