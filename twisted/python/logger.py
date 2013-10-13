@@ -932,7 +932,7 @@ class FileLogObserver(object):
 @implementer(ILogObserver)
 class PythonLogObserver(object):
     """
-    Log observer that writes to the python standard library's L{logging}
+    Log observer that writes to the python standard library's C{logging}
     module.
 
     @note: Warning: specific logging configurations (example: network) can lead
