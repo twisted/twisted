@@ -16,6 +16,8 @@ from inspect import currentframe, getsourcefile
 
 try:
     from time import tzset
+    # we should upgrade to a version of pyflakes that does not require this.
+    tzset
 except ImportError:
     tzset = None
 
