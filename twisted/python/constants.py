@@ -13,9 +13,11 @@ __all__ = [
 
 from itertools import count
 from operator import and_, or_, xor
+from twisted.python.compat import metatype
 
 _unspecified = object()
-_constantOrder = count().next
+_orderCounter = count()
+_constantOrder = lambda: next(_orderCounter)
 
 
 class _Constant(object):
@@ -88,7 +90,7 @@ class _ConstantsContainerType(type):
             return cls
 
         constants = []
-        for (name, descriptor) in attributes.iteritems():
+        for (name, descriptor) in attributes.items():
             if isinstance(descriptor, cls._constantType):
                 if descriptor._container is not None:
                     raise ValueError(
@@ -111,7 +113,7 @@ class _ConstantsContainerType(type):
         return cls
 
 
-
+@metatype(_ConstantsContainerType)
 class _ConstantsContainer(object):
     """
     L{_ConstantsContainer} is a class with attributes used as symbolic
@@ -125,7 +127,6 @@ class _ConstantsContainer(object):
         L{NamedConstant} instances) found in the class definition to those
         instances.
     """
-    __metaclass__ = _ConstantsContainerType
 
     _constantType = None
 
@@ -180,8 +181,8 @@ class _ConstantsContainer(object):
         @return: an iterator the elements of which are the L{NamedConstant}
             instances defined in the body of this L{Names} subclass.
         """
-        constants = cls._enumerants.values()
-        constants.sort(key=lambda descriptor: descriptor._index)
+        constants = sorted(cls._enumerants.values(),
+                           key=lambda descriptor: descriptor._index)
         return iter(constants)
 
 

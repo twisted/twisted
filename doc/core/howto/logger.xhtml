@@ -1,0 +1,241 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Logging with twisted.python.logger</title>
+  </head>
+
+  <body>
+    <h1>Logging with twisted.python.logger</h1>
+
+    <h2>The Basics</h2>
+
+    <p>
+        Logging consists of two main components: applications that emit events, and observers that receive and handle those events.
+        Events are simply dictionaries containing the relevant data to describe something interesting that has occurred.
+        For example: a web server might emit an event after handling each request that includes the URI of requested resource, the  response's status code, a count of bytes transferred, etc.
+        All of that information might be contained in a pair of objects representing the request and response:
+    </p>
+
+    <pre class="python">
+log.info(request=request, response=response)
+    </pre>
+
+    <p>
+        Note that many logging systems are about emitting <i>strings</i>.
+        In such systems, you might expect the API to look like this instead:
+    </p>
+
+    <pre class="python">
+log.info(
+    "{uri}: status={status}, bytes={size}, etc..."
+    .format(uri=request.uri, status=response.code, size=response.size)
+)
+    </pre>
+
+    <p>
+        One disadvantage to this is that a strings meant to be human-readable are not necessarily great for software to handle.
+        An observer receiving the above event as a string would have to resort to parsing the string to extract the URI, which is often unreliable.
+        Additionally, any information not encoded into the string is simply unavailable.
+        If the <code class="python">request</code> and <code class="python">response</code> objects are available to the observer, it would be possible to write an observer that accessed any attributes of those objects.
+        It would also be a lot easier to write an observer that emitted structured information by serializing these objects into a format such as JSON, rows in a database, etc.
+    </p>
+
+    <p>
+        Events-as-string do the advantage that it's obvious what an observer that writes strings (eg. an observer that streams text to a file) would emit here.
+        Since most people are used to server logs that are human-readonable, this is a reasonable thing to expect.
+        We can solve this more flexibly by providing an optional format string in events that can be used for this purpose:
+    </p>
+
+    <pre class="python">
+log.info(
+    "{request.uri}: status={response.status}, bytes={response.size}, etc...",
+    request=request, response=response
+)
+    </pre>
+
+    <p>
+        Now a text-based observer can format the text in a prescribed way, and an observer that wants to handle these events specially can do so.
+    </p>
+
+
+    <h2>Usage for emitting applications</h2>
+
+    <p>
+        The first thing that an application that emits logging events need to do is to instantiate a <code class="API" base="twisted.python.logger">Logger</code> object, which provides the API to emit events.
+        A <code class="API" base="twisted.python.logger">Logger</code> is often created globally for each module:
+    </p>
+
+    <pre class="python">
+from twisted.python.logger import Logger
+log = Logger()
+
+def handleData(data):
+    log.debug("Got data: {data!r}.", data=data)
+    </pre>
+
+    <p>
+        A <code class="API" base="twisted.python.logger">Logger</code> can also be assocaited with a class:
+    </p>
+
+    <pre class="python">
+from twisted.python.logger import Logger
+
+class Foo(object):
+    log = Logger()
+
+    def oops(self, data):
+        self.log.error("Oops! Invalid data from server: {data!r}",
+                       data=data)
+    </pre>
+
+    <h3>Namespaces</h3>
+
+    <p>
+        All <code class="API" base="twisted.python.logger">Logger</code>s have a namespace, which can be used to categorize events.
+        Namespaces may be specified by passing in a <code class="python">namespace</code> argument to <code class="API" base="twisted.python.logger">Logger</code>'s initializer, but if none is given, the logger will derive its own namespace by using the module name of the callable that instantiated it, or, in the case of a class, by using the fully qualified name of the class.
+        A <code class="API" base="twisted.python.logger">Logger</code> will add a <code class="python">log_namespace</code> key to the events it emits.
+    </p>
+
+    <p>
+        In the first example above, the namespace would be <code class="python">some.module</code>, and in the second example, it would be <code class="python">some.module.Foo</code>.
+    </p>
+
+    <h3>Log levels</h3>
+
+    <p>
+        <code class="API" base="twisted.python.logger">Logger</code>s provide a number of methods for emitting events.
+        These methods all have the same signature, but each will attach a specific <code class="python">log_level</code> key to events.
+        Log levels are defined by the <code class="API" base="twisted.python.logger">LogLevel</code> constants container.
+        These are:
+    </p>
+
+    <dl>
+        <dt><code class="API" base="twisted.python.logger.LogLevel">debug</code></dt>
+        <dd>
+            Debugging events: Information of use to a developer of the software, not generally of interest to someone running the software unless they are attempting to diagnose a software issue.
+        </dd>
+
+        <dt><code class="API" base="twisted.python.logger.LogLevel">info</code></dt>
+        <dd>
+            Informational events: Routine information about the status of an application, such as incoming connections, startup of a subsystem, etc.
+        </dd>
+
+        <dt><code class="API" base="twisted.python.logger.LogLevel">warn</code></dt>
+        <dd>
+            Warning events: Events that may require greater attention than informational events but are not a systemic failure condition, such as authorization failures, bad data from a network client, etc.
+            Such events are of potential interest to system administrators, and should ideally be phrased in such a way, or documented, so as to indicate an action that an administrator might take to mitigate the warning.
+        </dd>
+
+        <dt><code class="API" base="twisted.python.logger.LogLevel">error</code></dt>
+        <dd>
+            Error conditions: Events indicating a systemic failure, such as programming errors in the form of unhandled exceptions, loss of connectivity to an external system without which no useful work can proceed, such as a database or API endpoint, or resource exhaustion.
+            Similarly to warnings, errors that are related to operational parameters may be actionable to system administrators and should provide references to resources which an administrator might use to resolve them.
+        </dd>
+
+        <dt><code class="API" base="twisted.python.logger.LogLevel">critical</code></dt>
+        <dd>
+          Critical failures: Errors indicating systemic failure (ie. service outage), data corruption, imminent data loss, etc. which must be handled immediately.  This includes errors unanticipated by the software, such as unhandled exceptions, wherein the cause and consequences are unknown.
+        </dd>
+    </dl>
+
+    <p>
+        In the first example above, the call to <code class="python">log.debug</code> will add a <code class="python">log_level</code> key to the emitted event with a value of <code class="API" base="twisted.python.logger">LogLevel.debug</code>.
+        In the second example, calling <code class="python">self.log.error</code> would use a value of <code class="API" base="twisted.python.logger">LogLevel.error</code>.
+    </p>
+
+    <p>
+        The above descriptions are simply guidance, but it is worth noting that log levels have a reduced value if they are used inconsistantly.
+        If one module in an application considers a message informational, and another module considers a similar message an error, then filtering based on log levels becomes harder.
+        This is increasingly likely if the modules in question are developed by different parties, as will often be the case with externally source libraries and frameworks.
+        (If a module tends to use higher levels than another, namespaces may be used to calibrate the relative use of log levels, but that is obviously suboptimal.)
+        Sticking to the above guidelines will hopefully help here.
+    </p>
+
+    <h3>Emit method signatures</h3>
+
+    <p>
+        The emit methods (<code class="API" base="twisted.python.logger.Logger">log_info</code>, etc.) take an optional format string as a first argument, followed by keyword arguments that will be included in the emitted event.
+    </p>
+
+    <h3>Format strings</h3>
+
+    <p>
+        Format strings provide observers with a standard way to format an event as text, via the function <code class="API" base="twisted.python.logger">formatEvent</code>.
+        Format strings should be <code class="python">unicode</code> or UTF-8-encoded <code class="python">bytes</code>, and use <a href="http://www.python.org/dev/peps/pep-3101/">PEP 3101</a> syntax to describe how the event should be rendered as text.
+        There are two variations from PEP 3101 in the format strings used by this module:
+    </p>
+
+    <ol>
+        <li>
+            Positional (numerical) field names (eg. <code class="python">{0}</code>) are not permitted.
+            Because event keys are provided via keyword arguments, and the logging system adds additional keys, the order of event attributes is non-deterministic, which means positional field names do not make sense in this context.
+        </li>
+        <li>
+            Field names ending in parentheses (eg. <code class="python">{foo()}</code>) will call the referenced object with no arguments, and call <code class="python">str</code> on the result, rather than calling <code class="python">str</code> on the referenced object directly.
+            There is no support for specifying arguments in the format string.
+        </li>
+    </ol>
+
+    <h2>Implementing an observer</h2>
+
+    <p>
+        An observer must implement the <code class="API" base="twisted.python.logger">ILogObserver</code> interface, which means it provides a <code class="python">__call__</code> that takes an event as its sole argument:
+    </p>
+
+    <pre class="python">
+from twisted.python.logger import ILogObserver, formatEvent
+
+@implementer(ILogObserver)
+class PrintingObserver(object):
+    def __call__(self, event):
+        print formatEvent(event)
+    </pre>
+
+    <p>
+        The <code class="API" base="twisted.python.logger">formatEvent</code> function returns a textual (<code class="python">unicode</code>) representation of the event.
+    </p>
+
+    <p>
+        While it is recommended, it is not required that observers declare their compliant with <code class="API" base="twisted.python.logger">ILogObserver</code>.
+        This flexibility exists to allow for pre-existing callables and lambda expressions to be used as observers.
+        As an example, if one would like to accumulate events in a <code class="python">list</code>, then <code class="python">list.append</code> can be used as an observer.
+    </p>
+
+
+    <h2>Registering an observer</h2>
+
+    <p>...</p>
+
+
+    <h2>The default log publisher</h2>
+
+    <!-- LogPublisher" -->
+    <!-- PredicateResult" -->
+    <!-- ILogFilterPredicate" -->
+    <!-- FilteringLogObserver" -->
+    <!-- LogLevelFilterPredicate" -->
+
+    <p>...</p>
+
+
+    <h2>Provided log observers</h2>
+
+    <!-- FileLogObserver" -->
+    <!-- PythonLogObserver" -->
+    <!-- RingBufferLogObserver -->
+
+    <p>...</p>
+
+
+    <h2>Compatibility with twisted.python.log</h2>
+
+    <!-- LegacyLogger" -->
+    <!-- LegacyLogObserverWrapper" -->
+
+    <p>...</p>
+
+  </body>
+</html>

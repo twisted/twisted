@@ -7,6 +7,8 @@ Standardized versions of various cool and/or strange things that you can do
 with Python's reflection capabilities.
 """
 
+from __future__ import print_function
+
 import sys
 import types
 import pickle
@@ -16,12 +18,6 @@ import warnings
 from collections import deque
 
 RegexType = type(re.compile(""))
-
-
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
 
 from twisted.python.compat import _PY3
 from twisted.python.deprecate import deprecated
@@ -278,7 +274,7 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns
                                    'member_descriptor', 'getset_descriptor')):
         pass
     elif showUnknowns:
-        print 'unknown type', type(start), start
+        print('unknown type', type(start), start)
     return paths
 
 

@@ -1028,10 +1028,9 @@ class WrappedIProtocolTests(unittest.TestCase):
         self.assertEqual(self.eventLog['executable'], wpp.executable)
         self.assertEqual(self.eventLog['data'], 'stderr1')
         self.assertEqual(self.eventLog['protocol'], wpp.protocol)
-        self.assertEqual(
-            self.eventLog['format'],
-            'Process %(executable)r wrote stderr unhandled '
-            'by %(protocol)s: %(data)s')
+        self.assertIn(
+            'wrote stderr unhandled by',
+            log.textFromEventDict(self.eventLog))
 
 
     def test_stderrSkip(self):
