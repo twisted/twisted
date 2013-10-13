@@ -1061,7 +1061,7 @@ class LegacyLogObserverWrapper(object):
             event["system"] = system
 
         # Format new style -> old style
-        if event.get("log_format", None) is not None:
+        if event.get("log_format", None) is not None and 'format' not in event:
             #
             # Create an object that implements __str__() in order to
             # defer the work of formatting until it's needed by a
