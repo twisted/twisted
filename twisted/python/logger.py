@@ -77,9 +77,7 @@ TIME_FORMAT_RFC3339 = "%Y-%m-%dT%H:%M:%S%z"
 
 
 
-#
 # Log level definitions
-#
 
 class InvalidLogLevelError(Exception):
     """
@@ -168,9 +166,7 @@ LogLevel._levelPriorities = dict(
 
 
 
-#
 # Mappings to Python's logging module
-#
 pythonLogLevelMapping = {
     LogLevel.debug:    py_logging.DEBUG,
     LogLevel.info:     py_logging.INFO,
@@ -181,9 +177,7 @@ pythonLogLevelMapping = {
 
 
 
-##
 # Loggers
-##
 
 def formatEvent(event):
     """
@@ -565,9 +559,7 @@ def _bindLevels():
 _bindLevels()
 
 
-#
 # Observers
-#
 
 class ILogObserver(Interface):
     """
@@ -1044,10 +1036,9 @@ class LegacyLogObserverWrapper(object):
         Forward events to the legacy observer after editing them to
         ensure compatibility.
         """
-        #
+
         # Twisted's logging supports indicating a python log level, so let's
         # provide the equivalent to our logging levels.
-        #
         level = event.get("log_level", None)
         if level in pythonLogLevelMapping:
             event["logLevel"] = pythonLogLevelMapping[level]
@@ -1062,11 +1053,8 @@ class LegacyLogObserverWrapper(object):
 
         # Format new style -> old style
         if event.get("log_format", None) is not None and 'format' not in event:
-            #
-            # Create an object that implements __str__() in order to
-            # defer the work of formatting until it's needed by a
-            # legacy log observer.
-            #
+            # Create an object that implements __str__() in order to defer the
+            # work of formatting until it's needed by a legacy log observer.
             event["format"] = "%(log_legacy)s"
             event["log_legacy"] = StringifiableFromEvent(event)
 
@@ -1304,9 +1292,7 @@ Logger.setDefaultPublisher(DefaultLogPublisher())
 
 
 
-#
 # Utilities
-#
 
 class StringifiableFromEvent(object):
     """
