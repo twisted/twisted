@@ -358,8 +358,12 @@ def textFromEventDict(eventDict):
     edm = eventDict['message']
     if not edm:
         if eventDict['isError'] and 'failure' in eventDict:
-            text = ((eventDict.get('why') or 'Unhandled Error')
-                    + '\n' + eventDict['failure'].getTraceback())
+            why = eventDict.get('why')
+            if why:
+                why = reflect.safe_str(why)
+            else:
+                why = 'Unhandled Error'
+            text = (why + '\n' + eventDict['failure'].getTraceback())
         elif 'format' in eventDict:
             text = _safeFormat(eventDict['format'], eventDict)
         else:
