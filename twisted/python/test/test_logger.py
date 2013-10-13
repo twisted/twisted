@@ -1164,7 +1164,8 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
 
     def test_defaultTimeStamp(self):
         """
-        Default time stamp format is RFC 3339 and offset is correct.
+        Default time stamp format is RFC 3339 and offset respects the timezone
+        as set by the standard 'TZ' variable and L{tzset} API.
         """
         if tzset is None:
             raise SkipTest(
@@ -1196,36 +1197,37 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
             testObserver(localSTD, expectedSTD)
 
         tzIn = environ.get("TZ", None)
-        try:
-            # UTC
-            testForTimeZone(
-                "UTC",
-                b"2006-06-30T00:00:00+0000",
-                b"2007-01-31T00:00:00+0000",
-            )
-
-            # West of UTC
-            testForTimeZone(
-                "America/New_York",
-                b"2006-06-30T00:00:00-0400",
-                b"2007-01-31T00:00:00-0500",
-            )
-
-            # East of UTC
-            testForTimeZone(
-                "Europe/Berlin",
-                b"2006-06-30T00:00:00+0200",
-                b"2007-01-31T00:00:00+0100",
-            )
-
-            # No DST
-            testForTimeZone(
-                "Canada/Saskatchewan",
-                b"2006-06-30T00:00:00-0600",
-                b"2007-01-31T00:00:00-0600",
-            )
-        finally:
+        @self.addCleanup
+        def resetTZ():
             setTZ(tzIn)
+
+        # UTC
+        testForTimeZone(
+            "UTC+00",
+            b"2006-06-30T00:00:00+0000",
+            b"2007-01-31T00:00:00+0000",
+        )
+
+        # West of UTC
+        testForTimeZone(
+            "EST+05EDT,M4.1.0,M10.5.0",
+            b"2006-06-30T00:00:00-0400",
+            b"2007-01-31T00:00:00-0500",
+        )
+
+        # East of UTC
+        testForTimeZone(
+            "CEST-01CEDT,M4.1.0,M10.5.0",
+            b"2006-06-30T00:00:00+0200",
+            b"2007-01-31T00:00:00+0100",
+        )
+
+        # No DST
+        testForTimeZone(
+            "CST+06",
+            b"2006-06-30T00:00:00-0600",
+            b"2007-01-31T00:00:00-0600",
+        )
 
 
     def test_emptyFormat(self):
