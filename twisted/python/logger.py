@@ -902,8 +902,8 @@ class PythonLogObserver(object):
     Log observer that writes to the python standard library's L{logging}
     module.
 
-    @warning: specific logging configurations (example: network) can lead to
-        this observer blocking.  Nothing is done here to prevent that, so be
+    @note: Warning: specific logging configurations (example: network) can lead
+        to this observer blocking.  Nothing is done here to prevent that, so be
         sure to not to configure the standard library logging module to block
         when used in conjunction with this module: code within Twisted, such as
         twisted.web, assumes that logging does not block.
