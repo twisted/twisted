@@ -448,6 +448,71 @@ class Logger(object):
         self.emit(level, format, log_failure=failure, **kwargs)
 
 
+    def debug(self, format=None, **kwargs):
+        """
+        Emit a log event at log level L{LogLevel.debug}.
+
+        @param format: a message format using new-style (PEP 3101) formatting.
+            The logging event (which is a L{dict}) is used to render this
+            format string.
+
+        @param kwargs: additional keyword parameters to include with the event.
+        """
+        self.emit(LogLevel.debug, format, **kwargs)
+
+
+    def info(self, format=None, **kwargs):
+        """
+        Emit a log event at log level L{LogLevel.info}.
+
+        @param format: a message format using new-style (PEP 3101) formatting.
+            The logging event (which is a L{dict}) is used to render this
+            format string.
+
+        @param kwargs: additional keyword parameters to include with the event.
+        """
+        self.emit(LogLevel.info, format, **kwargs)
+
+
+    def warn(self, format=None, **kwargs):
+        """
+        Emit a log event at log level L{LogLevel.warn}.
+
+        @param format: a message format using new-style (PEP 3101) formatting.
+            The logging event (which is a L{dict}) is used to render this
+            format string.
+
+        @param kwargs: additional keyword parameters to include with the event.
+        """
+        self.emit(LogLevel.warn, format, **kwargs)
+
+
+    def error(self, format=None, **kwargs):
+        """
+        Emit a log event at log level L{LogLevel.error}.
+
+        @param format: a message format using new-style (PEP 3101) formatting.
+            The logging event (which is a L{dict}) is used to render this
+            format string.
+
+        @param kwargs: additional keyword parameters to include with the event.
+        """
+        self.emit(LogLevel.error, format, **kwargs)
+
+
+    def critical(self, format=None, **kwargs):
+        """
+        Emit a log event at log level L{LogLevel.critical}.
+
+        @param format: a message format using new-style (PEP 3101) formatting.
+            The logging event (which is a L{dict}) is used to render this
+            format string.
+
+        @param kwargs: additional keyword parameters to include with the event.
+        """
+        self.emit(LogLevel.critical, format, **kwargs)
+
+
 
 class LegacyLogger(object):
     """
@@ -525,37 +590,6 @@ class LegacyLogger(object):
             self.newStyleLogger.emit(LogLevel.error, repr(_stuff), why=_why,
                                      isError=1, **kwargs)
 
-
-
-def bindEmitters(level):
-    doc = """
-    Emit a log event at log level L{{{level}}}.
-
-    @param format: a message format using new-style (PEP 3101)
-        formatting.  The logging event (which is a L{{dict}}) is used to
-        render this format string.
-
-    @param kwargs: additional keyword parameters to include with the
-        event.
-    """.format(level=level.name)
-
-    #
-    # Attach methods to Logger
-    #
-    def log_emit(self, format=None, **kwargs):
-        self.emit(level, format, **kwargs)
-
-    log_emit.__doc__ = doc
-
-    setattr(Logger, level.name, log_emit)
-
-
-
-def _bindLevels():
-    for level in LogLevel.iterconstants():
-        bindEmitters(level)
-
-_bindLevels()
 
 
 # Observers
