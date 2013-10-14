@@ -1111,7 +1111,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         """
         Build an expected output string from components.
         """
-        return (u" ".join((timeStamp, system, text)) + u"\n").encode(encoding)
+        return (u" ".join((timeStamp, system, text)) + u"\n")
 
 
     def buildDefaultOutput(self, text, encoding="utf-8"):
