@@ -398,7 +398,7 @@ class Logger(object):
                 invalidLevel=level,
                 logger=self,
             )
-            #level = LogLevel.error
+            # level = LogLevel.error
             # FIXME: continue to emit?
             return
 
