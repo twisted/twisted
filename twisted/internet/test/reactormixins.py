@@ -290,7 +290,7 @@ class ReactorBuilder:
         if timedOut:
             raise TestTimeoutError(
                 "reactor still running after %s seconds" % (timeout,))
-        if not timedOut:
+        else:
             timedOutCall.cancel()
 
 
