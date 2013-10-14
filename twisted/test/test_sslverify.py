@@ -693,8 +693,10 @@ class ProtocolVersionTests(unittest.TestCase):
             SSL.SSLv2_METHOD: set([ProtocolVersion.SSLv2]),
             SSL.SSLv3_METHOD: set([ProtocolVersion.SSLv3]),
             SSL.TLSv1_METHOD: set([ProtocolVersion.TLSv1_0]),
-            getattr(SSL, "TLSv1_1_METHOD", object()): set([ProtocolVersion.TLSv1_1]),
-            getattr(SSL, "TLSv1_2_METHOD", object()): set([ProtocolVersion.TLSv1_2]),
+            getattr(SSL, "TLSv1_1_METHOD", object()):
+                set([ProtocolVersion.TLSv1_1]),
+            getattr(SSL, "TLSv1_2_METHOD", object()):
+                set([ProtocolVersion.TLSv1_2]),
 
             # Presently, SSLv23_METHOD means (SSLv2, SSLv3, TLSv1.0, TLSv1.1,
             # TLSv1.2) (excluding any protocol versions not implemented by the
