@@ -2262,6 +2262,7 @@ class AbortConnectionMixin(object):
 
         # Make sure everything was shutdown correctly:
         self.assertEqual(reactor.removeAll(), [])
+        self.assertEqual(reactor.getDelayedCalls(), [])
 
         if clientConnectionLostReason is not None:
             self.assertIsInstance(
