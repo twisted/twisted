@@ -1123,8 +1123,8 @@ class LoggingFile(object):
         supplied to L{LoggingFile.__init__}.
     @type defaultLogger: L{Logger}
 
-    @ivar softspace: File-like L{'softspace' attribute <file.softspace>}; 0 or
-        1.
+    @ivar softspace: File-like L{'softspace' attribute <file.softspace>}; zero
+        or one.
     @type softspace: C{int}
     """
 
@@ -1160,26 +1160,42 @@ class LoggingFile(object):
 
     @property
     def closed(self):
+        """
+        Read-only property.  Is the file closed?
+        """
         return self._closed
 
 
     @property
     def encoding(self):
+        """
+        Read-only property.  Does the file have an encoding?
+        """
         return self._encoding
 
 
     @property
     def mode(self):
+        """
+        Read-only property.  Does the file have an encoding?
+        """
         return "w"
 
 
     @property
     def newlines(self):
+        """
+        Read-only property.  Does the file have an encoding?
+        """
         return None
 
 
     @property
     def name(self):
+        """
+        The name of this file; a repr-style string giving information about its
+        namespace.
+        """
         return (
             "<{0} {1}#{2}>".format(
                 self.__class__.__name__,
@@ -1190,22 +1206,38 @@ class LoggingFile(object):
 
 
     def close(self):
+        """
+        Close this file so it can no longer be written to.
+        """
         self._closed = True
 
 
     def flush(self):
-        pass
+        """
+        No-op; this file does not buffer.
+        """
 
 
     def fileno(self):
+        """
+        Returns an invalid file descriptor, since this is not backed by an FD.
+        """
         return -1
 
 
     def isatty(self):
+        """
+        A L{LoggingFile} is not a TTY.
+
+        @return: False
+        """
         return False
 
 
     def write(self, string):
+        """
+        Log the given message.
+        """
         if self._closed:
             raise ValueError("I/O operation on closed file")
 
@@ -1221,11 +1253,17 @@ class LoggingFile(object):
 
 
     def writelines(self, lines):
+        """
+        Log each of the given lines as a separate message.
+        """
         for line in lines:
             self.write(line)
 
 
     def _unsupported(self, *args):
+        """
+        Template for unsupported operations.
+        """
         raise IOError("unsupported operation")
 
     read       = _unsupported
