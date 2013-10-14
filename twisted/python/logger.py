@@ -280,7 +280,11 @@ class Logger(object):
     @classmethod
     def _defaultPublisher(cls):
         """
-        Returns the default log publisher for L{Logger} instances.
+        Get the default log publisher, constructing and caching it if
+        necessary.
+
+        @return: the default log publisher for L{Logger} instances.
+        @rtype: L{ILogObserver}
         """
         if hasattr(cls, "_theDefaultPublisher"):
             return cls._theDefaultPublisher
