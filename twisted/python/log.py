@@ -375,7 +375,7 @@ def textFromEventDict(eventDict):
 
 
 
-class StartStopMixIn:
+class _GlobalStartStopMixIn:
     """
     Mix-in for global log observers that can start and stop.
     """
@@ -395,7 +395,7 @@ class StartStopMixIn:
 
 
 
-class FileLogObserver(StartStopMixIn):
+class FileLogObserver(_GlobalStartStopMixIn):
     """
     Log observer that writes to a file-like object.
 
@@ -464,7 +464,7 @@ class FileLogObserver(StartStopMixIn):
 
 
 
-class PythonLoggingObserver(NewPythonLogObserver, StartStopMixIn):
+class PythonLoggingObserver(NewPythonLogObserver, _GlobalStartStopMixIn):
     """
     Output twisted messages to Python standard library L{logging} module.
 
@@ -638,7 +638,7 @@ if 'logfile' not in globals():
 
 
 
-class DefaultObserver(StartStopMixIn):
+class DefaultObserver(_GlobalStartStopMixIn):
     """
     Default observer.
 
