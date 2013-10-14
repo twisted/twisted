@@ -1396,12 +1396,26 @@ class StringifiableFromEvent(object):
 
 
 
-class CallMapping(object):
+class _CallMapping(object):
+    """
+    Read-only mapping that turns a C{()}-suffix in key names into an invocation
+    of the key rather than a lookup of the key.
+
+    Implementation support for L{formatWithCall}.
+    """
     def __init__(self, submapping):
+        """
+        @param submapping: Another read-only mapping which will be used to look
+            up items.
+        """
         self._submapping = submapping
 
 
     def __getitem__(self, key):
+        """
+        Look up an item in the submapping for this L{_CallMapping}, calling it
+        if C{key} ends with C{"()"}.
+        """
         callit = key.endswith(u"()")
         realKey = key[:-2] if callit else key
         value = self._submapping[realKey]
@@ -1438,10 +1452,10 @@ def formatWithCall(formatString, mapping):
     @rtype: L{unicode}
     """
     return unicode(
-        theFormatter.vformat(formatString, (), CallMapping(mapping))
+        _theFormatter.vformat(formatString, (), _CallMapping(mapping))
     )
 
-theFormatter = Formatter()
+_theFormatter = Formatter()
 
 
 
