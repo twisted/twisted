@@ -579,6 +579,12 @@ class LegacyLogger(object):
         """
         This method is API-compatible with L{twisted.python.log.msg} and exists
         for compatibility with that API.
+
+        @param message: L{bytes} objects.
+        @type message: L{tuple}
+
+        @param kwargs: Fields in the legacy log message.
+        @type kwargs: L{dict}
         """
         if message:
             message = " ".join(map(safe_str, message))
