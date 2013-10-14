@@ -1100,7 +1100,7 @@ class LegacyLogObserverWrapper(object):
             # Create an object that implements __str__() in order to defer the
             # work of formatting until it's needed by a legacy log observer.
             event["format"] = "%(log_legacy)s"
-            event["log_legacy"] = StringifiableFromEvent(event)
+            event["log_legacy"] = StringifiableFromEvent(event.copy())
 
         # log.failure() -> isError blah blah
         if "log_failure" in event:
