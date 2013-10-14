@@ -1180,11 +1180,11 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
                 environ["TZ"] = name
             tzset()
 
-        def testObserver(t_int, t_bytes):
+        def testObserver(t_int, t_text):
             self._testObserver(
                 t_int, u"XYZZY",
                 dict(),
-                self.buildOutput(t_bytes, self.DEFAULT_SYSTEM, u"XYZZY",
+                self.buildOutput(t_text, self.DEFAULT_SYSTEM, u"XYZZY",
                                  "utf-8"),
             )
 
@@ -1213,29 +1213,29 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         # UTC
         testForTimeZone(
             "UTC+00",
-            b"2006-06-30T00:00:00+0000",
-            b"2007-01-31T00:00:00+0000",
+            u"2006-06-30T00:00:00+0000",
+            u"2007-01-31T00:00:00+0000",
         )
 
         # West of UTC
         testForTimeZone(
             "EST+05EDT,M4.1.0,M10.5.0",
-            b"2006-06-30T00:00:00-0400",
-            b"2007-01-31T00:00:00-0500",
+            u"2006-06-30T00:00:00-0400",
+            u"2007-01-31T00:00:00-0500",
         )
 
         # East of UTC
         testForTimeZone(
             "CEST-01CEDT,M4.1.0,M10.5.0",
-            b"2006-06-30T00:00:00+0200",
-            b"2007-01-31T00:00:00+0100",
+            u"2006-06-30T00:00:00+0200",
+            u"2007-01-31T00:00:00+0100",
         )
 
         # No DST
         testForTimeZone(
             "CST+06",
-            b"2006-06-30T00:00:00-0600",
-            b"2007-01-31T00:00:00-0600",
+            u"2006-06-30T00:00:00-0600",
+            u"2007-01-31T00:00:00-0600",
         )
 
 
@@ -1244,11 +1244,7 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         Empty format == empty log output == nothing to log.
         """
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        self._testObserver(
-            t, u"",
-            dict(),
-            b"",
-        )
+        self._testObserver(t, u"", dict(), u"")
 
 
     def test_noTimeFormat(self):
@@ -1281,9 +1277,9 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         "%f" supported in time format.
         """
         self._testObserver(
-            1.234567, u"XYZZY",
+            1.23456, u"XYZZY",
             dict(timeFormat="%f"),
-            self.buildOutput(u"234567", self.DEFAULT_SYSTEM, u"XYZZY",
+            self.buildOutput(u"234560", self.DEFAULT_SYSTEM, u"XYZZY",
                              "utf-8"),
         )
 
