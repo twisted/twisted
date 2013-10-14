@@ -285,11 +285,9 @@ class Logger(object):
         if hasattr(cls, "_theDefaultPublisher"):
             return cls._theDefaultPublisher
 
-        #
         # If no default log publisher has been set, return a temporary
         # RingBufferLogObserver which will hold onto events until a
         # default publisher is set.
-        #
         if not hasattr(cls, "_theTemporaryPublisher"):
             cls._theTemporaryPublisher = RingBufferLogObserver(64*1024)
         return cls._theTemporaryPublisher
@@ -303,10 +301,8 @@ class Logger(object):
         publisher = ILogObserver(publisher)
 
         if not hasattr(cls, "_theDefaultPublisher"):
-            #
             # No default publisher has been set before; drain the temporary
             # buffering publisher into the new one.
-            #
             if hasattr(cls, "_theTemporaryPublisher"):
                 for event in cls._theTemporaryPublisher:
                     publisher(event)
@@ -320,7 +316,8 @@ class Logger(object):
         """
         Derive a namespace from the module containing the caller's caller.
 
-        @return: a namespace
+        @return: the fully qualified python name of a module.
+        @rtype: L{str} (native string)
         """
         return currentframe().f_back.f_back.f_globals["__name__"]
 
