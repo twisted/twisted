@@ -623,6 +623,10 @@ class KeyPair(PublicKey):
 class OpenSSLCertificateOptions(object):
     """
     A factory for SSL context objects for both SSL servers and clients.
+
+    @ivar _options: Any option flags to set on the L{OpenSSL.SSL.Context}
+        object that will be created.
+    @type _options: L{int}
     """
 
     # Factory for creating contexts.  Configurable for testability.
@@ -632,8 +636,6 @@ class OpenSSLCertificateOptions(object):
     _OP_ALL = getattr(SSL, 'OP_ALL', 0x0000FFFF)
     # OP_NO_TICKET is not (yet) exposed by PyOpenSSL
     _OP_NO_TICKET = 0x00004000
-
-    method = SSL.TLSv1_METHOD
 
     def __init__(self,
                  privateKey=None,
@@ -657,7 +659,9 @@ class OpenSSLCertificateOptions(object):
         @param certificate: An X509 object holding the certificate.
 
         @param method: The SSL protocol to use, one of SSLv23_METHOD,
-        SSLv2_METHOD, SSLv3_METHOD, TLSv1_METHOD.  Defaults to TLSv1_METHOD.
+            SSLv2_METHOD, SSLv3_METHOD, TLSv1_METHOD (or any other method
+            constants provided by pyOpenSSL).  By default, a setting will be
+            used which allows TLSv1.0, TLSv1.1, and TLSv1.2.
 
         @param verify: If C{True}, verify certificates received from the peer
             and fail the handshake if verification fails.  Otherwise, allow
@@ -710,7 +714,18 @@ class OpenSSLCertificateOptions(object):
                 "Specify neither or both of privateKey and certificate")
         self.privateKey = privateKey
         self.certificate = certificate
-        if method is not None:
+
+        # Disallow insecure SSLv2. Only has an effect when SSLv23_METHOD is
+        # used.
+        self._options = SSL.OP_NO_SSLv2
+
+        if method is None:
+            # If no method is specified set things up so that TLSv1.0 and newer
+            # will be supported.
+            self.method = SSL.SSLv23_METHOD
+            self._options |= SSL.OP_NO_SSLv3
+        else:
+            # Otherwise respect the application decision.
             self.method = method
 
         if verify and not caCerts:
@@ -758,8 +773,7 @@ class OpenSSLCertificateOptions(object):
 
     def _makeContext(self):
         ctx = self._contextFactory(self.method)
-        # Disallow insecure SSLv2. Applies only for SSLv23_METHOD.
-        ctx.set_options(SSL.OP_NO_SSLv2)
+        ctx.set_options(self._options)
 
         if self.certificate is not None and self.privateKey is not None:
             ctx.use_certificate(self.certificate)
