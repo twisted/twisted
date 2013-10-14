@@ -21,6 +21,7 @@ the latest version of Python directly from your code, if possible.
 from __future__ import division
 
 import sys, string, socket, struct
+from io import TextIOBase, IOBase
 
 
 if sys.version_info < (3, 0):
@@ -266,6 +267,57 @@ if _PY3:
     unicode = str
 else:
     unicode = unicode
+
+
+
+def ioType(fileIshObject):
+    """
+    Determine the type which will be returned from the given file object's
+    read() and accepted by its write() method as an argument.
+
+    In other words, determine whether the given file is 'opened in text mode'.
+
+    @param fileIshObject: Any object, but ideally one
+
+    @return: There are 3 possible return values:
+
+            1. L{bytes}, either (A) if the file is unambiguously opened in
+               binary mode, or (B) if the file is not discernably a file-like
+               object at all.  This function is not intended to check for
+               validity of file-like-ness, so it errs on the side of
+               permissiveness.
+
+            2. L{unicode}, if the file is unambiguously opened in text mode.
+
+            3. L{basestring}, if we are on python 2 (the L{basestring} type
+               does not exist on python 3) and the file is opened in binary
+               mode, but has an encoding and can therefore accept both bytes
+               and text reliably for writing, but will return L{bytes} from
+               read methods.
+
+    @rtype: L{type}
+    """
+    if isinstance(fileIshObject, TextIOBase):
+        # If it's for text I/O, then it's for text I/O.
+        return unicode
+    if isinstance(fileIshObject, IOBase):
+        # If it's for I/O but it's _not_ for text I/O, it's for bytes I/O.
+        return bytes
+    encoding = getattr(fileIshObject, 'encoding', None)
+    import codecs
+    if isinstance(fileIshObject, codecs.StreamReaderWriter):
+        # On StreamReaderWriter, the 'encoding' attribute has special meaning;
+        # it is unambiguously unicode.
+        if encoding:
+            return unicode
+        else:
+            return bytes
+    if not _PY3:
+        # Special case: if we have an encoding file, we can *give* it unicode,
+        # but we can't expect to *get* unicode.
+        if encoding is not None:
+            return basestring
+    return bytes
 
 
 
