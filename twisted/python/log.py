@@ -395,20 +395,21 @@ class StartStopMixIn:
 
 
 
-class FileLogObserver(NewFileLogObserver, StartStopMixIn):
+class FileLogObserver(StartStopMixIn):
     """
     Log observer that writes to a file-like object.
 
     @type timeFormat: C{str} or C{NoneType}
     @ivar timeFormat: If not C{None}, the format string passed to strftime().
     """
-    defaultTimeFormat = "%d-%02d-%02d %02d:%02d:%02d%s%02d%02d%z"
+
+    timeFormat = None
 
     def __init__(self, f):
-        self._f = f
-        self._timeFormat = None
-
-        NewFileLogObserver.__init__(self, f, timeFormat=None)
+        # compatibility
+        self.write = f.write
+        self.flush = f.flush
+        self._newObserver = NewFileLogObserver(f)
 
 
     def getTimezoneOffset(self, when):
@@ -441,8 +442,8 @@ class FileLogObserver(NewFileLogObserver, StartStopMixIn):
 
         @rtype: C{str}
         """
-        if self.timeFormat is not None or when is None:
-            return NewFileLogObserver.formatTime(self, when)
+        if self.timeFormat is not None:
+            return datetime.fromtimestamp(when).strftime(self.timeFormat)
 
         tzOffset = -self.getTimezoneOffset(when)
         when = datetime.utcfromtimestamp(when + tzOffset)
@@ -459,7 +460,7 @@ class FileLogObserver(NewFileLogObserver, StartStopMixIn):
 
 
     def emit(self, eventDict):
-        publishToNewObserver(self, eventDict)
+        publishToNewObserver(self._newObserver, eventDict)
 
 
 

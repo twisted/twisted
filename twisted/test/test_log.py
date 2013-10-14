@@ -328,15 +328,15 @@ class FileObserverTestCase(LogPublisherTestCaseMixin,
     Tests for L{log.FileObserver}.
     """
 
-    ERROR_INVALID_FORMAT = 'Invalid format string'
-    ERROR_UNFORMATTABLE_OBJECT = 'UNFORMATTABLE OBJECT'
+    ERROR_INVALID_FORMAT = b'Invalid format string'
+    ERROR_UNFORMATTABLE_OBJECT = b'UNFORMATTABLE OBJECT'
     ERROR_FORMAT = \
-        'Invalid format string or unformattable object in log message'
-    ERROR_PATHOLOGICAL = 'PATHOLOGICAL ERROR'
+        b'Invalid format string or unformattable object in log message'
+    ERROR_PATHOLOGICAL = b'PATHOLOGICAL ERROR'
 
-    ERROR_NO_FORMAT = 'Unable to format event'
-    ERROR_UNFORMATTABLE_SYSTEM = "[UNFORMATTABLE]"
-    ERROR_MESSAGE_LOST = 'MESSAGE LOST: unformattable object logged'
+    ERROR_NO_FORMAT = b'Unable to format event'
+    ERROR_UNFORMATTABLE_SYSTEM = b"[UNFORMATTABLE]"
+    ERROR_MESSAGE_LOST = b'MESSAGE LOST: unformattable object logged'
 
     def test_getTimezoneOffset(self):
         """

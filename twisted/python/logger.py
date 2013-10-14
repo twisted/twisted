@@ -1,3 +1,4 @@
+from twisted.python.compat import unicode
 # -*- test-case-name: twisted.python.test.test_logger -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -54,7 +55,8 @@ __all__ = [
 
 
 
-import sys
+from twisted.python.compat import ioType
+import sys, io
 from string import Formatter
 from inspect import currentframe
 import logging as py_logging
@@ -65,7 +67,7 @@ from collections import deque
 
 from zope.interface import Interface, implementer
 from twisted.python.constants import NamedConstant, Names
-from twisted.python.util import untilConcludes
+
 from twisted.python.failure import Failure
 from twisted.python.reflect import safe_str, safe_repr
 
@@ -857,23 +859,33 @@ class FileLogObserver(object):
     Log observer that writes to a file-like object.
     """
 
-    def __init__(
-        self, fileHandle,
-        encoding="utf-8", timeFormat=TIME_FORMAT_RFC3339
-    ):
+    def __init__(self, textOutput, timeFormat=TIME_FORMAT_RFC3339):
         """
-        @param fileHandle: a file-like object to write events to.
+        @param textOutput: a file-like object.  Ideally one should be passed
+            which accepts unicode; if not, utf-8 will be used as the encoding.
+        @type textOutput: L{io.IOBase}
 
-        @param encoding: the encoding to use when writing events to
-            C{fileHandle}.
-
-        @param timeFormat: the format to use when adding timestamp
-            prefixes to logged events.  If C{None}, no timestamp
-            prefix is added.
+        @param timeFormat: the format to use when adding timestamp prefixes to
+            logged events.  If C{None}, no timestamp prefix is added.
         """
-        self.fileHandle = fileHandle
-        self.encoding = encoding
-        self.timeFormat = timeFormat
+        if ioType(textOutput) is not unicode:
+            self._encoding = 'utf-8'
+        else:
+            self._encoding = None
+        self._outputStream = textOutput
+        if callable(timeFormat):
+            self.formatTime = timeFormat
+        else:
+            self._timeFormat = timeFormat
+
+
+    def _writeText(self, text):
+        """
+        Write text to the output stream, encoding it first if necessary.
+        """
+        if self._encoding is not None:
+            text = text.encode(self._encoding)
+        self._outputStream.write(text)
 
 
     def formatTime(self, when):
@@ -885,12 +897,12 @@ class FileLogObserver(object):
         @return: a formatted time as a str.
         """
         if (
-            self.timeFormat is not None and
+            self._timeFormat is not None and
             when is not None
         ):
             tz = MagicTimeZone(when)
             datetime = DateTime.fromtimestamp(when, tz)
-            return datetime.strftime(self.timeFormat)
+            return datetime.strftime(self._timeFormat)
         else:
             return "-"
 
@@ -924,8 +936,8 @@ class FileLogObserver(object):
             event=eventText,
         )
 
-        untilConcludes(self.fileHandle.write, text.encode(self.encoding))
-        untilConcludes(self.fileHandle.flush)
+        self._writeText(text)
+        self._outputStream.flush()
 
 
 

@@ -9,7 +9,8 @@ Test cases for L{twisted.python.logger}.
 
 import sys
 from os import environ
-from cStringIO import StringIO
+from io import StringIO, BytesIO
+
 from time import mktime
 import logging as py_logging
 from inspect import currentframe, getsourcefile
@@ -1303,28 +1304,6 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         )
 
 
-    def test_defaultEncoding(self):
-        """
-        Default encoding is UTF-8.
-        """
-        self._testObserver(
-            None, u"S\xe1nchez",
-            dict(),
-            self.buildDefaultOutput(u"S\xe1nchez", "utf-8"),
-        )
-
-
-    def test_alternateEncoding(self):
-        """
-        Alternate encoding in output.
-        """
-        self._testObserver(
-            None, u"S\xe1nchez",
-            dict(encoding="utf-16"),
-            self.buildDefaultOutput(u"S\xe1nchez", "utf-16")
-        )
-
-
 
 class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
     """
@@ -1365,7 +1344,7 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
                 pl.rootLogger.addHandler(pl.bufferedHandler)
 
                 formatter = py_logging.Formatter(py_logging.BASIC_FORMAT)
-                pl.output = StringIO()
+                pl.output = BytesIO()
                 pl.streamHandler = py_logging.StreamHandler(pl.output)
                 pl.streamHandler.setFormatter(formatter)
                 pl.rootLogger.addHandler(pl.streamHandler)
@@ -1386,6 +1365,7 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
         a string.
 
         @return: a tuple: (records, output)
+        @rtype: 2-tuple of (L{list} of L{logging.LogRecord}, L{bytes}.)
         """
         pl = self.py_logger()
         try:
@@ -1474,7 +1454,7 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
         records, output = self.logEvent(event)
 
         self.assertEquals(len(records), 1)
-        self.assertEquals(str(records[0].msg), "Hello, dude!")
+        self.assertEquals(str(records[0].msg), u"Hello, dude!")
         self.assertEquals(records[0].args, ())
 
 
@@ -1486,7 +1466,7 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
         records, output = self.logEvent(event)
 
         self.assertEquals(len(records), 1)
-        self.assertTrue(output.endswith(":Hello, dude!\n"))
+        self.assertTrue(output.endswith(b":Hello, dude!\n"))
 
 
     def test_noFormat(self):
