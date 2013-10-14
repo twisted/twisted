@@ -597,6 +597,15 @@ class LegacyLogger(object):
         """
         This method is API-compatible with L{twisted.python.log.err} and exists
         for compatibility with that API.
+
+        @param _stuff: A L{Failure}, a string, or an exception.
+        @type _stuff: Something that describes a problem.
+
+        @param _why: A string describing what caused the failure.
+        @type _why: L{str}
+
+        @param kwargs: Additional fields.
+        @type kwargs: L{dict}
         """
         if _stuff is None:
             _stuff = Failure()
