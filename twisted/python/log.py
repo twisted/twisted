@@ -167,6 +167,7 @@ class LogPublisher:
             observerPublisher = NewPublisher()
         self._observerPublisher = observerPublisher
         self._publishPublisher = publishPublisher
+        self._legacyObservers = []
 
 
     @property
@@ -174,11 +175,7 @@ class LogPublisher:
         """
         Property returning all observers registered on this L{LogPublisher}.
         """
-        return [
-            observer.legacyObserver for observer
-            in self._observerPublisher.observers
-            if getattr(observer, "originator", None) == self
-        ]
+        return [x.legacyObserver for x in self._legacyObservers]
 
 
     def addObserver(self, other):
@@ -190,7 +187,7 @@ class LogPublisher:
             message (a dict).
         """
         wrapped = LegacyLogObserverWrapper(other)
-        wrapped.originator = self
+        self._legacyObservers.append(wrapped)
         self._observerPublisher.addObserver(wrapped)
 
 
@@ -198,11 +195,9 @@ class LogPublisher:
         """
         Remove an observer.
         """
-        for observer in self._observerPublisher.observers:
-            if (
-                getattr(observer, "originator", None) == self and
-                observer.legacyObserver == other
-            ):
+        for observer in self._legacyObservers:
+            if observer.legacyObserver == other:
+                self._legacyObservers.remove(observer)
                 self._observerPublisher.removeObserver(observer)
                 break
 
