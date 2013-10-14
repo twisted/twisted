@@ -1,4 +1,3 @@
-from twisted.python.compat import unicode
 # -*- test-case-name: twisted.python.test.test_logger -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -53,9 +52,7 @@ __all__ = [
     "LegacyLogObserverWrapper",
 ]
 
-
-
-from twisted.python.compat import ioType, _PY3, currentframe
+from twisted.python.compat import ioType, _PY3, currentframe, unicode
 import sys
 from string import Formatter
 import logging as py_logging
