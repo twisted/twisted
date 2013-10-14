@@ -1494,11 +1494,20 @@ timeDeltaZero = TimeDelta(0)
 
 
 def formatTrace(trace):
+    """
+    Format a trace (that is, the contents of the C{log_trace} key of a log
+    event) as a visual indication of the message's propagation through various
+    observers.
+
+    @return: A multi-line string with indentation and arrows indicating the
+        flow of the message through various observers.
+    @rtype: L{unicode}
+    """
     def formatWithName(obj):
         if hasattr(obj, "name"):
-            return "{0} ({1})".format(obj, obj.name)
+            return u"{0} ({1})".format(obj, obj.name)
         else:
-            return "{0}".format(obj)
+            return u"{0}".format(obj)
 
     result = []
     lineage = []
