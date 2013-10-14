@@ -301,6 +301,9 @@ class Logger(object):
     def setDefaultPublisher(cls, publisher):
         """
         Sets the default publisher for L{Logger} instances.
+
+        @param publisher: A new publisher.
+        @type publisher: L{ILogObserver}
         """
         publisher = ILogObserver(publisher)
 
