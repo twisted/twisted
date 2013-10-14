@@ -160,6 +160,12 @@ class LogLevel(Names):
         arguably a bug in Twisted, so this is just a workaround for U{until
         this is fixed in some way
         <https://twistedmatrix.com/trac/ticket/6523>}.
+
+        @param constant: One of the L{LogLevel} values.
+        @type constant: L{LogLevel}
+
+        @return: A numeric index indicating priority (lower is higher level).
+        @rtype: L{int}
         """
         return cls._levelPriorities[constant]
 
