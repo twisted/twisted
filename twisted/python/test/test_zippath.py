@@ -9,9 +9,6 @@ import os, zipfile
 
 from twisted.test.test_paths import AbstractFilePathTestCase
 from twisted.python.zippath import ZipArchive
-from twisted.python import filepath
-
-from zope.interface.verify import verifyObject
 
 
 def zipit(dirname, zfname):
@@ -40,14 +37,6 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         self.path = ZipArchive(self.cmn + '.zip')
         self.root = self.path
         self.all = [x.replace(self.cmn, self.cmn + '.zip') for x in self.all]
-
-
-    def test_verifyObject(self):
-        """
-        ZipPaths implement IFilePath.
-        """
-
-        self.assertTrue(verifyObject(filepath.IFilePath, self.path))
 
 
     def test_zipPathRepr(self):
