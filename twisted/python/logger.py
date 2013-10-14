@@ -987,7 +987,11 @@ class PythonLogObserver(object):
         """
         f = currentframe(self.stackDepth)
         co = f.f_code
-        return (co.co_filename, f.f_lineno, co.co_name)
+        if _PY3:
+            extra = (None,)
+        else:
+            extra = ()
+        return (co.co_filename, f.f_lineno, co.co_name) + extra
 
 
     def __call__(self, event):

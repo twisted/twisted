@@ -15,6 +15,8 @@ from twisted.trial import unittest
 from twisted.trial.unittest import SkipTest
 
 from twisted.python import log, failure
+from twisted.python.test.test_logger import EncodedStringIO
+from twisted.python.test.test_logger import handlerAndStringIO
 from twisted.python.logger import LoggingFile, LogLevel as NewLogLevel
 
 
@@ -592,17 +594,13 @@ class PythonLoggingObserverTestCase(unittest.SynchronousTestCase):
     Test the bridge with python logging module.
     """
     def setUp(self):
-        self.out = StringIO()
-
         rootLogger = logging.getLogger("")
         originalLevel = rootLogger.getEffectiveLevel()
         rootLogger.setLevel(logging.DEBUG)
         @self.addCleanup
         def restoreLevel():
             rootLogger.setLevel(originalLevel)
-        self.hdlr = logging.StreamHandler(self.out)
-        fmt = logging.Formatter(logging.BASIC_FORMAT)
-        self.hdlr.setFormatter(fmt)
+        self.hdlr, self.out = handlerAndStringIO()
         rootLogger.addHandler(self.hdlr)
         @self.addCleanup
         def removeLogger():

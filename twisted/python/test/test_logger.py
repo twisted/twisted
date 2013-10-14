@@ -9,7 +9,8 @@ Test cases for L{twisted.python.logger}.
 
 import sys
 from os import environ
-from io import StringIO, BytesIO
+from io import StringIO
+from math import floor
 
 from time import mktime
 import logging as py_logging
@@ -28,6 +29,7 @@ from twisted.python import log as twistedLogging
 from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.trial.unittest import SkipTest
+from twisted.python.compat import unicode, _PY3
 
 from twisted.python.logger import (
     LogLevel, InvalidLogLevelError,
@@ -41,6 +43,14 @@ from twisted.python.logger import (
     formatTrace,
 )
 
+class EncodedStringIO(StringIO):
+    """
+    On Python 2, L{logging.StreamHandler} makes a rather unfortunate
+    guess as to the unicode-ness of its stream.  It guesses wrong in
+    the case of L{StringIO}, and 'encoding' is read-only onp
+    L{StringIO}, so let's help it along figuring out what's up.
+    """
+    encoding = 'utf-8'
 
 defaultLogPublisher = Logger._defaultPublisher()
 
@@ -236,8 +246,8 @@ class LoggingTests(SetUpTearDown, unittest.TestCase):
               to call that key (which ought to be a callable) before
               formatting.
 
-        L{formatEvent} will always return L{unicode}, and if given
-        bytes, will always treat its format string as UTF-8 encoded.
+        L{formatEvent} will always return L{unicode}, and if given bytes, will
+        always treat its format string as UTF-8 encoded.
         """
         def format(log_format, **event):
             event["log_format"] = log_format
@@ -251,12 +261,20 @@ class LoggingTests(SetUpTearDown, unittest.TestCase):
         self.assertEquals(u"no, yes.",
                           format("{not_called}, {called()}.",
                                  not_called="no", called=lambda: "yes"))
-        self.assertEquals(u"S\xe1nchez", format("S\xc3\xa1nchez"))
-        self.assertIn(u"Unable to format event", format(b"S\xe1nchez"))
-        self.assertIn(u"Unable to format event",
-                      format(b"S{a}nchez", a=b"\xe1"))
-        self.assertIn(u"S'\\xe1'nchez",
-                      format(b"S{a!r}nchez", a=b"\xe1"))
+        self.assertEquals(u"S\xe1nchez", format(b"S\xc3\xa1nchez"))
+        badResult = format(b"S\xe1nchez")
+        self.assertIn(u"Unable to format event", badResult)
+        maybeResult = format(b"S{a!s}nchez", a=b"\xe1")
+        # The behavior of unicode.format("{x}", x=bytes) differs on py2 and
+        # py3.  Perhaps we should make our modified formatting more consistent
+        # than this? -glyph
+        if not _PY3:
+            self.assertIn(u"Unable to format event", maybeResult)
+        else:
+            self.assertIn(u"Sb'\\xe1'nchez", maybeResult)
+
+        xe1 = unicode(repr(b"\xe1"))
+        self.assertIn(u"S" + xe1 + "nchez", format(b"S{a!r}nchez", a=b"\xe1"))
 
 
     def test_formatEventNoFormat(self):
@@ -1309,6 +1327,20 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
 
 
 
+def handlerAndStringIO():
+    """
+    Construct a 2-tuple of C{(StreamHandler, StringIO)} for testing interaction
+    with the 'logging' module.
+    """
+    output = EncodedStringIO()
+    template = unicode(py_logging.BASIC_FORMAT)
+    formatter = py_logging.Formatter(template)
+    handler = py_logging.StreamHandler(output)
+    handler.setFormatter(formatter)
+    return handler, output
+
+
+
 class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
     """
     Tests for L{PythonLogObserver}.
@@ -1347,10 +1379,9 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
                 pl.bufferedHandler = BufferedHandler()
                 pl.rootLogger.addHandler(pl.bufferedHandler)
 
-                formatter = py_logging.Formatter(py_logging.BASIC_FORMAT)
-                pl.output = BytesIO()
-                pl.streamHandler = py_logging.StreamHandler(pl.output)
-                pl.streamHandler.setFormatter(formatter)
+                handler, output = handlerAndStringIO()
+                pl.output = output
+                pl.streamHandler = handler
                 pl.rootLogger.addHandler(pl.streamHandler)
 
             def close(pl):
@@ -1410,7 +1441,7 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
 
         # Build a set of events for each log level
         events = []
-        for level, py_level in levelMapping.iteritems():
+        for level, py_level in levelMapping.items():
             event = {}
 
             # Set the log level on the event, except for default
@@ -1470,7 +1501,8 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
         records, output = self.logEvent(event)
 
         self.assertEquals(len(records), 1)
-        self.assertTrue(output.endswith(b":Hello, dude!\n"))
+        self.assertTrue(output.endswith(u":Hello, dude!\n"),
+                        repr(output))
 
 
     def test_noFormat(self):
@@ -1505,7 +1537,7 @@ class RingBufferLogObserverTests(SetUpTearDown, unittest.TestCase):
         Events are buffered in order.
         """
         size = 4
-        events = [dict(n=n) for n in range(size/2)]
+        events = [dict(n=n) for n in range(size//2)]
         observer = RingBufferLogObserver(size)
 
         for event in events:
@@ -1533,7 +1565,7 @@ class RingBufferLogObserverTests(SetUpTearDown, unittest.TestCase):
         Events are cleared by C{observer.clear()}.
         """
         size = 4
-        events = [dict(n=n) for n in range(size/2)]
+        events = [dict(n=n) for n in range(size//2)]
         observer = RingBufferLogObserver(size)
 
         for event in events:
@@ -1579,15 +1611,16 @@ class LegacyLogObserverWrapperTests(SetUpTearDown, unittest.TestCase):
 
     def forwardAndVerify(self, event):
         """
-        Send an event to a wrapped legacy observer and verify that its
-        data is preserved.
+        Send an event to a wrapped legacy observer and verify that its data is
+        preserved.
+
         @return: the event as observed by the legacy wrapper
         """
         # Send a copy: don't mutate me, bro
         observed = self.observe(dict(event))
 
         # Don't expect modifications
-        for key, value in event.iteritems():
+        for key, value in event.items():
             self.assertIn(key, observed)
             self.assertEquals(observed[key], value)
 
@@ -1634,7 +1667,7 @@ class LegacyLogObserverWrapperTests(SetUpTearDown, unittest.TestCase):
         )
         self.assertEquals(
             twistedLogging.textFromEventDict(event),
-            "Hello, world!"
+            b"Hello, world!"
         )
 
 
