@@ -701,15 +701,15 @@ class LogPublisherTests(SetUpTearDown, unittest.TestCase):
             self.assertEquals(
                 trace,
                 (
-                    "{root} ({root.name})\n" +
-                    "  -> {o1} ({o1.name})\n" +
-                    "  -> {p1} ({p1.name})\n" +
-                    "    -> {o2} ({o2.name})\n" +
-                    "    -> {o3} ({o3.name})\n" +
-                    "    -> {p2} ({p2.name})\n" +
-                    "      -> {o4} ({o4.name})\n" +
-                    "  -> {o5} ({o5.name})\n" +
-                    "  -> {oTest}\n"
+                    u"{root} ({root.name})\n"
+                    u"  -> {o1} ({o1.name})\n"
+                    u"  -> {p1} ({p1.name})\n"
+                    u"    -> {o2} ({o2.name})\n"
+                    u"    -> {o3} ({o3.name})\n"
+                    u"    -> {p2} ({p2.name})\n"
+                    u"      -> {o4} ({o4.name})\n"
+                    u"  -> {o5} ({o5.name})\n"
+                    u"  -> {oTest}\n"
                 ).format(
                     root=root,
                     o1=o1, o2=o2, o3=o3, o4=o4, o5=o5,
