@@ -135,9 +135,16 @@ class LogLevel(Names):
     @classmethod
     def levelWithName(cls, name):
         """
+        Get the log level with the given name.
+
         @param name: the name of a L{LogLevel}
+        @type name: L{str} (native string)
 
         @return: the L{LogLevel} with the specified C{name}
+        @rtype: L{LogLevel}
+
+        @raise InvalidLogLevelError: if the C{name} does not name a valid log
+            level.
         """
         try:
             return cls.lookupByName(name)
