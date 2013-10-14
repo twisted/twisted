@@ -55,7 +55,7 @@ __all__ = [
 from twisted.python.compat import ioType, _PY3, currentframe, unicode
 import sys
 from string import Formatter
-import logging as py_logging
+import logging as stdlibLogging
 from time import time
 from datetime import datetime as DateTime, tzinfo as TZInfo
 from datetime import timedelta as TimeDelta
@@ -179,11 +179,11 @@ LogLevel._levelPriorities = dict(
 
 # Mappings to Python's logging module
 pythonLogLevelMapping = {
-    LogLevel.debug:    py_logging.DEBUG,
-    LogLevel.info:     py_logging.INFO,
-    LogLevel.warn:     py_logging.WARNING,
-    LogLevel.error:    py_logging.ERROR,
-    LogLevel.critical: py_logging.CRITICAL,
+    LogLevel.debug:    stdlibLogging.DEBUG,
+    LogLevel.info:     stdlibLogging.INFO,
+    LogLevel.warn:     stdlibLogging.WARNING,
+    LogLevel.error:    stdlibLogging.ERROR,
+    LogLevel.critical: stdlibLogging.CRITICAL,
 }
 
 
@@ -713,6 +713,11 @@ class LogPublisher(object):
         """
         Create an error-logger based on this logger, which does not contain the
         given bad observer.
+
+        @param observer: The observer which previously had an error.
+        @type observer: L{ILogObserver}
+
+        @return: L{None}
         """
         errorPublisher = self.__class__(*[obs for obs in self._observers
                                           if obs is not observer])
@@ -765,10 +770,13 @@ class FilteringLogObserver(object):
 
     def shouldLogEvent(self, event):
         """
-        Determine whether an event should be logged, based
-        C{self.predicates}.
+        Determine whether an event should be logged, based C{self.predicates}.
 
         @param event: an event
+        @type event: L{dict}
+
+        @return: yes, no, or maybe
+        @rtype: L{NamedConstant} from L{PredicateResult}
         """
         for predicate in self.predicates:
             result = predicate(event)
@@ -811,8 +819,16 @@ class LogLevelFilterPredicate(object):
 
     def logLevelForNamespace(self, namespace):
         """
+        Determine an appropriate log level for the given namespace.
+
+        This respects dots in namespaces; for example, if you have previously
+        invoked C{setLogLevelForNamespace("mypackage", LogLevel.debug)}, then
+        C{logLevelForNamespace("mypackage.subpackage")} will return
+        C{LogLevel.debug}.
+
         @param namespace: a logging namespace, or C{None} for the default
             namespace.
+        @type namespace: L{str} (native string)
 
         @return: the L{LogLevel} for the specified namespace.
         """
@@ -904,6 +920,9 @@ class FileLogObserver(object):
     def _writeText(self, text):
         """
         Write text to the output stream, encoding it first if necessary.
+
+        @param text: the text to write
+        @type text: L{unicode}
         """
         if self._encoding is not None:
             text = text.encode(self._encoding)
@@ -994,7 +1013,7 @@ class PythonLogObserver(object):
             metadata.
         @type stackDepth: L{int}
         """
-        self.logger = py_logging.getLogger(name)
+        self.logger = stdlibLogging.getLogger(name)
         self.logger.findCaller = self._findCaller
         self.stackDepth = stackDepth
 
@@ -1003,6 +1022,14 @@ class PythonLogObserver(object):
         """
         Based on the stack depth passed to this L{PythonLogObserver}, identify
         the calling function.
+
+        @param stack_info: Whether or not to construct stack information.
+            (Currently ignored.)
+        @type stack_info: L{bool}
+
+        @return: Depending on Python version, either a 3-tuple of (filename,
+            lineno, name) or a 4-tuple of that plus stack information.
+        @rtype: L{tuple}
         """
         f = currentframe(self.stackDepth)
         co = f.f_code
@@ -1018,8 +1045,8 @@ class PythonLogObserver(object):
         Format an event and bridge it to Python logging.
         """
         level = event.get("log_level", LogLevel.info)
-        py_level = pythonLogLevelMapping.get(level, py_logging.INFO)
-        self.logger.log(py_level, StringifiableFromEvent(event))
+        stdlibLevel = pythonLogLevelMapping.get(level, stdlibLogging.INFO)
+        self.logger.log(stdlibLevel, StringifiableFromEvent(event))
 
 
 
