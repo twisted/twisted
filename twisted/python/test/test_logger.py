@@ -1191,7 +1191,15 @@ class FileLogObserverTests(SetUpTearDown, unittest.TestCase):
         def testForTimeZone(name, expectedDST, expectedSTD):
             setTZ(name)
 
-            localDST = mktime((2006, 6, 30, 0, 0, 0, 4, 181, 1))
+            # On some rare platforms (FreeBSD 8?  I was not able to reproduce
+            # on FreeBSD 9) 'mktime' seems to always fail once tzset() has been
+            # called more than once in a process lifetime.  I think this is
+            # just a platform bug, so let's work around it.  -glyph
+            try:
+                localDST = mktime((2006, 6, 30, 0, 0, 0, 4, 181, 1))
+            except OverflowError:
+                raise SkipTest("Platform cannot construct time zone for " +
+                               repr(name))
             localSTD = mktime((2007, 1, 31, 0, 0, 0, 2,  31, 0))
 
             testObserver(localDST, expectedDST)
