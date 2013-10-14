@@ -1361,8 +1361,11 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
                 pl.rootLogger.setLevel(pl.originalLevel)
                 pl.rootLogger.removeHandler(pl.bufferedHandler)
                 pl.rootLogger.removeHandler(pl.streamHandler)
+                pl.streamHandler.close()
                 pl.output.close()
 
+        logger = Container()
+        self.addCleanup(logger.close)
         return Container()
 
 
@@ -1376,17 +1379,14 @@ class PythonLogObserverTests(SetUpTearDown, unittest.TestCase):
         @rtype: 2-tuple of (L{list} of L{logging.LogRecord}, L{bytes}.)
         """
         pl = self.py_logger()
-        try:
-            observer = PythonLogObserver(
-                # Add 1 to default stack depth to skip *this* frame, since
-                # tests will want to know about their own frames.
-                stackDepth=PythonLogObserver.defaultStackDepth + 1
-            )
-            for event in events:
-                observer(event)
-            return pl.bufferedHandler.records, pl.output.getvalue()
-        finally:
-            pl.close()
+        observer = PythonLogObserver(
+            # Add 1 to default stack depth to skip *this* frame, since
+            # tests will want to know about their own frames.
+            stackDepth=PythonLogObserver.defaultStackDepth + 1
+        )
+        for event in events:
+            observer(event)
+        return pl.bufferedHandler.records, pl.output.getvalue()
 
 
     def test_name(self):
