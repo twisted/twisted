@@ -525,7 +525,7 @@ class LogPublisherTests(SetUpTearDown, unittest.TestCase):
         o2 = lambda e: None
 
         publisher = LogPublisher(o1, o2)
-        self.assertEquals(set((o1, o2)), set(publisher.observers))
+        self.assertEquals(set((o1, o2)), set(publisher._observers))
 
 
     def test_addObserver(self):
@@ -538,7 +538,7 @@ class LogPublisherTests(SetUpTearDown, unittest.TestCase):
 
         publisher = LogPublisher(o1, o2)
         publisher.addObserver(o3)
-        self.assertEquals(set((o1, o2, o3)), set(publisher.observers))
+        self.assertEquals(set((o1, o2, o3)), set(publisher._observers))
 
 
     def test_addObserverNotCallable(self):
@@ -560,7 +560,7 @@ class LogPublisherTests(SetUpTearDown, unittest.TestCase):
 
         publisher = LogPublisher(o1, o2, o3)
         publisher.removeObserver(o2)
-        self.assertEquals(set((o1, o3)), set(publisher.observers))
+        self.assertEquals(set((o1, o3)), set(publisher._observers))
 
 
     def test_removeObserverNotRegistered(self):
@@ -574,7 +574,7 @@ class LogPublisherTests(SetUpTearDown, unittest.TestCase):
 
         publisher = LogPublisher(o1, o2)
         publisher.removeObserver(o3)
-        self.assertEquals(set((o1, o2)), set(publisher.observers))
+        self.assertEquals(set((o1, o2)), set(publisher._observers))
 
 
     def test_fanOut(self):
@@ -769,12 +769,12 @@ class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
 
         self.assertEquals(
             set((o1, o2)),
-            set(publisher.filteredPublisher.observers),
+            set(publisher.filteredPublisher._observers),
             "Filtered observers do not match expected set"
         )
         self.assertEquals(
             set((o3, publisher.filters)),
-            set(publisher.rootPublisher.observers),
+            set(publisher.rootPublisher._observers),
             "Root observers do not match expected set"
         )
 
@@ -800,12 +800,12 @@ class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
 
         self.assertEquals(
             set((o1, o3)),
-            set(publisher.filteredPublisher.observers),
+            set(publisher.filteredPublisher._observers),
             "Filtered observers do not match expected set"
         )
         self.assertEquals(
             set((o2, publisher.filters)),
-            set(publisher.rootPublisher.observers),
+            set(publisher.rootPublisher._observers),
             "Root observers do not match expected set"
         )
 
@@ -827,12 +827,12 @@ class DefaultLogPublisherTests(SetUpTearDown, unittest.TestCase):
 
         self.assertEquals(
             set((o1,)),
-            set(publisher.filteredPublisher.observers),
+            set(publisher.filteredPublisher._observers),
             "Filtered observers do not match expected set"
         )
         self.assertEquals(
             set((publisher.filters,)),
-            set(publisher.rootPublisher.observers),
+            set(publisher.rootPublisher._observers),
             "Root observers do not match expected set"
         )
 

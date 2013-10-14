@@ -658,12 +658,6 @@ class LogPublisher(object):
         self.log = Logger(publisher=self)
 
 
-    @property
-    def observers(self):
-        # Don't return a mutable object
-        return self._observers[:]
-
-
     def addObserver(self, observer):
         """
         Registers an observer with this publisher.
@@ -700,7 +694,7 @@ class LogPublisher(object):
 
         brokenObservers = []
 
-        for observer in self.observers:
+        for observer in self._observers:
             if trace is not None:
                 trace(observer)
 
