@@ -464,7 +464,7 @@ class FileLogObserver(_GlobalStartStopMixIn):
 
 
 
-class PythonLoggingObserver(NewPythonLogObserver, _GlobalStartStopMixIn):
+class PythonLoggingObserver(_GlobalStartStopMixIn, object):
     """
     Output twisted messages to Python standard library L{logging} module.
 
@@ -479,7 +479,7 @@ class PythonLoggingObserver(NewPythonLogObserver, _GlobalStartStopMixIn):
         @param loggerName: identifier used for getting logger.
         @type loggerName: C{str}
         """
-        NewPythonLogObserver.__init__(self, loggerName)
+        self._newObserver = NewPythonLogObserver(loggerName)
 
 
     def emit(self, eventDict):
@@ -492,7 +492,7 @@ class PythonLoggingObserver(NewPythonLogObserver, _GlobalStartStopMixIn):
             >>> log.msg('debugging', logLevel=logging.DEBUG)
         """
         if 'log_format' in eventDict:
-            publishToNewObserver(self, eventDict)
+            publishToNewObserver(self._newObserver, eventDict)
 
 
 

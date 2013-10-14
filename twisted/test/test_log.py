@@ -221,7 +221,8 @@ class FakeFile(list):
     def flush(self):
         pass
 
-
+import io
+io.IOBase.register(FakeFile)
 
 class EvilStr:
 
@@ -279,7 +280,7 @@ class LogPublisherTestCaseMixin:
         setting, if it was modified by L{setUp}.
         """
         for chunk in self.out:
-            self.failUnless(isinstance(chunk, str),
+            self.failUnless(isinstance(chunk, bytes),
                             "%r was not a string" % (chunk,))
 
         if self._origEncoding is not None:
@@ -315,7 +316,7 @@ class LogPublisherTestCase(LogPublisherTestCaseMixin,
         self.lp.msg(message)
         self.assertEqual(len(self.out), 1)
         if _PY3:
-            self.assertIn(message, self.out[0])
+            self.assertIn(message.encode("utf-8"), self.out[0])
         else:
             self.assertIn('with str error', self.out[0])
             self.assertIn('UnicodeEncodeError', self.out[0])
@@ -335,7 +336,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin,
     ERROR_PATHOLOGICAL = b'PATHOLOGICAL ERROR'
 
     ERROR_NO_FORMAT = b'Unable to format event'
-    ERROR_UNFORMATTABLE_SYSTEM = b"[UNFORMATTABLE]"
+    ERROR_UNFORMATTABLE_SYSTEM = b'[UNFORMATTABLE]'
     ERROR_MESSAGE_LOST = b'MESSAGE LOST: unformattable object logged'
 
     def test_getTimezoneOffset(self):

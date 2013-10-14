@@ -55,10 +55,9 @@ __all__ = [
 
 
 
-from twisted.python.compat import ioType
-import sys, io
+from twisted.python.compat import ioType, _PY3, currentframe
+import sys
 from string import Formatter
-from inspect import currentframe
 import logging as py_logging
 from time import time
 from datetime import datetime as DateTime, tzinfo as TZInfo
@@ -72,7 +71,7 @@ from twisted.python.failure import Failure
 from twisted.python.reflect import safe_str, safe_repr
 
 OBSERVER_DISABLED = (
-    "Temporarily disabling observer {observer} due to exception: {e}"
+    "Temporarily disabling observer {observer} due to exception: {failure}"
 )
 
 TIME_FORMAT_RFC3339 = "%Y-%m-%dT%H:%M:%S%z"
@@ -977,7 +976,7 @@ class PythonLogObserver(object):
         self.stackDepth = stackDepth
 
 
-    def _findCaller(self):
+    def _findCaller(self, stack_info=False):
         """
         Based on the stack depth passed to this L{PythonLogObserver}, identify
         the calling function.
@@ -1352,8 +1351,13 @@ class StringifiableFromEvent(object):
         return formatEvent(self.event)
 
 
-    def __str__(self):
+    def __bytes__(self):
         return unicode(self).encode("utf-8")
+
+    if _PY3:
+        __str__ = __unicode__
+    else:
+        __str__ = __bytes__
 
 
 

@@ -20,7 +20,7 @@ the latest version of Python directly from your code, if possible.
 
 from __future__ import division
 
-import sys, string, socket, struct
+import sys, string, socket, struct, inspect
 from io import TextIOBase, IOBase
 
 
@@ -42,6 +42,14 @@ def metatype(metacls):
             del namespace[extraSpecial]
         return metacls(cls.__name__, cls.__bases__, namespace)
     return decorator
+
+
+
+def currentframe(n=0):
+    f = inspect.currentframe()
+    for x in range(n + 1):
+        f = f.f_back
+    return f
 
 
 
@@ -270,7 +278,7 @@ else:
 
 
 
-def ioType(fileIshObject):
+def ioType(fileIshObject, default=unicode):
     """
     Determine the type which will be returned from the given file object's
     read() and accepted by its write() method as an argument.
@@ -281,19 +289,17 @@ def ioType(fileIshObject):
 
     @return: There are 3 possible return values:
 
-            1. L{bytes}, either (A) if the file is unambiguously opened in
-               binary mode, or (B) if the file is not discernably a file-like
-               object at all.  This function is not intended to check for
-               validity of file-like-ness, so it errs on the side of
-               permissiveness.
+            1. L{unicode}, if the file is unambiguously opened in text mode.
 
-            2. L{unicode}, if the file is unambiguously opened in text mode.
+            2. L{bytes}, if the file is unambiguously opened in binary mode.
 
             3. L{basestring}, if we are on python 2 (the L{basestring} type
                does not exist on python 3) and the file is opened in binary
                mode, but has an encoding and can therefore accept both bytes
                and text reliably for writing, but will return L{bytes} from
                read methods.
+
+            4. The C{default} parameter, if the given type is not understood.
 
     @rtype: L{type}
     """
@@ -305,7 +311,7 @@ def ioType(fileIshObject):
         return bytes
     encoding = getattr(fileIshObject, 'encoding', None)
     import codecs
-    if isinstance(fileIshObject, codecs.StreamReaderWriter):
+    if isinstance(fileIshObject, (codecs.StreamReader, codecs.StreamWriter)):
         # On StreamReaderWriter, the 'encoding' attribute has special meaning;
         # it is unambiguously unicode.
         if encoding:
@@ -315,9 +321,16 @@ def ioType(fileIshObject):
     if not _PY3:
         # Special case: if we have an encoding file, we can *give* it unicode,
         # but we can't expect to *get* unicode.
-        if encoding is not None:
-            return basestring
-    return bytes
+        if isinstance(fileIshObject, file):
+            if encoding is not None:
+                return basestring
+            else:
+                return bytes
+        from cStringIO import InputType, OutputType
+        from StringIO import StringIO
+        if isinstance(fileIshObject, (StringIO, InputType, OutputType)):
+            return bytes
+    return default
 
 
 

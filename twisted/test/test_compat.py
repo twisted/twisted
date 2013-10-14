@@ -116,12 +116,12 @@ class IOTypeTests(unittest.SynchronousTestCase):
                           unicodeCompat)
 
 
-    def test_defaultToBytes(self):
+    def test_defaultToText(self):
         """
         When passed an object about which no sensible decision can be made, err
-        on the side of bytes.
+        on the side of unicode.
         """
-        self.assertEquals(ioType(object()), bytes)
+        self.assertEquals(ioType(object()), unicodeCompat)
 
 
 
