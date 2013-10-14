@@ -1480,7 +1480,7 @@ class SetContentTests(BytesTestCase):
         pathString = self.mktemp()
         path = filepath.FilePath(pathString)
         path.setContent(b"hello, world")
-        with open(pathString) as fObj:
+        with open(pathString, "rb") as fObj:
             contents = fObj.read()
         self.assertEqual(b"hello, world", contents)
 
