@@ -285,11 +285,13 @@ class ReactorBuilder:
             timedOut.append(None)
             reactor.stop()
 
-        reactor.callLater(timeout, stop)
+        timedOutCall = reactor.callLater(timeout, stop)
         reactor.run()
         if timedOut:
             raise TestTimeoutError(
                 "reactor still running after %s seconds" % (timeout,))
+        else:
+            timedOutCall.cancel()
 
 
     def makeTestCaseClasses(cls):

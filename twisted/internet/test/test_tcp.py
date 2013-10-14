@@ -2262,9 +2262,7 @@ class AbortConnectionMixin(object):
 
         # Make sure everything was shutdown correctly:
         self.assertEqual(reactor.removeAll(), [])
-        # The reactor always has a timeout added in runReactor():
-        delayedCalls = reactor.getDelayedCalls()
-        self.assertEqual(len(delayedCalls), 1, map(str, delayedCalls))
+        self.assertEqual(reactor.getDelayedCalls(), [])
 
         if clientConnectionLostReason is not None:
             self.assertIsInstance(
