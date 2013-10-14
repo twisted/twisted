@@ -7,15 +7,18 @@ Symbolic constant support, including collections and constants with text,
 numeric, and bit flag values.
 """
 
+from __future__ import division, absolute_import
+
 __all__ = [
     'NamedConstant', 'ValueConstant', 'FlagConstant',
     'Names', 'Values', 'Flags']
 
+from functools import partial
 from itertools import count
 from operator import and_, or_, xor
 
 _unspecified = object()
-_constantOrder = count().next
+_constantOrder = partial(next, count())
 
 
 class _Constant(object):
@@ -61,7 +64,8 @@ class _Constant(object):
 
 class _ConstantsContainerType(type):
     """
-    L{_ConstantsContainerType} is a metaclass for creating constants container classes.
+    L{_ConstantsContainerType} is a metaclass for creating constants container
+    classes.
     """
     def __new__(self, name, bases, attributes):
         """
@@ -84,11 +88,14 @@ class _ConstantsContainerType(type):
         cls = super(_ConstantsContainerType, self).__new__(
             self, name, bases, attributes)
 
-        if cls._constantType is None:
+        # Only realize constants in concrete _ConstantsContainer subclasses.
+        # Ignore intermediate base classes.
+        constantType = getattr(cls, '_constantType', None)
+        if constantType is None:
             return cls
 
         constants = []
-        for (name, descriptor) in attributes.iteritems():
+        for (name, descriptor) in attributes.items():
             if isinstance(descriptor, cls._constantType):
                 if descriptor._container is not None:
                     raise ValueError(
@@ -96,9 +103,8 @@ class _ConstantsContainerType(type):
                             descriptor, cls.__name__))
                 constants.append((descriptor._index, name, descriptor))
 
-        constants.sort()
         enumerants = {}
-        for (index, enumerant, descriptor) in constants:
+        for (index, enumerant, descriptor) in sorted(constants):
             value = cls._constantFactory(enumerant, descriptor)
             descriptor._realize(cls, enumerant, value)
             enumerants[enumerant] = descriptor
@@ -112,7 +118,14 @@ class _ConstantsContainerType(type):
 
 
 
-class _ConstantsContainer(object):
+# In Python3 metaclasses are defined using a C{metaclass} keyword argument in
+# the class definition. This would cause a syntax error in Python2.
+# So we use L{type} to introduce an intermediate base class with the desired
+# metaclass.
+# See:
+# * http://docs.python.org/2/library/functions.html#type
+# * http://docs.python.org/3/reference/datamodel.html#customizing-class-creation
+class _ConstantsContainer(_ConstantsContainerType('', (object,), {})):
     """
     L{_ConstantsContainer} is a class with attributes used as symbolic
     constants.  It is up to subclasses to specify what kind of constants are
@@ -125,7 +138,6 @@ class _ConstantsContainer(object):
         L{NamedConstant} instances) found in the class definition to those
         instances.
     """
-    __metaclass__ = _ConstantsContainerType
 
     _constantType = None
 
@@ -145,6 +157,9 @@ class _ConstantsContainer(object):
         Construct the value for a new constant to add to this container.
 
         @param name: The name of the constant to create.
+
+        @param descriptor: An instance of a L{_Constant} subclass (eg
+            L{NamedConstant}) which is assigned to C{name}.
 
         @return: L{NamedConstant} instances have no value apart from identity,
             so return a meaningless dummy value.
@@ -181,8 +196,9 @@ class _ConstantsContainer(object):
             instances defined in the body of this L{Names} subclass.
         """
         constants = cls._enumerants.values()
-        constants.sort(key=lambda descriptor: descriptor._index)
-        return iter(constants)
+
+        return iter(
+            sorted(constants, key=lambda descriptor: descriptor._index))
 
 
 
@@ -374,6 +390,7 @@ class FlagConstant(_Constant):
         @return: C{False} if this flag's value is 0, else C{True}.
         """
         return bool(self.value)
+    __bool__ = __nonzero__
 
 
 
@@ -392,6 +409,15 @@ class Flags(Values):
         """
         For L{FlagConstant} instances with no explicitly defined value, assign
         the next power of two as its value.
+
+        @param name: The name of the constant to create.
+
+        @param descriptor: An instance of a L{FlagConstant} which is assigned to
+            C{name}.
+
+        @return: Either the value passed to the C{descriptor} constructor, or
+            the next power of 2 value which will be assigned to C{descriptor},
+            relative to the value of the last defined L{FlagConstant}.
         """
         if descriptor.value is _unspecified:
             value = cls._value
