@@ -168,8 +168,12 @@ class StandardIO(object):
 
     def stopReading(self):
         """Compatibility only, don't use. Call pauseProducing."""
+        warnings.warn("This function is deprecated, use pauseProducing instead.",
+                      category=DeprecationWarning, stacklevel=2)
         self.pauseProducing()
 
     def startReading(self):
         """Compatibility only, don't use. Call resumeProducing."""
+        warnings.warn("This function is deprecated, use resumeProducing instead.",
+                      category=DeprecationWarning, stacklevel=2)
         self.resumeProducing()
