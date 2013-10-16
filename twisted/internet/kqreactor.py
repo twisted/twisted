@@ -251,7 +251,10 @@ class KQueueReactor(posixbase.PosixReactorBase):
                 # handler disconnects another.
                 continue
             else:
-                log.callWithLogger(selectable, _drdw, selectable, fd, event)
+                try:
+                    _drdw(selectable, fd, event)
+                except Exception:
+                    log.err()
 
 
     def _doWriteOrRead(self, selectable, fd, event):

@@ -166,7 +166,10 @@ class PollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
                 # Handles the infrequent case where one selectable's
                 # handler disconnects another.
                 continue
-            log.callWithLogger(selectable, _drdw, selectable, fd, event)
+            try:
+                _drdw(selectable, fd, event)
+            except Exception:
+                log.err()
 
     doIteration = doPoll
 

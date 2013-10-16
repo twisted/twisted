@@ -139,41 +139,6 @@ class UDPPortTestsMixin(object):
             port.getHost(), IPv4Address('UDP', host, portNumber))
 
 
-    def test_logPrefix(self):
-        """
-        Datagram transports implement L{ILoggingContext.logPrefix} to return a
-        message reflecting the protocol they are running.
-        """
-        class CustomLogPrefixDatagramProtocol(DatagramProtocol):
-            def __init__(self, prefix):
-                self._prefix = prefix
-                self.system = Deferred()
-
-            def logPrefix(self):
-                return self._prefix
-
-            def datagramReceived(self, bytes, addr):
-                if self.system is not None:
-                    system = self.system
-                    self.system = None
-                    system.callback(context.get(ILogContext)["system"])
-
-        reactor = self.buildReactor()
-        protocol = CustomLogPrefixDatagramProtocol("Custom Datagrams")
-        d = protocol.system
-        port = self.getListeningPort(reactor, protocol)
-        address = port.getHost()
-
-        def gotSystem(system):
-            self.assertEqual("Custom Datagrams (UDP)", system)
-        d.addCallback(gotSystem)
-        d.addErrback(err)
-        d.addCallback(lambda ignored: reactor.stop())
-
-        port.write(b"some bytes", ('127.0.0.1', address.port))
-        self.runReactor(reactor)
-
-
     def test_str(self):
         """
         C{str()} on the listening port object includes the port number.

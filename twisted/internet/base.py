@@ -614,14 +614,16 @@ class ReactorBase(object):
         log.msg("Received SIGTERM, shutting down.")
         self.callFromThread(self.stop)
 
+
     def disconnectAll(self):
         """Disconnect every reader, and writer in the system.
         """
         selectables = self.removeAll()
         for reader in selectables:
-            log.callWithLogger(reader,
-                               reader.connectionLost,
-                               failure.Failure(main.CONNECTION_LOST))
+            try:
+                reader.connectionLost(failure.Failure(main.CONNECTION_LOST))
+            except Exception:
+                log.err()
 
 
     def iterate(self, delay=0):

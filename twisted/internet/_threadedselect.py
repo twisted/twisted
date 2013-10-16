@@ -189,14 +189,16 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         writes = self.writes
 
         _drdw = self._doReadOrWrite
-        _logrun = log.callWithLogger
         for selectables, method, dct in ((r, "doRead", reads), (w, "doWrite", writes)):
             for selectable in selectables:
                 # if this was disconnected in another thread, kill it.
                 if selectable not in dct:
                     continue
                 # This for pausing input when we're not ready for more.
-                _logrun(selectable, _drdw, selectable, method, dct)
+                try:
+                    _drdw(selectable, method, dct)
+                except Exception:
+                    log.err()
         #print >>sys.stderr, "done _process_Notify"
 
     def _process_Failure(self, f):

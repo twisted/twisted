@@ -133,7 +133,6 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
                 raise
 
         _drdw = self._doReadOrWrite
-        _logrun = log.callWithLogger
         for selectables, method, fdset in ((r, "doRead", self._reads),
                                            (w,"doWrite", self._writes)):
             for selectable in selectables:
@@ -142,7 +141,10 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
                 if selectable not in fdset:
                     continue
                 # This for pausing input when we're not ready for more.
-                _logrun(selectable, _drdw, selectable, method)
+                try:
+                    _drdw(selectable, method)
+                except Exception:
+                    log.err()
 
     doIteration = doSelect
 

@@ -187,12 +187,16 @@ class CFReactor(PosixReactorBase):
                 # actually attempt a doRead/doWrite first.  -glyph
                 if isRead:
                     if rw[_READ]:
-                        why = log.callWithLogger(
-                            readWriteDescriptor, readWriteDescriptor.doRead)
+                        try:
+                            why = readWriteDescriptor.doRead()
+                        except Exception:
+                            log.err()
                 else:
                     if rw[_WRITE]:
-                        why = log.callWithLogger(
-                            readWriteDescriptor, readWriteDescriptor.doWrite)
+                        try:
+                            why = readWriteDescriptor.doWrite()
+                        except Exception:
+                            log.err()
         except:
             why = sys.exc_info()[1]
             log.err()
@@ -497,5 +501,3 @@ def install(runLoop=None, runner=None):
     from twisted.internet.main import installReactor
     installReactor(reactor)
     return reactor
-
-

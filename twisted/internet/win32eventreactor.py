@@ -232,7 +232,10 @@ class Win32Reactor(posixbase.PosixReactorBase):
 
         for fd in self._writes.keys():
             ranUserCode = True
-            log.callWithLogger(fd, self._runWrite, fd)
+            try:
+                self._runWrite(fd)
+            except Exception:
+                log.err()
 
         if ranUserCode:
             # If application code *might* have scheduled an event, assume it
@@ -275,7 +278,10 @@ class Win32Reactor(posixbase.PosixReactorBase):
                 events = WSAEnumNetworkEvents(fileno, event)
                 if FD_CLOSE in events:
                     self._closedAndReading[fd] = True
-            log.callWithLogger(fd, self._runAction, action, fd)
+            try:
+                self._runAction(action, fd)
+            except Exception:
+                log.err()
 
 
     def _runWrite(self, fd):

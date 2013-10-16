@@ -290,37 +290,6 @@ class ConnectionTestsMixin(object):
     endpoints = None
 
 
-    def test_logPrefix(self):
-        """
-        Client and server transports implement L{ILoggingContext.logPrefix} to
-        return a message reflecting the protocol they are running.
-        """
-        class CustomLogPrefixProtocol(ConnectableProtocol):
-            def __init__(self, prefix):
-                self._prefix = prefix
-                self.system = None
-
-            def connectionMade(self):
-                self.transport.write(b"a")
-
-            def logPrefix(self):
-                return self._prefix
-
-            def dataReceived(self, bytes):
-                self.system = context.get(ILogContext)["system"]
-                self.transport.write(b"b")
-                # Only close connection if both sides have received data, so
-                # that both sides have system set.
-                if b"b" in bytes:
-                    self.transport.loseConnection()
-
-        client = CustomLogPrefixProtocol("Custom Client")
-        server = CustomLogPrefixProtocol("Custom Server")
-        runProtocolsWithReactor(self, server, client, self.endpoints)
-        self.assertIn("Custom Client", client.system)
-        self.assertIn("Custom Server", server.system)
-
-
     def test_writeAfterDisconnect(self):
         """
         After a connection is disconnected, L{ITransport.write} and
