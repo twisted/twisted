@@ -15,10 +15,9 @@ from weakref import ref
 
 from zope.interface.verify import verifyObject
 
-from twisted.python import context, log
+from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform
-from twisted.python.log import ILogContext, msg, err
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.interfaces import IConnector, IReactorFDSet
 from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
@@ -248,7 +247,7 @@ class Stop(ClientFactory):
 
     def clientConnectionFailed(self, connector, reason):
         self.failReason = reason
-        msg("Stop(CF) cCFailed: %s" % (reason.getErrorMessage(),))
+        log.msg("Stop(CF) cCFailed: %s" % (reason.getErrorMessage(),))
         self.reactor.stop()
 
 
@@ -265,16 +264,16 @@ class ClosingLaterProtocol(ConnectableProtocol):
 
 
     def connectionMade(self):
-        msg("ClosingLaterProtocol.connectionMade")
+        log.msg("ClosingLaterProtocol.connectionMade")
 
 
     def dataReceived(self, bytes):
-        msg("ClosingLaterProtocol.dataReceived %r" % (bytes,))
+        log.msg("ClosingLaterProtocol.dataReceived %r" % (bytes,))
         self.transport.loseConnection()
 
 
     def connectionLost(self, reason):
-        msg("ClosingLaterProtocol.connectionLost")
+        log.msg("ClosingLaterProtocol.connectionLost")
         self.lostConnectionReason = reason
         self.onConnectionLost.callback(self)
 
@@ -304,19 +303,19 @@ class ConnectionTestsMixin(object):
         portDeferred = self.endpoints.server(reactor).listen(
             ServerFactory.forProtocol(protocol))
         def listening(port):
-            msg("Listening on %r" % (port.getHost(),))
+            log.msg("Listening on %r" % (port.getHost(),))
             endpoint = self.endpoints.client(reactor, port.getHost())
 
             lostConnectionDeferred = Deferred()
             protocol = lambda: ClosingLaterProtocol(lostConnectionDeferred)
             client = endpoint.connect(ClientFactory.forProtocol(protocol))
             def write(proto):
-                msg("About to write to %r" % (proto,))
+                log.msg("About to write to %r" % (proto,))
                 proto.transport.write(b'x')
             client.addCallbacks(write, lostConnectionDeferred.errback)
 
             def disconnected(proto):
-                msg("%r disconnected" % (proto,))
+                log.msg("%r disconnected" % (proto,))
                 proto.transport.write(b"some bytes to get lost")
                 proto.transport.writeSequence([b"some", b"more"])
                 finished.append(True)
@@ -328,7 +327,7 @@ class ConnectionTestsMixin(object):
 
         def onListen():
             portDeferred.addCallback(listening)
-            portDeferred.addErrback(err)
+            portDeferred.addErrback(log.err)
             portDeferred.addCallback(lambda ignored: reactor.stop())
         needsRunningReactor(reactor, onListen)
 
@@ -349,13 +348,13 @@ class ConnectionTestsMixin(object):
         portDeferred = self.endpoints.server(reactor).listen(
             ServerFactory.forProtocol(Protocol))
         def listening(port):
-            msg("Listening on %r" % (port.getHost(),))
+            log.msg("Listening on %r" % (port.getHost(),))
             endpoint = self.endpoints.client(reactor, port.getHost())
 
             client = endpoint.connect(
                 ClientFactory.forProtocol(lambda: clientProtocol))
             def disconnect(proto):
-                msg("About to disconnect %r" % (proto,))
+                log.msg("About to disconnect %r" % (proto,))
                 proto.transport.loseConnection()
             client.addCallback(disconnect)
             client.addErrback(lostConnectionDeferred.errback)
@@ -363,7 +362,7 @@ class ConnectionTestsMixin(object):
 
         def onListening():
             portDeferred.addCallback(listening)
-            portDeferred.addErrback(err)
+            portDeferred.addErrback(log.err)
             portDeferred.addBoth(lambda ignored: reactor.stop())
         needsRunningReactor(reactor, onListening)
 
