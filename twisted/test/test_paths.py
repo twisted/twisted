@@ -1539,7 +1539,7 @@ class SetContentTests(BytesTestCase):
 
     def test_defaultExtension(self):
         """
-        L{FilePath.setContent} creates temporary files with the extensikon
+        L{FilePath.setContent} creates temporary files with the extension
         I{.new} if no alternate extension value is given.
         """
         fp = TrackingFilePath(self.mktemp())
