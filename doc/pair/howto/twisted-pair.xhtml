@@ -10,10 +10,21 @@
 <body>
 <h1>Twisted Pair: Low-level Networking</h1>
 
-<p>Twisted can do low-level networking, too.</p>
+<p>Twisted can do low-level networking, too.  Linux provides a facility, known
+as <em>tun/tap interfaces</em>, for reading and writing network data below the
+UDP, TCP, and even IP level.  With this facility, it is possible to construct
+packets for other protocols (such as ARP or ICMP) or to interact with IP, UDP,
+and TCP at a lower level - bypassing the standard "BSD socket API".</p>
 
-<p>Here's an example that tries to show the relationships of different
-classes and how data could flow for receiving packets.</p>
+<p>Twisted Pair exposes this functionality via
+the <code class="API">twisted.pair.tuntap.TuntapPort</code> class.  This is a
+datagram port - in many ways similar to the UDP port type created by a call
+to <code>reactor.listenUDP</code>.  However, instead of listening for UDP
+traffic, it listens either for ethernet frames or IP datagrams.</p>
+
+<p>Here's an illustration that shows the relationships of different classes and
+how data could flow for receiving packets.  Notice where <code>TuntapPort</code>
+falls in this diagram.</p>
 
 <pre>
 FileWrapper
@@ -37,8 +48,8 @@ RawUDPProtocol  RawICMPProtocol  RawTCPProtocol
 DatagramProtocol
 </pre>
 
-<p>Of course, for writing, the picture would look pretty much
-identical, except all arrows would be reversed.</p>
+<p>Of course, for writing, the picture would look pretty much identical, except
+all arrows would be reversed.</p>
 
 <h2>Overview of classes</h2>
 
