@@ -34,7 +34,9 @@ class BytesTestCase(TestCase):
 
 
 class AbstractFilePathTestCase(BytesTestCase):
-
+    """
+    Tests for L{IFilePath} implementations.
+    """
     f1content = b"file 1"
     f2content = b"file 2"
 
@@ -76,6 +78,13 @@ class AbstractFilePathTestCase(BytesTestCase):
         self.root = filepath.FilePath(b"/")
 
 
+    def test_verifyObject(self):
+        """
+        Instances of the path type being tested provide L{IFilePath}.
+        """
+        self.assertTrue(verifyObject(filepath.IFilePath, self.path))
+
+
     def test_segmentsFromPositive(self):
         """
         Verify that the segments between two paths are correctly identified.
@@ -83,6 +92,7 @@ class AbstractFilePathTestCase(BytesTestCase):
         self.assertEqual(
             self.path.child(b"a").child(b"b").child(b"c").segmentsFrom(self.path),
             [b"a", b"b", b"c"])
+
 
     def test_segmentsFromNegative(self):
         """
@@ -572,17 +582,10 @@ class PermissionsTestCase(BytesTestCase):
 class FilePathTestCase(AbstractFilePathTestCase):
     """
     Test various L{FilePath} path manipulations.
+
+    In particular, note that tests defined on this class instead of on the base
+    class are only run against L{twisted.python.filepath}.
     """
-
-
-    def test_verifyObject(self):
-        """
-        FilePaths implement IFilePath.
-        """
-
-        self.assertTrue(verifyObject(filepath.IFilePath, self.path))
-
-
     def test_chmod(self):
         """
         L{FilePath.chmod} modifies the permissions of
@@ -714,54 +717,6 @@ class FilePathTestCase(AbstractFilePathTestCase):
         fp = ExplodingFilePath(b"")
         self.assertRaises(IOError, fp.getContent)
         self.assertTrue(fp.fp.closed)
-
-
-    def test_setContentFileClosing(self):
-        """
-        If writing to the underlying file raises an exception,
-        L{FilePath.setContent} raises that exception after closing the file.
-        """
-        fp = ExplodingFilePath(b"")
-        self.assertRaises(IOError, fp.setContent, b"blah")
-        self.assertTrue(fp.fp.closed)
-
-
-    def test_setContentNameCollision(self):
-        """
-        L{FilePath.setContent} will use a different temporary filename on each
-        invocation, so that multiple processes, threads, or reentrant
-        invocations will not collide with each other.
-        """
-        fp = TrackingFilePath(self.mktemp())
-        fp.setContent(b"alpha")
-        fp.setContent(b"beta")
-
-        # Sanity check: setContent should only open one derivative path each
-        # time to store the temporary file.
-        openedSiblings = fp.openedPaths()
-        self.assertEqual(len(openedSiblings), 2)
-        self.assertNotEqual(openedSiblings[0], openedSiblings[1])
-
-
-    def test_setContentExtension(self):
-        """
-        L{FilePath.setContent} creates temporary files with a user-supplied
-        extension, so that if it is somehow interrupted while writing them, the
-        file that it leaves behind will be identifiable.
-        """
-        fp = TrackingFilePath(self.mktemp())
-        fp.setContent(b"hello")
-        opened = fp.openedPaths()
-        self.assertEqual(len(opened), 1)
-        self.assertTrue(opened[0].basename().endswith(b".new"),
-                        "%s does not end with default '.new' extension" % (
-                            opened[0].basename()))
-        fp.setContent(b"goodbye", b"-something-else")
-        opened = fp.openedPaths()
-        self.assertEqual(len(opened), 2)
-        self.assertTrue(opened[1].basename().endswith(b"-something-else"),
-                        "%s does not end with -something-else extension" % (
-                            opened[1].basename()))
 
 
     def test_symbolicLink(self):
@@ -1511,3 +1466,93 @@ class FilePathTestCase(AbstractFilePathTestCase):
         test_statinfoBitsNotImplementedInWindows.skip = "Test will run only on Windows."
         test_getPermissions_Windows.skip = "Test will run only on Windows."
 
+
+
+class SetContentTests(BytesTestCase):
+    """
+    Tests for L{FilePath.setContent}.
+    """
+    def test_write(self):
+        """
+        Contents of the file referred to by a L{FilePath} can be written using
+        L{FilePath.setContent}.
+        """
+        pathString = self.mktemp()
+        path = filepath.FilePath(pathString)
+        path.setContent(b"hello, world")
+        with open(pathString, "rb") as fObj:
+            contents = fObj.read()
+        self.assertEqual(b"hello, world", contents)
+
+
+    def test_fileClosing(self):
+        """
+        If writing to the underlying file raises an exception,
+        L{FilePath.setContent} raises that exception after closing the file.
+        """
+        fp = ExplodingFilePath(b"")
+        self.assertRaises(IOError, fp.setContent, b"blah")
+        self.assertTrue(fp.fp.closed)
+
+
+    def test_nameCollision(self):
+        """
+        L{FilePath.setContent} will use a different temporary filename on each
+        invocation, so that multiple processes, threads, or reentrant
+        invocations will not collide with each other.
+        """
+        fp = TrackingFilePath(self.mktemp())
+        fp.setContent(b"alpha")
+        fp.setContent(b"beta")
+
+        # Sanity check: setContent should only open one derivative path each
+        # time to store the temporary file.
+        openedSiblings = fp.openedPaths()
+        self.assertEqual(len(openedSiblings), 2)
+        self.assertNotEqual(openedSiblings[0], openedSiblings[1])
+
+
+    def _assertOneOpened(self, fp, extension):
+        """
+        Assert that the L{TrackingFilePath} C{fp} was used to open one sibling
+        with the given extension.
+
+        @param fp: A L{TrackingFilePath} which should have been used to open
+            file at a sibling path.
+        @type fp: L{TrackingFilePath}
+
+        @param extension: The extension the sibling path is expected to have
+            had.
+        @type extension: L{bytes}
+
+        @raise: C{self.failureException} is raised if the extension of the
+            opened file is incorrect or if not exactly one file was opened
+            using C{fp}.
+        """
+        opened = fp.openedPaths()
+        self.assertEqual(len(opened), 1, "expected exactly one opened file")
+        self.assertTrue(
+            opened[0].basename().endswith(extension),
+            "%s does not end with %r extension" % (
+                opened[0].basename(), extension))
+
+
+    def test_defaultExtension(self):
+        """
+        L{FilePath.setContent} creates temporary files with the extension
+        I{.new} if no alternate extension value is given.
+        """
+        fp = TrackingFilePath(self.mktemp())
+        fp.setContent(b"hello")
+        self._assertOneOpened(fp, b".new")
+
+
+    def test_customExtension(self):
+        """
+        L{FilePath.setContent} creates temporary files with a user-supplied
+        extension so that if it is somehow interrupted while writing them the
+        file that it leaves behind will be identifiable.
+        """
+        fp = TrackingFilePath(self.mktemp())
+        fp.setContent(b"goodbye", b"-something-else")
+        self._assertOneOpened(fp, b"-something-else")
