@@ -176,6 +176,11 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
     SEND_LIMIT = 128*1024
 
     def __init__(self, reactor=None):
+        """
+        @param reactor: An L{IReactorFDSet} provider which this descriptor will
+            use to get readable and writeable event notifications.  If no value
+            is given, the global reactor will be used.
+        """
         if not reactor:
             from twisted.internet import reactor
         self.reactor = reactor
