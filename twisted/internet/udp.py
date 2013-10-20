@@ -361,15 +361,16 @@ class Port(base.BasePort):
         @param enabled: Whether the socket may broadcast.
         @type enabled: C{bool}
         """
-        if enabled == True: enabled_int = 1
-        else: enabled_int = 0
         self.socket.setsockopt(
-            socket.SOL_SOCKET, socket.SO_BROADCAST, enabled_int)
+            socket.SOL_SOCKET, socket.SO_BROADCAST, enabled)
 
 
     def getBroadcastAllowed(self):
         """
-        Return whether this UDP socket may broadcast.
+        Checks if broadcast is currently allowed.
+
+        @return: Whether this UDP socket may broadcast.
+        @rtype: C{bool}
         """
         return operator.truth(
             self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST))
