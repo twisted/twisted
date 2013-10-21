@@ -1,2 +1,0 @@
-The Deferred returned by twisted.names.client.Resolver.queryTCP now
-fires with an error if the TCP connection attempt fails.

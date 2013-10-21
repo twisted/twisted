@@ -1,1 +1,0 @@
-twisted.names.authority.FileAuthority now considers any AAAA it knows about for inclusion in the additional section of a response (following the same logic previously used for including A records there).
