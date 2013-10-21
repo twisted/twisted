@@ -1,4 +1,4 @@
-Twisted Pair 13.1.0
+Twisted Pair 13.2.0pre1
 
 Twisted Pair depends on Twisted Core.  For TUN/TAP access, python-eunuchs
 (<http://pypi.python.org/pypi/python-eunuchs/0.0.0>) is also required.
