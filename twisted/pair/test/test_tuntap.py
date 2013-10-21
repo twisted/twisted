@@ -68,17 +68,11 @@ class ReactorFDSet(object):
 
 
     def removeReader(self, reader):
-        try:
-            self._readers.remove(reader)
-        except KeyError:
-            pass
+        self._readers.discard(reader)
 
 
     def removeWriter(self, writer):
-        try:
-            self._writers.remove(writer)
-        except KeyError:
-            pass
+        self._writers.discard(writer)
 
 
     def getReaders(self):
