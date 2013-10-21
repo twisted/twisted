@@ -45,8 +45,8 @@ from twisted.pair.raw import IRawPacketProtocol
 
 if platformSkip is None:
     from twisted.pair.tuntap import (
-        TUNSETIFF, IFNAMSIZ, TunnelType, TunnelFlags, TunnelAddress,
-        TuntapPort, _RealSystem)
+        _TUNSETIFF, _IFNAMSIZ, _RealSystem,
+        TunnelType, TunnelFlags, TunnelAddress, TuntapPort)
 
 
 
@@ -282,14 +282,14 @@ class MemoryIOSystem(object):
         except KeyError:
             raise IOError(EBADF, "Bad file descriptor")
 
-        if request != TUNSETIFF:
+        if request != _TUNSETIFF:
             raise IOError(EINVAL, "Request or args is not valid.")
 
-        name, mode = struct.unpack('%dsH' % (IFNAMSIZ,), args)
+        name, mode = struct.unpack('%dsH' % (_IFNAMSIZ,), args)
         tunnel.tunnelMode = mode
         tunnel.requestedName = name
-        tunnel.name = name[:IFNAMSIZ - 3] + "123"
-        return struct.pack('%dsH' % (IFNAMSIZ,), tunnel.name, mode)
+        tunnel.name = name[:_IFNAMSIZ - 3] + "123"
+        return struct.pack('%dsH' % (_IFNAMSIZ,), tunnel.name, mode)
 
 
     def sendUDP(self, datagram, address):
@@ -480,8 +480,8 @@ class TunnelDeviceTestsMixin(object):
                                        os.O_RDWR | os.O_NONBLOCK)
         self.addCleanup(self.system.close, self.fileno)
         config = struct.pack(
-            "%dsH" % (IFNAMSIZ,), self._TUNNEL_DEVICE, self._TUNNEL_TYPE.value)
-        self.system.ioctl(self.fileno, TUNSETIFF, config)
+            "%dsH" % (_IFNAMSIZ,), self._TUNNEL_DEVICE, self._TUNNEL_TYPE.value)
+        self.system.ioctl(self.fileno, _TUNSETIFF, config)
 
 
     def _invalidFileDescriptor(self):
@@ -537,7 +537,7 @@ class TunnelDeviceTestsMixin(object):
         """
         fd = self._invalidFileDescriptor()
         exc = self.assertRaises(
-            IOError, self.system.ioctl, fd, TUNSETIFF, b"tap0")
+            IOError, self.system.ioctl, fd, _TUNSETIFF, b"tap0")
         self.assertEqual(EBADF, exc.errno)
 
 
@@ -756,7 +756,7 @@ class TunnelTestsMixin(object):
             system.O_RDWR | system.O_CLOEXEC | system.O_NONBLOCK,
             tunnel.openFlags)
         self.assertEqual(
-            b"tun0" + "\x00" * (IFNAMSIZ - len(b"tun0")), tunnel.requestedName)
+            b"tun0" + "\x00" * (_IFNAMSIZ - len(b"tun0")), tunnel.requestedName)
         self.assertEqual(tunnel.name, self.port.interface)
         self.assertFalse(tunnel.blocking)
         self.assertTrue(tunnel.closeOnExec)

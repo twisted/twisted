@@ -22,12 +22,15 @@ from twisted.python import log
 from twisted.internet import abstract, error, task, interfaces, defer
 from twisted.pair import ethernet, raw
 
+__all__ = [
+    "TunnelType", "TunnelFlags", "TunnelAddress", "TuntapPort",
+    ]
 
 
-IFNAMSIZ = 16
-TUNSETIFF = 0x400454ca
-TUNGETIFF = 0x800454d2
-TUN_KO_PATH = b"/dev/net/tun"
+_IFNAMSIZ = 16
+_TUNSETIFF = 0x400454ca
+_TUNGETIFF = 0x800454d2
+_TUN_KO_PATH = b"/dev/net/tun"
 
 
 
@@ -182,10 +185,10 @@ class TuntapPort(abstract.FileDescriptor):
         flags = (
             self._system.O_RDWR | self._system.O_CLOEXEC |
             self._system.O_NONBLOCK)
-        config = struct.pack("%dsH" % (IFNAMSIZ,), name, mode.value)
-        fileno = self._system.open(TUN_KO_PATH, flags)
-        result = self._system.ioctl(fileno, TUNSETIFF, config)
-        return _TunnelDescription(fileno, result[:IFNAMSIZ].strip('\x00'))
+        config = struct.pack("%dsH" % (_IFNAMSIZ,), name, mode.value)
+        fileno = self._system.open(_TUN_KO_PATH, flags)
+        result = self._system.ioctl(fileno, _TUNSETIFF, config)
+        return _TunnelDescription(fileno, result[:_IFNAMSIZ].strip('\x00'))
 
 
     def _bindSocket(self):
