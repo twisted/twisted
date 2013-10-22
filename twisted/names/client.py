@@ -725,6 +725,11 @@ def lookupSenderPolicy(name, timeout=None):
 
 
 
+def lookupCertificate(name, timeout=None):
+    return getResolver().lookupCertificate(name, timeout)
+
+
+
 def lookupResponsibility(name, timeout=None):
     return getResolver().lookupResponsibility(name, timeout)
 

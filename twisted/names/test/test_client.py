@@ -974,6 +974,14 @@ class ClientTestCase(unittest.TestCase):
         d.addCallback(self.checkResult, dns.SPF)
         return d
 
+    def test_lookupCertificate(self):
+        """
+        See L{test_lookupAddress}
+        """
+        d = client.lookupCertificate(self.hostname)
+        d.addCallback(self.checkResult, dns.CERT)
+        return d
+
     def test_lookupResponsibility(self):
         """
         See L{test_lookupAddress}

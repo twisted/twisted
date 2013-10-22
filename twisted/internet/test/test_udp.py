@@ -192,6 +192,17 @@ class UDPPortTestsMixin(object):
         self.assertIn(repr(port.getHost().port), str(port))
 
 
+    def test_allowBroadcast(self):
+        """
+        L{IListeningPort.setBroadcastAllowed} sets broadcast to be allowed
+        on the socket.
+        """
+        reactor = self.buildReactor()
+        port = self.getListeningPort(reactor, DatagramProtocol())
+        port.setBroadcastAllowed(True)
+        self.assertTrue(port.getBroadcastAllowed())
+
+
 
 class UDPServerTestsBuilder(ReactorBuilder,
                             UDPPortTestsMixin, DatagramTransportTestsMixin):

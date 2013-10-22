@@ -74,6 +74,7 @@ test_domain_com = NoFileAuthority(
             dns.Record_NS('39.28.189.39'),
             dns.Record_SPF('v=spf1 mx/30 mx:example.org/30 -all'),
             dns.Record_SPF('v=spf1 +mx a:\0colo', '.example.com/28 -all not valid'),
+            dns.Record_CERT(certOrCRL=b'\x01\x02'),
             dns.Record_MX(10, 'host.test-domain.com'),
             dns.Record_HINFO(os='Linux', cpu='A Fast One, Dontcha know'),
             dns.Record_CNAME('canonical.name.com'),
@@ -360,6 +361,15 @@ class ServerDNSTestCase(unittest.TestCase):
             dns.Record_SPF('v=spf1 +mx a:\0colo', '.example.com/28 -all not valid', ttl=19283784)]
         )
 
+
+    def testCERT(self):
+        """
+        L{DNSServerFactory} can serve I{CERT} resource records.
+        """
+        return self.namesTest(
+            self.resolver.lookupCertificate('test-domain.com'),
+            [dns.Record_CERT(certOrCRL=b'\x01\x02', ttl=19283784)]
+        )
 
     def testWKS(self):
         """Test DNS 'WKS' record queries"""

@@ -354,6 +354,27 @@ class Port(base.BasePort):
         return address.IPv4Address('UDP', *self.socket.getsockname())
 
 
+    def setBroadcastAllowed(self, enabled):
+        """
+        Set whether this UDP socket may broadcast. This is disabled by default.
+
+        @param enabled: Whether the socket may broadcast.
+        @type enabled: C{bool}
+        """
+        if enabled == True: enabled_int = 1
+        else: enabled_int = 0
+        self.socket.setsockopt(
+            socket.SOL_SOCKET, socket.SO_BROADCAST, enabled_int)
+
+
+    def getBroadcastAllowed(self):
+        """
+        Return whether this UDP socket may broadcast.
+        """
+        return operator.truth(
+            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST))
+
+
 
 class MulticastMixin:
     """
