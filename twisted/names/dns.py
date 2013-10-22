@@ -14,7 +14,7 @@ from __future__ import division, absolute_import
 __all__ = [
     'IEncodable', 'IRecord',
 
-    'A', 'A6', 'AAAA', 'AFSDB', 'CNAME', 'DNAME', 'HINFO',
+    'A', 'A6', 'AAAA', 'AFSDB', 'CERT', 'CNAME', 'DNAME', 'HINFO',
     'MAILA', 'MAILB', 'MB', 'MD', 'MF', 'MG', 'MINFO', 'MR', 'MX',
     'NAPTR', 'NS', 'NULL', 'OPT', 'PTR', 'RP', 'SOA', 'SPF', 'SRV', 'TXT',
     'WKS',
@@ -44,7 +44,7 @@ __all__ = [
 
 
 # System imports
-import struct, random, socket
+import base64, struct, random, socket
 from itertools import chain
 
 from io import BytesIO
@@ -116,6 +116,7 @@ PORT = 53
 AAAA = 28
 SRV = 33
 NAPTR = 35
+CERT = 37
 A6 = 38
 DNAME = 39
 OPT = 41
@@ -146,6 +147,7 @@ QUERY_TYPES = {
     AAAA: 'AAAA',
     SRV: 'SRV',
     NAPTR: 'NAPTR',
+    CERT: 'CERT',
     A6: 'A6',
     DNAME: 'DNAME',
     OPT: 'OPT',
@@ -1552,6 +1554,119 @@ class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
         return hash((
             self.order, self.preference, self.flags,
             self.service, self.regexp, self.replacement))
+
+
+
+def _base64Format(bytes):
+    """
+    Base64 encode C{bytes} without any line breaks
+
+    @param bytes: The bytestring to encode.
+    @type bytes: L{bytes}
+
+    @return: The formatted base64 bytestring.
+    """
+    return nativeString(base64.encodestring(bytes).replace(b'\n', b''))
+
+
+
+@implementer(IEncodable, IRecord)
+class Record_CERT(tputil.FancyStrMixin, tputil.FancyEqMixin):
+    """
+    A Certificate record.
+
+    @see: U{http://tools.ietf.org/html/rfc4398}
+
+    @ivar TYPE: CERT type code constant C{37}.
+    @ivar fancybasename: See L{tputil.FancyStrMixin}
+    @ivar showAttributes: See L{tputil.FancyStrMixin}
+    @ivar compareAttributes: See L{tputil.FancyEqMixin}
+
+    @ivar certType: See L{__init__}
+    @ivar keyTag: See L{__init__}
+    @ivar algorithm: See L{__init__}
+    @ivar certOrCRL: See L{__init__}
+    @ivar ttl: See L{__init__}
+    """
+
+    TYPE = CERT
+
+    fancybasename = 'CERT'
+
+    showAttributes = (
+        'certType', 'keyTag', 'algorithm',
+        ('certOrCRL', _base64Format), 'ttl')
+
+    compareAttributes = (
+        'certType', 'keyTag', 'algorithm',
+        'certOrCRL', 'ttl')
+
+    _fmt = '!HHB'
+    _fmt_size = struct.calcsize(_fmt)
+
+    def __init__(self, certType=1, keyTag=0, 
+                 algorithm=5, certOrCRL=b'', ttl=None):
+        """
+        @param certType: an L{int} representing the certificate type
+            used in this CERT record. The default value (C{1}) represents
+            X.509 as per PKIX. See
+            U{https://www.iana.org/assignments/cert-rr-types/cert-rr-types.xhtml}
+        @type certType: L{int}
+
+        @param keyTag: Key tag value as described in RRSIG. 
+            The default value (C{0}) is recommende if the 
+            algorithm field is 0. See
+            U{https://tools.ietf.org/html/rfc4034#appendix-B}
+        @type keyTag: L{int}
+
+        @param algorithm: an L{int} representing the algorithm number 
+            used in this CERT. The default value (C{5}) represents 
+            RSA/SHA-1. These values are the same as used for DNSSEC. See 
+            U{https://www.iana.org/assignments/dns-sec-alg-numbers/dns-sec-alg-numbers.txt} 
+        @type algorithm: L{int}
+
+        @param certOrCRL: a base64 encoded string representing the 
+            stored certificate or CRL.
+        @type certOrCRL: L{bytes}
+
+        @param ttl: The time-to-live of this record. TTL can be 
+            supplied as an L{int} representing a period in seconds or 
+            a human readable string can be supplied which will be 
+            parsed by L{str2time}. Default is C{None}. 
+        @type ttl: L{int} or L{str} or C{None}. 
+        """
+        self.certType = certType
+        self.keyTag = keyTag
+        self.algorithm = algorithm
+        self.certOrCRL = certOrCRL
+        self.ttl = str2time(ttl)
+
+
+    def encode(self, strio, compDict=None):
+        strio.write(
+            struct.pack(self._fmt, self.certType, self.keyTag, self.algorithm))
+        strio.write(self.certOrCRL)
+
+
+    def decode(self, strio, length=None):
+        hdr = readPrecisely(strio, self._fmt_size)
+        self.certType, self.keyTag, self.algorithm = struct.unpack(self._fmt, hdr)
+
+        length -= self._fmt_size
+        self.certOrCRL = readPrecisely(strio, length)
+
+
+    def __hash__(self):
+        """
+        A has allowing this L{Record_CERT} to be used as a L{dict}
+        key.
+
+        @return: A L{hash} og the values of
+            L{Record_CERT.compareAttributes} except C{ttl}.
+        """
+        return hash(tuple(getattr(self, k)
+                          for k in self.compareAttributes
+                          if k != 'ttl'))
 
 
 

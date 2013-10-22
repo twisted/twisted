@@ -30,6 +30,7 @@ RECORD_TYPES = [
     dns.Record_WKS, dns.Record_SRV, dns.Record_AFSDB, dns.Record_RP,
     dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT,
     dns.Record_AAAA, dns.Record_A6, dns.Record_NAPTR, dns.UnknownRecord,
+    dns.Record_CERT,
     ]
 
 
@@ -569,6 +570,14 @@ class RoundtripDNSTestCase(unittest.TestCase):
         """
         self._recordRoundtripTest(dns.Record_TXT(b'foo', b'bar'))
 
+
+    def test_CERT(self):
+        """
+        The byte stream written by L{dns.Record_CERT.encode} can be used by
+        L{dns.Record_CERT.decode} to reconstruct the state of the original
+        L{dns.Record_Cert} instance.
+        """
+        self._recordRoundtripTest(dns.Record_CERT(certOrCRL=b'foobar'))
 
 
 MESSAGE_AUTHENTIC_DATA_BYTES = (
@@ -1291,6 +1300,16 @@ class ReprTests(unittest.TestCase):
             "<SPF data=['foo', 'bar'] ttl=15>")
 
 
+    def test_cert(self):
+        """
+        The repr of a L{dns.Record_CERT} instance includes the data and ttl
+        fields of the record.
+        """
+        self.assertEqual(
+            repr(dns.Record_CERT(certOrCRL=b'foobar', ttl=15)),
+            "<CERT certType=1 keyTag=0 algorithm=5 certOrCRL=Zm9vYmFy ttl=15>")
+
+
     def test_unknown(self):
         """
         The repr of a L{dns.UnknownRecord} instance includes the data and ttl
@@ -1848,6 +1867,39 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             dns.Record_SPF('foo', 'bar', ttl=10),
             dns.Record_SPF('foo', 'bar', ttl=10),
             dns.Record_SPF('foo', 'bar', ttl=100))
+
+
+    def test_cert(self):
+        """
+        L{dns.Record_CERT} instances compare equal if and only if 
+        they have the same certType, keyTag, algorithm,
+        certOrCRL, and ttl.
+        """
+        self._equalityTest(
+            dns.Record_CERT(certType=1),
+            dns.Record_CERT(certType=1),
+            dns.Record_CERT(certType=2))
+
+        self._equalityTest(
+            dns.Record_CERT(keyTag=1),
+            dns.Record_CERT(keyTag=1),
+            dns.Record_CERT(keyTag=2))
+
+        self._equalityTest(
+            dns.Record_CERT(algorithm=1),
+            dns.Record_CERT(algorithm=1),
+            dns.Record_CERT(algorithm=2))
+
+        self._equalityTest(
+            dns.Record_CERT(certOrCRL=b'foo'),
+            dns.Record_CERT(certOrCRL=b'foo'),
+            dns.Record_CERT(certOrCRL=b'bar'))
+
+        self._equalityTest(
+            dns.Record_CERT(ttl=10),
+            dns.Record_CERT(ttl=10),
+            dns.Record_CERT(ttl=100))
+
 
 
     def test_unknown(self):
@@ -2619,3 +2671,179 @@ class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
         o.decode(b)
         self.assertEqual(o.code, 1)
         self.assertEqual(o.data, b'foobar')
+
+
+class CERT_TEST_DATA(object):
+    """
+    Generate byte and instance representations of an
+    L{dns.Record_CERT} where all attributes are set to non-default
+    values.
+
+    For testing whether attributes have really been read from the byte
+    string during decoding.
+    """
+    @classmethod
+    def BYTES(cls):
+        """
+        @return: L{bytes} representing the encoded CERT record returned
+            by L{OBJECT}.
+        """
+        return (
+            b'\x00\x02' # certType
+            b'\x00\x01' # keyTag
+            b'\x04' # algorithm
+            b'foobar') # certOrCRL
+
+
+    @classmethod
+    def OBJECT(cls):
+        """
+        @return: A L{dns.Record_CERT} instance with attributes that
+            match the encoded record returned by L{BYTES}.
+        """
+        return dns.Record_CERT(
+            certType=2,
+            keyTag=1,
+            algorithm=4,
+            certOrCRL=b'foobar')
+
+
+
+class CERTRecordTests(unittest.TestCase):
+    """
+    Tests for L{dns.Record_CERT}.
+    """
+
+    def test_certTypeDefaultAttribute(self):
+        """
+        L{dns.Record_CERT.certType} is a public L{int} attribute
+        encoding the type of key the record holds. The
+        default value is C{1}.
+
+        http://tools.ietf.org/html/rfc4398#section-2.1
+        https://www.iana.org/assignments/cert-rr-types/cert-rr-types.xhtml
+        """
+        record = dns.Record_CERT()
+        self.assertEqual(record.certType, 1)
+
+
+    def test_certTypeOverride(self):
+        """
+        L{dns.Record_CERT.__init__} accepts a C{certType} parameter
+        which overrides the L{dns.Record_CERT.certType} attribute.
+        """
+        record = dns.Record_CERT(certType=2)
+        self.assertEqual(record.certType, 2)
+
+
+    def test_keyTagDefaultAttribute(self):
+        """
+        L{dns.Record_CERT.keyTag} is a public L{int}
+        attribute holding an identifier generated from the certificate. 
+        The default is C{0}.
+        """
+        record = dns.Record_CERT()
+        self.assertEqual(record.keyTag, 0)
+
+
+    def test_keyTagOverride(self):
+        """
+        L{dns.Record_CERT.__init__} accepts a C{keyTag}
+        parameter which overrides the
+        L{dns.Record_CERT.keyTag} attribute.
+        """
+        record = dns.Record_CERT(keyTag=1)
+        self.assertEqual(record.keyTag, 1)
+
+
+    def test_algorithmDefaultAttribute(self):
+        """
+        L{dns.Record_CERT.algorithm} is a public L{int} attribute
+        whose default value is 5 (RSA/SHA-1).
+
+        Values are defined in DNSSEC
+        https://tools.ietf.org/html/rfc4034#section-2.1.3
+        """
+        record = dns.Record_CERT()
+        self.assertEqual(record.algorithm, 5)
+
+
+    def test_algorithmOverride(self):
+        """
+        L{dns.Record_CERT.__init__} accepts a C{algorithm}
+        parameter which overrides the
+        L{dns.Record_CERT.algorithm} attribute.
+        """
+        record = dns.Record_CERT(algorithm=255)
+        self.assertEqual(record.algorithm, 255)
+
+
+    def test_certOrCRLDefaultAttribute(self):
+        """
+        L{dns.Record_CERT.certOrCRL} is a public L{bytes} attribute
+        whose default value is C{b''}.
+        """
+        record = dns.Record_CERT()
+        self.assertEqual(record.certOrCRL, b'')
+
+
+    def test_certOrCRLOverride(self):
+        """
+        L{dns.Record_CERT.__init__} accepts a C{certOrCRL}
+        parameter which overrides the
+        L{dns.Record_CERT.certOrCRL} attribute.
+        """
+        record = dns.Record_CERT(certOrCRL=b'foobar')
+        self.assertEqual(record.certOrCRL, b'foobar')
+
+
+    def test_encode(self):
+        """
+        L{dns.Record_CERT.encode} packs the header fields and the
+        key and writes them to a file like object passed in as an
+        argument.
+        """
+        record = CERT_TEST_DATA.OBJECT()
+        actualBytes = BytesIO()
+        record.encode(actualBytes)
+
+        self.assertEqual(actualBytes.getvalue(), CERT_TEST_DATA.BYTES())
+
+
+    def test_decode(self):
+        """
+        L{dns.Record_CERT.decode} unpacks the header fields from a file
+        like object and populates the attributes of an existing
+        L{dns.Record_CERT} instance.
+        """
+        expectedBytes = CERT_TEST_DATA.BYTES()
+        record = dns.Record_CERT()
+        record.decode(BytesIO(expectedBytes), length=len(expectedBytes))
+
+        self.assertEqual(record, CERT_TEST_DATA.OBJECT())
+
+
+    def test_decodeShorterThanHeader(self):
+        """
+        L{dns.Record_CERT.decode} raises L{EOFError} if the provided
+        file object is shorter than the fixed length header parts. ie
+        everything except key.
+        """
+        record = dns.Record_CERT()
+
+        self.assertRaises(EOFError, record.decode, BytesIO(b'x'), length=1)
+
+
+    def test_decodeShorterThanKey(self):
+        """
+        L{dns.Record_CERT.decode} raises L{EOFError} if the provided
+        file object is shorter than length provided in the length
+        argument.
+        """
+        expectedBytes = CERT_TEST_DATA.BYTES()
+        record = dns.Record_CERT()
+
+        self.assertRaises(
+                EOFError,
+                record.decode,
+                BytesIO(expectedBytes[:-1]), length=len(expectedBytes))
