@@ -26,7 +26,7 @@ from twisted.internet.protocol import DatagramProtocol
 
 from twisted.internet.test.connectionmixins import (LogObserverMixin,
                                                     findFreePort)
-from twisted.internet import defer
+from twisted.internet import defer, error
 from twisted.test.test_udp import Server, GoodClient
 from twisted.trial.unittest import SkipTest
 
@@ -156,12 +156,12 @@ class UDPPortTestsMixin(object):
 
     def test_invalidInterface(self):
         """
-        A C{ValueError} is raised when trying to listen on an address that
+        A C{InvalidAddressError} is raised when trying to listen on an address that
         isn't a valid IPv4 or IPv6 address.
         """
         reactor = self.buildReactor()
         self.assertRaises(
-            ValueError, reactor.listenUDP, DatagramProtocol(), 0,
+            error.InvalidAddressError, reactor.listenUDP, DatagramProtocol(), 0,
             interface='example.com')
 
 
@@ -268,8 +268,8 @@ class UDPPortTestsMixin(object):
 
     def test_connectedWriteToIPv6Interface(self):
         """
-        Writing to a connected IPv6 UDP socket on the loopback interface
-        succeeds.
+        An IPv6 address can be passed as the C{interface} argument to 
+        L{listenUDP}. The resulting Port accepts IPv6 datagrams.
         """
 
         reactor = self.buildReactor()
@@ -317,25 +317,43 @@ class UDPPortTestsMixin(object):
         self.assertEqual(packet[1], (cAddr.host, cAddr.port))
 
 
-    def test_writingToHostnameRaisesValueError(self):
+    def test_writingToHostnameRaisesAddressError(self):
         """
-        Writing to a hostname instead of an IP address will raise a ValueError.
-        """
-
-        reactor = self.buildReactor()
-        port = self.getListeningPort(reactor, DatagramProtocol())
-        self.assertRaises(ValueError, port.write, 'spam', ('eggs.com', 1))
-
-
-    def test_connectingToHostnameRaisesValueError(self):
-        """
-        Connecting to a hostname instead of an IP address will raise a
-        ValueError.
+        Writing to a hostname instead of an IP address will raise an
+        C{InvalidAddressError}.
         """
 
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor, DatagramProtocol())
-        self.assertRaises(ValueError, port.connect, 'eggs.com', 1)
+        self.assertRaises(error.InvalidAddressError, port.write, 'spam', ('eggs.com', 1))
+
+    def test_writingToIPv6OnIPv4RaisesAddressError(self):
+        """
+        Writing to an IPv6 address on an IPv4 socket will raise an 
+        C{InvalidAddressError}.
+        """
+        reactor = self.buildReactor()
+        port = self.getListeningPort(reactor, DatagramProtocol())
+        self.assertRaises(error.InvalidAddressError, port.write, 'spam', ('::1', 1))
+
+    def test_writingToIPv4OnIPv6RaisesAddressError(self):
+        """
+        Writing to an IPv6 address on an IPv4 socket will raise an 
+        C{InvalidAddressError}.
+        """
+        reactor = self.buildReactor()
+        port = self.getListeningPort(reactor, DatagramProtocol(), interface="::1")
+        self.assertRaises(error.InvalidAddressError, port.write, 'spam', ('127.0.0.1', 1))
+
+    def test_connectingToHostnameRaisesAddressError(self):
+        """
+        Connecting to a hostname instead of an IP address will raise an
+        C{InvalidAddressError}.
+        """
+
+        reactor = self.buildReactor()
+        port = self.getListeningPort(reactor, DatagramProtocol())
+        self.assertRaises(error.InvalidAddressError, port.connect, 'eggs.com', 1)
 
 
 

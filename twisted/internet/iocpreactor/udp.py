@@ -70,7 +70,7 @@ class Port(abstract.FileHandle):
         elif isIPAddress(self.interface):
             self.addressFamily = socket.AF_INET
         elif self.interface:
-            raise ValueError(self.interface, 'is not an IPv4 or IPv6 address.')
+            raise error.InvalidAddressError(self.interface, 'not an IPv4 or IPv6 address.')
 
 
     def __repr__(self):
@@ -188,8 +188,11 @@ class Port(abstract.FileHandle):
         else:
             assert addr != None
             if not isIPAddress(addr[0]) and not isIPv6Address(addr[0]):
-                raise ValueError(
-                    "Please only pass IPs to write(), not hostnames", addr[0])
+                raise error.InvalidAddressError(addr[0], "write() only accepts IP addresses, not hostnames")
+            if isIPAddress(addr[0]) and self.addressFamily == socket.AF_INET6:
+                raise error.InvalidAddressError(addr[0], "IPv6 port write() called with IPv4 address")
+            if isIPv6Address(addr[0]) and self.addressFamily == socket.AF_INET:
+                raise error.InvalidAddressError(addr[0], "IPv4 port write() called with IPv6 address")
             try:
                 return self.socket.sendto(datagram, addr)
             except socket.error, se:
@@ -221,8 +224,7 @@ class Port(abstract.FileHandle):
                 "already connected, reconnecting is not currently supported "
                 "(talk to itamar if you want this)")
         if not isIPAddress(host) and not isIPv6Address(host):
-            raise ValueError(
-                "please pass only IP addresses, not domain names", host)
+            raise error.InvalidAddressError(host, 'not an IPv4 or IPv6 address.')
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
 
@@ -282,9 +284,9 @@ class Port(abstract.FileHandle):
 
     def getHost(self):
         """
-        This indicates the address from which I am connecting.
+        Return the local address of the UDP connection
 
-        @returns: the address from which I am connecting
+        @returns: the local address of the UDP connection
         @rtype: L{IPv4Address} or L{IPv6Address}
         """
         addr = self.socket.getsockname()
