@@ -156,13 +156,13 @@ class UDPPortTestsMixin(object):
 
     def test_invalidInterface(self):
         """
-        A C{InvalidAddressError} is raised when trying to listen on an address that
-        isn't a valid IPv4 or IPv6 address.
+        An C{InvalidAddressError} is raised when trying to listen on an address
+        that isn't a valid IPv4 or IPv6 address.
         """
         reactor = self.buildReactor()
         self.assertRaises(
-            error.InvalidAddressError, reactor.listenUDP, DatagramProtocol(), 0,
-            interface='example.com')
+            error.InvalidAddressError, reactor.listenUDP, DatagramProtocol(),
+            0, interface='example.com')
 
 
     def test_logPrefix(self):
@@ -268,7 +268,7 @@ class UDPPortTestsMixin(object):
 
     def test_connectedWriteToIPv6Interface(self):
         """
-        An IPv6 address can be passed as the C{interface} argument to 
+        An IPv6 address can be passed as the C{interface} argument to
         L{listenUDP}. The resulting Port accepts IPv6 datagrams.
         """
 
@@ -317,7 +317,7 @@ class UDPPortTestsMixin(object):
         self.assertEqual(packet[1], (cAddr.host, cAddr.port))
 
 
-    def test_writingToHostnameRaisesAddressError(self):
+    def test_writingToHostnameRaisesInvalidAddressError(self):
         """
         Writing to a hostname instead of an IP address will raise an
         C{InvalidAddressError}.
@@ -325,27 +325,31 @@ class UDPPortTestsMixin(object):
 
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor, DatagramProtocol())
-        self.assertRaises(error.InvalidAddressError, port.write, 'spam', ('eggs.com', 1))
+        self.assertRaises(
+            error.InvalidAddressError, port.write, 'spam', ('eggs.com', 1))
 
-    def test_writingToIPv6OnIPv4RaisesAddressError(self):
+    def test_writingToIPv6OnIPv4RaisesInvalidAddressError(self):
         """
-        Writing to an IPv6 address on an IPv4 socket will raise an 
+        Writing to an IPv6 address on an IPv4 socket will raise an
         C{InvalidAddressError}.
         """
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor, DatagramProtocol())
-        self.assertRaises(error.InvalidAddressError, port.write, 'spam', ('::1', 1))
+        self.assertRaises(
+            error.InvalidAddressError, port.write, 'spam', ('::1', 1))
 
-    def test_writingToIPv4OnIPv6RaisesAddressError(self):
+    def test_writingToIPv4OnIPv6RaisesInvalidAddressError(self):
         """
-        Writing to an IPv6 address on an IPv4 socket will raise an 
+        Writing to an IPv6 address on an IPv4 socket will raise an
         C{InvalidAddressError}.
         """
         reactor = self.buildReactor()
-        port = self.getListeningPort(reactor, DatagramProtocol(), interface="::1")
-        self.assertRaises(error.InvalidAddressError, port.write, 'spam', ('127.0.0.1', 1))
+        port = self.getListeningPort(
+            reactor, DatagramProtocol(), interface="::1")
+        self.assertRaises(
+            error.InvalidAddressError, port.write, 'spam', ('127.0.0.1', 1))
 
-    def test_connectingToHostnameRaisesAddressError(self):
+    def test_connectingToHostnameRaisesInvalidAddressError(self):
         """
         Connecting to a hostname instead of an IP address will raise an
         C{InvalidAddressError}.
@@ -353,7 +357,8 @@ class UDPPortTestsMixin(object):
 
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor, DatagramProtocol())
-        self.assertRaises(error.InvalidAddressError, port.connect, 'eggs.com', 1)
+        self.assertRaises(
+            error.InvalidAddressError, port.connect, 'eggs.com', 1)
 
 
 

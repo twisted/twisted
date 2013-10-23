@@ -313,8 +313,9 @@ class UDPTestCase(unittest.TestCase):
 
     def test_badConnect(self):
         """
-        A call to the transport's connect method fails with a L{InvalidAddressError}
-        when a non-IP address is passed as the host value.
+        A call to the transport's connect method fails with an
+        L{InvalidAddressError} when a non-IP address is passed as the host
+        value.
 
         A call to a transport's connect method fails with a L{RuntimeError}
         when the transport is already connected.

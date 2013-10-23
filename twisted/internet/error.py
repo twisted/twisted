@@ -458,19 +458,26 @@ class AlreadyListened(Exception):
     listened on once.
     """
 
+
+
 class InvalidAddressError(Exception):
     """
-    An invalid address was specified (e.g. neither IPv4 or IPv6)
+    An invalid address was specified (i.e. neither IPv4 or IPv6, or expected
+    one and got the other).
 
-    @ivar address: the address that was provided
-    @ivar message: Additional information provided by the calling context
+    @ivar address: The address that was provided.
+    @ivar message: Additional information provided by the calling context.
     """
+
     def __init__(self, address, message):
         self.address = address
         self.message = message
 
+
     def __str__(self):
-        return "Invalid address %s: %s" %(self.address, self.message)
+        return "Invalid address %s: %s" % (self.address, self.message)
+
+
 
 __all__ = [
     'BindError', 'CannotListenError', 'MulticastJoinError',
