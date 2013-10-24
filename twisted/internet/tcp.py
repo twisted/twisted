@@ -990,9 +990,6 @@ class Port(base.BasePort, _SocketCloser):
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
 
-        log.msg("%s starting on %s" % (
-                self._getLogPrefix(self.factory), self._realPortNumber))
-
         _ip = self.interface if self.interface else "0.0.0.0"
 
         log.msg(eventSource=self, eventType="start", eventTransport="tcp",
@@ -1108,7 +1105,6 @@ class Port(base.BasePort, _SocketCloser):
         """
         Log message for closing port
         """
-        log.msg('(%s Port %s Closed)' % (self._type, self._realPortNumber))
         _ip = self.interface if self.interface else "0.0.0.0"
         log.msg(eventSource=self, eventType="stop", eventTransport="tcp",
                 factory=self.factory,
