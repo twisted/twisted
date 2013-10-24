@@ -913,7 +913,7 @@ class StreamTransportTestsMixin(LogObserverMixin):
         C{"factory"}.
         """
         reactor = self.buildReactor()
-        p = self.getListeningPort(reactor, ServerFactory())
+        p = self.getListeningPort(reactor, self.factory)
 
         listenPort = self.getExpectedConnectionPortNumber(p)
         listenHost = self.getExpectedConnectionPortHost(p)

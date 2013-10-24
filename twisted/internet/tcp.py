@@ -993,6 +993,12 @@ class Port(base.BasePort, _SocketCloser):
         log.msg("%s starting on %s" % (
                 self._getLogPrefix(self.factory), self._realPortNumber))
 
+        _ip = self.interface if self.interface else "0.0.0.0"
+
+        log.msg(eventSource=self, eventType="start", eventTransport="tcp",
+                factory=self.factory,
+                address="%s:%d" % (_ip,self._realPortNumber))
+
         # The order of the next 5 lines is kind of bizarre.  If no one
         # can explain it, perhaps we should re-arrange them.
         self.factory.doStart()
@@ -1097,11 +1103,16 @@ class Port(base.BasePort, _SocketCloser):
 
     stopListening = loseConnection
 
+
     def _logConnectionLostMsg(self):
         """
         Log message for closing port
         """
         log.msg('(%s Port %s Closed)' % (self._type, self._realPortNumber))
+        _ip = self.interface if self.interface else "0.0.0.0"
+        log.msg(eventSource=self, eventType="stop", eventTransport="tcp",
+                factory=self.factory,
+                address="%s:%d" % (_ip,self._realPortNumber))
 
 
     def connectionLost(self, reason):
@@ -1179,5 +1190,3 @@ class Connector(base.BaseConnector):
         @see: L{twisted.internet.interfaces.IConnector.getDestination}.
         """
         return self._addressType('TCP', self.host, self.port)
-
-
