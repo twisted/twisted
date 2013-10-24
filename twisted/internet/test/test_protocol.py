@@ -10,15 +10,17 @@ from __future__ import division, absolute_import
 from zope.interface.verify import verifyObject
 from zope.interface import implementer
 
+from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import (
     IProtocol, ILoggingContext, IProtocolFactory, IConsumer)
 from twisted.internet.defer import CancelledError
 from twisted.internet.protocol import (
     Protocol, ClientCreator, Factory, ProtocolToConsumerAdapter,
-    ConsumerToProtocolAdapter)
+    ConsumerToProtocolAdapter, AbstractDatagramProtocol)
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
+from twisted.test.testutils import DictSubsetMixin
 
 
 
@@ -428,3 +430,51 @@ class AdapterTests(TestCase):
         protocol.dataReceived(b"hello")
         self.assertEqual(result, [b"hello"])
         self.assertIsInstance(protocol, ConsumerToProtocolAdapter)
+
+
+
+class AbstractDatagramProtocolTestCase(TestCase, DictSubsetMixin):
+    """
+    Tests for L{AbstractDatagramProtocol}.
+    """
+    def setUp(self):
+        """
+        Create an unconnected L{AbstractDatagramProtocol} and add a log observer
+        to collect log events it emits.
+        """
+        self.proto = AbstractDatagramProtocol()
+        self.events = []
+        log.addObserver(self.events.append)
+        self.addCleanup(log.removeObserver, self.events.append)
+
+
+    def test_doStartLogMessage(self):
+        """
+        L{AbstractDatagramProtocol.doStart} logs an event dictionary with
+        C{"eventSource"}, C{"protocol"}, and C{"eventType"} keys.
+        """
+        self.proto.doStart()
+        self.assertDictSubset(
+            self.events[0],
+            {"eventSource": self.proto,
+             "protocol": self.proto,
+             "eventType": "start",
+             "eventTransport" : "udp",
+             "address" : ""})
+
+
+    def test_doStopLogMessage(self):
+        """
+        L{AbstractDatagramProtocol.doStop} logs an event dictionary with
+        C{"eventSource"}, C{"protocol"}, and C{"eventType"} keys.
+        """
+        self.proto.doStart()
+        del self.events[:]
+        self.proto.doStop()
+        self.assertDictSubset(
+            self.events[0],
+            {"eventSource": self.proto,
+             "protocol": self.proto,
+             "eventType": "stop",
+             "eventTransport" : "udp",
+             "address" : ""})
