@@ -36,48 +36,6 @@ class DatagramTransportTestsMixin(LogObserverMixin, DictSubsetMixin):
     """
     Mixin defining tests which apply to any port/datagram based transport.
     """
-    def test_startedListeningLogMessage(self):
-        """
-        When a port starts, a message including a description of the associated
-        protocol is logged.
-        """
-        loggedMessages = self.observe()
-        reactor = self.buildReactor()
-
-        @implementer(ILoggingContext)
-        class SomeProtocol(DatagramProtocol):
-            def logPrefix(self):
-                return "Crazy Protocol"
-        protocol = SomeProtocol()
-
-        p = self.getListeningPort(reactor, protocol)
-        expectedMessage = "Crazy Protocol starting on %d" % (p.getHost().port,)
-        self.assertEqual((expectedMessage,), loggedMessages[0]['message'])
-
-
-    def test_connectionLostLogMessage(self):
-        """
-        When a connection is lost a message is logged containing an
-        address identifying the port and the fact that it was closed.
-        """
-        loggedMessages = self.observe()
-        reactor = self.buildReactor()
-        p = self.getListeningPort(reactor, DatagramProtocol())
-        expectedMessage = "(UDP Port %s Closed)" % (p.getHost().port,)
-
-        def stopReactor(ignored):
-            reactor.stop()
-
-        def doStopListening():
-            del loggedMessages[:]
-            maybeDeferred(p.stopListening).addCallback(stopReactor)
-
-        reactor.callWhenRunning(doStopListening)
-        self.runReactor(reactor)
-
-        self.assertEqual((expectedMessage,), loggedMessages[0]['message'])
-
-
     def getExpectedConnectionPortNumber(self, port):
         """
         Get the expected port number for the TCP port that experienced
