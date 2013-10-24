@@ -840,56 +840,6 @@ class StreamTransportTestsMixin(LogObserverMixin):
     """
     Mixin defining tests which apply to any port/connection based transport.
     """
-    def test_startedListeningLogMessage(self):
-        """
-        When a port starts, a message including a description of the associated
-        factory is logged.
-        """
-        loggedMessages = self.observe()
-        reactor = self.buildReactor()
-
-        @implementer(ILoggingContext)
-        class SomeFactory(ServerFactory):
-            def logPrefix(self):
-                return "Crazy Factory"
-
-        factory = SomeFactory()
-        p = self.getListeningPort(reactor, factory)
-        expectedMessage = self.getExpectedStartListeningLogMessage(
-            p, "Crazy Factory")
-        self.assertEqual((expectedMessage,), loggedMessages[0]['message'])
-
-
-    def test_connectionLostLogMsg(self):
-        """
-        When a connection is lost, an informative message should be logged
-        (see L{getExpectedConnectionLostLogMsg}): an address identifying
-        the port and the fact that it was closed.
-        """
-
-        loggedMessages = []
-        def logConnectionLostMsg(eventDict):
-            loggedMessages.append(log.textFromEventDict(eventDict))
-
-        reactor = self.buildReactor()
-        p = self.getListeningPort(reactor, ServerFactory())
-        expectedMessage = self.getExpectedConnectionLostLogMsg(p)
-        log.addObserver(logConnectionLostMsg)
-
-        def stopReactor(ignored):
-            log.removeObserver(logConnectionLostMsg)
-            reactor.stop()
-
-        def doStopListening():
-            log.addObserver(logConnectionLostMsg)
-            maybeDeferred(p.stopListening).addCallback(stopReactor)
-
-        reactor.callWhenRunning(doStopListening)
-        reactor.run()
-
-        self.assertIn(expectedMessage, loggedMessages)
-
-
     def getExpectedConnectionPortNumber(self, port):
         """
         Get the expected port number for the TCP port that experienced
