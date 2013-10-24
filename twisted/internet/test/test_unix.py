@@ -19,6 +19,7 @@ except ImportError:
 
 from zope.interface import implements
 
+from twisted.python import log
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform
@@ -37,6 +38,7 @@ from twisted.internet.test.connectionmixins import (
     EndpointCreator, ConnectableProtocol, runProtocolsWithReactor,
     ConnectionTestsMixin, StreamClientTestsMixin)
 from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.test.testutils import DictSubsetMixin
 
 try:
     from twisted.python import sendmsg
@@ -514,11 +516,38 @@ class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
 
 
 class UNIXPortTestsBuilder(ReactorBuilder, ObjectModelIntegrationMixin,
-                           StreamTransportTestsMixin):
+                           StreamTransportTestsMixin, DictSubsetMixin):
     """
     Tests for L{IReactorUNIX.listenUnix}
     """
     requiredInterfaces = (interfaces.IReactorUNIX,)
+
+    def setUp(self):
+        """
+        Extend TCP test setUp to set transportType to 'unix'.
+        """
+        ReactorBuilder.setUp(self)
+        self.transportType = "unix"
+        self.factory = ServerFactory()
+        self.events = []
+        log.addObserver(self.events.append)
+        self.addCleanup(log.removeObserver, self.events.append)
+
+
+    def getExpectedConnectionPortNumber(self, port):
+        """
+        Get the expected UNIX socket path from the given UNIX listening port.
+        """
+        return port.getHost().name
+
+
+    def getExpectedConnectionPortHost(self, port):
+        """
+        Return an empty string, since there is no hostname for a UNIX socket.
+        """
+
+        return ""
+
 
     def getListeningPort(self, reactor, factory):
         """
