@@ -13,8 +13,11 @@ from unittest import TestResult
 
 from twisted.python.compat import NativeStringIO as StringIO
 from twisted.python.filepath import FilePath
+from twisted.test.testutils import DictSubsetMixin
 from twisted.trial.unittest import (
     SynchronousTestCase, _collectWarnings, _setWarningRegistryToNone)
+
+
 
 class Mask(object):
     """
@@ -44,20 +47,11 @@ class Mask(object):
 
 
 
-class FlushWarningsTests(SynchronousTestCase):
+class FlushWarningsTests(SynchronousTestCase, DictSubsetMixin):
     """
     Tests for C{flushWarnings}, an API for examining the warnings
     emitted so far in a test.
     """
-
-    def assertDictSubset(self, set, subset):
-        """
-        Assert that all the keys present in C{subset} are also present in
-        C{set} and that the corresponding values are equal.
-        """
-        for k, v in subset.items():
-            self.assertEqual(set[k], v)
-
 
     def assertDictSubsets(self, sets, subsets):
         """

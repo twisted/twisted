@@ -18,6 +18,20 @@ from xml.dom import minidom as dom
 
 from twisted.internet.protocol import FileWrapper
 
+
+
+# XXX Don't really put this here
+class DictSubsetMixin:
+    def assertDictSubset(self, set, subset):
+        """
+        Assert that all the keys present in C{subset} are also present in
+        C{set} and that the corresponding values are equal.
+        """
+        for k, v in subset.iteritems():
+            self.assertEqual(set[k], v)
+
+
+
 class IOPump:
     """Utility to pump data between clients and servers for protocol testing.
 

@@ -23,6 +23,7 @@ from twisted.python.failure import Failure
 from twisted.python import log
 
 from twisted.trial.unittest import SkipTest, TestCase
+from twisted.test.testutils import DictSubsetMixin
 from twisted.internet.error import (
     ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
     ConnectionAborted, DNSLookupError)
@@ -889,6 +890,65 @@ class StreamTransportTestsMixin(LogObserverMixin):
         self.assertIn(expectedMessage, loggedMessages)
 
 
+    def getExpectedConnectionPortNumber(self, port):
+        """
+        Get the expected port number for the TCP port that experienced
+        the connection event.
+        """
+        return str(port.getHost().port)
+
+
+    def getExpectedConnectionPortHost(self, port):
+        """
+        Get the expected hostname/IP for the TCP port that experienced
+        the connection event.
+        """
+        return port.getHost().host
+
+
+    def test_portStartStopLogMessage(self):
+        """
+        When a TCP port starts or stops listening, a log event is emitted with
+        the keys C{"eventSource"}, C{"eventType"}, C{"portNumber"}, and
+        C{"factory"}.
+        """
+        reactor = self.buildReactor()
+        p = self.getListeningPort(reactor, ServerFactory())
+
+        listenPort = self.getExpectedConnectionPortNumber(p)
+        listenHost = self.getExpectedConnectionPortHost(p)
+
+        def stopReactor(ignored):
+            reactor.stop()
+
+        def doStopListening():
+            maybeDeferred(p.stopListening).addCallback(stopReactor)
+
+        reactor.callWhenRunning(doStopListening)
+        self.runReactor(reactor)
+
+        expected = {
+            "eventSource": p, "address": "%s:%s" % (listenHost, listenPort),
+            "eventTransport" : self.transportType, "factory": self.factory}
+
+        for event in self.events:
+            if event.get("eventType") == "start":
+                self.assertDictSubset(event, expected)
+                break
+        else:
+            self.fail(
+                "Port startup message not found in events: %r" % (self.events,))
+
+        for event in self.events:
+            if event.get("eventType") == "stop":
+                self.assertDictSubset(event, expected)
+                break
+        else:
+            self.fail(
+                "Port shutdown message not found in events: %r" % (
+                    self.events,))
+
+
     def test_allNewStyle(self):
         """
         The L{IListeningPort} object is an instance of a class with no
@@ -1230,14 +1290,30 @@ class TCPPortTestsMixin(object):
 
 
 
-class TCPPortTestsBuilder(ReactorBuilder, ListenTCPMixin, TCPPortTestsMixin,
+class TCPPortTestsBuilderBase(ReactorBuilder, DictSubsetMixin):
+    def setUp(self):
+        """
+        Add a log observer to collect log events emitted by the listening port.
+        """
+        ReactorBuilder.setUp(self)
+        self.factory = ServerFactory()
+        self.events = []
+        self.transportType = "tcp"
+        log.addObserver(self.events.append)
+        self.addCleanup(log.removeObserver, self.events.append)
+
+
+
+class TCPPortTestsBuilder(TCPPortTestsBuilderBase,
+                          ListenTCPMixin, TCPPortTestsMixin,
                           ObjectModelIntegrationMixin,
                           StreamTransportTestsMixin):
     pass
 
 
 
-class TCPFDPortTestsBuilder(ReactorBuilder, SocketTCPMixin, TCPPortTestsMixin,
+class TCPFDPortTestsBuilder(TCPPortTestsBuilderBase,
+                            SocketTCPMixin, TCPPortTestsMixin,
                             ObjectModelIntegrationMixin,
                             StreamTransportTestsMixin):
     pass
