@@ -201,6 +201,9 @@ class Port(base.BasePort):
         log.msg("%s starting on %s" % (
                 self._getLogPrefix(self.protocol), self._realPortNumber))
 
+        log.msg(eventSource=self, eventType="start", protocol=self.protocol,
+                portNumber=self._realPortNumber)
+
         self.connected = 1
         self.socket = skt
         self.fileno = self.socket.fileno
@@ -314,11 +317,14 @@ class Port(base.BasePort):
         warnings.warn("Please use stopListening() to disconnect port", DeprecationWarning, stacklevel=2)
         self.stopListening()
 
+
     def connectionLost(self, reason=None):
         """
         Cleans up my socket.
         """
         log.msg('(UDP Port %s Closed)' % self._realPortNumber)
+        log.msg(eventSource=self, eventType="stop", protocol=self.protocol,
+                portNumber=self._realPortNumber)
         self._realPortNumber = None
         base.BasePort.connectionLost(self, reason)
         self.protocol.doStop()
