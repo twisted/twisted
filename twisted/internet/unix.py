@@ -266,8 +266,6 @@ class Port(_UNIXPort, tcp.Port):
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
-        log.msg("%s starting on %r" % (
-                self._getLogPrefix(self.factory), self.port))
         if self.wantPID:
             self.lockFile = lockfile.FilesystemLock(self.port + ".lock")
             if not self.lockFile.lock():
@@ -284,6 +282,9 @@ class Port(_UNIXPort, tcp.Port):
                             os.remove(self.port)
                     except:
                         pass
+
+        log.msg(eventSource=self, eventType="start", eventTransport="unix",
+                address=":%s" % (self.port,), factory=self.factory)
 
         self.factory.doStart()
         try:
@@ -307,7 +308,8 @@ class Port(_UNIXPort, tcp.Port):
         """
         Log message for closing socket
         """
-        log.msg('(UNIX Port %s Closed)' % (repr(self.port),))
+        log.msg(eventSource=self, eventType="stop", eventTransport="unix",
+                address=":%s" % (self.port,), factory=self.factory)
 
 
     def connectionLost(self, reason):
