@@ -729,7 +729,7 @@ class ProtocolVersionTests(unittest.TestCase):
         options = context.set_options(0)
         if opts.method == SSL.SSLv23_METHOD:
             # Exclusions apply only to SSLv23_METHOD and no others.
-            for (opt, exclude) in self._EXCLUSION_OPS.items():
+            for opt, exclude in self._EXCLUSION_OPS.items():
                 if options & opt:
                     protocols.discard(exclude)
         return protocols
@@ -748,7 +748,7 @@ class ProtocolVersionTests(unittest.TestCase):
             self._protocols(sslverify.OpenSSLCertificateOptions()))
 
 
-    def test_SSLv2IsDisabledForSSLv23(self):
+    def test_SSLv23(self):
         """
         When L{sslverify.OpenSSLCertificateOptions} is initialized with
         C{SSLv23_METHOD} all versions of TLS and SSLv3 are allowed.
