@@ -293,8 +293,8 @@ class LogFileTestCase(unittest.TestCase):
 
     def test_persistence(self):
         """
-        L{LogFile} objects can be pickled and unpickled, which preserves all the
-        various attributes of the log file.
+        L{LogFile} objects can be pickled and unpickled, which preserves all
+        the various attributes of the log file.
         """
         rotateLength = 12345
         defaultMode = 0o642
