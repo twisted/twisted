@@ -24,10 +24,10 @@ from twisted.internet.interfaces import (
     ILoggingContext, IListeningPort, IReactorUDP, IReactorSocket)
 from twisted.internet.address import IPv4Address
 from twisted.internet.protocol import DatagramProtocol
-
+from twisted.internet import udp
 from twisted.internet.test.connectionmixins import (LogObserverMixin,
                                                     findFreePort)
-from twisted.trial.unittest import SkipTest
+from twisted.trial.unittest import SkipTest, SynchronousTestCase
 
 
 
@@ -234,3 +234,64 @@ class UDPFDServerTestsBuilder(ReactorBuilder,
 
 globals().update(UDPServerTestsBuilder.makeTestCaseClasses())
 globals().update(UDPFDServerTestsBuilder.makeTestCaseClasses())
+
+
+from twisted.internet.test.test_tcp import assertLogEvents, logRecorder, _FakeFDSetReactor
+from twisted.python.failure import Failure
+class DummyProtocol(object):
+    def makeConnection(self, transport):
+        pass
+
+    def doStop(self):
+        pass
+
+
+
+class DatagramPortLoggingTestsMixin(object):
+    def test_startListeningLog(self):
+        expectedProtocol = DummyProtocol()
+
+        p = self.portFactory(proto=expectedProtocol,
+                             reactor=_FakeFDSetReactor())
+
+        with logRecorder() as events:
+            p.startListening()
+
+        expectedEvent = dict(
+            eventSource=p,
+            address=p.getHost(),
+            eventTransport=p.addressFamily,
+            eventType='start',
+            protocol=expectedProtocol,
+        )
+
+        assertLogEvents(self, [expectedEvent], events)
+
+        p.connectionLost(Failure(Exception('dummy')))
+
+
+    def test_stopListeningLog(self):
+        expectedProtocol = DummyProtocol()
+
+        p = self.portFactory(proto=expectedProtocol,
+                             reactor=_FakeFDSetReactor())
+        p.startListening()
+
+        expectedEvent = dict(
+            eventSource=p,
+            address=p.getHost(),
+            eventTransport=p.addressFamily,
+            eventType='stop',
+            protocol=expectedProtocol,
+        )
+
+        with logRecorder() as events:
+            p.connectionLost(Failure(Exception('Dummy')))
+
+        assertLogEvents(self, [expectedEvent], events)
+
+
+
+class PortLoggingTests(DatagramPortLoggingTestsMixin, SynchronousTestCase):
+    def portFactory(self, **kwargs):
+        return udp.Port(port=0, **kwargs)

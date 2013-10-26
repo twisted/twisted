@@ -198,12 +198,15 @@ class Port(base.BasePort):
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
 
-        log.msg(eventSource=self, eventType="start", protocol=self.protocol,
-                portNumber=self._realPortNumber)
-
         self.connected = 1
         self.socket = skt
         self.fileno = self.socket.fileno
+
+        log.msg(eventSource=self,
+                eventType="start",
+                eventTransport=self.addressFamily,
+                protocol=self.protocol,
+                address=self.getHost())
 
 
     def _connectToProtocol(self):
@@ -319,8 +322,12 @@ class Port(base.BasePort):
         """
         Cleans up my socket.
         """
-        log.msg(eventSource=self, eventType="stop", protocol=self.protocol,
-                portNumber=self._realPortNumber)
+        log.msg(eventSource=self,
+                eventType="stop",
+                eventTransport=self.addressFamily,
+                protocol=self.protocol,
+                address=self.getHost())
+
         self._realPortNumber = None
         base.BasePort.connectionLost(self, reason)
         self.protocol.doStop()

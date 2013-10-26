@@ -151,6 +151,13 @@ class IOCPReactorTestCase(unittest.TestCase):
 
 
 from twisted.internet.test.test_tcp import PortLoggingTestsMixin
-class PortLoggingTests(PortLoggingTestsMixin, unittest.SynchronousTestCase):
+class StreamPortLoggingTests(PortLoggingTestsMixin, unittest.SynchronousTestCase):
     def portFactory(self, **kwargs):
         return tcp.Port(port=0, **kwargs)
+
+
+
+from twisted.internet.test.test_udp import DatagramPortLoggingTestsMixin
+class DatagramPortLoggingTests(DatagramPortLoggingTestsMixin, unittest.SynchronousTestCase):
+    def portFactory(self, **kwargs):
+        return udp.Port(port=0, **kwargs)
