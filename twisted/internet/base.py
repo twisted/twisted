@@ -11,7 +11,7 @@ from __future__ import division, absolute_import
 import socket # needed only for sync-dns
 from zope.interface import implementer, classImplements
 
-import sys
+import sys, signal
 import warnings
 from heapq import heappush, heappop, heapify
 
@@ -601,6 +601,7 @@ class ReactorBase(object):
         """
         log.msg("Received SIGINT, shutting down.")
         self.callFromThread(self.stop)
+        self._exitStatus = signal.SIGINT
 
     def sigBreak(self, *args):
         """Handle a SIGBREAK interrupt.
@@ -613,6 +614,7 @@ class ReactorBase(object):
         """
         log.msg("Received SIGTERM, shutting down.")
         self.callFromThread(self.stop)
+        self._exitStatus = signal.SIGTERM
 
     def disconnectAll(self):
         """Disconnect every reader, and writer in the system.
@@ -1150,11 +1152,10 @@ class _SignalReactorMixin(object):
         if signal.getsignal(signal.SIGINT) == signal.default_int_handler:
             # only handle if there isn't already a handler, e.g. for Pdb.
             signal.signal(signal.SIGINT, self.sigInt)
-        signal.signal(signal.SIGTERM, self.sigTerm)
-
-        # Catch Ctrl-Break in windows
-        if hasattr(signal, "SIGBREAK"):
-            signal.signal(signal.SIGBREAK, self.sigBreak)
+            signal.signal(signal.SIGTERM, self.sigTerm)
+            # Catch Ctrl-Break in windows
+            if hasattr(signal, "SIGBREAK"):
+                signal.signal(signal.SIGBREAK, self.sigBreak)
 
 
     def startRunning(self, installSignalHandlers=True):

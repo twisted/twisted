@@ -1207,7 +1207,11 @@ class MockSignal(object):
     """
     Neuter L{signal.signal}, but pass other attributes unscathed
     """
+    def __init__(self):
+        self.signals = []
+
     def signal(self, sig, action):
+        self.signals.append((sig, action))
         return signal.getsignal(sig)
 
     def __getattr__(self, attr):

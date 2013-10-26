@@ -1,0 +1,1 @@
+Twistd returns SIGINT for SIGINT signal and SIGTERM for SIGTERM signal.

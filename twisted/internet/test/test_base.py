@@ -19,6 +19,7 @@ from twisted.internet.error import DNSLookupError
 from twisted.internet.base import ThreadedResolver, DelayedCall
 from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
+from twisted.internet.base import _SignalReactorMixin, ReactorBase
 
 
 @implementer(IReactorTime, IReactorThreads)
