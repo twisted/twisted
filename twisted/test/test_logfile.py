@@ -91,6 +91,12 @@ class LogFileTestCase(unittest.TestCase):
 
 
     def test_append(self):
+        """
+        Log files can be written to, closed. Their size is the number of
+        bytes written to them. Everything that was written to them can
+        be read, even if the writing happened on seperate occasions,
+        and even if the log file was closed in between.
+        """
         log = logfile.LogFile(self.name, self.dir)
         log.write("0123456789")
         log.close()
@@ -108,6 +114,15 @@ class LogFileTestCase(unittest.TestCase):
 
 
     def test_logReader(self):
+        """
+        Various tests for log readers.
+
+        First of all, log readers can get logs by number and read what
+        was written to those log files. Getting nonexistent log files
+        raises C{ValueError}. Using anything other than an integer
+        index raises C{TypeError}. As logs get older, their log
+        numbers increase.
+        """
         log = logfile.LogFile(self.name, self.dir)
         log.write("abc\n")
         log.write("def\n")
