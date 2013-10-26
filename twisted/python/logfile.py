@@ -7,6 +7,8 @@
 A rotating, browsable log file.
 """
 
+from __future__ import division, absolute_import
+
 # System Imports
 import os, glob, time, stat
 
@@ -61,18 +63,18 @@ class BaseLogFile:
         """
         self.closed = False
         if os.path.exists(self.path):
-            self._file = file(self.path, "r+", 1)
+            self._file = open(self.path, "r+", 1)
             self._file.seek(0, 2)
         else:
             if self.defaultMode is not None:
                 # Set the lowest permissions
-                oldUmask = os.umask(0777)
+                oldUmask = os.umask(0o777)
                 try:
-                    self._file = file(self.path, "w+", 1)
+                    self._file = open(self.path, "w+", 1)
                 finally:
                     os.umask(oldUmask)
             else:
-                self._file = file(self.path, "w+", 1)
+                self._file = open(self.path, "w+", 1)
         if self.defaultMode is not None:
             try:
                 os.chmod(self.path, self.defaultMode)
@@ -178,7 +180,7 @@ class LogFile(BaseLogFile):
         """
         filename = "%s.%d" % (self.path, identifier)
         if not os.path.exists(filename):
-            raise ValueError, "no such logfile exists"
+            raise ValueError("no such logfile exists")
         return LogReader(filename)
 
     def write(self, data):
@@ -266,7 +268,7 @@ class DailyLogFile(BaseLogFile):
             return self.getCurrentLog()
         filename = "%s.%s" % (self.path, self.suffix(identifier))
         if not os.path.exists(filename):
-            raise ValueError, "no such logfile exists"
+            raise ValueError("no such logfile exists")
         return LogReader(filename)
 
     def write(self, data):
@@ -304,7 +306,7 @@ class LogReader:
     """Read from a log file."""
 
     def __init__(self, name):
-        self._file = file(name, "r")
+        self._file = open(name, "r")
 
     def readLines(self, lines=10):
         """Read a list of lines from the log file.
