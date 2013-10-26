@@ -68,19 +68,19 @@ class LogFileTestCase(unittest.TestCase):
         log.write("123")
         log.write("4567890")
         log.write("1" * 11)
-        self.assertTrue(os.path.exists("{}.1".format(self.path)))
-        self.assertFalse(os.path.exists("{}.2".format(self.path)))
+        self.assertTrue(os.path.exists("{0}.1".format(self.path)))
+        self.assertFalse(os.path.exists("{0}.2".format(self.path)))
         log.write('')
-        self.assertTrue(os.path.exists("{}.1".format(self.path)))
-        self.assertTrue(os.path.exists("{}.2".format(self.path)))
-        self.assertFalse(os.path.exists("{}.3".format(self.path)))
+        self.assertTrue(os.path.exists("{0}.1".format(self.path)))
+        self.assertTrue(os.path.exists("{0}.2".format(self.path)))
+        self.assertFalse(os.path.exists("{0}.3".format(self.path)))
         log.write("3")
-        self.assertFalse(os.path.exists("{}.3".format(self.path)))
+        self.assertFalse(os.path.exists("{0}.3".format(self.path)))
 
         # test manual rotation
         log.rotate()
-        self.assertTrue(os.path.exists("{}.3".format(self.path)))
-        self.assertFalse(os.path.exists("{}.4".format(self.path)))
+        self.assertTrue(os.path.exists("{0}.3".format(self.path)))
+        self.assertFalse(os.path.exists("{0}.4".format(self.path)))
         log.close()
 
         self.assertEqual(log.listLogs(), [1, 2, 3])
@@ -197,20 +197,20 @@ class LogFileTestCase(unittest.TestCase):
                               maxRotatedFiles=3)
         log.write("1" * 11)
         log.write("2" * 11)
-        self.failUnless(os.path.exists("{}.1".format(self.path)))
+        self.failUnless(os.path.exists("{0}.1".format(self.path)))
 
         log.write("3" * 11)
-        self.failUnless(os.path.exists("{}.2".format(self.path)))
+        self.failUnless(os.path.exists("{0}.2".format(self.path)))
 
         log.write("4" * 11)
-        self.failUnless(os.path.exists("{}.3".format(self.path)))
-        with open("{}.3".format(self.path), "b") as fp:
+        self.failUnless(os.path.exists("{0}.3".format(self.path)))
+        with open("{0}.3".format(self.path), "b") as fp:
             self.assertEqual(fp.read(), "1" * 11)
 
         log.write("5" * 11)
-        with open("{}.3".format(self.path), "b") as fp:
+        with open("{0}.3".format(self.path), "b") as fp:
             self.assertEqual(fp.read(), "2" * 11)
-        self.failUnless(not os.path.exists("{}.4".format(self.path)))
+        self.failUnless(not os.path.exists("{0}.4".format(self.path)))
         log.close()
 
 
@@ -338,9 +338,9 @@ class LogFileTestCase(unittest.TestCase):
         """
         log = logfile.LogFile(self.name, self.dir)
 
-        with open("{}.1".format(log.path), "wb") as fp:
+        with open("{0}.1".format(log.path), "wb") as fp:
             fp.write("123")
-        with open("{}.bad-file".format(log.path), "wb") as fp:
+        with open("{0}.bad-file".format(log.path), "wb") as fp:
             fp.write("123")
 
         self.assertEqual([1], log.listLogs())
@@ -451,7 +451,7 @@ class DailyLogFileTestCase(unittest.TestCase):
         log = RiggedDailyLogFile(self.name, self.dir)
         # Build a new file with the same name as the file which would be created
         # if the log file is to be rotated.
-        newFilePath = "{}.{}".format(log.path, log.suffix(log.lastDate))
+        newFilePath = "{0}.{1}".format(log.path, log.suffix(log.lastDate))
         with open(newFilePath, "wb") as fp:
             fp.write("123")
         previousFile = log._file
