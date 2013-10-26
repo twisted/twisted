@@ -46,6 +46,7 @@ from twisted.internet.tcp import Connection, Port, Server, _resolveIPv6
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.test.test_tcp import MyClientFactory, MyServerFactory
 from twisted.test.test_tcp import ClosingFactory, ClientStartStopFactory
+from twisted.test.testutils import assertLogEvents, logRecorder
 
 try:
     from OpenSSL import SSL
@@ -2423,38 +2424,6 @@ class NonLoggingFactory(object):
 
     def doStop(self):
         pass
-
-
-
-from contextlib import contextmanager
-@contextmanager
-def logRecorder():
-    events = []
-    log.addObserver(events.append)
-    try:
-        yield events
-    finally:
-        log.removeObserver(events.append)
-
-
-
-def assertLogEvents(self, expectedEvents, actualEvents):
-    self.assertEqual(len(expectedEvents), len(actualEvents))
-    differences = []
-    for i, (expectedEvent, actualEvent) in enumerate(zip(expectedEvents, actualEvents)):
-        diff = set(expectedEvent.items()).difference(set(actualEvent.items()))
-        if diff:
-            differences.append((i, expectedEvent, actualEvent, diff))
-    if differences:
-        message = []
-        for i, expectedEvent, actualEvent, diff in differences:
-            message.append(
-                'Event %s was missing some expected items.\n' % (i,)
-                + 'Missing: %r\n' % (diff,)
-                + 'Expected: %r\n' % (expectedEvent,)
-                + 'Actual: %r' % (actualEvent,)
-            )
-        self.fail('\n\n'.join(message))
 
 
 

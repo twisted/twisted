@@ -17,6 +17,7 @@ from zope.interface.verify import verifyObject
 
 from twisted.python import context
 from twisted.python import log
+from twisted.python.failure import Failure
 from twisted.python.log import ILogContext, err
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.defer import Deferred, maybeDeferred
@@ -27,6 +28,8 @@ from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import udp
 from twisted.internet.test.connectionmixins import (LogObserverMixin,
                                                     findFreePort)
+from twisted.internet.test.test_tcp import  _FakeFDSetReactor
+from twisted.test.testutils import assertLogEvents, logRecorder
 from twisted.trial.unittest import SkipTest, SynchronousTestCase
 
 
@@ -236,8 +239,7 @@ globals().update(UDPServerTestsBuilder.makeTestCaseClasses())
 globals().update(UDPFDServerTestsBuilder.makeTestCaseClasses())
 
 
-from twisted.internet.test.test_tcp import assertLogEvents, logRecorder, _FakeFDSetReactor
-from twisted.python.failure import Failure
+
 class DummyProtocol(object):
     def makeConnection(self, transport):
         pass

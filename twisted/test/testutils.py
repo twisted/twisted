@@ -12,11 +12,15 @@ don't-use-it-outside-Twisted-we-won't-maintain-compatibility rule!
     their own test cases.
 """
 
+from contextlib import contextmanager
 from io import BytesIO
 
 from xml.dom import minidom as dom
 
 from twisted.internet.protocol import FileWrapper
+from twisted.python import log
+
+
 
 class IOPump:
     """Utility to pump data between clients and servers for protocol testing.
@@ -167,3 +171,34 @@ class ComparisonTestsMixin(object):
         self.assertFalse(firstValueOne != _Equal())
         self.assertFalse(firstValueOne == _NotEqual())
         self.assertTrue(firstValueOne != _NotEqual())
+
+
+
+@contextmanager
+def logRecorder():
+    events = []
+    log.addObserver(events.append)
+    try:
+        yield events
+    finally:
+        log.removeObserver(events.append)
+
+
+
+def assertLogEvents(self, expectedEvents, actualEvents):
+    self.assertEqual(len(expectedEvents), len(actualEvents))
+    differences = []
+    for i, (expectedEvent, actualEvent) in enumerate(zip(expectedEvents, actualEvents)):
+        diff = set(expectedEvent.items()).difference(set(actualEvent.items()))
+        if diff:
+            differences.append((i, expectedEvent, actualEvent, diff))
+    if differences:
+        message = []
+        for i, expectedEvent, actualEvent, diff in differences:
+            message.append(
+                'Event %s was missing some expected items.\n' % (i,)
+                + 'Missing: %r\n' % (diff,)
+                + 'Expected: %r\n' % (expectedEvent,)
+                + 'Actual: %r' % (actualEvent,)
+            )
+        self.fail('\n\n'.join(message))
