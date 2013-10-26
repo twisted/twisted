@@ -1180,16 +1180,14 @@ class TCPPortTestsMixin(object):
 
 
 
-class TCPPortTestsBuilder(ReactorBuilder,
-                          ListenTCPMixin, TCPPortTestsMixin,
+class TCPPortTestsBuilder(ReactorBuilder, ListenTCPMixin, TCPPortTestsMixin,
                           ObjectModelIntegrationMixin,
                           StreamTransportTestsMixin):
     pass
 
 
 
-class TCPFDPortTestsBuilder(ReactorBuilder,
-                            SocketTCPMixin, TCPPortTestsMixin,
+class TCPFDPortTestsBuilder(ReactorBuilder, SocketTCPMixin, TCPPortTestsMixin,
                             ObjectModelIntegrationMixin,
                             StreamTransportTestsMixin):
     pass
