@@ -53,6 +53,15 @@ class FlushWarningsTests(SynchronousTestCase, DictSubsetMixin):
     emitted so far in a test.
     """
 
+    def assertDictSubset(self, set, subset):
+        """
+        Assert that all the keys present in C{subset} are also present in
+        C{set} and that the corresponding values are equal.
+        """
+        for k, v in subset.iteritems():
+            self.assertEqual(set[k], v)
+
+
     def assertDictSubsets(self, sets, subsets):
         """
         For each pair of corresponding elements in C{sets} and C{subsets},

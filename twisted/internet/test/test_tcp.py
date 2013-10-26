@@ -22,8 +22,7 @@ from twisted.python.runtime import platform
 from twisted.python.failure import Failure
 from twisted.python import log
 
-from twisted.trial.unittest import SkipTest, TestCase
-from twisted.test.testutils import DictSubsetMixin
+from twisted.trial.unittest import SkipTest, TestCase, SynchronousTestCase
 from twisted.internet.error import (
     ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
     ConnectionAborted, DNSLookupError)
@@ -43,7 +42,7 @@ from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
     IPushProducer, IPullProducer, IHalfCloseableProtocol)
-from twisted.internet.tcp import Connection, Server, _resolveIPv6
+from twisted.internet.tcp import Connection, Port, Server, _resolveIPv6
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.test.test_tcp import MyClientFactory, MyServerFactory
 from twisted.test.test_tcp import ClosingFactory, ClientStartStopFactory
@@ -840,65 +839,6 @@ class StreamTransportTestsMixin(LogObserverMixin):
     """
     Mixin defining tests which apply to any port/connection based transport.
     """
-    def getExpectedConnectionPortNumber(self, port):
-        """
-        Get the expected port number for the TCP port that experienced
-        the connection event.
-        """
-        return str(port.getHost().port)
-
-
-    def getExpectedConnectionPortHost(self, port):
-        """
-        Get the expected hostname/IP for the TCP port that experienced
-        the connection event.
-        """
-        return port.getHost().host
-
-
-    def test_portStartStopLogMessage(self):
-        """
-        When a TCP port starts or stops listening, a log event is emitted with
-        the keys C{"eventSource"}, C{"eventType"}, C{"portNumber"}, and
-        C{"factory"}.
-        """
-        reactor = self.buildReactor()
-        p = self.getListeningPort(reactor, self.factory)
-
-        listenPort = self.getExpectedConnectionPortNumber(p)
-        listenHost = self.getExpectedConnectionPortHost(p)
-
-        def stopReactor(ignored):
-            reactor.stop()
-
-        def doStopListening():
-            maybeDeferred(p.stopListening).addCallback(stopReactor)
-
-        reactor.callWhenRunning(doStopListening)
-        self.runReactor(reactor)
-
-        expected = {
-            "eventSource": p, "address": "%s:%s" % (listenHost, listenPort),
-            "eventTransport" : self.transportType, "factory": self.factory}
-
-        for event in self.events:
-            if event.get("eventType") == "start":
-                self.assertDictSubset(event, expected)
-                break
-        else:
-            self.fail(
-                "Port startup message not found in events: %r" % (self.events,))
-
-        for event in self.events:
-            if event.get("eventType") == "stop":
-                self.assertDictSubset(event, expected)
-                break
-        else:
-            self.fail(
-                "Port shutdown message not found in events: %r" % (
-                    self.events,))
-
-
     def test_allNewStyle(self):
         """
         The L{IListeningPort} object is an instance of a class with no
@@ -907,6 +847,7 @@ class StreamTransportTestsMixin(LogObserverMixin):
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor, ServerFactory())
         self.assertFullyNewStyle(port)
+
 
 
 class ListenTCPMixin(object):
@@ -1240,21 +1181,7 @@ class TCPPortTestsMixin(object):
 
 
 
-class TCPPortTestsBuilderBase(ReactorBuilder, DictSubsetMixin):
-    def setUp(self):
-        """
-        Add a log observer to collect log events emitted by the listening port.
-        """
-        ReactorBuilder.setUp(self)
-        self.factory = ServerFactory()
-        self.events = []
-        self.transportType = "tcp"
-        log.addObserver(self.events.append)
-        self.addCleanup(log.removeObserver, self.events.append)
-
-
-
-class TCPPortTestsBuilder(TCPPortTestsBuilderBase,
+class TCPPortTestsBuilder(ReactorBuilder,
                           ListenTCPMixin, TCPPortTestsMixin,
                           ObjectModelIntegrationMixin,
                           StreamTransportTestsMixin):
@@ -1262,7 +1189,7 @@ class TCPPortTestsBuilder(TCPPortTestsBuilderBase,
 
 
 
-class TCPFDPortTestsBuilder(TCPPortTestsBuilderBase,
+class TCPFDPortTestsBuilder(ReactorBuilder,
                             SocketTCPMixin, TCPPortTestsMixin,
                             ObjectModelIntegrationMixin,
                             StreamTransportTestsMixin):
@@ -2489,3 +2416,96 @@ class SimpleUtilityTestCase(TestCase):
         # but, luckily, IP presentation format and what it means to be a port
         # number are a little better specified.
         self.assertEqual(result[:2], ("::1", 2))
+
+
+
+class NonLoggingFactory(object):
+    def doStart(self):
+        pass
+
+
+    def doStop(self):
+        pass
+
+
+
+from contextlib import contextmanager
+@contextmanager
+def logRecorder():
+    events = []
+    log.addObserver(events.append)
+    try:
+        yield events
+    finally:
+        log.removeObserver(events.append)
+
+
+
+def assertLogEvents(self, expectedEvents, actualEvents):
+    self.assertEqual(len(expectedEvents), len(actualEvents))
+    differences = []
+    for i, (expectedEvent, actualEvent) in enumerate(zip(expectedEvents, actualEvents)):
+        diff = set(expectedEvent.items()).difference(set(actualEvent.items()))
+        if diff:
+            differences.append((i, expectedEvent, actualEvent, diff))
+    if differences:
+        message = []
+        for i, expectedEvent, actualEvent, diff in differences:
+            message.append(
+                'Event %s was missing some expected items.\n' % (i,)
+                + 'Missing: %r\n' % (diff,)
+                + 'Expected: %r\n' % (expectedEvent,)
+                + 'Actual: %r' % (actualEvent,)
+            )
+        self.fail('\n\n'.join(message))
+
+
+
+class PortLoggingTestsMixin(object):
+    def test_startListeningLog(self):
+        expectedFactory = NonLoggingFactory()
+
+        p = self.portFactory(factory=expectedFactory,
+                             reactor=_FakeFDSetReactor())
+
+        with logRecorder() as events:
+            p.startListening()
+
+        expectedEvent = dict(
+            eventSource=p,
+            address=p.getHost(),
+            eventTransport=p.addressFamily,
+            eventType='start',
+            factory=expectedFactory,
+        )
+
+        assertLogEvents(self, [expectedEvent], events)
+
+        p.connectionLost(Failure(Exception('dummy')))
+
+
+    def test_stopListeningLog(self):
+        expectedFactory = NonLoggingFactory()
+
+        p = self.portFactory(factory=expectedFactory,
+                             reactor=_FakeFDSetReactor())
+        p.startListening()
+
+        expectedEvent = dict(
+            eventSource=p,
+            address=p.getHost(),
+            eventTransport=p.addressFamily,
+            eventType='stop',
+            factory=expectedFactory,
+        )
+
+        with logRecorder() as events:
+            p.connectionLost(Failure(Exception('Dummy')))
+
+        assertLogEvents(self, [expectedEvent], events)
+
+
+
+class PortLoggingTests(PortLoggingTestsMixin, SynchronousTestCase):
+    def portFactory(self, **kwargs):
+        return Port(port=0, **kwargs)

@@ -148,3 +148,9 @@ class IOCPReactorTestCase(unittest.TestCase):
         ir.doIteration(0)
         self.assertEqual(fd.counter, EVENTS_PER_LOOP + 1)
 
+
+
+from twisted.internet.test.test_tcp import PortLoggingTestsMixin
+class PortLoggingTests(PortLoggingTestsMixin, unittest.SynchronousTestCase):
+    def portFactory(self, **kwargs):
+        return tcp.Port(port=0, **kwargs)
