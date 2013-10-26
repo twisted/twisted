@@ -208,11 +208,11 @@ class LogFileTestCase(unittest.TestCase):
 
         log.write("4" * 11)
         self.failUnless(os.path.exists("{0}.3".format(self.path)))
-        with open("{0}.3".format(self.path), "b") as fp:
+        with open("{0}.3".format(self.path), "rb") as fp:
             self.assertEqual(fp.read(), "1" * 11)
 
         log.write("5" * 11)
-        with open("{0}.3".format(self.path), "b") as fp:
+        with open("{0}.3".format(self.path), "rb") as fp:
             self.assertEqual(fp.read(), "2" * 11)
         self.failUnless(not os.path.exists("{0}.4".format(self.path)))
         log.close()
