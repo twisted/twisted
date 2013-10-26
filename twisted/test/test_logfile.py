@@ -454,9 +454,9 @@ class DailyLogFileTestCase(unittest.TestCase):
         newFilePath = "{}.{}".format(log.path, log.suffix(log.lastDate))
         with open(newFilePath, "w") as fp:
             fp.write("123")
-        previous_file = log._file
+        previousFile = log._file
         log.rotate()
-        self.assertEqual(previous_file, log._file)
+        self.assertEqual(previousFile, log._file)
         log.close()
 
 
@@ -469,9 +469,9 @@ class DailyLogFileTestCase(unittest.TestCase):
         os.chmod(log.directory, 0o444)
         # Restore permissions so tests can be cleaned up.
         self.addCleanup(os.chmod, log.directory, 0o755)
-        previous_file = log._file
+        previousFile = log._file
         log.rotate()
-        self.assertEqual(previous_file, log._file)
+        self.assertEqual(previousFile, log._file)
         log.close()
 
 
@@ -482,9 +482,9 @@ class DailyLogFileTestCase(unittest.TestCase):
         """
         log = logfile.DailyLogFile(self.name, self.dir)
         os.chmod(log.path, 0o444)
-        previous_file = log._file
+        previousFile = log._file
         log.rotate()
-        self.assertEqual(previous_file, log._file)
+        self.assertEqual(previousFile, log._file)
         log.close()
 
 
