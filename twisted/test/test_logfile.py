@@ -509,9 +509,9 @@ class DailyLogFileTestCase(unittest.TestCase):
         # XXX: this might break if by chance, current's date changes between the
         # two functions runs.
         today = datetime.date.today()
-        log_date = log.toDate()
+        logDate = log.toDate()
 
-        self.assertEqual(today.timetuple()[:3], log_date)
+        self.assertEqual(today.timetuple()[:3], logDate)
         log.close()
 
 
