@@ -281,7 +281,6 @@ class LogFileTestCase(unittest.TestCase):
         self.assertEqual(f.read(), "hello1")
         f.close()
 
-
     if runtime.platform.isWindows():
         test_reopen.skip = "Can't test reopen on Windows"
 
