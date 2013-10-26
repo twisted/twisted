@@ -849,7 +849,6 @@ class StreamTransportTestsMixin(LogObserverMixin):
         self.assertFullyNewStyle(port)
 
 
-
 class ListenTCPMixin(object):
     """
     Mixin which uses L{IReactorTCP.listenTCP} to hand out listening TCP ports.

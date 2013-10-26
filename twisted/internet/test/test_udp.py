@@ -27,58 +27,14 @@ from twisted.internet.protocol import DatagramProtocol
 
 from twisted.internet.test.connectionmixins import (LogObserverMixin,
                                                     findFreePort)
-from twisted.test.testutils import DictSubsetMixin
 from twisted.trial.unittest import SkipTest
 
 
 
-class DatagramTransportTestsMixin(LogObserverMixin, DictSubsetMixin):
+class DatagramTransportTestsMixin(LogObserverMixin):
     """
     Mixin defining tests which apply to any port/datagram based transport.
     """
-    def getExpectedConnectionPortNumber(self, port):
-        """
-        Get the expected port number for the TCP port that experienced
-        the connection event.
-        """
-        return port.getHost().port
-
-
-    def test_portStartStopLogMessage(self):
-        """
-        When a UDP port starts or stops listening, a log event is emitted with
-        the keys C{"eventSource"}, C{"eventType"}, C{"portNumber"}, and
-        C{"protocol"}.
-        """
-        reactor = self.buildReactor()
-        p = self.getListeningPort(reactor, self.protocol)
-        listenPort = self.getExpectedConnectionPortNumber(p)
-        reactor.callWhenRunning(reactor.stop)
-        self.runReactor(reactor)
-
-        expected = {
-            "eventSource": p, "portNumber": listenPort,
-            "protocol": self.protocol}
-
-        for event in self.events:
-            if event.get("eventType") == "start":
-                self.assertDictSubset(event, expected)
-                break
-        else:
-            self.fail(
-                "Port startup message not found in events: %r" % (self.events,))
-
-        for event in self.events:
-            if event.get("eventType") == "stop":
-                self.assertDictSubset(event, expected)
-                break
-        else:
-            self.fail(
-                "Port shutdown message not found in events: %r" % (
-                    self.events,))
-
-
-
     def test_stopProtocolScheduling(self):
         """
         L{DatagramProtocol.stopProtocol} is called asynchronously (ie, not
@@ -196,20 +152,7 @@ class UDPPortTestsMixin(object):
 
 
 
-class UDPServerTestsBuilderBase(ReactorBuilder):
-    def setUp(self):
-        """
-        Add a log observer to collect log events emitted by the listening port.
-        """
-        ReactorBuilder.setUp(self)
-        self.protocol = DatagramProtocol()
-        self.events = []
-        log.addObserver(self.events.append)
-        self.addCleanup(log.removeObserver, self.events.append)
-
-
-
-class UDPServerTestsBuilder(UDPServerTestsBuilderBase,
+class UDPServerTestsBuilder(ReactorBuilder,
                             UDPPortTestsMixin, DatagramTransportTestsMixin):
     """
     Run L{UDPPortTestsMixin} tests using newly created UDP
@@ -234,7 +177,7 @@ class UDPServerTestsBuilder(UDPServerTestsBuilderBase,
 
 
 
-class UDPFDServerTestsBuilder(UDPServerTestsBuilderBase,
+class UDPFDServerTestsBuilder(ReactorBuilder,
                               UDPPortTestsMixin, DatagramTransportTestsMixin):
     """
     Run L{UDPPortTestsMixin} tests using adopted UDP sockets.
