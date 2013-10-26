@@ -15,9 +15,9 @@ import socket
 from zope.interface.verify import verifyObject
 
 from twisted.python import context
-from twisted.python.failure import Failure
 from twisted.python.log import ILogContext, err
-from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.internet.test.reactormixins import (
+    DatagramPortLoggingTestsMixin, ReactorBuilder)
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
     IListeningPort, IReactorUDP, IReactorSocket)
@@ -26,8 +26,6 @@ from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import udp
 from twisted.internet.test.connectionmixins import (LogObserverMixin,
                                                     findFreePort)
-from twisted.internet.test.test_tcp import  _FakeFDSetReactor
-from twisted.test.testutils import assertLogEvents, logRecorder
 from twisted.trial.unittest import SkipTest, SynchronousTestCase
 
 
@@ -235,60 +233,6 @@ class UDPFDServerTestsBuilder(ReactorBuilder,
 
 globals().update(UDPServerTestsBuilder.makeTestCaseClasses())
 globals().update(UDPFDServerTestsBuilder.makeTestCaseClasses())
-
-
-
-class DummyProtocol(object):
-    def makeConnection(self, transport):
-        pass
-
-    def doStop(self):
-        pass
-
-
-
-class DatagramPortLoggingTestsMixin(object):
-    def test_startListeningLog(self):
-        expectedProtocol = DummyProtocol()
-
-        p = self.portFactory(proto=expectedProtocol,
-                             reactor=_FakeFDSetReactor())
-
-        with logRecorder() as events:
-            p.startListening()
-
-        expectedEvent = dict(
-            eventSource=p,
-            address=p.getHost(),
-            eventTransport=p.addressFamily,
-            eventType='start',
-            protocol=expectedProtocol,
-        )
-
-        assertLogEvents(self, [expectedEvent], events)
-
-        p.connectionLost(Failure(Exception('dummy')))
-
-
-    def test_stopListeningLog(self):
-        expectedProtocol = DummyProtocol()
-
-        p = self.portFactory(proto=expectedProtocol,
-                             reactor=_FakeFDSetReactor())
-        p.startListening()
-
-        expectedEvent = dict(
-            eventSource=p,
-            address=p.getHost(),
-            eventTransport=p.addressFamily,
-            eventType='stop',
-            protocol=expectedProtocol,
-        )
-
-        with logRecorder() as events:
-            p.connectionLost(Failure(Exception('Dummy')))
-
-        assertLogEvents(self, [expectedEvent], events)
 
 
 

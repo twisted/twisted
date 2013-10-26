@@ -32,11 +32,12 @@ from twisted.internet import interfaces, unix
 from twisted.internet.protocol import (
     ServerFactory, ClientFactory, DatagramProtocol)
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
-from twisted.internet.test.test_tcp import StreamTransportTestsMixin, PortLoggingTestsMixin
+from twisted.internet.test.test_tcp import StreamTransportTestsMixin
 from twisted.internet.test.connectionmixins import (
     EndpointCreator, ConnectableProtocol, runProtocolsWithReactor,
     ConnectionTestsMixin, StreamClientTestsMixin)
-from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.internet.test.reactormixins import (
+    ReactorBuilder, StreamPortLoggingTestsMixin)
 from twisted.trial import unittest
 
 try:
@@ -602,6 +603,6 @@ globals().update(UnixClientTestsBuilder.makeTestCaseClasses())
 
 
 
-class PortLoggingTests(PortLoggingTestsMixin, unittest.SynchronousTestCase):
+class PortLoggingTests(StreamPortLoggingTestsMixin, unittest.SynchronousTestCase):
     def portFactory(self, *args, **kwargs):
         return unix.Port(self.mktemp(), *args, **kwargs)

@@ -17,7 +17,7 @@ from zope.interface.verify import verifyClass
 from twisted.python import failure
 from twisted.python.compat import unicode
 from twisted.internet.interfaces import (
-    ITransport, IConsumer, IPushProducer, IConnector)
+    ITransport, IConsumer, IPushProducer, IConnector, IReactorFDSet)
 from twisted.internet.interfaces import (
     IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
 from twisted.internet.interfaces import IListeningPort
@@ -627,3 +627,58 @@ class RaisingMemoryReactor(object):
         Fake L{reactor.connectUNIX}, that raises L{self._connectException}.
         """
         raise self._connectException
+
+
+
+@implementer(IReactorFDSet)
+class _FakeFDSetReactor(object):
+    """
+    An in-memory implementation of L{IReactorFDSet}, which records the current
+    sets of active L{IReadDescriptor} and L{IWriteDescriptor}s.
+
+    @ivar _readers: The set of of L{IReadDescriptor}s active on this
+        L{_FakeFDSetReactor}
+    @type _readers: L{set}
+
+    @ivar _writers: The set of of L{IWriteDescriptor}s active on this
+        L{_FakeFDSetReactor}
+    @ivar _writers: L{set}
+    """
+
+    def __init__(self):
+        self._readers = set()
+        self._writers = set()
+
+
+    def addReader(self, reader):
+        self._readers.add(reader)
+
+
+    def removeReader(self, reader):
+        if reader in self._readers:
+            self._readers.remove(reader)
+
+
+    def addWriter(self, writer):
+        self._writers.add(writer)
+
+
+    def removeWriter(self, writer):
+        if writer in self._writers:
+            self._writers.remove(writer)
+
+
+    def removeAll(self):
+        result = self.getReaders() + self.getWriters()
+        self.__init__()
+        return result
+
+
+    def getReaders(self):
+        return list(self._readers)
+
+
+    def getWriters(self):
+        return list(self._writers)
+
+verifyClass(IReactorFDSet, _FakeFDSetReactor)

@@ -16,7 +16,6 @@ import socket
 from functools import wraps
 
 from zope.interface import implementer
-from zope.interface.verify import verifyClass
 
 from twisted.python.runtime import platform
 from twisted.python.failure import Failure
@@ -31,7 +30,7 @@ from twisted.internet.test.connectionmixins import (
     findFreePort, ConnectableProtocol, EndpointCreator,
     runProtocolsWithReactor, Stop, BrokenContextFactory)
 from twisted.internet.test.reactormixins import (
-    ReactorBuilder, needsRunningReactor)
+    ReactorBuilder, needsRunningReactor, StreamPortLoggingTestsMixin)
 from twisted.internet.interfaces import (
     IConnector, IReactorFDSet, IReactorSocket, IReactorTCP,
     IResolverSimple, ITLSTransport)
@@ -46,7 +45,7 @@ from twisted.internet.tcp import Connection, Port, Server, _resolveIPv6
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
 from twisted.test.test_tcp import MyClientFactory, MyServerFactory
 from twisted.test.test_tcp import ClosingFactory, ClientStartStopFactory
-from twisted.test.testutils import assertLogEvents, logRecorder
+from twisted.test.proto_helpers import _FakeFDSetReactor
 
 try:
     from OpenSSL import SSL
@@ -217,61 +216,6 @@ class FakeProtocol(Protocol):
         that behavior.
         """
         return ()
-
-
-
-@implementer(IReactorFDSet)
-class _FakeFDSetReactor(object):
-    """
-    An in-memory implementation of L{IReactorFDSet}, which records the current
-    sets of active L{IReadDescriptor} and L{IWriteDescriptor}s.
-
-    @ivar _readers: The set of of L{IReadDescriptor}s active on this
-        L{_FakeFDSetReactor}
-    @type _readers: L{set}
-
-    @ivar _writers: The set of of L{IWriteDescriptor}s active on this
-        L{_FakeFDSetReactor}
-    @ivar _writers: L{set}
-    """
-
-    def __init__(self):
-        self._readers = set()
-        self._writers = set()
-
-
-    def addReader(self, reader):
-        self._readers.add(reader)
-
-
-    def removeReader(self, reader):
-        if reader in self._readers:
-            self._readers.remove(reader)
-
-
-    def addWriter(self, writer):
-        self._writers.add(writer)
-
-
-    def removeWriter(self, writer):
-        if writer in self._writers:
-            self._writers.remove(writer)
-
-
-    def removeAll(self):
-        result = self.getReaders() + self.getWriters()
-        self.__init__()
-        return result
-
-
-    def getReaders(self):
-        return list(self._readers)
-
-
-    def getWriters(self):
-        return list(self._writers)
-
-verifyClass(IReactorFDSet, _FakeFDSetReactor)
 
 
 
@@ -2417,61 +2361,6 @@ class SimpleUtilityTestCase(TestCase):
 
 
 
-class DummyFactory(object):
-    def doStart(self):
-        pass
-
-
-    def doStop(self):
-        pass
-
-
-
-class PortLoggingTestsMixin(object):
-    def test_startListeningLog(self):
-        expectedFactory = DummyFactory()
-
-        p = self.portFactory(factory=expectedFactory,
-                             reactor=_FakeFDSetReactor())
-
-        with logRecorder() as events:
-            p.startListening()
-
-        expectedEvent = dict(
-            eventSource=p,
-            address=p.getHost(),
-            eventTransport=p.addressFamily,
-            eventType='start',
-            factory=expectedFactory,
-        )
-
-        assertLogEvents(self, [expectedEvent], events)
-
-        p.connectionLost(Failure(Exception('dummy')))
-
-
-    def test_stopListeningLog(self):
-        expectedFactory = DummyFactory()
-
-        p = self.portFactory(factory=expectedFactory,
-                             reactor=_FakeFDSetReactor())
-        p.startListening()
-
-        expectedEvent = dict(
-            eventSource=p,
-            address=p.getHost(),
-            eventTransport=p.addressFamily,
-            eventType='stop',
-            factory=expectedFactory,
-        )
-
-        with logRecorder() as events:
-            p.connectionLost(Failure(Exception('Dummy')))
-
-        assertLogEvents(self, [expectedEvent], events)
-
-
-
-class PortLoggingTests(PortLoggingTestsMixin, SynchronousTestCase):
+class PortLoggingTests(StreamPortLoggingTestsMixin, SynchronousTestCase):
     def portFactory(self, **kwargs):
         return Port(port=0, **kwargs)

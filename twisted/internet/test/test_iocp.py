@@ -15,8 +15,8 @@ from zope.interface.verify import verifyClass
 from twisted.trial import unittest
 from twisted.python.log import msg
 from twisted.internet.interfaces import IPushProducer
-from twisted.internet.test.test_tcp import PortLoggingTestsMixin
-from twisted.internet.test.test_udp import DatagramPortLoggingTestsMixin
+from twisted.internet.test.reactormixins import (
+    DatagramPortLoggingTestsMixin, StreamPortLoggingTestsMixin)
 
 try:
     from twisted.internet.iocpreactor import iocpsupport as _iocp, tcp, udp
@@ -152,7 +152,7 @@ class IOCPReactorTestCase(unittest.TestCase):
 
 
 
-class StreamPortLoggingTests(PortLoggingTestsMixin, unittest.SynchronousTestCase):
+class StreamPortLoggingTests(StreamPortLoggingTestsMixin, unittest.SynchronousTestCase):
     def portFactory(self, **kwargs):
         return tcp.Port(port=0, **kwargs)
 
