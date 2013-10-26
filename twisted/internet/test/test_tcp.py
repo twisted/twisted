@@ -2417,7 +2417,7 @@ class SimpleUtilityTestCase(TestCase):
 
 
 
-class NonLoggingFactory(object):
+class DummyFactory(object):
     def doStart(self):
         pass
 
@@ -2429,7 +2429,7 @@ class NonLoggingFactory(object):
 
 class PortLoggingTestsMixin(object):
     def test_startListeningLog(self):
-        expectedFactory = NonLoggingFactory()
+        expectedFactory = DummyFactory()
 
         p = self.portFactory(factory=expectedFactory,
                              reactor=_FakeFDSetReactor())
@@ -2451,7 +2451,7 @@ class PortLoggingTestsMixin(object):
 
 
     def test_stopListeningLog(self):
-        expectedFactory = NonLoggingFactory()
+        expectedFactory = DummyFactory()
 
         p = self.portFactory(factory=expectedFactory,
                              reactor=_FakeFDSetReactor())
