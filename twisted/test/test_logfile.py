@@ -51,7 +51,7 @@ class LogFileTestCase(unittest.TestCase):
         log.write("7890")
         log.close()
 
-        f = open(self.path, "r")
+        f = open(self.path, "rb")
         self.assertEqual(f.read(), "1234567890")
         f.close()
 
@@ -146,7 +146,7 @@ class LogFileTestCase(unittest.TestCase):
         """
         Check rotated files have same permissions as original.
         """
-        f = open(self.path, "w").close()
+        f = open(self.path, "wb").close()
         os.chmod(self.path, 0o707)
         mode = os.stat(self.path)[stat.ST_MODE]
         log = logfile.LogFile(self.name, self.dir)
@@ -169,7 +169,7 @@ class LogFileTestCase(unittest.TestCase):
         # if this succeeds, chmod doesn't restrict us, so we can't
         # do the test
         try:
-            f = open(os.path.join(self.dir,"xxx"), "w")
+            f = open(os.path.join(self.dir,"xxx"), "wb")
         except (OSError, IOError):
             pass
         else:
@@ -204,11 +204,11 @@ class LogFileTestCase(unittest.TestCase):
 
         log.write("4" * 11)
         self.failUnless(os.path.exists("{}.3".format(self.path)))
-        with open("{}.3".format(self.path)) as fp:
+        with open("{}.3".format(self.path), "b") as fp:
             self.assertEqual(fp.read(), "1" * 11)
 
         log.write("5" * 11)
-        with open("{}.3".format(self.path)) as fp:
+        with open("{}.3".format(self.path), "b") as fp:
             self.assertEqual(fp.read(), "2" * 11)
         self.failUnless(not os.path.exists("{}.4".format(self.path)))
         log.close()
@@ -233,7 +233,7 @@ class LogFileTestCase(unittest.TestCase):
         Test the default permission of the log file: if the file exist, it
         should keep the permission.
         """
-        f = open(self.path, "w")
+        f = open(self.path, "wb")
         os.chmod(self.path, 0o707)
         currentMode = stat.S_IMODE(os.stat(self.path)[stat.ST_MODE])
         f.close()
@@ -270,10 +270,10 @@ class LogFileTestCase(unittest.TestCase):
         log1.write("hello2")
         log1.close()
 
-        f = open(self.path, "r")
+        f = open(self.path, "rb")
         self.assertEqual(f.read(), "hello2")
         f.close()
-        f = open(savePath, "r")
+        f = open(savePath, "rb")
         self.assertEqual(f.read(), "hello1")
         f.close()
 
@@ -338,9 +338,9 @@ class LogFileTestCase(unittest.TestCase):
         """
         log = logfile.LogFile(self.name, self.dir)
 
-        with open("{}.1".format(log.path), "w") as fp:
+        with open("{}.1".format(log.path), "wb") as fp:
             fp.write("123")
-        with open("{}.bad-file".format(log.path), "w") as fp:
+        with open("{}.bad-file".format(log.path), "wb") as fp:
             fp.write("123")
 
         self.assertEqual([1], log.listLogs())
@@ -386,7 +386,7 @@ class DailyLogFileTestCase(unittest.TestCase):
         log.write("7890")
         log.close()
 
-        f = open(self.path, "r")
+        f = open(self.path, "rb")
         self.assertEqual(f.read(), "1234567890")
         f.close()
 
@@ -452,7 +452,7 @@ class DailyLogFileTestCase(unittest.TestCase):
         # Build a new file with the same name as the file which would be created
         # if the log file is to be rotated.
         newFilePath = "{}.{}".format(log.path, log.suffix(log.lastDate))
-        with open(newFilePath, "w") as fp:
+        with open(newFilePath, "wb") as fp:
             fp.write("123")
         previousFile = log._file
         log.rotate()
