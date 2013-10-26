@@ -10,7 +10,6 @@ from __future__ import division, absolute_import
 from zope.interface.verify import verifyObject
 from zope.interface import implementer
 
-from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.internet.interfaces import (
     IProtocol, ILoggingContext, IProtocolFactory, IConsumer)
@@ -20,7 +19,7 @@ from twisted.internet.protocol import (
     ConsumerToProtocolAdapter, AbstractDatagramProtocol)
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
-from twisted.test.testutils import DictSubsetMixin
+from twisted.test.testutils import assertLogEvents, logRecorder
 
 
 
@@ -433,34 +432,27 @@ class AdapterTests(TestCase):
 
 
 
-class AbstractDatagramProtocolTestCase(TestCase, DictSubsetMixin):
+class AbstractDatagramProtocolTestCase(TestCase):
     """
     Tests for L{AbstractDatagramProtocol}.
     """
-    def setUp(self):
-        """
-        Create an unconnected L{AbstractDatagramProtocol} and add a log observer
-        to collect log events it emits.
-        """
-        self.proto = AbstractDatagramProtocol()
-        self.events = []
-        log.addObserver(self.events.append)
-        self.addCleanup(log.removeObserver, self.events.append)
-
-
     def test_doStartLogMessage(self):
         """
         L{AbstractDatagramProtocol.doStart} logs an event dictionary with
         C{"eventSource"}, C{"protocol"}, and C{"eventType"} keys.
         """
-        self.proto.doStart()
-        self.assertDictSubset(
-            self.events[0],
-            {"eventSource": self.proto,
-             "protocol": self.proto,
-             "eventType": "start",
-             "eventTransport" : "udp",
-             "address" : ""})
+        proto = AbstractDatagramProtocol()
+
+        expectedEvent = dict(
+            eventSource=proto,
+            eventType="start",
+            eventTransport="udp",
+        )
+
+        with logRecorder() as events:
+            proto.doStart()
+
+        assertLogEvents(self, [expectedEvent], events)
 
 
     def test_doStopLogMessage(self):
@@ -468,13 +460,16 @@ class AbstractDatagramProtocolTestCase(TestCase, DictSubsetMixin):
         L{AbstractDatagramProtocol.doStop} logs an event dictionary with
         C{"eventSource"}, C{"protocol"}, and C{"eventType"} keys.
         """
-        self.proto.doStart()
-        del self.events[:]
-        self.proto.doStop()
-        self.assertDictSubset(
-            self.events[0],
-            {"eventSource": self.proto,
-             "protocol": self.proto,
-             "eventType": "stop",
-             "eventTransport" : "udp",
-             "address" : ""})
+        proto = AbstractDatagramProtocol()
+        proto.doStart()
+
+        expectedEvent = dict(
+            eventSource=proto,
+            eventType="stop",
+            eventTransport="udp",
+        )
+
+        with logRecorder() as events:
+            proto.doStop()
+
+        assertLogEvents(self, [expectedEvent], events)
