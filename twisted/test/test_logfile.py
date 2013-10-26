@@ -12,7 +12,6 @@ class LogFileTestCase(unittest.TestCase):
     """
     Test the rotating log file.
     """
-
     def setUp(self):
         self.dir = self.mktemp()
         os.makedirs(self.dir)
@@ -52,6 +51,7 @@ class LogFileTestCase(unittest.TestCase):
         self.assertEqual(f.read(), "1234567890")
         f.close()
 
+
     def testRotation(self):
         # this logfile should rotate every 10 bytes
         log = logfile.LogFile(self.name, self.dir, rotateLength=10)
@@ -77,6 +77,7 @@ class LogFileTestCase(unittest.TestCase):
 
         self.assertEqual(log.listLogs(), [1, 2, 3])
 
+
     def testAppend(self):
         log = logfile.LogFile(self.name, self.dir)
         log.write("0123456789")
@@ -92,6 +93,7 @@ class LogFileTestCase(unittest.TestCase):
         f.seek(0, 0)
         self.assertEqual(f.read(), "0123456789abc")
         log.close()
+
 
     def testLogReader(self):
         log = logfile.LogFile(self.name, self.dir)
@@ -130,6 +132,7 @@ class LogFileTestCase(unittest.TestCase):
         self.assertEqual(reader.readLines(), [])
         reader.close()
         log.close()
+
 
     def testModePreservation(self):
         """
@@ -202,6 +205,7 @@ class LogFileTestCase(unittest.TestCase):
         self.failUnless(not os.path.exists("%s.4" % self.path))
         log.close()
 
+
     def test_fromFullPath(self):
         """
         Test the fromFullPath method.
@@ -214,6 +218,7 @@ class LogFileTestCase(unittest.TestCase):
         self.assertEqual(log1.defaultMode, log2.defaultMode)
         log1.close()
         log2.close()
+
 
     def test_defaultPermissions(self):
         """
@@ -263,6 +268,7 @@ class LogFileTestCase(unittest.TestCase):
         f = open(savePath, "r")
         self.assertEqual(f.read(), "hello1")
         f.close()
+
 
     if runtime.platform.isWindows():
         test_reopen.skip = "Can't test reopen on Windows"
@@ -333,6 +339,7 @@ class LogFileTestCase(unittest.TestCase):
         log.close()
 
 
+
 class RiggedDailyLogFile(logfile.DailyLogFile):
     _clock = 0.0
 
@@ -341,16 +348,18 @@ class RiggedDailyLogFile(logfile.DailyLogFile):
         # rig the date to match _clock, not mtime
         self.lastDate = self.toDate()
 
+
     def toDate(self, *args):
         if args:
             return time.gmtime(*args)[:3]
         return time.gmtime(self._clock)[:3]
 
+
+
 class DailyLogFileTestCase(unittest.TestCase):
     """
     Test rotating log file.
     """
-
     def setUp(self):
         self.dir = self.mktemp()
         os.makedirs(self.dir)
@@ -369,6 +378,7 @@ class DailyLogFileTestCase(unittest.TestCase):
         f = open(self.path, "r")
         self.assertEqual(f.read(), "1234567890")
         f.close()
+
 
     def testRotation(self):
         # this logfile should rotate every 10 bytes
@@ -393,6 +403,7 @@ class DailyLogFileTestCase(unittest.TestCase):
         log.write("3")
         self.assert_(not os.path.exists(days[2]))
         log.close()
+
 
     def test_getLog(self):
         """
