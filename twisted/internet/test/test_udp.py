@@ -12,17 +12,15 @@ __metaclass__ = type
 
 import socket
 
-from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.python import context
-from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.python.log import ILogContext, err
 from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.internet.defer import Deferred, maybeDeferred
+from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import (
-    ILoggingContext, IListeningPort, IReactorUDP, IReactorSocket)
+    IListeningPort, IReactorUDP, IReactorSocket)
 from twisted.internet.address import IPv4Address
 from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import udp

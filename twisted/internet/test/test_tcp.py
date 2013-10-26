@@ -33,7 +33,7 @@ from twisted.internet.test.connectionmixins import (
 from twisted.internet.test.reactormixins import (
     ReactorBuilder, needsRunningReactor)
 from twisted.internet.interfaces import (
-    ILoggingContext, IConnector, IReactorFDSet, IReactorSocket, IReactorTCP,
+    IConnector, IReactorFDSet, IReactorSocket, IReactorTCP,
     IResolverSimple, ITLSTransport)
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import (
