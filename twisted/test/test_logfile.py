@@ -39,7 +39,11 @@ class LogFileTestCase(unittest.TestCase):
         log.close()
 
 
-    def testWriting(self):
+    def test_writing(self):
+        """
+        Log files can be written to, flushed and closed. Closing a log file
+        also flushes it.
+        """
         log = logfile.LogFile(self.name, self.dir)
         log.write("123")
         log.write("456")
@@ -52,7 +56,11 @@ class LogFileTestCase(unittest.TestCase):
         f.close()
 
 
-    def testRotation(self):
+    def test_rotation(self):
+        """
+        Rotating log files autorotate after a period of time, and can also be
+        manually rotated.
+        """
         # this logfile should rotate every 10 bytes
         log = logfile.LogFile(self.name, self.dir, rotateLength=10)
 
@@ -78,7 +86,7 @@ class LogFileTestCase(unittest.TestCase):
         self.assertEqual(log.listLogs(), [1, 2, 3])
 
 
-    def testAppend(self):
+    def test_append(self):
         log = logfile.LogFile(self.name, self.dir)
         log.write("0123456789")
         log.close()
@@ -95,7 +103,7 @@ class LogFileTestCase(unittest.TestCase):
         log.close()
 
 
-    def testLogReader(self):
+    def test_logReader(self):
         log = logfile.LogFile(self.name, self.dir)
         log.write("abc\n")
         log.write("def\n")
@@ -134,7 +142,7 @@ class LogFileTestCase(unittest.TestCase):
         log.close()
 
 
-    def testModePreservation(self):
+    def test_modePreservation(self):
         """
         Check rotated files have same permissions as original.
         """
@@ -367,7 +375,10 @@ class DailyLogFileTestCase(unittest.TestCase):
         self.path = os.path.join(self.dir, self.name)
 
 
-    def testWriting(self):
+    def test_writing(self):
+        """
+        A daily log file can be written to like an ordinary log file.
+        """
         log = RiggedDailyLogFile(self.name, self.dir)
         log.write("123")
         log.write("456")
@@ -380,8 +391,10 @@ class DailyLogFileTestCase(unittest.TestCase):
         f.close()
 
 
-    def testRotation(self):
-        # this logfile should rotate every 10 bytes
+    def test_rotation(self):
+        """
+        Daily log files rotate daily.
+        """
         log = RiggedDailyLogFile(self.name, self.dir)
         days = [(self.path + '.' + log.suffix(day * 86400)) for day in range(3)]
 
