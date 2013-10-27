@@ -23,7 +23,7 @@ from twisted.internet.endpoints import (
     SSL4ServerEndpoint, SSL4ClientEndpoint, TCP4ClientEndpoint)
 from twisted.internet.error import ConnectionClosed
 from twisted.internet.task import Cooperator
-from twisted.trial.unittest import TestCase, SkipTest
+from twisted.trial.unittest import TestCase, SkipTest, SynchronousTestCase
 from twisted.python.runtime import platform
 
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
@@ -31,6 +31,7 @@ from twisted.internet.test.test_tcp import (
     StreamTransportTestsMixin, AbortConnectionMixin)
 from twisted.internet.test.connectionmixins import (
     EndpointCreator, ConnectionTestsMixin, BrokenContextFactory)
+from twisted.internet.test.reactormixins import StreamPortLoggingTestsMixin
 
 try:
     from OpenSSL.crypto import FILETYPE_PEM
@@ -38,7 +39,7 @@ except ImportError:
     FILETYPE_PEM = None
 else:
     from twisted.internet.ssl import PrivateCertificate, KeyPair
-    from twisted.internet.ssl import ClientContextFactory
+    from twisted.internet.ssl import ClientContextFactory, Port
 
 
 class TLSMixin:
@@ -436,3 +437,18 @@ class OldTLSDeprecationTest(TestCase):
             warnings[0]['message'],
             "Support for pyOpenSSL 0.5 is deprecated.  "
             "Upgrade to pyOpenSSL 0.10 or newer.")
+
+
+
+class DummyContextFactory(object):
+    def getContext(self):
+        pass
+
+
+
+class PortLoggingTests(StreamPortLoggingTestsMixin, SynchronousTestCase):
+    if FILETYPE_PEM is None:
+        skip = 'OpenSSL not available.'
+
+    def portFactory(self, **kwargs):
+        return Port(port=0, ctxFactory=DummyContextFactory(), **kwargs)
