@@ -320,17 +320,36 @@ class ReactorBuilder:
 
 
 class DummyFactory(object):
+    """
+    Dummy Factory.
+    """
     def doStart(self):
+        """
+        Dummy doStart.
+        """
         pass
 
 
     def doStop(self):
+        """
+        Dummy doStop.
+        """
         pass
 
 
 
 class StreamPortLoggingTestsMixin(object):
+    """
+    Tests for the log events emitted by stream L{IListeningPort}
+    implementations.
+    """
     def test_startListeningLog(self):
+        """
+        L{IListeningPort.startListening} emits a single C{"start"} log event
+        containing references to the port instance, the address on which the
+        port is listening, the address family of the port and the factory
+        associated with the port.
+        """
         expectedFactory = DummyFactory()
 
         p = self.portFactory(factory=expectedFactory,
@@ -353,6 +372,12 @@ class StreamPortLoggingTestsMixin(object):
 
 
     def test_stopListeningLog(self):
+        """
+        L{IListeningPort.stopListening} emits a single C{"stop"} log event
+        containing references to the port instance, the address on which the
+        port is listening, the address family of the port and the factory
+        associated with the port.
+        """
         expectedFactory = DummyFactory()
 
         p = self.portFactory(factory=expectedFactory,
@@ -375,16 +400,36 @@ class StreamPortLoggingTestsMixin(object):
 
 
 class DummyProtocol(object):
+    """
+    Dummy protocol.
+    """
     def makeConnection(self, transport):
+        """
+        Dummy makeConnection.
+        """
         pass
 
+
     def doStop(self):
+        """
+        Dummy makeConnection.
+        """
         pass
 
 
 
 class DatagramPortLoggingTestsMixin(object):
+    """
+    Tests for the log events emmitted by datagram L{IListeningPort}
+    implementations.
+    """
     def test_startListeningLog(self):
+        """
+        L{IListeningPort.stopListening} emits a single C{"start"} log event
+        containing references to the port instance, the address on which the
+        port is listening, the address family of the port and the protocol
+        associated with the port.
+        """
         expectedProtocol = DummyProtocol()
 
         p = self.portFactory(proto=expectedProtocol,
@@ -407,6 +452,12 @@ class DatagramPortLoggingTestsMixin(object):
 
 
     def test_stopListeningLog(self):
+        """
+        L{IListeningPort.stopListening} emits a single C{"stop"} log event
+        containing references to the port instance, the address on which the
+        port is listening, the address family of the port and the protocol
+        associated with the port.
+        """
         expectedProtocol = DummyProtocol()
 
         p = self.portFactory(proto=expectedProtocol,
