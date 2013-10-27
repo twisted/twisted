@@ -176,6 +176,13 @@ class ComparisonTestsMixin(object):
 
 @contextmanager
 def logRecorder():
+    """
+    A context manager which adds a temporary log observer which captures all
+    logged events and whose context is a list of the captured events. eg::
+        with logRecorder() as actualEvents:
+             functionUnderTest()
+        assertLogEvents(expectedEvents, actualEvents)
+    """
     events = []
     log.addObserver(events.append)
     try:
@@ -185,10 +192,25 @@ def logRecorder():
 
 
 
-def assertLogEvents(self, expectedEvents, actualEvents):
-    self.assertEqual(len(expectedEvents), len(actualEvents))
+def assertLogEvents(testCase, expectedEvents, actualEvents):
+    """
+    Assert that each logged event dictionary in C{actualEvents} is a superset of
+    the event dictionary at the same index in  C{expectedEvents}.
+
+    @param testCase: The test case instance on which to make assertions.
+    @type testCase: L{SynchronousTestCase
+                      <twisted.trial.unittest.SynchronousTestCase>}
+
+    @param expectedEvents: A list of expected event dictionaries.
+    @type expectedEvents: L{list} of L{dict}
+
+    @param actualEvents: A list of actual event dictionaries.
+    @type actualEvents: L{list} of L{dict}
+    """
+    testCase.assertEqual(len(expectedEvents), len(actualEvents))
     differences = []
-    for i, (expectedEvent, actualEvent) in enumerate(zip(expectedEvents, actualEvents)):
+    for i, (expectedEvent, actualEvent) in enumerate(zip(expectedEvents,
+                                                         actualEvents)):
         diff = set(expectedEvent.items()).difference(set(actualEvent.items()))
         if diff:
             differences.append((i, expectedEvent, actualEvent, diff))
@@ -201,4 +223,4 @@ def assertLogEvents(self, expectedEvents, actualEvents):
                 + 'Expected: %r\n' % (expectedEvent,)
                 + 'Actual: %r' % (actualEvent,)
             )
-        self.fail('\n\n'.join(message))
+        testCase.fail('\n\n'.join(message))
