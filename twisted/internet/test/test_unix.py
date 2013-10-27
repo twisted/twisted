@@ -28,7 +28,7 @@ from twisted.internet.address import UNIXAddress
 from twisted.internet.endpoints import UNIXServerEndpoint, UNIXClientEndpoint
 from twisted.internet.defer import Deferred, fail
 from twisted.internet.task import LoopingCall
-from twisted.internet import interfaces, unix
+from twisted.internet import interfaces
 from twisted.internet.protocol import (
     ServerFactory, ClientFactory, DatagramProtocol)
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
@@ -47,6 +47,14 @@ except ImportError:
         "sendmsg extension unavailable, extended UNIX features disabled")
 else:
     sendmsgSkip = None
+
+try:
+    from twisted.internet import unix
+except ImportError:
+    portLoggingSkip = (
+        "UNIX Port Logging tests are not supported on this platform")
+else:
+    portLoggingSkip = None
 
 
 class UNIXFamilyMixin:
@@ -608,6 +616,8 @@ class PortLoggingTests(StreamPortLoggingTestsMixin,
     """
     Tests for the log events produced by L{unix.Port}.
     """
+    skip = portLoggingSkip
+
     def portFactory(self, **kwargs):
         """
         Build and return the L{unix.Port} with a temporary file path.
