@@ -101,12 +101,15 @@ class Port(abstract.FileHandle):
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
 
-        log.msg("%s starting on %s" % (
-                self._getLogPrefix(self.protocol), self._realPortNumber))
-
         self.connected = True
         self.socket = skt
         self.getFileHandle = self.socket.fileno
+
+        log.msg(eventSource=self,
+                eventType="start",
+                eventTransport=self.addressFamily,
+                protocol=self.protocol,
+                address=self.getHost())
 
 
     def _connectToProtocol(self):
@@ -239,7 +242,12 @@ class Port(abstract.FileHandle):
         """
         Cleans up my socket.
         """
-        log.msg('(UDP Port %s Closed)' % self._realPortNumber)
+        log.msg(eventSource=self,
+                eventType="stop",
+                eventTransport=self.addressFamily,
+                protocol=self.protocol,
+                address=self.getHost())
+
         self._realPortNumber = None
         abstract.FileHandle.connectionLost(self, reason)
         self.protocol.doStop()
@@ -378,5 +386,3 @@ class MulticastPort(MulticastMixin, Port):
             if hasattr(socket, "SO_REUSEPORT"):
                 skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         return skt
-
-
