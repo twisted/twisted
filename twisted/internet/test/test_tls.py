@@ -441,14 +441,34 @@ class OldTLSDeprecationTest(TestCase):
 
 
 class DummyContextFactory(object):
+    """
+    Just enough of L{ssl.ContextFactory} to allow an L{ssl.Port} to start
+    listening.
+    """
     def getContext(self):
+        """
+        A noop implementation of L{ssl.ContextFactory.getContext}.
+        """
         pass
 
 
 
 class PortLoggingTests(StreamPortLoggingTestsMixin, SynchronousTestCase):
+    """
+    Tests for the log events produced by an SSL L{Port}.
+
+    Skipped if PyOpenSSL is not installed.
+    """
     if FILETYPE_PEM is None:
         skip = 'OpenSSL not available.'
 
     def portFactory(self, **kwargs):
+        """
+        Build an L{ssl.Port} using a dummy context factory listening on an
+        ephemeral port.
+
+        @param kwargs: Keyword arguments for the port.
+
+        @return: A L{Port}
+        """
         return Port(port=0, ctxFactory=DummyContextFactory(), **kwargs)
