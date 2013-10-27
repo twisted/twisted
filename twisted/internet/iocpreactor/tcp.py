@@ -437,9 +437,6 @@ class Port(_SocketCloser, _LogOwner):
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
 
-        log.msg("%s starting on %s" % (self._getLogPrefix(self.factory),
-                                       self._realPortNumber))
-
         self.factory.doStart()
         skt.listen(self.backlog)
         self.connected = True
@@ -448,6 +445,12 @@ class Port(_SocketCloser, _LogOwner):
         self.socket = skt
         self.getFileHandle = self.socket.fileno
         self.doAccept()
+
+        log.msg(eventSource=self,
+                eventType="start",
+                eventTransport=self.addressFamily,
+                factory=self.factory,
+                address=self.getHost())
 
 
     def loseConnection(self, connDone=failure.Failure(main.CONNECTION_DONE)):
@@ -471,7 +474,11 @@ class Port(_SocketCloser, _LogOwner):
         """
         Log message for closing port
         """
-        log.msg('(%s Port %s Closed)' % (self._type, self._realPortNumber))
+        log.msg(eventSource=self,
+                eventType="stop",
+                eventTransport=self.addressFamily,
+                factory=self.factory,
+                address=self.getHost())
 
 
     def connectionLost(self, reason):
@@ -574,5 +581,3 @@ class Port(_SocketCloser, _LogOwner):
 
         if rc and rc != ERROR_IO_PENDING:
             self.handleAccept(rc, evt)
-
-
