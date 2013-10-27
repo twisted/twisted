@@ -26,3 +26,10 @@
 (02:22:34 PM) <exarkun> Did you just spend 20 minutes reading about hippos on wikipedia?
 (02:22:44 PM) <PenguinO1Doom> yes :(
 %
++ @ivar controller: has emit_replicate method and forest object
+<itamar> Open a story for turning this into an explicit interface.
++ if slave == controller.ip:
+<itamar> Requirement for ip attribute was not mentioned in @ivar controller.
++ self.sitejuggler = controller.controller.controller
+<itamar> OMGOMGOMG.
+%
