@@ -55,7 +55,7 @@ class LogFileTestCase(unittest.TestCase):
         log.write("7890")
         log.close()
 
-        f = open(self.path, "rb")
+        f = open(self.path)
         self.assertEqual(f.read(), "1234567890")
         f.close()
 
@@ -165,7 +165,7 @@ class LogFileTestCase(unittest.TestCase):
         """
         Check rotated files have same permissions as original.
         """
-        f = open(self.path, "wb").close()
+        f = open(self.path, "w").close()
         os.chmod(self.path, 0o707)
         mode = os.stat(self.path)[stat.ST_MODE]
         log = logfile.LogFile(self.name, self.dir)
@@ -223,11 +223,11 @@ class LogFileTestCase(unittest.TestCase):
 
         log.write("4" * 11)
         self.failUnless(os.path.exists("{0}.3".format(self.path)))
-        with open("{0}.3".format(self.path), "rb") as fp:
+        with open("{0}.3".format(self.path)) as fp:
             self.assertEqual(fp.read(), "1" * 11)
 
         log.write("5" * 11)
-        with open("{0}.3".format(self.path), "rb") as fp:
+        with open("{0}.3".format(self.path)) as fp:
             self.assertEqual(fp.read(), "2" * 11)
         self.failUnless(not os.path.exists("{0}.4".format(self.path)))
         log.close()
@@ -289,10 +289,10 @@ class LogFileTestCase(unittest.TestCase):
         log1.write("hello2")
         log1.close()
 
-        f = open(self.path, "rb")
+        f = open(self.path)
         self.assertEqual(f.read(), "hello2")
         f.close()
-        f = open(savePath, "rb")
+        f = open(savePath)
         self.assertEqual(f.read(), "hello1")
         f.close()
 
@@ -404,7 +404,7 @@ class DailyLogFileTestCase(unittest.TestCase):
         log.write("7890")
         log.close()
 
-        f = open(self.path, "rb")
+        f = open(self.path)
         self.assertEqual(f.read(), "1234567890")
         f.close()
 
@@ -470,7 +470,7 @@ class DailyLogFileTestCase(unittest.TestCase):
         # Build a new file with the same name as the file which would be created
         # if the log file is to be rotated.
         newFilePath = "{0}.{1}".format(log.path, log.suffix(log.lastDate))
-        with open(newFilePath, "wb") as fp:
+        with open(newFilePath, "w") as fp:
             fp.write("123")
         previousFile = log._file
         log.rotate()
