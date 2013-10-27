@@ -152,12 +152,34 @@ class IOCPReactorTestCase(unittest.TestCase):
 
 
 
-class StreamPortLoggingTests(StreamPortLoggingTestsMixin, unittest.SynchronousTestCase):
+class StreamPortLoggingTests(StreamPortLoggingTestsMixin,
+                             unittest.SynchronousTestCase):
+    """
+    Tests for the log events produced by the IOCP L{tcp.Port} implementation.
+    """
     def portFactory(self, **kwargs):
+        """
+        Build and return a L{tcp.Port} which will listen on an ephemeral port.
+
+        @param kwargs: Keyword arguments for the port.
+
+        @return: A L{udp.Port}
+        """
         return tcp.Port(port=0, **kwargs)
 
 
 
-class DatagramPortLoggingTests(DatagramPortLoggingTestsMixin, unittest.SynchronousTestCase):
+class DatagramPortLoggingTests(DatagramPortLoggingTestsMixin,
+                               unittest.SynchronousTestCase):
+    """
+    Tests for the log events produced by the IOCP L{udp.Port} implementation.
+    """
     def portFactory(self, **kwargs):
+        """
+        Build and return a L{udp.Port} which will listen on an ephemeral port.
+
+        @param kwargs: Keyword arguments for the port.
+
+        @return: A L{udp.Port}
+        """
         return udp.Port(port=0, **kwargs)
