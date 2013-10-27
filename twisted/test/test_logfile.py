@@ -188,7 +188,7 @@ class LogFileTestCase(unittest.TestCase):
         # if this succeeds, chmod doesn't restrict us, so we can't
         # do the test
         try:
-            f = open(os.path.join(self.dir,"xxx"), "wb")
+            f = open(os.path.join(self.dir,"xxx"), "w")
         except (OSError, IOError):
             pass
         else:
@@ -356,9 +356,9 @@ class LogFileTestCase(unittest.TestCase):
         """
         log = logfile.LogFile(self.name, self.dir)
 
-        with open("{0}.1".format(log.path), "wb") as fp:
+        with open("{0}.1".format(log.path), "w") as fp:
             fp.write("123")
-        with open("{0}.bad-file".format(log.path), "wb") as fp:
+        with open("{0}.bad-file".format(log.path), "w") as fp:
             fp.write("123")
 
         self.assertEqual([1], log.listLogs())
