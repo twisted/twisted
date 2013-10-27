@@ -237,5 +237,15 @@ globals().update(UDPFDServerTestsBuilder.makeTestCaseClasses())
 
 
 class PortLoggingTests(DatagramPortLoggingTestsMixin, SynchronousTestCase):
+    """
+    Tests for the log events produced by the posix L{udp.Port} implementation.
+    """
     def portFactory(self, **kwargs):
+        """
+        Build and return the L{udp.Port} which will listen on an ephemeral port.
+
+        @param kwargs: Keyword arguments for the port.
+
+        @return: A L{udp.Port}
+        """
         return udp.Port(port=0, **kwargs)
