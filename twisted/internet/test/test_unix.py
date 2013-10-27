@@ -603,6 +603,17 @@ globals().update(UnixClientTestsBuilder.makeTestCaseClasses())
 
 
 
-class PortLoggingTests(StreamPortLoggingTestsMixin, unittest.SynchronousTestCase):
-    def portFactory(self, *args, **kwargs):
-        return unix.Port(self.mktemp(), *args, **kwargs)
+class PortLoggingTests(StreamPortLoggingTestsMixin,
+                       unittest.SynchronousTestCase):
+    """
+    Tests for the log events produced by L{unix.Port}.
+    """
+    def portFactory(self, **kwargs):
+        """
+        Build and return the L{unix.Port} with a temporary file path.
+
+        @param kwargs: Keyword arguments for the port.
+
+        @return: A L{unix.Port} with a temporary file path.
+        """
+        return unix.Port(self.mktemp(), **kwargs)
