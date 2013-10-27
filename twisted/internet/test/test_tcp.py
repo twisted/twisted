@@ -2362,5 +2362,15 @@ class SimpleUtilityTestCase(TestCase):
 
 
 class PortLoggingTests(StreamPortLoggingTestsMixin, SynchronousTestCase):
+    """
+    Tests for the log events produced by the posix L{tcp.Port} implementation.
+    """
     def portFactory(self, **kwargs):
+        """
+        Build and return the L{tcp.Port} which will listen on an ephemeral port.
+
+        @param kwargs: Keyword arguments for the port.
+
+        @return: A L{tcp.Port}
+        """
         return Port(port=0, **kwargs)
