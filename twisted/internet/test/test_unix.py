@@ -617,6 +617,10 @@ class PortLoggingTests(StreamPortLoggingTestsMixin,
     Tests for the log events produced by L{unix.Port}.
     """
     skip = portLoggingSkip
+    def setUp(self):
+        self.portPath = self.mktemp()
+        self.portAddress = UNIXAddress(self.portPath)
+
 
     def portFactory(self, **kwargs):
         """
@@ -626,4 +630,5 @@ class PortLoggingTests(StreamPortLoggingTestsMixin,
 
         @return: A L{unix.Port} with a temporary file path.
         """
-        return unix.Port(self.mktemp(), **kwargs)
+        open(self.portPath, 'w').close()
+        return unix.Port(self.portPath, **kwargs)

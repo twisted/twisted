@@ -18,8 +18,9 @@ __metaclass__ = type
 
 __all__ = ['TestTimeoutError', 'ReactorBuilder', 'needsRunningReactor']
 
-import os, signal, time
+import os, signal, time, types
 
+from twisted.internet import address
 from twisted.python.compat import _PY3
 from twisted.trial.unittest import SynchronousTestCase, SkipTest
 from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
@@ -29,7 +30,7 @@ from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 
 from twisted.python import log
 from twisted.python.failure import Failure
-from twisted.test.proto_helpers import _FakeFDSetReactor
+from twisted.test.proto_helpers import FakeFDSetReactor, FakeSocket
 from twisted.test.testutils import assertLogEvents, logRecorder
 
 # Access private APIs.
@@ -343,6 +344,8 @@ class StreamPortLoggingTestsMixin(object):
     Tests for the log events emitted by stream L{IListeningPort}
     implementations.
     """
+    portAddress = address.IPv4Address('TCP', '0.0.0.0', 1234)
+
     def test_startListeningLog(self):
         """
         L{IListeningPort.startListening} emits a single C{"start"} log event
@@ -353,7 +356,8 @@ class StreamPortLoggingTestsMixin(object):
         expectedFactory = DummyFactory()
 
         p = self.portFactory(factory=expectedFactory,
-                             reactor=_FakeFDSetReactor())
+                             reactor=FakeFDSetReactor())
+        p.createInternetSocket = lambda: FakeSocket.fromAddress(self.portAddress)
 
         with logRecorder() as events:
             p.startListening()
@@ -381,7 +385,9 @@ class StreamPortLoggingTestsMixin(object):
         expectedFactory = DummyFactory()
 
         p = self.portFactory(factory=expectedFactory,
-                             reactor=_FakeFDSetReactor())
+                             reactor=FakeFDSetReactor())
+        p.createInternetSocket = lambda: FakeSocket.fromAddress(self.portAddress)
+
         p.startListening()
 
         expectedEvent = dict(
@@ -420,9 +426,11 @@ class DummyProtocol(object):
 
 class DatagramPortLoggingTestsMixin(object):
     """
-    Tests for the log events emmitted by datagram L{IListeningPort}
+    Tests for the log events emitted by datagram L{IListeningPort}
     implementations.
     """
+    portAddress = address.IPv4Address('UDP', '0.0.0.0', 1234)
+
     def test_startListeningLog(self):
         """
         L{IListeningPort.stopListening} emits a single C{"start"} log event
@@ -433,7 +441,8 @@ class DatagramPortLoggingTestsMixin(object):
         expectedProtocol = DummyProtocol()
 
         p = self.portFactory(proto=expectedProtocol,
-                             reactor=_FakeFDSetReactor())
+                             reactor=FakeFDSetReactor())
+        p.createInternetSocket = lambda: FakeSocket.fromAddress(self.portAddress)
 
         with logRecorder() as events:
             p.startListening()
@@ -461,7 +470,9 @@ class DatagramPortLoggingTestsMixin(object):
         expectedProtocol = DummyProtocol()
 
         p = self.portFactory(proto=expectedProtocol,
-                             reactor=_FakeFDSetReactor())
+                             reactor=FakeFDSetReactor())
+        p.createInternetSocket = lambda: FakeSocket.fromAddress(self.portAddress)
+
         p.startListening()
 
         expectedEvent = dict(

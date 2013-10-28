@@ -631,7 +631,7 @@ class RaisingMemoryReactor(object):
 
 
 @implementer(IReactorFDSet)
-class _FakeFDSetReactor(object):
+class FakeFDSetReactor(object):
     """
     An in-memory implementation of L{IReactorFDSet}, which records the current
     sets of active L{IReadDescriptor} and L{IWriteDescriptor}s.
@@ -681,4 +681,117 @@ class _FakeFDSetReactor(object):
     def getWriters(self):
         return list(self._writers)
 
-verifyClass(IReactorFDSet, _FakeFDSetReactor)
+verifyClass(IReactorFDSet, FakeFDSetReactor)
+
+
+
+class FakeSocket(object):
+    """
+    A fake for L{socket.socket} objects.
+
+    @ivar data: A C{str} giving the data which will be returned from
+        L{FakeSocket.recv}.
+
+    @ivar sendBuffer: A C{list} of the objects passed to L{FakeSocket.send}.
+    """
+    def __init__(self, data):
+        self.data = data
+        self.sendBuffer = []
+
+
+    def setblocking(self, blocking):
+        self.blocking = blocking
+
+
+    def recv(self, size):
+        return self.data
+
+
+    def send(self, bytes):
+        """
+        I{Send} all of C{bytes} by accumulating it into C{self.sendBuffer}.
+
+        @return: The length of C{bytes}, indicating all the data has been
+            accepted.
+        """
+        self.sendBuffer.append(bytes)
+        return len(bytes)
+
+
+    def shutdown(self, how):
+        """
+        Shutdown is not implemented.  The method is provided since real sockets
+        have it and some code expects it.  No behavior of L{FakeSocket} is
+        affected by a call to it.
+        """
+
+
+    def close(self):
+        """
+        Close is not implemented.  The method is provided since real sockets
+        have it and some code expects it.  No behavior of L{FakeSocket} is
+        affected by a call to it.
+        """
+
+
+    def setsockopt(self, *args):
+        """
+        Setsockopt is not implemented.  The method is provided since
+        real sockets have it and some code expects it.  No behavior of
+        L{FakeSocket} is affected by a call to it.
+        """
+
+
+    def fileno(self):
+        """
+        Return a fake file descriptor.  If actually used, this will have no
+        connection to this L{FakeSocket} and will probably cause surprising
+        results.
+        """
+        return 1
+
+
+    def bind(self, address):
+        """
+        Setsockopt is not implemented.  The method is provided since
+        real sockets have it and some code expects it.  No behavior of
+        L{FakeSocket} is affected by a call to it.
+        """
+        pass
+
+
+    def listen(self, backlog):
+        """
+        Setsockopt is not implemented.  The method is provided since
+        real sockets have it and some code expects it.  No behavior of
+        L{FakeSocket} is affected by a call to it.
+        """
+        pass
+
+
+    def getsockname(self):
+        """
+        Return a fixed host and port of the address object supplied to the
+        C{fromAddress} constructor function.
+
+        @return: 2-L{tuple} of (host, port).
+        """
+        if isinstance(self._address, UNIXAddress):
+            return self._address.name
+        else:
+            return self._address.host, self._address.port
+
+
+    @classmethod
+    def fromAddress(cls, address, data=b''):
+        """
+        Construct a L{FakeSocket} from an L{IAddress} provider.
+
+        @param address: An L{IAddress} provider whose host and port will be
+             returned by C{getsockname}.
+
+        @param data: See L{__init__}
+        """
+        s = cls(data=data)
+        s._address = address
+        return s
