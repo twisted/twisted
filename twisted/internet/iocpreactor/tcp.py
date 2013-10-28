@@ -437,8 +437,6 @@ class Port(_SocketCloser, _LogOwner):
         except socket.error, le:
             raise error.CannotListenError, (self.interface, self.port, le)
 
-        self.addrLen = _iocp.maxAddrLen(skt.fileno())
-
         # Make sure that if we listened on port 0, we update that to
         # reflect what the OS actually assigned us.
         self._realPortNumber = skt.getsockname()[1]
@@ -578,8 +576,9 @@ class Port(_SocketCloser, _LogOwner):
     def doAccept(self):
         evt = _iocp.Event(self.cbAccept, self)
 
+        addrLen = _iocp.maxAddrLen(self.socket.fileno())
         # see AcceptEx documentation
-        evt.buff = buff = _iocp.AllocateReadBuffer(2 * (self.addrLen + 16))
+        evt.buff = buff = _iocp.AllocateReadBuffer(2 * (addrLen + 16))
 
         evt.newskt = newskt = self.createInternetSocket()
 

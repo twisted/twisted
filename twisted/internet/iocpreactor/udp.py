@@ -93,7 +93,7 @@ class Port(abstract.FileHandle):
 
     def _bindSocket(self):
         try:
-            skt = self.createSocket()
+            skt = self.createInternetSocket()
             skt.bind((self.interface, self.port))
         except socket.error, le:
             raise error.CannotListenError, (self.interface, self.port, le)
