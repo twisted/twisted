@@ -168,6 +168,7 @@ class StreamPortLoggingTests(StreamPortLoggingTestsMixin,
         p = tcp.Port(port=0, **kwargs)
         p.doAccept = lambda: None
         p.reactor.addActiveHandle = lambda *args: None
+        p.reactor.removeActiveHandle = lambda *args: None
         return p
 
 
@@ -186,5 +187,7 @@ class DatagramPortLoggingTests(DatagramPortLoggingTestsMixin,
         @return: A L{udp.Port}
         """
         p = udp.Port(port=0, **kwargs)
+        p.startReading = lambda: None
         p.reactor.addActiveHandle = lambda *args: None
+        p.reactor.removeActiveHandle = lambda *args: None
         return p

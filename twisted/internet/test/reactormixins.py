@@ -372,7 +372,6 @@ class StreamPortLoggingTestsMixin(object):
 
         assertLogEvents(self, [expectedEvent], events)
 
-        p.connectionLost(Failure(Exception('dummy')))
 
 
     def test_stopListeningLog(self):
@@ -457,7 +456,6 @@ class DatagramPortLoggingTestsMixin(object):
 
         assertLogEvents(self, [expectedEvent], events)
 
-        p.connectionLost(Failure(Exception('dummy')))
 
 
     def test_stopListeningLog(self):
