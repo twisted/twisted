@@ -620,13 +620,17 @@ class Request:
 
 
     def _writeHeaders(self, transport, TEorCL):
+        """
+        Write this request's headers to the given transport and include
+        the specified body framing header.
+        """
         hosts = self.headers.getRawHeaders('host', ())
         if len(hosts) != 1:
             raise BadHeaders("Exactly one Host header required")
 
         # In the future, having the protocol version be a parameter to this
         # method would probably be good.  It would be nice if this method
-        # weren't limited to issueing HTTP/1.1 requests.
+        # weren't limited to issuing HTTP/1.1 requests.
         requestLines = []
         requestLines.append(
             '%s %s HTTP/1.1\r\n' % (self.method, self.uri))

@@ -142,8 +142,8 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
     @ivar protocol: A callable which returns a managed relayer for SMTP.  See
         L{SMTPManagedRelayer.__init__} for parameters to the callable.
 
-    @type pArgs: 1-L{tuple} of (E{1}) L{bytes} or 2-L{tuple} of (E{1}) L{bytes},
-        (E{2}), L{int}
+    @type pArgs: 1-L{tuple} of (E{1}) L{bytes} or 2-L{tuple} of
+        (E{1}) L{bytes}, (E{2}), L{int}
     @ivar pArgs: Positional arguments for L{SMTPClient.__init__}
 
     @type pKwArgs: L{dict}
@@ -244,7 +244,8 @@ class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
         """
         self.secret = secret
         self.contextFactory = contextFactory
-        SMTPManagedRelayerFactory.__init__(self, messages, manager, *args, **kw)
+        SMTPManagedRelayerFactory.__init__(self, messages, manager, *args, 
+                **kw)
 
 
     def buildProtocol(self, addr):
@@ -316,7 +317,7 @@ class Queue:
         @rtype: L{dict} of L{bytes} -> L{object}
         @return: The non-volatile state of the queue.
         """
-        return {'directory' : self.directory}
+        return {'directory': self.directory}
 
 
     def __setstate__(self, state):
@@ -337,7 +338,7 @@ class Queue:
         """
         for message in os.listdir(self.directory):
             # Skip non data files
-            if message[-2:]!='-D':
+            if message[-2:] != '-D':
                 continue
             self.addMessage(message[:-2])
 
@@ -461,7 +462,7 @@ class Queue:
         @rtype: L{file}
         @return: The envelope file for the message.
         """
-        return open(os.path.join(self.directory, message+'-H'), 'rb')
+        return open(os.path.join(self.directory, message + '-H'), 'rb')
 
 
     def createNewMessage(self):
@@ -474,13 +475,14 @@ class Queue:
         """
         fname = "%s_%s_%s_%s" % (os.getpid(), time.time(), self.n, id(self))
         self.n = self.n + 1
-        headerFile = open(os.path.join(self.directory, fname+'-H'), 'wb')
-        tempFilename = os.path.join(self.directory, fname+'-C')
-        finalFilename = os.path.join(self.directory, fname+'-D')
+        headerFile = open(os.path.join(self.directory, fname + '-H'), 'wb')
+        tempFilename = os.path.join(self.directory, fname + '-C')
+        finalFilename = os.path.join(self.directory, fname + '-D')
         messageFile = open(tempFilename, 'wb')
 
         from twisted.mail.mail import FileMessage
-        return headerFile,FileMessage(messageFile, tempFilename, finalFilename)
+        return headerFile, FileMessage(messageFile, tempFilename,
+                                       finalFilename)
 
 
 
@@ -516,7 +518,7 @@ class _AttemptManager(object):
     def notifyFailure(self, relay, message):
         """Relaying the message has failed."""
         if self.manager.queue.noisy:
-            log.msg("could not relay "+message)
+            log.msg("could not relay " + message)
         # Moshe - Bounce E-mail here
         # Be careful: if it's a bounced bounce, silently
         # discard it
@@ -524,12 +526,13 @@ class _AttemptManager(object):
         fp = self.manager.queue.getEnvelopeFile(message)
         from_, to = pickle.load(fp)
         fp.close()
-        from_, to, bounceMessage = bounce.generateBounce(open(self.manager.queue.getPath(message)+'-D'), from_, to)
+        from_, to, bounceMessage = bounce.generateBounce(
+            open(self.manager.queue.getPath(message) + '-D'), from_, to)
         fp, outgoingMessage = self.manager.queue.createNewMessage()
         pickle.dump([from_, to], fp)
         fp.close()
         for line in bounceMessage.splitlines():
-             outgoingMessage.lineReceived(line)
+            outgoingMessage.lineReceived(line)
         outgoingMessage.eomReceived()
         self._finish(relay, self.manager.queue.getPath(message))
 
@@ -568,8 +571,10 @@ class _AttemptManager(object):
 
         if self.manager.queue.noisy:
             log.msg("Backing off on delivery of " + str(msgs))
+
         def setWaiting(queue, messages):
             map(queue.setWaiting, messages)
+
         from twisted.internet import reactor
         reactor.callLater(30, setWaiting, self.manager.queue, msgs)
         del self.manager.managed[relay]
@@ -600,7 +605,8 @@ class SmartHostSMTPRelayingManager:
         (E{2}) L{_AttemptManager}, (E{3}) L{bytes} or 4-L{tuple} of
         (E{1}) L{list} of L{bytes}, (E{2}) L{_AttemptManager}, (E{3}) L{bytes},
         (E{4}) L{int}
-    @ivar fArgs: Positional arguments for L{SMTPManagedRelayerFactory.__init__}.
+    @ivar fArgs: Positional arguments for
+        L{SMTPManagedRelayerFactory.__init__}.
 
     @type fKwArgs: L{dict}
     @ivar fKwArgs: Keyword arguments for L{SMTPManagedRelayerFactory.__init__}.
@@ -647,7 +653,7 @@ class SmartHostSMTPRelayingManager:
         """
         self.maxConnections = maxConnections
         self.maxMessagesPerConnection = maxMessagesPerConnection
-        self.managed = {} # SMTP clients we're managing
+        self.managed = {}  # SMTP clients we're managing
         self.queue = queue
         self.fArgs = ()
         self.fKwArgs = {}
@@ -690,7 +696,7 @@ class SmartHostSMTPRelayingManager:
         self.queue.readDirectory()
         if (len(self.managed) >= self.maxConnections):
             return
-        if  not self.queue.hasWaiting():
+        if not self.queue.hasWaiting():
             return
 
         return self._checkStateMX()
@@ -726,8 +732,10 @@ class SmartHostSMTPRelayingManager:
             relayAttemptDeferred = manager.getCompletionDeferred()
             connectSetupDeferred = self.mxcalc.getMX(domain)
             connectSetupDeferred.addCallback(lambda mx: str(mx.name))
-            connectSetupDeferred.addCallback(self._cbExchange, self.PORT, factory)
-            connectSetupDeferred.addErrback(lambda err: (relayAttemptDeferred.errback(err), err)[1])
+            connectSetupDeferred.addCallback(self._cbExchange, self.PORT,
+                factory)
+            connectSetupDeferred.addErrback(lambda err: (
+                relayAttemptDeferred.errback(err), err)[1])
             connectSetupDeferred.addErrback(self._ebExchange, factory, domain)
             relays.append(relayAttemptDeferred)
         return DeferredList(relays)
@@ -773,8 +781,10 @@ class SmartHostSMTPRelayingManager:
         """
         log.err('Error setting up managed relay factory for ' + domain)
         log.err(failure)
+
         def setWaiting(queue, messages):
             map(queue.setWaiting, messages)
+
         from twisted.internet import reactor
         reactor.callLater(30, setWaiting, self.queue, self.managed[factory])
         del self.managed[factory]
@@ -867,7 +877,7 @@ class MXCalculator:
         hostname directly when no mail exchange can be found (C{True}) or
         not (C{False}).
     """
-    timeOutBadMX = 60 * 60 # One hour
+    timeOutBadMX = 60 * 60  # One hour
     fallbackToDomain = True
 
     def __init__(self, resolver=None, clock=None):
@@ -1035,10 +1045,10 @@ class MXCalculator:
                     return record
             return exchanges[0][1]
         else:
-            # Treat no answers the same as an error - jump to the errback to try
-            # to look up an A record.  This provides behavior described as a
-            # special case in RFC 974 in the section headed I{Interpreting the
-            # List of MX RRs}.
+            # Treat no answers the same as an error - jump to the errback to
+            # try to look up an A record.  This provides behavior described as
+            # a special case in RFC 974 in the section headed I{Interpreting
+            # the List of MX RRs}.
             return Failure(
                 error.DNSNameError("No MX records for %r" % (domain,)))
 
@@ -1074,11 +1084,14 @@ class MXCalculator:
 
             # Alright, I admit, this is a bit icky.
             d = self.resolver.getHostByName(domain)
+
             def cbResolved(addr):
                 return dns.Record_MX(name=addr)
+
             def ebResolved(err):
                 err.trap(error.DNSNameError)
                 raise DNSLookupError()
+
             d.addCallbacks(cbResolved, ebResolved)
             return d
         elif failure.check(error.DNSNameError):
