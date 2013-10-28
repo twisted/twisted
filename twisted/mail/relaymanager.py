@@ -244,7 +244,7 @@ class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
         """
         self.secret = secret
         self.contextFactory = contextFactory
-        SMTPManagedRelayerFactory.__init__(self, messages, manager, *args, 
+        SMTPManagedRelayerFactory.__init__(self, messages, manager, *args,
                 **kw)
 
 
