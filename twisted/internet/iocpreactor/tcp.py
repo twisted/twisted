@@ -418,10 +418,16 @@ class Port(_SocketCloser, _LogOwner):
                                                    self.factory.__class__)
 
 
+    def createInternetSocket(self):
+        """
+        Create a socket registered with the IOCP reactor.
+        """
+        return self.reactor.createSocket(self.addressFamily, self.socketType)
+
+
     def startListening(self):
         try:
-            skt = self.reactor.createSocket(self.addressFamily,
-                                            self.socketType)
+            skt = self.createInternetSocket()
             # TODO: resolve self.interface if necessary
             if self.addressFamily == socket.AF_INET6:
                 addr = socket.getaddrinfo(self.interface, self.port)[0][4]
@@ -575,8 +581,8 @@ class Port(_SocketCloser, _LogOwner):
         # see AcceptEx documentation
         evt.buff = buff = _iocp.AllocateReadBuffer(2 * (self.addrLen + 16))
 
-        evt.newskt = newskt = self.reactor.createSocket(self.addressFamily,
-                                                        self.socketType)
+        evt.newskt = newskt = self.createInternetSocket()
+
         rc = _iocp.accept(self.socket.fileno(), newskt.fileno(), buff, evt)
 
         if rc and rc != ERROR_IO_PENDING:

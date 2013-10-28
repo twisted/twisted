@@ -88,6 +88,7 @@ class Port(abstract.FileHandle):
 
     def createSocket(self):
         return self.reactor.createSocket(self.addressFamily, self.socketType)
+    createInternetSocket = createSocket
 
 
     def _bindSocket(self):
