@@ -342,9 +342,16 @@ class LogFileTestCase(unittest.TestCase):
         Opening a L{LogFile} which can be read and write but whose mode can't
         be changed doesn't trigger an error.
         """
-        log = logfile.LogFile("null", "/dev", defaultMode=0o555)
+        if runtime.platform.isWindows():
+            name, directory = "NUL", ""
+            expectedPath = "NUL"
+        else:
+            name, directory = "null", "/dev"
+            expectedPath = "/dev/null"
 
-        self.assertEqual(log.path, "/dev/null")
+        log = logfile.LogFile(name, directory, defaultMode=0o555)
+
+        self.assertEqual(log.path, expectedPath)
         self.assertEqual(log.defaultMode, 0o555)
         log.close()
 
