@@ -623,7 +623,7 @@ class Key(object):
             is not part of the key itself.  For public OpenSSH keys, this is
             a comment.  For private OpenSSH keys, this is a passphrase to
             encrypt with.
-        @type extra: L{str} or L{NoneType}
+        @type extra: L{str} or L{NoneType<types.NoneType>}
 
         @rtype: L{str}
         """
