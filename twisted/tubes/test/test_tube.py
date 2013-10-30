@@ -29,6 +29,36 @@ class PassthruPump(Pump):
 
 
 
+class FakeFountWithBuffer(FakeFount):
+    """
+    Probably this should be replaced with a C{MemoryFount}.
+    """
+    def __init__(self):
+        self.buffer = []
+
+
+    def bufferUp(self, item):
+        self.buffer.append(item)
+
+
+    def flowTo(self, drain):
+        result = super(FakeFountWithBuffer, self).flowTo(drain)
+        self._go()
+        return result
+
+
+    def resumeFlow(self):
+        super(FakeFountWithBuffer, self).resumeFlow()
+        self._go()
+
+
+    def _go(self):
+        while not self.flowIsPaused and self.buffer:
+            item = self.buffer.pop(0)
+            self.drain.receive(item)
+
+
+
 class TubeTest(TestCase):
     """
     Tests for L{series}.
@@ -192,24 +222,36 @@ class TubeTest(TestCase):
         self.assertEquals(self.fd.received, ["before", "switched after"])
 
 
+    def test_initiallyEnthusiasticFountBecomesDisillusioned(self):
+        """
+        If an L{IFount} provider synchronously calls C{receive} on a
+        L{_TubeDrain}, whose corresponding L{_TubeFount} is not flowing to an
+        L{IDrain} yet, it will be synchronously paused with
+        L{IFount.pauseFlow}; when that L{_TubeFount} then flows to something
+        else, the buffer will be unspooled.
+        """
+        ff = FakeFountWithBuffer()
+        ff.bufferUp("something")
+        ff.bufferUp("else")
+        newDrain = series(PassthruPump())
+        # Just making sure.
+        self.assertEqual(ff.flowIsPaused, False)
+        newFount = ff.flowTo(newDrain)
+        # "something" should have been un-buffered at this point.
+        self.assertEqual(ff.buffer, ["else"])
+        self.assertEqual(ff.flowIsPaused, True)
+        newFount.flowTo(self.fd)
+        self.assertEqual(ff.buffer, [])
+        self.assertEqual(ff.flowIsPaused, False)
+        self.assertEqual(self.fd.received, ["something", "else"])
+
+
     def test_pumpFlowSwitching_ReEntrantResumeReceive(self):
         """
         Switching a pump that is receiving data from a fount which
         synchronously produces some data to C{receive} will ... uh .. work.
         """
 
-        class FakeFountWithBuffer(FakeFount):
-            def __init__(self):
-                self.buffer = []
-
-            def bufferUp(self, item):
-                self.buffer.append(item)
-
-            def resumeFlow(self):
-                super(FakeFountWithBuffer, self).resumeFlow()
-                while not self.flowIsPaused:
-                    item = self.buffer.pop(0)
-                    self.drain.receive(item)
         @implementer(ISwitchablePump)
         class SwitchablePassthruPump(PassthruPump):
             def reassemble(self, data):
