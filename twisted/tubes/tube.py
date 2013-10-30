@@ -164,7 +164,9 @@ class _TubeDrain(_TubePiece):
         """
         An item was received.  Pass it on to the pump for processing.
         """
-        delivered = self._tube._deliverFrom(lambda: self._pump.received(item))
+        def thingToDeliverFrom():
+            return self._pump.received(item)
+        delivered = self._tube._deliverFrom(thingToDeliverFrom)
         drain = self._tube._tfount.drain
         if drain is not None and delivered == 0:
             drain.progress()
