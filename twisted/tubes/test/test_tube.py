@@ -333,9 +333,7 @@ class TubeTest(TestCase):
             def received(self, data):
                 yield d
                 MultiDeferredPump.didYield = True
-                print "BEARTATO"
                 yield succeed("goodbye")
-                print "TOPATO"
 
         fakeDrain = self.fd
         self.ff.flowTo(series(MultiDeferredPump())).flowTo(fakeDrain)
