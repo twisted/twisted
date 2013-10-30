@@ -79,12 +79,15 @@ class Key(object):
         if type is None:
             type = cls._guessStringType(data)
         if type is None:
-            raise BadKeyError('cannot guess the type of %r' % data)
-        method = getattr(cls, '_fromString_%s' % type.upper(), None)
+            raise BadKeyError('cannot guess the type of {0!r}'.format(data))
+
+        methodName = '_fromString_{0}'.format(type.upper())
+        method = getattr(cls, methodName, None)
         if method is None:
-            raise BadKeyError('no _fromString method for %s' % type)
+            raise BadKeyError('no _fromString method for {0}'.format(type))
         if method.func_code.co_argcount == 2:  # no passphrase
-            if passphrase:
+            if passphrase: # XXX: Doesn't he mean "passphrase is not
+                # None"? what if the passprhrase is empty?
                 raise BadKeyError('key not encrypted')
             return method(data)
         else:
@@ -119,7 +122,7 @@ class Key(object):
             p, q, g, y, rest = common.getMP(rest, 4)
             return cls(DSA.construct((y, g, p, q)))
         else:
-            raise BadKeyError('unknown blob type: %s' % keyType)
+            raise BadKeyError('unknown blob type: {0}'.format(keyType))
     _fromString_BLOB = classmethod(_fromString_BLOB)
 
 
@@ -160,7 +163,7 @@ class Key(object):
             dsakey = cls(DSA.construct((y, g, p, q, x)))
             return dsakey
         else:
-            raise BadKeyError('unknown blob type: %s' % keyType)
+            raise BadKeyError('unknown blob type: {0}'.format(keyType))
     _fromString_PRIVATE_BLOB = classmethod(_fromString_PRIVATE_BLOB)
 
 
@@ -219,7 +222,7 @@ class Key(object):
                 _, cipher_iv_info = lines[2].split(' ', 1)
                 cipher, ivdata = cipher_iv_info.rstrip().split(',', 1)
             except ValueError:
-                raise BadKeyError('invalid DEK-info %r' % lines[2])
+                raise BadKeyError('invalid DEK-info {0!r}'.format(lines[2]))
 
             if cipher == 'AES-128-CBC':
                 CipherClass = AES
@@ -232,7 +235,8 @@ class Key(object):
                 if len(ivdata) != 16:
                     raise BadKeyError('DES encrypted key with a bad IV')
             else:
-                raise BadKeyError('unknown encryption type %r' % cipher)
+                errorMessage = 'unknown encryption type {0!r}'.format(cipher)
+                raise BadKeyError(errorMessage)
 
             # extract keyData for decoding
             iv = ''.join([chr(int(ivdata[i:i + 2], 16))
@@ -253,7 +257,8 @@ class Key(object):
         try:
             decodedKey = berDecoder.decode(keyData)[0]
         except PyAsn1Error, e:
-            raise BadKeyError('Failed to decode key (Bad Passphrase?): %s' % e)
+            errorTemplate = 'Failed to decode key (Bad Passphrase?): {0}'
+            raise BadKeyError(errorTemplate.format(e))
 
         if kind == 'RSA':
             if len(decodedKey) == 2:  # alternate RSA key
@@ -296,7 +301,7 @@ class Key(object):
         elif sexp[1][0] == 'rsa-pkcs1-sha1':
             return cls(RSA.construct((kd['n'], kd['e'])))
         else:
-            raise BadKeyError('unknown lsh key type %s' % sexp[1][0])
+            raise BadKeyError('unknown lsh key type {0}'.format(sexp[1][0]))
     _fromString_PUBLIC_LSH = classmethod(_fromString_PUBLIC_LSH)
 
 
@@ -329,7 +334,7 @@ class Key(object):
             return cls(RSA.construct((kd['n'], kd['e'], kd['d'],
                                         kd['p'], kd['q'])))
         else:
-            raise BadKeyError('unknown lsh key type %s' % sexp[1][0])
+            raise BadKeyError('unknown lsh key type {0}'.format(sexp[1][0]))
     _fromString_PRIVATE_LSH = classmethod(_fromString_PRIVATE_LSH)
 
 
@@ -376,7 +381,7 @@ class Key(object):
             q, data = common.getMP(data)
             return cls(RSA.construct((n, e, d, p, q, u)))
         else:
-            raise BadKeyError("unknown key type %s" % keyType)
+            raise BadKeyError("unknown key type {0}".format(keyType))
     _fromString_AGENTV3 = classmethod(_fromString_AGENTV3)
 
 
@@ -452,7 +457,7 @@ class Key(object):
                 by = by[15:]
                 o = ''
                 for c in m:
-                    o = o + '%02x:' % ord(c)
+                    o = o + '%02x:' % (ord(c),)
                 if len(m) < 15:
                     o = o[:-1]
                 lines.append('\t' + o)
@@ -509,11 +514,12 @@ class Key(object):
         if mod.startswith('Crypto.PublicKey'):
             type = mod.split('.')[2]
         else:
-            raise RuntimeError('unknown type of object: %r' % self.keyObject)
+            raise RuntimeError('unknown type of object: {0!r}'
+                               .format(self.keyObject))
         if type in ('RSA', 'DSA'):
             return type
         else:
-            raise RuntimeError('unknown type of key: %s' % type)
+            raise RuntimeError('unknown type of key: {0}'.format(type))
 
 
     def sshType(self):
@@ -621,9 +627,10 @@ class Key(object):
 
         @rtype: L{str}
         """
-        method = getattr(self, '_toString_%s' % type.upper(), None)
+        methodName = '_toString_{0}'.format(type.upper())
+        method = getattr(self, methodName, None)
         if method is None:
-            raise BadKeyError('unknown type: %s' % type)
+            raise BadKeyError('unknown type: {0}'.format(type))
         if method.func_code.co_argcount == 2:
             return method(extra)
         else:
@@ -650,7 +657,7 @@ class Key(object):
                 extra = ''
             return ('%s %s %s' % (self.sshType(), b64Data, extra)).strip()
         else:
-            lines = ['-----BEGIN %s PRIVATE KEY-----' % self.type()]
+            lines = ['-----BEGIN {0} PRIVATE KEY-----'.format(self.type())]
             if self.type() == 'RSA':
                 p, q = data['p'], data['q']
                 objData = (0, data['n'], data['e'], data['d'], q, p,
@@ -665,9 +672,9 @@ class Key(object):
             asn1Data = berEncoder.encode(asn1Sequence)
             if extra:
                 iv = randbytes.secureRandom(8)
-                hexiv = ''.join(['%02X' % ord(x) for x in iv])
+                hexiv = ''.join(['%02X' % (ord(x),) for x in iv])
                 lines.append('Proc-Type: 4,ENCRYPTED')
-                lines.append('DEK-Info: DES-EDE3-CBC,%s\n' % hexiv)
+                lines.append('DEK-Info: DES-EDE3-CBC,%s\n' % (hexiv,))
                 ba = md5(extra + iv).digest()
                 bb = md5(ba + extra + iv).digest()
                 encKey = (ba + bb)[:24]
@@ -677,7 +684,7 @@ class Key(object):
                                     iv).encrypt(asn1Data)
             b64Data = base64.encodestring(asn1Data).replace('\n', '')
             lines += [b64Data[i:i + 64] for i in range(0, len(b64Data), 64)]
-            lines.append('-----END %s PRIVATE KEY-----' % self.type())
+            lines.append('-----END {0} PRIVATE KEY-----'.format(self.type()))
             return '\n'.join(lines)
 
 
