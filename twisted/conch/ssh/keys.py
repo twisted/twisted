@@ -8,12 +8,10 @@ Handling of RSA and DSA keys.
 Maintainer: U{Paul Swartz}
 """
 
-# base library imports
 import base64
 import itertools
 from hashlib import md5, sha1
 
-# external library imports
 from Crypto.Cipher import DES3, AES
 from Crypto.PublicKey import RSA, DSA
 from Crypto import Util
@@ -22,10 +20,7 @@ from pyasn1.type import univ
 from pyasn1.codec.ber import decoder as berDecoder
 from pyasn1.codec.ber import encoder as berEncoder
 
-# twisted
 from twisted.python import randbytes
-
-# sibling imports
 from twisted.conch.ssh import common, sexpy
 
 
@@ -59,16 +54,16 @@ class Key(object):
                   operations are performed with.
     """
 
-    def fromFile(Class, filename, type=None, passphrase=None):
+    def fromFile(cls, filename, type=None, passphrase=None):
         """
         Return a Key object corresponding to the data in filename.  type
         and passphrase function as they do in fromString.
         """
-        return Class.fromString(file(filename, 'rb').read(), type, passphrase)
+        return cls.fromString(file(filename, 'rb').read(), type, passphrase)
     fromFile = classmethod(fromFile)
 
 
-    def fromString(Class, data, type=None, passphrase=None):
+    def fromString(cls, data, type=None, passphrase=None):
         """
         Return a Key object corresponding to the string data.
         type is optionally the type of string, matching a _fromString_*
@@ -82,10 +77,10 @@ class Key(object):
         @rtype: C{Key}
         """
         if type is None:
-            type = Class._guessStringType(data)
+            type = cls._guessStringType(data)
         if type is None:
             raise BadKeyError('cannot guess the type of %r' % data)
-        method = getattr(Class, '_fromString_%s' % type.upper(), None)
+        method = getattr(cls, '_fromString_%s' % type.upper(), None)
         if method is None:
             raise BadKeyError('no _fromString method for %s' % type)
         if method.func_code.co_argcount == 2:  # no passphrase
@@ -97,7 +92,7 @@ class Key(object):
     fromString = classmethod(fromString)
 
 
-    def _fromString_BLOB(Class, blob):
+    def _fromString_BLOB(cls, blob):
         """
         Return a public key object corresponding to this public key blob.
         The format of a RSA public key blob is::
@@ -119,16 +114,16 @@ class Key(object):
         keyType, rest = common.getNS(blob)
         if keyType == 'ssh-rsa':
             e, n, rest = common.getMP(rest, 2)
-            return Class(RSA.construct((n, e)))
+            return cls(RSA.construct((n, e)))
         elif keyType == 'ssh-dss':
             p, q, g, y, rest = common.getMP(rest, 4)
-            return Class(DSA.construct((y, g, p, q)))
+            return cls(DSA.construct((y, g, p, q)))
         else:
             raise BadKeyError('unknown blob type: %s' % keyType)
     _fromString_BLOB = classmethod(_fromString_BLOB)
 
 
-    def _fromString_PRIVATE_BLOB(Class, blob):
+    def _fromString_PRIVATE_BLOB(cls, blob):
         """
         Return a private key object corresponding to this private key blob.
         The blob formats are as follows:
@@ -158,18 +153,18 @@ class Key(object):
 
         if keyType == 'ssh-rsa':
             n, e, d, u, p, q, rest = common.getMP(rest, 6)
-            rsakey = Class(RSA.construct((n, e, d, p, q, u)))
+            rsakey = cls(RSA.construct((n, e, d, p, q, u)))
             return rsakey
         elif keyType == 'ssh-dss':
             p, q, g, y, x, rest = common.getMP(rest, 5)
-            dsakey = Class(DSA.construct((y, g, p, q, x)))
+            dsakey = cls(DSA.construct((y, g, p, q, x)))
             return dsakey
         else:
             raise BadKeyError('unknown blob type: %s' % keyType)
     _fromString_PRIVATE_BLOB = classmethod(_fromString_PRIVATE_BLOB)
 
 
-    def _fromString_PUBLIC_OPENSSH(Class, data):
+    def _fromString_PUBLIC_OPENSSH(cls, data):
         """
         Return a public key object corresponding to this OpenSSH public key
         string.  The format of an OpenSSH public key string is::
@@ -180,11 +175,11 @@ class Key(object):
         @raises BadKeyError: if the blob type is unknown.
         """
         blob = base64.decodestring(data.split()[1])
-        return Class._fromString_BLOB(blob)
+        return cls._fromString_BLOB(blob)
     _fromString_PUBLIC_OPENSSH = classmethod(_fromString_PUBLIC_OPENSSH)
 
 
-    def _fromString_PRIVATE_OPENSSH(Class, data, passphrase):
+    def _fromString_PRIVATE_OPENSSH(cls, data, passphrase):
         """
         Return a private key object corresponding to this OpenSSH private key
         string.  If the key is encrypted, passphrase MUST be provided.
@@ -269,16 +264,16 @@ class Key(object):
             n, e, d, p, q = [long(value) for value in decodedKey[1:6]]
             if p > q:  # make p smaller than q
                 p, q = q, p
-            return Class(RSA.construct((n, e, d, p, q)))
+            return cls(RSA.construct((n, e, d, p, q)))
         elif kind == 'DSA':
             p, q, g, y, x = [long(value) for value in decodedKey[1: 6]]
             if len(decodedKey) < 6:
                 raise BadKeyError('DSA key failed to decode properly')
-            return Class(DSA.construct((y, g, p, q, x)))
+            return cls(DSA.construct((y, g, p, q, x)))
     _fromString_PRIVATE_OPENSSH = classmethod(_fromString_PRIVATE_OPENSSH)
 
 
-    def _fromString_PUBLIC_LSH(Class, data):
+    def _fromString_PUBLIC_LSH(cls, data):
         """
         Return a public key corresponding to this LSH public key string.
         The LSH public key string format is::
@@ -297,15 +292,15 @@ class Key(object):
         for name, data in sexp[1][1:]:
             kd[name] = common.getMP(common.NS(data))[0]
         if sexp[1][0] == 'dsa':
-            return Class(DSA.construct((kd['y'], kd['g'], kd['p'], kd['q'])))
+            return cls(DSA.construct((kd['y'], kd['g'], kd['p'], kd['q'])))
         elif sexp[1][0] == 'rsa-pkcs1-sha1':
-            return Class(RSA.construct((kd['n'], kd['e'])))
+            return cls(RSA.construct((kd['n'], kd['e'])))
         else:
             raise BadKeyError('unknown lsh key type %s' % sexp[1][0])
     _fromString_PUBLIC_LSH = classmethod(_fromString_PUBLIC_LSH)
 
 
-    def _fromString_PRIVATE_LSH(Class, data):
+    def _fromString_PRIVATE_LSH(cls, data):
         """
         Return a private key corresponding to this LSH private key string.
         The LSH private key string format is::
@@ -325,20 +320,20 @@ class Key(object):
             kd[name] = common.getMP(common.NS(data))[0]
         if sexp[1][0] == 'dsa':
             assert len(kd) == 5, len(kd)
-            return Class(DSA.construct((kd['y'], kd['g'], kd['p'],
+            return cls(DSA.construct((kd['y'], kd['g'], kd['p'],
                                         kd['q'], kd['x'])))
         elif sexp[1][0] == 'rsa-pkcs1':
             assert len(kd) == 8, len(kd)
             if kd['p'] > kd['q']:  # make p smaller than q
                 kd['p'], kd['q'] = kd['q'], kd['p']
-            return Class(RSA.construct((kd['n'], kd['e'], kd['d'],
+            return cls(RSA.construct((kd['n'], kd['e'], kd['d'],
                                         kd['p'], kd['q'])))
         else:
             raise BadKeyError('unknown lsh key type %s' % sexp[1][0])
     _fromString_PRIVATE_LSH = classmethod(_fromString_PRIVATE_LSH)
 
 
-    def _fromString_AGENTV3(Class, data):
+    def _fromString_AGENTV3(cls, data):
         """
         Return a private key object corresponsing to the Secure Shell Key
         Agent v3 format.
@@ -371,7 +366,7 @@ class Key(object):
             g, data = common.getMP(data)
             y, data = common.getMP(data)
             x, data = common.getMP(data)
-            return Class(DSA.construct((y, g, p, q, x)))
+            return cls(DSA.construct((y, g, p, q, x)))
         elif keyType == 'ssh-rsa':
             e, data = common.getMP(data)
             d, data = common.getMP(data)
@@ -379,13 +374,13 @@ class Key(object):
             u, data = common.getMP(data)
             p, data = common.getMP(data)
             q, data = common.getMP(data)
-            return Class(RSA.construct((n, e, d, p, q, u)))
+            return cls(RSA.construct((n, e, d, p, q, u)))
         else:
             raise BadKeyError("unknown key type %s" % keyType)
     _fromString_AGENTV3 = classmethod(_fromString_AGENTV3)
 
 
-    def _guessStringType(Class, data):
+    def _guessStringType(cls, data):
         """
         Guess the type of key in data.  The types map to _fromString_*
         methods.
