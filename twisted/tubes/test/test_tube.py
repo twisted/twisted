@@ -261,6 +261,7 @@ class TubeTest(TestCase):
             def received(self, data):
                 if data == "switch":
                     destinationPump.tube.switch(series(Switchee(), fakeDrain))
+                    return None
                 else:
                     return [data]
 
