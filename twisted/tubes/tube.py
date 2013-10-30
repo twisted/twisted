@@ -346,11 +346,15 @@ class _Tube(object):
             self._tfount.pauseFlow()
         return self._unbufferIterator()
 
+    _unbuffering = False
 
     def _unbufferIterator(self):
+        if self._unbuffering:
+            return
         whatever = object()
         i = 0
         loooool = []
+        self._unbuffering = True
         while not self._currentlyPaused:
             value = next(self._pendingIterator, whatever)
             if value is whatever:
@@ -372,6 +376,7 @@ class _Tube(object):
             i += 1
         for aaaugh in loooool:
             aaaugh.unpause()
+        self._unbuffering = False
         return i
 
 

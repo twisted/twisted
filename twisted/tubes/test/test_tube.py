@@ -282,6 +282,42 @@ class TubeTest(TestCase):
         self.assertEquals(self.fd.received, ["before", "switched after"])
 
 
+    def test_pumpFlowSwitching_LotsOfStuffAtOnce(self):
+        """
+        If a pump returns a sequence of multiple things, great.
+        """
+        # TODO: docstring.
+        @implementer(ISwitchablePump)
+        class SwitchablePassthruPump(PassthruPump):
+            def reassemble(self, data):
+                raise NotImplementedError("Should not actually be called.")
+
+        class Multiplier(Pump):
+            def received(self, datums):
+                return datums
+
+        class Switcher(Pump):
+            def received(self, data):
+                if data == "switch":
+                    destinationPump.tube.switch(series(Switchee(), fakeDrain))
+                    return None
+                else:
+                    return [data]
+
+        class Switchee(Pump):
+            def received(self, data):
+                yield "switched " + data
+
+        fakeDrain = self.fd
+        destinationPump = SwitchablePassthruPump()
+
+        firstDrain = series(Multiplier(), Switcher(), destinationPump)
+
+        self.ff.flowTo(firstDrain).flowTo(fakeDrain)
+        self.ff.drain.receive(["before", "switch", "after"])
+        self.assertEquals(self.fd.received, ["before", "switched after"])
+
+
     def test_pumpYieldsFiredDeferred(self):
         """
         When a pump yields a fired L{Deferred} its result is synchronously
