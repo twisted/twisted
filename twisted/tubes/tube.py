@@ -342,6 +342,8 @@ class _Tube(object):
         if iterableOrNot is None:
             return 0
         self._pendingIterator = iter(iterableOrNot)
+        if self._tfount.drain is None:
+            self._tfount.pauseFlow()
         return self._unbufferIterator()
 
 
