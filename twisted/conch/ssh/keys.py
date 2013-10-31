@@ -50,8 +50,8 @@ class Key(object):
     on disk, use the toString method.  If you have a private key, but want
     the string representation of the public key, use Key.public().toString().
 
-    @ivar keyObject: The C{Crypto.PublicKey.pubkey.pubkey} object that
-                  operations are performed with.
+    @ivar keyObject: The underlying wrapped key object.
+    @type keyObject: C{Crypto.PublicKey.pubkey.pubkey}
     """
     @classmethod
     def fromFile(cls, filename, type=None, passphrase=None):
