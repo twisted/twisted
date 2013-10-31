@@ -71,10 +71,18 @@ class Key(object):
         to guess a type.  If the key is encrypted, passphrase is used as
         the decryption key.
 
+        @param data: The data to create the key from.
         @type data: L{bytes}
+
+        @param type: The type of data. Optional.
         @type type: L{None}/L{bytes}
+
+        @param passphrase: The passphrase to decrypt the key. Optional, only
+            if the key is encrypted.
         @type passphrase: L{None}/L{bytes}
-        @rtype: C{Key}
+
+        @return: A L{Key} object built from the C{data}.
+        @rtype: L{Key}
         """
         if type is None:
             type = cls._guessStringType(data)
