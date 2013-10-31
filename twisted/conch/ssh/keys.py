@@ -693,7 +693,7 @@ class Key(object):
         C{key.public().toString()}. C{type} maps to a C{_toString_*} method.
 
         @param type: The type of string to emit.  Currently supported values
-            are C{'OPENSSH'}, C{'LSH'}, and C{'AGENTV3'}.
+            are C{b'OPENSSH'}, C{b'LSH'}, and C{b'AGENTV3'}.
         @type type: L{bytes}
 
         @param extra: Any extra data supported by the selected format which
