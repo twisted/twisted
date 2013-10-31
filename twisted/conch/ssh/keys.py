@@ -567,9 +567,7 @@ class Key(object):
 
         @since: 8.2
 
-        @return: the user presentation of this L{Key}'s fingerprint, as a
-        string.
-
+        @return: The user presentation of this L{Key}'s fingerprint.
         @rtype: L{bytes}
         """
         return ':'.join([x.encode('hex') for x in md5(self.blob()).digest()])
