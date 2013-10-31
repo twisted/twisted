@@ -319,9 +319,13 @@ class Key(object):
         The names for a RSA (key type 'rsa-pkcs1-sha1') key are: n, e.
         The names for a DSA (key type 'dsa') key are: y, g, p, q.
 
+        @param data: The key data.
         @type data: L{bytes}
-        @return: a L{twisted.conch.ssh.keys.Key} object
-        @raises BadKeyError: if the key type is unknown
+
+        @return: The public key represented by this data.
+        @rtype: L{Key}
+
+        @raises BadKeyError: If the key type is unknown.
         """
         sexp = sexpy.parse(base64.decodestring(data[1:-1]))
         assert sexp[0] == 'public-key'
@@ -347,9 +351,13 @@ class Key(object):
         The names for a RSA (key type 'rsa-pkcs1-sha1') key are: n, e, d, p, q.
         The names for a DSA (key type 'dsa') key are: y, g, p, q, x.
 
+        @param data: The key data.
         @type data: L{bytes}
-        @return: a L{twisted.conch.ssh.keys.Key} object
-        @raises BadKeyError: if the key type is unknown
+
+        @return: The private key represented by this data.
+        @rtype: L{Key}
+
+        @raises BadKeyError: If the key type is unknown.
         """
         sexp = sexpy.parse(data)
         assert sexp[0] == 'private-key'
@@ -393,8 +401,12 @@ class Key(object):
             integer y
             integer x
 
+        @param data: The key data.
         @type data: L{bytes}
-        @return: a L{twisted.conch.ssh.keys.Key} object
+
+        @return: The key represented by this data.
+        @rtype: L{Key}
+
         @raises BadKeyError: if the key type (the first string) is unknown
         """
         keyType, data = common.getNS(data)
