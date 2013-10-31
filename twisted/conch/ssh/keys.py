@@ -72,8 +72,8 @@ class Key(object):
         the decryption key.
 
         @type data: L{bytes}
-        @type type: C{None}/L{bytes}
-        @type passphrase: C{None}/L{bytes}
+        @type type: L{None}/L{bytes}
+        @type passphrase: L{None}/L{bytes}
         @rtype: C{Key}
         """
         if type is None:
