@@ -51,7 +51,7 @@ class Key(object):
     the string representation of the public key, use Key.public().toString().
 
     @ivar keyObject: The underlying wrapped key object.
-    @type keyObject: C{Crypto.PublicKey.pubkey.pubkey}
+    @type keyObject: L{Crypto.PublicKey.pubkey.pubkey}
     """
     @classmethod
     def fromFile(cls, filename, type=None, passphrase=None):
@@ -890,9 +890,9 @@ class Key(object):
 def objectType(obj):
     """
     Return the SSH key type corresponding to a
-    C{Crypto.PublicKey.pubkey.pubkey} object.
+    L{Crypto.PublicKey.pubkey.pubkey} object.
 
-    @type obj:  C{Crypto.PublicKey.pubkey.pubkey}
+    @type obj:  L{Crypto.PublicKey.pubkey.pubkey}
     @rtype:     L{bytes}
     """
     keyDataMapping = {
