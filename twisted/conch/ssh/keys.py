@@ -71,9 +71,9 @@ class Key(object):
         to guess a type.  If the key is encrypted, passphrase is used as
         the decryption key.
 
-        @type data: C{str}
-        @type type: C{None}/C{str}
-        @type passphrase: C{None}/C{str}
+        @type data: L{bytes}
+        @type type: C{None}/L{bytes}
+        @type passphrase: C{None}/L{bytes}
         @rtype: C{Key}
         """
         if type is None:
@@ -110,7 +110,7 @@ class Key(object):
             integer g
             integer y
 
-        @type blob: C{str}
+        @type blob: L{bytes}
         @return: a L{twisted.conch.ssh.keys.Key} object
         @raises BadKeyError: if the key type (the first string) is unknown.
         """
@@ -148,7 +148,7 @@ class Key(object):
             integer y
             integer x
 
-        @type blob: C{str}
+        @type blob: L{bytes}
         @return: a L{twisted.conch.ssh.keys.Key} object
         @raises BadKeyError: if the key type (the first string) is unknown.
         """
@@ -173,7 +173,7 @@ class Key(object):
         string.  The format of an OpenSSH public key string is::
             <key type> <base64-encoded public key blob>
 
-        @type data: C{str}
+        @type data: L{bytes}
         @return: A L{twisted.conch.ssh.keys.Key} object
         @raises BadKeyError: if the blob type is unknown.
         """
@@ -201,8 +201,8 @@ class Key(object):
         The ASN.1 structure of a DSA key is::
             (0, p, q, g, y, x)
 
-        @type data: C{str}
-        @type passphrase: C{str}
+        @type data: L{bytes}
+        @type passphrase: L{bytes}
         @return: a L{twisted.conch.ssh.keys.Key} object
         @raises BadKeyError: if
             * a passphrase is provided for an unencrypted key
@@ -287,7 +287,7 @@ class Key(object):
         The names for a RSA (key type 'rsa-pkcs1-sha1') key are: n, e.
         The names for a DSA (key type 'dsa') key are: y, g, p, q.
 
-        @type data: C{str}
+        @type data: L{bytes}
         @return: a L{twisted.conch.ssh.keys.Key} object
         @raises BadKeyError: if the key type is unknown
         """
@@ -314,7 +314,7 @@ class Key(object):
         The names for a RSA (key type 'rsa-pkcs1-sha1') key are: n, e, d, p, q.
         The names for a DSA (key type 'dsa') key are: y, g, p, q, x.
 
-        @type data: C{str}
+        @type data: L{bytes}
         @return: a L{twisted.conch.ssh.keys.Key} object
         @raises BadKeyError: if the key type is unknown
         """
@@ -360,7 +360,7 @@ class Key(object):
             integer y
             integer x
 
-        @type data: C{str}
+        @type data: L{bytes}
         @return: a L{twisted.conch.ssh.keys.Key} object
         @raises BadKeyError: if the key type (the first string) is unknown
         """
@@ -499,7 +499,7 @@ class Key(object):
         @return: the user presentation of this L{Key}'s fingerprint, as a
         string.
 
-        @rtype: L{str}
+        @rtype: L{bytes}
         """
         return ':'.join([x.encode('hex') for x in md5(self.blob()).digest()])
 
@@ -561,7 +561,7 @@ class Key(object):
             integer g
             integer y
 
-        @rtype: C{str}
+        @rtype: L{bytes}
         """
         type = self.type()
         data = self.data()
@@ -617,15 +617,15 @@ class Key(object):
 
         @param type: The type of string to emit.  Currently supported values
             are C{'OPENSSH'}, C{'LSH'}, and C{'AGENTV3'}.
-        @type type: L{str}
+        @type type: L{bytes}
 
         @param extra: Any extra data supported by the selected format which
             is not part of the key itself.  For public OpenSSH keys, this is
             a comment.  For private OpenSSH keys, this is a passphrase to
             encrypt with.
-        @type extra: L{str} or L{NoneType<types.NoneType>}
+        @type extra: L{bytes} or L{NoneType<types.NoneType>}
 
-        @rtype: L{str}
+        @rtype: L{bytes}
         """
         methodName = '_toString_{0}'.format(type.upper())
         method = getattr(self, methodName, None)
@@ -646,9 +646,9 @@ class Key(object):
 
         @param extra: Comment for a public key or passphrase for a
             private key
-        @type extra: C{str}
+        @type extra: L{bytes}
 
-        @rtype: C{str}
+        @rtype: L{bytes}
         """
         data = self.data()
         if self.isPublic():
@@ -693,7 +693,7 @@ class Key(object):
         Return a public or private LSH key.  See _fromString_PUBLIC_LSH and
         _fromString_PRIVATE_LSH for the key formats.
 
-        @rtype: C{str}
+        @rtype: L{bytes}
         """
         data = self.data()
         if self.isPublic():
@@ -738,7 +738,7 @@ class Key(object):
         Return a private Secure Shell Agent v3 key.  See
         _fromString_AGENTV3 for the key format.
 
-        @rtype: C{str}
+        @rtype: L{bytes}
         """
         data = self.data()
         if not self.isPublic():
@@ -755,8 +755,8 @@ class Key(object):
         """
         Returns a signature with this Key.
 
-        @type data: C{str}
-        @rtype: C{str}
+        @type data: L{bytes}
+        @rtype: L{bytes}
         """
         if self.type() == 'RSA':
             digest = pkcs1Digest(data, self.keyObject.size() / 8)
@@ -779,8 +779,8 @@ class Key(object):
         """
         Returns true if the signature for data is valid for this Key.
 
-        @type signature: C{str}
-        @type data: C{str}
+        @type signature: L{bytes}
+        @type data: L{bytes}
         @rtype: C{bool}
         """
         if len(signature) == 40:
@@ -808,7 +808,7 @@ def objectType(obj):
     C{Crypto.PublicKey.pubkey.pubkey} object.
 
     @type obj:  C{Crypto.PublicKey.pubkey.pubkey}
-    @rtype:     C{str}
+    @rtype:     L{bytes}
     """
     keyDataMapping = {
         ('n', 'e', 'd', 'p', 'q'): 'ssh-rsa',
@@ -825,7 +825,7 @@ def objectType(obj):
 def pkcs1Pad(data, messageLength):
     """
     Pad out data to messageLength according to the PKCS#1 standard.
-    @type data: C{str}
+    @type data: L{bytes}
     @type messageLength: C{int}
     """
     lenPad = messageLength - 2 - len(data)
@@ -837,8 +837,8 @@ def pkcs1Digest(data, messageLength):
     """
     Create a message digest using the SHA1 hash algorithm according to the
     PKCS#1 standard.
-    @type data: C{str}
-    @type messageLength: C{str}
+    @type data: L{bytes}
+    @type messageLength: L{bytes}
     """
     digest = sha1(data).digest()
     return pkcs1Pad(ID_SHA1 + digest, messageLength)
