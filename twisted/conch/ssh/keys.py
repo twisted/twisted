@@ -73,21 +73,19 @@ class Key(object):
     @classmethod
     def fromString(cls, data, type=None, passphrase=None):
         """
-        Return a Key object corresponding to the string data.
-        type is optionally the type of string, matching a _fromString_*
-        method.  Otherwise, the _guessStringType() classmethod will be used
-        to guess a type.  If the key is encrypted, passphrase is used as
-        the decryption key.
+        Return a L{Key} object corresponding to the string data.
 
         @param data: The data to create the key from.
         @type data: L{bytes}
 
-        @param type: The type of data. Optional.
-        @type type: L{None}/L{bytes}
+        @param type: The type of data. Optional. Has to match one of the
+            C{_fromString_*} methods. If unspecified,
+            L{_guessStringType<Key._guessStringType>} is used to guess a type.
+        @type type: L{NoneType<types.NoneType>} or L{bytes}
 
         @param passphrase: The passphrase to decrypt the key. Optional, only
             if the key is encrypted.
-        @type passphrase: L{None}/L{bytes}
+        @type passphrase: L{NoneType<types.NoneType>} or L{bytes}
 
         @return: A L{Key} object built from the C{data}.
         @rtype: L{Key}
@@ -235,15 +233,14 @@ class Key(object):
         @param passphrase: The key's passphrase.
         @type passphrase: L{bytes}
 
-
         @return: The private key represented by this data.
         @rtype: L{Key}
 
-        @raises BadKeyError: if
-            * a passphrase is provided for an unencrypted key
-            * the ASN.1 encoding is incorrect
-        @raises EncryptedKeyError: if
-            * a passphrase is not provided for an encrypted key
+        @raises BadKeyError: When the ASN.1 encoding the key is incorrect.
+            Also when a passphrase was provided, but the key wasn't encrypted.
+
+        @raises EncryptedKeyError: If the key is encrypted, but no passphrase
+            was provided.
         """
         lines = data.strip().split('\n')
         kind = lines[0][11:14]
