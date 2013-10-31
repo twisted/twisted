@@ -53,16 +53,16 @@ class Key(object):
     @ivar keyObject: The C{Crypto.PublicKey.pubkey.pubkey} object that
                   operations are performed with.
     """
-
+    @classmethod
     def fromFile(cls, filename, type=None, passphrase=None):
         """
         Return a Key object corresponding to the data in filename.  type
         and passphrase function as they do in fromString.
         """
         return cls.fromString(file(filename, 'rb').read(), type, passphrase)
-    fromFile = classmethod(fromFile)
 
 
+    @classmethod
     def fromString(cls, data, type=None, passphrase=None):
         """
         Return a Key object corresponding to the string data.
@@ -95,14 +95,14 @@ class Key(object):
             raise BadKeyError('no _fromString method for {0}'.format(type))
         if method.func_code.co_argcount == 2:  # no passphrase
             if passphrase: # XXX: Doesn't he mean "passphrase is not
-                # None"? what if the passprhrase is empty?
+                # None"? what if the passphrase is empty?
                 raise BadKeyError('key not encrypted')
             return method(data)
         else:
             return method(data, passphrase)
-    fromString = classmethod(fromString)
 
 
+    @classmethod
     def _fromString_BLOB(cls, blob):
         """
         Return a public key object corresponding to this public key blob.
@@ -131,9 +131,9 @@ class Key(object):
             return cls(DSA.construct((y, g, p, q)))
         else:
             raise BadKeyError('unknown blob type: {0}'.format(keyType))
-    _fromString_BLOB = classmethod(_fromString_BLOB)
 
 
+    @classmethod
     def _fromString_PRIVATE_BLOB(cls, blob):
         """
         Return a private key object corresponding to this private key blob.
@@ -172,9 +172,9 @@ class Key(object):
             return dsakey
         else:
             raise BadKeyError('unknown blob type: {0}'.format(keyType))
-    _fromString_PRIVATE_BLOB = classmethod(_fromString_PRIVATE_BLOB)
 
 
+    @classmethod
     def _fromString_PUBLIC_OPENSSH(cls, data):
         """
         Return a public key object corresponding to this OpenSSH public key
@@ -187,9 +187,9 @@ class Key(object):
         """
         blob = base64.decodestring(data.split()[1])
         return cls._fromString_BLOB(blob)
-    _fromString_PUBLIC_OPENSSH = classmethod(_fromString_PUBLIC_OPENSSH)
 
 
+    @classmethod
     def _fromString_PRIVATE_OPENSSH(cls, data, passphrase):
         """
         Return a private key object corresponding to this OpenSSH private key
@@ -283,9 +283,9 @@ class Key(object):
             if len(decodedKey) < 6:
                 raise BadKeyError('DSA key failed to decode properly')
             return cls(DSA.construct((y, g, p, q, x)))
-    _fromString_PRIVATE_OPENSSH = classmethod(_fromString_PRIVATE_OPENSSH)
 
 
+    @classmethod
     def _fromString_PUBLIC_LSH(cls, data):
         """
         Return a public key corresponding to this LSH public key string.
@@ -313,6 +313,7 @@ class Key(object):
     _fromString_PUBLIC_LSH = classmethod(_fromString_PUBLIC_LSH)
 
 
+    @classmethod
     def _fromString_PRIVATE_LSH(cls, data):
         """
         Return a private key corresponding to this LSH private key string.
@@ -343,9 +344,9 @@ class Key(object):
                                         kd['p'], kd['q'])))
         else:
             raise BadKeyError('unknown lsh key type {0}'.format(sexp[1][0]))
-    _fromString_PRIVATE_LSH = classmethod(_fromString_PRIVATE_LSH)
 
 
+    @classmethod
     def _fromString_AGENTV3(cls, data):
         """
         Return a private key object corresponsing to the Secure Shell Key
@@ -390,9 +391,9 @@ class Key(object):
             return cls(RSA.construct((n, e, d, p, q, u)))
         else:
             raise BadKeyError("unknown key type {0}".format(keyType))
-    _fromString_AGENTV3 = classmethod(_fromString_AGENTV3)
 
 
+    @classmethod
     def _guessStringType(cls, data):
         """
         Guess the type of key in data.  The types map to _fromString_*
@@ -416,7 +417,6 @@ class Key(object):
                 return 'agentv3'
             else:
                 return 'blob'
-    _guessStringType = classmethod(_guessStringType)
 
 
     def __init__(self, keyObject):
