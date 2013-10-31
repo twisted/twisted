@@ -56,8 +56,16 @@ class Key(object):
     @classmethod
     def fromFile(cls, filename, type=None, passphrase=None):
         """
-        Return a Key object corresponding to the data in filename.  type
-        and passphrase function as they do in fromString.
+        Return a L{Key} object corresponding to the data in filename.
+
+        @param filename: The filename of the file containing key data.
+        @type filename: L{bytes}
+
+        @param type: As with L{fromString<Key.fromString>}.
+        @type type: As with L{fromString<Key.fromString>}.
+
+        @param passphrase: As with L{fromString<Key.fromString>}.
+        @type passphrase: As with L{fromString<Key.fromString>}.
         """
         return cls.fromString(file(filename, 'rb').read(), type, passphrase)
 
