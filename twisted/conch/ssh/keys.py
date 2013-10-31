@@ -118,8 +118,12 @@ class Key(object):
             integer g
             integer y
 
+        @param blob: The public key blob to produce a key from.
         @type blob: L{bytes}
-        @return: a L{twisted.conch.ssh.keys.Key} object
+
+        @return: The public key.
+        @rtype: L{Key}
+
         @raises BadKeyError: if the key type (the first string) is unknown.
         """
         keyType, rest = common.getNS(blob)
@@ -156,8 +160,12 @@ class Key(object):
             integer y
             integer x
 
+        @param blob: The private key blob to produce a key from.
         @type blob: L{bytes}
-        @return: a L{twisted.conch.ssh.keys.Key} object
+
+        @return: The private key.
+        @rtype: L{Key}
+
         @raises BadKeyError: if the key type (the first string) is unknown.
         """
         keyType, rest = common.getNS(blob)
@@ -181,8 +189,12 @@ class Key(object):
         string.  The format of an OpenSSH public key string is::
             <key type> <base64-encoded public key blob>
 
+        @param data: The key data.
         @type data: L{bytes}
-        @return: A L{twisted.conch.ssh.keys.Key} object
+
+        @return: The public key represented by this data.
+        @rtype: L{Key}
+
         @raises BadKeyError: if the blob type is unknown.
         """
         blob = base64.decodestring(data.split()[1])
@@ -209,9 +221,16 @@ class Key(object):
         The ASN.1 structure of a DSA key is::
             (0, p, q, g, y, x)
 
+        @param data: The key data.
         @type data: L{bytes}
+
+        @param passphrase: The key's passphrase.
         @type passphrase: L{bytes}
-        @return: a L{twisted.conch.ssh.keys.Key} object
+
+
+        @return: The private key represented by this data.
+        @rtype: L{Key}
+
         @raises BadKeyError: if
             * a passphrase is provided for an unencrypted key
             * the ASN.1 encoding is incorrect
@@ -396,8 +415,15 @@ class Key(object):
     @classmethod
     def _guessStringType(cls, data):
         """
-        Guess the type of key in data.  The types map to _fromString_*
-        methods.
+        Guess the type of key in data.  The types map to C{_fromString_*}
+        methods; C{"_fromString_{0}.format(returnValue.upper())"} will be the
+        name of the appropriate C{_fromString} method for this key data.
+
+        @param data: The key data to guess the type of.
+        @type data: L{bytes}
+
+        @return: The name of a key type.
+        @rtype: L{str} (native string)
         """
         if data.startswith('ssh-'):
             return 'public_openssh'
@@ -423,6 +449,7 @@ class Key(object):
         """
         Initialize a Key with a L{Crypto.PublicKey.pubkey.pubkey} object.
 
+        @param keyObject: The key object to initialize with.
         @type keyObject: L{Crypto.PublicKey.pubkey.pubkey}
         """
         self.keyObject = keyObject
@@ -430,7 +457,15 @@ class Key(object):
 
     def __eq__(self, other):
         """
-        Return True if other represents an object with the same key.
+        Checks for equality with another object.
+
+        @param other: The object to compare to.
+        @type other: Any L{object}, preferably L{Key}.
+
+        @return: L{True} if C{other} is a L{Key} representing the same key.
+                 L{False} if it is a L{Key} representing a different key.
+                 L{NotImplemented} if C{other} isn't a L{Key}.
+        @rtype: L{bool} or L{NotImplementedType<types.NotImplementedType>}
         """
         if type(self) == type(other):
             return self.type() == other.type() and self.data() == other.data()
@@ -440,7 +475,15 @@ class Key(object):
 
     def __ne__(self, other):
         """
-        Return True if other represents anything other than this key.
+        Check for inequality with another object.
+
+        @param other: The object to compare to.
+        @type other: Any L{object}, preferably L{Key}.
+
+        @return: L{True} if C{other} is a L{Key} representing a different key.
+                 L{False} if it is a L{Key} representing the same key.
+                 L{NotImplemented} if C{other} isn't a L{Key}.
+        @rtype: L{bool} or L{NotImplementedType<types.NotImplementedType>}
         """
         result = self.__eq__(other)
         if result == NotImplemented:
@@ -475,7 +518,10 @@ class Key(object):
 
     def isPublic(self):
         """
-        Returns True if this Key is a public key.
+        Returns L{True} if this is a public key.
+
+        @returns: L{True} if this L{Key} is public, L{False} otherwise.
+        @rtype: L{bool}
         """
         return not self.keyObject.has_private()
 
@@ -515,7 +561,10 @@ class Key(object):
     def type(self):
         """
         Return the type of the object we wrap.  Currently this can only be
-        'RSA' or 'DSA'.
+        C{b'RSA'} or C{b'DSA'}.
+
+        @return: The type of the wrapped object.
+        @rtype: L{bytes}
         """
         # the class is Crypto.PublicKey.<type>.<stuff we don't care about>
         mod = self.keyObject.__class__.__module__
@@ -524,7 +573,7 @@ class Key(object):
         else:
             raise RuntimeError('unknown type of object: {0!r}'
                                .format(self.keyObject))
-        if type in ('RSA', 'DSA'):
+        if type in (b'RSA', b'DSA'):
             return type
         else:
             raise RuntimeError('unknown type of key: {0}'.format(type))
@@ -533,16 +582,20 @@ class Key(object):
     def sshType(self):
         """
         Return the type of the object we wrap as defined in the ssh protocol.
-        Currently this can only be 'ssh-rsa' or 'ssh-dss'.
+        Currently this can only be C{b'ssh-rsa'} or C{b'ssh-dss'}.
+
+        @return: The type as defined by the SSH protocol.
+        @rtype: L{bytes}
         """
-        return {'RSA': 'ssh-rsa', 'DSA': 'ssh-dss'}[self.type()]
+        return {b'RSA': b'ssh-rsa', b'DSA': b'ssh-dss'}[self.type()]
 
 
     def data(self):
         """
         Return the values of the public key as a dictionary.
 
-        @rtype: C{dict}
+        @return: A dictionary with all of the values in the public key.
+        @rtype: L{dict}
         """
         keyData = {}
         for name in self.keyObject.keydata:
@@ -569,6 +622,7 @@ class Key(object):
             integer g
             integer y
 
+        @return: The public key blob for this L{Key}.
         @rtype: L{bytes}
         """
         type = self.type()
@@ -621,7 +675,7 @@ class Key(object):
         """
         Create a string representation of this key.  If the key is a private
         key and you want the represenation of its public key, use
-        C{key.public().toString()}.  type maps to a _toString_* method.
+        C{key.public().toString()}. C{type} maps to a C{_toString_*} method.
 
         @param type: The type of string to emit.  Currently supported values
             are C{'OPENSSH'}, C{'LSH'}, and C{'AGENTV3'}.
@@ -648,14 +702,15 @@ class Key(object):
     def _toString_OPENSSH(self, extra):
         """
         Return a public or private OpenSSH string.  See
-        _fromString_PUBLIC_OPENSSH and _fromString_PRIVATE_OPENSSH for the
+        L{_fromString_PUBLIC_OPENSSH<Key._fromString_PUBLIC_OPENSSH>} and
+        L{_fromString_PRIVATE_OPENSSH<Key._fromString_PRIVATE_OPENSSH>} for the
         string formats.  If extra is present, it represents a comment for a
         public key, or a passphrase for a private key.
 
-        @param extra: Comment for a public key or passphrase for a
-            private key
+        @param extra: Comment if this key is public, passphrase otherwise.
         @type extra: L{bytes}
 
+        @return: The OpenSSH string for this L{Key}.
         @rtype: L{bytes}
         """
         data = self.data()
@@ -698,9 +753,12 @@ class Key(object):
 
     def _toString_LSH(self):
         """
-        Return a public or private LSH key.  See _fromString_PUBLIC_LSH and
-        _fromString_PRIVATE_LSH for the key formats.
+        Return a public or private LSH key. See
+        L{_fromString_PUBLIC_LSH<Key._fromString_PUBLIC_LSH>} and
+        L{_fromString_PRIVATE_LSH<Key._fromString_PRIVATE_SH>} for the key
+        formats.
 
+        @return: The LSH key.
         @rtype: L{bytes}
         """
         data = self.data()
@@ -744,8 +802,9 @@ class Key(object):
     def _toString_AGENTV3(self):
         """
         Return a private Secure Shell Agent v3 key.  See
-        _fromString_AGENTV3 for the key format.
+        L{_fromString_AGENTV3<Key._fromString_AGENTV3>} for the key format.
 
+        @return: The private key.
         @rtype: L{bytes}
         """
         data = self.data()
@@ -761,9 +820,12 @@ class Key(object):
 
     def sign(self, data):
         """
-        Returns a signature with this Key.
+        Returns a signature with this L{Key}.
 
+        @param data: The data to sign.
         @type data: L{bytes}
+
+        @return: The signature of C{data}.
         @rtype: L{bytes}
         """
         if self.type() == 'RSA':
@@ -833,8 +895,15 @@ def objectType(obj):
 def pkcs1Pad(data, messageLength):
     """
     Pad out data to messageLength according to the PKCS#1 standard.
+
+    @param data: The data that will be padded.
     @type data: L{bytes}
-    @type messageLength: C{int}
+
+    @param messageLength: The total length of the message.
+    @type messageLength: L{int}
+
+    @return: The message, padded according to PKCS#1.
+    @rtype: L{bytes}
     """
     lenPad = messageLength - 2 - len(data)
     return '\x01' + ('\xff' * lenPad) + '\x00' + data
@@ -845,8 +914,15 @@ def pkcs1Digest(data, messageLength):
     """
     Create a message digest using the SHA1 hash algorithm according to the
     PKCS#1 standard.
+
+    @param data: The data to produce a message digest of.
     @type data: L{bytes}
+
+    @param messageLength: The length of the message.
     @type messageLength: L{bytes}
+
+    @return: A PKCS#1 message digest, properly padded.
+    @rtype: L{bytes}
     """
     digest = sha1(data).digest()
     return pkcs1Pad(ID_SHA1 + digest, messageLength)
@@ -857,8 +933,8 @@ def lenSig(obj):
     """
     Return the length of the signature in bytes for a key object.
 
-    @type obj: C{Crypto.PublicKey.pubkey.pubkey}
-    @rtype: C{long}
+    @type obj: L{Crypto.PublicKey.pubkey.pubkey}
+    @rtype: L{long}
     """
     return obj.size() / 8
 
