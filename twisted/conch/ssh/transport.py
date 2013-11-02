@@ -1367,7 +1367,7 @@ class SSHCiphers:
     to encrypt and authenticate the SSH connection.
 
     @cvar cipherMap: A dictionary mapping SSH encryption names to 3-tuples of
-                     (<Crypto.Cipher.* name>, <block size>, <counter mode>)
+                     (<Crypto.Cipher.* name>, <block size>, <is counter mode>)
     @cvar macMap: A dictionary mapping SSH MAC names to hash modules.
 
     @ivar outCipType: the string type of the outgoing cipher.
@@ -1383,19 +1383,19 @@ class SSHCiphers:
     """
 
     cipherMap = {
-        '3des-cbc':('DES3', 24, 0),
-        'blowfish-cbc':('Blowfish', 16,0 ),
-        'aes256-cbc':('AES', 32, 0),
-        'aes192-cbc':('AES', 24, 0),
-        'aes128-cbc':('AES', 16, 0),
-        'cast128-cbc':('CAST', 16, 0),
-        'aes128-ctr':('AES', 16, 1),
-        'aes192-ctr':('AES', 24, 1),
-        'aes256-ctr':('AES', 32, 1),
-        '3des-ctr':('DES3', 24, 1),
-        'blowfish-ctr':('Blowfish', 16, 1),
-        'cast128-ctr':('CAST', 16, 1),
-        'none':(None, 0, 0),
+        '3des-cbc': ('DES3', 24, False),
+        'blowfish-cbc': ('Blowfish', 16, False),
+        'aes256-cbc': ('AES', 32, False),
+        'aes192-cbc': ('AES', 24, False),
+        'aes128-cbc': ('AES', 16, False),
+        'cast128-cbc': ('CAST', 16, False),
+        'aes128-ctr': ('AES', 16, True),
+        'aes192-ctr': ('AES', 24, True),
+        'aes256-ctr': ('AES', 32, True),
+        '3des-ctr': ('DES3', 24, True),
+        'blowfish-ctr': ('Blowfish', 16, True),
+        'cast128-ctr': ('CAST', 16, True),
+        'none': (None, 0, False),
     }
     macMap = {
         'hmac-sha1': sha1,
