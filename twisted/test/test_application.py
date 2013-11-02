@@ -25,11 +25,11 @@ class Dummy:
     processName=None
 
 class TestService(unittest.TestCase):
-
     def testName(self):
         s = service.Service()
         s.setName("hello")
         self.assertEqual(s.name, "hello")
+
 
     def testParent(self):
         s = service.Service()
@@ -38,12 +38,14 @@ class TestService(unittest.TestCase):
         self.assertEqual(list(p), [s])
         self.assertEqual(s.parent, p)
 
+
     def testApplicationAsParent(self):
         s = service.Service()
         p = service.Application("")
         s.setServiceParent(p)
         self.assertEqual(list(service.IServiceCollection(p)), [s])
         self.assertEqual(s.parent, service.IServiceCollection(p))
+
 
     def testNamedChild(self):
         s = service.Service()
@@ -54,12 +56,14 @@ class TestService(unittest.TestCase):
         self.assertEqual(s.parent, p)
         self.assertEqual(p.getServiceNamed("hello"), s)
 
+
     def testDoublyNamedChild(self):
         s = service.Service()
         p = service.MultiService()
         s.setName("hello")
         s.setServiceParent(p)
         self.failUnlessRaises(RuntimeError, s.setName, "lala")
+
 
     def testDuplicateNamedChild(self):
         s = service.Service()
@@ -69,6 +73,7 @@ class TestService(unittest.TestCase):
         s = service.Service()
         s.setName("hello")
         self.failUnlessRaises(RuntimeError, s.setServiceParent, p)
+
 
     def testDisowning(self):
         s = service.Service()
@@ -88,6 +93,7 @@ class TestService(unittest.TestCase):
         s.stopService()
         self.assert_(not s.running)
 
+
     def testRunningChildren1(self):
         s = service.Service()
         p = service.MultiService()
@@ -100,6 +106,7 @@ class TestService(unittest.TestCase):
         p.stopService()
         self.assert_(not s.running)
         self.assert_(not p.running)
+
 
     def testRunningChildren2(self):
         s = service.Service()
@@ -114,6 +121,7 @@ class TestService(unittest.TestCase):
         p.startService()
         p.stopService()
 
+
     def testAddingIntoRunning(self):
         p = service.MultiService()
         p.startService()
@@ -123,6 +131,7 @@ class TestService(unittest.TestCase):
         self.assert_(s.running)
         s.disownServiceParent()
         self.assert_(not s.running)
+
 
     def testPrivileged(self):
         s = service.Service()
@@ -136,12 +145,45 @@ class TestService(unittest.TestCase):
         p.privilegedStartService()
         self.assert_(s.privilegedStarted)
 
+
     def testCopying(self):
         s = service.Service()
         s.startService()
         s1 = copy.copy(s)
         self.assert_(not s1.running)
         self.assert_(s.running)
+
+
+    def test_doubleStarting(self):
+        """
+        Calling startService on a started service should warn.
+        """
+        s = service.Service()
+        s.startService()
+        s.startService()
+        warnings = self.flushWarnings(
+            offendingFunctions=[s.startService])
+        self.assertIn(
+            'calling startService on a running service is deprecated',
+            warnings[0]['message'])
+
+
+    def test_stopServiceIdempotent(self):
+        """
+        StopService is idempotent - it can be called on an already-stopped
+        service with no ill effects.
+        """
+        s = service.Service()
+        s.startService()
+        self.failUnless(s.running)
+        s.stopService()
+        self.failIf(s.running)
+        s.stopService()
+        self.failIf(s.running)
+        warnings = self.flushWarnings(
+            offendingFunctions=[s.stopService])
+        self.assertEqual(warnings, [])
+
 
 
 if hasattr(os, "getuid"):
