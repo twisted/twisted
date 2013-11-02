@@ -24,7 +24,6 @@ class Dummy:
     processName=None
 
 class TestService(unittest.TestCase):
-
     def testName(self):
         s = service.Service()
         s.setName("hello")
@@ -123,6 +122,7 @@ class TestService(unittest.TestCase):
         s.disownServiceParent()
         self.assert_(not s.running)
 
+
     def testPrivileged(self):
         s = service.Service()
         def pss():
@@ -135,6 +135,7 @@ class TestService(unittest.TestCase):
         p.privilegedStartService()
         self.assert_(s.privilegedStarted)
 
+
     def testCopying(self):
         s = service.Service()
         s.startService()
@@ -142,9 +143,11 @@ class TestService(unittest.TestCase):
         self.assert_(not s1.running)
         self.assert_(s.running)
 
+
     def test_doubleStarting(self):
         """
-        Calling startService on a started service should warn.
+        Calling L{startService<service.Service.startService>} on a service
+        that was already started raises a warning.
         """
         s = service.Service()
         s.startService()
@@ -157,8 +160,9 @@ class TestService(unittest.TestCase):
 
     def test_stopServiceIdempotent(self):
         """
-        StopService is idempotent - it can be called on an already-stopped
-        service with no ill effects.
+        L{stopService<service.Service.stopService>} is idempotent: it can
+        be called on a service that was already stopped with no ill
+        effects.
         """
         s = service.Service()
         s.startService()
