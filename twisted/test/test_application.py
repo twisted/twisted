@@ -24,13 +24,13 @@ class Dummy:
     processName=None
 
 class TestService(unittest.TestCase):
-    def testName(self):
+    def test_name(self):
         s = service.Service()
         s.setName("hello")
         self.failUnlessEqual(s.name, "hello")
 
 
-    def testParent(self):
+    def test_parent(self):
         s = service.Service()
         p = service.MultiService()
         s.setServiceParent(p)
@@ -38,7 +38,7 @@ class TestService(unittest.TestCase):
         self.failUnlessEqual(s.parent, p)
 
 
-    def testApplicationAsParent(self):
+    def test_applicationAsParent(self):
         s = service.Service()
         p = service.Application("")
         s.setServiceParent(p)
@@ -46,7 +46,7 @@ class TestService(unittest.TestCase):
         self.failUnlessEqual(s.parent, service.IServiceCollection(p))
 
 
-    def testNamedChild(self):
+    def test_namedChild(self):
         s = service.Service()
         p = service.MultiService()
         s.setName("hello")
@@ -56,7 +56,7 @@ class TestService(unittest.TestCase):
         self.failUnlessEqual(p.getServiceNamed("hello"), s)
 
 
-    def testDoublyNamedChild(self):
+    def test_doublyNamedChild(self):
         s = service.Service()
         p = service.MultiService()
         s.setName("hello")
@@ -64,7 +64,7 @@ class TestService(unittest.TestCase):
         self.failUnlessRaises(RuntimeError, s.setName, "lala")
 
 
-    def testDuplicateNamedChild(self):
+    def test_duplicateNamedChild(self):
         s = service.Service()
         p = service.MultiService()
         s.setName("hello")
@@ -74,7 +74,7 @@ class TestService(unittest.TestCase):
         self.failUnlessRaises(RuntimeError, s.setServiceParent, p)
 
 
-    def testDisowning(self):
+    def test_disowning(self):
         s = service.Service()
         p = service.MultiService()
         s.setServiceParent(p)
@@ -85,7 +85,7 @@ class TestService(unittest.TestCase):
         self.failUnlessEqual(s.parent, None)
 
 
-    def testRunning(self):
+    def test_running(self):
         s = service.Service()
         self.assert_(not s.running)
         s.startService()
@@ -94,7 +94,7 @@ class TestService(unittest.TestCase):
         self.assert_(not s.running)
 
 
-    def testRunningChildren1(self):
+    def test_runningChildren1(self):
         s = service.Service()
         p = service.MultiService()
         s.setServiceParent(p)
@@ -108,7 +108,7 @@ class TestService(unittest.TestCase):
         self.assert_(not p.running)
 
 
-    def testRunningChildren2(self):
+    def test_runningChildren2(self):
         s = service.Service()
         def checkRunning():
             self.assert_(s.running)
@@ -122,7 +122,7 @@ class TestService(unittest.TestCase):
         p.stopService()
 
 
-    def testAddingIntoRunning(self):
+    def test_addingIntoRunning(self):
         p = service.MultiService()
         p.startService()
         s = service.Service()
@@ -133,7 +133,7 @@ class TestService(unittest.TestCase):
         self.assert_(not s.running)
 
 
-    def testPrivileged(self):
+    def test_privileged(self):
         s = service.Service()
         def pss():
             s.privilegedStarted = 1
@@ -146,7 +146,7 @@ class TestService(unittest.TestCase):
         self.assert_(s.privilegedStarted)
 
 
-    def testCopying(self):
+    def test_copying(self):
         s = service.Service()
         s.startService()
         s1 = copy.copy(s)
