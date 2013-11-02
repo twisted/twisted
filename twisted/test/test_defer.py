@@ -2333,7 +2333,7 @@ class DeferredFilesystemLockTestCase(unittest.TestCase):
 
     def test_cancelDeferUntilLocked(self):
         """
-        When cancel a L{defer.Deferred} returned by
+        When cancelling a L{defer.Deferred} returned by
         L{defer.DeferredFilesystemLock.deferUntilLocked}, the
         L{defer.DeferredFilesystemLock._tryLockCall} is cancelled.
         """
