@@ -367,8 +367,20 @@ class build_ext_twisted(build_ext.build_ext):
             self.define_macros = [("WIN32", 1)]
         else:
             self.define_macros = []
+
+        # On Solaris 10, we need to define the _XOPEN_SOURCE and
+        # _XOPEN_SOURCE_EXTENDED macros to build in order to gain access to
+        # the msg_control, msg_controllen, and msg_flags members in
+        # sendmsg.c. (according to
+        # http://stackoverflow.com/questions/1034587).  See the documentation
+        # of X/Open CAE in the standards(5) man page of Solaris.
+        if sys.platform.startswith('sunos'):
+            self.define_macros.append(('_XOPEN_SOURCE', 1))
+            self.define_macros.append(('_XOPEN_SOURCE_EXTENDED', 1))
+
         self.extensions = [x for x in self.conditionalExtensions
                            if x.condition(self)]
+
         for ext in self.extensions:
             ext.define_macros.extend(self.define_macros)
 
