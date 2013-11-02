@@ -152,8 +152,7 @@ class TestService(unittest.TestCase):
         s = service.Service()
         s.startService()
         s.startService()
-        warnings = self.flushWarnings(
-            offendingFunctions=[s.startService])
+        warnings = self.flushWarnings(offendingFunctions=[s.startService])
         self.assertIn(
             'calling startService on a running service is deprecated',
             warnings[0]['message'])
@@ -166,13 +165,12 @@ class TestService(unittest.TestCase):
         """
         s = service.Service()
         s.startService()
-        self.failUnless(s.running)
+        self.assertTrue(s.running)
         s.stopService()
-        self.failIf(s.running)
+        self.assertFalse(s.running)
         s.stopService()
-        self.failIf(s.running)
-        warnings = self.flushWarnings(
-            offendingFunctions=[s.stopService])
+        self.assertFalse(s.running)
+        warnings = self.flushWarnings(offendingFunctions=[s.stopService])
         self.assertEqual(warnings, [])
 
 if hasattr(os, "getuid"):
