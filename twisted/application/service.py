@@ -13,7 +13,6 @@ a sibling).
 Maintainer: Moshe Zadka
 """
 
-import warnings
 from zope.interface import implements, Interface, Attribute
 
 from twisted.python.reflect import namedAny
@@ -96,6 +95,7 @@ class IService(Interface):
     @type running:         C{boolean}
     @ivar running:         Whether the service is running.
     """
+
     def setName(name):
         """
         Set the name of the service.
@@ -103,7 +103,6 @@ class IService(Interface):
         @type name: C{str}
         @raise RuntimeError: Raised if the service already has a parent.
         """
-
 
     def setServiceParent(parent):
         """
@@ -115,7 +114,6 @@ class IService(Interface):
             or if the service has a name and the parent already has a child
             by that name.
         """
-
 
     def disownServiceParent():
         """
@@ -130,29 +128,20 @@ class IService(Interface):
             a value can be returned (usually, C{None}).
         """
 
-
     def startService():
         """
         Start the service.
-
-        This method must not be called on an already-started service.
         """
-
 
     def stopService():
         """
         Stop the service.
-
-        This method is idempotent: it can be called on already-stopped service
-        with no ill effects.  This is often done in error-handling code and to
-        reverse the effects of L{priviledgedStartService}.
 
         @rtype: L{Deferred<defer.Deferred>}
         @return: a L{Deferred<defer.Deferred>} which is triggered when the
             service has finished shutting down. If shutting down is immediate,
             a value can be returned (usually, C{None}).
         """
-
 
     def privilegedStartService():
         """
@@ -161,7 +150,6 @@ class IService(Interface):
         Here things which should be done before changing directory,
         root or shedding privileges are done.
         """
-
 
 
 class Service:
@@ -206,10 +194,6 @@ class Service:
         pass
 
     def startService(self):
-        if self.running:
-            warnings.warn(
-                "calling startService on a running service is deprecated "
-                "since Twisted 14.0.", DeprecationWarning)
         self.running = 1
 
     def stopService(self):
