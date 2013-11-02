@@ -2329,3 +2329,33 @@ class DeferredFilesystemLockTestCase(unittest.TestCase):
         self.clock.advance(1)
 
         return d
+
+
+    def test_cancelDeferUntilLocked(self):
+        """
+        When cancelling a L{defer.Deferred} returned by
+        L{defer.DeferredFilesystemLock.deferUntilLocked}, the
+        L{defer.DeferredFilesystemLock._tryLockCall} is cancelled.
+        """
+        self.lock.lock()
+        deferred = self.lock.deferUntilLocked()
+        tryLockCall = self.lock._tryLockCall
+        deferred.cancel()
+        self.assertFalse(tryLockCall.active())
+        self.assertEqual(self.lock._tryLockCall, None)
+        self.failureResultOf(deferred, defer.CancelledError)
+
+
+    def test_cancelDeferUntilLockedWithTimeout(self):
+        """
+        When cancel a L{defer.Deferred} returned by
+        L{defer.DeferredFilesystemLock.deferUntilLocked}, if the timeout is
+        set, the timeout call will be cancelled.
+        """
+        self.lock.lock()
+        deferred = self.lock.deferUntilLocked(timeout=1)
+        timeoutCall = self.lock._timeoutCall
+        deferred.cancel()
+        self.assertFalse(timeoutCall.active())
+        self.assertEqual(self.lock._timeoutCall, None)
+        self.failureResultOf(deferred, defer.CancelledError)

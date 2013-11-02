@@ -1566,20 +1566,25 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
                 AlreadyTryingToLockError(
                     "deferUntilLocked isn't safe for concurrent use."))
 
-        d = Deferred()
+        def _cancelLock(reason):
+            """
+            Cancel a L{DeferredFilesystemLock.deferUntilLocked} call.
 
-        def _cancelLock():
+            @type reason: L{failure.Failure}
+            @param reason: The reason why the call is cancelled.
+            """
             self._tryLockCall.cancel()
             self._tryLockCall = None
-            self._timeoutCall = None
+            if self._timeoutCall is not None and self._timeoutCall.active():
+                self._timeoutCall.cancel()
+                self._timeoutCall = None
 
             if self.lock():
                 d.callback(None)
             else:
-                d.errback(failure.Failure(
-                        TimeoutError("Timed out aquiring lock: %s after %fs" % (
-                                self.name,
-                                timeout))))
+                d.errback(reason)
+
+        d = Deferred(lambda deferred: _cancelLock(CancelledError()))
 
         def _tryLock():
             if self.lock():
@@ -1592,8 +1597,12 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
                 d.callback(None)
             else:
                 if timeout is not None and self._timeoutCall is None:
+                    reason = failure.Failure(TimeoutError(
+                        "Timed out aquiring lock: %s after %fs" % (
+                            self.name,
+                            timeout)))
                     self._timeoutCall = self._scheduler.callLater(
-                        timeout, _cancelLock)
+                        timeout, _cancelLock, reason)
 
                 self._tryLockCall = self._scheduler.callLater(
                     self._interval, _tryLock)
