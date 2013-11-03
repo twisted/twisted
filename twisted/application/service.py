@@ -165,7 +165,6 @@ class Service:
     book-keeping reponsibilities of starting and stopping, as well
     as not serializing this book-keeping information.
     """
-
     implements(IService)
 
     running = 0
@@ -178,10 +177,12 @@ class Service:
             del dict['running']
         return dict
 
+
     def setName(self, name):
         if self.parent is not None:
             raise RuntimeError("cannot change name when parent exists")
         self.name = name
+
 
     def setServiceParent(self, parent):
         if self.parent is not None:
@@ -190,13 +191,16 @@ class Service:
         self.parent = parent
         self.parent.addService(self)
 
+
     def disownServiceParent(self):
         d = self.parent.removeService(self)
         self.parent = None
         return d
 
+
     def privilegedStartService(self):
         pass
+
 
     def startService(self):
         if self.running:
@@ -204,6 +208,7 @@ class Service:
                 "calling startService on a running service is deprecated "
                 "since Twisted 14.0.", DeprecationWarning)
         self.running = 1
+
 
     def stopService(self):
         self.running = 0
