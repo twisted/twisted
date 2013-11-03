@@ -65,6 +65,10 @@ dependency resolution is disabled.
         data_files=getDataFiles('twisted'),
         **STATIC_PACKAGE_METADATA))
 
+    # Python 3 specific, but currently sdist only runs on Python 2:
+    if 'sdist' in sys.argv:
+        args['data_files'] = [('admin', ['admin/run-python3-tests'])]
+
     setup(**setup_args)
 
 
