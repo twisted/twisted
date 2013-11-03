@@ -167,7 +167,7 @@ class Service:
     """
     implements(IService)
 
-    running = 0
+    running = False
     name = None
     parent = None
 
@@ -207,11 +207,11 @@ class Service:
             warnings.warn(
                 "calling startService on a running service is deprecated "
                 "since Twisted 14.0.", DeprecationWarning)
-        self.running = 1
+        self.running = True
 
 
     def stopService(self):
-        self.running = 0
+        self.running = False
 
 
 
