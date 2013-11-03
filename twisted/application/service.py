@@ -202,7 +202,7 @@ class Service:
         if self.running:
             warnings.warn(
                 "calling startService on a running service is deprecated "
-                "since Twisted 11.0.", DeprecationWarning)
+                "since Twisted 14.0.", DeprecationWarning)
         self.running = 1
 
     def stopService(self):
@@ -343,13 +343,13 @@ class IProcess(Interface):
         """
         An C{int} giving the user id as which the process should run (or
         C{None} to leave the UID alone).
-        """)    
+        """)
 
     gid = Attribute(
         """
         An C{int} giving the group id as which the process should run (or
         C{None} to leave the GID alone).
-        """)    
+        """)
 
 
 
