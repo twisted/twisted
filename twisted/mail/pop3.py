@@ -27,7 +27,6 @@ from twisted.internet import interfaces
 from twisted.python import log
 
 from twisted import cred
-import twisted.cred.error
 
 ##
 ## Authentication
