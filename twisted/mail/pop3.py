@@ -28,7 +28,6 @@ from twisted.python import log
 
 from twisted import cred
 import twisted.cred.error
-import twisted.cred.credentials
 
 ##
 ## Authentication
