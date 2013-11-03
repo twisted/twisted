@@ -249,14 +249,16 @@ almostModules = [
 
 
 
-if __name__ == "__main__":
-    sys.path.insert(0, '.')
-
-    from distutils.core import setup
+def main():
+    try:
+        from setuptools import setup
+    except ImportError:
+        from distutils.core import setup
 
     from twisted.python.dist import STATIC_PACKAGE_METADATA
 
     args = STATIC_PACKAGE_METADATA.copy()
+    args['install_requires'] = ["zope.interface >= 4.0.2"]
     args['classifiers'] = ["Programming Language :: Python :: 3.3"]
     args['py_modules'] = modules + testModules + almostModules
 
@@ -264,3 +266,7 @@ if __name__ == "__main__":
         args['data_files'] = [('admin', ['admin/run-python3-tests'])]
 
     setup(**args)
+
+
+if __name__ == "__main__":
+    main()
