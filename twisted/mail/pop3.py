@@ -27,8 +27,6 @@ from twisted.internet import interfaces
 from twisted.python import log
 
 from twisted import cred
-import twisted.cred.error
-import twisted.cred.credentials
 
 ##
 ## Authentication
@@ -1864,6 +1862,8 @@ from twisted.mail.pop3client import POP3ClientError
 from twisted.mail.pop3client import InsecureAuthenticationDisallowed
 from twisted.mail.pop3client import ServerErrorResponse
 from twisted.mail.pop3client import LineTooLong
+from twisted.mail.pop3client import TLSError
+from twisted.mail.pop3client import TLSNotSupportedError
 
 __all__ = [
     # Interfaces
@@ -1871,7 +1871,7 @@ __all__ = [
 
     # Exceptions
     'POP3Error', 'POP3ClientError', 'InsecureAuthenticationDisallowed',
-    'ServerErrorResponse', 'LineTooLong',
+    'ServerErrorResponse', 'LineTooLong', 'TLSError', 'TLSNotSupportedError',
 
     # Protocol classes
     'POP3', 'POP3Client', 'AdvancedPOP3Client',

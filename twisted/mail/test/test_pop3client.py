@@ -2,6 +2,9 @@
 # Copyright (c) 2001-2004 Divmod Inc.
 # See LICENSE for details.
 
+import sys
+import inspect
+
 from zope.interface import directlyProvides
 
 from twisted.mail.pop3 import AdvancedPOP3Client as POP3Client
@@ -580,3 +583,38 @@ elif interfaces.IReactorSSL(reactor, None) is None:
     for case in (POP3TLSTestCase,):
         case.skip = "Reactor doesn't support SSL"
 
+
+
+import twisted.mail.pop3client
+
+class POP3ClientMiscTestCase(unittest.TestCase):
+    """
+    Miscellaneous tests more to do with module/package structure than
+    anything to do with the POP3 client.
+    """
+    def test_all(self):
+        """
+        twisted.mail.pop3client.__all__ should be empty because all classes
+        should be imported through twisted.mail.pop3.
+        """
+        self.assertEqual(twisted.mail.pop3client.__all__, [])
+
+
+    def test_import(self):
+        """
+        Every public class in twisted.mail.pop3client should be available as a
+        member of twisted.mail.pop3 with the exception of
+        twisted.mail.pop3client.POP3Client which should be available as
+        twisted.mail.pop3.AdvancedClient.
+        """
+        publicClasses = [c[0] for c in inspect.getmembers(
+                                       sys.modules['twisted.mail.pop3client'],
+                                       inspect.isclass)
+                         if not c[0][0] == '_']
+
+        for pc in publicClasses:
+            if not pc == 'POP3Client':
+                self.failUnless(hasattr(twisted.mail.pop3, pc))
+            else:
+                self.failUnless(hasattr(twisted.mail.pop3,
+                    'AdvancedPOP3Client'))
