@@ -4,6 +4,7 @@
 """
 Test code for policies.
 """
+
 from __future__ import division, absolute_import
 
 from zope.interface import Interface, implementer, implementedBy
@@ -406,6 +407,23 @@ class ThrottlingTestCase(unittest.TestCase):
         wrapTServer.deferred.addCallback(_check4)
         wrapTServer.deferred.addCallback(_cleanup)
         return wrapTServer.deferred
+
+
+    def test_writeSequence(self):
+        """
+        L{ThrottlingProtocol.writeSequence} is called on the underlying factory.
+        """
+        server = Server()
+        tServer = TestableThrottlingFactory(task.Clock(), server)
+        protocol = tServer.buildProtocol(
+            address.IPv4Address('TCP', '127.0.0.1', 0))
+        transport = StringTransportWithDisconnection()
+        transport.protocol = protocol
+        protocol.makeConnection(transport)
+
+        protocol.writeSequence([b'bytes'] * 4)
+        self.assertEqual(transport.value(), b"bytesbytesbytesbytes")
+        self.assertEqual(tServer.writtenThisSecond, 20)
 
 
     def test_writeLimit(self):

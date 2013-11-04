@@ -11,7 +11,7 @@ Resource limiting policies.
 from __future__ import division, absolute_import
 
 # system imports
-import sys, operator
+import sys
 
 from zope.interface import directlyProvides, providedBy
 
@@ -187,7 +187,9 @@ class WrappingFactory(ClientFactory):
 
 
 class ThrottlingProtocol(ProtocolWrapper):
-    """Protocol for ThrottlingFactory."""
+    """
+    Protocol for L{ThrottlingFactory}.
+    """
 
     # wrap API for tracking bandwidth
 
@@ -195,17 +197,21 @@ class ThrottlingProtocol(ProtocolWrapper):
         self.factory.registerWritten(len(data))
         ProtocolWrapper.write(self, data)
 
+
     def writeSequence(self, seq):
-        self.factory.registerWritten(reduce(operator.add, map(len, seq)))
+        self.factory.registerWritten(sum(map(len, seq)))
         ProtocolWrapper.writeSequence(self, seq)
+
 
     def dataReceived(self, data):
         self.factory.registerRead(len(data))
         ProtocolWrapper.dataReceived(self, data)
 
+
     def registerProducer(self, producer, streaming):
         self.producer = producer
         ProtocolWrapper.registerProducer(self, producer, streaming)
+
 
     def unregisterProducer(self):
         del self.producer
@@ -215,16 +221,20 @@ class ThrottlingProtocol(ProtocolWrapper):
     def throttleReads(self):
         self.transport.pauseProducing()
 
+
     def unthrottleReads(self):
         self.transport.resumeProducing()
+
 
     def throttleWrites(self):
         if hasattr(self, "producer"):
             self.producer.pauseProducing()
 
+
     def unthrottleWrites(self):
         if hasattr(self, "producer"):
             self.producer.resumeProducing()
+
 
 
 class ThrottlingFactory(WrappingFactory):
