@@ -415,13 +415,14 @@ class ThrottlingTestCase(unittest.TestCase):
         """
         server = Server()
         tServer = TestableThrottlingFactory(task.Clock(), server)
-        port = tServer.buildProtocol(address.IPv4Address('TCP', '127.0.0.1', 0))
-        tr = StringTransportWithDisconnection()
-        tr.protocol = port
-        port.makeConnection(tr)
+        protocol = tServer.buildProtocol(
+            address.IPv4Address('TCP', '127.0.0.1', 0))
+        transport = StringTransportWithDisconnection()
+        transport.protocol = protocol
+        protocol.makeConnection(transport)
 
-        port.writeSequence([b'bytes'] * 4)
-        self.assertEqual(tr.value(), b"bytesbytesbytesbytes")
+        protocol.writeSequence([b'bytes'] * 4)
+        self.assertEqual(transport.value(), b"bytesbytesbytesbytes")
         self.assertEqual(tServer.writtenThisSecond, 20)
 
 
