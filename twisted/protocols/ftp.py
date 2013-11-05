@@ -14,7 +14,6 @@ import operator
 import stat
 import errno
 import fnmatch
-import warnings
 
 try:
     import pwd, grp

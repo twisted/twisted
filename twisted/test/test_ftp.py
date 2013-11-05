@@ -13,7 +13,7 @@ import getpass
 from zope.interface import implements
 from zope.interface.verify import verifyClass
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 from twisted.python.randbytes import insecureRandom
 from twisted.cred.portal import IRealm
 from twisted.protocols import basic
