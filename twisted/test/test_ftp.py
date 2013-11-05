@@ -13,7 +13,7 @@ import getpass
 from zope.interface import implements
 from zope.interface.verify import verifyClass
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 from twisted.python.randbytes import insecureRandom
 from twisted.cred.portal import IRealm
 from twisted.protocols import basic
@@ -26,12 +26,6 @@ from twisted.test import proto_helpers
 
 from twisted.protocols import ftp, loopback
 
-
-_changeDirectorySuppression = util.suppress(
-    category=DeprecationWarning,
-    message=(
-        r"FTPClient\.changeDirectory is deprecated in Twisted 8\.2 and "
-        r"newer\.  Use FTPClient\.cwd instead\."))
 
 if runtime.platform.isWindows():
     nonPOSIXSkip = "Cannot run on Windows"
@@ -2120,74 +2114,6 @@ class FTPClientTestCase(unittest.TestCase):
         self.assertEqual(self.transport.value(), 'NLST foo/bar\r\n')
         self.client.lineReceived('550 foo/bar: No such file or directory')
         return d
-
-
-    def test_changeDirectoryDeprecated(self):
-        """
-        L{ftp.FTPClient.changeDirectory} is deprecated and the direct caller of
-        it is warned of this.
-        """
-        self._testLogin()
-        d = self.assertWarns(
-            DeprecationWarning,
-            "FTPClient.changeDirectory is deprecated in Twisted 8.2 and "
-            "newer.  Use FTPClient.cwd instead.",
-            __file__,
-            lambda: self.client.changeDirectory('.'))
-        # This is necessary to make the Deferred fire.  The Deferred needs
-        # to fire so that tearDown doesn't cause it to errback and fail this
-        # or (more likely) a later test.
-        self.client.lineReceived('250 success')
-        return d
-
-
-    def test_changeDirectory(self):
-        """
-        Test the changeDirectory method.
-
-        L{ftp.FTPClient.changeDirectory} should return a Deferred which fires
-        with True if succeeded.
-        """
-        def cbCd(res):
-            self.assertEqual(res, True)
-
-        self._testLogin()
-        d = self.client.changeDirectory("bar/foo").addCallback(cbCd)
-        self.assertEqual(self.transport.value(), 'CWD bar/foo\r\n')
-        self.client.lineReceived('250 Requested File Action Completed OK')
-        return d
-    test_changeDirectory.suppress = [_changeDirectorySuppression]
-
-
-    def test_failedChangeDirectory(self):
-        """
-        Test a failure in the changeDirectory method.
-
-        The behaviour here is the same as a failed CWD.
-        """
-        self._testLogin()
-        d = self.client.changeDirectory("bar/foo")
-        self.assertFailure(d, ftp.CommandFailed)
-        self.assertEqual(self.transport.value(), 'CWD bar/foo\r\n')
-        self.client.lineReceived('550 bar/foo: No such file or directory')
-        return d
-    test_failedChangeDirectory.suppress = [_changeDirectorySuppression]
-
-
-    def test_strangeFailedChangeDirectory(self):
-        """
-        Test a strange failure in changeDirectory method.
-
-        L{ftp.FTPClient.changeDirectory} is stricter than CWD as it checks
-        code 250 for success.
-        """
-        self._testLogin()
-        d = self.client.changeDirectory("bar/foo")
-        self.assertFailure(d, ftp.CommandFailed)
-        self.assertEqual(self.transport.value(), 'CWD bar/foo\r\n')
-        self.client.lineReceived('252 I do what I want !')
-        return d
-    test_strangeFailedChangeDirectory.suppress = [_changeDirectorySuppression]
 
 
     def test_renameFromTo(self):
