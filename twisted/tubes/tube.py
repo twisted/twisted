@@ -5,6 +5,7 @@
 """
 See L{_Tube}.
 """
+import itertools
 
 from zope.interface import implementer
 from zope.interface import directlyProvides
@@ -92,6 +93,7 @@ class _TubeFount(_TubePiece):
         if self._tube._currentlyPaused != 0:
             return
         fount = self._tube._tdrain.fount
+
         if self._tube._pendingIterator is not None:
             self._tube._unbufferIterator()
 
@@ -355,7 +357,6 @@ class _Tube(object):
             return
         whatever = object()
         i = 0
-        loooool = []
         self._unbuffering = True
         while not self._currentlyPaused:
             value = next(self._pendingIterator, whatever)
@@ -366,18 +367,16 @@ class _Tube(object):
                 self._tfount.pauseFlow()
 
                 def whenUnclogged(result):
-                    self._tfount.drain.receive(result)
+                    pending = self._pendingIterator
+                    self._pendingIterator = itertools.chain(iter([result]),
+                                                            pending)
                     self._tfount.resumeFlow()
 
-                value.pause()
-                loooool.append(value)
                 from twisted.python import log
                 value.addCallback(whenUnclogged).addErrback(log.err, "WHAT")
             else:
                 self._tfount.drain.receive(value)
             i += 1
-        for aaaugh in loooool:
-            aaaugh.unpause()
         self._unbuffering = False
         return i
 

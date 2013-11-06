@@ -381,6 +381,31 @@ class TubeTest(TestCase):
         self.assertEquals(self.fd.received, ["hello", "goodbye"])
 
 
+    def test_pumpYieldedDeferredFiresWhileFlowIsPaused(self):
+        """
+        When a L{Pump} yields an L{Deferred} and that L{Deferred} fires when
+        the L{_TubeFount} is paused it should buffer it's result and deliver it
+        when L{_TubeFount.resumeFlow} is called.
+        """
+        d = Deferred()
+
+        class DeferredPump(Pump):
+            def received(self, data):
+                yield d
+
+        fakeDrain = self.fd
+        self.ff.flowTo(series(DeferredPump())).flowTo(fakeDrain)
+        self.ff.drain.receive("ignored")
+
+        self.fd.fount.pauseFlow()
+
+        d.callback("hello")
+        self.assertEquals(self.fd.received, [])
+
+        self.fd.fount.resumeFlow()
+        self.assertEquals(self.fd.received, ["hello"])
+
+
     def test_flowingFromFirst(self):
         """
         If L{_Tube.flowingFrom} is called before L{_Tube.flowTo}, the argument
