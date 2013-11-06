@@ -237,9 +237,9 @@ class TubeTest(TestCase):
         # Just making sure.
         self.assertEqual(ff.flowIsPaused, False)
         newFount = ff.flowTo(newDrain)
+        self.assertEqual(ff.flowIsPaused, True)
         # "something" should have been un-buffered at this point.
         self.assertEqual(ff.buffer, ["else"])
-        self.assertEqual(ff.flowIsPaused, True)
         newFount.flowTo(self.fd)
         self.assertEqual(ff.buffer, [])
         self.assertEqual(ff.flowIsPaused, False)

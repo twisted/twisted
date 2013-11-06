@@ -64,9 +64,8 @@ class _TubeFount(_TubePiece):
         Flow data from this tube to the given drain.
         """
         self.drain = drain
-        wasPaused = self._tube._currentlyPaused
         result = self.drain.flowingFrom(self)
-        if wasPaused:
+        if self._tube._pausedBecauseNoDrain:
             self.resumeFlow()
         return result
 
@@ -335,6 +334,7 @@ class _Tube(object):
 
     pump = property(_get_pump, _set_pump)
 
+    _pausedBecauseNoDrain = False
 
     def _deliverFrom(self, deliverySource):
         assert self._pendingIterator is None
@@ -343,7 +343,9 @@ class _Tube(object):
             return 0
         self._pendingIterator = iter(iterableOrNot)
         if self._tfount.drain is None:
+            self._pausedBecauseNoDrain = True
             self._tfount.pauseFlow()
+
         return self._unbufferIterator()
 
     _unbuffering = False
@@ -388,6 +390,7 @@ class _Tube(object):
         upstream = self._tdrain.fount
         upstream.pauseFlow()
         upstream.flowTo(drain)
+        upstream.resumeFlow()
         if self._pendingIterator is not None:
             for element in self.pump.reassemble(self._pendingIterator):
                 drain.receive(element)
