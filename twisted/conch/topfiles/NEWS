@@ -1,6 +1,31 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 13.2.0 (2013-10-29)
+=================================
+
+Features
+--------
+ - ckeygen now accepts --no-passphrase to generate unprotected keys.
+   (#5998)
+ - twisted.conch.endpoints.SSHCommandClientEndpoint.newConnection now
+   supplies a convenient default for the `ui` parameter if a value is
+   not passed in for it. (#6550)
+
+Bugfixes
+--------
+ - ckeygen --changepass now doesn't delete unencrypted keys or raise
+   an exception on encrypted ones. (#5894)
+ - twisted.conch.endpoints.SSHCommandClientEndpoint now doesn't try
+   password authentication if there is no password specified. (#6553)
+ - twisted.conch.endpoints.SSHCommandClientEndpoint now uses the
+   standard SSH port if no port is specified. (#6631)
+
+Other
+-----
+ - #5387, #6220
+
+
 Twisted Conch 13.1.0 (2013-06-23)
 =================================
 

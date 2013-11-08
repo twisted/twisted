@@ -1,1 +1,0 @@
-Two attributes of twisted.web.iweb.IRequest, headers and received_headers, are now deprecated.

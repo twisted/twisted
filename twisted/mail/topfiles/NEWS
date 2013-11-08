@@ -1,6 +1,24 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Mail 13.2.0 (2013-10-29)
+================================
+
+Features
+--------
+ - twisted.mail.smtp.sendmail now returns a cancellable Deferred.
+   (#6572)
+
+Improved Documentation
+----------------------
+ - twisted.mail.mail now has full API documentation. (#6649)
+ - twisted.mail.bounce now has full API documentation. (#6652)
+
+Other
+-----
+ - #5387, #6486
+
+
 Twisted Mail 13.1.0 (2013-06-23)
 ================================
 

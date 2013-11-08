@@ -1,6 +1,70 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 13.2.0 (2013-10-29)
+================================
+
+Features
+--------
+ - twistd now waits for the application to start successfully before
+   exiting after daemonization. (#823)
+ - twisted.internet.endpoints now provides HostnameEndpoint, a TCP
+   client endpoint that connects to a hostname as quickly as possible.
+   (#4859)
+ - twisted.internet.interfaces.IReactorSocket now has a new
+   adoptDatagramPort method which is implemented by some reactors
+   allowing them to listen on UDP sockets set up by external software
+   (eg systemd or launchd). (#5574)
+ - trial now accepts an --order option that specifies what order to
+   run TestCase methods in. (#5787)
+ - Port twisted.python.lockfile to Python 3, enabling
+   twisted.python.defer.DeferredFilesystemLock and tests. (#5960)
+ - Returning a Deferred from a callback that's directly returned from
+   that Deferred will now produce a DeprecationWarning, to notify
+   users of the buggy behavior. (#6164)
+ - SSL server endpoint string descriptions now support the
+   specification of chain certificates. (#6499)
+ - twisted.application.reactors.installReactor now returns the just-
+   installed reactor. (#6596)
+ - twisted.internet.defer.DeferredList now has a new cancel method.
+   And twisted.internet.defer.gatherResults now returns a cancellable
+   result. (#6639)
+
+Bugfixes
+--------
+ - twisted.protocols.basic.LineReceiver no longer passes incorrect
+   data (a buffer missing a delimiter) to lineLengthExceeded in
+   certain cases. (#6536)
+ - twisted.cred.digest.DigestCredentialFactory now supports decoding
+   challenge responses with field values including ",". (#6609)
+ - twisted.internet.endpoints.TCP6ClientEndpoint now establishes
+   connections when constructed with a hostname. (#6633)
+ - twisted.application.internet.TimerService is now pickleable in all
+   cases. (#6657)
+
+Improved Documentation
+----------------------
+ - The howto document page of Deferred now has documentation about
+   cancellation. (#4320)
+ - Docstrings for twisted.internet.task.Cooperator and cooperate.
+   (#6213)
+
+Deprecations and Removals
+-------------------------
+ - Returning a Deferred from a callback that's directly returned from
+   that Deferred will now produce a DeprecationWarning, to notify
+   users of the buggy behavior. (#6164)
+ - Accessor, AccessorType, OriginalAccessor, PropertyAccessor,
+   Settable and Summer in twisted.python.reflect, deprecated since
+   Twisted 12.1.0, are now removed. (#6689)
+
+Other
+-----
+ - #5001, #5312, #5387, #5442, #5634, #6221, #6393, #6406, #6485,
+   #6570, #6575, #6610, #6674, #6684, #6685, #6715, #6729, #6731,
+   #6736, #6773, #6788, #6793
+
+
 Twisted Core 13.1.0 (2013-06-23)
 ================================
 

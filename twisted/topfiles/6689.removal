@@ -1,1 +1,0 @@
-Accessor, AccessorType, OriginalAccessor, PropertyAccessor, Settable and Summer in twisted.python.reflect, deprecated since Twisted 12.1.0, are now removed.

@@ -1,1 +1,0 @@
-twisted.application.internet.TimerService is now pickleable in all cases.

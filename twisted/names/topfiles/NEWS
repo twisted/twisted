@@ -1,6 +1,40 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Names 13.2.0 (2013-10-29)
+=================================
+
+Features
+--------
+ - twisted.names.authority.FileAuthority now considers any AAAA it
+   knows about for inclusion in the additional section of a response
+   (following the same logic previously used for including A records
+   there). (#6642)
+ - twisted.names.dns.Message now allows encoding and decoding of the
+   Authentic Data (AD) and Checking Disabled (CD) flags described in
+   RFC2535. (#6680)
+
+Bugfixes
+--------
+ - twisted.names.resolve.ResolverChain now returns a
+   twisted.names.error.DomainError failure if its resolvers list is
+   empty. (#5992)
+ - twisted.names.authority.FileAuthority now only returns
+   AuthoritativeDomainError (NXDOMAIN) for names which are subdomains.
+   (#6475)
+ - The Deferred returned by twisted.names.client.Resolver.queryTCP now
+   fires with an error if the TCP connection attempt fails. (#6658)
+
+Improved Documentation
+----------------------
+ - Use zope.interface.moduleProvides to allow pydoctor to properly
+   document the twisted.names.client.lookup* functions. (#6328)
+
+Other
+-----
+ - #5387, #5668, #6563, #6655
+
+
 Twisted Names 13.1.0 (2013-06-23)
 =================================
 

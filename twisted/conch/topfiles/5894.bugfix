@@ -1,2 +1,0 @@
-ckeygen --changepass now doesn't delete unencrypted keys or raise an exception
-on encrypted ones.
