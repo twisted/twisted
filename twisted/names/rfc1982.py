@@ -24,12 +24,6 @@ class SNA(object):
 
     @author: Bob Novas
     """
-    serialBits = 32
-    _modulo = 2 ** serialBits
-    halfRing = 2 ** (serialBits - 1)
-    maxAdd = (2 ** (serialBits - 1) - 1)
-
-
     def __init__(self, number, serialBits=32):
         """
         Construct an L{SNA} instance.
