@@ -299,7 +299,7 @@ class TCPServerTests(TestCase):
         self.assertEqual(self.skt.sendBuffer, [])
 
 
-    def test_writeAfteDisconnectAfterTLS(self):
+    def test_writeAfterDisconnectAfterTLS(self):
         """
         L{Server.write} discards bytes passed to it if called after it has lost
         its connection when the connection had started TLS.
@@ -319,7 +319,7 @@ class TCPServerTests(TestCase):
         self.assertEqual(self.skt.sendBuffer, [])
 
 
-    def test_writeSequenceAfteDisconnectAfterTLS(self):
+    def test_writeSequenceAfterDisconnectAfterTLS(self):
         """
         L{Server.writeSequence} discards bytes passed to it if called after it
         has lost its connection when the connection had started TLS.
