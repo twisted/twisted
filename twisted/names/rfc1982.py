@@ -21,8 +21,6 @@ class SNA(object):
 
     @see: U{https://tools.ietf.org/html/rfc1982}
     @see: U{https://tools.ietf.org/html/rfc4034}
-
-    @author: Bob Novas
     """
     def __init__(self, number, serialBits=32):
         """
