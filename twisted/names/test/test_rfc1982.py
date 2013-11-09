@@ -117,22 +117,6 @@ class SNATest(unittest.TestCase):
         self.assertEqual(self.s1 + self.s1, self.s2)
 
 
-    def test_addWhy(self):
-        """
-        L{SNA.__add__}
-        XXX: Explain this test.
-        """
-        self.assertEqual(self.s1 + SNA(SNA.maxAdd), SNA(SNA.maxAdd + 1))
-
-
-    def test_addWhy2(self):
-        """
-        L{SNA.__add__}
-        XXX: Explain this test.
-        """
-        self.assertEqual(SNA(SNA.maxAdd) + SNA(SNA.maxAdd) + SNA(2), SNA(0))
-
-
     def test_maxVal(self):
         """
         L{SNA.__add__} returns a wrapped value when s1 plus the s2
