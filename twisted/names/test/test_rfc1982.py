@@ -7,7 +7,7 @@ Test cases for L{twisted.names.util}.
 
 from functools import partial
 
-from twisted.names.util import SNA, DateSNA, snaMax
+from twisted.names.rfc1982 import SNA, DateSNA, snaMax
 from twisted.trial import unittest
 
 
