@@ -68,6 +68,22 @@ class KeyGenTests(TestCase):
         self.assertEqual(
             self.stdout.getvalue(),
             '768 3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af temp\n')
+    
+
+    def test_printFingerprintDefultKeyfile(self):
+        """
+        L{printFingerprint} should provide a default keyfile if nothing is
+        specified.
+        """
+        def fake_input(str):
+            return ''
+        filename = self.mktemp()
+        FilePath(filename).setContent(publicRSA_openssh)
+        printFingerprint(
+                {'filename':''}, default_file=filename, _raw_input=fake_input)
+        self.assertEqual(
+            self.stdout.getvalue(),
+            '768 3d:13:5f:cb:c9:79:8a:93:06:27:65:bc:3d:0b:8f:af temp\n')
 
 
     def test_saveKey(self):
@@ -126,6 +142,24 @@ class KeyGenTests(TestCase):
         pubKey = Key.fromString(publicRSA_openssh)
         FilePath(filename).setContent(privateRSA_openssh)
         displayPublicKey({'filename': filename})
+        self.assertEqual(
+            self.stdout.getvalue().strip('\n'),
+            pubKey.toString('openssh'))
+
+
+    def test_displayPublicKeyDefaultKeyfile(self):
+        """
+        L{displayPublicKey} should provide a default keyfile if nothing is 
+        specified.
+        """
+        def fake_input(str):
+            return ''
+        filename = self.mktemp()
+        pubKey = Key.fromString(publicRSA_openssh)
+        FilePath(filename).setContent(privateRSA_openssh)
+        displayPublicKey(
+                    {'filename': ''}, default_file=filename, 
+                    _raw_input=fake_input)
         self.assertEqual(
             self.stdout.getvalue().strip('\n'),
             pubKey.toString('openssh'))
@@ -338,3 +372,24 @@ class KeyGenTests(TestCase):
         self.assertEqual(
             'Could not change passphrase: key not encrypted', str(error))
         self.assertEqual(publicRSA_openssh, FilePath(filename).getContent())
+
+
+    def test_changePassphraseDefaultkeyfile(self):
+        """
+        L{changePassPhrase} should provide a default for keyfile if nothing
+        is specified.
+        """
+        def fake_input(str):
+            return ''
+
+        oldNewConfirm = makeGetpass('encrypted', 'newpass', 'newpass')
+        self.patch(getpass, 'getpass', oldNewConfirm)
+
+        filename = self.mktemp()
+        FilePath(filename).setContent(privateRSA_openssh_encrypted)
+
+        try:
+            changePassPhrase({'filename': ''}, default_file=filename, 
+                    _raw_input=fake_input)
+        except IOError:
+            self.fail()

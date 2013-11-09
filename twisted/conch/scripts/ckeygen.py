@@ -99,10 +99,18 @@ def generateDSAkey(options):
 
 
 
-def printFingerprint(options):
+def _getFilename(default_file, _raw_input):
+    filename = os.path.expanduser(default_file)
+    filename = _raw_input(
+                'Enter file in which the key is (%s): ' % filename
+                ).strip() or filename
+    return filename
+
+
+
+def printFingerprint(options, default_file='~/.ssh/id_rsa', _raw_input=raw_input):
     if not options['filename']:
-        filename = os.path.expanduser('~/.ssh/id_rsa')
-        options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
+        options['filename'] = _getFilename(default_file, _raw_input)
     if os.path.exists(options['filename']+'.pub'):
         options['filename'] += '.pub'
     try:
@@ -118,11 +126,9 @@ def printFingerprint(options):
 
 
 
-def changePassPhrase(options):
+def changePassPhrase(options, default_file='~/.ssh/id_rsa', _raw_input=raw_input):
     if not options['filename']:
-        filename = os.path.expanduser('~/.ssh/id_rsa')
-        options['filename'] = raw_input(
-            'Enter file in which the key is (%s): ' % filename)
+        options['filename'] = _getFilename(default_file, _raw_input)
     try:
         key = keys.Key.fromFile(options['filename']).keyObject
     except keys.EncryptedKeyError as e:
@@ -168,10 +174,9 @@ def changePassPhrase(options):
 
 
 
-def displayPublicKey(options):
+def displayPublicKey(options, default_file='~/.ssh/id_rsa', _raw_input=raw_input):
     if not options['filename']:
-        filename = os.path.expanduser('~/.ssh/id_rsa')
-        options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
+        options['filename'] = _getFilename(default_file, _raw_input)
     try:
         key = keys.Key.fromFile(options['filename']).keyObject
     except keys.EncryptedKeyError:
