@@ -17,13 +17,6 @@ class SNATest(unittest.TestCase):
     Tests for L{SNA}.
     """
 
-    def setUp(self):
-        self.s1 = SNA(1)
-        self.s1a = SNA(1)
-        self.s2 = SNA(2)
-        self.sMaxVal = SNA(SNA.halfRing + SNA.halfRing - 1)
-
-
     def test_serialBitsDefault(self):
         """
         L{SNA.serialBits} has default value 32.
@@ -51,10 +44,7 @@ class SNATest(unittest.TestCase):
         """
         L{SNA.__eq__} provides rich equality comparison.
         """
-        self.assertEqual(self.s1, self.s1a)
-
-        # XXX: Remove this test?
-        # self.assertNotIdentical(self.s1, self.s1a)
+        self.assertEqual(SNA(1), SNA(1))
 
 
     def test_hash(self):
@@ -62,59 +52,45 @@ class SNATest(unittest.TestCase):
         L{SNA.__hash__} allows L{SNA} instances to be hashed for use
         as dictionary keys.
         """
-        self.assertEqual(hash(self.s1), hash(self.s1a))
-        self.assertNotEqual(hash(self.s1), hash(self.s2))
+        self.assertEqual(hash(SNA(1)), hash(SNA(1)))
+        self.assertNotEqual(hash(SNA(1)), hash(SNA(2)))
 
 
     def test_le(self):
         """
         L{SNA.__le__} provides rich <= comparison.
         """
-        self.assertTrue(self.s1 <= self.s1)
-        self.assertTrue(self.s1 <= self.s1a)
-        self.assertTrue(self.s1 <= self.s2)
-        # XXX: Remove this test?
-        # self.assertFalse(self.s2 <= self.s1)
+        self.assertTrue(SNA(1) <= SNA(1))
+        self.assertTrue(SNA(1) <= SNA(2))
 
 
     def test_ge(self):
         """
         L{SNA.__ge__} provides rich >= comparison.
         """
-        self.assertTrue(self.s1 >= self.s1)
-        self.assertTrue(self.s1 >= self.s1a)
-        # XXX: Remove this test?
-        # self.assertFalse(self.s1 >= self.s2)
-        self.assertTrue(self.s2 >= self.s1)
+        self.assertTrue(SNA(1) >= SNA(1))
+        self.assertTrue(SNA(2) >= SNA(1))
 
 
     def test_lt(self):
         """
         L{SNA.__lt__} provides rich < comparison.
         """
-        # XXX: Remove these tests?
-        # self.assertFalse(self.s1 < self.s1)
-        # self.assertFalse(self.s1 < self.s1a)
-        # self.assertFalse(self.s2 < self.s1)
-        self.assertTrue(self.s1 < self.s2)
+        self.assertTrue(SNA(1) < SNA(2))
 
 
     def test_gt(self):
         """
         L{SNA.__gt__} provides rich > comparison.
         """
-        # XXX: Remove these tests?
-        # self.assertFalse(self.s1 > self.s1)
-        # self.assertFalse(self.s1 > self.s1a)
-        # self.assertFalse(self.s1 > self.s2)
-        self.assertTrue(self.s2 > self.s1)
+        self.assertTrue(SNA(2) > SNA(1))
 
 
     def test_add(self):
         """
         L{SNA.__add__} allows L{SNA} instances to be summed.
         """
-        self.assertEqual(self.s1 + self.s1, self.s2)
+        self.assertEqual(SNA(1) + SNA(1), SNA(2))
 
 
     def test_maxVal(self):
@@ -125,9 +101,11 @@ class SNATest(unittest.TestCase):
         XXX: I've got a feeling we need more tests demonstrating how
         results vary with different s2 values.
         """
-        smaxplus1 = self.sMaxVal + self.s1
-        self.assertTrue(smaxplus1 > self.sMaxVal)
-        self.assertEqual(smaxplus1, SNA(0))
+        s = SNA(1)
+        maxVal = s.halfRing + s.halfRing - 1
+        maxValPlus1 = maxVal + 1
+        self.assertTrue(SNA(maxValPlus1) > SNA(maxVal))
+        self.assertEqual(SNA(maxValPlus1), SNA(0))
 
 
 
@@ -141,13 +119,6 @@ class SnaMaxTests(unittest.TestCase):
     Tests for L{snaMax}.
     """
 
-    def setUp(self):
-        self.s1 = SNA(1)
-        self.s1a = SNA(1)
-        self.s2 = SNA(2)
-        self.sMaxVal = SNA(SNA.halfRing + SNA.halfRing - 1)
-
-
     def test_emptyList(self):
         """
         L{snaMax} returns C{None} when provided with an empty list.
@@ -160,7 +131,7 @@ class SnaMaxTests(unittest.TestCase):
         L{snaMax} accepts a list of L{SNA} instances and returns the
         one with the highest value.
         """
-        self.assertEqual(snaMax([self.s1, self.s2]), self.s2)
+        self.assertEqual(snaMax([SNA(1), SNA(2)]), SNA(2))
 
 
     def test_snaMaxEqual(self):
@@ -168,7 +139,9 @@ class SnaMaxTests(unittest.TestCase):
         If the list provided to L{snaMax} contains multiple equal
         L{SNA} instances, the first such instance is returned.
         """
-        self.assertEqual(snaMax([self.s1, self.s1a]), self.s1)
+        s1a = SNA(1)
+        s1b = SNA(1)
+        self.assertEqual(snaMax([s1a, s1b]), s1a)
 
 
     def test_snaMaxMixed(self):
@@ -176,23 +149,8 @@ class SnaMaxTests(unittest.TestCase):
         L{snaMax} accepts mixed lists containing L{SNA} instances and
         C{None}. L{SNA} is always greater than C{None}.
         """
-        self.assertEqual(snaMax([None, self.s1]), self.s1)
-        self.assertEqual(snaMax([self.s1, None]), self.s1)
-        # XXX: Remove this test?
-        # self.assertEqual(snaMax([self.s2, self.s1a, self.s1, None]), self.s2)
-
-
-    def test_why(self):
-        """
-        XXX: These tests need explaining.
-        """
-        self.assertEqual(
-            snaMax([SNA(SNA.maxAdd), self.s2, self.s1a, self.s1, None]),
-            SNA(SNA.maxAdd))
-
-        self.assertEqual(
-            snaMax([self.s2, self.s1a, self.s1, None, self.sMaxVal]),
-            self.s2)
+        self.assertEqual(snaMax([None, SNA(1)]), SNA(1))
+        self.assertEqual(snaMax([SNA(1), None]), SNA(1))
 
 
 
