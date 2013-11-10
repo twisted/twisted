@@ -2456,7 +2456,7 @@ class IStreamServerEndpointStringParser(Interface):
 
 class IStreamClientEndpointStringParser(Interface):
     """
-    This interface is deprecated since Twisted 13.2; please use the
+    This interface is deprecated since Twisted 14.0; please use the
     L{IStreamClientEndpointStringParserWithReactor} interface instead.
 
     An L{IStreamClientEndpointStringParser} is a parser which can convert
@@ -2510,7 +2510,7 @@ class IStreamClientEndpointStringParser(Interface):
         """
 
 deprecate.deprecatedModuleAttribute(
-    Version("Twisted", 13, 2, 0),
+    Version("Twisted", 14, 0, 0),
     "This interface has been superseded by "
     "IStreamClientEndpointStringParserWithReactor.",
     __name__,

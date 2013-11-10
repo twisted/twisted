@@ -1437,6 +1437,6 @@ class IStreamClientEndpointStringParserTests(unittest.TestCase):
         self.assertEqual(
             warnings[0]['message'],
             "twisted.internet.interfaces.IStreamClientEndpointStringParser "
-            "was deprecated in Twisted 13.2.0: This interface has been "
+            "was deprecated in Twisted 14.0.0: This interface has been "
             "superseded by IStreamClientEndpointStringParserWithReactor.")
         self.assertEqual(len(warnings), 1)
