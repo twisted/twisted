@@ -6,42 +6,40 @@
 Fake client and server endpoint string parser plugins for testing purposes.
 """
 
-from zope.interface.declarations import implements
+from zope.interface.declarations import implementer
 from twisted.plugin import IPlugin
 from twisted.internet.interfaces import (
     IStreamClientEndpoint, IStreamServerEndpoint,
     IStreamClientEndpointStringParser, IStreamServerEndpointStringParser,
     IStreamClientEndpointStringParserWithReactor)
 
+
+@implementer(IPlugin)
 class PluginBase(object):
-    implements(IPlugin)
 
     def __init__(self, pfx):
         self.prefix = pfx
 
 
 
+@implementer(IStreamClientEndpointStringParser)
 class FakeClientParser(PluginBase):
 
-    implements(IStreamClientEndpointStringParser)
-
     def parseStreamClient(self, *a, **kw):
         return StreamClient(self, a, kw)
 
 
 
+@implementer(IStreamClientEndpointStringParserWithReactor)
 class FakeClientParserWithReactor(PluginBase):
 
-    implements(IStreamClientEndpointStringParserWithReactor)
-
     def parseStreamClient(self, *a, **kw):
         return StreamClient(self, a, kw)
 
 
 
+@implementer(IStreamServerEndpointStringParser)
 class FakeParser(PluginBase):
-
-    implements(IStreamServerEndpointStringParser)
 
     def parseStreamServer(self, *a, **kw):
         return StreamServer(self, a, kw)
@@ -57,15 +55,15 @@ class EndpointBase(object):
 
 
 
+@implementer(IStreamClientEndpoint)
 class StreamClient(EndpointBase):
-
-    implements(IStreamClientEndpoint)
-
+    pass
 
 
+
+@implementer(IStreamServerEndpoint)
 class StreamServer(EndpointBase):
-
-    implements(IStreamServerEndpoint)
+    pass
 
 
 

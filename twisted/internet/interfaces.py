@@ -11,6 +11,9 @@ from __future__ import division, absolute_import
 
 from zope.interface import Interface, Attribute
 
+from twisted.python import deprecate
+from twisted.python.versions import Version
+
 
 class IAddress(Interface):
     """
@@ -2506,6 +2509,13 @@ class IStreamClientEndpointStringParser(Interface):
         @rtype: L{IStreamClientEndpoint}
         """
 
+deprecate.deprecatedModuleAttribute(
+    Version("Twisted", 13, 2, 0),
+    "This interface has been superseded by "
+    "IStreamClientEndpointStringParserWithReactor.",
+    __name__,
+    "IStreamClientEndpointStringParser")
+
 
 
 class IStreamClientEndpointStringParserWithReactor(Interface):
@@ -2533,10 +2543,10 @@ class IStreamClientEndpointStringParserWithReactor(Interface):
 
     prefix = Attribute(
         """
-        A C{str}, the description prefix to respond to.  For example, an
+        L{bytes}, the description prefix to respond to.  For example, an
         L{IStreamClientEndpointStringParserWithReactor} plugin which had
-        C{"foo"} for its C{prefix} attribute would be called for endpoint
-        descriptions like C{"foo:bar:baz"} or C{"foo:"}.
+        C{b"foo"} for its C{prefix} attribute would be called for endpoint
+        descriptions like C{b"foo:bar:baz"} or C{b"foo:"}.
         """
     )
 
@@ -2549,17 +2559,17 @@ class IStreamClientEndpointStringParserWithReactor(Interface):
 
         @param reactor: The reactor passed to L{endpoints.clientFromString}.
 
-        @param args: The string arguments, minus the endpoint type, in the
+        @param args: The byte string arguments, minus the endpoint type, in the
             endpoint description string, parsed according to the rules
             described in L{endpoints.quoteStringArgument}.  For example, if the
-            description were C{"my-type:foo:bar:baz=qux"}, C{args} would be
-            C{('foo','bar')}
+            description were C{b"my-type:foo:bar:baz=qux"}, C{args} would be
+            C{(b'foo', b'bar')}
 
-        @param kwargs: The string arguments from the endpoint description
+        @param kwargs: The byte string arguments from the endpoint description
             passed as keyword arguments.  For example, if the description were
-            C{"my-type:foo:bar:baz=qux"}, C{kwargs} would be
-            C{dict(baz='qux')}.
+            C{b"my-type:foo:bar:baz=qux"}, C{kwargs} would be
+            C{dict(baz=b'qux')}.
 
         @return: a client endpoint
-        @rtype: L{IStreamClientEndpoint}
+        @rtype: an implementer of L{IStreamClientEndpoint}
         """

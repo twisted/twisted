@@ -32,7 +32,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.systemd import ListenFDs
 from twisted.internet.abstract import isIPv6Address
 from twisted.python.failure import Failure
-from twisted.python import log, deprecate, versions
+from twisted.python import log
 from twisted.internet.address import _ProcessAddress, HostnameAddress
 from twisted.python.components import proxyForInterface
 from socket import AF_INET6, AF_INET
@@ -1736,16 +1736,6 @@ def clientFromString(reactor, description):
             return plugin.parseStreamClient(reactor, *args, **kwargs)
     for plugin in getPlugins(IStreamClientEndpointStringParser):
         if plugin.prefix.upper() == name:
-            warningFormat = (
-                "The IStreamClientEndpointStringParser interface used for "
-                "%(fqpn)s is deprecated since %(version)s. Please use the "
-                "IStreamClientEndpointStringParserWithReactor interface "
-                "instead.")
-            warningString = deprecate.getDeprecationWarningString(
-                plugin.parseStreamClient,
-                versions.Version('Twisted', 13, 2, 0),
-                format=warningFormat)
-            deprecate.warnAboutFunction(plugin.parseStreamClient, warningString)
             return plugin.parseStreamClient(*args, **kwargs)
     if name not in _clientParsers:
         raise ValueError("Unknown endpoint type: %r" % (aname,))
