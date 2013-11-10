@@ -200,7 +200,7 @@ class DateSNATests(unittest.TestCase):
         date3 = DateSNA('20370101000000')
         sna1  = SNA(365 * 24 * 60 * 60)
         date4 = date3 + sna1
-        self.assertEqual(date4.asInt(),  date3.asInt() + sna1.asInt())
+        self.assertEqual(int(date4),  int(date3) + int(sna1))
 
 
     def test_addTooFar(self):
@@ -234,7 +234,7 @@ class DateSNATests(unittest.TestCase):
         """
         date1 = '20370101000000'
         date1Sna = DateSNA(date1)
-        intval = date1Sna.asInt()
+        intval = int(date1Sna)
         sna1a = SNA(intval)
 
         dateSna1a = DateSNA.fromSNA(sna1a)

@@ -62,7 +62,7 @@ class SNA(object):
         return str(self._number)
 
 
-    def asInt(self):
+    def __int__(self):
         """
         @return: The integer value of this L{SNA} instance.
         @rtype: L{int}
