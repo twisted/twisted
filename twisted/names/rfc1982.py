@@ -21,6 +21,16 @@ class SNA(object):
 
     @see: U{https://tools.ietf.org/html/rfc1982}
     @see: U{https://tools.ietf.org/html/rfc4034}
+
+    @ivar serialBits: See L{__init__}.
+    @ivar _number: See C{number} of L{__init__}.
+    @ivar _modulo: The value at which wrapping will occur.
+    @ivar _halfRing: Half C{_modulo}. If another L{SNA} value is larger than
+        this, it would lead to a wrapped value which is larger than the first
+        and comparisons are therefore ambiguous.
+    @ivar _maxAdd: Half C{_modulo} plus 1. If another L{SNA} value is larger
+        than this, it would lead to a wrapped value which is larger than the
+        first. Comparisons with the original value would therefore be ambiguous.
     """
     def __init__(self, number, serialBits=32):
         """
@@ -38,9 +48,8 @@ class SNA(object):
         self.serialBits = serialBits
 
         self._modulo = 2 ** serialBits
-        self.halfRing = 2 ** (serialBits - 1)
-        self.maxAdd = (2 ** (serialBits - 1) - 1)
-
+        self._halfRing = 2 ** (serialBits - 1)
+        self._maxAdd = 2 ** (serialBits - 1) - 1
         self._number = int(number) % self._modulo
 
 
@@ -78,9 +87,9 @@ class SNA(object):
         """
         return ((self != sna2) and
                ((self._number < sna2._number) and
-                ((sna2._number - self._number) < self.halfRing) or
+                ((sna2._number - self._number) < self._halfRing) or
                (self._number > sna2._number) and
-                ((self._number - sna2._number) > self.halfRing)))
+                ((self._number - sna2._number) > self._halfRing)))
 
 
     def __gt__(self, sna2):
@@ -92,9 +101,9 @@ class SNA(object):
         """
         return ((self != sna2) and
                ((self._number < sna2._number) and
-               ((sna2._number - self._number) > self.halfRing) or
+               ((sna2._number - self._number) > self._halfRing) or
                (self._number > sna2._number) and
-               ((self._number - sna2._number) < self.halfRing)))
+               ((self._number - sna2._number) < self._halfRing)))
 
 
     def __le__(self, sna2):
@@ -125,10 +134,10 @@ class SNA(object):
 
         @type sna2: L{SNA}
         @rtype: L{SNA}
-        @raises: L{ArithmeticError} if C{sna2} is more than C{maxAdd}
+        @raises: L{ArithmeticError} if C{sna2} is more than C{_maxAdd}
             ie more than half the maximum value of this serial number.
         """
-        if sna2 <= SNA(self.maxAdd):
+        if sna2 <= SNA(self._maxAdd):
             return SNA( (self._number + sna2._number) % self._modulo )
         else:
             raise ArithmeticError
@@ -203,13 +212,13 @@ class DateSNA(SNA):
 
         @type sna2: L{SNA}
         @rtype: L{SNA}
-        @raises: L{ArithmeticError} if C{sna2} is more than C{maxAdd}
+        @raises: L{ArithmeticError} if C{sna2} is more than C{_maxAdd}
             ie more than half the maximum value of this serial number.
         """
         if not isinstance(sna2, SNA):
             return NotImplemented
 
-        if (sna2 <= SNA(self.maxAdd) and
+        if (sna2 <= SNA(self._maxAdd) and
             (self._number + sna2._number < self._modulo)):
             sna = SNA((self._number + sna2._number) % self._modulo)
             return DateSNA.fromSNA(sna)

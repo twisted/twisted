@@ -102,7 +102,7 @@ class SNATest(unittest.TestCase):
         results vary with different s2 values.
         """
         s = SNA(1)
-        maxVal = s.halfRing + s.halfRing - 1
+        maxVal = s._halfRing + s._halfRing - 1
         maxValPlus1 = maxVal + 1
         self.assertTrue(SNA(maxValPlus1) > SNA(maxVal))
         self.assertEqual(SNA(maxValPlus1), SNA(0))
@@ -294,7 +294,7 @@ class SNA2BitTests(unittest.TestCase):
         In this space, the largest integer that it is meaningful to add to a
         sequence number is 2^(SERIAL_BITS - 1) - 1, or 1.
         """
-        self.assertEqual(SNA(0, serialBits=2).maxAdd, 1)
+        self.assertEqual(SNA(0, serialBits=2)._maxAdd, 1)
 
 
     def test_add(self):
@@ -349,7 +349,7 @@ class SNA8BitTests(unittest.TestCase):
         In this space, the largest integer that it is meaningful to add to a
         sequence number is 2^(SERIAL_BITS - 1) - 1, or 127.
         """
-        self.assertEqual(SNA(0, serialBits=8).maxAdd, 127)
+        self.assertEqual(SNA(0, serialBits=8)._maxAdd, 127)
 
 
     def test_add(self):
