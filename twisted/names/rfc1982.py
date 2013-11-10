@@ -5,8 +5,8 @@
 """
 DNS utility functions and classes.
 """
-
-import calendar, time
+import calendar
+from datetime import datetime
 
 
 
@@ -199,9 +199,8 @@ class DateSNA(SNA):
             the UNIX epoch.
         @type utcDateTime: L{str}
         """
-        dateStruct = time.strptime(utcDateTime, DateSNA.fmt)
-
-        secondsSinceEpoch = calendar.timegm(dateStruct)
+        secondsSinceEpoch = calendar.timegm(
+            datetime.strptime(utcDateTime, DateSNA.fmt).utctimetuple())
 
         super(DateSNA, self).__init__(secondsSinceEpoch)
 
@@ -231,8 +230,7 @@ class DateSNA(SNA):
         @return: a date string representation of the object.
         @rtype: L{str}
         """
-        dateStruct = time.gmtime(self._number)
-        return time.strftime(DateSNA.fmt, dateStruct)
+        return datetime.utcfromtimestamp(self._number).strftime(self.fmt)
 
 
     @classmethod
