@@ -7,7 +7,7 @@ Test cases for L{twisted.names.util}.
 
 from functools import partial
 
-from twisted.names.rfc1982 import SNA, DateSNA, snaMax
+from twisted.names.rfc1982 import SNA, DateSNA
 from twisted.trial import unittest
 
 
@@ -163,51 +163,6 @@ class SNATest(unittest.TestCase):
         maxValPlus1 = maxVal + 1
         self.assertTrue(SNA(maxValPlus1) > SNA(maxVal))
         self.assertEqual(SNA(maxValPlus1), SNA(0))
-
-
-
-# XXX: I wonder if we even need snaMax? It's purpose seems to be to
-# allow comparison of SNA and None values. But that could (and probably
-# should) be added SNA.__gt__ etc.
-# eg uncomment the following and run the tests.
-# snaMax = max
-class SnaMaxTests(unittest.TestCase):
-    """
-    Tests for L{snaMax}.
-    """
-
-    def test_emptyList(self):
-        """
-        L{snaMax} returns C{None} when provided with an empty list.
-        """
-        self.assertIdentical(snaMax([]), None)
-
-
-    def test_snaMax(self):
-        """
-        L{snaMax} accepts a list of L{SNA} instances and returns the
-        one with the highest value.
-        """
-        self.assertEqual(snaMax([SNA(1), SNA(2)]), SNA(2))
-
-
-    def test_snaMaxEqual(self):
-        """
-        If the list provided to L{snaMax} contains multiple equal
-        L{SNA} instances, the first such instance is returned.
-        """
-        s1a = SNA(1)
-        s1b = SNA(1)
-        self.assertEqual(snaMax([s1a, s1b]), s1a)
-
-
-    def test_snaMaxMixed(self):
-        """
-        L{snaMax} accepts mixed lists containing L{SNA} instances and
-        C{None}. L{SNA} is always greater than C{None}.
-        """
-        self.assertEqual(snaMax([None, SNA(1)]), SNA(1))
-        self.assertEqual(snaMax([SNA(1), None]), SNA(1))
 
 
 

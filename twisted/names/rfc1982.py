@@ -191,7 +191,8 @@ class SNA(object):
                 (self._number + other._number) % self._modulo,
                 serialBits=self.serialBits)
         else:
-            raise ArithmeticError('value outside the range 0 ')
+            raise ArithmeticError(
+                'value outside the range 0 .. %r' % (self._maxAdd,))
 
 
     def __hash__(self):
@@ -201,29 +202,6 @@ class SNA(object):
         @rtype: L{int}
         """
         return hash(self._number)
-
-
-
-def snaMax(snaList):
-    """
-    Take a list of L{SNA} instances and return the one with the
-    highest value.
-
-    @param snaList: The list of objects to examine.
-    @type snaList: L{list} of L{SNA}
-
-    @return: The L{SNA} object with the highest value.
-    @rtype: L{SNA}
-    """
-    if len(snaList) == 0:
-        return None
-    trialMax = snaList[0]
-    for s in snaList[1:]:
-        if not trialMax:
-            trialMax = s
-        elif s and s > trialMax:
-            trialMax = s
-    return trialMax
 
 
 
