@@ -36,6 +36,16 @@ class SNATests(unittest.TestCase):
         self.assertEqual(SNA(1, serialBits=8).serialBits, 8)
 
 
+    def test_repr(self):
+        """
+        L{SNA.__repr__} returns a string containing number and serialBits
+        """
+        self.assertEqual(
+            '<SNA number=123 serialBits=32>',
+            repr(SNA(123, serialBits=32))
+        )
+
+
     def test_str(self):
         """
         L{SNA.__str__} returns a string representation of the current

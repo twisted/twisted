@@ -44,7 +44,10 @@ class SNA(FancyStrMixin, object):
         first. Comparisons with the original value would therefore be ambiguous.
     """
 
-    showAttributes = ('_number', 'serialBits')
+    showAttributes = (
+        ('_number', 'number', '%d'),
+        ('serialBits', 'serialBits', '%d'),
+    )
 
     def __init__(self, number, serialBits=32):
         """
