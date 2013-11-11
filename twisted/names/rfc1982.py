@@ -33,7 +33,7 @@ class SNA(FancyStrMixin, object):
     @see: U{https://tools.ietf.org/html/rfc1982}
     @see: U{https://tools.ietf.org/html/rfc4034}
 
-    @ivar serialBits: See L{__init__}.
+    @ivar _serialBits: See C{serialBits} of L{__init__}.
     @ivar _number: See C{number} of L{__init__}.
     @ivar _modulo: The value at which wrapping will occur.
     @ivar _halfRing: Half C{_modulo}. If another L{SNA} value is larger than
@@ -46,7 +46,7 @@ class SNA(FancyStrMixin, object):
 
     showAttributes = (
         ('_number', 'number', '%d'),
-        ('serialBits', 'serialBits', '%d'),
+        ('_serialBits', 'serialBits', '%d'),
     )
 
     def __init__(self, number, serialBits=32):
@@ -62,8 +62,7 @@ class SNA(FancyStrMixin, object):
             integer corresponding to a serial number value.
         @type serialBits: L{int}
         """
-        self.serialBits = serialBits
-
+        self._serialBits = serialBits
         self._modulo = 2 ** serialBits
         self._halfRing = 2 ** (serialBits - 1)
         self._maxAdd = 2 ** (serialBits - 1) - 1
@@ -83,7 +82,7 @@ class SNA(FancyStrMixin, object):
             raise TypeError(
                 'cannot compare or combine %r and %r' % (self, other))
 
-        if self.serialBits != other.serialBits:
+        if self._serialBits != other._serialBits:
             raise TypeError(
                 'cannot compare or combine SNA instances with different '
                 'serialBits. %r and %r' % (self, other))
@@ -212,7 +211,7 @@ class SNA(FancyStrMixin, object):
         if other._number <= self._maxAdd:
             return SNA(
                 (self._number + other._number) % self._modulo,
-                serialBits=self.serialBits)
+                serialBits=self._serialBits)
         else:
             raise ArithmeticError(
                 'value %r outside the range 0 .. %r' % (

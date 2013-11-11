@@ -25,7 +25,7 @@ class SNATests(unittest.TestCase):
         """
         L{SNA.serialBits} has default value 32.
         """
-        self.assertEqual(SNA(1).serialBits, 32)
+        self.assertEqual(SNA(1)._serialBits, 32)
 
 
     def test_serialBitsOverride(self):
@@ -33,7 +33,7 @@ class SNATests(unittest.TestCase):
         L{SNA.__init__} accepts a C{serialBits} argument whose value
         is assigned to L{SNA.serialBits}.
         """
-        self.assertEqual(SNA(1, serialBits=8).serialBits, 8)
+        self.assertEqual(SNA(1, serialBits=8)._serialBits, 8)
 
 
     def test_repr(self):
