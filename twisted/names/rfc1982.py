@@ -102,11 +102,13 @@ class SNA(object):
         @type other: L{SNA}
         """
         other = self._convertOther(other)
-        return ((self != other) and
-               ((self._number < other._number) and
-                ((other._number - self._number) < self._halfRing) or
-               (self._number > other._number) and
-                ((self._number - other._number) > self._halfRing)))
+        return (
+            (self._number < other._number
+             and (other._number - self._number) < self._halfRing)
+            or
+            (self._number > other._number
+             and (self._number - other._number) > self._halfRing)
+        )
 
 
     def __gt__(self, other):
@@ -117,11 +119,13 @@ class SNA(object):
         @rtype: L{bool}
         """
         other = self._convertOther(other)
-        return ((self != other) and
-               ((self._number < other._number) and
-               ((other._number - self._number) > self._halfRing) or
-               (self._number > other._number) and
-               ((self._number - other._number) < self._halfRing)))
+        return (
+            (self._number < other._number
+             and (other._number - self._number) > self._halfRing)
+            or
+            (self._number > other._number
+             and (self._number - other._number) < self._halfRing)
+        )
 
 
     def __le__(self, other):
