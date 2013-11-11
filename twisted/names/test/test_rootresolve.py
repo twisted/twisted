@@ -735,7 +735,7 @@ class BootstrapTests(SynchronousTestCase):
         root.bootstrap(stubResolver)
         self.assertEqual(
             stubResolver.calls,
-            [((s,),{}) for s in ROOT_SERVERS])
+            [((s,), {}) for s in ROOT_SERVERS])
 
 
     def test_becomesResolver(self):
