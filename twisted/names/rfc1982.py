@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 import calendar
 from datetime import datetime
 
+from twisted.python.compat import nativeString
 
 
 class SNA(object):
@@ -75,9 +76,9 @@ class SNA(object):
         """
         Return a string representation of this L{SNA} instance.
 
-        @rtype: L{str}
+        @rtype: L{nativeString}
         """
-        return str(self._number)
+        return nativeString('%d' % (self._number,))
 
 
     def __int__(self):
