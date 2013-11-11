@@ -33,8 +33,8 @@ class SNA(FancyStrMixin, object):
 
     This class implements RFC1982 DNS Serial Number Arithmetic.
 
-    SNA is used in DNS and specifically in DNSSEC as defined in
-    RFC4034 in the DNSSEC Signature Expiration and Inception Fields.
+    SNA is used in DNS and specifically in DNSSEC as defined in RFC4034 in the
+    DNSSEC Signature Expiration and Inception Fields.
 
     @see: U{https://tools.ietf.org/html/rfc1982}
     @see: U{https://tools.ietf.org/html/rfc4034}
@@ -63,9 +63,9 @@ class SNA(FancyStrMixin, object):
             C{number % 2 ^ serialBits}
         @type number: L{int}
 
-        @param serialBits: The size of the serial number space. The
-            power of two which results in one larger than the largest
-            integer corresponding to a serial number value.
+        @param serialBits: The size of the serial number space. The power of two
+            which results in one larger than the largest integer corresponding
+            to a serial number value.
         @type serialBits: L{int}
         """
         self._serialBits = serialBits
@@ -199,9 +199,9 @@ class SNA(FancyStrMixin, object):
 
         s' = (s + n) modulo (2 ^ SERIAL_BITS)
 
-        where the addition and modulus operations here act upon values that
-        are non-negative values of unbounded size in the usual ways of
-        integer arithmetic.
+        where the addition and modulus operations here act upon values that are
+        non-negative values of unbounded size in the usual ways of integer
+        arithmetic.
 
         Addition of a value outside the range
         [0 .. (2^(SERIAL_BITS - 1) - 1)] is undefined.
@@ -241,10 +241,9 @@ class SNA(FancyStrMixin, object):
 
         @see: U{https://tools.ietf.org/html/rfc4034#section-3.1.5}
 
-        @param utcDateTime: A UTC date/time string of format
-            I{YYMMDDhhmmss} which will be converted to seconds since
-            the UNIX epoch.
-        @type utcDateTime: L{unicode}
+        @param utcDateString: A UTC date/time string of format I{YYMMDDhhmmss}
+            which will be converted to seconds since the UNIX epoch.
+        @type utcDateString: L{unicode}
         """
         secondsSinceEpoch = calendar.timegm(
             datetime.strptime(utcDateString, RFC4034_TIME_FORMAT).utctimetuple())
@@ -253,7 +252,12 @@ class SNA(FancyStrMixin, object):
 
     def toRFC4034DateString(self):
         """
+        Calculate a date by treating the current L{SNA} value as a UNIX timestamp
+        and return a date string in the format described in RFC4034 3.2.
 
+        @see U{https://tools.ietf.org/html/rfc4034#section-3.2}
+
+        @return: The date string.
         """
         return nativeString(
             datetime.utcfromtimestamp(self._number).strftime(RFC4034_TIME_FORMAT)

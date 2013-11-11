@@ -30,15 +30,15 @@ class SNATests(unittest.TestCase):
 
     def test_serialBitsOverride(self):
         """
-        L{SNA.__init__} accepts a C{serialBits} argument whose value
-        is assigned to L{SNA.serialBits}.
+        L{SNA.__init__} accepts a C{serialBits} argument whose value is assigned
+        to L{SNA.serialBits}.
         """
         self.assertEqual(SNA(1, serialBits=8)._serialBits, 8)
 
 
     def test_repr(self):
         """
-        L{SNA.__repr__} returns a string containing number and serialBits
+        L{SNA.__repr__} returns a string containing number and serialBits.
         """
         self.assertEqual(
             '<SNA number=123 serialBits=32>',
@@ -48,16 +48,15 @@ class SNATests(unittest.TestCase):
 
     def test_str(self):
         """
-        L{SNA.__str__} returns a string representation of the current
-        value.
+        L{SNA.__str__} returns a string representation of the current value.
         """
         self.assertEqual(str(SNA(123)), '123')
 
 
     def test_hash(self):
         """
-        L{SNA.__hash__} allows L{SNA} instances to be hashed for use
-        as dictionary keys.
+        L{SNA.__hash__} allows L{SNA} instances to be hashed for use as
+        dictionary keys.
         """
         self.assertEqual(hash(SNA(1)), hash(SNA(1)))
         self.assertNotEqual(hash(SNA(1)), hash(SNA(2)))
@@ -191,11 +190,11 @@ class SNATests(unittest.TestCase):
 
     def test_maxVal(self):
         """
-        L{SNA.__add__} returns a wrapped value when s1 plus the s2
-        would result in a value greater than the C{maxVal}.
+        L{SNA.__add__} returns a wrapped value when s1 plus the s2 would result
+        in a value greater than the C{maxVal}.
 
-        XXX: I've got a feeling we need more tests demonstrating how
-        results vary with different s2 values.
+        XXX: I've got a feeling we need more tests demonstrating how results
+        vary with different s2 values.
         """
         s = SNA(1)
         maxVal = s._halfRing + s._halfRing - 1
@@ -269,18 +268,17 @@ class SNATests(unittest.TestCase):
 
 def assertUndefinedComparison(testCase, s1, s2):
     """
-    A custom assertion for L{SNA} values that cannot be meaningfully
-    compared.
+    A custom assertion for L{SNA} values that cannot be meaningfully compared.
 
-    "Note that there are some pairs of values s1 and s2 for which s1 is
-    not equal to s2, but for which s1 is neither greater than, nor less
-    than, s2.  An attempt to use these ordering operators on such pairs
-    of values produces an undefined result."
+    "Note that there are some pairs of values s1 and s2 for which s1 is not
+    equal to s2, but for which s1 is neither greater than, nor less than, s2.
+    An attempt to use these ordering operators on such pairs of values produces
+    an undefined result."
 
     @see: U{https://tools.ietf.org/html/rfc1982#section-3.2}
 
-    @param testCase: The L{unittest.TestCase} on which to call
-        assertion methods.
+    @param testCase: The L{unittest.TestCase} on which to call assertion
+        methods.
     @type testCase: L{unittest.TestCase}
 
     @param s1: The first value to compare.
@@ -305,9 +303,9 @@ class SNA2BitTests(unittest.TestCase):
     """
     Tests for correct answers to example calculations in RFC1982 5.1.
 
-    The simplest meaningful serial number space has SERIAL_BITS == 2.  In
-    this space, the integers that make up the serial number space are 0,
-    1, 2, and 3.  That is, 3 == 2^SERIAL_BITS - 1.
+    The simplest meaningful serial number space has SERIAL_BITS == 2.  In this
+    space, the integers that make up the serial number space are 0, 1, 2, and 3.
+    That is, 3 == 2^SERIAL_BITS - 1.
 
     https://tools.ietf.org/html/rfc1982#section-5.1
     """
@@ -341,8 +339,7 @@ class SNA2BitTests(unittest.TestCase):
 
     def test_undefined(self):
         """
-        It is undefined whether
-        2 > 0 or 0 > 2, and whether 1 > 3 or 3 > 1.
+        It is undefined whether 2 > 0 or 0 > 2, and whether 1 > 3 or 3 > 1.
         """
         assertUndefinedComparison(self, sna2(2), sna2(0))
         assertUndefinedComparison(self, sna2(0), sna2(2))
@@ -359,9 +356,9 @@ class SNA8BitTests(unittest.TestCase):
     """
     Tests for correct answers to example calculations in RFC1982 5.2.
 
-    Consider the case where SERIAL_BITS == 8.  In this space the integers
-    that make up the serial number space are 0, 1, 2, ... 254, 255.
-    255 == 2^SERIAL_BITS - 1.
+    Consider the case where SERIAL_BITS == 8.  In this space the integers that
+    make up the serial number space are 0, 1, 2, ... 254, 255.  255 ==
+    2^SERIAL_BITS - 1.
 
     https://tools.ietf.org/html/rfc1982#section-5.2
     """
@@ -402,12 +399,12 @@ class SNA8BitTests(unittest.TestCase):
 
     def test_surprisingAddition(self):
         """
-        Note that 100+100 > 100, but that (100+100)+100 < 100.  Incrementing
-        a serial number can cause it to become "smaller".  Of course,
-        incrementing by a smaller number will allow many more increments to
-        be made before this occurs.  However this is always something to be
-        aware of, it can cause surprising errors, or be useful as it is the
-        only defined way to actually cause a serial number to decrease.
+        Note that 100+100 > 100, but that (100+100)+100 < 100.  Incrementing a
+        serial number can cause it to become "smaller".  Of course, incrementing
+        by a smaller number will allow many more increments to be made before
+        this occurs.  However this is always something to be aware of, it can
+        cause surprising errors, or be useful as it is the only defined way to
+        actually cause a serial number to decrease.
         """
         self.assertTrue(sna8(100) + sna8(100) > sna8(100))
         self.assertTrue(sna8(100) + sna8(100) + sna8(100) < sna8(100))
@@ -415,9 +412,9 @@ class SNA8BitTests(unittest.TestCase):
 
     def test_undefined(self):
         """
-        The pairs of values 0 and 128, 1 and 129, 2 and 130, etc, to 127 and
-        255 are not equal, but in each pair, neither number is defined as
-        being greater than, or less than, the other.
+        The pairs of values 0 and 128, 1 and 129, 2 and 130, etc, to 127 and 255
+        are not equal, but in each pair, neither number is defined as being
+        greater than, or less than, the other.
         """
         assertUndefinedComparison(self, sna8(0), sna8(128))
         assertUndefinedComparison(self, sna8(1), sna8(129))
