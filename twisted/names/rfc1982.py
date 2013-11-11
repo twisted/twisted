@@ -213,11 +213,11 @@ class DateSNA(SNA):
 
     @see: U{https://tools.ietf.org/html/rfc4034#section-3.1.5}
 
-    @ivar fmt: The expected datetime format provided to
+    @ivar _timeFormat: The expected datetime format provided to
         L{DateSNA.__init__}
     """
 
-    fmt = '%Y%m%d%H%M%S'
+    _timeFormat = '%Y%m%d%H%M%S'
 
 
     def __init__(self, utcDateTime='19700101000000'):
@@ -230,7 +230,7 @@ class DateSNA(SNA):
         @type utcDateTime: L{str}
         """
         secondsSinceEpoch = calendar.timegm(
-            datetime.strptime(utcDateTime, DateSNA.fmt).utctimetuple())
+            datetime.strptime(utcDateTime, self._timeFormat).utctimetuple())
 
         super(DateSNA, self).__init__(secondsSinceEpoch)
 
@@ -260,7 +260,7 @@ class DateSNA(SNA):
         @return: a date string representation of the object.
         @rtype: L{str}
         """
-        return datetime.utcfromtimestamp(self._number).strftime(self.fmt)
+        return datetime.utcfromtimestamp(self._number).strftime(self._timeFormat)
 
 
     @classmethod
@@ -303,4 +303,4 @@ class DateSNA(SNA):
 
 
 
-__all__ = ['SNA', 'snaMax', 'DateSNA']
+__all__ = ['SNA', 'DateSNA']
