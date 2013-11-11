@@ -584,7 +584,6 @@ class ResolverFactoryArguments(Exception):
     Raised by L{raisingResolverFactory} with the *args and **kwargs
     passed to that function.
     """
-    pass
 
 
 
