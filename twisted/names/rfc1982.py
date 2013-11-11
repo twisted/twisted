@@ -301,11 +301,11 @@ class DateSNA(SNA):
 
     def __str__(self):
         """
-        Return a string representation of the object
+        Return a string representation of the object.
 
-        @rtype: L{str}
+        @rtype: L{nativeString}
         """
-        return self.asDate().strftime(self._timeFormat)
+        return nativeString(self.asDate().strftime(self._timeFormat))
 
 
 
