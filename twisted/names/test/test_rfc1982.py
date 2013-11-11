@@ -11,7 +11,7 @@ import calendar
 from datetime import datetime
 from functools import partial
 
-from twisted.names.rfc1982 import SNA
+from twisted.names._rfc1982 import SNA
 from twisted.trial import unittest
 
 

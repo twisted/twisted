@@ -60,7 +60,7 @@ modules = [
     "twisted.names.error",
     "twisted.names.hosts",
     "twisted.names.resolve",
-    "twisted.names.rfc1982",
+    "twisted.names._rfc1982",
     "twisted.names.test",
     "twisted.names._version",
     "twisted.protocols",
