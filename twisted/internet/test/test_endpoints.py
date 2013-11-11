@@ -2505,6 +2505,7 @@ def addFakePlugin(testCase, dropinSource="fakeendpoint.py"):
         sys.modules.clear()
         sys.modules.update(savedModules)
         plugins.__path__[:] = savedPluginPath
+        fp.remove()
 
     testCase.addCleanup(cleanup)
     fp = FilePath(testCase.mktemp())
