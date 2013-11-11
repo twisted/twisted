@@ -4,7 +4,7 @@
 """
 Test cases for L{twisted.names.util}.
 """
-
+from datetime import datetime
 from functools import partial
 
 from twisted.names.rfc1982 import SNA, DateSNA
@@ -241,12 +241,11 @@ class DateSNATests(unittest.TestCase):
 
     def test_asDate(self):
         """
-        L{DateSNA.asDate} returns a date string in the form
-        'YYYYMMDDhhmmss'.
+        L{DateSNA.asDate} returns a L{datetime} instance.
         """
-        date1 = '20120101000000'
-        date1Sna = DateSNA(date1)
-        self.assertEqual(date1Sna.asDate(), date1)
+        self.assertEqual(
+            datetime(2012, 1, 1, 0, 0, 0),
+            DateSNA('20120101000000').asDate())
 
 
     def test_roundTrip(self):

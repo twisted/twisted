@@ -257,10 +257,12 @@ class DateSNA(SNA):
 
     def asDate(self):
         """
-        @return: a date string representation of the object.
-        @rtype: L{str}
+        Convert to L{datetime}.
+
+        @return: A UTC L{datetime}.
+        @rtype: L{datetime}
         """
-        return datetime.utcfromtimestamp(self._number).strftime(self._timeFormat)
+        return datetime.utcfromtimestamp(self._number)
 
 
     @classmethod
@@ -299,7 +301,7 @@ class DateSNA(SNA):
 
         @rtype: L{str}
         """
-        return self.asDate()
+        return self.asDate().strftime(self._timeFormat)
 
 
 
