@@ -82,6 +82,7 @@ class SNA(FancyStrMixin, object):
         not.
 
         @param other: The foreign L{object} to be checked.
+        @return: C{other} after compatibility checks and possible coercion.
         @raises: L{TypeError} if C{other} is not compatible.
         """
         if not isinstance(other, SNA):
@@ -236,26 +237,31 @@ class SNA(FancyStrMixin, object):
     @classmethod
     def fromRFC4034DateString(cls, utcDateString):
         """
-        Create an L{SNA} instance from a date string in format 'YYYYMMDDHHMMSS'
-        per RFC4034 3.1.5
+        Create an L{_SNA} instance from a date string in format 'YYYYMMDDHHMMSS'
+        described in
+        U{RFC4034 3.2<https://tools.ietf.org/html/rfc4034#section-3.2>}.
+
+        The L{_SNA} instance stores the date as a 32bit UNIX timestamp.
 
         @see: U{https://tools.ietf.org/html/rfc4034#section-3.1.5}
 
         @param utcDateString: A UTC date/time string of format I{YYMMDDhhmmss}
             which will be converted to seconds since the UNIX epoch.
         @type utcDateString: L{unicode}
+
+        @return: An L{_SNA} instance containing the supplied date as a 32bit
+            UNIX timestamp.
         """
-        secondsSinceEpoch = calendar.timegm(
-            datetime.strptime(utcDateString, RFC4034_TIME_FORMAT).utctimetuple())
+        parsedDate = datetime.strptime(utcDateString, RFC4034_TIME_FORMAT)
+        secondsSinceEpoch = calendar.timegm(parsedDate.utctimetuple())
         return cls(secondsSinceEpoch, serialBits=32)
 
 
     def toRFC4034DateString(self):
         """
-        Calculate a date by treating the current L{SNA} value as a UNIX timestamp
-        and return a date string in the format described in RFC4034 3.2.
-
-        @see U{https://tools.ietf.org/html/rfc4034#section-3.2}
+        Calculate a date by treating the current L{_SNA} value as a UNIX
+        timestamp and return a date string in the format described in
+        U{RFC4034 3.2<https://tools.ietf.org/html/rfc4034#section-3.2>}.
 
         @return: The date string.
         """
