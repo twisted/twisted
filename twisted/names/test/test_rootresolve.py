@@ -794,17 +794,13 @@ class BootstrapTests(SynchronousTestCase):
         d1 = next(results)
         for d in results:
             d.errback(TimeoutError())
-            # XXX: It seems I have to add at least one Errback to
-            # prevent the TestCase detecting unhandled deferred
-            # errors.  Maybe this suggests a bug in bootstrap or
-            # DeferredResolver not specifically handling errors during
-            # async hint lookup.
-            d.addErrback(id)
         d1.errback(TimeoutError())
 
         def checkHints(res):
             self.assertEqual(deferredResolver.hints, [])
         d1.addBoth(checkHints)
+
+        self.addCleanup(self.flushLoggedErrors, TimeoutError)
 
 
     def test_passesResolverFactory(self):
