@@ -53,6 +53,21 @@ class SNATests(unittest.TestCase):
         self.assertNotEqual(hash(SNA(1)), hash(SNA(2)))
 
 
+    def test_convertOtherSerialBitsMismatch(self):
+        """
+        L{SNA._convertOther} raises L{TypeError} if the other SNA instance has a
+        different C{serialBits} value.
+        """
+        s1 = SNA(0, serialBits=8)
+        s2 = SNA(0, serialBits=16)
+
+        self.assertRaises(
+            TypeError,
+            s1._convertOther,
+            s2
+        )
+
+
     def test_eq(self):
         """
         L{SNA.__eq__} provides rich equality comparison.

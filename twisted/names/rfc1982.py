@@ -79,6 +79,12 @@ class SNA(FancyStrMixin, object):
         if not isinstance(other, SNA):
             raise TypeError(
                 'cannot compare or combine %r and %r' % (self, other))
+
+        if self.serialBits != other.serialBits:
+            raise TypeError(
+                'cannot compare or combine SNA instances with different '
+                'serialBits. %r and %r' % (self, other))
+
         return other
 
 
