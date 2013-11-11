@@ -717,7 +717,7 @@ class BootstrapTests(SynchronousTestCase):
     """
     Tests for L{root.bootstrap}
     """
-    def test_bootstrapReturnsDeferredResolver(self):
+    def test_returnsDeferredResolver(self):
         """
         L{root.bootstrap} returns an object which is initially a
         L{root.DeferredResolver}.
@@ -726,10 +726,10 @@ class BootstrapTests(SynchronousTestCase):
         self.assertIsInstance(deferredResolver, root.DeferredResolver)
 
 
-    def test_bootstrapResolves13RootServers(self):
+    def test_resolves13RootServers(self):
         """
-        The L{IResolverSimple} supplied to L{root.bootstrap} is used
-        to lookup the IP addresses of the 13 root name servers.
+        The L{IResolverSimple} supplied to L{root.bootstrap} is used to lookup
+        the IP addresses of the 13 root name servers.
         """
         stubResolver = StubResolver()
         root.bootstrap(stubResolver)
@@ -738,11 +738,11 @@ class BootstrapTests(SynchronousTestCase):
             [((s,),{}) for s in ROOT_SERVERS])
 
 
-    def test_bootstrapBecomesResolver(self):
+    def test_becomesResolver(self):
         """
-        The L{root.DeferredResolver} initially returned by
-        L{root.bootstrap} becomes a L{root.Resolver} when the supplied
-        resolver has successfully looked up all root hints.
+        The L{root.DeferredResolver} initially returned by L{root.bootstrap}
+        becomes a L{root.Resolver} when the supplied resolver has successfully
+        looked up all root hints.
         """
         stubResolver = StubResolver()
         deferredResolver = root.bootstrap(stubResolver)
@@ -751,11 +751,10 @@ class BootstrapTests(SynchronousTestCase):
         self.assertIsInstance(deferredResolver, Resolver)
 
 
-    def test_bootstrapResolverReceivesRootHints(self):
+    def test_resolverReceivesRootHints(self):
         """
-        The L{root.Resolver} which eventually replaces
-        L{root.DeferredResolver} is supplied with the IP addresses of
-        the 13 root servers.
+        The L{root.Resolver} which eventually replaces L{root.DeferredResolver}
+        is supplied with the IP addresses of the 13 root servers.
         """
         stubResolver = StubResolver()
         deferredResolver = root.bootstrap(stubResolver)
@@ -764,11 +763,11 @@ class BootstrapTests(SynchronousTestCase):
         self.assertEqual(deferredResolver.hints, ['192.0.2.101'] * 13)
 
 
-    def test_bootstrapContinuesWhenSomeRootHintsFail(self):
+    def test_continuesWhenSomeRootHintsFail(self):
         """
-        The L{root.Resolver} is eventually created, even if some of
-        the root hint lookups fail. Only the working root hint IP
-        addresses are supplied to the L{root.Resolver}.
+        The L{root.Resolver} is eventually created, even if some of the root
+        hint lookups fail. Only the working root hint IP addresses are supplied
+        to the L{root.Resolver}.
         """
         stubResolver = StubResolver()
         deferredResolver = root.bootstrap(stubResolver)
@@ -783,11 +782,11 @@ class BootstrapTests(SynchronousTestCase):
         d1.addBoth(checkHints)
 
 
-    def test_bootstrapContinuesWhenAllRootHintsFail(self):
+    def test_continuesWhenAllRootHintsFail(self):
         """
-        The L{root.Resolver} is eventually created, even if all of the
-        root hint lookups fail. Pending and new lookups will then fail
-        with AttributeError.
+        The L{root.Resolver} is eventually created, even if all of the root hint
+        lookups fail. Pending and new lookups will then fail with
+        AttributeError.
         """
         stubResolver = StubResolver()
         deferredResolver = root.bootstrap(stubResolver)
@@ -808,11 +807,11 @@ class BootstrapTests(SynchronousTestCase):
         d1.addBoth(checkHints)
 
 
-    def test_bootstrapPassesResolverFactory(self):
+    def test_passesResolverFactory(self):
         """
-        L{root.bootstrap} accepts a C{resolverFactory} argument which
-        is passed as an argument to L{root.Resolver} when it has
-        successfully looked up root hints.
+        L{root.bootstrap} accepts a C{resolverFactory} argument which is passed
+        as an argument to L{root.Resolver} when it has successfully looked up
+        root hints.
         """
         stubResolver = StubResolver()
         deferredResolver = root.bootstrap(
