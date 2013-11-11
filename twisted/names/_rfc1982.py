@@ -17,7 +17,7 @@ Utilities for handling RFC1982 Serial Number Arithmetic.
 from __future__ import division, absolute_import
 
 import calendar
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from twisted.python.compat import nativeString
 from twisted.python.util import FancyStrMixin
@@ -265,9 +265,11 @@ class SNA(FancyStrMixin, object):
 
         @return: The date string.
         """
-        return nativeString(
-            datetime.utcfromtimestamp(self._number).strftime(RFC4034_TIME_FORMAT)
-        )
+        # Can't use datetime.utcfromtimestamp, because it seems to overflow the
+        # signed 32bit int used in the underlying C library. SNA is unsigned
+        # and capable of handling all timestamps up to 2**32.
+        d = datetime(1970, 1, 1) + timedelta(seconds=self._number)
+        return nativeString(d.strftime(RFC4034_TIME_FORMAT))
 
 
 
