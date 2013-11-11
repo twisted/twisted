@@ -95,6 +95,16 @@ class SNA(object):
         return other._number == self._number
 
 
+    def __ne__(self, other):
+        """
+        Allow rich equality comparison with another L{SNA} instance.
+
+        @type other: L{SNA}
+        """
+        other = self._convertOther(other)
+        return other._number != self._number
+
+
     def __lt__(self, other):
         """
         Allow I{less than} comparison with another L{SNA} instance.

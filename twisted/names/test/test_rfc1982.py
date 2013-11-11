@@ -63,6 +63,21 @@ class SNATest(unittest.TestCase):
         self.assertRaises(TypeError, lambda: SNA(1) == object())
 
 
+    def test_ne(self):
+        """
+        L{SNA.__ne__} provides rich equality comparison.
+        """
+        self.assertFalse(SNA(1) != SNA(1))
+        self.assertNotEqual(SNA(1), SNA(2))
+
+
+    def test_neForeignType(self):
+        """
+        != comparison of L{SNA} with a non-L{SNA} instance raises L{TypeError}.
+        """
+        self.assertRaises(TypeError, lambda: SNA(1) != object())
+
+
     def test_le(self):
         """
         L{SNA.__le__} provides rich <= comparison.
