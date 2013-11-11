@@ -59,11 +59,10 @@ class Resolver(common.ResolverBase):
              provider to use to bind UDP ports and manage timeouts.
         @type reactor: L{IReactorTime} and L{IReactorUDP} provider
 
-        @param resolverFactory: An optional L{callable} which accepts
-             C{reactor} and C{servers} arguments and returns an
-             instance that provides L{IResolver}. Defaults to
-             L{twisted.names.client.Resolver}.
-        @type resolverFactory: L{callable}
+        @param resolverFactory: An optional callable which accepts C{reactor}
+             and C{servers} arguments and returns an instance that provides a
+             C{queryUDP} method. Defaults to L{twisted.names.client.Resolver}.
+        @type resolverFactory: callable
         """
         common.ResolverBase.__init__(self)
         self.hints = hints
@@ -318,7 +317,7 @@ def bootstrap(resolver, resolverFactory=None):
     @param resolverFactory: An optional callable which returns a
         resolver instance. It will passed as the C{resolverFactory}
         argument to L{Resolver.__init__}.
-    @type resolverFactory: L{callable}
+    @type resolverFactory: callable
 
     @return: A L{DeferredResolver} which will be dynamically replaced
         with L{Resolver} when the root nameservers have been looked up.
