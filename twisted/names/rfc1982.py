@@ -192,7 +192,8 @@ class SNA(object):
                 serialBits=self.serialBits)
         else:
             raise ArithmeticError(
-                'value outside the range 0 .. %r' % (self._maxAdd,))
+                'value %r outside the range 0 .. %r' % (
+                    other._number, self._maxAdd,))
 
 
     def __hash__(self):

@@ -150,6 +150,16 @@ class SNATest(unittest.TestCase):
         self.assertRaises(TypeError, lambda: SNA(1) + object())
 
 
+    def test_addOutOfRangeHigh(self):
+        """
+        L{SNA} cannot be added with other SNA values larger than C{_maxAdd}.
+        """
+        maxAdd = SNA(1)._maxAdd
+        self.assertRaises(
+            ArithmeticError,
+            lambda: SNA(1) + SNA(maxAdd + 1))
+
+
     def test_maxVal(self):
         """
         L{SNA.__add__} returns a wrapped value when s1 plus the s2
