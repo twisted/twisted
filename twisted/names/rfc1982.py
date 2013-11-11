@@ -5,6 +5,9 @@
 """
 DNS utility functions and classes.
 """
+
+from __future__ import unicode_literals
+
 import calendar
 from datetime import datetime
 
@@ -227,7 +230,7 @@ class DateSNA(SNA):
         @param utcDateTime: A UTC date/time string of format
             I{YYMMDDhhmmss} which will be converted to seconds since
             the UNIX epoch.
-        @type utcDateTime: L{str}
+        @type utcDateTime: L{unicode}
         """
         secondsSinceEpoch = calendar.timegm(
             datetime.strptime(utcDateTime, self._timeFormat).utctimetuple())
