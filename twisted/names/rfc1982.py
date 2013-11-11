@@ -1,9 +1,11 @@
-# -*- test-case-name: twisted.names.test.test_util -*-
+# -*- test-case-name: twisted.names.test.test_rfc1982 -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
-DNS utility functions and classes.
+Utilities for handling RFC1982 Serial Number Arithmetic.
+
+@see: U{http://tools.ietf.org/html/rfc1982}
 """
 
 from __future__ import division, absolute_import, unicode_literals

@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Test cases for L{twisted.names.util}.
+Test cases for L{twisted.names.rfc1982}.
 """
 
 from __future__ import division, absolute_import, unicode_literals
