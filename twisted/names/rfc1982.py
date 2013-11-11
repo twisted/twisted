@@ -6,7 +6,7 @@
 DNS utility functions and classes.
 """
 
-from __future__ import unicode_literals
+from __future__ import division, absolute_import, unicode_literals
 
 import calendar
 from datetime import datetime

@@ -4,6 +4,9 @@
 """
 Test cases for L{twisted.names.util}.
 """
+
+from __future__ import division, absolute_import, unicode_literals
+
 from datetime import datetime
 from functools import partial
 
