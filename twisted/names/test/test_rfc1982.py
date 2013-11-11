@@ -53,6 +53,13 @@ class SNATests(unittest.TestCase):
         self.assertEqual(str(SNA(123)), '123')
 
 
+    def test_int(self):
+        """
+        L{SNA.__int__} returns an integer representation of the current value.
+        """
+        self.assertEqual(int(SNA(123)), 123)
+
+
     def test_hash(self):
         """
         L{SNA.__hash__} allows L{SNA} instances to be hashed for use as
