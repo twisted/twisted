@@ -40,13 +40,6 @@ class SNATest(unittest.TestCase):
         self.assertEqual(str(SNA(123)), '123')
 
 
-    def test_equality(self):
-        """
-        L{SNA.__eq__} provides rich equality comparison.
-        """
-        self.assertEqual(SNA(1), SNA(1))
-
-
     def test_hash(self):
         """
         L{SNA.__hash__} allows L{SNA} instances to be hashed for use
@@ -54,6 +47,20 @@ class SNATest(unittest.TestCase):
         """
         self.assertEqual(hash(SNA(1)), hash(SNA(1)))
         self.assertNotEqual(hash(SNA(1)), hash(SNA(2)))
+
+
+    def test_eq(self):
+        """
+        L{SNA.__eq__} provides rich equality comparison.
+        """
+        self.assertEqual(SNA(1), SNA(1))
+
+
+    def test_eqForeignType(self):
+        """
+        == comparison of L{SNA} with a non-L{SNA} instance raises L{TypeError}.
+        """
+        self.assertRaises(TypeError, lambda: SNA(1) == object())
 
 
     def test_le(self):
@@ -64,12 +71,26 @@ class SNATest(unittest.TestCase):
         self.assertTrue(SNA(1) <= SNA(2))
 
 
+    def test_leForeignType(self):
+        """
+        <= comparison of L{SNA} with a non-L{SNA} instance returns False.
+        """
+        self.assertRaises(TypeError, lambda: SNA(1) <= object())
+
+
     def test_ge(self):
         """
         L{SNA.__ge__} provides rich >= comparison.
         """
         self.assertTrue(SNA(1) >= SNA(1))
         self.assertTrue(SNA(2) >= SNA(1))
+
+
+    def test_geForeignType(self):
+        """
+        >= comparison of L{SNA} with a non-L{SNA} instance returns False.
+        """
+        self.assertRaises(TypeError, lambda: SNA(1) >= object())
 
 
     def test_lt(self):
@@ -79,6 +100,13 @@ class SNATest(unittest.TestCase):
         self.assertTrue(SNA(1) < SNA(2))
 
 
+    def test_ltForeignType(self):
+        """
+        < comparison of L{SNA} with a non-L{SNA} instance returns False.
+        """
+        self.assertRaises(TypeError, lambda: SNA(1) < object())
+
+
     def test_gt(self):
         """
         L{SNA.__gt__} provides rich > comparison.
@@ -86,11 +114,25 @@ class SNATest(unittest.TestCase):
         self.assertTrue(SNA(2) > SNA(1))
 
 
+    def test_gtForeignType(self):
+        """
+        > comparison of L{SNA} with a non-L{SNA} instance returns False.
+        """
+        self.assertRaises(TypeError, lambda: SNA(2) > object())
+
+
     def test_add(self):
         """
         L{SNA.__add__} allows L{SNA} instances to be summed.
         """
         self.assertEqual(SNA(1) + SNA(1), SNA(2))
+
+
+    def test_addForeignType(self):
+        """
+        Addition of L{SNA} with a non-L{SNA} instance raises L{TypeError}.
+        """
+        self.assertRaises(TypeError, lambda: SNA(1) + object())
 
 
     def test_maxVal(self):

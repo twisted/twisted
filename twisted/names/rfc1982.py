@@ -53,6 +53,21 @@ class SNA(object):
         self._number = int(number) % self._modulo
 
 
+    def _convertOther(self, other):
+        """
+        Check that a foreign object is suitable for use in the comparison or
+        arithmetic magic methods of this L{SNA} instance. Raise L{TypeError} if
+        not.
+
+        @param other: The foreign L{object} to be checked.
+        @raises: L{TypeError} if C{other} is not compatible.
+        """
+        if not isinstance(other, SNA):
+            raise TypeError(
+                'cannot compare or combine %r and %r' % (self, other))
+        return other
+
+
     def __str__(self):
         """
         Return a string representation of this L{SNA} instance.
@@ -70,75 +85,81 @@ class SNA(object):
         return self._number
 
 
-    def __eq__(self, sna2):
+    def __eq__(self, other):
         """
         Allow rich equality comparison with another L{SNA} instance.
 
-        @type sna2: L{SNA}
+        @type other: L{SNA}
         """
-        return sna2._number == self._number
+        other = self._convertOther(other)
+        return other._number == self._number
 
 
-    def __lt__(self, sna2):
+    def __lt__(self, other):
         """
         Allow I{less than} comparison with another L{SNA} instance.
 
-        @type sna2: L{SNA}
+        @type other: L{SNA}
         """
-        return ((self != sna2) and
-               ((self._number < sna2._number) and
-                ((sna2._number - self._number) < self._halfRing) or
-               (self._number > sna2._number) and
-                ((self._number - sna2._number) > self._halfRing)))
+        other = self._convertOther(other)
+        return ((self != other) and
+               ((self._number < other._number) and
+                ((other._number - self._number) < self._halfRing) or
+               (self._number > other._number) and
+                ((self._number - other._number) > self._halfRing)))
 
 
-    def __gt__(self, sna2):
+    def __gt__(self, other):
         """
         Allow I{greater than} comparison with another L{SNA} instance.
 
-        @type sna2: L{SNA}
+        @type other: L{SNA}
         @rtype: L{bool}
         """
-        return ((self != sna2) and
-               ((self._number < sna2._number) and
-               ((sna2._number - self._number) > self._halfRing) or
-               (self._number > sna2._number) and
-               ((self._number - sna2._number) < self._halfRing)))
+        other = self._convertOther(other)
+        return ((self != other) and
+               ((self._number < other._number) and
+               ((other._number - self._number) > self._halfRing) or
+               (self._number > other._number) and
+               ((self._number - other._number) < self._halfRing)))
 
 
-    def __le__(self, sna2):
+    def __le__(self, other):
         """
         Allow I{less than or equal} comparison with another L{SNA} instance.
 
-        @type sna2: L{SNA}
+        @type other: L{SNA}
         @rtype: L{bool}
         """
-        return self == sna2 or self < sna2
+        other = self._convertOther(other)
+        return self == other or self < other
 
 
-    def __ge__(self, sna2):
+    def __ge__(self, other):
         """
         Allow I{greater than or equal} comparison with another L{SNA} instance.
 
-        @type sna2: L{SNA}
+        @type other: L{SNA}
         @rtype: L{bool}
         """
-        return self == sna2 or self > sna2
+        other = self._convertOther(other)
+        return self == other or self > other
 
 
-    def __add__(self, sna2):
+    def __add__(self, other):
         """
         Allow I{addition} with another L{SNA} instance.
 
         XXX: check my explanation of the ArithmeticError situation below.
 
-        @type sna2: L{SNA}
+        @type other: L{SNA}
         @rtype: L{SNA}
         @raises: L{ArithmeticError} if C{sna2} is more than C{_maxAdd}
             ie more than half the maximum value of this serial number.
         """
-        if sna2 <= SNA(self._maxAdd):
-            return SNA( (self._number + sna2._number) % self._modulo )
+        other = self._convertOther(other)
+        if other <= SNA(self._maxAdd):
+            return SNA( (self._number + other._number) % self._modulo )
         else:
             raise ArithmeticError
 
