@@ -164,18 +164,34 @@ class SNA(object):
         """
         Allow I{addition} with another L{SNA} instance.
 
-        XXX: check my explanation of the ArithmeticError situation below.
+        Serial numbers may be incremented by the addition of a positive
+        integer n, where n is taken from the range of integers
+        [0 .. (2^(SERIAL_BITS - 1) - 1)].  For a sequence number s, the
+        result of such an addition, s', is defined as
+
+        s' = (s + n) modulo (2 ^ SERIAL_BITS)
+
+        where the addition and modulus operations here act upon values that
+        are non-negative values of unbounded size in the usual ways of
+        integer arithmetic.
+
+        Addition of a value outside the range
+        [0 .. (2^(SERIAL_BITS - 1) - 1)] is undefined.
+
+        @see: U{http://tools.ietf.org/html/rfc1982#section-3.1}
 
         @type other: L{SNA}
         @rtype: L{SNA}
-        @raises: L{ArithmeticError} if C{sna2} is more than C{_maxAdd}
+        @raises: L{ArithmeticError} if C{other} is more than C{_maxAdd}
             ie more than half the maximum value of this serial number.
         """
         other = self._convertOther(other)
-        if other <= SNA(self._maxAdd):
-            return SNA( (self._number + other._number) % self._modulo )
+        if other._number <= self._maxAdd:
+            return SNA(
+                (self._number + other._number) % self._modulo,
+                serialBits=self.serialBits)
         else:
-            raise ArithmeticError
+            raise ArithmeticError('value outside the range 0 ')
 
 
     def __hash__(self):

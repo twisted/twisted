@@ -445,14 +445,7 @@ class SNA8BitTests(unittest.TestCase):
         only defined way to actually cause a serial number to decrease.
         """
         self.assertTrue(sna8(100) + sna8(100) > sna8(100))
-
-        # XXX: This test should succeed according to description
-        # above, but fails. Can't work out what's wrong, test or
-        # implementation.
-        # self.assertTrue((sna8(100) + sna8(100)) + sna8(100) < sna8(100))
-        self.assertRaises(
-            ArithmeticError,
-            lambda: (sna8(100) + sna8(100)) + sna8(100))
+        self.assertTrue(sna8(100) + sna8(100) + sna8(100) < sna8(100))
 
 
     def test_undefined(self):
