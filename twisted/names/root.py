@@ -37,20 +37,40 @@ class Resolver(common.ResolverBase):
     L{Resolver} implements recursive lookup starting from a specified list of
     root servers.
 
-    @ivar hints: A C{list} of C{str} giving the dotted quad representation
-        of IP addresses of root servers at which to begin resolving names.
-
-    @ivar _maximumQueries: A C{int} giving the maximum number of queries
-        which will be attempted to resolve a single name.
-
-    @ivar _reactor: A L{IReactorTime} and L{IReactorUDP} provider to use to
-        bind UDP ports and manage timeouts.
+    @ivar hints: See C{hints} parameter of L{__init__}
+    @ivar _maximumQueries: See C{maximumQueries} parameter of L{__init__}
+    @ivar _reactor: See C{reactor} parameter of L{__init__}
+    @ivar _resolverFactory: See C{resolverFactory} parameter of L{__init__}
     """
-    def __init__(self, hints, maximumQueries=10, reactor=None):
+    def __init__(self, hints, maximumQueries=10,
+                 reactor=None, resolverFactory=None):
+        """
+        @param hints: A L{list} of L{str} giving the dotted quad
+            representation of IP addresses of root servers at which to
+            begin resolving names.
+        @type hints: L{list} of L{str}
+
+        @param maximumQueries: An optional L{int} giving the maximum
+             number of queries which will be attempted to resolve a
+             single name.
+        @type maximumQueries: L{int}
+
+        @param reactor: An optional L{IReactorTime} and L{IReactorUDP}
+             provider to use to bind UDP ports and manage timeouts.
+        @type reactor: L{IReactorTime} and L{IReactorUDP} provider
+
+        @param resolverFactory: An optional callable which accepts C{reactor}
+             and C{servers} arguments and returns an instance that provides a
+             C{queryUDP} method. Defaults to L{twisted.names.client.Resolver}.
+        @type resolverFactory: callable
+        """
         common.ResolverBase.__init__(self)
         self.hints = hints
         self._maximumQueries = maximumQueries
         self._reactor = reactor
+        if resolverFactory is None:
+            from twisted.names.client import Resolver as resolverFactory
+        self._resolverFactory = resolverFactory
 
 
     def _roots(self):
@@ -86,8 +106,7 @@ class Resolver(common.ResolverBase):
             error.
         @rtype: L{Deferred}
         """
-        from twisted.names import client
-        r = client.Resolver(servers=servers, reactor=self._reactor)
+        r = self._resolverFactory(servers=servers, reactor=self._reactor)
         d = r.queryUDP([query], timeout)
         if filter:
             d.addCallback(r.filterAnswers)
@@ -281,17 +300,36 @@ class DeferredResolver:
             return makePlaceholder(self.waiting[-1], name)
         raise AttributeError(name)
 
-def bootstrap(resolver):
-    """Lookup the root nameserver addresses using the given resolver
+
+
+def bootstrap(resolver, resolverFactory=None):
+    """
+    Lookup the root nameserver addresses using the given resolver
 
     Return a Resolver which will eventually become a C{root.Resolver}
     instance that has references to all the root servers that we were able
     to look up.
+
+    @param resolver: The resolver instance which will be used to
+        lookup the root nameserver addresses.
+    @type resolver: L{twisted.internet.interfaces.IResolverSimple}
+
+    @param resolverFactory: An optional callable which returns a
+        resolver instance. It will passed as the C{resolverFactory}
+        argument to L{Resolver.__init__}.
+    @type resolverFactory: callable
+
+    @return: A L{DeferredResolver} which will be dynamically replaced
+        with L{Resolver} when the root nameservers have been looked up.
     """
     domains = [chr(ord('a') + i) for i in range(13)]
-    # f = lambda r: (log.msg('Root server address: ' + str(r)), r)[1]
-    f = lambda r: r
-    L = [resolver.getHostByName('%s.root-servers.net' % d).addCallback(f) for d in domains]
+    L = [resolver.getHostByName('%s.root-servers.net' % d) for d in domains]
     d = defer.DeferredList(L)
-    d.addCallback(lambda r: Resolver([e[1] for e in r if e[0]]))
+
+    def buildResolver(res):
+        return Resolver(
+            hints=[e[1] for e in res if e[0]],
+            resolverFactory=resolverFactory)
+    d.addCallback(buildResolver)
+
     return DeferredResolver(d)
