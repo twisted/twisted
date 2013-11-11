@@ -8,15 +8,20 @@ Utilities for handling RFC1982 Serial Number Arithmetic.
 @see: U{http://tools.ietf.org/html/rfc1982}
 """
 
-from __future__ import division, absolute_import, unicode_literals
+from __future__ import division, absolute_import
 
 import calendar
 from datetime import datetime
 
 from twisted.python.compat import nativeString
+from twisted.python.util import FancyStrMixin
 
 
-class SNA(object):
+RFC4034_TIME_FORMAT = '%Y%m%d%H%M%S'
+
+
+
+class SNA(FancyStrMixin, object):
     """
     A Serial Number Arithmetic helper class.
 
@@ -38,6 +43,9 @@ class SNA(object):
         than this, it would lead to a wrapped value which is larger than the
         first. Comparisons with the original value would therefore be ambiguous.
     """
+
+    showAttributes = ('_number', 'serialBits')
+
     def __init__(self, number, serialBits=32):
         """
         Construct an L{SNA} instance.
@@ -211,24 +219,13 @@ class SNA(object):
         return hash(self._number)
 
 
-
-class DateSNA(SNA):
-    """
-    A helper class for DNS Serial Number Arithmetic for dates
-    'YYYYMMDDHHMMSS' per RFC4034 3.1.5
-
-    @see: U{https://tools.ietf.org/html/rfc4034#section-3.1.5}
-
-    @ivar _timeFormat: The expected datetime format provided to
-        L{DateSNA.__init__}
-    """
-
-    _timeFormat = '%Y%m%d%H%M%S'
-
-
-    def __init__(self, utcDateTime='19700101000000'):
+    @classmethod
+    def fromRFC4034DateString(cls, utcDateString):
         """
-        Construct a L{DateSNA} instance.
+        Create an L{SNA} instance from a date string in format 'YYYYMMDDHHMMSS'
+        per RFC4034 3.1.5
+
+        @see: U{https://tools.ietf.org/html/rfc4034#section-3.1.5}
 
         @param utcDateTime: A UTC date/time string of format
             I{YYMMDDhhmmss} which will be converted to seconds since
@@ -236,79 +233,18 @@ class DateSNA(SNA):
         @type utcDateTime: L{unicode}
         """
         secondsSinceEpoch = calendar.timegm(
-            datetime.strptime(utcDateTime, self._timeFormat).utctimetuple())
+            datetime.strptime(utcDateString, RFC4034_TIME_FORMAT).utctimetuple())
+        return cls(secondsSinceEpoch, serialBits=32)
 
-        super(DateSNA, self).__init__(secondsSinceEpoch)
 
-
-    def __add__(self, sna2):
+    def toRFC4034DateString(self):
         """
-        Allow I{addition} with another L{SNA} or L{DateSNA} instance.
 
-        @type sna2: L{SNA}
-        @rtype: L{SNA}
-        @raises: L{ArithmeticError} if C{sna2} is more than C{_maxAdd}
-            ie more than half the maximum value of this serial number.
         """
-        if not isinstance(sna2, SNA):
-            return NotImplemented
-
-        if (sna2 <= SNA(self._maxAdd) and
-            (self._number + sna2._number < self._modulo)):
-            sna = SNA((self._number + sna2._number) % self._modulo)
-            return DateSNA.fromSNA(sna)
-        else:
-            raise ArithmeticError
-
-
-    def asDate(self):
-        """
-        Convert to L{datetime}.
-
-        @return: A UTC L{datetime}.
-        @rtype: L{datetime}
-        """
-        return datetime.utcfromtimestamp(self._number)
-
-
-    @classmethod
-    def fromSNA(cls, sna):
-        """
-        Create a L{DateSNA} object from an L{SNA}.
-
-        @param sna: The source L{SNA} instance.
-        @type sna: L{SNA}
-
-        @return: The resulting L{DateSNA} instance.
-        @rtype: L{DateSNA}
-        """
-        d = cls()
-        d._number = sna._number
-        return d
-
-
-    @classmethod
-    def fromInt(cls, i):
-        """
-        Create an DateSNA object from an L{int}.
-
-        @param i: The source L{int}.
-        @type i: L{int}
-
-        @return: The resulting L{DateSNA} instance.
-        @rtype: L{DateSNA}
-        """
-        return cls.fromSNA(SNA(i))
-
-
-    def __str__(self):
-        """
-        Return a string representation of the object.
-
-        @rtype: L{nativeString}
-        """
-        return nativeString(self.asDate().strftime(self._timeFormat))
+        return nativeString(
+            datetime.utcfromtimestamp(self._number).strftime(RFC4034_TIME_FORMAT)
+        )
 
 
 
-__all__ = ['SNA', 'DateSNA']
+__all__ = ['SNA']

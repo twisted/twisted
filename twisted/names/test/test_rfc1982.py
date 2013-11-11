@@ -5,17 +5,18 @@
 Test cases for L{twisted.names.rfc1982}.
 """
 
-from __future__ import division, absolute_import, unicode_literals
+from __future__ import division, absolute_import
 
+import calendar
 from datetime import datetime
 from functools import partial
 
-from twisted.names.rfc1982 import SNA, DateSNA
+from twisted.names.rfc1982 import SNA
 from twisted.trial import unittest
 
 
 
-class SNATest(unittest.TestCase):
+class SNATests(unittest.TestCase):
     """
     Tests for L{SNA}.
     """
@@ -178,94 +179,66 @@ class SNATest(unittest.TestCase):
         self.assertEqual(SNA(maxValPlus1), SNA(0))
 
 
-
-class DateSNATests(unittest.TestCase):
-    """
-    Tests for L{DateSNA}.
-    """
-    def test_dateStringArgument(self):
+    def test_fromRFC4034DateString(self):
         """
-        L{DateSNA.__init__} accepts a datetime string argument of the
-        form 'YYYYMMDDhhmmss'
-        """
-        self.assertEqual(DateSNA('20120101000000'), SNA(1325376000))
-
-
-    def test_str(self):
-        """
-        L{DateSNA.__str__} returns a string representation of the
-        current date value.
+        L{SNA.fromRFC4034DateString} accepts a datetime string argument of the
+        form 'YYYYMMDDhhmmss' and returns an L{SNA} instance whose value is the
+        unix timestamp corresponding to that UTC date.
         """
         self.assertEqual(
-            str(DateSNA('20120101000000')), '20120101000000')
+            SNA(1325376000),
+            SNA.fromRFC4034DateString('20120101000000')
+        )
 
 
-    def test_additionWithDifferentType(self):
+    def test_toRFC4034DateString(self):
         """
-        L{DateSNA.__add__} can only be used with another L{SNA} subclass.
+        L{DateSNA.toRFC4034DateString} interprets the current value as a unix
+        timestamp and returns a date string representation of that date.
         """
-        self.assertRaises(TypeError, lambda: DateSNA() + 1)
+        self.assertEqual(
+            '20120101000000',
+            SNA(1325376000).toRFC4034DateString()
+        )
 
 
-    def test_lt(self):
+    def test_unixEpoch(self):
         """
-        L{DateSNA.__lt__} provides rich < comparison.
+        L{SNA.toRFC4034DateString} stores 32bit timestamps relative to the UNIX
+        epoch.
         """
-        date1 = DateSNA('20120101000000')
-        date2 = DateSNA('20130101000000')
-        self.assertTrue(date1 < date2)
+        self.assertEqual(
+            SNA(0).toRFC4034DateString(),
+            '19700101000000'
+        )
 
 
-    def test_add(self):
+    def test_Y2106Problem(self):
         """
-        L{DateSNA.__add__} wraps dates in the year 2038.
-
-        XXX: Is that right? https://en.wikipedia.org/wiki/Year_2038_problem
+        L{SNA} wraps unix timestamps in the year 2106.
         """
-        date3 = DateSNA('20370101000000')
-        sna1  = SNA(365 * 24 * 60 * 60)
-        date4 = date3 + sna1
-        self.assertEqual(int(date4),  int(date3) + int(sna1))
+        self.assertEqual(
+            SNA(-1).toRFC4034DateString(),
+            '21060207062815'
+        )
 
 
-    def test_addTooFar(self):
+    def test_Y2038Problem(self):
         """
-        L{DateSNA} cannot be added to dates more than 68 years
+        L{SNA} raises ArithmeticError when used to add dates more than 68 years
         in the future.
         """
+        maxAddTime = calendar.timegm(
+            datetime(2038, 1, 19, 3, 14, 7).utctimetuple())
+
         self.assertEqual(
-            str(DateSNA() + SNA((2 ** (32-1)) - 1)),
-            '20380119031407')
+            maxAddTime,
+            SNA(0)._maxAdd,
+        )
 
         self.assertRaises(
             ArithmeticError,
-            lambda: DateSNA() + SNA((2 ** (32-1))))
-
-
-    def test_asDate(self):
-        """
-        L{DateSNA.asDate} returns a L{datetime} instance.
-        """
-        self.assertEqual(
-            datetime(2012, 1, 1, 0, 0, 0),
-            DateSNA('20120101000000').asDate())
-
-
-    def test_roundTrip(self):
-        """
-        L{DateSNA} instances can be converted to L{SNA} and back
-        without loss.
-        """
-        date1 = '20370101000000'
-        date1Sna = DateSNA(date1)
-        intval = int(date1Sna)
-        sna1a = SNA(intval)
-
-        dateSna1a = DateSNA.fromSNA(sna1a)
-        self.assertEqual(date1Sna, dateSna1a)
-
-        dateSna2 = DateSNA.fromInt(intval)
-        self.assertEqual(date1Sna, dateSna2)
+            lambda: SNA(0) + SNA(maxAddTime + 1))
 
 
 
