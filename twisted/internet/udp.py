@@ -64,6 +64,9 @@ class Port(base.BasePort):
     @ivar maxThroughput: Maximum number of bytes read in one event
         loop iteration.
 
+    @ivar addressFamily: L{socket.AF_INET} or L{socket.AF_INET6}, depending on
+        whether this port is listening on an IPv4 address or an IPv6 address.
+
     @ivar _realPortNumber: Actual port number being listened on. The
         value will be C{None} until this L{Port} is listening.
 
@@ -233,9 +236,11 @@ class Port(base.BasePort):
                 read += len(data)
                 if self.addressFamily == socket.AF_INET6:
                     # Remove the flow and scope ID from the address tuple,
-                    # reducing it to a tuple of just (host, port). This should
-                    # be amended later to return an object that can unpack to
-                    # (host, port) but also includes the flow and scope ID.
+                    # reducing it to a tuple of just (host, port).
+                    #
+                    # TODO: This should be amended to return an object that can
+                    # unpack to (host, port) but also includes the flow info
+                    # and scope ID. See http://tm.tl/6826
                     addr = addr[:2]
                 try:
                     self.protocol.datagramReceived(data, addr)

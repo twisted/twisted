@@ -24,6 +24,9 @@ from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
 class Port(abstract.FileHandle):
     """
     UDP port, listening for packets.
+
+    @ivar addressFamily: L{socket.AF_INET} or L{socket.AF_INET6}, depending on
+        whether this port is listening on an IPv4 address or an IPv6 address.
     """
     implements(
         IReadWriteHandle, interfaces.IListeningPort, interfaces.IUDPTransport,
@@ -188,7 +191,8 @@ class Port(abstract.FileHandle):
                     raise
         else:
             assert addr != None
-            if not isIPAddress(addr[0]) and not isIPv6Address(addr[0]):
+            if (not isIPAddress(addr[0]) and not isIPv6Address(addr[0])
+                    and addr[0] != "<broadcast>"):
                 raise error.InvalidAddressError(
                     addr[0],
                     "write() only accepts IP addresses, not hostnames")
