@@ -64,6 +64,9 @@ class Port(base.BasePort):
     @ivar maxThroughput: Maximum number of bytes read in one event
         loop iteration.
 
+    @ivar addressFamily: L{socket.AF_INET} or L{socket.AF_INET6}, depending on
+        whether this port is listening on an IPv4 address or an IPv6 address.
+
     @ivar _realPortNumber: Actual port number being listened on. The
         value will be C{None} until this L{Port} is listening.
 
@@ -108,6 +111,7 @@ class Port(base.BasePort):
         self.interface = interface
         self.setLogStr()
         self._connectedAddr = None
+        self._setAddressFamily()
 
 
     @classmethod
@@ -230,6 +234,14 @@ class Port(base.BasePort):
                 raise
             else:
                 read += len(data)
+                if self.addressFamily == socket.AF_INET6:
+                    # Remove the flow and scope ID from the address tuple,
+                    # reducing it to a tuple of just (host, port).
+                    #
+                    # TODO: This should be amended to return an object that can
+                    # unpack to (host, port) but also includes the flow info
+                    # and scope ID. See http://tm.tl/6826
+                    addr = addr[:2]
                 try:
                     self.protocol.datagramReceived(data, addr)
                 except:
@@ -245,7 +257,7 @@ class Port(base.BasePort):
 
         @type addr: C{tuple} containing C{str} as first element and C{int} as
             second element, or C{None}
-        @param addr: A tuple of (I{stringified dotted-quad IP address},
+        @param addr: A tuple of (I{stringified IPv4 or IPv6 address},
             I{integer port number}); can be C{None} in connected mode.
         """
         if self._connectedAddr:
@@ -264,9 +276,21 @@ class Port(base.BasePort):
                     raise
         else:
             assert addr != None
-            if not addr[0].replace(".", "").isdigit() and addr[0] != "<broadcast>":
-                warnings.warn("Please only pass IPs to write(), not hostnames",
-                              DeprecationWarning, stacklevel=2)
+            if (not abstract.isIPAddress(addr[0])
+                    and not abstract.isIPv6Address(addr[0])
+                    and addr[0] != "<broadcast>"):
+                raise error.InvalidAddressError(
+                    addr[0],
+                    "write() only accepts IP addresses, not hostnames")
+            if ((abstract.isIPAddress(addr[0]) or addr[0] == "<broadcast>")
+                    and self.addressFamily == socket.AF_INET6):
+                raise error.InvalidAddressError(
+                    addr[0],
+                    "IPv6 port write() called with IPv4 or broadcast address")
+            if (abstract.isIPv6Address(addr[0])
+                    and self.addressFamily == socket.AF_INET):
+                raise error.InvalidAddressError(
+                    addr[0], "IPv4 port write() called with IPv6 address")
             try:
                 return self.socket.sendto(datagram, addr)
             except socket.error as se:
@@ -292,8 +316,9 @@ class Port(base.BasePort):
         """
         if self._connectedAddr:
             raise RuntimeError("already connected, reconnecting is not currently supported")
-        if not abstract.isIPAddress(host):
-            raise ValueError("please pass only IP addresses, not domain names")
+        if not abstract.isIPAddress(host) and not abstract.isIPv6Address(host):
+            raise error.InvalidAddressError(
+                host, 'not an IPv4 or IPv6 address.')
         self._connectedAddr = (host, port)
         self.socket.connect((host, port))
 
@@ -337,6 +362,18 @@ class Port(base.BasePort):
         logPrefix = self._getLogPrefix(self.protocol)
         self.logstr = "%s (UDP)" % logPrefix
 
+    def _setAddressFamily(self):
+        """
+        Resolve address family for the socket.
+        """
+        if abstract.isIPv6Address(self.interface):
+            self.addressFamily = socket.AF_INET6
+        elif abstract.isIPAddress(self.interface):
+            self.addressFamily = socket.AF_INET
+        elif self.interface:
+            raise error.InvalidAddressError(
+                self.interface, 'not an IPv4 or IPv6 address.')
+
 
     def logPrefix(self):
         """
@@ -347,11 +384,16 @@ class Port(base.BasePort):
 
     def getHost(self):
         """
-        Returns an IPv4Address.
+        Return the local address of the UDP connection
 
-        This indicates the address from which I am connecting.
+        @returns: the local address of the UDP connection
+        @rtype: L{IPv4Address} or L{IPv6Address}
         """
-        return address.IPv4Address('UDP', *self.socket.getsockname())
+        addr = self.socket.getsockname()
+        if self.addressFamily == socket.AF_INET:
+            return address.IPv4Address('UDP', *addr)
+        elif self.addressFamily == socket.AF_INET6:
+            return address.IPv6Address('UDP', *(addr[:2]))
 
 
 
@@ -417,7 +459,8 @@ class MulticastPort(MulticastMixin, Port):
     UDP Port that supports multicasting.
     """
 
-    def __init__(self, port, proto, interface='', maxPacketSize=8192, reactor=None, listenMultiple=False):
+    def __init__(self, port, proto, interface='', maxPacketSize=8192,
+                 reactor=None, listenMultiple=False):
         """
         @see: L{twisted.internet.interfaces.IReactorMulticast.listenMulticast}
         """

@@ -2282,7 +2282,8 @@ class IUDPTransport(Interface):
 
     def getHost():
         """
-        Returns L{IPv4Address}.
+        @return: an address describing the listening port.
+        @rtype: L{IPv4Address} or L{IPv6Address}.
         """
 
     def stopListening():
