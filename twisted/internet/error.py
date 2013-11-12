@@ -460,16 +460,20 @@ class AlreadyListened(Exception):
 
 
 
-class InvalidAddressError(Exception):
+class InvalidAddressError(ValueError):
     """
     An invalid address was specified (i.e. neither IPv4 or IPv6, or expected
     one and got the other).
 
-    @ivar address: The address that was provided.
-    @ivar message: Additional information provided by the calling context.
+    @ivar address: See L{__init__}
+    @ivar message: See L{__init__}
     """
 
     def __init__(self, address, message):
+        """
+        @param address: The address that was provided.
+        @param message: Additional information provided by the calling context.
+        """
         self.address = address
         self.message = message
 
