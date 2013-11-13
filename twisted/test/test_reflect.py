@@ -180,25 +180,3 @@ class GetClass(unittest.TestCase):
         self.assertEqual(reflect.getClass(new).__name__, 'NewClass')
 
 
-class DeprecationTestCase(unittest.TestCase):
-    """
-    Test deprecations in twisted.python.reflect
-    """
-
-    def test_allYourBase(self):
-        """
-        Test deprecation of L{reflect.allYourBase}. See #5481 for removal.
-        """
-        self.callDeprecated(
-            (Version("Twisted", 11, 0, 0), "inspect.getmro"),
-            reflect.allYourBase, DeprecationTestCase)
-
-
-    def test_accumulateBases(self):
-        """
-        Test deprecation of L{reflect.accumulateBases}. See #5481 for removal.
-        """
-        l = []
-        self.callDeprecated(
-            (Version("Twisted", 11, 0, 0), "inspect.getmro"),
-            reflect.accumulateBases, DeprecationTestCase, l, None)
