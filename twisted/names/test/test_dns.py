@@ -849,6 +849,31 @@ class DNSProtocolSharedTestsMixin(object):
                 messageFactory=dummyMessageFactory)._messageFactory)
 
 
+    def test_messageFactoryCalledByQuery(self):
+        """
+        C{query} calls C{messageFactory} to construct a new message instance.
+        """
+        class RaisedArguments(Exception):
+            def __init__(self, args, kwargs):
+                self.args = args
+                self.kwargs = kwargs
+
+        def raisingMessageFactory(*args, **kwargs):
+            raise RaisedArguments(args, kwargs)
+
+        p = self.protocolFactory(controller=None,
+                                 messageFactory=raisingMessageFactory)
+        e = self.assertRaises(
+            RaisedArguments,
+            p.query,
+            address=('127.0.0.1', 53),
+            queries=[dns.Query('example.com')]
+        )
+        self.assertEqual(
+            ((), {}),
+            e.args, e.kwargs)
+
+
 
 class DatagramProtocolTestCase(DNSProtocolSharedTestsMixin, unittest.TestCase):
     """
