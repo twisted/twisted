@@ -2249,7 +2249,7 @@ class DNSMixin(object):
             query, or errbacked with any errors that could happen (exceptions
             during writing of the query, timeout errors, ...).
         """
-        m = Message(id, recDes=1)
+        m = self._messageFactory(id=id, recDes=1)
         m.queries = queries
 
         try:

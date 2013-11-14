@@ -19,7 +19,7 @@ from twisted.internet import address, task
 from twisted.internet.error import CannotListenError, ConnectionDone
 from twisted.trial import unittest
 from twisted.names import dns
-
+from twisted.names.test.test_rootresolve import MemoryReactor
 from twisted.test import proto_helpers
 from twisted.test.testutils import ComparisonTestsMixin
 
@@ -862,7 +862,10 @@ class DNSProtocolSharedTestsMixin(object):
             raise RaisedArguments(args, kwargs)
 
         p = self.protocolFactory(controller=None,
+                                 reactor=MemoryReactor(),
                                  messageFactory=raisingMessageFactory)
+        p.pickID = lambda: 1
+
         e = self.assertRaises(
             RaisedArguments,
             p.query,
@@ -870,8 +873,9 @@ class DNSProtocolSharedTestsMixin(object):
             queries=[dns.Query('example.com')]
         )
         self.assertEqual(
-            ((), {}),
-            e.args, e.kwargs)
+            ((), {'id': 1, 'recDes': 1}),
+            (e.args, e.kwargs)
+        )
 
 
 
