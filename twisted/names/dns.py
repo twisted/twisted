@@ -2184,18 +2184,31 @@ class DNSMixin(object):
     """
     DNS protocol mixin shared by UDP and TCP implementations.
 
-    @ivar _reactor: A L{IReactorTime} and L{IReactorUDP} provider which will
-        be used to issue DNS queries and manage request timeouts.
+    @ivar _reactor: See C{reactor} of L{__init__}.
+    @ivar _messageFactory: See C{messageFactory} of L{__init__}.
     """
     id = None
     liveMessages = None
 
-    def __init__(self, controller, reactor=None):
+    def __init__(self, controller, reactor=None, messageFactory=None):
+        """
+        @param controller: A L{twisted.names.server.DNSServerFactory} object.
+
+        @param reactor: A L{IReactorTime} and L{IReactorUDP} provider which will
+            be used to issue DNS queries and manage request timeouts.
+
+        @param messageFactory: A L{Message} like class. Or a factory function
+            which returns a L{Message} like object.
+        """
         self.controller = controller
         self.id = random.randrange(2 ** 10, 2 ** 15)
         if reactor is None:
             from twisted.internet import reactor
         self._reactor = reactor
+
+        if messageFactory is None:
+            messageFactory = Message
+        self._messageFactory = messageFactory
 
 
     def pickID(self):
