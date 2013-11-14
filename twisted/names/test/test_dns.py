@@ -842,6 +842,9 @@ class RaisedArguments(Exception):
 def raisingMessageFactory(*args, **kwargs):
     """
     A stub message factory which raises an exception containing its arguments.
+
+    @param args: Positional args
+    @param kwargs: Keyword args
     """
     raise RaisedArguments(args, kwargs)
 
