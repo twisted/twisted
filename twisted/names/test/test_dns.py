@@ -869,8 +869,8 @@ class DNSProtocolSharedTestsMixin(object):
         e = self.assertRaises(
             RaisedArguments,
             p.query,
-            address=('127.0.0.1', 53),
-            queries=[dns.Query('example.com')]
+            queries=[dns.Query('example.com')],
+            **self.missingQueryArgs
         )
         self.assertEqual(
             ((), {'id': 1, 'recDes': 1}),
@@ -889,6 +889,9 @@ class DatagramProtocolTestCase(DNSProtocolSharedTestsMixin, unittest.TestCase):
         """
         Create a L{dns.DNSDatagramProtocol} with a deterministic clock.
         """
+        # DNSProtocol.query requires an address argument (unlike DNSProtocol,
+        # see below)
+        self.missingQueryArgs = dict(address=('127.0.0.1', 53))
         self.clock = task.Clock()
         self.controller = TestController()
         self.proto = self.protocolFactory(self.controller)
@@ -1013,6 +1016,9 @@ class DNSProtocolTestCase(DNSProtocolSharedTestsMixin, unittest.TestCase):
         """
         Create a L{dns.DNSProtocol} with a deterministic clock.
         """
+        # DNSProtocol.query doesn't require an address argument (unlike
+        # DNSDatagramProtocol, see above)
+        self.missingQueryArgs = {}
         self.clock = task.Clock()
         self.controller = TestTCPController()
         self.proto = self.protocolFactory(self.controller)
