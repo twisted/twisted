@@ -8,6 +8,7 @@ Tests for twisted.names.dns.
 
 from __future__ import division, absolute_import
 
+from functools import partial
 from io import BytesIO
 
 import struct
@@ -861,16 +862,13 @@ class DNSProtocolSharedTestsMixin(object):
         def raisingMessageFactory(*args, **kwargs):
             raise RaisedArguments(args, kwargs)
 
-        p = self.protocolFactory(controller=None,
-                                 reactor=MemoryReactor(),
-                                 messageFactory=raisingMessageFactory)
-        p.pickID = lambda: 1
+        self.proto._messageFactory = raisingMessageFactory
+        self.proto.pickID = lambda: 1
 
         e = self.assertRaises(
             RaisedArguments,
-            p.query,
-            queries=[dns.Query('example.com')],
-            **self.missingQueryArgs
+            self.queryMethod,
+            queries=[dns.Query('example.com')]
         )
         self.assertEqual(
             ((), {'id': 1, 'recDes': 1}),
@@ -889,15 +887,15 @@ class DatagramProtocolTestCase(DNSProtocolSharedTestsMixin, unittest.TestCase):
         """
         Create a L{dns.DNSDatagramProtocol} with a deterministic clock.
         """
-        # DNSProtocol.query requires an address argument (unlike DNSProtocol,
-        # see below)
-        self.missingQueryArgs = dict(address=('127.0.0.1', 53))
         self.clock = task.Clock()
         self.controller = TestController()
         self.proto = self.protocolFactory(self.controller)
         transport = proto_helpers.FakeDatagramTransport()
         self.proto.makeConnection(transport)
         self.proto.callLater = self.clock.callLater
+        # DNSProtocol.query requires an address argument (unlike DNSProtocol,
+        # see below)
+        self.queryMethod = partial(self.proto.query, address=('127.0.0.1', 53))
 
 
     def test_truncatedPacket(self):
@@ -1016,15 +1014,14 @@ class DNSProtocolTestCase(DNSProtocolSharedTestsMixin, unittest.TestCase):
         """
         Create a L{dns.DNSProtocol} with a deterministic clock.
         """
-        # DNSProtocol.query doesn't require an address argument (unlike
-        # DNSDatagramProtocol, see above)
-        self.missingQueryArgs = {}
         self.clock = task.Clock()
         self.controller = TestTCPController()
         self.proto = self.protocolFactory(self.controller)
         self.proto.makeConnection(proto_helpers.StringTransport())
         self.proto.callLater = self.clock.callLater
-
+        # DNSProtocol.query doesn't require an address argument (unlike
+        # DNSDatagramProtocol, see above)
+        self.queryMethod = self.proto.query
 
     def test_connectionTracking(self):
         """
