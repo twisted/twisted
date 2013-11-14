@@ -821,10 +821,40 @@ class TestController(object):
 
 
 
-class DatagramProtocolTestCase(unittest.TestCase):
+class DNSProtocolSharedTestsMixin(object):
+    """
+    Tests for features shared by L{dns.DNSProtocol} and
+    L{dns.DNSDatagramProtocol}.
+    """
+
+    def test_messageFactoryDefault(self):
+        """
+        L{dns.DNSDatagramProtocol} and L{dns.DNSProtocol} set C{messageFactory}
+        to L{dns.Message} by default.
+        """
+        self.assertIdentical(dns.Message, self.proto._messageFactory)
+
+
+    def test_messageFactoryOverride(self):
+        """
+        The constructors for L{dns.DNSDatagramProtocol} and L{dns.DNSProtocol}
+        set both accept a C{messageFactory} argument which is assigned to
+        C{_messageFactory}.
+        """
+        dummyMessageFactory = object()
+        self.assertIdentical(
+            dummyMessageFactory,
+            self.protocolFactory(
+                controller=None,
+                messageFactory=dummyMessageFactory)._messageFactory)
+
+
+
+class DatagramProtocolTestCase(DNSProtocolSharedTestsMixin, unittest.TestCase):
     """
     Test various aspects of L{dns.DNSDatagramProtocol}.
     """
+    protocolFactory = dns.DNSDatagramProtocol
 
     def setUp(self):
         """
@@ -832,7 +862,7 @@ class DatagramProtocolTestCase(unittest.TestCase):
         """
         self.clock = task.Clock()
         self.controller = TestController()
-        self.proto = dns.DNSDatagramProtocol(self.controller)
+        self.proto = self.protocolFactory(self.controller)
         transport = proto_helpers.FakeDatagramTransport()
         self.proto.makeConnection(transport)
         self.proto.callLater = self.clock.callLater
@@ -944,10 +974,11 @@ class TestTCPController(TestController):
 
 
 
-class DNSProtocolTestCase(unittest.TestCase):
+class DNSProtocolTestCase(DNSProtocolSharedTestsMixin, unittest.TestCase):
     """
     Test various aspects of L{dns.DNSProtocol}.
     """
+    protocolFactory = dns.DNSProtocol
 
     def setUp(self):
         """
@@ -955,7 +986,7 @@ class DNSProtocolTestCase(unittest.TestCase):
         """
         self.clock = task.Clock()
         self.controller = TestTCPController()
-        self.proto = dns.DNSProtocol(self.controller)
+        self.proto = self.protocolFactory(self.controller)
         self.proto.makeConnection(proto_helpers.StringTransport())
         self.proto.callLater = self.clock.callLater
 
