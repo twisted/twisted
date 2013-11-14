@@ -821,6 +821,31 @@ class TestController(object):
 
 
 
+class RaisedArguments(Exception):
+    """
+    Capture the arguments supplied to a function whose signature is being
+    tested.
+    """
+    def __init__(self, args, kwargs):
+        """
+        Store the arguements
+
+        @param args: Positional args
+        @param kwargs: Keyword args
+        """
+        self.args = args
+        self.kwargs = kwargs
+
+
+
+def raisingMessageFactory(*args, **kwargs):
+    """
+    A stub message factory which raises an exception containing its arguments.
+    """
+    raise RaisedArguments(args, kwargs)
+
+
+
 class DNSProtocolSharedTestsMixin(object):
     """
     Tests for features shared by L{dns.DNSProtocol} and
@@ -854,14 +879,6 @@ class DNSProtocolSharedTestsMixin(object):
         C{query} calls C{messageFactory} with C{id} and C{recDes} keyword
         arguments to construct a new message instance.
         """
-        class RaisedArguments(Exception):
-            def __init__(self, args, kwargs):
-                self.args = args
-                self.kwargs = kwargs
-
-        def raisingMessageFactory(*args, **kwargs):
-            raise RaisedArguments(args, kwargs)
-
         self.proto._messageFactory = raisingMessageFactory
         self.proto.pickID = lambda: 1
 
@@ -881,16 +898,7 @@ class DNSProtocolSharedTestsMixin(object):
         C{dataReceived} and C{datagramReceived} call C{messageFactory} without
         any arguments to construct a new message instance.
         """
-        class RaisedArguments(Exception):
-            def __init__(self, args, kwargs):
-                self.args = args
-                self.kwargs = kwargs
-
-        def raisingMessageFactory(*args, **kwargs):
-            raise RaisedArguments(args, kwargs)
-
         self.proto._messageFactory = raisingMessageFactory
-        self.proto.pickID = lambda: 1
 
         e = self.assertRaises(
             RaisedArguments,
