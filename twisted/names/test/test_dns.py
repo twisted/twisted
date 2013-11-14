@@ -20,7 +20,6 @@ from twisted.internet import address, task
 from twisted.internet.error import CannotListenError, ConnectionDone
 from twisted.trial import unittest
 from twisted.names import dns
-from twisted.names.test.test_rootresolve import MemoryReactor
 from twisted.test import proto_helpers
 from twisted.test.testutils import ComparisonTestsMixin
 
@@ -852,7 +851,8 @@ class DNSProtocolSharedTestsMixin(object):
 
     def test_messageFactoryCalledByQuery(self):
         """
-        C{query} calls C{messageFactory} to construct a new message instance.
+        C{query} calls C{messageFactory} with C{id} and C{recDes} keyword
+        arguments to construct a new message instance.
         """
         class RaisedArguments(Exception):
             def __init__(self, args, kwargs):
@@ -872,6 +872,33 @@ class DNSProtocolSharedTestsMixin(object):
         )
         self.assertEqual(
             ((), {'id': 1, 'recDes': 1}),
+            (e.args, e.kwargs)
+        )
+
+
+    def test_messageFactoryCalledByDataReceived(self):
+        """
+        C{dataReceived} and C{datagramReceived} call C{messageFactory} without
+        any arguments to construct a new message instance.
+        """
+        class RaisedArguments(Exception):
+            def __init__(self, args, kwargs):
+                self.args = args
+                self.kwargs = kwargs
+
+        def raisingMessageFactory(*args, **kwargs):
+            raise RaisedArguments(args, kwargs)
+
+        self.proto._messageFactory = raisingMessageFactory
+        self.proto.pickID = lambda: 1
+
+        e = self.assertRaises(
+            RaisedArguments,
+            self.dataReceivedMethod,
+            data=dns.Message().toStr()
+        )
+        self.assertEqual(
+            ((), {}),
             (e.args, e.kwargs)
         )
 
@@ -896,6 +923,8 @@ class DatagramProtocolTestCase(DNSProtocolSharedTestsMixin, unittest.TestCase):
         # DNSProtocol.query requires an address argument (unlike DNSProtocol,
         # see below)
         self.queryMethod = partial(self.proto.query, address=('127.0.0.1', 53))
+        self.dataReceivedMethod = partial(
+            self.proto.datagramReceived, addr=('127.0.0.1', 53))
 
 
     def test_truncatedPacket(self):
@@ -1022,6 +1051,8 @@ class DNSProtocolTestCase(DNSProtocolSharedTestsMixin, unittest.TestCase):
         # DNSProtocol.query doesn't require an address argument (unlike
         # DNSDatagramProtocol, see above)
         self.queryMethod = self.proto.query
+        self.dataReceivedMethod = self.proto.dataReceived
+
 
     def test_connectionTracking(self):
         """

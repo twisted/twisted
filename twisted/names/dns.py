@@ -2311,7 +2311,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         Read a datagram, extract the message in it and trigger the associated
         Deferred.
         """
-        m = Message()
+        m = self._messageFactory()
         try:
             m.fromStr(data)
         except EOFError:
@@ -2420,7 +2420,7 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
 
             if len(self.buffer) >= self.length:
                 myChunk = self.buffer[:self.length]
-                m = Message()
+                m = self._messageFactory()
                 m.fromStr(myChunk)
 
                 try:
