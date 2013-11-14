@@ -20,6 +20,7 @@ from twisted.internet import address, task
 from twisted.internet.error import CannotListenError, ConnectionDone
 from twisted.trial import unittest
 from twisted.names import dns
+
 from twisted.test import proto_helpers
 from twisted.test.testutils import ComparisonTestsMixin
 
