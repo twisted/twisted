@@ -258,8 +258,6 @@ class StubStreamProtocolFactory(object):
         @param args: Not used
         @param kwargs: Not used
         """
-        pass
-
 
     def startedConnecting(self, connector):
         """
@@ -267,7 +265,6 @@ class StubStreamProtocolFactory(object):
 
         @param connector: Not used
         """
-        pass
 
 
 
