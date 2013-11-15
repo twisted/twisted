@@ -295,11 +295,47 @@ def raiser(*args, **kwargs):
 
 
 
+class FactoryCreatorSpy(object):
+    """
+    Return a known stub factory when called and record the supplied arguments.
+
+    @ivar returnFactory: See L{__init__}
+    @ivar recordedArgs: A list of the arguments that have been supplied when
+        this fake factory is called.
+    """
+    def __init__(self, returnFactory):
+        """
+        Store the factory object which we will return when we are called.
+
+        @param returnFactory: The factory object that will be returned.
+        """
+        self.returnFactory = returnFactory
+        self.recordedArgs = []
+
+
+    def __call__(self, *args, **kwargs):
+        """
+        Record the supplied arguments and return the factory object.
+
+        @param args: Positional arguments
+        @param kwargs: Keyword arguments
+        @return: A stub factory object
+        """
+        self.recordedArgs.append((args, kwargs))
+        return self.returnFactory
+
+
+
+class StubAxfrController(object):
+    """
+    A test stub for L{client.AXFRController}.
+    """
+
+
 class ResolverTests(unittest.TestCase):
     """
     Tests for L{client.Resolver}.
     """
-
     def test_clientProvidesIResolver(self):
         """
         L{client} provides L{IResolver} through a series of free
@@ -394,28 +430,16 @@ class ResolverTests(unittest.TestCase):
         created by calling C{streamProtocolFactory} with the L{client.Resolver}
         object and its timeout.
         """
-        stubFactory = StubStreamProtocolFactory()
-        recordedArgs = []
-        def fakeStreamFactoryCreator(*args, **kwargs):
-            """
-            Return a known stub factory
-
-            @param args: Positional arguments
-            @param kwargs: Keyword arguments
-            @return: A stub factory object
-            """
-            recordedArgs.append((args, kwargs))
-            return stubFactory
-
+        fakeFactory = FactoryCreatorSpy(StubStreamProtocolFactory())
         expectedTimeout = (1,)
         c = client.Resolver(
             servers=[('127.0.0.1', 53)],
             timeout=expectedTimeout,
-            streamProtocolFactory=fakeStreamFactoryCreator,
+            streamProtocolFactory=fakeFactory,
             reactor=object())
 
         self.assertIdentical(
-            stubFactory,
+            fakeFactory.returnFactory,
             c.factory
         )
 
@@ -423,7 +447,7 @@ class ResolverTests(unittest.TestCase):
 
         self.assertEqual(
             [((), {'controller': c, 'timeout': expectedTimeout})],
-            recordedArgs
+            fakeFactory.recordedArgs
         )
 
 
@@ -433,48 +457,29 @@ class ResolverTests(unittest.TestCase):
         C{streamProtocolFactory} with a L{client.AXFRController} object and a
         timeout.
         """
-        stubFactory = StubStreamProtocolFactory()
-        recordedArgs = []
-        def fakeStreamProtocolFactory(*args, **kwargs):
-            """
-            Return a known stub factory
+        fakeStreamProtocolFactory = FactoryCreatorSpy(
+            StubStreamProtocolFactory())
 
-            @param args: Positional args
-            @param kwargs: Keyword args
-            @return: A stub factory object
-            """
-            recordedArgs.append((args, kwargs))
-            return stubFactory
-
-        stubAxfrController = lambda: None
-        def dummyAxfrControllerFactory(name, deferred):
-            """
-            Return a known stub factory
-
-            @param args: Positional args
-            @param kwargs: Keyword args
-            @return: A stub factory object
-            """
-            return stubAxfrController
+        fakeAxfrControllerFactory = FactoryCreatorSpy(StubAxfrController())
 
         c = client.Resolver(
             servers=[('127.0.0.1', 53)],
             streamProtocolFactory=fakeStreamProtocolFactory,
-            axfrControllerFactory=dummyAxfrControllerFactory,
+            axfrControllerFactory=fakeAxfrControllerFactory,
             reactor=proto_helpers.MemoryReactorClock())
 
         # Reset recordedArgs, because factory will already have been called in
         # __init__
-        recordedArgs[:] = []
+        fakeStreamProtocolFactory.recordedArgs[:] = []
 
         expectedTimeout = 1
 
         c.lookupZone(b'example.com', timeout=expectedTimeout)
 
         self.assertEqual(
-            [((), {'controller': stubAxfrController,
+            [((), {'controller': fakeAxfrControllerFactory.returnFactory,
                    'timeout': expectedTimeout})],
-            recordedArgs
+            fakeStreamProtocolFactory.recordedArgs
         )
 
 
