@@ -333,7 +333,8 @@ class UDPPortTestsMixin(object):
         L{InvalidAddressError}.
         """
         reactor = self.buildReactor()
-        port = self.getListeningPort(reactor, DatagramProtocol())
+        port = self.getListeningPort(
+            reactor, DatagramProtocol(), interface="127.0.0.1")
         self.assertRaises(
             error.InvalidAddressError, port.write, 'spam', ('::1', 1))
 
