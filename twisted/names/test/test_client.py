@@ -332,6 +332,7 @@ class StubAxfrController(object):
     """
 
 
+
 class ResolverTests(unittest.TestCase):
     """
     Tests for L{client.Resolver}.
