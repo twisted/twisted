@@ -246,7 +246,7 @@ class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
 
 
 
-class DummyFactory(object):
+class StubStreamProtocolFactory(object):
     def __init__(self, *args, **kwargs):
         pass
 
@@ -365,10 +365,11 @@ class ResolverTests(unittest.TestCase):
         L{client.Resolver.__init__}.
         """
         self.assertIdentical(
-            DummyFactory,
+            StubStreamProtocolFactory,
             client.Resolver(
                 servers=[('127.0.0.1', 53)],
-                streamProtocolFactory=DummyFactory)._streamProtocolFactory
+                streamProtocolFactory=StubStreamProtocolFactory
+            )._streamProtocolFactory
         )
 
 
@@ -378,21 +379,27 @@ class ResolverTests(unittest.TestCase):
         created by calling C{streamProtocolFactory} with the L{client.Resolver}
         object and its timeout.
         """
-        dummyFactory = DummyFactory()
+        stubFactory = StubStreamProtocolFactory()
         recordedArgs = []
-        def dummyFactoryCreator(*args, **kwargs):
+        def fakeStreamFactoryCreator(*args, **kwargs):
+            """
+            Return a known stub factory
+
+            @param args: Positional arguments
+            @param kwargs: Keyword arguments
+            """
             recordedArgs.append((args, kwargs))
-            return dummyFactory
+            return stubFactory
 
         expectedTimeout = (1,)
         c = client.Resolver(
             servers=[('127.0.0.1', 53)],
             timeout=expectedTimeout,
-            streamProtocolFactory=dummyFactoryCreator,
+            streamProtocolFactory=fakeStreamFactoryCreator,
             reactor=object())
 
         self.assertIdentical(
-            dummyFactory,
+            stubFactory,
             c.factory
         )
 
@@ -410,19 +417,31 @@ class ResolverTests(unittest.TestCase):
         C{streamProtocolFactory} with a L{client.AXFRController} object and a
         timeout.
         """
-        dummyFactory = DummyFactory()
+        stubFactory = StubStreamProtocolFactory()
         recordedArgs = []
-        def dummyStreamProtocolFactory(*args, **kwargs):
+        def fakeStreamProtocolFactory(*args, **kwargs):
+            """
+            Return a known stub factory
+
+            @param args: Positional args
+            @param kwargs: Keyword args
+            """
             recordedArgs.append((args, kwargs))
-            return dummyFactory
+            return stubFactory
 
         stubAxfrController = lambda: None
         def dummyAxfrControllerFactory(name, deferred):
+            """
+            Return a known stub factory
+
+            @param args: Positional args
+            @param kwargs: Keyword args
+            """
             return stubAxfrController
 
         c = client.Resolver(
             servers=[('127.0.0.1', 53)],
-            streamProtocolFactory=dummyStreamProtocolFactory,
+            streamProtocolFactory=fakeStreamProtocolFactory,
             axfrControllerFactory=dummyAxfrControllerFactory,
             reactor=proto_helpers.MemoryReactorClock())
 
