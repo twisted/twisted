@@ -318,6 +318,7 @@ class ResolverTests(unittest.TestCase):
         L{client.Resolver.__init__}.
         """
         dummyFactory = object()
+
         self.assertIdentical(
             dummyFactory,
             client.Resolver(
@@ -371,6 +372,75 @@ class ResolverTests(unittest.TestCase):
         )
 
 
+    def test_factoryAttributeFromstreamProtocolFactory(self):
+        """
+        C{factory} of L{client.Resolver} is assigned during C{__init__} and
+        created by calling C{streamProtocolFactory} with the L{client.Resolver}
+        object and its timeout.
+        """
+        dummyFactory = DummyFactory()
+        recordedArgs = []
+        def dummyFactoryCreator(*args, **kwargs):
+            recordedArgs.append((args, kwargs))
+            return dummyFactory
+
+        expectedTimeout = (1,)
+        c = client.Resolver(
+            servers=[('127.0.0.1', 53)],
+            timeout=expectedTimeout,
+            streamProtocolFactory=dummyFactoryCreator,
+            reactor=object())
+
+        self.assertIdentical(
+            dummyFactory,
+            c.factory
+        )
+
+        self.assertEqual(0, c.factory.noisy)
+
+        self.assertEqual(
+            [((), {'controller': c, 'timeout': expectedTimeout})],
+            recordedArgs
+        )
+
+
+    def test_lookupZoneCallsStreamProtocolFactory(self):
+        """
+        C{lookupZone} of L{client.Resolver} creates a client factory by calling
+        C{streamProtocolFactory} with a L{client.AXFRController} object and a
+        timeout.
+        """
+        dummyFactory = DummyFactory()
+        recordedArgs = []
+        def dummyStreamProtocolFactory(*args, **kwargs):
+            recordedArgs.append((args, kwargs))
+            return dummyFactory
+
+        stubAxfrController = lambda: None
+        def dummyAxfrControllerFactory(name, deferred):
+            return stubAxfrController
+
+        c = client.Resolver(
+            servers=[('127.0.0.1', 53)],
+            streamProtocolFactory=dummyStreamProtocolFactory,
+            axfrControllerFactory=dummyAxfrControllerFactory,
+            reactor=proto_helpers.MemoryReactorClock())
+
+        # Reset recordedArgs, because factory will already have been called in
+        # __init__
+        recordedArgs[:] = []
+
+        expectedTimeout = 1
+
+        c.lookupZone(b'example.com', timeout=expectedTimeout)
+
+        self.assertEqual(
+            [((), {'controller': stubAxfrController,
+                   'timeout': expectedTimeout})],
+            recordedArgs
+        )
+
+
     def test_axfrControllerFactoryDefault(self):
         """
         C{_axfrControllerFactory} of L{client.Resolver} is
@@ -397,36 +467,6 @@ class ResolverTests(unittest.TestCase):
         )
 
 
-    def test_factoryAttributeFromstreamProtocolFactory(self):
-        """
-        C{factory} of L{client.Resolver} is assigned during C{__init__} and
-        created by calling C{streamProtocolFactory} with the L{client.Resolver}
-        object and its timeout.
-        """
-        dummyFactory = DummyFactory()
-        recordedArgs = []
-        def dummyFactoryCreator(*args, **kwargs):
-            recordedArgs[:] = [args, kwargs]
-            return dummyFactory
-
-        c = client.Resolver(
-            servers=[('127.0.0.1', 53)],
-            timeout=(1,),
-            streamProtocolFactory=dummyFactoryCreator)
-
-        self.assertIdentical(
-            dummyFactory,
-            c.factory
-        )
-
-        self.assertEqual(0, c.factory.noisy)
-
-        self.assertEqual(
-            [(), {'controller': c, 'timeout': (1,)}],
-            recordedArgs
-        )
-
-
     def test_lookupZoneCallsAxfrControllerFactory(self):
         """
         C{lookupZone} of L{client.Resolver} creates an AXFRController by calling
@@ -448,41 +488,6 @@ class ResolverTests(unittest.TestCase):
              e.kwargs.pop('name'),
              isinstance(e.kwargs.pop('deferred'), defer.Deferred),
              e.kwargs)
-        )
-
-
-    def test_lookupZoneCallsStreamProtocolFactory(self):
-        """
-        C{lookupZone} of L{client.Resolver} creates a client factory by calling
-        C{streamProtocolFactory} with a L{client.AXFRController} object and a
-        timeout.
-        """
-        dummyFactory = DummyFactory()
-        recordedArgs = []
-        def dummyStreamProtocolFactory(*args, **kwargs):
-            recordedArgs.append((args, kwargs))
-            return dummyFactory
-
-        stubAxfrController = lambda: None
-        def dummyAxfrControllerFactory(name, deferred):
-            return stubAxfrController
-
-        c = client.Resolver(
-            servers=[('127.0.0.1', 53)],
-            timeout=(1,),
-            streamProtocolFactory=dummyStreamProtocolFactory,
-            axfrControllerFactory=dummyAxfrControllerFactory,
-            reactor=proto_helpers.MemoryReactorClock())
-
-        # Reset recordedArgs, because factory will already have been called in
-        # __init__
-        recordedArgs[:] = []
-
-        c.lookupZone(b'example.com', timeout=1)
-
-        self.assertEqual(
-            [((), {'controller': stubAxfrController, 'timeout': 1})],
-            recordedArgs
         )
 
 
