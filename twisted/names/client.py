@@ -65,7 +65,7 @@ class Resolver(common.ResolverBase):
 
     def __init__(self, resolv=None, servers=None, timeout=(1, 3, 11, 45),
                  reactor=None, datagramProtocolFactory=None,
-                 streamProtocolFactory=None):
+                 streamProtocolFactory=None, axfrControllerFactory=None):
         """
         Construct a resolver which will query domain name servers listed in
         the C{resolv.conf(5)}-format file given by C{resolv} as well as
@@ -124,6 +124,10 @@ class Resolver(common.ResolverBase):
         self.factory = streamProtocolFactory(controller=self,
                                              timeout=timeout)
         self.factory.noisy = 0   # Be quiet by default
+
+        if axfrControllerFactory is None:
+            axfrControllerFactory = AXFRController
+        self._axfrControllerFactory = axfrControllerFactory
 
         self.connections = []
         self.pending = []
@@ -226,7 +230,8 @@ class Resolver(common.ResolverBase):
         Return a new L{DNSDatagramProtocol} bound to a randomly selected port
         number.
         """
-        proto = dns.DNSDatagramProtocol(self, reactor=self._reactor)
+        proto = self._datagramProtocolFactory(controller=self,
+                                              reactor=self._reactor)
         while True:
             try:
                 self._reactor.listenUDP(dns.randomSource(), proto)
@@ -425,8 +430,9 @@ class Resolver(common.ResolverBase):
             return defer.fail(IOError('No domain name servers available'))
         host, port = address
         d = defer.Deferred()
-        controller = AXFRController(name, d)
-        factory = DNSClientFactory(controller, timeout)
+        controller = self._axfrControllerFactory(name=name, deferred=d)
+        factory = self._streamProtocolFactory(controller=controller,
+                                              timeout=timeout)
         factory.noisy = False #stfu
 
         connector = self._reactor.connectTCP(host, port, factory)
