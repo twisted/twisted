@@ -246,6 +246,11 @@ class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
 
 
 
+class DummyFactory(object):
+    def __init__(self, *args, **kwargs):
+        pass
+
+
 
 class ResolverTests(unittest.TestCase):
     """
@@ -265,6 +270,112 @@ class ResolverTests(unittest.TestCase):
         L{client.Resolver} provides L{IResolver}.
         """
         verifyClass(IResolver, client.Resolver)
+
+
+    def test_datagramProtocolFactoryDefault(self):
+        """
+        C{_datagramProtocolFactory} of L{client.Resolver} is
+        L{dns.DNSDatagramProtocol} by default.
+        """
+        self.assertIdentical(
+            dns.DNSDatagramProtocol,
+            client.Resolver(
+                servers=[('127.0.0.1', 53)])._datagramProtocolFactory
+        )
+
+
+    def test_datagramProtocolFactoryOverride(self):
+        """
+        C{datagramProtocolFactory} can be overridden by passing an argument to
+        L{client.Resolver.__init__}.
+        """
+        dummyFactory = object()
+        self.assertIdentical(
+            dummyFactory,
+            client.Resolver(
+                servers=[('127.0.0.1', 53)],
+                datagramProtocolFactory=dummyFactory)._datagramProtocolFactory
+        )
+
+
+    def test_streamProtocolFactoryDefault(self):
+        """
+        C{_streamProtocolFactory} of L{client.Resolver} is
+        L{dns.DNSClientFactory} by default.
+        """
+        self.assertIdentical(
+            client.DNSClientFactory,
+            client.Resolver(
+                servers=[('127.0.0.1', 53)])._streamProtocolFactory
+        )
+
+
+    def test_streamProtocolFactoryOverride(self):
+        """
+        C{streamProtocolFactory} can be overridden by passing an argument to
+        L{client.Resolver.__init__}.
+        """
+        self.assertIdentical(
+            DummyFactory,
+            client.Resolver(
+                servers=[('127.0.0.1', 53)],
+                streamProtocolFactory=DummyFactory)._streamProtocolFactory
+        )
+
+
+    def test_factoryAttributeFromstreamProtocolFactory(self):
+        """
+        C{factory} of L{client.Resolver} is assigned during C{__init__} and
+        created by calling C{streamProtocolFactory} with the L{client.Resolver}
+        object and its timeout.
+        """
+        dummyFactory = DummyFactory()
+        recordedArgs = []
+        def dummyFactoryCreator(*args, **kwargs):
+            recordedArgs[:] = [args, kwargs]
+            return dummyFactory
+
+        c = client.Resolver(
+            servers=[('127.0.0.1', 53)],
+            timeout=(1,),
+            streamProtocolFactory=dummyFactoryCreator)
+
+        self.assertIdentical(
+            dummyFactory,
+            c.factory
+        )
+
+        self.assertEqual(0, c.factory.noisy)
+
+        self.assertEqual(
+            [(), {'controller': c, 'timeout': (1,)}],
+            recordedArgs
+        )
+
+
+    def test_lookupZoneCallsStreamProtocolFactory(self):
+        """
+        C{lookupZone} of L{client.Resolver} creates a client factory by calling
+        C{streamProtocolFactory} with a L{client.AXFRController} object and a
+        timeout.
+        """
+        dummyFactory = DummyFactory()
+        recordedArgs = []
+        def dummyFactoryCreator(*args, **kwargs):
+            recordedArgs[:] = [args, kwargs]
+            return dummyFactory
+
+        c = client.Resolver(
+            servers=[('127.0.0.1', 53)],
+            timeout=(1,),
+            streamProtocolFactory=dummyFactoryCreator)
+        c.lookupZone(b'example.com')
+        self.assertEqual(0, c.factory.noisy)
+
+        self.assertEqual(
+            [(), {'controller': c, 'timeout': (1,)}],
+            recordedArgs
+        )
 
 
     def test_noServers(self):

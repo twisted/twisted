@@ -63,7 +63,9 @@ class Resolver(common.ResolverBase):
     _lastResolvTime = None
     _resolvReadInterval = 60
 
-    def __init__(self, resolv=None, servers=None, timeout=(1, 3, 11, 45), reactor=None):
+    def __init__(self, resolv=None, servers=None, timeout=(1, 3, 11, 45),
+                 reactor=None, datagramProtocolFactory=None,
+                 streamProtocolFactory=None):
         """
         Construct a resolver which will query domain name servers listed in
         the C{resolv.conf(5)}-format file given by C{resolv} as well as
@@ -111,7 +113,16 @@ class Resolver(common.ResolverBase):
         if not len(self.servers) and not resolv:
             raise ValueError("No nameservers specified")
 
-        self.factory = DNSClientFactory(self, timeout)
+        if datagramProtocolFactory is None:
+            datagramProtocolFactory = dns.DNSDatagramProtocol
+        self._datagramProtocolFactory = datagramProtocolFactory
+
+        if streamProtocolFactory is None:
+            streamProtocolFactory = DNSClientFactory
+        self._streamProtocolFactory = streamProtocolFactory
+
+        self.factory = streamProtocolFactory(controller=self,
+                                             timeout=timeout)
         self.factory.noisy = 0   # Be quiet by default
 
         self.connections = []
