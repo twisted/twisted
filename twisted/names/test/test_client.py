@@ -337,6 +337,7 @@ class ResolverTests(unittest.TestCase):
     """
     Tests for L{client.Resolver}.
     """
+
     def test_clientProvidesIResolver(self):
         """
         L{client} provides L{IResolver} through a series of free
