@@ -270,8 +270,7 @@ class StubStreamProtocolFactory(object):
 
 class RaisedArguments(Exception):
     """
-    Raised by a test fake to record the argument signature used by the
-    caller.
+    Raised by a test fake to record the argument signature used by the caller.
     """
     def __init__(self, args, kwargs):
         """
@@ -288,6 +287,9 @@ class RaisedArguments(Exception):
 def raiser(*args, **kwargs):
     """
     Raises L{RaisedArguments} with the supplied arguments when it is called.
+
+    @param args: Positional arguments passed to L{RaisedArguements}
+    @param kwargs: Keyword arguements passed to L{RaisedArguements}
     """
     raise RaisedArguments(args, kwargs)
 
@@ -400,6 +402,7 @@ class ResolverTests(unittest.TestCase):
 
             @param args: Positional arguments
             @param kwargs: Keyword arguments
+            @return: A stub factory object
             """
             recordedArgs.append((args, kwargs))
             return stubFactory
@@ -438,6 +441,7 @@ class ResolverTests(unittest.TestCase):
 
             @param args: Positional args
             @param kwargs: Keyword args
+            @return: A stub factory object
             """
             recordedArgs.append((args, kwargs))
             return stubFactory
@@ -449,6 +453,7 @@ class ResolverTests(unittest.TestCase):
 
             @param args: Positional args
             @param kwargs: Keyword args
+            @return: A stub factory object
             """
             return stubAxfrController
 
