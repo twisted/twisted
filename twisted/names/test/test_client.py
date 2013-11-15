@@ -383,7 +383,7 @@ class ResolverTests(unittest.TestCase):
     def test_connectedProtocolCallsDatagramProtocolFactory(self):
         """
         C{_connectedProtocol} of L{client.Resolver} creates a
-        L{dns.DNSDatagramProtocol} by calling C{datagramProtocolFactory} with a
+        L{dns.DNSDatagramProtocol} by calling C{datagramProtocolFactory} with
         C{self} and a C{reactor}.
         """
         r = MemoryReactor()
@@ -513,8 +513,8 @@ class ResolverTests(unittest.TestCase):
 
     def test_lookupZoneCallsAxfrControllerFactory(self):
         """
-        C{lookupZone} of L{client.Resolver} creates an AXFRController by calling
-        C{axfrControllerFactory} with a L{Name} and a L{Deferred}.
+        C{lookupZone} of L{client.Resolver} creates an L{AXFRController} by
+        calling C{axfrControllerFactory} with a L{Name} and a L{Deferred}.
         """
         c = client.Resolver(
             servers=[('127.0.0.1', 53)],
@@ -530,6 +530,8 @@ class ResolverTests(unittest.TestCase):
             ((), b'example.com', True, {}),
             (e.args,
              e.kwargs.pop('name'),
+             # Can't get a handle on the actual deferred object created in
+             # lookupZone, so just check it's type instead.
              isinstance(e.kwargs.pop('deferred'), defer.Deferred),
              e.kwargs)
         )
