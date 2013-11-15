@@ -247,10 +247,26 @@ class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
 
 
 class StubStreamProtocolFactory(object):
+    """
+    A noop test stub used for testing the parameterized C{streamProtocolFactory}
+    of L{client.Resolver}.
+    """
     def __init__(self, *args, **kwargs):
+        """
+        Noop
+
+        @param args: Not used
+        @param kwargs: Not used
+        """
         pass
 
+
     def startedConnecting(self, connector):
+        """
+        Noop
+
+        @param connector: Not used
+        """
         pass
 
 
