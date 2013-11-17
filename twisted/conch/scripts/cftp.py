@@ -809,7 +809,7 @@ class SSHSession(channel.SSHChannel):
 
     def eofReceived(self):
         log.msg('got eof')
-        self.stdio.closeStdin()
+        self.stdio.loseWriteConnection()
 
     def closeReceived(self):
         log.msg('remote side closed %s' % self)

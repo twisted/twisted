@@ -11,7 +11,6 @@ Future Plans::
 Maintainer: James Y Knight
 """
 
-import warnings
 from zope.interface import implements
 
 from twisted.internet import process, error, interfaces

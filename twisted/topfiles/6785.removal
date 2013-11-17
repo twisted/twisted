@@ -1,1 +1,1 @@
-twisted.internet._posixstdio.closeStdin, deprecated, has been removed.
+twisted.internet._posixstdio.closeStdin, deprecated since Twisted 2.1, has been removed.
