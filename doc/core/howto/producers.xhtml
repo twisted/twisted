@@ -48,9 +48,9 @@
 
     <h2>Consumers</h2>
 
-    <p>This far, I've discussed the various external APIs of the two kinds of producers supported by Twisted.  However, I have not mentioned where the data a producer generates actually goes, nor what entity is responsible for invoking these APIs.  Both of these roles are filled by <em>consumers</em>. Consumers are defined by the two interfaces <code base="twisted.internet.interfaces" class="API">IConsumer</code> and <code base="twisted.internet.interfaces" class="API">IFinishableConsumer</code>.</p>
+    <p>This far, I've discussed the various external APIs of the two kinds of producers supported by Twisted.  However, I have not mentioned where the data a producer generates actually goes, nor what entity is responsible for invoking these APIs.  Both of these roles are filled by <em>consumers</em>. Consumers are defined by the one interface <code base="twisted.internet.interfaces" class="API">IConsumer</code>.</p>
 
-    <p>The slightly simpler of these two interfaces, <code class="python">IConsumer</code>, defines three methods: <code base="twisted.internet.interfaces.IConsumer" class="API">registerProducer</code>, <code base="twisted.internet.interfaces.IConsumer" class="API">unregisterProducer</code>, and <code base="twisted.internet.interfaces.IConsumer" class="API">write</code>. <code class="python">IFinishableConsumer</code> adds <code base="twisted.internet.interfaces.IFinishableConsumer" class="API">finish</code>.</p>
+    <p><code class="python">IConsumer</code>, defines three methods: <code base="twisted.internet.interfaces.IConsumer" class="API">registerProducer</code>, <code base="twisted.internet.interfaces.IConsumer" class="API">unregisterProducer</code>, and <code base="twisted.internet.interfaces.IConsumer" class="API">write</code>.</p>
 
     <h3>registerProducer(producer, streaming)</h3>
 
@@ -63,10 +63,6 @@
     <h3>write(data)</h3>
 
     <p>As you might guess, this is the method which a producer calls when it has generated some data.  Push producers should call it as frequently as they like as long as they are not paused.  Pull producers should call it once for each time <code class="python">resumeProducing</code> is called on them.</p>
-
-    <h3>finish()</h3>
-
-    <p>This method of <code class="python">IFinishableConsumer</code>s gives producers a way to explicitly notify the consumer that they have generated all the data they will ever generate.</p>
 
     <h2>Further Reading</h2>
 
