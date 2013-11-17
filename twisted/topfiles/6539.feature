@@ -1,0 +1,1 @@
+"setup.py install" now works with Python 3.3.
