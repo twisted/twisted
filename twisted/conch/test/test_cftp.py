@@ -17,14 +17,16 @@ if Crypto and pyasn1:
     try:
         from twisted.conch import unix
         from twisted.conch.scripts import cftp
+        from twisted.conch.scripts.cftp import SSHSession
         from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
     except ImportError as e:
         unix = None
+        SSHSession = None
         _reason = str(e)
         del e
 else:
     unix = None
-
+    SSHSession = None
 
 from twisted.python.fakepwd import UserDatabase
 from twisted.trial.unittest import TestCase
@@ -39,6 +41,43 @@ from twisted.internet.task import Clock
 from twisted.conch.test import test_ssh, test_conch
 from twisted.conch.test.test_filetransfer import SFTPTestBase
 from twisted.conch.test.test_filetransfer import FileTransferTestAvatar
+
+
+
+class FakeStdio(object):
+    """
+    A fake for testing L{twisted.conch.scripts.cftp.SSHSession.eofReceived}.
+
+    @ivar writeConnLost: A flag which records whether L{loserWriteConnection}
+        has been called.
+    """
+    writeConnLost = False
+
+    def loseWriteConnection(self):
+        """
+        Record the call to loseWriteConnection.
+        """
+        self.writeConnLost = True
+
+
+
+class SSHSessionTests(TestCase):
+    """
+    Tests for L{twisted.conch.scripts.cftp.SSHSession}.
+    """
+    if SSHSession is None:
+        skip = _reason
+
+    def test_eofReceived(self):
+        """
+        L{twisted.conch.scripts.cftp.SSHSession.eofReceived} loses the write
+        half of its stdio connection.
+        """
+        stdio = FakeStdio()
+        channel = SSHSession()
+        channel.stdio = stdio
+        channel.eofReceived()
+        self.assertTrue(stdio.writeConnLost)
 
 
 
