@@ -21,12 +21,10 @@ if Crypto and pyasn1:
         from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
     except ImportError as e:
         unix = None
-        SSHSession = None
         _reason = str(e)
         del e
 else:
     unix = None
-    SSHSession = None
 
 from twisted.python.fakepwd import UserDatabase
 from twisted.trial.unittest import TestCase
@@ -65,9 +63,6 @@ class SSHSessionTests(TestCase):
     """
     Tests for L{twisted.conch.scripts.cftp.SSHSession}.
     """
-    if SSHSession is None:
-        skip = _reason
-
     def test_eofReceived(self):
         """
         L{twisted.conch.scripts.cftp.SSHSession.eofReceived} loses the write
@@ -1006,6 +1001,7 @@ if unix is None or Crypto is None or pyasn1 is None or interfaces.IReactorProces
     TestOurServerBatchFile.skip = _reason
     TestOurServerSftpClient.skip = _reason
     StdioClientTests.skip = _reason
+    SSHSessionTests.skip = _reason
 else:
     from twisted.python.procutils import which
     if not which('sftp'):
