@@ -30,7 +30,7 @@ if _PY3:
 
 libc = CDLL(find_library("c"))
 
-if sys.platform == 'darwin':
+if sys.platform.startswith('freebsd') or sys.platform == 'darwin':
     _sockaddrCommon = [
         ("sin_len", c_uint8),
         ("sin_family", c_uint8),
