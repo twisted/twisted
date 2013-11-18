@@ -38,6 +38,21 @@ moduleProvides(interfaces.IResolver)
 
 class Resolver(common.ResolverBase):
     """
+    @ivar index: The index of the server in C{servers} to which the next query
+        will be sent.
+    @ivar timeout: See L{__init__}.
+    @ivar factory: The instance of L{dns.DNSProtocol} (or alternative) which
+        will be used for performing TCP queries.
+    @ivar servers: See L{__init__}.
+    @ivar dynServers: The list of upstream DNS servers found in C{resolv}.
+    @ivar pending: A queued list of TCP queries awaiting the establishment of a
+        TCP connection.
+    @ivar connections: A list of currently established TCP connections.
+    @ivar resolv: The path to a I{resolv.conf} file which will be periodically
+        parsed for upstream DNS server addresses.
+    @ivar _lastResolvTime: The last modified timestamp of C{resolv}.
+    @ivar _resolvReadInterval: The interval (in seconds) at which C{resolv} will
+        be checked for modifications.
     @ivar _waiting: A C{dict} mapping tuple keys of query name/type/class to
         Deferreds which will be called back with the result of those queries.
         This is used to avoid issuing the same query more than once in
@@ -45,10 +60,10 @@ class Resolver(common.ResolverBase):
         "birthday paradox" attack by keeping the number of outstanding requests
         for a particular query fixed at one instead of allowing the attacker to
         raise it to an arbitrary number.
-
-    @ivar _reactor: A provider of L{IReactorTCP}, L{IReactorUDP}, and
-        L{IReactorTime} which will be used to set up network resources and
-        track timeouts.
+    @ivar _reactor: See reactor of L{__init__}.
+    @ivar _datagramProtocolFactory: See datagramProtocolFactory of L{__init__}.
+    @ivar _streamProtocolFactory: See streamProtocolFactory of L{__init__}.
+    @ivar _axfrControllerFactory: See axfrControllerFactory of L{__init__}.
     """
     index = 0
     timeout = None
@@ -73,15 +88,15 @@ class Resolver(common.ResolverBase):
         round-robin fashion.  If given, C{resolv} is periodically checked
         for modification and re-parsed if it is noticed to have changed.
 
+        @type resolv: C{str}
+        @param resolv: Filename to read and parse as a resolver(5)
+            configuration file.
+
         @type servers: C{list} of C{(str, int)} or C{None}
         @param servers: If not None, interpreted as a list of (host, port)
             pairs specifying addresses of domain name servers to attempt to use
             for this lookup.  Host addresses should be in IPv4 dotted-quad
             form.  If specified, overrides C{resolv}.
-
-        @type resolv: C{str}
-        @param resolv: Filename to read and parse as a resolver(5)
-            configuration file.
 
         @type timeout: Sequence of C{int}
         @param timeout: Default number of seconds after which to reissue the
@@ -92,6 +107,25 @@ class Resolver(common.ResolverBase):
             L{IReactorTCP} which will be used to establish connections, listen
             for DNS datagrams, and enforce timeouts.  If not provided, the
             global reactor will be used.
+
+        @type datagramProtocolFactory: callable
+        @param datagramProtocolFactory: A constructor or factory function which
+            returns a L{dns.DNSDatagramProtocol} like object. It will be
+            instantiated with C{controller} and C{reactor} arguments and used
+            for performing UDP DNS queries.  Defaults to
+            L{dns.DNSDatagramProtocol}.
+
+        @type streamProtocolFactory: callable
+        @param streamProtocolFactory: A constructor or factory function which
+            returns a L{dns.DNSProtocol} like object. It will be instantiated
+            with C{controller} and L{timeout} arguments and used for performing
+            TCP DNS queries.  Defaults to L{dns.DNSProtocol}.
+
+        @type axfrControllerFactory: callable
+        @param axfrControllerFactory: A constructor or factory function which
+            returns a L{AXFRController} like object. It will be passed C{name}
+            and C{deferred} arguments and used to handle messages received in
+            response to an AXFR query.  Defaults to L{AXFRController}.
 
         @raise ValueError: Raised if no nameserver addresses can be found.
         """
