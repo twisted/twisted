@@ -118,7 +118,7 @@ def _maybeCleanupScopeIndex(family, packed):
     @rtype: L{bytes}
 
     @see: U{https://twistedmatrix.com/trac/ticket/6843}
-    @see: u{http://www.freebsd.org/doc/en/books/developers-handbook/ipv6.html#ipv6-scope-index}
+    @see: U{http://www.freebsd.org/doc/en/books/developers-handbook/ipv6.html#ipv6-scope-index}
 
     @note: Indications are that the need for this will be gone in FreeBSD >=10.
     """
