@@ -477,7 +477,9 @@ class RoundtripDNSTestCase(unittest.TestCase):
         self._recordRoundtripTest(dns.Record_RRSIG(typeCovered=10,
                                                    algorithmNumber=20,
                                                    labels=30,
-                                                   originalTTL=40))
+                                                   originalTTL=40,
+                                                   signatureInception=50,
+                                                   signatureExpiration=60))
 
 
     def test_SOA(self):
@@ -1370,6 +1372,8 @@ class ReprTests(unittest.TestCase):
              "algorithmNumber=0 "
              "labels=0 "
              "originalTTL=0 "
+             "signatureInception=0 "
+             "signatureExpiration=0 "
              "ttl=None>"))
 
 
@@ -1958,6 +1962,16 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             dns.Record_RRSIG(originalTTL=10),
             dns.Record_RRSIG(originalTTL=20))
 
+        self._equalityTest(
+            dns.Record_RRSIG(signatureInception=10),
+            dns.Record_RRSIG(signatureInception=10),
+            dns.Record_RRSIG(signatureInception=20))
+
+        self._equalityTest(
+            dns.Record_RRSIG(signatureExpiration=10),
+            dns.Record_RRSIG(signatureExpiration=10),
+            dns.Record_RRSIG(signatureExpiration=20))
+
 
     def test_unknown(self):
         """
@@ -2272,6 +2286,8 @@ class RRSIGTestData(object):
             b'\x0b' # ALGORITHM NUMBER
             b'\x0c' # LABELS
             b'\x00\x00\x00\x0d' # ORIGINAL TTL
+            b'\x00\x00\x00\x0e' # SIGNATURE INCEPTION
+            b'\x00\x00\x00\x0f' # SIGNATUTE EXPIRATION
         )
 
 
@@ -2284,7 +2300,9 @@ class RRSIGTestData(object):
         return dns.Record_RRSIG(typeCovered=10,
                                 algorithmNumber=11,
                                 labels=12,
-                                originalTTL=13)
+                                originalTTL=13,
+                                signatureInception=14,
+                                signatureExpiration=15)
 
 
 
@@ -2349,12 +2367,48 @@ class RRSIGRecordTests(unittest.TestCase):
         self.assertEqual(0, dns.Record_RRSIG().originalTTL)
 
 
-    def test_labelsOverride(self):
+    def test_originalTTLOverride(self):
         """
         L{dns.Record_RRSIG.originalTTL} can be overridden in the constructor.
         """
         self.assertEqual(123,
                          dns.Record_RRSIG(originalTTL=123).originalTTL)
+
+
+    def test_signatureInception(self):
+        """
+        L{dns.Record_RRSIG.signatureInception} is an integer attribute which
+        defaults to C{0}.
+        """
+        self.assertEqual(0, dns.Record_RRSIG().signatureInception)
+
+
+    def test_signatureInceptionOverride(self):
+        """
+        L{dns.Record_RRSIG.signatureInception} can be overridden in the
+        constructor.
+        """
+        self.assertEqual(
+            123,
+            dns.Record_RRSIG(signatureInception=123).signatureInception)
+
+
+    def test_signatureExpiration(self):
+        """
+        L{dns.Record_RRSIG.signatureExpiration} is an integer attribute which
+        defaults to C{0}.
+        """
+        self.assertEqual(0, dns.Record_RRSIG().signatureExpiration)
+
+
+    def test_signatureExpirationOverride(self):
+        """
+        L{dns.Record_RRSIG.signatureExpiration} can be overridden in the
+        constructor.
+        """
+        self.assertEqual(
+            123,
+            dns.Record_RRSIG(signatureExpiration=123).signatureExpiration)
 
 
     def test_encode(self):

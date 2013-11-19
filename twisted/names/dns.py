@@ -1936,18 +1936,21 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     fancybasename = 'RRSIG'
 
     showAttributes = (
-        'typeCovered', 'algorithmNumber', 'labels', 'originalTTL', 'ttl',
+        'typeCovered', 'algorithmNumber', 'labels', 'originalTTL',
+        'signatureInception', 'signatureExpiration', 'ttl',
     )
 
     compareAttributes = (
-        'typeCovered', 'algorithmNumber', 'labels', 'originalTTL', 'ttl',
+        'typeCovered', 'algorithmNumber', 'labels', 'originalTTL',
+        'signatureInception', 'signatureExpiration', 'ttl',
     )
 
-    _fmt = '!HBBI'#IIH'
+    _fmt = '!HBBIII'#H'
     _fmt_size = struct.calcsize(_fmt)
 
     def __init__(self, typeCovered=0, algorithmNumber=0, labels=0,
-                 originalTTL=0,  ttl=None):
+                 originalTTL=0, signatureInception=0, signatureExpiration=0,
+                 ttl=None):
         """
         Set the RRSIG field values.
 
@@ -1967,11 +1970,22 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
             covered RRset as it appears in the authoritative zone.
         @type originalTTL: L[int}
 
+        @param signatureInception: The date from which this signature is
+            valid. As a 32bit SNA timestamp. This record MUST NOT be used for
+            authentication prior to the inception date.
+        @type signatureInception: L[int}
+
+        @param signatureExpiration: The date on which this signature expires.
+            As a 32bit SNA timestamp. This record MUST NOT be used for
+            authentication after the expiration date.
+        @type signatureExpiration: L[int}
         """
         self.typeCovered = typeCovered
         self.algorithmNumber = algorithmNumber
         self.labels = labels
         self.originalTTL = originalTTL
+        self.signatureInception = signatureInception
+        self.signatureExpiration = signatureExpiration
         self.ttl = str2time(ttl)
 
 
@@ -1981,7 +1995,9 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
                         self.typeCovered,
                         self.algorithmNumber,
                         self.labels,
-                        self.originalTTL))
+                        self.originalTTL,
+                        self.signatureInception,
+                        self.signatureExpiration))
 
 
     def decode(self, strio, length=None):
@@ -1989,7 +2005,9 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
         (self.typeCovered,
          self.algorithmNumber,
          self.labels,
-         self.originalTTL) = struct.unpack(self._fmt, hdr)
+         self.originalTTL,
+         self.signatureInception,
+         self.signatureExpiration) = struct.unpack(self._fmt, hdr)
 
 
     def __hash__(self):
