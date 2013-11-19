@@ -472,14 +472,13 @@ class InvalidAddressError(ValueError):
     def __init__(self, address, message):
         """
         @param address: The address that was provided.
-        @param message: Additional information provided by the calling context.
+        @type address: L{bytes}
+        @param message: A native string of additional information provided by
+            the calling context.
+        @type address: L{str}
         """
         self.address = address
         self.message = message
-
-
-    def __str__(self):
-        return "Invalid address %s: %s" % (self.address, self.message)
 
 
 
