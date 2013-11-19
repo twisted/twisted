@@ -2179,6 +2179,59 @@ class IsSubdomainOfTests(unittest.SynchronousTestCase):
 
 
 
+# Exclude dns.UnknownRecord which doesn't have a TYPE attribute.
+KNOWN_RECORD_TYPES = [r for r in RECORD_TYPES if r is not dns.UnknownRecord]
+
+
+
+class DnsConstantsTests(unittest.TestCase):
+    """
+    Tests for constants in L{dns}.
+    """
+
+    def test_queryTypeUnique(self):
+        """
+        Each Record_ class in the L{dns} module has a unique C{TYPE}
+        code
+        """
+        typesFound = set()
+
+        for v in KNOWN_RECORD_TYPES:
+            recordTypeCode = v.TYPE
+
+            self.assertNotIn(recordTypeCode, typesFound)
+
+            typesFound.add(recordTypeCode)
+
+
+    def test_queryTypesMap(self):
+        """
+        Each Record_ class in the L{dns} module has a corresponding
+        type code entry in L{dns.QUERY_TYPES}.
+        """
+        for v in KNOWN_RECORD_TYPES:
+            recordTypeCode = v.TYPE
+
+            try:
+                dns.QUERY_TYPES[recordTypeCode]
+            except KeyError:
+                self.fail('Missing twisted.names.dns.QUERY_TYPE. '
+                          'type: %r, record: %r' % (recordTypeCode, v))
+
+
+    def test_queryTypesNamedConstants(self):
+        """
+        Each Record_ class in the L{dns} module has a corresponding
+        type code constant.
+        """
+        for v in KNOWN_RECORD_TYPES:
+            recordTypeCode = v.TYPE
+            recordTypeName = dns.QUERY_TYPES[recordTypeCode]
+
+            self.assertEqual(getattr(dns, recordTypeName), recordTypeCode)
+
+
+
 class OPTNonStandardAttributes(object):
     """
     Generate byte and instance representations of an L{dns._OPTHeader}
