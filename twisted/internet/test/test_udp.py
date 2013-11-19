@@ -324,7 +324,8 @@ class UDPPortTestsMixin(object):
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor, DatagramProtocol())
         self.assertRaises(
-            error.InvalidAddressError, port.write, 'spam', ('eggs.com', 1))
+            error.InvalidAddressError,
+            port.write, 'spam', ('example.invalid', 1))
 
 
     def test_writingToIPv6OnIPv4RaisesInvalidAddressError(self):
@@ -360,7 +361,7 @@ class UDPPortTestsMixin(object):
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor, DatagramProtocol())
         self.assertRaises(
-            error.InvalidAddressError, port.connect, 'eggs.com', 1)
+            error.InvalidAddressError, port.connect, 'example.invalid', 1)
 
 
 
