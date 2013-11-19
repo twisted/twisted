@@ -2231,6 +2231,31 @@ class DnsConstantsTests(unittest.TestCase):
             self.assertEqual(getattr(dns, recordTypeName), recordTypeCode)
 
 
+class RRSIGTestData(object):
+    """
+    Generate byte and instance representations of an L{dns.Record_RRSIG} where
+    all attributes are set to non-default values.
+
+    For testing whether attributes have really been read from the byte
+    string during decoding.
+    """
+    @classmethod
+    def BYTES(cls):
+        """
+        @return: L{bytes} representing the encoded record returned by L{OBJECT}.
+        """
+        return b''
+
+
+    @classmethod
+    def OBJECT(cls):
+        """
+        @return: A L{dns.Record_RRSIG} instance with attributes that match the
+        encoded record returned by L{BYTES}.
+        """
+        return dns.Record_RRSIG(typeCovered=234)
+
+
 
 class OPTNonStandardAttributes(object):
     """
