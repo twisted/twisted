@@ -2253,7 +2253,10 @@ class RRSIGTestData(object):
         """
         @return: L{bytes} representing the encoded record returned by L{OBJECT}.
         """
-        return b''
+        return (
+            b'\x00\x7b'
+            b'\x7b'
+        )
 
 
     @classmethod
@@ -2263,7 +2266,7 @@ class RRSIGTestData(object):
         encoded record returned by L{BYTES}.
         """
         return dns.Record_RRSIG(typeCovered=123,
-                                algorithm=123)
+                                algorithmNumber=123)
 
 
 
@@ -2303,6 +2306,30 @@ class RRSIGRecordTests(unittest.TestCase):
         self.assertEqual(123,
                          dns.Record_RRSIG(algorithmNumber=123).algorithmNumber)
 
+
+    def test_encode(self):
+        """
+        L{dns.Record_RRSIG.encode} packs the header fields and the key and
+        writes them to a file like object passed in as an argument.
+        """
+        record = RRSIGTestData.OBJECT()
+        actualBytes = BytesIO()
+        record.encode(actualBytes)
+
+        self.assertEqual(actualBytes.getvalue(), RRSIGTestData.BYTES())
+
+
+    def test_decode(self):
+        """
+        L{dns.Record_RRSIG.decode} unpacks the header fields from a file like
+        object and populates the attributes of an existing L{dns.Record_RRSIG}
+        instance.
+        """
+        expectedBytes = RRSIGTestData.BYTES()
+        record = dns.Record_RRSIG()
+        record.decode(BytesIO(expectedBytes), length=len(expectedBytes))
+
+        self.assertEqual(record, RRSIGTestData.OBJECT())
 
 
 class OPTNonStandardAttributes(object):

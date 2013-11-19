@@ -1943,7 +1943,7 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
         'typeCovered', 'algorithmNumber', 'ttl',
     )
 
-    _fmt = '!HBB'
+    _fmt = '!HB'#BIIIH'
     _fmt_size = struct.calcsize(_fmt)
 
     def __init__(self, typeCovered=0, algorithmNumber=0, ttl=None):
@@ -1964,24 +1964,13 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
 
     def encode(self, strio, compDict=None):
-        flags = (
-            self.zoneKey << 8
-            | self.revoked << 7
-            | self.secureEntryPoint)
         strio.write(
-            struct.pack(self._fmt, flags, self.protocol, self.algorithm))
-        strio.write(self.publicKey)
+            struct.pack(self._fmt, self.typeCovered, self.algorithmNumber))
 
 
     def decode(self, strio, length=None):
         hdr = readPrecisely(strio, self._fmt_size)
-        flags, self.protocol, self.algorithm = struct.unpack(self._fmt, hdr)
-        self.zoneKey = bool(flags >> 8)
-        self.revoked = bool(flags >> 7 & 0x1)
-        self.secureEntryPoint = bool(flags & 0x1)
-
-        length -= self._fmt_size
-        self.publicKey = readPrecisely(strio, length)
+        self.typeCovered, self.algorithmNumber = struct.unpack(self._fmt, hdr)
 
 
     def __hash__(self):
