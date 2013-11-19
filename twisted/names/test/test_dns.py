@@ -479,7 +479,8 @@ class RoundtripDNSTestCase(unittest.TestCase):
                                                    labels=30,
                                                    originalTTL=40,
                                                    signatureInception=50,
-                                                   signatureExpiration=60))
+                                                   signatureExpiration=60,
+                                                   keyTag=70))
 
 
     def test_SOA(self):
@@ -1374,6 +1375,7 @@ class ReprTests(unittest.TestCase):
              "originalTTL=0 "
              "signatureInception=0 "
              "signatureExpiration=0 "
+             "keyTag=0 "
              "ttl=None>"))
 
 
@@ -1972,6 +1974,11 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             dns.Record_RRSIG(signatureExpiration=10),
             dns.Record_RRSIG(signatureExpiration=20))
 
+        self._equalityTest(
+            dns.Record_RRSIG(keyTag=10),
+            dns.Record_RRSIG(keyTag=10),
+            dns.Record_RRSIG(keyTag=20))
+
 
     def test_unknown(self):
         """
@@ -2288,6 +2295,7 @@ class RRSIGTestData(object):
             b'\x00\x00\x00\x0d' # ORIGINAL TTL
             b'\x00\x00\x00\x0e' # SIGNATURE INCEPTION
             b'\x00\x00\x00\x0f' # SIGNATUTE EXPIRATION
+            b'\x10' # KEYTAG
         )
 
 
@@ -2302,7 +2310,8 @@ class RRSIGTestData(object):
                                 labels=12,
                                 originalTTL=13,
                                 signatureInception=14,
-                                signatureExpiration=15)
+                                signatureExpiration=15,
+                                keyTag=16)
 
 
 
@@ -2409,6 +2418,21 @@ class RRSIGRecordTests(unittest.TestCase):
         self.assertEqual(
             123,
             dns.Record_RRSIG(signatureExpiration=123).signatureExpiration)
+
+
+    def test_keyTag(self):
+        """
+        L{dns.Record_RRSIG.keyTag} is an integer attribute which defaults to
+        C{0}.
+        """
+        self.assertEqual(0, dns.Record_RRSIG().keyTag)
+
+
+    def test_keyTagOverride(self):
+        """
+        L{dns.Record_RRSIG.keyTag} can be overridden in the constructor.
+        """
+        self.assertEqual(123, dns.Record_RRSIG(keyTag=123).keyTag)
 
 
     def test_encode(self):

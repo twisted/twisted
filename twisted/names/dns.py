@@ -1937,20 +1937,20 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
     showAttributes = (
         'typeCovered', 'algorithmNumber', 'labels', 'originalTTL',
-        'signatureInception', 'signatureExpiration', 'ttl',
+        'signatureInception', 'signatureExpiration', 'keyTag', 'ttl',
     )
 
     compareAttributes = (
         'typeCovered', 'algorithmNumber', 'labels', 'originalTTL',
-        'signatureInception', 'signatureExpiration', 'ttl',
+        'signatureInception', 'signatureExpiration', 'keyTag', 'ttl',
     )
 
-    _fmt = '!HBBIII'#H'
+    _fmt = '!HBBIIIB'
     _fmt_size = struct.calcsize(_fmt)
 
     def __init__(self, typeCovered=0, algorithmNumber=0, labels=0,
                  originalTTL=0, signatureInception=0, signatureExpiration=0,
-                 ttl=None):
+                 keyTag=0, ttl=None):
         """
         Set the RRSIG field values.
 
@@ -1979,6 +1979,11 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
             As a 32bit SNA timestamp. This record MUST NOT be used for
             authentication after the expiration date.
         @type signatureExpiration: L[int}
+
+        @param keyTag: The Key Tag field contains the key tag value of the
+            DNSKEY RR that validates this signature, in network byte order.
+        @type keyTag: L[int}
+
         """
         self.typeCovered = typeCovered
         self.algorithmNumber = algorithmNumber
@@ -1986,6 +1991,7 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
         self.originalTTL = originalTTL
         self.signatureInception = signatureInception
         self.signatureExpiration = signatureExpiration
+        self.keyTag = keyTag
         self.ttl = str2time(ttl)
 
 
@@ -1997,7 +2003,8 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
                         self.labels,
                         self.originalTTL,
                         self.signatureInception,
-                        self.signatureExpiration))
+                        self.signatureExpiration,
+                        self.keyTag))
 
 
     def decode(self, strio, length=None):
@@ -2007,7 +2014,8 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
          self.labels,
          self.originalTTL,
          self.signatureInception,
-         self.signatureExpiration) = struct.unpack(self._fmt, hdr)
+         self.signatureExpiration,
+         self.keyTag) = struct.unpack(self._fmt, hdr)
 
 
     def __hash__(self):
