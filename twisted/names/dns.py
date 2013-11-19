@@ -45,6 +45,7 @@ __all__ = [
 
 
 # System imports
+import base64
 import struct, random, socket
 from itertools import chain
 
@@ -1914,6 +1915,19 @@ class Record_SPF(Record_TXT):
 
 
 
+def _base64Format(bytes):
+    """
+    Base64 encode C{bytes} without any line breaks
+
+    @param bytes: The bytestring to encode.
+    @type bytes: L{bytes}
+
+    @return: The formatted base64 bytestring.
+    """
+    return nativeString(base64.encodestring(bytes).replace(b'\n', b''))
+
+
+
 @implementer(IEncodable, IRecord)
 class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     """
@@ -1937,14 +1951,15 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
     showAttributes = (
         'typeCovered', 'algorithmNumber', 'labels', 'originalTTL',
-        'signatureInception', 'signatureExpiration', 'keyTag', ('signersName', lambda n: n.name),
+        'signatureInception', 'signatureExpiration', 'keyTag',
+        ('signersName', lambda n: n.name), ('signature', _base64Format),
         'ttl',
     )
 
     compareAttributes = (
         'typeCovered', 'algorithmNumber', 'labels', 'originalTTL',
         'signatureInception', 'signatureExpiration', 'keyTag', 'signersName',
-        'ttl',
+        'signature', 'ttl',
     )
 
     _fmt = '!HBBIIIB'
@@ -1952,7 +1967,7 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
     def __init__(self, typeCovered=0, algorithmNumber=0, labels=0,
                  originalTTL=0, signatureInception=0, signatureExpiration=0,
-                 keyTag=0, signersName=None, ttl=None):
+                 keyTag=0, signersName=None, signature=b'',  ttl=None):
         """
         Set the RRSIG field values.
 
@@ -1990,6 +2005,11 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
             name of the DNSKEY RR that a validator is supposed to use to
             validate this signature.
         @type signersName: L{dns.Name}
+
+        @param signature: A signature covers the RRSIG RDATA (excluding the
+            Signature Field) and covers the data RRset specified by the RRSIG
+            owner name, RRSIG class, and RRSIG Type Covered fields.
+        @type signature: L{bytes}
         """
         self.typeCovered = typeCovered
         self.algorithmNumber = algorithmNumber
@@ -2001,6 +2021,7 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
         if signersName is None:
             signersName = Name(b'')
         self.signersName = signersName
+        self.signature = signature
         self.ttl = str2time(ttl)
 
 
@@ -2015,6 +2036,7 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
                         self.signatureExpiration,
                         self.keyTag))
         self.signersName.encode(strio)
+        strio.write(self.signature)
 
 
     def decode(self, strio, length=None):
@@ -2027,9 +2049,12 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
          self.signatureExpiration,
          self.keyTag) = struct.unpack(self._fmt, hdr)
         signersName = Name()
+        encodedNameStart = strio.tell()
         signersName.decode(strio)
+        encodedNameLength = strio.tell() - encodedNameStart
         self.signersName = signersName
-
+        length -= self._fmt_size + encodedNameLength
+        self.signature = readPrecisely(strio, length)
 
 
     def __hash__(self):
