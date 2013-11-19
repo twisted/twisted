@@ -474,7 +474,7 @@ class RoundtripDNSTestCase(unittest.TestCase):
         L{dns.Record_RRSIG.decode} to reconstruct the state of the original
         L{dns.Record_RRSIG} instance.
         """
-        self._recordRoundtripTest(dns.Record_RRSIG(typeCovered=False))
+        self._recordRoundtripTest(dns.Record_RRSIG(typeCovered=1234))
 
 
     def test_SOA(self):
@@ -1363,7 +1363,7 @@ class ReprTests(unittest.TestCase):
         self.assertEqual(
             repr(record),
             ("<RRSIG "
-             "typeCovered=None "
+             "typeCovered=0 "
              "ttl=None>"))
 
 
@@ -2231,13 +2231,14 @@ class DnsConstantsTests(unittest.TestCase):
             self.assertEqual(getattr(dns, recordTypeName), recordTypeCode)
 
 
+
 class RRSIGTestData(object):
     """
     Generate byte and instance representations of an L{dns.Record_RRSIG} where
     all attributes are set to non-default values.
 
-    For testing whether attributes have really been read from the byte
-    string during decoding.
+    For testing whether attributes have really been read from the byte string
+    during decoding.
     """
     @classmethod
     def BYTES(cls):
@@ -2254,6 +2255,23 @@ class RRSIGTestData(object):
         encoded record returned by L{BYTES}.
         """
         return dns.Record_RRSIG(typeCovered=234)
+
+
+
+class RRSIGRecordTests(unittest.TestCase):
+    """
+    Tests for L{dns.Record_RRSIG}.
+    """
+
+    def test_typeCovered(self):
+        """
+        L{dns.Record_RRSIG.typeCovered} is an integer attribute which defaults
+        to C{0}.
+
+        https://tools.ietf.org/html/rfc4034#section-3.1.1
+        """
+        record = dns.Record_RRSIG()
+        self.assertEqual(record.typeCovered, 0)
 
 
 

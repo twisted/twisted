@@ -1945,7 +1945,7 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     _fmt = '!HBB'
     _fmt_size = struct.calcsize(_fmt)
 
-    def __init__(self, typeCovered=None, ttl=None):
+    def __init__(self, typeCovered=0, ttl=None):
         """
         @param typeCovered: a L{bool} signifying whether
             this DNSKEY record holds a DNS zone key.
