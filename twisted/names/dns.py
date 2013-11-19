@@ -1935,11 +1935,11 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     fancybasename = 'RRSIG'
 
     showAttributes = (
-        'typeCovered',
+        'typeCovered', 'ttl',
     )
 
     compareAttributes = (
-        'typeCovered',
+        'typeCovered', 'ttl',
     )
 
     _fmt = '!HBB'

@@ -468,6 +468,15 @@ class RoundtripDNSTestCase(unittest.TestCase):
         self.assertEqual(record, replica)
 
 
+    def test_RRSIG(self):
+        """
+        The byte stream written by L{dns.Record_RRSIG.encode} can be used by
+        L{dns.Record_RRSIG.decode} to reconstruct the state of the original
+        L{dns.Record_RRSIG} instance.
+        """
+        self._recordRoundtripTest(dns.Record_RRSIG(typeCovered=False))
+
+
     def test_SOA(self):
         """
         The byte stream written by L{dns.Record_SOA.encode} can be used by
@@ -1341,6 +1350,23 @@ class ReprTests(unittest.TestCase):
             "<SPF data=['foo', 'bar'] ttl=15>")
 
 
+    def test_rrsig(self):
+        """
+        The repr of a L{dns.Record_RRSIG} instance includes fields of
+        the record and a base64 encoded representation of the
+        publicKey.
+
+        https://tools.ietf.org/html/rfc4034#section-2.3
+        """
+        record = dns.Record_RRSIG()
+
+        self.assertEqual(
+            repr(record),
+            ("<RRSIG "
+             "typeCovered=None "
+             "ttl=None>"))
+
+
     def test_unknown(self):
         """
         The repr of a L{dns.UnknownRecord} instance includes the data and ttl
@@ -1898,6 +1924,17 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             dns.Record_SPF('foo', 'bar', ttl=10),
             dns.Record_SPF('foo', 'bar', ttl=10),
             dns.Record_SPF('foo', 'bar', ttl=100))
+
+
+    def test_rrsig(self):
+        """
+        L{dns.Record_RRSIG} instances compare equal if and only if they have the
+        same typeCovered.
+        """
+        self._equalityTest(
+            dns.Record_RRSIG(typeCovered=1),
+            dns.Record_RRSIG(typeCovered=1),
+            dns.Record_RRSIG(typeCovered=2))
 
 
     def test_unknown(self):
