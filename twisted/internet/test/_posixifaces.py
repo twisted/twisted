@@ -100,6 +100,34 @@ getifaddrs.restype = c_int
 freeifaddrs = libc.freeifaddrs
 freeifaddrs.argtypes = [ifaddrs_p]
 
+
+
+def _maybeCleanupScopeIndex(family, packed):
+    """
+    On FreeBSD, kill the embedded interface indices in link-local scoped
+    addresses.
+
+    @param family: The address family of the packed address - one of the
+        I{socket.AF_*} constants.
+
+    @param packed: The packed representation of the address (ie, the bytes of a
+        I{in_addr} field).
+    @type packed: L{bytes}
+
+    @return: The packed address with any FreeBSD-specific extra bits cleared.
+    @rtype: L{bytes}
+
+    @see: U{https://twistedmatrix.com/trac/ticket/6843}
+    @see: u{http://www.freebsd.org/doc/en/books/developers-handbook/ipv6.html#ipv6-scope-index}
+
+    @note: Indications are that the need for this will be gone in FreeBSD >=10.
+    """
+    if sys.platform.startswith('freebsd'):
+        return packed[:2] + b"\x00\x00" + packed[4:]
+    return packed
+
+
+
 def _interfaces():
     """
     Call C{getifaddrs(3)} and return a list of tuples of interface name, address
@@ -122,6 +150,7 @@ def _interfaces():
 
                 if addr:
                     packed = b''.join(map(chr, addr[0].sin_addr.in_addr[:]))
+                    packed = _maybeCleanupScopeIndex(family, packed)
                     results.append((
                             ifaddrs[0].ifa_name,
                             family,
@@ -144,15 +173,5 @@ def posixGetLinkLocalIPv6Addresses():
         interface = nativeString(interface)
         address = nativeString(address)
         if family == socket.AF_INET6 and address.startswith('fe80:'):
-            if sys.platform.startswith('freebsd'):
-                # Kill the embedded interface indices in link-local scoped
-                # addresses.  See https://twistedmatrix.com/trac/ticket/6843
-                # and
-                # http://www.freebsd.org/doc/en/books/developers-handbook/ipv6.html#ipv6-scope-index
-                # Indications are that the need for this will be gone in
-                # FreeBSD >=10.
-                l = address.split(':')
-                l[1] = ''
-                address = ':'.join(l)
             retList.append('%s%%%s' % (address, interface))
     return retList
