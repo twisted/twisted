@@ -474,13 +474,16 @@ class RoundtripDNSTestCase(unittest.TestCase):
         L{dns.Record_RRSIG.decode} to reconstruct the state of the original
         L{dns.Record_RRSIG} instance.
         """
-        self._recordRoundtripTest(dns.Record_RRSIG(typeCovered=10,
-                                                   algorithmNumber=20,
-                                                   labels=30,
-                                                   originalTTL=40,
-                                                   signatureInception=50,
-                                                   signatureExpiration=60,
-                                                   keyTag=70))
+        self._recordRoundtripTest(
+            dns.Record_RRSIG(
+                typeCovered=10,
+                algorithmNumber=20,
+                labels=30,
+                originalTTL=40,
+                signatureInception=50,
+                signatureExpiration=60,
+                keyTag=70,
+                signersName=dns.Name(b'example.com')))
 
 
     def test_SOA(self):
@@ -1376,6 +1379,7 @@ class ReprTests(unittest.TestCase):
              "signatureInception=0 "
              "signatureExpiration=0 "
              "keyTag=0 "
+             "signersName= "
              "ttl=None>"))
 
 
@@ -1979,6 +1983,11 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             dns.Record_RRSIG(keyTag=10),
             dns.Record_RRSIG(keyTag=20))
 
+        self._equalityTest(
+            dns.Record_RRSIG(signersName=dns.Name(b'example.com')),
+            dns.Record_RRSIG(signersName=dns.Name(b'example.com')),
+            dns.Record_RRSIG(signersName=dns.Name(b'foo.example.com')))
+
 
     def test_unknown(self):
         """
@@ -2296,6 +2305,7 @@ class RRSIGTestData(object):
             b'\x00\x00\x00\x0e' # SIGNATURE INCEPTION
             b'\x00\x00\x00\x0f' # SIGNATUTE EXPIRATION
             b'\x10' # KEYTAG
+            b'\x03www\x07example\x03com\x00' # SIGNERS NAME
         )
 
 
@@ -2311,7 +2321,8 @@ class RRSIGTestData(object):
                                 originalTTL=13,
                                 signatureInception=14,
                                 signatureExpiration=15,
-                                keyTag=16)
+                                keyTag=16,
+                                signersName=dns.Name(b'www.example.com'))
 
 
 
@@ -2433,6 +2444,23 @@ class RRSIGRecordTests(unittest.TestCase):
         L{dns.Record_RRSIG.keyTag} can be overridden in the constructor.
         """
         self.assertEqual(123, dns.Record_RRSIG(keyTag=123).keyTag)
+
+
+    def test_signersName(self):
+        """
+        L{dns.Record_RRSIG.signersName} is a L{dns.Name} attribute which
+        defaults to C{b''}
+        """
+        self.assertEqual(dns.Name(b''), dns.Record_RRSIG().signersName)
+
+
+    def test_signersNameOverride(self):
+        """
+        L{dns.Record_RRSIG.signersName} can be overridden in the constructor.
+        """
+        self.assertEqual(
+            dns.Name(b'example.com'),
+            dns.Record_RRSIG(signersName=dns.Name(b'example.com')).signersName)
 
 
     def test_encode(self):

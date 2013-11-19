@@ -1937,12 +1937,14 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
     showAttributes = (
         'typeCovered', 'algorithmNumber', 'labels', 'originalTTL',
-        'signatureInception', 'signatureExpiration', 'keyTag', 'ttl',
+        'signatureInception', 'signatureExpiration', 'keyTag', ('signersName', lambda n: n.name),
+        'ttl',
     )
 
     compareAttributes = (
         'typeCovered', 'algorithmNumber', 'labels', 'originalTTL',
-        'signatureInception', 'signatureExpiration', 'keyTag', 'ttl',
+        'signatureInception', 'signatureExpiration', 'keyTag', 'signersName',
+        'ttl',
     )
 
     _fmt = '!HBBIIIB'
@@ -1950,7 +1952,7 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
     def __init__(self, typeCovered=0, algorithmNumber=0, labels=0,
                  originalTTL=0, signatureInception=0, signatureExpiration=0,
-                 keyTag=0, ttl=None):
+                 keyTag=0, signersName=None, ttl=None):
         """
         Set the RRSIG field values.
 
@@ -1984,6 +1986,10 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
             DNSKEY RR that validates this signature, in network byte order.
         @type keyTag: L[int}
 
+        @param signersName: The Signer's Name field value identifies the owner
+            name of the DNSKEY RR that a validator is supposed to use to
+            validate this signature.
+        @type signersName: L{dns.Name}
         """
         self.typeCovered = typeCovered
         self.algorithmNumber = algorithmNumber
@@ -1992,6 +1998,9 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
         self.signatureInception = signatureInception
         self.signatureExpiration = signatureExpiration
         self.keyTag = keyTag
+        if signersName is None:
+            signersName = Name(b'')
+        self.signersName = signersName
         self.ttl = str2time(ttl)
 
 
@@ -2005,6 +2014,7 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
                         self.signatureInception,
                         self.signatureExpiration,
                         self.keyTag))
+        self.signersName.encode(strio)
 
 
     def decode(self, strio, length=None):
@@ -2016,6 +2026,10 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
          self.signatureInception,
          self.signatureExpiration,
          self.keyTag) = struct.unpack(self._fmt, hdr)
+        signersName = Name()
+        signersName.decode(strio)
+        self.signersName = signersName
+
 
 
     def __hash__(self):
