@@ -476,7 +476,8 @@ class RoundtripDNSTestCase(unittest.TestCase):
         """
         self._recordRoundtripTest(dns.Record_RRSIG(typeCovered=10,
                                                    algorithmNumber=20,
-                                                   labels=30))
+                                                   labels=30,
+                                                   originalTTL=40))
 
 
     def test_SOA(self):
@@ -1368,6 +1369,7 @@ class ReprTests(unittest.TestCase):
              "typeCovered=0 "
              "algorithmNumber=0 "
              "labels=0 "
+             "originalTTL=0 "
              "ttl=None>"))
 
 
@@ -1936,21 +1938,25 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
         same typeCovered.
         """
         self._equalityTest(
-            dns.Record_RRSIG(typeCovered=1),
-            dns.Record_RRSIG(typeCovered=1),
-            dns.Record_RRSIG(typeCovered=2))
+            dns.Record_RRSIG(typeCovered=10),
+            dns.Record_RRSIG(typeCovered=10),
+            dns.Record_RRSIG(typeCovered=20))
 
 
         self._equalityTest(
-            dns.Record_RRSIG(algorithmNumber=123),
-            dns.Record_RRSIG(algorithmNumber=123),
-            dns.Record_RRSIG(algorithmNumber=321))
-
+            dns.Record_RRSIG(algorithmNumber=10),
+            dns.Record_RRSIG(algorithmNumber=10),
+            dns.Record_RRSIG(algorithmNumber=20))
 
         self._equalityTest(
             dns.Record_RRSIG(labels=10),
             dns.Record_RRSIG(labels=10),
             dns.Record_RRSIG(labels=20))
+
+        self._equalityTest(
+            dns.Record_RRSIG(originalTTL=10),
+            dns.Record_RRSIG(originalTTL=10),
+            dns.Record_RRSIG(originalTTL=20))
 
 
     def test_unknown(self):
@@ -2262,9 +2268,10 @@ class RRSIGTestData(object):
         @return: L{bytes} representing the encoded record returned by L{OBJECT}.
         """
         return (
-            b'\x00\x0a'
-            b'\x0b'
-            b'\x0c'
+            b'\x00\x0a' # TYPE COVERED
+            b'\x0b' # ALGORITHM NUMBER
+            b'\x0c' # LABELS
+            b'\x00\x00\x00\x0d' # ORIGINAL TTL
         )
 
 
@@ -2276,7 +2283,8 @@ class RRSIGTestData(object):
         """
         return dns.Record_RRSIG(typeCovered=10,
                                 algorithmNumber=11,
-                                labels=12)
+                                labels=12,
+                                originalTTL=13)
 
 
 
@@ -2331,6 +2339,22 @@ class RRSIGRecordTests(unittest.TestCase):
         """
         self.assertEqual(123,
                          dns.Record_RRSIG(labels=123).labels)
+
+
+    def test_originalTTL(self):
+        """
+        L{dns.Record_RRSIG.originalTTL} is an integer attribute which defaults
+        to C{0}.
+        """
+        self.assertEqual(0, dns.Record_RRSIG().originalTTL)
+
+
+    def test_labelsOverride(self):
+        """
+        L{dns.Record_RRSIG.originalTTL} can be overridden in the constructor.
+        """
+        self.assertEqual(123,
+                         dns.Record_RRSIG(originalTTL=123).originalTTL)
 
 
     def test_encode(self):

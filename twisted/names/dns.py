@@ -1936,17 +1936,18 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     fancybasename = 'RRSIG'
 
     showAttributes = (
-        'typeCovered', 'algorithmNumber', 'labels', 'ttl',
+        'typeCovered', 'algorithmNumber', 'labels', 'originalTTL', 'ttl',
     )
 
     compareAttributes = (
-        'typeCovered', 'algorithmNumber', 'labels', 'ttl',
+        'typeCovered', 'algorithmNumber', 'labels', 'originalTTL', 'ttl',
     )
 
-    _fmt = '!HBB'#IIIH'
+    _fmt = '!HBBI'#IIH'
     _fmt_size = struct.calcsize(_fmt)
 
-    def __init__(self, typeCovered=0, algorithmNumber=0, labels=0, ttl=None):
+    def __init__(self, typeCovered=0, algorithmNumber=0, labels=0,
+                 originalTTL=0,  ttl=None):
         """
         Set the RRSIG field values.
 
@@ -1961,10 +1962,16 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
         @param labels: The Labels field specifies the number of labels in the
             original RRSIG RR owner name.
         @type labels: L[int}
+
+        @param originalTTL: The Original TTL field specifies the TTL of the
+            covered RRset as it appears in the authoritative zone.
+        @type originalTTL: L[int}
+
         """
         self.typeCovered = typeCovered
         self.algorithmNumber = algorithmNumber
         self.labels = labels
+        self.originalTTL = originalTTL
         self.ttl = str2time(ttl)
 
 
@@ -1973,14 +1980,16 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
             struct.pack(self._fmt,
                         self.typeCovered,
                         self.algorithmNumber,
-                        self.labels))
+                        self.labels,
+                        self.originalTTL))
 
 
     def decode(self, strio, length=None):
         hdr = readPrecisely(strio, self._fmt_size)
         (self.typeCovered,
          self.algorithmNumber,
-         self.labels) = struct.unpack(self._fmt, hdr)
+         self.labels,
+         self.originalTTL) = struct.unpack(self._fmt, hdr)
 
 
     def __hash__(self):
