@@ -122,7 +122,7 @@ def _maybeCleanupScopeIndex(family, packed):
 
     @note: Indications are that the need for this will be gone in FreeBSD >=10.
     """
-    if sys.platform.startswith('freebsd'):
+    if sys.platform.startswith('freebsd') and packed[:2] == b"\xfe\x80":
         return packed[:2] + b"\x00\x00" + packed[4:]
     return packed
 
