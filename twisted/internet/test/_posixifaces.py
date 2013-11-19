@@ -145,10 +145,12 @@ def posixGetLinkLocalIPv6Addresses():
         address = nativeString(address)
         if family == socket.AF_INET6 and address.startswith('fe80:'):
             if sys.platform.startswith('freebsd'):
-                # kill embedded interface indices in link-local scoped addresses
-                # See https://twistedmatrix.com/trac/ticket/6843 and
+                # Kill the embedded interface indices in link-local scoped
+                # addresses.  See https://twistedmatrix.com/trac/ticket/6843
+                # and
                 # http://www.freebsd.org/doc/en/books/developers-handbook/ipv6.html#ipv6-scope-index
-                # Indications are that the need for this will be gone in FreeBSD >=10.
+                # Indications are that the need for this will be gone in
+                # FreeBSD >=10.
                 l = address.split(':')
                 l[1] = ''
                 address = ':'.join(l)
