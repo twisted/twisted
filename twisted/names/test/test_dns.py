@@ -474,8 +474,9 @@ class RoundtripDNSTestCase(unittest.TestCase):
         L{dns.Record_RRSIG.decode} to reconstruct the state of the original
         L{dns.Record_RRSIG} instance.
         """
-        self._recordRoundtripTest(dns.Record_RRSIG(typeCovered=123,
-                                                   algorithmNumber=123))
+        self._recordRoundtripTest(dns.Record_RRSIG(typeCovered=10,
+                                                   algorithmNumber=20,
+                                                   labels=30))
 
 
     def test_SOA(self):
@@ -1366,6 +1367,7 @@ class ReprTests(unittest.TestCase):
             ("<RRSIG "
              "typeCovered=0 "
              "algorithmNumber=0 "
+             "labels=0 "
              "ttl=None>"))
 
 
@@ -1945,6 +1947,12 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             dns.Record_RRSIG(algorithmNumber=321))
 
 
+        self._equalityTest(
+            dns.Record_RRSIG(labels=10),
+            dns.Record_RRSIG(labels=10),
+            dns.Record_RRSIG(labels=20))
+
+
     def test_unknown(self):
         """
         L{dns.UnknownRecord} instances compare equal if and only if they have
@@ -2254,8 +2262,9 @@ class RRSIGTestData(object):
         @return: L{bytes} representing the encoded record returned by L{OBJECT}.
         """
         return (
-            b'\x00\x7b'
-            b'\x7b'
+            b'\x00\x0a'
+            b'\x0b'
+            b'\x0c'
         )
 
 
@@ -2265,8 +2274,9 @@ class RRSIGTestData(object):
         @return: A L{dns.Record_RRSIG} instance with attributes that match the
         encoded record returned by L{BYTES}.
         """
-        return dns.Record_RRSIG(typeCovered=123,
-                                algorithmNumber=123)
+        return dns.Record_RRSIG(typeCovered=10,
+                                algorithmNumber=11,
+                                labels=12)
 
 
 
@@ -2305,6 +2315,22 @@ class RRSIGRecordTests(unittest.TestCase):
         """
         self.assertEqual(123,
                          dns.Record_RRSIG(algorithmNumber=123).algorithmNumber)
+
+
+    def test_labels(self):
+        """
+        L{dns.Record_RRSIG.labels} is an integer attribute which defaults to
+        C{0}.
+        """
+        self.assertEqual(0, dns.Record_RRSIG().labels)
+
+
+    def test_labelsOverride(self):
+        """
+        L{dns.Record_RRSIG.labels} can be overridden in the constructor.
+        """
+        self.assertEqual(123,
+                         dns.Record_RRSIG(labels=123).labels)
 
 
     def test_encode(self):

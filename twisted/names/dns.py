@@ -1936,17 +1936,17 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     fancybasename = 'RRSIG'
 
     showAttributes = (
-        'typeCovered', 'algorithmNumber', 'ttl',
+        'typeCovered', 'algorithmNumber', 'labels', 'ttl',
     )
 
     compareAttributes = (
-        'typeCovered', 'algorithmNumber', 'ttl',
+        'typeCovered', 'algorithmNumber', 'labels', 'ttl',
     )
 
-    _fmt = '!HB'#BIIIH'
+    _fmt = '!HBB'#IIIH'
     _fmt_size = struct.calcsize(_fmt)
 
-    def __init__(self, typeCovered=0, algorithmNumber=0, ttl=None):
+    def __init__(self, typeCovered=0, algorithmNumber=0, labels=0, ttl=None):
         """
         Set the RRSIG field values.
 
@@ -1957,20 +1957,30 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
         @param algorithmNumber: The Algorithm Number field identifies the
             cryptographic algorithm used to create the signature.
         @type algorithmNumber: L[int}
+
+        @param labels: The Labels field specifies the number of labels in the
+            original RRSIG RR owner name.
+        @type labels: L[int}
         """
         self.typeCovered = typeCovered
         self.algorithmNumber = algorithmNumber
+        self.labels = labels
         self.ttl = str2time(ttl)
 
 
     def encode(self, strio, compDict=None):
         strio.write(
-            struct.pack(self._fmt, self.typeCovered, self.algorithmNumber))
+            struct.pack(self._fmt,
+                        self.typeCovered,
+                        self.algorithmNumber,
+                        self.labels))
 
 
     def decode(self, strio, length=None):
         hdr = readPrecisely(strio, self._fmt_size)
-        self.typeCovered, self.algorithmNumber = struct.unpack(self._fmt, hdr)
+        (self.typeCovered,
+         self.algorithmNumber,
+         self.labels) = struct.unpack(self._fmt, hdr)
 
 
     def __hash__(self):
