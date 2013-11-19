@@ -222,7 +222,6 @@ class UDPPortTestsMixin(object):
         """
         Writing to an IPv6 UDP socket on the loopback interface succeeds.
         """
-
         reactor = self.buildReactor()
         server = Server()
         serverStarted = server.startedDeferred = defer.Deferred()
@@ -270,7 +269,6 @@ class UDPPortTestsMixin(object):
         An IPv6 address can be passed as the C{interface} argument to
         L{listenUDP}. The resulting Port accepts IPv6 datagrams.
         """
-
         reactor = self.buildReactor()
         server = Server()
         serverStarted = server.startedDeferred = defer.Deferred()
@@ -320,7 +318,6 @@ class UDPPortTestsMixin(object):
         Writing to a hostname instead of an IP address will raise an
         L{InvalidAddressError}.
         """
-
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor, DatagramProtocol())
         self.assertRaises(
@@ -357,7 +354,6 @@ class UDPPortTestsMixin(object):
         Connecting to a hostname instead of an IP address will raise an
         L{InvalidAddressError}.
         """
-
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor, DatagramProtocol())
         self.assertRaises(
