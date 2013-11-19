@@ -1927,6 +1927,7 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     @ivar compareAttributes: See L{tputil.FancyEqMixin}
 
     @ivar typeCovered: See L{__init__}
+    @ivar algorithmNumber: See L{__init__}
     @ivar ttl: See L{__init__}
     """
 
@@ -1935,23 +1936,30 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     fancybasename = 'RRSIG'
 
     showAttributes = (
-        'typeCovered', 'ttl',
+        'typeCovered', 'algorithmNumber', 'ttl',
     )
 
     compareAttributes = (
-        'typeCovered', 'ttl',
+        'typeCovered', 'algorithmNumber', 'ttl',
     )
 
     _fmt = '!HBB'
     _fmt_size = struct.calcsize(_fmt)
 
-    def __init__(self, typeCovered=0, ttl=None):
+    def __init__(self, typeCovered=0, algorithmNumber=0, ttl=None):
         """
-        @param typeCovered: a L{bool} signifying whether
-            this DNSKEY record holds a DNS zone key.
-        @type zoneKey: L{bool}
+        Set the RRSIG field values.
+
+        @param typeCovered: The Type Covered field identifies the type of the
+            RRset that is covered by this RRSIG record.
+        @type typeCovered: L{int}
+
+        @param algorithmNumber: The Algorithm Number field identifies the
+            cryptographic algorithm used to create the signature.
+        @type algorithmNumber: L[int}
         """
         self.typeCovered = typeCovered
+        self.algorithmNumber = algorithmNumber
         self.ttl = str2time(ttl)
 
 

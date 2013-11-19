@@ -474,7 +474,8 @@ class RoundtripDNSTestCase(unittest.TestCase):
         L{dns.Record_RRSIG.decode} to reconstruct the state of the original
         L{dns.Record_RRSIG} instance.
         """
-        self._recordRoundtripTest(dns.Record_RRSIG(typeCovered=1234))
+        self._recordRoundtripTest(dns.Record_RRSIG(typeCovered=123,
+                                                   algorithmNumber=123))
 
 
     def test_SOA(self):
@@ -1364,6 +1365,7 @@ class ReprTests(unittest.TestCase):
             repr(record),
             ("<RRSIG "
              "typeCovered=0 "
+             "algorithmNumber=0 "
              "ttl=None>"))
 
 
@@ -1937,6 +1939,12 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             dns.Record_RRSIG(typeCovered=2))
 
 
+        self._equalityTest(
+            dns.Record_RRSIG(algorithmNumber=123),
+            dns.Record_RRSIG(algorithmNumber=123),
+            dns.Record_RRSIG(algorithmNumber=321))
+
+
     def test_unknown(self):
         """
         L{dns.UnknownRecord} instances compare equal if and only if they have
@@ -2254,7 +2262,8 @@ class RRSIGTestData(object):
         @return: A L{dns.Record_RRSIG} instance with attributes that match the
         encoded record returned by L{BYTES}.
         """
-        return dns.Record_RRSIG(typeCovered=234)
+        return dns.Record_RRSIG(typeCovered=123,
+                                algorithm=123)
 
 
 
@@ -2267,11 +2276,32 @@ class RRSIGRecordTests(unittest.TestCase):
         """
         L{dns.Record_RRSIG.typeCovered} is an integer attribute which defaults
         to C{0}.
-
-        https://tools.ietf.org/html/rfc4034#section-3.1.1
         """
-        record = dns.Record_RRSIG()
-        self.assertEqual(record.typeCovered, 0)
+        self.assertEqual(0, dns.Record_RRSIG().typeCovered)
+
+
+    def test_typeCoveredOverride(self):
+        """
+        L{dns.Record_RRSIG.typeCovered} can be overridden in the constructor.
+        """
+        self.assertEqual(123, dns.Record_RRSIG(typeCovered=123).typeCovered)
+
+
+    def test_algorithmNumber(self):
+        """
+        L{dns.Record_RRSIG.algorithmNumber} is an integer attribute which
+        defaults to C{0}.
+        """
+        self.assertEqual(0, dns.Record_RRSIG().typeCovered)
+
+
+    def test_algorithmNumberOverride(self):
+        """
+        L{dns.Record_RRSIG.algorithmNumber} can be overridden in the
+        constructor.
+        """
+        self.assertEqual(123,
+                         dns.Record_RRSIG(algorithmNumber=123).algorithmNumber)
 
 
 
