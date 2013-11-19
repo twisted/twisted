@@ -13,6 +13,7 @@ from io import BytesIO
 import struct
 
 from zope.interface.verify import verifyClass
+from zope.interface.exceptions import BrokenImplementation
 
 from twisted.python.failure import Failure
 from twisted.internet import address, task
@@ -30,6 +31,7 @@ RECORD_TYPES = [
     dns.Record_WKS, dns.Record_SRV, dns.Record_AFSDB, dns.Record_RP,
     dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT,
     dns.Record_AAAA, dns.Record_A6, dns.Record_NAPTR, dns.UnknownRecord,
+    dns.Record_RRSIG,
     ]
 
 
@@ -385,6 +387,54 @@ class RoundtripDNSTestCase(unittest.TestCase):
             hk1 = hash(k1)
             hk2 = hash(k2)
             self.assertEqual(hk1, hk2, "%s != %s (for %s)" % (hk1,hk2,k))
+
+
+    def test_iencodableInterface(self):
+        """
+        All record types implement L{dns.IEncodable},
+        """
+        for cls in RECORD_TYPES:
+            try:
+                verifyClass(dns.IEncodable, cls)
+            except BrokenImplementation as e:
+                self.fail(
+                    '%s does not implement IEncodable. %s' % (cls, e))
+
+
+    def test_irecordInterface(self):
+        """
+        All record types implement L{dns.IRecord},
+        """
+        for cls in RECORD_TYPES:
+            try:
+                verifyClass(dns.IRecord, cls)
+            except BrokenImplementation as e:
+                self.fail(
+                    '%s does not implement IRecord. %s' % (cls, e))
+
+
+    def test_ttlDefault(self):
+        """
+        All record types have a public C{ttl} argument whose default value is
+        C{None}.
+        """
+        for cls in RECORD_TYPES:
+            record = cls()
+            self.assertIdentical(
+                record.ttl, None,
+                'Unexpected default ttl %r in %s' % (record.ttl, cls,))
+
+
+    def test_ttlOverride(self):
+        """
+        All record types accept a C{ttl} argument which is converted using
+        L{dns.str2time}.
+        """
+        for cls in RECORD_TYPES:
+            record = cls(ttl='1d')
+            self.assertEqual(
+                record.ttl, 60*60*24,
+                'No str2time conversion %r in %s' % (record.ttl, cls,))
 
 
     def test_Charstr(self):

@@ -30,6 +30,7 @@ __all__ = [
     'Record_MG', 'Record_MINFO', 'Record_MR', 'Record_MX', 'Record_NAPTR',
     'Record_NS', 'Record_NULL', 'Record_PTR', 'Record_RP', 'Record_SOA',
     'Record_SPF', 'Record_SRV', 'Record_TXT', 'Record_WKS', 'UnknownRecord',
+    'Record_RRSIG',
 
     'QUERY_CLASSES', 'QUERY_TYPES', 'REV_CLASSES', 'REV_TYPES', 'EXT_QUERIES',
 
@@ -119,6 +120,9 @@ NAPTR = 35
 A6 = 38
 DNAME = 39
 OPT = 41
+# The Type value for the RRSIG RR type is 46.
+# https://tools.ietf.org/html/rfc4034#section-3
+RRSIG = 46
 SPF = 99
 
 QUERY_TYPES = {
@@ -149,6 +153,7 @@ QUERY_TYPES = {
     A6: 'A6',
     DNAME: 'DNAME',
     OPT: 'OPT',
+    RRSIG: 'RRSIG',
     SPF: 'SPF'
 }
 
@@ -1906,6 +1911,90 @@ class Record_SPF(Record_TXT):
     """
     TYPE = SPF
     fancybasename = 'SPF'
+
+
+
+@implementer(IEncodable, IRecord)
+class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
+    """
+    A RRSIG record.
+
+    @see: U{https://tools.ietf.org/html/rfc4034#section-3}
+
+    @ivar TYPE: RRSIG type code constant C{46}.
+    @ivar fancybasename: See L{tputil.FancyStrMixin}
+    @ivar showAttributes: See L{tputil.FancyStrMixin}
+    @ivar compareAttributes: See L{tputil.FancyEqMixin}
+
+    @ivar typeCovered: See L{__init__}
+    @ivar ttl: See L{__init__}
+    """
+
+    TYPE = RRSIG
+
+    fancybasename = 'RRSIG'
+
+    showAttributes = (
+        'typeCovered',
+    )
+
+    compareAttributes = (
+        'typeCovered',
+    )
+
+    _fmt = '!HBB'
+    _fmt_size = struct.calcsize(_fmt)
+
+    def __init__(self, typeCovered=None, ttl=None):
+        """
+        @param typeCovered: a L{bool} signifying whether
+            this DNSKEY record holds a DNS zone key.
+        @type zoneKey: L{bool}
+        """
+        self.typeCovered = typeCovered
+        self.ttl = str2time(ttl)
+
+
+    def encode(self, strio, compDict=None):
+        flags = (
+            self.zoneKey << 8
+            | self.revoked << 7
+            | self.secureEntryPoint)
+        strio.write(
+            struct.pack(self._fmt, flags, self.protocol, self.algorithm))
+        strio.write(self.publicKey)
+
+
+    def decode(self, strio, length=None):
+        hdr = readPrecisely(strio, self._fmt_size)
+        flags, self.protocol, self.algorithm = struct.unpack(self._fmt, hdr)
+        self.zoneKey = bool(flags >> 8)
+        self.revoked = bool(flags >> 7 & 0x1)
+        self.secureEntryPoint = bool(flags & 0x1)
+
+        length -= self._fmt_size
+        self.publicKey = readPrecisely(strio, length)
+
+
+    def __hash__(self):
+        """
+        A hash allowing this L{Record_DNSKEY} to be used as a L{dict}
+        key.
+
+        @return: A L{hash} of the values of
+             L{Record_DNSKEY.compareAttributes} except C{ttl}.
+        """
+        # XXX: All other record types (apart from UnknownRecord) seem
+        # to exclude ttl from the hash while including it in
+        # compareAttributes. Why?
+        # TTL is duplicated in and really belongs in RRHeader.
+        # but on the other hand FileAuthority relies on having the ttl
+        # in Records.
+        # Are Records really used as dictionary keys? and if so
+        # shouldn't they be immutable?
+        return hash(tuple(getattr(self, k)
+                          for k in self.compareAttributes
+                          if k != 'ttl'))
 
 
 
