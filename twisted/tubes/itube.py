@@ -8,6 +8,36 @@ Interfaces related to data flows.
 
 from zope.interface import Interface, Attribute
 
+
+class AlreadyUnpaused(Exception):
+    """
+    You ever say a word so many times it just loses meaning?  Pause pause pause
+    pause pause pause.
+    """
+
+
+
+class IPause(Interface):
+    """
+    A L{pause <IPause>} is a reason that an L{IFount} is not delivering output
+    to its C{drain} attribute.  This reason may be removed by L{unpausing
+    <IPause.unpause>} the pause.
+    """
+
+    def unpause():
+        """
+        Remove this L{IPause} from the set of L{IPause}s obstructing delivery
+        from an L{IFount}.  When no L{IPause}s remain, the flow will resume.
+
+        The spice must flow.
+
+        @raise AlreadyUnpaused: An L{IPause} may only be C{unpause}d once; it
+            can not be re-paused.  Therefore a second invocation of this
+            method is invalid and will raise an L{AlreadyUnpaused} exception.
+        """
+
+
+
 class IFount(Interface):
     """
     A fount produces objects for a drain to consume.
@@ -55,14 +85,14 @@ class IFount(Interface):
 
     def pauseFlow():
         """
-        Momentarily pause delivering items to the currently active drain, until
-        C{resumeFlow} is called.
-        """
+        Temporarily refrain from delivery of items to this L{IFount}'s C{drain}
+        attribute.
 
-
-    def resumeFlow():
-        """
-        Resume delivering items to the drain.
+        @return: a L{pause token <IPause>} which may used to remove the
+            impediment to this L{IFount}'s flow established by this call to
+            C{pauseFlow}.  Multiple calls will result in multiple tokens, all
+            of which must be unpaused for the flow to resume.
+        @rtype: L{IPause}
         """
 
 
