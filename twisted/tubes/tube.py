@@ -44,7 +44,7 @@ class _Pause(object):
 
 
     def unpause(self):
-        return
+        self.pauser.actuallyResume()
 
 
 

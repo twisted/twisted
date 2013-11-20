@@ -72,13 +72,29 @@ class StopperTest(TestCase):
         One call to L{_Pauser.pause} will call the actuallyPause callable.
         """
         def pause():
-            pause.ed += 1
-        pause.ed = 0
+            pause.d += 1
+        pause.d = 0
         pauser = _Pauser(pause, None)
         result = pauser.pauseFlow()
         self.assertTrue(verifyObject(IPause, result))
-        self.assertEqual(pause.ed, 1)
+        self.assertEqual(pause.d, 1)
 
+
+    def test_pauseThenUnpause(self):
+        """
+        A call to L{_Pauser.pause} followed by a call to the result's
+        C{unpause} will call the C{actuallyResume} callable.
+        """
+        def pause():
+            pause.d += 1
+        pause.d = 0
+        def resume():
+            resume.d += 1
+        resume.d = 0
+        pauser = _Pauser(pause, resume)
+        pauser.pauseFlow().unpause()
+        self.assertEqual(pause.d, 1)
+        self.assertEqual(resume.d, 1)
 
 
 
