@@ -432,7 +432,8 @@ class HtmlIndentTests(TestCase):
 
     def test_simpleInput(self):
         """
-        L{htmlIndent} transparently process input with no special cases inside.
+        L{htmlIndent} transparently processes input with no special cases
+        inside.
         """
         line = "foo bar"
         self.assertEqual(line, htmlIndent(line))
@@ -465,7 +466,7 @@ class HtmlIndentTests(TestCase):
 
     def test_indentFromTabCharacters(self):
         """
-        L{htmlIndent} replaces tab characters by unbreakable spaces.
+        L{htmlIndent} replaces tab characters with unbreakable spaces.
         """
         line = "\tfoo"
         self.assertEqual("&nbsp; &nbsp; &nbsp; &nbsp; foo", htmlIndent(line))

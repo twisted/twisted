@@ -135,6 +135,9 @@ class DummyRequest(object):
         return self.headers.get(name.lower(), None)
 
     def getAllHeaders(self):
+        """
+        Retrieve all the values of the request headers as a dictionary.
+        """
         return self.headers
 
     def setHeader(self, name, value):
@@ -243,12 +246,29 @@ class DummyRequest(object):
 
 
     def getRequestHostname(self):
+        """
+        Get a dummy hostname associated to the HTTP request.
+
+        @rtype: C{bytes}
+        @returns: a dummy hostname
+        """
         return self._serverName
 
 
     def getHost(self):
-        return DummyChannel.TCP()
+        """
+        Get a dummy transport's host.
+
+        @rtype: C{IPv4Address}
+        @returns: a dummy transport's host
+        """
+        return IPv4Address('TCP', '127.0.0.1', 80)
 
 
     def getClient(self):
+        """
+        Stub to get the client doing the HTTP request.
+        This merely just ensures that this method exists here. Feel free to
+        extend it.
+        """
         pass
