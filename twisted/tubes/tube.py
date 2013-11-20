@@ -19,6 +19,7 @@ from twisted.tubes.itube import IFount
 from twisted.tubes.itube import ITube
 from twisted.tubes.itube import ISwitchablePump
 from twisted.tubes.itube import ISwitchableTube
+from twisted.tubes.itube import IPause
 
 
 class _TubePiece(object):
@@ -32,6 +33,35 @@ class _TubePiece(object):
     @property
     def _pump(self):
         return self._tube.pump
+
+
+
+@implementer(IPause)
+class _Pause(object):
+    def __init__(self, pauser):
+        self.pauser = pauser
+        self.alive = True
+
+
+    def unpause(self):
+        return
+
+
+
+class _Pauser(object):
+
+    def __init__(self, actuallyPause, actuallyResume):
+        self.actuallyPause = actuallyPause
+        self.actuallyResume = actuallyResume
+        self.pauses = set()
+
+
+    def pauseFlow(self):
+        """
+        @see: L{IFount.pauseFlow}
+        """
+        self.actuallyPause()
+        return _Pause(self)
 
 
 

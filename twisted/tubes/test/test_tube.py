@@ -5,16 +5,18 @@
 Tests for L{twisted.tubes.tube}.
 """
 
+from zope.interface import implementer
+from zope.interface.verify import verifyObject
+
 from twisted.trial.unittest import TestCase
 from twisted.tubes.test.util import (TesterPump, FakeFount,
                                      FakeDrain, IFakeInput)
 from twisted.tubes.test.util import SwitchableTesterPump
 from twisted.tubes.itube import ISwitchableTube, ISwitchablePump
 from twisted.python.failure import Failure
-from twisted.tubes.tube import Pump, series
+from twisted.tubes.tube import Pump, series, _Pauser
+from twisted.tubes.itube import IPause
 from twisted.internet.defer import Deferred, succeed
-
-from zope.interface import implementer
 
 
 class ReprPump(Pump):
@@ -56,6 +58,27 @@ class FakeFountWithBuffer(FakeFount):
         while not self.flowIsPaused and self.buffer:
             item = self.buffer.pop(0)
             self.drain.receive(item)
+
+
+
+class StopperTest(TestCase):
+    """
+    Tests for L{_Pauser}, helper for someone who wants to implement a thing
+    that pauses.
+    """
+
+    def test_pauseOnce(self):
+        """
+        One call to L{_Pauser.pause} will call the actuallyPause callable.
+        """
+        def pause():
+            pause.ed += 1
+        pause.ed = 0
+        pauser = _Pauser(pause, None)
+        result = pauser.pauseFlow()
+        self.assertTrue(verifyObject(IPause, result))
+        self.assertEqual(pause.ed, 1)
+
 
 
 
