@@ -198,9 +198,9 @@ htmlReprTypes = {types.DictType: htmlDict,
 
 
 def htmlIndent(snippetLine):
-    ret = html.escape(snippetLine.rstrip())\
-            .replace('  ', '&nbsp;')\
-            .replace('\t', '&nbsp; &nbsp; &nbsp; &nbsp; ')
+    ret = (html.escape(snippetLine.rstrip())
+            .replace('  ', '&nbsp;')
+            .replace('\t', '&nbsp; &nbsp; &nbsp; &nbsp; '))
     return ret
 
 
