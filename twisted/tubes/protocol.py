@@ -17,14 +17,15 @@ from twisted.internet.interfaces import IPushProducer
 class _FountProducer(object):
     def __init__(self, fount):
         self._fount = fount
+        self._pauses = []
 
 
     def pauseProducing(self):
-        self._fount.pauseFlow()
+        self._pauses.append(self._fount.pauseFlow())
 
 
     def resumeProducing(self):
-        self._fount.resumeFlow()
+        self._pauses.pop().unpause()
 
 
     def stopProducing(self):
@@ -95,24 +96,13 @@ class _ProtocolFount(object):
         return self.drain.flowingFrom(self)
 
 
-    _flowPaused = False
     def pauseFlow(self):
         """
         Pause flowing.
         """
-        self._flowPaused = True
         self._transport.pauseProducing()
 
 
-    def resumeFlow(self):
-        """
-        Resume flowing.
-        """
-        self._flowPaused = False
-        self._transport.resumeProducing()
-
-
-    _flowEnded = False
     def stopFlow(self):
         """
         End the flow from this fount, dropping the TCP connection in the
