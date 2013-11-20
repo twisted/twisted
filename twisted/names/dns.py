@@ -1952,7 +1952,8 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
     showAttributes = (
         'typeCovered', 'algorithmNumber', 'labels', 'originalTTL',
         'signatureInception', 'signatureExpiration', 'keyTag',
-        ('signersName', lambda n: n.name), ('signature', _base64Format),
+        ('signersName', lambda n: n.name.decode('ascii')),
+        ('signature', _base64Format),
         'ttl',
     )
 
