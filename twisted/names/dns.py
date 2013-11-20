@@ -2060,11 +2060,11 @@ class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
     def __hash__(self):
         """
-        A hash allowing this L{Record_DNSKEY} to be used as a L{dict}
+        A hash allowing this L{Record_RRSIG} to be used as a L{dict}
         key.
 
         @return: A L{hash} of the values of
-             L{Record_DNSKEY.compareAttributes} except C{ttl}.
+             L{Record_RRSIG.compareAttributes} except C{ttl}.
         """
         # XXX: All other record types (apart from UnknownRecord) seem
         # to exclude ttl from the hash while including it in
