@@ -244,7 +244,7 @@ typeToMethod = {
     dns.MX:    'lookupMailExchange',
     dns.TXT:   'lookupText',
     dns.SPF:   'lookupSenderPolicy',
-
+    dns.RRSIG: 'lookupRRSIG',
     dns.RP:    'lookupResponsibility',
     dns.AFSDB: 'lookupAFSDatabase',
     dns.SRV:   'lookupService',
