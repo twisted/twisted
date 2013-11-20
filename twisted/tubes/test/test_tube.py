@@ -564,7 +564,7 @@ class TubeTest(TestCase):
 
     def test_switchableTubeGetsImplemented(self):
         """
-        Passing an L{ISwitchablePump} to L{_Tube} will cause it to implement
+        Passing an L{ISwitchablePump} to L{_Tube} will cause it to provide
         L{ISwitchableTube}.
         """
 
@@ -576,7 +576,7 @@ class TubeTest(TestCase):
     def test_switchableTubeCanGetUnimplemented(self):
         """
         Passing an L{ISwitchablePump} and then a L{IPump} to L{_Tube} will
-        cause it to no longer implement L{ISwitchableTube}.
+        cause it to no longer provide L{ISwitchableTube}.
         """
 
         pump = SwitchableTesterPump()
@@ -590,7 +590,7 @@ class TubeTest(TestCase):
     def test_switchableTubeCanStayImplemented(self):
         """
         Passing an L{ISwitchablePump} and then an L{ISwitchablePump} to
-        L{_Tube} will cause it to still implement L{ISwitchableTube}.
+        L{_Tube} will cause it to still provide L{ISwitchableTube}.
         """
 
         pump = SwitchableTesterPump()
@@ -604,7 +604,7 @@ class TubeTest(TestCase):
     def test_switchableTubeCanStayUnimplemented(self):
         """
         Passing an L{IPump} and then an L{IPump} to L{_Tube} will cause it to
-        still not implement L{ISwitchableTube}.
+        still not provide L{ISwitchableTube}.
         """
 
         pump = TesterPump()
@@ -618,7 +618,7 @@ class TubeTest(TestCase):
     def test_switchableTubeCanGetReimplemented(self):
         """
         Passing an L{ISwitchablePump} and then a L{IPump} and then an
-        L{ISwitchablePump} again to L{_Tube} will cause it to implement
+        L{ISwitchablePump} again to L{_Tube} will cause it to provide
         L{ISwitchableTube}.
         """
 
