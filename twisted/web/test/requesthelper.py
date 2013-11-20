@@ -275,4 +275,3 @@ class DummyRequest(object):
         This merely just ensures that this method exists here. Feel free to
         extend it.
         """
-        pass
