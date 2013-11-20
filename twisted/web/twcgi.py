@@ -106,7 +106,7 @@ class CGIScript(resource.Resource):
 
         try:
             qindex = request.uri.index('?')
-        except ValueError: # '?' not found
+        except ValueError:
             env['QUERY_STRING'] = ''
             qargs = []
         else:
