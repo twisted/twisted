@@ -134,11 +134,15 @@ class DummyRequest(object):
         """
         return self.headers.get(name.lower(), None)
 
+
     def getAllHeaders(self):
         """
         Retrieve all the values of the request headers as a dictionary.
+
+        @return: The entire C{headers} L{dict}.
         """
         return self.headers
+
 
     def setHeader(self, name, value):
         """TODO: make this assert on write() if the header is content-length

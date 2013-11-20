@@ -220,8 +220,17 @@ class CGI(unittest.TestCase):
         argument to the constructor.
         """
         class FakeReactor:
+            """
+            A fake reactor recording whether spawnProcess is called.
+            """
             called = False
             def spawnProcess(self, *args, **kwargs):
+                """
+                Set the C{called} flag to C{True} if C{spawnProcess} is called.
+
+                @param args: Positional arguments.
+                @param kwargs: Keyword arguements.
+                """
                 self.called = True
 
         fakeReactor = FakeReactor()
@@ -244,7 +253,19 @@ class CGIScriptTests(unittest.TestCase):
         the request path.
         """
         class FakeReactor:
+            """
+            A fake reactor recording the environment passed to spawnProcess.
+            """
             def spawnProcess(self, process, filename, args, env, wdir):
+                """
+                Store the C{env} L{dict} to an instance attribute.
+
+                @param process: Ignored
+                @param filename: Ignored
+                @param args: Ignored
+                @param env: The environment L{dict} which will be stored
+                @param wdir: Ignored
+                """
                 self.process_env = env
 
         _reactor = FakeReactor()
@@ -310,4 +331,3 @@ class CGIProcessProtocolTests(unittest.TestCase):
         protocol = twcgi.CGIProcessProtocol(request)
         protocol.processEnded(failure.Failure(error.ProcessTerminated()))
         self.assertEqual(request.responseCode, INTERNAL_SERVER_ERROR)
-
