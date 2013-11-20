@@ -16,6 +16,7 @@ from twisted.tubes.itube import ISwitchableTube, ISwitchablePump
 from twisted.python.failure import Failure
 from twisted.tubes.tube import Pump, series, _Pauser
 from twisted.tubes.itube import IPause
+from twisted.tubes.itube import AlreadyUnpaused
 from twisted.internet.defer import Deferred, succeed
 
 
@@ -94,6 +95,23 @@ class StopperTest(TestCase):
         pauser = _Pauser(pause, resume)
         pauser.pauseFlow().unpause()
         self.assertEqual(pause.d, 1)
+        self.assertEqual(resume.d, 1)
+
+
+    def test_secondUnpauseFails(self):
+        """
+        The second of two consectuive calls to L{IPause.unpause} results in an
+        L{AlreadyUnpaused} exception.
+        """
+        def pause():
+            pass
+        def resume():
+            resume.d += 1
+        resume.d = 0
+        pauser = _Pauser(pause, resume)
+        aPause = pauser.pauseFlow()
+        aPause.unpause()
+        self.assertRaises(AlreadyUnpaused, aPause.unpause)
         self.assertEqual(resume.d, 1)
 
 

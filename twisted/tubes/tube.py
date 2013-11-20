@@ -20,6 +20,7 @@ from twisted.tubes.itube import ITube
 from twisted.tubes.itube import ISwitchablePump
 from twisted.tubes.itube import ISwitchableTube
 from twisted.tubes.itube import IPause
+from twisted.tubes.itube import AlreadyUnpaused
 
 
 class _TubePiece(object):
@@ -44,7 +45,11 @@ class _Pause(object):
 
 
     def unpause(self):
-        self.pauser.actuallyResume()
+        if self.alive:
+            self.pauser.actuallyResume()
+            self.alive = False
+        else:
+            raise AlreadyUnpaused()
 
 
 
