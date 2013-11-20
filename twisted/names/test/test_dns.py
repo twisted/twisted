@@ -13,6 +13,7 @@ from io import BytesIO
 import struct
 
 from zope.interface.verify import verifyClass
+from zope.interface.exceptions import BrokenImplementation
 
 from twisted.python.failure import Failure
 from twisted.internet import address, task
@@ -30,6 +31,7 @@ RECORD_TYPES = [
     dns.Record_WKS, dns.Record_SRV, dns.Record_AFSDB, dns.Record_RP,
     dns.Record_HINFO, dns.Record_MINFO, dns.Record_MX, dns.Record_TXT,
     dns.Record_AAAA, dns.Record_A6, dns.Record_NAPTR, dns.UnknownRecord,
+    dns.Record_RRSIG,
     ]
 
 
@@ -387,6 +389,54 @@ class RoundtripDNSTestCase(unittest.TestCase):
             self.assertEqual(hk1, hk2, "%s != %s (for %s)" % (hk1,hk2,k))
 
 
+    def test_iencodableInterface(self):
+        """
+        All record types implement L{dns.IEncodable},
+        """
+        for cls in RECORD_TYPES:
+            try:
+                verifyClass(dns.IEncodable, cls)
+            except BrokenImplementation as e:
+                self.fail(
+                    '%s does not implement IEncodable. %s' % (cls, e))
+
+
+    def test_irecordInterface(self):
+        """
+        All record types implement L{dns.IRecord},
+        """
+        for cls in RECORD_TYPES:
+            try:
+                verifyClass(dns.IRecord, cls)
+            except BrokenImplementation as e:
+                self.fail(
+                    '%s does not implement IRecord. %s' % (cls, e))
+
+
+    def test_ttlDefault(self):
+        """
+        All record types have a public C{ttl} argument whose default value is
+        C{None}.
+        """
+        for cls in RECORD_TYPES:
+            record = cls()
+            self.assertIdentical(
+                record.ttl, None,
+                'Unexpected default ttl %r in %s' % (record.ttl, cls,))
+
+
+    def test_ttlOverride(self):
+        """
+        All record types accept a C{ttl} argument which is converted using
+        L{dns.str2time}.
+        """
+        for cls in RECORD_TYPES:
+            record = cls(ttl='1d')
+            self.assertEqual(
+                record.ttl, 60*60*24,
+                'No str2time conversion %r in %s' % (record.ttl, cls,))
+
+
     def test_Charstr(self):
         """
         Test L{dns.Charstr} encode and decode.
@@ -416,6 +466,25 @@ class RoundtripDNSTestCase(unittest.TestCase):
         replica = record.__class__()
         replica.decode(stream, length)
         self.assertEqual(record, replica)
+
+
+    def test_RRSIG(self):
+        """
+        The byte stream written by L{dns.Record_RRSIG.encode} can be used by
+        L{dns.Record_RRSIG.decode} to reconstruct the state of the original
+        L{dns.Record_RRSIG} instance.
+        """
+        self._recordRoundtripTest(
+            dns.Record_RRSIG(
+                typeCovered=10,
+                algorithmNumber=20,
+                labels=30,
+                originalTTL=40,
+                signatureInception=50,
+                signatureExpiration=60,
+                keyTag=70,
+                signersName=dns.Name(b'example.com'),
+                signature=b'foobar'))
 
 
     def test_SOA(self):
@@ -1291,6 +1360,28 @@ class ReprTests(unittest.TestCase):
             "<SPF data=['foo', 'bar'] ttl=15>")
 
 
+    def test_rrsig(self):
+        """
+        The repr of a L{dns.Record_RRSIG} instance includes fields of the record
+        and a base64 encoded representation of the publicKey.
+
+        https://tools.ietf.org/html/rfc4034#section-2.3
+        """
+        self.assertEqual(
+            repr(dns.Record_RRSIG()),
+            ("<RRSIG "
+             "typeCovered=0 "
+             "algorithmNumber=0 "
+             "labels=0 "
+             "originalTTL=0 "
+             "signatureInception=0 "
+             "signatureExpiration=0 "
+             "keyTag=0 "
+             "signersName= "
+             "signature= "
+             "ttl=None>"))
+
+
     def test_unknown(self):
         """
         The repr of a L{dns.UnknownRecord} instance includes the data and ttl
@@ -1850,6 +1941,57 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             dns.Record_SPF('foo', 'bar', ttl=100))
 
 
+    def test_rrsig(self):
+        """
+        L{dns.Record_RRSIG} instances compare equal if and only if they have the
+        same typeCovered.
+        """
+        self._equalityTest(
+            dns.Record_RRSIG(typeCovered=10),
+            dns.Record_RRSIG(typeCovered=10),
+            dns.Record_RRSIG(typeCovered=20))
+
+        self._equalityTest(
+            dns.Record_RRSIG(algorithmNumber=10),
+            dns.Record_RRSIG(algorithmNumber=10),
+            dns.Record_RRSIG(algorithmNumber=20))
+
+        self._equalityTest(
+            dns.Record_RRSIG(labels=10),
+            dns.Record_RRSIG(labels=10),
+            dns.Record_RRSIG(labels=20))
+
+        self._equalityTest(
+            dns.Record_RRSIG(originalTTL=10),
+            dns.Record_RRSIG(originalTTL=10),
+            dns.Record_RRSIG(originalTTL=20))
+
+        self._equalityTest(
+            dns.Record_RRSIG(signatureInception=10),
+            dns.Record_RRSIG(signatureInception=10),
+            dns.Record_RRSIG(signatureInception=20))
+
+        self._equalityTest(
+            dns.Record_RRSIG(signatureExpiration=10),
+            dns.Record_RRSIG(signatureExpiration=10),
+            dns.Record_RRSIG(signatureExpiration=20))
+
+        self._equalityTest(
+            dns.Record_RRSIG(keyTag=10),
+            dns.Record_RRSIG(keyTag=10),
+            dns.Record_RRSIG(keyTag=20))
+
+        self._equalityTest(
+            dns.Record_RRSIG(signersName=dns.Name(b'example.com')),
+            dns.Record_RRSIG(signersName=dns.Name(b'example.com')),
+            dns.Record_RRSIG(signersName=dns.Name(b'foo.example.com')))
+
+        self._equalityTest(
+            dns.Record_RRSIG(signature=b'foobar'),
+            dns.Record_RRSIG(signature=b'foobar'),
+            dns.Record_RRSIG(signature=b'bazqux'))
+
+
     def test_unknown(self):
         """
         L{dns.UnknownRecord} instances compare equal if and only if they have
@@ -2089,6 +2231,287 @@ class IsSubdomainOfTests(unittest.SynchronousTestCase):
         assertIsSubdomainOf(self, b'foo.example.com', b'EXAMPLE.COM')
 
         assertIsSubdomainOf(self, b'FOO.EXAMPLE.COM', b'example.com')
+
+
+
+# Exclude dns.UnknownRecord which doesn't have a TYPE attribute.
+KNOWN_RECORD_TYPES = [r for r in RECORD_TYPES if r is not dns.UnknownRecord]
+
+
+
+class DnsConstantsTests(unittest.TestCase):
+    """
+    Tests for constants in L{dns}.
+    """
+
+    def test_queryTypeUnique(self):
+        """
+        Each Record_ class in the L{dns} module has a unique C{TYPE}
+        code
+        """
+        typesFound = set()
+
+        for v in KNOWN_RECORD_TYPES:
+            recordTypeCode = v.TYPE
+
+            self.assertNotIn(recordTypeCode, typesFound)
+
+            typesFound.add(recordTypeCode)
+
+
+    def test_queryTypesMap(self):
+        """
+        Each Record_ class in the L{dns} module has a corresponding
+        type code entry in L{dns.QUERY_TYPES}.
+        """
+        for v in KNOWN_RECORD_TYPES:
+            recordTypeCode = v.TYPE
+
+            try:
+                dns.QUERY_TYPES[recordTypeCode]
+            except KeyError:
+                self.fail('Missing twisted.names.dns.QUERY_TYPE. '
+                          'type: %r, record: %r' % (recordTypeCode, v))
+
+
+    def test_queryTypesNamedConstants(self):
+        """
+        Each Record_ class in the L{dns} module has a corresponding
+        type code constant.
+        """
+        for v in KNOWN_RECORD_TYPES:
+            recordTypeCode = v.TYPE
+            recordTypeName = dns.QUERY_TYPES[recordTypeCode]
+
+            self.assertEqual(getattr(dns, recordTypeName), recordTypeCode)
+
+
+
+class RRSIGTestData(object):
+    """
+    Generate byte and instance representations of an L{dns.Record_RRSIG} where
+    all attributes are set to non-default values.
+
+    For testing whether attributes have really been read from the byte string
+    during decoding.
+    """
+    @classmethod
+    def bytes(cls):
+        """
+        Return an RRSIG record in wire format.
+
+        @return: L{bytes} representing the encoded record returned by L{OBJECT}.
+        """
+        return (
+            b'\x00\x0a' # TYPE COVERED
+            b'\x0b' # ALGORITHM NUMBER
+            b'\x0c' # LABELS
+            b'\x00\x00\x00\x0d' # ORIGINAL TTL
+            b'\x00\x00\x00\x0e' # SIGNATURE INCEPTION
+            b'\x00\x00\x00\x0f' # SIGNATUTE EXPIRATION
+            b'\x10' # KEYTAG
+            b'\x03www\x07example\x03com\x00' # SIGNERS NAME
+            b'foobar' # SIGNATURE
+        )
+
+
+    @classmethod
+    def object(cls):
+        """
+        Create a instance of L{dns.Record_RRSIG}.
+
+        @return: A L{dns.Record_RRSIG} instance with attributes that match the
+            encoded record returned by L{BYTES}.
+        """
+        return dns.Record_RRSIG(typeCovered=10,
+                                algorithmNumber=11,
+                                labels=12,
+                                originalTTL=13,
+                                signatureInception=14,
+                                signatureExpiration=15,
+                                keyTag=16,
+                                signersName=dns.Name(b'www.example.com'),
+                                signature=b'foobar')
+
+
+
+class RRSIGRecordTests(unittest.TestCase):
+    """
+    Tests for L{dns.Record_RRSIG}.
+    """
+
+    def test_typeCovered(self):
+        """
+        L{dns.Record_RRSIG.typeCovered} is an integer attribute which defaults
+        to C{0}.
+        """
+        self.assertEqual(0, dns.Record_RRSIG().typeCovered)
+
+
+    def test_typeCoveredOverride(self):
+        """
+        L{dns.Record_RRSIG.typeCovered} can be overridden in the constructor.
+        """
+        self.assertEqual(123, dns.Record_RRSIG(typeCovered=123).typeCovered)
+
+
+    def test_algorithmNumber(self):
+        """
+        L{dns.Record_RRSIG.algorithmNumber} is an integer attribute which
+        defaults to C{0}.
+        """
+        self.assertEqual(0, dns.Record_RRSIG().typeCovered)
+
+
+    def test_algorithmNumberOverride(self):
+        """
+        L{dns.Record_RRSIG.algorithmNumber} can be overridden in the
+        constructor.
+        """
+        self.assertEqual(123,
+                         dns.Record_RRSIG(algorithmNumber=123).algorithmNumber)
+
+
+    def test_labels(self):
+        """
+        L{dns.Record_RRSIG.labels} is an integer attribute which defaults to
+        C{0}.
+        """
+        self.assertEqual(0, dns.Record_RRSIG().labels)
+
+
+    def test_labelsOverride(self):
+        """
+        L{dns.Record_RRSIG.labels} can be overridden in the constructor.
+        """
+        self.assertEqual(123,
+                         dns.Record_RRSIG(labels=123).labels)
+
+
+    def test_originalTTL(self):
+        """
+        L{dns.Record_RRSIG.originalTTL} is an integer attribute which defaults
+        to C{0}.
+        """
+        self.assertEqual(0, dns.Record_RRSIG().originalTTL)
+
+
+    def test_originalTTLOverride(self):
+        """
+        L{dns.Record_RRSIG.originalTTL} can be overridden in the constructor.
+        """
+        self.assertEqual(123,
+                         dns.Record_RRSIG(originalTTL=123).originalTTL)
+
+
+    def test_signatureInception(self):
+        """
+        L{dns.Record_RRSIG.signatureInception} is an integer attribute which
+        defaults to C{0}.
+        """
+        self.assertEqual(0, dns.Record_RRSIG().signatureInception)
+
+
+    def test_signatureInceptionOverride(self):
+        """
+        L{dns.Record_RRSIG.signatureInception} can be overridden in the
+        constructor.
+        """
+        self.assertEqual(
+            123,
+            dns.Record_RRSIG(signatureInception=123).signatureInception)
+
+
+    def test_signatureExpiration(self):
+        """
+        L{dns.Record_RRSIG.signatureExpiration} is an integer attribute which
+        defaults to C{0}.
+        """
+        self.assertEqual(0, dns.Record_RRSIG().signatureExpiration)
+
+
+    def test_signatureExpirationOverride(self):
+        """
+        L{dns.Record_RRSIG.signatureExpiration} can be overridden in the
+        constructor.
+        """
+        self.assertEqual(
+            123,
+            dns.Record_RRSIG(signatureExpiration=123).signatureExpiration)
+
+
+    def test_keyTag(self):
+        """
+        L{dns.Record_RRSIG.keyTag} is an integer attribute which defaults to
+        C{0}.
+        """
+        self.assertEqual(0, dns.Record_RRSIG().keyTag)
+
+
+    def test_keyTagOverride(self):
+        """
+        L{dns.Record_RRSIG.keyTag} can be overridden in the constructor.
+        """
+        self.assertEqual(123, dns.Record_RRSIG(keyTag=123).keyTag)
+
+
+    def test_signersName(self):
+        """
+        L{dns.Record_RRSIG.signersName} is a L{dns.Name} attribute which
+        defaults to C{b''}
+        """
+        self.assertEqual(dns.Name(b''), dns.Record_RRSIG().signersName)
+
+
+    def test_signersNameOverride(self):
+        """
+        L{dns.Record_RRSIG.signersName} can be overridden in the constructor.
+        """
+        self.assertEqual(
+            dns.Name(b'example.com'),
+            dns.Record_RRSIG(signersName=dns.Name(b'example.com')).signersName)
+
+
+    def test_signature(self):
+        """
+        L{dns.Record_RRSIG.signature} is a L{bytes} attribute which defaults to
+        C{b''}
+        """
+        self.assertEqual(b'', dns.Record_RRSIG().signature)
+
+
+    def test_signatureOverride(self):
+        """
+        L{dns.Record_RRSIG.signature} can be overridden in the constructor.
+        """
+        self.assertEqual(
+            b'foobar',
+            dns.Record_RRSIG(signature=b'foobar').signature)
+
+
+    def test_encode(self):
+        """
+        L{dns.Record_RRSIG.encode} packs the header fields and the key and
+        writes them to a file like object passed in as an argument.
+        """
+        record = RRSIGTestData.object()
+        actualBytes = BytesIO()
+        record.encode(actualBytes)
+
+        self.assertEqual(actualBytes.getvalue(), RRSIGTestData.bytes())
+
+
+    def test_decode(self):
+        """
+        L{dns.Record_RRSIG.decode} unpacks the header fields from a file like
+        object and populates the attributes of an existing L{dns.Record_RRSIG}
+        instance.
+        """
+        expectedBytes = RRSIGTestData.bytes()
+        record = dns.Record_RRSIG()
+        record.decode(BytesIO(expectedBytes), length=len(expectedBytes))
+
+        self.assertEqual(record, RRSIGTestData.object())
 
 
 

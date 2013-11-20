@@ -30,6 +30,7 @@ __all__ = [
     'Record_MG', 'Record_MINFO', 'Record_MR', 'Record_MX', 'Record_NAPTR',
     'Record_NS', 'Record_NULL', 'Record_PTR', 'Record_RP', 'Record_SOA',
     'Record_SPF', 'Record_SRV', 'Record_TXT', 'Record_WKS', 'UnknownRecord',
+    'Record_RRSIG',
 
     'QUERY_CLASSES', 'QUERY_TYPES', 'REV_CLASSES', 'REV_TYPES', 'EXT_QUERIES',
 
@@ -44,6 +45,7 @@ __all__ = [
 
 
 # System imports
+import base64
 import struct, random, socket
 from itertools import chain
 
@@ -119,6 +121,9 @@ NAPTR = 35
 A6 = 38
 DNAME = 39
 OPT = 41
+# The Type value for the RRSIG RR type is 46.
+# https://tools.ietf.org/html/rfc4034#section-3
+RRSIG = 46
 SPF = 99
 
 QUERY_TYPES = {
@@ -149,6 +154,7 @@ QUERY_TYPES = {
     A6: 'A6',
     DNAME: 'DNAME',
     OPT: 'OPT',
+    RRSIG: 'RRSIG',
     SPF: 'SPF'
 }
 
@@ -1906,6 +1912,171 @@ class Record_SPF(Record_TXT):
     """
     TYPE = SPF
     fancybasename = 'SPF'
+
+
+
+def _base64Format(bytes):
+    """
+    Base64 encode C{bytes} without any line breaks
+
+    @param bytes: The bytestring to encode.
+    @type bytes: L{bytes}
+
+    @return: The formatted base64 bytestring.
+    """
+    return nativeString(base64.encodestring(bytes).replace(b'\n', b''))
+
+
+
+@implementer(IEncodable, IRecord)
+class Record_RRSIG(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
+    """
+    A RRSIG record.
+
+    @see: U{https://tools.ietf.org/html/rfc4034#section-3}
+
+    @ivar TYPE: RRSIG type code constant C{46}.
+    @ivar fancybasename: See L{tputil.FancyStrMixin}
+    @ivar showAttributes: See L{tputil.FancyStrMixin}
+    @ivar compareAttributes: See L{tputil.FancyEqMixin}
+
+    @ivar typeCovered: See L{__init__}
+    @ivar algorithmNumber: See L{__init__}
+    @ivar ttl: See L{__init__}
+    """
+
+    TYPE = RRSIG
+
+    fancybasename = 'RRSIG'
+
+    showAttributes = (
+        'typeCovered', 'algorithmNumber', 'labels', 'originalTTL',
+        'signatureInception', 'signatureExpiration', 'keyTag',
+        ('signersName', lambda n: n.name.decode('ascii')),
+        ('signature', _base64Format),
+        'ttl',
+    )
+
+    compareAttributes = (
+        'typeCovered', 'algorithmNumber', 'labels', 'originalTTL',
+        'signatureInception', 'signatureExpiration', 'keyTag', 'signersName',
+        'signature', 'ttl',
+    )
+
+    _fmt = '!HBBIIIB'
+    _fmt_size = struct.calcsize(_fmt)
+
+    def __init__(self, typeCovered=0, algorithmNumber=0, labels=0,
+                 originalTTL=0, signatureInception=0, signatureExpiration=0,
+                 keyTag=0, signersName=None, signature=b'',  ttl=None):
+        """
+        Set the RRSIG field values.
+
+        @param typeCovered: The Type Covered field identifies the type of the
+            RRset that is covered by this RRSIG record.
+        @type typeCovered: L{int}
+
+        @param algorithmNumber: The Algorithm Number field identifies the
+            cryptographic algorithm used to create the signature.
+        @type algorithmNumber: L[int}
+
+        @param labels: The Labels field specifies the number of labels in the
+            original RRSIG RR owner name.
+        @type labels: L[int}
+
+        @param originalTTL: The Original TTL field specifies the TTL of the
+            covered RRset as it appears in the authoritative zone.
+        @type originalTTL: L[int}
+
+        @param signatureInception: The date from which this signature is
+            valid. As a 32bit SNA timestamp. This record MUST NOT be used for
+            authentication prior to the inception date.
+        @type signatureInception: L[int}
+
+        @param signatureExpiration: The date on which this signature expires.
+            As a 32bit SNA timestamp. This record MUST NOT be used for
+            authentication after the expiration date.
+        @type signatureExpiration: L[int}
+
+        @param keyTag: The Key Tag field contains the key tag value of the
+            DNSKEY RR that validates this signature, in network byte order.
+        @type keyTag: L[int}
+
+        @param signersName: The Signer's Name field value identifies the owner
+            name of the DNSKEY RR that a validator is supposed to use to
+            validate this signature.
+        @type signersName: L{dns.Name}
+
+        @param signature: A signature covers the RRSIG RDATA (excluding the
+            Signature Field) and covers the data RRset specified by the RRSIG
+            owner name, RRSIG class, and RRSIG Type Covered fields.
+        @type signature: L{bytes}
+        """
+        self.typeCovered = typeCovered
+        self.algorithmNumber = algorithmNumber
+        self.labels = labels
+        self.originalTTL = originalTTL
+        self.signatureInception = signatureInception
+        self.signatureExpiration = signatureExpiration
+        self.keyTag = keyTag
+        if signersName is None:
+            signersName = Name(b'')
+        self.signersName = signersName
+        self.signature = signature
+        self.ttl = str2time(ttl)
+
+
+    def encode(self, strio, compDict=None):
+        strio.write(
+            struct.pack(self._fmt,
+                        self.typeCovered,
+                        self.algorithmNumber,
+                        self.labels,
+                        self.originalTTL,
+                        self.signatureInception,
+                        self.signatureExpiration,
+                        self.keyTag))
+        self.signersName.encode(strio)
+        strio.write(self.signature)
+
+
+    def decode(self, strio, length=None):
+        hdr = readPrecisely(strio, self._fmt_size)
+        (self.typeCovered,
+         self.algorithmNumber,
+         self.labels,
+         self.originalTTL,
+         self.signatureInception,
+         self.signatureExpiration,
+         self.keyTag) = struct.unpack(self._fmt, hdr)
+        signersName = Name()
+        encodedNameStart = strio.tell()
+        signersName.decode(strio)
+        encodedNameLength = strio.tell() - encodedNameStart
+        self.signersName = signersName
+        length -= self._fmt_size + encodedNameLength
+        self.signature = readPrecisely(strio, length)
+
+
+    def __hash__(self):
+        """
+        A hash allowing this L{Record_RRSIG} to be used as a L{dict}
+        key.
+
+        @return: A L{hash} of the values of
+             L{Record_RRSIG.compareAttributes} except C{ttl}.
+        """
+        # XXX: All other record types (apart from UnknownRecord) seem
+        # to exclude ttl from the hash while including it in
+        # compareAttributes. Why?
+        # TTL is duplicated in and really belongs in RRHeader.
+        # but on the other hand FileAuthority relies on having the ttl
+        # in Records.
+        # Are Records really used as dictionary keys? and if so
+        # shouldn't they be immutable?
+        return hash(tuple(getattr(self, k)
+                          for k in self.compareAttributes
+                          if k != 'ttl'))
 
 
 
