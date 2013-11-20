@@ -273,7 +273,6 @@ class CGIScriptTests(unittest.TestCase):
         request = DummyRequest(['a', 'b'])
         _render(resource, request)
 
-        self.assertIn("PATH_INFO", _reactor.process_env)
         self.assertEqual(_reactor.process_env["PATH_INFO"],
                          "/a/b")
 
