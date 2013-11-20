@@ -115,7 +115,7 @@ class FlowingAdapterTests(TestCase):
         self.assertIdentical(self.adaptedDrain.fount, ff)
 
 
-    def test_pauseUnpause(self):
+    def test_pauseUnpauseFromTransport(self):
         """
         When an L{IFount} produces too much data for a L{_ProtocolDrain} to
         process, the L{push producer
@@ -133,6 +133,31 @@ class FlowingAdapterTests(TestCase):
         # All clear, start writing again.
         self.adaptedProtocol.transport.producer.resumeProducing()
         self.assertEquals(ff.flowIsPaused, False)
+
+
+    def test_pauseUnpauseFromOtherDrain(self):
+        """
+        When a L{_ProtocolFount} produces too much data for a L{drain <IDrain>}
+        to process, and it calls L{_ProtocolFount.pauseFlow}, the underlying
+        transport will be paused.
+        """
+        fd = FakeDrain()
+        # StringTransport is an OK API.  But it is not the _best_ API.
+        PRODUCING = 'producing'
+        PAUSED = 'paused'
+        # Sanity check.
+        self.assertEqual(self.adaptedProtocol.transport.producerState,
+                         PRODUCING)
+        self.adaptedFount.flowTo(fd)
+        # Steady as she goes.
+        self.assertEqual(self.adaptedProtocol.transport.producerState,
+                         PRODUCING)
+        anPause = fd.fount.pauseFlow()
+        self.assertEqual(self.adaptedProtocol.transport.producerState,
+                         PAUSED)
+        anPause.unpause()
+        self.assertEqual(self.adaptedProtocol.transport.producerState,
+                         PRODUCING)
 
 
     def test_stopProducing(self):

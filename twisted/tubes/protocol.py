@@ -9,6 +9,7 @@ L{Tube}s.
 
 from zope.interface import implementer
 from twisted.tubes.itube import IDrain, IFount, ISegment
+from twisted.tubes.tube import _Pauser
 from twisted.internet.protocol import Protocol as _Protocol
 from twisted.internet.interfaces import IPushProducer
 
@@ -85,6 +86,8 @@ class _ProtocolFount(object):
 
     def __init__(self, transport):
         self._transport = transport
+        self._pauser = _Pauser(self._transport.pauseProducing,
+                               self._transport.resumeProducing)
 
 
     # fount -> deliver data to elsewhere
@@ -100,7 +103,7 @@ class _ProtocolFount(object):
         """
         Pause flowing.
         """
-        self._transport.pauseProducing()
+        return self._pauser.pauseFlow()
 
 
     def stopFlow(self):
@@ -129,6 +132,7 @@ class _ProtocolPlumbing(_Protocol):
 
     def __init__(self, flow):
         self._flow = flow
+
 
     def connectionMade(self):
         """
@@ -177,4 +181,3 @@ def factoryFromFlow(flow):
     @param flow: a 2-argument callable, taking (fount, drain).
     """
     return _FlowFactory(flow)
-
