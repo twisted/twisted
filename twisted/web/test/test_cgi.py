@@ -87,7 +87,7 @@ class CGI(unittest.TestCase):
         return self.p.getHost().port
 
     def tearDown(self):
-        if self.p:
+        if getattr(self, 'p', None):
             return self.p.stopListening()
 
 
@@ -214,6 +214,69 @@ class CGI(unittest.TestCase):
         self.assertEqual(res, "readallinput ok%s" % os.linesep)
 
 
+    def test_useReactorArgument(self):
+        """
+        L{twcgi.FilteredScript.runProcess} uses the reactor passed as an
+        argument to the constructor.
+        """
+        class FakeReactor:
+            """
+            A fake reactor recording whether spawnProcess is called.
+            """
+            called = False
+            def spawnProcess(self, *args, **kwargs):
+                """
+                Set the C{called} flag to C{True} if C{spawnProcess} is called.
+
+                @param args: Positional arguments.
+                @param kwargs: Keyword arguements.
+                """
+                self.called = True
+
+        fakeReactor = FakeReactor()
+        request = DummyRequest(['a', 'b'])
+        resource = twcgi.FilteredScript("dummy-file", reactor=fakeReactor)
+        _render(resource, request)
+
+        self.assertTrue(fakeReactor.called)
+
+
+
+class CGIScriptTests(unittest.TestCase):
+    """
+    Tests for L{twcgi.CGIScript}.
+    """
+
+    def test_pathInfo(self):
+        """
+        L{twcgi.CGIScript.render} sets the process environment I{PATH_INFO} from
+        the request path.
+        """
+        class FakeReactor:
+            """
+            A fake reactor recording the environment passed to spawnProcess.
+            """
+            def spawnProcess(self, process, filename, args, env, wdir):
+                """
+                Store the C{env} L{dict} to an instance attribute.
+
+                @param process: Ignored
+                @param filename: Ignored
+                @param args: Ignored
+                @param env: The environment L{dict} which will be stored
+                @param wdir: Ignored
+                """
+                self.process_env = env
+
+        _reactor = FakeReactor()
+        resource = twcgi.CGIScript(self.mktemp(), reactor=_reactor)
+        request = DummyRequest(['a', 'b'])
+        _render(resource, request)
+
+        self.assertEqual(_reactor.process_env["PATH_INFO"],
+                         "/a/b")
+
+
 
 class CGIDirectoryTests(unittest.TestCase):
     """
@@ -267,4 +330,3 @@ class CGIProcessProtocolTests(unittest.TestCase):
         protocol = twcgi.CGIProcessProtocol(request)
         protocol.processEnded(failure.Failure(error.ProcessTerminated()))
         self.assertEqual(request.responseCode, INTERNAL_SERVER_ERROR)
-

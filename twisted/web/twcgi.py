@@ -8,13 +8,12 @@ I hold resource classes and helper classes that deal with CGI scripts.
 """
 
 # System Imports
-import string
 import os
 import urllib
 
 # Twisted Imports
 from twisted.web import http
-from twisted.internet import reactor, protocol
+from twisted.internet import protocol
 from twisted.spread import pb
 from twisted.python import log, filepath
 from twisted.web import resource, server, static
@@ -51,11 +50,17 @@ class CGIScript(resource.Resource):
     IPC with an external process with an unpleasant protocol.
     """
     isLeaf = 1
-    def __init__(self, filename, registry=None):
+    def __init__(self, filename, registry=None, reactor=None):
         """
         Initialize, with the name of a CGI script file.
         """
         self.filename = filename
+        if reactor is None:
+            # This installs a default reactor, if None was installed before.
+            # We do a late import here, so that importing the current module
+            # won't directly trigger installing a default reactor.
+            from twisted.internet import reactor
+        self._reactor = reactor
 
 
     def render(self, request):
@@ -68,8 +73,8 @@ class CGIScript(resource.Resource):
         @type request: L{twisted.web.http.Request}
         @param request: An HTTP request.
         """
-        script_name = "/"+string.join(request.prepath, '/')
-        serverName = string.split(request.getRequestHostname(), ':')[0]
+        script_name = "/" + "/".join(request.prepath)
+        serverName = request.getRequestHostname().split(':')[0]
         env = {"SERVER_SOFTWARE":   server.version,
                "SERVER_NAME":       serverName,
                "GATEWAY_INTERFACE": "CGI/1.1",
@@ -89,7 +94,7 @@ class CGIScript(resource.Resource):
             env['REMOTE_ADDR'] = ip
         pp = request.postpath
         if pp:
-            env["PATH_INFO"] = "/"+string.join(pp, '/')
+            env["PATH_INFO"] = "/" + "/".join(pp)
 
         if hasattr(request, "content"):
             # request.content is either a StringIO or a TemporaryFile, and
@@ -99,20 +104,21 @@ class CGIScript(resource.Resource):
             request.content.seek(0,0)
             env['CONTENT_LENGTH'] = str(length)
 
-        qindex = string.find(request.uri, '?')
-        if qindex != -1:
+        try:
+            qindex = request.uri.index('?')
+        except ValueError:
+            env['QUERY_STRING'] = ''
+            qargs = []
+        else:
             qs = env['QUERY_STRING'] = request.uri[qindex+1:]
             if '=' in qs:
                 qargs = []
             else:
                 qargs = [urllib.unquote(x) for x in qs.split('+')]
-        else:
-            env['QUERY_STRING'] = ''
-            qargs = []
 
         # Propogate HTTP headers
         for title, header in request.getAllHeaders().items():
-            envname = string.upper(string.replace(title, '-', '_'))
+            envname = title.replace('-', '_').upper()
             if title not in ('content-type', 'content-length'):
                 envname = "HTTP_" + envname
             env[envname] = header
@@ -143,8 +149,8 @@ class CGIScript(resource.Resource):
             will get spawned.
         """
         p = CGIProcessProtocol(request)
-        reactor.spawnProcess(p, self.filename, [self.filename] + qargs, env,
-                             os.path.dirname(self.filename))
+        self._reactor.spawnProcess(p, self.filename, [self.filename] + qargs,
+                                   env, os.path.dirname(self.filename))
 
 
 
@@ -185,9 +191,9 @@ class FilteredScript(CGIScript):
             will get spawned.
         """
         p = CGIProcessProtocol(request)
-        reactor.spawnProcess(p, self.filter,
-                             [self.filter, self.filename] + qargs, env,
-                             os.path.dirname(self.filename))
+        self._reactor.spawnProcess(p, self.filter,
+                                   [self.filter, self.filename] + qargs, env,
+                                   os.path.dirname(self.filename))
 
 
 

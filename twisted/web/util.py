@@ -12,10 +12,8 @@ __all__ = [
 
 from cStringIO import StringIO
 import linecache
-import string
 import types
 
-from twisted.python.filepath import FilePath
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
@@ -200,9 +198,18 @@ htmlReprTypes = {types.DictType: htmlDict,
 
 
 def htmlIndent(snippetLine):
-    ret = string.replace(string.replace(html.escape(string.rstrip(snippetLine)),
-                                  '  ', '&nbsp;'),
-                   '\t', '&nbsp; &nbsp; &nbsp; &nbsp; ')
+    """
+    Strip trailing whitespace, escape HTML entitities and expand indentation
+    whitespace to HTML non-breaking space.
+
+    @param snippetLine: The line of input to indent.
+    @type snippetLine: L{bytes}
+
+    @return: The escaped and indented line.
+    """
+    ret = (html.escape(snippetLine.rstrip())
+            .replace('  ', '&nbsp;')
+            .replace('\t', '&nbsp; &nbsp; &nbsp; &nbsp; '))
     return ret
 
 
