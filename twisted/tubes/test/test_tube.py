@@ -115,6 +115,31 @@ class StopperTest(TestCase):
         self.assertEqual(resume.d, 1)
 
 
+    def test_repeatedlyPause(self):
+        """
+        Multiple calls to L{_Pauser.pause} where not all of the pausers are
+        unpaused do not result in any calls to C{actuallyResume}.
+        """
+        def pause():
+            pause.d += 1
+        pause.d = 0
+        def resume():
+            resume.d += 1
+        resume.d = 0
+        pauser = _Pauser(pause, resume)
+        one = pauser.pauseFlow()
+        two = pauser.pauseFlow()
+        three = pauser.pauseFlow()
+        pauser.pauseFlow()
+
+        one.unpause()
+        two.unpause()
+        three.unpause()
+        # four.unpause() # NO
+        self.assertEqual(pause.d, 1)
+        self.assertEqual(resume.d, 0)
+
+
 
 class TubeTest(TestCase):
     """

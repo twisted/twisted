@@ -46,7 +46,9 @@ class _Pause(object):
 
     def unpause(self):
         if self.alive:
-            self.pauser.actuallyResume()
+            self.pauser.pauses -= 1
+            if self.pauser.pauses == 0:
+                self.pauser.actuallyResume()
             self.alive = False
         else:
             raise AlreadyUnpaused()
@@ -58,14 +60,16 @@ class _Pauser(object):
     def __init__(self, actuallyPause, actuallyResume):
         self.actuallyPause = actuallyPause
         self.actuallyResume = actuallyResume
-        self.pauses = set()
+        self.pauses = 0
 
 
     def pauseFlow(self):
         """
         @see: L{IFount.pauseFlow}
         """
-        self.actuallyPause()
+        if not self.pauses:
+            self.actuallyPause()
+        self.pauses += 1
         return _Pause(self)
 
 
