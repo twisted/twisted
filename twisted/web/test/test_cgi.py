@@ -87,7 +87,7 @@ class CGI(unittest.TestCase):
         return self.p.getHost().port
 
     def tearDown(self):
-        if self.p:
+        if getattr(self, 'p', None):
             return self.p.stopListening()
 
 
@@ -212,6 +212,49 @@ class CGI(unittest.TestCase):
     testReadAllInput.timeout = 5
     def _testReadAllInput_1(self, res):
         self.assertEqual(res, "readallinput ok%s" % os.linesep)
+
+
+    def test_useReactorArgument(self):
+        """
+        L{twcgi.FilteredScript.runProcess} uses the reactor passed as an
+        argument to the constructor.
+        """
+        class FakeReactor:
+            called = False
+            def spawnProcess(self, *args, **kwargs):
+                self.called = True
+
+        fakeReactor = FakeReactor()
+        request = DummyRequest(['a', 'b'])
+        resource = twcgi.FilteredScript("dummy-file", reactor=fakeReactor)
+        _render(resource, request)
+
+        self.assertTrue(fakeReactor.called)
+
+
+
+class CGIScriptTests(unittest.TestCase):
+    """
+    Tests for L{twcgi.CGIScript}.
+    """
+
+    def test_pathInfo(self):
+        """
+        L{twcgi.CGIScript.render} sets the process environment I{PATH_INFO} from
+        the request path.
+        """
+        class FakeReactor:
+            def spawnProcess(self, process, filename, args, env, wdir):
+                self.process_env = env
+
+        _reactor = FakeReactor()
+        resource = twcgi.CGIScript(self.mktemp(), reactor=_reactor)
+        request = DummyRequest(['a', 'b'])
+        _render(resource, request)
+
+        self.assertIn("PATH_INFO", _reactor.process_env)
+        self.assertEqual(_reactor.process_env["PATH_INFO"],
+                         "/a/b")
 
 
 
