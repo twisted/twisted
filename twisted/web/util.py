@@ -198,6 +198,15 @@ htmlReprTypes = {types.DictType: htmlDict,
 
 
 def htmlIndent(snippetLine):
+    """
+    Strip trailing whitespace, escape HTML entitities and expand indentation
+    whitespace to HTML non-breaking space.
+
+    @param snippetLine: The line of input to indent.
+    @type snippetLine: L{bytes}
+
+    @return: The escaped and indented line.
+    """
     ret = (html.escape(snippetLine.rstrip())
             .replace('  ', '&nbsp;')
             .replace('\t', '&nbsp; &nbsp; &nbsp; &nbsp; '))
