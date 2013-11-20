@@ -37,6 +37,7 @@ class FakeFountWithBuffer(FakeFount):
     Probably this should be replaced with a C{MemoryFount}.
     """
     def __init__(self):
+        super(FakeFountWithBuffer, self).__init__()
         self.buffer = []
 
 
@@ -50,8 +51,8 @@ class FakeFountWithBuffer(FakeFount):
         return result
 
 
-    def resumeFlow(self):
-        super(FakeFountWithBuffer, self).resumeFlow()
+    def _actuallyResume(self):
+        super(FakeFountWithBuffer, self)._actuallyResume()
         self._go()
 
 
@@ -479,12 +480,12 @@ class TubeTest(TestCase):
         self.ff.flowTo(series(DeferredPump())).flowTo(fakeDrain)
         self.ff.drain.receive("ignored")
 
-        self.fd.fount.pauseFlow()
+        anPause = self.fd.fount.pauseFlow()
 
         d.callback("hello")
         self.assertEquals(self.fd.received, [])
 
-        self.fd.fount.resumeFlow()
+        anPause.unpause()
         self.assertEquals(self.fd.received, ["hello"])
 
 
@@ -638,7 +639,7 @@ class TubeTest(TestCase):
         """
         newFF = FakeFount()
 
-        self.ff.flowTo(self.tubeDrain).pauseFlow()
+        myPause = self.ff.flowTo(self.tubeDrain).pauseFlow()
         newFF.flowTo(self.tubeDrain)
 
         self.assertTrue(newFF.flowIsPaused, "New upstream is not paused.")

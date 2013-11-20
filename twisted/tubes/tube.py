@@ -87,6 +87,11 @@ class _TubeFount(_TubePiece):
     """
     drain = None
 
+    def __init__(self, tube):
+        super(_TubeFount, self).__init__(tube)
+        self._pauser = _Pauser(self._actuallyPause, self._actuallyResume)
+
+
     def __repr__(self):
         """
         Nice string representation.
@@ -105,8 +110,10 @@ class _TubeFount(_TubePiece):
         """
         self.drain = drain
         result = self.drain.flowingFrom(self)
-        if self._tube._pausedBecauseNoDrain:
-            self.resumeFlow()
+        if self._tube._pauseBecauseNoDrain:
+            pbnd = self._tube._pauseBecauseNoDrain
+            self._tube._pauseBecauseNoDrain = None
+            pbnd.unpause()
         return result
 
 
@@ -115,30 +122,30 @@ class _TubeFount(_TubePiece):
         Pause the flow from the fount, or remember to do that when the
         fount is attached, if it isn't yet.
         """
-        self._tube._currentlyPaused += 1
-        if self._tube._currentlyPaused != 1:
-            return
+        return self._pauser.pauseFlow()
+
+
+    def _actuallyPause(self):
         fount = self._tube._tdrain.fount
-        if fount is not None and not self._tube._fountPaused:
-            self._tube._fountPaused = True
-            fount.pauseFlow()
+        self._tube._currentlyPaused = True
+        if fount is not None and self._tube._pauseBecausePauseCalled is None:
+            self._tube._pauseBecausePauseCalled = fount.pauseFlow()
 
 
-    def resumeFlow(self):
+    def _actuallyResume(self):
         """
         Resume the flow from the fount to this L{_Tube}.
         """
-        self._tube._currentlyPaused -= 1
-        if self._tube._currentlyPaused != 0:
-            return
         fount = self._tube._tdrain.fount
+        self._tube._currentlyPaused = False
 
         if self._tube._pendingIterator is not None:
             self._tube._unbufferIterator()
 
-        if fount is not None and self._tube._fountPaused:
-            self._tube._fountPaused = False
-            fount.resumeFlow()
+        if fount is not None and self._tube._pauseBecausePauseCalled:
+            fp = self._tube._pauseBecausePauseCalled
+            self._tube._pauseBecausePauseCalled = None
+            fp.unpause()
 
 
     def stopFlow(self):
@@ -183,8 +190,11 @@ class _TubeDrain(_TubePiece):
         if out is not None and in_ is not None and not in_.isOrExtends(out):
             raise TypeError()
         self.fount = fount
-        if self._tube._currentlyPaused:
-            fount.pauseFlow()
+        if self._tube._pauseBecausePauseCalled:
+            pbpc = self._tube._pauseBecausePauseCalled
+            self._tube._pauseBecausePauseCalled = None
+            pbpc.unpause()
+            self._tube._pauseBecausePauseCalled = fount.pauseFlow()
         self._tube._deliverFrom(self._pump.started)
         nextFount = self._tube._tfount
         nextDrain = nextFount.drain
@@ -325,11 +335,12 @@ class _Tube(object):
     @ivar _currentlyPaused: is this L{_Tube} currently paused?  Boolean:
         C{True} if paused, C{False} if not.
 
-    @ivar _fountPaused: have I{we} paused I{the upstream} fount?
+    @ivar _pauseBecausePauseCalled: an L{IPause} from the upstream fount,
+        present because pauseFlow has been called.
     """
 
-    _currentlyPaused = 0
-    _fountPaused = False
+    _currentlyPaused = False
+    _pauseBecausePauseCalled = None
     _pump = None
     _pendingIterator = None
 
@@ -375,7 +386,7 @@ class _Tube(object):
 
     pump = property(_get_pump, _set_pump)
 
-    _pausedBecauseNoDrain = False
+    _pauseBecauseNoDrain = None
 
     def _deliverFrom(self, deliverySource):
         assert self._pendingIterator is None
@@ -384,8 +395,7 @@ class _Tube(object):
             return 0
         self._pendingIterator = iter(iterableOrNot)
         if self._tfount.drain is None:
-            self._pausedBecauseNoDrain = True
-            self._tfount.pauseFlow()
+            self._pauseBecauseNoDrain = self._tfount.pauseFlow()
 
         return self._unbufferIterator()
 
@@ -403,13 +413,13 @@ class _Tube(object):
                 self._pendingIterator = None
                 break
             if isinstance(value, Deferred):
-                self._tfount.pauseFlow()
+                anPause = self._tfount.pauseFlow()
 
                 def whenUnclogged(result):
                     pending = self._pendingIterator
                     self._pendingIterator = itertools.chain(iter([result]),
                                                             pending)
-                    self._tfount.resumeFlow()
+                    anPause.unpause()
 
                 from twisted.python import log
                 value.addCallback(whenUnclogged).addErrback(log.err, "WHAT")
@@ -426,9 +436,9 @@ class _Tube(object):
                 'this tube cannot be switched; its pump does not implement '
                 'ISwitchablePump')
         upstream = self._tdrain.fount
-        upstream.pauseFlow()
+        anPause = upstream.pauseFlow()
         upstream.flowTo(drain)
-        upstream.resumeFlow()
+        anPause.unpause()
         if self._pendingIterator is not None:
             for element in self.pump.reassemble(self._pendingIterator):
                 drain.receive(element)

@@ -14,7 +14,7 @@ from twisted.internet.defer import succeed
 from twisted.tubes.itube import IDrain
 from twisted.tubes.itube import IFount
 from twisted.tubes.itube import ISwitchablePump
-from twisted.tubes.tube import Pump
+from twisted.tubes.tube import Pump, _Pauser
 
 
 class StringEndpoint(object):
@@ -98,6 +98,9 @@ class FakeFount(object):
 
     flowIsPaused = 0
     flowIsStopped = False
+    def __init__(self):
+        self._pauser = _Pauser(self._actuallyPause, self._actuallyResume)
+
 
     def flowTo(self, drain):
         self.drain = drain
@@ -105,10 +108,14 @@ class FakeFount(object):
 
 
     def pauseFlow(self):
+        return self._pauser.pauseFlow()
+
+
+    def _actuallyPause(self):
         self.flowIsPaused += 1
 
 
-    def resumeFlow(self):
+    def _actuallyResume(self):
         self.flowIsPaused -= 1
 
 
