@@ -974,6 +974,16 @@ class ClientTestCase(unittest.TestCase):
         d.addCallback(self.checkResult, dns.SPF)
         return d
 
+
+    def test_lookupRRSIG(self):
+        """
+        See L{test_lookupAddress}
+        """
+        d = client.lookupRRSIG(self.hostname)
+        d.addCallback(self.checkResult, dns.RRSIG)
+        return d
+
+
     def test_lookupResponsibility(self):
         """
         See L{test_lookupAddress}
