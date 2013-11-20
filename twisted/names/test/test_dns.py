@@ -1362,9 +1362,8 @@ class ReprTests(unittest.TestCase):
 
     def test_rrsig(self):
         """
-        The repr of a L{dns.Record_RRSIG} instance includes fields of
-        the record and a base64 encoded representation of the
-        publicKey.
+        The repr of a L{dns.Record_RRSIG} instance includes fields of the record
+        and a base64 encoded representation of the publicKey.
 
         https://tools.ietf.org/html/rfc4034#section-2.3
         """
@@ -1952,7 +1951,6 @@ class EqualityTests(ComparisonTestsMixin, unittest.TestCase):
             dns.Record_RRSIG(typeCovered=10),
             dns.Record_RRSIG(typeCovered=20))
 
-
         self._equalityTest(
             dns.Record_RRSIG(algorithmNumber=10),
             dns.Record_RRSIG(algorithmNumber=10),
@@ -2298,8 +2296,10 @@ class RRSIGTestData(object):
     during decoding.
     """
     @classmethod
-    def BYTES(cls):
+    def bytes(cls):
         """
+        Return an RRSIG record in wire format.
+
         @return: L{bytes} representing the encoded record returned by L{OBJECT}.
         """
         return (
@@ -2316,10 +2316,12 @@ class RRSIGTestData(object):
 
 
     @classmethod
-    def OBJECT(cls):
+    def object(cls):
         """
+        Create a instance of L{dns.Record_RRSIG}.
+
         @return: A L{dns.Record_RRSIG} instance with attributes that match the
-        encoded record returned by L{BYTES}.
+            encoded record returned by L{BYTES}.
         """
         return dns.Record_RRSIG(typeCovered=10,
                                 algorithmNumber=11,
@@ -2492,11 +2494,11 @@ class RRSIGRecordTests(unittest.TestCase):
         L{dns.Record_RRSIG.encode} packs the header fields and the key and
         writes them to a file like object passed in as an argument.
         """
-        record = RRSIGTestData.OBJECT()
+        record = RRSIGTestData.object()
         actualBytes = BytesIO()
         record.encode(actualBytes)
 
-        self.assertEqual(actualBytes.getvalue(), RRSIGTestData.BYTES())
+        self.assertEqual(actualBytes.getvalue(), RRSIGTestData.bytes())
 
 
     def test_decode(self):
@@ -2505,11 +2507,12 @@ class RRSIGRecordTests(unittest.TestCase):
         object and populates the attributes of an existing L{dns.Record_RRSIG}
         instance.
         """
-        expectedBytes = RRSIGTestData.BYTES()
+        expectedBytes = RRSIGTestData.bytes()
         record = dns.Record_RRSIG()
         record.decode(BytesIO(expectedBytes), length=len(expectedBytes))
 
-        self.assertEqual(record, RRSIGTestData.OBJECT())
+        self.assertEqual(record, RRSIGTestData.object())
+
 
 
 class OPTNonStandardAttributes(object):

@@ -570,7 +570,6 @@ class IResolver(IResolverSimple):
         """
 
 
-
     def lookupRRSIG(name, timeout=None):
         """
         Perform a RRSIG record lookup.
