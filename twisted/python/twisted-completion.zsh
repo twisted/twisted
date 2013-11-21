@@ -1,4 +1,4 @@
-#compdef twistd trial conch cftp tapconvert ckeygen lore pyhtmlizer tap2deb tkconch manhole tap2rpm
+#compdef twistd trial conch cftp ckeygen lore pyhtmlizer tap2deb tkconch manhole tap2rpm
 #
 # This is the ZSH completion file for Twisted commands. It calls the current
 # command-line with the special "--_shell-completion" option which is handled
