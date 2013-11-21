@@ -1909,7 +1909,7 @@ class Record_SPF(Record_TXT):
 
 
 
-class Message:
+class Message(tputil.FancyStrMixin):
     """
     L{Message} contains all the information represented by a single
     DNS request or response.
@@ -1942,6 +1942,12 @@ class Message:
         in C{answers} and C{authority}.
     @type additional: L{list} of L{RRHeader}
     """
+    showAttributes = (
+        'id', 'answer', 'opCode', 'auth', 'trunc',
+        'recDes', 'recAv', 'rCode',
+        'authenticData', 'checkingDisabled', 'maxSize',
+        'queries', 'answers', 'authority', 'additional')
+
     headerFmt = "!H2B4H"
     headerSize = struct.calcsize(headerFmt)
 

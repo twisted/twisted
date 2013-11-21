@@ -675,6 +675,32 @@ class MessageTestCase(unittest.SynchronousTestCase):
         self.assertEqual(m.checkingDisabled, 1)
 
 
+    def test_repr(self):
+        """
+        L{dns.Message.__repr__} displays all the field values and sections of
+        the message.
+        """
+        self.assertEqual(
+            repr(dns.Message()),
+            '<Message '
+            'id=0 '
+            'answer=0 '
+            'opCode=0 '
+            'auth=0 '
+            'trunc=0 '
+            'recDes=0 '
+            'recAv=0 '
+            'rCode=0 '
+            'authenticData=0 '
+            'checkingDisabled=0 '
+            'maxSize=512 '
+            'queries=[] '
+            'answers=[] '
+            'authority=[] '
+            'additional=[]'
+            '>')
+
+
     def testEmptyMessage(self):
         """
         Test that a message which has been truncated causes an EOFError to
