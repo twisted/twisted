@@ -367,41 +367,51 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
         by setting C{TZ} to various well-known values and asserting that the
         reported offset is correct.
         """
-        localDaylightTuple = (2006, 6, 30, 0, 0, 0, 4, 181, 1)
-        utcDaylightTimestamp = time.mktime(localDaylightTuple)
-        localStandardTuple = (2007, 1, 31, 0, 0, 0, 2, 31, 0)
-        utcStandardTimestamp = time.mktime(localStandardTuple)
+        # The behavior of mktime depends on the current timezone setting.  So
+        # delay constructing the test data until the timezone has been set to a
+        # well-known value.  Not doing this results in the test failing if one
+        # of these values is out of bounds for the timezone on the
+        # system/environment the test suite happens to be running in.
+        def daylight():
+            localDaylightTuple = (2006, 6, 30, 0, 0, 0, 4, 181, 1)
+            return time.mktime(localDaylightTuple)
+
+        def standard():
+            localStandardTuple = (2007, 1, 31, 0, 0, 0, 2, 31, 0)
+            return time.mktime(localStandardTuple)
+
+        # A helper to change the timezone that affects this process.
+        def settz(name):
+            os.environ['TZ'] = name
+            time.tzset()
 
         originalTimezone = os.environ.get('TZ', None)
         try:
             # Test something west of UTC
-            os.environ['TZ'] = 'America/New_York'
-            time.tzset()
+            settz('America/New_York')
             self.assertEqual(
-                self.flo.getTimezoneOffset(utcDaylightTimestamp),
+                self.flo.getTimezoneOffset(daylight()),
                 14400)
             self.assertEqual(
-                self.flo.getTimezoneOffset(utcStandardTimestamp),
+                self.flo.getTimezoneOffset(standard()),
                 18000)
 
             # Test something east of UTC
-            os.environ['TZ'] = 'Europe/Berlin'
-            time.tzset()
+            settz('Europe/Berlin')
             self.assertEqual(
-                self.flo.getTimezoneOffset(utcDaylightTimestamp),
+                self.flo.getTimezoneOffset(daylight()),
                 -7200)
             self.assertEqual(
-                self.flo.getTimezoneOffset(utcStandardTimestamp),
+                self.flo.getTimezoneOffset(standard()),
                 -3600)
 
             # Test a timezone that doesn't have DST
-            os.environ['TZ'] = 'Africa/Johannesburg'
-            time.tzset()
+            settz('Africa/Johannesburg')
             self.assertEqual(
-                self.flo.getTimezoneOffset(utcDaylightTimestamp),
+                self.flo.getTimezoneOffset(daylight()),
                 -7200)
             self.assertEqual(
-                self.flo.getTimezoneOffset(utcStandardTimestamp),
+                self.flo.getTimezoneOffset(standard()),
                 -7200)
         finally:
             if originalTimezone is None:
