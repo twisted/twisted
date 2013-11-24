@@ -405,7 +405,9 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
                 self.flo.getTimezoneOffset(standard()),
                 -3600)
 
-            # Test a timezone that doesn't have DST
+            # Test a timezone that doesn't have DST.  Despite the comment above
+            # about mktime() failing, implementations don't seem to fail when a
+            # daylight value is constructed for this timezone.
             settz('Africa/Johannesburg')
             self.assertEqual(
                 self.flo.getTimezoneOffset(daylight()),
