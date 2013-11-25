@@ -405,6 +405,26 @@ interpolation.  For example, this is safe on Python 2 and Python 3:
 """
 
 
+try:
+    StringType = basestring
+except NameError:
+    # Python 3+
+    StringType = str
+
+try:
+    from types import InstanceType
+except ImportError:
+    # Python 3+
+    InstanceType = object
+
+try:
+    from types import FileType
+except ImportError:
+    from io import IOBase
+    # Python 3+
+    FileType = IOBase
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -420,4 +440,7 @@ __all__ = [
     "iterbytes",
     "intToBytes",
     "lazyByteSlice",
+    "StringType",
+    "InstanceType",
+    "FileType",
     ]
