@@ -44,7 +44,7 @@ __all__ = [
 
 
 # System imports
-import struct, random, socket
+import inspect, struct, random, socket
 from itertools import chain
 
 from io import BytesIO
@@ -1909,7 +1909,7 @@ class Record_SPF(Record_TXT):
 
 
 
-class Message(tputil.FancyStrMixin):
+class Message:
     """
     L{Message} contains all the information represented by a single
     DNS request or response.
@@ -1941,12 +1941,18 @@ class Message(tputil.FancyStrMixin):
     @ivar additional: Records containing IP addresses of host names
         in C{answers} and C{authority}.
     @type additional: L{list} of L{RRHeader}
+
+    @ivar _flagNames: The names of attributes representing the flag header
+        fields.
+    @ivar _fieldNames: The names of attributes representing non-flag fixed
+        header fields.
+    @ivar _sectionNames: The names of attributes representing the record
+        sections of this message.
     """
-    showAttributes = (
-        'id', 'answer', 'opCode', 'auth', 'trunc',
-        'recDes', 'recAv', 'rCode',
-        'authenticData', 'checkingDisabled', 'maxSize',
-        'queries', 'answers', 'authority', 'additional')
+    _flagNames = ('answer','auth', 'trunc', 'recDes', 'recAv', 'authenticData',
+                  'checkingDisabled')
+    _fieldNames = ('id', 'opCode', 'rCode', 'maxSize')
+    _sectionNames = ('queries', 'answers', 'authority', 'additional')
 
     headerFmt = "!H2B4H"
     headerSize = struct.calcsize(headerFmt)
@@ -2033,6 +2039,46 @@ class Message(tputil.FancyStrMixin):
         self.answers = []
         self.authority = []
         self.additional = []
+
+
+    def __repr__(self):
+        """
+        Generate a repr of this message.
+
+        Only includes the non-default fields and sections and only includes
+        flags which are set.
+
+        @return: The native string repr.
+        """
+        setFlags = []
+        for name in self._flagNames:
+            if getattr(self, name, False) == True:
+                setFlags.append(name)
+
+        out = ['<', self.__class__.__name__]
+
+        # Get the argument names and values from the constructor.
+        argspec = inspect.getargspec(self.__class__.__init__)
+        # Reverse the args and defaults to avoid mapping positional arguments
+        # which don't have a default.
+        defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
+        for name in self._fieldNames:
+            defaultValue = defaults.get(name)
+            fieldValue = getattr(self, name, defaultValue)
+            if name == 'id' or fieldValue != defaultValue:
+                out.append(' %s=%r' % (name, fieldValue))
+
+        if setFlags:
+            out.append(' flags=%s' % (','.join(setFlags),))
+
+        for name in self._sectionNames:
+            section = getattr(self, name, [])
+            if section:
+                out.append(' %s=%r' % (name, section))
+
+        out.append('>')
+
+        return ''.join(out)
 
 
     def addQuery(self, name, type=ALL_RECORDS, cls=IN):
