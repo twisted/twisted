@@ -18,13 +18,9 @@ from collections import deque
 RegexType = type(re.compile(""))
 
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
-
 from twisted.python.compat import _PY3
 from twisted.python.deprecate import deprecated
+from twisted.python import compat
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.versions import Version
 
@@ -113,7 +109,7 @@ def getClass(obj):
 
 # I should really have a better name for this...
 def isinst(inst,clazz):
-    if type(inst) != types.InstanceType or type(clazz)!= types.ClassType:
+    if type(inst) != compat.InstanceType or type(clazz)!= types.ClassType:
         return isinstance(inst,clazz)
     cl = inst.__class__
     cl2 = getcurrent(cl)
@@ -226,7 +222,7 @@ def modgrep(goal):
 
 def isOfType(start, goal):
     return ((type(start) is goal) or
-            (isinstance(start, types.InstanceType) and
+            (isinstance(start, compat.InstanceType) and
              start.__class__ is goal))
 
 
@@ -252,33 +248,33 @@ def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns
             return
         maxDepth -= 1
     seen[id(start)] = start
-    if isinstance(start, types.DictionaryType):
+    if isinstance(start, dict):
         for k, v in start.items():
             objgrep(k, goal, eq, path+'{'+repr(v)+'}', paths, seen, showUnknowns, maxDepth)
             objgrep(v, goal, eq, path+'['+repr(k)+']', paths, seen, showUnknowns, maxDepth)
     elif isinstance(start, (list, tuple, deque)):
-        for idx in xrange(len(start)):
+        for idx, _elem in enumerate(start):
             objgrep(start[idx], goal, eq, path+'['+str(idx)+']', paths, seen, showUnknowns, maxDepth)
     elif isinstance(start, types.MethodType):
-        objgrep(start.im_self, goal, eq, path+'.im_self', paths, seen, showUnknowns, maxDepth)
-        objgrep(start.im_func, goal, eq, path+'.im_func', paths, seen, showUnknowns, maxDepth)
-        objgrep(start.im_class, goal, eq, path+'.im_class', paths, seen, showUnknowns, maxDepth)
+        objgrep(start.__self__, goal, eq, path+'.__self__', paths, seen, showUnknowns, maxDepth)
+        objgrep(start.__func__, goal, eq, path+'.__func__', paths, seen, showUnknowns, maxDepth)
+        objgrep(start.__self__.__class__, goal, eq, path+'.__self__.__class__', paths, seen, showUnknowns, maxDepth)
     elif hasattr(start, '__dict__'):
         for k, v in start.__dict__.items():
             objgrep(v, goal, eq, path+'.'+k, paths, seen, showUnknowns, maxDepth)
-        if isinstance(start, types.InstanceType):
+        if isinstance(start, compat.InstanceType):
             objgrep(start.__class__, goal, eq, path+'.__class__', paths, seen, showUnknowns, maxDepth)
     elif isinstance(start, weakref.ReferenceType):
         objgrep(start(), goal, eq, path+'()', paths, seen, showUnknowns, maxDepth)
-    elif (isinstance(start, types.StringTypes+
-                    (types.IntType, types.FunctionType,
-                     types.BuiltinMethodType, RegexType, types.FloatType,
-                     types.NoneType, types.FileType)) or
+    elif (isinstance(start, (compat.StringType,
+                    int, types.FunctionType,
+                     types.BuiltinMethodType, RegexType, float,
+                     type(None), compat.FileType)) or
           type(start).__name__ in ('wrapper_descriptor', 'method_descriptor',
                                    'member_descriptor', 'getset_descriptor')):
         pass
     elif showUnknowns:
-        print 'unknown type', type(start), start
+        print('unknown type', type(start), start)
     return paths
 
 
