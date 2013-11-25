@@ -2043,10 +2043,10 @@ class Message:
 
     def __repr__(self):
         """
-        Generate a repr of this message.
+        Generate a repr of this L{Message}.
 
         Only includes the non-default fields and sections and only includes
-        flags which are set.
+        flags which are set. The C{id} is always shown.
 
         @return: The native string repr.
         """
