@@ -1592,8 +1592,8 @@ class SSLTestCase(unittest.TestCase):
             protocol, including a line which ends the capability response.
         @type param: L{bytes}
 
-        @raise: C{self.failException} if the behavior of C{self.clientProtocol}
-            is not as described.
+        @raise: C{self.failureException} if the behavior of
+            C{self.clientProtocol} is not as described.
         """
         transport = StringTransport()
         directlyProvides(transport, interfaces.ISSLTransport)
