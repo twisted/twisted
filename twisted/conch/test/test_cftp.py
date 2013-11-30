@@ -39,23 +39,7 @@ from twisted.internet.task import Clock
 from twisted.conch.test import test_ssh, test_conch
 from twisted.conch.test.test_filetransfer import SFTPTestBase
 from twisted.conch.test.test_filetransfer import FileTransferTestAvatar
-
-
-
-class FakeStdio(object):
-    """
-    A fake for testing L{twisted.conch.scripts.cftp.SSHSession.eofReceived}.
-
-    @ivar writeConnLost: A flag which records whether L{loserWriteConnection}
-        has been called.
-    """
-    writeConnLost = False
-
-    def loseWriteConnection(self):
-        """
-        Record the call to loseWriteConnection.
-        """
-        self.writeConnLost = True
+from twisted.conch.test.test_conch import FakeStdio
 
 
 
