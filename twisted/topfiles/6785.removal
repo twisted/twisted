@@ -1,1 +1,2 @@
-twisted.internet._posixstdio.closeStdin, deprecated since Twisted 2.1, has been removed.
+twisted.internet.stdio.StandardIO.closeStdin, an alias for loseWriteConnection
+only available on POSIX and deprecated since 2.1, has been removed.
