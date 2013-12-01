@@ -17,6 +17,7 @@ if Crypto and pyasn1:
     try:
         from twisted.conch import unix
         from twisted.conch.scripts import cftp
+        from twisted.conch.scripts.cftp import SSHSession
         from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
     except ImportError as e:
         unix = None
@@ -24,7 +25,6 @@ if Crypto and pyasn1:
         del e
 else:
     unix = None
-
 
 from twisted.python.fakepwd import UserDatabase
 from twisted.trial.unittest import TestCase
@@ -39,6 +39,24 @@ from twisted.internet.task import Clock
 from twisted.conch.test import test_ssh, test_conch
 from twisted.conch.test.test_filetransfer import SFTPTestBase
 from twisted.conch.test.test_filetransfer import FileTransferTestAvatar
+from twisted.conch.test.test_conch import FakeStdio
+
+
+
+class SSHSessionTests(TestCase):
+    """
+    Tests for L{twisted.conch.scripts.cftp.SSHSession}.
+    """
+    def test_eofReceived(self):
+        """
+        L{twisted.conch.scripts.cftp.SSHSession.eofReceived} loses the write
+        half of its stdio connection.
+        """
+        stdio = FakeStdio()
+        channel = SSHSession()
+        channel.stdio = stdio
+        channel.eofReceived()
+        self.assertTrue(stdio.writeConnLost)
 
 
 
@@ -967,6 +985,7 @@ if unix is None or Crypto is None or pyasn1 is None or interfaces.IReactorProces
     TestOurServerBatchFile.skip = _reason
     TestOurServerSftpClient.skip = _reason
     StdioClientTests.skip = _reason
+    SSHSessionTests.skip = _reason
 else:
     from twisted.python.procutils import which
     if not which('sftp'):

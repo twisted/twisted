@@ -39,6 +39,24 @@ except ImportError:
 
 
 
+class FakeStdio(object):
+    """
+    A fake for testing L{twisted.conch.scripts.conch.SSHSession.eofReceived} and
+    L{twisted.conch.scripts.cftp.SSHSession.eofReceived}.
+
+    @ivar writeConnLost: A flag which records whether L{loserWriteConnection}
+        has been called.
+    """
+    writeConnLost = False
+
+    def loseWriteConnection(self):
+        """
+        Record the call to loseWriteConnection.
+        """
+        self.writeConnLost = True
+
+
+
 class StdioInteractingSessionTests(unittest.TestCase):
     """
     Tests for L{twisted.conch.scripts.conch.SSHSession}.
@@ -51,12 +69,6 @@ class StdioInteractingSessionTests(unittest.TestCase):
         L{twisted.conch.scripts.conch.SSHSession.eofReceived} loses the
         write half of its stdio connection.
         """
-        class FakeStdio:
-            writeConnLost = False
-
-            def loseWriteConnection(self):
-                self.writeConnLost = True
-
         stdio = FakeStdio()
         channel = StdioInteractingSession()
         channel.stdio = stdio

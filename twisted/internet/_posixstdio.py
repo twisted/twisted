@@ -11,7 +11,6 @@ Future Plans::
 Maintainer: James Y Knight
 """
 
-import warnings
 from zope.interface import implements
 
 from twisted.internet import process, error, interfaces
@@ -158,13 +157,6 @@ class StandardIO(object):
     def resumeProducing(self):
         if self._reader is not None:
             self._reader.resumeProducing()
-
-    # Stupid compatibility:
-    def closeStdin(self):
-        """Compatibility only, don't use. Same as loseWriteConnection."""
-        warnings.warn("This function is deprecated, use loseWriteConnection instead.",
-                      category=DeprecationWarning, stacklevel=2)
-        self.loseWriteConnection()
 
     def stopReading(self):
         """Compatibility only, don't use. Call pauseProducing."""
