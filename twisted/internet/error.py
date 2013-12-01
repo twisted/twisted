@@ -459,6 +459,29 @@ class AlreadyListened(Exception):
     """
 
 
+
+class InvalidAddressError(ValueError):
+    """
+    An invalid address was specified (i.e. neither IPv4 or IPv6, or expected
+    one and got the other).
+
+    @ivar address: See L{__init__}
+    @ivar message: See L{__init__}
+    """
+
+    def __init__(self, address, message):
+        """
+        @param address: The address that was provided.
+        @type address: L{bytes}
+        @param message: A native string of additional information provided by
+            the calling context.
+        @type address: L{str}
+        """
+        self.address = address
+        self.message = message
+
+
+
 __all__ = [
     'BindError', 'CannotListenError', 'MulticastJoinError',
     'MessageLengthError', 'DNSLookupError', 'ConnectInProgressError',
@@ -472,4 +495,4 @@ __all__ = [
     'ProcessTerminated', 'ProcessExitedAlready', 'NotConnectingError',
     'NotListeningError', 'ReactorNotRunning', 'ReactorAlreadyRunning',
     'ReactorAlreadyInstalledError', 'ConnectingCancelledError',
-    'UnsupportedAddressFamily', 'UnsupportedSocketType']
+    'UnsupportedAddressFamily', 'UnsupportedSocketType', 'InvalidAddressError']

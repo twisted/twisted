@@ -164,6 +164,21 @@ class TestStringification(unittest.SynchronousTestCase):
                 output)
 
 
+    def test_connectingCancelledError(self):
+        """
+        L{error.ConnectingCancelledError} has an C{address} attribute.
+        """
+        address = object()
+        e = error.ConnectingCancelledError(address)
+        self.assertIdentical(e.address, address)
+
+
+
+class SubclassingTests(unittest.SynchronousTestCase):
+    """
+    Some exceptions are subclasses of other exceptions.
+    """
+
     def test_connectionLostSubclassOfConnectionClosed(self):
         """
         L{error.ConnectionClosed} is a superclass of L{error.ConnectionLost}.
@@ -180,13 +195,13 @@ class TestStringification(unittest.SynchronousTestCase):
                                    error.ConnectionClosed))
 
 
-    def test_connectingCancelledError(self):
+    def test_invalidAddressErrorSubclassOfValueError(self):
         """
-        L{error.ConnectingCancelledError} has an C{address} attribute.
+        L{ValueError} is a superclass of L{error.InvalidAddressError}.
         """
-        address = object()
-        e = error.ConnectingCancelledError(address)
-        self.assertIdentical(e.address, address)
+        self.assertTrue(issubclass(error.InvalidAddressError,
+                                   ValueError))
+
 
 
 

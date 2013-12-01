@@ -21,11 +21,13 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.internet.interfaces import (
     ILoggingContext, IListeningPort, IReactorUDP, IReactorSocket)
-from twisted.internet.address import IPv4Address
+from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.protocol import DatagramProtocol
 
 from twisted.internet.test.connectionmixins import (LogObserverMixin,
                                                     findFreePort)
+from twisted.internet import defer, error
+from twisted.test.test_udp import Server, GoodClient
 from twisted.trial.unittest import SkipTest
 
 
@@ -139,6 +141,30 @@ class UDPPortTestsMixin(object):
             port.getHost(), IPv4Address('UDP', host, portNumber))
 
 
+    def test_getHostIPv6(self):
+        """
+        L{IListeningPort.getHost} returns an L{IPv6Address} when listening on
+        an IPv6 interface.
+        """
+        reactor = self.buildReactor()
+        port = self.getListeningPort(
+            reactor, DatagramProtocol(), interface='::1')
+        addr = port.getHost()
+        self.assertEqual(addr.host, "::1")
+        self.assertIsInstance(addr, IPv6Address)
+
+
+    def test_invalidInterface(self):
+        """
+        An L{InvalidAddressError} is raised when trying to listen on an address
+        that isn't a valid IPv4 or IPv6 address.
+        """
+        reactor = self.buildReactor()
+        self.assertRaises(
+            error.InvalidAddressError, reactor.listenUDP, DatagramProtocol(),
+            0, interface='example.com')
+
+
     def test_logPrefix(self):
         """
         Datagram transports implement L{ILoggingContext.logPrefix} to return a
@@ -190,6 +216,148 @@ class UDPPortTestsMixin(object):
         reactor = self.buildReactor()
         port = self.getListeningPort(reactor, DatagramProtocol())
         self.assertIn(repr(port.getHost().port), str(port))
+
+
+    def test_writeToIPv6Interface(self):
+        """
+        Writing to an IPv6 UDP socket on the loopback interface succeeds.
+        """
+        reactor = self.buildReactor()
+        server = Server()
+        serverStarted = server.startedDeferred = defer.Deferred()
+        self.getListeningPort(reactor, server, interface="::1")
+
+        client = GoodClient()
+        clientStarted = client.startedDeferred = defer.Deferred()
+        self.getListeningPort(reactor, client, interface="::1")
+        cAddr = client.transport.getHost()
+
+        def cbClientStarted(ignored):
+            """
+            Send a datagram from the client once it's started.
+
+            @param ignored: a list of C{[None, None]}, which is ignored
+            @returns: a deferred which fires when the server has received a
+                datagram.
+            """
+            client.transport.write(
+                b"spam", ("::1", server.transport.getHost().port))
+            serverReceived = server.packetReceived = defer.Deferred()
+            return serverReceived
+
+        def cbServerReceived(ignored):
+            """
+            Stop the reactor after a datagram is received.
+
+            @param ignored: C{None}, which is ignored
+            @returns: C{None}
+            """
+            reactor.stop()
+
+        d = defer.gatherResults([serverStarted, clientStarted])
+        d.addCallback(cbClientStarted)
+        d.addCallback(cbServerReceived)
+        d.addErrback(err)
+        self.runReactor(reactor)
+
+        packet = server.packets[0]
+        self.assertEqual(packet, (b'spam', (cAddr.host, cAddr.port)))
+
+
+    def test_connectedWriteToIPv6Interface(self):
+        """
+        An IPv6 address can be passed as the C{interface} argument to
+        L{listenUDP}. The resulting Port accepts IPv6 datagrams.
+        """
+        reactor = self.buildReactor()
+        server = Server()
+        serverStarted = server.startedDeferred = defer.Deferred()
+        self.getListeningPort(reactor, server, interface="::1")
+
+        client = GoodClient()
+        clientStarted = client.startedDeferred = defer.Deferred()
+        self.getListeningPort(reactor, client, interface="::1")
+        cAddr = client.transport.getHost()
+
+        def cbClientStarted(ignored):
+            """
+            Send a datagram from the client once it's started.
+
+            @param ignored: a list of C{[None, None]}, which is ignored
+            @returns: a deferred which fires when the server has received a
+                datagram.
+            """
+
+            client.transport.connect("::1", server.transport.getHost().port)
+            client.transport.write(b"spam")
+            serverReceived = server.packetReceived = defer.Deferred()
+            return serverReceived
+
+        def cbServerReceived(ignored):
+            """
+            Stop the reactor after a datagram is received.
+
+            @param ignored: C{None}, which is ignored
+            @returns: C{None}
+            """
+
+            reactor.stop()
+
+        d = defer.gatherResults([serverStarted, clientStarted])
+        d.addCallback(cbClientStarted)
+        d.addCallback(cbServerReceived)
+        d.addErrback(err)
+        self.runReactor(reactor)
+
+        packet = server.packets[0]
+        self.assertEqual(packet, (b'spam', (cAddr.host, cAddr.port)))
+
+
+    def test_writingToHostnameRaisesInvalidAddressError(self):
+        """
+        Writing to a hostname instead of an IP address will raise an
+        L{InvalidAddressError}.
+        """
+        reactor = self.buildReactor()
+        port = self.getListeningPort(reactor, DatagramProtocol())
+        self.assertRaises(
+            error.InvalidAddressError,
+            port.write, 'spam', ('example.invalid', 1))
+
+
+    def test_writingToIPv6OnIPv4RaisesInvalidAddressError(self):
+        """
+        Writing to an IPv6 address on an IPv4 socket will raise an
+        L{InvalidAddressError}.
+        """
+        reactor = self.buildReactor()
+        port = self.getListeningPort(
+            reactor, DatagramProtocol(), interface="127.0.0.1")
+        self.assertRaises(
+            error.InvalidAddressError, port.write, 'spam', ('::1', 1))
+
+
+    def test_writingToIPv4OnIPv6RaisesInvalidAddressError(self):
+        """
+        Writing to an IPv6 address on an IPv4 socket will raise an
+        L{InvalidAddressError}.
+        """
+        reactor = self.buildReactor()
+        port = self.getListeningPort(
+            reactor, DatagramProtocol(), interface="::1")
+        self.assertRaises(
+            error.InvalidAddressError, port.write, 'spam', ('127.0.0.1', 1))
+
+
+    def test_connectingToHostnameRaisesInvalidAddressError(self):
+        """
+        Connecting to a hostname instead of an IP address will raise an
+        L{InvalidAddressError}.
+        """
+        reactor = self.buildReactor()
+        port = self.getListeningPort(reactor, DatagramProtocol())
+        self.assertRaises(
+            error.InvalidAddressError, port.connect, 'example.invalid', 1)
 
 
 
