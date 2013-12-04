@@ -4010,11 +4010,11 @@ class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
 
 class MessageStandardEncodingTests(EDNSMessageStandardEncodingTests):
     """
-    Repeat the L{EDNSMessageStandardEncodingTests} using for L{dns.Message}.
+    Repeat the L{EDNSMessageStandardEncodingTests} using L{dns.Message}.
     """
 
     @staticmethod
-    def messageFactory(*args, **kwargs):
+    def messageFactory(**kwargs):
         """
         This function adapts constructor arguments expected by
         _EDNSMessage.__init__ to arguments suitable for use with the
@@ -4041,7 +4041,7 @@ class MessageStandardEncodingTests(EDNSMessageStandardEncodingTests):
 
         kwargs.pop('ednsVersion', None)
 
-        m = dns.Message(*args, **kwargs)
+        m = dns.Message(**kwargs)
         m.queries = queries
         m.answers = answers
         m.authority = authority
