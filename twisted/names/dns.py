@@ -2255,14 +2255,13 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             domain name in question section.
         @type auth: L{bool}
 
-        @param trunc: TrunCation - specifies that this message was truncated due
+        @param trunc: Truncation - specifies that this message was truncated due
             to length greater than that permitted on the transmission channel.
         @type trunc: L{bool}
 
         @param recDes: Recursion Desired - this bit may be set in a query and is
-            copied into the response.  If RD is set, it directs the name server
-            to pursue the query recursively.  Recursive query support is
-            optional.
+            copied into the response.  If set, it directs the name server to
+            pursue the query recursively.  Recursive query support is optional.
         @type recDes: L{bool}
 
         @param recAv: Recursion Available - this bit is set or cleared in a
