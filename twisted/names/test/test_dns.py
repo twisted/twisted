@@ -3877,14 +3877,18 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
 
 
 
-class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
+class StandardEncodingTestsMixin(object):
     """
     Tests for the encoding and decoding of various standard (not EDNS) messages.
 
     These tests should work with both L{dns._EDNSMessage} and L{dns.Message}.
-    """
-    messageFactory = dns._EDNSMessage
 
+    TestCase classes that use this mixin must provide a C{messageFactory} method
+    which accepts any argment supported by L{dns._EDNSMessage.__init__}.
+
+    EDNS specific arguments may be discarded if not supported by the message
+    class under construction.
+    """
     def test_emptyMessageEncode(self):
         """
         An empty message can be encoded.
@@ -4008,11 +4012,22 @@ class EDNSMessageStandardEncodingTests(unittest.SynchronousTestCase):
 
 
 
-class MessageStandardEncodingTests(EDNSMessageStandardEncodingTests):
+class EDNSMessageStandardEncodingTests(StandardEncodingTestsMixin,
+                                       unittest.SynchronousTestCase):
     """
-    Repeat the L{EDNSMessageStandardEncodingTests} using L{dns.Message}.
+    Tests for the encoding and decoding of various standard (non-EDNS) messages
+    by L{dns._EDNSMessage}.
     """
+    messageFactory = dns._EDNSMessage
 
+
+
+class MessageStandardEncodingTests(StandardEncodingTestsMixin,
+                                   unittest.SynchronousTestCase):
+    """
+    Tests for the encoding and decoding of various standard (non-EDNS) messages
+    by L{dns.Message}.
+    """
     @staticmethod
     def messageFactory(**kwargs):
         """
