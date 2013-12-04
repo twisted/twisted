@@ -645,6 +645,15 @@ class TubeTest(TestCase):
         self.assertTrue(newFF.flowIsPaused, "New upstream is not paused.")
 
 
+    def test_switchingNonSwitchableError(self):
+        """
+        L{_Tube.switch} on a L{_Tube} without an L{ISwitchablePump} raises
+        L{NotImplementedError} with a helpful message.
+        """
+        nie = self.assertRaises(NotImplementedError, self.tube.switch, None)
+        self.assertIn("this tube cannot be switched", str(nie))
+
+
     def test_switchableTubeGetsImplemented(self):
         """
         Passing an L{ISwitchablePump} to L{_Tube} will cause it to provide

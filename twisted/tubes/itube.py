@@ -24,7 +24,7 @@ class IPause(Interface):
     <IPause.unpause>} the pause.
     """
 
-    def unpause():
+    def unpause(): # pragma:nocover
         """
         Remove this L{IPause} from the set of L{IPause}s obstructing delivery
         from an L{IFount}.  When no L{IPause}s remain, the flow will resume.
@@ -57,7 +57,7 @@ class IFount(Interface):
         """)
 
 
-    def flowTo(drain):
+    def flowTo(drain): # pragma:nocover
         """
         Add a drain to this fount to consume its output.
 
@@ -83,7 +83,7 @@ class IFount(Interface):
         """
 
 
-    def pauseFlow():
+    def pauseFlow(): # pragma:nocover
         """
         Temporarily refrain from delivery of items to this L{IFount}'s C{drain}
         attribute.
@@ -96,7 +96,7 @@ class IFount(Interface):
         """
 
 
-    def stopFlow():
+    def stopFlow(): # pragma:nocover
         """
         End the flow from this L{IFount}; after this invocation, this L{IFount}
         should never call any methods on its C{drain} other than
@@ -123,7 +123,7 @@ class IDrain(Interface):
         """)
 
 
-    def flowingFrom(fount):
+    def flowingFrom(fount): # pragma:nocover
         """
         This drain is now accepting a flow from the given L{IFount}.
 
@@ -132,7 +132,7 @@ class IDrain(Interface):
         """
 
 
-    def receive(item):
+    def receive(item): # pragma:nocover
         """
         An item was received from the fount.
 
@@ -146,7 +146,7 @@ class IDrain(Interface):
         """
 
 
-    def progress(amount=None):
+    def progress(amount=None): # pragma:nocover
         """
         An item was received at some lower level interface; progress is being
         made towards the next item that will be passed to 'receive'.
@@ -183,7 +183,7 @@ class IDrain(Interface):
         """
 
 
-    def flowStopped(reason):
+    def flowStopped(reason): # pragma:nocover
         """
         The flow has stopped.  The given L{Failure
         <twisted.internet.failure.Failure>} object indicates why.  After a
@@ -252,27 +252,27 @@ class IPump(Interface):
         """)
 
 
-    def started():
+    def started(): # pragma:nocover
         """
         The flow of items has started.  C{received} may be called at any point
         after this.
         """
 
 
-    def received(item):
+    def received(item): # pragma:nocover
         """
         An item was received from 'upstream', i.e. the framework, or the
         lower-level data source that this L{Pump} is interacting with.
         """
 
 
-    def progressed(amount=None):
+    def progressed(amount=None): # pragma:nocover
         """
         Some progress was made.
         """
 
 
-    def stopped(reason):
+    def stopped(reason): # pragma:nocover
         """
         The flow of data from this L{IPump}'s input has ceased; this
         corresponds to L{IDrain.flowStopped}.
@@ -297,7 +297,7 @@ class ISwitchablePump(IPump):
         """)
 
 
-    def reassemble(data):
+    def reassemble(data): # pragma:nocover
         """
         Reverse the transformation done between the L{ISwitchableTube} calling
         L{received} and the L{ISwitchablePump} calling C{tube.deliver}.
@@ -341,7 +341,7 @@ class ITube(Interface):
     )
 
 
-    def deliver(item):
+    def deliver(item): # pragma:nocover
         """
         Deliver the given item to this L{ITube}'s L{IDrain}, if something is
         flowing from the L{IDrain}.
@@ -363,7 +363,7 @@ class ISwitchableTube(ITube):
     )
 
 
-    def switch(drain):
+    def switch(drain): # pragma:nocover
         """
         Replace this L{ISwitchableTube} with a different drain.
 
