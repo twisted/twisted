@@ -17,6 +17,7 @@ from twisted.python.failure import Failure
 from twisted.tubes.tube import Pump, series, _Pauser
 from twisted.tubes.itube import IPause
 from twisted.tubes.itube import AlreadyUnpaused
+from twisted.tubes.itube import IPump
 from twisted.internet.defer import Deferred, succeed
 
 
@@ -139,6 +140,40 @@ class StopperTest(TestCase):
         # four.unpause() # NO
         self.assertEqual(pause.d, 1)
         self.assertEqual(resume.d, 0)
+
+
+
+class PumpTest(TestCase):
+    """
+    Tests for L{Pump}'s various no-ops.
+    """
+
+    def test_provider(self):
+        """
+        L{Pump} provides L{IPump}.
+        """
+        self.failUnless(verifyObject(IPump, Pump()))
+
+
+    def test_noOps(self):
+        """
+        All of L{Pump}'s implementations of L{IPump} are no-ops.
+        """
+        # There are no assertions here because there's no reasonable way this
+        # test will fail rather than error; however, coverage --branch picks up
+        # on methods which haven't been executed and the fact that these
+        # methods exist (i.e. for super() to invoke them) is an important
+        # property to verify. -glyph
+
+        # TODO: maybe make a policy of this or explain it somewhere other than
+        # a comment.  Institutional learning ftw.
+
+        pump = Pump()
+        pump.started()
+        pump.received(None)
+        pump.progressed(None)
+        pump.progressed()
+        pump.stopped(None)
 
 
 

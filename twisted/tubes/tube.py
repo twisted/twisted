@@ -467,11 +467,34 @@ def _registryAdapting(*fromToAdapterTuples):
 from zope.interface.declarations import implementedBy
 
 _tubeType = implementedBy(_Tube)
+
+
+
+def _pump2drain(pump):
+    return _pumpToTube(pump)._tdrain
+
+
+
+def _pump2fount(pump):
+    return _pumpToTube(pump)._tfount
+
+
+
+def _tube2fount(tube):
+    return tube._tfount
+
+
+
+def _tube2drain(tube):
+    return tube._tdrain
+
+
+
 _pumpRegistry = _registryAdapting(
-    (IPump, IDrain, lambda pump: _pumpToTube(pump)._tdrain),
-    (IPump, IFount, lambda pump: _pumpToTube(pump)._tfount),
-    (_tubeType, IFount, lambda tube: tube._tfount),
-    (_tubeType, IDrain, lambda tube: tube._tdrain),
+    (IPump, IDrain, _pump2drain),
+    (IPump, IFount, _pump2fount),
+    (_tubeType, IFount, _tube2fount),
+    (_tubeType, IDrain, _tube2drain),
 )
 
 
