@@ -3298,15 +3298,17 @@ class ConstructorTestsMixin(object):
 
 
 
-class EDNSMessageTests(unittest.SynchronousTestCase, ConstructorTestsMixin):
+class CommonConstructorTestsMixin(object):
     """
-    Tests for aspects of L{twisted.names.dns._EDNSMessage} that are shared with
-    L{dns.Message}.
+    Tests for constructor arguments and their associated attributes that are
+    common to both L{twisted.names.dns._EDNSMessage} and L{dns.Message}.
 
-    These tests should pass when C{messageFactory = dns.Message}
+    TestCase classes that use this mixin must provide a C{messageFactory} method
+    which accepts any argment supported by L{dns.Message.__init__}.
+
+    TestCases must also mixin ConstructorTestsMixin which provides some custom
+    assertions for testing constructor arguments.
     """
-    messageFactory = dns._EDNSMessage
-
     def test_id(self):
         """
         L{dns._EDNSMessage.id} defaults to C{0} and can be overridden in
@@ -3409,16 +3411,30 @@ class EDNSMessageTests(unittest.SynchronousTestCase, ConstructorTestsMixin):
 
 
 
-class EDNSMessageTestsUsingMessage(EDNSMessageTests):
+class EDNSMessageConstructorTests(ConstructorTestsMixin,
+                                  CommonConstructorTestsMixin,
+                                  unittest.SynchronousTestCase):
     """
-    Run the L{EDNSMessageTests} using L{dns.Message}.
+    Tests for L{twisted.names.dns._EDNSMessage} constructor arguments that are
+    shared with L{dns.Message}.
+    """
+    messageFactory = dns._EDNSMessage
+
+
+
+class MessageContstructorTests(ConstructorTestsMixin,
+                               CommonConstructorTestsMixin,
+                               unittest.SynchronousTestCase):
+    """
+    Tests for L{twisted.names.dns.Message} constructor arguments that are shared
+    with L{dns._EDNSMessage}.
     """
     messageFactory = dns.Message
 
 
 
-class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
-                                   ConstructorTestsMixin):
+class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
+                                   unittest.SynchronousTestCase):
     """
     Tests for L{dns._EDNSMessage}.
 
