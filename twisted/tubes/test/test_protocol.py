@@ -180,6 +180,20 @@ class FlowingAdapterTests(TestCase):
         self.test_dataReceivedBeforeFlowing()
 
 
+    def test_flowingToNoneAfterFlowingToSomething(self):
+        """
+        Flowing to L{None} should disconnect from any drain, no longer
+        delivering it output.
+        """
+        fd = FakeDrain()
+        self.adaptedFount.flowTo(fd)
+        self.adaptedProtocol.dataReceived("a")
+        self.adaptedFount.flowTo(None)
+        self.assertEquals(fd.fount, None)
+        self.test_dataReceivedBeforeFlowing()
+        self.assertEquals(fd.received, ["a"])
+
+
     def test_flowingFromAttribute(self):
         """
         L{ProtocolAdapter.flowingFrom} will establish the appropriate L{IFount}

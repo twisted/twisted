@@ -96,9 +96,11 @@ class _ProtocolFount(object):
         """
         Flow to the given drain.
         """
+        if self.drain is not None:
+            self.drain.flowingFrom(None)
+        self.drain = drain
         if drain is None:
             return
-        self.drain = drain
         result = self.drain.flowingFrom(self)
         if self._preReceivePause is not None:
             self._preReceivePause.unpause()
