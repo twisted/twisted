@@ -54,7 +54,6 @@ class _ProtocolDrain(object):
 
     def receive(self, item):
         self._transport.write(item)
-        return 1.0
 
 
     def progress(self, amount=0.0):

@@ -78,6 +78,16 @@ class FlowingAdapterTests(TestCase):
         self.assertEquals(self.pump.items, ["some data"])
 
 
+    def test_drainReceivingWritesToTransport(self):
+        """
+        Calling L{receive} on a L{_ProtocolDrain} will send the data to the
+        wrapped transport.
+        """
+        HELLO = b"hello world!"
+        self.adaptedDrain.receive(HELLO)
+        self.assertEquals(self.endpoint.transports[0].io.getvalue(), HELLO)
+
+
     def test_stopFlowStopsConnection(self):
         """
         L{_ProtocolFount.stopFlow} will close the underlying connection by

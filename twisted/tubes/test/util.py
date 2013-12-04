@@ -37,6 +37,7 @@ class StringEndpoint(object):
         transport = StringTransport()
         transport.protocol = protocol
         protocol.makeConnection(transport)
+        self.transports.append(transport)
         return succeed(protocol)
 
 
