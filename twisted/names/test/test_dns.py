@@ -4100,15 +4100,11 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
         ednsMessage = dns._EDNSMessage._fromMessage(standardMessage)
 
-        sectionLists = []
         duplicates = []
         for attrName in ('queries', 'answers', 'authority', 'additional'):
-            for m in (standardMessage, ednsMessage):
-                sectionListId = id(getattr(m, attrName))
-                if sectionListId in sectionLists:
-                    duplicates.append(attrName)
-                else:
-                    sectionLists.append(sectionListId)
+            if (getattr(standardMessage, attrName)
+                is getattr(ednsMessage, attrName)):
+                duplicates.append(attrName)
 
         if duplicates:
             self.fail(
