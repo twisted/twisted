@@ -171,6 +171,15 @@ class FlowingAdapterTests(TestCase):
         self.assertEquals(fd2.received, ["hooray"])
 
 
+    def test_dataReceivedWhenFlowingToNone(self):
+        """
+        Initially flowing to L{None} is the same as flowTo never having been
+        called, so L{_ProtocolFount.dataReceived} should have the same effect.
+        """
+        self.adaptedFount.flowTo(None)
+        self.test_dataReceivedBeforeFlowing()
+
+
     def test_flowingFromAttribute(self):
         """
         L{ProtocolAdapter.flowingFrom} will establish the appropriate L{IFount}
