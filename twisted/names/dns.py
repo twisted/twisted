@@ -2344,7 +2344,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.additional = additional
 
 
-    def toMessage(self):
+    def _toMessage(self):
         """
         Convert to a standard L{dns.Message}.
 
@@ -2390,11 +2390,11 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
         @return: A L{bytes} string.
         """
-        return self.toMessage().toStr()
+        return self._toMessage().toStr()
 
 
     @classmethod
-    def fromMessage(cls, message):
+    def _fromMessage(cls, message):
         """
         Construct and return a new L(_EDNSMessage} whose attributes and records
         are derived from the attributes and records of C{message} (a L{Message}
@@ -2466,7 +2466,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         m = self._messageFactory()
         m.fromStr(bytes)
 
-        ednsMessage = self.fromMessage(m)
+        ednsMessage = self._fromMessage(m)
         for attrName in self.compareAttributes:
             setattr(self, attrName, getattr(ednsMessage, attrName))
 

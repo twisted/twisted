@@ -3577,7 +3577,7 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
 
     def test_fromStrCallsFromMessage(self):
         """
-        L{dns._EDNSMessage.fromString} calls L{dns._EDNSMessage.fromMessage}
+        L{dns._EDNSMessage.fromString} calls L{dns._EDNSMessage._fromMessage}
         with a L{dns.Message} instance
         """
         m = dns._EDNSMessage()
@@ -3597,7 +3597,7 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
 
         def fakeFromMessage(*args, **kwargs):
             raise RaisedArgs(args, kwargs)
-        m.fromMessage = fakeFromMessage
+        m._fromMessage = fakeFromMessage
         e = self.assertRaises(RaisedArgs, m.fromStr, b'')
         self.assertEqual(
             ((fakeMessage,), {}),
@@ -3607,12 +3607,12 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
 
     def test_toStrCallsToMessage(self):
         """
-        L{dns._EDNSMessage.toStr} calls L{dns._EDNSMessage.toMessage}
+        L{dns._EDNSMessage.toStr} calls L{dns._EDNSMessage._toMessage}
         """
         m = dns._EDNSMessage()
         def fakeToMessage(*args, **kwargs):
             raise RaisedArgs(args, kwargs)
-        m.toMessage = fakeToMessage
+        m._toMessage = fakeToMessage
         e = self.assertRaises(RaisedArgs, m.toStr)
         self.assertEqual(
             ((), {}),
@@ -3623,7 +3623,7 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
     def test_toStrCallsToMessageToStr(self):
         """
         L{dns._EDNSMessage.toStr} calls C{toStr} on the message returned by
-        L{dns._EDNSMessage.toMessage}.
+        L{dns._EDNSMessage._toMessage}.
         """
         m = dns._EDNSMessage()
         dummyBytes = object()
@@ -3641,7 +3641,7 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
 
         def fakeToMessage(*args, **kwargs):
             return FakeMessage()
-        m.toMessage = fakeToMessage
+        m._toMessage = fakeToMessage
 
         self.assertEqual(
             dummyBytes,
@@ -4091,14 +4091,14 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
     def test_fromMessageCopiesSections(self):
         """
-        L{dns._EDNSMessage.fromMessage} returns an L{_EDNSMessage} instance
+        L{dns._EDNSMessage._fromMessage} returns an L{_EDNSMessage} instance
         whose queries, answers, authority and additional lists are copies (not
         references to) the original message lists.
         """
         standardMessage = dns.Message()
         standardMessage.fromStr(MessageEDNSQuery.bytes())
 
-        ednsMessage = dns._EDNSMessage.fromMessage(standardMessage)
+        ednsMessage = dns._EDNSMessage._fromMessage(standardMessage)
 
         sectionLists = []
         duplicates = []
@@ -4146,15 +4146,15 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         m.additional = [optRRHeader]
 
         actualMessages = []
-        actualMessages.append(dns._EDNSMessage.fromMessage(m).ednsVersion)
+        actualMessages.append(dns._EDNSMessage._fromMessage(m).ednsVersion)
 
         m.additional.append(dns.RRHeader(type=dns.A))
         actualMessages.append(
-            dns._EDNSMessage.fromMessage(m).ednsVersion)
+            dns._EDNSMessage._fromMessage(m).ednsVersion)
 
         m.additional.insert(0, dns.RRHeader(type=dns.A))
         actualMessages.append(
-            dns._EDNSMessage.fromMessage(m).ednsVersion)
+            dns._EDNSMessage._fromMessage(m).ednsVersion)
 
         self.assertEqual(
             [1] * 3,
@@ -4216,7 +4216,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         https://tools.ietf.org/html/rfc6891#section-6.1.3
         """
         ednsMessage = self.messageFactory(rCode=15, ednsVersion=0)
-        standardMessage = ednsMessage.toMessage()
+        standardMessage = ednsMessage._toMessage()
 
         self.assertEqual(
             (15, 0),
