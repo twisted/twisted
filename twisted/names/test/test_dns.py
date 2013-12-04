@@ -839,22 +839,30 @@ class DNSProtocolSharedTestsMixin(object):
     Tests for features shared by L{dns.DNSProtocol} and
     L{dns.DNSDatagramProtocol}.
 
-    TestCase classes which use this mixin must provide a protocol instance
-    assigned to an attribute called C{proto}.
+    TestCase classes which use this mixin must provide a protocolFactory
+    attribute with a reference to the protocol class under test.
 
-    Additionally, the TestCase class must provide a reference to a
-    C{dataReceived} protocol method assigned to an attribute called C{proto}.
-    This is C{dataReceived} in the case of stream protocols and
-    C{datagramReceived} in the case of datagram protocols.
+    The TestCase class must provide a C{queryArguments} attribute containing a
+    dictionary of arguments which will be supplied to the protocol C{query}
+    method during the test.
 
-    These attributes should be assigned by the C{setUp} method.
+    The TestCase class must provide the name of the C{dataReceived} method
+    appropriate to that class.  This is C{dataReceived} in the case of stream
+    protocols and C{datagramReceived} in the case of datagram protocols.
+
+    The TestCase must provide a dataReceivedArguements attribute with a
+    dictionary of extra arguments that will be supplied to the named
+    C{dataReceivedMethod} during a test.
     """
     def test_messageFactoryDefault(self):
         """
         L{dns.DNSDatagramProtocol} and L{dns.DNSProtocol} set C{messageFactory}
         to L{dns.Message} by default.
         """
-        self.assertIdentical(dns.Message, self.proto._messageFactory)
+        self.assertIdentical(
+            dns.Message,
+            self.protocolFactory(controller=None)._messageFactory
+        )
 
 
     def test_messageFactoryOverride(self):
@@ -876,13 +884,16 @@ class DNSProtocolSharedTestsMixin(object):
         C{query} calls C{messageFactory} with C{id} and C{recDes} keyword
         arguments to construct a new message instance.
         """
-        self.proto._messageFactory = raisingMessageFactory
-        self.proto.pickID = lambda: 1
+        proto = self.protocolFactory(controller=None)
+        proto._messageFactory = raisingMessageFactory
+        proto.pickID = lambda: 1
+        proto.transport = object()
 
         e = self.assertRaises(
             RaisedArgs,
-            self.queryMethod,
-            queries=[dns.Query('example.com')]
+            proto.query,
+            queries=[dns.Query('example.com')],
+            **self.queryArguments
         )
         self.assertEqual(
             ((), {'id': 1, 'recDes': 1}),
@@ -895,12 +906,14 @@ class DNSProtocolSharedTestsMixin(object):
         C{dataReceived} and C{datagramReceived} call C{messageFactory} without
         any arguments to construct a new message instance.
         """
-        self.proto._messageFactory = raisingMessageFactory
+        proto = self.protocolFactory(controller=None)
+        proto._messageFactory = raisingMessageFactory
 
         e = self.assertRaises(
             RaisedArgs,
-            self.dataReceivedMethod,
-            data=dns.Message().toStr()
+            getattr(proto, self.dataReceivedMethod),
+            data=dns.Message().toStr(),
+            **self.dataReceivedArguements
         )
         self.assertEqual(
             ((), {}),
@@ -909,27 +922,44 @@ class DNSProtocolSharedTestsMixin(object):
 
 
 
-class DatagramProtocolTestCase(DNSProtocolSharedTestsMixin, unittest.TestCase):
+class DatagramProtocolSharedTests(DNSProtocolSharedTestsMixin, unittest.TestCase):
+    """
+    Test aspects of L{dns.DNSDatagramProtocol} that are shared with
+    L{dns.DNSProtocol}.
+    """
+    protocolFactory = dns.DNSDatagramProtocol
+    queryArguments = dict(address=())
+    dataReceivedMethod = 'datagramReceived'
+    dataReceivedArguements = dict(addr=())
+
+
+
+class StreamProtocolSharedTests(DNSProtocolSharedTestsMixin, unittest.TestCase):
+    """
+    Test aspects of L{dns.DNSProtocol} that are shared with
+    L{dns.DNSDatagramProtocol}.
+    """
+    protocolFactory = dns.DNSProtocol
+    queryArguments = dict()
+    dataReceivedMethod = 'dataReceived'
+    dataReceivedArguements = dict()
+
+
+
+class DatagramProtocolTestCase(unittest.TestCase):
     """
     Test various aspects of L{dns.DNSDatagramProtocol}.
     """
-    protocolFactory = dns.DNSDatagramProtocol
-
     def setUp(self):
         """
         Create a L{dns.DNSDatagramProtocol} with a deterministic clock.
         """
         self.clock = task.Clock()
         self.controller = TestController()
-        self.proto = self.protocolFactory(self.controller)
+        self.proto = dns.DNSDatagramProtocol(self.controller)
         transport = proto_helpers.FakeDatagramTransport()
         self.proto.makeConnection(transport)
         self.proto.callLater = self.clock.callLater
-        # DNSProtocol.query requires an address argument (unlike DNSProtocol,
-        # see below)
-        self.queryMethod = partial(self.proto.query, address=('127.0.0.1', 53))
-        self.dataReceivedMethod = partial(
-            self.proto.datagramReceived, addr=('127.0.0.1', 53))
 
 
     def test_truncatedPacket(self):
@@ -1038,25 +1068,19 @@ class TestTCPController(TestController):
 
 
 
-class DNSProtocolTestCase(DNSProtocolSharedTestsMixin, unittest.TestCase):
+class DNSProtocolTestCase(unittest.TestCase):
     """
     Test various aspects of L{dns.DNSProtocol}.
     """
-    protocolFactory = dns.DNSProtocol
-
     def setUp(self):
         """
         Create a L{dns.DNSProtocol} with a deterministic clock.
         """
         self.clock = task.Clock()
         self.controller = TestTCPController()
-        self.proto = self.protocolFactory(self.controller)
+        self.proto = dns.DNSProtocol(self.controller)
         self.proto.makeConnection(proto_helpers.StringTransport())
         self.proto.callLater = self.clock.callLater
-        # DNSProtocol.query doesn't require an address argument (unlike
-        # DNSDatagramProtocol, see above)
-        self.queryMethod = self.proto.query
-        self.dataReceivedMethod = self.proto.dataReceived
 
 
     def test_connectionTracking(self):
