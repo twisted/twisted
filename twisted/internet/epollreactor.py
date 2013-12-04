@@ -252,7 +252,21 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             # this method in this file.
             if fd in other:
                 flags |= antievent
-                self._poller.modify(fd, flags)
+                try:
+                    self._poller.modify(fd, flags)
+                except IOError as e:
+                    if e.errno == errno.ENOENT:
+                        # We appear to have some bad reactor state (see
+                        # e.g. #6346) where we thought fd was in other state,
+                        # but epoll disagrees. So clear it out and try again.
+                        if fd in selectables:
+                            log.msg("%r still registered, but no longer in epoll()."
+                                    % (selectables[fd],))
+                        del other[fd]
+                        return self._add(xer, primary, other, selectables,
+                                         event, antievent)
+                    else:
+                        raise
             else:
                 self._poller.register(fd, flags)
 

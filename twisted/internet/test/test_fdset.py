@@ -337,8 +337,47 @@ class ReactorFDSetTestsBuilder(ReactorBuilder):
         # If the implementation feels like logging the exception raised by
         # MessedUp.fileno, that's fine.
         self.flushLoggedErrors(socket.error)
+
+
+    def test_lostFileDescriptorReadded(self):
+        """
+        A C{IReadWriteDescriptor} whose fd is close()ed, but is still
+        registered as writer should not break a newly added
+        C{IReadWriteDescriptor} that has same fd number as the original
+        C{IReadWriteDescriptor}.
+        """
+        reactor = self.buildReactor()
+
+        if reactor.__class__.__name__ == 'PollReactor':
+            raise SkipTest("poll reactor is covered by #6374")
+
+        client, server = self._connectedPair()
+
+        class Descriptor(FileDescriptor):
+            def __init__(self, fd):
+                FileDescriptor.__init__(self)
+                self.fd = fd
+
+            def fileno(self):
+                return self.fd
+
+        fileno = server.fileno()
+
+        victim = Descriptor(fileno)
+        reactor.addWriter(victim)
+        server.close()
+
+        newC, newS = self._connectedPair()
+        os.dup2(newS.fileno(), fileno)
+        unrelated = Descriptor(fileno)
+        reactor.addReader(unrelated)
+        self.assertIn(unrelated, reactor.getReaders())
+        self.assertNotIn(unrelated, reactor.getWriters())
+        reactor.removeReader(unrelated)
+
+
     if platform.isWindows():
-        test_lostFileDescriptor.skip = (
+        test_lostFileDescriptor.skip = test_lostFileDescriptorReadded.skip = (
             "Cannot duplicate socket filenos on Windows")
 
 
