@@ -2502,8 +2502,9 @@ class DNSMixin(object):
         @param reactor: A L{IReactorTime} and L{IReactorUDP} provider which will
             be used to issue DNS queries and manage request timeouts.
 
-        @param messageFactory: A L{Message} like class. Or a factory function
-            which returns a L{Message} like object.
+        @param messageFactory: A callable with the same signature as
+            L{Message.__init__} and which returns a L{Message} like
+            object. Defaults to L{Message}.
         """
         self.controller = controller
         self.id = random.randrange(2 ** 10, 2 ** 15)
