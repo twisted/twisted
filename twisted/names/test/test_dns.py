@@ -15,6 +15,7 @@ import struct
 from zope.interface.verify import verifyClass
 
 from twisted.python.failure import Failure
+from twisted.python.util import FancyEqMixin, FancyStrMixin
 from twisted.internet import address, task
 from twisted.internet.error import CannotListenError, ConnectionDone
 from twisted.trial import unittest
@@ -2144,7 +2145,7 @@ class OPTNonStandardAttributes(object):
             udpPayloadSize=512,
             extendedRCODE=3,
             version=4,
-            dnssecOK=1)
+            dnssecOK=True)
 
 
 
@@ -2458,7 +2459,7 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
             udpPayloadSize=0xffff,
             extendedRCODE=0xfe,
             version=0xfd,
-            dnssecOK=1,
+            dnssecOK=True,
             options=[dns._OPTVariableOption(code=0xffff, data=b'abc')])
 
         self.assertEqual(decodedOptHeader, expectedOptHeader)
@@ -2520,9 +2521,9 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         dnssecOK flags.
         """
         self.assertNormalEqualityImplementation(
-            dns._OPTHeader(dnssecOK=1),
-            dns._OPTHeader(dnssecOK=1),
-            dns._OPTHeader(dnssecOK=0))
+            dns._OPTHeader(dnssecOK=True),
+            dns._OPTHeader(dnssecOK=True),
+            dns._OPTHeader(dnssecOK=False))
 
 
     def test_equalityOptions(self):
@@ -2619,3 +2620,1632 @@ class OPTVariableOptionTests(ComparisonTestsMixin, unittest.TestCase):
         o.decode(b)
         self.assertEqual(o.code, 1)
         self.assertEqual(o.data, b'foobar')
+
+
+
+class RaisedArgs(Exception):
+    """
+    An exception which can be raised by fakes to test that the fake is called
+    with expected arguments.
+    """
+    def __init__(self, args, kwargs):
+        """
+        Store the positional and keyword arguments as attributes.
+
+        @param args: The positional args.
+        @param kwargs: The keyword args.
+        """
+        self.args = args
+        self.kwargs = kwargs
+
+
+
+class MessageEmpty(object):
+    """
+    Generate byte string and constructor arguments for an empty
+    L{dns._EDNSMessage}.
+    """
+    @classmethod
+    def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
+        return (
+            b'\x01\x00' # id: 256
+            b'\x97' # QR: 1, OPCODE: 2, AA: 0, TC: 0, RD: 1
+            b'\x8f' # RA: 1, Z, RCODE: 15
+            b'\x00\x00' # number of queries
+            b'\x00\x00' # number of answers
+            b'\x00\x00' # number of authorities
+            b'\x00\x00' # number of additionals
+        )
+
+
+    @classmethod
+    def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
+        return dict(
+            id=256,
+            answer=True,
+            opCode=dns.OP_STATUS,
+            auth=True,
+            trunc=True,
+            recDes=True,
+            recAv=True,
+            rCode=15,
+            ednsVersion=None,
+        )
+
+
+
+class MessageTruncated(object):
+    """
+    An empty response message whose TR bit is set to 1.
+    """
+    @classmethod
+    def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
+        return (
+            b'\x01\x00' # ID: 256
+            b'\x82' # QR: 1, OPCODE: 0, AA: 0, TC: 1, RD: 0
+            b'\x00' # RA: 0, Z, RCODE: 0
+            b'\x00\x00' # Number of queries
+            b'\x00\x00' # Number of answers
+            b'\x00\x00' # Number of authorities
+            b'\x00\x00' # Number of additionals
+        )
+
+
+    @classmethod
+    def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
+        return dict(
+            id=256,
+            answer=1,
+            opCode=0,
+            auth=0,
+            trunc=1,
+            recDes=0,
+            recAv=0,
+            rCode=0,
+            ednsVersion=None,)
+
+
+
+class MessageNonAuthoritative(object):
+    """
+    A minimal non-authoritative message.
+    """
+    @classmethod
+    def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
+        return (
+            b'\x01\x00' # ID 256
+            b'\x00' # QR: 0, OPCODE: 0, AA: 0, TC: 0, RD: 0
+            b'\x00' # RA: 0, Z, RCODE: 0
+            b'\x00\x00' # Query count
+            b'\x00\x01' # Answer count
+            b'\x00\x00' # Authorities count
+            b'\x00\x00' # Additionals count
+            # Answer
+            b'\x00' # RR NAME (root)
+            b'\x00\x01' # RR TYPE 1 (A)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\x00\x00\x00\x00' # RR TTL
+            b'\x00\x04' # RDLENGTH 4
+            b'\x01\x02\x03\x04' # IPv4 1.2.3.4
+        )
+
+
+    @classmethod
+    def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
+        return dict(
+            id=256,
+            auth=0,
+            ednsVersion=None,
+            answers=[
+                dns.RRHeader(
+                    b'',
+                    payload=dns.Record_A('1.2.3.4', ttl=0),
+                    auth=False)])
+
+
+
+class MessageAuthoritative(object):
+    """
+    A minimal authoritative message.
+    """
+    @classmethod
+    def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
+        return (
+            b'\x01\x00' # ID: 256
+            b'\x04' # QR: 0, OPCODE: 0, AA: 1, TC: 0, RD: 0
+            b'\x00' # RA: 0, Z, RCODE: 0
+            b'\x00\x00' # Query count
+            b'\x00\x01' # Answer count
+            b'\x00\x00' # Authorities count
+            b'\x00\x00' # Additionals count
+            # Answer
+            b'\x00' # RR NAME (root)
+            b'\x00\x01' # RR TYPE 1 (A)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\x00\x00\x00\x00' # RR TTL
+            b'\x00\x04' # RDLENGTH 4
+            b'\x01\x02\x03\x04' # IPv4 1.2.3.4
+        )
+
+
+    @classmethod
+    def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
+        return dict(
+            id=256,
+            auth=1,
+            ednsVersion=None,
+            answers=[
+                dns.RRHeader(
+                    b'',
+                    payload=dns.Record_A('1.2.3.4', ttl=0),
+                    auth=True)])
+
+
+
+class MessageComplete:
+    """
+    An example of a fully populated non-edns response message.
+
+    Contains name compression, answers, authority, and additional records.
+    """
+    @classmethod
+    def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
+        return (
+            b'\x01\x00' # ID: 256
+            b'\x95' # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
+            b'\x8f' # RA: 1, Z, RCODE: 15
+            b'\x00\x01' # Query count
+            b'\x00\x01' # Answer count
+            b'\x00\x01' # Authorities count
+            b'\x00\x01' # Additionals count
+
+            # Query begins at Byte 12
+            b'\x07example\x03com\x00' # QNAME
+            b'\x00\x06' # QTYPE 6 (SOA)
+            b'\x00\x01' # QCLASS 1 (IN)
+
+            # Answers
+            b'\xc0\x0c' # RR NAME (compression ref b12)
+            b'\x00\x06' # RR TYPE 6 (SOA)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\xff\xff\xff\xff' # RR TTL
+            b'\x00\x27' # RDLENGTH 39
+            b'\x03ns1\xc0\x0c' # Mname (ns1.example.com (compression ref b15)
+            b'\x0ahostmaster\xc0\x0c' # rname (hostmaster.example.com)
+            b'\xff\xff\xff\xfe' # Serial
+            b'\x7f\xff\xff\xfd' # Refresh
+            b'\x7f\xff\xff\xfc' # Retry
+            b'\x7f\xff\xff\xfb' # Expire
+            b'\xff\xff\xff\xfa' # Minimum
+
+            # Authority
+            b'\xc0\x0c' # RR NAME (example.com compression ref b12)
+            b'\x00\x02' # RR TYPE 2 (NS)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\xff\xff\xff\xff' # RR TTL
+            b'\x00\x02' # RDLENGTH
+            b'\xc0\x29' # RDATA (ns1.example.com (compression ref b41)
+
+            # Additional
+            b'\xc0\x29' # RR NAME (ns1.example.com compression ref b41)
+            b'\x00\x01' # RR TYPE 1 (A)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\xff\xff\xff\xff' # RR TTL
+            b'\x00\x04' # RDLENGTH
+            b'\x05\x06\x07\x08' # RDATA 5.6.7.8
+        )
+
+
+    @classmethod
+    def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
+        return dict(
+            id=256,
+            answer=1,
+            opCode=dns.OP_STATUS,
+            auth=1,
+            recDes=1,
+            recAv=1,
+            rCode=15,
+            ednsVersion=None,
+            queries=[dns.Query(b'example.com', dns.SOA)],
+            answers=[
+                dns.RRHeader(
+                    b'example.com',
+                    type=dns.SOA,
+                    ttl=0xffffffff,
+                    auth=True,
+                    payload=dns.Record_SOA(
+                        ttl=0xffffffff,
+                        mname=b'ns1.example.com',
+                        rname=b'hostmaster.example.com',
+                        serial=0xfffffffe,
+                        refresh=0x7ffffffd,
+                        retry=0x7ffffffc,
+                        expire=0x7ffffffb,
+                        minimum=0xfffffffa,
+                        ))],
+            authority=[
+                dns.RRHeader(
+                    b'example.com',
+                    type=dns.NS,
+                    ttl=0xffffffff,
+                    auth=True,
+                    payload=dns.Record_NS(
+                        'ns1.example.com', ttl=0xffffffff))],
+            additional=[
+                dns.RRHeader(
+                    b'ns1.example.com',
+                    type=dns.A,
+                    ttl=0xffffffff,
+                    auth=True,
+                    payload=dns.Record_A(
+                        '5.6.7.8', ttl=0xffffffff))])
+
+
+
+class MessageEDNSQuery(object):
+    """
+    A minimal EDNS query message.
+    """
+    @classmethod
+    def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
+        return (
+            b'\x00\x00' # ID: 0
+            b'\x00' # QR: 0, OPCODE: 0, AA: 0, TC: 0, RD: 0
+            b'\x00' # RA: 0, Z, RCODE: 0
+            b'\x00\x01' # Queries count
+            b'\x00\x00' # Anwers count
+            b'\x00\x00' # Authority count
+            b'\x00\x01' # Additionals count
+
+            # Queries
+            b'\x03www\x07example\x03com\x00' # QNAME
+            b'\x00\x01' # QTYPE (A)
+            b'\x00\x01' # QCLASS (IN)
+
+            # Additional OPT record
+            b'\x00' # NAME (.)
+            b'\x00\x29' # TYPE (OPT 41)
+            b'\x10\x00' # UDP Payload Size (4096)
+            b'\x00' # Extended RCODE
+            b'\x03' # EDNS version
+            b'\x00\x00' # DO: False + Z
+            b'\x00\x00' # RDLENGTH
+        )
+
+
+    @classmethod
+    def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
+        return dict(
+            id=0,
+            answer=0,
+            opCode=dns.OP_QUERY,
+            auth=0,
+            recDes=0,
+            recAv=0,
+            rCode=0,
+            ednsVersion=3,
+            dnssecOK=False,
+            queries=[dns.Query(b'www.example.com', dns.A)],
+            additional=[])
+
+
+
+class MessageEDNSComplete(object):
+    """
+    An example of a fully populated edns response message.
+
+    Contains name compression, answers, authority, and additional records.
+    """
+    @classmethod
+    def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
+        return (
+            b'\x01\x00' # ID: 256
+            b'\x95' # QR: 1, OPCODE: 2, AA: 1, TC: 0, RD: 1
+            b'\xbf' # RA: 1, AD: 1, RCODE: 15
+            b'\x00\x01' # Query count
+            b'\x00\x01' # Answer count
+            b'\x00\x01' # Authorities count
+            b'\x00\x02' # Additionals count
+
+            # Query begins at Byte 12
+            b'\x07example\x03com\x00' # QNAME
+            b'\x00\x06' # QTYPE 6 (SOA)
+            b'\x00\x01' # QCLASS 1 (IN)
+
+            # Answers
+            b'\xc0\x0c' # RR NAME (compression ref b12)
+            b'\x00\x06' # RR TYPE 6 (SOA)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\xff\xff\xff\xff' # RR TTL
+            b'\x00\x27' # RDLENGTH 39
+            b'\x03ns1\xc0\x0c' # mname (ns1.example.com (compression ref b15)
+            b'\x0ahostmaster\xc0\x0c' # rname (hostmaster.example.com)
+            b'\xff\xff\xff\xfe' # Serial
+            b'\x7f\xff\xff\xfd' # Refresh
+            b'\x7f\xff\xff\xfc' # Retry
+            b'\x7f\xff\xff\xfb' # Expire
+            b'\xff\xff\xff\xfa' # Minimum
+
+            # Authority
+            b'\xc0\x0c' # RR NAME (example.com compression ref b12)
+            b'\x00\x02' # RR TYPE 2 (NS)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\xff\xff\xff\xff' # RR TTL
+            b'\x00\x02' # RDLENGTH
+            b'\xc0\x29' # RDATA (ns1.example.com (compression ref b41)
+
+            # Additional
+            b'\xc0\x29' # RR NAME (ns1.example.com compression ref b41)
+            b'\x00\x01' # RR TYPE 1 (A)
+            b'\x00\x01' # RR CLASS 1 (IN)
+            b'\xff\xff\xff\xff' # RR TTL
+            b'\x00\x04' # RDLENGTH
+            b'\x05\x06\x07\x08' # RDATA 5.6.7.8
+
+            # Additional OPT record
+            b'\x00' # NAME (.)
+            b'\x00\x29' # TYPE (OPT 41)
+            b'\x04\x00' # UDP Payload Size (1024)
+            b'\x00' # Extended RCODE
+            b'\x03' # EDNS version
+            b'\x80\x00' # DO: True + Z
+            b'\x00\x00' # RDLENGTH
+        )
+
+
+    @classmethod
+    def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
+        return dict(
+            id=256,
+            answer=1,
+            opCode=dns.OP_STATUS,
+            auth=1,
+            trunc=0,
+            recDes=1,
+            recAv=1,
+            rCode=15,
+            ednsVersion=3,
+            dnssecOK=True,
+            authenticData=True,
+            checkingDisabled=True,
+            maxSize=1024,
+            queries=[dns.Query(b'example.com', dns.SOA)],
+            answers=[
+                dns.RRHeader(
+                    b'example.com',
+                    type=dns.SOA,
+                    ttl=0xffffffff,
+                    auth=True,
+                    payload=dns.Record_SOA(
+                        ttl=0xffffffff,
+                        mname=b'ns1.example.com',
+                        rname=b'hostmaster.example.com',
+                        serial=0xfffffffe,
+                        refresh=0x7ffffffd,
+                        retry=0x7ffffffc,
+                        expire=0x7ffffffb,
+                        minimum=0xfffffffa,
+                        ))],
+            authority=[
+                dns.RRHeader(
+                    b'example.com',
+                    type=dns.NS,
+                    ttl=0xffffffff,
+                    auth=True,
+                    payload=dns.Record_NS(
+                        'ns1.example.com', ttl=0xffffffff))],
+            additional=[
+                dns.RRHeader(
+                    b'ns1.example.com',
+                    type=dns.A,
+                    ttl=0xffffffff,
+                    auth=True,
+                    payload=dns.Record_A(
+                        '5.6.7.8', ttl=0xffffffff))])
+
+
+
+class MessageEDNSExtendedRCODE(object):
+    """
+    An example of an EDNS message with an extended RCODE.
+    """
+    @classmethod
+    def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
+        return (
+            b'\x00\x00'
+            b'\x00'
+            b'\x0c' # RA: 0, Z, RCODE: 12
+            b'\x00\x00'
+            b'\x00\x00'
+            b'\x00\x00'
+            b'\x00\x01' # 1 additionals
+
+            # Additional OPT record
+            b'\x00'
+            b'\x00\x29'
+            b'\x10\x00'
+            b'\xab' # Extended RCODE: 171
+            b'\x00'
+            b'\x00\x00'
+            b'\x00\x00'
+        )
+
+
+    @classmethod
+    def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
+        return dict(
+            id=0,
+            answer=False,
+            opCode=dns.OP_QUERY,
+            auth=False,
+            trunc=False,
+            recDes=False,
+            recAv=False,
+            rCode=0xabc, # Combined OPT extended RCODE + Message RCODE
+            ednsVersion=0,
+            dnssecOK=False,
+            maxSize=4096,
+            queries=[],
+            answers=[],
+            authority=[],
+            additional=[],
+        )
+
+
+
+class MessageComparable(FancyEqMixin, FancyStrMixin, object):
+    """
+    A wrapper around L{dns.Message} which is comparable so that it can be tested
+    using some of the L{dns._EDNSMessage} tests.
+    """
+    showAttributes = compareAttributes = (
+        'id', 'answer', 'opCode', 'auth', 'trunc',
+        'recDes', 'recAv', 'rCode',
+        'queries', 'answers', 'authority', 'additional')
+
+    def __init__(self, original):
+        self.original = original
+
+
+    def __getattr__(self, key):
+        return getattr(self.original, key)
+
+
+
+def verifyConstructorArgument(testCase, cls, argName, defaultVal, altVal,
+                              attrName=None):
+    """
+    Verify that an attribute has the expected default value and that a
+    corresponding argument passed to a constructor is assigned to that
+    attribute.
+
+    @param testCase: The L{TestCase} whose assert methods will be
+        called.
+    @type testCase: L{unittest.TestCase}
+
+    @param cls: The constructor under test.
+    @type cls: L{type}
+
+    @param argName: The name of the constructor argument under test.
+    @type argName: L{str}
+
+    @param defaultVal: The expected default value of C{attrName} /
+        C{argName}
+    @type defaultVal: L{object}
+
+    @param altVal: A value which is different from the default. Used to
+        test that supplied constructor arguments are actually assigned to the
+        correct attribute.
+    @type altVal: L{object}
+
+    @param attrName: The name of the attribute under test if different
+        from C{argName}. Defaults to C{argName}
+    @type attrName: L{str}
+    """
+    if attrName is None:
+        attrName = argName
+
+    actual = {}
+    expected = {'defaultVal': defaultVal, 'altVal': altVal}
+
+    o = cls()
+    actual['defaultVal'] = getattr(o, attrName)
+
+    o = cls(**{argName: altVal})
+    actual['altVal'] = getattr(o, attrName)
+
+    testCase.assertEqual(expected, actual)
+
+
+
+class ConstructorTestsMixin(object):
+    """
+    Helper methods for verifying default attribute values and corresponding
+    constructor arguments.
+    """
+    def _verifyConstructorArgument(self, argName, defaultVal, altVal):
+        """
+        Wrap L{verifyConstructorArgument} to provide simpler interface for
+        testing Message and _EDNSMessage constructor arguments.
+
+        @param argName: The name of the constructor argument.
+        @param defaultVal: The expected default value.
+        @param altVal: An alternative value which is expected to be assigned to
+            a correspondingly named attribute.
+        """
+        verifyConstructorArgument(testCase=self, cls=self.messageFactory,
+                                  argName=argName, defaultVal=defaultVal,
+                                  altVal=altVal)
+
+
+    def _verifyConstructorFlag(self, argName, defaultVal):
+        """
+        Wrap L{verifyConstructorArgument} to provide simpler interface for
+        testing  _EDNSMessage constructor flags.
+
+        @param argName: The name of the constructor flag argument
+        @param defaultVal: The expected default value of the flag
+        """
+        assert defaultVal in (True, False)
+        verifyConstructorArgument(testCase=self, cls=self.messageFactory,
+                                  argName=argName, defaultVal=defaultVal,
+                                  altVal=not defaultVal,)
+
+
+
+class CommonConstructorTestsMixin(object):
+    """
+    Tests for constructor arguments and their associated attributes that are
+    common to both L{twisted.names.dns._EDNSMessage} and L{dns.Message}.
+
+    TestCase classes that use this mixin must provide a C{messageFactory} method
+    which accepts any argment supported by L{dns.Message.__init__}.
+
+    TestCases must also mixin ConstructorTestsMixin which provides some custom
+    assertions for testing constructor arguments.
+    """
+    def test_id(self):
+        """
+        L{dns._EDNSMessage.id} defaults to C{0} and can be overridden in
+        the constructor.
+        """
+        self._verifyConstructorArgument('id', defaultVal=0, altVal=1)
+
+
+    def test_answer(self):
+        """
+        L{dns._EDNSMessage.answer} defaults to C{False} and can be overridden in
+        the constructor.
+        """
+        self._verifyConstructorFlag('answer', defaultVal=False)
+
+
+    def test_opCode(self):
+        """
+        L{dns._EDNSMessage.opCode} defaults to L{dns.OP_QUERY} and can be
+        overridden in the constructor.
+        """
+        self._verifyConstructorArgument(
+            'opCode', defaultVal=dns.OP_QUERY, altVal=dns.OP_STATUS)
+
+
+    def test_auth(self):
+        """
+        L{dns._EDNSMessage.auth} defaults to C{False} and can be overridden in
+        the constructor.
+        """
+        self._verifyConstructorFlag('auth', defaultVal=False)
+
+
+    def test_trunc(self):
+        """
+        L{dns._EDNSMessage.trunc} defaults to C{False} and can be overridden in
+        the constructor.
+        """
+        self._verifyConstructorFlag('trunc', defaultVal=False)
+
+
+    def test_recDes(self):
+        """
+        L{dns._EDNSMessage.recDes} defaults to C{False} and can be overridden in
+        the constructor.
+        """
+        self._verifyConstructorFlag('recDes', defaultVal=False)
+
+
+    def test_recAv(self):
+        """
+        L{dns._EDNSMessage.recAv} defaults to C{False} and can be overridden in
+        the constructor.
+        """
+        self._verifyConstructorFlag('recAv', defaultVal=False)
+
+
+    def test_rCode(self):
+        """
+        L{dns._EDNSMessage.rCode} defaults to C{0} and can be overridden in the
+        constructor.
+        """
+        self._verifyConstructorArgument('rCode', defaultVal=0, altVal=123)
+
+
+    def test_maxSize(self):
+        """
+        L{dns._EDNSMessage.maxSize} defaults to C{512} and can be overridden in
+        the constructor.
+        """
+        self._verifyConstructorArgument('maxSize', defaultVal=512, altVal=1024)
+
+
+    def test_queries(self):
+        """
+        L{dns._EDNSMessage.queries} defaults to C{[]}.
+        """
+        self.assertEqual(self.messageFactory().queries, [])
+
+
+    def test_answers(self):
+        """
+        L{dns._EDNSMessage.answers} defaults to C{[]}.
+        """
+        self.assertEqual(self.messageFactory().answers, [])
+
+
+    def test_authority(self):
+        """
+        L{dns._EDNSMessage.authority} defaults to C{[]}.
+        """
+        self.assertEqual(self.messageFactory().authority, [])
+
+
+    def test_additional(self):
+        """
+        L{dns._EDNSMessage.additional} defaults to C{[]}.
+        """
+        self.assertEqual(self.messageFactory().additional, [])
+
+
+
+class EDNSMessageConstructorTests(ConstructorTestsMixin,
+                                  CommonConstructorTestsMixin,
+                                  unittest.SynchronousTestCase):
+    """
+    Tests for L{twisted.names.dns._EDNSMessage} constructor arguments that are
+    shared with L{dns.Message}.
+    """
+    messageFactory = dns._EDNSMessage
+
+
+
+class MessageContstructorTests(ConstructorTestsMixin,
+                               CommonConstructorTestsMixin,
+                               unittest.SynchronousTestCase):
+    """
+    Tests for L{twisted.names.dns.Message} constructor arguments that are shared
+    with L{dns._EDNSMessage}.
+    """
+    messageFactory = dns.Message
+
+
+
+class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
+                                   unittest.SynchronousTestCase):
+    """
+    Tests for L{dns._EDNSMessage}.
+
+    These tests are for L{dns._EDNSMessage} APIs which are not shared with
+    L{dns.Message}.
+    """
+    messageFactory = dns._EDNSMessage
+
+    def test_ednsVersion(self):
+        """
+        L{dns._EDNSMessage.ednsVersion} defaults to C{0} and can be overridden
+        in the constructor.
+        """
+        self._verifyConstructorArgument(
+            'ednsVersion', defaultVal=0, altVal=None)
+
+
+    def test_dnssecOK(self):
+        """
+        L{dns._EDNSMessage.dnssecOK} defaults to C{False} and can be overridden
+        in the constructor.
+        """
+        self._verifyConstructorFlag('dnssecOK', defaultVal=False)
+
+
+    def test_authenticData(self):
+        """
+        L{dns._EDNSMessage.authenticData} defaults to C{False} and can be
+        overridden in the constructor.
+        """
+        self._verifyConstructorFlag('authenticData', defaultVal=False)
+
+
+    def test_checkingDisabled(self):
+        """
+        L{dns._EDNSMessage.checkingDisabled} defaults to C{False} and can be
+        overridden in the constructor.
+        """
+        self._verifyConstructorFlag('checkingDisabled', defaultVal=False)
+
+
+    def test_queriesOverride(self):
+        """
+        L{dns._EDNSMessage.queries} can be overridden in the constructor.
+        """
+        msg = self.messageFactory(queries=[dns.Query(b'example.com')])
+
+        self.assertEqual(
+            msg.queries,
+            [dns.Query(b'example.com')])
+
+
+    def test_answersOverride(self):
+        """
+        L{dns._EDNSMessage.answers} can be overridden in the constructor.
+        """
+        msg = self.messageFactory(
+            answers=[
+                dns.RRHeader(
+                    b'example.com',
+                    payload=dns.Record_A('1.2.3.4'))])
+
+        self.assertEqual(
+            msg.answers,
+            [dns.RRHeader(b'example.com', payload=dns.Record_A('1.2.3.4'))])
+
+
+    def test_authorityOverride(self):
+        """
+        L{dns._EDNSMessage.authority} can be overridden in the constructor.
+        """
+        msg = self.messageFactory(
+            authority=[
+                dns.RRHeader(
+                    b'example.com',
+                    type=dns.SOA,
+                    payload=dns.Record_SOA())])
+
+        self.assertEqual(
+            msg.authority,
+            [dns.RRHeader(b'example.com', type=dns.SOA,
+                          payload=dns.Record_SOA())])
+
+
+    def test_additionalOverride(self):
+        """
+        L{dns._EDNSMessage.authority} can be overridden in the constructor.
+        """
+        msg = self.messageFactory(
+            additional=[
+                dns.RRHeader(
+                    b'example.com',
+                    payload=dns.Record_A('1.2.3.4'))])
+
+        self.assertEqual(
+            msg.additional,
+            [dns.RRHeader(b'example.com', payload=dns.Record_A('1.2.3.4'))])
+
+
+    def test_repr(self):
+        """
+        L{dns._EDNSMessage.__repr__} displays the id, answer, opCode, auth,
+        trunc, recDes, recAv attributes of the message.
+        """
+        self.assertEqual(
+            repr(self.messageFactory()),
+            '<_EDNSMessage '
+            'id=0 '
+            'answer=False '
+            'opCode=0 '
+            'auth=False '
+            'trunc=False '
+            'recDes=False '
+            'recAv=False '
+            'rCode=0 '
+            'ednsVersion=0 '
+            'dnssecOK=False '
+            'authenticData=False '
+            'checkingDisabled=False '
+            'maxSize=512 '
+            'queries=[] '
+            'answers=[] '
+            'authority=[] '
+            'additional=[]'
+            '>')
+
+
+    def test_fromStrCallsMessageFactory(self):
+        """
+        L{dns._EDNSMessage.fromString} calls L{dns._EDNSMessage._messageFactory}
+        to create a new L{dns.Message} instance which is used to decode the
+        supplied bytes.
+        """
+        class FakeMessageFactory(object):
+            """
+            Fake message factory.
+            """
+            def fromStr(self, *args, **kwargs):
+                """
+                Fake fromStr method which raises the arguments it was passed.
+
+                @param args: positional arguments
+                @param kwargs: keyword arguments
+                """
+                raise RaisedArgs(args, kwargs)
+
+        m = dns._EDNSMessage()
+        m._messageFactory = FakeMessageFactory
+        dummyBytes = object()
+        e = self.assertRaises(RaisedArgs, m.fromStr, dummyBytes)
+        self.assertEqual(
+            ((dummyBytes,), {}),
+            (e.args, e.kwargs)
+        )
+
+
+    def test_fromStrCallsFromMessage(self):
+        """
+        L{dns._EDNSMessage.fromString} calls L{dns._EDNSMessage._fromMessage}
+        with a L{dns.Message} instance
+        """
+        m = dns._EDNSMessage()
+        class FakeMessageFactory():
+            """
+            Fake message factory.
+            """
+            def fromStr(self, bytes):
+                """
+                A noop fake version of fromStr
+
+                @param bytes: the bytes to be decoded
+                """
+
+        fakeMessage = FakeMessageFactory()
+        m._messageFactory = lambda: fakeMessage
+
+        def fakeFromMessage(*args, **kwargs):
+            raise RaisedArgs(args, kwargs)
+        m._fromMessage = fakeFromMessage
+        e = self.assertRaises(RaisedArgs, m.fromStr, b'')
+        self.assertEqual(
+            ((fakeMessage,), {}),
+            (e.args, e.kwargs)
+        )
+
+
+    def test_toStrCallsToMessage(self):
+        """
+        L{dns._EDNSMessage.toStr} calls L{dns._EDNSMessage._toMessage}
+        """
+        m = dns._EDNSMessage()
+        def fakeToMessage(*args, **kwargs):
+            raise RaisedArgs(args, kwargs)
+        m._toMessage = fakeToMessage
+        e = self.assertRaises(RaisedArgs, m.toStr)
+        self.assertEqual(
+            ((), {}),
+            (e.args, e.kwargs)
+        )
+
+
+    def test_toStrCallsToMessageToStr(self):
+        """
+        L{dns._EDNSMessage.toStr} calls C{toStr} on the message returned by
+        L{dns._EDNSMessage._toMessage}.
+        """
+        m = dns._EDNSMessage()
+        dummyBytes = object()
+        class FakeMessage(object):
+            """
+            Fake Message
+            """
+            def toStr(self):
+                """
+                Fake toStr which returns dummyBytes.
+
+                @return: dummyBytes
+                """
+                return dummyBytes
+
+        def fakeToMessage(*args, **kwargs):
+            return FakeMessage()
+        m._toMessage = fakeToMessage
+
+        self.assertEqual(
+            dummyBytes,
+            m.toStr()
+        )
+
+
+
+class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCase):
+    """
+    Tests for equality between L(dns._EDNSMessage} instances.
+
+    These tests will not work with L{dns.Message} because it does not use
+    L{twisted.python.util.FancyEqMixin}.
+    """
+
+    messageFactory = dns._EDNSMessage
+
+    def test_id(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        id.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(id=1),
+            self.messageFactory(id=1),
+            self.messageFactory(id=2),
+            )
+
+
+    def test_answer(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        answer flag.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(answer=True),
+            self.messageFactory(answer=True),
+            self.messageFactory(answer=False),
+            )
+
+
+    def test_opCode(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        opCode.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(opCode=dns.OP_STATUS),
+            self.messageFactory(opCode=dns.OP_STATUS),
+            self.messageFactory(opCode=dns.OP_INVERSE),
+            )
+
+
+    def test_auth(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        auth flag.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(auth=True),
+            self.messageFactory(auth=True),
+            self.messageFactory(auth=False),
+            )
+
+
+    def test_trunc(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        trunc flag.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(trunc=True),
+            self.messageFactory(trunc=True),
+            self.messageFactory(trunc=False),
+            )
+
+
+    def test_recDes(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        recDes flag.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(recDes=True),
+            self.messageFactory(recDes=True),
+            self.messageFactory(recDes=False),
+            )
+
+
+    def test_recAv(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        recAv flag.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(recAv=True),
+            self.messageFactory(recAv=True),
+            self.messageFactory(recAv=False),
+            )
+
+
+    def test_rCode(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        rCode.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(rCode=16),
+            self.messageFactory(rCode=16),
+            self.messageFactory(rCode=15),
+            )
+
+
+    def test_ednsVersion(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        ednsVersion.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(ednsVersion=1),
+            self.messageFactory(ednsVersion=1),
+            self.messageFactory(ednsVersion=None),
+            )
+
+
+    def test_dnssecOK(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        dnssecOK.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(dnssecOK=True),
+            self.messageFactory(dnssecOK=True),
+            self.messageFactory(dnssecOK=False),
+            )
+
+
+    def test_authenticData(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        authenticData flags.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(authenticData=True),
+            self.messageFactory(authenticData=True),
+            self.messageFactory(authenticData=False),
+            )
+
+
+    def test_checkingDisabled(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        checkingDisabled flags.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(checkingDisabled=True),
+            self.messageFactory(checkingDisabled=True),
+            self.messageFactory(checkingDisabled=False),
+            )
+
+
+    def test_maxSize(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        maxSize.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(maxSize=2048),
+            self.messageFactory(maxSize=2048),
+            self.messageFactory(maxSize=1024),
+            )
+
+
+    def test_queries(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        queries.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(queries=[dns.Query(b'example.com')]),
+            self.messageFactory(queries=[dns.Query(b'example.com')]),
+            self.messageFactory(queries=[dns.Query(b'example.org')]),
+            )
+
+
+    def test_answers(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        answers.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(answers=[dns.RRHeader(
+                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
+            self.messageFactory(answers=[dns.RRHeader(
+                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
+            self.messageFactory(answers=[dns.RRHeader(
+                        b'example.org', payload=dns.Record_A('4.3.2.1'))]),
+            )
+
+
+    def test_authority(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        authority records.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(authority=[dns.RRHeader(
+                        b'example.com',
+                        type=dns.SOA, payload=dns.Record_SOA())]),
+            self.messageFactory(authority=[dns.RRHeader(
+                        b'example.com',
+                        type=dns.SOA, payload=dns.Record_SOA())]),
+            self.messageFactory(authority=[dns.RRHeader(
+                        b'example.org',
+                        type=dns.SOA, payload=dns.Record_SOA())]),
+            )
+
+
+    def test_additional(self):
+        """
+        Two L{dns._EDNSMessage} instances compare equal if they have the same
+        additional records.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(additional=[dns.RRHeader(
+                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
+            self.messageFactory(additional=[dns.RRHeader(
+                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
+            self.messageFactory(additional=[dns.RRHeader(
+                        b'example.org', payload=dns.Record_A('1.2.3.4'))]),
+            )
+
+
+
+class StandardEncodingTestsMixin(object):
+    """
+    Tests for the encoding and decoding of various standard (not EDNS) messages.
+
+    These tests should work with both L{dns._EDNSMessage} and L{dns.Message}.
+
+    TestCase classes that use this mixin must provide a C{messageFactory} method
+    which accepts any argment supported by L{dns._EDNSMessage.__init__}.
+
+    EDNS specific arguments may be discarded if not supported by the message
+    class under construction.
+    """
+    def test_emptyMessageEncode(self):
+        """
+        An empty message can be encoded.
+        """
+        self.assertEqual(
+            self.messageFactory(**MessageEmpty.kwargs()).toStr(),
+            MessageEmpty.bytes())
+
+
+    def test_emptyMessageDecode(self):
+        """
+        An empty message byte sequence can be decoded.
+        """
+        m = self.messageFactory()
+        m.fromStr(MessageEmpty.bytes())
+
+        self.assertEqual(m, self.messageFactory(**MessageEmpty.kwargs()))
+
+
+    def test_completeQueryEncode(self):
+        """
+        A fully populated query message can be encoded.
+        """
+        self.assertEqual(
+            self.messageFactory(**MessageComplete.kwargs()).toStr(),
+            MessageComplete.bytes())
+
+
+    def test_completeQueryDecode(self):
+        """
+        A fully populated message byte string can be decoded.
+        """
+        m = self.messageFactory()
+        m.fromStr(MessageComplete.bytes()),
+
+        self.assertEqual(m, self.messageFactory(**MessageComplete.kwargs()))
+
+
+    def test_NULL(self):
+        """
+        A I{NULL} record with an arbitrary payload can be encoded and decoded as
+        part of a message.
+        """
+        bytes = b''.join([dns._ord2bytes(i) for i in range(256)])
+        rec = dns.Record_NULL(bytes)
+        rr = dns.RRHeader(b'testname', dns.NULL, payload=rec)
+        msg1 = self.messageFactory()
+        msg1.answers.append(rr)
+        s = msg1.toStr()
+
+        msg2 = self.messageFactory()
+        msg2.fromStr(s)
+
+        self.assertIsInstance(msg2.answers[0].payload, dns.Record_NULL)
+        self.assertEqual(msg2.answers[0].payload.payload, bytes)
+
+
+    def test_nonAuthoritativeMessageEncode(self):
+        """
+        If the message C{authoritative} attribute is set to 0, the encoded bytes
+        will have AA bit 0.
+        """
+        self.assertEqual(
+            self.messageFactory(**MessageNonAuthoritative.kwargs()).toStr(),
+            MessageNonAuthoritative.bytes())
+
+
+    def test_nonAuthoritativeMessageDecode(self):
+        """
+        The L{dns.RRHeader} instances created by a message from a
+        non-authoritative message byte string are marked as not authoritative.
+        """
+        m = self.messageFactory()
+        m.fromStr(MessageNonAuthoritative.bytes())
+
+        self.assertEqual(
+            m, self.messageFactory(**MessageNonAuthoritative.kwargs()))
+
+
+    def test_authoritativeMessageEncode(self):
+        """
+        If the message C{authoritative} attribute is set to 1, the encoded bytes
+        will have AA bit 1.
+        """
+        self.assertEqual(
+            self.messageFactory(**MessageAuthoritative.kwargs()).toStr(),
+            MessageAuthoritative.bytes())
+
+
+    def test_authoritativeMessageDecode(self):
+        """
+        The message and its L{dns.RRHeader} instances created by C{decode} from
+        an authoritative message byte string, are marked as authoritative.
+        """
+        m = self.messageFactory()
+        m.fromStr(MessageAuthoritative.bytes())
+
+        self.assertEqual(
+            m, self.messageFactory(**MessageAuthoritative.kwargs()))
+
+
+    def test_truncatedMessageEncode(self):
+        """
+        If the message C{trunc} attribute is set to 1 the encoded bytes will
+        have TR bit 1.
+        """
+        self.assertEqual(
+            self.messageFactory(**MessageTruncated.kwargs()).toStr(),
+            MessageTruncated.bytes())
+
+
+    def test_truncatedMessageDecode(self):
+        """
+        The message instance created by decoding a truncated message is marked
+        as truncated.
+        """
+        m = self.messageFactory()
+        m.fromStr(MessageTruncated.bytes())
+
+        self.assertEqual(m, self.messageFactory(**MessageTruncated.kwargs()))
+
+
+
+class EDNSMessageStandardEncodingTests(StandardEncodingTestsMixin,
+                                       unittest.SynchronousTestCase):
+    """
+    Tests for the encoding and decoding of various standard (non-EDNS) messages
+    by L{dns._EDNSMessage}.
+    """
+    messageFactory = dns._EDNSMessage
+
+
+
+class MessageStandardEncodingTests(StandardEncodingTestsMixin,
+                                   unittest.SynchronousTestCase):
+    """
+    Tests for the encoding and decoding of various standard (non-EDNS) messages
+    by L{dns.Message}.
+    """
+    @staticmethod
+    def messageFactory(**kwargs):
+        """
+        This function adapts constructor arguments expected by
+        _EDNSMessage.__init__ to arguments suitable for use with the
+        Message.__init__.
+
+        Also handles the fact that unlike L{dns._EDNSMessage},
+        L{dns.Message.__init__} does not accept queries, answers etc as
+        arguments.
+
+        Also removes any L{dns._EDNSMessage} specific arguments.
+
+        @param args: The positional arguments which will be passed to
+            L{dns.Message.__init__}.
+
+        @param kwargs: The keyword arguments which will be stripped of EDNS
+            specific arguments before being passed to L{dns.Message.__init__}.
+
+        @return: An L{dns.Message} instance.
+        """
+        queries = kwargs.pop('queries', [])
+        answers = kwargs.pop('answers', [])
+        authority = kwargs.pop('authority', [])
+        additional = kwargs.pop('additional', [])
+
+        kwargs.pop('ednsVersion', None)
+
+        m = dns.Message(**kwargs)
+        m.queries = queries
+        m.answers = answers
+        m.authority = authority
+        m.additional = additional
+        return MessageComparable(m)
+
+
+
+class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
+    """
+    Tests for the encoding and decoding of various EDNS messages.
+
+    These test will not work with L{dns.Message}.
+    """
+    messageFactory = dns._EDNSMessage
+
+    def test_ednsMessageDecodeStripsOptRecords(self):
+        """
+        The L(_EDNSMessage} instance created by L{dns._EDNSMessage.decode} from
+        an EDNS query never includes OPT records in the additional section.
+        """
+        m = self.messageFactory()
+        m.fromStr(MessageEDNSQuery.bytes())
+
+        self.assertEqual(m.additional, [])
+
+
+    def test_ednsMessageDecodeMultipleOptRecords(self):
+        """
+        An L(_EDNSMessage} instance created from a byte string containing
+        multiple I{OPT} records will discard all the C{OPT} records.
+
+        C{ednsVersion} will be set to C{None}.
+
+        @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.1}
+        """
+        m = dns.Message()
+        m.additional = [
+            dns._OPTHeader(version=2),
+            dns._OPTHeader(version=3)]
+
+        ednsMessage = dns._EDNSMessage()
+        ednsMessage.fromStr(m.toStr())
+
+        self.assertEqual(ednsMessage.ednsVersion, None)
+
+
+    def test_fromMessageCopiesSections(self):
+        """
+        L{dns._EDNSMessage._fromMessage} returns an L{_EDNSMessage} instance
+        whose queries, answers, authority and additional lists are copies (not
+        references to) the original message lists.
+        """
+        standardMessage = dns.Message()
+        standardMessage.fromStr(MessageEDNSQuery.bytes())
+
+        ednsMessage = dns._EDNSMessage._fromMessage(standardMessage)
+
+        duplicates = []
+        for attrName in ('queries', 'answers', 'authority', 'additional'):
+            if (getattr(standardMessage, attrName)
+                is getattr(ednsMessage, attrName)):
+                duplicates.append(attrName)
+
+        if duplicates:
+            self.fail(
+                'Message and _EDNSMessage shared references to the following '
+                'section lists after decoding: %s' % (duplicates,))
+
+
+    def test_toMessageCopiesSections(self):
+        """
+        L{dns._EDNSMessage.toStr} makes no in place changes to the message
+        instance.
+        """
+        ednsMessage = dns._EDNSMessage(ednsVersion=1)
+        ednsMessage.toStr()
+        self.assertEqual(ednsMessage.additional, [])
+
+
+    def test_optHeaderPosition(self):
+        """
+        L{dns._EDNSMessage} can decode OPT records, regardless of their position
+        in the additional records section.
+
+        "The OPT RR MAY be placed anywhere within the additional data section."
+
+        @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.1}
+        """
+        # XXX: We need an _OPTHeader.toRRHeader method. See #6779.
+        b = BytesIO()
+        optRecord = dns._OPTHeader(version=1)
+        optRecord.encode(b)
+        optRRHeader = dns.RRHeader()
+        b.seek(0)
+        optRRHeader.decode(b)
+        m = dns.Message()
+        m.additional = [optRRHeader]
+
+        actualMessages = []
+        actualMessages.append(dns._EDNSMessage._fromMessage(m).ednsVersion)
+
+        m.additional.append(dns.RRHeader(type=dns.A))
+        actualMessages.append(
+            dns._EDNSMessage._fromMessage(m).ednsVersion)
+
+        m.additional.insert(0, dns.RRHeader(type=dns.A))
+        actualMessages.append(
+            dns._EDNSMessage._fromMessage(m).ednsVersion)
+
+        self.assertEqual(
+            [1] * 3,
+            actualMessages
+        )
+
+
+    def test_ednsDecode(self):
+        """
+        The L(_EDNSMessage} instance created by L{dns._EDNSMessage.fromStr}
+        derives its edns specific values (C{ednsVersion}, etc) from the supplied
+        OPT record.
+        """
+        m = self.messageFactory()
+        m.fromStr(MessageEDNSComplete.bytes())
+
+        self.assertEqual(m, self.messageFactory(**MessageEDNSComplete.kwargs()))
+
+
+    def test_ednsEncode(self):
+        """
+        The L(_EDNSMessage} instance created by L{dns._EDNSMessage.toStr}
+        encodes its edns specific values (C{ednsVersion}, etc) into an OPT
+        record added to the additional section.
+        """
+        self.assertEqual(
+            self.messageFactory(**MessageEDNSComplete.kwargs()).toStr(),
+            MessageEDNSComplete.bytes())
+
+
+    def test_extendedRcodeEncode(self):
+        """
+        The L(_EDNSMessage.toStr} encodes the extended I{RCODE} (>=16) by
+        assigning the lower 4bits to the message RCODE field and the upper 4bits
+        to the OPT pseudo record.
+        """
+        self.assertEqual(
+            self.messageFactory(**MessageEDNSExtendedRCODE.kwargs()).toStr(),
+            MessageEDNSExtendedRCODE.bytes())
+
+
+    def test_extendedRcodeDecode(self):
+        """
+        The L(_EDNSMessage} instance created by L{dns._EDNSMessage.fromStr}
+        derives RCODE from the supplied OPT record.
+        """
+        m = self.messageFactory()
+        m.fromStr(MessageEDNSExtendedRCODE.bytes())
+
+        self.assertEqual(
+            m, self.messageFactory(**MessageEDNSExtendedRCODE.kwargs()))
+
+
+    def test_extendedRcodeZero(self):
+        """
+        Note that EXTENDED-RCODE value 0 indicates that an unextended RCODE is
+        in use (values 0 through 15).
+
+        https://tools.ietf.org/html/rfc6891#section-6.1.3
+        """
+        ednsMessage = self.messageFactory(rCode=15, ednsVersion=0)
+        standardMessage = ednsMessage._toMessage()
+
+        self.assertEqual(
+            (15, 0),
+            (standardMessage.rCode, standardMessage.additional[0].extendedRCODE)
+        )
