@@ -798,3 +798,14 @@ class TubeTest(TestCase):
         self.assertEquals(self.ff.flowIsStopped, False)
         self.fd.fount.stopFlow()
         self.assertEquals(self.ff.flowIsStopped, True)
+
+
+    def test_stopFlowBeforeTimeBegins(self):
+        """
+        L{_TubeFount.stopFlow} will stop the flow of its L{_Tube}'s upstream
+        fount later, when it acquires one, if it's previously been stopped.
+        """
+        partially = series(self.tube, self.fd)
+        self.fd.fount.stopFlow()
+        self.ff.flowTo(partially)
+        self.assertEquals(self.ff.flowIsStopped, True)
