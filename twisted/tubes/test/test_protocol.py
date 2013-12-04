@@ -59,6 +59,16 @@ class FlowingAdapterTests(TestCase):
         self.tube = series(self.pump)
 
 
+    def test_progressNoOp(self):
+        """
+        L{_ProtocolDrain.progress} does nothing, but has the correct signature.
+
+        @see: L{twisted.tubes.test.test_tube.PumpTest.test_noOps}
+        """
+        self.adaptedDrain.progress()
+        self.adaptedDrain.progress(0.5)
+
+
     def test_flowToSetsDrain(self):
         """
         L{_ProtocolFount.flowTo} will set the C{drain} attribute of the
