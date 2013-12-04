@@ -8,6 +8,7 @@ Tests for twisted.names.dns.
 
 from __future__ import division, absolute_import
 
+from functools import partial
 from io import BytesIO
 
 import struct
@@ -822,10 +823,105 @@ class TestController(object):
 
 
 
-class DatagramProtocolTestCase(unittest.TestCase):
+class RaisedArguments(Exception):
+    """
+    Capture the arguments supplied to a function whose signature is being
+    tested.
+    """
+    def __init__(self, args, kwargs):
+        """
+        Store the arguements
+
+        @param args: Positional args
+        @param kwargs: Keyword args
+        """
+        self.args = args
+        self.kwargs = kwargs
+
+
+
+def raisingMessageFactory(*args, **kwargs):
+    """
+    A stub message factory which raises an exception containing its arguments.
+
+    @param args: Positional args
+    @param kwargs: Keyword args
+    """
+    raise RaisedArguments(args, kwargs)
+
+
+
+class DNSProtocolSharedTestsMixin(object):
+    """
+    Tests for features shared by L{dns.DNSProtocol} and
+    L{dns.DNSDatagramProtocol}.
+    """
+
+    def test_messageFactoryDefault(self):
+        """
+        L{dns.DNSDatagramProtocol} and L{dns.DNSProtocol} set C{messageFactory}
+        to L{dns.Message} by default.
+        """
+        self.assertIdentical(dns.Message, self.proto._messageFactory)
+
+
+    def test_messageFactoryOverride(self):
+        """
+        The constructors for L{dns.DNSDatagramProtocol} and L{dns.DNSProtocol}
+        set both accept a C{messageFactory} argument which is assigned to
+        C{_messageFactory}.
+        """
+        dummyMessageFactory = object()
+        self.assertIdentical(
+            dummyMessageFactory,
+            self.protocolFactory(
+                controller=None,
+                messageFactory=dummyMessageFactory)._messageFactory)
+
+
+    def test_messageFactoryCalledByQuery(self):
+        """
+        C{query} calls C{messageFactory} with C{id} and C{recDes} keyword
+        arguments to construct a new message instance.
+        """
+        self.proto._messageFactory = raisingMessageFactory
+        self.proto.pickID = lambda: 1
+
+        e = self.assertRaises(
+            RaisedArguments,
+            self.queryMethod,
+            queries=[dns.Query('example.com')]
+        )
+        self.assertEqual(
+            ((), {'id': 1, 'recDes': 1}),
+            (e.args, e.kwargs)
+        )
+
+
+    def test_messageFactoryCalledByDataReceived(self):
+        """
+        C{dataReceived} and C{datagramReceived} call C{messageFactory} without
+        any arguments to construct a new message instance.
+        """
+        self.proto._messageFactory = raisingMessageFactory
+
+        e = self.assertRaises(
+            RaisedArguments,
+            self.dataReceivedMethod,
+            data=dns.Message().toStr()
+        )
+        self.assertEqual(
+            ((), {}),
+            (e.args, e.kwargs)
+        )
+
+
+
+class DatagramProtocolTestCase(DNSProtocolSharedTestsMixin, unittest.TestCase):
     """
     Test various aspects of L{dns.DNSDatagramProtocol}.
     """
+    protocolFactory = dns.DNSDatagramProtocol
 
     def setUp(self):
         """
@@ -833,10 +929,15 @@ class DatagramProtocolTestCase(unittest.TestCase):
         """
         self.clock = task.Clock()
         self.controller = TestController()
-        self.proto = dns.DNSDatagramProtocol(self.controller)
+        self.proto = self.protocolFactory(self.controller)
         transport = proto_helpers.FakeDatagramTransport()
         self.proto.makeConnection(transport)
         self.proto.callLater = self.clock.callLater
+        # DNSProtocol.query requires an address argument (unlike DNSProtocol,
+        # see below)
+        self.queryMethod = partial(self.proto.query, address=('127.0.0.1', 53))
+        self.dataReceivedMethod = partial(
+            self.proto.datagramReceived, addr=('127.0.0.1', 53))
 
 
     def test_truncatedPacket(self):
@@ -945,10 +1046,11 @@ class TestTCPController(TestController):
 
 
 
-class DNSProtocolTestCase(unittest.TestCase):
+class DNSProtocolTestCase(DNSProtocolSharedTestsMixin, unittest.TestCase):
     """
     Test various aspects of L{dns.DNSProtocol}.
     """
+    protocolFactory = dns.DNSProtocol
 
     def setUp(self):
         """
@@ -956,9 +1058,13 @@ class DNSProtocolTestCase(unittest.TestCase):
         """
         self.clock = task.Clock()
         self.controller = TestTCPController()
-        self.proto = dns.DNSProtocol(self.controller)
+        self.proto = self.protocolFactory(self.controller)
         self.proto.makeConnection(proto_helpers.StringTransport())
         self.proto.callLater = self.clock.callLater
+        # DNSProtocol.query doesn't require an address argument (unlike
+        # DNSDatagramProtocol, see above)
+        self.queryMethod = self.proto.query
+        self.dataReceivedMethod = self.proto.dataReceived
 
 
     def test_connectionTracking(self):
