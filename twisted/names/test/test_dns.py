@@ -838,8 +838,17 @@ class DNSProtocolSharedTestsMixin(object):
     """
     Tests for features shared by L{dns.DNSProtocol} and
     L{dns.DNSDatagramProtocol}.
-    """
 
+    TestCase classes which use this mixin must provide a protocol instance
+    assigned to an attribute called C{proto}.
+
+    Additionally, the TestCase class must provide a reference to a
+    C{dataReceived} protocol method assigned to an attribute called C{proto}.
+    This is C{dataReceived} in the case of stream protocols and
+    C{datagramReceived} in the case of datagram protocols.
+
+    These attributes should be assigned by the C{setUp} method.
+    """
     def test_messageFactoryDefault(self):
         """
         L{dns.DNSDatagramProtocol} and L{dns.DNSProtocol} set C{messageFactory}
