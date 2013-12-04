@@ -152,7 +152,10 @@ class _TubeFount(_TubePiece):
         """
         Stop the flow from the fount to this L{_Tube}.
         """
+        self._tube._flowWasStopped = True
         fount = self._tube._tdrain.fount
+        if fount is None:
+            return
         fount.stopFlow()
 
 
@@ -185,6 +188,8 @@ class _TubeDrain(_TubePiece):
         if out is not None and in_ is not None and not in_.isOrExtends(out):
             raise TypeError()
         self.fount = fount
+        if self._tube._flowWasStopped:
+            fount.stopFlow()
         if self._tube._pauseBecausePauseCalled:
             pbpc = self._tube._pauseBecausePauseCalled
             self._tube._pauseBecausePauseCalled = None
@@ -338,6 +343,7 @@ class _Tube(object):
     _pauseBecausePauseCalled = None
     _pump = None
     _pendingIterator = None
+    _flowWasStopped = False
 
     def __init__(self, pump):
         """
