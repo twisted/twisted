@@ -823,23 +823,6 @@ class TestController(object):
 
 
 
-class RaisedArguments(Exception):
-    """
-    Capture the arguments supplied to a function whose signature is being
-    tested.
-    """
-    def __init__(self, args, kwargs):
-        """
-        Store the arguements
-
-        @param args: Positional args
-        @param kwargs: Keyword args
-        """
-        self.args = args
-        self.kwargs = kwargs
-
-
-
 def raisingMessageFactory(*args, **kwargs):
     """
     A stub message factory which raises an exception containing its arguments.
@@ -847,7 +830,7 @@ def raisingMessageFactory(*args, **kwargs):
     @param args: Positional args
     @param kwargs: Keyword args
     """
-    raise RaisedArguments(args, kwargs)
+    raise RaisedArgs(args, kwargs)
 
 
 
@@ -888,7 +871,7 @@ class DNSProtocolSharedTestsMixin(object):
         self.proto.pickID = lambda: 1
 
         e = self.assertRaises(
-            RaisedArguments,
+            RaisedArgs,
             self.queryMethod,
             queries=[dns.Query('example.com')]
         )
@@ -906,7 +889,7 @@ class DNSProtocolSharedTestsMixin(object):
         self.proto._messageFactory = raisingMessageFactory
 
         e = self.assertRaises(
-            RaisedArguments,
+            RaisedArgs,
             self.dataReceivedMethod,
             data=dns.Message().toStr()
         )
