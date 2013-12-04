@@ -790,3 +790,11 @@ class TubeTest(TestCase):
         self.assertEqual(repr(pump.tube), '<Tube for <Pump For Testing>>')
 
 
+    def test_stopFlow(self):
+        """
+        L{_TubeFount.stopFlow} stops the flow of its L{_Tube}'s upstream fount.
+        """
+        self.ff.flowTo(series(self.tube, self.fd))
+        self.assertEquals(self.ff.flowIsStopped, False)
+        self.fd.fount.stopFlow()
+        self.assertEquals(self.ff.flowIsStopped, True)
