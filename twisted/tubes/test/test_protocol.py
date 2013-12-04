@@ -159,6 +159,18 @@ class FlowingAdapterTests(TestCase):
         self.assertEquals(fd.received, ["hello, ", "world!"])
 
 
+    def test_dataReceivedBeforeFlowingThenFlowTo(self):
+        """
+        Repeated calls to L{flowTo} don't replay the buffer from
+        L{dataReceived} to the new drain.
+        """
+        self.test_dataReceivedBeforeFlowing()
+        fd2 = FakeDrain()
+        self.adaptedFount.flowTo(fd2)
+        self.adaptedProtocol.dataReceived("hooray")
+        self.assertEquals(fd2.received, ["hooray"])
+
+
     def test_flowingFromAttribute(self):
         """
         L{ProtocolAdapter.flowingFrom} will establish the appropriate L{IFount}

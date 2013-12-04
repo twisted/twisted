@@ -101,8 +101,8 @@ class _ProtocolFount(object):
         if self._preReceivePause is not None:
             self._preReceivePause.unpause()
             self.drain.receive(self._preReceiveBuffer)
-            # self._preReceiveBuffer = None
-            # self._preReceivePause = None
+            self._preReceiveBuffer = None
+            self._preReceivePause = None
         return result
 
 
