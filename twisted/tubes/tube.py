@@ -480,21 +480,21 @@ def _pump2fount(pump):
 
 
 
-def _tube2fount(tube):
-    return tube._tfount
+# def _tube2fount(tube):
+#     return tube._tfount
 
 
 
-def _tube2drain(tube):
-    return tube._tdrain
+# def _tube2drain(tube):
+#     return tube._tdrain
 
 
 
 _pumpRegistry = _registryAdapting(
     (IPump, IDrain, _pump2drain),
     (IPump, IFount, _pump2fount),
-    (_tubeType, IFount, _tube2fount),
-    (_tubeType, IDrain, _tube2drain),
+    # (_tubeType, IFount, _tube2fount),
+    # (_tubeType, IDrain, _tube2drain),
 )
 
 
