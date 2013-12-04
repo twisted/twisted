@@ -111,10 +111,13 @@ class FlowingAdapterTests(TestCase):
         self.assertEquals(self.pump.wasStopped, False)
 
 
-    def test_loseConnectionSendsFlowStopped(self):
+    def test_connectionLostSendsFlowStopped(self):
         """
-        L{_ProtocolPlumbing.connectionLost} will notify its C{_fount}'s
-        C{drain} that the flow has stopped, since the connection is now gone.
+        When C{connectionLost} is called on a L{_ProtocolPlumbing} and it has
+        an L{IFount} flowing to it (in other words, flowing to its
+        L{_ProtocolDrain}), but no drain flowing I{from} it, the L{IFount}
+        should have C{stopFlow} invoked on it so that it will no longer deliver
+        to the now-dead transport.
         """
         self.adaptedFount.flowTo(self.tube)
         class MyFunException(Exception):
@@ -123,6 +126,18 @@ class FlowingAdapterTests(TestCase):
         self.adaptedProtocol.connectionLost(f)
         self.assertEquals(self.pump.wasStopped, True)
         self.assertIdentical(f, self.pump.reason)
+
+
+    def test_connectionLostSendsStopFlow(self):
+        """
+        L{_ProtocolPlumbing.connectionLost} will notify its C{_drain}'s
+        C{fount} that it should stop flowing, since the connection is now gone.
+        """
+        ff = FakeFount()
+        ff.flowTo(self.adaptedDrain)
+        self.assertEquals(ff.flowIsStopped, False)
+        self.adaptedProtocol.connectionLost(Failure(ZeroDivisionError))
+        self.assertEquals(ff.flowIsStopped, True)
 
 
     def test_flowingFromAttribute(self):
@@ -205,22 +220,3 @@ class FlowingAdapterTests(TestCase):
                 return another
         anotherOther = self.adaptedFount.flowTo(ReflowingFakeDrain())
         self.assertIdentical(another, anotherOther)
-
-
-    def test_pureConsumerConnectionGetsShutDown(self):
-        """
-        When C{connectionLost} is called on a L{_ProtocolPlumbing} and it has
-        an L{IFount} flowing to it (in other words, flowing to its
-        L{_ProtocolDrain}), but no drain flowing I{from} it, the L{IFount}
-        should have C{stopFlow} invoked on it so that it will no longer deliver
-        to the now-dead transport.
-        """
-        ff = FakeFount()
-        ff.flowTo(self.adaptedDrain)
-        self.adaptedProtocol.connectionLost(
-            Failure(Exception("it's a fair cop"))
-        )
-        self.assertEquals(ff.flowIsStopped, True)
-
-
-
