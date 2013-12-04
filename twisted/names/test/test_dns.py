@@ -3591,7 +3591,7 @@ class EDNSMessageSpecificsTestCase(unittest.SynchronousTestCase,
 
                 @param bytes: the bytes to be decoded
                 """
-                pass
+
         fakeMessage = FakeMessageFactory()
         m._messageFactory = lambda: fakeMessage
 
