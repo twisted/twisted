@@ -364,6 +364,15 @@ class TubeTest(TestCase):
         self.assertEqual(self.fd.received, ["something", "else"])
 
 
+    def test_flowingFromNoneInitialNoOp(self):
+        """
+        L{_TubeFount.flowTo}C{(None)} is a no-op when called before
+        any other invocations of L{_TubeFount.flowTo}.
+        """
+        tubeFount = self.ff.flowTo(self.tubeDrain)
+        tubeFount.flowTo(None)
+
+
     def test_pumpFlowSwitching_ReEntrantResumeReceive(self):
         """
         Switching a pump that is receiving data from a fount which
