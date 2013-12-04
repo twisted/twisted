@@ -2217,6 +2217,9 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     @ivar answers: See L{__init__}
     @ivar authority: See L{__init__}
     @ivar additional: See L{__init__}
+
+    @ivar _messageFactory: A constructor of L{Message} instances. Called by
+        C{_toMessage} and C{_fromMessage}.
     """
 
     showAttributes = (
@@ -2235,6 +2238,13 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
                  checkingDisabled=False, maxSize=512,
                  queries=None, answers=None, authority=None, additional=None):
         """
+        Construct a new L{_EDNSMessage}
+
+        @see U{RFC1035 section-4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
+        @see U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}
+        @see U{RFC3225 section-3<https://tools.ietf.org/html/rfc3225#section-3>}
+        @see U{RFC6891 section-6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}
+
         @param id: A 16 bit identifier assigned by the program that generates
             any kind of query.  This identifier is copied the corresponding
             reply and can be used by the requester to match up replies to
@@ -2261,7 +2271,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
         @param recDes: Recursion Desired - this bit may be set in a query and is
             copied into the response.  If set, it directs the name server to
-            pursue the query recursively.  Recursive query support is optional.
+            pursue the query recursively. Recursive query support is optional.
         @type recDes: L{bool}
 
         @param recAv: Recursion Available - this bit is set or cleared in a
@@ -2270,7 +2280,9 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @type recAv: L{bool}
 
         @param rCode: Extended 12-bit RCODE. Derived from the 4 bits defined in
-            [RFC1035] and the upper 8bits defined in [RFC6891 section-6.1.3]
+            U{RFC1035 4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
+            and the upper 8bits defined in U{RFC6891
+            6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}.
         @type rCode: L{int}
 
         @param ednsVersion: Indicates the EDNS implementation level. Set to
@@ -2278,7 +2290,8 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             the encoded byte string.
         @type ednsVersion: L{int} or L{None}
 
-        @param dnssecOK: DNSSEC OK bit as defined by [RFC3225].
+        @param dnssecOK: DNSSEC OK bit as defined by
+            U{RFC3225 3<https://tools.ietf.org/html/rfc3225#section-3>}.
         @type dnssecOK: C{bool}
 
         @param authenticData: A flag indicating in a response that all the data
