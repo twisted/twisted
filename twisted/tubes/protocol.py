@@ -87,6 +87,8 @@ class _ProtocolFount(object):
         self._transport = transport
         self._pauser = _Pauser(self._transport.pauseProducing,
                                self._transport.resumeProducing)
+        self._preReceivePause = None
+        self._preReceiveBuffer = None
 
 
     # fount -> deliver data to elsewhere
@@ -95,7 +97,13 @@ class _ProtocolFount(object):
         Flow to the given drain.
         """
         self.drain = drain
-        return self.drain.flowingFrom(self)
+        result = self.drain.flowingFrom(self)
+        if self._preReceivePause is not None:
+            self._preReceivePause.unpause()
+            self.drain.receive(self._preReceiveBuffer)
+            # self._preReceiveBuffer = None
+            # self._preReceivePause = None
+        return result
 
 
     def pauseFlow(self):
@@ -110,8 +118,11 @@ class _ProtocolFount(object):
         End the flow from this fount, dropping the TCP connection in the
         process.
         """
-        # XXX really stopFlow just ends the *read* connection.
-        self._flowEnded = True
+        # Really, stopFlow just ends the *read* connection, but there is no
+        # such thing as "loseReadConnection" because TCP can't signal that.
+        # This is of potential (academic?) future interest when considering
+        # enhanced properties of subprocess transports, because you can both
+        # trigger and detect the fact that a subprocess's stdin was closed.
         self._transport.loseConnection()
 
 
@@ -149,11 +160,15 @@ class _ProtocolPlumbing(_Protocol):
 
         Some data was received.
         """
-        self._fount.drain.receive(data)
+        drain = self._fount.drain
+        if drain is None:
+            self._fount._preReceivePause = self._fount._pauser.pauseFlow()
+            self._fount._preReceiveBuffer = data
+            return
+        drain.receive(data)
 
 
     def connectionLost(self, reason):
-        self._flowEnded = True
         if self._fount.drain is not None:
             self._fount.drain.flowStopped(reason)
         if self._drain.fount is not None:

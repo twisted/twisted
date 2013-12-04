@@ -140,6 +140,25 @@ class FlowingAdapterTests(TestCase):
         self.assertEquals(ff.flowIsStopped, True)
 
 
+    def test_dataReceivedBeforeFlowing(self):
+        """
+        If L{_ProtocolPlumbing.dataReceived} is called before its
+        L{_ProtocolFount} is flowing to anything, then it will pause the
+        transport but only until the L{_ProtocolFount} is flowing to something.
+        """
+        self.adaptedProtocol.dataReceived("hello, ")
+        self.assertEquals(self.adaptedProtocol.transport.producerState,
+                          'paused')
+        # It would be invalid to call dataReceived again in this state, so no
+        # need to test that...
+        fd = FakeDrain()
+        self.adaptedFount.flowTo(fd)
+        self.assertEquals(self.adaptedProtocol.transport.producerState,
+                          'producing')
+        self.adaptedProtocol.dataReceived("world!")
+        self.assertEquals(fd.received, ["hello, ", "world!"])
+
+
     def test_flowingFromAttribute(self):
         """
         L{ProtocolAdapter.flowingFrom} will establish the appropriate L{IFount}
