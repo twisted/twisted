@@ -2031,6 +2031,22 @@ class Message:
         self.additional = []
 
 
+    @property
+    def authoritativeAnswer(self):
+        return self.auth
+
+
+    @classmethod
+    def sensibleConstructor(cls, authoritativeAnswer=False, **kwargs):
+        """
+        An alternative message constructor which allows meaningful argument
+        names.
+        """
+        m = cls(**kwargs)
+        m.auth = authoritativeAnswer
+        return m
+
+
     def addQuery(self, name, type=ALL_RECORDS, cls=IN):
         """
         Add another query to this Message.
@@ -2202,7 +2218,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     @ivar id: See L{__init__}
     @ivar answer: See L{__init__}
     @ivar opCode: See L{__init__}
-    @ivar auth: See L{__init__}
+    @ivar authoritativeAnswer: See L{__init__}
     @ivar trunc: See L{__init__}
     @ivar recDes: See L{__init__}
     @ivar recAv: See L{__init__}
@@ -2223,7 +2239,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
 
     showAttributes = (
-        'id', 'answer', 'opCode', 'auth', 'trunc',
+        'id', 'answer', 'opCode', 'authoritativeAnswer', 'trunc',
         'recDes', 'recAv', 'rCode', 'ednsVersion', 'dnssecOK',
         'authenticData', 'checkingDisabled', 'maxSize',
         'queries', 'answers', 'authority', 'additional')
@@ -2232,10 +2248,10 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     _messageFactory = Message
 
-    def __init__(self, id=0, answer=False, opCode=OP_QUERY, auth=False,
-                 trunc=False, recDes=False, recAv=False, rCode=0,
-                 ednsVersion=0, dnssecOK=False, authenticData=False,
-                 checkingDisabled=False, maxSize=512,
+    def __init__(self, id=0, answer=False, opCode=OP_QUERY,
+                 authoritativeAnswer=False, trunc=False, recDes=False,
+                 recAv=False, rCode=0, ednsVersion=0, dnssecOK=False,
+                 authenticData=False, checkingDisabled=False, maxSize=512,
                  queries=None, answers=None, authority=None, additional=None):
         """
         Construct a new L{_EDNSMessage}
@@ -2260,9 +2276,9 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             into the response.
         @type opCode: L{int}
 
-        @param auth: Authoritative Answer - this bit is valid in responses, and
-            specifies that the responding name server is an authority for the
-            domain name in question section.
+        @param authoritativeAnswer: Authoritative Answer - this bit is valid in
+            responses, and specifies that the responding name server is an
+            authority for the domain name in question section.
         @type auth: L{bool}
 
         @param trunc: Truncation - specifies that this message was truncated due
@@ -2329,7 +2345,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.id = id
         self.answer = answer
         self.opCode = opCode
-        self.auth = auth
+        self.authoritativeAnswer = authoritativeAnswer
         self.trunc = trunc
         self.recDes = recDes
         self.recAv = recAv
@@ -2372,7 +2388,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             id=self.id,
             answer=self.answer,
             opCode=self.opCode,
-            auth=self.auth,
+            auth=self.authoritativeAnswer,
             trunc=self.trunc,
             recDes=self.recDes,
             recAv=self.recAv,
@@ -2439,7 +2455,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             id=message.id,
             answer=message.answer,
             opCode=message.opCode,
-            auth=message.auth,
+            authoritativeAnswer=message.auth,
             trunc=message.trunc,
             recDes=message.recDes,
             recAv=message.recAv,

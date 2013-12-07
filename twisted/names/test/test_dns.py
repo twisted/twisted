@@ -2677,7 +2677,7 @@ class MessageEmpty(object):
             id=256,
             answer=True,
             opCode=dns.OP_STATUS,
-            auth=True,
+            authoritativeAnswer=True,
             trunc=True,
             recDes=True,
             recAv=True,
@@ -2723,7 +2723,7 @@ class MessageTruncated(object):
             id=256,
             answer=1,
             opCode=0,
-            auth=0,
+            authoritativeAnswer=0,
             trunc=1,
             recDes=0,
             recAv=0,
@@ -2773,7 +2773,7 @@ class MessageNonAuthoritative(object):
         """
         return dict(
             id=256,
-            auth=0,
+            authoritativeAnswer=0,
             ednsVersion=None,
             answers=[
                 dns.RRHeader(
@@ -2824,7 +2824,7 @@ class MessageAuthoritative(object):
         """
         return dict(
             id=256,
-            auth=1,
+            authoritativeAnswer=1,
             ednsVersion=None,
             answers=[
                 dns.RRHeader(
@@ -2907,7 +2907,7 @@ class MessageComplete:
             id=256,
             answer=1,
             opCode=dns.OP_STATUS,
-            auth=1,
+            authoritativeAnswer=1,
             recDes=1,
             recAv=1,
             rCode=15,
@@ -3091,7 +3091,7 @@ class MessageEDNSComplete(object):
             id=256,
             answer=1,
             opCode=dns.OP_STATUS,
-            auth=1,
+            authoritativeAnswer=1,
             trunc=0,
             recDes=1,
             recAv=1,
@@ -3182,7 +3182,7 @@ class MessageEDNSExtendedRCODE(object):
             id=0,
             answer=False,
             opCode=dns.OP_QUERY,
-            auth=False,
+            authoritativeAnswer=False,
             trunc=False,
             recDes=False,
             recAv=False,
@@ -3334,12 +3334,12 @@ class CommonConstructorTestsMixin(object):
             'opCode', defaultVal=dns.OP_QUERY, altVal=dns.OP_STATUS)
 
 
-    def test_auth(self):
+    def test_authoritativeAnswer(self):
         """
-        L{dns._EDNSMessage.auth} defaults to C{False} and can be overridden in
-        the constructor.
+        L{dns._EDNSMessage.authoritativeAnswer} defaults to C{False} and can be
+        overridden in the constructor.
         """
-        self._verifyConstructorFlag('auth', defaultVal=False)
+        self._verifyConstructorFlag('authoritativeAnswer', defaultVal=False)
 
 
     def test_trunc(self):
@@ -3422,14 +3422,14 @@ class EDNSMessageConstructorTests(ConstructorTestsMixin,
 
 
 
-class MessageContstructorTests(ConstructorTestsMixin,
-                               CommonConstructorTestsMixin,
-                               unittest.SynchronousTestCase):
+class MessageConstructorTests(ConstructorTestsMixin,
+                              CommonConstructorTestsMixin,
+                              unittest.SynchronousTestCase):
     """
     Tests for L{twisted.names.dns.Message} constructor arguments that are shared
     with L{dns._EDNSMessage}.
     """
-    messageFactory = dns.Message
+    messageFactory = dns.Message.sensibleConstructor
 
 
 
@@ -3545,7 +3545,7 @@ class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
             'id=0 '
             'answer=False '
             'opCode=0 '
-            'auth=False '
+            'authoritativeAnswer=False '
             'trunc=False '
             'recDes=False '
             'recAv=False '
@@ -3712,15 +3712,15 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
             )
 
 
-    def test_auth(self):
+    def test_authoritativeAnswer(self):
         """
         Two L{dns._EDNSMessage} instances compare equal if they have the same
         auth flag.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(auth=True),
-            self.messageFactory(auth=True),
-            self.messageFactory(auth=False),
+            self.messageFactory(authoritativeAnswer=True),
+            self.messageFactory(authoritativeAnswer=True),
+            self.messageFactory(authoritativeAnswer=False),
             )
 
 
@@ -4072,7 +4072,7 @@ class MessageStandardEncodingTests(StandardEncodingTestsMixin,
 
         kwargs.pop('ednsVersion', None)
 
-        m = dns.Message(**kwargs)
+        m = dns.Message.sensibleConstructor(**kwargs)
         m.queries = queries
         m.answers = answers
         m.authority = authority
