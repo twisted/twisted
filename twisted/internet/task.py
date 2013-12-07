@@ -813,9 +813,11 @@ def react(main, argv=(), _reactor=None):
       - Exit the application when done, with exit code 0 in case of success and
         1 in case of failure. If C{main} fails with a C{SystemExit} error, the
         code returned is used.
-      - The following is a simple example of a C{main} function::
+
+    The following demonstrates the signature of a C{main} function which can be
+    used with L{react}::
           def main(reactor, username, password):
-              pass
+              return defer.succeed('ok')
 
           task.react(main, ('alice', 'secret'))
 
