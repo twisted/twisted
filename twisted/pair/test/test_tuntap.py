@@ -46,8 +46,7 @@ from twisted.pair.raw import IRawPacketProtocol
 if platformSkip is None:
     from twisted.pair.tuntap import (
         _TUNSETIFF, _IFNAMSIZ, _RealSystem,
-        TunnelType, TunnelAddress, TuntapPort)
-
+        IInputOutputSystem, TunnelType, TunnelAddress, TuntapPort)
 
 
 @implementer(IReactorFDSet)
@@ -214,6 +213,9 @@ class TapHelper(object):
 
 
 class TunnelDeviceTestsMixin(object):
+    """
+    A mixin defining tests that apply to L{IInputOutputSystem} implementations.
+    """
     def setUp(self):
         self.system = self.system()
         self.fileno = self.system.open(b"/dev/net/tun",
@@ -222,6 +224,13 @@ class TunnelDeviceTestsMixin(object):
         config = struct.pack(
             "%dsH" % (_IFNAMSIZ,), self._TUNNEL_DEVICE, self.helper.TUNNEL_TYPE.value)
         self.system.ioctl(self.fileno, _TUNSETIFF, config)
+
+
+    def test_interface(self):
+        """
+        The object under test provides L{IInputOutputSystem}.
+        """
+        self.assertTrue(verifyObject(IInputOutputSystem, self.system))
 
 
     def _invalidFileDescriptor(self):

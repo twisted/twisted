@@ -12,12 +12,14 @@ from errno import (
 from collections import deque
 from functools import wraps
 
+from zope.interface import implementer
+
 from twisted.internet.protocol import DatagramProtocol
 from twisted.pair.ethernet import EthernetProtocol
 from twisted.pair.rawudp import RawUDPProtocol
 from twisted.pair.ip import IPProtocol
 from twisted.pair.tuntap import (
-    _IFNAMSIZ, _TUNSETIFF, TunnelType, TunnelFlags)
+    _IFNAMSIZ, _TUNSETIFF, IInputOutputSystem, TunnelType, TunnelFlags)
 
 
 def _H(n):
@@ -161,6 +163,7 @@ def privileged(original):
 
 
 
+@implementer(IInputOutputSystem)
 class MemoryIOSystem(object):
     """
     An in-memory implementation of basic I/O primitives, useful in the context

@@ -13,7 +13,7 @@ import struct
 import warnings
 from collections import namedtuple
 
-from zope.interface import implementer
+from zope.interface import Attribute, Interface, implementer
 
 from twisted.python.versions import Version
 from twisted.python.deprecate import deprecated
@@ -101,6 +101,69 @@ class _TunnelDescription(namedtuple("_TunnelDescription", "fileno name")):
 
 
 
+class IInputOutputSystem(Interface):
+    """
+    An interface for performing some basic kinds of I/O (particularly that I/O
+    which might be useful for L{twisted.pair.tuntap}-using code).
+    """
+    O_RDWR = Attribute("@see: L{os.O_RDWR}")
+    O_NONBLOCK = Attribute("@see: L{os.O_NONBLOCK}")
+    O_CLOEXEC = Attribute("@see: L{os.O_CLOEXEC}")
+
+    def open(filename, flag, mode=0o777):
+        """
+        @see: L{os.open}
+        """
+
+
+    def ioctl(fd, opt, arg=None, mutate_flag=None):
+        """
+        @see: L{fcntl.ioctl}
+        """
+
+
+    def read(fd, limit):
+        """
+        @see: L{os.read}
+        """
+
+
+    def write(fd, data):
+        """
+        @see: L{os.write}
+        """
+
+
+    def close(fd):
+        """
+        @see: L{os.close}
+        """
+
+
+    def sendUDP(datagram, address):
+        """
+        Send a datagram to a certain address.
+
+        @param datagram: The payload of a UDP datagram to send.
+        @type datagram: L{bytes}
+
+        @param address: The destination to which to send the datagram.
+        @type address: L{tuple} of L{bytes} and L{int}
+
+        @return: The local address from which the datagram was sent.
+        @rtype: L{tuple} of L{bytes} and L{int}
+        """
+
+
+    def receiveUDP(fileno, host, port):
+        """
+        Return a socket which can be used to receive datagrams sent to the
+        given address.
+        """
+
+
+
+@implementer(IInputOutputSystem)
 class _RealSystem(object):
     """
     An interface to the parts of the operating system which L{TuntapPort}
