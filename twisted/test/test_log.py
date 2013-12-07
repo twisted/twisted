@@ -447,16 +447,6 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
         self._getTimezoneOffsetTest("Africa/Johannesburg", -7200, -7200)
 
 
-    def test_getTimezoneOffsetAtUTC(self):
-        """
-        Attempt to verify that L{FileLogObserver.getTimezoneOffset} returns
-        correct values for the current C{TZ} environment setting for at least
-        some cases.  This test method exercises UTC which should always have a
-        zero offset.
-        """
-        self._getTimezoneOffsetTest("UTC", 0, 0)
-
-
     def test_timeFormatting(self):
         """
         Test the method of L{FileLogObserver} which turns a timestamp into a
