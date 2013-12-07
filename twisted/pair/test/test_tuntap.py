@@ -59,6 +59,12 @@ class ReactorFDSet(object):
     This implementation isn't actually capable of determining readability or
     writeability and generates no events for the descriptors registered with
     it.
+
+    @ivar _readers: A L{set} of L{IReadDescriptor} providers which the reactor
+        is supposedly monitoring for read events.
+
+    @ivar _writers: A L{set} of L{IWriteDescriptor} providers which the reactor
+        is supposedly monitoring for write events.
     """
     def __init__(self):
         self._readers = set()
@@ -103,52 +109,32 @@ class FSSetClock(Clock, ReactorFDSet):
 
 
 
-class TapMixin(object):
+class TunHelper(object):
+    """
+    A helper for tests of tun-related functionality (ip-level tunnels).
+    """
+    TUNNEL_TYPE = staticmethod(TunnelType.TUN)
 
-    _TUNNEL_TYPE = staticmethod(TunnelType.TAP)
-
-    def encapsulate(self, payload):
-        return _ethernet(
-            src='\x00\x00\x00\x00\x00\x00', dst='\xff\xff\xff\xff\xff\xff',
-            protocol=_IPv4,
-            payload=_ip(
-                src=self._TUNNEL_REMOTE, dst=self._TUNNEL_LOCAL,
-                payload=_udp(
-                    src=50000, dst=12345, payload=payload)))
+    def __init__(self, tunnelRemote, tunnelLocal):
+        self.tunnelRemote = tunnelRemote
+        self.tunnelLocal = tunnelLocal
 
 
-    def parser(self):
-        datagrams = []
-        receiver = DatagramProtocol()
+    def encapsulate(self, source, destination, payload):
+        """
+        Construct an ip datagram containing a udp datagram containing the given
+        application-level payload.
 
-        def capture(*args):
-            datagrams.append(args)
+        @param payload: The application data to include in the udp datagram.
+        @type payload: L{bytes}
 
-        receiver.datagramReceived = capture
-
-        udp = RawUDPProtocol()
-        udp.addProto(12345, receiver)
-
-        ip = IPProtocol()
-        ip.addProto(17, udp)
-
-        ether = EthernetProtocol()
-        ether.addProto(0x800, ip)
-
-        return datagrams, ether.datagramReceived
-
-
-
-class TunMixin(object):
-
-    _TUNNEL_TYPE = staticmethod(TunnelType.TUN)
-
-
-    def encapsulate(self, payload):
+        @return: An ethernet frame.
+        @rtype: L{bytes}
+        """
         return _ip(
-            src=self._TUNNEL_REMOTE, dst=self._TUNNEL_LOCAL,
+            src=self.tunnelRemote, dst=self.tunnelLocal,
             payload=_udp(
-                src=50000, dst=12345, payload=payload))
+                src=source, dst=destination, payload=payload))
 
 
     def parser(self):
@@ -174,6 +160,59 @@ class TunMixin(object):
 
 
 
+class TapHelper(object):
+    """
+    A helper for tests of tap-related functionality (ethernet-level tunnels).
+    """
+    TUNNEL_TYPE = staticmethod(TunnelType.TAP)
+
+    def __init__(self, tunnelRemote, tunnelLocal):
+        self.tunnelRemote = tunnelRemote
+        self.tunnelLocal = tunnelLocal
+
+
+    def encapsulate(self, source, destination, payload):
+        """
+        Construct an ethernet frame containing an ip datagram containing a udp
+        datagram containing the given application-level payload.
+
+        @param payload: The application data to include in the udp datagram.
+        @type payload: L{bytes}
+
+        @return: An ethernet frame.
+        @rtype: L{bytes}
+        """
+        tun = TunHelper(self.tunnelRemote, self.tunnelLocal)
+        ip = tun.encapsulate(source, destination, payload)
+        return _ethernet(
+            src='\x00\x00\x00\x00\x00\x00', dst='\xff\xff\xff\xff\xff\xff',
+            protocol=_IPv4, payload=ip)
+
+
+    def parser(self):
+        """
+        """
+        datagrams = []
+        receiver = DatagramProtocol()
+
+        def capture(*args):
+            datagrams.append(args)
+
+        receiver.datagramReceived = capture
+
+        udp = RawUDPProtocol()
+        udp.addProto(12345, receiver)
+
+        ip = IPProtocol()
+        ip.addProto(17, udp)
+
+        ether = EthernetProtocol()
+        ether.addProto(0x800, ip)
+
+        return datagrams, ether.datagramReceived
+
+
+
 class TunnelDeviceTestsMixin(object):
     def setUp(self):
         self.system = self.system()
@@ -181,7 +220,7 @@ class TunnelDeviceTestsMixin(object):
                                        os.O_RDWR | os.O_NONBLOCK)
         self.addCleanup(self.system.close, self.fileno)
         config = struct.pack(
-            "%dsH" % (_IFNAMSIZ,), self._TUNNEL_DEVICE, self._TUNNEL_TYPE.value)
+            "%dsH" % (_IFNAMSIZ,), self._TUNNEL_DEVICE, self.helper.TUNNEL_TYPE.value)
         self.system.ioctl(self.fileno, _TUNSETIFF, config)
 
 
@@ -257,7 +296,7 @@ class TunnelDeviceTestsMixin(object):
 
 
     def test_receive(self):
-        datagrams, parse = self.parser()
+        datagrams, parse = self.helper.parser()
 
         found = False
         for i in range(100):
@@ -295,7 +334,7 @@ class TunnelDeviceTestsMixin(object):
 
         port = self.system.receiveUDP(self.fileno, self._TUNNEL_LOCAL, 12345)
 
-        packet = self.encapsulate(message)
+        packet = self.helper.encapsulate(50000, 12345, message)
 
         flags = 0
         self.system.write(self.fileno, _H(flags) + _H(protocol) + packet)
@@ -317,15 +356,19 @@ class FakeDeviceTestsMixin(object):
 
 
 
-class FakeTapDeviceTests(TapMixin, FakeDeviceTestsMixin,
+class FakeTapDeviceTests(FakeDeviceTestsMixin,
                          TunnelDeviceTestsMixin, SynchronousTestCase):
     pass
+FakeTapDeviceTests.helper = TapHelper(
+    FakeTapDeviceTests._TUNNEL_REMOTE, FakeTapDeviceTests._TUNNEL_LOCAL)
 
 
 
-class FakeTunDeviceTests(TunMixin, FakeDeviceTestsMixin,
+class FakeTunDeviceTests(FakeDeviceTestsMixin,
                          TunnelDeviceTestsMixin, SynchronousTestCase):
     pass
+FakeTunDeviceTests.helper = TunHelper(
+    FakeTunDeviceTests._TUNNEL_REMOTE, FakeTunDeviceTests._TUNNEL_LOCAL)
 
 
 
@@ -411,25 +454,27 @@ class RealDeviceTestsMixin(object):
 
 
 
-class RealDeviceWithProtocolInformationTests(TapMixin, RealDeviceTestsMixin,
+class RealDeviceWithProtocolInformationTests(RealDeviceTestsMixin,
                                              TunnelDeviceTestsMixin,
                                              SynchronousTestCase):
 
-    _TUNNEL_TYPE = staticmethod(TunnelType.TAP)
     _TUNNEL_DEVICE = "tap-twtest-pi"
     _TUNNEL_LOCAL = "10.1.0.1"
     _TUNNEL_REMOTE = "10.1.0.2"
 
+    helper = TapHelper(_TUNNEL_REMOTE, _TUNNEL_LOCAL)
 
 
-class RealDeviceWithoutProtocolInformationTests(TapMixin, RealDeviceTestsMixin,
+
+class RealDeviceWithoutProtocolInformationTests(RealDeviceTestsMixin,
                                                 TunnelDeviceTestsMixin,
                                                 SynchronousTestCase):
 
-    _TUNNEL_TYPE = staticmethod(TunnelType.TAP)
     _TUNNEL_DEVICE = "tap-twtest"
     _TUNNEL_LOCAL = "10.0.0.1"
     _TUNNEL_REMOTE = "10.0.0.2"
+
+    helper = TapHelper(_TUNNEL_REMOTE, _TUNNEL_LOCAL)
 
 
 
@@ -440,7 +485,7 @@ class TunnelTestsMixin(object):
         self.system = MemoryIOSystem()
         self.system._devices[Tunnel._DEVICE_NAME] = Tunnel
         self.protocol = self.factory.buildProtocol(
-            TunnelAddress(self.TUNNEL_TYPE, self.name))
+            TunnelAddress(self.helper.TUNNEL_TYPE, self.name))
         self.reactor = FSSetClock()
         self.port = TuntapPort(self.name, self.protocol, reactor=self.reactor, system=self.system)
 
@@ -760,7 +805,7 @@ class TunnelTestsMixin(object):
         self.port.startListening()
         address = self.port.getHost()
         self.assertIsInstance(address, TunnelAddress)
-        self.assertEqual(self.TUNNEL_TYPE, address.type)
+        self.assertEqual(self.helper.TUNNEL_TYPE, address.type)
         self.assertEqual(
             self.system.getTunnel(self.port).name, address.name)
 
@@ -773,7 +818,7 @@ class TunnelTestsMixin(object):
         self.port.startListening()
         expected = "<%s listening on %s/%s>" % (
             fullyQualifiedName(self.protocol.__class__),
-            self.TUNNEL_TYPE.name,
+            self.helper.TUNNEL_TYPE.name,
             self.system.getTunnel(self.port).name)
 
         self.assertEqual(expected, str(self.port))
@@ -786,7 +831,7 @@ class TunnelTestsMixin(object):
         """
         expected = "<%s not listening on %s/%s>" % (
             fullyQualifiedName(self.protocol.__class__),
-            self.TUNNEL_TYPE.name, self.name)
+            self.helper.TUNNEL_TYPE.name, self.name)
 
         self.assertEqual(expected, str(self.port))
 
@@ -799,7 +844,7 @@ class TunnelTestsMixin(object):
         self.assertEqual(
             "%s (%s)" % (
                 self.protocol.__class__.__name__,
-                self.TUNNEL_TYPE.name),
+                self.helper.TUNNEL_TYPE.name),
             self.port.logPrefix())
 
 
@@ -854,10 +899,9 @@ class TunTests(TunnelTestsMixin, SynchronousTestCase):
     """
     Tests for L{TuntapPort} when used to open a Linux I{tun} tunnel.
     """
-    TUNNEL_TYPE = staticmethod(TunnelType.TUN)
-
     factory = Factory()
     factory.protocol = IPRecordingProtocol
+    helper = TunHelper(None, None)
 
 
 
@@ -873,8 +917,6 @@ class EthernetRecordingProtocol(EthernetProtocol):
 
 
 class TapTests(TunnelTestsMixin, SynchronousTestCase):
-
-    TUNNEL_TYPE = staticmethod(TunnelType.TAP)
-
     factory = Factory()
     factory.protocol = EthernetRecordingProtocol
+    helper = TapHelper(None, None)
