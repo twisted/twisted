@@ -440,9 +440,9 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
         daylight saving time at all (so both summer and winter time test values
         should have the same offset).
         """
-        # Test a timezone that doesn't have DST.  Despite the comment above
-        # about mktime() failing, implementations don't seem to fail when a
-        # daylight value is constructed for this timezone.
+        # Test a timezone that doesn't have DST.  mktime() implementations
+        # available for testing seem happy to produce results for this even
+        # though it's not entirely valid.
         self._getTimezoneOffsetTest("Africa/Johannesburg", -7200, -7200)
 
 
