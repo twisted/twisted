@@ -2051,10 +2051,15 @@ class Message:
         return self.recAv
 
 
+    @property
+    def responseCode(self):
+        return self.rCode
+
+
     @classmethod
     def sensibleConstructor(cls, authoritativeAnswer=False, truncated=False,
                             recursionDesired=False, recursionAvailable=False,
-                            **kwargs):
+                            responseCode=0, **kwargs):
         """
         An alternative message constructor which allows meaningful argument
         names.
@@ -2064,6 +2069,7 @@ class Message:
         m.trunc = truncated
         m.recDes = recursionDesired
         m.recAv = recursionAvailable
+        m.rCode = responseCode
         return m
 
 
@@ -2242,7 +2248,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     @ivar truncated: See L{__init__}
     @ivar recursionDesired: See L{__init__}
     @ivar recursionAvailable: See L{__init__}
-    @ivar rCode: See L{__init__}
+    @ivar responseCode: See L{__init__}
     @ivar ednsVersion: See L{__init__}
     @ivar dnssecOK: See L{__init__}
     @ivar authenticData: See L{__init__}
@@ -2260,7 +2266,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     showAttributes = (
         'id', 'answer', 'opCode', 'authoritativeAnswer', 'truncated',
-        'recursionDesired', 'recursionAvailable', 'rCode', 'ednsVersion',
+        'recursionDesired', 'recursionAvailable', 'responseCode', 'ednsVersion',
         'dnssecOK', 'authenticData', 'checkingDisabled', 'maxSize',
         'queries', 'answers', 'authority', 'additional')
 
@@ -2270,10 +2276,10 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     def __init__(self, id=0, answer=False, opCode=OP_QUERY,
                  authoritativeAnswer=False, truncated=False,
-                 recursionDesired=False, recursionAvailable=False, rCode=0,
-                 ednsVersion=0, dnssecOK=False, authenticData=False,
-                 checkingDisabled=False, maxSize=512, queries=None,
-                 answers=None, authority=None, additional=None):
+                 recursionDesired=False, recursionAvailable=False,
+                 responseCode=0, ednsVersion=0, dnssecOK=False,
+                 authenticData=False, checkingDisabled=False, maxSize=512,
+                 queries=None, answers=None, authority=None, additional=None):
         """
         Construct a new L{_EDNSMessage}
 
@@ -2317,11 +2323,12 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             is available in the name server.
         @type recursionAvailable: L{bool}
 
-        @param rCode: Extended 12-bit RCODE. Derived from the 4 bits defined in
-            U{RFC1035 4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
-            and the upper 8bits defined in U{RFC6891
+        @param responseCode: Extended 12-bit RCODE. Derived from the 4 bits
+            defined in U{RFC1035
+            4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>} and the
+            upper 8bits defined in U{RFC6891
             6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}.
-        @type rCode: L{int}
+        @type responseCode: L{int}
 
         @param ednsVersion: Indicates the EDNS implementation level. Set to
             L{None} to prevent any EDNS attributes and options being added to
@@ -2371,7 +2378,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.truncated = truncated
         self.recursionDesired = recursionDesired
         self.recursionAvailable = recursionAvailable
-        self.rCode = rCode
+        self.responseCode = responseCode
         self.ednsVersion = ednsVersion
         self.dnssecOK = dnssecOK
         self.authenticData = authenticData
@@ -2415,7 +2422,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             recDes=self.recursionDesired,
             recAv=self.recursionAvailable,
             # Assign the lower 4 bits to the message
-            rCode=self.rCode & 0xf,
+            rCode=self.responseCode & 0xf,
             authenticData=self.authenticData,
             checkingDisabled=self.checkingDisabled)
 
@@ -2429,7 +2436,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
                            dnssecOK=self.dnssecOK,
                            udpPayloadSize=self.maxSize,
                            # Assign the upper 8 bits to the OPT record
-                           extendedRCODE=self.rCode >> 4)
+                           extendedRCODE=self.responseCode >> 4)
             m.additional.append(o)
 
         return m
@@ -2457,7 +2464,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         c{ednsOptions}.
 
         The C{extendedRCODE} will be combined with C{message.rCode} and assigned
-        to C{self.rCode}.
+        to C{self.responseCode}.
 
         @param message: The source L{Message}.
         @type message: L{Message}
@@ -2481,7 +2488,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             truncated=message.trunc,
             recursionDesired=message.recDes,
             recursionAvailable=message.recAv,
-            rCode=message.rCode,
+            responseCode=message.rCode,
             authenticData=message.authenticData,
             checkingDisabled=message.checkingDisabled,
             # Default to None, it will be updated later when the OPT records are
@@ -2501,7 +2508,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             newMessage.ednsVersion = opt.version
             newMessage.dnssecOK = opt.dnssecOK
             newMessage.maxSize = opt.udpPayloadSize
-            newMessage.rCode = opt.extendedRCODE << 4 | message.rCode
+            newMessage.responseCode = opt.extendedRCODE << 4 | message.rCode
 
         return newMessage
 

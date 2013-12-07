@@ -2681,7 +2681,7 @@ class MessageEmpty(object):
             truncated=True,
             recursionDesired=True,
             recursionAvailable=True,
-            rCode=15,
+            responseCode=15,
             ednsVersion=None,
         )
 
@@ -2727,7 +2727,7 @@ class MessageTruncated(object):
             truncated=1,
             recursionDesired=0,
             recursionAvailable=0,
-            rCode=0,
+            responseCode=0,
             ednsVersion=None,)
 
 
@@ -2910,7 +2910,7 @@ class MessageComplete:
             authoritativeAnswer=1,
             recursionDesired=1,
             recursionAvailable=1,
-            rCode=15,
+            responseCode=15,
             ednsVersion=None,
             queries=[dns.Query(b'example.com', dns.SOA)],
             answers=[
@@ -3001,7 +3001,7 @@ class MessageEDNSQuery(object):
             auth=0,
             recursionDesired=0,
             recursionAvailable=0,
-            rCode=0,
+            responseCode=0,
             ednsVersion=3,
             dnssecOK=False,
             queries=[dns.Query(b'www.example.com', dns.A)],
@@ -3095,7 +3095,7 @@ class MessageEDNSComplete(object):
             truncated=0,
             recursionDesired=1,
             recursionAvailable=1,
-            rCode=15,
+            responseCode=15,
             ednsVersion=3,
             dnssecOK=True,
             authenticData=True,
@@ -3186,7 +3186,7 @@ class MessageEDNSExtendedRCODE(object):
             truncated=False,
             recursionDesired=False,
             recursionAvailable=False,
-            rCode=0xabc, # Combined OPT extended RCODE + Message RCODE
+            responseCode=0xabc, # Combined OPT extended RCODE + Message RCODE
             ednsVersion=0,
             dnssecOK=False,
             maxSize=4096,
@@ -3366,12 +3366,13 @@ class CommonConstructorTestsMixin(object):
         self._verifyConstructorFlag('recursionAvailable', defaultVal=False)
 
 
-    def test_rCode(self):
+    def test_responseCode(self):
         """
-        L{dns._EDNSMessage.rCode} defaults to C{0} and can be overridden in the
-        constructor.
+        L{dns._EDNSMessage.responseCode} defaults to C{0} and can be overridden
+        in the constructor.
         """
-        self._verifyConstructorArgument('rCode', defaultVal=0, altVal=123)
+        self._verifyConstructorArgument(
+            'responseCode', defaultVal=0, altVal=123)
 
 
     def test_maxSize(self):
@@ -3550,7 +3551,7 @@ class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
             'truncated=False '
             'recursionDesired=False '
             'recursionAvailable=False '
-            'rCode=0 '
+            'responseCode=0 '
             'ednsVersion=0 '
             'dnssecOK=False '
             'authenticData=False '
@@ -3761,15 +3762,15 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
             )
 
 
-    def test_rCode(self):
+    def test_responseCode(self):
         """
         Two L{dns._EDNSMessage} instances compare equal if they have the same
-        rCode.
+        responseCode.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(rCode=16),
-            self.messageFactory(rCode=16),
-            self.messageFactory(rCode=15),
+            self.messageFactory(responseCode=16),
+            self.messageFactory(responseCode=16),
+            self.messageFactory(responseCode=15),
             )
 
 
@@ -4243,7 +4244,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
         https://tools.ietf.org/html/rfc6891#section-6.1.3
         """
-        ednsMessage = self.messageFactory(rCode=15, ednsVersion=0)
+        ednsMessage = self.messageFactory(responseCode=15, ednsVersion=0)
         standardMessage = ednsMessage._toMessage()
 
         self.assertEqual(
