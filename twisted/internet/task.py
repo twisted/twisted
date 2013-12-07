@@ -851,8 +851,16 @@ def react(main, argv=(), _reactor=None):
         1 in case of failure. If C{main} fails with a C{SystemExit} error, the
         code returned is used.
 
-    @param main: A callable which returns a L{Deferred}.  It should take as
-        many arguments as there are elements in the list C{argv}.
+    The following demonstrates the signature of a C{main} function which can be
+    used with L{react}::
+          def main(reactor, username, password):
+              return defer.succeed('ok')
+
+          task.react(main, ('alice', 'secret'))
+
+    @param main: A callable which returns a L{Deferred}. It should
+        take the reactor as its first parameter, followed by the elements of
+        C{argv}.
 
     @param argv: A list of arguments to pass to C{main}. If omitted the
         callable will be invoked with no additional arguments.
