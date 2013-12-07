@@ -401,9 +401,9 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
             standard = time.mktime(localStandardTuple)
 
             self.assertEqual(
-                (self.flo.getTimezoneOffset(daylight), self.flo.getTimezoneOffset(standard)),
+                (self.flo.getTimezoneOffset(daylight),
+                 self.flo.getTimezoneOffset(standard)),
                 (daylightOffset, standardOffset))
-
         finally:
             if originalTimezone is None:
                 del os.environ['TZ']
@@ -430,7 +430,6 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
         (and should produce negative results).
         """
         self._getTimezoneOffsetTest("Europe/Berlin", -7200, -3600)
-
 
 
     def test_getTimezoneOffsetWithoutDaylightSavingTime(self):
