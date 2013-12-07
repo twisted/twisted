@@ -31,8 +31,6 @@ from twisted.internet.protocol import DatagramProtocol
 from twisted.pair.rawudp import RawUDPProtocol
 from twisted.pair.ip import IPProtocol
 from twisted.pair.ethernet import EthernetProtocol
-from twisted.pair.testing import (
-    Tunnel, MemoryIOSystem, _IPv4, _H, _ethernet, _ip, _udp)
 
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.compat import iterbytes
@@ -44,9 +42,17 @@ from twisted.internet.error import CannotListenError
 from twisted.pair.raw import IRawPacketProtocol
 
 if platformSkip is None:
+    from twisted.pair.testing import (
+        Tunnel, MemoryIOSystem, _IPv4, _H, _ethernet, _ip, _udp)
+
     from twisted.pair.tuntap import (
         _TUNSETIFF, _IFNAMSIZ, _RealSystem,
         IInputOutputSystem, TunnelType, TunnelAddress, TuntapPort)
+else:
+    # Let the module-scope testing subclass of this still be defined (and then
+    # not used)
+    _RealSystem = object
+    skip = platformSkip
 
 
 @implementer(IReactorFDSet)
@@ -112,7 +118,11 @@ class TunHelper(object):
     """
     A helper for tests of tun-related functionality (ip-level tunnels).
     """
-    TUNNEL_TYPE = staticmethod(TunnelType.TUN)
+    @property
+    def TUNNEL_TYPE(self):
+        # Hide this in a property because TunnelType is not always imported.
+        return TunnelType.TUN
+
 
     def __init__(self, tunnelRemote, tunnelLocal):
         self.tunnelRemote = tunnelRemote
@@ -163,7 +173,11 @@ class TapHelper(object):
     """
     A helper for tests of tap-related functionality (ethernet-level tunnels).
     """
-    TUNNEL_TYPE = staticmethod(TunnelType.TAP)
+    @property
+    def TUNNEL_TYPE(self):
+        # Hide this in a property because TunnelType is not always imported.
+        return TunnelType.TAP
+
 
     def __init__(self, tunnelRemote, tunnelLocal):
         self.tunnelRemote = tunnelRemote
