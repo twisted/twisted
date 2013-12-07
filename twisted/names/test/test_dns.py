@@ -867,30 +867,6 @@ class MessageComparisonTests(ComparisonTestsMixin,
         )
 
 
-    def test_auth(self):
-        """
-        Two L{dns.Message} instances compare equal if they have the same auth
-        flag.
-        """
-        self.assertNormalEqualityImplementation(
-            self.messageFactory(auth=1),
-            self.messageFactory(auth=1),
-            self.messageFactory(auth=0),
-        )
-
-
-    def test_trunc(self):
-        """
-        Two L{dns.Message} instances compare equal if they have the same trunc
-        flag.
-        """
-        self.assertNormalEqualityImplementation(
-            self.messageFactory(trunc=1),
-            self.messageFactory(trunc=1),
-            self.messageFactory(trunc=0),
-        )
-
-
     def test_recDes(self):
         """
         Two L{dns.Message} instances compare equal if they have the same recDes
@@ -915,6 +891,18 @@ class MessageComparisonTests(ComparisonTestsMixin,
         )
 
 
+    def test_auth(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same auth
+        flag.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(auth=1),
+            self.messageFactory(auth=1),
+            self.messageFactory(auth=0),
+        )
+
+
     def test_rCode(self):
         """
         Two L{dns.Message} instances compare equal if they have the same rCode
@@ -924,6 +912,30 @@ class MessageComparisonTests(ComparisonTestsMixin,
             self.messageFactory(rCode=10),
             self.messageFactory(rCode=10),
             self.messageFactory(rCode=20),
+        )
+
+
+    def test_trunc(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same trunc
+        flag.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(trunc=1),
+            self.messageFactory(trunc=1),
+            self.messageFactory(trunc=0),
+        )
+
+
+    def test_maxSize(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same
+        maxSize value.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(maxSize=10),
+            self.messageFactory(maxSize=10),
+            self.messageFactory(maxSize=20),
         )
 
 
@@ -948,18 +960,6 @@ class MessageComparisonTests(ComparisonTestsMixin,
             self.messageFactory(checkingDisabled=1),
             self.messageFactory(checkingDisabled=1),
             self.messageFactory(checkingDisabled=0),
-        )
-
-
-    def test_maxSize(self):
-        """
-        Two L{dns.Message} instances compare equal if they have the same
-        maxSize value.
-        """
-        self.assertNormalEqualityImplementation(
-            self.messageFactory(maxSize=10),
-            self.messageFactory(maxSize=10),
-            self.messageFactory(maxSize=20),
         )
 
 
