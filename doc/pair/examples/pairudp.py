@@ -24,6 +24,9 @@ and use something like 10.0.0.0/24 for ${IP_NETWORK}.
 Invent any valid value for ${MAC_ADDRESS} (though avoid re-using an address
 already in use on your network).
 
+See the Twisted Pair configuration howto for more information about this
+system-level setup.
+
 When the tap device is configured, the example is running, and a UDP datagram
 is sent to the right address, the example will display information about the
 datagram on its standard out.
