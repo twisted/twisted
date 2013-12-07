@@ -2678,7 +2678,7 @@ class MessageEmpty(object):
             answer=True,
             opCode=dns.OP_STATUS,
             authoritativeAnswer=True,
-            trunc=True,
+            truncated=True,
             recDes=True,
             recAv=True,
             rCode=15,
@@ -2724,7 +2724,7 @@ class MessageTruncated(object):
             answer=1,
             opCode=0,
             authoritativeAnswer=0,
-            trunc=1,
+            truncated=1,
             recDes=0,
             recAv=0,
             rCode=0,
@@ -3092,7 +3092,7 @@ class MessageEDNSComplete(object):
             answer=1,
             opCode=dns.OP_STATUS,
             authoritativeAnswer=1,
-            trunc=0,
+            truncated=0,
             recDes=1,
             recAv=1,
             rCode=15,
@@ -3183,7 +3183,7 @@ class MessageEDNSExtendedRCODE(object):
             answer=False,
             opCode=dns.OP_QUERY,
             authoritativeAnswer=False,
-            trunc=False,
+            truncated=False,
             recDes=False,
             recAv=False,
             rCode=0xabc, # Combined OPT extended RCODE + Message RCODE
@@ -3344,10 +3344,10 @@ class CommonConstructorTestsMixin(object):
 
     def test_trunc(self):
         """
-        L{dns._EDNSMessage.trunc} defaults to C{False} and can be overridden in
-        the constructor.
+        L{dns._EDNSMessage.truncated} defaults to C{False} and can be overridden
+        in the constructor.
         """
-        self._verifyConstructorFlag('trunc', defaultVal=False)
+        self._verifyConstructorFlag('truncated', defaultVal=False)
 
 
     def test_recDes(self):
@@ -3536,8 +3536,8 @@ class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
 
     def test_repr(self):
         """
-        L{dns._EDNSMessage.__repr__} displays the id, answer, opCode, auth,
-        trunc, recDes, recAv attributes of the message.
+        L{dns._EDNSMessage.__repr__} displays the id, answer, opCode,
+        authoritativeAnswer, truncated, recDes, recAv attributes of the message.
         """
         self.assertEqual(
             repr(self.messageFactory()),
@@ -3546,7 +3546,7 @@ class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
             'answer=False '
             'opCode=0 '
             'authoritativeAnswer=False '
-            'trunc=False '
+            'truncated=False '
             'recDes=False '
             'recAv=False '
             'rCode=0 '
@@ -3724,15 +3724,15 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
             )
 
 
-    def test_trunc(self):
+    def test_truncated(self):
         """
         Two L{dns._EDNSMessage} instances compare equal if they have the same
-        trunc flag.
+        truncated flag.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(trunc=True),
-            self.messageFactory(trunc=True),
-            self.messageFactory(trunc=False),
+            self.messageFactory(truncated=True),
+            self.messageFactory(truncated=True),
+            self.messageFactory(truncated=False),
             )
 
 
@@ -4008,7 +4008,7 @@ class StandardEncodingTestsMixin(object):
 
     def test_truncatedMessageEncode(self):
         """
-        If the message C{trunc} attribute is set to 1 the encoded bytes will
+        If the message C{truncated} attribute is set to 1 the encoded bytes will
         have TR bit 1.
         """
         self.assertEqual(
