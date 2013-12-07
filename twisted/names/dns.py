@@ -1943,9 +1943,9 @@ class Message(tputil.FancyEqMixin):
     @type additional: L{list} of L{RRHeader}
     """
     compareAttributes = (
-        'id', 'answer', 'opCode', 'auth', 'trunc',
-        'recDes', 'recAv', 'rCode',
-        'authenticData', 'checkingDisabled', 'maxSize',
+        'id', 'answer', 'opCode', 'recDes', 'recAv',
+        'auth', 'rCode', 'trunc', 'maxSize',
+        'authenticData', 'checkingDisabled',
         'queries', 'answers', 'authority', 'additional'
     )
 
