@@ -359,60 +359,91 @@ class FileObserverTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
     """
     Tests for L{log.FileObserver}.
     """
+    def _getTimezoneOffsetTest(self, tzname, daylightOffset, standardOffset):
+        """
+        Verify that L{getTimezoneOffset} produces the expected offset for a
+        certain timezone both when daylight saving time is in effect and when
+        it is not.
 
-    def test_getTimezoneOffset(self):
+        @param tzname: The name of a timezone to exercise.
+        @type tzname: L{bytes}
+
+        @param daylightOffset: The number of seconds west of UTC the timezone
+            should be when daylight saving time is in effect.
+        @type daylightOffset: L{int}
+
+        @param standardOffset: The number of seconds west of UTC the timezone
+            should be when daylight saving time is not in effect.
+        @type standardOffset: L{int}
         """
-        Attempt to verify that L{FileLogObserver.getTimezoneOffset} returns
-        correct values for the current C{TZ} environment setting.  Do this
-        by setting C{TZ} to various well-known values and asserting that the
-        reported offset is correct.
-        """
-        localDaylightTuple = (2006, 6, 30, 0, 0, 0, 4, 181, 1)
-        utcDaylightTimestamp = time.mktime(localDaylightTuple)
-        localStandardTuple = (2007, 1, 31, 0, 0, 0, 2, 31, 0)
-        utcStandardTimestamp = time.mktime(localStandardTuple)
+        if getattr(time, 'tzset', None) is None:
+            raise unittest.SkipTest(
+                "Platform cannot change timezone, cannot verify correct offsets "
+                "in well-known timezones.")
 
         originalTimezone = os.environ.get('TZ', None)
         try:
-            # Test something west of UTC
-            os.environ['TZ'] = 'America/New_York'
+            os.environ['TZ'] = tzname
             time.tzset()
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcDaylightTimestamp),
-                14400)
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcStandardTimestamp),
-                18000)
 
-            # Test something east of UTC
-            os.environ['TZ'] = 'Europe/Berlin'
-            time.tzset()
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcDaylightTimestamp),
-                -7200)
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcStandardTimestamp),
-                -3600)
+            # The behavior of mktime depends on the current timezone setting.
+            # So only do this after changing the timezone.
 
-            # Test a timezone that doesn't have DST
-            os.environ['TZ'] = 'Africa/Johannesburg'
-            time.tzset()
+            # Compute a POSIX timestamp for a certain date and time that is
+            # known to occur at a time when daylight saving time is in effect.
+            localDaylightTuple = (2006, 6, 30, 0, 0, 0, 4, 181, 1)
+            daylight = time.mktime(localDaylightTuple)
+
+            # Compute a POSIX timestamp for a certain date and time that is
+            # known to occur at a time when daylight saving time is not in
+            # effect.
+            localStandardTuple = (2007, 1, 31, 0, 0, 0, 2, 31, 0)
+            standard = time.mktime(localStandardTuple)
+
             self.assertEqual(
-                self.flo.getTimezoneOffset(utcDaylightTimestamp),
-                -7200)
-            self.assertEqual(
-                self.flo.getTimezoneOffset(utcStandardTimestamp),
-                -7200)
+                (self.flo.getTimezoneOffset(daylight),
+                 self.flo.getTimezoneOffset(standard)),
+                (daylightOffset, standardOffset))
         finally:
             if originalTimezone is None:
                 del os.environ['TZ']
             else:
                 os.environ['TZ'] = originalTimezone
             time.tzset()
-    if getattr(time, 'tzset', None) is None:
-        test_getTimezoneOffset.skip = (
-            "Platform cannot change timezone, cannot verify correct offsets "
-            "in well-known timezones.")
+
+
+    def test_getTimezoneOffsetWestOfUTC(self):
+        """
+        Attempt to verify that L{FileLogObserver.getTimezoneOffset} returns
+        correct values for the current C{TZ} environment setting for at least
+        some cases.  This test method exercises a timezone that is west of UTC
+        (and should produce positive results).
+        """
+        self._getTimezoneOffsetTest("America/New_York", 14400, 18000)
+
+
+    def test_getTimezoneOffsetEastOfUTC(self):
+        """
+        Attempt to verify that L{FileLogObserver.getTimezoneOffset} returns
+        correct values for the current C{TZ} environment setting for at least
+        some cases.  This test method exercises a timezone that is east of UTC
+        (and should produce negative results).
+        """
+        self._getTimezoneOffsetTest("Europe/Berlin", -7200, -3600)
+
+
+    def test_getTimezoneOffsetWithoutDaylightSavingTime(self):
+        """
+        Attempt to verify that L{FileLogObserver.getTimezoneOffset} returns
+        correct values for the current C{TZ} environment setting for at least
+        some cases.  This test method exercises a timezone that does not use
+        daylight saving time at all (so both summer and winter time test values
+        should have the same offset).
+        """
+        # Test a timezone that doesn't have DST.  mktime() implementations
+        # available for testing seem happy to produce results for this even
+        # though it's not entirely valid.
+        self._getTimezoneOffsetTest("Africa/Johannesburg", -7200, -7200)
 
 
     def test_timeFormatting(self):
