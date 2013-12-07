@@ -2680,7 +2680,7 @@ class MessageEmpty(object):
             authoritativeAnswer=True,
             truncated=True,
             recursionDesired=True,
-            recAv=True,
+            recursionAvailable=True,
             rCode=15,
             ednsVersion=None,
         )
@@ -2726,7 +2726,7 @@ class MessageTruncated(object):
             authoritativeAnswer=0,
             truncated=1,
             recursionDesired=0,
-            recAv=0,
+            recursionAvailable=0,
             rCode=0,
             ednsVersion=None,)
 
@@ -2909,7 +2909,7 @@ class MessageComplete:
             opCode=dns.OP_STATUS,
             authoritativeAnswer=1,
             recursionDesired=1,
-            recAv=1,
+            recursionAvailable=1,
             rCode=15,
             ednsVersion=None,
             queries=[dns.Query(b'example.com', dns.SOA)],
@@ -3000,7 +3000,7 @@ class MessageEDNSQuery(object):
             opCode=dns.OP_QUERY,
             auth=0,
             recursionDesired=0,
-            recAv=0,
+            recursionAvailable=0,
             rCode=0,
             ednsVersion=3,
             dnssecOK=False,
@@ -3094,7 +3094,7 @@ class MessageEDNSComplete(object):
             authoritativeAnswer=1,
             truncated=0,
             recursionDesired=1,
-            recAv=1,
+            recursionAvailable=1,
             rCode=15,
             ednsVersion=3,
             dnssecOK=True,
@@ -3185,7 +3185,7 @@ class MessageEDNSExtendedRCODE(object):
             authoritativeAnswer=False,
             truncated=False,
             recursionDesired=False,
-            recAv=False,
+            recursionAvailable=False,
             rCode=0xabc, # Combined OPT extended RCODE + Message RCODE
             ednsVersion=0,
             dnssecOK=False,
@@ -3358,12 +3358,12 @@ class CommonConstructorTestsMixin(object):
         self._verifyConstructorFlag('recursionDesired', defaultVal=False)
 
 
-    def test_recAv(self):
+    def test_recursionAvailable(self):
         """
-        L{dns._EDNSMessage.recAv} defaults to C{False} and can be overridden in
-        the constructor.
+        L{dns._EDNSMessage.recursionAvailable} defaults to C{False} and can be
+        overridden in the constructor.
         """
-        self._verifyConstructorFlag('recAv', defaultVal=False)
+        self._verifyConstructorFlag('recursionAvailable', defaultVal=False)
 
 
     def test_rCode(self):
@@ -3537,8 +3537,8 @@ class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
     def test_repr(self):
         """
         L{dns._EDNSMessage.__repr__} displays the id, answer, opCode,
-        authoritativeAnswer, truncated, recursionDesired, recAv attributes of
-        the message.
+        authoritativeAnswer, truncated, recursionDesired, recursionAvailable
+        attributes of the message.
         """
         self.assertEqual(
             repr(self.messageFactory()),
@@ -3549,7 +3549,7 @@ class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
             'authoritativeAnswer=False '
             'truncated=False '
             'recursionDesired=False '
-            'recAv=False '
+            'recursionAvailable=False '
             'rCode=0 '
             'ednsVersion=0 '
             'dnssecOK=False '
@@ -3749,15 +3749,15 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
             )
 
 
-    def test_recAv(self):
+    def test_recursionAvailable(self):
         """
         Two L{dns._EDNSMessage} instances compare equal if they have the same
-        recAv flag.
+        recursionAvailable flag.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(recAv=True),
-            self.messageFactory(recAv=True),
-            self.messageFactory(recAv=False),
+            self.messageFactory(recursionAvailable=True),
+            self.messageFactory(recursionAvailable=True),
+            self.messageFactory(recursionAvailable=False),
             )
 
 
