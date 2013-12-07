@@ -799,6 +799,232 @@ class MessageTestCase(unittest.SynchronousTestCase):
 
 
 
+class MessageComparisonTests(ComparisonTestsMixin,
+                             unittest.SynchronousTestCase):
+    """
+    Tests for the rich comparison of L{dns.Message} instances.
+    """
+    def messageFactory(self, *args, **kwargs):
+        """
+        Create a L{dns.Message}.
+
+        The L{dns.Message} constructor doesn't accept C{queries}, C{answers},
+        C{authority}, C{additional} arguments, so we extract them from the
+        kwargs supplied to this factory function and assign them to the message.
+
+        @param args: Positional arguments.
+        @param kwargs: Keyword arguments.
+        @return: A L{dns.Message} instance.
+        """
+        queries = kwargs.pop('queries', [])
+        answers = kwargs.pop('answers', [])
+        authority = kwargs.pop('authority', [])
+        additional = kwargs.pop('additional', [])
+        m = dns.Message(**kwargs)
+        if queries:
+            m.queries = queries
+        if answers:
+            m.answers = answers
+        if authority:
+            m.authority = authority
+        if additional:
+            m.additional = additional
+        return m
+
+
+    def test_id(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same id
+        value.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(id=10),
+            self.messageFactory(id=10),
+            self.messageFactory(id=20),
+        )
+
+
+    def test_answer(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same answer
+        flag.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(answer=1),
+            self.messageFactory(answer=1),
+            self.messageFactory(answer=0),
+        )
+
+
+    def test_opCode(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same opCode
+        value.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(opCode=10),
+            self.messageFactory(opCode=10),
+            self.messageFactory(opCode=20),
+        )
+
+
+    def test_recDes(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same recDes
+        flag.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(recDes=1),
+            self.messageFactory(recDes=1),
+            self.messageFactory(recDes=0),
+        )
+
+
+    def test_recAv(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same recAv
+        flag.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(recAv=1),
+            self.messageFactory(recAv=1),
+            self.messageFactory(recAv=0),
+        )
+
+
+    def test_auth(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same auth
+        flag.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(auth=1),
+            self.messageFactory(auth=1),
+            self.messageFactory(auth=0),
+        )
+
+
+    def test_rCode(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same rCode
+        value.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(rCode=10),
+            self.messageFactory(rCode=10),
+            self.messageFactory(rCode=20),
+        )
+
+
+    def test_trunc(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same trunc
+        flag.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(trunc=1),
+            self.messageFactory(trunc=1),
+            self.messageFactory(trunc=0),
+        )
+
+
+    def test_maxSize(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same
+        maxSize value.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(maxSize=10),
+            self.messageFactory(maxSize=10),
+            self.messageFactory(maxSize=20),
+        )
+
+
+    def test_authenticData(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same
+        authenticData flag.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(authenticData=1),
+            self.messageFactory(authenticData=1),
+            self.messageFactory(authenticData=0),
+        )
+
+
+    def test_checkingDisabled(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same
+        checkingDisabled flag.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(checkingDisabled=1),
+            self.messageFactory(checkingDisabled=1),
+            self.messageFactory(checkingDisabled=0),
+        )
+
+
+    def test_queries(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same
+        queries.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(queries=[dns.Query(b'example.com')]),
+            self.messageFactory(queries=[dns.Query(b'example.com')]),
+            self.messageFactory(queries=[dns.Query(b'example.org')]),
+            )
+
+
+    def test_answers(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same
+        answers.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(answers=[dns.RRHeader(
+                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
+            self.messageFactory(answers=[dns.RRHeader(
+                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
+            self.messageFactory(answers=[dns.RRHeader(
+                        b'example.org', payload=dns.Record_A('4.3.2.1'))]),
+            )
+
+
+    def test_authority(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same
+        authority records.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(authority=[dns.RRHeader(
+                        b'example.com',
+                        type=dns.SOA, payload=dns.Record_SOA())]),
+            self.messageFactory(authority=[dns.RRHeader(
+                        b'example.com',
+                        type=dns.SOA, payload=dns.Record_SOA())]),
+            self.messageFactory(authority=[dns.RRHeader(
+                        b'example.org',
+                        type=dns.SOA, payload=dns.Record_SOA())]),
+            )
+
+
+    def test_additional(self):
+        """
+        Two L{dns.Message} instances compare equal if they have the same
+        additional records.
+        """
+        self.assertNormalEqualityImplementation(
+            self.messageFactory(additional=[dns.RRHeader(
+                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
+            self.messageFactory(additional=[dns.RRHeader(
+                        b'example.com', payload=dns.Record_A('1.2.3.4'))]),
+            self.messageFactory(additional=[dns.RRHeader(
+                        b'example.org', payload=dns.Record_A('1.2.3.4'))]),
+            )
+
+
+
 class TestController(object):
     """
     Pretend to be a DNS query processor for a DNSDatagramProtocol.
