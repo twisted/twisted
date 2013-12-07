@@ -2679,7 +2679,7 @@ class MessageEmpty(object):
             opCode=dns.OP_STATUS,
             authoritativeAnswer=True,
             truncated=True,
-            recDes=True,
+            recursionDesired=True,
             recAv=True,
             rCode=15,
             ednsVersion=None,
@@ -2725,7 +2725,7 @@ class MessageTruncated(object):
             opCode=0,
             authoritativeAnswer=0,
             truncated=1,
-            recDes=0,
+            recursionDesired=0,
             recAv=0,
             rCode=0,
             ednsVersion=None,)
@@ -2908,7 +2908,7 @@ class MessageComplete:
             answer=1,
             opCode=dns.OP_STATUS,
             authoritativeAnswer=1,
-            recDes=1,
+            recursionDesired=1,
             recAv=1,
             rCode=15,
             ednsVersion=None,
@@ -2999,7 +2999,7 @@ class MessageEDNSQuery(object):
             answer=0,
             opCode=dns.OP_QUERY,
             auth=0,
-            recDes=0,
+            recursionDesired=0,
             recAv=0,
             rCode=0,
             ednsVersion=3,
@@ -3093,7 +3093,7 @@ class MessageEDNSComplete(object):
             opCode=dns.OP_STATUS,
             authoritativeAnswer=1,
             truncated=0,
-            recDes=1,
+            recursionDesired=1,
             recAv=1,
             rCode=15,
             ednsVersion=3,
@@ -3184,7 +3184,7 @@ class MessageEDNSExtendedRCODE(object):
             opCode=dns.OP_QUERY,
             authoritativeAnswer=False,
             truncated=False,
-            recDes=False,
+            recursionDesired=False,
             recAv=False,
             rCode=0xabc, # Combined OPT extended RCODE + Message RCODE
             ednsVersion=0,
@@ -3350,12 +3350,12 @@ class CommonConstructorTestsMixin(object):
         self._verifyConstructorFlag('truncated', defaultVal=False)
 
 
-    def test_recDes(self):
+    def test_recursionDesired(self):
         """
-        L{dns._EDNSMessage.recDes} defaults to C{False} and can be overridden in
-        the constructor.
+        L{dns._EDNSMessage.recursionDesired} defaults to C{False} and can be
+        overridden in the constructor.
         """
-        self._verifyConstructorFlag('recDes', defaultVal=False)
+        self._verifyConstructorFlag('recursionDesired', defaultVal=False)
 
 
     def test_recAv(self):
@@ -3537,7 +3537,8 @@ class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
     def test_repr(self):
         """
         L{dns._EDNSMessage.__repr__} displays the id, answer, opCode,
-        authoritativeAnswer, truncated, recDes, recAv attributes of the message.
+        authoritativeAnswer, truncated, recursionDesired, recAv attributes of
+        the message.
         """
         self.assertEqual(
             repr(self.messageFactory()),
@@ -3547,7 +3548,7 @@ class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
             'opCode=0 '
             'authoritativeAnswer=False '
             'truncated=False '
-            'recDes=False '
+            'recursionDesired=False '
             'recAv=False '
             'rCode=0 '
             'ednsVersion=0 '
@@ -3736,15 +3737,15 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
             )
 
 
-    def test_recDes(self):
+    def test_recursionDesired(self):
         """
         Two L{dns._EDNSMessage} instances compare equal if they have the same
-        recDes flag.
+        recursionDesired flag.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(recDes=True),
-            self.messageFactory(recDes=True),
-            self.messageFactory(recDes=False),
+            self.messageFactory(recursionDesired=True),
+            self.messageFactory(recursionDesired=True),
+            self.messageFactory(recursionDesired=False),
             )
 
 
