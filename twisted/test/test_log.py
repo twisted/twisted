@@ -350,8 +350,7 @@ class LogPublisherTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
         if _PY3:
             self.assertIn(message, self.out[0])
         else:
-            self.assertIn('with str error', self.out[0])
-            self.assertIn('UnicodeEncodeError', self.out[0])
+            self.assertIn("Hello, \\xbd world.", self.out[0])
 
 
 

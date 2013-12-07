@@ -385,3 +385,21 @@ def safe_str(o):
     @rtype: C{str}
     """
     return _safeFormat(str, o)
+
+
+
+def safe_bytes(o):
+    """
+    Returns a C{bytes} representation of an object.  If the object is
+    C{unicode} (or C{str} on Python 3) and can be ASCII encoded, return the
+    ASCII encoded C{bytes}.  If it cannot be ASCII encoded, return the repr()
+    of the Unicode instead.
+
+    @param o: Any object.
+
+    @rtype: C{bytes}
+    """
+    try:
+        return bytes(o)
+    except Exception:
+        return _safeFormat(repr, o)

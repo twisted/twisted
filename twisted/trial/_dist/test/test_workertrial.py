@@ -35,6 +35,7 @@ class WorkerLogObserverTestCase(TestCase):
     def test_emit(self):
         """
         L{WorkerLogObserver} forwards data to L{managercommands.TestWrite}.
+        The data always come out as C{bytes}.
         """
         calls = []
 
@@ -47,6 +48,47 @@ class WorkerLogObserverTestCase(TestCase):
         observer.emit({'message': ['Some log']})
         self.assertEqual(
             calls, [(managercommands.TestWrite, {'out': 'Some log'})])
+        self.assertEqual(bytes, type(calls[0][1]['out']))
+
+
+    def test_emitUnicodeASCIIUnicode(self):
+        """
+        L{WorkerLogObserver} forwards ASCII-encodeable C{unicode} to
+        L{managercommands.TestWrite}.  The data comes out as ASCII-encoded
+        C{bytes}.
+        """
+        calls = []
+
+        class FakeClient(object):
+
+            def callRemote(self, method, **kwargs):
+                calls.append((method, kwargs))
+
+        observer = WorkerLogObserver(FakeClient())
+        observer.emit({'message': [u"hello"]})
+        self.assertEqual(
+            calls, [(managercommands.TestWrite, {'out': b"hello"})])
+        self.assertEqual(bytes, type(calls[0][1]['out']))
+
+
+    def test_emitUnicodeNotASCIIEncodable(self):
+        """
+        L{WorkerLogObserver} forwards non-ASCII-encodeable C{unicode} to
+        L{managercommands.TestWrite}.  The data comes out as repr() of the
+        Unicode C{bytes}.
+        """
+        calls = []
+
+        class FakeClient(object):
+
+            def callRemote(self, method, **kwargs):
+                calls.append((method, kwargs))
+
+        observer = WorkerLogObserver(FakeClient())
+        observer.emit({'message': [u"\u2603"]})
+        self.assertEqual(
+            calls, [(managercommands.TestWrite, {'out': b"u'\\u2603'"})])
+        self.assertEqual(bytes, type(calls[0][1]['out']))
 
 
 

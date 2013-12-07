@@ -292,9 +292,14 @@ def textFromEventDict(eventDict):
     handle the dict, it returns None.
 
     The possible keys of eventDict are:
-     - C{message}: by default, it holds the final text. It's required, but can
-       be empty if either C{isError} or C{format} is provided (the first
-       having the priority).
+     - C{message}: by default, it holds the final text as a C{list} of
+       C{bytes}.  It's required, but can be empty if either C{isError} or
+       C{format} is provided (the first having the priority).  For each object
+       in the list, if it is a C{unicode}, this function will attempt to encode
+       them using the 'ascii' codec (implicit in the call to safe_str), and if
+       that fails, it resorts to representing them as the C{byte} string
+       returned by C{repr} of the C{unicode} objects.  See
+       L{_reflectpy3.safe_str}.
      - C{isError}: boolean indicating the nature of the event.
      - C{failure}: L{failure.Failure} instance, required if the event is an
        error.
@@ -315,7 +320,7 @@ def textFromEventDict(eventDict):
             # we don't know how to log this
             return
     else:
-        text = ' '.join(map(reflect.safe_str, edm))
+        text = ' '.join(map(reflect.safe_bytes, edm))
     return text
 
 
