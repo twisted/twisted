@@ -83,7 +83,7 @@ class TunnelAddress(object):
         Deprecated accessor for the tunnel name.  Use attributes instead.
         """
         warnings.warn(
-            "TunnelAddress.__getitem__ is deprecated since Twisted 13.1  "
+            "TunnelAddress.__getitem__ is deprecated since Twisted 14.0  "
             "Use attributes instead.", category=DeprecationWarning,
             stacklevel=2)
         return ('TUNTAP', self.name)[index]
@@ -375,6 +375,6 @@ class TuntapPort(abstract.FileDescriptor):
         return TunnelAddress(self._mode, self.interface)
 
 TuntapPort.loseConnection = deprecated(
-    Version("Twisted", 13, 1, 0),
+    Version("Twisted", 14, 0, 0),
     TuntapPort.stopListening)(TuntapPort.loseConnection)
 
