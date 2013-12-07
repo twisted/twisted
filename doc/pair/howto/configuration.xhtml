@@ -55,6 +55,7 @@ First, it uses the 10.0.0.0/24 and 10.1.0.0/24 address ranges.
 If your network is configured to use these already then running the script may cause problems for your network.
 These addresses are hard-coded into the Twisted Pair test suite so this problem is not easily avoided.
 Second, the changes are not persistent across reboots.
+If you want this network configuration to be available even after a reboot you will need to integrate the above into your system's init scripts somehow.
     </p>
 
   </body>
