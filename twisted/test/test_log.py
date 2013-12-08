@@ -15,7 +15,7 @@ import os, sys, time, logging, warnings, calendar
 from twisted.trial import unittest
 
 from twisted.python import log, failure
-
+from twisted.python.log import textFromEventDict
 
 class FakeWarning(Warning):
     """
@@ -352,6 +352,186 @@ class LogPublisherTestCase(LogPublisherTestCaseMixin, unittest.SynchronousTestCa
         else:
             self.assertIn('with str error', self.out[0])
             self.assertIn('UnicodeEncodeError', self.out[0])
+
+
+class MeltingSnowmanException(Exception):
+    """
+    A custom exception to differentiate from others in
+    L{TextFromEventDictTests}.
+    """
+    pass
+
+
+class TextFromEventDictTests(unittest.SynchronousTestCase):
+    """
+    Tests that L{twisted.python.textFromEventDict} always returns a native
+    string type.
+
+    XXX This only addresses the Python 2 cases at present.  It probably needs
+    special cases for Python 3, like L{LogPublisherTestCase.test_singleUnicode}.
+    """
+
+    def setUp(self):
+        self.logMessages = []
+        log.addObserver(self.logMessages.append)
+        self.addCleanup(log.removeObserver, self.logMessages.append)
+        # Workaround brain-deadness in GTK, which might be imported sometimes.
+        import sys
+        print(sys.getdefaultencoding())
+        reload(sys)
+        sys.setdefaultencoding('ascii')
+
+
+    def test_simpleMessageBytes(self):
+        """
+        C{bytes} in, C{bytes} out.
+        """
+        log.msg(b"hello, world.")
+        text = textFromEventDict(self.logMessages[-1])
+        self.assertEqual(type(text), bytes)
+        self.assertEqual(text, b"hello, world.")
+
+
+    def test_simpleMessageASCIIUnicode(self):
+        """
+        An ASCII encodable Unicode string gets turned into C{bytes}.
+        """
+        log.msg(u"hello, world.")
+        text = textFromEventDict(self.logMessages[-1])
+        self.assertEqual(type(text), bytes)
+        self.assertEqual(text, b"hello, world.")
+
+
+    def test_simpleMessageNonASCIIUnicode(self):
+        """
+        An non-ASCII encodable Unicode string gets turned into a C{bytes} which
+        describes, using C{bytes}, the error encountered trying to turn it into
+        C{bytes}.
+        """
+        log.msg(u"hello, \N{SNOWMAN}.")
+        text = textFromEventDict(self.logMessages[-1])
+        self.assertEqual(type(text), bytes)
+        self.assertIn(b"with str error", text)
+        self.assertIn(b"ordinal not in range", text)
+
+
+    def test_formatStringNonASCIIUnicodeInterpolateBytes(self):
+        """
+        Calling log.err(format=...) always results in C{bytes}, even if the
+        format string itself is C{unicode}.  If necessary, the C{bytes} explain
+        what went wrong.
+        """
+        log.msg(format="hello %(world)s", world=u"world \N{SNOWMAN}")
+        text = textFromEventDict(self.logMessages[-1])
+        self.assertEqual(type(text), bytes)
+        self.assertIn(b"Invalid format string or unformattable object", text)
+
+
+    def test_formatStringASCIIUnicodeInterpolateBytes(self):
+        """
+        Calling log.err(format=...) always results in C{bytes}, even if the
+        format string itself is C{unicode}.  If the C{unicode} can be encoded
+        as C{ascii}, it will be.
+        """
+        log.msg(format="hello %(world)s", world=u"world")
+        text = textFromEventDict(self.logMessages[-1])
+        self.assertEqual(type(text), bytes)
+        self.assertEqual(text, b"hello world")
+
+
+    def test_formatStringBytesInterpolateASCIIUnicode(self):
+        """
+        Calling log.err(format=...) always results in C{bytes}, even one of the
+        arguments is C{unicode}.  If the C{unicode} can be encoded as C{ascii},
+        it will be.
+        """
+        log.msg(format=u"hello %(world)s", world="world")
+        text = textFromEventDict(self.logMessages[-1])
+        self.assertEqual(type(text), bytes)
+        self.assertEqual(text, b"hello world")
+
+
+    def test_formatStringBytesInterpolateNonASCIIUnicode(self):
+        """
+        Calling log.err(format=...) always results in C{bytes}, even one of the
+        arguments is C{unicode}.  If necessary, the C{bytes} explain what went
+        wrong.
+        """
+        log.msg(format=u"it's a \N{SNOWMAN} %(world)s", world="world")
+        text = textFromEventDict(self.logMessages[-1])
+        self.assertEqual(type(text), bytes)
+        self.assertIn(b"Invalid format string or unformattable object", text)
+
+
+    def test_failureNonASCIIUnicodeWhyNonASCIIUnicode(self):
+        """
+        Non-ASCII unicode exception and non-ASCII unicode explanation at least
+        results in C{bytes}.
+        """
+        log.err(failure.Failure(MeltingSnowmanException(u"the \N{SNOWMAN} melted")),
+                u"what \N{VULGAR FRACTION ONE HALF}ity")
+        text = textFromEventDict(self.logMessages[-1])
+        self.assertEqual(type(text), bytes)
+        self.assertIn(b"ordinal not in range", text)
+        self.assertIn(b"<unicode instance", text)
+        self.flushLoggedErrors(1, MeltingSnowmanException)
+
+
+    def test_failureNonASCIIUnicodeWhyASCIIUnicode(self):
+        """
+        Non-ASCII unicode exception and ASCII unicode explanation at least
+        results in C{bytes}.
+        """
+        log.err(failure.Failure(MeltingSnowmanException(u"the \N{SNOWMAN} melted")),
+                u"what vulgarity")
+        text = textFromEventDict(self.logMessages[-1])
+        self.assertEqual(type(text), bytes)
+        self.assertIn(b"what vulgarity", text)
+        self.assertIn(b"MeltingSnowmanException", text)
+        self.flushLoggedErrors(1, MeltingSnowmanException)
+
+
+    def test_failureNonASCIIUnicodeWhyBytes(self):
+        """
+        Non-ASCII unicode explanation at least results in C{bytes}.
+        """
+        log.err(failure.Failure(MeltingSnowmanException(b"oops")),
+                u"what \N{VULGAR FRACTION ONE HALF}ity")
+        text = textFromEventDict(self.logMessages[-1])
+        self.assertEqual(type(text), bytes)
+        self.assertIn(b"ordinal not in range", text)
+        self.assertIn(b"<unicode instance", text)
+        self.flushLoggedErrors(1, MeltingSnowmanException)
+
+
+    def test_failureASCIIUnicodeWhyASCIIUnicode(self):
+        """
+        ASCII unicode exception and ASCII unicode reason results in C{bytes}.
+        """
+        log.err(failure.Failure(MeltingSnowmanException(u"the snowman melted")),
+                u"what vulgarity")
+        text = textFromEventDict(self.logMessages[-1])
+        self.assertEqual(type(text), bytes)
+        self.assertEqual(text,
+                b'what vulgarity\nTraceback (most recent call last):\nFailure: '
+                b'twisted.test.test_log.MeltingSnowmanException: the snowman '
+                b'melted\n')
+        self.flushLoggedErrors(1, MeltingSnowmanException)
+
+
+    def test_failureWhyNonASCIIUnicode(self):
+        """
+        C{bytes} exception and C{bytes} reason results in C{bytes}.
+        """
+        log.err(failure.Failure(MeltingSnowmanException(b"the snowman melted")),
+                b"what vulgarity")
+        text = textFromEventDict(self.logMessages[-1])
+        self.assertEqual(type(text), bytes)
+        self.assertEqual(text,
+                b'what vulgarity\nTraceback (most recent call last):\nFailure: '
+                b'twisted.test.test_log.MeltingSnowmanException: the snowman '
+                b'melted\n')
+        self.flushLoggedErrors(1, MeltingSnowmanException)
 
 
 

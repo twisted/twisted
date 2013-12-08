@@ -272,7 +272,7 @@ def _safeFormat(fmtString, fmtDict):
     # can only cry about that individual object instead of the
     # entire event dict.
     try:
-        text = fmtString % fmtDict
+        text = str(fmtString % fmtDict)
     except KeyboardInterrupt:
         raise
     except:
@@ -303,12 +303,15 @@ def textFromEventDict(eventDict):
        the event. It uses all keys present in C{eventDict} to format
        the text.
     Other keys will be used when applying the C{format}, or ignored.
+
+    @return:  C{str}, the native string type.  On Python 2 this is C{bytes}, on
+        Python 3 it is C{unicode}.
     """
     edm = eventDict['message']
     if not edm:
         if eventDict['isError'] and 'failure' in eventDict:
-            text = ((eventDict.get('why') or 'Unhandled Error')
-                    + '\n' + eventDict['failure'].getTraceback())
+            text = ((reflect.safe_str(eventDict.get('why')) or 'Unhandled Error')
+                    + '\n' + reflect.safe_str(eventDict['failure'].getTraceback()))
         elif 'format' in eventDict:
             text = _safeFormat(eventDict['format'], eventDict)
         else:
