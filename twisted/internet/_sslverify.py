@@ -875,7 +875,7 @@ class OpenSSLCipher(FancyEqMixin, object):
         """
         A runnable representation of the cipher.
         """
-        return 'OpenSSLCipher({!r})'.format(self.fullName)
+        return 'OpenSSLCipher({0!r})'.format(self.fullName)
 
 
 
