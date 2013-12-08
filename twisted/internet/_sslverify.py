@@ -933,7 +933,8 @@ class OpenSSLAcceptableCiphers(object):
 
         @type cipherString: L{str}
 
-        @return: L{twisted.internet.ssl.AcceptableCiphers}
+        @return: Instance representing C{cipherString}.
+        @rtype: L{twisted.internet.ssl.AcceptableCiphers}
         """
         return cls(_expandCipherString(
             cipherString, SSL.SSLv23_METHOD, SSL.OP_NO_SSLv2 | SSL.OP_NO_SSLv3)
