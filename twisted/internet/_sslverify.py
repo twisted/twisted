@@ -945,6 +945,3 @@ defaultCiphers = OpenSSLAcceptableCiphers.fromOpenSSLCipherString(
     "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:"
     "DH+AES:ECDH+3DES:DH+3DES:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS"
 )
-"""
-Default acceptable ciphers used by L{OpenSSLCertificateOptions}.
-"""
