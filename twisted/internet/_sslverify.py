@@ -10,10 +10,15 @@ from hashlib import md5
 
 from OpenSSL import SSL, crypto
 
-from twisted.python.compat import nativeString, networkString
-from twisted.python import _reflectpy3 as reflect, util
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
+from twisted.internet.interfaces import IAcceptableCiphers, ICipher
+from twisted.python import _reflectpy3 as reflect, util
+from twisted.python.compat import nativeString, networkString
+from twisted.python.util import FancyEqMixin
+from zope.interface import implementer
+
+
 
 def _sessionCounter(counter=itertools.count()):
     """
@@ -650,7 +655,8 @@ class OpenSSLCertificateOptions(object):
                  enableSessions=True,
                  fixBrokenPeers=False,
                  enableSessionTickets=False,
-                 extraCertChain=None):
+                 extraCertChain=None,
+                 acceptableCiphers=None):
         """
         Create an OpenSSL context SSL connection context factory.
 
@@ -707,6 +713,11 @@ class OpenSSLCertificateOptions(object):
             C{certificate} to it.
 
         @type extraCertChain: C{list} of L{OpenSSL.crypto.X509}
+
+        @param acceptableCiphers: Ciphers that are acceptable for connections.
+            Uses a secure default if left L{None}.
+
+        @type acceptableCiphers: L{twisted.internet.ssl.AcceptableCiphers}
         """
 
         if (privateKey is None) != (certificate is None):
@@ -749,6 +760,21 @@ class OpenSSLCertificateOptions(object):
         self.fixBrokenPeers = fixBrokenPeers
         self.enableSessionTickets = enableSessionTickets
 
+        if acceptableCiphers is None:
+            acceptableCiphers = defaultCiphers
+        # This needs to run when method and _options are finalized.
+        self.cipherString = b':'.join(
+            c.fullName
+            for c in acceptableCiphers.selectCiphers(
+                _expandCipherString(b'ALL', self.method, self._options)
+            )
+        )
+        if self.cipherString == b'':
+            raise ValueError(
+                'Supplied cipher string yielded no usable ciphers on this '
+                'platform.'
+            )
+
 
     def __getstate__(self):
         d = self.__dict__.copy()
@@ -764,7 +790,8 @@ class OpenSSLCertificateOptions(object):
 
 
     def getContext(self):
-        """Return a SSL.Context object.
+        """
+        Return a SSL.Context object.
         """
         if self._context is None:
             self._context = self._makeContext()
@@ -820,4 +847,111 @@ class OpenSSLCertificateOptions(object):
         if not self.enableSessionTickets:
             ctx.set_options(self._OP_NO_TICKET)
 
+        ctx.set_cipher_list(self.cipherString)
+
         return ctx
+
+
+
+@implementer(ICipher)
+class OpenSSLCipher(FancyEqMixin, object):
+    """
+    A representation of an OpenSSL cipher.
+    """
+    compareAttributes = ('fullName',)
+
+    def __init__(self, fullName):
+        self.fullName = fullName
+
+
+    def __str__(self):
+        """
+        The string version is the full name of the cipher.
+        """
+        return self.fullName
+
+
+    def __repr__(self):
+        """
+        A runnable representation of the cipher.
+        """
+        return 'OpenSSLCipher({!r})'.format(self.fullName)
+
+
+
+def _expandCipherString(cipherString, method, options):
+    """
+    Expand C{cipherString} according to C{method} and C{options} to a list
+    of explicit ciphers that are supported by the current platform.
+
+    @param cipherString: An OpenSSL cipher string to expand.
+    @type cipherString: L{bytes}
+
+    @param method: An OpenSSL method like C{SSL.TLSv1_METHOD} used for
+        determining the effective ciphers.
+
+    @param options: OpenSSL options like C{SSL.OP_NO_SSLv3} ORed together.
+    @type options: L{int}
+
+    @return: The effective list of explicit ciphers that results from the
+        arguments on the current platform.
+    @rtype: L{list} of L{OpenSSLCipher}
+    """
+    ctx = SSL.Context(method)
+    ctx.set_options(options)
+    try:
+        ctx.set_cipher_list(cipherString)
+    except SSL.Error as e:
+        if e.args[0][0][2] == b'no cipher match':
+            return []
+        else:
+            raise
+    conn = SSL.Connection(ctx, None)
+    return [OpenSSLCipher(cipher) for cipher in conn.get_cipher_list()]
+
+
+
+@implementer(IAcceptableCiphers)
+class OpenSSLAcceptableCiphers(object):
+    """
+    A representation of ciphers that are acceptable for TLS connections.
+    """
+    def __init__(self, ciphers):
+        self._ciphers = ciphers
+
+    def selectCiphers(self, availableCiphers):
+        return [cipher
+                for cipher in self._ciphers
+                if cipher in availableCiphers]
+
+
+    @classmethod
+    def fromOpenSSLCipherString(cls, cipherString):
+        """
+        Create a new instance using an OpenSSL cipher string.
+
+        @param cipherString: An OpenSSL cipher string that describes what
+            cipher suites are acceptable.
+            See the documentation of U{OpenSSL
+            <http://www.openssl.org/docs/apps/ciphers.html#CIPHER_STRINGS>} or
+            U{Apache
+            <http://httpd.apache.org/docs/2.4/mod/mod_ssl.html#sslciphersuite>}
+            for details.
+
+        @type cipherString: L{bytes}
+
+        @return: L{twisted.internet.ssl.AcceptableCiphers}
+        """
+        return cls(_expandCipherString(
+            cipherString, SSL.SSLv23_METHOD, SSL.OP_NO_SSLv2 | SSL.OP_NO_SSLv3)
+        )
+
+
+
+defaultCiphers = OpenSSLAcceptableCiphers.fromOpenSSLCipherString(
+    b"ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:"
+    b"DH+AES:ECDH+3DES:DH+3DES:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS"
+)
+"""
+Default acceptable ciphers used by L{OpenSSLCertificateOptions}.
+"""
