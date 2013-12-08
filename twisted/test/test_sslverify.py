@@ -406,7 +406,7 @@ class OpenSSLOptions(unittest.TestCase):
             privateKey=self.sKey,
             certificate=self.sCert,
             acceptableCiphers=
-            sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString(b'')
+            sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString('')
         )
 
 
@@ -425,7 +425,7 @@ class OpenSSLOptions(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        self.assertEqual(b'sentinel', ctx._cipherList)
+        self.assertEqual('sentinel', ctx._cipherList)
 
 
     def test_abbreviatingDistinguishedNames(self):
@@ -924,7 +924,7 @@ class TestOpenSSLCipher(unittest.TestCase):
     if interfaces.IReactorSSL(reactor, None) is None:
         skip = "Reactor does not support SSL, cannot run SSL tests"
 
-    cipherName = b'CIPHER-STRING'
+    cipherName = 'CIPHER-STRING'
 
     def test_constructorSetsFullName(self):
         """
@@ -933,16 +933,6 @@ class TestOpenSSLCipher(unittest.TestCase):
         self.assertEqual(
             self.cipherName,
             sslverify.OpenSSLCipher(self.cipherName).fullName
-        )
-
-
-    def test_str(self):
-        """
-        C{str(cipher)} should return the full name.
-        """
-        self.assertEqual(
-            self.cipherName,
-            str(sslverify.OpenSSLCipher(self.cipherName))
         )
 
 
@@ -1022,7 +1012,7 @@ class TestExpandCipherString(unittest.TestCase):
         """
         Returns always a list of ICipher.
         """
-        ciphers = sslverify._expandCipherString(b'ALL', SSL.SSLv23_METHOD, 0)
+        ciphers = sslverify._expandCipherString('ALL', SSL.SSLv23_METHOD, 0)
         self.assertIsInstance(ciphers, list)
         self.assertTrue(all(sslverify.ICipher.providedBy(c) for c in ciphers))
 
@@ -1063,7 +1053,7 @@ class TestAcceptableCiphers(unittest.TestCase):
         If L{sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString} is
         called it expands the string to a list of ciphers.
         """
-        ac = sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString(b'ALL')
+        ac = sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString('ALL')
         self.assertIsInstance(ac._ciphers, list)
         self.assertTrue(all(sslverify.ICipher.providedBy(c)
                             for c in ac._ciphers))

@@ -763,13 +763,13 @@ class OpenSSLCertificateOptions(object):
         if acceptableCiphers is None:
             acceptableCiphers = defaultCiphers
         # This needs to run when method and _options are finalized.
-        self.cipherString = b':'.join(
+        self.cipherString = ':'.join(
             c.fullName
             for c in acceptableCiphers.selectCiphers(
-                _expandCipherString(b'ALL', self.method, self._options)
+                _expandCipherString('ALL', self.method, self._options)
             )
         )
-        if self.cipherString == b'':
+        if self.cipherString == '':
             raise ValueError(
                 'Supplied cipher string yielded no usable ciphers on this '
                 'platform.'
@@ -864,13 +864,6 @@ class OpenSSLCipher(FancyEqMixin, object):
         self.fullName = fullName
 
 
-    def __str__(self):
-        """
-        The string version is the full name of the cipher.
-        """
-        return self.fullName
-
-
     def __repr__(self):
         """
         A runnable representation of the cipher.
@@ -885,7 +878,7 @@ def _expandCipherString(cipherString, method, options):
     of explicit ciphers that are supported by the current platform.
 
     @param cipherString: An OpenSSL cipher string to expand.
-    @type cipherString: L{bytes}
+    @type cipherString: L{str}
 
     @param method: An OpenSSL method like C{SSL.TLSv1_METHOD} used for
         determining the effective ciphers.
@@ -902,7 +895,7 @@ def _expandCipherString(cipherString, method, options):
     try:
         ctx.set_cipher_list(cipherString)
     except SSL.Error as e:
-        if e.args[0][0][2] == b'no cipher match':
+        if e.args[0][0][2] == 'no cipher match':
             return []
         else:
             raise
@@ -938,7 +931,7 @@ class OpenSSLAcceptableCiphers(object):
             <http://httpd.apache.org/docs/2.4/mod/mod_ssl.html#sslciphersuite>}
             for details.
 
-        @type cipherString: L{bytes}
+        @type cipherString: L{str}
 
         @return: L{twisted.internet.ssl.AcceptableCiphers}
         """
@@ -949,8 +942,8 @@ class OpenSSLAcceptableCiphers(object):
 
 
 defaultCiphers = OpenSSLAcceptableCiphers.fromOpenSSLCipherString(
-    b"ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:"
-    b"DH+AES:ECDH+3DES:DH+3DES:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS"
+    "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:"
+    "DH+AES:ECDH+3DES:DH+3DES:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS"
 )
 """
 Default acceptable ciphers used by L{OpenSSLCertificateOptions}.
