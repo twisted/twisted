@@ -134,7 +134,7 @@ def _statXform(line):
     @param line: The response from the server to a STAT command minus the
         status indicator.
 
-    @rtype: 2-L{tuple} of (E{1}) L{int}, (E{2}) L{int}
+    @rtype: 2-L{tuple} of (0) L{int}, (1) L{int}
     @return: The number of messages in the mailbox and the size of the mailbox.
     """
     numMsgs, totalSize = line.split(None, 1)
@@ -153,7 +153,7 @@ def _listXform(line):
     @param line: A non-initial line from the multi-line response to a LIST
         command.
 
-    @rtype: 2-L{tuple} of (E{1}) L{int}, (E{2}) L{int}
+    @rtype: 2-L{tuple} of (0 L{int}, (1) L{int}
     @return: The 0-based index of the message and the size of the message.
     """
     index, size = line.split(None, 1)
@@ -172,7 +172,7 @@ def _uidXform(line):
     @param line: A non-initial line from the multi-line response to a UIDL
         command.
 
-    @rtype: 2-L{tuple} of (E{1}) L{int}, (E{2}) L{bytes}
+    @rtype: 2-L{tuple} of (0) L{int}, (1) L{bytes}
     @return: The 0-based index of the message and the unique identifier
         for the message.
     """
@@ -260,8 +260,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         challenge in the server greeting.
 
     @type _blockedQueue: L{NoneType <types.NoneType>} or L{list} of 3-L{tuple}
-        of (E{1}) L{Deferred <defer.Deferred>}, (E{2}) callable which results
-        in a L{Deferred <defer.Deferred>}, f(E{3}) L{tuple}
+        of (0) L{Deferred <defer.Deferred>}, (1) callable which results
+        in a L{Deferred <defer.Deferred>}, f(2) L{tuple}
     @ivar _blockedQueue: A list of blocked commands.  While a command is
         awaiting a response from the server, other commands are blocked.  When
         no command is outstanding, C{_blockedQueue} is set to None.  Otherwise,
@@ -1058,7 +1058,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             the transform function.
 
         @type xform: L{NoneType <types.NoneType>}, callable that takes
-            L{bytes} and returns 2-L{tuple} of (E{1}) L{int}, (E{2}) L{object},
+            L{bytes} and returns 2-L{tuple} of (0) L{int}, (1) L{object},
             or callable that takes L{bytes} and returns L{object}
         @param xform: A function that parses a line from a multi-line response
             and transforms the values into usable form for input to the
@@ -1103,8 +1103,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             no transform function is specified, the line is used as is.
 
         @rtype: L{Deferred <defer.Deferred>} which fires with L{list} of
-            2-L{tuple} of (E{1}) L{int}, (E{2}) L{object} or callable that
-            takes 2-L{tuple} of (E{1}) L{int}, (E{2}) L{object}
+            2-L{tuple} of (0) L{int}, (1) L{object} or callable that
+            takes 2-L{tuple} of (0) L{int}, (1) L{object}
         @return: A deferred which fires when the entire response has been
             received.  When a consumer is not provided, the return value is a
             list of the transformed lines.  Otherwise, it returns the consumer
@@ -1236,8 +1236,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             retrieved.  Otherwise, the entire message is retrieved.
 
         @rtype: L{Deferred <defer.Deferred>} which fires with L{list} of
-            L{bytes}, or callable that takes 2-L{tuple} of (E{1}) L{int},
-            (E{2}) L{object}
+            L{bytes}, or callable that takes 2-L{tuple} of (0) L{int},
+            (1) L{object}
         @return: A deferred which fires when the entire response has been
             received.  When a consumer is not provided, the return value is a
             list of the transformed lines.  Otherwise, it returns the consumer
@@ -1271,12 +1271,12 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         server.
 
         @type consumer: L{NoneType <types.NoneType>} or callable that takes
-            2-L{tuple} of (E{1}) L{int}, (E{2}) L{int}
+            2-L{tuple} of (0) L{int}, (1) L{int}
         @param consumer: A function which consumes the 0-based message index
             and message size derived from the server response.
 
         @rtype: L{Deferred <defer.Deferred>} which fires L{list} of L{int} or
-            callable that takes 2-L{tuple} of (E{1}) L{int}, (E{2}) L{int}
+            callable that takes 2-L{tuple} of (0) L{int}, (1) L{int}
         @return: A deferred which fires when the entire response has been
             received.  When a consumer is not provided, the return value is a
             list of message sizes.  Otherwise, it returns the consumer itself.
@@ -1289,13 +1289,13 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         Send a UIDL command to retrieve the UIDs of all messages on the server.
 
         @type consumer: L{NoneType <types.NoneType>} or callable that takes
-            2-L{tuple} of (E{1}) L{int}, (E{2}) L{bytes}
+            2-L{tuple} of (0) L{int}, (1) L{bytes}
         @param consumer: A function which consumes the 0-based message index
             and UID derived from the server response.
 
         @rtype: L{Deferred <defer.Deferred>} which fires with L{list} of
-            L{object} or callable that takes 2-L{tuple} of (E{1}) L{int},
-            (E{2}) L{bytes}
+            L{object} or callable that takes 2-L{tuple} of (0) L{int},
+            (1) L{bytes}
         @return: A deferred which fires when the entire response has been
             received.  When a consumer is not provided, the return value is a
             list of message sizes.  Otherwise, it returns the consumer itself.
