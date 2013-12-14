@@ -351,11 +351,17 @@ class TunnelDeviceTestsMixin(object):
         parse = self.helper.parser()
 
         found = False
+
+        # Try sending the datagram a lot of times.  There are no delivery
+        # guarantees for UDP - not even over localhost.
         for i in range(100):
             key = randrange(2 ** 64)
             message = "hello world:%d" % (key,)
             source = self.system.sendUDP(message, (self._TUNNEL_REMOTE, 12345))
 
+            # Likewise try receiving each of those datagrams a lot of times.
+            # Timing might cause us to miss it the first few dozen times
+            # through the loop.
             for j in range(100):
                 try:
                     packet = self.system.read(self.fileno, 1024)
