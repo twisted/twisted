@@ -56,31 +56,29 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
     """
     A select() based reactor - runs on all POSIX platforms and on Win32.
 
-    @ivar _reads: A dictionary mapping L{FileDescriptor} instances to arbitrary
-        values (this is essentially a set).  Keys in this dictionary will be
+    @ivar _reads: A set containing L{FileDescriptor} instances which will be
         checked for read events.
 
-    @ivar _writes: A dictionary mapping L{FileDescriptor} instances to
-        arbitrary values (this is essentially a set).  Keys in this dictionary
-        will be checked for writability.
+    @ivar _writes: A set containing L{FileDescriptor} instances which will be
+        checked for writability.
     """
 
     def __init__(self):
         """
         Initialize file descriptor tracking dictionaries and the base class.
         """
-        self._reads = {}
-        self._writes = {}
+        self._reads = set()
+        self._writes = set()
         posixbase.PosixReactorBase.__init__(self)
 
 
     def _preenDescriptors(self):
         log.msg("Malformed file descriptor found.  Preening lists.")
-        readers = list(self._reads.keys())
-        writers = list(self._writes.keys())
+        readers = list(self._reads)
+        writers = list(self._writes)
         self._reads.clear()
         self._writes.clear()
-        for selDict, selList in ((self._reads, readers),
+        for selSet, selList in ((self._reads, readers),
                                  (self._writes, writers)):
             for selectable in selList:
                 try:
@@ -89,7 +87,7 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
                     log.msg("bad descriptor %s" % selectable)
                     self._disconnectSelectable(selectable, e, False)
                 else:
-                    selDict[selectable] = 1
+                    selSet.add(selectable)
 
 
     def doSelect(self, timeout):
@@ -100,8 +98,8 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
         waiting for them.
         """
         try:
-            r, w, ignored = _select(self._reads.keys(),
-                                    self._writes.keys(),
+            r, w, ignored = _select(self._reads,
+                                    self._writes,
                                     [], timeout)
         except ValueError:
             # Possibly a file descriptor has gone negative?
@@ -159,38 +157,36 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):
         """
         Add a FileDescriptor for notification of data available to read.
         """
-        self._reads[reader] = 1
+        self._reads.add(reader)
 
     def addWriter(self, writer):
         """
         Add a FileDescriptor for notification of data available to write.
         """
-        self._writes[writer] = 1
+        self._writes.add(writer)
 
     def removeReader(self, reader):
         """
         Remove a Selectable for notification of data available to read.
         """
-        if reader in self._reads:
-            del self._reads[reader]
+        self._reads.discard(reader)
 
     def removeWriter(self, writer):
         """
         Remove a Selectable for notification of data available to write.
         """
-        if writer in self._writes:
-            del self._writes[writer]
+        self._writes.discard(writer)
 
     def removeAll(self):
         return self._removeAll(self._reads, self._writes)
 
 
     def getReaders(self):
-        return list(self._reads.keys())
+        return list(self._reads)
 
 
     def getWriters(self):
-        return list(self._writes.keys())
+        return list(self._writes)
 
 
 
