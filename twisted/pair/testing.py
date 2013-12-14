@@ -244,7 +244,7 @@ class Tunnel(object):
 
 
 
-def privileged(original):
+def _privileged(original):
     """
     Wrap a L{MemoryIOSystem} method with permission-checking logic.  The
     returned function will check C{self.permissions} and raise L{IOError} with
@@ -294,7 +294,7 @@ class MemoryIOSystem(object):
         return self._openFiles[port.fileno()]
 
 
-    @privileged
+    @_privileged
     def open(self, name, flags, mode=None):
         """
         A replacement for C{os.open}.  This initializes state in this
@@ -358,7 +358,7 @@ class MemoryIOSystem(object):
             raise OSError(EBADF, "Bad file descriptor")
 
 
-    @privileged
+    @_privileged
     def ioctl(self, fd, request, args):
         """
         Perform some configuration change to the in-memory state for the given
