@@ -256,7 +256,7 @@ class TunnelDeviceTestsMixin(object):
     implementations.
     """
     def setUp(self):
-        self.system = self.system()
+        self.system = self.createSystem()
         self.fileno = self.system.open(b"/dev/net/tun",
                                        os.O_RDWR | os.O_NONBLOCK)
         self.addCleanup(self.system.close, self.fileno)
@@ -397,7 +397,7 @@ class FakeDeviceTestsMixin(object):
     _TUNNEL_LOCAL = "10.2.0.1"
     _TUNNEL_REMOTE = "10.2.0.2"
 
-    def system(self):
+    def createSystem(self):
         system = MemoryIOSystem()
         system._devices[Tunnel._DEVICE_NAME] = Tunnel
         return system
@@ -468,7 +468,7 @@ class RealDeviceTestsMixin(object):
     if platformSkip:
         skip = platformSkip
 
-    def system(self):
+    def createSystem(self):
         # Create a tap-style tunnel device.  Ethernet frames come out of this
         # and ethernet frames must be put into it.  Grant access to it to an
         # otherwise unprivileged user.
