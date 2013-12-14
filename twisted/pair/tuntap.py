@@ -101,7 +101,7 @@ class _TunnelDescription(namedtuple("_TunnelDescription", "fileno name")):
 
 
 
-class IInputOutputSystem(Interface):
+class _IInputOutputSystem(Interface):
     """
     An interface for performing some basic kinds of I/O (particularly that I/O
     which might be useful for L{twisted.pair.tuntap}-using code).
@@ -163,7 +163,7 @@ class IInputOutputSystem(Interface):
 
 
 
-@implementer(IInputOutputSystem)
+@implementer(_IInputOutputSystem)
 class _RealSystem(object):
     """
     An interface to the parts of the operating system which L{TuntapPort}

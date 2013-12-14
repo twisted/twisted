@@ -19,7 +19,7 @@ from twisted.pair.ethernet import EthernetProtocol
 from twisted.pair.rawudp import RawUDPProtocol
 from twisted.pair.ip import IPProtocol
 from twisted.pair.tuntap import (
-    _IFNAMSIZ, _TUNSETIFF, IInputOutputSystem, TunnelType, TunnelFlags)
+    _IFNAMSIZ, _TUNSETIFF, _IInputOutputSystem, TunnelType, TunnelFlags)
 
 
 def _H(n):
@@ -163,7 +163,7 @@ def privileged(original):
 
 
 
-@implementer(IInputOutputSystem)
+@implementer(_IInputOutputSystem)
 class MemoryIOSystem(object):
     """
     An in-memory implementation of basic I/O primitives, useful in the context

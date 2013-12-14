@@ -47,7 +47,7 @@ if platformSkip is None:
 
     from twisted.pair.tuntap import (
         _TUNSETIFF, _IFNAMSIZ, _RealSystem,
-        IInputOutputSystem, TunnelType, TunnelAddress, TuntapPort)
+        _IInputOutputSystem, TunnelType, TunnelAddress, TuntapPort)
 else:
     # Let the module-scope testing subclass of this still be defined (and then
     # not used)
@@ -252,7 +252,8 @@ class TapHelper(object):
 
 class TunnelDeviceTestsMixin(object):
     """
-    A mixin defining tests that apply to L{IInputOutputSystem} implementations.
+    A mixin defining tests that apply to L{_IInputOutputSystem}
+    implementations.
     """
     def setUp(self):
         self.system = self.system()
@@ -266,9 +267,9 @@ class TunnelDeviceTestsMixin(object):
 
     def test_interface(self):
         """
-        The object under test provides L{IInputOutputSystem}.
+        The object under test provides L{_IInputOutputSystem}.
         """
-        self.assertTrue(verifyObject(IInputOutputSystem, self.system))
+        self.assertTrue(verifyObject(_IInputOutputSystem, self.system))
 
 
     def _invalidFileDescriptor(self):
