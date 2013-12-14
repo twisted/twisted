@@ -344,6 +344,10 @@ class TunnelDeviceTestsMixin(object):
 
 
     def test_receive(self):
+        """
+        If a UDP datagram is sent to an address reachable by the tunnel device
+        then it can be read out of the tunnel device.
+        """
         parse = self.helper.parser()
 
         found = False
@@ -376,28 +380,56 @@ class TunnelDeviceTestsMixin(object):
 
 
     def test_send(self):
+        """
+        If a UDP datagram is written the tunnel device then it is received by
+        the network to which it is addressed.
+        """
+        # Going to send a datagram using IPv4 addressing
         protocol = _IPv4
-        key = 1234567  # randrange(2 ** 64)
+
+        # Construct a unique application payload so the receiving side can
+        # unambiguously identify the datagram we sent.
+        key = randrange(2 ** 64)
         message = "hello world:%d" % (key,)
 
+        # Start listening for the test datagram first.  The resulting port
+        # object can be used to receive datagrams sent to _TUNNEL_LOCAL:12345 -
+        # in other words, an application using the tunnel device will be able
+        # to cause datagrams to arrive at this port as though they actually
+        # traversed a network to arrive at this host.
         port = self.system.receiveUDP(self.fileno, self._TUNNEL_LOCAL, 12345)
 
+        # Construct a packet with the appropriate wrappers and headings so that
+        # it will arrive at the port created above.
         packet = self.helper.encapsulate(50000, 12345, message)
 
+        # Write the packet to the tunnel device.
+        # XXX I am unsure why this unconditionally adds the PI header.
         flags = 0
         self.system.write(self.fileno, _H(flags) + _H(protocol) + packet)
 
+        # Try to receive that datagram and verify it has the correct payload.
         packet = port.recv(1024)
         self.assertEqual(message, packet)
 
 
 
 class FakeDeviceTestsMixin(object):
+    """
+    Define a mixin for use with test cases that require an
+    L{_IInputOutputSystem} provider.  This mixin hands out L{MemoryIOSystem}
+    instances as the provider of that interface.
+    """
     _TUNNEL_DEVICE = "tap-twistedtest"
     _TUNNEL_LOCAL = "10.2.0.1"
     _TUNNEL_REMOTE = "10.2.0.2"
 
     def createSystem(self):
+        """
+        Create and return a brand new L{MemoryIOSystem}.
+
+        The L{MemoryIOSystem} knows how to open new tunnel devices.
+        """
         system = MemoryIOSystem()
         system._devices[Tunnel._DEVICE_NAME] = Tunnel
         return system
@@ -406,7 +438,9 @@ class FakeDeviceTestsMixin(object):
 
 class FakeTapDeviceTests(FakeDeviceTestsMixin,
                          TunnelDeviceTestsMixin, SynchronousTestCase):
-    pass
+    """
+    Run various tap-type tunnel unit tests against an in-memory I/O system.
+    """
 FakeTapDeviceTests.helper = TapHelper(
     FakeTapDeviceTests._TUNNEL_REMOTE, FakeTapDeviceTests._TUNNEL_LOCAL)
 
@@ -414,13 +448,19 @@ FakeTapDeviceTests.helper = TapHelper(
 
 class FakeTunDeviceTests(FakeDeviceTestsMixin,
                          TunnelDeviceTestsMixin, SynchronousTestCase):
-    pass
+    """
+    Run various tun-type tunnel unit tests against an in-memory I/O system.
+    """
 FakeTunDeviceTests.helper = TunHelper(
     FakeTunDeviceTests._TUNNEL_REMOTE, FakeTunDeviceTests._TUNNEL_LOCAL)
 
 
 
 class TestRealSystem(_RealSystem):
+    """
+    Add extra skipping logic so tests that try to create real tunnel devices on
+    platforms where those are not supported automatically get skipped.
+    """
     def open(self, filename, *args, **kwargs):
         """
         Attempt an open, but if the file is /dev/net/tun and it does not exist,
@@ -450,6 +490,9 @@ class TestRealSystem(_RealSystem):
 
 
     def sendUDP(self, datagram, address):
+        """
+        Use the platform network stack to send a datagram to the given address.
+        """
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind(('10.0.0.1', 0))
         s.sendto(datagram, address)
@@ -457,6 +500,10 @@ class TestRealSystem(_RealSystem):
 
 
     def receiveUDP(self, fileno, host, port):
+        """
+        Use the platform network stack to receive a datagram sent to the given
+        address.
+        """
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # s.setblocking(False)
         s.bind((host, port))
@@ -465,6 +512,11 @@ class TestRealSystem(_RealSystem):
 
 
 class RealDeviceTestsMixin(object):
+    """
+    Define a mixin for use with test cases that require an
+    L{_IInputOutputSystem} provider.  This mixin hands out L{TestRealSystem}
+    instances as the provider of that interface.
+    """
     if platformSkip:
         skip = platformSkip
 
@@ -505,7 +557,10 @@ class RealDeviceTestsMixin(object):
 class RealDeviceWithProtocolInformationTests(RealDeviceTestsMixin,
                                              TunnelDeviceTestsMixin,
                                              SynchronousTestCase):
-
+    """
+    Run various tap-type tunnel unit tests, with "protocol information" (PI)
+    turned on, against a real I/O system.
+    """
     _TUNNEL_DEVICE = "tap-twtest-pi"
     _TUNNEL_LOCAL = "10.1.0.1"
     _TUNNEL_REMOTE = "10.1.0.2"
@@ -518,6 +573,10 @@ class RealDeviceWithoutProtocolInformationTests(RealDeviceTestsMixin,
                                                 TunnelDeviceTestsMixin,
                                                 SynchronousTestCase):
 
+    """
+    Run various tap-type tunnel unit tests, with "protocol information" (PI)
+    turned off, against a real I/O system.
+    """
     _TUNNEL_DEVICE = "tap-twtest"
     _TUNNEL_LOCAL = "10.0.0.1"
     _TUNNEL_REMOTE = "10.0.0.2"
@@ -527,7 +586,12 @@ class RealDeviceWithoutProtocolInformationTests(RealDeviceTestsMixin,
 
 
 class TunnelTestsMixin(object):
+    """
+    A mixin defining tests for L{TuntapPort}.
 
+    These tests run against L{MemoryIOSystem} (proven equivalent to the real
+    thing by the tests above) to avoid performing any real I/O.
+    """
     def setUp(self):
         self.name = b"tun0"
         self.system = MemoryIOSystem()
@@ -595,6 +659,11 @@ class TunnelTestsMixin(object):
 
 
     def _stopPort(self, port):
+        """
+        Verify that the C{stopListening} method of an L{IListeningPort} removes
+        that port from the reactor's "readers" set and also that the
+        L{Deferred} returned by that method fires with C{None}.
+        """
         stopped = port.stopListening()
         self.assertNotIn(port, self.reactor.getReaders())
         # An unfortunate implementation detail
@@ -636,6 +705,10 @@ class TunnelTestsMixin(object):
 
 
     def test_multipleStopListening(self):
+        """
+        It is safe and a no-op to call L{TuntapPort.stopListening} more than
+        once with no intervening L{TuntapPort.startListening} call.
+        """
         self.port.startListening()
         first = self.port.stopListening()
         second = self.port.stopListening()
@@ -933,7 +1006,9 @@ class TunnelAddressTests(SynchronousTestCase):
 
 @implementer(IRawPacketProtocol)
 class IPRecordingProtocol(AbstractDatagramProtocol):
-
+    """
+    A protocol which merely records the datagrams delivered to it.
+    """
     def startProtocol(self):
         self.received = []
 
@@ -954,7 +1029,9 @@ class TunTests(TunnelTestsMixin, SynchronousTestCase):
 
 
 class EthernetRecordingProtocol(EthernetProtocol):
-
+    """
+    A protocol which merely records the datagrams delivered to it.
+    """
     def startProtocol(self):
         self.received = []
 
@@ -965,6 +1042,9 @@ class EthernetRecordingProtocol(EthernetProtocol):
 
 
 class TapTests(TunnelTestsMixin, SynchronousTestCase):
+    """
+    Tests for L{TuntapPort} when used to open a Linux I{tap} tunnel.
+    """
     factory = Factory()
     factory.protocol = EthernetRecordingProtocol
     helper = TapHelper(None, None)

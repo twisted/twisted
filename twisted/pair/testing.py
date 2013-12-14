@@ -23,6 +23,9 @@ from twisted.pair.tuntap import (
 
 
 def _H(n):
+    """
+    Pack an integer into a network-order two-byte string.
+    """
     return struct.pack('>H', n)
 
 
@@ -30,10 +33,42 @@ _IPv4 = 0x0800
 
 
 def _ethernet(src, dst, protocol, payload):
+    """
+    Construct an ethernet frame.
+
+    @param src: The source ethernet address, encoded.
+    @type src: L{bytes}
+
+    @param dst: The destination ethernet address, encoded.
+    @type dst: L{bytes}
+
+    @param protocol: The protocol number of the payload of this datagram.
+    @type protocol: L{int}
+
+    @param payload: The content of the ethernet frame (such as an IP datagram).
+    @type payload: L{bytes}
+    """
     return dst + src + _H(protocol) + payload
 
 
+
 def _ip(src, dst, payload):
+    """
+    Construct an IP datagram with the given source, destination, and
+    application payload.
+
+    @param src: The source IPv4 address as a dotted-quad string.
+    @type src: L{bytes}
+
+    @param dst: The destination IPv4 address as a dotted-quad string.
+    @type dst: L{bytes}
+
+    @param payload: The content of the IP datagram (such as a UDP datagram).
+    @type payload: L{bytes}
+
+    @return: An IP datagram header and payload.
+    @rtype: L{bytes}
+    """
     ipHeader = (
         '\x45'  # version and header length, 4 bits each
         '\x00'  # differentiated services field
@@ -65,6 +100,22 @@ def _ip(src, dst, payload):
 
 
 def _udp(src, dst, payload):
+    """
+    Construct a UDP datagram with the given source, destination, and
+    application payload.
+
+    @param src: The source port number.
+    @type src: L{int}
+
+    @param dst: The destination port number.
+    @type dst: L{int}
+
+    @param payload: The content of the UDP datagram.
+    @type payload: L{bytes}
+
+    @return: A UDP datagram header and payload.
+    @rtype: L{bytes}
+    """
     udpHeader = (
         _H(src)                  # source port
         + _H(dst)                # destination port
@@ -98,6 +149,16 @@ class Tunnel(object):
     SEND_BUFFER_SIZE = 1024
 
     def __init__(self, system, openFlags, fileMode):
+        """
+        @param system: An L{_IInputOutputSystem} provider to use to perform I/O.
+
+        @param openFlags: Any flags to apply when opening the tunnel device.
+            See C{os.O_*}.
+
+        @type openFlags: L{int}
+
+        @param fileMode: ignored
+        """
         self.system = system
 
         # Drop fileMode on the floor - evidence and logic suggest it is
@@ -113,15 +174,42 @@ class Tunnel(object):
 
     @property
     def blocking(self):
+        """
+        If the file descriptor for this tunnel is open in blocking mode,
+        C{True}.  C{False} otherwise.
+        """
         return not (self.openFlags & self.system.O_NONBLOCK)
 
 
     @property
     def closeOnExec(self):
+        """
+        If the file descriptor for this this tunnel is marked as close-on-exec,
+        C{True}.  C{False} otherwise.
+        """
         return self.openFlags & self.system.O_CLOEXEC
 
 
     def read(self, limit):
+        """
+        Read a datagram out of this tunnel.
+
+        @param limit: The maximum number of bytes from the datagram to return.
+            If the next datagram is larger than this, extra bytes are dropped
+            and lost forever.
+        @type limit: L{int}
+
+        @raise OSError: Any of the usual I/O problems can result in this
+            exception being raised with some particular error number set.
+
+        @raise IOError: Any of the usual I/O problems can result in this
+            exception being raised with some particular error number set.
+
+        @return: The datagram which was read from the tunnel.  If the tunnel
+            mode does not include L{TunnelFlags.IFF_NO_PI} then the datagram is
+            prefixed with a 4 byte PI header.
+        @rtype: L{bytes}
+        """
         if self.readBuffer:
             header = ""
             if not self.tunnelMode & TunnelFlags.IFF_NO_PI.value:
@@ -135,6 +223,15 @@ class Tunnel(object):
 
 
     def write(self, datagram):
+        """
+        Write a datagram into this tunnel.
+
+        @param datagram: The datagram to write.
+        @type datagram: L{bytes}
+
+        @raise IOError: Any of the usual I/O problems can result in this
+            exception being raised with some particular error number set.
+        """
         if self.pendingSignals:
             self.pendingSignals.popleft()
             raise IOError(EINTR, "Interrupted system call")
@@ -223,6 +320,12 @@ class MemoryIOSystem(object):
 
 
     def read(self, fd, limit):
+        """
+        Try to read some bytes out of one of the in-memory buffers which may
+        previously have been populated by C{write}.
+
+        @see: L{os.read}
+        """
         try:
             return self._openFiles[fd].read(limit)
         except KeyError:
@@ -230,6 +333,12 @@ class MemoryIOSystem(object):
 
 
     def write(self, fd, data):
+        """
+        Try to add some bytes to one of the in-memory buffers to be accessed by
+        a later C{read} call.
+
+        @see: L{os.write}
+        """
         try:
             return self._openFiles[fd].write(data)
         except KeyError:
@@ -237,6 +346,12 @@ class MemoryIOSystem(object):
 
 
     def close(self, fd):
+        """
+        Discard the in-memory buffer and other in-memory state for the given
+        file descriptor.
+
+        @see: L{os.close}
+        """
         try:
             del self._openFiles[fd]
         except KeyError:
@@ -245,6 +360,12 @@ class MemoryIOSystem(object):
 
     @privileged
     def ioctl(self, fd, request, args):
+        """
+        Perform some configuration change to the in-memory state for the given
+        file descriptor.
+
+        @see: L{fcntl.ioctl}
+        """
         try:
             tunnel = self._openFiles[fd]
         except KeyError:
@@ -261,6 +382,14 @@ class MemoryIOSystem(object):
 
 
     def sendUDP(self, datagram, address):
+        """
+        Write an ethernet frame containing an ip datagram containing a udp
+        datagram containing the given payload, addressed to the given address,
+        to a tunnel device previously opened on this I/O system.
+
+        @return: A two-tuple giving the address from which gives the address
+            from which the datagram was sent.
+        """
         # Just make up some random thing
         srcIP = '10.1.2.3'
         srcPort = 21345
@@ -276,17 +405,31 @@ class MemoryIOSystem(object):
 
 
     def receiveUDP(self, fileno, host, port):
+        """
+        Get a socket-like object which can be used to receive a datagram sent
+        from the given address.
+        """
         return _FakePort(self, fileno)
 
 
 
 class _FakePort(object):
+    """
+    A socket-like object which can be used to read UDP datagrams from
+    tunnel-like file descriptors managed by a L{MemoryIOSystem}.
+    """
     def __init__(self, system, fileno):
         self._system = system
         self._fileno = fileno
 
 
     def recv(self, nbytes):
+        """
+        Receive a datagram sent to this port using the L{MemoryIOSystem} which
+        created this object.
+
+        @see: L{socket.socket.recv}
+        """
         data = self._system._openFiles[self._fileno].writeBuffer.popleft()
 
         datagrams = []
