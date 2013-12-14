@@ -437,7 +437,7 @@ class FakeDeviceTestsMixin(object):
         The L{MemoryIOSystem} knows how to open new tunnel devices.
         """
         system = MemoryIOSystem()
-        system._devices[Tunnel._DEVICE_NAME] = Tunnel
+        system.registerSpecialDevice(Tunnel._DEVICE_NAME, Tunnel)
         return system
 
 
@@ -601,7 +601,7 @@ class TunnelTestsMixin(object):
     def setUp(self):
         self.name = b"tun0"
         self.system = MemoryIOSystem()
-        self.system._devices[Tunnel._DEVICE_NAME] = Tunnel
+        self.system.registerSpecialDevice(Tunnel._DEVICE_NAME, Tunnel)
         self.protocol = self.factory.buildProtocol(
             TunnelAddress(self.helper.TUNNEL_TYPE, self.name))
         self.reactor = FSSetClock()

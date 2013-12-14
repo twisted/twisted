@@ -294,6 +294,20 @@ class MemoryIOSystem(object):
         return self._openFiles[port.fileno()]
 
 
+    def registerSpecialDevice(self, name, cls):
+        """
+        Specify a class which will be used to handle I/O to a device of a
+        particular name.
+
+        @param name: The filesystem path name of the device.
+        @type name: L{bytes}
+
+        @param cls: A class (like L{Tunnel}) to instantiated whenever this
+            device is opened.
+        """
+        self._devices[name] = cls
+
+
     @_privileged
     def open(self, name, flags, mode=None):
         """
