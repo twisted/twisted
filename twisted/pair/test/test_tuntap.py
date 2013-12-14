@@ -147,6 +147,15 @@ class TunHelper(object):
 
 
     def parser(self):
+        """
+        Get a function for parsing a datagram read from a I{tun} device.
+
+        The returned function accepts a datagram exactly as might be read from
+        a I{tun} device.  The datagram is expected to ultimately carry a UDP
+        datagram.  When called, it returns a L{list} of L{tuple}s.  Each tuple
+        has the UDP application data as the first element and the sender
+        address as the second element.
+        """
         datagrams = []
         receiver = DatagramProtocol()
 
@@ -163,9 +172,10 @@ class TunHelper(object):
 
         def parse(data):
             # Skip the ethernet frame
-            return ip.datagramReceived(data[14:], False, None, None, None)
+            ip.datagramReceived(data[14:], False, None, None, None)
+            return datagrams
 
-        return datagrams, parse
+        return parse
 
 
 
@@ -204,7 +214,17 @@ class TapHelper(object):
 
     def parser(self):
         """
+        Get a function for parsing a datagram read from a I{tap} device.
+
+        The returned function accepts a datagram exactly as might be read from
+        a I{tap} device.  The datagram is expected to ultimately carry a UDP
+        datagram.  When called, it returns a L{list} of L{tuple}s.  Each tuple
+        has the UDP application data as the first element and the sender
+        address as the second element.
         """
+        # XXX This is essentially the same as TunHelper.parser, it just looks a
+        # little different.  This seems like a bad thing.  Figure out what's
+        # going on here and document it.
         datagrams = []
         receiver = DatagramProtocol()
 
@@ -222,7 +242,11 @@ class TapHelper(object):
         ether = EthernetProtocol()
         ether.addProto(0x800, ip)
 
-        return datagrams, ether.datagramReceived
+        def parser(datagram):
+            ether.datagramReceived(datagram)
+            return datagrams
+
+        return parser
 
 
 
@@ -319,7 +343,7 @@ class TunnelDeviceTestsMixin(object):
 
 
     def test_receive(self):
-        datagrams, parse = self.helper.parser()
+        parse = self.helper.parser()
 
         found = False
         for i in range(100):
@@ -338,7 +362,7 @@ class TunnelDeviceTestsMixin(object):
                     # XXX Slice off the four bytes of flag/proto prefix that
                     # always seem to be there.  Why can't I get this to work
                     # any other way?
-                    parse(packet[4:])
+                    datagrams = parse(packet[4:])
                     if (message, source) in datagrams:
                         found = True
                         break
