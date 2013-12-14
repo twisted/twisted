@@ -34,7 +34,9 @@ datagram on its standard out.
 
 from sys import stdout
 
-from twisted.internet import reactor, protocol
+from twisted.internet import protocol
+from twisted.internet.task import react
+from twisted.internet.defer import Deferred
 from twisted.pair.ethernet import EthernetProtocol
 from twisted.pair.ip import IPProtocol
 from twisted.pair.rawudp import RawUDPProtocol
@@ -49,7 +51,7 @@ class MyProto(protocol.DatagramProtocol):
 
 
 
-def main():
+def main(reactor):
     startLogging(stdout, setStdout=False)
     udp = RawUDPProtocol()
     udp.addProto(42, MyProto())
@@ -59,9 +61,11 @@ def main():
     eth.addProto(0x800, ip)
 
     port = TuntapPort(interface='tap0', proto=eth, reactor=reactor)
-
     port.startListening()
-    reactor.run()
+
+    # Run forever
+    return Deferred()
+
 
 if __name__ == '__main__':
-    main()
+    react(main, [])
