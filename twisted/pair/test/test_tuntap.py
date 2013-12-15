@@ -43,7 +43,7 @@ from twisted.pair.raw import IRawPacketProtocol
 
 if platformSkip is None:
     from twisted.pair.testing import (
-        Tunnel, MemoryIOSystem, _IPv4, _H, _ethernet, _ip, _udp)
+        _PI_SIZE, Tunnel, MemoryIOSystem, _IPv4, _H, _ethernet, _ip, _udp)
 
     from twisted.pair.tuntap import (
         _TUNSETIFF, _IFNAMSIZ, _RealSystem,
@@ -373,7 +373,7 @@ class TunnelDeviceTestsMixin(object):
                     # XXX Slice off the four bytes of flag/proto prefix that
                     # always seem to be there.  Why can't I get this to work
                     # any other way?
-                    datagrams = parse(packet[4:])
+                    datagrams = parse(packet[_PI_SIZE:])
                     if (message, source) in datagrams:
                         found = True
                         break

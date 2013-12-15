@@ -22,6 +22,13 @@ from twisted.pair.tuntap import (
     _IFNAMSIZ, _TUNSETIFF, _IInputOutputSystem, TunnelType, TunnelFlags)
 
 
+# The number of bytes in the "protocol information" header that may be present
+# on datagrams read from a tunnel device.  This is two bytes of flags followed
+# by two bytes of protocol identification.  All this code does with this
+# information is use it to discard the header.
+_PI_SIZE = 4
+
+
 def _H(n):
     """
     Pack an integer into a network-order two-byte string.
@@ -469,5 +476,5 @@ class _FakePort(object):
             datagramReceived = lambda data: ip.datagramReceived(
                 data, None, None, None, None)
 
-        datagramReceived(data[4:])
+        datagramReceived(data[_PI_SIZE:])
         return datagrams[0][:nbytes]
