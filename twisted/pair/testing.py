@@ -218,9 +218,13 @@ class Tunnel(object):
         @rtype: L{bytes}
         """
         if self.readBuffer:
-            header = ""
-            if not self.tunnelMode & TunnelFlags.IFF_NO_PI.value:
-                header = "\x00\x00\x00\x00"
+            if self.tunnelMode & TunnelFlags.IFF_NO_PI.value:
+                header = b""
+            else:
+                # Synthesize a PI header to include in the result.  Nothing in
+                # twisted.pair uses the PI information yet so we can synthesize
+                # something incredibly boring (ie 32 bits of 0).
+                header = b"\x00" * _PI_SIZE
                 limit -= 4
             return header + self.readBuffer.popleft()[:limit]
         elif self.blocking:
