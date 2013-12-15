@@ -174,8 +174,9 @@ class TunHelper(object):
         ip.addProto(17, udp)
 
         def parse(data):
-            # Skip the ethernet frame
-            ip.datagramReceived(data[14:], False, None, None, None)
+            # TUN devices omit the ethernet framing so we can start parsing
+            # right at the IP layer.
+            ip.datagramReceived(data, False, None, None, None)
             return datagrams
 
         return parse
@@ -225,9 +226,6 @@ class TapHelper(object):
         has the UDP application data as the first element and the sender
         address as the second element.
         """
-        # XXX This is essentially the same as TunHelper.parser, it just looks a
-        # little different.  This seems like a bad thing.  Figure out what's
-        # going on here and document it.
         datagrams = []
         receiver = DatagramProtocol()
 
@@ -246,6 +244,8 @@ class TapHelper(object):
         ether.addProto(0x800, ip)
 
         def parser(datagram):
+            # TAP devices include ethernet framing so start parsing at the
+            # ethernet layer.
             ether.datagramReceived(datagram)
             return datagrams
 

@@ -197,6 +197,24 @@ class Tunnel(object):
         return self.openFlags & self.system.O_CLOEXEC
 
 
+    def addToReadBuffer(self, datagram):
+        """
+        Deliver a datagram to this tunnel's read buffer.  This makes it
+        available to be read later using the C{read} method.
+
+        @param datagram: The IPv4 datagram to deliver.  If the mode of this
+            tunnel is TAP then ethernet framing will be added automatically.
+        @type datagram: L{bytes}
+        """
+        # TAP devices also include ethernet framing.
+        if self.tunnelMode & TunnelFlags.IFF_TAP.value:
+            datagram = _ethernet(
+                src='\x00' * 6, dst='\xff' * 6, protocol=_IPv4,
+                payload=datagram)
+
+        self.readBuffer.append(datagram)
+
+
     def read(self, limit):
         """
         Read a datagram out of this tunnel.
@@ -419,12 +437,11 @@ class MemoryIOSystem(object):
         srcIP = '10.1.2.3'
         srcPort = 21345
 
-        self._openFiles.values()[0].readBuffer.append(
-            _ethernet(
-                src='\x00' * 6, dst='\xff' * 6, protocol=_IPv4,
-                payload=_ip(
-                    src=srcIP, dst=address[0], payload=_udp(
-                        src=srcPort, dst=address[1], payload=datagram))))
+        serialized = _ip(
+            src=srcIP, dst=address[0], payload=_udp(
+                src=srcPort, dst=address[1], payload=datagram))
+
+        self._openFiles.values()[0].addToReadBuffer(serialized)
 
         return (srcIP, srcPort)
 
