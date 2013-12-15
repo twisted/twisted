@@ -19,7 +19,7 @@ from twisted.pair.ethernet import EthernetProtocol
 from twisted.pair.rawudp import RawUDPProtocol
 from twisted.pair.ip import IPProtocol
 from twisted.pair.tuntap import (
-    _IFNAMSIZ, _TUNSETIFF, _IInputOutputSystem, TunnelType, TunnelFlags)
+    _IFNAMSIZ, _TUNSETIFF, _IInputOutputSystem, TunnelFlags)
 
 
 # The number of bytes in the "protocol information" header that may be present
@@ -472,7 +472,7 @@ class _FakePort(object):
         ip.addProto(17, udp)
 
         if (self._system._openFiles[self._fileno].tunnelMode ==
-                TunnelType.TAP.value):
+                TunnelFlags.IFF_TAP.value):
             ether = EthernetProtocol()
             ether.addProto(0x800, ip)
             datagramReceived = ether.datagramReceived

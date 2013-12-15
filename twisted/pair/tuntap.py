@@ -23,7 +23,7 @@ from twisted.internet import abstract, error, task, interfaces, defer
 from twisted.pair import ethernet, raw
 
 __all__ = [
-    "TunnelType", "TunnelFlags", "TunnelAddress", "TuntapPort",
+    "TunnelFlags", "TunnelAddress", "TuntapPort",
     ]
 
 
@@ -33,15 +33,13 @@ _TUNGETIFF = 0x800454d2
 _TUN_KO_PATH = b"/dev/net/tun"
 
 
-
-class TunnelType(Flags):
+class TunnelFlags(Flags):
     """
-    L{TunnelType} defines flags which are used to configure the behavior of a
-    tunnel device.
+    L{TunnelFlags} defines more flags which are used to configure the behavior
+    of a tunnel device.
     """
-    # XXX these are the kernel internal names I think
-    TUN = FlagConstant(1)
-    TAP = FlagConstant(2)
+    IFF_TUN = FlagConstant(0x0001)
+    IFF_TAP = FlagConstant(0x0002)
 
     TUN_FASYNC = FlagConstant(0x0010)
     TUN_NOCHECKSUM = FlagConstant(0x0020)
@@ -50,10 +48,6 @@ class TunnelType(Flags):
     TUN_PERSIST = FlagConstant(0x0100)
     TUN_VNET_HDR = FlagConstant(0x0200)
 
-
-
-class TunnelFlags(Flags):
-    # XXX Should have TUN and TAP constants here and use them
     IFF_NO_PI = FlagConstant(0x1000)
     IFF_ONE_QUEUE = FlagConstant(0x2000)
     IFF_VNET_HDR = FlagConstant(0x4000)
@@ -68,8 +62,8 @@ class TunnelAddress(object):
     """
     def __init__(self, type, name):
         """
-        @param type: One of the L{TunnelType} constants representing the type
-            of this tunnel.
+        @param type: Either L{TunnelFlags.IFF_TUN} or L{TunnelFlags.IFF_TAP},
+            representing the type of this tunnel.
 
         @param name: The system name of the tunnel.
         @type name: L{bytes}
@@ -193,10 +187,10 @@ class TuntapPort(abstract.FileDescriptor):
                  system=None):
         if ethernet.IEthernetProtocol.providedBy(proto):
             self.ethernet = 1
-            self._mode = TunnelType.TAP
+            self._mode = TunnelFlags.IFF_TAP
         else:
             self.ethernet = 0
-            self._mode = TunnelType.TUN
+            self._mode = TunnelFlags.IFF_TUN
             assert raw.IRawPacketProtocol.providedBy(proto)
 
         if system is None:
@@ -241,7 +235,8 @@ class TuntapPort(abstract.FileDescriptor):
         @param name: The name of the tunnel to open.
         @type name: L{bytes}
 
-        @param mode: XXX It's a mixup
+        @param mode: Flags from L{TunnelFlags} with exactly one of
+            L{TunnelFlags.IFF_TUN} or L{TunnelFlags.IFF_TAP} set.
 
         @return: A L{_TunnelDescription} representing the newly opened tunnel.
         """

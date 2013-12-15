@@ -47,7 +47,7 @@ if platformSkip is None:
 
     from twisted.pair.tuntap import (
         _TUNSETIFF, _IFNAMSIZ, _RealSystem,
-        _IInputOutputSystem, TunnelType, TunnelAddress, TuntapPort)
+        _IInputOutputSystem, TunnelFlags, TunnelAddress, TuntapPort)
 else:
     # Let the module-scope testing subclass of this still be defined (and then
     # not used)
@@ -120,8 +120,8 @@ class TunHelper(object):
     """
     @property
     def TUNNEL_TYPE(self):
-        # Hide this in a property because TunnelType is not always imported.
-        return TunnelType.TUN
+        # Hide this in a property because TunnelFlags is not always imported.
+        return TunnelFlags.IFF_TUN
 
 
     def __init__(self, tunnelRemote, tunnelLocal):
@@ -185,8 +185,8 @@ class TapHelper(object):
     """
     @property
     def TUNNEL_TYPE(self):
-        # Hide this in a property because TunnelType is not always imported.
-        return TunnelType.TAP
+        # Hide this in a property because TunnelFlags is not always imported.
+        return TunnelFlags.IFF_TAP
 
 
     def __init__(self, tunnelRemote, tunnelLocal):
@@ -986,7 +986,7 @@ class TunnelAddressTests(SynchronousTestCase):
         A L{TunnelAddress} instances provides L{IAddress}.
         """
         self.assertTrue(
-            verifyObject(IAddress, TunnelAddress(TunnelType.TAP, "tap0")))
+            verifyObject(IAddress, TunnelAddress(TunnelFlags.IFF_TAP, "tap0")))
 
 
     def test_indexing(self):
@@ -995,7 +995,7 @@ class TunnelAddressTests(SynchronousTestCase):
         string C{"TUNTAP"} or the name of the tunnel interface, while
         triggering a deprecation warning.
         """
-        address = TunnelAddress(TunnelType.TAP, "tap0")
+        address = TunnelAddress(TunnelFlags.IFF_TAP, "tap0")
         self.assertEqual("TUNTAP", address[0])
         self.assertEqual("tap0", address[1])
         warnings = self.flushWarnings([self.test_indexing])
