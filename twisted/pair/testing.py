@@ -268,6 +268,9 @@ class Tunnel(object):
         if len(datagram) > self.SEND_BUFFER_SIZE:
             raise IOError(ENOBUFS, "No buffer space available")
 
+        if not (self.tunnelMode & TunnelFlags.IFF_NO_PI.value):
+            datagram = b"\x00" * 4 + datagram
+
         self.writeBuffer.append(datagram)
         return len(datagram)
 
@@ -421,6 +424,7 @@ class MemoryIOSystem(object):
         tunnel.tunnelMode = mode
         tunnel.requestedName = name
         tunnel.name = name[:_IFNAMSIZ - 3] + "123"
+
         return struct.pack('%dsH' % (_IFNAMSIZ,), tunnel.name, mode)
 
 
@@ -488,8 +492,8 @@ class _FakePort(object):
         ip = IPProtocol()
         ip.addProto(17, udp)
 
-        if (self._system._openFiles[self._fileno].tunnelMode ==
-                TunnelFlags.IFF_TAP.value):
+        mode = self._system._openFiles[self._fileno].tunnelMode
+        if (mode & TunnelFlags.IFF_TAP.value):
             ether = EthernetProtocol()
             ether.addProto(0x800, ip)
             datagramReceived = ether.datagramReceived
@@ -497,5 +501,11 @@ class _FakePort(object):
             datagramReceived = lambda data: ip.datagramReceived(
                 data, None, None, None, None)
 
-        datagramReceived(data[_PI_SIZE:])
+        dataHasPI = not (mode & TunnelFlags.IFF_NO_PI.value)
+
+        if dataHasPI:
+            # datagramReceived can't handle the PI, get rid of it.
+            data = data[_PI_SIZE:]
+
+        datagramReceived(data)
         return datagrams[0][:nbytes]

@@ -124,10 +124,19 @@ class TunHelper(object):
     @property
     def TUNNEL_TYPE(self):
         # Hide this in a property because TunnelFlags is not always imported.
-        return TunnelFlags.IFF_TUN
+        return TunnelFlags.IFF_TUN | TunnelFlags.IFF_NO_PI
 
 
     def __init__(self, tunnelRemote, tunnelLocal):
+        """
+        @param tunnelRemote: The source address for UDP datagrams originated
+            from this helper.  This is an IPv4 dotted-quad string.
+        @type tunnelRemote: L{bytes}
+
+        @param tunnelLocal: The destination address for UDP datagrams
+            originated from this helper.  This is an IPv4 dotted-quad string.
+        @type tunnelLocal: L{bytes}
+        """
         self.tunnelRemote = tunnelRemote
         self.tunnelLocal = tunnelLocal
 
@@ -136,6 +145,13 @@ class TunHelper(object):
         """
         Construct an ip datagram containing a udp datagram containing the given
         application-level payload.
+
+        @param source: The source port for the UDP datagram being encapsulated.
+        @type source: L{int}
+
+        @param destination: The destination port for the UDP datagram being
+            encapsulated.
+        @type destination: L{int}
 
         @param payload: The application data to include in the udp datagram.
         @type payload: L{bytes}
@@ -189,19 +205,42 @@ class TapHelper(object):
     """
     @property
     def TUNNEL_TYPE(self):
-        # Hide this in a property because TunnelFlags is not always imported.
-        return TunnelFlags.IFF_TAP
+        flag = TunnelFlags.IFF_TAP
+        if not self.pi:
+            flag |= TunnelFlags.IFF_NO_PI
+        return flag
 
 
-    def __init__(self, tunnelRemote, tunnelLocal):
+    def __init__(self, tunnelRemote, tunnelLocal, pi):
+        """
+        @param tunnelRemote: The source address for UDP datagrams originated
+            from this helper.  This is an IPv4 dotted-quad string.
+        @type tunnelRemote: L{bytes}
+
+        @param tunnelLocal: The destination address for UDP datagrams
+            originated from this helper.  This is an IPv4 dotted-quad string.
+        @type tunnelLocal: L{bytes}
+
+        @param pi: A flag indicating whether this helper will generate and
+            consume a protocol information (PI) header.
+        @type pi: L{bool}
+        """
         self.tunnelRemote = tunnelRemote
         self.tunnelLocal = tunnelLocal
+        self.pi = pi
 
 
     def encapsulate(self, source, destination, payload):
         """
         Construct an ethernet frame containing an ip datagram containing a udp
         datagram containing the given application-level payload.
+
+        @param source: The source port for the UDP datagram being encapsulated.
+        @type source: L{int}
+
+        @param destination: The destination port for the UDP datagram being
+            encapsulated.
+        @type destination: L{int}
 
         @param payload: The application data to include in the udp datagram.
         @type payload: L{bytes}
@@ -211,9 +250,16 @@ class TapHelper(object):
         """
         tun = TunHelper(self.tunnelRemote, self.tunnelLocal)
         ip = tun.encapsulate(source, destination, payload)
-        return _ethernet(
+        frame = _ethernet(
             src='\x00\x00\x00\x00\x00\x00', dst='\xff\xff\xff\xff\xff\xff',
             protocol=_IPv4, payload=ip)
+        if self.pi:
+            # Going to send a datagram using IPv4 addressing
+            protocol = _IPv4
+            # There are no flags though
+            flags = 0
+            frame = _H(flags) + _H(protocol) + frame
+        return frame
 
 
     def parser(self):
@@ -244,6 +290,11 @@ class TapHelper(object):
         ether.addProto(0x800, ip)
 
         def parser(datagram):
+            # TAP devices might include a PI header.  Strip that off if we
+            # expect it to be there.
+            if self.pi:
+                datagram = datagram[_PI_SIZE:]
+
             # TAP devices include ethernet framing so start parsing at the
             # ethernet layer.
             ether.datagramReceived(datagram)
@@ -263,8 +314,10 @@ class TunnelDeviceTestsMixin(object):
         self.fileno = self.system.open(b"/dev/net/tun",
                                        os.O_RDWR | os.O_NONBLOCK)
         self.addCleanup(self.system.close, self.fileno)
+
+        mode = self.helper.TUNNEL_TYPE
         config = struct.pack(
-            "%dsH" % (_IFNAMSIZ,), self._TUNNEL_DEVICE, self.helper.TUNNEL_TYPE.value)
+            "%dsH" % (_IFNAMSIZ,), self._TUNNEL_DEVICE, mode.value)
         self.system.ioctl(self.fileno, _TUNSETIFF, config)
 
 
@@ -373,10 +426,7 @@ class TunnelDeviceTestsMixin(object):
                         break
                     raise
                 else:
-                    # XXX Slice off the four bytes of flag/proto prefix that
-                    # always seem to be there.  Why can't I get this to work
-                    # any other way?
-                    datagrams = parse(packet[_PI_SIZE:])
+                    datagrams = parse(packet)
                     if (message, source) in datagrams:
                         found = True
                         break
@@ -393,9 +443,6 @@ class TunnelDeviceTestsMixin(object):
         If a UDP datagram is written the tunnel device then it is received by
         the network to which it is addressed.
         """
-        # Going to send a datagram using IPv4 addressing
-        protocol = _IPv4
-
         # Construct a unique application payload so the receiving side can
         # unambiguously identify the datagram we sent.
         key = randrange(2 ** 64)
@@ -413,9 +460,7 @@ class TunnelDeviceTestsMixin(object):
         packet = self.helper.encapsulate(50000, 12345, message)
 
         # Write the packet to the tunnel device.
-        # XXX I am unsure why this unconditionally adds the PI header.
-        flags = 0
-        self.system.write(self.fileno, _H(flags) + _H(protocol) + packet)
+        self.system.write(self.fileno, packet)
 
         # Try to receive that datagram and verify it has the correct payload.
         packet = port.recv(1024)
@@ -451,7 +496,8 @@ class FakeTapDeviceTests(FakeDeviceTestsMixin,
     Run various tap-type tunnel unit tests against an in-memory I/O system.
     """
 FakeTapDeviceTests.helper = TapHelper(
-    FakeTapDeviceTests._TUNNEL_REMOTE, FakeTapDeviceTests._TUNNEL_LOCAL)
+    FakeTapDeviceTests._TUNNEL_REMOTE, FakeTapDeviceTests._TUNNEL_LOCAL,
+    pi=False)
 
 
 
@@ -574,7 +620,11 @@ class RealDeviceWithProtocolInformationTests(RealDeviceTestsMixin,
     _TUNNEL_LOCAL = "10.1.0.1"
     _TUNNEL_REMOTE = "10.1.0.2"
 
-    helper = TapHelper(_TUNNEL_REMOTE, _TUNNEL_LOCAL)
+    # The PI flag is not an inherent part of the tunnel.  It must be specified
+    # by each user of the tunnel.  Thus, we must also have an indication of
+    # whether we want PI so the tests can properly initialize the tunnel
+    # device.
+    helper = TapHelper(_TUNNEL_REMOTE, _TUNNEL_LOCAL, pi=True)
 
 
 
@@ -590,7 +640,7 @@ class RealDeviceWithoutProtocolInformationTests(RealDeviceTestsMixin,
     _TUNNEL_LOCAL = "10.0.0.1"
     _TUNNEL_REMOTE = "10.0.0.2"
 
-    helper = TapHelper(_TUNNEL_REMOTE, _TUNNEL_LOCAL)
+    helper = TapHelper(_TUNNEL_REMOTE, _TUNNEL_LOCAL, pi=False)
 
 
 
@@ -609,6 +659,13 @@ class TunnelTestsMixin(object):
             TunnelAddress(self.helper.TUNNEL_TYPE, self.name))
         self.reactor = FSSetClock()
         self.port = TuntapPort(self.name, self.protocol, reactor=self.reactor, system=self.system)
+
+
+    def _tunnelTypeOnly(self, flags):
+        """
+        Mask off any flags except for L{TunnelType.IFF_TUN} and L{TunnelType.IFF_TAP}.
+        """
+        return flags & (TunnelFlags.IFF_TUN | TunnelFlags.IFF_TAP)
 
 
     def test_startListeningOpensDevice(self):
@@ -935,7 +992,11 @@ class TunnelTestsMixin(object):
         self.port.startListening()
         address = self.port.getHost()
         self.assertIsInstance(address, TunnelAddress)
-        self.assertEqual(self.helper.TUNNEL_TYPE, address.type)
+        self.assertEqual(
+            # Two FlagConstants from the same container and with the same value
+            # do not compare equal to each other.  Compare their values
+            # directly.  https://twistedmatrix.com/trac/ticket/6878
+            self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).value, address.type.value)
         self.assertEqual(
             self.system.getTunnel(self.port).name, address.name)
 
@@ -948,7 +1009,7 @@ class TunnelTestsMixin(object):
         self.port.startListening()
         expected = "<%s listening on %s/%s>" % (
             fullyQualifiedName(self.protocol.__class__),
-            self.helper.TUNNEL_TYPE.name,
+            self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name,
             self.system.getTunnel(self.port).name)
 
         self.assertEqual(expected, str(self.port))
@@ -961,7 +1022,7 @@ class TunnelTestsMixin(object):
         """
         expected = "<%s not listening on %s/%s>" % (
             fullyQualifiedName(self.protocol.__class__),
-            self.helper.TUNNEL_TYPE.name, self.name)
+            self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name, self.name)
 
         self.assertEqual(expected, str(self.port))
 
@@ -974,7 +1035,7 @@ class TunnelTestsMixin(object):
         self.assertEqual(
             "%s (%s)" % (
                 self.protocol.__class__.__name__,
-                self.helper.TUNNEL_TYPE.name),
+                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).name),
             self.port.logPrefix())
 
 
@@ -1056,4 +1117,4 @@ class TapTests(TunnelTestsMixin, SynchronousTestCase):
     """
     factory = Factory()
     factory.protocol = EthernetRecordingProtocol
-    helper = TapHelper(None, None)
+    helper = TapHelper(None, None, pi=False)
