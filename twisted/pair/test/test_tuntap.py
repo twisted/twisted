@@ -16,11 +16,12 @@ from collections import deque
 from itertools import cycle
 from signal import SIGINT
 
+from twisted.python.reflect import ObjectNotFound, namedAny
+
 try:
-    from fcntl import ioctl as _ioctl
-except ImportError:
+    namedAny("fcntl.ioctl")
+except (ObjectNotFound, AttributeError):
     platformSkip = "Platform is missing fcntl/ioctl support"
-    _ioctl = None
 else:
     platformSkip = None
 
