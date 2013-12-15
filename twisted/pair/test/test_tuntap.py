@@ -42,6 +42,11 @@ from twisted.trial.unittest import SkipTest, SynchronousTestCase
 from twisted.internet.error import CannotListenError
 from twisted.pair.raw import IRawPacketProtocol
 
+# Let the module-scope testing subclass of this still be defined (and then not
+# used) in case we can't import from twisted.pair.testing due to platform
+# limitations.
+_RealSystem = object
+
 if platformSkip is None:
     from twisted.pair.testing import (
         _PI_SIZE, Tunnel, MemoryIOSystem, _IPv4, _H, _ethernet, _ip, _udp)
@@ -50,9 +55,6 @@ if platformSkip is None:
         _TUNSETIFF, _IFNAMSIZ, _RealSystem,
         _IInputOutputSystem, TunnelFlags, TunnelAddress, TuntapPort)
 else:
-    # Let the module-scope testing subclass of this still be defined (and then
-    # not used)
-    _RealSystem = object
     skip = platformSkip
 
 
