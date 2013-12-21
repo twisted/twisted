@@ -1,1 +1,1 @@
-twisted.ssl.CertificateOptions now allows to set acceptable ciphers and uses secure ones by default.
+twisted.ssl.CertificateOptions now allows the user to set acceptable ciphers and uses secure ones by default.
