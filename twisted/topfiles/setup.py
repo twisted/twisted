@@ -31,11 +31,15 @@ extensions = [
                "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],
               libraries=["ws2_32"],
               condition=lambda _: _isCPython and sys.platform == "win32"),
-
-    Extension("twisted.python.sendmsg",
-              sources=["twisted/python/sendmsg.c"],
-              condition=lambda _: sys.platform != "win32"),
 ]
+try:
+    from twisted.python import sendmsg
+except ImportError:
+    pass
+else:
+    ext = sendmsg._ffi.verifier.get_extension()
+    ext.condition = lambda builder: True
+    extensions.append(ext)
 
 if sys.version_info[:2] <= (2, 6):
     extensions.append(
