@@ -528,10 +528,7 @@ class TestINotify(unittest.TestCase):
         in_ = inotify.INotify(overflow = overflow)
         in_.watch(subdir)
         maxEvents = filepath.FilePath(b"/proc/sys/fs/inotify/max_queued_events")
-        try:
-            num = int(maxEvents.getContent())
-        except:
-            num = 16384
+        num = int(maxEvents.getContent())
         # since touch and remove should create lots of events half should
         # be enough
         num/=2
