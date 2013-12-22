@@ -152,10 +152,12 @@ class INotify(FileDescriptor, object):
 
     @ivar _watchpaths: a C{dict} that maps from watched paths to the
         inotify watch ids
+
+    @ivar _overflow: a C{f} which gets called in case of IN_Q_OVERFLOW
     """
     _inotify = _inotify
 
-    def __init__(self, reactor=None):
+    def __init__(self, reactor=None, overflow=None):
         FileDescriptor.__init__(self, reactor=reactor)
 
         # Smart way to allow parametrization of libc so I can override
@@ -175,6 +177,7 @@ class INotify(FileDescriptor, object):
         self._buffer = ''
         self._watchpoints = {}
         self._watchpaths = {}
+        self._overflow = overflow
 
 
     def _addWatch(self, path, mask, autoAdd, callbacks):
@@ -252,6 +255,9 @@ class INotify(FileDescriptor, object):
                 name = None
 
             self._buffer = self._buffer[16 + size:]
+
+            if mask & IN_Q_OVERFLOW and self._overflow:
+                self._overflow()
 
             try:
                 iwp = self._watchpoints[wd]

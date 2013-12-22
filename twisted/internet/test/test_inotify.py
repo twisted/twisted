@@ -16,6 +16,9 @@ except ImportError:
 else:
     from twisted.internet import inotify
 
+import sys
+if sys.version_info < (3,):
+    range = xrange
 
 
 class TestINotify(unittest.TestCase):
@@ -501,4 +504,35 @@ class TestINotify(unittest.TestCase):
         # see that we process all of them.
         for i, filename in enumerate(someFiles):
             filename.setContent(filename.path)
+        return d
+
+    def test_overflowEvent(self):
+        """
+        L{inotify.INotify} will callback the overflow-callback in case of
+        IN_Q_OVERFLOW.
+        """
+        def overflow():
+            #there could be more than just one overflow
+            if not d.called:
+                in_.stopReading()
+                d.callback(None)
+        subdir = self.dirname.child('test')
+        subdir.makedirs()
+        d = defer.Deferred()
+        in_ = inotify.INotify(overflow = overflow)
+        in_.watch(subdir)
+        try:
+            f = filepath.FilePath('/proc/sys/fs/inotify/max_queued_events')
+            f = f.open('r')
+            num = int(f.readline())
+            f.close()
+        except:
+            num = 16384
+        # since touch and remove should create lots of events half should
+        # be enough
+        num/=2
+        for i in xrange(num):
+            subdir.child(str(i)).touch()
+        subdir.remove()
+        in_.startReading()
         return d
