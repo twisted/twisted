@@ -263,6 +263,7 @@ class INotify(FileDescriptor, object):
 
             if mask & IN_Q_OVERFLOW and self._overflow:
                 self._overflow()
+                continue
 
             try:
                 iwp = self._watchpoints[wd]
