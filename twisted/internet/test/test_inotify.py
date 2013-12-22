@@ -526,14 +526,30 @@ class TestINotify(unittest.TestCase):
 
         d = defer.Deferred()
         in_ = inotify.INotify(overflow = overflow)
-        in_.watch(subdir)
+
+        # To try to make this test hit the limit as quickly as possible, pick a
+        # certain set of events associated with some of the less expensive I/O
+        # operations INotify supports.  There shouldn't be anything special
+        # about these events with respect to the overflow functionality.  They
+        # are selected *only* for their desirable performance characteristics.
+        mask = inotify.IN_OPEN | inotify.IN_ACCESS | inotify.IN_CLOSE_NOWRITE
+        in_.watch(subdir, mask=mask)
+
         maxEvents = filepath.FilePath(b"/proc/sys/fs/inotify/max_queued_events")
         num = int(maxEvents.getContent())
+
+        probe = subdir.child(b"probe")
+        probe.setContent(b"x")
+
         # since touch and remove should create lots of events half should
         # be enough
-        num/=2
+        num/=3
         for i in xrange(num):
-            subdir.child(str(i)).touch()
+            # open generates IN_OPEN
+            # read generates IN_ACCESS
+            # close generates IN_CLOSE_NOWRITE
+            probe.getContent()
+
         subdir.remove()
         in_.startReading()
         return d
