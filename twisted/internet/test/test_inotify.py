@@ -541,7 +541,7 @@ class TestINotify(unittest.TestCase):
 
         # Since there are three events per iteration, one third the limit
         # should suffice.
-        num /= 3
+        num /= 3 + 1
         for i in range(num):
             # open generates IN_OPEN
             # read generates IN_ACCESS
