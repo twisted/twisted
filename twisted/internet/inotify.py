@@ -261,7 +261,7 @@ class INotify(FileDescriptor, object):
 
             self._buffer = self._buffer[16 + size:]
 
-            if mask & IN_Q_OVERFLOW and self._overflow:
+            if mask & IN_Q_OVERFLOW and self._overflow is not None:
                 self._overflow()
                 continue
 

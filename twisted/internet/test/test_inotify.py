@@ -16,10 +16,6 @@ except ImportError:
 else:
     from twisted.internet import inotify
 
-import sys
-if sys.version_info < (3,):
-    range = xrange
-
 
 class TestINotify(unittest.TestCase):
     """
@@ -351,10 +347,11 @@ class TestINotify(unittest.TestCase):
         the fd shouldn't raise the exception but should log the error
         """
         import os
-        in_ = inotify.INotify()
-        os.close(in_._fd)
-        in_.loseConnection()
+        notify = inotify.INotify()
+        os.close(notify._fd)
+        notify.loseConnection()
         self.flushLoggedErrors()
+
 
     def test_noAutoAddSubdirectory(self):
         """
@@ -506,6 +503,7 @@ class TestINotify(unittest.TestCase):
             filename.setContent(filename.path)
         return d
 
+
     def test_overflowEvent(self):
         """
         L{inotify.INotify} will callback the overflow-callback in case of
@@ -518,14 +516,14 @@ class TestINotify(unittest.TestCase):
         def overflow():
             if not overflowed:
                 overflowed.add(None)
-                in_.stopReading()
-                d.callback(None)
+                notify.stopReading()
+                overflowing.callback(None)
 
         subdir = self.dirname.child(b"overflow")
         subdir.makedirs()
 
-        d = defer.Deferred()
-        in_ = inotify.INotify(overflow = overflow)
+        overflowing = defer.Deferred()
+        notify = inotify.INotify(overflow=overflow)
 
         # To try to make this test hit the limit as quickly as possible, pick a
         # certain set of events associated with some of the less expensive I/O
@@ -533,7 +531,7 @@ class TestINotify(unittest.TestCase):
         # about these events with respect to the overflow functionality.  They
         # are selected *only* for their desirable performance characteristics.
         mask = inotify.IN_OPEN | inotify.IN_ACCESS | inotify.IN_CLOSE_NOWRITE
-        in_.watch(subdir, mask=mask)
+        notify.watch(subdir, mask=mask)
 
         maxEvents = filepath.FilePath(b"/proc/sys/fs/inotify/max_queued_events")
         num = int(maxEvents.getContent())
@@ -541,15 +539,14 @@ class TestINotify(unittest.TestCase):
         probe = subdir.child(b"probe")
         probe.setContent(b"x")
 
-        # since touch and remove should create lots of events half should
-        # be enough
-        num/=3
-        for i in xrange(num):
+        # Since there are three events per iteration, one third the limit
+        # should suffice.
+        num /= 3
+        for i in range(num):
             # open generates IN_OPEN
             # read generates IN_ACCESS
             # close generates IN_CLOSE_NOWRITE
             probe.getContent()
 
-        subdir.remove()
-        in_.startReading()
-        return d
+        notify.startReading()
+        return overflowing
