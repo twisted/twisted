@@ -511,13 +511,19 @@ class TestINotify(unittest.TestCase):
         L{inotify.INotify} will callback the overflow-callback in case of
         IN_Q_OVERFLOW.
         """
+        # There could be more than just one overflow so keep track of when it
+        # has happened in order to only try to finish the test on the first
+        # overflow.
+        overflowed = set()
         def overflow():
-            #there could be more than just one overflow
-            if not d.called:
+            if not overflowed:
+                overflowed.add(None)
                 in_.stopReading()
                 d.callback(None)
+
         subdir = self.dirname.child('test')
         subdir.makedirs()
+
         d = defer.Deferred()
         in_ = inotify.INotify(overflow = overflow)
         in_.watch(subdir)
