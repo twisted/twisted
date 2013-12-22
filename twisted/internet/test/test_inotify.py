@@ -521,14 +521,14 @@ class TestINotify(unittest.TestCase):
                 in_.stopReading()
                 d.callback(None)
 
-        subdir = self.dirname.child('test')
+        subdir = self.dirname.child(b"overflow")
         subdir.makedirs()
 
         d = defer.Deferred()
         in_ = inotify.INotify(overflow = overflow)
         in_.watch(subdir)
         try:
-            f = filepath.FilePath('/proc/sys/fs/inotify/max_queued_events')
+            f = filepath.FilePath(b"/proc/sys/fs/inotify/max_queued_events")
             f = f.open('r')
             num = int(f.readline())
             f.close()
