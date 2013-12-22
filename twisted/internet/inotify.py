@@ -153,11 +153,16 @@ class INotify(FileDescriptor, object):
     @ivar _watchpaths: a C{dict} that maps from watched paths to the
         inotify watch ids
 
-    @ivar _overflow: a C{f} which gets called in case of IN_Q_OVERFLOW
+    @ivar _overflow: See L{__init__}'s C{overflow} parameter.
     """
     _inotify = _inotify
 
     def __init__(self, reactor=None, overflow=None):
+        """
+        @param overflow: A no-argument callable which will be called each time
+            an overflow in the event queue is encountered.  Or C{None} to
+            disable notification of queue overflow.
+        """
         FileDescriptor.__init__(self, reactor=reactor)
 
         # Smart way to allow parametrization of libc so I can override
