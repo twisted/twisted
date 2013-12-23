@@ -37,6 +37,9 @@ try:
 except ImportError:
     pass
 else:
+    configure_ext = sendmsg._configure_ffi.verifier.get_extension()
+    configure_ext.condition = lambda builder: True
+    extensions.append(configure_ext)
     ext = sendmsg._ffi.verifier.get_extension()
     ext.condition = lambda builder: True
     extensions.append(ext)

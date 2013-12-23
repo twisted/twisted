@@ -13,6 +13,37 @@ if sys.platform == "win32":
     raise ImportError("twisted.python.sendmsg is not available on Windows.")
 
 
+def _type_for_width(width):
+    return {
+        1: "uint8_t",
+        2: "uint16_t",
+        4: "uint32_t",
+        8: "uint64_t",
+    }[width]
+
+
+_configure_ffi = cffi.FFI()
+_configure_ffi.cdef("""
+static const size_t SIZEOF_SA_FAMILY;
+static const size_t SIZEOF_CMSG_LEN;
+""")
+_configure_lib = _configure_ffi.verify("""
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <signal.h>
+
+#include <sys/param.h>
+
+#ifdef BSD
+#  include <sys/uio.h>
+#endif
+
+#define member_size(type, member) sizeof(((type *)0)->member)
+
+static const size_t SIZEOF_SA_FAMILY = member_size(struct sockaddr, sa_family);
+static const size_t SIZEOF_CMSG_LEN = member_size(struct cmsghdr, cmsg_len);
+""")
+
 _ffi = cffi.FFI()
 _ffi.cdef("""
 const static int SCM_RIGHTS;
@@ -43,14 +74,14 @@ struct msghdr {
 };
 
 struct cmsghdr {
-    int cmsg_level;
+    %(cmsg_len_type)s cmsg_level;
     int cmsg_type;
     unsigned cmsg_len;
     ...;
 };
 
 struct sockaddr {
-    unsigned char sa_family;
+    %(sa_family_type)s sa_family;
     ...;
 };
 
@@ -64,7 +95,10 @@ size_t CMSG_LEN(size_t);
 struct cmsghdr *CMSG_FIRSTHDR(struct msghdr *);
 struct cmsghdr *CMSG_NXTHDR(struct msghdr *, struct cmsghdr *);
 unsigned char *CMSG_DATA(struct cmsghdr *);
-""")
+""" % {
+    "cmsg_len_type": _type_for_width(_configure_lib.SIZEOF_CMSG_LEN),
+    "sa_family_type": _type_for_width(_configure_lib.SIZEOF_SA_FAMILY),
+})
 _lib = _ffi.verify("""
 #include <stdbool.h>
 
