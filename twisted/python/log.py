@@ -181,6 +181,18 @@ class LogPublisher:
         >>> log.msg('Hello ', 'world.')
 
         This form only works (sometimes) by accident.
+
+        Keyword arguments will be converted into items in the event
+        dict that is passed to L{ILogObserver} implementations.
+        Each implementation, in turn, can define keys that are used
+        by it specifically, in addition to common keys listed at
+        L{ILogObserver.__call__}.
+
+        For example, to set the C{system} parameter while logging
+        a message::
+
+        >>> log.msg('Started', system='Foo')
+
         """
         actualEventDict = (context.get(ILogContext) or {}).copy()
         actualEventDict.update(kw)
