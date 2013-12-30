@@ -44,7 +44,6 @@ class NoResponseDNSServerFactory(server.DNSServerFactory):
         @param args: Positional arguments
         @type args: L{tuple}
         """
-        pass
 
 
 
@@ -61,7 +60,6 @@ class RaisingDNSServerFactory(server.DNSServerFactory):
         """
         Contains positional and keyword arguments in C{args}.
         """
-        pass
 
 
     def allowQuery(self, *args, **kwargs):
@@ -87,7 +85,6 @@ class RaisingProtocol:
         """
         Contains positional and keyword arguments in C{args}.
         """
-        pass
 
 
     def writeMessage(self, *args, **kwargs):
@@ -119,7 +116,6 @@ class NoopProtocol:
         @param kwargs: Keyword args
         @type kwargs: L{dict}
         """
-        pass
 
 
 
@@ -132,7 +128,6 @@ class RaisingResolver:
         """
         Contains positional and keyword arguments in C{args}.
         """
-        pass
 
 
     def query(self, *args, **kwargs):
@@ -158,7 +153,6 @@ class RaisingCache:
         """
         Contains positional and keyword arguments in C{args}.
         """
-        pass
 
 
     def cacheResult(self, *args, **kwargs):
