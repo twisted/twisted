@@ -265,7 +265,8 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                 for header in headers:
                     br = header.find(': ')
                     if br == -1:
-                        log.msg( 'ignoring malformed CGI header: %s' % header )
+                        log.msg('ignoring malformed CGI header: "%s"' %
+                                header)
                     else:
                         headerName = header[:br].lower()
                         headerText = header[br+2:]
