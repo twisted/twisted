@@ -292,7 +292,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         L{server.DNSServerFactory.cache} is L{None} by default.
         """
-        self.assertIdentical(server.DNSServerFactory().cache, None)
+        self.assertIs(server.DNSServerFactory().cache, None)
 
 
     def test_cacheOverride(self):
@@ -351,7 +351,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.protocol} defaults to
         L{dns.DNSProtocol}.
         """
-        self.assertIdentical(server.DNSServerFactory.protocol, dns.DNSProtocol)
+        self.assertIs(server.DNSServerFactory.protocol, dns.DNSProtocol)
 
 
     def test_buildProtocolDefaultProtocolType(self):
@@ -699,9 +699,9 @@ class DNSServerFactoryTests(unittest.TestCase):
             protocol=RaisingProtocol(), message=dns.Message(), address=None)
         (message,), kwargs = e.args
 
-        self.assertIdentical(message.answers, answers)
-        self.assertIdentical(message.authority, authority)
-        self.assertIdentical(message.additional, additional)
+        self.assertIs(message.answers, answers)
+        self.assertIs(message.authority, authority)
+        self.assertIs(message.additional, additional)
 
 
     def test_gotResolverResponseAuthoritativeMessage(self):
@@ -765,9 +765,9 @@ class DNSServerFactoryTests(unittest.TestCase):
         (query, (answers, authority, additional)), kwargs = e.args
 
         self.assertEqual(query.name.name, b'example.com')
-        self.assertIdentical(answers, expectedAnswers)
-        self.assertIdentical(authority, expectedAuthority)
-        self.assertIdentical(additional, expectedAdditional)
+        self.assertIs(answers, expectedAnswers)
+        self.assertIs(authority, expectedAuthority)
+        self.assertIs(additional, expectedAdditional)
 
 
     def _assertMessageRcodeForError(self, responseError, expectedMessageCode):
