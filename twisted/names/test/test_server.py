@@ -297,12 +297,12 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_cacheOverride(self):
         """
-        L{server.DNSServerFactory.__init__} assigns the first object in
+        L{server.DNSServerFactory.__init__} assigns the last object in
         the C{caches} list to L{server.DNSServerFactory.cache}.
         """
         dummyResolver = object()
         self.assertEqual(
-            server.DNSServerFactory(caches=[dummyResolver]).cache,
+            server.DNSServerFactory(caches=[object(), dummyResolver]).cache,
             dummyResolver)
 
 
