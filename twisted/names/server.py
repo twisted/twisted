@@ -31,7 +31,8 @@ class DNSServerFactory(protocol.ServerFactory):
 
     @ivar cache: A L{Cache<twisted.names.cache.Cache>} instance whose
         C{cacheResult} method is called when a response is received from one of
-        C{clients}. Or L{None} if no caches are specified.
+        C{clients}. Defaults to L{None} if no caches are specified. See
+        C{caches} of L{__init__} for more details.
     @type cache: L{Cache<twisted.names.cache.Cache} or L{None}
 
     @ivar canRecurse: A flag indicating whether this server is capable of
@@ -66,7 +67,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         @param caches: Resolvers which provide cached non-authoritative
             answers. The first cache instance is assigned to
-            L{DNSServerFactory.cache} and its C{cacheResult} method will be
+            C{DNSServerFactory.cache} and its C{cacheResult} method will be
             called when a response is received from one of C{clients}.
         @type caches: L{list} of L{Cache<twisted.names.cache.Cache} instances
 
