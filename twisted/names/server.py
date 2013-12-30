@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.names.test.test_names, twisted.names.test.test_server -*-
+# -*- test-case-name: twisted.names.test.test_names,twisted.names.test.test_server -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 

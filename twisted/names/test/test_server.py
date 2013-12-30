@@ -63,7 +63,6 @@ class RaisingDNSServerFactory(server.DNSServerFactory):
         Contains positional and keyword arguments in C{args}.
         """
 
-
     def allowQuery(self, *args, **kwargs):
         """
         Raise the arguments supplied to L{allowQuery}.
@@ -363,15 +362,12 @@ class DNSServerFactoryTests(unittest.TestCase):
             args = None
             kwargs = None
 
-
         stubProtocol = FakeProtocol()
-
 
         def fakeProtocolFactory(*args, **kwargs):
             stubProtocol.args = args
             stubProtocol.kwargs = kwargs
             return stubProtocol
-
 
         f = server.DNSServerFactory()
         f.protocol = fakeProtocolFactory
@@ -666,16 +662,16 @@ class DNSServerFactoryTests(unittest.TestCase):
         m = dns.Message()
         m.addQuery(b'one.example.com')
         stubProtocol = NoopProtocol()
-        stubAddress = object()
+        dummyAddress = object()
 
-        f.handleQuery(message=m, protocol=stubProtocol, address=stubAddress)
+        f.handleQuery(message=m, protocol=stubProtocol, address=dummyAddress)
 
         stubFailure = failure.Failure(Exception())
         d.errback(stubFailure)
 
         self.assertEqual(
             gotResolverErrorArgs,
-            [((stubFailure, stubProtocol, m, stubAddress), {})])
+            [((stubFailure, stubProtocol, m, dummyAddress), {})])
 
 
     def test_gotResolverResponse(self):
