@@ -24,12 +24,13 @@ class NoResponseDNSServerFactory(server.DNSServerFactory):
     having to fake or patch the preceding code which attempts to
     deliver a response message.
     """
-    def allowQuery(*args):
+    def allowQuery(self, message, protocol, address):
         """
         Deny all queries.
 
-        @param args: Positional arguments
-        @type args: L{tuple}
+        @param message: See L{server.DNSServerFactory.allowQuery}
+        @param protocol: See L{server.DNSServerFactory.allowQuery}
+        @param address: See L{server.DNSServerFactory.allowQuery}
 
         @return: L{False}
         @rtype: L{bool}
@@ -37,12 +38,13 @@ class NoResponseDNSServerFactory(server.DNSServerFactory):
         return False
 
 
-    def sendReply(*args):
+    def sendReply(self, protocol, message, address):
         """
         A noop send reply.
 
-        @param args: Positional arguments
-        @type args: L{tuple}
+        @param protocol: See L{server.DNSServerFactory.sendReply}
+        @param message: See L{server.DNSServerFactory.sendReply}
+        @param address: See L{server.DNSServerFactory.sendReply}
         """
 
 
@@ -66,10 +68,12 @@ class RaisingDNSServerFactory(server.DNSServerFactory):
         """
         Raise the arguments supplied to L{allowQuery}.
 
-        @param args: Positional arguments
+        @param args: Positional arguments which will be recorded in the raised
+            exception.
         @type args: L{tuple}
 
-        @param kwargs: Keyword args
+        @param kwargs: Keyword args which will be recorded in the raised
+            exception.
         @type kwargs: L{dict}
         """
         raise self.AllowQueryArguments(args, kwargs)
