@@ -26,33 +26,33 @@ from twisted.python import log
 
 class DNSServerFactory(protocol.ServerFactory):
     """
-    Server factory and tracker for L{DNSProtocol} connections.  This
-    class also provides records for responses to DNS queries.
+    Server factory and tracker for L{DNSProtocol} connections.  This class also
+    provides records for responses to DNS queries.
 
     @ivar cache: A L{Cache<twisted.names.cache.Cache>} instance whose
         C{cacheResult} method is called when a response is received from one of
         C{clients}. Or L{None} if no caches are specified.
     @type cache: L{Cache<twisted.names.cache.Cache} or L{None}
 
-    @ivar canRecurse: A flag indicating whether this server is capable
-        of performing recursive DNS resolution.
+    @ivar canRecurse: A flag indicating whether this server is capable of
+        performing recursive DNS resolution.
     @type canRecurse: L{bool}
 
-    @ivar resolver: A L{resolve.ResolverChain} containing an ordered
-        list of C{authorities}, C{caches} and C{clients} to which
-        queries will be dispatched.
+    @ivar resolver: A L{resolve.ResolverChain} containing an ordered list of
+        C{authorities}, C{caches} and C{clients} to which queries will be
+        dispatched.
     @type resolver: L{resolve.ResolverChain}
 
     @ivar verbose: See L{__init__}
 
-    @ivar connections: A list of all the connected L{DNSProtocol}
-        instances using this object as their controller.
+    @ivar connections: A list of all the connected L{DNSProtocol} instances
+        using this object as their controller.
     @type connections: C{list} of L{DNSProtocol} instances
 
-    @ivar protocol: A callable used for building a DNS stream
-        protocol. Called by L{DNSServerFactory.buildProtocol} and
-        passed the L{DNSServerFactory} instance as the one and only
-        positional argument.  Defaults to L{dns.DNSProtocol}.
+    @ivar protocol: A callable used for building a DNS stream protocol. Called
+        by L{DNSServerFactory.buildProtocol} and passed the L{DNSServerFactory}
+        instance as the one and only positional argument.  Defaults to
+        L{dns.DNSProtocol}.
     @type protocol: L{IProtocolFactory} constructor
     """
 
@@ -64,21 +64,19 @@ class DNSServerFactory(protocol.ServerFactory):
         @param authorities: Resolvers which provide authoritative answers.
         @type authorities: L{list} of L{IResolver} providers
 
-        @param caches: Resolvers which provide cached
-            non-authoritative answers. The first cache instance is
-            assigned to L{DNSServerFactory.cache} and its
-            C{cacheResult} method will be called when a response is
-            received from one of C{clients}.
+        @param caches: Resolvers which provide cached non-authoritative
+            answers. The first cache instance is assigned to
+            L{DNSServerFactory.cache} and its C{cacheResult} method will be
+            called when a response is received from one of C{clients}.
         @type caches: L{list} of L{Cache<twisted.names.cache.Cache} instances
 
         @param clients: Resolvers which are capable of performing recursive DNS
             lookups.
         @type clients: L{list} of {IResolver} providers
 
-        @param verbose: An integer controlling the verbosity of
-            logging of queries and responses. Default is C{0} which
-            means no logging. Set to C{2} to enable logging of full
-            query and response messages.
+        @param verbose: An integer controlling the verbosity of logging of
+            queries and responses. Default is C{0} which means no logging. Set
+            to C{2} to enable logging of full query and response messages.
         @param verbose: L{int}
         """
         resolvers = []
@@ -117,8 +115,8 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         Stop tracking a no-longer connected L{DNSProtocol}.
 
-        @param protocol: The tracked protocol instance to be which has
-            been lost.
+        @param protocol: The tracked protocol instance to be which has been
+            lost.
         @type protocol: L{dns.DNSProtocol}
         """
         self.connections.remove(protocol)
@@ -129,18 +127,16 @@ class DNSServerFactory(protocol.ServerFactory):
         Send a response C{message} to a given C{address} via the supplied
         C{protocol}.
 
-        Message payload will be logged if C{DNSServerFactory.verbose}
-        is C{>1}.
+        Message payload will be logged if C{DNSServerFactory.verbose} is C{>1}.
 
-        @param protocol: The DNS protocol instance to which to send the
-            message.
+        @param protocol: The DNS protocol instance to which to send the message.
         @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
 
         @param message: The DNS message to be sent.
         @type message: L{dns.Message}
 
-        @param address: The address to which the message will be
-            sent or L{None} if C{protocol} is a stream protocol.
+        @param address: The address to which the message will be sent or L{None}
+            if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
         if self.verbose > 1:
@@ -167,18 +163,17 @@ class DNSServerFactory(protocol.ServerFactory):
 
     def gotResolverResponse(self, (ans, auth, add), protocol, message, address):
         """
-        A callback used by L{DNSServerFactory.handleQuery} for handling
-        the deferred response from C{self.resolver.query}.
+        A callback used by L{DNSServerFactory.handleQuery} for handling the
+        deferred response from C{self.resolver.query}.
 
-        Constructs a response message by combining the original query
-        message with the resolved answer, authority and additional
-        records.
+        Constructs a response message by combining the original query message
+        with the resolved answer, authority and additional records.
 
-        Marks the response message as authoritative if any of the
-        resolved answers are found to be authoritative.
+        Marks the response message as authoritative if any of the resolved
+        answers are found to be authoritative.
 
-        The resolved answers count will be logged if
-        C{DNSServerFactory.verbose} is C{>1}.
+        The resolved answers count will be logged if C{DNSServerFactory.verbose}
+        is C{>1}.
 
         @param ans: A list of answer records
         @type ans: L{list} of L{dns.RRHeader} instances
@@ -189,16 +184,16 @@ class DNSServerFactory(protocol.ServerFactory):
         @param add: A list of additional records
         @type add: L{list} of L{dns.RRHeader} instances
 
-        @param protocol: The DNS protocol instance to which to send a
-            response message.
+        @param protocol: The DNS protocol instance to which to send a response
+            message.
         @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
 
-        @param message: The original DNS query message for which a
-            response message will be constructed.
+        @param message: The original DNS query message for which a response
+            message will be constructed.
         @type message: L{dns.Message}
 
-        @param address: The address to which the response message will
-            be sent or L{None} if C{protocol} is a stream protocol.
+        @param address: The address to which the response message will be sent
+            or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
         message.rCode = dns.OK
@@ -223,29 +218,28 @@ class DNSServerFactory(protocol.ServerFactory):
 
     def gotResolverError(self, failure, protocol, message, address):
         """
-        A callback used by L{DNSServerFactory.handleQuery} for handling
-        deferred errors from C{self.resolver.query}.
+        A callback used by L{DNSServerFactory.handleQuery} for handling deferred
+        errors from C{self.resolver.query}.
 
-        Constructs a response message from the original query
-        message by assigning a suitable error code to C{rCode}.
+        Constructs a response message from the original query message by
+        assigning a suitable error code to C{rCode}.
 
-        An error message will be logged if C{DNSServerFactory.verbose}
-        is C{>1}.
+        An error message will be logged if C{DNSServerFactory.verbose} is C{>1}.
 
         @param failure: The reason for the failed resolution (as reported by
             C{self.resolver.query}).
         @type failure: L{Failure<twisted.python.failure.Failure>}
 
-        @param protocol: The DNS protocol instance to which to send a
-            response message.
+        @param protocol: The DNS protocol instance to which to send a response
+            message.
         @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
 
-        @param message: The original DNS query message for which a
-            response message will be constructed.
+        @param message: The original DNS query message for which a response
+            message will be constructed.
         @type message: L{dns.Message}
 
-        @param address: The address to which the response message will
-            be sent or L{None} if C{protocol} is a stream protocol.
+        @param address: The address to which the response message will be sent
+            or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
         if failure.check(dns.DomainError, dns.AuthoritativeDomainError):
@@ -261,37 +255,35 @@ class DNSServerFactory(protocol.ServerFactory):
 
     def handleQuery(self, message, protocol, address):
         """
-        Called by L{DNSServerFactory.messageReceived} when a query message
-        is received.
+        Called by L{DNSServerFactory.messageReceived} when a query message is
+        received.
 
-        Takes the first query from the received message and dispatches
-        it to C{self.resolver.query}.
+        Takes the first query from the received message and dispatches it to
+        C{self.resolver.query}.
 
         Adds callbacks L{DNSServerFactory.gotResolverResponse} and
-        L{DNSServerFactory.gotResolverError} to the resulting
-        deferred.
+        L{DNSServerFactory.gotResolverError} to the resulting deferred.
 
-        Note: Multiple queries in a single message are not supported
-        because there is no standard way to respond with multiple
-        rCodes, auth, etc. This is consistent with other DNS server
-        implementations. See
-        U{http://tools.ietf.org/html/draft-ietf-dnsext-edns1-03} for a
-        proposed solution.
+        Note: Multiple queries in a single message are not supported because
+        there is no standard way to respond with multiple rCodes, auth,
+        etc. This is consistent with other DNS server implementations. See
+        U{http://tools.ietf.org/html/draft-ietf-dnsext-edns1-03} for a proposed
+        solution.
 
-        @param protocol: The DNS protocol instance to which to send a
-            response message.
+        @param protocol: The DNS protocol instance to which to send a response
+            message.
         @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
 
-        @param message: The original DNS query message for which a
-            response message will be constructed.
+        @param message: The original DNS query message for which a response
+            message will be constructed.
         @type message: L{dns.Message}
 
-        @param address: The address to which the response message will
-            be sent or L{None} if C{protocol} is a stream protocol.
+        @param address: The address to which the response message will be sent
+            or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
 
-        @return: A C{deferred} which fires with the resolved result or
-            error of the first query in C{message}.
+        @return: A C{deferred} which fires with the resolved result or error of
+            the first query in C{message}.
         @rtype: L{Deferred<twisted.internet.defer.Deferred>}
         """
         query = message.queries[0]
@@ -305,26 +297,25 @@ class DNSServerFactory(protocol.ServerFactory):
 
     def handleInverseQuery(self, message, protocol, address):
         """
-        Called by L{DNSServerFactory.messageReceived} when an inverse
-        query message is received.
+        Called by L{DNSServerFactory.messageReceived} when an inverse query
+        message is received.
 
         Replies with a I{Not Implemented} error by default.
 
-        An error message will be logged if C{DNSServerFactory.verbose}
-        is C{>1}.
+        An error message will be logged if C{DNSServerFactory.verbose} is C{>1}.
 
         Override in a subclass.
 
-        @param protocol: The DNS protocol instance to which to send a
-            response message.
+        @param protocol: The DNS protocol instance to which to send a response
+            message.
         @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
 
-        @param message: The original DNS query message for which a
-            response message will be constructed.
+        @param message: The original DNS query message for which a response
+            message will be constructed.
         @type message: L{dns.Message}
 
-        @param address: The address to which the response message will
-            be sent or L{None} if C{protocol} is a stream protocol.
+        @param address: The address to which the response message will be sent
+            or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
         message.rCode = dns.ENOTIMP
@@ -335,26 +326,25 @@ class DNSServerFactory(protocol.ServerFactory):
 
     def handleStatus(self, message, protocol, address):
         """
-        Called by L{DNSServerFactory.messageReceived} when a status
-        message is received.
+        Called by L{DNSServerFactory.messageReceived} when a status message is
+        received.
 
         Replies with a I{Not Implemented} error by default.
 
-        An error message will be logged if C{DNSServerFactory.verbose}
-        is C{>1}.
+        An error message will be logged if C{DNSServerFactory.verbose} is C{>1}.
 
         Override in a subclass.
 
-        @param protocol: The DNS protocol instance to which to send a
-            response message.
+        @param protocol: The DNS protocol instance to which to send a response
+            message.
         @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
 
-        @param message: The original DNS query message for which a
-            response message will be constructed.
+        @param message: The original DNS query message for which a response
+            message will be constructed.
         @type message: L{dns.Message}
 
-        @param address: The address to which the response message will
-            be sent or L{None} if C{protocol} is a stream protocol.
+        @param address: The address to which the response message will be sent
+            or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
         message.rCode = dns.ENOTIMP
@@ -365,26 +355,25 @@ class DNSServerFactory(protocol.ServerFactory):
 
     def handleNotify(self, message, protocol, address):
         """
-        Called by L{DNSServerFactory.messageReceived} when a notify
-        message is received.
+        Called by L{DNSServerFactory.messageReceived} when a notify message is
+        received.
 
         Replies with a I{Not Implemented} error by default.
 
-        An error message will be logged if C{DNSServerFactory.verbose}
-        is C{>1}.
+        An error message will be logged if C{DNSServerFactory.verbose} is C{>1}.
 
         Override in a subclass.
 
-        @param protocol: The DNS protocol instance to which to send a
-            response message.
+        @param protocol: The DNS protocol instance to which to send a response
+            message.
         @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
 
-        @param message: The original DNS query message for which a
-            response message will be constructed.
+        @param message: The original DNS query message for which a response
+            message will be constructed.
         @type message: L{dns.Message}
 
-        @param address: The address to which the response message will
-            be sent or L{None} if C{protocol} is a stream protocol.
+        @param address: The address to which the response message will be sent
+            or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
         message.rCode = dns.ENOTIMP
@@ -400,21 +389,20 @@ class DNSServerFactory(protocol.ServerFactory):
 
         Replies with a I{Not Implemented} error by default.
 
-        An error message will be logged if C{DNSServerFactory.verbose}
-        is C{>1}.
+        An error message will be logged if C{DNSServerFactory.verbose} is C{>1}.
 
         Override in a subclass.
 
-        @param protocol: The DNS protocol instance to which to send a
-            response message.
+        @param protocol: The DNS protocol instance to which to send a response
+            message.
         @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
 
-        @param message: The original DNS query message for which a
-            response message will be constructed.
+        @param message: The original DNS query message for which a response
+            message will be constructed.
         @type message: L{dns.Message}
 
-        @param address: The address to which the response message will
-            be sent or L{None} if C{protocol} is a stream protocol.
+        @param address: The address to which the response message will be sent
+            or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
         message.rCode = dns.ENOTIMP
@@ -426,26 +414,23 @@ class DNSServerFactory(protocol.ServerFactory):
 
     def messageReceived(self, message, proto, address=None):
         """
-        L{DNSServerFactory.messageReceived} is called by protocols which
-        are under the control of this L{DNSServerFactory} whenever
-        they receive a DNS query message or an unexpected / duplicate
-        / late DNS response message.
+        L{DNSServerFactory.messageReceived} is called by protocols which are
+        under the control of this L{DNSServerFactory} whenever they receive a
+        DNS query message or an unexpected / duplicate / late DNS response
+        message.
 
-        L{DNSServerFactory.allowQuery} is called with the received
-        message, protocol and origin address. If it returns L{False},
-        a C{dns.EREFUSED} response is sent back to the client.
+        L{DNSServerFactory.allowQuery} is called with the received message,
+        protocol and origin address. If it returns L{False}, a C{dns.EREFUSED}
+        response is sent back to the client.
 
         Otherwise the received message is dispatched to one of
-        L{DNSServerFactory.handleQuery},
-        L{DNSServerFactory.handleInverseQuery},
-        L{DNSServerFactory.handleStatus},
-        L{DNSServerFactory.handleNotify}, or
-        L{DNSServerFactory.handleOther} depending on the I{OPCODE} of
-        the received message.
+        L{DNSServerFactory.handleQuery}, L{DNSServerFactory.handleInverseQuery},
+        L{DNSServerFactory.handleStatus}, L{DNSServerFactory.handleNotify}, or
+        L{DNSServerFactory.handleOther} depending on the I{OPCODE} of the
+        received message.
 
-        If C{DNSServerFactory.verbose} is C{>0} all received messages
-        will be logged in more or less detail depending on the value
-        of C{verbose}.
+        If C{DNSServerFactory.verbose} is C{>0} all received messages will be
+        logged in more or less detail depending on the value of C{verbose}.
 
         @param message: The DNS message that was received.
         @type message: L{dns.Message}
@@ -453,11 +438,10 @@ class DNSServerFactory(protocol.ServerFactory):
         @param proto: The DNS protocol instance which received the message
         @type proto: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
 
-        @param address: The address from which the message was
-            received. Only provided for messages received by datagram
-            protocols. The origin of Messages received from stream
-            protocols can be gleaned from the protocol C{transport}
-            attribute.
+        @param address: The address from which the message was received. Only
+            provided for messages received by datagram protocols. The origin of
+            Messages received from stream protocols can be gleaned from the
+            protocol C{transport} attribute.
         @type address: L{tuple} or L{None}
         """
         message.timeReceived = time.time()
@@ -511,15 +495,14 @@ class DNSServerFactory(protocol.ServerFactory):
         @param protocol: The DNS protocol instance which received the message
         @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
 
-        @param address: The address from which the message was
-            received. Only provided for messages received by datagram
-            protocols. The origin of Messages received from stream
-            protocols can be gleaned from the protocol C{transport}
-            attribute.
+        @param address: The address from which the message was received. Only
+            provided for messages received by datagram protocols. The origin of
+            Messages received from stream protocols can be gleaned from the
+            protocol C{transport} attribute.
         @type address: L{tuple} or L{None}
 
-        @return: L{True} if the received message contained one or more
-            queries, else L{False}.
+        @return: L{True} if the received message contained one or more queries,
+            else L{False}.
         @rtype: L{bool}
         """
         return len(message.queries)
