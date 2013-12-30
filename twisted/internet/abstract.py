@@ -59,7 +59,7 @@ class _ConsumerMixin(object):
 
     @ivar producerPaused: A flag indicating whether the producer is currently
         paused.
-    @type producerPaused: C{bool}
+    @type producerPaused: L{bool}
 
     @ivar streamingProducer: A flag indicating whether the producer was
         registered as a streaming (ie push) producer or not (ie a pull
