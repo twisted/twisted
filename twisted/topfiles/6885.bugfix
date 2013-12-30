@@ -1,1 +1,1 @@
-twisted.application.service.MultiService.removeService now fails more cleanly when given a named service that is not a child.
+twisted.application.service.MultiService.removeService now raises the correct exception and no longer incorrectly modifies internal state when given a named service that is not a child.
