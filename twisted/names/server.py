@@ -232,8 +232,8 @@ class DNSServerFactory(protocol.ServerFactory):
         An error message will be logged if C{DNSServerFactory.verbose}
         is C{>1}.
 
-        @param failure: A C{failure} wrapping the L{Exception}
-            returned by C{self.resolver.query}
+        @param failure: The reason for the failed resolution (as reported by
+            C{self.resolver.query}).
         @type failure: L{Failure<twisted.python.failure.Failure>}
 
         @param protocol: The DNS protocol instance to which to send a
