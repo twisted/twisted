@@ -166,7 +166,7 @@ class _PollableWritePipe(_PollableResource):
     def __init__(self, writePipe, lostCallback):
         self.disconnecting = False
         self.producer = None
-        self.producerPaused = 0
+        self.producerPaused = False
         self.streamingProducer = 0
         self.outQueue = []
         self.writePipe = writePipe
@@ -185,13 +185,13 @@ class _PollableWritePipe(_PollableResource):
 
     def bufferFull(self):
         if self.producer is not None:
-            self.producerPaused = 1
+            self.producerPaused = True
             self.producer.pauseProducing()
 
     def bufferEmpty(self):
         if self.producer is not None and ((not self.streamingProducer) or
                                           self.producerPaused):
-            self.producer.producerPaused = 0
+            self.producer.producerPaused = False
             self.producer.resumeProducing()
             return True
         return False

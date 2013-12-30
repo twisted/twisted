@@ -59,7 +59,7 @@ class _ConsumerMixin(object):
 
     @ivar producerPaused: A flag indicating whether the producer is currently
         paused.
-    @type producerPaused: C{bool} or C{int}
+    @type producerPaused: L{bool}
 
     @ivar streamingProducer: A flag indicating whether the producer was
         registered as a streaming (ie push) producer or not (ie a pull
@@ -272,7 +272,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             if self.producer is not None and ((not self.streamingProducer)
                                               or self.producerPaused):
                 # tell them to supply some more.
-                self.producerPaused = 0
+                self.producerPaused = False
                 self.producer.resumeProducing()
             elif self.disconnecting:
                 # But if I was previously asked to let the connection die, do
@@ -332,7 +332,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             # and our buffer is full,
             if self._isSendBufferFull():
                 # pause it.
-                self.producerPaused = 1
+                self.producerPaused = True
                 self.producer.pauseProducing()
 
 
