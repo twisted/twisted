@@ -80,6 +80,49 @@ class TestService(unittest.TestCase):
         self.assertEqual(list(p), [])
         self.assertEqual(s.parent, None)
 
+    def test_disowningNamedChild(self):
+        s = service.Service()
+        p = service.MultiService()
+        s.setName("hello")
+        s.setServiceParent(p)
+        self.assertEqual(list(p), [s])
+        self.assertEqual(s.parent, p)
+        self.assertEqual(p.getServiceNamed("hello"), s)
+        s.disownServiceParent()
+        self.assertEqual(list(p), [])
+        self.assertEqual(s.parent, None)
+        self.assertRaises(KeyError, p.getServiceNamed, "hello")
+
+    def test_removingNonChild(self):
+        s = service.Service()
+        p = service.MultiService()
+        self.assertEqual(list(p), [])
+        self.assertEqual(s.parent, None)
+        self.assertRaises(ValueError, p.removeService, s)
+
+    def test_removingNamedNonChild(self):
+        s = service.Service()
+        p = service.MultiService()
+        s.setName("hello")
+        self.assertEqual(list(p), [])
+        self.assertEqual(s.parent, None)
+        self.assertRaises(ValueError, p.removeService, s)
+
+    def test_removingDuplicateNamedNonChild(self):
+        s = service.Service()
+        t = service.Service()
+        p = service.MultiService()
+        s.setName("hello")
+        s.setServiceParent(p)
+        self.assertEqual(list(p), [s])
+        self.assertEqual(s.parent, p)
+        self.assertEqual(p.getServiceNamed("hello"), s)
+        t.setName("hello")
+        self.assertRaises(ValueError, p.removeService, t)
+        self.assertEqual(list(p), [s])
+        self.assertEqual(s.parent, p)
+        self.assertEqual(p.getServiceNamed("hello"), s)
+
     def testRunning(self):
         s = service.Service()
         self.assert_(not s.running)

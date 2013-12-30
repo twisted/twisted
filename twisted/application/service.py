@@ -309,9 +309,9 @@ class MultiService(Service):
             service.startService()
 
     def removeService(self, service):
+        self.services.remove(service)
         if service.name:
             del self.namedServices[service.name]
-        self.services.remove(service)
         if self.running:
             # Returning this so as not to lose information from the
             # MultiService.stopService deferred.

@@ -1,0 +1,1 @@
+twisted.application.service.MultiService.removeService now fails more cleanly when given a named service that is not a child.
