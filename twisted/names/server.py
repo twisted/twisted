@@ -165,8 +165,7 @@ class DNSServerFactory(protocol.ServerFactory):
                     time.time() - message.timeReceived))
 
 
-    def gotResolverResponse(self, (ans, auth, add),
-                            protocol, message, address):
+    def gotResolverResponse(self, (ans, auth, add), protocol, message, address):
         """
         A callback used by L{DNSServerFactory.handleQuery} for handling
         the deferred response from C{self.resolver.query}.
