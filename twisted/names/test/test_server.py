@@ -17,12 +17,12 @@ from twisted.trial import unittest
 
 class NoResponseDNSServerFactory(server.DNSServerFactory):
     """
-    A L{server.DNSServerFactory} subclass which does not attempt to
-    reply to any received messages.
+    A L{server.DNSServerFactory} subclass which does not attempt to reply to any
+    received messages.
 
-    Used for testing logged messages in C{messageReceived} without
-    having to fake or patch the preceding code which attempts to
-    deliver a response message.
+    Used for testing logged messages in C{messageReceived} without having to
+    fake or patch the preceding code which attempts to deliver a response
+    message.
     """
     def allowQuery(self, message, protocol, address):
         """
@@ -51,11 +51,11 @@ class NoResponseDNSServerFactory(server.DNSServerFactory):
 
 class RaisingDNSServerFactory(server.DNSServerFactory):
     """
-    A L{server.DNSServerFactory} subclass whose methods raise an
-    exception containing the supplied arguments.
+    A L{server.DNSServerFactory} subclass whose methods raise an exception
+    containing the supplied arguments.
 
-    Used for stopping L{messageReceived} and testing the arguments
-    supplied to L{allowQuery}.
+    Used for stopping L{messageReceived} and testing the arguments supplied to
+    L{allowQuery}.
     """
 
     class AllowQueryArguments(Exception):
@@ -82,8 +82,8 @@ class RaisingDNSServerFactory(server.DNSServerFactory):
 
 class RaisingProtocol(object):
     """
-    A partial fake L{IProtocol} whose methods raise an exception
-    containing the supplied arguments.
+    A partial fake L{IProtocol} whose methods raise an exception containing the
+    supplied arguments.
     """
     class WriteMessageArguments(Exception):
         """
@@ -107,8 +107,7 @@ class RaisingProtocol(object):
 
 class NoopProtocol(object):
     """
-    A partial fake L{dns.DNSProtocolMixin} with a noop L{writeMessage}
-    method.
+    A partial fake L{dns.DNSProtocolMixin} with a noop L{writeMessage} method.
     """
     def writeMessage(self, *args, **kwargs):
         """
@@ -125,8 +124,8 @@ class NoopProtocol(object):
 
 class RaisingResolver(object):
     """
-    A partial fake L{IResolver} whose methods raise an exception
-    containing the supplied arguments.
+    A partial fake L{IResolver} whose methods raise an exception containing the
+    supplied arguments.
     """
     class QueryArguments(Exception):
         """
@@ -150,8 +149,8 @@ class RaisingResolver(object):
 
 class RaisingCache(object):
     """
-    A partial fake L{twisted.names.cache.Cache} whose methods raise an
-    exception containing the supplied arguments.
+    A partial fake L{twisted.names.cache.Cache} whose methods raise an exception
+    containing the supplied arguments.
     """
     class CacheResultArguments(Exception):
         """
@@ -179,8 +178,8 @@ def assertLogMessage(testCase, expectedMessages, callable, *args, **kwargs):
 
     XXX: Put this somewhere where it can be re-used elsewhere. See #6677.
 
-    @param testCase: The test case controlling the test which triggers
-        the logged messages and on which assertions will be called.
+    @param testCase: The test case controlling the test which triggers the
+        logged messages and on which assertions will be called.
     @type testCase: L{unittest.SynchronousTestCase}
 
     @param expectedMessages: A L{list} of the expected log messages
@@ -215,8 +214,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_resolverType(self):
         """
-        L{server.DNSServerFactory.resolver} is a
-        L{resolve.ResolverChain} instance
+        L{server.DNSServerFactory.resolver} is a L{resolve.ResolverChain}
+        instance
         """
         self.assertIsInstance(
             server.DNSServerFactory().resolver,
@@ -225,8 +224,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_resolverDefaultEmpty(self):
         """
-        L{server.DNSServerFactory.resolver} is an empty
-        L{resolve.ResolverChain} by default.
+        L{server.DNSServerFactory.resolver} is an empty L{resolve.ResolverChain}
+        by default.
         """
         self.assertEqual(
             server.DNSServerFactory().resolver.resolvers,
@@ -236,8 +235,8 @@ class DNSServerFactoryTests(unittest.TestCase):
     def test_authorities(self):
         """
         L{server.DNSServerFactory.__init__} accepts an C{authorities}
-        argument. The value of this argument is a list and is used to
-        extend the C{resolver} L{resolve.ResolverChain}.
+        argument. The value of this argument is a list and is used to extend the
+        C{resolver} L{resolve.ResolverChain}.
         """
         dummyResolver = object()
         self.assertEqual(
@@ -248,9 +247,9 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_caches(self):
         """
-        L{server.DNSServerFactory.__init__} accepts a C{caches}
-        argument. The value of this argument is a list and is used to
-        extend the C{resolver} L{resolve.ResolverChain}.
+        L{server.DNSServerFactory.__init__} accepts a C{caches} argument. The
+        value of this argument is a list and is used to extend the C{resolver}
+        L{resolve.ResolverChain}.
         """
         dummyResolver = object()
         self.assertEqual(
@@ -261,9 +260,9 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_clients(self):
         """
-        L{server.DNSServerFactory.__init__} accepts a C{clients}
-        argument. The value of this argument is a list and is used to
-        extend the C{resolver} L{resolve.ResolverChain}.
+        L{server.DNSServerFactory.__init__} accepts a C{clients} argument. The
+        value of this argument is a list and is used to extend the C{resolver}
+        L{resolve.ResolverChain}.
         """
         dummyResolver = object()
         self.assertEqual(
@@ -297,8 +296,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_cacheOverride(self):
         """
-        L{server.DNSServerFactory.__init__} assigns the last object in
-        the C{caches} list to L{server.DNSServerFactory.cache}.
+        L{server.DNSServerFactory.__init__} assigns the last object in the
+        C{caches} list to L{server.DNSServerFactory.cache}.
         """
         dummyResolver = object()
         self.assertEqual(
@@ -308,17 +307,17 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_canRecurseDefault(self):
         """
-        L{server.DNSServerFactory.canRecurse} is a flag indicating that
-        this server is capable of performing recursive DNS lookups. It
-        defaults to L{False}.
+        L{server.DNSServerFactory.canRecurse} is a flag indicating that this
+        server is capable of performing recursive DNS lookups. It defaults to
+        L{False}.
         """
         self.assertEqual(server.DNSServerFactory().canRecurse, False)
 
 
     def test_canRecurseOverride(self):
         """
-        L{server.DNSServerFactory.__init__} sets C{canRecurse} to L{True}
-        if it is supplied with C{clients}.
+        L{server.DNSServerFactory.__init__} sets C{canRecurse} to L{True} if it
+        is supplied with C{clients}.
         """
         self.assertEqual(
             server.DNSServerFactory(clients=[None]).canRecurse, True)
@@ -333,8 +332,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_verboseOverride(self):
         """
-        L{server.DNSServerFactory.__init__} accepts a C{verbose} argument
-        which overrides L{server.DNSServerFactory.verbose}.
+        L{server.DNSServerFactory.__init__} accepts a C{verbose} argument which
+        overrides L{server.DNSServerFactory.verbose}.
         """
         self.assertEqual(server.DNSServerFactory(verbose=True).verbose, True)
 
@@ -348,17 +347,16 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_defaultProtocol(self):
         """
-        L{server.DNSServerFactory.protocol} defaults to
-        L{dns.DNSProtocol}.
+        L{server.DNSServerFactory.protocol} defaults to L{dns.DNSProtocol}.
         """
         self.assertIs(server.DNSServerFactory.protocol, dns.DNSProtocol)
 
 
     def test_buildProtocolProtocolOverride(self):
         """
-        L{server.DNSServerFactory.buildProtocol} builds a protocol by
-        calling L{server.DNSServerFactory.protocol} with its self as a
-        positional argument.
+        L{server.DNSServerFactory.buildProtocol} builds a protocol by calling
+        L{server.DNSServerFactory.protocol} with its self as a positional
+        argument.
         """
         class FakeProtocol(object):
             factory = None
@@ -387,8 +385,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_messageReceivedLoggingNoQuery(self):
         """
-        L{server.DNSServerFactory.messageReceived} logs about an empty query
-        if the message had no queries and C{verbose} is  C{>0}.
+        L{server.DNSServerFactory.messageReceived} logs about an empty query if
+        the message had no queries and C{verbose} is C{>0}.
         """
         m = dns.Message()
         f = NoResponseDNSServerFactory(verbose=1)
@@ -402,8 +400,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_messageReceivedLogging1(self):
         """
-        L{server.DNSServerFactory.messageReceived} logs the query types of
-        all queries in the message if C{verbose} is set to C{1}.
+        L{server.DNSServerFactory.messageReceived} logs the query types of all
+        queries in the message if C{verbose} is set to C{1}.
         """
         m = dns.Message()
         m.addQuery(name='example.com', type=dns.MX)
@@ -419,8 +417,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_messageReceivedLogging2(self):
         """
-        L{server.DNSServerFactory.messageReceived} logs the repr of all
-        queries in the message if C{verbose} is set to C{2}.
+        L{server.DNSServerFactory.messageReceived} logs the repr of all queries
+        in the message if C{verbose} is set to C{2}.
         """
         m = dns.Message()
         m.addQuery(name='example.com', type=dns.MX)
@@ -437,8 +435,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_messageReceivedTimestamp(self):
         """
-        L{server.DNSServerFactory.messageReceived} assigns a unix
-        timestamp to the received message.
+        L{server.DNSServerFactory.messageReceived} assigns a unix timestamp to
+        the received message.
         """
         m = dns.Message()
         f = NoResponseDNSServerFactory()
@@ -452,8 +450,8 @@ class DNSServerFactoryTests(unittest.TestCase):
     def test_messageReceivedAllowQuery(self):
         """
         L{server.DNSServerFactory.messageReceived} passes all messages to
-        L{server.DNSServerFactory.allowQuery} along with the receiving
-        protocol and origin address.
+        L{server.DNSServerFactory.allowQuery} along with the receiving protocol
+        and origin address.
         """
         message = dns.Message()
         stubProtocol = object()
@@ -472,9 +470,8 @@ class DNSServerFactoryTests(unittest.TestCase):
     def test_allowQueryFalse(self):
         """
         If C{allowQuery} returns C{False},
-        L{server.DNSServerFactory.messageReceived} calls
-        L{server.sendReply} with a message whose C{rCode} is
-        L{dns.EREFUSED}.
+        L{server.DNSServerFactory.messageReceived} calls L{server.sendReply}
+        with a message whose C{rCode} is L{dns.EREFUSED}.
         """
         class SendReplyException(Exception):
             pass
@@ -498,15 +495,15 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def _messageReceivedTest(self, methodName, message):
         """
-        Assert that the named method is called with the given message when
-        it is passed to L{DNSServerFactory.messageReceived}.
+        Assert that the named method is called with the given message when it is
+        passed to L{DNSServerFactory.messageReceived}.
 
-        @param methodName: The name of the method which is expected to
-            be called.
+        @param methodName: The name of the method which is expected to be
+            called.
         @type methodName: L{str}
 
-        @param message: The message which is expected to be passed to
-            the C{methodName} method.
+        @param message: The message which is expected to be passed to the
+            C{methodName} method.
         @type message: L{dns.Message}
         """
         # Make it appear to have some queries so that
@@ -526,8 +523,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_queryMessageReceived(self):
         """
-        L{DNSServerFactory.messageReceived} passes messages with an opcode
-        of C{OP_QUERY} on to L{DNSServerFactory.handleQuery}.
+        L{DNSServerFactory.messageReceived} passes messages with an opcode of
+        C{OP_QUERY} on to L{DNSServerFactory.handleQuery}.
         """
         self._messageReceivedTest(
             'handleQuery', dns.Message(opCode=dns.OP_QUERY))
@@ -535,8 +532,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_inverseQueryMessageReceived(self):
         """
-        L{DNSServerFactory.messageReceived} passes messages with an opcode
-        of C{OP_INVERSE} on to L{DNSServerFactory.handleInverseQuery}.
+        L{DNSServerFactory.messageReceived} passes messages with an opcode of
+        C{OP_INVERSE} on to L{DNSServerFactory.handleInverseQuery}.
         """
         self._messageReceivedTest(
             'handleInverseQuery', dns.Message(opCode=dns.OP_INVERSE))
@@ -544,8 +541,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_statusMessageReceived(self):
         """
-        L{DNSServerFactory.messageReceived} passes messages with an opcode
-        of C{OP_STATUS} on to L{DNSServerFactory.handleStatus}.
+        L{DNSServerFactory.messageReceived} passes messages with an opcode of
+        C{OP_STATUS} on to L{DNSServerFactory.handleStatus}.
         """
         self._messageReceivedTest(
             'handleStatus', dns.Message(opCode=dns.OP_STATUS))
@@ -553,8 +550,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_notifyMessageReceived(self):
         """
-        L{DNSServerFactory.messageReceived} passes messages with an opcode
-        of C{OP_NOTIFY} on to L{DNSServerFactory.handleNotify}.
+        L{DNSServerFactory.messageReceived} passes messages with an opcode of
+        C{OP_NOTIFY} on to L{DNSServerFactory.handleNotify}.
         """
         self._messageReceivedTest(
             'handleNotify', dns.Message(opCode=dns.OP_NOTIFY))
@@ -562,8 +559,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_updateMessageReceived(self):
         """
-        L{DNSServerFactory.messageReceived} passes messages with an opcode
-        of C{OP_UPDATE} on to L{DNSServerFactory.handleOther}.
+        L{DNSServerFactory.messageReceived} passes messages with an opcode of
+        C{OP_UPDATE} on to L{DNSServerFactory.handleOther}.
 
         This may change if the implementation ever covers update messages.
         """
@@ -574,9 +571,8 @@ class DNSServerFactoryTests(unittest.TestCase):
     def test_connectionTracking(self):
         """
         The C{connectionMade} and C{connectionLost} methods of
-        L{DNSServerFactory} cooperate to keep track of all
-        L{DNSProtocol} objects created by a factory which are
-        connected.
+        L{DNSServerFactory} cooperate to keep track of all L{DNSProtocol}
+        objects created by a factory which are connected.
         """
         protoA, protoB = object(), object()
         factory = server.DNSServerFactory()
@@ -592,8 +588,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_handleQuery(self):
         """
-        L{server.DNSServerFactory.handleQuery} takes the first query from
-        the supplied message and dispatches it to
+        L{server.DNSServerFactory.handleQuery} takes the first query from the
+        supplied message and dispatches it to
         L{server.DNSServerFactory.resolver.query}.
         """
         m = dns.Message()
@@ -613,11 +609,10 @@ class DNSServerFactoryTests(unittest.TestCase):
     def test_handleQueryCallback(self):
         """
         L{server.DNSServerFactory.handleQuery} adds
-        L{server.DNSServerFactory.resolver.gotResolverResponse} as a
-        callback to the deferred returned by
-        L{server.DNSServerFactory.resolver.query}. It is called with
-        the query response, the original protocol, message and origin
-        address.
+        L{server.DNSServerFactory.resolver.gotResolverResponse} as a callback to
+        the deferred returned by L{server.DNSServerFactory.resolver.query}. It
+        is called with the query response, the original protocol, message and
+        origin address.
         """
         f = server.DNSServerFactory()
 
@@ -650,11 +645,10 @@ class DNSServerFactoryTests(unittest.TestCase):
     def test_handleQueryErrback(self):
         """
         L{server.DNSServerFactory.handleQuery} adds
-        L{server.DNSServerFactory.resolver.gotResolverError} as an
-        errback to the deferred returned by
-        L{server.DNSServerFactory.resolver.query}. It is called with
-        the query failure, the original protocol, message and origin
-        address.
+        L{server.DNSServerFactory.resolver.gotResolverError} as an errback to
+        the deferred returned by L{server.DNSServerFactory.resolver.query}. It
+        is called with the query failure, the original protocol, message and
+        origin address.
         """
         f = server.DNSServerFactory()
 
@@ -687,8 +681,8 @@ class DNSServerFactoryTests(unittest.TestCase):
     def test_gotResolverResponse(self):
         """
         L{server.DNSServerFactory.gotResolverResponse} accepts a tuple of
-        resource record lists and triggers a response message
-        containing those resource record lists.
+        resource record lists and triggers a response message containing those
+        resource record lists.
         """
         f = server.DNSServerFactory()
         answers = []
@@ -709,8 +703,7 @@ class DNSServerFactoryTests(unittest.TestCase):
     def test_gotResolverResponseAuthoritativeMessage(self):
         """
         L{server.DNSServerFactory.gotResolverResponse} marks the response
-        message as authoritative if any of the answer records are
-        authoritative.
+        message as authoritative if any of the answer records are authoritative.
         """
         f = server.DNSServerFactory()
         answers = [dns.RRHeader(auth=True)]
@@ -730,8 +723,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_gotResolverResponseLogging(self):
         """
-        L{server.DNSServerFactory.gotResolverResponse} logs the total
-        number of records in the response if C{verbose > 0}.
+        L{server.DNSServerFactory.gotResolverResponse} logs the total number of
+        records in the response if C{verbose > 0}.
         """
         f = server.DNSServerFactory(verbose=1)
         answers = [dns.RRHeader()]
@@ -748,8 +741,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_gotResolverResponseCaching(self):
         """
-        L{server.DNSServerFactory.gotResolverResponse} caches the response
-        if at least one cache was provided in the constructor.
+        L{server.DNSServerFactory.gotResolverResponse} caches the response if at
+        least one cache was provided in the constructor.
         """
         f = server.DNSServerFactory(caches=[RaisingCache()])
 
@@ -774,17 +767,17 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def _assertMessageRcodeForError(self, responseError, expectedMessageCode):
         """
-        L{server.DNSServerFactory.gotResolver} accepts a
-        L{failure.Failure} and triggers a response message whose rCode
-        corresponds to the DNS error contained in the C{Failure}.
+        L{server.DNSServerFactory.gotResolver} accepts a L{failure.Failure} and
+        triggers a response message whose rCode corresponds to the DNS error
+        contained in the C{Failure}.
 
-        @param responseError: The L{Exception} instance which is
-            expected to trigger C{expectedMessageCode} when it is supplied
-            to C{gotResolverError}
+        @param responseError: The L{Exception} instance which is expected to
+            trigger C{expectedMessageCode} when it is supplied to
+            C{gotResolverError}
         @type responseError: L{Exception}
 
-        @param expectedMessageCode: The C{rCode} which is expected in
-            the message returned by C{gotResolverError} in response to
+        @param expectedMessageCode: The C{rCode} which is expected in the
+            message returned by C{gotResolverError} in response to
             C{responseError}.
         @type expectedMessageCode: L{int}
         """
@@ -801,17 +794,16 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_gotResolverErrorDomainError(self):
         """
-        L{server.DNSServerFactory.gotResolver} triggers a response message
-        with an C{rCode} of L{dns.ENAME} if supplied with a
-        L{error.DomainError}.
+        L{server.DNSServerFactory.gotResolver} triggers a response message with
+        an C{rCode} of L{dns.ENAME} if supplied with a L{error.DomainError}.
         """
         self._assertMessageRcodeForError(error.DomainError(), dns.ENAME)
 
 
     def test_gotResolverErrorAuthoritativeDomainError(self):
         """
-        L{server.DNSServerFactory.gotResolver} triggers a response message
-        with an C{rCode} of L{dns.ENAME} if supplied with a
+        L{server.DNSServerFactory.gotResolver} triggers a response message with
+        an C{rCode} of L{dns.ENAME} if supplied with a
         L{error.AuthoritativeDomainError}.
         """
         self._assertMessageRcodeForError(
@@ -820,9 +812,9 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_gotResolverErrorOtherError(self):
         """
-        L{server.DNSServerFactory.gotResolver} triggers a response message
-        with an C{rCode} of L{dns.ESERVER} if supplied with another
-        type of error and logs the error.
+        L{server.DNSServerFactory.gotResolver} triggers a response message with
+        an C{rCode} of L{dns.ESERVER} if supplied with another type of error and
+        logs the error.
         """
         self._assertMessageRcodeForError(KeyError(), dns.ESERVER)
         e = self.flushLoggedErrors(KeyError)
@@ -831,8 +823,7 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_gotResolverErrorLogging(self):
         """
-        L{server.DNSServerFactory.gotResolver} logs a message if
-        C{verbose > 0}.
+        L{server.DNSServerFactory.gotResolver} logs a message if C{verbose > 0}.
         """
         f = server.DNSServerFactory(verbose=1)
         assertLogMessage(
@@ -845,8 +836,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_sendReplyWithAddress(self):
         """
-        If L{server.DNSServerFactory.sendReply} is supplied with a
-        protocol *and* an address tuple it will supply that address to
+        If L{server.DNSServerFactory.sendReply} is supplied with a protocol
+        *and* an address tuple it will supply that address to
         C{protocol.writeMessage}.
         """
         m = dns.Message()
@@ -865,8 +856,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_sendReplyWithoutAddress(self):
         """
-        If L{server.DNSServerFactory.sendReply} is supplied with a
-        protocol but no address tuple it will supply only a message to
+        If L{server.DNSServerFactory.sendReply} is supplied with a protocol but
+        no address tuple it will supply only a message to
         C{protocol.writeMessage}.
         """
         m = dns.Message()
@@ -884,8 +875,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_sendReplyLoggingNoAnswers(self):
         """
-        If L{server.DNSServerFactory.sendReply} logs a "no answers"
-        message if the supplied message has no answers.
+        If L{server.DNSServerFactory.sendReply} logs a "no answers" message if
+        the supplied message has no answers.
         """
         self.patch(server.time, 'time', lambda: 2)
         m = dns.Message()
@@ -902,9 +893,9 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_sendReplyLoggingWithAnswers(self):
         """
-        If L{server.DNSServerFactory.sendReply} logs a message for
-        answers, authority, additional if the supplied a message has
-        records in any of those sections.
+        If L{server.DNSServerFactory.sendReply} logs a message for answers,
+        authority, additional if the supplied a message has records in any of
+        those sections.
         """
         self.patch(server.time, 'time', lambda: 2)
         m = dns.Message()
@@ -927,8 +918,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_handleInverseQuery(self):
         """
-        L{server.DNSServerFactory.handleInverseQuery} triggers the sending
-        of a response message with C{rCode} set to L{dns.ENOTIMP}.
+        L{server.DNSServerFactory.handleInverseQuery} triggers the sending of a
+        response message with C{rCode} set to L{dns.ENOTIMP}.
         """
         f = server.DNSServerFactory()
         e = self.assertRaises(
@@ -942,8 +933,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_handleInverseQueryLogging(self):
         """
-        L{server.DNSServerFactory.handleInverseQuery} logs the message
-        origin address if C{verbose > 0}.
+        L{server.DNSServerFactory.handleInverseQuery} logs the message origin
+        address if C{verbose > 0}.
         """
         f = server.DNSServerFactory(verbose=1)
         assertLogMessage(
@@ -957,8 +948,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_handleStatus(self):
         """
-        L{server.DNSServerFactory.handleStatus} triggers the sending
-        of a response message with C{rCode} set to L{dns.ENOTIMP}.
+        L{server.DNSServerFactory.handleStatus} triggers the sending of a
+        response message with C{rCode} set to L{dns.ENOTIMP}.
         """
         f = server.DNSServerFactory()
         e = self.assertRaises(
@@ -972,8 +963,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_handleStatusLogging(self):
         """
-        L{server.DNSServerFactory.handleStatus} logs the message
-        origin address if C{verbose > 0}.
+        L{server.DNSServerFactory.handleStatus} logs the message origin address
+        if C{verbose > 0}.
         """
         f = server.DNSServerFactory(verbose=1)
         assertLogMessage(
@@ -987,8 +978,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_handleNotify(self):
         """
-        L{server.DNSServerFactory.handleNotify} triggers the sending
-        of a response message with C{rCode} set to L{dns.ENOTIMP}.
+        L{server.DNSServerFactory.handleNotify} triggers the sending of a
+        response message with C{rCode} set to L{dns.ENOTIMP}.
         """
         f = server.DNSServerFactory()
         e = self.assertRaises(
@@ -1002,8 +993,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_handleNotifyLogging(self):
         """
-        L{server.DNSServerFactory.handleNotify} logs the message
-        origin address if C{verbose > 0}.
+        L{server.DNSServerFactory.handleNotify} logs the message origin address
+        if C{verbose > 0}.
         """
         f = server.DNSServerFactory(verbose=1)
         assertLogMessage(
@@ -1017,8 +1008,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_handleOther(self):
         """
-        L{server.DNSServerFactory.handleOther} triggers the sending
-        of a response message with C{rCode} set to L{dns.ENOTIMP}.
+        L{server.DNSServerFactory.handleOther} triggers the sending of a
+        response message with C{rCode} set to L{dns.ENOTIMP}.
         """
         f = server.DNSServerFactory()
         e = self.assertRaises(
@@ -1032,8 +1023,8 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_handleOtherLogging(self):
         """
-        L{server.DNSServerFactory.handleOther} logs the message
-        origin address if C{verbose > 0}.
+        L{server.DNSServerFactory.handleOther} logs the message origin address
+        if C{verbose > 0}.
         """
         f = server.DNSServerFactory(verbose=1)
         assertLogMessage(
