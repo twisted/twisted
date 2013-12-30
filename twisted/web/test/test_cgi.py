@@ -186,13 +186,14 @@ class CGI(unittest.TestCase):
 
         def addMessage(eventDict):
             loggedMessages.append(log.textFromEventDict(eventDict))
-        
+
         log.addObserver(addMessage)
-        
+        self.addCleanup(log.removeObserver, addMessage)
+
         def checkResponse(ignored):
             self.assertEqual(loggedMessages[0],
-                             'ignoring malformed CGI header: "XYZ"')
-            
+                             "ignoring malformed CGI header: 'XYZ'")
+
         factory.deferred.addCallback(checkResponse)
         return factory.deferred
 
