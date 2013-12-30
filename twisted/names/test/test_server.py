@@ -354,33 +354,35 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertIs(server.DNSServerFactory.protocol, dns.DNSProtocol)
 
 
-    def test_buildProtocolDefaultProtocolType(self):
-        """
-        L{server.DNSServerFactory.buildProtocol} returns an instance of
-        L{server.DNSServerFactory.protocol} by default.
-        """
-        self.assertIsInstance(
-            server.DNSServerFactory().buildProtocol(addr=None),
-            server.DNSServerFactory.protocol)
-
-
     def test_buildProtocolProtocolOverride(self):
         """
         L{server.DNSServerFactory.buildProtocol} builds a protocol by
         calling L{server.DNSServerFactory.protocol} with its self as a
         positional argument.
         """
-        class StubProtocol(object):
-            def __init__(self, *args, **kwargs):
-                self.args = args
-                self.kwargs = kwargs
+        class FakeProtocol(object):
+            factory = None
+            args = None
+            kwargs = None
+
+
+        stubProtocol = FakeProtocol()
+
+
+        def fakeProtocolFactory(*args, **kwargs):
+            stubProtocol.args = args
+            stubProtocol.kwargs = kwargs
+            return stubProtocol
+
 
         f = server.DNSServerFactory()
-        f.protocol = StubProtocol
+        f.protocol = fakeProtocolFactory
         p = f.buildProtocol(addr=None)
-        self.assertIsInstance(p, StubProtocol)
-        self.assertEqual(p.args, (f,))
-        self.assertEqual(p.kwargs, {})
+
+        self.assertEqual(
+            (stubProtocol, (f,), {}),
+            (p, p.args, p.kwargs)
+        )
 
 
     def test_messageReceivedLoggingNoQuery(self):
