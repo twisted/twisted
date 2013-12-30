@@ -30,9 +30,9 @@ class DNSServerFactory(protocol.ServerFactory):
     class also provides records for responses to DNS queries.
 
     @ivar cache: A L{Cache<twisted.names.cache.Cache>} instance whose
-        C{cacheResult} method is called when a response is received
-        from one of C{clients}.
-    @type cache: L{Cache<twisted.names.cache.Cache}
+        C{cacheResult} method is called when a response is received from one of
+        C{clients}. Or L{None} if no caches are specified.
+    @type cache: L{Cache<twisted.names.cache.Cache} or L{None}
 
     @ivar canRecurse: A flag indicating whether this server is capable
         of performing recursive DNS resolution.
