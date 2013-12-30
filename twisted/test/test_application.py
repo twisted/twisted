@@ -80,48 +80,70 @@ class TestService(unittest.TestCase):
         self.assertEqual(list(p), [])
         self.assertEqual(s.parent, None)
 
+
     def test_disowningNamedChild(self):
-        s = service.Service()
-        p = service.MultiService()
-        s.setName("hello")
-        s.setServiceParent(p)
-        self.assertEqual(list(p), [s])
-        self.assertEqual(s.parent, p)
-        self.assertEqual(p.getServiceNamed("hello"), s)
-        s.disownServiceParent()
-        self.assertEqual(list(p), [])
-        self.assertEqual(s.parent, None)
-        self.assertRaises(KeyError, p.getServiceNamed, "hello")
+        """
+        Service.disownServiceParent() should remove the service from its
+        parent's named service dict as well as the list of children.
+        """
+        child = service.Service()
+        parent = service.MultiService()
+        child.setName("hello")
+        child.setServiceParent(parent)
+        self.assertEqual(list(parent), [child])
+        self.assertEqual(child.parent, parent)
+        self.assertEqual(parent.getServiceNamed("hello"), child)
+        child.disownServiceParent()
+        self.assertEqual(list(parent), [])
+        self.assertEqual(child.parent, None)
+        self.assertRaises(KeyError, parent.getServiceNamed, "hello")
+
 
     def test_removingNonChild(self):
-        s = service.Service()
-        p = service.MultiService()
-        self.assertEqual(list(p), [])
-        self.assertEqual(s.parent, None)
-        self.assertRaises(ValueError, p.removeService, s)
+        """
+        MultiService.removeService() should raise a ValueError and not modify
+        internal state if the service it's given is not a child.
+        """
+        child = service.Service()
+        parent = service.MultiService()
+        self.assertEqual(list(parent), [])
+        self.assertEqual(child.parent, None)
+        self.assertRaises(ValueError, parent.removeService, child)
+
 
     def test_removingNamedNonChild(self):
-        s = service.Service()
-        p = service.MultiService()
-        s.setName("hello")
-        self.assertEqual(list(p), [])
-        self.assertEqual(s.parent, None)
-        self.assertRaises(ValueError, p.removeService, s)
+        """
+        MultiService.removeService() should raise a ValueError and not modify
+        internal state if the named service it's given is not a child.
+        """
+        child = service.Service()
+        parent = service.MultiService()
+        child.setName("hello")
+        self.assertEqual(list(parent), [])
+        self.assertEqual(child.parent, None)
+        self.assertRaises(ValueError, parent.removeService, child)
+
 
     def test_removingDuplicateNamedNonChild(self):
-        s = service.Service()
-        t = service.Service()
-        p = service.MultiService()
-        s.setName("hello")
-        s.setServiceParent(p)
-        self.assertEqual(list(p), [s])
-        self.assertEqual(s.parent, p)
-        self.assertEqual(p.getServiceNamed("hello"), s)
-        t.setName("hello")
-        self.assertRaises(ValueError, p.removeService, t)
-        self.assertEqual(list(p), [s])
-        self.assertEqual(s.parent, p)
-        self.assertEqual(p.getServiceNamed("hello"), s)
+        """
+        MultiService.removeService() should raise a ValueError and not modify
+        internal state if the service it's given is not a child but has the
+        same name as a child service.
+        """
+        child = service.Service()
+        nonchild = service.Service()
+        parent = service.MultiService()
+        child.setName("hello")
+        child.setServiceParent(parent)
+        self.assertEqual(list(parent), [child])
+        self.assertEqual(child.parent, parent)
+        self.assertEqual(parent.getServiceNamed("hello"), child)
+        nonchild.setName("hello")
+        self.assertRaises(ValueError, parent.removeService, nonchild)
+        self.assertEqual(list(parent), [child])
+        self.assertEqual(child.parent, parent)
+        self.assertEqual(parent.getServiceNamed("hello"), child)
+
 
     def testRunning(self):
         s = service.Service()
