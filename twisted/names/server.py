@@ -47,13 +47,13 @@ class DNSServerFactory(protocol.ServerFactory):
 
     @ivar connections: A list of all the connected L{DNSProtocol}
         instances using this object as their controller.
-    @type connections: C{list} of L{DNSProtocol}
+    @type connections: C{list} of L{DNSProtocol} instances
 
     @ivar protocol: A callable used for building a DNS stream
         protocol. Called by L{DNSServerFactory.buildProtocol} and
         passed the L{DNSServerFactory} instance as the one and only
         positional argument.  Defaults to L{dns.DNSProtocol}.
-    @type protocol: A L{callable} which returns L{IProtocolFactory}
+    @type protocol: L{IProtocolFactory} constructor
     """
 
     protocol = dns.DNSProtocol
@@ -62,18 +62,18 @@ class DNSServerFactory(protocol.ServerFactory):
     def __init__(self, authorities=None, caches=None, clients=None, verbose=0):
         """
         @param authorities: Resolvers which provide authoritative answers.
-        @type authorities: L{list} of L{IResolver}
+        @type authorities: L{list} of L{IResolver} providers
 
         @param caches: Resolvers which provide cached
             non-authoritative answers. The first cache instance is
             assigned to L{DNSServerFactory.cache} and its
             C{cacheResult} method will be called when a response is
             received from one of C{clients}.
-        @type caches: L{list} of L{Cache<twisted.names.cache.Cache}
+        @type caches: L{list} of L{Cache<twisted.names.cache.Cache} instances
 
-        @param clients: Resolvers which are capable of performing
-            recursive DNS lookups.
-        @type clients: L{list} of {IResolver}
+        @param clients: Resolvers which are capable of performing recursive DNS
+            lookups.
+        @type clients: L{list} of {IResolver} providers
 
         @param verbose: An integer controlling the verbosity of
             logging of queries and responses. Default is C{0} which
@@ -182,13 +182,13 @@ class DNSServerFactory(protocol.ServerFactory):
         C{DNSServerFactory.verbose} is C{>1}.
 
         @param ans: A list of answer records
-        @type ans: L{list} of L{dns.RRHeader}
+        @type ans: L{list} of L{dns.RRHeader} instances
 
         @param auth: A list of authority records
-        @type auth: L{list} of L{dns.RRHeader}
+        @type auth: L{list} of L{dns.RRHeader} instances
 
         @param add: A list of additional records
-        @type add: L{list} of L{dns.RRHeader}
+        @type add: L{list} of L{dns.RRHeader} instances
 
         @param protocol: The DNS protocol instance to which to send a
             response message.
