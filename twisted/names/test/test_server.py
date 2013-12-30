@@ -15,7 +15,7 @@ from twisted.trial import unittest
 
 
 
-class NoresponseDNSServerFactory(server.DNSServerFactory):
+class NoResponseDNSServerFactory(server.DNSServerFactory):
     """
     A L{server.DNSServerFactory} subclass which does not attempt to
     reply to any received messages.
@@ -391,7 +391,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         if the message had no queries and C{verbose} is  C{>0}.
         """
         m = dns.Message()
-        f = NoresponseDNSServerFactory(verbose=1)
+        f = NoResponseDNSServerFactory(verbose=1)
 
         assertLogMessage(
             self,
@@ -408,7 +408,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         m = dns.Message()
         m.addQuery(name='example.com', type=dns.MX)
         m.addQuery(name='example.com', type=dns.AAAA)
-        f = NoresponseDNSServerFactory(verbose=1)
+        f = NoResponseDNSServerFactory(verbose=1)
 
         assertLogMessage(
             self,
@@ -425,7 +425,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         m = dns.Message()
         m.addQuery(name='example.com', type=dns.MX)
         m.addQuery(name='example.com', type=dns.AAAA)
-        f = NoresponseDNSServerFactory(verbose=2)
+        f = NoResponseDNSServerFactory(verbose=2)
 
         assertLogMessage(
             self,
@@ -441,7 +441,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         timestamp to the received message.
         """
         m = dns.Message()
-        f = NoresponseDNSServerFactory()
+        f = NoResponseDNSServerFactory()
         t = object()
         self.patch(server.time, 'time', lambda: t)
         f.messageReceived(message=m, proto=None, address=None)
