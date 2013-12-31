@@ -9,7 +9,7 @@ import sys, os
 
 from twisted.trial import unittest
 from twisted.internet import reactor, interfaces, error
-from twisted.python import util, failure
+from twisted.python import util, failure, log
 from twisted.web.http import NOT_FOUND, INTERNAL_SERVER_ERROR
 from twisted.web import client, twcgi, server, resource
 from twisted.web.test._util import _render
@@ -24,6 +24,12 @@ print "cgi output"
 DUAL_HEADER_CGI = '''\
 print "Header: spam"
 print "Header: eggs"
+print
+print "cgi output"
+'''
+
+BROKEN_HEADER_CGI = '''\
+print "XYZ"
 print
 print "cgi output"
 '''
@@ -162,6 +168,32 @@ class CGI(unittest.TestCase):
         def checkResponse(ignored):
             self.assertEqual(
                 factory.response_headers['header'], ['spam', 'eggs'])
+        factory.deferred.addCallback(checkResponse)
+        return factory.deferred
+
+
+    def test_malformedHeaderCGI(self):
+        """
+        Check for the error message in the duplicated header
+        """
+        cgiFilename = self.writeCGI(BROKEN_HEADER_CGI)
+
+        portnum = self.startServer(cgiFilename)
+        url = "http://localhost:%d/cgi" % (portnum,)
+        factory = client.HTTPClientFactory(url)
+        reactor.connectTCP('localhost', portnum, factory)
+        loggedMessages = []
+
+        def addMessage(eventDict):
+            loggedMessages.append(log.textFromEventDict(eventDict))
+
+        log.addObserver(addMessage)
+        self.addCleanup(log.removeObserver, addMessage)
+
+        def checkResponse(ignored):
+            self.assertEqual(loggedMessages[0],
+                             "ignoring malformed CGI header: 'XYZ'")
+
         factory.deferred.addCallback(checkResponse)
         return factory.deferred
 
