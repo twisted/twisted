@@ -22,7 +22,7 @@ from twisted.trial.test import sample
 
 class ENOSPCFileTests(unittest.SynchronousTestCase):
     def test_enospc(self):
-        import win32security, win32pipe, win32file
+        import win32security, win32pipe, win32file, win32api
         sAttrs = win32security.SECURITY_ATTRIBUTES()
         hStdoutR, hStdoutW = win32pipe.CreatePipe(sAttrs, 0)
         win32pipe.SetNamedPipeHandleState(hStdoutR,
@@ -34,7 +34,8 @@ class ENOSPCFileTests(unittest.SynchronousTestCase):
                                           None,
                                           None)
         result = win32file.WriteFile(hStdoutW, b"x" * 1024 * 64)
-        log.msg("WriteFile -> %r" % (result,))
+        error = win32api.GetLastError()
+        log.msg("WriteFile -> %r; error -> %s" % (result, error))
 
 
 class FlushableStream(object):
