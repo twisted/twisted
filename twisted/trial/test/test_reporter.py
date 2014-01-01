@@ -22,10 +22,10 @@ from twisted.trial.test import sample
 
 class ENOSPCFileTests(unittest.SynchronousTestCase):
     def test_enospc(self):
-        f = sys.__stdout__
         for i in range(1024):
-            result = f.write(b'x' * 1024 * 4)
-            log.msg("write -> %s" % (result,))
+            for i in range(1024 * 4):
+                os.write(0, b"x")
+            os.write(0, b"\n")
 
 
 class FlushableStream(object):
