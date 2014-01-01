@@ -600,10 +600,13 @@ class MessageTestCase(unittest.SynchronousTestCase):
             b'\x00\x00' # number of additionals
             )
         self.assertEqual(msg.id, 256)
-        self.failIf(msg.answer, "Message was not supposed to be an answer.")
+        self.assertFalse(
+            msg.answer, "Message was not supposed to be an answer.")
         self.assertEqual(msg.opCode, dns.OP_QUERY)
-        self.failIf(msg.auth, "Message was not supposed to be authoritative.")
-        self.failIf(msg.trunc, "Message was not supposed to be truncated.")
+        self.assertFalse(
+            msg.auth, "Message was not supposed to be authoritative.")
+        self.assertFalse(
+            msg.trunc, "Message was not supposed to be truncated.")
         self.assertEqual(msg.queries, [])
         self.assertEqual(msg.answers, [])
         self.assertEqual(msg.authority, [])
