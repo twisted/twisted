@@ -164,7 +164,7 @@ class SRVConnectorTest(unittest.TestCase):
                                                    payload=payload)]
         self.connector.connect()
 
-        self.assertNotIdentical(None, self.factory.reason)
+        self.assertIsNot(None, self.factory.reason)
         self.factory.reason.trap(DNSLookupError)
         self.assertEqual(self.reactor.tcpClients, [])
 

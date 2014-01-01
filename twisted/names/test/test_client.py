@@ -499,8 +499,8 @@ class ResolverTests(unittest.TestCase):
         firstProto = resolver._connectedProtocol()
         secondProto = resolver._connectedProtocol()
 
-        self.assertNotIdentical(firstProto.transport, None)
-        self.assertNotIdentical(secondProto.transport, None)
+        self.assertIsNot(firstProto.transport, None)
+        self.assertIsNot(secondProto.transport, None)
         self.assertNotEqual(
             firstProto.transport.getHost().port,
             secondProto.transport.getHost().port)
