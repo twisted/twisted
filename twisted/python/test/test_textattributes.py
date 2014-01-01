@@ -19,7 +19,7 @@ class DefaultFormattingStateTests(unittest.TestCase):
         L{DefaultFormattingState}s are always equal to other
         L{DefaultFormattingState}s.
         """
-        self.assertEquals(
+        self.assertEqual(
             DefaultFormattingState(),
             DefaultFormattingState())
         self.assertNotEquals(
