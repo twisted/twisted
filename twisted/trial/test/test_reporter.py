@@ -23,9 +23,11 @@ from twisted.trial.test import sample
 class ENOSPCFileTests(unittest.SynchronousTestCase):
     def test_enospc(self):
         for i in range(1024):
+            n = 0
             for i in range(1024 * 4):
-                os.write(1, b"x")
-            os.write(1, b"\n")
+                n += os.write(1, b"x")
+            n += os.write(1, b"\n")
+            log.msg("n == %d" % (n,))
 
 
 
