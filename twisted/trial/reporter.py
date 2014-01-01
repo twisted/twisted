@@ -42,6 +42,56 @@ class BrokenTestCaseWarning(Warning):
 
 
 
+class _ENOSPCFile(object):
+    def __init__(self, fd):
+        self.fd = fd
+
+
+    def write(self, data):
+        bufferSize = min(2 ** 16, len(data))
+        while data:
+            log.msg(
+                format="SafeStream.write trying %(data)r",
+                data=data[:bufferSize])
+            try:
+                untilConcludes(os.write, self.fd, data[:bufferSize])
+            except OSError as e:
+                if e.errno == errno.ENOSPC:
+                    log.msg(
+                        format="ENOSPC in SafeStream.write for %(data)r",
+                        data=data[:bufferSize])
+                    if bufferSize == 1:
+                        pass
+                    else:
+                        bufferSize //= 2
+                else:
+                    raise
+            else:
+                bufferSize = min(2 ** 16, len(data))
+                data = data[bufferSize:]
+
+
+    def flush(self):
+        # XXX This branch very poorly tested
+        # Using os.write so no need to flush
+        pass
+
+
+
+class _UntilConcludesFile(object):
+    def __init__(self, original):
+        self.original = original
+
+
+    def write(self, data):
+        untilConcludes(self.original.write, data)
+
+
+    def flush(self):
+        untilConcludes(self.original.flush)
+
+
+
 class SafeStream(object):
     """
     Wraps a stream object so that all C{write} calls are wrapped in
@@ -55,21 +105,19 @@ class SafeStream(object):
 
     def __init__(self, original):
         self.original = original
-        self._catchENOSPC = False
-        if self._platform.isWindows():
+        self._output = _UntilConcludesFile(original)
+        try:
+            fileno = self.original.fileno
+        except AttributeError:
+            pass
+        else:
             try:
-                fileno = self.original.fileno
-            except AttributeError:
+                fd = fileno()
+            except io.UnsupportedOperation:
                 pass
             else:
-                try:
-                    fd = fileno()
-                except io.UnsupportedOperation:
-                    pass
-                else:
-                    if not self._isFile(fd):
-                        self._fd = fd
-                        self._catchENOSPC = True
+                if not self._isFile(fd):
+                    self._output = _ENOSPCFile(fd)
 
 
     def __getattr__(self, name):
@@ -93,43 +141,14 @@ class SafeStream(object):
         """
         Flush the underlying stream, while handling any transient errors.
         """
-        if self._catchENOSPC:
-            # XXX This branch very poorly tested
-            # Using os.write so no need to flush
-            pass
-        else:
-            untilConcludes(self.original.flush)
+        self._output.flush()
 
 
     def write(self, data):
         """
         Write to the underlying stream, while handling any transient errors.
         """
-        if self._catchENOSPC:
-            bufferSize = min(2 ** 16, len(data))
-            while data:
-                log.msg(
-                    format="SafeStream.write trying %(data)r",
-                    data=data[:bufferSize])
-                try:
-                    untilConcludes(
-                        os.write, self._fd, data[:bufferSize])
-                except OSError as e:
-                    if e.errno == errno.ENOSPC:
-                        log.msg(
-                            format="ENOSPC in SafeStream.write for %(data)r",
-                            data=data[:bufferSize])
-                        if bufferSize == 1:
-                            pass
-                        else:
-                            bufferSize //= 2
-                    else:
-                        raise
-                else:
-                    bufferSize = min(2 ** 16, len(data))
-                    data = data[bufferSize:]
-        else:
-            untilConcludes(self.original.write, data)
+        self._output.write(data)
 
 
 
@@ -1215,7 +1234,10 @@ class TreeReporter(Reporter):
         self._lastTest = []
         for colorizer in [_Win32Colorizer, _AnsiColorizer, _NullColorizer]:
             if colorizer.supported(stream):
-                self._colorizer = colorizer(stream)
+                # Reporter.__init__ initialized _stream from stream but it
+                # applied some critical wrapping necessary for correct buffer
+                # handling.  We must use it - *not* sys.stdout (or whatever).
+                self._colorizer = colorizer(self._stream)
                 break
 
     def getDescription(self, test):

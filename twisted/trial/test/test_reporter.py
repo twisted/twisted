@@ -19,6 +19,13 @@ from twisted.trial.unittest import makeTodo, SkipTest, Todo
 from twisted.trial.test import sample
 
 
+
+class ENOSPCFileTests(unittest.SynchronousTestCase):
+    def test_enospc(self):
+        read, write = os.pipe()
+        os.write(write, b"x" * 1024 * 64)
+
+
 class FlushableStream(object):
     """
     Stream-ish object that has a buffer that needs to be flushed.
