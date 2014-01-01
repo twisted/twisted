@@ -34,9 +34,12 @@ class ENOSPCFileTests(unittest.SynchronousTestCase):
                                           win32pipe.PIPE_NOWAIT,
                                           None,
                                           None)
-        result = win32file.WriteFile(hStdoutW, b"x" * 1024 * 3)
-        error = win32api.GetLastError()
-        log.msg("WriteFile -> %r; error -> %s" % (result, error))
+        for i in range(1024):
+            result = win32file.WriteFile(hStdoutW, b"x" * 1024 * 3)
+            error = win32api.GetLastError()
+            log.msg("WriteFile -> %r; error -> %s" % (result, error))
+            if error != 0:
+                break
 
 
 class FlushableStream(object):
