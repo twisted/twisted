@@ -34,7 +34,7 @@ class ENOSPCFileTests(unittest.SynchronousTestCase):
                                           None,
                                           None)
         result = win32file.WriteFile(hStdoutW, b"x" * 1024 * 64)
-        log.msg("WriteFile -> %d" % (result,))
+        log.msg("WriteFile -> %r" % (result,))
 
 
 class FlushableStream(object):
