@@ -299,7 +299,7 @@ class SendmsgTestCase(TestCase):
             send1msg(self.input.fileno(), message, 0))
 
         result = recv1msg(fd=self.output.fileno())
-        self.assertEquals(result, (message, 0, []))
+        self.assertEqual(result, (message, 0, []))
 
 
     def test_shortsend(self):
@@ -323,7 +323,7 @@ class SendmsgTestCase(TestCase):
         send1msg(self.input.fileno(), "hello, world!", 0, [])
 
         result = recv1msg(fd=self.output.fileno())
-        self.assertEquals(result, ("hello, world!", 0, []))
+        self.assertEqual(result, ("hello, world!", 0, []))
 
 
     def test_flags(self):
@@ -356,8 +356,8 @@ class SendmsgTestCase(TestCase):
         error = self.assertRaises(TypeError,
                                   send1msg, self.input.fileno(),
                                   "hello, world!", 0, 4321)
-        self.assertEquals(str(error),
-                          "send1msg argument 3 expected list, got int")
+        self.assertEqual(str(error),
+                         "send1msg argument 3 expected list, got int")
 
 
     def spawn(self, script):
@@ -402,9 +402,9 @@ class SendmsgTestCase(TestCase):
 
         close(pipeIn)
         yield sspp.stopped
-        self.assertEquals(read(pipeOut, 1024), "Test fixture data: blonk.\n")
+        self.assertEqual(read(pipeOut, 1024), "Test fixture data: blonk.\n")
         # Make sure that the pipe is actually closed now.
-        self.assertEquals(read(pipeOut, 1024), "")
+        self.assertEqual(read(pipeOut, 1024), "")
 
 
 

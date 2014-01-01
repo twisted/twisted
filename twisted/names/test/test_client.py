@@ -119,7 +119,7 @@ class GetResolverTests(unittest.TestCase):
         with AlternateReactor(Clock()):
             a = client.getResolver()
             b = client.getResolver()
-        self.assertIdentical(a, b)
+        self.assertIs(a, b)
 
 
 
@@ -178,7 +178,7 @@ class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
             resolver = client.createResolver()
         res = [r for r in resolver.resolvers if isinstance(r, client.Resolver)]
         self.assertEqual(1, len(res))
-        self.assertIdentical(reactor, res[0]._reactor)
+        self.assertIs(reactor, res[0]._reactor)
 
 
     def test_defaultResolvConf(self):
@@ -341,16 +341,16 @@ class ResolverTests(unittest.TestCase):
         queryResult.addCallback(self.assertEqual, expectedResult)
 
         self.assertEqual(len(protocol.queries), 1)
-        self.assertIdentical(protocol.queries[0][0], servers[0])
+        self.assertIs(protocol.queries[0][0], servers[0])
         protocol.queries[0][-1].errback(DNSQueryTimeoutError(0))
         self.assertEqual(len(protocol.queries), 2)
-        self.assertIdentical(protocol.queries[1][0], servers[1])
+        self.assertIs(protocol.queries[1][0], servers[1])
         protocol.queries[1][-1].errback(DNSQueryTimeoutError(1))
         self.assertEqual(len(protocol.queries), 3)
-        self.assertIdentical(protocol.queries[2][0], dynServers[0])
+        self.assertIs(protocol.queries[2][0], dynServers[0])
         protocol.queries[2][-1].errback(DNSQueryTimeoutError(2))
         self.assertEqual(len(protocol.queries), 4)
-        self.assertIdentical(protocol.queries[3][0], dynServers[1])
+        self.assertIs(protocol.queries[3][0], dynServers[1])
         protocol.queries[3][-1].callback(expectedResult)
 
         return queryResult
@@ -480,8 +480,8 @@ class ResolverTests(unittest.TestCase):
         firstProto = resolver._connectedProtocol()
         secondProto = resolver._connectedProtocol()
 
-        self.assertNotIdentical(firstProto.transport, None)
-        self.assertNotIdentical(secondProto.transport, None)
+        self.assertIsNot(firstProto.transport, None)
+        self.assertIsNot(secondProto.transport, None)
         self.assertNotEqual(
             firstProto.transport.getHost().port,
             secondProto.transport.getHost().port)
@@ -500,7 +500,7 @@ class ResolverTests(unittest.TestCase):
         reactor = MemoryReactor()
         resolver = client.Resolver(resolv=self.mktemp(), reactor=reactor)
         proto = resolver._connectedProtocol()
-        self.assertIdentical(proto._reactor, reactor)
+        self.assertIs(proto._reactor, reactor)
 
 
     def test_differentProtocol(self):

@@ -47,8 +47,7 @@ class SearchHostsFileTests(TestCase, GoodTempPathMixin):
         hosts = self.path()
         hosts.setContent(
             b"10.2.3.4 foo.example.com\n")
-        self.assertIdentical(
-            None, searchFileFor(hosts.path, b"bar.example.com"))
+        self.assertIs(None, searchFileFor(hosts.path, b"bar.example.com"))
 
 
     def test_firstAddress(self):

@@ -32,7 +32,7 @@ class ExceptionForCodeTests(SynchronousTestCase):
         L{ResolverBase.exceptionForCode} converts L{EFORMAT} to
         L{DNSFormatError}.
         """
-        self.assertIdentical(self.exceptionForCode(EFORMAT), DNSFormatError)
+        self.assertIs(self.exceptionForCode(EFORMAT), DNSFormatError)
 
 
     def test_eserver(self):
@@ -40,14 +40,14 @@ class ExceptionForCodeTests(SynchronousTestCase):
         L{ResolverBase.exceptionForCode} converts L{ESERVER} to
         L{DNSServerError}.
         """
-        self.assertIdentical(self.exceptionForCode(ESERVER), DNSServerError)
+        self.assertIs(self.exceptionForCode(ESERVER), DNSServerError)
 
 
     def test_ename(self):
         """
         L{ResolverBase.exceptionForCode} converts L{ENAME} to L{DNSNameError}.
         """
-        self.assertIdentical(self.exceptionForCode(ENAME), DNSNameError)
+        self.assertIs(self.exceptionForCode(ENAME), DNSNameError)
 
 
     def test_enotimp(self):
@@ -55,8 +55,7 @@ class ExceptionForCodeTests(SynchronousTestCase):
         L{ResolverBase.exceptionForCode} converts L{ENOTIMP} to
         L{DNSNotImplementedError}.
         """
-        self.assertIdentical(
-            self.exceptionForCode(ENOTIMP), DNSNotImplementedError)
+        self.assertIs(self.exceptionForCode(ENOTIMP), DNSNotImplementedError)
 
 
     def test_erefused(self):
@@ -64,8 +63,7 @@ class ExceptionForCodeTests(SynchronousTestCase):
         L{ResolverBase.exceptionForCode} converts L{EREFUSED} to
         L{DNSQueryRefusedError}.
         """
-        self.assertIdentical(
-            self.exceptionForCode(EREFUSED), DNSQueryRefusedError)
+        self.assertIs(self.exceptionForCode(EREFUSED), DNSQueryRefusedError)
 
 
     def test_other(self):
@@ -73,8 +71,7 @@ class ExceptionForCodeTests(SynchronousTestCase):
         L{ResolverBase.exceptionForCode} converts any other response code to
         L{DNSUnknownError}.
         """
-        self.assertIdentical(
-            self.exceptionForCode(object()), DNSUnknownError)
+        self.assertIs(self.exceptionForCode(object()), DNSUnknownError)
 
 
 

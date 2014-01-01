@@ -509,7 +509,7 @@ class HelperTestCase(unittest.TestCase):
         a = authority.getSerial(f)
         for i in range(20):
             b = authority.getSerial(f)
-            self.failUnless(a < b)
+            self.assertTrue(a < b)
             a = b
 
 

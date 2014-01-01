@@ -56,7 +56,7 @@ class Str2TimeTests(unittest.TestCase):
         When passed a non-string object, L{dns.str2name} returns it unmodified.
         """
         time = object()
-        self.assertIdentical(time, dns.str2time(time))
+        self.assertIs(time, dns.str2time(time))
 
 
     def test_seconds(self):
@@ -702,10 +702,13 @@ class MessageTestCase(unittest.SynchronousTestCase):
             b'\x00\x00' # number of additionals
             )
         self.assertEqual(msg.id, 256)
-        self.failIf(msg.answer, "Message was not supposed to be an answer.")
+        self.assertFalse(
+            msg.answer, "Message was not supposed to be an answer.")
         self.assertEqual(msg.opCode, dns.OP_QUERY)
-        self.failIf(msg.auth, "Message was not supposed to be authoritative.")
-        self.failIf(msg.trunc, "Message was not supposed to be truncated.")
+        self.assertFalse(
+            msg.auth, "Message was not supposed to be authoritative.")
+        self.assertFalse(
+            msg.trunc, "Message was not supposed to be truncated.")
         self.assertEqual(msg.queries, [])
         self.assertEqual(msg.answers, [])
         self.assertEqual(msg.authority, [])
@@ -728,7 +731,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
         msg2 = dns.Message()
         msg2.decode(s)
 
-        self.failUnless(isinstance(msg2.answers[0].payload, dns.Record_NULL))
+        self.assertIsInstance(msg2.answers[0].payload, dns.Record_NULL)
         self.assertEqual(msg2.answers[0].payload.payload, bytes)
 
 
@@ -741,8 +744,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
         # 65280 is the first value in the range reserved for private
         # use, so it shouldn't ever conflict with an officially
         # allocated value.
-        self.assertIdentical(
-            dns.Message().lookupRecordType(65280), dns.UnknownRecord)
+        self.assertIs(dns.Message().lookupRecordType(65280), dns.UnknownRecord)
 
 
     def test_nonAuthoritativeMessage(self):

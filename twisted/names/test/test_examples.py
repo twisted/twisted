@@ -75,7 +75,7 @@ class ExampleTestBase(object):
         """
         The example scripts start with the standard shebang line.
         """
-        self.assertEquals(
+        self.assertEqual(
             self.examplePath.open().readline().rstrip(),
             '#!/usr/bin/env python')
 
