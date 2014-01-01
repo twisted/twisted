@@ -54,7 +54,7 @@ class Str2TimeTests(unittest.TestCase):
         When passed a non-string object, L{dns.str2name} returns it unmodified.
         """
         time = object()
-        self.assertIdentical(time, dns.str2time(time))
+        self.assertIs(time, dns.str2time(time))
 
 
     def test_seconds(self):
@@ -639,8 +639,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
         # 65280 is the first value in the range reserved for private
         # use, so it shouldn't ever conflict with an officially
         # allocated value.
-        self.assertIdentical(
-            dns.Message().lookupRecordType(65280), dns.UnknownRecord)
+        self.assertIs(dns.Message().lookupRecordType(65280), dns.UnknownRecord)
 
 
     def test_nonAuthoritativeMessage(self):
