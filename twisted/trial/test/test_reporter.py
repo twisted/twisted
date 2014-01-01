@@ -24,8 +24,9 @@ class ENOSPCFileTests(unittest.SynchronousTestCase):
     def test_enospc(self):
         for i in range(1024):
             for i in range(1024 * 4):
-                os.write(0, b"x")
-            os.write(0, b"\n")
+                os.write(1, b"x")
+            os.write(1, b"\n")
+
 
 
 class FlushableStream(object):
