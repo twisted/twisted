@@ -24,8 +24,8 @@ class ENOSPCFileTests(unittest.SynchronousTestCase):
     def test_enospc(self):
         for i in range(1024):
             n = 0
-            for i in range(1024 * 4):
-                n += os.write(1, b"x")
+            for i in range(1024):
+                n += os.write(1, b"x" * 4)
             n += os.write(1, b"\n")
             log.msg("n == %d" % (n,))
 
