@@ -629,7 +629,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
         msg2 = dns.Message()
         msg2.decode(s)
 
-        self.failUnless(isinstance(msg2.answers[0].payload, dns.Record_NULL))
+        self.assertIsInstance(msg2.answers[0].payload, dns.Record_NULL)
         self.assertEqual(msg2.answers[0].payload.payload, bytes)
 
 
