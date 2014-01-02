@@ -1,3 +1,3 @@
 Twisted Runner 13.2.0
 
-Twisted Runner depends on Twisted.
+Twisted Runner depends on Twisted and cffi (0.6 or newer).
