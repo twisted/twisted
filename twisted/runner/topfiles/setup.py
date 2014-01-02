@@ -2,17 +2,11 @@
 # See LICENSE for details.
 
 try:
-    from twisted.python.dist import setup, ConditionalExtension as Extension
+    from twisted.python.dist import setup
 except ImportError:
     raise SystemExit("twisted.python.dist module not found.  Make sure you "
                      "have installed the Twisted core package before "
                      "attempting to install any other Twisted projects.")
-
-extensions = [
-    Extension("twisted.runner.portmap",
-              ["twisted/runner/portmap.c"],
-              condition=lambda builder: builder._check_header("rpc/rpc.h")),
-]
 
 if __name__ == '__main__':
     setup(
@@ -30,6 +24,4 @@ if __name__ == '__main__':
 Twisted Runner contains code useful for persistent process management
 with Python and Twisted, and has an almost full replacement for inetd.
 """,
-        # build stuff
-        conditionalExtensions=extensions,
     )
