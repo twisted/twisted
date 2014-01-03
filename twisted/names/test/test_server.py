@@ -89,7 +89,6 @@ class RaisingProtocol(object):
         Contains positional and keyword arguments in C{args}.
         """
 
-
     def writeMessage(self, *args, **kwargs):
         """
         Raises the supplied arguments.
