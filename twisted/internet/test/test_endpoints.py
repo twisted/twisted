@@ -686,6 +686,13 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
         return d.addCallback(checkAddress)
 
 
+    def test_StdioIOReceivesCorrectReactor(self):
+        reactor = MemoryReactor()
+        ep = endpoints.StandardIOEndpoint(reactor)
+        ep.listen(StdioFactory())
+        self.assertEqual(len(reactor.getReaders()), 1)
+
+
 
 class StubApplicationProtocol(protocol.Protocol):
     """

@@ -258,7 +258,8 @@ class StandardIOEndpoint(object):
         Implement L{IStreamServerEndpoint.listen} to listen on stdin/stdout
         """
         return defer.execute(stdio.StandardIO,
-                             stdioProtocolFactory.buildProtocol(PipeAddress()))
+                             stdioProtocolFactory.buildProtocol(PipeAddress()),
+                             reactor=self._reactor)
 
 
 

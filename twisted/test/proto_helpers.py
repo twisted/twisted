@@ -17,10 +17,9 @@ from zope.interface.verify import verifyClass
 from twisted.python import failure
 from twisted.python.compat import unicode
 from twisted.internet.interfaces import (
-    ITransport, IConsumer, IPushProducer, IConnector)
-from twisted.internet.interfaces import (
-    IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
-from twisted.internet.interfaces import IListeningPort
+    ITransport, IConsumer, IPushProducer, IConnector, IReactorTCP, IReactorSSL,
+    IReactorUNIX, IReactorSocket, IListeningPort, IReactorFDSet
+)
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.error import UnsupportedAddressFamily
 from twisted.protocols import basic
@@ -370,7 +369,9 @@ class _FakeConnector(object):
 
 
 
-@implementer(IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
+@implementer(
+    IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket, IReactorFDSet
+)
 class MemoryReactor(object):
     """
     A fake reactor to be used in tests.  This reactor doesn't actually do
@@ -421,6 +422,9 @@ class MemoryReactor(object):
         self.adoptedPorts = []
         self.adoptedStreamConnections = []
         self.connectors = []
+
+        self.readers = []
+        self.writers = []
 
 
     def adoptStreamPort(self, fileno, addressFamily, factory):
@@ -542,6 +546,32 @@ class MemoryReactor(object):
         factory.startedConnecting(conn)
         self.connectors.append(conn)
         return conn
+
+    def addReader(self, reader):
+        if reader not in self.readers:
+            self.readers.append(reader)
+
+    def removeReader(self, reader):
+        self.readers.remove(reader)
+
+    def addWriter(self, writer):
+        if writer not in self.writers:
+            self.writers.append(writer)
+
+    def removeWriter(self, writer):
+        self.writers.remove(writer)
+
+    def getReaders(self):
+        return self.readers[:]
+
+    def getWriters(self):
+        return self.writers[:]
+
+    def removeAll(self):
+        del self.readers[:]
+        del self.writers[:]
+
+
 for iface in implementedBy(MemoryReactor):
     verifyClass(iface, MemoryReactor)
 
