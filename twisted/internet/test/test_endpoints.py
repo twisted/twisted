@@ -26,6 +26,7 @@ from twisted.test.proto_helpers import RaisingMemoryReactor, StringTransport
 from twisted.python.failure import Failure
 from twisted.python.systemd import ListenFDs
 from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
 from twisted.python import log
 from twisted.protocols import basic
 from twisted.internet.task import Clock
@@ -684,6 +685,24 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
             stdioOb.loseConnection()
 
         return d.addCallback(checkAddress)
+
+
+    def test_StdioIOReceivesCorrectReactor(self):
+        """
+        The reactor passed to the endpoint is the one that the readers are
+        added to.
+        """
+        reactor = MemoryReactor()
+        ep = endpoints.StandardIOEndpoint(reactor)
+        d = ep.listen(StdioFactory())
+
+        def checkReaders(stdioOb):
+            if platform.isWindows():
+                self.assertEqual(stdioOb.reactor, reactor)
+            else:
+                self.assertIn(stdioOb._reader, reactor.getReaders())
+
+        return d.addCallback(checkReaders)
 
 
 

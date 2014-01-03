@@ -17,10 +17,9 @@ from zope.interface.verify import verifyClass
 from twisted.python import failure
 from twisted.python.compat import unicode
 from twisted.internet.interfaces import (
-    ITransport, IConsumer, IPushProducer, IConnector)
-from twisted.internet.interfaces import (
-    IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
-from twisted.internet.interfaces import IListeningPort
+    ITransport, IConsumer, IPushProducer, IConnector, IReactorTCP, IReactorSSL,
+    IReactorUNIX, IReactorSocket, IListeningPort, IReactorFDSet
+)
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.error import UnsupportedAddressFamily
 from twisted.protocols import basic
@@ -370,7 +369,9 @@ class _FakeConnector(object):
 
 
 
-@implementer(IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket)
+@implementer(
+    IReactorTCP, IReactorSSL, IReactorUNIX, IReactorSocket, IReactorFDSet
+)
 class MemoryReactor(object):
     """
     A fake reactor to be used in tests.  This reactor doesn't actually do
@@ -421,6 +422,9 @@ class MemoryReactor(object):
         self.adoptedPorts = []
         self.adoptedStreamConnections = []
         self.connectors = []
+
+        self.readers = set()
+        self.writers = set()
 
 
     def adoptStreamPort(self, fileno, addressFamily, factory):
@@ -542,6 +546,63 @@ class MemoryReactor(object):
         factory.startedConnecting(conn)
         self.connectors.append(conn)
         return conn
+
+
+    def addReader(self, reader):
+        """
+        Fake L{IReactorFDSet.addReader} which adds the reader to a local set.
+        """
+        self.readers.add(reader)
+
+
+    def removeReader(self, reader):
+        """
+        Fake L{IReactorFDSet.removeReader} which removes the reader from a
+        local set.
+        """
+        self.readers.discard(reader)
+
+
+    def addWriter(self, writer):
+        """
+        Fake L{IReactorFDSet.addWriter} which adds the writer to a local set.
+        """
+        self.writers.add(writer)
+
+
+    def removeWriter(self, writer):
+        """
+        Fake L{IReactorFDSet.removeWriter} which removes the writer from a
+        local set.
+        """
+        self.writers.discard(writer)
+
+
+    def getReaders(self):
+        """
+        Fake L{IReactorFDSet.getReaders} which returns a list of readers from
+        the local set.
+        """
+        return list(self.readers)
+
+
+    def getWriters(self):
+        """
+        Fake L{IReactorFDSet.getWriters} which returns a list of writers from
+        the local set.
+        """
+        return list(self.writers)
+
+
+    def removeAll(self):
+        """
+        Fake L{IReactorFDSet.removeAll} which removed all readers and writers
+        from the local sets.
+        """
+        self.readers.clear()
+        self.writers.clear()
+
+
 for iface in implementedBy(MemoryReactor):
     verifyClass(iface, MemoryReactor)
 
