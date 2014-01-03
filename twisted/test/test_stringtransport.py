@@ -277,3 +277,37 @@ class ReactorTests(TestCase):
         address = port.getHost()
         verifyObject(IAddress, address)
         self.assertEqual(address.name, "/path/to/socket")
+
+
+    def test_readers(self):
+        """
+        Adding, removing, and listing readers works.
+        """
+        reader = object()
+        reactor = MemoryReactor()
+
+        reactor.addReader(reader)
+        reactor.addReader(reader)
+
+        self.assertEqual(reactor.getReaders(), [reader])
+
+        reactor.removeReader(reader)
+
+        self.assertEqual(reactor.getReaders(), [])
+
+
+    def test_writers(self):
+        """
+        Adding, removing, and listing writers works.
+        """
+        writer = object()
+        reactor = MemoryReactor()
+
+        reactor.addWriter(writer)
+        reactor.addWriter(writer)
+
+        self.assertEqual(reactor.getWriters(), [writer])
+
+        reactor.removeWriter(writer)
+
+        self.assertEqual(reactor.getWriters(), [])

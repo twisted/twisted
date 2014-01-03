@@ -26,6 +26,7 @@ from twisted.test.proto_helpers import RaisingMemoryReactor, StringTransport
 from twisted.python.failure import Failure
 from twisted.python.systemd import ListenFDs
 from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
 from twisted.python import log
 from twisted.protocols import basic
 from twisted.internet.task import Clock
@@ -699,6 +700,9 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
             self.assertIn(stdioOb._reader, reactor.getReaders())
 
         return d.addCallback(checkReaders)
+
+    if platform.isWindows():
+        test_StdioIOReceivesCorrectReactor.skip = "Requires POSIX stdio"
 
 
 
