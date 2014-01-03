@@ -484,16 +484,16 @@ class DNSServerFactoryTests(unittest.TestCase):
         and origin address.
         """
         message = dns.Message()
-        stubProtocol = object()
-        stubAddress = object()
+        dummyProtocol = object()
+        dummyAddress = object()
 
         f = RaisingDNSServerFactory()
         e = self.assertRaises(
             RaisingDNSServerFactory.AllowQueryArguments,
             f.messageReceived,
-            message=message, proto=stubProtocol, address=stubAddress)
+            message=message, proto=dummyProtocol, address=dummyAddress)
         args, kwargs = e.args
-        self.assertEqual(args, (message, stubProtocol, stubAddress))
+        self.assertEqual(args, (message, dummyProtocol, dummyAddress))
         self.assertEqual(kwargs, {})
 
 
@@ -660,16 +660,16 @@ class DNSServerFactoryTests(unittest.TestCase):
         m = dns.Message()
         m.addQuery(b'one.example.com')
         stubProtocol = NoopProtocol()
-        stubAddress = object()
+        dummyAddress = object()
 
-        f.handleQuery(message=m, protocol=stubProtocol, address=stubAddress)
+        f.handleQuery(message=m, protocol=stubProtocol, address=dummyAddress)
 
-        stubResponse = object()
-        d.callback(stubResponse)
+        dummyResponse = object()
+        d.callback(dummyResponse)
 
         self.assertEqual(
             gotResolverResponseArgs,
-            [((stubResponse, stubProtocol, m, stubAddress), {})])
+            [((dummyResponse, stubProtocol, m, dummyAddress), {})])
 
 
     def test_handleQueryErrback(self):
@@ -871,16 +871,16 @@ class DNSServerFactoryTests(unittest.TestCase):
         C{protocol.writeMessage}.
         """
         m = dns.Message()
-        stubAddress = object()
+        dummyAddress = object()
         f = server.DNSServerFactory()
         e = self.assertRaises(
             RaisingProtocol.WriteMessageArguments,
             f.sendReply,
             protocol=RaisingProtocol(),
             message=m,
-            address=stubAddress)
+            address=dummyAddress)
         args, kwargs = e.args
-        self.assertEqual(args, (m, stubAddress))
+        self.assertEqual(args, (m, dummyAddress))
         self.assertEqual(kwargs, {})
 
 
