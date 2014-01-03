@@ -697,12 +697,12 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
         d = ep.listen(StdioFactory())
 
         def checkReaders(stdioOb):
-            self.assertIn(stdioOb._reader, reactor.getReaders())
+            if platform.isWindows():
+                self.assertEqual(stdioOb.reactor, reactor)
+            else:
+                self.assertIn(stdioOb._reader, reactor.getReaders())
 
         return d.addCallback(checkReaders)
-
-    if platform.isWindows():
-        test_StdioIOReceivesCorrectReactor.skip = "Requires POSIX stdio"
 
 
 
