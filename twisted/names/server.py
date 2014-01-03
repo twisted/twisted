@@ -100,8 +100,8 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         Log a message only if verbose logging is enabled.
 
-        @param args: Positional arguments which will be passed to L{log.msg}
-        @param kwargs: Keyword arguments which will be passed to L{log.msg}
+        @param args: Positional arguments which will be passed to C{log.msg}
+        @param kwargs: Keyword arguments which will be passed to C{log.msg}
         """
         if self.verbose > 0:
             log.msg(*args, **kwargs)
