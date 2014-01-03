@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.names.test.test_names -*-
+# -*- test-case-name: twisted.names.test.test_names,twisted.names.test.test_server -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -96,6 +96,17 @@ class DNSServerFactory(protocol.ServerFactory):
         self.connections = []
 
 
+    def _verboseLog(self, *args, **kwargs):
+        """
+        Log a message only if verbose logging is enabled.
+
+        @param args: Positional arguments which will be passed to C{log.msg}
+        @param kwargs: Keyword arguments which will be passed to C{log.msg}
+        """
+        if self.verbose > 0:
+            log.msg(*args, **kwargs)
+
+
     def buildProtocol(self, addr):
         p = self.protocol(self)
         p.factory = self
@@ -156,10 +167,9 @@ class DNSServerFactory(protocol.ServerFactory):
         else:
             protocol.writeMessage(message, address)
 
-        if self.verbose > 1:
-            log.msg(
-                "Processed query in %0.3f seconds" % (
-                    time.time() - message.timeReceived))
+        self._verboseLog(
+            "Processed query in %0.3f seconds" % (
+                time.time() - message.timeReceived))
 
 
     def gotResolverResponse(self, (ans, auth, add), protocol, message, address):
@@ -208,8 +218,7 @@ class DNSServerFactory(protocol.ServerFactory):
         self.sendReply(protocol, message, address)
 
         l = len(ans) + len(auth) + len(add)
-        if self.verbose:
-            log.msg("Lookup found %d record%s" % (l, l != 1 and "s" or ""))
+        self._verboseLog("Lookup found %d record%s" % (l, l != 1 and "s" or ""))
 
         if self.cache and l:
             self.cache.cacheResult(
@@ -250,8 +259,7 @@ class DNSServerFactory(protocol.ServerFactory):
             log.err(failure)
 
         self.sendReply(protocol, message, address)
-        if self.verbose:
-            log.msg("Lookup failed")
+        self._verboseLog("Lookup failed")
 
 
     def handleQuery(self, message, protocol, address):
@@ -321,8 +329,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        if self.verbose:
-            log.msg("Inverse query from %r" % (address,))
+        self._verboseLog("Inverse query from %r" % (address,))
 
 
     def handleStatus(self, message, protocol, address):
@@ -350,8 +357,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        if self.verbose:
-            log.msg("Status request from %r" % (address,))
+        self._verboseLog("Status request from %r" % (address,))
 
 
     def handleNotify(self, message, protocol, address):
@@ -379,8 +385,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        if self.verbose:
-            log.msg("Notify message from %r" % (address,))
+        self._verboseLog("Notify message from %r" % (address,))
 
 
     def handleOther(self, message, protocol, address):
@@ -408,9 +413,8 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        if self.verbose:
-            log.msg(
-                "Unknown op code (%d) from %r" % (message.opCode, address))
+        self._verboseLog(
+            "Unknown op code (%d) from %r" % (message.opCode, address))
 
 
     def messageReceived(self, message, proto, address=None):
@@ -450,10 +454,9 @@ class DNSServerFactory(protocol.ServerFactory):
         if self.verbose:
             if self.verbose > 1:
                 s = ' '.join([str(q) for q in message.queries])
-            elif self.verbose > 0:
+            else:
                 s = ' '.join([dns.QUERY_TYPES.get(q.type, 'UNKNOWN')
                               for q in message.queries])
-
             if not len(s):
                 log.msg(
                     "Empty query from %r" % (
