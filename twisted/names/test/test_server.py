@@ -386,6 +386,33 @@ class DNSServerFactoryTests(unittest.TestCase):
         )
 
 
+    def test_verboseLogQuiet(self):
+        """
+        L{server.DNSServerFactory._verboseLog} does not log messages unless
+        C{verbose > 0}.
+        """
+        f = server.DNSServerFactory()
+        assertLogMessage(
+            self,
+            [],
+            f._verboseLog,
+            'Foo Bar'
+        )
+
+
+    def test_verboseLogVerbose(self):
+        """
+        L{server.DNSServerFactory._verboseLog} logs a message if C{verbose > 0}.
+        """
+        f = server.DNSServerFactory(verbose=1)
+        assertLogMessage(
+            self,
+            ['Foo Bar'],
+            f._verboseLog,
+            'Foo Bar'
+        )
+
+
     def test_messageReceivedLoggingNoQuery(self):
         """
         L{server.DNSServerFactory.messageReceived} logs about an empty query if
@@ -729,7 +756,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.gotResolverResponse} logs the total number of
         records in the response if C{verbose > 0}.
         """
-        f = server.DNSServerFactory(verbose=1)
+        f = NoResponseDNSServerFactory(verbose=1)
         answers = [dns.RRHeader()]
         authority = [dns.RRHeader()]
         additional = [dns.RRHeader()]
@@ -747,7 +774,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.gotResolverResponse} caches the response if at
         least one cache was provided in the constructor.
         """
-        f = server.DNSServerFactory(caches=[RaisingCache()])
+        f = NoResponseDNSServerFactory(caches=[RaisingCache()])
 
         m = dns.Message()
         m.addQuery(b'example.com')
@@ -828,7 +855,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         L{server.DNSServerFactory.gotResolver} logs a message if C{verbose > 0}.
         """
-        f = server.DNSServerFactory(verbose=1)
+        f = NoResponseDNSServerFactory(verbose=1)
         assertLogMessage(
             self,
             ["Lookup failed"],
@@ -939,7 +966,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.handleInverseQuery} logs the message origin
         address if C{verbose > 0}.
         """
-        f = server.DNSServerFactory(verbose=1)
+        f = NoResponseDNSServerFactory(verbose=1)
         assertLogMessage(
             self,
             ["Inverse query from ('::1', 53)"],
@@ -969,7 +996,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.handleStatus} logs the message origin address
         if C{verbose > 0}.
         """
-        f = server.DNSServerFactory(verbose=1)
+        f = NoResponseDNSServerFactory(verbose=1)
         assertLogMessage(
             self,
             ["Status request from ('::1', 53)"],
@@ -999,7 +1026,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.handleNotify} logs the message origin address
         if C{verbose > 0}.
         """
-        f = server.DNSServerFactory(verbose=1)
+        f = NoResponseDNSServerFactory(verbose=1)
         assertLogMessage(
             self,
             ["Notify message from ('::1', 53)"],
@@ -1029,7 +1056,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.handleOther} logs the message origin address
         if C{verbose > 0}.
         """
-        f = server.DNSServerFactory(verbose=1)
+        f = NoResponseDNSServerFactory(verbose=1)
         assertLogMessage(
             self,
             ["Unknown op code (0) from ('::1', 53)"],
