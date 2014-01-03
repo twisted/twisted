@@ -275,9 +275,16 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.resolver} contains an ordered list of
         authorities, caches and clients.
         """
-        class DummyAuthority(object): pass
-        class DummyCache(object): pass
-        class DummyClient(object): pass
+        # Use classes here so that we can see meaningful names in test results
+        class DummyAuthority(object):
+            pass
+
+        class DummyCache(object):
+            pass
+
+        class DummyClient(object):
+            pass
+
         self.assertEqual(
             server.DNSServerFactory(
                 authorities=[DummyAuthority],
