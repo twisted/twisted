@@ -423,8 +423,8 @@ class MemoryReactor(object):
         self.adoptedStreamConnections = []
         self.connectors = []
 
-        self.readers = []
-        self.writers = []
+        self.readers = set()
+        self.writers = set()
 
 
     def adoptStreamPort(self, fileno, addressFamily, factory):
@@ -548,28 +548,26 @@ class MemoryReactor(object):
         return conn
 
     def addReader(self, reader):
-        if reader not in self.readers:
-            self.readers.append(reader)
+        self.readers.add(reader)
 
     def removeReader(self, reader):
-        self.readers.remove(reader)
+        self.readers.discard(reader)
 
     def addWriter(self, writer):
-        if writer not in self.writers:
-            self.writers.append(writer)
+        self.writers.add(writer)
 
     def removeWriter(self, writer):
-        self.writers.remove(writer)
+        self.writers.discard(writer)
 
     def getReaders(self):
-        return self.readers[:]
+        return list(self.readers)
 
     def getWriters(self):
-        return self.writers[:]
+        return list(self.writers)
 
     def removeAll(self):
-        del self.readers[:]
-        del self.writers[:]
+        self.readers.clear()
+        self.writers.clear()
 
 
 for iface in implementedBy(MemoryReactor):

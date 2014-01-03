@@ -687,10 +687,18 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
 
 
     def test_StdioIOReceivesCorrectReactor(self):
+        """
+        The reactor passed to the endpoint is the one that the readers are
+        added to.
+        """
         reactor = MemoryReactor()
         ep = endpoints.StandardIOEndpoint(reactor)
-        ep.listen(StdioFactory())
-        self.assertEqual(len(reactor.getReaders()), 1)
+        d = ep.listen(StdioFactory())
+
+        def checkReaders(stdioOb):
+            self.assertIn(stdioOb._reader, reactor.getReaders())
+
+        return d.addCallback(checkReaders)
 
 
 
