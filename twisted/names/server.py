@@ -73,7 +73,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         @param clients: Resolvers which are capable of performing recursive DNS
             lookups.
-        @type clients: L{list} of {IResolver} providers
+        @type clients: L{list} of L{IResolver} providers
 
         @param verbose: An integer controlling the verbosity of logging of
             queries and responses. Default is C{0} which means no logging. Set
