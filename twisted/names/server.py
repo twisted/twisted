@@ -454,10 +454,9 @@ class DNSServerFactory(protocol.ServerFactory):
         if self.verbose:
             if self.verbose > 1:
                 s = ' '.join([str(q) for q in message.queries])
-            elif self.verbose > 0:
+            else:
                 s = ' '.join([dns.QUERY_TYPES.get(q.type, 'UNKNOWN')
                               for q in message.queries])
-
             if not len(s):
                 log.msg(
                     "Empty query from %r" % (
