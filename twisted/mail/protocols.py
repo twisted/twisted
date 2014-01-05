@@ -275,7 +275,7 @@ class ESMTPFactory(SMTPFactory):
     @ivar context: A factory to generate contexts to be used in negotiating
         encrypted communication.
 
-    @type challengers: L{dict} of L{bytes} -> no-argument callable which
+    @type challengers: L{dict} mapping L{bytes} to no-argument callable which
         returns L{ICredentials <twisted.cred.credentials.ICredentials>}
         subclass provider.
     @ivar challengers: A mapping of acceptable authorization mechanism to
@@ -386,7 +386,6 @@ class VirtualPOP3(pop3.POP3):
             deferred fails with an L{UnauthorizedLogin
             <twisted.cred.error.UnauthorizedLogin>} error.
         """
-
         user, domain = self.lookupDomain(user)
         try:
             portal = self.service.lookupPortal(domain)
@@ -488,7 +487,6 @@ class SSLContextFactory:
         @param filename: The name of a file containing a certificate and
             private key.
         """
-
         self.filename = filename
 
 
