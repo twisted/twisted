@@ -22,8 +22,10 @@ from twisted.internet.error import ProcessDone, ProcessTerminated
 
 _uidgidSkip = None
 if platform.isWindows():
+    process = None
     _uidgidSkip = "Cannot change UID/GID on Windows"
 else:
+    from twisted.internet import process
     if os.getuid() != 0:
         _uidgidSkip = "Cannot change UID/GID except as root"
 
@@ -450,6 +452,42 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self._changeIDTest(b"gid")
     if _uidgidSkip is not None:
         test_changeGID.skip = _uidgidSkip
+
+
+    def test_processExitedRaises(self):
+        """
+        If L{IProcessProtocol.processExited} raises an exception, it is logged.
+        """
+        # Ideally we wouldn't need to poke the process module; see
+        # https://twistedmatrix.com/trac/ticket/6889
+        reactor = self.buildReactor()
+
+        class TestException(Exception):
+            pass
+
+        class Protocol(ProcessProtocol):
+            def processExited(self, reason):
+                reactor.stop()
+                raise TestException("processedExited raised")
+
+        protocol = Protocol()
+        transport = reactor.spawnProcess(
+               protocol, sys.executable, [sys.executable, "-c", ""],
+               usePTY=self.usePTY)
+        self.runReactor(reactor)
+
+        # Manually clean-up broken process handler.
+        # Only required if the test fails on systems that support
+        # the process module.
+        if process is not None:
+            for pid, handler in process.reapProcessHandlers.items():
+                if handler is not transport:
+                    continue
+                process.unregisterReapProcessHandler(pid, handler)
+                self.fail("After processExited raised, transport was left in"
+                          " reapProcessHandlers")
+
+        self.assertEqual(1, len(self.flushLoggedErrors(TestException)))
 
 
 
