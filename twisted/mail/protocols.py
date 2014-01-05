@@ -63,7 +63,7 @@ class DomainDeliveryBase:
         """
         Generate a received header string for a message.
 
-        @type helo: 2-L{tuple} of (E{1}) L{bytes}, (E{2}) L{bytes}
+        @type helo: 2-L{tuple} of (0) L{bytes}, (1) L{bytes}
         @param helo: The client's identity as sent in the HELO command and its
             IP address.
 
@@ -119,7 +119,7 @@ class DomainDeliveryBase:
         """
         Validate the address from which a message originates.
 
-        @type helo: 2-L{tuple} of (E{1}) L{bytes}, (E{2}) L{bytes}
+        @type helo: 2-L{tuple} of (0) L{bytes}, (1) L{bytes}
         @param helo: The client's identity as sent in the HELO command and its
             IP address.
 
@@ -166,8 +166,8 @@ class DomainSMTP(SMTPDomainDelivery, smtp.SMTP):
         """
         Initialize the SMTP server.
 
-        @type args: 2-L{tuple} of (E{1}) L{IMessageDelivery} provider or
-            L{NoneType <types.NoneType>}, (E{2}) L{IMessageDeliveryFactory}
+        @type args: 2-L{tuple} of (0) L{IMessageDelivery} provider or
+            L{NoneType <types.NoneType>}, (1) L{IMessageDeliveryFactory}
             provider or L{NoneType <types.NoneType>}
         @param args: Positional arguments for L{SMTP.__init__}
 
@@ -195,8 +195,8 @@ class DomainESMTP(ESMTPDomainDelivery, smtp.ESMTP):
         """
         Initialize the ESMTP server.
 
-        @type args: 2-L{tuple} of (E{1}) L{IMessageDelivery} provider or
-            L{NoneType <types.NoneType>}, (E{2}) L{IMessageDeliveryFactory}
+        @type args: 2-L{tuple} of (0) L{IMessageDelivery} provider or
+            L{NoneType <types.NoneType>}, (1) L{IMessageDeliveryFactory}
             provider or L{NoneType <types.NoneType>})
         @param args: Positional arguments for L{ESMTP.__init__}
 
@@ -286,7 +286,7 @@ class ESMTPFactory(SMTPFactory):
 
     def __init__(self, *args):
         """
-        @type args: 2-L{tuple} of (E{1}) L{MailService}, (E{2}) L{Portal
+        @type args: 2-L{tuple} of (0) L{MailService}, (1) L{Portal
             <twisted.cred.portal.Portal>} or L{NoneType <types.NoneType>}
         @param args: Arguments for L{SMTPFactory.__init__}
         """
@@ -344,8 +344,8 @@ class VirtualPOP3(pop3.POP3):
         @param digest: The challenge response.
 
         @rtype: L{Deferred} which successfully results in 3-L{tuple} of
-            (E{1}) L{IMailbox <pop3.IMailbox>}, (E{2}) L{IMailbox
-            <pop3.IMailbox>} provider, (E{3}) no-argument callable
+            (0) L{IMailbox <pop3.IMailbox>}, (1) L{IMailbox
+            <pop3.IMailbox>} provider, (2) no-argument callable
         @return: A deferred which fires when authentication is complete.
             If successful, it returns an L{IMailbox <pop3.IMailbox>} interface,
             a mailbox and a logout function. If authentication fails, the
@@ -378,8 +378,8 @@ class VirtualPOP3(pop3.POP3):
         @param password: The password to authenticate with.
 
         @rtype: L{Deferred} which successfully results in 3-L{tuple} of
-            (E{1}) L{IMailbox <pop3.IMailbox>}, (E{2}) L{IMailbox
-            <pop3.IMailbox>} provider, (E{3}) no-argument callable
+            (0) L{IMailbox <pop3.IMailbox>}, (1) L{IMailbox
+            <pop3.IMailbox>} provider, (2) no-argument callable
         @return: A deferred which fires when authentication is complete.
             If successful, it returns an L{IMailbox <pop3.IMailbox>} interface,
             a mailbox and a logout function. If authentication fails, the
@@ -408,7 +408,7 @@ class VirtualPOP3(pop3.POP3):
         @type user: L{bytes}
         @param user: An email address.
 
-        @rtype: 2-L{tuple} of (E{1}) L{bytes}, (E{2}) L{bytes}
+        @rtype: 2-L{tuple} of (0) L{bytes}, (1) L{bytes}
         @return: The local part and the domain part of the email address if the
             domain is supported.
 
