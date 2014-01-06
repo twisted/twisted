@@ -329,7 +329,11 @@ class TuntapPort(abstract.FileDescriptor):
 
     def write(self, datagram):
         """
-        Write a datagram.
+        Write the given data as a single datagram.
+
+        @param datagram: The data that will make up the complete datagram to be
+            written.
+        @type datagram: L{bytes}
         """
         try:
             return self._system.write(self._fileno, datagram)
@@ -341,9 +345,13 @@ class TuntapPort(abstract.FileDescriptor):
 
     def writeSequence(self, seq):
         """
-        Write a datagram constructed for a list of L{bytes}.
+        Write a datagram constructed from a L{list} of L{bytes}.
+
+        @param datagram: The data that will make up the complete datagram to be
+            written.
+        @type seq: L{list} of L{bytes}
         """
-        self.write("".join(seq))
+        self.write(b"".join(seq))
 
 
     def stopListening(self):
@@ -351,6 +359,8 @@ class TuntapPort(abstract.FileDescriptor):
         Stop accepting connections on this port.
 
         This will shut down my socket and call self.connectionLost().
+
+        @return: A L{Deferred} that fires when this port has stopped.
         """
         self.stopReading()
         if self.disconnecting:
@@ -374,6 +384,8 @@ class TuntapPort(abstract.FileDescriptor):
     def connectionLost(self, reason=None):
         """
         Cleans up my socket.
+
+        @param reason: Ignored.  Do not use this.
         """
         log.msg('(Tuntap %s Closed)' % self.interface)
         abstract.FileDescriptor.connectionLost(self, reason)
