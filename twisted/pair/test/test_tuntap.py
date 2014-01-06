@@ -938,6 +938,12 @@ class TunnelTestsMixin(object):
 
 
     def _datagramReceivedException(self):
+        """
+        Deliver some data to a L{TuntapPort} hooked up to an application
+        protocol that raises an exception from its C{datagramReceived} method.
+
+        @return: Whatever L{AttributeError} exceptions are logged.
+        """
         self.port.startListening()
         self.system.getTunnel(self.port).readBuffer.append(b"ping")
 
@@ -945,8 +951,7 @@ class TunnelTestsMixin(object):
         self.protocol.received = None
 
         self.port.doRead()
-        errors = self.flushLoggedErrors(AttributeError)
-        self.assertEqual(1, len(errors))
+        return self.flushLoggedErrors(AttributeError)
 
 
     def test_datagramReceivedException(self):
@@ -954,7 +959,8 @@ class TunnelTestsMixin(object):
         If the protocol's C{datagramReceived} method raises an exception, the
         exception is logged.
         """
-        self._datagramReceivedException()
+        errors = self._datagramReceivedException()
+        self.assertEqual(1, len(errors))
 
 
     def test_datagramReceivedExceptionIdentifiesProtocol(self):
