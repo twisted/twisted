@@ -415,7 +415,7 @@ class OpenSSLOptions(unittest.TestCase):
         """
         class FakeAcceptableCiphers(object):
             def selectCiphers(self, _):
-                return [sslverify.OpenSSLCipher('sentinel')]
+                return [sslverify.OpenSSLCipher(u'sentinel')]
 
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
@@ -424,7 +424,7 @@ class OpenSSLOptions(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        self.assertEqual('sentinel', ctx._cipherList)
+        self.assertEqual(u'sentinel', ctx._cipherList)
 
 
     def test_abbreviatingDistinguishedNames(self):
@@ -994,7 +994,7 @@ class TestExpandCipherString(unittest.TestCase):
         propagated.
         """
         def raiser(_):
-            raise SSL.Error([[b'', b'', b'']])
+            raise SSL.Error([['', '', '']])
         ctx = FakeContext(SSL.SSLv23_METHOD)
         ctx.set_cipher_list = raiser
         self.patch(sslverify.SSL, 'Context', lambda _: ctx)
