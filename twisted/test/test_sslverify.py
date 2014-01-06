@@ -1018,6 +1018,7 @@ class TestExpandCipherString(unittest.TestCase):
         self.assertEqual([], bogus)
 
 
+
 class TestAcceptableCiphers(unittest.TestCase):
     """
     Tests for twisted.internet._sslverify.OpenSSLAcceptableCiphers.
