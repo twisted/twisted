@@ -994,6 +994,8 @@ class TestExpandCipherString(unittest.TestCase):
         propagated.
         """
         def raiser(_):
+            # Unfortunately, there seems to be no way to trigger a real SSL
+            # error artificially.
             raise SSL.Error([['', '', '']])
         ctx = FakeContext(SSL.SSLv23_METHOD)
         ctx.set_cipher_list = raiser
