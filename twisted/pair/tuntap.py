@@ -97,9 +97,11 @@ class _TunnelDescription(namedtuple("_TunnelDescription", "fileno name")):
     """
     Describe an existing tunnel.
 
-    @ivar fileno: An L{int} giving the file descriptor associated with the
-        tunnel.
-    @ivar name: A L{bytes} instance giving the name of the tunnel.
+    @ivar fileno: the file descriptor associated with the tunnel
+    @type fileno: L{int}
+
+    @ivar name: the name of the tunnel
+    @type name: L{bytes}
     """
 
 
