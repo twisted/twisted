@@ -139,10 +139,14 @@ def _udp(src, dst, payload):
     @rtype: L{bytes}
     """
     udpHeader = (
-        _H(src)                  # source port
-        + _H(dst)                # destination port
-        + _H(len(payload) + 8)   # length
-        + _H(0))                 # checksum
+        # Source port
+        _H(src)
+        # Destination port
+        + _H(dst)
+        # Length
+        + _H(len(payload) + 8)
+        # Checksum
+        + _H(0))
     return udpHeader + payload
 
 
@@ -467,8 +471,8 @@ class MemoryIOSystem(object):
         datagram containing the given payload, addressed to the given address,
         to a tunnel device previously opened on this I/O system.
 
-        @param address: The destination to which to send the datagram.
-        @type address: L{tuple} of (L{bytes}, L{int})
+        @param datagram: A UDP datagram payload to send.
+        @type datagram: L{bytes}
 
         @param address: The destination to which to send the datagram.
         @type address: L{tuple} of (L{bytes}, L{int})

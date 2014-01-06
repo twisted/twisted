@@ -324,7 +324,8 @@ class TuntapPort(abstract.FileDescriptor):
             except:
                 cls = fullyQualifiedName(self.protocol.__class__)
                 log.err(
-                    None, "Unhandled exception from %s.datagramReceived" % (cls,))
+                    None,
+                    "Unhandled exception from %s.datagramReceived" % (cls,))
 
 
     def write(self, datagram):

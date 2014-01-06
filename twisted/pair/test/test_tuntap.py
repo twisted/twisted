@@ -59,6 +59,7 @@ else:
     skip = platformSkip
 
 
+
 @implementer(IReactorFDSet)
 class ReactorFDSet(object):
     """
@@ -564,6 +565,9 @@ class TestRealSystem(_RealSystem):
 
         @param address: The destination to which to send the datagram.
         @type address: L{tuple} of (L{bytes}, L{int})
+
+        @return: The address from which the UDP datagram was sent.
+        @rtype: L{tuple} of (L{bytes}, L{int})
         """
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind(('10.0.0.1', 0))
@@ -679,6 +683,12 @@ class TunnelTestsMixin(object):
         """
         Mask off any flags except for L{TunnelType.IFF_TUN} and
         L{TunnelType.IFF_TAP}.
+
+        @param flags: Flags from L{TunnelType} to mask.
+        @type flags: L{FlagConstant}
+
+        @return: The flags given by C{flags} except the two type flags.
+        @rtype: L{FlagConstant}
         """
         return flags & (TunnelFlags.IFF_TUN | TunnelFlags.IFF_TAP)
 
@@ -695,7 +705,8 @@ class TunnelTestsMixin(object):
             system.O_RDWR | system.O_CLOEXEC | system.O_NONBLOCK,
             tunnel.openFlags)
         self.assertEqual(
-            b"tun0" + "\x00" * (_IFNAMSIZ - len(b"tun0")), tunnel.requestedName)
+            b"tun0" + "\x00" * (_IFNAMSIZ - len(b"tun0")),
+            tunnel.requestedName)
         self.assertEqual(tunnel.name, self.port.interface)
         self.assertFalse(tunnel.blocking)
         self.assertTrue(tunnel.closeOnExec)
