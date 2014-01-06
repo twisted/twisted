@@ -720,16 +720,16 @@ class OpenSSLCertificateOptions(object):
             Uses a secure default if left L{None}.
         @type acceptableCiphers: L{IAcceptableCiphers}
 
-        @raise ValueError: when L{privateKey} or L{certificate} are set
+        @raise ValueError: when C{privateKey} or L{certificate} are set
             without setting the respective other.
 
-        @raise ValueError: when L{verify} is L{True} but L{caCerts} doesn't
+        @raise ValueError: when C{verify} is L{True} but C{caCerts} doesn't
             specify any CA certificates.
 
-        @raise ValueError: when L{extraCertChain} is passed without specifying
-            L{privateKey} or L{certificate}.
+        @raise ValueError: when C{extraCertChain} is passed without specifying
+            C{privateKey} or C{certificate}.
 
-        @raise ValueError: when L{acceptableCiphers} doesn't yield any usable
+        @raise ValueError: when C{acceptableCiphers} doesn't yield any usable
             ciphers for the current platform.
         """
 
@@ -906,7 +906,7 @@ def _expandCipherString(cipherString, method, options):
 
     @return: The effective list of explicit ciphers that results from the
         arguments on the current platform.
-    @rtype: L{list} of L{OpenSSLCipher}
+    @rtype: L{list} of L{ICipher}
     """
     ctx = SSL.Context(method)
     ctx.set_options(options)
