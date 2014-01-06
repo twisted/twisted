@@ -35,6 +35,7 @@ from twisted.pair.ethernet import EthernetProtocol
 
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.compat import iterbytes
+from twisted.python.log import addObserver, removeObserver, textFromEventDict
 from twisted.internet.interfaces import IAddress, IReactorFDSet
 from twisted.internet.protocol import AbstractDatagramProtocol, Factory
 from twisted.internet.task import Clock
@@ -936,11 +937,7 @@ class TunnelTestsMixin(object):
         self.assertEqual(datagrams, self.protocol.received)
 
 
-    def test_datagramReceivedException(self):
-        """
-        If the protocol's C{datagramReceived} method raises an exception, the
-        exception is logged.
-        """
+    def _datagramReceivedException(self):
         self.port.startListening()
         self.system.getTunnel(self.port).readBuffer.append(b"ping")
 
@@ -950,6 +947,31 @@ class TunnelTestsMixin(object):
         self.port.doRead()
         errors = self.flushLoggedErrors(AttributeError)
         self.assertEqual(1, len(errors))
+
+
+    def test_datagramReceivedException(self):
+        """
+        If the protocol's C{datagramReceived} method raises an exception, the
+        exception is logged.
+        """
+        self._datagramReceivedException()
+
+
+    def test_datagramReceivedExceptionIdentifiesProtocol(self):
+        """
+        The exception raised by C{datagramReceived} is logged with a message
+        identifying the offending protocol.
+        """
+        messages = []
+        addObserver(messages.append)
+        self.addCleanup(removeObserver, messages.append)
+        self._datagramReceivedException()
+        error = next(m for m in messages if m['isError'])
+        message = textFromEventDict(error)
+        self.assertEqual(
+            "Unhandled exception from %s.datagramReceived" % (
+                fullyQualifiedName(self.protocol.__class__),),
+            message.splitlines()[0])
 
 
     def test_write(self):

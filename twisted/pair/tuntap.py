@@ -18,6 +18,7 @@ from collections import namedtuple
 from zope.interface import Attribute, Interface, implementer
 
 from twisted.python.versions import Version
+from twisted.python.reflect import fullyQualifiedName
 from twisted.python.deprecate import deprecated
 from twisted.python.constants import Flags, FlagConstant
 from twisted.python import log
@@ -321,7 +322,9 @@ class TuntapPort(abstract.FileDescriptor):
             try:
                 self.protocol.datagramReceived(data, partial=0)
             except:
-                log.err(None, "monkeys")
+                cls = fullyQualifiedName(self.protocol.__class__)
+                log.err(
+                    None, "Unhandled exception from %s.datagramReceived" % (cls,))
 
 
     def write(self, datagram):
