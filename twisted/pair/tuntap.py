@@ -37,6 +37,15 @@ class TunnelFlags(Flags):
     """
     L{TunnelFlags} defines more flags which are used to configure the behavior
     of a tunnel device.
+
+    @cvar IFF_TUN: This indicates a I{tun}-type device.  This type of tunnel
+        carries IP datagrams.  This flag is mutually exclusive with C{IFF_TAP}.
+
+    @cvar IFF_TAP: This indicates a I{tap}-type device.  This type of tunnel
+        carries ethernet frames.  This flag is mutually exclusive with C{IFF_TUN}.
+
+    @cvar IFF_NO_PI: This indicates the I{protocol information} header will
+        B{not} be included in data read from the tunnel.
     """
     IFF_TUN = FlagConstant(0x0001)
     IFF_TAP = FlagConstant(0x0002)
