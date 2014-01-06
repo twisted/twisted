@@ -720,7 +720,7 @@ class OpenSSLCertificateOptions(object):
             Uses a secure default if left L{None}.
         @type acceptableCiphers: L{IAcceptableCiphers}
 
-        @raise ValueError: when C{privateKey} or L{certificate} are set
+        @raise ValueError: when C{privateKey} or C{certificate} are set
             without setting the respective other.
 
         @raise ValueError: when C{verify} is L{True} but C{caCerts} doesn't
