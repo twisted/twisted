@@ -20,7 +20,6 @@ except ImportError:
 
 from twisted.python.compat import nativeString
 from twisted.python.constants import NamedConstant, Names
-from twisted.python.monkey import MonkeyPatcher
 from twisted.trial import unittest
 from twisted.internet import protocol, defer, reactor
 
