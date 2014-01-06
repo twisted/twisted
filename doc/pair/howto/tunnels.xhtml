@@ -37,6 +37,9 @@ from twisted.pair.rawudp import RawUDPProtocol
 
 from twisted.internet import reactor
 
+# Note that you must run this example as a user with permission to open this
+# device.  That means run it as root or pre-configure tap0 and assign ownership
+# of it to a non-root user.  The same goes for tun0 below.
 tap = TuntapPort(b"tap0", EthernetProtocol(), reactor=reactor)
 tap.startListening()
 
@@ -48,6 +51,9 @@ tun.startListening()
 In the above example two protocols are attached to the network: one to a tap device and the other to a tun device.
 The <code>EthernetProtocol</code> used in this example is a very simple implementation of <code>IEthernetProtocol</code> which does nothing more than dispatch to some other protocol based on the protocol found in the header of each ethernet frame it receives.
 <code>RawUDPProtocol</code> is similar - it dispatches to other protocols based on the UDP port of IP datagrams it received.
+This example won't do anything since no application protocols have been added to either the <code>EthernetProtocol</code> or <code>RawUDPProtocol</code> instances
+(not to mention the reactor isn't being started).
+However, it should give you some idea of how tun/tap functionality fits into a Twisted application.
     </p>
 
     <p>
