@@ -520,6 +520,7 @@ FakeTunDeviceTests.helper = TunHelper(
 
 
 
+@implementer(_IInputOutputSystem)
 class TestRealSystem(_RealSystem):
     """
     Add extra skipping logic so tests that try to create real tunnel devices on

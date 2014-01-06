@@ -186,11 +186,10 @@ class _IInputOutputSystem(Interface):
 
 
 
-@implementer(_IInputOutputSystem)
 class _RealSystem(object):
     """
     An interface to the parts of the operating system which L{TuntapPort}
-    relies on.
+    relies on.  This is most of an implementation of L{_IInputOutputSystem}.
     """
     open = staticmethod(os.open)
     read = staticmethod(os.read)
