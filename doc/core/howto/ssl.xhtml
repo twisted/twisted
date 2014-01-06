@@ -159,7 +159,7 @@ def main():
       SSLv2 is explicitly not supported.
     </p>
     <p>
-      Additionally, it is possible to limit the acceptable ciphers for your connection by passing an <code class="API" base="twisted.internet.ssl">AcceptableCiphers</code> object to <code>CertificateOptions</code>.
+      Additionally, it is possible to limit the acceptable ciphers for your connection by passing an <code class="API" base="twisted.internet.interfaces">IAcceptableCiphers</code> object to <code>CertificateOptions</code>.
       Since Twisted uses a secure cipher string by default, it is discouraged to do so unless absolutely necessary.
     </p>
 

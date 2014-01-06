@@ -9,14 +9,14 @@ import itertools
 from hashlib import md5
 
 from OpenSSL import SSL, crypto
+from zope.interface import implementer
 
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
 from twisted.internet.interfaces import IAcceptableCiphers, ICipher
 from twisted.python import _reflectpy3 as reflect, util
-from twisted.python.compat import nativeString, networkString
+from twisted.python.compat import nativeString, networkString, unicode
 from twisted.python.util import FancyEqMixin
-from zope.interface import implementer
 
 
 
@@ -632,6 +632,9 @@ class OpenSSLCertificateOptions(object):
     @ivar _options: Any option flags to set on the L{OpenSSL.SSL.Context}
         object that will be created.
     @type _options: L{int}
+
+    @ivar _cipherString: An OpenSSL-specific cipher string.
+    @type _cipherString: L{unicode}
     """
 
     # Factory for creating contexts.  Configurable for testability.
@@ -711,13 +714,23 @@ class OpenSSLCertificateOptions(object):
             verification chain if the certificate authority that signed your
             C{certificate} isn't widely supported.  Do I{not} add
             C{certificate} to it.
-
         @type extraCertChain: C{list} of L{OpenSSL.crypto.X509}
 
         @param acceptableCiphers: Ciphers that are acceptable for connections.
             Uses a secure default if left L{None}.
+        @type acceptableCiphers: L{IAcceptableCiphers}
 
-        @type acceptableCiphers: L{twisted.internet.ssl.AcceptableCiphers}
+        @raise ValueError: when L{privateKey} or L{certificate} are set
+            without setting the respective other.
+
+        @raise ValueError: when L{verify} is L{True} but L{caCerts} doesn't
+            specify any CA certificates.
+
+        @raise ValueError: when L{extraCertChain} is passed without specifying
+            L{privateKey} or L{certificate}.
+
+        @raise ValueError: when L{acceptableCiphers} doesn't yield any usable
+            ciphers for the current platform.
         """
 
         if (privateKey is None) != (certificate is None):
@@ -763,16 +776,16 @@ class OpenSSLCertificateOptions(object):
         if acceptableCiphers is None:
             acceptableCiphers = defaultCiphers
         # This needs to run when method and _options are finalized.
-        self.cipherString = ':'.join(
+        self._cipherString = u':'.join(
             c.fullName
             for c in acceptableCiphers.selectCiphers(
-                _expandCipherString('ALL', self.method, self._options)
+                _expandCipherString(u'ALL', self.method, self._options)
             )
         )
-        if self.cipherString == '':
+        if self._cipherString == u'':
             raise ValueError(
-                'Supplied cipher string yielded no usable ciphers on this '
-                'platform.'
+                'Supplied IAcceptableCiphers yielded no usable ciphers '
+                'on this platform.'
             )
 
 
@@ -791,7 +804,7 @@ class OpenSSLCertificateOptions(object):
 
     def getContext(self):
         """
-        Return a SSL.Context object.
+        Return an L{OpenSSL.SSL.Context} object.
         """
         if self._context is None:
             self._context = self._makeContext()
@@ -847,7 +860,7 @@ class OpenSSLCertificateOptions(object):
         if not self.enableSessionTickets:
             ctx.set_options(self._OP_NO_TICKET)
 
-        ctx.set_cipher_list(self.cipherString)
+        ctx.set_cipher_list(nativeString(self._cipherString))
 
         return ctx
 
@@ -861,6 +874,11 @@ class OpenSSLCipher(FancyEqMixin, object):
     compareAttributes = ('fullName',)
 
     def __init__(self, fullName):
+        """
+        @param fullName: The full name of the cipher. For example
+            C{ECDHE-RSA-AES256-GCM-SHA384}.
+        @type fullName: L{unicode}
+        """
         self.fullName = fullName
 
 
@@ -878,7 +896,7 @@ def _expandCipherString(cipherString, method, options):
     of explicit ciphers that are supported by the current platform.
 
     @param cipherString: An OpenSSL cipher string to expand.
-    @type cipherString: L{str}
+    @type cipherString: L{unicode}
 
     @param method: An OpenSSL method like C{SSL.TLSv1_METHOD} used for
         determining the effective ciphers.
@@ -900,7 +918,11 @@ def _expandCipherString(cipherString, method, options):
         else:
             raise
     conn = SSL.Connection(ctx, None)
-    return [OpenSSLCipher(cipher) for cipher in conn.get_cipher_list()]
+    ciphers = conn.get_cipher_list()
+    if isinstance(ciphers[0], unicode):
+        return [OpenSSLCipher(cipher) for cipher in ciphers]
+    else:
+        return [OpenSSLCipher(cipher.decode('ascii')) for cipher in ciphers]
 
 
 
@@ -930,18 +952,23 @@ class OpenSSLAcceptableCiphers(object):
             U{Apache
             <http://httpd.apache.org/docs/2.4/mod/mod_ssl.html#sslciphersuite>}
             for details.
-
-        @type cipherString: L{str}
+        @type cipherString: L{unicode}
 
         @return: Instance representing C{cipherString}.
         @rtype: L{twisted.internet.ssl.AcceptableCiphers}
         """
         return cls(_expandCipherString(
-            cipherString, SSL.SSLv23_METHOD, SSL.OP_NO_SSLv2 | SSL.OP_NO_SSLv3)
+            nativeString(cipherString),
+            SSL.SSLv23_METHOD, SSL.OP_NO_SSLv2 | SSL.OP_NO_SSLv3)
         )
 
 
-
+# A secure default.
+# Sources for more information on TLS ciphers:
+#
+# - https://wiki.mozilla.org/Security/Server_Side_TLS
+# - https://www.ssllabs.com/projects/best-practices/index.html
+# - https://hynek.me/articles/hardening-your-web-servers-ssl-ciphers/
 defaultCiphers = OpenSSLAcceptableCiphers.fromOpenSSLCipherString(
     "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:"
     "DH+AES:ECDH+3DES:DH+3DES:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS"

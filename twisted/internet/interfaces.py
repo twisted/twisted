@@ -2161,7 +2161,9 @@ class ICipher(Interface):
     """
     A TLS cipher.
     """
-    fullName = Attribute("The fully qualified name of the cipher.")
+    fullName = Attribute(
+        "The fully qualified name of the cipher in L{unicode}."
+    )
 
 
 

@@ -392,7 +392,7 @@ class OpenSSLOptions(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        self.assertEqual(opts.cipherString, ctx._cipherList)
+        self.assertEqual(opts._cipherString, ctx._cipherList)
 
 
     def test_givesMeaningfulErrorMessageIfNoCipherMatches(self):
@@ -924,7 +924,7 @@ class TestOpenSSLCipher(unittest.TestCase):
     if interfaces.IReactorSSL(reactor, None) is None:
         skip = "Reactor does not support SSL, cannot run SSL tests"
 
-    cipherName = 'CIPHER-STRING'
+    cipherName = u'CIPHER-STRING'
 
     def test_constructorSetsFullName(self):
         """
@@ -985,7 +985,7 @@ class TestExpandCipherString(unittest.TestCase):
         """
         self.assertEqual(
             [],
-            sslverify._expandCipherString('', SSL.SSLv23_METHOD, 0)
+            sslverify._expandCipherString(u'', SSL.SSLv23_METHOD, 0)
         )
 
 
@@ -998,13 +998,10 @@ class TestExpandCipherString(unittest.TestCase):
             raise SSL.Error([[b'', b'', b'']])
         ctx = FakeContext(SSL.SSLv23_METHOD)
         ctx.set_cipher_list = raiser
-        patcher = MonkeyPatcher()
-        patcher.addPatch(sslverify.SSL, 'Context', lambda _: ctx)
-        self.addCleanup(patcher.restore)
-        patcher.runWithPatches(
-            self.assertRaises,
+        self.patch(sslverify.SSL, 'Context', lambda _: ctx)
+        self.assertRaises(
             SSL.Error,
-            sslverify._expandCipherString, b'ALL', SSL.SSLv23_METHOD, 0
+            sslverify._expandCipherString, u'ALL', SSL.SSLv23_METHOD, 0
         )
 
 
@@ -1012,10 +1009,14 @@ class TestExpandCipherString(unittest.TestCase):
         """
         Returns always a list of ICipher.
         """
-        ciphers = sslverify._expandCipherString('ALL', SSL.SSLv23_METHOD, 0)
+        ciphers = sslverify._expandCipherString(u'ALL', SSL.SSLv23_METHOD, 0)
         self.assertIsInstance(ciphers, list)
-        self.assertTrue(all(sslverify.ICipher.providedBy(c) for c in ciphers))
+        bogus = []
+        for c in ciphers:
+            if not interfaces.ICipher.providedBy(c):
+                bogus.append(c)
 
+        self.assertEqual([], bogus)
 
 
 class TestAcceptableCiphers(unittest.TestCase):
