@@ -151,10 +151,10 @@ class _IInputOutputSystem(Interface):
         @type datagram: L{bytes}
 
         @param address: The destination to which to send the datagram.
-        @type address: L{tuple} of L{bytes} and L{int}
+        @type address: L{tuple} of (L{bytes}, L{int})
 
         @return: The local address from which the datagram was sent.
-        @rtype: L{tuple} of L{bytes} and L{int}
+        @rtype: L{tuple} of (L{bytes}, L{int})
         """
 
 
@@ -162,6 +162,20 @@ class _IInputOutputSystem(Interface):
         """
         Return a socket which can be used to receive datagrams sent to the
         given address.
+
+        @param fileno: A file descriptor representing a tunnel device which the
+            datagram was either sent via or will be received via.
+        @type fileno: L{int}
+
+        @param host: The IPv4 address at which the datagram will be received.
+        @type host: L{bytes}
+
+        @param port: The UDP port number at which the datagram will be
+            received.
+        @type port: L{int}
+
+        @return: A L{socket.socket} which can be used to receive the specified
+            datagram.
         """
 
 

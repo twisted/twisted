@@ -32,6 +32,12 @@ _PI_SIZE = 4
 def _H(n):
     """
     Pack an integer into a network-order two-byte string.
+
+    @param n: The integer to pack.  Only values that fit into 16 bits are
+        supported.
+
+    @return: The packed representation of the integer.
+    @rtype: L{bytes}
     """
     return struct.pack('>H', n)
 
@@ -54,6 +60,9 @@ def _ethernet(src, dst, protocol, payload):
 
     @param payload: The content of the ethernet frame (such as an IP datagram).
     @type payload: L{bytes}
+
+    @return: The full ethernet frame.
+    @rtype: L{bytes}
     """
     return dst + src + _H(protocol) + payload
 
@@ -77,13 +86,19 @@ def _ip(src, dst, payload):
     @rtype: L{bytes}
     """
     ipHeader = (
-        '\x45'  # version and header length, 4 bits each
-        '\x00'  # differentiated services field
-        + _H(20 + len(payload))  # total length
+        # Version and header length, 4 bits each
+        '\x45'
+        # Differentiated services field
+        '\x00'
+        # Total length
+        + _H(20 + len(payload))
         + '\x00\x01\x00\x00\x40\x11'
-        + _H(0)  # checksum
-        + socket.inet_pton(socket.AF_INET, src)  # source address
-        + socket.inet_pton(socket.AF_INET, dst))  # destination address
+        # Checksum
+        + _H(0)
+        # Source address
+        + socket.inet_pton(socket.AF_INET, src)
+        # Destination address
+        + socket.inet_pton(socket.AF_INET, dst))
 
     # Total all of the 16-bit integers in the header
     checksumStep1 = sum(struct.unpack('!10H', ipHeader))
@@ -94,9 +109,9 @@ def _ip(src, dst, payload):
     # Compute the one's complement sum
     checksumStep3 = checksumStep2 ^ 0xFFFF
 
-    # Reconstruct the IP header including the correct checksum so the
-    # platform IP stack, if there is one involved in this test, doesn't drop
-    # it on the floor as garbage.
+    # Reconstruct the IP header including the correct checksum so the platform
+    # IP stack, if there is one involved in this test, doesn't drop it on the
+    # floor as garbage.
     ipHeader = (
         ipHeader[:10] +
         struct.pack('!H', checksumStep3) +
@@ -260,6 +275,9 @@ class Tunnel(object):
 
         @raise IOError: Any of the usual I/O problems can result in this
             exception being raised with some particular error number set.
+
+        @return: The number of bytes of the datagram which were written.
+        @rtype: L{int}
         """
         if self.pendingSignals:
             self.pendingSignals.popleft()
@@ -282,6 +300,10 @@ def _privileged(original):
     returned function will check C{self.permissions} and raise L{IOError} with
     L{errno.EPERM} if the function name is not listed as an available
     permission.
+
+    @param original: The L{MemoryIOSystem} instance to wrap.
+
+    @return: A wrapper around C{original} that applies permission checks.
     """
     @wraps(original)
     def permissionChecker(self, *args, **kwargs):
@@ -322,6 +344,10 @@ class MemoryIOSystem(object):
 
         @param port: A L{TuntapPort} previously initialized using this
             L{MemoryIOSystem}.
+
+        @return: The tunnel object created by a prior use of C{open} on this
+            object on the tunnel special device file.
+        @rtype: L{Tunnel}
         """
         return self._openFiles[port.fileno()]
 
@@ -356,6 +382,13 @@ class MemoryIOSystem(object):
 
         @param mode: The mode with which to open the file.
         @type mode: C{int}
+
+        @raise OSError: With C{ENOSYS} if the file is not a recognized special
+            device file.
+
+        @return: A file descriptor associated with the newly opened file
+            description.
+        @rtype: L{int}
         """
         if name in self._devices:
             fd = self._counter
@@ -434,8 +467,15 @@ class MemoryIOSystem(object):
         datagram containing the given payload, addressed to the given address,
         to a tunnel device previously opened on this I/O system.
 
+        @param address: The destination to which to send the datagram.
+        @type address: L{tuple} of (L{bytes}, L{int})
+
+        @param address: The destination to which to send the datagram.
+        @type address: L{tuple} of (L{bytes}, L{int})
+
         @return: A two-tuple giving the address from which gives the address
             from which the datagram was sent.
+        @rtype: L{tuple} of (L{bytes}, L{int})
         """
         # Just make up some random thing
         srcIP = '10.1.2.3'
@@ -454,6 +494,20 @@ class MemoryIOSystem(object):
         """
         Get a socket-like object which can be used to receive a datagram sent
         from the given address.
+
+        @param fileno: A file descriptor representing a tunnel device which the
+            datagram will be received via.
+        @type fileno: L{int}
+
+        @param host: The IPv4 address to which the datagram was sent.
+        @type host: L{bytes}
+
+        @param port: The UDP port number to which the datagram was sent.
+            received.
+        @type port: L{int}
+
+        @return: A L{socket.socket}-like object which can be used to receive
+            the specified datagram.
         """
         return _FakePort(self, fileno)
 
@@ -473,6 +527,10 @@ class _FakePort(object):
         """
         Receive a datagram sent to this port using the L{MemoryIOSystem} which
         created this object.
+
+        This behaves like L{socket.socket.recv} but the data being I{sent} and
+        I{received} only passes through various memory buffers managed by this
+        object and L{MemoryIOSystem}.
 
         @see: L{socket.socket.recv}
         """

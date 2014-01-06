@@ -169,11 +169,11 @@ class TunHelper(object):
         """
         Get a function for parsing a datagram read from a I{tun} device.
 
-        The returned function accepts a datagram exactly as might be read from
-        a I{tun} device.  The datagram is expected to ultimately carry a UDP
-        datagram.  When called, it returns a L{list} of L{tuple}s.  Each tuple
-        has the UDP application data as the first element and the sender
-        address as the second element.
+        @return: A function which accepts a datagram exactly as might be read
+            from a I{tun} device.  The datagram is expected to ultimately carry
+            a UDP datagram.  When called, it returns a L{list} of L{tuple}s.
+            Each tuple has the UDP application data as the first element and
+            the sender address as the second element.
         """
         datagrams = []
         receiver = DatagramProtocol()
@@ -266,11 +266,11 @@ class TapHelper(object):
         """
         Get a function for parsing a datagram read from a I{tap} device.
 
-        The returned function accepts a datagram exactly as might be read from
-        a I{tap} device.  The datagram is expected to ultimately carry a UDP
-        datagram.  When called, it returns a L{list} of L{tuple}s.  Each tuple
-        has the UDP application data as the first element and the sender
-        address as the second element.
+        @return: A function which accepts a datagram exactly as might be read
+            from a I{tap} device.  The datagram is expected to ultimately carry
+            a UDP datagram.  When called, it returns a L{list} of L{tuple}s.
+            Each tuple has the UDP application data as the first element and
+            the sender address as the second element.
         """
         datagrams = []
         receiver = DatagramProtocol()
@@ -310,6 +310,10 @@ class TunnelDeviceTestsMixin(object):
     implementations.
     """
     def setUp(self):
+        """
+        Create the L{_IInputOutputSystem} provider under test and open a tunnel
+        using it.
+        """
         self.system = self.createSystem()
         self.fileno = self.system.open(b"/dev/net/tun",
                                        os.O_RDWR | os.O_NONBLOCK)
@@ -330,10 +334,12 @@ class TunnelDeviceTestsMixin(object):
 
     def _invalidFileDescriptor(self):
         """
-        Return an integer which is not a valid file descriptor at the time of
-        this call.  After any future system call which allocates a new file
-        descriptor, there is no guarantee the returned file descriptor will
-        still be invalid.
+        Get an invalid file descriptor.
+
+        @return: An integer which is not a valid file descriptor at the time of
+            this call.  After any future system call which allocates a new file
+            descriptor, there is no guarantee the returned file descriptor will
+            still be invalid.
         """
         fd = self.system.open(b"/dev/net/tun", os.O_RDWR)
         self.system.close(fd)
@@ -483,6 +489,9 @@ class FakeDeviceTestsMixin(object):
         Create and return a brand new L{MemoryIOSystem}.
 
         The L{MemoryIOSystem} knows how to open new tunnel devices.
+
+        @return: The newly created I/O system object.
+        @rtype: L{MemoryIOSystem}
         """
         system = MemoryIOSystem()
         system.registerSpecialDevice(Tunnel._DEVICE_NAME, Tunnel)
@@ -547,6 +556,12 @@ class TestRealSystem(_RealSystem):
     def sendUDP(self, datagram, address):
         """
         Use the platform network stack to send a datagram to the given address.
+
+        @param datagram: A UDP datagram payload to send.
+        @type datagram: L{bytes}
+
+        @param address: The destination to which to send the datagram.
+        @type address: L{tuple} of (L{bytes}, L{int})
         """
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind(('10.0.0.1', 0))
@@ -558,9 +573,23 @@ class TestRealSystem(_RealSystem):
         """
         Use the platform network stack to receive a datagram sent to the given
         address.
+
+        @param fileno: The file descriptor of the tunnel used to send the
+            datagram.  This is ignored because a real socket is used to receive
+            the datagram.
+        @type fileno: L{int}
+
+        @param host: The IPv4 address at which the datagram will be received.
+        @type host: L{bytes}
+
+        @param port: The UDP port number at which the datagram will be
+            received.
+        @type port: L{int}
+
+        @return: A L{socket.socket} which can be used to receive the specified
+            datagram.
         """
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # s.setblocking(False)
         s.bind((host, port))
         return s
 
@@ -575,36 +604,15 @@ class RealDeviceTestsMixin(object):
     if platformSkip:
         skip = platformSkip
 
+
     def createSystem(self):
-        # Create a tap-style tunnel device.  Ethernet frames come out of this
-        # and ethernet frames must be put into it.  Grant access to it to an
-        # otherwise unprivileged user.
-        #
-        # ip tuntap add dev tap-twistedtest mode tap user exarkun group exarkun
-        #
-        # Bring the device up, since otherwise it's not usable for anything.
-        #
-        # ip link set up dev tap-twistedtest
-        #
-        # Give the device an address.  Just like an ethernet device may be
-        # given an address, perhaps a statically allocated one.  This will also
-        # implicitly create a route for traffic destined for addresses on the
-        # same network as the address assigned here to travel via this device.
-        #
-        # ip addr add 10.0.0.1/24 dev tap-twistedtest
-        #
-        # Statically populate the arp cache with some addresses that might
-        # exist on that network and thus be accessible via this device.
-        #
-        # ip neigh add 10.0.0.2 lladdr de:ad:be:ef:ca:fe dev tap-twistedtest
-        #
-        # Once all that's done, RealSpecial will satisfy the requirements of
-        # the tests inherited by this class.
-        #
-        # You can undo it all just by getting rid of the tunnel device.
-        #
-        # ip tuntap del dev tap-twistedtest mode tap
-        #
+        """
+        Create a real I/O system that can be used to open real tunnel device
+        provided by the underlying system and previously configured.
+
+        @return: The newly created I/O system object.
+        @rtype: L{TestRealSystem}
+        """
         return TestRealSystem()
 
 
@@ -652,18 +660,23 @@ class TunnelTestsMixin(object):
     thing by the tests above) to avoid performing any real I/O.
     """
     def setUp(self):
+        """
+        Create an in-memory I/O system and set up a L{TuntapPort} against it.
+        """
         self.name = b"tun0"
         self.system = MemoryIOSystem()
         self.system.registerSpecialDevice(Tunnel._DEVICE_NAME, Tunnel)
         self.protocol = self.factory.buildProtocol(
             TunnelAddress(self.helper.TUNNEL_TYPE, self.name))
         self.reactor = FSSetClock()
-        self.port = TuntapPort(self.name, self.protocol, reactor=self.reactor, system=self.system)
+        self.port = TuntapPort(
+            self.name, self.protocol, reactor=self.reactor, system=self.system)
 
 
     def _tunnelTypeOnly(self, flags):
         """
-        Mask off any flags except for L{TunnelType.IFF_TUN} and L{TunnelType.IFF_TAP}.
+        Mask off any flags except for L{TunnelType.IFF_TUN} and
+        L{TunnelType.IFF_TAP}.
         """
         return flags & (TunnelFlags.IFF_TUN | TunnelFlags.IFF_TAP)
 
@@ -729,6 +742,9 @@ class TunnelTestsMixin(object):
         Verify that the C{stopListening} method of an L{IListeningPort} removes
         that port from the reactor's "readers" set and also that the
         L{Deferred} returned by that method fires with C{None}.
+
+        @param port: The port object to stop.
+        @type port: L{IListeningPort} provider
         """
         stopped = port.stopListening()
         self.assertNotIn(port, self.reactor.getReaders())
@@ -996,7 +1012,8 @@ class TunnelTestsMixin(object):
             # Two FlagConstants from the same container and with the same value
             # do not compare equal to each other.  Compare their values
             # directly.  https://twistedmatrix.com/trac/ticket/6878
-            self._tunnelTypeOnly(self.helper.TUNNEL_TYPE).value, address.type.value)
+            self._tunnelTypeOnly(
+                self.helper.TUNNEL_TYPE).value, address.type.value)
         self.assertEqual(
             self.system.getTunnel(self.port).name, address.name)
 
