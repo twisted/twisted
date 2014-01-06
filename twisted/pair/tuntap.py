@@ -4,6 +4,8 @@
 
 """
 Support for Linux ethernet and IP tunnel devices.
+
+@see: U{https://en.wikipedia.org/wiki/TUN/TAP}
 """
 
 import os
@@ -46,6 +48,8 @@ class TunnelFlags(Flags):
 
     @cvar IFF_NO_PI: This indicates the I{protocol information} header will
         B{not} be included in data read from the tunnel.
+
+    @see: U{https://www.kernel.org/doc/Documentation/networking/tuntap.txt}
     """
     IFF_TUN = FlagConstant(0x0001)
     IFF_TAP = FlagConstant(0x0002)
