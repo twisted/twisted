@@ -376,7 +376,7 @@ class TuntapPort(abstract.FileDescriptor):
 
     def loseConnection(self):
         """
-        Close this tunnel.  This is Use L{TuntapPort.stopListening} instead.
+        Close this tunnel.  Use L{TuntapPort.stopListening} instead.
         """
         self.stopListening().addErrback(log.err)
 
