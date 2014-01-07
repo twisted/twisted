@@ -2905,11 +2905,11 @@ class MessageEmpty(object):
             id=256,
             answer=True,
             opCode=dns.OP_STATUS,
-            auth=True,
-            trunc=True,
-            recDes=True,
-            recAv=True,
-            rCode=15,
+            authoritativeAnswer=True,
+            truncated=True,
+            recursionDesired=True,
+            recursionAvailable=True,
+            responseCode=15,
             ednsVersion=None,
         )
 
@@ -2951,11 +2951,11 @@ class MessageTruncated(object):
             id=256,
             answer=1,
             opCode=0,
-            auth=0,
-            trunc=1,
-            recDes=0,
-            recAv=0,
-            rCode=0,
+            authoritativeAnswer=0,
+            truncated=1,
+            recursionDesired=0,
+            recursionAvailable=0,
+            responseCode=0,
             ednsVersion=None,)
 
 
@@ -3001,7 +3001,7 @@ class MessageNonAuthoritative(object):
         """
         return dict(
             id=256,
-            auth=0,
+            authoritativeAnswer=0,
             ednsVersion=None,
             answers=[
                 dns.RRHeader(
@@ -3052,7 +3052,7 @@ class MessageAuthoritative(object):
         """
         return dict(
             id=256,
-            auth=1,
+            authoritativeAnswer=1,
             ednsVersion=None,
             answers=[
                 dns.RRHeader(
@@ -3135,10 +3135,10 @@ class MessageComplete:
             id=256,
             answer=1,
             opCode=dns.OP_STATUS,
-            auth=1,
-            recDes=1,
-            recAv=1,
-            rCode=15,
+            authoritativeAnswer=1,
+            recursionDesired=1,
+            recursionAvailable=1,
+            responseCode=15,
             ednsVersion=None,
             queries=[dns.Query(b'example.com', dns.SOA)],
             answers=[
@@ -3227,9 +3227,9 @@ class MessageEDNSQuery(object):
             answer=0,
             opCode=dns.OP_QUERY,
             auth=0,
-            recDes=0,
-            recAv=0,
-            rCode=0,
+            recursionDesired=0,
+            recursionAvailable=0,
+            responseCode=0,
             ednsVersion=3,
             dnssecOK=False,
             queries=[dns.Query(b'www.example.com', dns.A)],
@@ -3319,11 +3319,11 @@ class MessageEDNSComplete(object):
             id=256,
             answer=1,
             opCode=dns.OP_STATUS,
-            auth=1,
-            trunc=0,
-            recDes=1,
-            recAv=1,
-            rCode=15,
+            authoritativeAnswer=1,
+            truncated=0,
+            recursionDesired=1,
+            recursionAvailable=1,
+            responseCode=15,
             ednsVersion=3,
             dnssecOK=True,
             authenticData=True,
@@ -3410,11 +3410,11 @@ class MessageEDNSExtendedRCODE(object):
             id=0,
             answer=False,
             opCode=dns.OP_QUERY,
-            auth=False,
-            trunc=False,
-            recDes=False,
-            recAv=False,
-            rCode=0xabc, # Combined OPT extended RCODE + Message RCODE
+            authoritativeAnswer=False,
+            truncated=False,
+            recursionDesired=False,
+            recursionAvailable=False,
+            responseCode=0xabc, # Combined OPT extended RCODE + Message RCODE
             ednsVersion=0,
             dnssecOK=False,
             maxSize=4096,
@@ -3562,46 +3562,6 @@ class CommonConstructorTestsMixin(object):
             'opCode', defaultVal=dns.OP_QUERY, altVal=dns.OP_STATUS)
 
 
-    def test_auth(self):
-        """
-        L{dns._EDNSMessage.auth} defaults to C{False} and can be overridden in
-        the constructor.
-        """
-        self._verifyConstructorFlag('auth', defaultVal=False)
-
-
-    def test_trunc(self):
-        """
-        L{dns._EDNSMessage.trunc} defaults to C{False} and can be overridden in
-        the constructor.
-        """
-        self._verifyConstructorFlag('trunc', defaultVal=False)
-
-
-    def test_recDes(self):
-        """
-        L{dns._EDNSMessage.recDes} defaults to C{False} and can be overridden in
-        the constructor.
-        """
-        self._verifyConstructorFlag('recDes', defaultVal=False)
-
-
-    def test_recAv(self):
-        """
-        L{dns._EDNSMessage.recAv} defaults to C{False} and can be overridden in
-        the constructor.
-        """
-        self._verifyConstructorFlag('recAv', defaultVal=False)
-
-
-    def test_rCode(self):
-        """
-        L{dns._EDNSMessage.rCode} defaults to C{0} and can be overridden in the
-        constructor.
-        """
-        self._verifyConstructorArgument('rCode', defaultVal=0, altVal=123)
-
-
     def test_maxSize(self):
         """
         L{dns._EDNSMessage.maxSize} defaults to C{512} and can be overridden in
@@ -3650,14 +3610,65 @@ class EDNSMessageConstructorTests(ConstructorTestsMixin,
 
 
 
-class MessageContstructorTests(ConstructorTestsMixin,
-                               CommonConstructorTestsMixin,
-                               unittest.SynchronousTestCase):
+class MessageConstructorTests(ConstructorTestsMixin,
+                              CommonConstructorTestsMixin,
+                              unittest.SynchronousTestCase):
     """
     Tests for L{twisted.names.dns.Message} constructor arguments that are shared
     with L{dns._EDNSMessage}.
     """
     messageFactory = dns.Message
+
+
+
+class MessageSpecificsTestCase(ConstructorTestsMixin,
+                               unittest.SynchronousTestCase):
+    """
+    Tests for L{dns.Message}.
+
+    These tests are for L{dns.Message} APIs which are not shared with
+    L{dns._EDNSMessage}.
+    """
+    messageFactory = dns.Message
+
+    def test_auth(self):
+        """
+        L{dns.Message.auth} defaults to C{False} and can be overridden in the
+        constructor.
+        """
+        self._verifyConstructorFlag('auth', defaultVal=False)
+
+
+    def test_recDes(self):
+        """
+        L{dns.Message.recDes} defaults to C{False} and can be overridden in the
+        constructor.
+        """
+        self._verifyConstructorFlag('recDes', defaultVal=False)
+
+
+    def test_recAv(self):
+        """
+        L{dns.Message.recAv} defaults to C{False} and can be overridden in the
+        constructor.
+        """
+        self._verifyConstructorFlag('recAv', defaultVal=False)
+
+
+    def test_responseCode(self):
+        """
+        L{dns.Message.rCode} defaults to C{0} and can be overridden in the
+        constructor.
+        """
+        self._verifyConstructorArgument('rCode', defaultVal=0, altVal=123)
+
+
+    def test_trunc(self):
+        """
+        L{dns.Message.trunc} defaults to C{False} and can be overridden in the
+        constructor.
+        """
+        self._verifyConstructorFlag('trunc', defaultVal=False)
 
 
 
@@ -3670,6 +3681,47 @@ class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
     L{dns.Message}.
     """
     messageFactory = dns._EDNSMessage
+
+    def test_authoritativeAnswer(self):
+        """
+        L{dns._EDNSMessage.authoritativeAnswer} defaults to C{False} and can be
+        overridden in the constructor.
+        """
+        self._verifyConstructorFlag('authoritativeAnswer', defaultVal=False)
+
+
+    def test_recursionDesired(self):
+        """
+        L{dns._EDNSMessage.recursionDesired} defaults to C{False} and can be
+        overridden in the constructor.
+        """
+        self._verifyConstructorFlag('recursionDesired', defaultVal=False)
+
+
+    def test_recursionAvailable(self):
+        """
+        L{dns._EDNSMessage.recursionAvailable} defaults to C{False} and can be
+        overridden in the constructor.
+        """
+        self._verifyConstructorFlag('recursionAvailable', defaultVal=False)
+
+
+    def test_responseCode(self):
+        """
+        L{dns._EDNSMessage.responseCode} defaults to C{0} and can be overridden
+        in the constructor.
+        """
+        self._verifyConstructorArgument(
+            'responseCode', defaultVal=0, altVal=123)
+
+
+    def test_truncated(self):
+        """
+        L{dns._EDNSMessage.truncated} defaults to C{False} and can be overridden
+        in the constructor.
+        """
+        self._verifyConstructorFlag('truncated', defaultVal=False)
+
 
     def test_ednsVersion(self):
         """
@@ -3764,8 +3816,9 @@ class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
 
     def test_repr(self):
         """
-        L{dns._EDNSMessage.__repr__} displays the id, answer, opCode, auth,
-        trunc, recDes, recAv attributes of the message.
+        L{dns._EDNSMessage.__repr__} displays the id, answer, opCode,
+        authoritativeAnswer, truncated, recursionDesired, recursionAvailable
+        attributes of the message.
         """
         self.assertEqual(
             repr(self.messageFactory()),
@@ -3773,11 +3826,11 @@ class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
             'id=0 '
             'answer=False '
             'opCode=0 '
-            'auth=False '
-            'trunc=False '
-            'recDes=False '
-            'recAv=False '
-            'rCode=0 '
+            'authoritativeAnswer=False '
+            'truncated=False '
+            'recursionDesired=False '
+            'recursionAvailable=False '
+            'responseCode=0 '
             'ednsVersion=0 '
             'dnssecOK=False '
             'authenticData=False '
@@ -3940,63 +3993,63 @@ class EDNSMessageEqualityTests(ComparisonTestsMixin, unittest.SynchronousTestCas
             )
 
 
-    def test_auth(self):
+    def test_authoritativeAnswer(self):
         """
         Two L{dns._EDNSMessage} instances compare equal if they have the same
         auth flag.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(auth=True),
-            self.messageFactory(auth=True),
-            self.messageFactory(auth=False),
+            self.messageFactory(authoritativeAnswer=True),
+            self.messageFactory(authoritativeAnswer=True),
+            self.messageFactory(authoritativeAnswer=False),
             )
 
 
-    def test_trunc(self):
+    def test_truncated(self):
         """
         Two L{dns._EDNSMessage} instances compare equal if they have the same
-        trunc flag.
+        truncated flag.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(trunc=True),
-            self.messageFactory(trunc=True),
-            self.messageFactory(trunc=False),
+            self.messageFactory(truncated=True),
+            self.messageFactory(truncated=True),
+            self.messageFactory(truncated=False),
             )
 
 
-    def test_recDes(self):
+    def test_recursionDesired(self):
         """
         Two L{dns._EDNSMessage} instances compare equal if they have the same
-        recDes flag.
+        recursionDesired flag.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(recDes=True),
-            self.messageFactory(recDes=True),
-            self.messageFactory(recDes=False),
+            self.messageFactory(recursionDesired=True),
+            self.messageFactory(recursionDesired=True),
+            self.messageFactory(recursionDesired=False),
             )
 
 
-    def test_recAv(self):
+    def test_recursionAvailable(self):
         """
         Two L{dns._EDNSMessage} instances compare equal if they have the same
-        recAv flag.
+        recursionAvailable flag.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(recAv=True),
-            self.messageFactory(recAv=True),
-            self.messageFactory(recAv=False),
+            self.messageFactory(recursionAvailable=True),
+            self.messageFactory(recursionAvailable=True),
+            self.messageFactory(recursionAvailable=False),
             )
 
 
-    def test_rCode(self):
+    def test_responseCode(self):
         """
         Two L{dns._EDNSMessage} instances compare equal if they have the same
-        rCode.
+        responseCode.
         """
         self.assertNormalEqualityImplementation(
-            self.messageFactory(rCode=16),
-            self.messageFactory(rCode=16),
-            self.messageFactory(rCode=15),
+            self.messageFactory(responseCode=16),
+            self.messageFactory(responseCode=16),
+            self.messageFactory(responseCode=15),
             )
 
 
@@ -4236,7 +4289,7 @@ class StandardEncodingTestsMixin(object):
 
     def test_truncatedMessageEncode(self):
         """
-        If the message C{trunc} attribute is set to 1 the encoded bytes will
+        If the message C{truncated} attribute is set to 1 the encoded bytes will
         have TR bit 1.
         """
         self.assertEqual(
@@ -4293,6 +4346,12 @@ class MessageStandardEncodingTests(StandardEncodingTestsMixin,
 
         @return: An L{dns.Message} instance.
         """
+        kwargs['auth'] = kwargs.pop('authoritativeAnswer', False)
+        kwargs['recDes'] = kwargs.pop('recursionDesired', False)
+        kwargs['recAv'] = kwargs.pop('recursionAvailable', False)
+        kwargs['trunc'] = kwargs.pop('truncated', False)
+        kwargs['rCode'] = kwargs.pop('responseCode', False)
+
         queries = kwargs.pop('queries', [])
         answers = kwargs.pop('answers', [])
         authority = kwargs.pop('authority', [])
@@ -4470,7 +4529,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
         https://tools.ietf.org/html/rfc6891#section-6.1.3
         """
-        ednsMessage = self.messageFactory(rCode=15, ednsVersion=0)
+        ednsMessage = self.messageFactory(responseCode=15, ednsVersion=0)
         standardMessage = ednsMessage._toMessage()
 
         self.assertEqual(
