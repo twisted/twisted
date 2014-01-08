@@ -770,10 +770,12 @@ else:
 
         def getContext(self, hostname, port):
             """
-            Return an L{SSL.Context}.
+            Return an L{OpenSSL.SSL.Context}.
 
-            :param hostname: ignored
-            :param port: ignored
+            @param hostname: ignored
+            @param port: ignored
+
+            @rtype: L{OpenSSL.SSL.Context}
             """
             return self._contextFactory.getContext()
 

@@ -692,13 +692,21 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
         """
         Create an L{Agent} with an https scheme and return its endpoint
         created according to the arguments.
+
+        @param host: The host for the endpoint.
+        @type host: L{bytes}
+
+        @param port: The port for the endpoint.
+        @type port: L{int}
+
+        @rtype: L{SSL4ClientEndpoint}
         """
-        return client.Agent(self.Reactor())._getEndpoint('https', host, port)
+        return client.Agent(self.Reactor())._getEndpoint(b'https', host, port)
 
 
     def test_endpointType(self):
         """
-        L{Agent._getEndpoint} return a C{SSL4ClientEndpoint} when passed a
+        L{Agent._getEndpoint} return a L{SSL4ClientEndpoint} when passed a
         scheme of C{'https'}.
         """
         self.assertIsInstance(self.makeEndpoint(), SSL4ClientEndpoint)
