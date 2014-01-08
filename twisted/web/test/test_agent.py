@@ -1067,6 +1067,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
     if ssl is None:
         skip = "SSL not present, cannot run SSL tests"
 
+
     def makeEndpoint(self, host='example.com', port=443):
         """
         Create an L{Agent} with an https scheme and return its endpoint
