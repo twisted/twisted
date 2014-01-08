@@ -8,7 +8,8 @@ HTTP client.
 
 from __future__ import division, absolute_import
 
-import os, types
+import os
+import types
 
 try:
     from urlparse import urlunparse, urljoin, urldefrag
@@ -747,7 +748,9 @@ if not _PY3:
         ResponseNeverReceived, PotentialDataLoss, _WrapperException)
 
 try:
-    from twisted.internet.ssl import ClientContextFactory
+    from OpenSSL import SSL
+
+    from twisted.internet.ssl import CertificateOptions
 except ImportError:
     class WebClientContextFactory(object):
         """
@@ -757,13 +760,25 @@ except ImportError:
         def getContext(self, hostname, port):
             raise NotImplementedError("SSL support unavailable")
 else:
-    class WebClientContextFactory(ClientContextFactory):
+    class WebClientContextFactory(object):
         """
         A web context factory which ignores the hostname and port and does no
         certificate verification.
         """
+        def __init__(self):
+            self._contextFactory = CertificateOptions(method=SSL.SSLv23_METHOD)
+
         def getContext(self, hostname, port):
-            return ClientContextFactory.getContext(self)
+            """
+            Return an L{OpenSSL.SSL.Context}.
+
+            @param hostname: ignored
+            @param port: ignored
+
+            @return: A new SSL context.
+            @rtype: L{OpenSSL.SSL.Context}
+            """
+            return self._contextFactory.getContext()
 
 
 

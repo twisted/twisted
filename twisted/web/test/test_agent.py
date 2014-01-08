@@ -813,26 +813,6 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         self.assertIsInstance(endpoint, TCP4ClientEndpoint)
 
 
-    def test_connectHTTPS(self):
-        """
-        L{Agent._getEndpoint} return a C{SSL4ClientEndpoint} when passed a
-        scheme of C{'https'}.
-        """
-        expectedHost = 'example.com'
-        expectedPort = 4321
-        endpoint = self.agent._getEndpoint('https', expectedHost, expectedPort)
-        self.assertIsInstance(endpoint, SSL4ClientEndpoint)
-        self.assertEqual(endpoint._host, expectedHost)
-        self.assertEqual(endpoint._port, expectedPort)
-        self.assertIsInstance(endpoint._sslContextFactory,
-                              _WebToNormalContextFactory)
-        # Default context factory was used:
-        self.assertIsInstance(endpoint._sslContextFactory._webContext,
-                              WebClientContextFactory)
-    if ssl is None:
-        test_connectHTTPS.skip = "OpenSSL not present"
-
-
     def test_connectHTTPSCustomContextFactory(self):
         """
         If a context factory is passed to L{Agent.__init__} it will be used to
@@ -1077,6 +1057,107 @@ class AgentTests(TestCase, FakeReactorAndConnectMixin, AgentTestsMixin):
         """
         request = client.Request(b'FOO', b'/', client.Headers(), None)
         self.assertIdentical(request.absoluteURI, None)
+
+
+
+class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
+    """
+    Tests for the new HTTP client API that depends on SSL.
+    """
+    if ssl is None:
+        skip = "SSL not present, cannot run SSL tests"
+
+
+    def makeEndpoint(self, host='example.com', port=443):
+        """
+        Create an L{Agent} with an https scheme and return its endpoint
+        created according to the arguments.
+
+        @param host: The host for the endpoint.
+        @type host: L{bytes}
+
+        @param port: The port for the endpoint.
+        @type port: L{int}
+
+        @return: An endpoint of an L{Agent} constructed according to args.
+        @rtype: L{SSL4ClientEndpoint}
+        """
+        return client.Agent(self.Reactor())._getEndpoint(b'https', host, port)
+
+
+    def test_endpointType(self):
+        """
+        L{Agent._getEndpoint} return a L{SSL4ClientEndpoint} when passed a
+        scheme of C{'https'}.
+        """
+        self.assertIsInstance(self.makeEndpoint(), SSL4ClientEndpoint)
+
+
+    def test_hostArgumentIsRespected(self):
+        """
+        If a host is passed, the endpoint respects it.
+        """
+        expectedHost = 'example.com'
+        endpoint = self.makeEndpoint(host=expectedHost)
+        self.assertEqual(endpoint._host, expectedHost)
+
+
+    def test_portArgumentIsRespected(self):
+        """
+        If a port is passed, the endpoint respects it.
+        """
+        expectedPort = 4321
+        endpoint = self.makeEndpoint(port=expectedPort)
+        self.assertEqual(endpoint._port, expectedPort)
+
+
+    def test_contextFactoryType(self):
+        """
+        Ensure L{Agent} wraps correctly its context factory and uses modern
+        TLS APIs.
+        """
+        endpoint = self.makeEndpoint()
+        self.assertIsInstance(endpoint._sslContextFactory,
+                              _WebToNormalContextFactory)
+        # Default context factory was used:
+        self.assertIsInstance(endpoint._sslContextFactory._webContext,
+                              WebClientContextFactory)
+        self.assertIsInstance(
+            endpoint._sslContextFactory._webContext._contextFactory,
+            ssl.CertificateOptions
+        )
+
+
+
+class WebClientContextFactoryTests(TestCase):
+    """
+    Tests for the context factory wrapper for web clients
+    L{WebClientContextFactory}.
+    """
+    def test_missingSSL(self):
+        """
+        If C{getContext} is called and SSL is not available, raise
+        L{NotImplementedError}.
+        """
+        self.assertRaises(
+            NotImplementedError,
+            WebClientContextFactory().getContext,
+            'example.com', 443,
+        )
+
+
+    def test_returnsContext(self):
+        """
+        If SSL is present, C{getContext} returns a L{SSL.Context}.
+        """
+        ctx = WebClientContextFactory().getContext('example.com', 443)
+        self.assertIsInstance(ctx, ssl.SSL.Context)
+
+
+    if ssl is None:
+        test_returnsContext.skip = "SSL not present, cannot run SSL tests."
+    else:
+        test_missingSSL.skip = "SSL present."
 
 
 
