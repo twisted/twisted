@@ -775,6 +775,7 @@ else:
             @param hostname: ignored
             @param port: ignored
 
+            @return: A new SSL context.
             @rtype: L{OpenSSL.SSL.Context}
             """
             return self._contextFactory.getContext()
