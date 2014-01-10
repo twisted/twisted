@@ -2284,7 +2284,6 @@ class SphinxBuilderTests(TestCase):
         self.createFakeSphinxProject()
         self.builder.build(self.sphinxDir)
 
-        # assert things
         htmlDir = self.sphinxDir.sibling('doc')
         self.assertTrue(htmlDir.isdir())
         doctreeDir = htmlDir.child("doctrees")
