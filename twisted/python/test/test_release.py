@@ -1066,28 +1066,6 @@ class BuildDocsScriptTests(TestCase, BuilderTestsMixin,
     test_buildDocs.skip = latexSkip or loreSkip
 
 
-    def test_docsBuilderScriptMainRequiresThreeArguments(self):
-        """
-        SystemExit is raised when the incorrect number of command line
-        arguments are passed to the main documentation building script.
-        """
-        self.assertRaises(SystemExit, self.script.main, [])
-        self.assertRaises(SystemExit, self.script.main, ["foo"])
-        self.assertRaises(SystemExit, self.script.main, ["foo", "bar", "baz"])
-
-
-    def test_docsBuilderScriptMain(self):
-        """
-        The main documentation building script invokes C{buildDocs} with the
-        arguments passed to it cast as L{FilePath}.
-        """
-        calls = []
-        self.script.buildDocs = lambda a, b: calls.append((a, b))
-        self.script.main(["hello", "there"])
-        self.assertEqual(calls, [(FilePath("hello"), FilePath("there"))])
-
-
-
 class APIBuilderTestCase(TestCase):
     """
     Tests for L{APIBuilder}.
