@@ -997,13 +997,12 @@ class SphinxBuilder(object):
             buildDir = docDir.child('build')
 
         doctreeDir = buildDir.child('doctrees')
-        sourceDir = docDir.child('source')
 
         # only support html builder for now
         builder, builderOpts = ('html', [])
 
         argsList = ['sphinx-build', '-b', builder]
-        allSphinxOpts = ['-d', doctreeDir.path, sourceDir.path]
+        allSphinxOpts = ['-d', doctreeDir.path, docDir.path]
         if builderOpts:
             allSphinxOpts.extend(builderOpts)
 
@@ -1012,7 +1011,7 @@ class SphinxBuilder(object):
         argsList.extend(allSphinxOpts)
         argsList.append(outDir.path)
 
-        runCommand(argsList)
+        print(runCommand(argsList))
 
 
 
@@ -1532,7 +1531,4 @@ class BuildDocsScript(object):
             two strings: the path to the root of the Twisted checkout and the
             path to the Twisted website template.
         """
-        if len(args) != 2:
-            sys.exit("Must specify two arguments: "
-                     "Twisted checkout path and template path.")
-        self.buildDocs(FilePath(args[0]), FilePath(args[1]))
+        SphinxBuilder().build(FilePath(args[0]).child("docs"))
