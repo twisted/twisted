@@ -37,8 +37,7 @@ from twisted.python._release import (
     NoDocumentsFound, filePathDelta, CommandFailed, BookBuilder,
     DistributionBuilder, APIBuilder, BuildAPIDocsScript, buildAllTarballs,
     runCommand, UncleanWorkingDirectory, NotWorkingDirectory,
-    ChangeVersionsScript, BuildTarballsScript, NewsBuilder, BuildDocsScript,
-    SphinxBuilder)
+    ChangeVersionsScript, BuildTarballsScript, NewsBuilder, SphinxBuilder)
 
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
@@ -2220,7 +2219,8 @@ class SphinxBuilderTests(TestCase):
         self.builder = SphinxBuilder()
 
         # set up a place for a fake sphinx project
-        self.sphinxDir = FilePath(self.mktemp())
+        self.twistedRootDir = FilePath(self.mktemp())
+        self.sphinxDir = self.twistedRootDir.child("docs")
         self.sphinxDir.makedirs()
         self.sourceDir = self.sphinxDir
 
@@ -2283,7 +2283,22 @@ class SphinxBuilderTests(TestCase):
         """
         self.createFakeSphinxProject()
         self.builder.build(self.sphinxDir)
+        self.verifyBuilt()
 
+
+    def test_main(self):
+        """
+        Creates and builds a fake Sphinx project as if via the command line.
+        """
+        self.createFakeSphinxProject()
+        self.builder.main([self.sphinxDir.parent().path])
+        self.verifyBuilt()
+
+
+    def verifyBuilt(self):
+        """
+        Verify that a sphinx project has been built.
+        """
         htmlDir = self.sphinxDir.sibling('doc')
         self.assertTrue(htmlDir.isdir())
         doctreeDir = htmlDir.child("doctrees")
