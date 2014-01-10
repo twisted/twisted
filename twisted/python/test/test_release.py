@@ -73,12 +73,6 @@ else:
 
 
 
-if which("latex") and which("dvips") and which("ps2pdf13"):
-    latexSkip = skip
-else:
-    latexSkip = "LaTeX is not available."
-
-
 if which("svn") and which("svnadmin"):
     svnSkip = skip
 else:
@@ -1000,69 +994,6 @@ class DocBuilderTestCase(TestCase, BuilderTestsMixin):
                                           FilePath("/foo/examples/quotes"))
         self.assertEqual(linkrel, "../../howto/")
 
-
-
-class BuildDocsScriptTests(TestCase, BuilderTestsMixin,
-                           StructureAssertingMixin):
-    """
-    Tests for L{BuildDocsScript}.
-    """
-
-    def setUp(self):
-        """
-        Create a L{BuildDocsScript} in C{self.script}.
-        """
-        BuilderTestsMixin.setUp(self)
-        self.script = BuildDocsScript()
-
-
-    def test_buildDocs(self):
-        """
-        L{BuildDocsScript.buildDocs} generates Lore man pages, turn all Lore
-        pages to HTML, and build the PDF book.
-        """
-        rootDir = FilePath(self.mktemp())
-        rootDir.createDirectory()
-        loreInput, loreOutput = self.getArbitraryLoreInputAndOutput(
-            "10.0.0",
-            apiBaseURL="http://twistedmatrix.com/documents/10.0.0/api/%s.html")
-        coreIndexInput, coreIndexOutput = self.getArbitraryLoreInputAndOutput(
-            "10.0.0", prefix="howto/",
-            apiBaseURL="http://twistedmatrix.com/documents/10.0.0/api/%s.html")
-
-        manInput = self.getArbitraryManInput()
-        manOutput = self.getArbitraryManHTMLOutput("10.0.0", "../howto/")
-
-        structure = {
-            "LICENSE": "copyright!",
-            "twisted": {"_version.py": genVersion("twisted", 10, 0, 0)},
-            "doc": {"core": {"index.xhtml": coreIndexInput,
-                             "howto": {"template.tpl": self.template,
-                                       "index.xhtml": loreInput},
-                             "man": {"twistd.1": manInput}}}}
-
-        outStructure = {
-            "LICENSE": "copyright!",
-            "twisted": {"_version.py": genVersion("twisted", 10, 0, 0)},
-            "doc": {"core": {"index.html": coreIndexOutput,
-                             "howto": {"template.tpl": self.template,
-                                       "index.html": loreOutput},
-                             "man": {"twistd.1": manInput,
-                                     "twistd-man.html": manOutput}}}}
-
-        self.createStructure(rootDir, structure)
-
-        howtoDir = rootDir.descendant(["doc", "core", "howto"])
-        self.setupTeXFiles(howtoDir)
-
-        templateFile = howtoDir.child("template.tpl")
-        self.script.buildDocs(rootDir, templateFile)
-
-        howtoDir.child("book.tex").remove()
-        howtoDir.child("book.pdf").remove()
-        self.assertStructure(rootDir, outStructure)
-
-    test_buildDocs.skip = latexSkip or loreSkip
 
 
 class APIBuilderTestCase(TestCase):
