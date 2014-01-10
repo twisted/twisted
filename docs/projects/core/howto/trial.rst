@@ -453,16 +453,12 @@ our API class. This brings us to ``calculus/base_3.py`` :
 
 Here the ``_make_ints`` helper function tries to
 convert a list into a list of equivalent integers, and raises a ``TypeError`` in case the conversion goes wrong.
+
 .. note::
-   The ``int``  conversion can also
-   raise a ``TypeError``  if passed something of the
-   wrong type, such as a list. We'll just let that exception go by, as ``TypeError``  is already what we want in case something
-   goes wrong.
 
-
-
-
-
+   The ``int`` conversion can also raise a ``TypeError`` if passed something of
+   the wrong type, such as a list. We'll just let that exception go by, as
+   ``TypeError`` is already what we want in case something goes wrong.
 
 .. _core-howto-trial-twisted:
 
