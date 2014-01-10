@@ -1,0 +1,8 @@
+[[[Rendering the template.]]]
+<div>
+    Before waiting ...
+    [[[In progress... now firing the Deferred.]]]
+<span>A value: '&lt;value&gt;'</span>
+    ... after waiting.
+    </div>[[[Deferred fired.]]]
+[[[All done.]]]

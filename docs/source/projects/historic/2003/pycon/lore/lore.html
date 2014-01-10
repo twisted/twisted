@@ -1,0 +1,791 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<title>The Lore Document Generation Framework</title>
+</head>
+
+<body>
+
+<h1>The Lore Document Generation Framework</h1>
+
+<ul>
+<li>Moshe Zadka
+    <a href="mailto:moshez@twistedmatrix.com">moshez@twistedmatrix.com</a></li>
+<li>Andrew Bennetts
+    <a href="mailto:spiv@twistedmatrix.com">spiv@twistedmatrix.com</a></li>
+</ul>
+
+<h2>Abstract</h2>
+
+<p>Lore is a documentation generation system which uses a limited subset
+of XHTML, together with some class attributes, as its source format. This
+allows for lower barrier of entry than many other similar systems, since HTML
+authoring tools are plentiful
+as is knowledge of HTML writing. As an added advantage, the source format
+is viewable directly, so that even if Lore is not available the documentation
+is useful. It currently outputs LaTeX and HTML, which allows for most
+use-cases.</p>
+
+<p>Lore is currently in use by the Twisted project to generate its
+documentation for versions 1.0.1 and above.</p>
+
+<h2>History</h2>
+
+<p>At the beginning of Twisted's life cycle, as with any self-respecting
+free software project, it came completely devoid of documentation.  As
+Twisted progressed in maturity, the Twisted development team realized
+that documentation is necessary.</p>
+
+<p>Since at that time the Twisted development
+team did not want the overhead of integrating
+a full-scale document generation framework into its build infrastructure,
+documents were written for the least common denominator -- plain HTML.
+When the Twisted team wanted the documentation to be 
+featured on the web site, it was desirable to have them integrated with
+the web site's look and feel. Thus, <code class="shell">generate-domdocs</code>
+was born as a simple XML-based command line hack which improved the look of the
+documents so they would share the look and feel of the other pages in the web
+site, including a standard header and footer. As
+<code class="shell">generate-domdocs</code>
+slowly grew more and more features, it gradually became too large to maintain.
+The authors, members of the Twisted development team, decided that in order to
+make it more maintainable, it should be refactored into a
+library and by the way also add alternate output formats. Some of the documents
+which were reluctant to be transformed into alternate formats were fixed,
+and guidelines for making compatible documents were drafted. Those documents,
+together with the conversion code, are the Lore documentation generation
+system.</p>
+
+<h2>Introduction</h2>
+
+<p>Lore is documentation generation system which is a part of the
+<a href="http://twistedmatrix.com">Twisted</a> framework. It uses
+the Twisted XML parsing framework
+(<code class="API" base="twisted.web">microdom</code>) to parse compliant XHTML
+and generate the various output formats from it.</p>
+
+<p>Lore consists of a Python package, <code class="API">twisted.lore</code>,
+and a command-line program: <code class="shell">lore</code>, which
+generates HTML output (which is more presentation-oriented than the source
+format), LaTeX or  runs an linter, depending on command-line arguments.</p>
+
+<p>In the case where the default output of Lore is not exactly suited to a
+Lore user,
+it is possible to subclass the output generators and customize their behavior.
+This could be done for many purposes, from straight-forward additions like
+adding a new <code>span</code> or <code>div</code> class to advanced tweaking
+such as changing the way Lore does image conversion on LaTeX output.</p>
+
+<p>Lore uses reflection intensively to make adding new features as simple
+as adding a new method, without the need for awkward registration schemes.
+Thus, adding another check to the linter or letting
+Lore handle the <code>link</code> element in some way require only the addition
+of one method.</p>
+
+<h2>Goals</h2>
+
+<p>Lore was written when the Twisted team felt it needed to write documentation
+and looked for a documentation format. Looking through alternatives, the
+best one seemed to be the Python way, using LaTeX format and 
+<code class="shell">latex2html</code>. However, the Python way has its share
+of problems, not the least of which is <code class="shell">latex2html</code>
+being a long and crufty Perl program whose Perl APIs, which are the
+only way to add support for custom markup, change every version.</p>
+
+<p>Since documentation writing is important, a documentation system with
+minimal impact on the writer would be desirable. While LaTeX certainly has
+very little impact in terms of markup overhead, it has a very big impact
+both in terms of installed base (installing LaTeX on UNIX systems or
+Windows is non-trivial at best) and in terms of familiarity.</p>
+
+<p>HTML has the benefit of being directly readable on every post-1995
+computer, so the installed base is as big as could be hoped for. It also has
+the benefit of being easily parsed, at least in its new XHTML guise.</p>
+
+<p>The goals of Lore were taken to be:</p>
+
+<ul>
+<li>Source files directly readable.</li>
+<li>At least output to modern (CSS-based) HTML.</li>
+<li>Easily parsed by third-parties.</li>
+</ul>
+
+<h2>Source Format</h2>
+
+<h3>Description</h3>
+
+<p>Lore's source format is a subset of XHTML; all Lore source documents are
+valid XHTML documents.  The XHTML tags that Lore allows are:
+<code>html</code>, <code>title</code>, <code>head</code>, <code>body</code>,
+<code>h1</code>, <code>h2</code>, <code>h3</code>, <code>ol</code>,
+<code>ul</code>, <code>dl</code>, <code>li</code>, <code>dt</code>,
+<code>dd</code>, <code>p</code>, <code>code</code>, <code>img</code>,
+<code>blockquote</code>, <code>a</code>, <code>cite</code>, <code>div</code>,
+<code>span</code>, <code>strong</code>, <code>em</code>, <code>pre</code>,
+<code>q</code>, <code>table</code>, <code>tr</code>, <code>td</code>,
+<code>th</code> and <code>style</code>.
+</p>
+
+<p>We would like to stress the omission of the <code>font</code> tag (which is
+deprecated in HTML 4.01 anyway).  Instead of using <code>font</code>,  Lore
+mandates the use of stylesheets
+and the <code>class</code> attribute, and in particular Lore defines several
+classes, such as <code>footnote</code>, <code>API</code>,
+<code>py-listing</code>.  The use of classes on <code>div</code> and
+<code>span</code> elements effectively allows XHTML to be arbitrarily
+extensible without needing to define custom tags.</p>
+
+<p>Further discouraging explicit style decision, Lore deprecates the
+<code>style</code> attribute which allowing HTML (and XHTML) authors to embed
+pieces of the stylesheet in the document. Though Lore properly processes
+such documents, they are against the specification of Lore -- and
+the Lore lint-like problem finder will complain.</p>
+
+<h3>Advantages and Disadvantages</h3>
+
+<p>Requiring XHTML rather than just HTML greatly simplifies the code to
+manipulate Lore source, because we can use standard XML libraries.  For
+documentation authors, the difference is negligible -- and any mistakes made in
+balancing tags can be easily found using the linter.
+Since tag balancing problems, in many cases, cause a discrepancy between
+author intention and the result, it is better to balance the tags anyway.</p>
+
+<p>Like LaTeX, Lore encourages authors to focus on content, letting the
+presentation take care of itself.  This is an inherently restrictive approach,
+but results in much more consistent and higher-quality output.</p>
+
+<p>The Lore source format is quite usable (if somewhat plain) as an end-format.
+Any web browser can read it, and it does not require special stylesheet support,
+JavaScript or any other modern HTML additions.  It is also, as intended,
+straightforward to create and edit documents in this format.</p>
+
+<p>However, reading the source format directly has some major limitations,
+which are inherent in the combination of the facilities which render HTML
+and the requirement that the format will be easily writable, and easy to
+modify, using any standard text editor.
+The limitations include:</p>
+
+<ul>
+<li>There is no table of contents.</li>
+<li>Footnotes interrupt the flow of text (although stylesheet tricks can
+alleviate this to an extent).</li>
+<li>Python source is not syntax highlighted.</li>
+<li>File inclusions are implemented as hyper-links.</li>
+</ul>
+
+<h2>Output Formats</h2>
+
+<p>The two most important formats, for the end-user, are the computer screen and
+pages of print outs. Any other format should be first and foremost be thought
+of as a prelude to these final formats.</p>
+
+<p>The easiest computer-screen oriented format is HTML. However, the HTML
+which is most comfortable and useful to the end-user is not necessarily 
+easy to write and modify.
+For example, it is painful to manually write a table of contents, and even more
+painful to keep it updated as sections are added, removed or changed. However,
+when reading a long document having a table of contents, with hyperlinks
+into the sections, is a boon.
+Thus, even though both Lore's source and one output format are HTML, an
+HTML to HTML conversion is still necessary, paradoxical though it may sound.</p>
+
+<p>For printable output, the most widely supported formats are PostScript
+and Portable Document Format. On UNIX systems PostScript is often preferred,
+since there are many tools for manipulating it and printing it (and PostScript
+printers are more common in the UNIX world). On Windows and Apple computers,
+Portable Document Format (PDF) is preferred because of the ease of installation
+of the necessary tools. Mac OS X, though being technically a UNIX, supports
+PDF natively.</p>
+
+<p>Directly generating PostScript or PDF, however, is hard. Since these formats
+are very low-level, the application generating them must do the hard work
+of calculating line breaks, guessing hyphenation points and deciding on fonts.
+Since these tasks are already implemented by LaTeX, Lore just generates LaTeX
+code and lets the user run LaTeX to generate PostScript and
+<code class="shell">ps2pdf</code> to generate PDF. Granted, this still causes
+the problems with the difficulties of installing LaTeX. It is
+possible to implement direct Lore to PDF converter, though this hasn't been
+done yet, by using <code>pdflib</code>.</p>
+
+<h3>HTML</h3>
+
+<p>The HTML to HTML converter works by running a series of transformations on
+the Document Object Model (DOM) tree of the parsed document, and then
+writing it out. The most important transformation is that of throwing
+away anything outside the <code>body</code> element, and putting the
+<code>body</code> element inside a template file. This allows large
+parts of the common layout code to be customized without modifying or writing
+any Python code.</p>
+
+<p>Each step is implemented as a separate function, to allow Lore-using
+Python programmers to customize which tree transformations to do in their
+own code, without forcing them to rewrite functionality in Lore. In addition,
+other output generators might perform a subset of these transformations
+on the input tree before processing it -- and indeed, this is being used
+even in Lore itself.</p>
+
+<p>One of the steps taken is caused by a need which is common in large
+Python frameworks: many of the class or module names are deeply nested,
+but are commonly referred to by just their last one or two components
+in writing. However, the user would like to know the full name of the
+class or module name, and where to look up the API documentation -- but
+without having the complete name thrust upon him during the flow of text
+each time the module is mentioned.</p>
+
+<p>Lore makes sure that each class or module name which is mentioned will
+appear at least once using its full name, and afterwards use a common
+short name, regardless of how the author wrote it up. This frees authors
+from needing to observe, manually, this useful rule in their documents.</p>
+
+<p>The HTML Lore outputs aims to be the poster boy of graceful degradation.
+Thus, for example, while footnotes always appear as hyper-links to the footnote
+text, browsers which respect the <code>title</code> attribute (which is usually
+rendered as a tooltip) will also show the beginning of the footnote while
+hovering above the hyper-link.</p>
+
+<p>Lore avoids using the <q>font</q> or <q>color</q> tags and attributes,
+preferring to use HTML classes and using a stylesheet to specify graphical
+design decisions. This allows the Lore user to customize the presentation of
+the output without touching Python code. Since most often the stylesheet
+link is found in the <code>head</code> element, this is determined by 
+the by the template.</p>
+
+<p>Lore uses the same approach even for syntax-highlighting Python code,
+generating such elements as
+<code>&lt;span class="keyword"&gt;if&lt;/span&gt;</code>.</p>
+
+<h3>LaTeX</h3>
+
+<p>The LaTeX home page describes LaTeX as a <q>high-quality typesetting system,
+with features designed for the production of technical and scientific
+documentation.</q> LaTeX is very popular for generating printable content,
+building on Donald Knuth's TeX system to generate nearly optimal output
+by putting together much of the typesetting industry's experience in the
+form of a program and adding sophisticated algorithms for line-breaking and
+hyphenation.</p>
+
+<p>It is very common for document generation systems to avoid generating
+printable output themselves, instead letting LaTeX do the hard work, and
+Lore is no exception.</p>
+
+<p>Lore can output LaTeX in two modes: article mode, in which it generates
+a complete article ready to be be processed, and a section mode in which
+it generates a LaTeX file whose top-level element is a section. Such a file
+is usually included in some other LaTeX file via the include mechanism.
+Twisted itself uses mainly the section mode, and includes everything in the
+file <code class="shell">book.tex</code>, which is later processed to generate
+the Twisted book.</p>
+
+<p>While, conceivably, other modes could be done (a chapter mode or a subsection
+mode) there has not been any demand for those. In the case of demand, supplying
+these would be very few lines of Python code (less than 10), which can even
+be done by subclassing existing classes and avoiding the modification of Lore
+itself.</p>
+
+<h3>Docbook</h3>
+
+<p>Docbook output is currently experimental. Its chief use to Lore would
+be in generating Texinfo, which is the source for the GNU info documentation
+format.</p>
+
+<h2>Lint</h2>
+
+<p>Very early in the Lore development life-cycle it was found that a good
+Lint-like tool is necessary to find errors without necessitating a full
+compilation to all formats and sometimes even browsing the results. Because
+Lore was written to accommodate a large set of already existing documents
+(which were not previously checked for potential problems), such a tool
+was very useful so that finding a problem in one document would not mean
+this problem needs to be manually searched, and corrected, in all the other
+documents.</p>
+
+<p>Lore's linter tries to find problems in documents
+that would either stop the conversion to other formats by Lore completely
+(for example, by being not well-formed XML), or that would make it less useful
+(for example, by warning about tags or classes that are not supported by
+Lore).</p>
+
+<p>The linter even detects more exotic problems,
+including:</p>
+<ul>
+  <li><code>pre</code> elements containing lines over 80 characters.  Long lines
+      can be ugly to render in some output formats, and even impossible to
+      render in others.</li> 
+  <li>Explicit use of the <code>"</code> character in a non-pre or non-code
+      environment.  This makes a big difference for high-quality typographical
+      output targets like LaTeX, which
+      have distinct left- and right-quote characters.</li>
+  <li>Python code that isn't syntactically valid, with a bit of magic to account
+      for this idiom:
+<pre class="python">
+for x in sequence:
+    ...
+</pre>  
+      This check caught a surprisingly large number of errors in the Twisted
+      documentation!</li>  
+  <li><code>h1</code> contents being equal to <code>title</code> contents.
+      HTML is somewhat unique in that it has two places to specify the logical
+      idea of <q>title</q>. Since other output formats do not support that,
+      in Lore papers, the contents of both must be the same.</li>
+</ul>
+
+<p>Since many of the incremental improvements done to Lore found a problem
+in the existing documentation files, the linter has been
+an important part of the Lore development effort. One may even argue that
+part of the reason other documentation generation systems produce suboptimal
+output for their <q>non-native</q> application is the lack of a linting
+tool.</p>
+
+<p>Finally, if the linter gives a false positive, that is
+it emits a warning for something that isn't a problem in a particular situation,
+the user can add an <code>hlint="off"</code> attribute to the offending tag, and
+the linter will ignore it.  This is necessary only very rarely.</p>
+
+<p>The chief design decision made in the linter, after
+painful experience when running <code class="shell">tidy</code>, is that
+<em>it must never change the document</em>. Thus, while the linter
+will be as pedantic as possible finding
+errors, it never changes the contents. This is particularly important
+when dealing with version control systems, where spurious changes can
+render <code class="shell">diff</code> listings useless.</p> 
+
+<h2>Features</h2>
+
+<h3>Python Syntax Highlighting</h3>
+
+<p>All existing syntax highlighters for Python used pre-<code>tokenize</code>
+techniques to analyse the Python code. As a result, they were cumbersome
+and non-standard. The Lore developers decided that writing a Python
+HTML syntax-highlighter would be easier than modifying one of the existing
+ones. A syntax-highlighter was built on top of a null-tokenizer: that is,
+a tokenizer which emits the <em>exact same</em> characters as the input.
+This allowed easy debugging of the parsing code.</p>
+
+<p>The only non-trivial code in the syntax highlighter is when dealing
+with whitespace which is not significant syntactically, since the tokenizer
+does not report it. However, since the tokenizer does report row and column,
+when the code sees a discrepancy between where the previous token ended
+and the current token starts, it adds whitespace to make up for
+the discrepancy.</p>
+
+<p>When writing out the HTML, the only difference between that and the
+null-tokenizer is the wrapping of each token by a <code>span</code>
+tag with the appropriate class and escaping.</p>
+
+<p>Note that the basic Python tokenizer does not distinguish between the
+various roles of the production <q>NAME</q> (that is, a string of alphanumeric
+and
+underscore characters starting with an underscore or a letter) in Python.
+The tokenizer Lore uses adds that information by having a simple state machine:
+if the word is a keyword, there is nothing to be determined; otherwise, it
+depends on the last detected name -- <code>class</code> or
+<code>def</code> mean it is a function or class names, and after a 
+<code>class</code>/<code>def</code> and until a <code>:</code>, everything
+is a <q>parameter</q> or a superclass.</p>
+
+<p>The Python syntax highlighter Lore uses can be found in the
+<code class="API">twisted.python.htmlizer</code>.</p>
+
+<h3>File Inclusion</h3>
+
+<p>Often, when writing detailed documents, the author wishes to test his
+examples or even use examples from a working project. Pasting such examples
+directly into the HTML has both the usual problems of pasting code -- the
+version in the document will not benefit from bug fixes or enhancement to
+the original version -- and the problem that the HTML needs proper escaping,
+which is a tedious and error-prone procedure if done manually.
+Both problems are solved by Lore's <q>listing</q> mechanism. The
+<q>listing</q> mechanism converts HTML such as</p>
+
+<pre>
+&lt;a href="foo.py" class="py-listing&gt;foo.py&lt;/a&gt;
+</pre>
+
+<p>into inclusion of the <code class="shell">foo.py</code> file. It will always
+be properly escaped for whatever output format. It will
+also be syntax-highlighted, just as if it had been included verbatim.</p>
+
+<p>A similar class, <code>html-listing</code> is available for inclusion
+of HTML files.</p>
+
+<h3>API Reference Links</h3>
+
+<p>Twisted's documentation frequently references API documentation.  In Lore,
+the name of an API such as 
+<code class="API">twisted.internet.defer.Deferred</code> is marked up as</p>
+
+<pre>
+&lt;code class="API" base="twisted.internet.defer"&gt;Deferred&lt;/code&gt;
+</pre>
+
+<p>This will unambiguously link to 
+<code class="API">twisted.internet.defer.Deferred</code>, even though it is
+displayed as 
+<q><code class="API" base="twisted.internet.defer">Deferred</code></q>.  Lore
+produces API links that work with
+<a href="http://epydoc.sourceforge.net">epydoc</a>,
+but could easily be adapted for another API documentation generator; in fact,
+Lore originally worked with happydoc.
+In addition, in the HTML output, Lore will add a <code>title</code>
+attribute to the API reference, containing the full name of the link.</p>
+
+<h3>Cross references</h3>
+
+<p>A collection of documents will typically refer to each other, for instance to
+avoid re-explaining some central concept.  In HTML, cross-referencing
+is implemented as linking:</p>
+
+<pre>
+See &lt;a href="defer.html"&gt;Deferring Execution&lt;/a&gt;.
+</pre>
+
+<p>As a collection of HTML documents, this works with no changes.  Other output
+formats do linking in other ways.  When Lore is used to convert a collection of
+source HTML files into a single LaTeX book, each file is its own section, and
+the links are automatically converted into cross-references.  Thus the example
+above might be rendered as <q>See Deferring Execution (page 163).</q></p>
+
+<p>Lore also recognizes <em>fragment identifiers</em> in links, so that a link
+to <code>glossary.html#psu</code> will be cross-referenced to that part of the
+glossary named <q>psu</q>, not just the whole glossary.  This ensures that the
+page the reader is referred to is the correct one.</p>
+
+<h2>Man Support</h2>
+
+<p>Man pages are a fact of life on UNIX, and every self-respecting command
+line program is expected to come with one. The man format, implemented as
+troff macros, is somewhat arcane. Since, when Lore was written, we already
+had written man pages, the decision was to convert them to HTML rather than
+try to rewrite them in HTML and design a man output format.</p>
+
+<p>A limited parser for man pages is available in the 
+<code class="API">twisted.lore.man2lore</code> module. It is not yet
+exposed via any public command line program.</p>
+
+<p>Earlier attempts, using <code class="shell">groff -Thtml</code> to
+generate HTML and then post-process it into Lore-compatible HTML
+were crufty and unmaintainable. It seems the man format shares some
+of LaTeX's problem: being written as a macro package over a powerful
+processor, it is too flexible for its own good. Fortunately, the subset
+normally used in man pages is quite small, so heuristically parsing man pages is
+much easier than the same task with LaTeX.</p>
+
+<h2>Comparisons</h2>
+
+<h3>HTML</h3>
+
+<p>HTML, when invented by Tim Berners-Lee, was meant to be a simple language
+for writing and sharing documents. With the explosion of the web, HTML has
+grown to a confusing jumble of logical and presentation features, with more
+layers, such as CSS, dumped on top of it. As a result, a modern browser is
+a complicated beast. That given, it is perhaps understandable that today's
+browsers do a sub-standard job at printing. Thus, while being extremely
+well suited to the world wide web, HTML is significantly lacking, at least
+in today's application market, when it comes to paper output. It might
+be possible to write an application to properly convert HTML with CSS to
+PostScript or PDF -- however, it would probably be much more complicated
+than Lore. Moreover, the portability of such an application would
+be worse of the portability of Lore itself, which currently only depends
+on Python 2.1 or higher and the Twisted framework.</p>
+
+<p>Limiting HTML to a small subset of features enables Lore to be small
+and readable while remaining useful.  By including the <code>class</code>
+attribute among those features, Lore is also extensible.</p> 
+
+<h3>LaTeX</h3>
+
+<p>When it comes to paper output, LaTeX cannot be out done except by a skilled
+typesetter designing and implementing. However, the architecture of LaTeX
+presents
+significant problems when trying to view LaTeX online. LaTeX is written
+as a macro layer above TeX rather than a preprocessor. Thus, all of TeX's
+power is available, and sometimes used, in LaTeX. TeX is non-trivial to
+parse and format by anyone short of Donald Knuth -- it contains such commands
+as to change the tokenizer by modifying which characters are considered
+word characters or even which character is the command character.
+In fact, the authors are not aware of any application which handles the
+full power of TeX without being based on the original TeX code.</p>
+
+<p>All this makes LaTeX extremely difficult to parse, and even partial attempts
+to parse LaTeX are big and cumbersome -- for example,
+<code class="shell">latex2html</code>. It is thus difficult to convert
+LaTeX to something appropriate to online viewing.</p>
+
+<h3>LyX</h3>
+
+<p>LyX's internal source format is not well documented, and the only supported
+way to write it is using the LyX GUI. Thus it is inherently limiting to
+documentation authors. In addition, it is not trivial to write LyX preprocessors
+to save documentation authors tedious work.</p>
+
+<h3>Docbook</h3>
+
+<p>Docbook is a big standard, with non-trivial to install tool-set. Writing
+Docbook is different than most other document generation formats, so it
+takes significant training to write. In addition, using Docbook for
+a specific project usually requires writing custom DSSSL stylesheets
+in a scheme-like language, and additional XML DTD snippets. Writing
+these was quite possibly comparable to writing Lore, and Lore has the advantage
+of being written in Python.</p>
+
+<h3>Texinfo</h3>
+
+<p>Texinfo imposes a significant effort on authors. Many things need to
+be written twice, and the error messages leave a lot to be desired.
+After starting to work on the Lore texinfo output format the authors
+are grateful they have never had to write Texinfo by hand.</p>
+
+<h2>Techniques</h2>
+
+<h3>Visitor Pattern</h3>
+
+<p>When generating LaTeX, Lore does it via a visitor pattern while visiting
+the nodes. A node which does not have a specific visitor is visited by
+first writing the <code>start_</code> attribute, then visiting its
+children and then writing the <code>end_</code> attribute. If the attributes
+do not exist, they are treated as though they were empty strings.</p>
+
+<p>That code allows most of the HTML elements to LaTeX converters to have no 
+code -- only a pair of strings -- while the elements converters which need
+more sophisticated programming can do it via defining a method, which can
+still call the default processor if it needs this functionality.</p>
+
+<p>This pattern is also friendly to subclassing: all a subclass needs to
+do in order to change how an element is handled is to define either a pair
+of class attributes or a method.</p>
+
+<h3>Liberal Use of Reflection</h3>
+
+<p>In the above example of the visitor pattern, registration of the methods
+and attributes is avoided thanks to using the crudest form of reflection
+in Python -- the <code>getattr()</code> function.</p>
+
+<p>In the Lint support tool, more sophisticated reflection is needed when
+it needs to find all methods whose name begins with <code>check_</code>.
+This is done via the Twisted reflection code, built on top of the native
+Python facilities, in the module
+<code class="API">twisted.python.reflect</code>.</p>
+
+<h3>Recursively Searching For Elements</h3>
+
+<p>In the HTML output code, the most common operation is that of getting
+a list of elements which satisfy some property. This is done by one
+primary work-horse function:
+<code class="API">twisted.web.domhelpers.findNodes</code>. This function
+accepts a DOM tree and a function, and returns a list of all elements
+for which this function returns true. Using this, and the fact that Python makes
+it easy to combine functions into boolean combinations, makes analysis
+and modification and of the DOM tree a breeze.</p>
+
+<h2>Lessons Learned</h2>
+
+<h3>Problems With Some Output Formats</h3>
+
+<p>Probably the trickiest thing about non-HTML output formats is escaping.
+The problem comes from two annoying problems which are not really hard
+to solve, but do represent annoyances in the code:</p>
+
+<ul>
+<li>Different characters are escaped differently (for example, <code>\</code>
+    is escaped, in TeX, as <code>$\backslash$</code> while most other
+    characters are escaped as <code>\&lt;char&gt;</code>.</li>
+<li>Escaping depends on context -- special characters should not be escaped
+    at all inside <code>pre</code>, <code>&lt;/&gt;</code> should not be
+    escaped inside <code>code</code> and should be escaped as
+    <code>$&lt;$/$&gt;$</code> outside it.</li>
+</ul>
+
+<p>In Docbook, the sections are nested, so there is only need for
+a <code>title</code> element. However, in HTML only the headers care
+at which level they are. This requires the Docbook converter to keep
+the last header level and when it reaches a new header, to close and open
+enough sections so the header will get to the correct level. While Docbook's
+way may be more <q>correct</q>, it is unfortunate it chose to diverge from
+all other systems here.</p>
+
+<p>Texinfo requires all the sections in a document will have unique names.
+This makes it very inconvenient as both an input and an output format.</p>
+
+<p>Also, differing significance of whitespace in different formats requires that
+all whitespace emitted by lore must be normalized for the particular output
+format being used.  Blank lines which have no impact on HTML will trigger
+paragraph breaks in LaTeX.</p>
+
+<h3>Event-based XML Parsing Considered Harmful</h3>
+
+<p>The first version of the LaTeX output generator was using an event-based
+XML parsing engine. It quickly turned out one needs to keep a lot of
+information in stacks and manage many instance variables. For example,
+though XML gets the name of the closing element (even that is arguably
+too much information), it does not get the attributes. In <code>span</code>
+elements, for example, the interesting information is the <code>class</code>
+attribute. Since a-priory, <code>span</code>s might be nested, the class
+needs to keep a stack of attribute collections.</p>
+
+<p>Quite soon, stacks were needed for proper handling of <code>div</code>
+tags and for determining proper quoting formats. Moreover, getting the
+code to function correctly in the face of edge cases, such as cross-references
+inside <code>pre</code> tags, proved to be quite a challenge.</p>
+
+<p>The code was shortened, simplified and became more maintainable when
+it was moved to <code class="API" base="twisted.web">microdom</code>.</p>
+
+<p>We feel that unless there is
+an inherent reason to do XML event-based parsing, then it is much easier
+to read the whole thing into a DOM and then process it. The code is both
+shorter and clearer, and features are much easier to add.</p>
+
+<h3>Allow Easy Modification</h3>
+
+<p>Lore, out of the box, does not attempt to be all things to all people.
+Particularly in the LaTeX output format, there is a lot of room for
+interpretation and personal preferences. Lore chose one specific way, without
+trying to add half a dozen options to tweak it. However, thanks to the
+way it is coded, it is easy to add or modify features to suit individual
+preferences.  Many customizations only involve adding or overriding simple data
+attributes to a subclass; more advanced changes require adding or overriding
+methods.</p>
+
+<p>Likewise, the HTML output is built by running several tree-modification
+functions which are independent. Completely different HTML output could
+be build by adding more functions, or not running some of those which
+are being run.</p>
+
+<p>We already know of multiple users that have extended Lore for custom LaTeX
+generation.  In each case it was a simple matter of subclassing Lore's LaTeX
+code.</p>
+
+<h3>Reinventing Wheels Can Be Useful</h3>
+
+<p>Documentation generation systems were already a solved problem before Lore
+was written. However, we know of no system with Lore's unique combination of
+features -- in particular, portability, having a directly readable source format
+which is also directly writable in text editors.
+The common wisdom that a documentation generation
+system is a hard sell because it requires people to learn a new language was
+refuted by using an existing language.</p>
+
+<p>Wheel reinvention also occurred in a nearby area -- Twisted's XML support,
+for which Lore is one of the biggest users. Again, the common wisdom was that
+this was a solved problem, with many existing DOM and SAX implementations.
+However, implementation of some features, no implementation of other features
+and API instability have lead the Twisted team to write its own, highly
+pythonic, DOM-like implementation. In
+<code class="API" base="twisted.web">microdom</code>, the aim is to be
+as thin a wrapper over the basic Python wrappers as possible. This feature
+has been used to the full in Lore, where many of the tree manipulations
+would have been much more cumbersome had a standard <q>opaque</q> DOM
+implementation been used. In addition, using
+<code class="API" base="twisted.web">microdom</code> frees Lore from the
+dependence on both Python version and whether PyXML is installed.</p>
+
+<p>For example, <code class="API" base="twisted.web">microdom</code>
+exposes the list of child nodes as a plain Python lists. This means that
+not only all the list operations can be done of it, which could possibly
+be simulated by a list-like object, but that it is possible to
+<em>replace</em> it by our own list. As another example,
+<code class="API" base="twisted.web">microdom</code> allows us to freely
+copy nodes from one DOM tree into another.</p>
+
+<p>Python, as a language well suited to rapid application development,
+acts as a way to make wheel reinvention far from the horrible mistake
+which is portrayed in the common software engineering folklore. Indeed, Python
+makes it easy enough to reinvent wheels that only the best, and easy to
+use, wheels, get reused at all.</p>
+
+<h2>Availability</h2>
+
+<p>Lore can be found in Twisted 1.0.1 and higher, in the 
+<code class="API">twisted.lore</code> package. When you install the package,
+the relevant script, <code class="shell">lore</code>,
+should be installed in a sane directory, 
+as determined by distutils.</p>
+
+<p>For usage examples, see <code class="shell">admin/release-twisted</code>
+in the Twisted source distribution. It runs the various Lore scripts
+as part of the package build.</p>
+
+<h2>Future Plans</h2>
+
+<h3>More Output Formats</h3>
+
+<p>It would be nice to have the Docbook output fully working. It would also
+be nice to have Texinfo in full working order so that GNU info aficionados could
+read the documents with the info browser. As suggested above, it might
+also be useful to have a way to directly generate PDF output via
+<code>pdflib</code> in order to skip LaTeX.</p>
+
+<p>In addition, another potential output format is to have high-quality
+text output. This is non-trivial, but possibly useful: browsers'
+<q>Save as text</q> feature is usually implemented as an afterthought,
+and hardly uses the flexibility available in the text format to its
+full power. The authors are unaware, for example, of an HTML to text
+converter which uses the underlining with <q>=</q> sign or <q>-</q>
+to indicate a header, or which uses the <code>/slant/</code> or
+<code>*asterisk*</code> conventions to indicate emphasis.</p>
+
+<p>Another output format we are considering is a split-page HTML with
+interlinks, so that long documents can be converted into something
+which is web-friendly. One nice use for that would be in web-based
+presentations.</p>  
+
+<h3>Image Conversion</h3>
+
+<p>Currently all images are converted to EPS format. It would be nice to have
+the LaTeX converter try to see if there is already an EPS version, via some
+naming convention, and use that. This would allow better scaling of things like
+Dia diagrams. The versions in bitmap-based formats (such as PNG)
+are impossible to scale, because the text would become unreadable.</p>
+
+<h3>Interface</h3>
+
+<p>Currently, the only interface to Lore is through the command-line, and
+even that is somewhat spotty: for example, the man page parser is not directly
+available via the command line. We hope to remedy that, having at least a full
+suite of command-line tools and possibly graphical wrappers, particularly
+EMACS modes.</p>
+
+<h2>Twisted Integration</h2>
+
+<p>When starting with a historical note, it is only fitting to end
+with a historical note. Since the writing of Lore, Twisted documentation
+is successfully generated by it and distributed in the tarball. It contains
+generated HTML from the HOWTO documents, specifications and man pages.
+It also contains all these documents inside a LaTeX-generated PostScript
+file and PDF file in an easy to print format, suitable for reading on those
+long plane flights or train rides.</p>
+
+<p>Lore is also used to generate pages with consistent headers and footers for
+the twistedmatrix.com web site -- not just the Twisted documentation.
+This is shows the inherent flexibility in Lore's model of being easily
+configurable via an HTML template,
+a feature which none of the major
+document generation systems support for their HTML output.</p>
+
+<h2>Further Resources</h2>
+
+<ul>
+  <li><a
+    href="http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-1.0.3/man/lore-man.xhtml"><code
+        class="shell">lore(1)</code> man page</a></li>
+  <li><a
+    href="http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-1.0.3/howto/doc-standard">Lore guidelines</a></li>
+  <li><a
+    href="http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-1.0.3/howto/lore">Lore HOWTO</a></li>
+  <li><a
+    href="http://twistedmatrix.com/documents/TwistedDocs/TwistedDocs-1.0.1/examples/example.html">Skeleton Lore document</a></li>
+  <li>The <a
+    href="http://twistedmatrix.com/users/jh.twistd/viewcvs/cgi/viewcvs.cgi/~checkout~/doc/howto/stylesheet.css?rev=1.16&amp;content-type=text/css&amp;cvsroot=Twisted">stylesheet</a> and <a
+    href="http://twistedmatrix.com/users/jh.twistd/viewcvs/cgi/viewcvs.cgi/~checkout~/doc/howto/template.tpl?rev=1.6&amp;content-type=text/plain&amp;cvsroot=Twisted">template</a> used by the Twisted documentation</li>
+  <li><a href="http://www.w3.org/TR/xhtml1/">The XHTML specification</a></li>
+  <li><a href="http://www.latex-project.org">LaTeX project home page</a></li>
+  <li><a href="http://www.lyx.org">LyX</a></li>
+  <li><a href="http://www.docbook.org">Docbook</a></li>
+  <li><a href="http://www.python10.com/p10-papers/09/index.htm">Zadka, Moshe and Lefkowitz, Glyph, The Twisted Network Framework, The Tenth International Python Conference Proceedings</a></li>
+</ul>
+
+</body></html>
