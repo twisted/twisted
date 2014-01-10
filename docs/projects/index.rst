@@ -148,16 +148,3 @@ Twisted Documentation Index
 - 
   :doc:`Historical Documents <historic/index>` 
   
-  
-  
-  - 
-    :ref:`2003 <historic-index-auto0>` 
-  - 
-    :ref:`Previously <historic-index-auto2>` 
-  
-  
-  
-
-
-
-
