@@ -16,8 +16,6 @@ import sys
 import textwrap
 from StringIO import StringIO
 import tarfile
-from xml.dom import minidom as dom
-
 from datetime import date
 
 from twisted.trial.unittest import TestCase
@@ -27,7 +25,7 @@ from twisted.python.procutils import which
 from twisted.python import release
 from twisted.python.filepath import FilePath
 from twisted.python.versions import Version
-from twisted.test.testutils import XMLAssertionMixin
+
 from twisted.web.microdom import parseXMLString
 from twisted.python._release import (
     _changeVersionInFile, getNextVersion, findTwistedProjects, replaceInFile,
@@ -41,14 +39,6 @@ if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
 else:
     skip = None
-
-# Check a bunch of dependencies to skip tests if necessary.
-try:
-    from twisted.lore.scripts import lore
-except ImportError:
-    loreSkip = "Lore is not present."
-else:
-    loreSkip = skip
 
 testingSphinxConf = "master_doc = 'index'\n"
 
@@ -581,241 +571,6 @@ class VersionWritingTest(TestCase):
         ns = {'__name___': 'twisted.test_project'}
         execfile("test_project", ns)
         self.assertEqual(ns["version"].base(), "0.82.7pre8")
-
-
-
-class BuilderTestsMixin(XMLAssertionMixin):
-    """
-    A mixin class which provides various methods for creating sample Lore input
-    and output.
-
-    @cvar template: The lore template that will be used to prepare sample
-    output.
-    @type template: C{str}
-
-    @ivar docCounter: A counter which is incremented every time input is
-        generated and which is included in the documents.
-    @type docCounter: C{int}
-    """
-    template = '''
-    <html>
-    <head><title>Yo:</title></head>
-    <body>
-    <div class="body" />
-    <a href="index.html">Index</a>
-    <span class="version">Version: </span>
-    </body>
-    </html>
-    '''
-
-    def setUp(self):
-        """
-        Initialize the doc counter which ensures documents are unique.
-        """
-        self.docCounter = 0
-
-
-    def getArbitraryOutput(self, version, counter, prefix="", apiBaseURL="%s"):
-        """
-        Get the correct HTML output for the arbitrary input returned by
-        L{getArbitraryLoreInput} for the given parameters.
-
-        @param version: The version string to include in the output.
-        @type version: C{str}
-        @param counter: A counter to include in the output.
-        @type counter: C{int}
-        """
-        document = """\
-<?xml version="1.0"?><html>
-    <head><title>Yo:Hi! Title: %(count)d</title></head>
-    <body>
-    <div class="content">Hi! %(count)d<div class="API"><a href="%(foobarLink)s"
-    title="foobar">foobar</a></div></div>
-    <a href="%(prefix)sindex.html">Index</a>
-    <span class="version">Version: %(version)s</span>
-    </body>
-    </html>"""
-        # Try to normalize irrelevant whitespace.
-        return dom.parseString(
-            document % {"count": counter, "prefix": prefix,
-                        "version": version,
-                        "foobarLink": apiBaseURL % ("foobar",)}).toxml('utf-8')
-
-
-    def getArbitraryLoreInput(self, counter):
-        """
-        Get an arbitrary, unique (for this test case) string of lore input.
-
-        @param counter: A counter to include in the input.
-        @type counter: C{int}
-        """
-        template = (
-            '<html>'
-            '<head><title>Hi! Title: %(count)s</title></head>'
-            '<body>'
-            'Hi! %(count)s'
-            '<div class="API">foobar</div>'
-            '</body>'
-            '</html>')
-        return template % {"count": counter}
-
-
-    def getArbitraryLoreInputAndOutput(self, version, prefix="",
-                                       apiBaseURL="%s"):
-        """
-        Get an input document along with expected output for lore run on that
-        output document, assuming an appropriately-specified C{self.template}.
-
-        @param version: A version string to include in the input and output.
-        @type version: C{str}
-        @param prefix: The prefix to include in the link to the index.
-        @type prefix: C{str}
-
-        @return: A two-tuple of input and expected output.
-        @rtype: C{(str, str)}.
-        """
-        self.docCounter += 1
-        return (self.getArbitraryLoreInput(self.docCounter),
-                self.getArbitraryOutput(version, self.docCounter,
-                                        prefix=prefix, apiBaseURL=apiBaseURL))
-
-
-    def getArbitraryManInput(self):
-        """
-        Get an arbitrary man page content.
-        """
-        return """.TH MANHOLE "1" "August 2001" "" ""
-.SH NAME
-manhole \- Connect to a Twisted Manhole service
-.SH SYNOPSIS
-.B manhole
-.SH DESCRIPTION
-manhole is a GTK interface to Twisted Manhole services. You can execute
-python code as if at an interactive Python console inside a running Twisted
-process with this."""
-
-
-    def getArbitraryManLoreOutput(self):
-        """
-        Get an arbitrary lore input document which represents man-to-lore
-        output based on the man page returned from L{getArbitraryManInput}
-        """
-        return """\
-<?xml version="1.0"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html><head>
-<title>MANHOLE.1</title></head>
-<body>
-
-<h1>MANHOLE.1</h1>
-
-<h2>NAME</h2>
-
-<p>manhole - Connect to a Twisted Manhole service
-</p>
-
-<h2>SYNOPSIS</h2>
-
-<p><strong>manhole</strong> </p>
-
-<h2>DESCRIPTION</h2>
-
-<p>manhole is a GTK interface to Twisted Manhole services. You can execute
-python code as if at an interactive Python console inside a running Twisted
-process with this.</p>
-
-</body>
-</html>
-"""
-
-    def getArbitraryManHTMLOutput(self, version, prefix=""):
-        """
-        Get an arbitrary lore output document which represents the lore HTML
-        output based on the input document returned from
-        L{getArbitraryManLoreOutput}.
-
-        @param version: A version string to include in the document.
-        @type version: C{str}
-        @param prefix: The prefix to include in the link to the index.
-        @type prefix: C{str}
-        """
-        # Try to normalize the XML a little bit.
-        return dom.parseString("""\
-<?xml version="1.0" ?><html>
-    <head><title>Yo:MANHOLE.1</title></head>
-    <body>
-    <div class="content">
-
-<span/>
-
-<h2>NAME<a name="auto0"/></h2>
-
-<p>manhole - Connect to a Twisted Manhole service
-</p>
-
-<h2>SYNOPSIS<a name="auto1"/></h2>
-
-<p><strong>manhole</strong> </p>
-
-<h2>DESCRIPTION<a name="auto2"/></h2>
-
-<p>manhole is a GTK interface to Twisted Manhole services. You can execute
-python code as if at an interactive Python console inside a running Twisted
-process with this.</p>
-
-</div>
-    <a href="%(prefix)sindex.html">Index</a>
-    <span class="version">Version: %(version)s</span>
-    </body>
-    </html>""" % {
-            'prefix': prefix, 'version': version}).toxml("utf-8")
-
-
-    def setupTeXFiles(self, howtoDir):
-        """
-        Create a main TeX file with 3 sections in C{howtoDir}.
-
-        @param howtoDir: The path in which to create the TeX files.
-
-        @return: The main TeX file C{FilePath}.
-        """
-        sections = range(3)
-        self.setupTeXSections(sections, howtoDir)
-        return self.setupTeXBook(sections, howtoDir)
-
-
-    def setupTeXSections(self, sections, howtoDir):
-        """
-        For every C{sections}, create a TeX file in C{howtoDir}.
-
-        @param sections: A list of sections to create.
-
-        @param howtoDir: The path in which to create the TeX files.
-        """
-        for section in sections:
-            texPath = howtoDir.child("%s.tex" % (section,))
-            texPath.setContent(
-                self.getArbitraryOutput("1.2.3", section))
-
-
-    def setupTeXBook(self, sections, howtoDir):
-        """
-        Setup the main C{book.tex} file referencing C{sections}.
-
-        @param sections: A list of sections to reference.
-
-        @param howtoDir: The path in which to create the TeX files.
-
-        @return: The main TeX file C{FilePath}.
-        """
-        bookTeX = howtoDir.child("book.tex")
-        bookTeX.setContent(
-            r"\documentclass{book}" "\n"
-            r"\begin{document}" "\n" +
-            "\n".join([r"\input{%s.tex}" % (n,) for n in sections]) +
-            r"\end{document}" "\n")
-        return bookTeX
 
 
 
@@ -1680,16 +1435,12 @@ class SphinxBuilderTests(TestCase):
 
 
 
-class DistributionBuilderTestBase(BuilderTestsMixin, StructureAssertingMixin,
-                                  TestCase):
+class DistributionBuilderTestBase(StructureAssertingMixin, TestCase):
     """
     Base for tests of L{DistributionBuilder}.
     """
-    skip = loreSkip
 
     def setUp(self):
-        BuilderTestsMixin.setUp(self)
-
         self.rootDir = FilePath(self.mktemp())
         self.rootDir.createDirectory()
 
@@ -1866,14 +1617,6 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
         - plugins from other subprojects
         - scripts from other subprojects
         """
-        indexInput, indexOutput = self.getArbitraryLoreInputAndOutput(
-            "8.0.0", prefix="howto/")
-        howtoInput, howtoOutput = self.getArbitraryLoreInputAndOutput("8.0.0")
-        specInput, specOutput = self.getArbitraryLoreInputAndOutput(
-            "8.0.0", prefix="../howto/")
-        tutorialInput, tutorialOutput = self.getArbitraryLoreInputAndOutput(
-            "8.0.0", prefix="../")
-
         structure = {
             "LICENSE": "copyright!",
             "twisted": {"__init__.py": "twisted",
@@ -1930,9 +1673,6 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
         runCommand(["svnadmin", "create", repositoryPath])
         runCommand(["svn", "checkout", "file://" + repository.path,
                     checkout.path])
-        coreIndexInput, coreIndexOutput = self.getArbitraryLoreInputAndOutput(
-            "1.2.0", prefix="howto/",
-            apiBaseURL="http://twistedmatrix.com/documents/1.2.0/api/%s.html")
 
         structure = {
             "README": "Twisted",
@@ -2062,7 +1802,7 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
 
 
 
-class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
+class ScriptTests(StructureAssertingMixin, TestCase):
     """
     Tests for the release script functionality.
     """
