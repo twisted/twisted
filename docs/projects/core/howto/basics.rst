@@ -120,12 +120,11 @@ init levels.
 ..  Is "note" really the right class to be using here? 
 
 .. note::
-    ``tap2rpm`` 
-   and ``tap2deb``  do not package your entire
-   application and dependent code, just the Twisted Application file. You
-   will need to find some other way to package your Python code, such
-   as `distutils <http://docs.python.org/library/distutils.html>`_ '
-   ``bdist_rpm``  command.
+
+    ``tap2rpm`` and ``tap2deb`` do not package your entire application and
+    dependent code, just the Twisted Application file. You will need to find
+    some other way to package your Python code, such as `distutils
+    <http://docs.python.org/library/distutils.html>`_ ' ``bdist_rpm`` command.
 
 
 
