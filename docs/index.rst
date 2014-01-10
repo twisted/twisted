@@ -10,7 +10,8 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
-   
+
+   projects/index
    projects/conch/index
    projects/core/index
    projects/lore/index

@@ -6,12 +6,12 @@
 Specifications
 ==============
 
+.. toctree::
+   :hidden:
 
+   banana
 
-
-
-
-- `Banana <banana.html>`_ 
+- :doc:`banana`
 
 
 
