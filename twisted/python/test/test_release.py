@@ -2284,12 +2284,11 @@ class SphinxBuilderTests(TestCase):
         self.createFakeSphinxProject()
         self.builder.build(self.sphinxDir)
 
-        # assert some stuff
-        builds = self.sphinxDir.child('build')
-        self.assertTrue(builds.child("html").exists())
-        self.assertTrue(builds.child("doctrees").exists())
-
-        htmlDir = self.sphinxDir.child('build').child('html')
+        # assert things
+        htmlDir = self.sphinxDir.sibling('doc')
+        self.assertTrue(htmlDir.isdir())
+        doctreeDir = htmlDir.child("doctrees")
+        self.assertTrue(doctreeDir.isdir())
 
         self.verifyFileExists(htmlDir, 'index.html')
         self.verifyFileExists(htmlDir, 'genindex.html')
