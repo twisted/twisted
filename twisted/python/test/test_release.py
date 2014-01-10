@@ -2222,8 +2222,7 @@ class SphinxBuilderTests(TestCase):
         # set up a place for a fake sphinx project
         self.sphinxDir = FilePath(self.mktemp())
         self.sphinxDir.makedirs()
-        self.sourceDir = self.sphinxDir.child('source')
-        self.sourceDir.makedirs()
+        self.sourceDir = self.sphinxDir
 
 
     def createFakeSphinxProject(self):
