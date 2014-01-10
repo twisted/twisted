@@ -2286,9 +2286,9 @@ class SphinxBuilderTests(TestCase):
         self.builder.build(self.sphinxDir)
 
         # assert some stuff
-        for each in ['doctrees', 'html']:
-            fpath = self.sphinxDir.child('build').child(each)
-            self.assertTrue(fpath.exists())
+        builds = self.sphinxDir.child('build')
+        self.assertTrue(builds.child("html").exists())
+        self.assertTrue(builds.child("doctrees").exists())
 
         htmlDir = self.sphinxDir.child('build').child('html')
 
