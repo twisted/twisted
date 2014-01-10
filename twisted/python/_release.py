@@ -994,7 +994,7 @@ class SphinxBuilder(object):
         """
 
         if buildDir is None:
-            buildDir = docDir.child('build')
+            buildDir = docDir.parent().child('doc')
 
         doctreeDir = buildDir.child('doctrees')
 
@@ -1006,10 +1006,8 @@ class SphinxBuilder(object):
         if builderOpts:
             allSphinxOpts.extend(builderOpts)
 
-        outDir = buildDir.child(builder)
-
         argsList.extend(allSphinxOpts)
-        argsList.append(outDir.path)
+        argsList.append(buildDir.path)
 
         print(runCommand(argsList))
 
