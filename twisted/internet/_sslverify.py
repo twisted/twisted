@@ -911,7 +911,7 @@ def _expandCipherString(cipherString, method, options):
     ctx = SSL.Context(method)
     ctx.set_options(options)
     try:
-        ctx.set_cipher_list(cipherString)
+        ctx.set_cipher_list(nativeString(cipherString))
     except SSL.Error as e:
         if e.args[0][0][2] == 'no cipher match':
             return []
