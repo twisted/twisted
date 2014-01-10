@@ -976,6 +976,19 @@ class SphinxBuilder(object):
     which the Sphinx output will be created.
     """
 
+    def main(self, args):
+        """
+        Build the main documentation.
+
+        @type args: list of str
+        @param args: The command line arguments to process.  This must contain
+            one string argument: the path to the root of a Twisted checkout.
+            Additional arguments will be ignored for compatibility with legacy
+            build infrastructure.
+        """
+        self.build(FilePath(args[0]).child("docs"))
+
+
     def build(self, docDir, buildDir=None, version=''):
         """
         Build the documentation in C{docDir} with Sphinx.
@@ -992,24 +1005,14 @@ class SphinxBuilder(object):
         @param version: The version of Twisted to set in the docs.
         @type version: C{str}
         """
-
         if buildDir is None:
             buildDir = docDir.parent().child('doc')
 
         doctreeDir = buildDir.child('doctrees')
 
-        # only support html builder for now
-        builder, builderOpts = ('html', [])
-
-        argsList = ['sphinx-build', '-b', builder]
-        allSphinxOpts = ['-d', doctreeDir.path, docDir.path]
-        if builderOpts:
-            allSphinxOpts.extend(builderOpts)
-
-        argsList.extend(allSphinxOpts)
-        argsList.append(buildDir.path)
-
-        runCommand(argsList)
+        runCommand(['sphinx-build', '-b', 'html',
+                    '-d', doctreeDir.path, docDir.path,
+                    buildDir.path])
 
 
 
@@ -1467,66 +1470,3 @@ class BuildAPIDocsScript(object):
             sys.exit("Must specify two arguments: "
                      "Twisted checkout and destination path")
         self.buildAPIDocs(FilePath(args[0]), FilePath(args[1]))
-
-
-
-class BuildDocsScript(object):
-    """
-    A thing for building the main documentation. See L{main}.
-    """
-
-    def buildDocs(self, projectRoot, template):
-        """
-        Build the main documentation of Twisted, with our project policy.
-
-        @param projectRoot: A L{FilePath} representing the root of the Twisted
-            checkout.
-        @type projectRoot: L{FilePath}
-
-        @param template: A L{FilePath} pointing to the template file that is
-            used for the look and feel of the howto documentation.
-        @type template: L{FilePath}
-        """
-        version = Project(projectRoot.child("twisted")).getVersion()
-        versionString = version.base()
-        apiURL = "http://twistedmatrix.com/documents/%s/api/" % (
-            versionString,)
-
-        dirs = {}
-        docRoot = projectRoot.child("doc")
-
-        for p in docRoot.walk():
-            if p.basename() == 'man':
-                ManBuilder().build(p)
-
-        howtoRoot = docRoot.descendant(["core", "howto"])
-
-        for p in docRoot.walk():
-            if p.basename().endswith('.xhtml'):
-                if p.parent() not in dirs:
-                    dirs[p.parent()] = True
-                    DocBuilder().build(
-                        versionString, howtoRoot, p.parent(),
-                        template,
-                        apiURL + "%s.html",
-                        False)
-
-        BookBuilder().build(howtoRoot, dirs.keys(),
-                            howtoRoot.child('book.tex'),
-                            howtoRoot.child('book.pdf'))
-
-        for path in dirs:
-            for doc in path.globChildren("*.xhtml"):
-                doc.remove()
-
-
-    def main(self, args):
-        """
-        Build the main documentation.
-
-        @type args: list of str
-        @param args: The command line arguments to process.  This must contain
-            two strings: the path to the root of the Twisted checkout and the
-            path to the Twisted website template.
-        """
-        SphinxBuilder().build(FilePath(args[0]).child("docs"))
