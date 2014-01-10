@@ -1009,7 +1009,7 @@ class SphinxBuilder(object):
         argsList.extend(allSphinxOpts)
         argsList.append(buildDir.path)
 
-        print(runCommand(argsList))
+        runCommand(argsList)
 
 
 
