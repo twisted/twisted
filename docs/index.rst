@@ -11,8 +11,6 @@ Contents:
 .. toctree::
    :maxdepth: 2
    
-   proposal
-   transition_plan
    contents
    
 Indices and tables
