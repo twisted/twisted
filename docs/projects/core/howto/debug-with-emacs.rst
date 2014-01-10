@@ -6,19 +6,6 @@
 Debugging Python(Twisted) with Emacs
 ====================================
 
-
-
-
-
-
-.. image:: http://yellow5.com/pokey/archive/pokey411_3.gif
-
-
- [#]_ 
-
-
-
-
 - Open up your project files. sometimes emacs can't find them if you
   don't have them open before-hand.
 - Make sure you have a program called ``pdb`` somewhere
@@ -66,6 +53,3 @@ Debugging Python(Twisted) with Emacs
 
 
 .. rubric:: Footnotes
-
-.. [#] POKEY THE PENGUIN IS COPYRIGHT © 1998-2002
-       THE AUTHORS
