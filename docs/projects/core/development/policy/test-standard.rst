@@ -551,7 +551,7 @@ Links
 - A chapter on `Unit Testing <http://diveintopython.org/unit_testing/index.html>`_ 
   in Mark Pilgrim's `Dive Into      Python <http://diveintopython.org>`_ .
 - `unittest <http://docs.python.org/library/unittest.html>`_ module documentation, in the `Python Library      Reference <http://docs.python.org/library>`_ .
-- `UnitTest <http://c2.com/cgi/wiki?UnitTest>`_ on
+- `UnitTest <http://c2.com/cgi/wiki?UnitTest>`__ on
   the `PortlandPatternRepository      Wiki <http://c2.com/cgi/wiki>`_ , where all the cool `ExtremeProgramming <http://c2.com/cgi/wiki?ExtremeProgramming>`_ kids hang out.
 - `Unit      Tests <http://www.extremeprogramming.org/rules/unittests.html>`_ in `Extreme Programming: A Gentle Introduction <http://www.extremeprogramming.org>`_ .
 - Ron Jeffries expounds on the importance of `Unit      Tests at 100% <http://www.xprogramming.com/xpmag/expUnitTestsAt100.htm>`_ .
