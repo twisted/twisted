@@ -27,14 +27,6 @@ from twisted.python.filepath import FilePath
 from twisted.python.dist import twisted_subprojects
 from twisted.python.compat import execfile
 from twisted.python.usage import Options, UsageError
-from twisted.python.dist import twisted_subprojects
-
-# This import is an example of why you shouldn't use this module unless you're
-# radix
-try:
-    from twisted.lore.scripts import lore
-except ImportError:
-    pass
 
 # The offset between a year and the corresponding major version number.
 VERSION_OFFSET = 2000
