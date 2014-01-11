@@ -500,8 +500,8 @@ class FakeDeviceTestsMixin(object):
     instances as the provider of that interface.
     """
     _TUNNEL_DEVICE = "tap-twistedtest"
-    _TUNNEL_LOCAL = "10.2.0.1"
-    _TUNNEL_REMOTE = "10.2.0.2"
+    _TUNNEL_LOCAL = "172.16.2.1"
+    _TUNNEL_REMOTE = "172.16.2.2"
 
     def createSystem(self):
         """
@@ -599,7 +599,7 @@ class TestRealSystem(_RealSystem):
         @rtype: L{tuple} of (L{bytes}, L{int})
         """
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind(('10.0.0.1', 0))
+        s.bind(('172.16.0.1', 0))
         s.sendto(datagram, address)
         return s.getsockname()
 
@@ -660,8 +660,8 @@ class RealDeviceWithProtocolInformationTests(RealDeviceTestsMixin,
     turned on, against a real I/O system.
     """
     _TUNNEL_DEVICE = "tap-twtest-pi"
-    _TUNNEL_LOCAL = "10.1.0.1"
-    _TUNNEL_REMOTE = "10.1.0.2"
+    _TUNNEL_LOCAL = "172.16.1.1"
+    _TUNNEL_REMOTE = "172.16.1.2"
 
     # The PI flag is not an inherent part of the tunnel.  It must be specified
     # by each user of the tunnel.  Thus, we must also have an indication of
@@ -680,8 +680,8 @@ class RealDeviceWithoutProtocolInformationTests(RealDeviceTestsMixin,
     turned off, against a real I/O system.
     """
     _TUNNEL_DEVICE = "tap-twtest"
-    _TUNNEL_LOCAL = "10.0.0.1"
-    _TUNNEL_REMOTE = "10.0.0.2"
+    _TUNNEL_LOCAL = "172.16.0.1"
+    _TUNNEL_REMOTE = "172.16.0.2"
 
     helper = TapHelper(_TUNNEL_REMOTE, _TUNNEL_LOCAL, pi=False)
 
