@@ -220,6 +220,7 @@ class _RealSystem(object):
 
 
 
+@implementer(interfaces.IListeningPort)
 class TuntapPort(abstract.FileDescriptor):
     """
     A Port that reads and writes packets from/to a TUN/TAP-device.

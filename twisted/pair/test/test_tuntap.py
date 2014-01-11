@@ -28,6 +28,7 @@ else:
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
+from twisted.internet.interfaces import IListeningPort
 from twisted.internet.protocol import DatagramProtocol
 from twisted.pair.rawudp import RawUDPProtocol
 from twisted.pair.ip import IPProtocol
@@ -655,6 +656,28 @@ class RealDeviceWithoutProtocolInformationTests(RealDeviceTestsMixin,
     _TUNNEL_REMOTE = "10.0.0.2"
 
     helper = TapHelper(_TUNNEL_REMOTE, _TUNNEL_LOCAL, pi=False)
+
+
+
+class TuntapPortTests(SynchronousTestCase):
+    """
+    Tests for L{TuntapPort} behavior that is independent of the tunnel type.
+    """
+    def test_interface(self):
+        """
+        A L{TuntapPort} instance provides L{IListeningPort}.
+        """
+        port = TuntapPort(b"device", EthernetProtocol())
+        self.assertTrue(verifyObject(IListeningPort, port))
+
+
+    def test_realSystem(self):
+        """
+        When not initialized with an I/O system, L{TuntapPort} uses a
+        L{_RealSystem}.
+        """
+        port = TuntapPort(b"device", EthernetProtocol())
+        self.assertIsInstance(port._system, _RealSystem)
 
 
 
