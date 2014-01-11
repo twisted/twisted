@@ -25,7 +25,7 @@ except (ObjectNotFound, AttributeError):
 else:
     platformSkip = None
 
-from zope.interface import implementer
+from zope.interface import Interface, implementer
 from zope.interface.verify import verifyObject
 
 from twisted.internet.interfaces import IListeningPort
@@ -48,6 +48,10 @@ from twisted.pair.raw import IRawPacketProtocol
 # used) in case we can't import from twisted.pair.testing due to platform
 # limitations.
 _RealSystem = object
+
+# Same rationale as for _RealSystem.
+_IInputOutputSystem = Interface
+
 
 if platformSkip is None:
     from twisted.pair.testing import (
@@ -1209,19 +1213,21 @@ class TunnelAddressEqualityTests(SynchronousTestCase):
     Tests for the implementation of equality (C{==} and C{!=}) for
     L{TunnelAddress}.
     """
-    first = TunnelAddress(TunnelFlags.IFF_TUN, b"device")
+    def setUp(self):
+        self.first = TunnelAddress(TunnelFlags.IFF_TUN, b"device")
 
-    # Construct a different object representing IFF_TUN to make this a little
-    # trickier.  Two FlagConstants from the same container and with the same
-    # value do not compare equal to each other.
-    #
-    # The implementation will have to compare their values directly until
-    # https://twistedmatrix.com/trac/ticket/6878 is resolved.
-    second = TunnelAddress(
-        TunnelFlags.IFF_TUN | TunnelFlags.IFF_TUN, b"device")
+        # Construct a different object representing IFF_TUN to make this a little
+        # trickier.  Two FlagConstants from the same container and with the same
+        # value do not compare equal to each other.
+        #
+        # The implementation will have to compare their values directly until
+        # https://twistedmatrix.com/trac/ticket/6878 is resolved.
+        self.second = TunnelAddress(
+            TunnelFlags.IFF_TUN | TunnelFlags.IFF_TUN, b"device")
 
-    variedType = TunnelAddress(TunnelFlags.IFF_TAP, b"tap1")
-    variedName = TunnelAddress(TunnelFlags.IFF_TUN, b"tun1")
+        self.variedType = TunnelAddress(TunnelFlags.IFF_TAP, b"tap1")
+        self.variedName = TunnelAddress(TunnelFlags.IFF_TUN, b"tun1")
+
 
     def test_selfComparesEqual(self):
         """
