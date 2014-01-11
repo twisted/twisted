@@ -477,6 +477,16 @@ class TunnelDeviceTestsMixin(object):
         key = randrange(2 ** 64)
         message = "hello world:%d" % (key,)
 
+        # To avoid really inconvenient test failures where the test just hangs
+        # forever, set up a timeout for blocking socket operations.  This
+        # shouldn't ever be triggered when the test is passing.  It only serves
+        # to make sure the test runs eventually completes if something is
+        # broken in a way that prevents real traffic from flowing.  The value
+        # chosen is totally arbitrary (but it might coincidentally exactly
+        # match trial's builtin timeout for asynchronous tests).
+        self.addCleanup(socket.setdefaulttimeout, socket.getdefaulttimeout())
+        socket.setdefaulttimeout(120)
+
         # Start listening for the test datagram first.  The resulting port
         # object can be used to receive datagrams sent to _TUNNEL_LOCAL:12345 -
         # in other words, an application using the tunnel device will be able
