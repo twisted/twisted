@@ -1329,3 +1329,35 @@ class TapTests(TunnelTestsMixin, SynchronousTestCase):
     factory = Factory()
     factory.protocol = EthernetRecordingProtocol
     helper = TapHelper(None, None, pi=False)
+
+
+
+class IOSystemTestsMixin(object):
+    """
+    Tests that apply to any L{_IInputOutputSystem} implementation.
+    """
+    def test_noSuchDevice(self):
+        """
+        L{_IInputOutputSystem.open} raises L{OSError} when called with a
+        non-existent device path.
+        """
+        system = self.createSystem()
+        self.assertRaises(
+            OSError,
+            system.open, b"/dev/there-is-no-such-device-ever", os.O_RDWR)
+
+
+
+class MemoryIOSystemTests(IOSystemTestsMixin, SynchronousTestCase,
+                          FakeDeviceTestsMixin):
+    """
+    General L{_IInputOutputSystem} tests applied to L{MemoryIOSystem}.
+    """
+
+
+
+class RealIOSystemTests(IOSystemTestsMixin, SynchronousTestCase,
+                        RealDeviceTestsMixin):
+    """
+    General L{_IInputOutputSystem} tests applied to L{_RealSystem}.
+    """
