@@ -20,7 +20,6 @@ from twisted.trial.util import suppress as SUPPRESS
 
 from twisted.python.compat import _PY3
 from twisted.python import util
-from twisted.python.versions import Version
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorProcess
 from twisted.internet.protocol import ProcessProtocol
@@ -858,87 +857,6 @@ def _getDeprecationSuppression(f):
     return SUPPRESS(
         category=DeprecationWarning,
         message='%s was deprecated' % (fullyQualifiedName(f),))
-
-
-
-class UnsignedIDTests(unittest.TestCase):
-    """
-    Tests for L{util.unsignedID} and L{util.setIDFunction}.
-    """
-
-    suppress = [
-        _getDeprecationSuppression(util.unsignedID),
-        _getDeprecationSuppression(util.setIDFunction),
-        ]
-
-    def setUp(self):
-        """
-        Save the value of L{util._idFunction} and arrange for it to be restored
-        after the test runs.
-        """
-        self.addCleanup(setattr, util, '_idFunction', util._idFunction)
-
-
-    def test_setIDFunction(self):
-        """
-        L{util.setIDFunction} returns the last value passed to it.
-        """
-        value = object()
-        previous = util.setIDFunction(value)
-        result = util.setIDFunction(previous)
-        self.assertIdentical(value, result)
-
-
-    def test_setIDFunctionDeprecated(self):
-        """
-        L{util.setIDFunction} is deprecated.
-        """
-        self.callDeprecated(
-            (Version("Twisted", 13, 0, 0)),
-            util.setIDFunction, UnsignedIDTests)
-    test_setIDFunctionDeprecated.suppress = []
-
-
-    def test_unsignedID(self):
-        """
-        L{util.unsignedID} uses the function passed to L{util.setIDFunction} to
-        determine the unique integer id of an object and then adjusts it to be
-        positive if necessary.
-        """
-        foo = object()
-        bar = object()
-
-        # A fake object identity mapping
-        objects = {foo: 17, bar: -73}
-        def fakeId(obj):
-            return objects[obj]
-
-        util.setIDFunction(fakeId)
-
-        self.assertEqual(util.unsignedID(foo), 17)
-        self.assertEqual(util.unsignedID(bar), (sys.maxsize + 1) * 2 - 73)
-
-
-    def test_unsignedIDDeprecated(self):
-        """
-        L{util.unsignedID} is deprecated, use the builtin C{id} instead.
-        """
-        self.callDeprecated(
-            (Version("Twisted", 13, 0, 0), "builtin id"),
-            util.unsignedID, UnsignedIDTests)
-    test_unsignedIDDeprecated.suppress = []
-
-
-    def test_defaultIDFunction(self):
-        """
-        L{util.unsignedID} uses the built in L{id} by default.
-        """
-        obj = object()
-        idValue = id(obj)
-        if idValue < 0:
-            idValue += (sys.maxsize + 1) * 2
-
-        self.assertEqual(util.unsignedID(obj), idValue)
 
 
 
