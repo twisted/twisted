@@ -14,8 +14,6 @@ try:
 except ImportError:
     setgroups = getgroups = None
 
-from twisted.python.deprecate import deprecated
-from twisted.python.versions import Version
 from twisted.python.compat import _PY3, unicode
 if _PY3:
     UserDict = object
