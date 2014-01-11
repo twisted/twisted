@@ -754,6 +754,7 @@ class SphinxBuilder(object):
                 path.copyTo(dest)
 
 
+
 def filePathDelta(origin, destination):
     """
     Return a list of strings that represent C{destination} as a path relative
