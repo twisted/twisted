@@ -59,5 +59,17 @@ If you want this network configuration to be available even after a reboot you w
 (the details of this for different systems is beyond the scope of this document).
     </p>
 
+    <p>
+Certain platforms may also require a modification to their firewall rules in order to allow the traffic the test suite wants to transmit.
+Adding firewall rules which allowing traffic destined for the addresses used by the test suite should address this problem.
+If you encounter timeouts when running the Twisted Pair test suite then this may apply to you.
+For example, to configure an iptables firewall to allow this traffic:
+    </p>
+
+    <pre>
+iptables -I INPUT --dest 172.16.1.1 -j ACCEPT
+iptables -I INPUT --dest 172.16.2.1 -j ACCEPT
+    </pre>
+
   </body>
 </html>
