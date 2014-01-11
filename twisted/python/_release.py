@@ -749,7 +749,8 @@ class SphinxBuilder(object):
                 dest = buildDir
                 while segments:
                     dest = dest.child(segments.pop(0))
-                dest.parent().makedirs()
+                if not dest.parent().isdir():
+                    dest.parent().makedirs()
                 path.copyTo(dest)
 
 
