@@ -290,9 +290,6 @@ class Tunnel(object):
         if len(datagram) > self.SEND_BUFFER_SIZE:
             raise IOError(ENOBUFS, "No buffer space available")
 
-        if not (self.tunnelMode & TunnelFlags.IFF_NO_PI.value):
-            datagram = b"\x00" * 4 + datagram
-
         self.writeBuffer.append(datagram)
         return len(datagram)
 
