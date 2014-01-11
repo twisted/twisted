@@ -701,15 +701,24 @@ class TunnelTestsMixin(object):
         system = self.system
         self.port.startListening()
         tunnel = self.system.getTunnel(self.port)
-        self.assertEqual(
+
+        expected = (
             system.O_RDWR | system.O_CLOEXEC | system.O_NONBLOCK,
-            tunnel.openFlags)
-        self.assertEqual(
             b"tun0" + "\x00" * (_IFNAMSIZ - len(b"tun0")),
-            tunnel.requestedName)
-        self.assertEqual(tunnel.name, self.port.interface)
-        self.assertFalse(tunnel.blocking)
-        self.assertTrue(tunnel.closeOnExec)
+            self.port.interface, False, True)
+        actual = (
+            tunnel.openFlags,
+            tunnel.requestedName,
+            tunnel.name, tunnel.blocking, tunnel.closeOnExec)
+        self.assertEqual(expected, actual)
+
+
+    def test_startListeningSetsConnected(self):
+        """
+        L{TuntapPort.startListening} sets C{connected} on the port object to
+        C{True}.
+        """
+        self.port.startListening()
         self.assertTrue(self.port.connected)
 
 
@@ -776,8 +785,17 @@ class TunnelTestsMixin(object):
         fileno = self.port.fileno()
         self._stopPort(self.port)
 
-        self.assertFalse(self.port.connected)
         self.assertNotIn(fileno, self.system._openFiles)
+
+
+    def test_stopListeningUnsetsConnected(self):
+        """
+        After the L{Deferred} returned by L{TuntapPort.stopListening} fires,
+        the C{connected} attribute of the port object is set to C{False}.
+        """
+        self.port.startListening()
+        self._stopPort(self.port)
+        self.assertFalse(self.port.connected)
 
 
     def test_stopListeningStopsProtocol(self):
@@ -805,10 +823,9 @@ class TunnelTestsMixin(object):
         once with no intervening L{TuntapPort.startListening} call.
         """
         self.port.startListening()
-        first = self.port.stopListening()
+        self.port.stopListening()
         second = self.port.stopListening()
         self.reactor.advance(0)
-        self.assertIdentical(None, self.successResultOf(first))
         self.assertIdentical(None, self.successResultOf(second))
 
 
@@ -1047,15 +1064,11 @@ class TunnelTestsMixin(object):
         """
         self.port.startListening()
         address = self.port.getHost()
-        self.assertIsInstance(address, TunnelAddress)
         self.assertEqual(
-            # Two FlagConstants from the same container and with the same value
-            # do not compare equal to each other.  Compare their values
-            # directly.  https://twistedmatrix.com/trac/ticket/6878
-            self._tunnelTypeOnly(
-                self.helper.TUNNEL_TYPE).value, address.type.value)
-        self.assertEqual(
-            self.system.getTunnel(self.port).name, address.name)
+            TunnelAddress(
+                self._tunnelTypeOnly(self.helper.TUNNEL_TYPE),
+                self.system.getTunnel(self.port).name),
+            address)
 
 
     def test_listeningString(self):
@@ -1101,7 +1114,6 @@ class TunnelAddressTests(SynchronousTestCase):
     """
     Tests for L{TunnelAddress}.
     """
-
     def test_interfaces(self):
         """
         A L{TunnelAddress} instances provides L{IAddress}.
@@ -1128,6 +1140,113 @@ class TunnelAddressTests(SynchronousTestCase):
         self.assertEqual(DeprecationWarning, warnings[1]['category'])
         self.assertEqual(message, warnings[1]['message'])
         self.assertEqual(2, len(warnings))
+
+
+    def test_repr(self):
+        """
+        The string representation of a L{TunnelAddress} instance includes the
+        class name and the values of the C{type} and C{name} attributes.
+        """
+        self.assertEqual(
+            "<TunnelAddress type=IFF_TUN name='device'>",
+            repr(TunnelAddress(TunnelFlags.IFF_TUN, name=b"device")))
+
+
+
+class TunnelAddressEqualityTests(SynchronousTestCase):
+    """
+    Tests for the implementation of equality (C{==} and C{!=}) for
+    L{TunnelAddress}.
+    """
+    first = TunnelAddress(TunnelFlags.IFF_TUN, b"device")
+
+    # Construct a different object representing IFF_TUN to make this a little
+    # trickier.  Two FlagConstants from the same container and with the same
+    # value do not compare equal to each other.
+    #
+    # The implementation will have to compare their values directly until
+    # https://twistedmatrix.com/trac/ticket/6878 is resolved.
+    second = TunnelAddress(
+        TunnelFlags.IFF_TUN | TunnelFlags.IFF_TUN, b"device")
+
+    variedType = TunnelAddress(TunnelFlags.IFF_TAP, b"tap1")
+    variedName = TunnelAddress(TunnelFlags.IFF_TUN, b"tun1")
+
+    def test_selfComparesEqual(self):
+        """
+        A L{TunnelAddress} compares equal to itself.
+        """
+        self.assertTrue(self.first == self.first)
+
+
+    def test_selfNotComparesNotEqual(self):
+        """
+        A L{TunnelAddress} doesn't compare not equal to itself.
+        """
+        self.assertFalse(self.first != self.first)
+
+
+    def test_sameAttributesComparesEqual(self):
+        """
+        Two L{TunnelAddress} instances with the same value for the C{type} and
+        C{name} attributes compare equal to each other.
+        """
+        self.assertTrue(self.first == self.second)
+
+
+    def test_sameAttributesNotComparesNotEqual(self):
+        """
+        Two L{TunnelAddress} instances with the same value for the C{type} and
+        C{name} attributes don't compare not equal to each other.
+        """
+        self.assertFalse(self.first != self.second)
+
+
+    def test_differentTypeComparesNotEqual(self):
+        """
+        Two L{TunnelAddress} instances that differ only by the value of their
+        type don't compare equal to each other.
+        """
+        self.assertFalse(self.first == self.variedType)
+
+
+    def test_differentTypeNotComparesEqual(self):
+        """
+        Two L{TunnelAddress} instances that differ only by the value of their
+        type compare not equal to each other.
+        """
+        self.assertTrue(self.first != self.variedType)
+
+
+    def test_differentNameComparesNotEqual(self):
+        """
+        Two L{TunnelAddress} instances that differ only by the value of their
+        name don't compare equal to each other.
+        """
+        self.assertFalse(self.first == self.variedName)
+
+
+    def test_differentNameNotComparesEqual(self):
+        """
+        Two L{TunnelAddress} instances that differ only by the value of their
+        name compare not equal to each other.
+        """
+        self.assertTrue(self.first != self.variedName)
+
+
+    def test_differentClassNotComparesEqual(self):
+        """
+        A L{TunnelAddress} doesn't compare equal to an instance of another
+        class.
+        """
+        self.assertFalse(self.first == self)
+
+
+    def test_differentClassComparesNotEqual(self):
+        """
+        A L{TunnelAddress} compares not equal to an instance of another class.
+        """
+        self.assertTrue(self.first != self)
 
 
 

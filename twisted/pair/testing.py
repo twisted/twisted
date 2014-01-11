@@ -213,7 +213,7 @@ class Tunnel(object):
         If the file descriptor for this this tunnel is marked as close-on-exec,
         C{True}.  C{False} otherwise.
         """
-        return self.openFlags & self.system.O_CLOEXEC
+        return bool(self.openFlags & self.system.O_CLOEXEC)
 
 
     def addToReadBuffer(self, datagram):

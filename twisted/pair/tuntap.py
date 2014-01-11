@@ -17,6 +17,7 @@ from collections import namedtuple
 
 from zope.interface import Attribute, Interface, implementer
 
+from twisted.python.util import FancyEqMixin, FancyStrMixin
 from twisted.python.versions import Version
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.deprecate import deprecated
@@ -70,10 +71,23 @@ class TunnelFlags(Flags):
 
 
 @implementer(interfaces.IAddress)
-class TunnelAddress(object):
+class TunnelAddress(FancyStrMixin, object, FancyEqMixin):
     """
     A L{TunnelAddress} represents the tunnel to which a L{TuntapPort} is bound.
     """
+    compareAttributes = ("_typeValue", "name")
+    showAttributes = (("type", lambda flag: flag.name), "name")
+
+    @property
+    def _typeValue(self):
+        """
+        Return the integer value of the C{type} attribute.  Used to produce
+        correct results in the equality implementation.
+        """
+        # Work-around for https://twistedmatrix.com/trac/ticket/6878
+        return self.type.value
+
+
     def __init__(self, type, name):
         """
         @param type: Either L{TunnelFlags.IFF_TUN} or L{TunnelFlags.IFF_TAP},
