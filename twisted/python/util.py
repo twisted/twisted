@@ -837,13 +837,6 @@ def untilConcludes(f, *a, **kw):
 
 
 
-_idFunction = id
-
-# A value about twice as large as any Python int, to which negative values
-# from id() will be added, moving them into a range which should begin just
-# above where positive values from id() leave off.
-_HUGEINT = (sys.maxsize + 1) * 2
-
 def mergeFunctionMetadata(f, g):
     """
     Overwrite C{g}'s name and docstring with values from C{f}.  Update
