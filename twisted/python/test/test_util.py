@@ -20,7 +20,6 @@ from twisted.trial.util import suppress as SUPPRESS
 
 from twisted.python.compat import _PY3
 from twisted.python import util
-from twisted.python.versions import Version
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorProcess
 from twisted.internet.protocol import ProcessProtocol
