@@ -1511,6 +1511,8 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
 
         self.assertExtractedStructure(outputFile, outStructure)
 
+    test_twistedDistribution.skip = sphinxSkip
+
 
     def test_excluded(self):
         """
@@ -1655,7 +1657,7 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
     """
     Tests for L{DistributionBuilder.buildAllTarballs}.
     """
-    skip = svnSkip
+    skip = svnSkip or sphinxSkip
 
     def test_buildAllTarballs(self):
         """
