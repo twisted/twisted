@@ -728,7 +728,7 @@ class TunnelTestsMixin(object):
         the port was initialized with, passing the port as an argument.
         """
         self.port.startListening()
-        self.assertIdentical(self.port, self.protocol.transport)
+        self.assertIs(self.port, self.protocol.transport)
 
 
     def test_startListeningStartsReading(self):
@@ -772,7 +772,7 @@ class TunnelTestsMixin(object):
         self.assertNotIn(port, self.reactor.getReaders())
         # An unfortunate implementation detail
         self.reactor.advance(0)
-        self.assertIdentical(None, self.successResultOf(stopped))
+        self.assertIs(None, self.successResultOf(stopped))
 
 
     def test_stopListeningStopsReading(self):
@@ -805,7 +805,7 @@ class TunnelTestsMixin(object):
         """
         self.port.startListening()
         self._stopPort(self.port)
-        self.assertIdentical(None, self.protocol.transport)
+        self.assertIs(None, self.protocol.transport)
 
 
     def test_stopListeningWhenStopped(self):
@@ -814,7 +814,7 @@ class TunnelTestsMixin(object):
         immediately if it is called when the port is not listening.
         """
         stopped = self.port.stopListening()
-        self.assertIdentical(None, self.successResultOf(stopped))
+        self.assertIs(None, self.successResultOf(stopped))
 
 
     def test_multipleStopListening(self):
@@ -826,7 +826,7 @@ class TunnelTestsMixin(object):
         self.port.stopListening()
         second = self.port.stopListening()
         self.reactor.advance(0)
-        self.assertIdentical(None, self.successResultOf(second))
+        self.assertIs(None, self.successResultOf(second))
 
 
     def test_loseConnection(self):
