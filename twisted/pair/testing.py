@@ -265,7 +265,7 @@ class Tunnel(object):
                 limit -= 4
             return header + self.readBuffer.popleft()[:limit]
         elif self.blocking:
-            raise OSError(ENOSYS, "Function not implemented")
+            raise NotImplementedError()
         else:
             raise self.nonBlockingExceptionStyle
 

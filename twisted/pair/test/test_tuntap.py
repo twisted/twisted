@@ -307,6 +307,22 @@ class TapHelper(object):
 
 
 
+class TunnelTests(SynchronousTestCase):
+    """
+    L{Tunnel} is mostly tested by other test cases but some tests don't fit
+    there.  Those tests are here.
+    """
+    def test_blockingRead(self):
+        """
+        Blocking reads are not implemented by L{Tunnel.read}.  Attempting one
+        results in L{NotImplementedError} being raised.
+        """
+        tunnel = Tunnel(MemoryIOSystem(), os.O_RDONLY, None)
+        self.assertRaises(
+            NotImplementedError, tunnel.read, 1024)
+
+
+
 class TunnelDeviceTestsMixin(object):
     """
     A mixin defining tests that apply to L{_IInputOutputSystem}
