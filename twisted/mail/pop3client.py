@@ -95,7 +95,7 @@ class _ListSetter:
     message is deleted, it is omitted from these responses.  The setitem
     method of this class is meant to be called with these two values.  In the
     cases where indices are skipped, it takes care of padding out the missing
-    values with None.
+    values with C{None}.
 
     @ivar L: See L{__init__}
     """
@@ -263,12 +263,12 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         in a L{Deferred <defer.Deferred>}, (2) L{tuple}
     @ivar _blockedQueue: A list of blocked commands.  While a command is
         awaiting a response from the server, other commands are blocked.  When
-        no command is outstanding, C{_blockedQueue} is set to None.  Otherwise,
-        it contains a list of information about blocked commands.  Each list
-        entry provides the following information about a blocked command: the
-        deferred that should be called when the response to the command is
-        received, the function that sends the command, and the arguments to
-        the function.
+        no command is outstanding, C{_blockedQueue} is set to C{None}.
+        Otherwise, it contains a list of information about blocked commands.
+        Each list entry provides the following information about a blocked
+        command: the deferred that should be called when the response to the
+        command is received, the function that sends the command, and the
+        arguments to the function.
 
     @type _waiting: L{Deferred <defer.Deferred>} or
         L{NoneType <types.NoneType>}
@@ -282,7 +282,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
     @type _greetingError: L{bytes} or L{NoneType <types.NoneType>}
     @ivar _greetingError: The server greeting minus the status indicator, when
         the connection was dropped because of an error in the server greeting.
-        Otherwise, None.
+        Otherwise, C{None}.
 
     @type state: L{bytes}
     @ivar state: The state which indicates what type of response is expected
@@ -293,7 +293,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         and returns L{object}
     @ivar _xform: The transform function which is used to convert each
         line of a multi-line response into usable values for use by the
-        consumer function.  If None, each line of the multi-line response
+        consumer function.  If C{None}, each line of the multi-line response
         is sent directly to the consumer function.
 
     @type _consumer: callable that takes L{object}
@@ -321,7 +321,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         which sends the command to a list and return a deferred that will be
         chained with the return value of the function when it eventually runs.
         Otherwise, set up for subsequent commands to be blocked and return
-        None.
+        C{None}
 
         @type f: callable
         @param f: A function which sends a command.
@@ -421,8 +421,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             L{bytes} and returns L{object}
         @param xform: A transform function which should be used to transform
             each line of the multi-line response into usable values for use by
-            a consumer function.  If None, each line of the multi-line response
-            should be sent directly to the consumer function.
+            a consumer function.  If C{None}, each line of the multi-line
+            response should be sent directly to the consumer function.
 
         @rtype: L{Deferred <defer.Deferred>} which successfully fires with
             callable that takes L{object} and fails with L{ServerErrorResponse}
@@ -791,7 +791,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         @rtype: L{NoneType <types.NoneType>} or
             L{ClientContextFactory <twisted.internet.ssl.ClientContextFactory>}
-        @return: A context factory or None if TLS is not supported on the
+        @return: A context factory or C{None} if TLS is not supported on the
             client.
         """
         try:
@@ -1068,7 +1068,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             L{object} or callable that takes L{list} of L{object}
         @return: A deferred which fires when the entire response has been
             received.  When a consumer is not provided, the return value is a
-            list of the value for each message or None for deleted messages.
+            list of the value for each message or C{None} for deleted messages.
             Otherwise, it returns the consumer itself.
         """
         if consumer is None:
