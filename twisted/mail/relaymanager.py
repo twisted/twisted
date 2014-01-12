@@ -84,8 +84,8 @@ class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):
         @type manager: L{_AttemptManager}
         @param manager: An attempt manager.
 
-        @type args: 1-L{tuple} of (E{1}) L{bytes} or 2-L{tuple} of
-            (E{1}) L{bytes}, (E{2}) L{int}
+        @type args: 1-L{tuple} of (0) L{bytes} or 2-L{tuple} of
+            (0) L{bytes}, (1) L{int}
         @param args: Positional arguments for L{SMTPClient.__init__}
 
         @type kw: L{dict}
@@ -111,13 +111,13 @@ class ESMTPManagedRelayer(ManagedRelayerMixin, relay.ESMTPRelayer):
         @type manager: L{_AttemptManager}
         @param manager: An attempt manager.
 
-        @type args: 3-L{tuple} of (E{1}) L{bytes}, (E{2}) L{NoneType
+        @type args: 3-L{tuple} of (0) L{bytes}, (1) L{NoneType
             <types.NoneType>} or L{ClientContextFactory
-            <twisted.internet.ssl.ClientContextFactory>}, (E{3}) L{bytes} or
-            4-L{tuple} of (E{1}) L{bytes}, (E{2}) L{NoneType <types.NoneType>}
+            <twisted.internet.ssl.ClientContextFactory>}, (2) L{bytes} or
+            4-L{tuple} of (0) L{bytes}, (1) L{NoneType <types.NoneType>}
             or L{ClientContextFactory
-            <twisted.internet.ssl.ClientContextFactory>}, (E{3}) L{bytes},
-            (E{4}) L{int}
+            <twisted.internet.ssl.ClientContextFactory>}, (2) L{bytes},
+            (3) L{int}
         @param args: Positional arguments for L{ESMTPClient.__init__}
 
         @type kw: L{dict}
@@ -135,15 +135,15 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
     This factory creates a managed relayer which relays a set of messages over
     SMTP and informs an attempt manager of its progress.
 
-    @type messages: See L{__init__}
-    @type manager: See L{__init__}
+    @ivar messages: See L{__init__}
+    @ivar manager: See L{__init__}
 
     @type protocol: callable which returns L{SMTPManagedRelayer}
     @ivar protocol: A callable which returns a managed relayer for SMTP.  See
         L{SMTPManagedRelayer.__init__} for parameters to the callable.
 
-    @type pArgs: 1-L{tuple} of (E{1}) L{bytes} or 2-L{tuple} of
-        (E{1}) L{bytes}, (E{2}), L{int}
+    @type pArgs: 1-L{tuple} of (0) L{bytes} or 2-L{tuple} of
+        (0) L{bytes}, (1), L{int}
     @ivar pArgs: Positional arguments for L{SMTPClient.__init__}
 
     @type pKwArgs: L{dict}
@@ -159,8 +159,8 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
         @type manager: L{_AttemptManager}
         @param manager: An attempt manager.
 
-        @type args: 1-L{tuple} of (E{1}) L{bytes} or 2-L{tuple} of
-            (E{1}) L{bytes}, (E{2}), L{int}
+        @type args: 1-L{tuple} of (0) L{bytes} or 2-L{tuple} of
+            (0) L{bytes}, (1), L{int}
         @param args: Positional arguments for L{SMTPClient.__init__}
 
         @type kw: L{dict}
@@ -215,8 +215,8 @@ class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
     @ivar protocol: A callable which returns a managed relayer for ESMTP.  See
         L{ESMTPManagedRelayer.__init__} for parameters to the callable.
 
-    @type secret: See L{__init__}
-    @type contextFactory: See L{__init__}
+    @ivar secret: See L{__init__}
+    @ivar contextFactory: See L{__init__}
     """
     protocol = ESMTPManagedRelayer
 
@@ -235,8 +235,8 @@ class ESMTPManagedRelayerFactory(SMTPManagedRelayerFactory):
             L{ClientContextFactory <twisted.internet.ssl.ClientContextFactory>}
         @param contextFactory: An SSL context factory.
 
-        @type args: 1-L{tuple} of (E{1}) L{bytes} or 2-L{tuple} of
-            (E{1}) L{bytes}, (E{2}), L{int}
+        @type args: 1-L{tuple} of (0) L{bytes} or 2-L{tuple} of
+            (0) L{bytes}, (1), L{int}
         @param args: Positional arguments for L{SMTPClient.__init__}
 
         @type pKwArgs: L{dict}
@@ -314,7 +314,7 @@ class Queue:
         """
         Create a representation of the non-volatile state of the queue.
 
-        @rtype: L{dict} of L{bytes} -> L{object}
+        @rtype: L{dict} mapping L{bytes} to L{object}
         @return: The non-volatile state of the queue.
         """
         return {'directory': self.directory}
@@ -325,7 +325,7 @@ class Queue:
         Restore the non-volatile state of the queue and recreate the volatile
         state.
 
-        @type state: L{dict} of L{bytes} -> L{object}
+        @type state: L{dict} mapping L{bytes} to L{object}
         @param state: The non-volatile state of the queue.
         """
         self.__dict__.update(state)
@@ -445,7 +445,7 @@ class Queue:
         @type message: L{bytes}
         @param message: The base filename of a message.
 
-        @rtype: L{list} of (E{1}) L{bytes}, (E{2}) L{bytes}
+        @rtype: L{list} of two L{bytes}
         @return: A list containing the origination and destination addresses
             for the message.
         """
@@ -469,7 +469,7 @@ class Queue:
         """
         Create a new message in the queue.
 
-        @rtype: 2-L{tuple} of (E{1}) L{file}, (E{2}) L{FileMessage}
+        @rtype: 2-L{tuple} of (0) L{file}, (1) L{FileMessage}
         @return: The envelope file and a message receiver for a new message in
             the queue.
         """
@@ -601,10 +601,9 @@ class SmartHostSMTPRelayingManager:
     @ivar maxConnections: See L{__init__}.
     @ivar maxMessagesPerConnection: See L{__init__}.
 
-    @type fArgs: 3-L{tuple} of (E{1}) L{list} of L{bytes},
-        (E{2}) L{_AttemptManager}, (E{3}) L{bytes} or 4-L{tuple} of
-        (E{1}) L{list} of L{bytes}, (E{2}) L{_AttemptManager}, (E{3}) L{bytes},
-        (E{4}) L{int}
+    @type fArgs: 3-L{tuple} of (0) L{list} of L{bytes},
+        (1) L{_AttemptManager}, (2) L{bytes} or 4-L{tuple} of (0) L{list}
+        of L{bytes}, (1) L{_AttemptManager}, (2) L{bytes}, (3) L{int}
     @ivar fArgs: Positional arguments for
         L{SMTPManagedRelayerFactory.__init__}.
 
@@ -622,7 +621,7 @@ class SmartHostSMTPRelayingManager:
     @type mxcalc: L{NoneType <types.NoneType>} or L{MXCalculator}
     @ivar mxcalc: A resource for mail exchange host lookups.
 
-    @type managed: L{dict} of L{SMTPManagedRelayerFactory} -> L{list} of
+    @type managed: L{dict} mapping L{SMTPManagedRelayerFactory} to L{list} of
         L{bytes}
     @ivar managed: A mapping of factory for a managed relayer to
         filenames of messages the managed relayer is responsible for.
@@ -663,7 +662,7 @@ class SmartHostSMTPRelayingManager:
         """
         Create a representation of the non-volatile state of this object.
 
-        @rtype: L{dict} of L{bytes} -> L{object}
+        @rtype: L{dict} mapping L{bytes} to L{object}
         @return: The non-volatile state of the queue.
         """
         dct = self.__dict__.copy()
@@ -676,7 +675,7 @@ class SmartHostSMTPRelayingManager:
         Restore the non-volatile state of this object and recreate the volatile
         state.
 
-        @type state: L{dict} of L{bytes} -> L{object}
+        @type state: L{dict} mapping L{bytes} to L{object}
         @param state: The non-volatile state of the queue.
         """
         self.__dict__.update(state)
@@ -864,7 +863,7 @@ class MXCalculator:
     @type resolver: L{IResolver <twisted.internet.interfaces.IResolver>}
     @ivar resolver: A resolver.
 
-    @type badMXs: L{dict} of L{bytes} -> L{float}
+    @type badMXs: L{dict} mapping L{bytes} to L{float}
     @ivar badMXs: A mapping of non-functioning mail exchange hostname to time
         at which another attempt at contacting it may be made.
 
@@ -952,14 +951,14 @@ class MXCalculator:
         """
         Organize the records of a DNS response by record name.
 
-        @type records: 3-L{tuple} of (E{1}) L{list} of L{RRHeader
-            <twisted.names.dns.RRHeader>}, (E{2}) L{list} of L{RRHeader
-            <twisted.names.dns.RRHeader>}, (E{3}) L{list} of L{RRHeader
+        @type records: 3-L{tuple} of (0) L{list} of L{RRHeader
+            <twisted.names.dns.RRHeader>}, (1) L{list} of L{RRHeader
+            <twisted.names.dns.RRHeader>}, (2) L{list} of L{RRHeader
             <twisted.names.dns.RRHeader>}
         @param records: Answer resource records, authority resource records and
             additional resource records.
 
-        @rtype: L{dict} of L{bytes} -> L{list} of L{IRecord
+        @rtype: L{dict} mapping L{bytes} to L{list} of L{IRecord
             <twisted.names.dns.IRecord>} provider
         @return: A mapping of record name to record payload.
         """
@@ -978,7 +977,7 @@ class MXCalculator:
         recognize loops and will give up on non-cyclic chains after a specified
         number of lookups.
 
-        @type answers: L{dict} of L{bytes} -> L{list} of L{IRecord
+        @type answers: L{dict} mapping L{bytes} to L{list} of L{IRecord
             <twisted.names.dns.IRecord>} provider
         @param answers: A mapping of record name to record payload.
 
@@ -1067,7 +1066,7 @@ class MXCalculator:
         @rtype: L{Record_MX <twisted.names.dns.Record_MX>} or L{Failure}
         @return: An MX record for the domain or a failure if the fallback to
             domain option is not in effect and an error, other than not
-            finding a mail exchange record, occured during lookup.
+            finding an MX record, occured during lookup.
 
         @raise IOError: When no MX record could be found and the fallback to
             domain option is not in effect.

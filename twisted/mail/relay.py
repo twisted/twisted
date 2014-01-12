@@ -148,8 +148,8 @@ class SMTPRelayer(RelayerMixin, smtp.SMTPClient):
         @type messagePaths: L{list} of L{bytes}
         @param messagePaths: The base filename for each message to be relayed.
 
-        @type args: 1-L{tuple} of (E{1}) L{bytes} or 2-L{tuple} of
-            (E{1}) L{bytes}, (E{2}) L{int}
+        @type args: 1-L{tuple} of (0) L{bytes} or 2-L{tuple} of
+            (0) L{bytes}, (1) L{int}
         @param args: Positional arguments for L{SMTPClient.__init__}
 
         @type kw: L{dict}
@@ -169,13 +169,13 @@ class ESMTPRelayer(RelayerMixin, smtp.ESMTPClient):
         @type messagePaths: L{list} of L{bytes}
         @param messagePaths: The base filename for each message to be relayed.
 
-        @type args: 3-L{tuple} of (E{1}) L{bytes}, (E{2}) L{NoneType
+        @type args: 3-L{tuple} of (0) L{bytes}, (1) L{NoneType
             <types.NoneType>} or L{ClientContextFactory
-            <twisted.internet.ssl.ClientContextFactory>}, (E{3}) L{bytes} or
-            4-L{tuple} of (E{1}) L{bytes}, (E{2}) L{NoneType <types.NoneType>}
+            <twisted.internet.ssl.ClientContextFactory>}, (2) L{bytes} or
+            4-L{tuple} of (0) L{bytes}, (1) L{NoneType <types.NoneType>}
             or L{ClientContextFactory
-            <twisted.internet.ssl.ClientContextFactory>}, (E{3}) L{bytes},
-            (E{4}) L{int}
+            <twisted.internet.ssl.ClientContextFactory>}, (2) L{bytes},
+            (3) L{int}
         @param args: Positional arguments for L{ESMTPClient.__init__}
 
         @type kw: L{dict}
