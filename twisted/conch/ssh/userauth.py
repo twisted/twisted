@@ -394,11 +394,13 @@ class SSHUserAuthClient(service.SSHService):
     """
     A service implementing the client side of 'ssh-userauth'.
 
+    This service will try all authentication methods provided by the server,
+    making callbacks for more information when necessary.
+
     @ivar name: the name of this service: 'ssh-userauth'
     @type name: C{str}
-    @ivar preferredOrder: a list of authentication methods we support, in
-        order of preference.  The client will try authentication methods in
-        this order, making callbacks for information when necessary.
+    @ivar preferredOrder: a list of authentication methods that should be used
+        first, in order of preference, if supported by the server
     @type preferredOrder: C{list}
     @ivar user: the name of the user to authenticate as
     @type user: C{str}
