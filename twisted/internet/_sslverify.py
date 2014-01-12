@@ -876,7 +876,7 @@ class OpenSSLCipher(FancyEqMixin, object):
     def __init__(self, fullName):
         """
         @param fullName: The full name of the cipher. For example
-            C{ECDHE-RSA-AES256-GCM-SHA384}.
+            C{u"ECDHE-RSA-AES256-GCM-SHA384"}.
         @type fullName: L{unicode}
         """
         self.fullName = fullName

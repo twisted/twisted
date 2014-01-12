@@ -10,13 +10,17 @@ from __future__ import division, absolute_import
 
 import itertools
 
+from zope.interface import implementer
+
 try:
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA
     from twisted.internet import _sslverify as sslverify
+
+    skipSSL = False
 except ImportError:
-    SSL = None
+    skipSSL = "OpenSSL is required for SSL tests."
 
 from twisted.python.compat import nativeString
 from twisted.python.constants import NamedConstant, Names
@@ -176,8 +180,8 @@ class FakeContext(object):
 
 
 class OpenSSLOptions(unittest.TestCase):
-    if interfaces.IReactorSSL(reactor, None) is None:
-        skip = "Reactor does not support SSL, cannot run SSL tests"
+    if skipSSL:
+        skip = skipSSL
 
     serverPort = clientConn = None
     onServerLost = onClientLost = None
@@ -413,6 +417,7 @@ class OpenSSLOptions(unittest.TestCase):
         """
         If acceptable ciphers are passed, they are used.
         """
+        @implementer(interfaces.IAcceptableCiphers)
         class FakeAcceptableCiphers(object):
             def selectCiphers(self, _):
                 return [sslverify.OpenSSLCipher(u'sentinel')]
@@ -738,8 +743,8 @@ class ProtocolVersionTests(unittest.TestCase):
     Tests for L{sslverify.OpenSSLCertificateOptions}'s SSL/TLS version
     selection features.
     """
-    if SSL is None:
-        skip = "Reactor does not support SSL, cannot run SSL tests"
+    if skipSSL:
+        skip = skipSSL
     else:
         _METHOD_TO_PROTOCOL = {
             SSL.SSLv2_METHOD: set([ProtocolVersion.SSLv2]),
@@ -846,8 +851,8 @@ class _ActualSSLTransport:
 
 
 class Constructors(unittest.TestCase):
-    if interfaces.IReactorSSL(reactor, None) is None:
-        skip = "Reactor does not support SSL, cannot run SSL tests"
+    if skipSSL:
+        skip = skipSSL
 
     def test_peerFromNonSSLTransport(self):
         """
@@ -920,8 +925,8 @@ class TestOpenSSLCipher(unittest.TestCase):
     """
     Tests for twisted.internet._sslverify.OpenSSLCipher.
     """
-    if interfaces.IReactorSSL(reactor, None) is None:
-        skip = "Reactor does not support SSL, cannot run SSL tests"
+    if skipSSL:
+        skip = skipSSL
 
     cipherName = u'CIPHER-STRING'
 
@@ -937,7 +942,7 @@ class TestOpenSSLCipher(unittest.TestCase):
 
     def test_repr(self):
         """
-        C{repr(cipher)} should return a valid constructor call.
+        C{repr(cipher)} returns a valid constructor call.
         """
         cipher = sslverify.OpenSSLCipher(self.cipherName)
         self.assertEqual(
@@ -974,13 +979,12 @@ class TestExpandCipherString(unittest.TestCase):
     """
     Tests for twisted.internet._sslverify._expandCipherString.
     """
-    if interfaces.IReactorSSL(reactor, None) is None:
-        skip = "Reactor does not support SSL, cannot run SSL tests"
-
+    if skipSSL:
+        skip = skipSSL
 
     def test_doesNotStumbleOverEmptyList(self):
         """
-        If the expanded cipher list is empty, an empty list is returned.
+        If the expanded cipher list is empty, an empty L{list} is returned.
         """
         self.assertEqual(
             [],
@@ -1008,7 +1012,8 @@ class TestExpandCipherString(unittest.TestCase):
 
     def test_returnsListOfICiphers(self):
         """
-        Returns always a list of ICipher.
+        L{sslverify._expandCipherString} always returns a L{list} of
+        L{interfaces.ICipher}.
         """
         ciphers = sslverify._expandCipherString(u'ALL', SSL.SSLv23_METHOD, 0)
         self.assertIsInstance(ciphers, list)
@@ -1025,9 +1030,8 @@ class TestAcceptableCiphers(unittest.TestCase):
     """
     Tests for twisted.internet._sslverify.OpenSSLAcceptableCiphers.
     """
-    if interfaces.IReactorSSL(reactor, None) is None:
-        skip = "Reactor does not support SSL, cannot run SSL tests"
-
+    if skipSSL:
+        skip = skipSSL
 
     def test_selectOnEmptyListReturnsEmptyList(self):
         """
