@@ -188,7 +188,7 @@ def _codeStatusSplit(line):
     @type line: L{bytes}
     @param line: The first line of a multi-line server response.
 
-    @rtype: (L{bytes}, L{bytes})
+    @rtype: 2-tuple of (0) L{bytes}, (1) L{bytes}
     @return: The status indicator and the rest of the server response.
     """
     parts = line.split(' ', 1)
@@ -247,21 +247,20 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         before timing out a connection.  If the number is <= 0, no timeout
         checking will be performed.
 
-    @type _capCache: L{NoneType <types.NoneType>} or L{dict} of
-        L{bytes} -> L{list} of L{bytes} and/or L{bytes} ->
-        L{NoneType <types.NoneType>}
+    @type _capCache: L{NoneType <types.NoneType>} or L{dict} mapping L{bytes}
+        to L{list} of L{bytes} and/or L{bytes} to L{NoneType <types.NoneType>}
     @ivar _capCache: The cached server capabilities.  Capabilities are not
         allowed to change during the session (except when TLS is negotiated),
         so the first response to a capabilities command can be used for
         later lookups.
 
-    @type _challengeMagicRe: L{re.RegexObject}
+    @type _challengeMagicRe: L{RegexObject <re.RegexObject>}
     @ivar _challengeMagicRe: A regular expression which matches the
         challenge in the server greeting.
 
     @type _blockedQueue: L{NoneType <types.NoneType>} or L{list} of 3-L{tuple}
         of (0) L{Deferred <defer.Deferred>}, (1) callable which results
-        in a L{Deferred <defer.Deferred>}, f(2) L{tuple}
+        in a L{Deferred <defer.Deferred>}, (2) L{tuple}
     @ivar _blockedQueue: A list of blocked commands.  While a command is
         awaiting a response from the server, other commands are blocked.  When
         no command is outstanding, C{_blockedQueue} is set to None.  Otherwise,
@@ -331,7 +330,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @param a: Arguments to the function.
 
         @rtype: L{NoneType <types.NoneType>} or L{Deferred <defer.Deferred>}
-        @return: None if the command can run immediately.  Otherwise,
+        @return: C{None} if the command can run immediately.  Otherwise,
             a deferred that will eventually trigger with the return value of
             the function.
          """
@@ -590,7 +589,6 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @rtype: L{bytes}
         @return: The next state.
         """
-        code, status = _codeStatusSplit(line)
         deferred, self._waiting = self._waiting, None
         self._unblock()
         code, status = _codeStatusSplit(line)
@@ -674,7 +672,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
     # External API - call these (most of 'em anyway)
     def startTLS(self, contextFactory=None):
         """
-        Switch to encrypted communication using TLS or SSL.
+        Switch to encrypted communication using TLS.
 
         The first step of switching to encrypted communication is obtaining
         the server's capabilities.  When that is complete, the L{_startTLS}
@@ -686,7 +684,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             If not provided, try to create a new one.
 
         @rtype: L{Deferred <defer.Deferred>} which successfully results in
-            L{dict} of L{bytes} -> L{list} of L{bytes} and/or L{bytes} ->
+            L{dict} mapping L{bytes} to L{list} of L{bytes} and/or L{bytes} to
             L{NoneType <types.NoneType>} or fails with L{TLSError}
         @return: A deferred which fires when the transport has been
             secured according to the given context factory with the server
@@ -723,8 +721,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         the L{_startedTLS} callback function completes the switch to encrypted
         communication. Then, the new server capabilities are requested.
 
-        @type caps: L{dict} of L{bytes} -> L{list} of L{bytes} and/or
-            L{bytes} -> L{NoneType <types.NoneType>}
+        @type caps: L{dict} mapping L{bytes} to L{list} of L{bytes} and/or
+            L{bytes} to L{NoneType <types.NoneType>}
         @param caps: The server capabilities.
 
         @type contextFactory: L{ClientContextFactory
@@ -735,7 +733,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @param tls: A TCP transport that supports switching to TLS midstream.
 
         @rtype: L{Deferred <defer.Deferred>} which successfully triggers with
-            L{dict} of L{bytes} -> L{list} of L{bytes} and/or L{bytes} ->
+            L{dict} mapping L{bytes} to L{list} of L{bytes} and/or L{bytes} to
             L{NoneType <types.NoneType>} or fails with L{TLSNotSupportedError}
         @return: A deferred which successfully fires when the response from
             the server to the request to start TLS has been received and the
@@ -765,8 +763,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         The final steps are discarding the cached capabilities and initiating
         TLS negotiation on the transport.
 
-        @type result: L{dict} of L{bytes} -> L{list} of L{bytes} and/or
-            L{bytes} -> L{NoneType <types.NoneType>}
+        @type result: L{dict} mapping L{bytes} to L{list} of L{bytes} and/or
+            L{bytes} to L{NoneType <types.NoneType>}
         @param result: The server capabilities.
 
         @type context: L{ClientContextFactory
@@ -776,8 +774,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @type tls: L{ITLSTransport <interfaces.ITLSTransport>}
         @param tls: A TCP transport that supports switching to TLS midstream.
 
-        @rtype: L{dict} of L{bytes} -> L{list} of L{bytes} and/or L{bytes} ->
-            L{NoneType <types.NoneType>}
+        @rtype: L{dict} mapping L{bytes} to L{list} of L{bytes} and/or L{bytes}
+            to L{NoneType <types.NoneType>}
         @return: The server capabilities.
         """
         self.transport = tls
@@ -845,13 +843,13 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         If the server provided a challenge in the greeting, proceed with an
         APOP login.  Otherwise, if the server and the transport support
-        encrypted communication, try to switch to TLS or SSL and then complete
+        encrypted communication, try to switch to TLS and then complete
         the login process with the L{_loginTLS} callback function.  Otherwise,
         if insecure authentication is allowed, do a plaintext login.
         Otherwise, fail with an L{InsecureAuthenticationDisallowed} error.
 
-        @type caps: L{dict} of L{bytes} -> L{list} of L{bytes} and/or
-            L{bytes} -> L{NoneType <types.NoneType>}
+        @type caps: L{dict} mapping L{bytes} to L{list} of L{bytes} and/or
+            L{bytes} to L{NoneType <types.NoneType>}
         @param caps: The server capabilities.
 
         @type username: L{bytes}
@@ -898,8 +896,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         This callback function runs after the transport switches to encrypted
         communication.
 
-        @type res: L{dict} of L{bytes} -> L{list} of L{bytes} and/or
-            L{bytes} -> L{NoneType <types.NoneType>}
+        @type res: L{dict} mapping L{bytes} to L{list} of L{bytes} and/or
+            L{bytes} to L{NoneType <types.NoneType>}
         @param res: The server capabilities.
 
         @type username: L{bytes}
@@ -1054,7 +1052,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         @type consumer: L{NoneType <types.NoneType>} or callable that takes
             L{object}
-        @param consumer: None or a function that consumes the output from
+        @param consumer: C{None} or a function that consumes the output from
             the transform function.
 
         @type xform: L{NoneType <types.NoneType>}, callable that takes
@@ -1093,7 +1091,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
         @type consumer: L{NoneType <types.NoneType>} or callable that takes
             L{object}
-        @param consumer: None or a function that consumes the output from the
+        @param consumer: C{None} or a function that consumes the output from the
             transform function.
 
         @type xform: L{NoneType <types.NoneType>} or callable that takes
@@ -1135,7 +1133,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             results should be used if available.
 
         @rtype: L{Deferred <defer.Deferred>} which successfully results in
-            L{dict} of L{bytes} -> L{list} of L{bytes} and/or L{bytes} ->
+            L{dict} mapping L{bytes} to L{list} of L{bytes} and/or L{bytes} to
             L{NoneType <types.NoneType>}
         @return: A deferred which fires with a mapping of capability name to
         parameters.  For example::
@@ -1255,7 +1253,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         Send a STAT command to get information about the size of the mailbox.
 
         @rtype: L{Deferred <defer.Deferred>} which successfully fires with
-            (L{int}, L{int}) or fails with L{ServerErrorResponse}
+            a 2-tuple of (0) L{int}, (1) L{int} or fails with
+            L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
             On an okay response, the deferred succeds with the number of
             messages in the mailbox and the size of the mailbox in octets.
