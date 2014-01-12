@@ -193,7 +193,10 @@ class Connector(tcp.Connector):
 from twisted.internet._sslverify import DistinguishedName, DN, Certificate
 from twisted.internet._sslverify import CertificateRequest, PrivateCertificate
 from twisted.internet._sslverify import KeyPair
-from twisted.internet._sslverify import OpenSSLCertificateOptions as CertificateOptions
+from twisted.internet._sslverify import (
+    OpenSSLAcceptableCiphers as AcceptableCiphers,
+    OpenSSLCertificateOptions as CertificateOptions,
+)
 
 __all__ = [
     "ContextFactory", "DefaultOpenSSLContextFactory", "ClientContextFactory",
@@ -201,5 +204,5 @@ __all__ = [
     'DistinguishedName', 'DN',
     'Certificate', 'CertificateRequest', 'PrivateCertificate',
     'KeyPair',
-    'CertificateOptions',
+    'AcceptableCiphers', 'CertificateOptions',
     ]

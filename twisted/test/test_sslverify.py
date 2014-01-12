@@ -10,13 +10,17 @@ from __future__ import division, absolute_import
 
 import itertools
 
+from zope.interface import implementer
+
 try:
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA
     from twisted.internet import _sslverify as sslverify
+
+    skipSSL = False
 except ImportError:
-    SSL = None
+    skipSSL = "OpenSSL is required for SSL tests."
 
 from twisted.python.compat import nativeString
 from twisted.python.constants import NamedConstant, Names
@@ -138,6 +142,7 @@ class FakeContext(object):
     @ivar _sessionID: Set by L{set_session_id}.
     @ivar _extraCertChain: Accumulated C{list} of all extra certificates added
         by L{add_extra_chain_cert}.
+    @ivar _cipherList: Set by L{set_cipher_list}.
     """
     _options = 0
 
@@ -169,11 +174,14 @@ class FakeContext(object):
     def add_extra_chain_cert(self, cert):
         self._extraCertChain.append(cert)
 
+    def set_cipher_list(self, cipherList):
+        self._cipherList = cipherList
+
 
 
 class OpenSSLOptions(unittest.TestCase):
-    if interfaces.IReactorSSL(reactor, None) is None:
-        skip = "Reactor does not support SSL, cannot run SSL tests"
+    if skipSSL:
+        skip = skipSSL
 
     serverPort = clientConn = None
     onServerLost = onClientLost = None
@@ -373,6 +381,55 @@ class OpenSSLOptions(unittest.TestCase):
         )
         ctx = opts.getContext()
         self.assertIsInstance(ctx, SSL.Context)
+
+
+    def test_acceptableCiphersAreAlwaysSet(self):
+        """
+        If the user doesn't supply custom acceptable ciphers, a shipped secure
+        default is used.  We can't check directly for it because the effective
+        cipher string we set varies with platforms.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        self.assertEqual(opts._cipherString, ctx._cipherList)
+
+
+    def test_givesMeaningfulErrorMessageIfNoCipherMatches(self):
+        """
+        If there is no valid cipher that matches the user's wishes,
+        a L{ValueError} is raised.
+        """
+        self.assertRaises(
+            ValueError,
+            sslverify.OpenSSLCertificateOptions,
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            acceptableCiphers=
+            sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString('')
+        )
+
+
+    def test_honorsAcceptableCiphersArgument(self):
+        """
+        If acceptable ciphers are passed, they are used.
+        """
+        @implementer(interfaces.IAcceptableCiphers)
+        class FakeAcceptableCiphers(object):
+            def selectCiphers(self, _):
+                return [sslverify.OpenSSLCipher(u'sentinel')]
+
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            acceptableCiphers=FakeAcceptableCiphers(),
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        self.assertEqual(u'sentinel', ctx._cipherList)
 
 
     def test_abbreviatingDistinguishedNames(self):
@@ -686,8 +743,8 @@ class ProtocolVersionTests(unittest.TestCase):
     Tests for L{sslverify.OpenSSLCertificateOptions}'s SSL/TLS version
     selection features.
     """
-    if SSL is None:
-        skip = "Reactor does not support SSL, cannot run SSL tests"
+    if skipSSL:
+        skip = skipSSL
     else:
         _METHOD_TO_PROTOCOL = {
             SSL.SSLv2_METHOD: set([ProtocolVersion.SSLv2]),
@@ -794,8 +851,8 @@ class _ActualSSLTransport:
 
 
 class Constructors(unittest.TestCase):
-    if interfaces.IReactorSSL(reactor, None) is None:
-        skip = "Reactor does not support SSL, cannot run SSL tests"
+    if skipSSL:
+        skip = skipSSL
 
     def test_peerFromNonSSLTransport(self):
         """
@@ -861,3 +918,149 @@ class Constructors(unittest.TestCase):
             sslverify.Certificate.peerFromTransport(
                 _ActualSSLTransport()).serialNumber(),
             12346)
+
+
+
+class TestOpenSSLCipher(unittest.TestCase):
+    """
+    Tests for twisted.internet._sslverify.OpenSSLCipher.
+    """
+    if skipSSL:
+        skip = skipSSL
+
+    cipherName = u'CIPHER-STRING'
+
+    def test_constructorSetsFullName(self):
+        """
+        The first argument passed to the constructor becomes the full name.
+        """
+        self.assertEqual(
+            self.cipherName,
+            sslverify.OpenSSLCipher(self.cipherName).fullName
+        )
+
+
+    def test_repr(self):
+        """
+        C{repr(cipher)} returns a valid constructor call.
+        """
+        cipher = sslverify.OpenSSLCipher(self.cipherName)
+        self.assertEqual(
+            cipher,
+            eval(repr(cipher), {'OpenSSLCipher': sslverify.OpenSSLCipher})
+        )
+
+
+    def test_eqSameClass(self):
+        """
+        Equal type and C{fullName} means that the objects are equal.
+        """
+        cipher1 = sslverify.OpenSSLCipher(self.cipherName)
+        cipher2 = sslverify.OpenSSLCipher(self.cipherName)
+        self.assertEqual(cipher1, cipher2)
+
+
+    def test_eqSameNameDifferentType(self):
+        """
+        If ciphers have the same name but different types, they're still
+        different.
+        """
+        class DifferentCipher(object):
+            fullName = self.cipherName
+
+        self.assertNotEqual(
+            sslverify.OpenSSLCipher(self.cipherName),
+            DifferentCipher(),
+        )
+
+
+
+class TestExpandCipherString(unittest.TestCase):
+    """
+    Tests for twisted.internet._sslverify._expandCipherString.
+    """
+    if skipSSL:
+        skip = skipSSL
+
+    def test_doesNotStumbleOverEmptyList(self):
+        """
+        If the expanded cipher list is empty, an empty L{list} is returned.
+        """
+        self.assertEqual(
+            [],
+            sslverify._expandCipherString(u'', SSL.SSLv23_METHOD, 0)
+        )
+
+
+    def test_doesNotSwallowOtherSSLErrors(self):
+        """
+        Only no cipher matches get swallowed, every other SSL error gets
+        propagated.
+        """
+        def raiser(_):
+            # Unfortunately, there seems to be no way to trigger a real SSL
+            # error artificially.
+            raise SSL.Error([['', '', '']])
+        ctx = FakeContext(SSL.SSLv23_METHOD)
+        ctx.set_cipher_list = raiser
+        self.patch(sslverify.SSL, 'Context', lambda _: ctx)
+        self.assertRaises(
+            SSL.Error,
+            sslverify._expandCipherString, u'ALL', SSL.SSLv23_METHOD, 0
+        )
+
+
+    def test_returnsListOfICiphers(self):
+        """
+        L{sslverify._expandCipherString} always returns a L{list} of
+        L{interfaces.ICipher}.
+        """
+        ciphers = sslverify._expandCipherString(u'ALL', SSL.SSLv23_METHOD, 0)
+        self.assertIsInstance(ciphers, list)
+        bogus = []
+        for c in ciphers:
+            if not interfaces.ICipher.providedBy(c):
+                bogus.append(c)
+
+        self.assertEqual([], bogus)
+
+
+
+class TestAcceptableCiphers(unittest.TestCase):
+    """
+    Tests for twisted.internet._sslverify.OpenSSLAcceptableCiphers.
+    """
+    if skipSSL:
+        skip = skipSSL
+
+    def test_selectOnEmptyListReturnsEmptyList(self):
+        """
+        If no ciphers are available, nothing can be selected.
+        """
+        ac = sslverify.OpenSSLAcceptableCiphers([])
+        self.assertEqual([], ac.selectCiphers([]))
+
+
+    def test_selectReturnsOnlyFromAvailable(self):
+        """
+        Select only returns a cross section of what is available and what is
+        desirable.
+        """
+        ac = sslverify.OpenSSLAcceptableCiphers([
+            sslverify.OpenSSLCipher('A'),
+            sslverify.OpenSSLCipher('B'),
+        ])
+        self.assertEqual([sslverify.OpenSSLCipher('B')],
+                         ac.selectCiphers([sslverify.OpenSSLCipher('B'),
+                                           sslverify.OpenSSLCipher('C')]))
+
+
+    def test_fromOpenSSLCipherStringExpandsToListOfCiphers(self):
+        """
+        If L{sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString} is
+        called it expands the string to a list of ciphers.
+        """
+        ac = sslverify.OpenSSLAcceptableCiphers.fromOpenSSLCipherString('ALL')
+        self.assertIsInstance(ac._ciphers, list)
+        self.assertTrue(all(sslverify.ICipher.providedBy(c)
+                            for c in ac._ciphers))
