@@ -432,6 +432,42 @@ class OpenSSLOptions(unittest.TestCase):
         self.assertEqual(u'sentinel', ctx._cipherList)
 
 
+    def test_basicSecurityOptionsAreSet(self):
+        """
+        Every context must have C{OP_NO_SSLv2}, C{OP_NO_COMPRESSION}, and
+        C{OP_CIPHER_SERVER_PREFERENCE} set.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        self.assertTrue(
+            ctx._options &
+            SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
+            opts._OP_CIPHER_SERVER_PREFERENCE,
+        )
+
+
+    def test_singleUseKeys(self):
+        """
+        If C{singleUseKeys} is set, ensure appropriate options have been set for
+        both DH and ECDH.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            enableSingleUseKeys=True,
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        self.assertTrue(
+            ctx._options &
+            SSL.OP_SINGLE_DH_USE | opts._OP_SINGLE_ECDH_USE
+        )
+
+
     def test_abbreviatingDistinguishedNames(self):
         """
         Check that abbreviations used in certificates correctly map to
