@@ -636,8 +636,8 @@ class SmartHostSMTPRelayingManager:
         """
         Initialize a smart host.
 
-        The default values specify connection limits appropriate for a smart
-        host with 1-5 users.
+        The default values specify connection limits appropriate for a
+        low-volume smart host.
 
         @type queue: L{Queue}
         @param queue: A relay queue.
