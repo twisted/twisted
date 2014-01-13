@@ -52,7 +52,7 @@ class _MaildirNameGenerator:
     @type s: L{bytes}
     @ivar s: A representation of the hostname.
 
-    @ivar _clock: See L{__init__}
+    @ivar _clock: See C{clock} parameter of L{__init__}.
     """
     n = 0
     p = os.getpid()
@@ -126,7 +126,7 @@ class MaildirMessage(mail.FileMessage):
         @param fp: The file in which to store the message while it is being
             received.
 
-        @type a: 2-L{tuple} of (E{1}) L{bytes}, (E{2}) L{bytes}
+        @type a: 2-L{tuple} of (0) L{bytes}, (1) L{bytes}
         @param a: Positional arguments for L{FileMessage.__init__}.
 
         @type kw: L{dict}
@@ -169,11 +169,11 @@ class AbstractMaildirDomain:
     """
     An abstract maildir-backed domain.
 
-    @type alias: L{NoneType <types.NoneType>} or L{dict} of
-        L{bytes} -> L{AliasBase}
+    @type alias: L{NoneType <types.NoneType>} or L{dict} mapping
+        L{bytes} to L{AliasBase}
     @ivar alias: A mapping of username to alias.
 
-    @ivar root: See L{__init__}
+    @ivar root: See L{__init__}.
     """
     alias = None
     root = None
@@ -207,7 +207,7 @@ class AbstractMaildirDomain:
         """
         Set the group of defined aliases for this domain.
 
-        @type alias: L{dict} of L{bytes} -> L{IAlias} provider.
+        @type alias: L{dict} mapping L{bytes} to L{IAlias} provider.
         @param alias: A mapping of domain name to alias.
         """
         self.alias = alias
@@ -321,11 +321,11 @@ class _MaildirMailboxAppendMessageTask:
     """
     A task which adds a message to a maildir mailbox.
 
-    @ivar mbox: See L{__init__}
+    @ivar mbox: See L{__init__}.
 
     @type defer: L{Deferred <defer.Deferred>} which successfully returns
         L{NoneType <types.NoneType>}
-    @ivar defer: A deferred which triggers when the task has completed.
+    @ivar defer: A deferred which fires when the task has completed.
 
     @type opencall: L{IDelayedCall <interfaces.IDelayedCall>} provider or
         L{NoneType <types.NoneType>}
@@ -435,7 +435,7 @@ class _MaildirMailboxAppendMessageTask:
 
     def fail(self, err=None):
         """
-        Trigger the deferred to indicate the task completed with a failure.
+        Fire the deferred to indicate the task completed with a failure.
 
         @type err: L{Failure <failure.Failure>}
         @param err: The error that occurred.
@@ -450,8 +450,8 @@ class _MaildirMailboxAppendMessageTask:
 
     def moveFileToNew(self):
         """
-        Place the message in the new/ directory, add it to the mailbox and
-        trigger the deferred to indicate that the task has completed
+        Place the message in the I{new/} directory, add it to the mailbox and
+        fire the deferred to indicate that the task has completed
         successfully.
         """
         while True:
@@ -501,17 +501,17 @@ class MaildirMailbox(pop3.Mailbox):
 
     @ivar path: See L{__init__}.
 
-    @type list: L{list} of L{int} or 2-L{tuple} of (E{1}) file-like object,
-        (E{2}) L{bytes}
+    @type list: L{list} of L{int} or 2-L{tuple} of (0) file-like object,
+        (1) L{bytes}
     @ivar list: Information about the messages in the mailbox. For undeleted
         messages, the file containing the message and the
         full path name of the file are stored.  Deleted messages are indicated
         by 0.
 
-    @type deleted: L{dict} of 2-L{tuple} of (E{1}) file-like object,
-        (E{2}) L{bytes} -> L{bytes}
+    @type deleted: L{dict} mapping 2-L{tuple} of (0) file-like object,
+        (1) L{bytes} to L{bytes}
     @type deleted: A mapping of the information about a file before it was
-        deleted to the full path name of the deleted file in the .Trash/
+        deleted to the full path name of the deleted file in the I{.Trash/}
         subfolder.
     """
     AppendFactory = _MaildirMailboxAppendMessageTask
@@ -599,7 +599,7 @@ class MaildirMailbox(pop3.Mailbox):
         """
         Mark a message for deletion.
 
-        Move the message to the .Trash/ subfolder so it can be undeleted
+        Move the message to the I{.Trash/} subfolder so it can be undeleted
         by an administrator.
 
         @type i: L{int}
@@ -620,7 +620,7 @@ class MaildirMailbox(pop3.Mailbox):
         """
         Undelete all messages marked for deletion.
 
-        Move each message marked for deletion from the .Trash/ subfolder back
+        Move each message marked for deletion from the I{.Trash/} subfolder back
         to its original position.
         """
         for (real, trash) in self.deleted.items():
@@ -663,7 +663,7 @@ class StringListMailbox:
     """
     An in-memory mailbox.
 
-    @ivar  msgs: See L{__init__}
+    @ivar  msgs: See L{__init__}.
 
     @type _delete: L{set} of L{int}
     @ivar _delete: The indices of messages which have been marked for deletion.
@@ -766,15 +766,16 @@ class StringListMailbox:
 @implementer(portal.IRealm)
 class MaildirDirdbmDomain(AbstractMaildirDomain):
     """
-    A maildir-backed domain where membership is checked with a DirDBM database.
+    A maildir-backed domain where membership is checked with a
+    L{DirDBM <dirdbm.DirDBM>} database.
 
-    The directory structure of a MailddirDirdbmDomain is:
+    The directory structure of a MaildirDirdbmDomain is:
 
-    /passwd <-- a dirdbm directory
+    /passwd <-- a DirDBM directory
 
     /USER/{cur, new, del} <-- each user has these three directories
 
-    @ivar postmaster: See L{__init__}
+    @ivar postmaster: See L{__init__}.
 
     @type dbm: L{DirDBM <dirdbm.DirDBM>}
     @ivar dbm: The authentication database for the domain.
@@ -874,8 +875,8 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         @param interfaces: A group of interfaces, one of which the avatar
             must support.
 
-        @rtype: 3-L{tuple} of (E{1}) L{IMailbox <pop3.IMailbox>},
-            (E{2}) L{IMailbox <pop3.IMailbox>} provider, (E{3}) no-argument
+        @rtype: 3-L{tuple} of (0) L{IMailbox <pop3.IMailbox>},
+            (1) L{IMailbox <pop3.IMailbox>} provider, (2) no-argument
             callable
         @return: A tuple of the supported interface, a mailbox, and a
             logout function.
@@ -901,7 +902,8 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
 @implementer(checkers.ICredentialsChecker)
 class DirdbmDatabase:
     """
-    A credentials checker which authenticates users out of a DirDBM database.
+    A credentials checker which authenticates users out of a
+    L{DirDBM <dirdbm.DirDBM>} database.
 
     @type dirdbm: L{DirDBM <dirdbm.DirDBM>}
     @ivar dirdbm: An authentication database.
