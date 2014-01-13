@@ -443,17 +443,15 @@ class OpenSSLOptions(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        self.assertTrue(
-            ctx._options &
-            SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
-            opts._OP_CIPHER_SERVER_PREFERENCE,
-        )
+        options = (SSL.OP_NO_SSLv2 | opts._OP_NO_COMPRESSION |
+                   opts._OP_CIPHER_SERVER_PREFERENCE)
+        self.assertEqual(options, ctx._options & options)
 
 
     def test_singleUseKeys(self):
         """
-        If C{singleUseKeys} is set, ensure appropriate options have been set for
-        both DH and ECDH.
+        If C{singleUseKeys} is set, ensure appropriate options have been set
+        for both DH and ECDH.
         """
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
@@ -462,10 +460,8 @@ class OpenSSLOptions(unittest.TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        self.assertTrue(
-            ctx._options &
-            SSL.OP_SINGLE_DH_USE | opts._OP_SINGLE_ECDH_USE
-        )
+        options = SSL.OP_SINGLE_DH_USE | opts._OP_SINGLE_ECDH_USE
+        self.assertEqual(options, ctx._options & options)
 
 
     def test_abbreviatingDistinguishedNames(self):
