@@ -10,7 +10,8 @@ Twisted Pair Documentation
 .. toctree::
    :hidden:
 
-   twisted-pair
+   tunnels
+   configuration
 
 
 
@@ -21,7 +22,8 @@ Twisted Pair Documentation
   
   
   
-  - :doc:`Twisted Pair: Low-level networking <twisted-pair>` 
+  - :doc:`Twisted Pair: Tunnels And Network Taps <tunnels>` 
+  - :doc:`Twisted Pair: Device Configuration <configuration>` 
   
   
 
