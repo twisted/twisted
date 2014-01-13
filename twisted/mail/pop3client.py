@@ -80,7 +80,8 @@ class ServerErrorResponse(POP3ClientError):
 
 class LineTooLong(POP3ClientError):
     """
-    An error indicating that the server sent an extremely long line.
+    An error indicating that the server sent a line which exceeded the
+    maximum line length (L{LineOnlyReceiver.MAX_LENGTH}).
     """
 
 
@@ -92,7 +93,7 @@ class _ListSetter:
 
     POP3 responses sometimes occur in the form of a list of lines containing
     two pieces of data, a message index and a value of some sort.  When a
-    message is deleted, it is omitted from these responses.  The setitem
+    message is deleted, it is omitted from these responses.  The L{setitem}
     method of this class is meant to be called with these two values.  In the
     cases where indices are skipped, it takes care of padding out the missing
     values with C{None}.
@@ -153,7 +154,7 @@ def _listXform(line):
     @param line: A non-initial line from the multi-line response to a LIST
         command.
 
-    @rtype: 2-L{tuple} of (0 L{int}, (1) L{int}
+    @rtype: 2-L{tuple} of (0) L{int}, (1) L{int}
     @return: The 0-based index of the message and the size of the message.
     """
     index, size = line.split(None, 1)
@@ -236,7 +237,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     @type allowInsecureLogin: L{bool}
     @ivar allowInsecureLogin: An indication of whether plaintext login should
-        be allowed if the server offers no authentication challenge and if the
+        be allowed when the server offers no authentication challenge and the
         transport does not offer any protection via encryption.
 
     @type serverChallenge: L{bytes} or L{NoneType <types.NoneType>}
@@ -321,7 +322,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         which sends the command to a list and return a deferred that will be
         chained with the return value of the function when it eventually runs.
         Otherwise, set up for subsequent commands to be blocked and return
-        C{None}
+        C{None}.
 
         @type f: callable
         @param f: A function which sends a command.
@@ -381,8 +382,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @rtype: L{Deferred <defer.Deferred>} which successfully fires with
             L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the entire response is received.
-            On an okay response, it returns the response from the server minus
-            the status indicator.  On an error response, it issues a server
+            On an OK response, it returns the response from the server minus
+            the status indicator.  On an ERR response, it issues a server
             error response failure with the response from the server minus the
             status indicator.
         """
@@ -427,7 +428,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @rtype: L{Deferred <defer.Deferred>} which successfully fires with
             callable that takes L{object} and fails with L{ServerErrorResponse}
         @return: A deferred which fires when the entire response is received.
-            On an okay response, it returns the consumer function.  On an error
+            On an OK response, it returns the consumer function.  On an ERR
             response, it issues a server error response failure with the
             response from the server minus the status indicator and the
             consumer function.
@@ -520,7 +521,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def lineLengthExceeded(self, buffer):
         """
-        Drop the connection when a server response is too long.
+        Drop the connection when a server response exceeds the maximum line
+        length (L{LineOnlyReceiver.MAX_LENGTH}).
 
         @type buffer: L{bytes}
         @param buffer: A received line which exceeds the maximum line length.
@@ -604,8 +606,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         Handle server responses for the LONG_INITIAL state in which the server
         is expected to send the first line of a multi-line response.
 
-        Parse the response.  On an okay response, transition the state to
-        LONG.  On an error response, cleanup and transition the state to
+        Parse the response.  On an OK response, transition the state to
+        LONG.  On an ERR response, cleanup and transition the state to
         WAITING.
 
         @type line: L{bytes}
@@ -717,7 +719,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         This callback function runs after the server capabilities are received.
 
         The next step is sending the server an STLS command to request a
-        switch to encrypted communication.  When an okay response is received,
+        switch to encrypted communication.  When an OK response is received,
         the L{_startedTLS} callback function completes the switch to encrypted
         communication. Then, the new server capabilities are requested.
 
@@ -977,8 +979,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @rtype: L{Deferred <defer.Deferred>} which successfully fires with
             L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
-            On an okay response, the deferred succeeds with the server
-            response minus the status indicator.  On an error response, the
+            On an OK response, the deferred succeeds with the server
+            response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
         return self.sendShort('APOP', username + ' ' + digest)
@@ -996,8 +998,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @rtype: L{Deferred <defer.Deferred>} which successfully fires with
             L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
-            On an okay response, the deferred succeeds with the server
-            response minus the status indicator.  On an error response, the
+            On an OK response, the deferred succeeds with the server
+            response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
         return self.sendShort('USER', username)
@@ -1015,8 +1017,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @rtype: L{Deferred <defer.Deferred>} which successfully fires with
             L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
-            On an okay response, the deferred succeeds with the server
-            response minus the status indicator.  On an error response, the
+            On an OK response, the deferred succeeds with the server
+            response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
         return self.sendShort('PASS', password)
@@ -1032,8 +1034,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @rtype: L{Deferred <defer.Deferred>} which successfully fires with
             L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
-            On an okay response, the deferred succeeds with the server
-            response minus the status indicator.  On an error response, the
+            On an OK response, the deferred succeeds with the server
+            response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
         return self.sendShort('DELE', str(index + 1))
@@ -1194,8 +1196,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @rtype: L{Deferred <defer.Deferred>} which successfully fires with
             L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
-            On an okay response, the deferred succeeds with the server
-            response minus the status indicator.  On an error response, the
+            On an OK response, the deferred succeeds with the server
+            response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
         return self.sendShort("NOOP", None)
@@ -1209,8 +1211,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @rtype: L{Deferred <defer.Deferred>} which successfully fires with
             L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
-            On an okay response, the deferred succeeds with the server
-            response minus the status indicator.  On an error response, the
+            On an OK response, the deferred succeeds with the server
+            response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
         return self.sendShort("RSET", None)
@@ -1256,9 +1258,9 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             a 2-tuple of (0) L{int}, (1) L{int} or fails with
             L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
-            On an okay response, the deferred succeds with the number of
+            On an OK response, the deferred succeds with the number of
             messages in the mailbox and the size of the mailbox in octets.
-            On an error response, the deferred fails with a server error
+            On an ERR response, the deferred fails with a server error
             response failure.
         """
         return self.sendShort('STAT', None).addCallback(_statXform)
@@ -1309,8 +1311,8 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @rtype: L{Deferred <defer.Deferred>} which successfully fires with
             L{bytes} or fails with L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
-            On an okay response, the deferred succeeds with the server
-            response minus the status indicator.  On an error response, the
+            On an OK response, the deferred succeeds with the server
+            response minus the status indicator.  On an ERR response, the
             deferred fails with a server error response failure.
         """
         return self.sendShort('QUIT', None)
