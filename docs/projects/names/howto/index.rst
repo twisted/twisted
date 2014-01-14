@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Names Documentation
-===========================
+Developer Guides
+================
 
 
 .. toctree::
@@ -17,7 +17,7 @@ Twisted Names Documentation
 
 
 
-- :doc:`Names DNS library <names>` 
+- :doc:`Names DNS library <names>`
 
 
 

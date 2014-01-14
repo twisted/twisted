@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Mail Documentation
-==========================
+Twisted Mail
+============
 
 
 .. toctree::

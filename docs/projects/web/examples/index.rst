@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Web code examples
-=========================
+Examples
+========
 
 
 
@@ -14,7 +14,7 @@ Twisted Web code examples
 twisted.web.client
 ------------------
 
-    
+
 
 
 - :download:`getpage.py` - use
@@ -25,14 +25,14 @@ twisted.web.client
   that occur when downloading a web page
 
 
-    
+
 
 
 
 XML-RPC
 -------
 
-    
+
 
 
 - :download:`xmlrpc.py` XML-RPC server with
@@ -46,28 +46,28 @@ XML-RPC
   advogato.org; requires an advogato account
 
 
-    
+
 
 
 
 Virtual hosts and proxies
 -------------------------
 
-    
+
 
 
 - :download:`proxy.py` -
   use ``twisted.web.proxy.Proxy`` to make the simplest
   proxy
 - :download:`logging-proxy.py` - example of
-  subclassing the core classes of ``twisted.web.proxy`` 
+  subclassing the core classes of ``twisted.web.proxy``
   to log requests through a proxy
 - :download:`reverse-proxy.py` - use
   ``twisted.web.proxy.ReverseProxyResource`` to make
   any HTTP request to the proxy port get applied to a specified
   website
 - :download:`rootscript.py` - example use of
-  ``twisted.web.vhost.NameVirtualHost`` 
+  ``twisted.web.vhost.NameVirtualHost``
 - :download:`web.py` - an example of both using the
   ``processors`` attribute to set how certain file types
   are treated and using
@@ -75,14 +75,14 @@ Virtual hosts and proxies
   proxy
 
 
-    
+
 
 
 
 .rpys and ResourceTemplate
 --------------------------
 
-    
+
 
 
 - :download:`hello.rpy.py` - use
@@ -102,17 +102,17 @@ Virtual hosts and proxies
   ``twisted.web.distrib`` to publish user directories
   as for a "community web site"
 - simple.rtl- example use of
-  ``twisted.web.resource.ResourceTemplate`` 
+  ``twisted.web.resource.ResourceTemplate``
 
 
-    
+
 
 
 
 Miscellaneous
 -------------
 
-    
+
 
 
 - :download:`webguard.py` - pairing
@@ -121,7 +121,7 @@ Miscellaneous
 - :download:`silly-web.py` - bare-bones
   distributed web setup with a master and slave using
   ``twisted.web.distrib`` and
-  ``twisted.spread.pb`` 
+  ``twisted.spread.pb``
 - :download:`soap.py` - use
   ``twisted.web.soap`` to publish SOAP methods
 

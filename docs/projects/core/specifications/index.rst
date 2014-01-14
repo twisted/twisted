@@ -12,6 +12,3 @@ Specifications
    banana
 
 - :doc:`banana`
-
-
-

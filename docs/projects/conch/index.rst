@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Conch Documentation
-===========================
+Twisted Conch
+=============
 
 
 .. toctree::

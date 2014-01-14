@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Lore examples
-=====================
+Examples
+========
 
 
 
@@ -12,9 +12,9 @@ Twisted Lore examples
 
 
 
-- `example.html <example.html>`_ 
+- `example.html <example.html>`_
 - slides-template.tpl
 
-    
+
 
 

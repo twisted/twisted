@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Pair Documentation
-==========================
+Developer Guides
+================
 
 
 .. toctree::
@@ -19,13 +19,13 @@ Twisted Pair Documentation
 
 
 - Twisted Pair Documentation
-  
-  
-  
-  - :doc:`Twisted Pair: Tunnels And Network Taps <tunnels>` 
-  - :doc:`Twisted Pair: Device Configuration <configuration>` 
-  
-  
+
+
+
+  - :doc:`Twisted Pair: Tunnels And Network Taps <tunnels>`
+  - :doc:`Twisted Pair: Device Configuration <configuration>`
+
+
 
 
 

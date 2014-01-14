@@ -29,7 +29,7 @@ For the majority of this tutorial, ``twistd`` will be used
 to launch the application.  Near the end we will explore other
 possibilities for starting a Twisted application.  Until then, make
 sure that you have ``twistd`` installed and conveniently
-accessible for use in running each of the example ``.tac`` 
+accessible for use in running each of the example ``.tac``
 files.
 
 
@@ -49,7 +49,7 @@ The first step is to create :download:`smtpclient-1.tac` possible for use by ``t
 
 .. code-block:: python
 
-    
+
     from twisted.application import service
 
 
@@ -69,7 +69,7 @@ configuration.
 
 .. code-block:: python
 
-    
+
     application = service.Application("SMTP Client Tutorial")
 
 
@@ -98,7 +98,7 @@ the ``twistd`` command line:
 
 .. code-block:: python
 
-    
+
     twistd -ny smtpclient-1.tac
 
 
@@ -112,7 +112,7 @@ we are rewarded with the following output:
 
 .. code-block:: console
 
-    
+
     exarkun@boson:~/mail/tutorial/smtpclient$ twistd -ny smtpclient-1.tac
     18:31 EST [-] Log opened.
     18:31 EST [-] twistd 2.0.0 (/usr/bin/python2.4 2.4.1) starting up
@@ -132,7 +132,7 @@ by issuing ``^C`` :
 
 .. code-block:: console
 
-    
+
     18:34 EST [-] Received SIGINT, shutting down.
     18:34 EST [-] Main loop terminated.
     18:34 EST [-] Server Shut Down.
@@ -158,7 +158,7 @@ more things:
 
 .. code-block:: python
 
-    
+
     from twisted.application import internet
     from twisted.internet import protocol
 
@@ -176,7 +176,7 @@ as *factories* and *protocols* .
 
 
 
-The next line of :download:`smtpclient-2.tac` 
+The next line of :download:`smtpclient-2.tac`
 instantiates a new *client factory* .
 
 
@@ -185,7 +185,7 @@ instantiates a new *client factory* .
 
 .. code-block:: python
 
-    
+
     smtpClientFactory = protocol.ClientFactory()
 
 
@@ -211,7 +211,7 @@ just that:
 
 .. code-block:: python
 
-    
+
     smtpClientService = internet.TCPClient(None, None, smtpClientFactory)
 
 
@@ -237,7 +237,7 @@ disappointing:
 
 .. code-block:: console
 
-    
+
     exarkun@boson:~/mail/tutorial/smtpclient$ twistd -ny smtpclient-2.tac
     18:55 EST [-] Log opened.
     18:55 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
@@ -265,7 +265,7 @@ disappointing:
               File "/usr/lib/python2.4/string.py", line 292, in split
                 return s.split(sep, maxsplit)
             exceptions.AttributeError: 'NoneType' object has no attribute 'split'
-    
+
     18:55 EST [-] Received SIGINT, shutting down.
     18:55 EST [-] Main loop terminated.
     18:55 EST [-] Server Shut Down.
@@ -274,7 +274,7 @@ disappointing:
 
 
 
-What happened?  Those first two arguments to ``TCPClient`` 
+What happened?  Those first two arguments to ``TCPClient``
 turned out to be important after all.  We'll get to them in the next
 example.
 
@@ -296,7 +296,7 @@ from version two:
 
 .. code-block:: python
 
-    
+
     smtpClientService = internet.TCPClient(None, None, smtpClientFactory)
 
 
@@ -311,7 +311,7 @@ something with a bit more meaning:
 
 .. code-block:: python
 
-    
+
     smtpClientService = internet.TCPClient('localhost', 25, smtpClientFactory)
 
 
@@ -329,7 +329,7 @@ change gets us:
 
 .. code-block:: console
 
-    
+
     exarkun@boson:~/mail/tutorial/smtpclient$ twistd -ny smtpclient-3.tac
     19:10 EST [-] Log opened.
     19:10 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
@@ -360,7 +360,7 @@ change gets us:
               File "twisted/internet/protocol.py", line 99, in buildProtocol
                 p = self.protocol()
             exceptions.TypeError: 'NoneType' object is not callable
-    
+
     19:10 EST [Uninitialized] Stopping factory
               <twisted.internet.protocol.ClientFactory instance at
               0xb791e48c>
@@ -401,7 +401,7 @@ oversight that caused the traceback in smtpclient-3.tac:
 
 .. code-block:: python
 
-    
+
     smtpClientFactory.protocol = protocol.Protocol
 
 
@@ -416,7 +416,7 @@ again traceback free:
 
 .. code-block:: console
 
-    
+
     exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -ny smtpclient-4.tac
     19:29 EST [-] Log opened.
     19:29 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
@@ -476,7 +476,7 @@ smtpclient-5.tac adds a new import:
 
 .. code-block:: python
 
-    
+
     from twisted.mail import smtp
 
 
@@ -498,7 +498,7 @@ Next we remove a line we added in smtpclient-4.tac:
 
 .. code-block:: python
 
-    
+
     smtpClientFactory.protocol = protocol.Protocol
 
 
@@ -512,7 +512,7 @@ And add a similar one in its place:
 
 .. code-block:: python
 
-    
+
     smtpClientFactory.protocol = smtp.ESMTPClient
 
 
@@ -528,7 +528,7 @@ version?
 
 .. code-block:: console
 
-    
+
     exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -ny smtpclient-5.tac
     19:42 EST [-] Log opened.
     19:42 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
@@ -559,7 +559,7 @@ version?
               File "twisted/internet/protocol.py", line 99, in buildProtocol
                 p = self.protocol()
             exceptions.TypeError: __init__() takes at least 2 arguments (1 given)
-    
+
     19:42 EST [Uninitialized] Stopping factory
               <twisted.internet.protocol.ClientFactory instance at
               0xb791e54c>
@@ -599,10 +599,10 @@ problem encountered in the previous example.
 
 .. code-block:: python
 
-    
+
     class SMTPClientFactory(protocol.ClientFactory):
         protocol = smtp.ESMTPClient
-    
+
         def buildProtocol(self, addr):
             return self.protocol(secret=None, identity='example.com')
 
@@ -636,7 +636,7 @@ will now instantiate ``SMTPClientFactory`` :
 
 .. code-block:: python
 
-    
+
     smtpClientFactory = SMTPClientFactory()
 
 
@@ -651,7 +651,7 @@ code **still** isn't quite traceback-free.
 
 .. code-block:: console
 
-    
+
     exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -ny smtpclient-6.tac
     21:17 EST [-] Log opened.
     21:17 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
@@ -690,7 +690,7 @@ code **still** isn't quite traceback-free.
               File "twisted/mail/smtp.py", line 1137, in getMailFrom
                 raise NotImplementedError
             exceptions.NotImplementedError:
-    
+
     21:17 EST [ESMTPClient,client] Stopping factory
               <__builtin__.SMTPClientFactory instance at 0xb77fd68c>
     21:17 EST [-] Received SIGINT, shutting down.
@@ -732,7 +732,7 @@ and ``mailData`` ):
 
 .. code-block:: python
 
-    
+
     class SMTPTutorialClient(smtp.ESMTPClient):
         mailFrom = "tutorial_sender@example.com"
         mailTo = "tutorial_recipient@example.net"
@@ -741,7 +741,7 @@ and ``mailData`` ):
     From: Tutorial Guy <tutorial_sender@example.com>
     To: Tutorial Gal <tutorial_recipient@example.net>
     Subject: Tutorate!
-    
+
     Hello, how are you, goodbye.
     '''
 
@@ -760,7 +760,7 @@ meaning.  First, ``getMailFrom`` :
 
 .. code-block:: python
 
-    
+
     def getMailFrom(self):
         result = self.mailFrom
         self.mailFrom = None
@@ -790,7 +790,7 @@ The next method is ``getMailTo`` :
 
 .. code-block:: python
 
-    
+
     def getMailTo(self):
         return [self.mailTo]
 
@@ -816,7 +816,7 @@ Twisted is ``getMailData`` :
 
 .. code-block:: python
 
-    
+
     def getMailData(self):
         return StringIO.StringIO(self.mailData)
 
@@ -847,7 +847,7 @@ failure of the message transmission to the application:
 
 .. code-block:: python
 
-    
+
     def sentMail(self, code, resp, numOk, addresses, log):
         print 'Sent', numOk, 'messages'
 
@@ -877,7 +877,7 @@ which starts up, connects to a (possibly) remote host, transmits some
 data, and disconnects.  Notably missing, however, is application
 shutdown.  Hitting ^C is fine during development, but it's not exactly
 a long-term solution.  Fortunately, programmatic shutdown is extremely
-simple.  :download:`smtpclient-8.tac` 
+simple.  :download:`smtpclient-8.tac`
 extends ``sentMail`` with these two lines:
 
 
@@ -886,7 +886,7 @@ extends ``sentMail`` with these two lines:
 
 .. code-block:: python
 
-    
+
     from twisted.internet import reactor
     reactor.stop()
 
@@ -904,7 +904,7 @@ after sending the message, without user-intervention:
 
 .. code-block:: console
 
-    
+
     exarkun@boson:~/doc/mail/tutorial/smtpclient$ twistd -ny smtpclient-8.tac
     19:52 EST [-] Log opened.
     19:52 EST [-] twistd SVN-Trunk (/usr/bin/python2.4 2.4.1) starting up
@@ -948,7 +948,7 @@ the mail exchange host for a particular domain:
 
 .. code-block:: python
 
-    
+
     def getMailExchange(host):
         return 'localhost'
 
@@ -968,7 +968,7 @@ call it when constructing our ``TCPClient`` service:
 
 .. code-block:: python
 
-    
+
     smtpClientService = internet.TCPClient(
         getMailExchange('example.net'), 25, smtpClientFactory)
 
@@ -1003,7 +1003,7 @@ thusly:
 
 .. code-block:: python
 
-    
+
     def getMailExchange(host):
         return defer.succeed('localhost')
 
@@ -1022,13 +1022,13 @@ handle this ``Deferred`` :
 
 .. code-block:: python
 
-    
+
     def cbMailExchange(exchange):
         smtpClientFactory = SMTPClientFactory()
-    
+
         smtpClientService = internet.TCPClient(exchange, 25, smtpClientFactory)
         smtpClientService.setServiceParent(application)
-    
+
     getMailExchange('example.net').addCallback(cbMailExchange)
 
 
@@ -1036,7 +1036,7 @@ handle this ``Deferred`` :
 
 An in-depth exploration of ``Deferred`` s is beyond the
 scope of this document.  For such a look, see
-the `Deferred Reference <../../../core/howto/defer.html>`_ ``TCPClient`` until the ``Deferred`` 
+the `Deferred Reference <../../../core/howto/defer.html>`_ ``TCPClient`` until the ``Deferred``
 returned by ``getMailExchange`` fires.  Once it does, we
 proceed normally through the creation of
 our ``SMTPClientFactory`` and ``TCPClient`` , as well
@@ -1062,7 +1062,7 @@ task, ``twisted.mail.relaymanager.MXCalculator`` :
 
 .. code-block:: python
 
-    
+
     def getMailExchange(host):
         def cbMX(mxRecord):
             return str(mxRecord.name)
@@ -1074,7 +1074,7 @@ task, ``twisted.mail.relaymanager.MXCalculator`` :
 Because ``getMX`` returns a ``Record_MX`` object
 rather than a string, we do a little bit of post-processing to get the
 results we want.  We have already converted the rest of the tutorial
-application to expect a ``Deferred`` 
+application to expect a ``Deferred``
 from ``getMailExchange`` , so no further changes are
 required.  :download:`smtpclient-11.tac` completes
 this tutorial by being able to both look up the mail exchange host for
@@ -1085,5 +1085,5 @@ report its results, and finally shut down the reactor.
 
 
 
-..  TODO: write a conclusion to wrap it up 
+..  TODO: write a conclusion to wrap it up
 

@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Conch code examples
-===========================
+Examples
+========
 
 
 
@@ -14,35 +14,35 @@ Twisted Conch code examples
 Simple SSH server and client
 ----------------------------
 
-    
+
 
 
 - :download:`sshsimpleclient.py` - simple SSH client
 - :download:`sshsimpleserver.py` - simple SSH server
 
 
-    
+
 
 
 
 Simple telnet server
 --------------------
 
-    
+
 
 
 - :download:`telnet_echo.tac` - A telnet server which echoes data and events back to the client
 
 
 
-    
+
 
 
 
 twisted.conch.insults examples
 ------------------------------
 
-    
+
 
 
 - :download:`demo.tac` - Nearly pointless demonstration of the manhole interactive interpreter

@@ -3,7 +3,7 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted IM Documentation
+Developer Guides
 ========================
 
 
@@ -18,15 +18,15 @@ Twisted IM Documentation
 
 
 
-- :doc:`Twisted IM <im>` 
+- :doc:`Twisted IM <im>`
 - IRC
-  
-  
-  
-  - :doc:`Using the Twisted Words IRC client <ircclient>` 
-  
-  
-  
+
+
+
+  - :doc:`Using the Twisted Words IRC client <ircclient>`
+
+
+
 
 
 

@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Web Documentation
-=========================
+Twisted Web
+===========
 
 
 .. toctree::

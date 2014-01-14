@@ -3,7 +3,7 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Words code examples
+Examples
 ===========================
 
 
@@ -14,11 +14,11 @@ Twisted Words code examples
 
 - :download:`ircLogBot.py` - connects to an IRC server and logs all messages
 - :download:`minchat.py` - log bot using twisted.im
-- :download:`msn_example.py` 
-- :download:`oscardemo.py` 
-- :download:`jabber_client.py` 
-- :download:`pb_client.py` 
-- :download:`xmpp_client.py` 
+- :download:`msn_example.py`
+- :download:`oscardemo.py`
+- :download:`jabber_client.py`
+- :download:`pb_client.py`
+- :download:`xmpp_client.py`
 - :download:`cursesclient.py` - trivial curses-based IRC client
 
 

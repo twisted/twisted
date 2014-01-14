@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Lore Documentation
-==========================
+Developer Guides
+================
 
 
 .. toctree::
@@ -18,8 +18,8 @@ Twisted Lore Documentation
 
 
 
-- :doc:`Lore documentation system <lore>` 
-- :doc:`Extending Lore <extend-lore>` 
+- :doc:`Lore documentation system <lore>`
+- :doc:`Extending Lore <extend-lore>`
 
 
 

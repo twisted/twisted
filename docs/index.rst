@@ -9,23 +9,15 @@ Welcome to the Twisted documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 2
+    :includehidden:
 
-   projects/index
-   projects/conch/index
-   projects/core/index
-   projects/lore/index
-   projects/mail/index
-   projects/names/index
-   projects/pair/index
-   projects/web/index
-   projects/words/index
-   projects/historic/index
-   
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+    projects/core/index
+    projects/conch/index
+    projects/lore/index
+    projects/mail/index
+    projects/names/index
+    projects/pair/index
+    projects/web/index
+    projects/words/index
+    projects/historic/index

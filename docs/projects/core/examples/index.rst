@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted code examples
-=====================
+Examples
+========
 
 
 
@@ -14,34 +14,34 @@ Twisted code examples
 Simple Echo server and client
 -----------------------------
 
-    
+
 
 
 - :download:`simpleclient.py` - simple TCP client
 - :download:`simpleserv.py` - simple TCP echo server
 
 
-    
+
 
 
 
 Chat
 ----
 
-    
+
 
 
 - :download:`chatserver.py` - shows how to communicate between clients
 
 
-    
+
 
 
 
 Echo server & client variants
 -----------------------------
 
-    
+
 
 
 - :download:`echoserv.py` - variant on a simple TCP echo server
@@ -54,28 +54,28 @@ Echo server & client variants
 - :download:`echoclient_ssl.py` - simple SSL client
 
 
-    
+
 
 
 
 AMP server & client variants
 ----------------------------
 
-    
+
 
 
 - :download:`ampserver.py` - do math using AMP
 - :download:`ampclient.py` - do math using AMP
 
 
-    
+
 
 
 
 Perspective Broker
 ------------------
 
-    
+
 
 
 - :download:`pbsimple.py` - simplest possible PB server
@@ -91,14 +91,14 @@ Perspective Broker
 - :download:`bananabench.py` - benchmark for banana
 
 
-    
+
 
 
 
 Cred
 ----
 
-    
+
 
 
 - :download:`cred.py` - Authenticate a user with an in-memory username/password
@@ -106,14 +106,14 @@ Cred
 - :download:`dbcred.py` - Using a database backend to authenticate a user
 
 
-    
+
 
 
 
 GUI
 ---
 
-    
+
 
 
 - :download:`wxdemo.py` - demo of wxPython integration with Twisted
@@ -121,14 +121,14 @@ GUI
 - :download:`pyuidemo.py` - PyUI
 
 
-    
+
 
 
 
 FTP examples
 ------------
 
-    
+
 
 
 - :download:`ftpclient.py` - example of using the FTP client
@@ -137,14 +137,14 @@ FTP examples
   files for authenticated users from ``/home`` .
 
 
-    
+
 
 
 
 Logging
 -------
 
-    
+
 
 
 - :download:`twistd-logging.tac` - logging example using
@@ -154,28 +154,28 @@ Logging
 - :download:`rotatinglog.py` - example of log file rotation
 
 
-    
+
 
 
 
 POSIX Specific Tricks
 ---------------------
 
-    
+
 
 
 - :download:`sendfd.py` , :download:`recvfd.py` - send and receive
   file descriptors over UNIX domain sockets
 
 
-    
+
 
 
 
 Miscellaneous
 -------------
 
-    
+
 
 
 - :download:`shaper.py` - example of rate-limiting your web server

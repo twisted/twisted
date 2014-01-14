@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Web Documentation
-=========================
+Developer Guides
+================
 
 
 .. toctree::
@@ -26,38 +26,38 @@ Twisted Web Documentation
 
 
 - Introduction
-  
-  
-  
-  - :doc:`Overview of Twisted Web <web-overview>` 
-  
-  
+
+
+
+  - :doc:`Overview of Twisted Web <web-overview>`
+
+
 - Web Applications
-  
-  
-  
-  - :doc:`Using twisted.web <using-twistedweb>` 
-  - :doc:`Web application development <web-development>` 
-  - :doc:`HTML Templating with twisted.web.template <twisted-templates>` 
-  - :doc:`XML-RPC and SOAP <xmlrpc>` 
-  - :doc:`Twisted Web in 60 Seconds: A series of short, complete examples using twisted.web <web-in-60/index>` 
-  - :doc:`Quixote resource templates <resource-templates>` 
-  
-  
+
+
+
+  - :doc:`Using twisted.web <using-twistedweb>`
+  - :doc:`Web application development <web-development>`
+  - :doc:`HTML Templating with twisted.web.template <twisted-templates>`
+  - :doc:`XML-RPC and SOAP <xmlrpc>`
+  - :doc:`Twisted Web in 60 Seconds: A series of short, complete examples using twisted.web <web-in-60/index>`
+  - :doc:`Quixote resource templates <resource-templates>`
+
+
 - Other
-  
-  
-  
-  - :doc:`Using the Twisted Web Client <client>` 
-  
-  
+
+
+
+  - :doc:`Using the Twisted Web Client <client>`
+
+
 - Appendix
-  
-  
-  
-  - :doc:`Glossary <glossary>` 
-  
-  
+
+
+
+  - :doc:`Glossary <glossary>`
+
+
 
 
 

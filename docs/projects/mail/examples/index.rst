@@ -3,7 +3,7 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Mail code examples
+Examples
 ==========================
 
 
@@ -14,20 +14,20 @@ Twisted Mail code examples
 SMTP servers
 ------------
 
-    
+
 
 
 - :download:`emailserver.tac` - a toy email server.
 
 
-    
+
 
 
 
 SMTP clients
 ------------
 
-    
+
 
 
 - :download:`smtpclient_simple.py` - sending email using SMTP.
@@ -35,14 +35,14 @@ SMTP clients
   using authentication and transport layer security.
 
 
-    
+
 
 
 
 IMAP clients
 ------------
 
-    
+
 
 
 - :download:`imap4client.py` - Simple IMAP4

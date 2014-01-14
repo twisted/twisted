@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Pair Documentation
-==========================
+Twisted Pair
+============
 
 
 .. toctree::

@@ -3,17 +3,17 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Core Documentation
-==========================
+Twisted Core
+============
 
 
 .. toctree::
-   :hidden:
+    :hidden:
 
-   howto/index
-   examples/index
-   specifications/index
-   development/index
+    howto/index
+    examples/index
+    specifications/index
+    development/index
 
 
 
@@ -31,7 +31,7 @@ Twisted Core Documentation
 
 
 
-An `API  reference <http://twistedmatrix.com/documents/current/api/>`_ is available on the twistedmatrix web site.
+An `API reference <//twistedmatrix.com/documents/current/api/>`_ is available on the twistedmatrix web site.
 
 
 

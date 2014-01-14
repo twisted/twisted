@@ -3,8 +3,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Twisted Names code examples
-===========================
+Examples
+========
 
 
 
@@ -14,7 +14,7 @@ Twisted Names code examples
 DNS (Twisted Names)
 -------------------
 
-    
+
 
 
 - :download:`testdns.py` - Prints the results of an Address record lookup, Mail-Exchanger record lookup, and Nameserver record lookup for the given domain name.
