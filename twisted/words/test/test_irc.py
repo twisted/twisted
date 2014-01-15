@@ -1688,34 +1688,6 @@ class BasicServerFunctionalityTestCase(unittest.TestCase):
         self.check('@aaa=bbb;ccc;example.com/ddd=eee :irc.example.com '
             'CMD param1 param2\r\n')
 
-    def test_sendMessageWithEmptyTags(self):
-        """
-        Passing invalid tags to L{IRC.sendMessage} raises a C{ValueError}.
-        """
-        error = self.assertRaises(ValueError, self.p.sendMessage, 'CMD',
-            'param1', prefix='irc.example.com',
-            tags=[('aaa', 'bbb'), ('ccc',), ()])
-        self.assertEqual(str(error), "Empty tags can't be sent.")
-
-    def test_sendMessageWithEmptyTagNames(self):
-        """
-        Passing invalid tags to L{IRC.sendMessage} raises a C{ValueError}.
-        """
-        error = self.assertRaises(ValueError, self.p.sendMessage, 'CMD',
-            'param1', prefix='irc.example.com',
-            tags=[('aaa', 'bbb'), ('',)])
-        self.assertEqual(str(error), "The tag name cannot be empty.")
-
-    def test_sendMessageWithTooManyTagValues(self):
-        """
-        Passing invalid tags to L{IRC.sendMessage} raises a C{ValueError}.
-        """
-        error = self.assertRaises(ValueError, self.p.sendMessage, 'CMD',
-            'param1', prefix='irc.example.com',
-            tags=[('aaa', 'bbb'), ('ccc',), ('ddd', 'eee', 'fff', 'ggg')])
-        self.assertEqual(str(error),
-            "Multiple values can't be specified for a tag.")
-
 
     def testPrivmsg(self):
         self.p.privmsg("this-is-sender", "this-is-recip", "this is message")
