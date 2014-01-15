@@ -90,11 +90,11 @@ Lets start by creating a simple DNS server:
 :download:`simple_server.py <listings/names/simple_server.py>`
 
 .. literalinclude:: listings/names/simple_server.py
-   :prepend: ...
-   :pyobject: main
-   :append: ...
+   :linenos:
 
-In this example, we are passing a single client resolver to the DNSServerFactory
+In this example, we are passing a
+:api:`twisted.names.client.Resolver <client.Resolver>` instance
+to the :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>`
 and we are configuring that client to use the upstream DNS servers
 which are specified in a local resolv.conf file.
 
@@ -112,35 +112,27 @@ which responds to certain hostname queries
 by dynamically calculating the resulting IP address,
 while passing all other queries to another DNS server.
 
-ie hostname queries for names matching the pattern <em>workstation{0-9}+</em>
+ie hostname queries for names matching the pattern **workstation{0-9}+**
 will always result in an IP address where the last octet matches the
 workstation number.
 
 We can achieve that by writing a custom resolver
 which we insert before the standard client resolver.
 The custom resolver will be queried first,
-and if it returns a DomainError,
-the DNSServerFactory will then dispatch the query to the standard client.
+and if it returns a :api:`twisted.names.error.DomainError <DomainError>`,
+the :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>`
+will then dispatch the query to the standard client.
 
 Here's the code:
 
 :download:`override_server.py <listings/names/override_server.py>`
 
 .. literalinclude:: listings/names/override_server.py
-   :prepend: ...
-   :pyobject: DynamicResolver
-   :append: ...
    :linenos:
 
-.. literalinclude:: listings/names/override_server.py
-   :prepend: ...
-   :pyobject: main
-   :append: ...
-   :linenos:
-
-In fact, the fallback behaviour is handled by ResolverChain.
+In fact, the fallback behaviour is handled by :api:`twisted.names.resolve.ResolverChain <ResolverChain>`.
 ResolverChain is a proxy for other resolvers.
-It takes a list of IResolver providers and queries each one in turn
+It takes a list of :api:`twisted.internet.interfaces.IResolver <IResolver>` providers and queries each one in turn
 until it receives an answer.
 The job of DNSServerFactory is to take a list of authoritative resolvers, caches and client resolvers
 and ensure that they are added to the ResolverChain in the correct order.
