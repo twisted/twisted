@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.words.test.test_irc -*-
+    # -*- test-case-name: twisted.words.test.test_irc -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -1090,7 +1090,8 @@ class IRCClient(basic.LineReceiver):
     _heartbeat = None
     heartbeatInterval = 120
 
-    # cache of nickname prefixes from ServerSupportedFeatures, extracted by irc_RPL_NAMREPLY
+    # cache of nickname prefixes from ServerSupportedFeatures,
+    # extracted by irc_RPL_NAMREPLY
     _nickprefixes = None
 
 
@@ -1265,9 +1266,10 @@ class IRCClient(basic.LineReceiver):
         intact.
         """
 
-        
+
     def channelNames(self, channel, names):
-        """Called when a list of users in the channel has been requested.
+        """
+        Called when a list of users in the channel has been requested.
 
         Also called when first joining a channel.
 
@@ -1437,8 +1439,12 @@ class IRCClient(basic.LineReceiver):
         """
         Tells the server to give a list of users in the specified channels.
 
-        Multiple channels can be specified at one time, `channelNames` will be 
+        Multiple channels can be specified at one time, `channelNames` will be
         called multiple times, once for each channel.
+
+        @type channels: C{str}
+        @param channels: The name of the channel or or channels to request
+            the username lists for from the server.
         """
         # dump all names of all visible channels
         if not channels:
@@ -1446,7 +1452,7 @@ class IRCClient(basic.LineReceiver):
         else:
             # some servers do not support multiple channel names at once
             for channel in channels:
-                self.sendLine("NAMES %s" % channel)
+                self.sendLine("NAMES %s" % (channel,))
 
     def leave(self, channel, reason=None):
         """
@@ -1863,24 +1869,31 @@ class IRCClient(basic.LineReceiver):
         Called when the login was incorrect.
         """
         raise IRCPasswordMismatch("Password Incorrect.")
- 
+
 
     def irc_RPL_NAMREPLY(self, prefix, params):
         """
         Handles the raw NAMREPLY that is returned as answer to
         the NAMES command. Accumulates users until ENDOFNAMES.
+
+        @type prefix: C{str}
+        @param prefix: irc command prefix, irrelevant to this method
+        @type params: C{Array}
+        @param params: parameters for the RPL_NAMREPLY message
+            the third entry is the channel name and the fourth
+            is a space-delimited list of member usernames.
         """
         # cache nickname prefixes if not already parsed from ServerSupportedFeatures instance
         if not self._nickprefixes:
             self._nickprefixes = ''
             prefixes = self.supported.getFeature('PREFIX', {})
-            for prefix_tuple in prefixes.itervalues():
-                self._nickprefixes = self._nickprefixes + prefix_tuple[0]
+            for prefixTuple in prefixes.itervalues():
+                self._nickprefixes = self._nickprefixes + prefixTuple[0]
         channel = params[2]
-        prefixed_users = params[3].split()
+        prefixedUsers = params[3].split()
         users = []
-        for prefixed_user in prefixed_users:
-            users.append(prefixed_user.lstrip(self._nickprefixes))
+        for prefixedUser in prefixedUsers:
+            users.append(prefixedUser.lstrip(self._nickprefixes))
         self._namreply.setdefault(channel, []).extend(users)
 
 
@@ -1890,6 +1903,13 @@ class IRCClient(basic.LineReceiver):
         NAMREPLYs have finished. It gathers one, or all depending
         on the NAMES request, channel names lists gathered from
         RPL_NAMREPLY responses.
+
+        @type prefix: C{str}
+        @param prefix: irc command prefix, irrelevant to this method
+        @type params: C{Array}
+        @param params: parameters for the RPL_ENDOFNAMES message
+            the second entry will be the channel for which all
+            member usernames have already been sent to the client.
         """
         channel = params[1]
         if channel not in self._namreply:

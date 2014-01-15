@@ -2009,19 +2009,50 @@ class SemiImplClient(IRCClient):
     A L{twisted.words.protocols.irc.IRCClient} that implements some of the
     callback stubs for testing.
     """
+
+
     def __init__(self):
         self.userNamesByChannel = {}
 
+
     def clear(self):
+        """
+        Clear the stored map of recieved usernames by channel name.
+        """
         self.userNamesByChannel = {}
 
+
     def hasChannel(self, channel):
+        """
+        Convenience method to check if a channel is represented in the
+        usernames by channel map.
+
+        @type channel: C{str}
+        @param channel: channel name to check
+        """
         return channel in self.userNamesByChannel
 
+
     def getUsersByChannel(self, channel):
+        """
+        Return the current stored list of users by channel name.
+
+        @type channel: C{str}
+        @param channel: channel name
+        """
         return self.userNamesByChannel[channel]
 
+
     def channelNames(self, channel, names):
+        """
+        Associate the list of usernames to the channel name in the internal
+        map.
+
+        @type channel: C{str}
+        @param channel: channel name
+        @type names: C{Array}
+        @param names: list of usernames
+        """
         self.userNamesByChannel[channel] = names
 
 
@@ -2250,6 +2281,103 @@ class ClientTests(TestCase):
         self.protocol.privmsg = privmsg
         self.protocol.irc_NOTICE(
             'spam', ['#greasyspooncafe', "I don't want any spam!"])
+
+
+    def test_names_no_channels(self):
+        """
+        L{IRCClient.names} sends one NAMES request with no channel arguments to the destination
+        server.
+        """
+        usersReply = 'someguy someotherguy'
+        oneChannel = 'justachannel'
+        self.protocol.names()
+        self.assertEqual(self.transport.value().rstrip(), 'NAMES')
+        self.protocol.irc_RPL_NAMREPLY(None, [None, None, oneChannel, usersReply])
+        self.protocol.irc_RPL_ENDOFNAMES(None, [None, oneChannel])
+        self.assertTrue(self.protocol.hasChannel(oneChannel))
+        self.assertEqual(self.protocol.getUsersByChannel(oneChannel), usersReply.split(' '))
+        self.transport.clear()
+        self.protocol.clear()
+
+
+    def test_names_one_channel(self):
+        """
+        L{IRCClient.names} sends one NAMES request with one channel argument to the destination
+        server.
+        """
+        usersReply = 'someguy someotherguy'
+        oneChannel = 'justachannel'
+        self.protocol.names(oneChannel)
+        self.assertEqual(self.transport.value().rstrip(), 'NAMES ' + oneChannel)
+        self.protocol.irc_RPL_NAMREPLY(None, [None, None, oneChannel, usersReply])
+        self.protocol.irc_RPL_ENDOFNAMES(None, [None, oneChannel])
+        self.assertTrue(self.protocol.hasChannel(oneChannel))
+        self.assertEqual(self.protocol.getUsersByChannel(oneChannel), usersReply.split(' '))
+        self.transport.clear()
+        self.protocol.clear()
+
+
+    def test_names_many_channels(self):
+        """
+        L{IRCClient.names} sends one NAMES request with one channel argument to the destination
+        server.
+        """
+        usersReply = 'someguy someotherguy'
+        manyChannels = ['justachannel', 'justanotherchannel', 'yetanotherchannel']
+        usersReplyByChannel = {
+            manyChannels[0]: usersReply,
+            manyChannels[1]: 'pinky thebrain',
+            manyChannels[2]: 'justme'
+        }
+        self.protocol.names(manyChannels[0], manyChannels[1], manyChannels[2])
+        expected = []
+        for channel in manyChannels:
+            expected.append('NAMES ' + channel)
+        self.assertEqual(self.transport.value().rstrip().split('\r\n'), expected)
+        self.protocol.irc_RPL_NAMREPLY(None, [None, None, manyChannels[0],
+                                              usersReplyByChannel[manyChannels[0]]])
+        self.protocol.irc_RPL_NAMREPLY(None, [None, None, manyChannels[1],
+                                              usersReplyByChannel[manyChannels[1]]])
+        self.protocol.irc_RPL_NAMREPLY(None, [None, None, manyChannels[2],
+                                              usersReplyByChannel[manyChannels[2]]])
+        self.protocol.irc_RPL_ENDOFNAMES(None, [None, None])
+        for channel in manyChannels:
+            self.assertTrue(self.protocol.hasChannel(channel))
+            self.assertEqual(self.protocol.getUsersByChannel(channel), usersReplyByChannel[channel].split(' '))
+        self.transport.clear()
+        self.protocol.clear()
+
+
+    def test_names_many_channels_many_user_types(self):
+        """
+        L{IRCClient.names} sends one NAMES request with one channel argument to the destination
+        server.
+        """
+        usersReply = 'someguy someotherguy'
+        manyChannels = ['justachannel', 'justanotherchannel', 'yetanotherchannel']
+        usersReplyByChannel = {
+            manyChannels[0]: usersReply,
+            manyChannels[1]: 'owner admin operator halfoperator voiced',
+            manyChannels[2]: 'justme'
+        }
+        server_reply_channel_2 = '~owner &admin @operator %halfoperator +voiced'
+        self.protocol.names(manyChannels[0], manyChannels[1], manyChannels[2])
+        expected = []
+        for channel in manyChannels:
+            expected.append('NAMES ' + channel)
+        self.assertEqual(self.transport.value().rstrip().split('\r\n'), expected)
+        self.protocol.irc_RPL_NAMREPLY(None, [None, None, manyChannels[0],
+                                              usersReplyByChannel[manyChannels[0]]])
+        self.protocol.irc_RPL_NAMREPLY(None, [None, None, manyChannels[1],
+                                              server_reply_channel_2])
+        self.protocol.irc_RPL_NAMREPLY(None, [None, None, manyChannels[2],
+                                              usersReplyByChannel[manyChannels[2]]])
+        self.protocol.irc_RPL_ENDOFNAMES(None, [None, None])
+        for channel in manyChannels:
+            self.assertTrue(self.protocol.hasChannel(channel))
+            self.assertEqual(self.protocol.getUsersByChannel(channel), usersReplyByChannel[channel].split(' '))
+        self.transport.clear()
+        self.protocol.clear()
 
 
 
@@ -2597,97 +2725,6 @@ class TestCTCPQuery(TestCase):
                          [('ctcpMakeReply',
                            ('Wolf', [('ERRMSG',
                                       "DCC data :Unknown DCC type 'DATA'")]))])
-
-
-    def test_names_no_channels(self):
-        """
-        L{IRCClient.names} sends one NAMES request with no channel arguments to the destination
-        server.
-        """
-        users_reply = 'someguy someotherguy'
-        one_channel = 'justachannel'
-        self.protocol.names()
-        self.assertEqual(self.transport.value().rstrip(), 'NAMES')
-        self.protocol.irc_RPL_NAMREPLY(None, [None, None, one_channel, users_reply])
-        self.protocol.irc_RPL_ENDOFNAMES(None, [None, one_channel])
-        self.assertTrue(self.protocol.hasChannel(one_channel))
-        self.assertEqual(self.protocol.getUsersByChannel(one_channel), users_reply.split(' '))
-        self.transport.clear()
-        self.protocol.clear()
-
-
-    def test_names_one_channel(self):
-        """
-        L{IRCClient.names} sends one NAMES request with one channel argument to the destination
-        server.
-        """
-        users_reply = 'someguy someotherguy'
-        one_channel = 'justachannel'
-        self.protocol.names(one_channel)
-        self.assertEqual(self.transport.value().rstrip(), 'NAMES ' + one_channel)
-        self.protocol.irc_RPL_NAMREPLY(None, [None, None, one_channel, users_reply])
-        self.protocol.irc_RPL_ENDOFNAMES(None, [None, one_channel])
-        self.assertTrue(self.protocol.hasChannel(one_channel))
-        self.assertEqual(self.protocol.getUsersByChannel(one_channel), users_reply.split(' '))
-        self.transport.clear()
-        self.protocol.clear()
-
-
-    def test_names_many_channels(self):
-        """
-        L{IRCClient.names} sends one NAMES request with one channel argument to the destination
-        server.
-        """
-        users_reply = 'someguy someotherguy'
-        many_channels = ['justachannel', 'justanotherchannel', 'yetanotherchannel']
-        users_reply_by_channel = {
-            many_channels[0]: users_reply,
-            many_channels[1]: 'pinky thebrain',
-            many_channels[2]: 'justme'
-        }
-        self.protocol.names(many_channels[0], many_channels[1], many_channels[2])
-        expected = []
-        for channel in many_channels:
-            expected.append('NAMES ' + channel)
-        self.assertEqual(self.transport.value().rstrip().split('\r\n'), expected)
-        self.protocol.irc_RPL_NAMREPLY(None, [None, None, many_channels[0], users_reply_by_channel[many_channels[0]]])
-        self.protocol.irc_RPL_NAMREPLY(None, [None, None, many_channels[1], users_reply_by_channel[many_channels[1]]])
-        self.protocol.irc_RPL_NAMREPLY(None, [None, None, many_channels[2], users_reply_by_channel[many_channels[2]]])
-        self.protocol.irc_RPL_ENDOFNAMES(None, [None, None])
-        for channel in many_channels:
-            self.assertTrue(self.protocol.hasChannel(channel))
-            self.assertEqual(self.protocol.getUsersByChannel(channel), users_reply_by_channel[channel].split(' '))
-        self.transport.clear()
-        self.protocol.clear()
-
-
-    def test_names_many_channels_many_user_types(self):
-        """
-        L{IRCClient.names} sends one NAMES request with one channel argument to the destination
-        server.
-        """
-        users_reply = 'someguy someotherguy'
-        many_channels = ['justachannel', 'justanotherchannel', 'yetanotherchannel']
-        users_reply_by_channel = {
-            many_channels[0]: users_reply,
-            many_channels[1]: 'owner admin operator halfoperator voiced',
-            many_channels[2]: 'justme'
-        }
-        server_reply_channel_2 = '~owner &admin @operator %halfoperator +voiced'
-        self.protocol.names(many_channels[0], many_channels[1], many_channels[2])
-        expected = []
-        for channel in many_channels:
-            expected.append('NAMES ' + channel)
-        self.assertEqual(self.transport.value().rstrip().split('\r\n'), expected)
-        self.protocol.irc_RPL_NAMREPLY(None, [None, None, many_channels[0], users_reply_by_channel[many_channels[0]]])
-        self.protocol.irc_RPL_NAMREPLY(None, [None, None, many_channels[1], server_reply_channel_2])
-        self.protocol.irc_RPL_NAMREPLY(None, [None, None, many_channels[2], users_reply_by_channel[many_channels[2]]])
-        self.protocol.irc_RPL_ENDOFNAMES(None, [None, None])
-        for channel in many_channels:
-            self.assertTrue(self.protocol.hasChannel(channel))
-            self.assertEqual(self.protocol.getUsersByChannel(channel), users_reply_by_channel[channel].split(' '))
-        self.transport.clear()
-        self.protocol.clear()
 
 
 
