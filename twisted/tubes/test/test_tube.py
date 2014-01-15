@@ -18,6 +18,7 @@ from twisted.tubes.tube import Pump, series, _Pauser
 from twisted.tubes.itube import IPause
 from twisted.tubes.itube import AlreadyUnpaused
 from twisted.tubes.itube import IPump
+from zope.interface.declarations import directlyProvides
 from twisted.internet.defer import Deferred, succeed
 
 
@@ -318,11 +319,6 @@ class TubeTest(TestCase):
         Switching a pump that has never received data works I{just fine} thank
         you very much.
         """
-        @implementer(ISwitchablePump)
-        class SwitchablePassthruPump(PassthruPump):
-            def reassemble(self, data):
-                raise NotImplementedError("Should not actually be called.")
-
         class Switcher(Pump):
             def received(self, data):
                 if data == "switch":
@@ -335,7 +331,9 @@ class TubeTest(TestCase):
                 yield "switched " + data
 
         fakeDrain = self.fd
-        destinationPump = SwitchablePassthruPump()
+        destinationPump = PassthruPump()
+        # reassemble should not be called, so don't implement it
+        directlyProvides(destinationPump, ISwitchablePump)
 
         firstDrain = series(Switcher(), destinationPump)
         self.ff.flowTo(firstDrain).flowTo(fakeDrain)
@@ -383,12 +381,6 @@ class TubeTest(TestCase):
         Switching a pump that is receiving data from a fount which
         synchronously produces some data to C{receive} will ... uh .. work.
         """
-
-        @implementer(ISwitchablePump)
-        class SwitchablePassthruPump(PassthruPump):
-            def reassemble(self, data):
-                raise NotImplementedError("Should not actually be called.")
-
         class Switcher(Pump):
             def received(self, data):
                 if data == "switch":
@@ -402,7 +394,9 @@ class TubeTest(TestCase):
                 yield "switched " + data
 
         fakeDrain = self.fd
-        destinationPump = SwitchablePassthruPump()
+        destinationPump = PassthruPump()
+        # reassemble should not be called, so don't implement it
+        directlyProvides(destinationPump, ISwitchablePump)
 
         firstDrain = series(Switcher(), destinationPump)
 
@@ -421,8 +415,9 @@ class TubeTest(TestCase):
         # TODO: docstring.
         @implementer(ISwitchablePump)
         class SwitchablePassthruPump(PassthruPump):
-            def reassemble(self, data):
-                raise NotImplementedError("Should not actually be called.")
+            """
+            Reassemble should not be called; don't implement it.
+            """
 
         class Multiplier(Pump):
             def received(self, datums):
@@ -604,7 +599,8 @@ class TubeTest(TestCase):
         got = []
         class ReceivingPump(Pump):
             def received(self, item):
-                yield item + 1
+                if not got:
+                    yield item + 1
         class ProgressingPump(Pump):
             def progressed(self, amount=None):
                 progged.append(amount)
@@ -616,6 +612,8 @@ class TubeTest(TestCase):
         # sanity check
         self.assertEquals(got, [3])
         self.assertEquals(progged, [])
+        self.tubeDrain.receive(2)
+        self.assertEquals(progged, [None])
 
 
     def test_flowFromTypeCheck(self):
