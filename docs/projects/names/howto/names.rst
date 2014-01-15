@@ -98,12 +98,11 @@ which are specified in a local resolv.conf file.
 Also note that we start the server listening on both UDP and TCP ports.
 This is a standard requirement for DNS servers.
 
-You can test the server using the dig tool. For example:
+You can test the server using the dig tool. For example
+::
 
-``
-$ dig -p 10053 @127.0.0.1 example.com SOA +short
-sns.dns.icann.org. noc.dns.icann.org. 2013102791 7200 3600 1209600 3600
-``
+    $ dig -p 10053 @127.0.0.1 example.com SOA +short
+    sns.dns.icann.org. noc.dns.icann.org. 2013102791 7200 3600 1209600 3600
 
 Now suppose we want to create a bespoke DNS server
 which responds to certain hostname queries
@@ -135,20 +134,17 @@ The job of DNSServerFactory is to take a list of authoritative resolvers, caches
 and ensure that they are added to the ResolverChain in the correct order.
 
 Let's use dig to see how this server responds to requests that match the pattern we specified.
+::
 
-``
-$ dig -p 10053 @127.0.0.1 workstation1.example.com A +short
-172.0.2.1
-``
+    $ dig -p 10053 @127.0.0.1 workstation1.example.com A +short
+    172.0.2.1
 
-``
-$ dig -p 10053 @127.0.0.1 workstation100.example.com A +short
-172.0.2.100
-``
+    $ dig -p 10053 @127.0.0.1 workstation100.example.com A +short
+    172.0.2.100
+
 
 And if we issue a request that doesn't match the pattern.
+::
 
-``
-$ dig -p 10053 @127.0.0.1 foobar.example.com A +short
-67.215.65.132
-``
+    $ dig -p 10053 @127.0.0.1 foobar.example.com A +short
+    67.215.65.132
