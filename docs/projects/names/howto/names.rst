@@ -90,6 +90,9 @@ Lets start by creating a simple DNS server:
 :download:`simple_server.py <listings/names/simple_server.py>`
 
 .. literalinclude:: listings/names/simple_server.py
+   :prepend: ...
+   :pyobject: main
+   :append: ...
 
 In this example, we are passing a single client resolver to the DNSServerFactory
 and we are configuring that client to use the upstream DNS servers
@@ -124,7 +127,16 @@ Here's the code:
 :download:`override_server.py <listings/names/override_server.py>`
 
 .. literalinclude:: listings/names/override_server.py
+   :prepend: ...
+   :pyobject: DynamicResolver
+   :append: ...
+   :linenos:
 
+.. literalinclude:: listings/names/override_server.py
+   :prepend: ...
+   :pyobject: main
+   :append: ...
+   :linenos:
 
 In fact, the fallback behaviour is handled by ResolverChain.
 ResolverChain is a proxy for other resolvers.
