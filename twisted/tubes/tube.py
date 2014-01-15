@@ -109,6 +109,8 @@ class _TubeFount(_TubePiece):
         Flow data from this tube to the given drain.
         """
         self.drain = drain
+        if drain is None:
+            return
         result = self.drain.flowingFrom(self)
         if self._tube._pauseBecauseNoDrain:
             pbnd = self._tube._pauseBecauseNoDrain

@@ -148,8 +148,8 @@ class LineTests(TestCase):
 
         cc = series(lines, Switcher())
         ff.flowTo(cc).flowTo(fd1)
-        ff.drain.receive('switch\r\n7:hello\r\n,5:world,')
-        self.assertEquals(fd1.received, [])
+        ff.drain.receive('something\r\nswitch\r\n7:hello\r\n,5:world,')
+        self.assertEquals(fd1.received, ["something"])
         self.assertEquals(fd2.received, ['hello\r\n', 'world'])
 
 

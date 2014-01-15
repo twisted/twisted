@@ -11,7 +11,7 @@ from zope.interface.verify import verifyObject
 from twisted.trial.unittest import TestCase
 from twisted.tubes.test.util import (TesterPump, FakeFount,
                                      FakeDrain, IFakeInput)
-from twisted.tubes.test.util import SwitchableTesterPump
+from twisted.tubes.test.util import JustProvidesSwitchable
 from twisted.tubes.itube import ISwitchableTube, ISwitchablePump
 from twisted.python.failure import Failure
 from twisted.tubes.tube import Pump, series, _Pauser
@@ -132,14 +132,15 @@ class StopperTest(TestCase):
         one = pauser.pauseFlow()
         two = pauser.pauseFlow()
         three = pauser.pauseFlow()
-        pauser.pauseFlow()
+        four = pauser.pauseFlow()
 
         one.unpause()
         two.unpause()
         three.unpause()
-        # four.unpause() # NO
         self.assertEqual(pause.d, 1)
         self.assertEqual(resume.d, 0)
+        four.unpause()
+        self.assertEqual(resume.d, 1)
 
 
 
@@ -250,11 +251,13 @@ class TubeTest(TestCase):
 
         sourcePump = SwitchablePassthruPump()
         fakeDrain = self.fd
+        testCase = self
 
         class Switcher(Pump):
             def received(self, data):
-                if data == "switch":
-                    sourcePump.tube.switch(series(Switchee(), fakeDrain))
+                # Sanity check: this should be the only input ever received.
+                testCase.assertEqual(data, "switch")
+                sourcePump.tube.switch(series(Switchee(), fakeDrain))
                 return ()
 
         class Switchee(Pump):
@@ -275,6 +278,7 @@ class TubeTest(TestCase):
         The L{_Tube} of a L{Pump} sends on reassembled data to a newly
         specified L{Drain}.
         """
+        testCase = self
         @implementer(ISwitchablePump)
         class ReassemblingPump(Pump):
             def received(self, datum):
@@ -288,8 +292,9 @@ class TubeTest(TestCase):
 
         class Switcher(Pump):
             def received(self, data):
-                if data == "switch":
-                    sourcePump.tube.switch(series(Switchee(), fakeDrain))
+                # Sanity check: this should be the only input ever received.
+                testCase.assertEqual(data, "switch")
+                sourcePump.tube.switch(series(Switchee(), fakeDrain))
                 return ()
 
         class Switchee(Pump):
@@ -704,7 +709,7 @@ class TubeTest(TestCase):
         L{ISwitchableTube}.
         """
 
-        pump = SwitchableTesterPump()
+        pump = JustProvidesSwitchable()
         series(pump)
         self.assertTrue(ISwitchableTube.providedBy(pump.tube))
 
@@ -715,7 +720,7 @@ class TubeTest(TestCase):
         cause it to no longer provide L{ISwitchableTube}.
         """
 
-        pump = SwitchableTesterPump()
+        pump = JustProvidesSwitchable()
         series(pump)
         otherPump = TesterPump()
         tube = pump.tube
@@ -729,9 +734,9 @@ class TubeTest(TestCase):
         L{_Tube} will cause it to still provide L{ISwitchableTube}.
         """
 
-        pump = SwitchableTesterPump()
+        pump = JustProvidesSwitchable()
         series(pump)
-        otherPump = SwitchableTesterPump()
+        otherPump = JustProvidesSwitchable()
         tube = pump.tube
         tube.pump = otherPump
         self.assertTrue(ISwitchableTube.providedBy(tube))
@@ -758,12 +763,12 @@ class TubeTest(TestCase):
         L{ISwitchableTube}.
         """
 
-        pump = SwitchableTesterPump()
+        pump = JustProvidesSwitchable()
         series(pump)
         otherPump = TesterPump()
         tube = pump.tube
         tube.pump = otherPump
-        thirdPump = SwitchableTesterPump()
+        thirdPump = JustProvidesSwitchable()
         tube.pump = thirdPump
         self.assertTrue(ISwitchableTube.providedBy(tube))
 

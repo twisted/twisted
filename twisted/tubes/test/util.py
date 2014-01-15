@@ -148,13 +148,8 @@ class TesterPump(Pump):
 
 
 @implementer(ISwitchablePump)
-class SwitchableTesterPump(TesterPump):
+class JustProvidesSwitchable(TesterPump):
     """
-    A L{TesterPump} that supports reassembly.
+    A L{TesterPump} that just provides L{ISwitchablePump} for tests that want
+    to assert about interfaces (no implementation actually provided).
     """
-
-    def reassemble(self, data):
-        """
-        Do nothing.
-        """
-        return []
