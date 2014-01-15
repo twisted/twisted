@@ -265,7 +265,7 @@ class IRC(protocol.Protocol):
         First argument is the command, all subsequent arguments are parameters
         to that command.  If a prefix is desired, it may be specified with the
         keyword argument 'prefix'.
-        
+
         Message tags may be specified using the keyword argument 'tags', passing
         a list of 1- or 2-tuples.  One-tuples should be passed for tags whose
         presence has a meaning (i.e. those that do not show a value).
@@ -283,8 +283,20 @@ class IRC(protocol.Protocol):
         if 'prefix' in prefix:
             line = ":%s %s" % (prefix['prefix'], line)
         if 'tags' in prefix:
-            line = "@%s %s" % (";".join(
-               ["=".join(tag) for tag in prefix['tags']]), line)
+            tagList = []
+            for tag in prefix['tags']:
+                if not tag:
+                    raise ValueError("Empty tags can't be sent.")
+                if len(tag) > 2:
+                    raise ValueError("Multiple values can't be specified for a tag.")
+                if not tag[0]:
+                    raise ValueError("The tag name cannot be empty.")
+                if len(tag) == 2 and not tag[1]:
+                    raise ValueError("The tag value, if specified, cannot be empty.")
+                if " " in tag[0] or (len(tag) == 2 and " " in tag[1]):
+                    raise ValueError("Tags may not contain spaces.")
+                tagList.append("=".join(tag))
+            line = "@%s %s" % (";".join(tagList), line)
         self.sendLine(line)
 
         if len(parameter_list) > 15:
