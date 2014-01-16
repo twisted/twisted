@@ -77,10 +77,12 @@ Here's the code:
 
 .. literalinclude:: listings/names/override_server.py
 
-In fact, the fallback behaviour is handled by :api:`twisted.names.resolve.ResolverChain <ResolverChain>`.
-ResolverChain is a proxy for other resolvers.
-It takes a list of :api:`twisted.internet.interfaces.IResolver <IResolver>` providers and queries each one in turn until it receives an answer.
-The job of DNSServerFactory is to take a list of authoritative resolvers, caches and client resolvers and ensure that they are added to the ResolverChain in the correct order.
+
+.. note::
+   In fact, the fallback behaviour is handled by :api:`twisted.names.resolve.ResolverChain <ResolverChain>`.
+   ResolverChain is a proxy for other resolvers.
+   It takes a list of :api:`twisted.internet.interfaces.IResolver <IResolver>` providers and queries each one in turn until it receives an answer.
+   The :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>` constructor takes a list of authoritative resolvers, caches and client resolvers and ensures that they are added to the :api:`twisted.names.resolve.ResolverChain <ResolverChain>` in the correct order.
 
 Let's use ``dig`` to see how this server responds to requests that match the pattern we specified.
 ::
