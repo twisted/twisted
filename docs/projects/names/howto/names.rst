@@ -44,15 +44,18 @@ Creating a custom server
 ------------------------
 The builtin DNS server plugin is useful, but the beauty of Twisted Names is that you can build your own custom servers and clients using the names components.
 
-A Simple Server
-~~~~~~~~~~~~~~~
+ - In this section you will learn about the components required to build a simple DNS server.
+ - You will then learn how to create a custom DNS server which calculates responses dynamically.
+
+A simple DNS server
+~~~~~~~~~~~~~~~~~~~
 Lets start by creating a simple DNS server:
 
 :download:`simple_server.py <listings/names/simple_server.py>`
 
 .. literalinclude:: listings/names/simple_server.py
 
-In this example, we are passing a :api:`twisted.names.client.Resolver <client.Resolver>` instance to the :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>` and we are configuring that client to use the upstream DNS servers which are specified in a local ``resolv.conf`` file.
+In this example we are passing a :api:`twisted.names.client.Resolver <client.Resolver>` instance to the :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>` and we are configuring that client to use the upstream DNS servers which are specified in a local ``resolv.conf`` file.
 
 Also note that we start the server listening on both UDP and TCP ports.
 This is a standard requirement for DNS servers.
@@ -63,13 +66,12 @@ For example
     $ dig -p 10053 @127.0.0.1 example.com SOA +short
     sns.dns.icann.org. noc.dns.icann.org. 2013102791 7200 3600 1209600 3600
 
-Calculate responses on the fly
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Calculate responses dynamically
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Now suppose we want to create a bespoke DNS server which responds to certain hostname queries by dynamically calculating the resulting IP address, while passing all other queries to another DNS server.
+Queries for hostnames matching the pattern **workstation{0-9}+** will result in an IP address where the last octet matches the workstation number.
 
-ie hostname queries for names matching the pattern **workstation{0-9}+** will always result in an IP address where the last octet matches the workstation number.
-
-We can achieve that by writing a custom resolver which we insert before the standard client resolver.
+We'll write a custom resolver which we insert before the standard client resolver.
 The custom resolver will be queried first.
 
 Here's the code:
