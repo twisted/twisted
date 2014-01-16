@@ -52,7 +52,7 @@ Lets start by creating a simple DNS server:
 
 .. literalinclude:: listings/names/simple_server.py
 
-In this example, we are passing a :api:`twisted.names.client.Resolver <client.Resolver>` instance to the :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>` and we are configuring that client to use the upstream DNS servers which are specified in a local resolv.conf file.
+In this example, we are passing a :api:`twisted.names.client.Resolver <client.Resolver>` instance to the :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>` and we are configuring that client to use the upstream DNS servers which are specified in a local ``resolv.conf`` file.
 
 Also note that we start the server listening on both UDP and TCP ports.
 This is a standard requirement for DNS servers.
