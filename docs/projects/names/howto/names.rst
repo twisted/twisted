@@ -99,3 +99,9 @@ And if we issue a request that doesn't match the pattern.
 ::
     $ dig -p 10053 @127.0.0.1 foobar.example.com A +short
     67.215.65.132
+
+Further Reading
+~~~~~~~~~~~~~~~
+ - For simplicity, the examples above use the ``reactor.listenXXX`` APIs.
+   But your application will be more flexible if you use the :doc:`Twisted Application APIs <../../core/howto/application>`, along with the :doc:`Twisted plugin system <../../core/howto/plugin>` and ``twistd``.
+   Read the source code of :api:`twisted.names.tap <names.tap>` to see how the ``twistd names`` plugin works.
