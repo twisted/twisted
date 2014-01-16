@@ -18,7 +18,8 @@ import os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('./_extensions'))
+sys.path.insert(0, os.path.abspath('..'))
 
 # -- General configuration ------------------------------------------------
 
@@ -35,9 +36,6 @@ try:
     extensions.append('rst2pdf.pdfbuilder')
 except ImportError:
     pass
-
-sys.path.append(os.path.abspath('./_extensions'))
-sys.path.append(os.path.abspath('..'))
 
 extensions.append('apilinks')
 extensions.append('traclinks')
@@ -66,7 +64,8 @@ copyright = u'2014, Twisted Matrix Labs'
 # built documents.
 #
 # The short X.Y version.
-version = twisted_version_object.short()
+version = "{major}.{minor}".format(major=twisted_version_object.major,
+                                   minor=twisted_version_object.minor)
 # The full version, including alpha/beta/rc tags.
 release = twisted_version_object.short()
 
