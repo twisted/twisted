@@ -450,8 +450,8 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_singleUseKeys(self):
         """
-        If C{singleUseKeys} is set, ensure appropriate options have been set
-        for both DH and ECDH.
+        If C{singleUseKeys} is set, every context must have
+        C{OP_SINGLE_DH_USE} and C{OP_SINGLE_ECDH_USE} set.
         """
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
