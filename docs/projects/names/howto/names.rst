@@ -57,7 +57,8 @@ In this example, we are passing a :api:`twisted.names.client.Resolver <client.Re
 Also note that we start the server listening on both UDP and TCP ports.
 This is a standard requirement for DNS servers.
 
-You can test the server using the dig tool. For example
+You can test the server using ``dig``.
+For example
 ::
     $ dig -p 10053 @127.0.0.1 example.com SOA +short
     sns.dns.icann.org. noc.dns.icann.org. 2013102791 7200 3600 1209600 3600
@@ -81,7 +82,7 @@ ResolverChain is a proxy for other resolvers.
 It takes a list of :api:`twisted.internet.interfaces.IResolver <IResolver>` providers and queries each one in turn until it receives an answer.
 The job of DNSServerFactory is to take a list of authoritative resolvers, caches and client resolvers and ensure that they are added to the ResolverChain in the correct order.
 
-Let's use dig to see how this server responds to requests that match the pattern we specified.
+Let's use ``dig`` to see how this server responds to requests that match the pattern we specified.
 ::
     $ dig -p 10053 @127.0.0.1 workstation1.example.com A +short
     172.0.2.1
