@@ -640,10 +640,13 @@ class OpenSSLCertificateOptions(object):
     # Factory for creating contexts.  Configurable for testability.
     _contextFactory = SSL.Context
     _context = None
-    # Older versions of PyOpenSSL didn't provide OP_ALL.  Fudge it here, just in case.
+    # Some option constants may not be exposed by PyOpenSSL yet.
     _OP_ALL = getattr(SSL, 'OP_ALL', 0x0000FFFF)
-    # OP_NO_TICKET is not (yet) exposed by PyOpenSSL
-    _OP_NO_TICKET = 0x00004000
+    _OP_NO_TICKET = getattr(SSL, 'OP_NO_TICKET', 0x00004000)
+    _OP_NO_COMPRESSION = getattr(SSL, 'OP_NO_COMPRESSION', 0x00020000)
+    _OP_CIPHER_SERVER_PREFERENCE = getattr(SSL, 'OP_CIPHER_SERVER_PREFERENCE ',
+                                           0x00400000)
+    _OP_SINGLE_ECDH_USE = getattr(SSL, 'OP_SINGLE_ECDH_USE ', 0x00080000)
 
     def __init__(self,
                  privateKey=None,
@@ -692,8 +695,9 @@ class OpenSSLCertificateOptions(object):
         @param verifyOnce: If True, do not re-verify the certificate
         on session resumption.
 
-        @param enableSingleUseKeys: If True, generate a new key whenever
-        ephemeral DH parameters are used to prevent small subgroup attacks.
+        @param enableSingleUseKeys: If L{True}, generate a new key whenever
+            ephemeral DH and ECDH parameters are used to prevent small
+            subgroup attacks and to ensure perfect forward secrecy.
 
         @param enableSessions: If True, set a session ID on each context.  This
         allows a shortened handshake to be used when a known client reconnects.
@@ -739,9 +743,13 @@ class OpenSSLCertificateOptions(object):
         self.privateKey = privateKey
         self.certificate = certificate
 
-        # Disallow insecure SSLv2. Only has an effect when SSLv23_METHOD is
-        # used.
-        self._options = SSL.OP_NO_SSLv2
+        # Set basic security options: disallow insecure SSLv2, disallow TLS
+        # compression to avoid CRIME attack, make the server choose the
+        # ciphers.
+        self._options = (
+            SSL.OP_NO_SSLv2 | self._OP_NO_COMPRESSION |
+            self._OP_CIPHER_SERVER_PREFERENCE
+        )
 
         if method is None:
             # If no method is specified set things up so that TLSv1.0 and newer
@@ -769,9 +777,15 @@ class OpenSSLCertificateOptions(object):
         self.requireCertificate = requireCertificate
         self.verifyOnce = verifyOnce
         self.enableSingleUseKeys = enableSingleUseKeys
+        if enableSingleUseKeys:
+            self._options |= SSL.OP_SINGLE_DH_USE | self._OP_SINGLE_ECDH_USE
         self.enableSessions = enableSessions
         self.fixBrokenPeers = fixBrokenPeers
+        if fixBrokenPeers:
+            self._options |= self._OP_ALL
         self.enableSessionTickets = enableSessionTickets
+        if not enableSessionTickets:
+            self._options |= self._OP_NO_TICKET
 
         if acceptableCiphers is None:
             acceptableCiphers = defaultCiphers
@@ -845,20 +859,11 @@ class OpenSSLCertificateOptions(object):
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)
 
-        if self.enableSingleUseKeys:
-            ctx.set_options(SSL.OP_SINGLE_DH_USE)
-
-        if self.fixBrokenPeers:
-            ctx.set_options(self._OP_ALL)
-
         if self.enableSessions:
             name = "%s-%d" % (reflect.qual(self.__class__), _sessionCounter())
             sessionName = md5(networkString(name)).hexdigest()
 
             ctx.set_session_id(sessionName)
-
-        if not self.enableSessionTickets:
-            ctx.set_options(self._OP_NO_TICKET)
 
         ctx.set_cipher_list(nativeString(self._cipherString))
 
