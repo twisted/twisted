@@ -15,6 +15,6 @@ except ImportError:
     sys.exc_clear()
 sys.path.remove(extra)
 
-from twisted.python._release import BuildDocsScript
+from twisted.python._release import SphinxBuilder
 
-BuildDocsScript().main(sys.argv[1:])
+SphinxBuilder().main(sys.argv[1:])

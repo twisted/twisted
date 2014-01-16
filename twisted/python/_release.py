@@ -28,13 +28,6 @@ from twisted.python.dist import twisted_subprojects
 from twisted.python.compat import execfile
 from twisted.python.usage import Options, UsageError
 
-# This import is an example of why you shouldn't use this module unless you're
-# radix
-try:
-    from twisted.lore.scripts import lore
-except ImportError:
-    pass
-
 # The offset between a year and the corresponding major version number.
 VERSION_OFFSET = 2000
 
@@ -317,134 +310,6 @@ class NoDocumentsFound(Exception):
 
 
 
-class LoreBuilderMixin(object):
-    """
-    Base class for builders which invoke lore.
-    """
-    def lore(self, arguments):
-        """
-        Run lore with the given arguments.
-
-        @param arguments: A C{list} of C{str} giving command line arguments to
-            lore which should be used.
-        """
-        options = lore.Options()
-        options.parseOptions(["--null"] + arguments)
-        lore.runGivenOptions(options)
-
-
-
-class DocBuilder(LoreBuilderMixin):
-    """
-    Generate HTML documentation for projects.
-    """
-
-    def build(self, version, resourceDir, docDir, template, apiBaseURL=None,
-              deleteInput=False):
-        """
-        Build the documentation in C{docDir} with Lore.
-
-        Input files ending in .xhtml will be considered. Output will written as
-        .html files.
-
-        @param version: the version of the documentation to pass to lore.
-        @type version: C{str}
-
-        @param resourceDir: The directory which contains the toplevel index and
-            stylesheet file for this section of documentation.
-        @type resourceDir: L{twisted.python.filepath.FilePath}
-
-        @param docDir: The directory of the documentation.
-        @type docDir: L{twisted.python.filepath.FilePath}
-
-        @param template: The template used to generate the documentation.
-        @type template: L{twisted.python.filepath.FilePath}
-
-        @type apiBaseURL: C{str} or C{NoneType}
-        @param apiBaseURL: A format string which will be interpolated with the
-            fully-qualified Python name for each API link.  For example, to
-            generate the Twisted 8.0.0 documentation, pass
-            C{"http://twistedmatrix.com/documents/8.0.0/api/%s.html"}.
-
-        @param deleteInput: If True, the input documents will be deleted after
-            their output is generated.
-        @type deleteInput: C{bool}
-
-        @raise NoDocumentsFound: When there are no .xhtml files in the given
-            C{docDir}.
-        """
-        linkrel = self.getLinkrel(resourceDir, docDir)
-        inputFiles = docDir.globChildren("*.xhtml")
-        filenames = [x.path for x in inputFiles]
-        if not filenames:
-            raise NoDocumentsFound(
-                "No input documents found in %s" % (docDir,))
-        if apiBaseURL is not None:
-            arguments = ["--config", "baseurl=" + apiBaseURL]
-        else:
-            arguments = []
-        arguments.extend(["--config", "template=%s" % (template.path,),
-                          "--config", "ext=.html",
-                          "--config", "version=%s" % (version,),
-                          "--linkrel", linkrel] + filenames)
-        self.lore(arguments)
-        if deleteInput:
-            for inputFile in inputFiles:
-                inputFile.remove()
-
-
-    def getLinkrel(self, resourceDir, docDir):
-        """
-        Calculate a value appropriate for Lore's --linkrel option.
-
-        Lore's --linkrel option defines how to 'find' documents that are
-        linked to from TEMPLATE files (NOT document bodies). That is, it's a
-        prefix for links ('a' and 'link') in the template.
-
-        @param resourceDir: The directory which contains the toplevel index and
-            stylesheet file for this section of documentation.
-        @type resourceDir: L{twisted.python.filepath.FilePath}
-
-        @param docDir: The directory containing documents that must link to
-            C{resourceDir}.
-        @type docDir: L{twisted.python.filepath.FilePath}
-        """
-        if resourceDir != docDir:
-            return '/'.join(filePathDelta(docDir, resourceDir)) + "/"
-        else:
-            return ""
-
-
-
-class ManBuilder(LoreBuilderMixin):
-    """
-    Generate man pages of the different existing scripts.
-    """
-
-    def build(self, manDir):
-        """
-        Generate Lore input files from the man pages in C{manDir}.
-
-        Input files ending in .1 will be considered. Output will written as
-        -man.xhtml files.
-
-        @param manDir: The directory of the man pages.
-        @type manDir: L{twisted.python.filepath.FilePath}
-
-        @raise NoDocumentsFound: When there are no .1 files in the given
-            C{manDir}.
-        """
-        inputFiles = manDir.globChildren("*.1")
-        filenames = [x.path for x in inputFiles]
-        if not filenames:
-            raise NoDocumentsFound("No manual pages found in %s" % (manDir,))
-        arguments = ["--input", "man",
-                     "--output", "lore",
-                     "--config", "ext=-man.xhtml"] + filenames
-        self.lore(arguments)
-
-
-
 class APIBuilder(object):
     """
     Generate API documentation from source files using
@@ -487,142 +352,6 @@ class APIBuilder(object):
              "--add-package", packagePath.path,
              "--html-output", outputPath.path,
              "--html-write-function-pages", "--quiet", "--make-html"])
-
-
-
-class BookBuilder(LoreBuilderMixin):
-    """
-    Generate the LaTeX and PDF documentation.
-
-    The book is built by assembling a number of LaTeX documents.  Only the
-    overall document which describes how to assemble the documents is stored
-    in LaTeX in the source.  The rest of the documentation is generated from
-    Lore input files.  These are primarily XHTML files (of the particular
-    Lore subset), but man pages are stored in GROFF format.  BookBuilder
-    expects all of its input to be Lore XHTML format, so L{ManBuilder}
-    should be invoked first if the man pages are to be included in the
-    result (this is determined by the book LaTeX definition file).
-    Therefore, a sample usage of BookBuilder may look something like this::
-
-        man = ManBuilder()
-        man.build(FilePath("doc/core/man"))
-        book = BookBuilder()
-        book.build(
-            FilePath('doc/core/howto'),
-            [FilePath('doc/core/howto'), FilePath('doc/core/howto/tutorial'),
-             FilePath('doc/core/man'), FilePath('doc/core/specifications')],
-            FilePath('doc/core/howto/book.tex'), FilePath('/tmp/book.pdf'))
-    """
-    def run(self, command):
-        """
-        Execute a command in a child process and return the output.
-
-        @type command: C{str}
-        @param command: The shell command to run.
-
-        @raise CommandFailed: If the child process exits with an error.
-        """
-        return runCommand(command)
-
-
-    def buildTeX(self, howtoDir):
-        """
-        Build LaTeX files for lore input files in the given directory.
-
-        Input files ending in .xhtml will be considered. Output will written as
-        .tex files.
-
-        @type howtoDir: L{FilePath}
-        @param howtoDir: A directory containing lore input files.
-
-        @raise ValueError: If C{howtoDir} does not exist.
-        """
-        if not howtoDir.exists():
-            raise ValueError("%r does not exist." % (howtoDir.path,))
-        self.lore(
-            ["--output", "latex",
-             "--config", "section"] +
-            [child.path for child in howtoDir.globChildren("*.xhtml")])
-
-
-    def buildPDF(self, bookPath, inputDirectory, outputPath):
-        """
-        Build a PDF from the given a LaTeX book document.
-
-        @type bookPath: L{FilePath}
-        @param bookPath: The location of a LaTeX document defining a book.
-
-        @type inputDirectory: L{FilePath}
-        @param inputDirectory: The directory which the inputs of the book are
-            relative to.
-
-        @type outputPath: L{FilePath}
-        @param outputPath: The location to which to write the resulting book.
-        """
-        if not bookPath.basename().endswith(".tex"):
-            raise ValueError("Book filename must end with .tex")
-
-        workPath = FilePath(mkdtemp())
-        try:
-            startDir = os.getcwd()
-            try:
-                os.chdir(inputDirectory.path)
-
-                texToDVI = [
-                    "latex", "-interaction=nonstopmode",
-                    "-output-directory=" + workPath.path,
-                    bookPath.path]
-
-                # What I tell you three times is true!
-                # The first two invocations of latex on the book file allows it
-                # correctly create page numbers for in-text references.  Why
-                # this is the case, I could not tell you. -exarkun
-                for i in range(3):
-                    self.run(texToDVI)
-
-                bookBaseWithoutExtension = bookPath.basename()[:-4]
-                dviPath = workPath.child(bookBaseWithoutExtension + ".dvi")
-                psPath = workPath.child(bookBaseWithoutExtension + ".ps")
-                pdfPath = workPath.child(bookBaseWithoutExtension + ".pdf")
-                self.run([
-                    "dvips", "-o", psPath.path, "-t", "letter", "-Ppdf",
-                    dviPath.path])
-                self.run(["ps2pdf13", psPath.path, pdfPath.path])
-                pdfPath.moveTo(outputPath)
-                workPath.remove()
-            finally:
-                os.chdir(startDir)
-        except:
-            workPath.moveTo(bookPath.parent().child(workPath.basename()))
-            raise
-
-
-    def build(self, baseDirectory, inputDirectories, bookPath, outputPath):
-        """
-        Build a PDF book from the given TeX book definition and directories
-        containing lore inputs.
-
-        @type baseDirectory: L{FilePath}
-        @param baseDirectory: The directory which the inputs of the book are
-            relative to.
-
-        @type inputDirectories: C{list} of L{FilePath}
-        @param inputDirectories: The paths which contain lore inputs to be
-            converted to LaTeX.
-
-        @type bookPath: L{FilePath}
-        @param bookPath: The location of a LaTeX document defining a book.
-
-        @type outputPath: L{FilePath}
-        @param outputPath: The location to which to write the resulting book.
-        """
-        for inputDir in inputDirectories:
-            self.buildTeX(inputDir)
-        self.buildPDF(bookPath, baseDirectory, outputPath)
-        for inputDirectory in inputDirectories:
-            for child in inputDirectory.children():
-                if child.splitext()[1] == ".tex" and child != bookPath:
-                    child.remove()
 
 
 
@@ -976,6 +705,19 @@ class SphinxBuilder(object):
     which the Sphinx output will be created.
     """
 
+    def main(self, args):
+        """
+        Build the main documentation.
+
+        @type args: list of str
+        @param args: The command line arguments to process.  This must contain
+            one string argument: the path to the root of a Twisted checkout.
+            Additional arguments will be ignored for compatibility with legacy
+            build infrastructure.
+        """
+        self.build(FilePath(args[0]).child("docs"))
+
+
     def build(self, docDir, buildDir=None, version=''):
         """
         Build the documentation in C{docDir} with Sphinx.
@@ -992,27 +734,24 @@ class SphinxBuilder(object):
         @param version: The version of Twisted to set in the docs.
         @type version: C{str}
         """
-
         if buildDir is None:
-            buildDir = docDir.child('build')
+            buildDir = docDir.parent().child('doc')
 
         doctreeDir = buildDir.child('doctrees')
-        sourceDir = docDir.child('source')
 
-        # only support html builder for now
-        builder, builderOpts = ('html', [])
+        runCommand(['sphinx-build', '-b', 'html',
+                    '-d', doctreeDir.path, docDir.path,
+                    buildDir.path])
 
-        argsList = ['sphinx-build', '-b', builder]
-        allSphinxOpts = ['-d', doctreeDir.path, sourceDir.path]
-        if builderOpts:
-            allSphinxOpts.extend(builderOpts)
-
-        outDir = buildDir.child(builder)
-
-        argsList.extend(allSphinxOpts)
-        argsList.append(outDir.path)
-
-        runCommand(argsList)
+        for path in docDir.walk():
+            if path.basename() == "man":
+                segments = path.segmentsFrom(docDir)
+                dest = buildDir
+                while segments:
+                    dest = dest.child(segments.pop(0))
+                if not dest.parent().isdir():
+                    dest.parent().makedirs()
+                path.copyTo(dest)
 
 
 
@@ -1051,10 +790,9 @@ class DistributionBuilder(object):
 
     This knows how to build tarballs for Twisted and all of its subprojects.
     """
-    from twisted.python.dist import twisted_subprojects as subprojects
+    subprojects = twisted_subprojects
 
-    def __init__(self, rootDirectory, outputDirectory, templatePath=None,
-                 apiBaseURL=None):
+    def __init__(self, rootDirectory, outputDirectory, templatePath=None):
         """
         Create a distribution builder.
 
@@ -1068,47 +806,10 @@ class DistributionBuilder(object):
         @param templatePath: Path to the template file that is used for the
             howto documentation.
         @type templatePath: L{FilePath}
-
-        @type apiBaseURL: C{str} or C{NoneType}
-        @param apiBaseURL: A format string which will be interpolated with the
-            fully-qualified Python name for each API link.  For example, to
-            generate the Twisted 8.0.0 documentation, pass
-            C{"http://twistedmatrix.com/documents/8.0.0/api/%s.html"}.
         """
         self.rootDirectory = rootDirectory
         self.outputDirectory = outputDirectory
         self.templatePath = templatePath
-        self.apiBaseURL = apiBaseURL
-        self.manBuilder = ManBuilder()
-        self.docBuilder = DocBuilder()
-
-
-    def _buildDocInDir(self, path, version, howtoPath):
-        """
-        Generate documentation in the given path, building man pages first if
-        necessary and swallowing errors (so that directories without lore
-        documentation in them are ignored).
-
-        @param path: The path containing documentation to build.
-        @type path: L{FilePath}
-        @param version: The version of the project to include in all generated
-            pages.
-        @type version: C{str}
-        @param howtoPath: The "resource path" as L{DocBuilder} describes it.
-        @type howtoPath: L{FilePath}
-        """
-        if self.templatePath is None:
-            self.templatePath = self.rootDirectory.descendant(
-                ["doc", "core", "howto", "template.tpl"])
-        if path.basename() == "man":
-            self.manBuilder.build(path)
-        if path.isdir():
-            try:
-                self.docBuilder.build(
-                    version, howtoPath, path, self.templatePath,
-                    self.apiBaseURL, True)
-            except NoDocumentsFound:
-                pass
 
 
     def buildTwisted(self, version):
@@ -1129,15 +830,11 @@ class DistributionBuilder(object):
         outputFile = self.outputDirectory.child(releaseName + ".tar.bz2")
         tarball = tarfile.TarFile.open(outputFile.path, 'w:bz2')
 
-        docPath = self.rootDirectory.child("doc")
+        docPath = self.rootDirectory.child("docs")
 
         # Generate docs!
         if docPath.isdir():
-            for subProjectDir in docPath.children():
-                if subProjectDir.isdir():
-                    for child in subProjectDir.walk():
-                        self._buildDocInDir(
-                            child, version, subProjectDir.child("howto"))
+            SphinxBuilder().build(docPath)
 
         for binthing in self.rootDirectory.child("bin").children():
             # bin/admin should not be included.
@@ -1285,14 +982,6 @@ class DistributionBuilder(object):
 
         tarball.add(self.rootDirectory.child("LICENSE").path,
                     buildPath("LICENSE"))
-
-        docPath = self.rootDirectory.child("doc").child(projectName)
-
-        if docPath.isdir():
-            for child in docPath.walk():
-                self._buildDocInDir(child, version, docPath.child("howto"))
-            tarball.add(docPath.path, buildPath("doc"))
-
         return tarball
 
 
@@ -1348,12 +1037,9 @@ def buildAllTarballs(checkout, destination, templatePath=None):
     version = Project(twistedPath).getVersion()
     versionString = version.base()
 
-    apiBaseURL = "http://twistedmatrix.com/documents/%s/api/%%s.html" % (
-        versionString)
     if not destination.exists():
         destination.createDirectory()
-    db = DistributionBuilder(export, destination, templatePath=templatePath,
-                             apiBaseURL=apiBaseURL)
+    db = DistributionBuilder(export, destination, templatePath=templatePath)
 
     db.buildCore(versionString)
     for subproject in twisted_subprojects:
@@ -1470,69 +1156,3 @@ class BuildAPIDocsScript(object):
             sys.exit("Must specify two arguments: "
                      "Twisted checkout and destination path")
         self.buildAPIDocs(FilePath(args[0]), FilePath(args[1]))
-
-
-
-class BuildDocsScript(object):
-    """
-    A thing for building the main documentation. See L{main}.
-    """
-
-    def buildDocs(self, projectRoot, template):
-        """
-        Build the main documentation of Twisted, with our project policy.
-
-        @param projectRoot: A L{FilePath} representing the root of the Twisted
-            checkout.
-        @type projectRoot: L{FilePath}
-
-        @param template: A L{FilePath} pointing to the template file that is
-            used for the look and feel of the howto documentation.
-        @type template: L{FilePath}
-        """
-        version = Project(projectRoot.child("twisted")).getVersion()
-        versionString = version.base()
-        apiURL = "http://twistedmatrix.com/documents/%s/api/" % (
-            versionString,)
-
-        dirs = {}
-        docRoot = projectRoot.child("doc")
-
-        for p in docRoot.walk():
-            if p.basename() == 'man':
-                ManBuilder().build(p)
-
-        howtoRoot = docRoot.descendant(["core", "howto"])
-
-        for p in docRoot.walk():
-            if p.basename().endswith('.xhtml'):
-                if p.parent() not in dirs:
-                    dirs[p.parent()] = True
-                    DocBuilder().build(
-                        versionString, howtoRoot, p.parent(),
-                        template,
-                        apiURL + "%s.html",
-                        False)
-
-        BookBuilder().build(howtoRoot, dirs.keys(),
-                            howtoRoot.child('book.tex'),
-                            howtoRoot.child('book.pdf'))
-
-        for path in dirs:
-            for doc in path.globChildren("*.xhtml"):
-                doc.remove()
-
-
-    def main(self, args):
-        """
-        Build the main documentation.
-
-        @type args: list of str
-        @param args: The command line arguments to process.  This must contain
-            two strings: the path to the root of the Twisted checkout and the
-            path to the Twisted website template.
-        """
-        if len(args) != 2:
-            sys.exit("Must specify two arguments: "
-                     "Twisted checkout path and template path.")
-        self.buildDocs(FilePath(args[0]), FilePath(args[1]))

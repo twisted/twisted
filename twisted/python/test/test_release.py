@@ -10,15 +10,12 @@ only ever performed on Linux.
 
 
 import glob
-import warnings
 import operator
 import os
 import sys
 import textwrap
 from StringIO import StringIO
 import tarfile
-from xml.dom import minidom as dom
-
 from datetime import date
 
 from twisted.trial.unittest import TestCase
@@ -28,31 +25,22 @@ from twisted.python.procutils import which
 from twisted.python import release
 from twisted.python.filepath import FilePath
 from twisted.python.versions import Version
-from twisted.test.testutils import XMLAssertionMixin
+
 from twisted.web.microdom import parseXMLString
 from twisted.python._release import (
     _changeVersionInFile, getNextVersion, findTwistedProjects, replaceInFile,
     replaceProjectVersion, Project, generateVersionFileData,
-    changeAllProjectVersions, VERSION_OFFSET, DocBuilder, ManBuilder,
-    NoDocumentsFound, filePathDelta, CommandFailed, BookBuilder,
+    changeAllProjectVersions, VERSION_OFFSET, filePathDelta, CommandFailed,
     DistributionBuilder, APIBuilder, BuildAPIDocsScript, buildAllTarballs,
     runCommand, UncleanWorkingDirectory, NotWorkingDirectory,
-    ChangeVersionsScript, BuildTarballsScript, NewsBuilder, BuildDocsScript,
-    SphinxBuilder)
+    ChangeVersionsScript, BuildTarballsScript, NewsBuilder, SphinxBuilder)
 
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
 else:
     skip = None
 
-# Check a bunch of dependencies to skip tests if necessary.
-try:
-    from twisted.lore.scripts import lore
-except ImportError:
-    loreSkip = "Lore is not present."
-else:
-    loreSkip = skip
-
+testingSphinxConf = "master_doc = 'index'\n"
 
 try:
     import pydoctor.driver
@@ -72,12 +60,6 @@ if which("sphinx-build"):
 else:
     sphinxSkip = "Sphinx not available."
 
-
-
-if which("latex") and which("dvips") and which("ps2pdf13"):
-    latexSkip = skip
-else:
-    latexSkip = "LaTeX is not available."
 
 
 if which("svn") and which("svnadmin"):
@@ -143,17 +125,19 @@ class StructureAssertingMixin(object):
             parameter to L{createStructure}.
         @type dirDict: C{dict}
         """
-        children = [x.basename() for x in root.children()]
-        for x in dirDict:
-            child = root.child(x)
-            if isinstance(dirDict[x], dict):
+        children = [each.basename() for each in root.children()]
+        for pathSegment, expectation in dirDict.items():
+            child = root.child(pathSegment)
+            if callable(expectation):
+                self.assertTrue(expectation(child))
+            elif isinstance(expectation, dict):
                 self.assertTrue(child.isdir(), "%s is not a dir!"
                                 % (child.path,))
-                self.assertStructure(child, dirDict[x])
+                self.assertStructure(child, expectation)
             else:
-                a = child.getContent().replace(os.linesep, '\n')
-                self.assertEqual(a, dirDict[x], child.path)
-            children.remove(x)
+                actual = child.getContent().replace(os.linesep, '\n')
+                self.assertEqual(actual, expectation)
+            children.remove(pathSegment)
         if children:
             self.fail("There were extra children in %s: %s"
                       % (root.path, children))
@@ -590,504 +574,6 @@ class VersionWritingTest(TestCase):
 
 
 
-class BuilderTestsMixin(XMLAssertionMixin):
-    """
-    A mixin class which provides various methods for creating sample Lore input
-    and output.
-
-    @cvar template: The lore template that will be used to prepare sample
-    output.
-    @type template: C{str}
-
-    @ivar docCounter: A counter which is incremented every time input is
-        generated and which is included in the documents.
-    @type docCounter: C{int}
-    """
-    template = '''
-    <html>
-    <head><title>Yo:</title></head>
-    <body>
-    <div class="body" />
-    <a href="index.html">Index</a>
-    <span class="version">Version: </span>
-    </body>
-    </html>
-    '''
-
-    def setUp(self):
-        """
-        Initialize the doc counter which ensures documents are unique.
-        """
-        self.docCounter = 0
-
-
-    def getArbitraryOutput(self, version, counter, prefix="", apiBaseURL="%s"):
-        """
-        Get the correct HTML output for the arbitrary input returned by
-        L{getArbitraryLoreInput} for the given parameters.
-
-        @param version: The version string to include in the output.
-        @type version: C{str}
-        @param counter: A counter to include in the output.
-        @type counter: C{int}
-        """
-        document = """\
-<?xml version="1.0"?><html>
-    <head><title>Yo:Hi! Title: %(count)d</title></head>
-    <body>
-    <div class="content">Hi! %(count)d<div class="API"><a href="%(foobarLink)s"
-    title="foobar">foobar</a></div></div>
-    <a href="%(prefix)sindex.html">Index</a>
-    <span class="version">Version: %(version)s</span>
-    </body>
-    </html>"""
-        # Try to normalize irrelevant whitespace.
-        return dom.parseString(
-            document % {"count": counter, "prefix": prefix,
-                        "version": version,
-                        "foobarLink": apiBaseURL % ("foobar",)}).toxml('utf-8')
-
-
-    def getArbitraryLoreInput(self, counter):
-        """
-        Get an arbitrary, unique (for this test case) string of lore input.
-
-        @param counter: A counter to include in the input.
-        @type counter: C{int}
-        """
-        template = (
-            '<html>'
-            '<head><title>Hi! Title: %(count)s</title></head>'
-            '<body>'
-            'Hi! %(count)s'
-            '<div class="API">foobar</div>'
-            '</body>'
-            '</html>')
-        return template % {"count": counter}
-
-
-    def getArbitraryLoreInputAndOutput(self, version, prefix="",
-                                       apiBaseURL="%s"):
-        """
-        Get an input document along with expected output for lore run on that
-        output document, assuming an appropriately-specified C{self.template}.
-
-        @param version: A version string to include in the input and output.
-        @type version: C{str}
-        @param prefix: The prefix to include in the link to the index.
-        @type prefix: C{str}
-
-        @return: A two-tuple of input and expected output.
-        @rtype: C{(str, str)}.
-        """
-        self.docCounter += 1
-        return (self.getArbitraryLoreInput(self.docCounter),
-                self.getArbitraryOutput(version, self.docCounter,
-                                        prefix=prefix, apiBaseURL=apiBaseURL))
-
-
-    def getArbitraryManInput(self):
-        """
-        Get an arbitrary man page content.
-        """
-        return """.TH MANHOLE "1" "August 2001" "" ""
-.SH NAME
-manhole \- Connect to a Twisted Manhole service
-.SH SYNOPSIS
-.B manhole
-.SH DESCRIPTION
-manhole is a GTK interface to Twisted Manhole services. You can execute
-python code as if at an interactive Python console inside a running Twisted
-process with this."""
-
-
-    def getArbitraryManLoreOutput(self):
-        """
-        Get an arbitrary lore input document which represents man-to-lore
-        output based on the man page returned from L{getArbitraryManInput}
-        """
-        return """\
-<?xml version="1.0"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html><head>
-<title>MANHOLE.1</title></head>
-<body>
-
-<h1>MANHOLE.1</h1>
-
-<h2>NAME</h2>
-
-<p>manhole - Connect to a Twisted Manhole service
-</p>
-
-<h2>SYNOPSIS</h2>
-
-<p><strong>manhole</strong> </p>
-
-<h2>DESCRIPTION</h2>
-
-<p>manhole is a GTK interface to Twisted Manhole services. You can execute
-python code as if at an interactive Python console inside a running Twisted
-process with this.</p>
-
-</body>
-</html>
-"""
-
-    def getArbitraryManHTMLOutput(self, version, prefix=""):
-        """
-        Get an arbitrary lore output document which represents the lore HTML
-        output based on the input document returned from
-        L{getArbitraryManLoreOutput}.
-
-        @param version: A version string to include in the document.
-        @type version: C{str}
-        @param prefix: The prefix to include in the link to the index.
-        @type prefix: C{str}
-        """
-        # Try to normalize the XML a little bit.
-        return dom.parseString("""\
-<?xml version="1.0" ?><html>
-    <head><title>Yo:MANHOLE.1</title></head>
-    <body>
-    <div class="content">
-
-<span/>
-
-<h2>NAME<a name="auto0"/></h2>
-
-<p>manhole - Connect to a Twisted Manhole service
-</p>
-
-<h2>SYNOPSIS<a name="auto1"/></h2>
-
-<p><strong>manhole</strong> </p>
-
-<h2>DESCRIPTION<a name="auto2"/></h2>
-
-<p>manhole is a GTK interface to Twisted Manhole services. You can execute
-python code as if at an interactive Python console inside a running Twisted
-process with this.</p>
-
-</div>
-    <a href="%(prefix)sindex.html">Index</a>
-    <span class="version">Version: %(version)s</span>
-    </body>
-    </html>""" % {
-            'prefix': prefix, 'version': version}).toxml("utf-8")
-
-
-    def setupTeXFiles(self, howtoDir):
-        """
-        Create a main TeX file with 3 sections in C{howtoDir}.
-
-        @param howtoDir: The path in which to create the TeX files.
-
-        @return: The main TeX file C{FilePath}.
-        """
-        sections = range(3)
-        self.setupTeXSections(sections, howtoDir)
-        return self.setupTeXBook(sections, howtoDir)
-
-
-    def setupTeXSections(self, sections, howtoDir):
-        """
-        For every C{sections}, create a TeX file in C{howtoDir}.
-
-        @param sections: A list of sections to create.
-
-        @param howtoDir: The path in which to create the TeX files.
-        """
-        for section in sections:
-            texPath = howtoDir.child("%s.tex" % (section,))
-            texPath.setContent(
-                self.getArbitraryOutput("1.2.3", section))
-
-
-    def setupTeXBook(self, sections, howtoDir):
-        """
-        Setup the main C{book.tex} file referencing C{sections}.
-
-        @param sections: A list of sections to reference.
-
-        @param howtoDir: The path in which to create the TeX files.
-
-        @return: The main TeX file C{FilePath}.
-        """
-        bookTeX = howtoDir.child("book.tex")
-        bookTeX.setContent(
-            r"\documentclass{book}" "\n"
-            r"\begin{document}" "\n" +
-            "\n".join([r"\input{%s.tex}" % (n,) for n in sections]) +
-            r"\end{document}" "\n")
-        return bookTeX
-
-
-
-class DocBuilderTestCase(TestCase, BuilderTestsMixin):
-    """
-    Tests for L{DocBuilder}.
-
-    Note for future maintainers: The exact byte equality assertions throughout
-    this suite may need to be updated due to minor differences in lore. They
-    should not be taken to mean that Lore must maintain the same byte format
-    forever. Feel free to update the tests when Lore changes, but please be
-    careful.
-    """
-    skip = loreSkip
-
-    def setUp(self):
-        """
-        Set up a few instance variables that will be useful.
-
-        @ivar builder: A plain L{DocBuilder}.
-        @ivar docCounter: An integer to be used as a counter by the
-            C{getArbitrary...} methods.
-        @ivar howtoDir: A L{FilePath} representing a directory to be used for
-            containing Lore documents.
-        @ivar templateFile: A L{FilePath} representing a file with
-            C{self.template} as its content.
-        """
-        BuilderTestsMixin.setUp(self)
-        self.builder = DocBuilder()
-        self.howtoDir = FilePath(self.mktemp())
-        self.howtoDir.createDirectory()
-        self.templateFile = self.howtoDir.child("template.tpl")
-        self.templateFile.setContent(self.template)
-
-
-    def test_build(self):
-        """
-        The L{DocBuilder} runs lore on all .xhtml files within a directory.
-        """
-        version = "1.2.3"
-        input1, output1 = self.getArbitraryLoreInputAndOutput(version)
-        input2, output2 = self.getArbitraryLoreInputAndOutput(version)
-
-        self.howtoDir.child("one.xhtml").setContent(input1)
-        self.howtoDir.child("two.xhtml").setContent(input2)
-
-        self.builder.build(version, self.howtoDir, self.howtoDir,
-                           self.templateFile)
-        out1 = self.howtoDir.child('one.html')
-        out2 = self.howtoDir.child('two.html')
-        self.assertXMLEqual(out1.getContent(), output1)
-        self.assertXMLEqual(out2.getContent(), output2)
-
-
-    def test_noDocumentsFound(self):
-        """
-        The C{build} method raises L{NoDocumentsFound} if there are no
-        .xhtml files in the given directory.
-        """
-        self.assertRaises(
-            NoDocumentsFound,
-            self.builder.build, "1.2.3", self.howtoDir, self.howtoDir,
-            self.templateFile)
-
-
-    def test_parentDocumentLinking(self):
-        """
-        The L{DocBuilder} generates correct links from documents to
-        template-generated links like stylesheets and index backreferences.
-        """
-        input = self.getArbitraryLoreInput(0)
-        tutoDir = self.howtoDir.child("tutorial")
-        tutoDir.createDirectory()
-        tutoDir.child("child.xhtml").setContent(input)
-        self.builder.build("1.2.3", self.howtoDir, tutoDir, self.templateFile)
-        outFile = tutoDir.child('child.html')
-        self.assertIn('<a href="../index.html">Index</a>',
-                      outFile.getContent())
-
-
-    def test_siblingDirectoryDocumentLinking(self):
-        """
-        It is necessary to generate documentation in a directory foo/bar where
-        stylesheet and indexes are located in foo/baz. Such resources should be
-        appropriately linked to.
-        """
-        input = self.getArbitraryLoreInput(0)
-        resourceDir = self.howtoDir.child("resources")
-        docDir = self.howtoDir.child("docs")
-        docDir.createDirectory()
-        docDir.child("child.xhtml").setContent(input)
-        self.builder.build("1.2.3", resourceDir, docDir, self.templateFile)
-        outFile = docDir.child('child.html')
-        self.assertIn('<a href="../resources/index.html">Index</a>',
-                      outFile.getContent())
-
-
-    def test_apiLinking(self):
-        """
-        The L{DocBuilder} generates correct links from documents to API
-        documentation.
-        """
-        version = "1.2.3"
-        input, output = self.getArbitraryLoreInputAndOutput(version)
-        self.howtoDir.child("one.xhtml").setContent(input)
-
-        self.builder.build(version, self.howtoDir, self.howtoDir,
-                           self.templateFile, "scheme:apilinks/%s.ext")
-        out = self.howtoDir.child('one.html')
-        self.assertIn(
-            '<a href="scheme:apilinks/foobar.ext" title="foobar">foobar</a>',
-            out.getContent())
-
-
-    def test_deleteInput(self):
-        """
-        L{DocBuilder.build} can be instructed to delete the input files after
-        generating the output based on them.
-        """
-        input1 = self.getArbitraryLoreInput(0)
-        self.howtoDir.child("one.xhtml").setContent(input1)
-        self.builder.build("whatever", self.howtoDir, self.howtoDir,
-                           self.templateFile, deleteInput=True)
-        self.assertTrue(self.howtoDir.child('one.html').exists())
-        self.assertFalse(self.howtoDir.child('one.xhtml').exists())
-
-
-    def test_doNotDeleteInput(self):
-        """
-        Input will not be deleted by default.
-        """
-        input1 = self.getArbitraryLoreInput(0)
-        self.howtoDir.child("one.xhtml").setContent(input1)
-        self.builder.build("whatever", self.howtoDir, self.howtoDir,
-                           self.templateFile)
-        self.assertTrue(self.howtoDir.child('one.html').exists())
-        self.assertTrue(self.howtoDir.child('one.xhtml').exists())
-
-
-    def test_getLinkrelToSameDirectory(self):
-        """
-        If the doc and resource directories are the same, the linkrel should be
-        an empty string.
-        """
-        linkrel = self.builder.getLinkrel(FilePath("/foo/bar"),
-                                          FilePath("/foo/bar"))
-        self.assertEqual(linkrel, "")
-
-
-    def test_getLinkrelToParentDirectory(self):
-        """
-        If the doc directory is a child of the resource directory, the linkrel
-        should make use of '..'.
-        """
-        linkrel = self.builder.getLinkrel(FilePath("/foo"),
-                                          FilePath("/foo/bar"))
-        self.assertEqual(linkrel, "../")
-
-
-    def test_getLinkrelToSibling(self):
-        """
-        If the doc directory is a sibling of the resource directory, the
-        linkrel should make use of '..' and a named segment.
-        """
-        linkrel = self.builder.getLinkrel(FilePath("/foo/howto"),
-                                          FilePath("/foo/examples"))
-        self.assertEqual(linkrel, "../howto/")
-
-
-    def test_getLinkrelToUncle(self):
-        """
-        If the doc directory is a sibling of the parent of the resource
-        directory, the linkrel should make use of multiple '..'s and a named
-        segment.
-        """
-        linkrel = self.builder.getLinkrel(FilePath("/foo/howto"),
-                                          FilePath("/foo/examples/quotes"))
-        self.assertEqual(linkrel, "../../howto/")
-
-
-
-class BuildDocsScriptTests(TestCase, BuilderTestsMixin,
-                           StructureAssertingMixin):
-    """
-    Tests for L{BuildDocsScript}.
-    """
-
-    def setUp(self):
-        """
-        Create a L{BuildDocsScript} in C{self.script}.
-        """
-        BuilderTestsMixin.setUp(self)
-        self.script = BuildDocsScript()
-
-
-    def test_buildDocs(self):
-        """
-        L{BuildDocsScript.buildDocs} generates Lore man pages, turn all Lore
-        pages to HTML, and build the PDF book.
-        """
-        rootDir = FilePath(self.mktemp())
-        rootDir.createDirectory()
-        loreInput, loreOutput = self.getArbitraryLoreInputAndOutput(
-            "10.0.0",
-            apiBaseURL="http://twistedmatrix.com/documents/10.0.0/api/%s.html")
-        coreIndexInput, coreIndexOutput = self.getArbitraryLoreInputAndOutput(
-            "10.0.0", prefix="howto/",
-            apiBaseURL="http://twistedmatrix.com/documents/10.0.0/api/%s.html")
-
-        manInput = self.getArbitraryManInput()
-        manOutput = self.getArbitraryManHTMLOutput("10.0.0", "../howto/")
-
-        structure = {
-            "LICENSE": "copyright!",
-            "twisted": {"_version.py": genVersion("twisted", 10, 0, 0)},
-            "doc": {"core": {"index.xhtml": coreIndexInput,
-                             "howto": {"template.tpl": self.template,
-                                       "index.xhtml": loreInput},
-                             "man": {"twistd.1": manInput}}}}
-
-        outStructure = {
-            "LICENSE": "copyright!",
-            "twisted": {"_version.py": genVersion("twisted", 10, 0, 0)},
-            "doc": {"core": {"index.html": coreIndexOutput,
-                             "howto": {"template.tpl": self.template,
-                                       "index.html": loreOutput},
-                             "man": {"twistd.1": manInput,
-                                     "twistd-man.html": manOutput}}}}
-
-        self.createStructure(rootDir, structure)
-
-        howtoDir = rootDir.descendant(["doc", "core", "howto"])
-        self.setupTeXFiles(howtoDir)
-
-        templateFile = howtoDir.child("template.tpl")
-        self.script.buildDocs(rootDir, templateFile)
-
-        howtoDir.child("book.tex").remove()
-        howtoDir.child("book.pdf").remove()
-        self.assertStructure(rootDir, outStructure)
-
-    test_buildDocs.skip = latexSkip or loreSkip
-
-
-    def test_docsBuilderScriptMainRequiresThreeArguments(self):
-        """
-        SystemExit is raised when the incorrect number of command line
-        arguments are passed to the main documentation building script.
-        """
-        self.assertRaises(SystemExit, self.script.main, [])
-        self.assertRaises(SystemExit, self.script.main, ["foo"])
-        self.assertRaises(SystemExit, self.script.main, ["foo", "bar", "baz"])
-
-
-    def test_docsBuilderScriptMain(self):
-        """
-        The main documentation building script invokes C{buildDocs} with the
-        arguments passed to it cast as L{FilePath}.
-        """
-        calls = []
-        self.script.buildDocs = lambda a, b: calls.append((a, b))
-        self.script.main(["hello", "there"])
-        self.assertEqual(calls, [(FilePath("hello"), FilePath("there"))])
-
-
-
 class APIBuilderTestCase(TestCase):
     """
     Tests for L{APIBuilder}.
@@ -1225,403 +711,6 @@ class APIBuilderTestCase(TestCase):
         script.buildAPIDocs = lambda a, b: calls.append((a, b))
         script.main(["hello", "there"])
         self.assertEqual(calls, [(FilePath("hello"), FilePath("there"))])
-
-
-
-class ManBuilderTestCase(TestCase, BuilderTestsMixin):
-    """
-    Tests for L{ManBuilder}.
-    """
-    skip = loreSkip
-
-    def setUp(self):
-        """
-        Set up a few instance variables that will be useful.
-
-        @ivar builder: A plain L{ManBuilder}.
-        @ivar manDir: A L{FilePath} representing a directory to be used for
-            containing man pages.
-        """
-        BuilderTestsMixin.setUp(self)
-        self.builder = ManBuilder()
-        self.manDir = FilePath(self.mktemp())
-        self.manDir.createDirectory()
-
-
-    def test_noDocumentsFound(self):
-        """
-        L{ManBuilder.build} raises L{NoDocumentsFound} if there are no
-        .1 files in the given directory.
-        """
-        self.assertRaises(NoDocumentsFound, self.builder.build, self.manDir)
-
-
-    def test_build(self):
-        """
-        Check that L{ManBuilder.build} find the man page in the directory, and
-        successfully produce a Lore content.
-        """
-        manContent = self.getArbitraryManInput()
-        self.manDir.child('test1.1').setContent(manContent)
-        self.builder.build(self.manDir)
-        output = self.manDir.child('test1-man.xhtml').getContent()
-        expected = self.getArbitraryManLoreOutput()
-        # No-op on *nix, fix for windows
-        expected = expected.replace('\n', os.linesep)
-        self.assertEqual(output, expected)
-
-
-    def test_toHTML(self):
-        """
-        Check that the content output by C{build} is compatible as input of
-        L{DocBuilder.build}.
-        """
-        manContent = self.getArbitraryManInput()
-        self.manDir.child('test1.1').setContent(manContent)
-        self.builder.build(self.manDir)
-
-        templateFile = self.manDir.child("template.tpl")
-        templateFile.setContent(DocBuilderTestCase.template)
-        docBuilder = DocBuilder()
-        docBuilder.build("1.2.3", self.manDir, self.manDir,
-                         templateFile)
-        output = self.manDir.child('test1-man.html').getContent()
-
-        self.assertXMLEqual(
-            output,
-            """\
-<?xml version="1.0" ?><html>
-    <head><title>Yo:MANHOLE.1</title></head>
-    <body>
-    <div class="content">
-
-<span/>
-
-<h2>NAME<a name="auto0"/></h2>
-
-<p>manhole - Connect to a Twisted Manhole service
-</p>
-
-<h2>SYNOPSIS<a name="auto1"/></h2>
-
-<p><strong>manhole</strong> </p>
-
-<h2>DESCRIPTION<a name="auto2"/></h2>
-
-<p>manhole is a GTK interface to Twisted Manhole services. You can execute
-python code as if at an interactive Python console inside a running Twisted
-process with this.</p>
-
-</div>
-    <a href="index.html">Index</a>
-    <span class="version">Version: 1.2.3</span>
-    </body>
-    </html>""")
-
-
-
-class BookBuilderTests(TestCase, BuilderTestsMixin):
-    """
-    Tests for L{BookBuilder}.
-    """
-    skip = latexSkip or loreSkip
-
-    def setUp(self):
-        """
-        Make a directory into which to place temporary files.
-        """
-        self.docCounter = 0
-        self.howtoDir = FilePath(self.mktemp())
-        self.howtoDir.makedirs()
-
-
-    def getArbitraryOutput(self, version, counter, prefix="", apiBaseURL=None):
-        """
-        Create and return a C{str} containing the LaTeX document which is
-        expected as the output for processing the result of the document
-        returned by C{self.getArbitraryLoreInput(counter)}.
-        """
-        path = self.howtoDir.child("%d.xhtml" % (counter,)).path
-        return (
-            r'\section{Hi! Title: %(count)s\label{%(path)s}}'
-            '\n'
-            r'Hi! %(count)sfoobar') % {'count': counter, 'path': path}
-
-
-    def test_runSuccess(self):
-        """
-        L{BookBuilder.run} executes the command it is passed and returns a
-        string giving the stdout and stderr of the command if it completes
-        successfully.
-        """
-        builder = BookBuilder()
-        self.assertEqual(
-            builder.run([
-                sys.executable, '-c',
-                'import sys; '
-                'sys.stdout.write("hi\\n"); '
-                'sys.stdout.flush(); '
-                'sys.stderr.write("bye\\n"); '
-                'sys.stderr.flush()']),
-            "hi\nbye\n")
-
-
-    def test_runFailed(self):
-        """
-        L{BookBuilder.run} executes the command it is passed and raises
-        L{CommandFailed} if it completes unsuccessfully.
-        """
-        builder = BookBuilder()
-        exc = self.assertRaises(
-            CommandFailed, builder.run,
-            [sys.executable, '-c', 'print "hi"; raise SystemExit(1)'])
-        self.assertEqual(exc.exitStatus, 1)
-        self.assertEqual(exc.exitSignal, None)
-        self.assertEqual(exc.output, "hi\n")
-
-
-    def test_runSignaled(self):
-        """
-        L{BookBuilder.run} executes the command it is passed and raises
-        L{CommandFailed} if it exits due to a signal.
-        """
-        builder = BookBuilder()
-        exc = self.assertRaises(
-            CommandFailed, builder.run,
-            [sys.executable, '-c',
-             'import sys; print "hi"; sys.stdout.flush(); '
-             'import os; os.kill(os.getpid(), 9)'])
-        self.assertEqual(exc.exitSignal, 9)
-        self.assertEqual(exc.exitStatus, None)
-        self.assertEqual(exc.output, "hi\n")
-
-
-    def test_buildTeX(self):
-        """
-        L{BookBuilder.buildTeX} writes intermediate TeX files for all lore
-        input files in a directory.
-        """
-        version = "3.2.1"
-        input1, output1 = self.getArbitraryLoreInputAndOutput(version)
-        input2, output2 = self.getArbitraryLoreInputAndOutput(version)
-
-        # Filenames are chosen by getArbitraryOutput to match the counter used
-        # by getArbitraryLoreInputAndOutput.
-        self.howtoDir.child("1.xhtml").setContent(input1)
-        self.howtoDir.child("2.xhtml").setContent(input2)
-
-        builder = BookBuilder()
-        builder.buildTeX(self.howtoDir)
-        self.assertEqual(self.howtoDir.child("1.tex").getContent(), output1)
-        self.assertEqual(self.howtoDir.child("2.tex").getContent(), output2)
-
-
-    def test_buildTeXRejectsInvalidDirectory(self):
-        """
-        L{BookBuilder.buildTeX} raises L{ValueError} if passed a directory
-        which does not exist.
-        """
-        builder = BookBuilder()
-        self.assertRaises(
-            ValueError, builder.buildTeX, self.howtoDir.temporarySibling())
-
-
-    def test_buildTeXOnlyBuildsXHTML(self):
-        """
-        L{BookBuilder.buildTeX} ignores files which which don't end with
-        ".xhtml".
-        """
-        # Hopefully ">" is always a parse error from microdom!
-        self.howtoDir.child("not-input.dat").setContent(">")
-        self.test_buildTeX()
-
-
-    def test_stdout(self):
-        """
-        L{BookBuilder.buildTeX} does not write to stdout.
-        """
-        stdout = StringIO()
-        self.patch(sys, 'stdout', stdout)
-
-        # Suppress warnings so that if there are any old-style plugins that
-        # lore queries for don't confuse the assertion below.  See #3070.
-        self.patch(warnings, 'warn', lambda *a, **kw: None)
-        self.test_buildTeX()
-        self.assertEqual(stdout.getvalue(), '')
-
-
-    def test_buildPDFRejectsInvalidBookFilename(self):
-        """
-        L{BookBuilder.buildPDF} raises L{ValueError} if the book filename does
-        not end with ".tex".
-        """
-        builder = BookBuilder()
-        self.assertRaises(
-            ValueError,
-            builder.buildPDF,
-            FilePath(self.mktemp()).child("foo"),
-            None,
-            None)
-
-
-    def test_buildPDF(self):
-        """
-        L{BookBuilder.buildPDF} creates a PDF given an index tex file and a
-        directory containing .tex files.
-        """
-        bookPath = self.setupTeXFiles(self.howtoDir)
-        outputPath = FilePath(self.mktemp())
-
-        builder = BookBuilder()
-        builder.buildPDF(bookPath, self.howtoDir, outputPath)
-
-        self.assertTrue(outputPath.exists())
-
-
-    def test_buildPDFLongPath(self):
-        """
-        L{BookBuilder.buildPDF} succeeds even if the paths it is operating on
-        are very long.
-
-        C{ps2pdf13} seems to have problems when path names are long.  This test
-        verifies that even if inputs have long paths, generation still
-        succeeds.
-        """
-        # Make it long.
-        self.howtoDir = self.howtoDir.child(
-            "x" * 128).child("x" * 128).child("x" * 128)
-        self.howtoDir.makedirs()
-
-        # This will use the above long path.
-        bookPath = self.setupTeXFiles(self.howtoDir)
-        outputPath = FilePath(self.mktemp())
-
-        builder = BookBuilder()
-        builder.buildPDF(bookPath, self.howtoDir, outputPath)
-
-        self.assertTrue(outputPath.exists())
-
-
-    def test_buildPDFRunsLaTeXThreeTimes(self):
-        """
-        L{BookBuilder.buildPDF} runs C{latex} three times.
-        """
-        class InspectableBookBuilder(BookBuilder):
-            def __init__(self):
-                BookBuilder.__init__(self)
-                self.commands = []
-
-            def run(self, command):
-                """
-                Record the command and then execute it.
-                """
-                self.commands.append(command)
-                return BookBuilder.run(self, command)
-
-        bookPath = self.setupTeXFiles(self.howtoDir)
-        outputPath = FilePath(self.mktemp())
-
-        builder = InspectableBookBuilder()
-        builder.buildPDF(bookPath, self.howtoDir, outputPath)
-
-        # These string comparisons are very fragile.  It would be better to
-        # have a test which asserted the correctness of the contents of the
-        # output files.  I don't know how one could do that, though. -exarkun
-        latex1, latex2, latex3, dvips, ps2pdf13 = builder.commands
-        self.assertEqual(latex1, latex2)
-        self.assertEqual(latex2, latex3)
-        self.assertEqual(
-            latex1[:1], ["latex"],
-            "LaTeX command %r does not seem right." % (latex1,))
-        self.assertEqual(
-            latex1[-1:], [bookPath.path],
-            "LaTeX command %r does not end with the book path (%r)." % (
-                latex1, bookPath.path))
-
-        self.assertEqual(
-            dvips[:1], ["dvips"],
-            "dvips command %r does not seem right." % (dvips,))
-        self.assertEqual(
-            ps2pdf13[:1], ["ps2pdf13"],
-            "ps2pdf13 command %r does not seem right." % (ps2pdf13,))
-
-
-    def test_noSideEffects(self):
-        """
-        The working directory is the same before and after a call to
-        L{BookBuilder.buildPDF}.  Also the contents of the directory containing
-        the input book are the same before and after the call.
-        """
-        startDir = os.getcwd()
-        bookTeX = self.setupTeXFiles(self.howtoDir)
-        startTeXSiblings = bookTeX.parent().children()
-        startHowtoChildren = self.howtoDir.children()
-
-        builder = BookBuilder()
-        builder.buildPDF(bookTeX, self.howtoDir, FilePath(self.mktemp()))
-
-        self.assertEqual(startDir, os.getcwd())
-        self.assertEqual(startTeXSiblings, bookTeX.parent().children())
-        self.assertEqual(startHowtoChildren, self.howtoDir.children())
-
-
-    def test_failedCommandProvidesOutput(self):
-        """
-        If a subprocess fails, L{BookBuilder.buildPDF} raises L{CommandFailed}
-        with the subprocess's output and leaves the temporary directory as a
-        sibling of the book path.
-        """
-        bookTeX = FilePath(self.mktemp() + ".tex")
-        builder = BookBuilder()
-        inputState = bookTeX.parent().children()
-        exc = self.assertRaises(
-            CommandFailed,
-            builder.buildPDF,
-            bookTeX, self.howtoDir, FilePath(self.mktemp()))
-        self.assertTrue(exc.output)
-        newOutputState = set(bookTeX.parent().children()) - set(inputState)
-        self.assertEqual(len(newOutputState), 1)
-        workPath = newOutputState.pop()
-        self.assertTrue(
-            workPath.isdir(),
-            "Expected work path %r was not a directory." % (workPath.path,))
-
-
-    def test_build(self):
-        """
-        L{BookBuilder.build} generates a pdf book file from some lore input
-        files.
-        """
-        sections = range(1, 4)
-        for sectionNumber in sections:
-            self.howtoDir.child("%d.xhtml" % (sectionNumber,)).setContent(
-                self.getArbitraryLoreInput(sectionNumber))
-        bookTeX = self.setupTeXBook(sections, self.howtoDir)
-        bookPDF = FilePath(self.mktemp())
-
-        builder = BookBuilder()
-        builder.build(self.howtoDir, [self.howtoDir], bookTeX, bookPDF)
-
-        self.assertTrue(bookPDF.exists())
-
-
-    def test_buildRemovesTemporaryLaTeXFiles(self):
-        """
-        L{BookBuilder.build} removes the intermediate LaTeX files it creates.
-        """
-        sections = range(1, 4)
-        for sectionNumber in sections:
-            self.howtoDir.child("%d.xhtml" % (sectionNumber,)).setContent(
-                self.getArbitraryLoreInput(sectionNumber))
-        bookTeX = self.setupTeXBook(sections, self.howtoDir)
-        bookPDF = FilePath(self.mktemp())
-
-        builder = BookBuilder()
-        builder.build(self.howtoDir, [self.howtoDir], bookTeX, bookPDF)
-
-        self.assertEqual(
-            set(self.howtoDir.listdir()),
-            set([bookTeX.basename()] + ["%d.xhtml" % (n,) for n in sections]))
 
 
 
@@ -2242,10 +1331,10 @@ class SphinxBuilderTests(TestCase):
         self.builder = SphinxBuilder()
 
         # set up a place for a fake sphinx project
-        self.sphinxDir = FilePath(self.mktemp())
+        self.twistedRootDir = FilePath(self.mktemp())
+        self.sphinxDir = self.twistedRootDir.child("docs")
         self.sphinxDir.makedirs()
-        self.sourceDir = self.sphinxDir.child('source')
-        self.sourceDir.makedirs()
+        self.sourceDir = self.sphinxDir
 
 
     def createFakeSphinxProject(self):
@@ -2306,13 +1395,26 @@ class SphinxBuilderTests(TestCase):
         """
         self.createFakeSphinxProject()
         self.builder.build(self.sphinxDir)
+        self.verifyBuilt()
 
-        # assert some stuff
-        for each in ['doctrees', 'html']:
-            fpath = self.sphinxDir.child('build').child(each)
-            self.assertTrue(fpath.exists())
 
-        htmlDir = self.sphinxDir.child('build').child('html')
+    def test_main(self):
+        """
+        Creates and builds a fake Sphinx project as if via the command line.
+        """
+        self.createFakeSphinxProject()
+        self.builder.main([self.sphinxDir.parent().path])
+        self.verifyBuilt()
+
+
+    def verifyBuilt(self):
+        """
+        Verify that a sphinx project has been built.
+        """
+        htmlDir = self.sphinxDir.sibling('doc')
+        self.assertTrue(htmlDir.isdir())
+        doctreeDir = htmlDir.child("doctrees")
+        self.assertTrue(doctreeDir.isdir())
 
         self.verifyFileExists(htmlDir, 'index.html')
         self.verifyFileExists(htmlDir, 'genindex.html')
@@ -2333,16 +1435,12 @@ class SphinxBuilderTests(TestCase):
 
 
 
-class DistributionBuilderTestBase(BuilderTestsMixin, StructureAssertingMixin,
-                                  TestCase):
+class DistributionBuilderTestBase(StructureAssertingMixin, TestCase):
     """
     Base for tests of L{DistributionBuilder}.
     """
-    skip = loreSkip
 
     def setUp(self):
-        BuilderTestsMixin.setUp(self)
-
         self.rootDir = FilePath(self.mktemp())
         self.rootDir.createDirectory()
 
@@ -2359,14 +1457,7 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
         The Twisted tarball contains everything in the source checkout, with
         built documentation.
         """
-        loreInput, loreOutput = self.getArbitraryLoreInputAndOutput("10.0.0")
-        manInput1 = self.getArbitraryManInput()
-        manOutput1 = self.getArbitraryManHTMLOutput("10.0.0", "../howto/")
-        manInput2 = self.getArbitraryManInput()
-        manOutput2 = self.getArbitraryManHTMLOutput("10.0.0", "../howto/")
-        coreIndexInput, coreIndexOutput = self.getArbitraryLoreInputAndOutput(
-            "10.0.0", prefix="howto/")
-
+        manInput1 = "pretend there's some troff in here or something"
         structure = {
             "README": "Twisted",
             "unrelated": "x",
@@ -2382,11 +1473,20 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                 "words": {"__init__.py": "import WORDS"},
                 "plugins": {"twisted_web.py": "import WEBPLUG",
                             "twisted_words.py": "import WORDPLUG"}},
-            "doc": {"web": {"howto": {"index.xhtml": loreInput},
-                            "man": {"websetroot.1": manInput2}},
-                    "core": {"howto": {"template.tpl": self.template},
-                             "man": {"twistd.1": manInput1},
-                             "index.xhtml": coreIndexInput}}}
+            "docs": {
+                "conf.py": testingSphinxConf,
+                "index.rst": "",
+                "core": {"man": {"twistd.1": manInput1}}
+            }
+        }
+
+        def hasManpagesAndSphinx(path):
+            self.assertTrue(path.isdir())
+            self.assertEqual(
+                path.child("core").child("man").child("twistd.1").getContent(),
+                manInput1
+            )
+            return True
 
         outStructure = {
             "README": "Twisted",
@@ -2402,19 +1502,16 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                 "words": {"__init__.py": "import WORDS"},
                 "plugins": {"twisted_web.py": "import WEBPLUG",
                             "twisted_words.py": "import WORDPLUG"}},
-            "doc": {"web": {"howto": {"index.html": loreOutput},
-                            "man": {"websetroot.1": manInput2,
-                                    "websetroot-man.html": manOutput2}},
-                    "core": {"howto": {"template.tpl": self.template},
-                             "man": {"twistd.1": manInput1,
-                                     "twistd-man.html": manOutput1},
-                             "index.html": coreIndexOutput}}}
+            "doc": hasManpagesAndSphinx,
+        }
 
         self.createStructure(self.rootDir, structure)
 
         outputFile = self.builder.buildTwisted("10.0.0")
 
         self.assertExtractedStructure(outputFile, outStructure)
+
+    test_twistedDistribution.skip = sphinxSkip
 
 
     def test_excluded(self):
@@ -2513,37 +1610,6 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
         self.assertExtractedStructure(outputFile, outStructure)
 
 
-    def test_subProjectDocBuilding(self):
-        """
-        When building a subproject release, documentation should be built with
-        lore.
-        """
-        loreInput, loreOutput = self.getArbitraryLoreInputAndOutput("0.3.0")
-        manInput = self.getArbitraryManInput()
-        manOutput = self.getArbitraryManHTMLOutput("0.3.0", "../howto/")
-        structure = {
-            "LICENSE": "copyright!",
-            "twisted": {"web": {"__init__.py": "import WEB",
-                                "topfiles": {"setup.py": "import WEBINST"}}},
-            "doc": {"web": {"howto": {"index.xhtml": loreInput},
-                            "man": {"twistd.1": manInput}},
-                    "core": {"howto": {"template.tpl": self.template}}}}
-
-        outStructure = {
-            "LICENSE": "copyright!",
-            "setup.py": "import WEBINST",
-            "twisted": {"web": {"__init__.py": "import WEB"}},
-            "doc": {"howto": {"index.html": loreOutput},
-                    "man": {"twistd.1": manInput,
-                            "twistd-man.html": manOutput}}}
-
-        self.createStructure(self.rootDir, structure)
-
-        outputFile = self.builder.buildSubProject("web", "0.3.0")
-
-        self.assertExtractedStructure(outputFile, outStructure)
-
-
     def test_coreProjectLayout(self):
         """
         The core tarball looks a lot like a subproject tarball, except it
@@ -2553,14 +1619,6 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
         - plugins from other subprojects
         - scripts from other subprojects
         """
-        indexInput, indexOutput = self.getArbitraryLoreInputAndOutput(
-            "8.0.0", prefix="howto/")
-        howtoInput, howtoOutput = self.getArbitraryLoreInputAndOutput("8.0.0")
-        specInput, specOutput = self.getArbitraryLoreInputAndOutput(
-            "8.0.0", prefix="../howto/")
-        tutorialInput, tutorialOutput = self.getArbitraryLoreInputAndOutput(
-            "8.0.0", prefix="../")
-
         structure = {
             "LICENSE": "copyright!",
             "twisted": {"__init__.py": "twisted",
@@ -2574,14 +1632,6 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                                     "cred.py": "include!"},
                         "topfiles": {"setup.py": "import CORE",
                                      "README": "core readme"}},
-            "doc": {"core": {"howto": {"template.tpl": self.template,
-                                       "index.xhtml": howtoInput,
-                                       "tutorial": {
-                                           "index.xhtml": tutorialInput}},
-                             "specifications": {"index.xhtml": specInput},
-                             "examples": {"foo.py": "foo.py"},
-                             "index.xhtml": indexInput},
-                    "web": {"howto": {"index.xhtml": "webindex"}}},
             "bin": {"twistd": "TWISTD",
                     "web": {"websetroot": "websetroot"}}}
 
@@ -2595,44 +1645,10 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                         "plugin.py": "plugin",
                         "plugins": {"twisted_whatever.py": "include!",
                                     "cred.py": "include!"}},
-            "doc": {"howto": {"template.tpl": self.template,
-                              "index.html": howtoOutput,
-                              "tutorial": {"index.html": tutorialOutput}},
-                    "specifications": {"index.html": specOutput},
-                    "examples": {"foo.py": "foo.py"},
-                    "index.html": indexOutput},
             "bin": {"twistd": "TWISTD"}}
 
         self.createStructure(self.rootDir, structure)
         outputFile = self.builder.buildCore("8.0.0")
-        self.assertExtractedStructure(outputFile, outStructure)
-
-
-    def test_apiBaseURL(self):
-        """
-        DistributionBuilder builds documentation with the specified
-        API base URL.
-        """
-        apiBaseURL = "http://%s"
-        builder = DistributionBuilder(self.rootDir, self.outputDir,
-                                      apiBaseURL=apiBaseURL)
-        loreInput, loreOutput = self.getArbitraryLoreInputAndOutput(
-            "0.3.0", apiBaseURL=apiBaseURL)
-        structure = {
-            "LICENSE": "copyright!",
-            "twisted": {"web": {"__init__.py": "import WEB",
-                                "topfiles": {"setup.py": "import WEBINST"}}},
-            "doc": {"web": {"howto": {"index.xhtml": loreInput}},
-                    "core": {"howto": {"template.tpl": self.template}}}}
-
-        outStructure = {
-            "LICENSE": "copyright!",
-            "setup.py": "import WEBINST",
-            "twisted": {"web": {"__init__.py": "import WEB"}},
-            "doc": {"howto": {"index.html": loreOutput}}}
-
-        self.createStructure(self.rootDir, structure)
-        outputFile = builder.buildSubProject("web", "0.3.0")
         self.assertExtractedStructure(outputFile, outStructure)
 
 
@@ -2641,7 +1657,7 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
     """
     Tests for L{DistributionBuilder.buildAllTarballs}.
     """
-    skip = svnSkip
+    skip = svnSkip or sphinxSkip
 
     def test_buildAllTarballs(self):
         """
@@ -2659,9 +1675,6 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
         runCommand(["svnadmin", "create", repositoryPath])
         runCommand(["svn", "checkout", "file://" + repository.path,
                     checkout.path])
-        coreIndexInput, coreIndexOutput = self.getArbitraryLoreInputAndOutput(
-            "1.2.0", prefix="howto/",
-            apiBaseURL="http://twistedmatrix.com/documents/1.2.0/api/%s.html")
 
         structure = {
             "README": "Twisted",
@@ -2681,8 +1694,17 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
                 "plugins": {"twisted_web.py": "import WEBPLUG",
                             "twisted_words.py": "import WORDPLUG",
                             "twisted_yay.py": "import YAY"}},
-            "doc": {"core": {"howto": {"template.tpl": self.template},
-                             "index.xhtml": coreIndexInput}}}
+            "docs": {
+                "conf.py": testingSphinxConf,
+                "index.rst": "",
+            }
+        }
+
+        def smellsLikeSphinxOutput(actual):
+            self.assertTrue(actual.isdir())
+            self.assertIn("index.html", actual.listdir())
+            self.assertIn("objects.inv", actual.listdir())
+            return True
 
         twistedStructure = {
             "README": "Twisted",
@@ -2702,8 +1724,7 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
                 "plugins": {"twisted_web.py": "import WEBPLUG",
                             "twisted_words.py": "import WORDPLUG",
                             "twisted_yay.py": "import YAY"}},
-            "doc": {"core": {"howto": {"template.tpl": self.template},
-                             "index.html": coreIndexOutput}}}
+            "doc": smellsLikeSphinxOutput}
 
         coreStructure = {
             "setup.py": "import TOPINSTALL",
@@ -2713,8 +1734,7 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
             "twisted": {
                 "_version.py": genVersion("twisted", 1, 2, 0),
                 "plugins": {"twisted_yay.py": "import YAY"}},
-            "doc": {"howto": {"template.tpl": self.template},
-                    "index.html": coreIndexOutput}}
+        }
 
         wordsStructure = {
             "README": "WORDS!",
@@ -2784,7 +1804,7 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
 
 
 
-class ScriptTests(BuilderTestsMixin, StructureAssertingMixin, TestCase):
+class ScriptTests(StructureAssertingMixin, TestCase):
     """
     Tests for the release script functionality.
     """
