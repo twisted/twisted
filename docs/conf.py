@@ -346,5 +346,5 @@ epub_copyright = u'2014, Twisted Matrix Labs'
 #epub_use_index = True
 
 # Base url for apilinks extension
-apilinks_base_url = 'https://twistedmatrix.com/documents/%s/api/' % (version,)
-traclinks_base_url = 'https:l//twistedmatrix.com/trac'
+apilinks_base_url = 'https://twistedmatrix.com/documents/%s/api/' % (release,)
+traclinks_base_url = 'https://twistedmatrix.com/trac'
