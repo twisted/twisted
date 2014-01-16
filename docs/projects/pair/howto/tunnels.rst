@@ -53,4 +53,4 @@ Both ``IEthernetProtocol`` and ``IRawSocketProtocol`` are similar to :api:`twist
 Datagrams, either ethernet or otherwise, are delivered to the protocol's ``datagramReceived`` method.
 Conversely the protocol is associated with a transport with a ``write`` method that accepts datagrams for injection into the network.
 
-You can see an example of some of this functionality in :download:`../examples/pairudp.py` example.
+You can see an example of some of this functionality in the :download:`../examples/pairudp.py` example.
