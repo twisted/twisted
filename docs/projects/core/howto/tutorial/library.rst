@@ -81,13 +81,7 @@ code correctly, it is easy to achieve a good separation of parts.
 Easy Configuration
 ------------------
 
-
-
-We can also supply easy configuration for common cases with a makeService
-method that will also help build .tap files later:
-
-
-
+We can also supply easy configuration for common cases with a ``makeService`` method that will also help build .tap files later:
 
 
 :download:`finger_config.py <listings/finger/finger_config.py>`
@@ -98,14 +92,9 @@ method that will also help build .tap files later:
 And we can write simpler files now:
 
 
-
-
-
 :download:`simple-finger.tac <listings/finger/simple-finger.tac>`
 
 .. literalinclude:: listings/finger/simple-finger.tac
-
-
 
 .. code-block:: console
 
@@ -113,37 +102,20 @@ And we can write simpler files now:
     % twistd -ny simple-finger.tac
 
 
-
-
-
-Note: the finger *user* still has ultimate power: they can use``makeService`` , or they can use the lower-level interface if they
-have specific needs (maybe an IRC server on some other port? Maybe we want the
-non-SSL webserver to listen only locally?  etc. etc.)  This is an important
-design principle: never force a layer of abstraction: allow usage of layers of
-abstractions.
-
-
-
+Note: the finger *user* still has ultimate power: they can use ``makeService``, or they can use the lower-level interface if they have specific needs (maybe an IRC server on some other port? Maybe we want the non-SSL webserver to listen only locally? etc. etc.).
+This is an important design principle: never *force* a layer of abstraction; *allow* usage of layers of abstractions instead.
 
 The pasta theory of design:
 
+Spaghetti
+   Each piece of code interacts with every other piece of code (can be implemented with GOTO, functions, objects).
+Lasagna
+   Code has carefully designed layers.
+   Each layer is, in theory independent.
+   However low-level layers usually cannot be used easily, and high-level layers depend on low-level layers.
+Ravioli
+   Each part of the code is useful by itself.
+   There is a thin layer of interfaces between various parts (the sauce).
+   Each part can be usefully be used elsewhere.
 
-
-
-
-- Spaghetti: each piece of code interacts with every other piece of
-  code [can be implemented with GOTO, functions, objects]
-- Lasagna: code has carefully designed layers. Each layer is, in
-  theory independent. However low-level layers usually cannot be
-  used easily, and high-level layers depend on low-level layers.
-- Ravioli: each part of the code is useful by itself. There is a thin
-  layer of interfaces between various parts [the sauce]. Each part
-  can be usefully be used elsewhere.
-- ...but sometimes, the user just wants to order "Ravioli" , so one
-  coarse-grain easily definable layer of abstraction on top of it all
-  can be useful.
-
-
-
-
-
+...but sometimes, the user just wants to order "Ravioli", so one coarse-grain easily definable layer of abstraction on top of it all can be useful.
