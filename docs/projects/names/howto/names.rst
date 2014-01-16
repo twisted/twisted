@@ -51,7 +51,6 @@ Lets start by creating a simple DNS server:
 :download:`simple_server.py <listings/names/simple_server.py>`
 
 .. literalinclude:: listings/names/simple_server.py
-   :linenos:
 
 In this example, we are passing a :api:`twisted.names.client.Resolver <client.Resolver>` instance to the :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>` and we are configuring that client to use the upstream DNS servers which are specified in a local resolv.conf file.
 
@@ -76,7 +75,6 @@ Here's the code:
 :download:`override_server.py <listings/names/override_server.py>`
 
 .. literalinclude:: listings/names/override_server.py
-   :linenos:
 
 In fact, the fallback behaviour is handled by :api:`twisted.names.resolve.ResolverChain <ResolverChain>`.
 ResolverChain is a proxy for other resolvers.
