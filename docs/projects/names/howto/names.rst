@@ -70,13 +70,16 @@ Now suppose we want to create a bespoke DNS server which responds to certain hos
 ie hostname queries for names matching the pattern **workstation{0-9}+** will always result in an IP address where the last octet matches the workstation number.
 
 We can achieve that by writing a custom resolver which we insert before the standard client resolver.
-The custom resolver will be queried first, and if it returns a :api:`twisted.names.error.DomainError <DomainError>`, the :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>` will then dispatch the query to the standard client.
+The custom resolver will be queried first.
 
 Here's the code:
 :download:`override_server.py <listings/names/override_server.py>`
 
 .. literalinclude:: listings/names/override_server.py
 
+Notice that ``DynamicResolver.query`` returns a :api:`twisted.internet.defer.Deferred <Deferred>`.
+On success, it returns three lists of DNS records (answers, authority, additional) which will be encoded by :api:`twisted.names.dns.Message <dns.Message>` and returned to the client.
+On failure, it returns a :api:`twisted.names.error.DomainError <DomainError>`, which is a signal to :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>` that it should dispatch the query to the next client resolver in its list.
 
 .. note::
    In fact, the fallback behaviour is handled by :api:`twisted.names.resolve.ResolverChain <ResolverChain>`.
