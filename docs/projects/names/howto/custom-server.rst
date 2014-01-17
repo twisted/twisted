@@ -2,10 +2,8 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-==========================
- Creating a custom server
-==========================
-
+Creating a custom server
+========================
 The builtin DNS server plugin is useful, but the beauty of Twisted Names is that you can build your own custom servers and clients using the names components.
 
  - In this section you will learn about the components required to build a simple DNS server.
