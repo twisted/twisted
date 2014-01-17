@@ -1,4 +1,3 @@
-
 :LastChangedDate: $LastChangedDate$
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
@@ -17,7 +16,5 @@ Developer Guides
 
 
 
-- :doc:`Names DNS library <names>`
-
-
-
+- :doc:`Using the twistd plugin <names>`
+- :doc:`Create a custom DNS server <custom-server>`
