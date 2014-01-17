@@ -974,7 +974,15 @@ class OpenSSLAcceptableCiphers(object):
 # - https://wiki.mozilla.org/Security/Server_Side_TLS
 # - https://www.ssllabs.com/projects/best-practices/index.html
 # - https://hynek.me/articles/hardening-your-web-servers-ssl-ciphers/
+#
+# The general intent is:
+# - Prefer cipher suites that offer perfect forward secrecy (DHE/ECDHE),
+# - prefer ECDHE over DHE for better performance,
+# - prefer any AES-GCM over any AES-CBC for better performance and security,
+# - use 3DES as fallback which is secure but slow,
+# - disable NULL authentication, MD5 MACs and DSS for security reasons.
+#
 defaultCiphers = OpenSSLAcceptableCiphers.fromOpenSSLCipherString(
     "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:"
-    "DH+AES:ECDH+3DES:DH+3DES:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS"
+    "DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS"
 )
