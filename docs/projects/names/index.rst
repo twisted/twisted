@@ -35,3 +35,4 @@ and provide you with all the information you need to build your own custom DNS c
   Twisted Names to develop your own applications
 - :doc:`Examples <examples/index>` : short code examples using
   Twisted Names
+- :api:`twisted.names <API documentation>` : Detailed API documentation for all the Twisted Names components
