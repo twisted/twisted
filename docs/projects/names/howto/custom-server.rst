@@ -51,7 +51,7 @@ On failure, it returns a :api:`twisted.names.error.DomainError <DomainError>`, w
 .. note::
    In fact, the fallback behaviour is handled by :api:`twisted.names.resolve.ResolverChain <ResolverChain>`.
    ResolverChain is a proxy for other resolvers.
-   It takes a list of :api:`twisted.internet.interfaces.IResolver <IResolver>` providers and queries each one in turn until it receives an answer.
+   It takes a list of :api:`twisted.internet.interfaces.IResolver <IResolver>` providers and queries each one in turn until it receives an answer, or until the list is exhausted.
    The :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>` constructor takes a list of authoritative resolvers, caches and client resolvers and ensures that they are added to the :api:`twisted.names.resolve.ResolverChain <ResolverChain>` in the correct order.
 
 Let's use ``dig`` to see how this server responds to requests that match the pattern we specified:
