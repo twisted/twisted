@@ -29,7 +29,9 @@ sys.path.insert(0, os.path.abspath('..'))
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = []
+extensions = [
+    "sphinx.ext.intersphinx",
+]
 
 try:
     import rst2pdf.pdfbuilder
@@ -348,3 +350,18 @@ epub_copyright = u'2014, Twisted Matrix Labs'
 # Base url for apilinks extension
 apilinks_base_url = 'https://twistedmatrix.com/documents/%s/api/' % (release,)
 traclinks_base_url = 'https://twistedmatrix.com/trac'
+
+# -- Extension configuration ----------------------------------------------
+
+# A dict mapping unique IDs (which can be used to disambiguate references) to a
+# tuple of (<external sphinx documentation URI>, <inventory file location>).
+# The inventory file may be None to use the default location at the given URI.
+intersphinx_mapping = {
+    'py2': ('http://docs.python.org/2.7', None),
+    'py3': ('http://docs.python.org/3.3', None),
+}
+# How long to cache remote inventories. Positive is a number of days,
+# negative means infinite. The default is 5 days, which should be fine
+# for standard library documentation that does not typically change
+# significantly after release.
+#intersphinx_cache_limit = 5

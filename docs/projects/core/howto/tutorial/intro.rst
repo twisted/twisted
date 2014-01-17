@@ -390,7 +390,7 @@ The web. That invention which has infiltrated homes around the
 world finally gets through to our invention. In this case we use the
 built-in Twisted web client
 via ``twisted.web.client.getPage`` , a non-blocking version of
-Python's ``urllib2.urlopen(URL).read()`` .
+Python's :func:`urllib2.urlopen(URL).read <urllib2.urlopen>` .
 Like ``getProcessOutput`` it returns a Deferred which will be
 called back with a string, and can thus be used as a drop-in
 replacement.

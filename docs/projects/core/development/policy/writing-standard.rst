@@ -174,15 +174,11 @@ Linking
 -------
 
 
-    
 The first occurrence of the name of any module, class or function should
 always link to the API documents. Subsequent mentions may or may not link
 at the author's discretion: discussions which are very closely bound to a
 particular API should probably link in the first mention in the given
 section.
-
-    
-
 
 Links between howtos are encouraged. Overview documents and tutorials
 should always link to reference documents and in depth documents. These
@@ -190,8 +186,11 @@ documents should link among themselves wherever it's needed: if you're
 tempted to re-describe the functionality of another module, you should
 certainly link instead.
 
-    
-
+Linking to standard library documentation is also encouraged when referencing
+standard library objects. `Intersphinx <http://sphinx-doc.org/ext/intersphinx.html>`_
+is supported in Twisted documentation, with prefixes for linking to either
+the Python 2 standard library documentation (via ``py2``) or Python 3 (via
+``py3``) as needed.
 
 
 Introductions
