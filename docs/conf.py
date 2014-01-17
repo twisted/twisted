@@ -360,3 +360,8 @@ intersphinx_mapping = {
     'py2': ('http://docs.python.org/2.7', None),
     'py3': ('http://docs.python.org/3.3', None),
 }
+# How long to cache remote inventories. Positive is a number of days,
+# negative means infinite. The default is 5 days, which should be fine
+# for standard library documentation that does not typically change
+# significantly after release.
+#intersphinx_cache_limit = 5
