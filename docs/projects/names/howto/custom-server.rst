@@ -46,12 +46,16 @@ Here's the code:
 
 Notice that ``DynamicResolver.query`` returns a :api:`twisted.internet.defer.Deferred <Deferred>`.
 On success, it returns three lists of DNS records (answers, authority, additional) which will be encoded by :api:`twisted.names.dns.Message <dns.Message>` and returned to the client.
-On failure, it returns a :api:`twisted.names.error.DomainError <DomainError>`, which is a signal to :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>` that it should dispatch the query to the next client resolver in its list.
+On failure, it returns a :api:`twisted.names.error.DomainError <DomainError>`, which is a signal the query should be dispatched to the next client resolver in the list.
 
 .. note::
-   In fact, the fallback behaviour is handled by :api:`twisted.names.resolve.ResolverChain <ResolverChain>`.
+   The fallback behaviour is actually handled by :api:`twisted.names.resolve.ResolverChain <ResolverChain>`.
+
    ResolverChain is a proxy for other resolvers.
    It takes a list of :api:`twisted.internet.interfaces.IResolver <IResolver>` providers and queries each one in turn until it receives an answer, or until the list is exhausted.
+
+   Each :api:`twisted.internet.interfaces.IResolver <IResolver>` in the chain may return a deferred :api:`twisted.names.error.DomainError <DomainError>`, which is a signal that :api:`twisted.names.resolve.ResolverChain <ResolverChain>` should query the next chained resolver.
+
    The :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>` constructor takes a list of authoritative resolvers, caches and client resolvers and ensures that they are added to the :api:`twisted.names.resolve.ResolverChain <ResolverChain>` in the correct order.
 
 Let's use ``dig`` to see how this server responds to requests that match the pattern we specified:
