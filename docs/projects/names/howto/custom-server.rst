@@ -23,7 +23,9 @@ Also note that we start the server listening on both UDP and TCP ports.
 This is a standard requirement for DNS servers.
 
 You can test the server using ``dig``.
-For example ::
+For example:
+
+.. code-block:: console
 
     $ dig -p 10053 @127.0.0.1 example.com SOA +short
     sns.dns.icann.org. noc.dns.icann.org. 2013102791 7200 3600 1209600 3600
@@ -37,6 +39,7 @@ We'll write a custom resolver which we insert before the standard client resolve
 The custom resolver will be queried first.
 
 Here's the code:
+
 :download:`override_server.py <listings/names/override_server.py>`
 
 .. literalinclude:: listings/names/override_server.py
@@ -51,7 +54,9 @@ On failure, it returns a :api:`twisted.names.error.DomainError <DomainError>`, w
    It takes a list of :api:`twisted.internet.interfaces.IResolver <IResolver>` providers and queries each one in turn until it receives an answer.
    The :api:`twisted.names.server.DNSServerFactory <DNSServerFactory>` constructor takes a list of authoritative resolvers, caches and client resolvers and ensures that they are added to the :api:`twisted.names.resolve.ResolverChain <ResolverChain>` in the correct order.
 
-Let's use ``dig`` to see how this server responds to requests that match the pattern we specified. ::
+Let's use ``dig`` to see how this server responds to requests that match the pattern we specified:
+
+.. code-block:: console
 
     $ dig -p 10053 @127.0.0.1 workstation1.example.com A +short
     172.0.2.1
@@ -59,7 +64,9 @@ Let's use ``dig`` to see how this server responds to requests that match the pat
     $ dig -p 10053 @127.0.0.1 workstation100.example.com A +short
     172.0.2.100
 
-And if we issue a request that doesn't match the pattern. ::
+And if we issue a request that doesn't match the pattern:
+
+.. code-block:: console
 
     $ dig -p 10053 @127.0.0.1 foobar.example.com A +short
     67.215.65.132
