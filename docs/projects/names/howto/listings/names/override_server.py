@@ -49,7 +49,7 @@ class DynamicResolver(object):
         Calculate the response to a query.
         """
         name = query.name.name
-        labels = dns._nameToLabels(name)
+        labels = name.split('.')
         parts = labels[0].split(self._pattern)
         lastOctet = int(parts[1])
         answer = dns.RRHeader(
