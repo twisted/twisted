@@ -51,8 +51,7 @@ class DynamicResolver(object):
         lastOctet = int(parts[1])
         answer = dns.RRHeader(
             name=name,
-            payload=dns.Record_A(
-                address=b'%s.%s' % (self._network, lastOctet,), ttl=0))
+            payload=dns.Record_A(address=b'%s.%s' % (self._network, lastOctet)))
         answers = [answer]
         authority = []
         additional = []
