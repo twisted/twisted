@@ -20,14 +20,21 @@ the latest version of Python directly from your code, if possible.
 
 from __future__ import division
 
+from operator import methodcaller
 import sys, string, socket, struct
 
 
-if sys.version_info < (3, 0):
-    _PY3 = False
-else:
-    _PY3 = True
+_PY3 = sys.version_info >= (3, 0)
 
+
+if _PY3:
+    iterkeys = methodcaller("keys")
+    itervalues = methodcaller("values")
+    iteritems = methodcaller("items")
+else:
+    iterkeys = methodcaller("iterkeys")
+    itervalues = methodcaller("itervalues")
+    iteritems = methodcaller("iteritems")
 
 
 def inet_pton(af, addr):
@@ -418,6 +425,9 @@ __all__ = [
     "networkString",
     "unicode",
     "iterbytes",
+    "iterkeys",
+    "itervalues",
+    "iteritems",
     "intToBytes",
     "lazyByteSlice",
     ]

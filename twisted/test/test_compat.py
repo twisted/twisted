@@ -74,6 +74,72 @@ class CompatTestCase(unittest.SynchronousTestCase):
 
 
 
+class FakeMapping(object):
+    """
+    A fake mapping (dict-like object) whose interface has iterkeys, itervalues,
+    and iteritems on Python 2 and no iter- prefix on Python 3.
+    """
+    def keys(self):
+        """
+        Return a stub set of keys.
+        """
+        return iter([1, 2])
+
+
+    def values(self):
+        """
+        Return a stub set of values.
+        """
+        return iter([3, 4])
+
+
+    def items(self):
+        """
+        Return a stub set of items.
+        """
+        return iter([(1, 3), (2, 4)])
+
+
+    if not _PY3:
+        iterkeys = keys
+        itervalues = values
+        iteritems = items
+        del keys, values, items
+
+
+
+class IterMethodsTest(unittest.SynchronousTestCase):
+    """
+    C{iterkeys}, C{itervalues} and C{iteritems} are functions that
+    delegate appropriately to the methods that return iterables on both
+    Python 2 and Python 3.
+    """
+
+    def test_iterkeys(self):
+        """
+        C{iterkeys} calls C{iterkeys} on Python 2 and C{keys} on Python 3.
+        """
+        from twisted.python.compat import iterkeys
+        self.assertEqual(list(iterkeys(FakeMapping())), [1, 2])
+
+
+    def test_itervalues(self):
+        """
+        C{itervalues} calls C{itervalues} on Python 2 and C{values} on Python 3.
+        """
+        from twisted.python.compat import itervalues
+        self.assertEqual(list(itervalues(FakeMapping())), [3, 4])
+
+
+    def test_iteritems(self):
+        """
+        C{iteritems} calls C{iteritems} on Python 2 and C{items} on Python 3.
+        """
+        from twisted.python.compat import iteritems
+        self.assertEqual(list(iteritems(FakeMapping())), [(1, 3), (2, 4)])
+
+
+
 class IPv6Tests(unittest.SynchronousTestCase):
     """
     C{inet_pton} and C{inet_ntop} implementations support IPv6.
