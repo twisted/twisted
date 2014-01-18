@@ -82,8 +82,8 @@ And if we issue a request that doesn't match the pattern:
 
 .. code-block:: console
 
-    $ dig -p 10053 @127.0.0.1 foobar.example.com A +short
-    67.215.65.132
+    $ dig -p 10053 @localhost www.example.com A +short
+    93.184.216.119
 
 Further Reading
 ---------------
