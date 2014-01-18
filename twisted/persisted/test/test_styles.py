@@ -7,8 +7,8 @@ Tests for L{twisted.persisted.styles}.
 
 from __future__ import print_function, division, absolute_import
 
+import io
 import pickle
-import StringIO
 
 from twisted.trial import unittest
 from twisted.persisted.styles import (
@@ -35,30 +35,30 @@ class Bar:
 
 class UnpickleMethodTestCase(unittest.TestCase):
     """
-    Tests for the unpickleMethod function.
+    Tests for the L{unpickleMethod} function.
     """
 
     def test_instanceBuildingNamePresent(self):
         """
-        L{unpickleMethod} returns an instance method bound to the
-        instance passed to it.
+        L{unpickleMethod} returns an instance method bound to the instance
+        passed to it.
         """
         foo = Foo()
         m = unpickleMethod('method', foo, Foo)
         self.assertEqual(m, foo.method)
-        self.assertNotIdentical(m, foo.method)
+        self.assertIsNot(m, foo.method)
 
 
     def test_instanceBuildingNameNotPresent(self):
         """
-        If the named method is not present in the class,
-        L{unpickleMethod} finds a method on the class of the instance
-        and returns a bound method from there.
+        If the named method is not present in the class, L{unpickleMethod}
+        finds a method on the class of the instance and returns a bound method
+        from there.
         """
         foo = Foo()
         m = unpickleMethod('method', foo, Bar)
         self.assertEqual(m, foo.method)
-        self.assertNotIdentical(m, foo.method)
+        self.assertIsNot(m, foo.method)
 
 
 
@@ -66,7 +66,11 @@ class VersionTestCase(unittest.TestCase):
     """
     Tests for L{Versioned}.
     """
-    def testNullVersionUpgrade(self):
+    def test_nullVersionUpgrade(self):
+        """
+        L{doUpgrade} will upgrade a class that used to not subclass
+        L{Versioned} to the first L{Versioned} subclass version.
+        """
         global NullVersioned
         class NullVersioned:
             ok = 0
@@ -77,9 +81,14 @@ class VersionTestCase(unittest.TestCase):
                 self.ok = 1
         mnv = pickle.loads(pkcl)
         doUpgrade()
-        assert mnv.ok, "initial upgrade not run!"
+        self.assertTrue(mnv.ok, "initial upgrade not run!")
 
-    def testVersionUpgrade(self):
+
+    def test_versionUpgrade(self):
+        """
+        L{doUpgrade} will upgrade from a L{Versioned} subclass with a smaller
+        C{persistenceVersion} to a larger C{persistenceVersion}.
+        """
         global MyVersioned
         class MyVersioned(Versioned):
             persistenceVersion = 2
@@ -97,20 +106,25 @@ class VersionTestCase(unittest.TestCase):
             def upgradeToVersion4(self):
                 self.v4 += 1
         mv = MyVersioned()
-        assert not (mv.v3 or mv.v4), "hasn't been upgraded yet"
+        self.assertFalse(mv.v3 or mv.v4, "hasn't been upgraded yet")
         pickl = pickle.dumps(mv)
         MyVersioned.persistenceVersion = 4
         obj = pickle.loads(pickl)
         doUpgrade()
-        assert obj.v3, "didn't do version 3 upgrade"
-        assert obj.v4, "didn't do version 4 upgrade"
+        self.assertTrue(obj.v3, "didn't do version 3 upgrade")
+        self.assertTrue(obj.v4, "didn't do version 4 upgrade")
         pickl = pickle.dumps(obj)
         obj = pickle.loads(pickl)
         doUpgrade()
-        assert obj.v3 == 1, "upgraded unnecessarily"
-        assert obj.v4 == 1, "upgraded unnecessarily"
+        self.assertEqual(obj.v3, 1, "upgraded unnecessarily")
+        self.assertEqual(obj.v4, 1, "upgraded unnecessarily")
 
-    def testNonIdentityHash(self):
+
+    def test_nonIdentityHash(self):
+        """
+        L{doUpgrade} will upgrade a L{Versioned} class with an overridden
+        C{__hash__} method.
+        """
         global ClassWithCustomHash
         class ClassWithCustomHash(Versioned):
             def __init__(self, unique, hash):
@@ -133,7 +147,12 @@ class VersionTestCase(unittest.TestCase):
         self.failUnless(v1.upgraded)
         self.failUnless(v2.upgraded)
 
-    def testUpgradeDeserializesObjectsRequiringUpgrade(self):
+
+    def test_upgradeDeserializesObjectsRequiringUpgrade(self):
+        """
+        L{doUpgrade} will upgrade other L{Versioned} subclasses referenced from
+        the object being deserialized.
+        """
         global ToyClassA, ToyClassB
         class ToyClassA(Versioned):
             pass
@@ -153,7 +172,7 @@ class VersionTestCase(unittest.TestCase):
 
         x = pickle.loads(pklA)
         doUpgrade()
-        self.failUnless(x.y.upgraded)
+        self.assertTrue(x.y.upgraded)
 
 
 
@@ -225,8 +244,14 @@ class MyEphemeral(Ephemeral):
 
 
 class EphemeralTestCase(unittest.TestCase):
-
-    def testEphemeral(self):
+    """
+    Tests for L{Ephemeral}.
+    """
+    def test_ephemeral(self):
+        """
+        An instance of a subclass of L{Ephemeral} is unpickled as an instance
+        of L{Ephemeral}.
+        """
         o = MyEphemeral(3)
         self.assertEqual(o.__class__, MyEphemeral)
         self.assertEqual(o.x, 3)
@@ -235,7 +260,8 @@ class EphemeralTestCase(unittest.TestCase):
         o = pickle.loads(pickl)
 
         self.assertEqual(o.__class__, Ephemeral)
-        self.assert_(not hasattr(o, 'x'))
+        self.assertFalse(hasattr(o, 'x'))
+
 
 
 class Pickleable:
@@ -246,30 +272,53 @@ class Pickleable:
     def getX(self):
         return self.x
 
-class PicklingTestCase(unittest.TestCase):
-    """Test pickling of extra object types."""
 
-    def testModule(self):
+
+class PicklingTestCase(unittest.TestCase):
+    """
+    Test pickling of extra object types.
+    """
+
+    def test_module(self):
+        """
+        A module object can be pickled.
+        """
         pickl = pickle.dumps(unittest)
         o = pickle.loads(pickl)
         self.assertEqual(o, unittest)
 
-    def testClassMethod(self):
+
+    def test_classMethod(self):
+        """
+        An unbound method can be pickled.
+        """
         pickl = pickle.dumps(Pickleable.getX)
         o = pickle.loads(pickl)
         self.assertEqual(o, Pickleable.getX)
 
-    def testInstanceMethod(self):
+
+    def test_instanceMethod(self):
+        """
+        A bound method can be pickled.
+        """
         obj = Pickleable(4)
         pickl = pickle.dumps(obj.getX)
         o = pickle.loads(pickl)
         self.assertEqual(o(), 4)
         self.assertEqual(type(o), type(obj.getX))
 
-    def testStringIO(self):
+
+    def test_stringIO(self):
+        """
+        An L{StringIO.StringIO} can be pickled.
+        """
+        try:
+            import StringIO
+        except ImportError:
+            raise SkipTest("Python 3 doesn't have StringIO")
         f = StringIO.StringIO()
-        f.write("abc")
+        f.write(b"abc")
         pickl = pickle.dumps(f)
         o = pickle.loads(pickl)
         self.assertEqual(type(o), type(f))
-        self.assertEqual(f.getvalue(), "abc")
+        self.assertEqual(f.getvalue(), b"abc")

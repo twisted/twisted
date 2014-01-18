@@ -22,7 +22,7 @@ import sys
 
 # Twisted Imports
 from twisted.python import log
-from twisted.python import reflect
+from twisted.python._reflectpy3 import qual, namedAny
 
 oldModules = {}
 
@@ -43,7 +43,7 @@ def unpickleMethod(im_name,
         unbound = getattr(im_class,im_name)
         if im_self is None:
             return unbound
-        bound = types.MethodType(unbound.im_func, im_self, im_class)
+        bound = types.MethodType(unbound.__func__, im_self, im_class)
         return bound
     except AttributeError:
         log.msg("Method",im_name,"not on class",im_class)
@@ -108,24 +108,47 @@ if hasattr(NativeStringIO, 'InputType'):
                 pickleStringI,
                 unpickleStringI)
 
+
+
 class Ephemeral:
     """
     This type of object is never persisted; if possible, even references to it
     are eliminated.
     """
-
-    def __getstate__(self):
+    def _warn(self):
         log.msg( "WARNING: serializing ephemeral %s" % self )
         import gc
         if '__pypy__' not in sys.builtin_module_names:
             if getattr(gc, 'get_referrers', None):
                 for r in gc.get_referrers(self):
                     log.msg( " referred to by %s" % (r,))
+
+
+    # This seems to work on Python 3.
+    def __reduce__(self):
+        self._warn()
+        return _loadEphemeral, (qual(self.__class__),)
+
+
+    # This is still needed for Python 2.
+    def __getstate__(self):
+        self._warn()
         return None
 
+
     def __setstate__(self, state):
-        log.msg( "WARNING: unserializing ephemeral %s" % self.__class__ )
+        _loadEphemeral(qual(self.__class__))
         self.__class__ = Ephemeral
+
+
+
+def _loadEphemeral(name):
+    """
+    Issue a log event warning about an Ephemeral being unserialized.
+    """
+    log.msg( "WARNING: unserializing ephemeral %s" % (name,))
+    return Ephemeral()
+
 
 
 versionedsToUpgrade = {}
@@ -133,7 +156,7 @@ upgraded = {}
 
 def doUpgrade():
     global versionedsToUpgrade, upgraded
-    for versioned in versionedsToUpgrade.values():
+    for versioned in list(versionedsToUpgrade.values()):
         requireUpgrade(versioned)
     versionedsToUpgrade = {}
     upgraded = {}
@@ -167,6 +190,16 @@ def _aybabtu(c):
     # return all except the unwanted classes
     return l[2:]
 
+
+def _loadVersioned(className, state):
+    print('HOOOOOOOO')
+    cls = namedAny(className)
+    self = cls.__new__(cls)
+    self.__setstate__(state)
+    return self
+
+
+
 class Versioned:
     """
     This type of object is persisted with versioning information.
@@ -190,9 +223,19 @@ class Versioned:
     persistenceVersion = 0
     persistenceForgets = ()
 
+    # This doesn't help in the "null upgrade" case on Python 3 because it's
+    # some other class that gets serialized.  And on Python 3 that also means
+    # __setstate__ apparently never gets called even after the class switches
+    # to Versioned.
+    def __reduce__(self):
+        return _loadVersioned, (qual(self.__class__), self.__getstate__())
+
+
+    # Python 2.
     def __setstate__(self, state):
         versionedsToUpgrade[id(self)] = self
         self.__dict__ = state
+
 
     def __getstate__(self, dict=None):
         """Get state, adding a version number to it on its way out.
@@ -207,8 +250,9 @@ class Versioned:
                     if slot in dct:
                         del dct[slot]
             if 'persistenceVersion' in base.__dict__:
-                dct['%s.persistenceVersion' % reflect.qual(base)] = base.persistenceVersion
+                dct['%s.persistenceVersion' % qual(base)] = base.persistenceVersion
         return dct
+
 
     def versionUpgrade(self):
         """(internal) Do a version upgrade.
@@ -240,14 +284,14 @@ class Versioned:
                     highestBase = base
                     highestVersion = base.persistenceVersion
             if highestBase:
-                self.__dict__['%s.persistenceVersion' % reflect.qual(highestBase)] = pver
+                self.__dict__['%s.persistenceVersion' % qual(highestBase)] = pver
         for base in bases:
             # ugly hack, but it's what the user expects, really
             if (Versioned not in base.__bases__ and
                 'persistenceVersion' not in base.__dict__):
                 continue
             currentVers = base.persistenceVersion
-            pverName = '%s.persistenceVersion' % reflect.qual(base)
+            pverName = '%s.persistenceVersion' % qual(base)
             persistVers = (self.__dict__.get(pverName) or 0)
             if persistVers:
                 del self.__dict__[pverName]
@@ -256,7 +300,7 @@ class Versioned:
                 persistVers = persistVers + 1
                 method = base.__dict__.get('upgradeToVersion%s' % persistVers, None)
                 if method:
-                    log.msg( "Upgrading %s (of %s @ %s) to version %s" % (reflect.qual(base), reflect.qual(self.__class__), id(self), persistVers) )
+                    log.msg( "Upgrading %s (of %s @ %s) to version %s" % (qual(base), qual(self.__class__), id(self), persistVers) )
                     method(self)
                 else:
                     log.msg( 'Warning: cannot upgrade %s to version %s' % (base, persistVers) )
