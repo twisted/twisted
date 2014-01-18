@@ -33,13 +33,12 @@ class DynamicResolver(object):
         """
         Check the query to determine if a dynamic response is required.
         """
-        response = False
         if query.type == dns.A:
             labels = query.name.name.split('.')
             if labels[0].startswith(self._pattern):
-                response = True
+                return True
 
-        return response
+        return False
 
 
     def _doDynamicResponse(self, query):
