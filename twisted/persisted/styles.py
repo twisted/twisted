@@ -2,23 +2,23 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-
 """
 Different styles of persisted objects.
 """
+from __future__ import print_function,division,absolute_import
+from twisted.python.compat import _PY3,NativeStringIO
 
 # System Imports
 import types
-import copy_reg
+
+if not _PY3:
+    import copy_reg
+else:
+    import copyreg as copy_reg
+
 import copy
 import inspect
 import sys
-
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
 
 # Twisted Imports
 from twisted.python import log
@@ -84,13 +84,13 @@ def pickleStringO(stringo):
     return unpickleStringO, (stringo.getvalue(), stringo.tell())
 
 def unpickleStringO(val, sek):
-    x = StringIO.StringIO()
+    x = NativeStringIO()
     x.write(val)
     x.seek(sek)
     return x
 
-if hasattr(StringIO, 'OutputType'):
-    copy_reg.pickle(StringIO.OutputType,
+if hasattr(NativeStringIO, 'OutputType'):
+    copy_reg.pickle(NativeStringIO.OutputType,
                     pickleStringO,
                     unpickleStringO)
 
@@ -98,13 +98,13 @@ def pickleStringI(stringi):
     return unpickleStringI, (stringi.getvalue(), stringi.tell())
 
 def unpickleStringI(val, sek):
-    x = StringIO.StringIO(val)
+    x = NativeStringIO(val)
     x.seek(sek)
     return x
 
 
-if hasattr(StringIO, 'InputType'):
-    copy_reg.pickle(StringIO.InputType,
+if hasattr(NativeStringIO, 'InputType'):
+    copy_reg.pickle(NativeStringIO.InputType,
                 pickleStringI,
                 unpickleStringI)
 
