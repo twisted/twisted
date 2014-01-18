@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_persisted -*-
+# -*- test-case-name: twisted.persisted.test.test_styles -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
