@@ -37,7 +37,7 @@ class DynamicResolver(object):
         """
         response = False
         if query.type == dns.A:
-            labels = dns._nameToLabels(query.name.name)
+            labels = query.name.name.split('.')
             if labels[0].startswith(self._pattern):
                 response = True
 
