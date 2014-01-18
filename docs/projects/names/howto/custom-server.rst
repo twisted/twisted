@@ -53,7 +53,7 @@ Notice that ``DynamicResolver.query`` returns a :api:`twisted.internet.defer.Def
 On success, it returns three lists of DNS records (answers, authority, additional),
 which will be encoded by :api:`twisted.names.dns.Message <dns.Message>` and returned to the client.
 On failure, it returns a :api:`twisted.names.error.DomainError <DomainError>`,
-which is a signal the query should be dispatched to the next client resolver in the list.
+which is a signal that the query should be dispatched to the next client resolver in the list.
 
 .. note::
    The fallback behaviour is actually handled by :api:`twisted.names.resolve.ResolverChain <ResolverChain>`.
