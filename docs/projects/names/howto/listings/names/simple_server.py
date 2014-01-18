@@ -13,14 +13,14 @@ def main():
     """
     Run the server.
     """
-    f = server.DNSServerFactory(
-        clients=[client.Resolver(resolv='/etc/resolv.conf')],
+    factory = server.DNSServerFactory(
+        clients=[client.Resolver(resolv='/etc/resolv.conf')]
     )
 
-    p = dns.DNSDatagramProtocol(controller=f)
+    protocol = dns.DNSDatagramProtocol(controller=factory)
 
-    reactor.listenUDP(10053, p)
-    reactor.listenTCP(10053, f)
+    reactor.listenUDP(10053, protocol)
+    reactor.listenTCP(10053, factory)
 
     reactor.run()
 
