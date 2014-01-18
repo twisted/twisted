@@ -48,12 +48,18 @@ class DynamicResolver(object):
         """
         Calculate the response to a query.
         """
-        name = query.name
-        labels = dns._nameToLabels(query.name.name)
+        name = query.name.name
+        labels = dns._nameToLabels(name)
         parts = labels[0].split(self._pattern)
         lastOctet = int(parts[1])
-        p = dns.Record_A(address=b'%s.%s' % (self._network, lastOctet,), ttl=0)
-        return [dns.RRHeader(name=name.name, payload=p)], [], []
+        answer = dns.RRHeader(
+            name=name,
+            payload=dns.Record_A(
+                address=b'%s.%s' % (self._network, lastOctet,), ttl=0))
+        answers = [answer]
+        authority = []
+        additional = []
+        return answers, authority, additional
 
 
     def query(self, query, timeout=None):
@@ -72,14 +78,14 @@ def main():
     """
     Run the server.
     """
-    f = server.DNSServerFactory(
-        clients=[DynamicResolver(), client.Resolver(resolv='/etc/resolv.conf')],
+    factory = server.DNSServerFactory(
+        clients=[DynamicResolver(), client.Resolver(resolv='/etc/resolv.conf')]
     )
 
-    p = dns.DNSDatagramProtocol(controller=f)
+    protocol = dns.DNSDatagramProtocol(controller=factory)
 
-    reactor.listenUDP(10053, p)
-    reactor.listenTCP(10053, f)
+    reactor.listenUDP(10053, protocol)
+    reactor.listenTCP(10053, factory)
 
     reactor.run()
 
