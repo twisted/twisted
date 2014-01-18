@@ -26,10 +26,8 @@ class DynamicResolver(object):
     A resolver which calculates the answers to certain queries based on the
     query type and name.
     """
-    def __init__(self, pattern='workstation', network='172.0.2'):
-        self._pattern = pattern
-        self._network = network
-
+    _pattern = 'workstation'
+    _network = '172.0.2'
 
     def _dynamicResponseRequired(self, query):
         """
