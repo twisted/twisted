@@ -24,6 +24,7 @@ except ImportError:
 
 from twisted.python.compat import nativeString
 from twisted.python.constants import NamedConstant, Names
+from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet import protocol, defer, reactor
 
@@ -470,18 +471,10 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_dhParams(self):
         """
-        If C{dhParams} is set, C{dhParams._setParameters} will be ran on every
-        new context.
+        If C{dhParams} is set, they are loaded into each new context.
         """
         class FakeDiffieHellmanParameters(object):
-            """
-            A fake L{sslverify.OpenSSLDiffieHellmanParameters} that saves the
-            contexts it gets passed.
-            """
-            _contexts = []
-
-            def _setParameters(self, context):
-                self._contexts.append(context)
+            _dhFile = FilePath(b'dh.params')
 
         dhParams = FakeDiffieHellmanParameters()
         opts = sslverify.OpenSSLCertificateOptions(
@@ -489,8 +482,12 @@ class OpenSSLOptions(unittest.TestCase):
             certificate=self.sCert,
             dhParameters=dhParams,
         )
+        opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        self.assertEqual([ctx], dhParams._contexts)
+        self.assertEqual(
+            FakeDiffieHellmanParameters._dhFile.path,
+            ctx._dhFilename
+        )
 
 
     def test_abbreviatingDistinguishedNames(self):
@@ -1134,7 +1131,7 @@ class TestDiffieHellmanParameters(unittest.TestCase):
     """
     if skipSSL:
         skip = skipSSL
-    filename = 'dh.params'
+    filePath = FilePath(b'dh.params')
 
     def test_fromFile(self):
         """
@@ -1142,18 +1139,6 @@ class TestDiffieHellmanParameters(unittest.TestCase):
         name saved.
         """
         params = sslverify.OpenSSLDiffieHellmanParameters.fromFile(
-            self.filename
+            self.filePath
         )
-        self.assertEqual(self.filename, params._dhFilename)
-
-    def test_setParameters(self):
-        """
-        C{_setParameters} calls its argument's context with the saved
-        filename.
-        """
-        params = sslverify.OpenSSLDiffieHellmanParameters.fromFile(
-            self.filename
-        )
-        ctx = FakeContext(SSL.TLSv1_METHOD)
-        params._setParameters(ctx)
-        self.assertEqual(self.filename, ctx._dhFilename)
+        self.assertEqual(self.filePath, params._dhFile)

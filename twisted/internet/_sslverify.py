@@ -16,6 +16,7 @@ from twisted.internet.error import VerifyError, CertificateError
 from twisted.internet.interfaces import IAcceptableCiphers, ICipher
 from twisted.python import _reflectpy3 as reflect, util
 from twisted.python.compat import nativeString, networkString, unicode
+from twisted.python.filepath import FilePath
 from twisted.python.util import FancyEqMixin
 
 
@@ -873,7 +874,7 @@ class OpenSSLCertificateOptions(object):
             ctx.set_session_id(sessionName)
 
         if self.dhParameters:
-            self.dhParameters._setParameters(ctx)
+            ctx.load_tmp_dh(self.dhParameters._dhFile.path)
         ctx.set_cipher_list(nativeString(self._cipherString))
 
         return ctx
@@ -1004,11 +1005,11 @@ class OpenSSLDiffieHellmanParameters(object):
     Diffie-Hellman key exchange.
     """
     def __init__(self, parameters):
-        self._dhFilename = parameters
+        self._dhFile = parameters
 
 
     @classmethod
-    def fromFile(cls, filename):
+    def fromFile(cls, filePath):
         """
         Load parameters from a file.
 
@@ -1020,22 +1021,12 @@ class OpenSSLDiffieHellmanParameters(object):
         Please refer to U{OpenSSL's C{dhparam} documentation
         <http://www.openssl.org/docs/apps/dhparam.html>} for further details.
 
-        @param filename: A file containing parameters for Diffie-Hellman key
+        @param filePath: A file containing parameters for Diffie-Hellman key
             exchange.
-        @type filename: L{bytes}
+        @type filePath: L{FilePath}
 
-        @return: A instance that loads its parameters from C{filename}.
+        @return: A instance that loads its parameters from C{filePath}.
         @rtype: L{DiffieHellmanParameters
             <twisted.internet.ssl.DiffieHellmanParameters>}
         """
-        return cls(filename)
-
-
-    def _setParameters(self, context):
-        """
-        Set key exchange parameters on a context.
-
-        @param context: An SSL Context.
-        @type context: L{OpenSSL.SSL.Context}
-        """
-        context.load_tmp_dh(self._dhFilename)
+        return cls(filePath)
