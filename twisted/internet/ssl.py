@@ -205,5 +205,5 @@ __all__ = [
     'DistinguishedName', 'DN',
     'Certificate', 'CertificateRequest', 'PrivateCertificate',
     'KeyPair',
-    'AcceptableCiphers', 'CertificateOptions',
+    'AcceptableCiphers', 'CertificateOptions', 'DiffieHellmanParameters',
     ]
