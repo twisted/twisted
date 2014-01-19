@@ -196,6 +196,7 @@ from twisted.internet._sslverify import KeyPair
 from twisted.internet._sslverify import (
     OpenSSLAcceptableCiphers as AcceptableCiphers,
     OpenSSLCertificateOptions as CertificateOptions,
+    OpenSSLDiffieHellmanParameters as DiffieHellmanParameters,
 )
 
 __all__ = [
@@ -204,5 +205,5 @@ __all__ = [
     'DistinguishedName', 'DN',
     'Certificate', 'CertificateRequest', 'PrivateCertificate',
     'KeyPair',
-    'AcceptableCiphers', 'CertificateOptions',
+    'AcceptableCiphers', 'CertificateOptions', 'DiffieHellmanParameters',
     ]

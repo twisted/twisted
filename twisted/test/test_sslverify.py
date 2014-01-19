@@ -24,6 +24,7 @@ except ImportError:
 
 from twisted.python.compat import nativeString
 from twisted.python.constants import NamedConstant, Names
+from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet import protocol, defer, reactor
 
@@ -143,6 +144,7 @@ class FakeContext(object):
     @ivar _extraCertChain: Accumulated C{list} of all extra certificates added
         by L{add_extra_chain_cert}.
     @ivar _cipherList: Set by L{set_cipher_list}.
+    @ivar _dhFilename: Set by L{load_tmp_dh}.
     """
     _options = 0
 
@@ -176,6 +178,9 @@ class FakeContext(object):
 
     def set_cipher_list(self, cipherList):
         self._cipherList = cipherList
+
+    def load_tmp_dh(self, dhfilename):
+        self._dhFilename = dhfilename
 
 
 
@@ -462,6 +467,27 @@ class OpenSSLOptions(unittest.TestCase):
         ctx = opts.getContext()
         options = SSL.OP_SINGLE_DH_USE | opts._OP_SINGLE_ECDH_USE
         self.assertEqual(options, ctx._options & options)
+
+
+    def test_dhParams(self):
+        """
+        If C{dhParams} is set, they are loaded into each new context.
+        """
+        class FakeDiffieHellmanParameters(object):
+            _dhFile = FilePath(b'dh.params')
+
+        dhParams = FakeDiffieHellmanParameters()
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+            dhParameters=dhParams,
+        )
+        opts._contextFactory = FakeContext
+        ctx = opts.getContext()
+        self.assertEqual(
+            FakeDiffieHellmanParameters._dhFile.path,
+            ctx._dhFilename
+        )
 
 
     def test_abbreviatingDistinguishedNames(self):
@@ -1096,3 +1122,23 @@ class TestAcceptableCiphers(unittest.TestCase):
         self.assertIsInstance(ac._ciphers, list)
         self.assertTrue(all(sslverify.ICipher.providedBy(c)
                             for c in ac._ciphers))
+
+
+
+class TestDiffieHellmanParameters(unittest.TestCase):
+    """
+    Tests for twisted.internet._sslverify.OpenSSLDHParameters.
+    """
+    if skipSSL:
+        skip = skipSSL
+    filePath = FilePath(b'dh.params')
+
+    def test_fromFile(self):
+        """
+        Calling C{fromFile} with a filename returns an instance with that file
+        name saved.
+        """
+        params = sslverify.OpenSSLDiffieHellmanParameters.fromFile(
+            self.filePath
+        )
+        self.assertEqual(self.filePath, params._dhFile)
