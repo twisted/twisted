@@ -650,7 +650,9 @@ class IReactorTCP(Interface):
         """
         Connect a TCP client.
 
-        @param host: a host name
+        @param host: A hostname or an IPv4 or IPv6 address literal.
+
+        @type host: L{bytes}
 
         @param port: a port number
 
