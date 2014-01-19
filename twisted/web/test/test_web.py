@@ -982,6 +982,16 @@ class TestLogEscaping(unittest.TestCase):
 
 
     def assertLogs(self, line):
+        """
+        Assert that if C{self.request} is logged using C{self.site} then
+        C{line} is written to the site's access log file.
+
+        @param line: The expected line.
+        @type line: L{bytes}
+
+        @raise self.failureException: If the log file contains something other
+            than the expected line.
+        """
         try:
             self.site.log(self.request)
         finally:

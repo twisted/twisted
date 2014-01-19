@@ -1830,6 +1830,12 @@ def _escape(s):
     """
     Return a string like python repr, but always escaped as if surrounding
     quotes were double quotes.
+
+    @param s: The string to escape.
+    @type s: L{bytes} or L{unicode}
+
+    @return: An escaped string.
+    @rtype: L{unicode}
     """
     if not isinstance(s, bytes):
         s = s.encode("ascii")
@@ -1874,6 +1880,14 @@ class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
     Add a layer on top of another request that only uses the value of an
     X-Forwarded-For header as the result of C{getClientIP}.
     """
+    def getClientIP(self):
+        """
+        Get the client address (the first address) in the value of the
+        X-Forwarded-For header.  If the header is not present, return C{b"-"}.
+        """
+        return self._request.requestHeaders.getRawHeaders(
+            b"x-forwarded-for", [b"-"])[0].split(b",")[0]
+
     # These are missing from the interface.  Forward them manually.
     @property
     def clientproto(self):
@@ -1886,10 +1900,6 @@ class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
     @property
     def sentLength(self):
         return self._request.sentLength
-
-    def getClientIP(self):
-        return self._request.requestHeaders.getRawHeaders(
-            b"x-forwarded-for", [b"-"])[0].split(b",")[0]
 
 
 
@@ -1916,6 +1926,14 @@ class HTTPFactory(protocol.ServerFactory):
     @type _logDateTimeCall: L{IDelayedCall} provided
 
     @ivar _logFormatter: See the C{logFormatter} parameter to L{__init__}
+
+    @ivar _nativeize: A flag that indicates whether the log file being written
+        to wants native strings (C{True}) or bytes (C{False}).  This is only to
+        support writing to L{twisted.python.log} which, unfortunately, works
+        with native strings.
+
+    @ivar _reactor: An L{IReactorTime} provider used to compute logging
+        timestamps.
     """
 
     protocol = HTTPChannel
@@ -2009,7 +2027,7 @@ class HTTPFactory(protocol.ServerFactory):
         else:
             line = self._logFormatter(self._logDateTime, request) + u"\n"
             if self._nativeize:
-                line = nativeString(line )
+                line = nativeString(line)
             else:
                 line = line.encode("utf-8")
             logFile.write(line)
