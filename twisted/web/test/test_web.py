@@ -10,13 +10,14 @@ import zlib
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import (_PY3, networkString,
-                                   NativeStringIO as StringIO)
+from twisted.python.compat import (
+    _PY3, networkString, NativeStringIO as StringIO)
+from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet import reactor
 from twisted.internet.address import IPv4Address
+from twisted.internet.task import Clock
 from twisted.web import server, resource
-from twisted.internet import task
 from twisted.web import iweb, http, error
 from twisted.python import log
 
@@ -94,7 +95,7 @@ class SessionTest(unittest.TestCase):
         Create a site with one active session using a deterministic, easily
         controlled clock.
         """
-        self.clock = task.Clock()
+        self.clock = Clock()
         self.uid = b'unique'
         self.site = server.Site(resource.Resource())
         self.session = server.Session(self.site, self.uid, self.clock)
@@ -833,6 +834,96 @@ class DummyRequestForLogTest(DummyRequest):
     clientproto = b'HTTP/1.0'
     sentLength = None
     client = IPv4Address('TCP', '1.2.3.4', 12345)
+
+
+
+class AccessLogTests(unittest.TestCase):
+    """
+    Tests for L{http.HTTPFactory.log}.
+    """
+    def test_commonLogFormat(self):
+        """
+        L{http.HTTPFactory.log} writes a I{common log format} line to the
+        factory's log file.
+        """
+        reactor = Clock()
+        reactor.advance(1234567890)
+
+        logPath = self.mktemp()
+        factory = http.HTTPFactory(logPath)
+        factory._reactor = reactor
+        factory.startFactory()
+        self.addCleanup(factory.stopFactory)
+
+        factory.log(DummyRequestForLogTest(factory))
+
+        self.assertEqual(
+            # Client IP
+            b'1.2.3.4 '
+            # Some blanks we never fill in
+            b'- - '
+            # The current time
+            b'[13/Feb/2009:23:31:30 +0000] '
+            # Method, URI, version
+            b'"GET /dummy HTTP/1.0" '
+            # Response code
+            b'123 '
+            # Response length
+            b'- '
+            # Value of the "Referer" header.  Probably incorrectly quoted.
+            b'"-" '
+            # Value pf the "User-Agent" header.  Probably incorrectly quoted.
+            b'"-"'
+            b"\n",
+            FilePath(logPath).getContent())
+
+
+    def test_logFormatOverride(self):
+        """
+        If a custom log formatter is passed to L{http.HTTPFactory} then it is
+        used to generate lines for the log file.
+        """
+        def badFormatter(timestamp, request):
+            return b"this is a bad log format"
+
+        reactor = Clock()
+        reactor.advance(1234567890)
+
+        logPath = self.mktemp()
+        factory = http.HTTPFactory(logPath, logFormatter=badFormatter)
+        factory._reactor = reactor
+        factory.startFactory()
+        self.addCleanup(factory.stopFactory)
+
+        factory.log(DummyRequestForLogTest(factory))
+
+        self.assertEqual(
+            b"this is a bad log format\n",
+            FilePath(logPath).getContent())
+
+
+
+class ProxiedLogFormatterTests(unittest.TestCase):
+    """
+    Tests for L{twisted.web.http.proxiedLogFormatter}.
+    """
+    def test_xforwardedfor(self):
+        """
+        L{proxiedLogFormatter} logs the value of the I{X-Forwarded-For} header
+        in place of the client address field.
+        """
+        reactor = Clock()
+        reactor.advance(1234567890)
+
+        timestamp = http.datetimeToLogString(reactor.seconds())
+        request = DummyRequestForLogTest(http.HTTPFactory())
+        expected = http.commonLogFormatter(timestamp, request).replace(
+            b"1.2.3.4", b"172.16.1.2")
+        request.requestHeaders.setRawHeaders(
+            b"x-forwarded-for", [b"172.16.1.2, 10.0.0.3, 192.168.1.4"])
+        line = http.proxiedLogFormatter(timestamp, request)
+
+        self.assertEqual(expected, line)
 
 
 
