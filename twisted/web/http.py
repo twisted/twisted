@@ -1823,6 +1823,75 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             request.connectionLost(reason)
 
 
+
+def _escape(s):
+    """
+    Return a string like python repr, but always escaped as if surrounding
+    quotes were double quotes.
+    """
+    try:
+        s = nativeString(s)
+    except UnicodeError:
+        pass
+    r = repr(s)
+    if r[0] == "'":
+        return r[1:-1].replace('"', '\\"').replace("\\'", "'")
+    return r[1:-1]
+
+
+
+def commonLogFormatter(timestamp, request):
+    """
+    Generate a common log formatted log line for the given request.
+    """
+    line = (
+        b'%(ip)s - - %(timestamp)s "%(method)s %(uri)s %(protocol)s" '
+        b'%(code)d %(length)s "%(referrer)s" "%(agent)s"' % dict(
+            ip=request.getClientIP(),
+            timestamp=timestamp,
+            method=_escape(request.method),
+            uri=_escape(request.uri),
+            protocol=_escape(request.clientproto),
+            code=request.code,
+            length=request.sentLength or b"-",
+            referrer=_escape(request.getHeader("referer") or b"-"),
+            agent=_escape(request.getHeader("user-agent") or b"-"),
+            ))
+    return line
+
+
+
+from twisted.python.components import proxyForInterface
+from twisted.web.iweb import IRequest
+
+class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
+    # These are missing from the interface.  Forward them manually.
+    @property
+    def clientproto(self):
+        return self._request.clientproto
+
+    @property
+    def code(self):
+        return self._request.code
+
+    @property
+    def sentLength(self):
+        return self._request.sentLength
+
+    def getClientIP(self):
+        return self._request.requestHeaders.getRawHeaders(
+            b"x-forwarded-for", [b"-"])[0].split(b",")[0]
+
+
+def proxiedLogFormatter(timestamp, request):
+    """
+    Generate a common log formatted log line for the given request but use the
+    value of the X-Forwarded-For header as the value for the client IP address.
+    """
+    return commonLogFormatter(timestamp, _XForwardedForRequest(request))
+
+
+
 class HTTPFactory(protocol.ServerFactory):
     """
     Factory for HTTP server.
@@ -1842,11 +1911,16 @@ class HTTPFactory(protocol.ServerFactory):
 
     timeOut = 60 * 60 * 12
 
-    def __init__(self, logPath=None, timeout=60*60*12):
+    _reactor = reactor
+
+    def __init__(self, logPath=None, timeout=60*60*12, logFormatter=None):
         if logPath is not None:
             logPath = os.path.abspath(logPath)
         self.logPath = logPath
         self.timeOut = timeout
+        if logFormatter is None:
+            logFormatter = commonLogFormatter
+        self._logFormatter = logFormatter
 
         # For storing the cached log datetime and the callback to update it
         self._logDateTime = None
@@ -1857,8 +1931,8 @@ class HTTPFactory(protocol.ServerFactory):
         """
         Update log datetime periodically, so we aren't always recalculating it.
         """
-        self._logDateTime = datetimeToLogString()
-        self._logDateTimeCall = reactor.callLater(1, self._updateLogDateTime)
+        self._logDateTime = datetimeToLogString(self._reactor.seconds())
+        self._logDateTimeCall = self._reactor.callLater(1, self._updateLogDateTime)
 
 
     def buildProtocol(self, addr):
@@ -1900,32 +1974,8 @@ class HTTPFactory(protocol.ServerFactory):
         f = open(path, "a", 1)
         return f
 
-    def _escape(self, s):
-        # pain in the ass. Return a string like python repr, but always
-        # escaped as if surrounding quotes were "".
-        try:
-            s = nativeString(s)
-        except UnicodeError:
-            pass
-        r = repr(s)
-        if r[0] == "'":
-            return r[1:-1].replace('"', '\\"').replace("\\'", "'")
-        return r[1:-1]
 
     def log(self, request):
-        """
-        Log a request's result to the logfile, by default in combined log format.
-        """
         if hasattr(self, "logFile"):
-            line = '%s - - %s "%s" %d %s "%s" "%s"\n' % (
-                request.getClientIP(),
-                # request.getUser() or "-", # the remote user is almost never important
-                self._logDateTime,
-                '%s %s %s' % (self._escape(request.method),
-                              self._escape(request.uri),
-                              self._escape(request.clientproto)),
-                request.code,
-                request.sentLength or "-",
-                self._escape(request.getHeader("referer") or "-"),
-                self._escape(request.getHeader("user-agent") or "-"))
-            self.logFile.write(line)
+            self.logFile.write(self._logFormatter(self._logDateTime, request))
+            self.logFile.write(b"\n")
