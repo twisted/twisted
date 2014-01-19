@@ -85,16 +85,18 @@ except ImportError:
         return (key.encode('charmap'), pdict)
 
 
-from zope.interface import implementer
+from zope.interface import implementer, directlyProvides
 
 # twisted imports
-from twisted.python.compat import (_PY3, unicode, intToBytes, networkString,
-                                   nativeString)
+from twisted.python.compat import (
+    _PY3, unicode, intToBytes, networkString, nativeString)
+from twisted.python import log
+from twisted.python.components import proxyForInterface
 from twisted.internet import interfaces, reactor, protocol, address
 from twisted.internet.defer import Deferred
 from twisted.protocols import policies, basic
-from twisted.python import log
 
+from twisted.web.iweb import IRequest, IAccessLogFormatter
 from twisted.web.http_headers import _DictHeaders, Headers
 
 from twisted.web._responses import (
@@ -1829,13 +1831,16 @@ def _escape(s):
     Return a string like python repr, but always escaped as if surrounding
     quotes were double quotes.
     """
-    try:
-        s = nativeString(s)
-    except UnicodeError:
-        pass
+    if not isinstance(s, bytes):
+        s = s.encode("ascii")
+
     r = repr(s)
-    if r[0] == "'":
-        return r[1:-1].replace('"', '\\"').replace("\\'", "'")
+    if not isinstance(r, unicode):
+        r = r.decode("ascii")
+    if r.startswith(u"b"):
+        r = r[1:]
+    if r.startswith(u"'"):
+        return r[1:-1].replace(u'"', u'\\"').replace(u"\\'", u"'")
     return r[1:-1]
 
 
@@ -1844,27 +1849,31 @@ def commonLogFormatter(timestamp, request):
     """
     Generate a common log formatted log line for the given request.
     """
+    referrer = _escape(request.getHeader(b"referer") or b"-")
+    agent = _escape(request.getHeader(b"user-agent") or b"-")
     line = (
-        b'%(ip)s - - %(timestamp)s "%(method)s %(uri)s %(protocol)s" '
-        b'%(code)d %(length)s "%(referrer)s" "%(agent)s"' % dict(
-            ip=request.getClientIP(),
+        u'"%(ip)s" - - %(timestamp)s "%(method)s %(uri)s %(protocol)s" '
+        u'%(code)d %(length)s "%(referrer)s" "%(agent)s"' % dict(
+            ip=_escape(request.getClientIP() or b"-"),
             timestamp=timestamp,
             method=_escape(request.method),
             uri=_escape(request.uri),
             protocol=_escape(request.clientproto),
             code=request.code,
-            length=request.sentLength or b"-",
-            referrer=_escape(request.getHeader("referer") or b"-"),
-            agent=_escape(request.getHeader("user-agent") or b"-"),
+            length=request.sentLength or u"-",
+            referrer=referrer,
+            agent=agent,
             ))
     return line
+directlyProvides(commonLogFormatter, IAccessLogFormatter)
 
 
-
-from twisted.python.components import proxyForInterface
-from twisted.web.iweb import IRequest
 
 class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
+    """
+    Add a layer on top of another request that only uses the value of an
+    X-Forwarded-For header as the result of C{getClientIP}.
+    """
     # These are missing from the interface.  Forward them manually.
     @property
     def clientproto(self):
@@ -1883,12 +1892,14 @@ class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
             b"x-forwarded-for", [b"-"])[0].split(b",")[0]
 
 
+
 def proxiedLogFormatter(timestamp, request):
     """
     Generate a common log formatted log line for the given request but use the
     value of the X-Forwarded-For header as the value for the client IP address.
     """
     return commonLogFormatter(timestamp, _XForwardedForRequest(request))
+directlyProvides(proxiedLogFormatter, IAccessLogFormatter)
 
 
 
@@ -1903,6 +1914,8 @@ class HTTPFactory(protocol.ServerFactory):
     @ivar _logDateTimeCall: A delayed call for the next update to the cached
         log datetime string.
     @type _logDateTimeCall: L{IDelayedCall} provided
+
+    @ivar _logFormatter: See the C{logFormatter} parameter to L{__init__}
     """
 
     protocol = HTTPChannel
@@ -1914,6 +1927,11 @@ class HTTPFactory(protocol.ServerFactory):
     _reactor = reactor
 
     def __init__(self, logPath=None, timeout=60*60*12, logFormatter=None):
+        """
+        @param logFormatter: An object to format requests into log lines for
+            the access log.
+        @type logFormatter: L{IAccessLogFormatter} provider
+        """
         if logPath is not None:
             logPath = os.path.abspath(logPath)
         self.logPath = logPath
@@ -1951,8 +1969,10 @@ class HTTPFactory(protocol.ServerFactory):
             self._updateLogDateTime()
 
         if self.logPath:
+            self._nativeize = False
             self.logFile = self._openLogFile(self.logPath)
         else:
+            self._nativeize = True
             self.logFile = log.logfile
 
 
@@ -1971,11 +1991,25 @@ class HTTPFactory(protocol.ServerFactory):
         """
         Override in subclasses, e.g. to use twisted.python.logfile.
         """
-        f = open(path, "a", 1)
+        f = open(path, "ab", 1)
         return f
 
 
     def log(self, request):
-        if hasattr(self, "logFile"):
-            self.logFile.write(self._logFormatter(self._logDateTime, request))
-            self.logFile.write(b"\n")
+        """
+        Write a line representing C{request} to the access log file.
+
+        @param request: The request object about which to log.
+        @type request: L{Request}
+        """
+        try:
+            logFile = self.logFile
+        except AttributeError:
+            pass
+        else:
+            line = self._logFormatter(self._logDateTime, request) + u"\n"
+            if self._nativeize:
+                line = nativeString(line )
+            else:
+                line = line.encode("utf-8")
+            logFile.write(line)
