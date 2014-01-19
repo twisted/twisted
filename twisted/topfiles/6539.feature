@@ -1,1 +1,1 @@
-"setup.py install" now works with Python 3.3.
+"setup.py install" and "pip install" now work on Python 3.3, installing the subset of Twisted that has been ported to Python 3.
