@@ -163,7 +163,7 @@ SSLv2 is explicitly not supported.
 Additionally, it is possible to limit the acceptable ciphers for your connection by passing an :api:`twisted.internet.interfaces.IAcceptableCiphers <IAcceptableCiphers>` object to ``CertificateOptions``.
 Since Twisted uses a secure cipher configuration by default, it is discouraged to do so unless absolutely necessary.
 
-For servers, it is desirable to offer Diffie-Hellman based key exchange that offers perfect forward secrecy.
+For servers, it is desirable to offer Diffie-Hellman based key exchange that provides perfect forward secrecy.
 The ciphers are activated by default, however it is necessary to pass an instance of :api:`twisted.internet.ssl.DiffieHellmanParameters <DiffieHellmanParameters>` to ``CertificateOptions`` to be able to use them.
 
 
