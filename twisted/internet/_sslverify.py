@@ -727,7 +727,8 @@ class OpenSSLCertificateOptions(object):
         @type acceptableCiphers: L{IAcceptableCiphers}
 
         @param dhParameters: Key generation parameters that are required for
-            Diffie-Hellman key exchange.
+            Diffie-Hellman key exchange.  If this argument is left L{None},
+            C{EDH} ciphers are I{disabled} regardless of C{acceptableCiphers}.
         @type dhParameters: L{DiffieHellmanParameters
             <twisted.internet.ssl.DiffieHellmanParameters>}
 
