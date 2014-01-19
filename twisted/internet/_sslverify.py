@@ -1017,6 +1017,9 @@ class OpenSSLDiffieHellmanParameters(object):
 
         C{openssl dhparam -out dh_param_1024.pem -2 1024}
 
+        Please refer to U{OpenSSL's C{dhparam} documentation
+        <http://www.openssl.org/docs/apps/dhparam.html>} for further details.
+
         @param filename: A file containing parameters for Diffie-Hellman key
             exchange.
         @type filename: L{bytes}
