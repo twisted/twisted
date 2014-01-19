@@ -10,8 +10,7 @@ import zlib
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import (
-    _PY3, networkString, NativeStringIO as StringIO)
+from twisted.python.compat import _PY3, networkString
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet import reactor
@@ -19,7 +18,6 @@ from twisted.internet.address import IPv4Address
 from twisted.internet.task import Clock
 from twisted.web import server, resource
 from twisted.web import iweb, http, error
-from twisted.python import log
 
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 
@@ -219,7 +217,8 @@ class ConditionalTest(unittest.TestCase):
         self.resrc.putChild(b'', self.resrc)
         self.resrc.putChild(b'with-content-type', SimpleResource(b'image/jpeg'))
         self.site = server.Site(self.resrc)
-        self.site.logFile = log.logfile
+        self.site.startFactory()
+        self.addCleanup(self.site.stopFactory)
 
         # HELLLLLLLLLLP!  This harness is Very Ugly.
         self.channel = self.site.buildProtocol(None)
@@ -853,13 +852,15 @@ class AccessLogTests(unittest.TestCase):
         factory = http.HTTPFactory(logPath)
         factory._reactor = reactor
         factory.startFactory()
-        self.addCleanup(factory.stopFactory)
 
-        factory.log(DummyRequestForLogTest(factory))
+        try:
+            factory.log(DummyRequestForLogTest(factory))
+        finally:
+            factory.stopFactory()
 
         self.assertEqual(
             # Client IP
-            b'1.2.3.4 '
+            b'"1.2.3.4" '
             # Some blanks we never fill in
             b'- - '
             # The current time
@@ -883,23 +884,52 @@ class AccessLogTests(unittest.TestCase):
         If a custom log formatter is passed to L{http.HTTPFactory} then it is
         used to generate lines for the log file.
         """
-        def badFormatter(timestamp, request):
-            return b"this is a bad log format"
+        def notVeryGoodFormatter(timestamp, request):
+            return u"this is a bad log format"
 
         reactor = Clock()
         reactor.advance(1234567890)
 
         logPath = self.mktemp()
-        factory = http.HTTPFactory(logPath, logFormatter=badFormatter)
+        factory = http.HTTPFactory(logPath, logFormatter=notVeryGoodFormatter)
         factory._reactor = reactor
         factory.startFactory()
-        self.addCleanup(factory.stopFactory)
-
-        factory.log(DummyRequestForLogTest(factory))
+        try:
+            factory.log(DummyRequestForLogTest(factory))
+        finally:
+            factory.stopFactory()
 
         self.assertEqual(
             b"this is a bad log format\n",
             FilePath(logPath).getContent())
+
+
+
+class CommonLogFormatterTests(unittest.TestCase):
+    """
+    Tests for L{twisted.web.http.commonLogFormatter}.
+    """
+    def test_nonASCII(self):
+        """
+        Bytes in fields of the request which are not part of ASCII are escaped
+        in the result.
+        """
+        reactor = Clock()
+        reactor.advance(1234567890)
+
+        timestamp = http.datetimeToLogString(reactor.seconds())
+        request = DummyRequestForLogTest(http.HTTPFactory())
+        request.client = IPv4Address("TCP", b"evil x-forwarded-for \x80", 12345)
+        request.method = b"POS\x81"
+        request.protocol = b"HTTP/1.\x82"
+        request.headers[b"referer"] = b"evil \x83"
+        request.headers[b"user-agent"] = b"evil \x84"
+
+        line = http.commonLogFormatter(timestamp, request)
+        self.assertEqual(
+            u'"evil x-forwarded-for \\x80" - - [13/Feb/2009:23:31:30 +0000] '
+            u'"POS\\x81 /dummy HTTP/1.0" 123 - "evil \\x83" "evil \\x84"',
+            line)
 
 
 
@@ -918,7 +948,7 @@ class ProxiedLogFormatterTests(unittest.TestCase):
         timestamp = http.datetimeToLogString(reactor.seconds())
         request = DummyRequestForLogTest(http.HTTPFactory())
         expected = http.commonLogFormatter(timestamp, request).replace(
-            b"1.2.3.4", b"172.16.1.2")
+            u"1.2.3.4", u"172.16.1.2")
         request.requestHeaders.setRawHeaders(
             b"x-forwarded-for", [b"172.16.1.2, 10.0.0.3, 192.168.1.4"])
         line = http.proxiedLogFormatter(timestamp, request)
@@ -929,68 +959,61 @@ class ProxiedLogFormatterTests(unittest.TestCase):
 
 class TestLogEscaping(unittest.TestCase):
     def setUp(self):
-        self.site = http.HTTPFactory()
-        self.site.logFile = StringIO()
+        self.logPath = self.mktemp()
+        self.site = http.HTTPFactory(self.logPath)
+        self.site.startFactory()
         self.request = DummyRequestForLogTest(self.site, False)
+
+
+    def assertLogs(self, line):
+        try:
+            self.site.log(self.request)
+        finally:
+            self.site.stopFactory()
+        logged = FilePath(self.logPath).getContent()
+        self.assertEqual(line, logged)
+
 
     def testSimple(self):
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.site.log(self.request)
-        self.site.logFile.seek(0)
-        self.assertEqual(
-            self.site.logFile.read(),
-            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "-" "-"\n')
+        self.assertLogs(
+            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "-" "-"\n')
 
     def testMethodQuote(self):
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.request.method = 'G"T'
-        self.site.log(self.request)
-        self.site.logFile.seek(0)
-        self.assertEqual(
-            self.site.logFile.read(),
-            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "G\\"T /dummy HTTP/1.0" 123 - "-" "-"\n')
+        self.request.method = b'G"T'
+        self.assertLogs(
+            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] "G\\"T /dummy HTTP/1.0" 123 - "-" "-"\n')
 
     def testRequestQuote(self):
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.request.uri='/dummy"withquote'
-        self.site.log(self.request)
-        self.site.logFile.seek(0)
-        self.assertEqual(
-            self.site.logFile.read(),
-            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy\\"withquote HTTP/1.0" 123 - "-" "-"\n')
+        self.request.uri = b'/dummy"withquote'
+        self.assertLogs(
+            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] "GET /dummy\\"withquote HTTP/1.0" 123 - "-" "-"\n')
 
     def testProtoQuote(self):
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.request.clientproto='HT"P/1.0'
-        self.site.log(self.request)
-        self.site.logFile.seek(0)
-        self.assertEqual(
-            self.site.logFile.read(),
-            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HT\\"P/1.0" 123 - "-" "-"\n')
+        self.request.clientproto = b'HT"P/1.0'
+        self.assertLogs(
+            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HT\\"P/1.0" 123 - "-" "-"\n')
 
     def testRefererQuote(self):
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.request.headers['referer'] = 'http://malicious" ".website.invalid'
-        self.site.log(self.request)
-        self.site.logFile.seek(0)
-        self.assertEqual(
-            self.site.logFile.read(),
-            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "http://malicious\\" \\".website.invalid" "-"\n')
+        self.request.headers[b'referer'] = b'http://malicious" ".website.invalid'
+        self.assertLogs(
+            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "http://malicious\\" \\".website.invalid" "-"\n')
 
     def testUserAgentQuote(self):
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.request.headers['user-agent'] = 'Malicious Web" Evil'
-        self.site.log(self.request)
-        self.site.logFile.seek(0)
-        self.assertEqual(
-            self.site.logFile.read(),
-            '1.2.3.4 - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "-" "Malicious Web\\" Evil"\n')
+        self.request.headers[b'user-agent'] = b'Malicious Web" Evil'
+        self.assertLogs(
+            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "-" "Malicious Web\\" Evil"\n')
 
 
 
