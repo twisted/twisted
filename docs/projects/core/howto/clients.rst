@@ -187,6 +187,19 @@ Note that :api:`twisted.internet.protocol.ClientFactory.clientConnectionFailed <
 is called when a connection could not be established, and that :api:`twisted.internet.protocol.ClientFactory.clientConnectionLost <clientConnectionLost>`
 is called when a connection was made and then disconnected.
 
+Reactor Client APIs
+~~~~~~~~~~~~~~~~~~~
+
+connectTCP
+''''''''''
+
+:api:`twisted.internet.interfaces.IReactorTCP.connectTCP <IReactorTCP.connectTCP>` provides support for IPv4 and IPv6 TCP clients.
+The ``host`` argument it accepts can be either a hostname or an IP address literal.
+In the case of a hostname, the reactor will automatically resolve the name to an IP address before attempting the connection.
+This means that for a hostname with multiple address records, reconnection attempts may not always go to the same server (see below).
+It also means that there is name resolution overhead for each connection attempt.
+If you are creating many short-lived connections (typically around hundreds or thousands per second) then you may want to resolve the hostname to an address first and then pass the address to ``connectTCP`` instead.
+
 Reconnection
 ~~~~~~~~~~~~
 Often, the connection of a client will be lost unintentionally due to
