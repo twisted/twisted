@@ -23,13 +23,11 @@ when you connect to the server and will go away when the connection is
 finished.  This means that persistent configuration is not saved in the
 ``Protocol`` .
 
-The persistent configuration is kept in a ``Factory``
-class, which usually inherits from :api:`twisted.internet.protocol.Factory <twisted.internet.protocol.Factory>`
-(or :api:`twisted.internet.protocol.ClientFactory <twisted.internet.protocol.ClientFactory>` : see
-below). The default factory class just instantiates the ``Protocol``
-and then sets the protocol's ``factory`` attribute to point to
-itself (the factory). This lets the ``Protocol`` access, and
-possibly modify, the persistent configuration.
+The persistent configuration is kept in a ``Factory`` class,
+which usually inherits from :api:`twisted.internet.protocol.Factory <twisted.internet.protocol.Factory>`
+(or :api:`twisted.internet.protocol.ClientFactory <twisted.internet.protocol.ClientFactory>` : see below).
+The default factory class just instantiates the ``Protocol`` and then sets the protocol's ``factory`` attribute to point to itself (the factory).
+This lets the ``Protocol`` access, and possibly modify, the persistent configuration.
 
 Protocol
 --------
@@ -141,15 +139,11 @@ a few features (such as automatic reconnection) have not been
 re-implemented with endpoints yet, so in some cases they may be more
 convenient to use.
 
-To use the lower-level connection APIs, you will need to call one of the
-*reactor.connect** methods directly.  For these cases, you need a
-:api:`twisted.internet.protocol.ClientFactory <ClientFactory>` .
-The ``ClientFactory`` is in charge of creating the
-``Protocol`` and also receives events relating to the connection
-state. This allows it to do things like reconnect in the event of a
-connection error. Here is an example of a simple ``ClientFactory``
-that uses the ``Echo`` protocol (above) and also prints what state
-the connection is in.
+To use the lower-level connection APIs, you will need to call one of the *reactor.connect** methods directly.
+For these cases, you need a :api:`twisted.internet.protocol.ClientFactory <ClientFactory>` .
+The ``ClientFactory`` is in charge of creating the ``Protocol`` and also receives events relating to the connection state.
+This allows it to do things like reconnect in the event of a connection error.
+Here is an example of a simple ``ClientFactory`` that uses the ``Echo`` protocol (above) and also prints what state the connection is in.
 
 .. code-block:: python
 
@@ -183,9 +177,8 @@ this code:
     reactor.connectTCP(host, port, EchoClientFactory())
     reactor.run()
 
-Note that :api:`twisted.internet.protocol.ClientFactory.clientConnectionFailed <clientConnectionFailed>`
-is called when a connection could not be established, and that :api:`twisted.internet.protocol.ClientFactory.clientConnectionLost <clientConnectionLost>`
-is called when a connection was made and then disconnected.
+Note that :api:`twisted.internet.protocol.ClientFactory.clientConnectionFailed <clientConnectionFailed>` is called when a connection could not be established,
+and that :api:`twisted.internet.protocol.ClientFactory.clientConnectionLost <clientConnectionLost>` is called when a connection was made and then disconnected.
 
 Reactor Client APIs
 ~~~~~~~~~~~~~~~~~~~
@@ -261,9 +254,8 @@ A Higher-Level Example: ircLogBot
 
 Overview of ircLogBot
 ~~~~~~~~~~~~~~~~~~~~~
-The clients so far have been fairly simple.  A more complicated example
-comes with Twisted Words in the ``doc/words/examples``
-directory.
+The clients so far have been fairly simple.
+A more complicated example comes with Twisted Words in the ``doc/words/examples`` directory.
 
 :download:`ircLogBot.py <../../words/examples/ircLogBot.py>`
 
@@ -314,11 +306,9 @@ When the protocol is created, it gets a reference to the factory as
 its logic. In the case of ``LogBot`` , it opens the file and
 connects to the channel stored in the factory.
 
-Factories have a default implementation of ``buildProtocol``
-that does the same thing the example above does, using
-the ``protocol`` attribute of the factory to create the protocol
-instance. In the example above, the factory could be rewritten to look
-like this:
+Factories have a default implementation of ``buildProtocol``.
+It does the same thing the example above does using the ``protocol`` attribute of the factory to create the protocol instance.
+In the example above, the factory could be rewritten to look like this:
 
 .. code-block:: python
 
@@ -331,12 +321,8 @@ like this:
 
 Further Reading
 ---------------
-The :api:`twisted.internet.protocol.Protocol <Protocol>`
-class used throughout this document is a base implementation
-of :api:`twisted.internet.interfaces.IProtocol <IProtocol>`
-used in most Twisted applications for convenience. To learn about the
-complete ``IProtocol`` interface, see the API documentation for
-:api:`twisted.internet.interfaces.IProtocol <IProtocol>` .
+The :api:`twisted.internet.protocol.Protocol <Protocol>` class used throughout this document is a base implementation of :api:`twisted.internet.interfaces.IProtocol <IProtocol>` used in most Twisted applications for convenience.
+To learn about the complete ``IProtocol`` interface, see the API documentation for :api:`twisted.internet.interfaces.IProtocol <IProtocol>` .
 
 The ``transport`` attribute used in some examples in this
 document provides the :api:`twisted.internet.interfaces.ITCPTransport <ITCPTransport>` interface. To learn
