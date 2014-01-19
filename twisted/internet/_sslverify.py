@@ -662,7 +662,8 @@ class OpenSSLCertificateOptions(object):
                  fixBrokenPeers=False,
                  enableSessionTickets=False,
                  extraCertChain=None,
-                 acceptableCiphers=None):
+                 acceptableCiphers=None,
+                 dhParameters=None):
         """
         Create an OpenSSL context SSL connection context factory.
 
@@ -723,6 +724,11 @@ class OpenSSLCertificateOptions(object):
         @param acceptableCiphers: Ciphers that are acceptable for connections.
             Uses a secure default if left L{None}.
         @type acceptableCiphers: L{IAcceptableCiphers}
+
+        @param dhParameters: Key generation parameters that are required for
+            Diffie-Hellman key exchange.
+        @type dhParameters: L{DiffieHellmanParameters
+            <twisted.internet.ssl.DiffieHellmanParameters>}
 
         @raise ValueError: when C{privateKey} or C{certificate} are set
             without setting the respective other.
@@ -786,6 +792,7 @@ class OpenSSLCertificateOptions(object):
         self.enableSessionTickets = enableSessionTickets
         if not enableSessionTickets:
             self._options |= self._OP_NO_TICKET
+        self.dhParameters = dhParameters
 
         if acceptableCiphers is None:
             acceptableCiphers = defaultCiphers
@@ -865,6 +872,8 @@ class OpenSSLCertificateOptions(object):
 
             ctx.set_session_id(sessionName)
 
+        if self.dhParameters:
+            self.dhParameters._setParameters(ctx)
         ctx.set_cipher_list(nativeString(self._cipherString))
 
         return ctx
@@ -986,3 +995,40 @@ defaultCiphers = OpenSSLAcceptableCiphers.fromOpenSSLCipherString(
     "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:"
     "DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS"
 )
+
+
+
+class OpenSSLDiffieHellmanParameters(object):
+    """
+    A representation of key generation parameters that are required for
+    Diffie-Hellman key exchange.
+    """
+    def __init__(self, parameters):
+        self._dhFilename = parameters
+
+
+    @classmethod
+    def fromFile(cls, filename):
+        """
+        Load parameters from a file.
+
+        Such a file can be generated using the C{openssl} command line tool as
+        following:
+
+        C{openssl dhparam -out dh_param_1024.pem -2 1024}
+
+        @param filename: A file containing parameters for Diffie-Hellman key
+            exchange.
+        @type filename: L{bytes}
+        """
+        return cls(filename)
+
+
+    def _setParameters(self, context):
+        """
+        Set key exchange parameters on a context.
+
+        @param context: An SSL Context.
+        @type context: L{OpenSSL.SSL.Context}
+        """
+        context.load_tmp_dh(self._dhFilename)
