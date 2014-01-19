@@ -909,6 +909,14 @@ class CommonLogFormatterTests(unittest.TestCase):
     """
     Tests for L{twisted.web.http.commonLogFormatter}.
     """
+    def test_interface(self):
+        """
+        L{commonLogFormatter} provides L{IAccessLogFormatter}.
+        """
+        self.assertTrue(verifyObject(
+                iweb.IAccessLogFormatter, http.commonLogFormatter))
+
+
     def test_nonASCII(self):
         """
         Bytes in fields of the request which are not part of ASCII are escaped
@@ -937,6 +945,14 @@ class ProxiedLogFormatterTests(unittest.TestCase):
     """
     Tests for L{twisted.web.http.proxiedLogFormatter}.
     """
+    def test_interface(self):
+        """
+        L{proxiedLogFormatter} provides L{IAccessLogFormatter}.
+        """
+        self.assertTrue(verifyObject(
+                iweb.IAccessLogFormatter, http.proxiedLogFormatter))
+
+
     def test_xforwardedfor(self):
         """
         L{proxiedLogFormatter} logs the value of the I{X-Forwarded-For} header
