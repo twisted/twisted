@@ -16,7 +16,6 @@ from twisted.internet.error import VerifyError, CertificateError
 from twisted.internet.interfaces import IAcceptableCiphers, ICipher
 from twisted.python import _reflectpy3 as reflect, util
 from twisted.python.compat import nativeString, networkString, unicode
-from twisted.python.filepath import FilePath
 from twisted.python.util import FancyEqMixin
 
 
@@ -1024,7 +1023,7 @@ class OpenSSLDiffieHellmanParameters(object):
 
         @param filePath: A file containing parameters for Diffie-Hellman key
             exchange.
-        @type filePath: L{FilePath}
+        @type filePath: L{FilePath <twisted.python.filepath.FilePath>}
 
         @return: A instance that loads its parameters from C{filePath}.
         @rtype: L{DiffieHellmanParameters
