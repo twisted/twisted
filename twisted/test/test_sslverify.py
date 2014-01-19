@@ -493,7 +493,6 @@ class OpenSSLOptions(unittest.TestCase):
         self.assertEqual([ctx], dhParams._contexts)
 
 
-
     def test_abbreviatingDistinguishedNames(self):
         """
         Check that abbreviations used in certificates correctly map to

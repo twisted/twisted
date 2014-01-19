@@ -1020,6 +1020,10 @@ class OpenSSLDiffieHellmanParameters(object):
         @param filename: A file containing parameters for Diffie-Hellman key
             exchange.
         @type filename: L{bytes}
+
+        @return: A instance that loads its parameters from C{filename}.
+        @rtype: L{DiffieHellmanParameters
+            <twisted.internet.ssl.DiffieHellmanParameters>}
         """
         return cls(filename)
 
