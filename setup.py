@@ -10,6 +10,10 @@ Distutils installer for Twisted.
 try:
     # Load setuptools, to build a specific source package
     import setuptools
+    # Tell Twisted not to enforce zope.interface requirement on import, since
+    # we're going to have to import twisted.python.dist and can rely on
+    # setuptools to install dependencies.
+    setuptools._TWISTED_NO_CHECK_REQUIREMENTS = True
 except ImportError:
     pass
 
@@ -25,6 +29,12 @@ def main(args):
     if os.path.exists('twisted'):
         sys.path.insert(0, '.')
 
+    # On Python 3, use setup3.py until Python 3 port is done:
+    if sys.version_info[0] > 2:
+        import setup3
+        setup3.main()
+        return
+
     setup_args = {}
 
     if 'setuptools' in sys.modules:
@@ -39,7 +49,6 @@ dependency resolution is disabled.
 """)
         else:
             setup_args['install_requires'] = requirements
-            setuptools._TWISTED_NO_CHECK_REQUIREMENTS = True
         setup_args['include_package_data'] = True
         setup_args['zip_safe'] = False
 

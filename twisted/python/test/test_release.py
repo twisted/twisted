@@ -1652,6 +1652,26 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
         self.assertExtractedStructure(outputFile, outStructure)
 
 
+    def test_setup3(self):
+        """
+        setup3.py is included in the release tarball.
+        """
+        structure = {
+            "setup3.py": "install python 3 version",
+            "bin": {"twistd": "TWISTD"},
+            "twisted": {
+                "web": {
+                    "__init__.py": "import WEB",
+                    "topfiles": {"setup.py": "import WEBINSTALL",
+                                 "README": "WEB!"}}},
+            "doc": {"web": {"howto": {"index.html": "hello"}}},
+            }
+
+        self.createStructure(self.rootDir, structure)
+        outputFile = self.builder.buildTwisted("13.2.0")
+        self.assertExtractedStructure(outputFile, structure)
+
+
 
 class BuildAllTarballsTest(DistributionBuilderTestBase):
     """

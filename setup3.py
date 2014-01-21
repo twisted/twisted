@@ -10,7 +10,7 @@
 from __future__ import division, absolute_import
 
 import sys
-
+from distutils.command.sdist import sdist
 
 # A list of modules that have been ported, e.g. "twisted.python.versions"; a
 # package name (e.g. "twisted.python") indicates the corresponding __init__.py
@@ -249,18 +249,33 @@ almostModules = [
 
 
 
-if __name__ == "__main__":
-    sys.path.insert(0, '.')
+class DisabledSdist(sdist):
+    """
+    A version of the sdist command that does nothing.
+    """
+    def run(self):
+        sys.stderr.write(
+            "The sdist command only works with Python 2 at the moment.\n")
+        sys.exit(1)
 
-    from distutils.core import setup
+
+
+def main():
+    try:
+        from setuptools import setup
+    except ImportError:
+        from distutils.core import setup
 
     from twisted.python.dist import STATIC_PACKAGE_METADATA
 
     args = STATIC_PACKAGE_METADATA.copy()
+    args['install_requires'] = ["zope.interface >= 4.0.2"]
     args['classifiers'] = ["Programming Language :: Python :: 3.3"]
     args['py_modules'] = modules + testModules + almostModules
-
-    if 'sdist' in sys.argv:
-        args['data_files'] = [('admin', ['admin/run-python3-tests'])]
+    args['cmdclass'] = {'sdist': DisabledSdist}
 
     setup(**args)
+
+
+if __name__ == "__main__":
+    main()
