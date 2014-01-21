@@ -676,6 +676,72 @@ class MessageTestCase(unittest.SynchronousTestCase):
         self.assertEqual(m.checkingDisabled, 1)
 
 
+    def test_reprDefaults(self):
+        """
+        L{dns.Message.__repr__} omits field values and sections which are
+        identical to their defaults. The id field value is always shown.
+        """
+        self.assertEqual(
+            '<Message id=0>',
+            repr(dns.Message())
+        )
+
+
+    def test_reprFlagsIfSet(self):
+        """
+        L{dns.Message.__repr__} displays flags if they are L{True}.
+        """
+        m = dns.Message(answer=True, auth=True, trunc=True, recDes=True,
+                        recAv=True, authenticData=True, checkingDisabled=True)
+        self.assertEqual(
+            '<Message '
+            'id=0 '
+            'flags=answer,auth,trunc,recDes,recAv,authenticData,'
+            'checkingDisabled'
+            '>',
+            repr(m),
+        )
+
+
+    def test_reprNonDefautFields(self):
+        """
+        L{dns.Message.__repr__} displays field values if they differ from their
+        defaults.
+        """
+        m = dns.Message(id=10, opCode=20, rCode=30, maxSize=40)
+        self.assertEqual(
+            '<Message '
+            'id=10 '
+            'opCode=20 '
+            'rCode=30 '
+            'maxSize=40'
+            '>',
+            repr(m),
+        )
+
+
+    def test_reprNonDefaultSections(self):
+        """
+        L{dns.Message.__repr__} displays sections which differ from their
+        defaults.
+        """
+        m = dns.Message()
+        m.queries = [1, 2, 3]
+        m.answers = [4, 5, 6]
+        m.authority = [7, 8, 9]
+        m.additional = [10, 11, 12]
+        self.assertEqual(
+            '<Message '
+            'id=0 '
+            'queries=[1, 2, 3] '
+            'answers=[4, 5, 6] '
+            'authority=[7, 8, 9] '
+            'additional=[10, 11, 12]'
+            '>',
+            repr(m),
+        )
+
+
     def testEmptyMessage(self):
         """
         Test that a message which has been truncated causes an EOFError to
