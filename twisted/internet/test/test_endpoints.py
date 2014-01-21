@@ -2450,10 +2450,9 @@ class ServerStringTests(unittest.TestCase):
             "ssl:4321:privateKey={0}:certKey={1}:dhParameters={2}"
             .format(escapedPEMPathName, escapedPEMPathName, fileName)
         )
-        self.assertEqual(
-            FilePath(fileName),
-            server._sslContextFactory.dhParameters._dhFile
-        )
+        cf = server._sslContextFactory
+        self.assertIsInstance(cf.dhParameters, DiffieHellmanParameters)
+        self.assertEqual(FilePath(fileName), cf.dhParameters._dhFile)
 
 
     if skipSSL:
