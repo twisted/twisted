@@ -8,12 +8,12 @@ Twisted Names provides a layered selection of client APIs.
 
 In this section:
 
- - You will learn about the high level :api:`twisted.names.client <client>` API
- - You will learn about how you can use the client API interactively from the Python shell (useful for DNS debugging and diagnostics)
- - You will learn about the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>` and the :api:`twisted.internet.interfaces.IResolver <IResolver>` interfaces
- - You will learn about various implementations of those interfaces and when to use them
- - You will learn how to customise how the reactor carries out hostname resolution
- - You will also be introduced to some of the low level APIs
+ * You will learn about the high level :api:`twisted.names.client <client>` API.
+ * You will learn about how you can use the client API interactively from the Python shell (useful for DNS debugging and diagnostics).
+ * You will learn about the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>` and the :api:`twisted.internet.interfaces.IResolver <IResolver>` interfaces.
+ * You will learn about various implementations of those interfaces and when to use them.
+ * You will learn how to customise how the reactor carries out hostname resolution.
+ * You will also be introduced to some of the low level APIs.
 
 
 Using the Global Resolver
@@ -51,13 +51,13 @@ Since we are sending requests using :api:`twisted.conch.stdio <twisted.conch.std
 So we type ``_`` (the default variable) a little later, to display the value of the deferred after an answer has been received and the deferred has fired.
 
 .. note::
-   * Unlike its posix equivalent, ``getHostByName`` may return an IPv6 address
+   * Unlike its posix equivalent, ``getHostByName`` may return an IPv6 address.
 
-   * ``IResolver`` contains separate functions for looking up each of the common DNS record types
+   * ``IResolver`` contains separate functions for looking up each of the common DNS record types.
 
-   * ``IResolver`` includes a lower level ``query`` function for issuing arbitrary queries
+   * ``IResolver`` includes a lower level ``query`` function for issuing arbitrary queries.
 
-   * The :api:`twisted.names.client <names.client>` module ``directlyProvides`` both the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>` and the :api:`twisted.names.internet.IResolver <IResolver>` interfaces
+   * The :api:`twisted.names.client <names.client>` module ``directlyProvides`` both the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>` and the :api:`twisted.names.internet.IResolver <IResolver>` interfaces.
 
    * :api:`twisted.names.client.createResolver <createResolver>` constructs a global resolver which performs queries against the same DNS sources and servers used by the underlying operating system.
 
