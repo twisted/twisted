@@ -96,7 +96,7 @@ class ISession(Interface):
 
 class ISFTPServer(Interface):
     """
-    SFTP subsystem for server side.
+    SFTP subsystem for server-side communication.
 
     Each method should check to verify that the user has permission for
     their actions.
