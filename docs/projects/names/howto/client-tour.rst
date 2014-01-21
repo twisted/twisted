@@ -162,3 +162,9 @@ These things are handled automatically by the higher level APIs in :api:`twisted
 Note also that in this case, the deferred result of :api:`twisted.names.dns.DNSDatagramProtocol <dns.DNSDatagramProtocol.query>`
 is a :api:`twisted.names.dns.Message <dns.Message>` object,
 rather than a list of DNS records.
+
+
+Further Reading
+---------------
+Check out the :doc:`Twisted Names Examples <../examples/index>`
+which demonstrate how the client APIs can be used to create useful DNS diagnostic tools.
