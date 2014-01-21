@@ -18,9 +18,9 @@ In this section:
 
 Using the Global Resolver
 -------------------------
-The easiest way to issue DNS queries from twisted, is to use the module level functions in :api:`twisted.names.client <names.client>`.
+The easiest way to issue DNS queries from twisted is to use the module level functions in :api:`twisted.names.client <names.client>`.
 
-Here's an example of some DNS queries generated from an interactive Twisted shell.
+Here's an example showing some DNS queries generated in an interactive Twisted shell.
 
 .. code-block:: console
 
@@ -43,24 +43,25 @@ Here's an example of some DNS queries generated from an interactive Twisted shel
 
 All the ``IResolverSimple`` and ``IResolver`` methods are asynchronous and therefore return ``deferreds``.
 
-:api:`twisted.names.client.getHostByName <getHostByName>` (part of ``IResolverSimple``) simply returns an IP address whereas :api:`twisted.names.client.lookupMailExchange <lookupMailExchange>` returns three lists of DNS records -- representing answer records, authority records, and additional records.
+:api:`twisted.names.client.getHostByName <getHostByName>` (part of ``IResolverSimple``) simply returns an IP address whereas :api:`twisted.names.client.lookupMailExchange <lookupMailExchange>` returns three lists of DNS records.
+These three lists contain answer records, authority records, and additional records.
 
-Since we are sending requests using using :api:`twisted.conch.stdio <twisted.conch.stdio>` you will notice that initially, the deferred returned by the DNS lookup functions, has not fired -- it is waiting for a response from the DNS server.
+Since we are sending requests using :api:`twisted.conch.stdio <twisted.conch.stdio>` you'll notice that initially, the deferred returned by the DNS lookup functions, has not fired -- its waiting for a response from the DNS server.
 
-We type ``_`` (the default variable) a little later, to display the value of the deferred after an answer has been received and the deferred has fired.
+So we type ``_`` (the default variable) a little later, to display the value of the deferred after an answer has been received and the deferred has fired.
 
 .. note::
    * Unlike its posix equivalent, ``getHostByName`` may return an IPv6 address
 
    * ``IResolver`` contains separate functions for looking up each of the common DNS record types
 
-   * ``IResolver`` includes a lower level ``query`` function for issuing arbitrary queries.
+   * ``IResolver`` includes a lower level ``query`` function for issuing arbitrary queries
 
-   * The :api:`twisted.names.client <names.client>` module ``directlyProvides`` both the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>` and the :api:`twisted.names.internet.IResolver <IResolver>` interfaces.
+   * The :api:`twisted.names.client <names.client>` module ``directlyProvides`` both the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>` and the :api:`twisted.names.internet.IResolver <IResolver>` interfaces
 
-   * :api:`twisted.names.client.createResolver <createResolver>` constructs a global resolver, which performs queries against the same DNS sources and servers used by the underlying operating system.
+   * :api:`twisted.names.client.createResolver <createResolver>` constructs a global resolver which performs queries against the same DNS sources and servers used by the underlying operating system.
 
-     That is, it will use the DNS server IP addresses found in a local ``resolv.conf`` file (if the operating system provides such a file) and it will use a OS specific ``hosts`` file path.
+     That is, it will use the DNS server IP addresses found in a local ``resolv.conf`` file (if the operating system provides such a file) and it will use an OS specific ``hosts`` file path.
 
 
 Creating a New Resolver
@@ -89,10 +90,9 @@ Installing a Resolver in the Reactor
 ------------------------------------
 You can also install a custom resolver into the reactor using the :api:`twisted.internet.interfaces.IReactoryPluggable <IReactorPluggable>` interface.
 
-The reactor uses its installed resolver when ever it needs to resolve hostnames.
-For example, when you supply a hostname to :api:`twisted.internet.interfaces.IReactoryTCP.connectTCP <connectTCP>`.
+The reactor uses its installed resolver when ever it needs to resolve hostnames; for example, when you supply a hostname to :api:`twisted.internet.interfaces.IReactoryTCP.connectTCP <connectTCP>`.
 
-Here's a short example that shows how to install an alternative resolver for the global reactor.
+Here's a short example that shows how to install an alternative resolver for the global reactor:
 
 .. code-block:: python
 
@@ -115,8 +115,6 @@ Lower Level APIs
 
 Here's an example of how to use the :api:`twisted.names.dns.DNSDatagramProtocol <DNSDatagramProtocol>` directly.
 
-This can be useful if you're trying to construct a test for the DNS protocol its self or if you're trying to build a custom DNS client.
-
 .. code-block:: python
 
    from twisted.internet import task
@@ -135,11 +133,11 @@ This can be useful if you're trying to construct a test for the DNS protocol its
 
    task.react(main)
 
-Th disadvantage of working at this low level is that you will need to handle query failures by manually re-issuing queries or by issuing followup TCP queries using the stream based :api:`twisted.names.dns.DNSProtocol <dns.DNSProtocol>`.
+The disadvantage of working at this low level is that you will need to handle query failures yourself, by manually re-issuing queries or by issuing followup TCP queries using the stream based :api:`twisted.names.dns.DNSProtocol <dns.DNSProtocol>`.
 
 These things are handled automatically by the higher level APIs in :api:`twisted.names.client <client>`.
 
-Note also that in this case, the deferred result of :api:`twisted.names.dns.DNSDatagramProtocol <dns.DNSDatagramProtocol.query>` is a :api:`twisted.names.dns.Message <dns.Message>` object, rather than a list of DNS records.
+Also notice that in this case, the deferred result of :api:`twisted.names.dns.DNSDatagramProtocol <dns.DNSDatagramProtocol.query>` is a :api:`twisted.names.dns.Message <dns.Message>` object, rather than a list of DNS records.
 
 
 Further Reading
