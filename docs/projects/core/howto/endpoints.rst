@@ -193,13 +193,17 @@ TCP (IPv6)
    For example, ``tcp6:port=80:interface=2001\:0DB8\:f00e\:eb00\:\:1``.
 
 SSL
-   All TCP arguments are supported, plus: ``certKey``, ``privateKey``, ``extraCertChain``, and ``sslmethod``.
+   All TCP arguments are supported, plus: ``certKey``, ``privateKey``, ``extraCertChain``, ``sslmethod``, and ``dhParameters``.
    ``certKey`` (optional, defaults to the value of privateKey) gives a filesystem path to a certificate (PEM format).
    ``privateKey`` gives a filesystem path to a private key (PEM format).
    ``extraCertChain`` gives a filesystem path to a file with one or more concatenated certificates in PEM format that establish the chain from a root CA to the one that signed your certificate.
    ``sslmethod`` indicates which SSL/TLS version to use (a value like ``TLSv1_METHOD``).
+   ``dhParameters`` gives a filesystem path to a file in PEM format with parameters that are required for Diffie-Hellman key exchange.
+   Since the this is required for the ``DHE``-family of ciphers that offer perfect forward secrecy (PFS), it is recommended to specify one.
+   Such a file can be created using ``openssl dhparam -out dh_param_1024.pem -2 1024``.
+   Please refer to `OpenSSL's documentation on dhparam <http://www.openssl.org/docs/apps/dhparam.html>`_ for further details.
 
-   For example, ``ssl:port=443:privateKey=/etc/ssl/server.pem:extraCertChain=/etc/ssl/chain.pem:sslmethod=SSLv3_METHOD``.
+   For example, ``ssl:port=443:privateKey=/etc/ssl/server.pem:extraCertChain=/etc/ssl/chain.pem:sslmethod=SSLv3_METHOD:dhParameters=dh_param_1024.pem``.
 
 UNIX
    Supported arguments: ``address``, ``mode``, ``backlog``, ``lockfile``.
