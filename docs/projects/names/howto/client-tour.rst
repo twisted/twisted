@@ -4,30 +4,26 @@
 
 A Guided Tour of twisted.names.client
 =====================================
-Twisted Names includes multiple client APIs, at varying levels of abstraction.
+Twisted Names provides a layered selection of client APIs.
 
 In this section:
 
- - You will learn about the high level client API
- - You will learn about how you can use the client API interactively from the Python shell for DNS debugging and diagnostics
- - You will learn about the IResolverSimple and the IResolver interfaces,
-   the implementations of those interfaces and when to use them.
+ - You will learn about the high level :api:`twisted.names.client <client>` API
+ - You will learn about how you can use the client API interactively from the Python shell
+   (useful for DNS debugging and diagnostics)
+ - You will learn about the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>`
+   and the :api:`twisted.internet.interfaces.IResolver <IResolver>` interfaces
+ - You will learn about various implementations of those interfaces and when to use them
  - You will learn how to customise how the reactor carries out hostname resolution
- - You will also be introduced to some of the low level interfaces
+ - You will also be introduced to some of the low level APIs
 
 
 Using the Global Resolver
 -------------------------
-The easiest way to issue DNS queries is to use the module level functions
+The easiest way to issue DNS queries from twisted, is to use the module level functions
 in :api:`twisted.names.client <names.client>`.
 
-These will construct a global, singleton resolver object
-using :api:`twisted.names.client.createResolver <createResolver>`.
-That resolver is cached and used in subsequent calls to the lookup functions.
-
-Here's an example of some DNS queries generated from an interactive Twisted shell
-using :api:`twisted.conch.stdio <twisted.conch.stdio>`:
-
+Here's an example of some DNS queries generated from an interactive Twisted shell.
 
 .. code-block:: console
 
@@ -48,35 +44,36 @@ using :api:`twisted.conch.stdio <twisted.conch.stdio>`:
    <Deferred at 0xf5cd40 current result: ([<RR name=twistedmatrix.com type=MX class=IN ttl=1s auth=False>], [], [])>
 
 
-All the ``IResolverSimple`` and ``IResolver`` methods are asynchronous and return ``deferreds``.
+All the ``IResolverSimple`` and ``IResolver`` methods are asynchronous and therefore return ``deferreds``.
 
-Notice that :api:`twisted.names.client.getHostByName <getHostByName>` (part of ``IResolverSimple``) returns an IP address.
+:api:`twisted.names.client.getHostByName <getHostByName>` (part of ``IResolverSimple``) simply returns an IP address
+whereas :api:`twisted.names.client.lookupMailExchange <lookupMailExchange>` returns three lists of DNS records --
+representing answer records, authority records, and additional records.
 
-Whereas :api:`twisted.names.client.lookupMailExchange <lookupMailExchange>` returns three lists of DNS records.
-
-Notice also that initially the deferred returned by the DNS lookup functions has not fired
+Since we are sending requests using using :api:`twisted.conch.stdio <twisted.conch.stdio>`
+you will notice that initially, the deferred returned by the DNS lookup functions, has not fired
  -- it is waiting for a response from the DNS server.
 
 We type ``_`` (the default variable) a little later,
-to display its value after an answer has been received and the deferred has fired.
+to display the value of the deferred after an answer has been received and the deferred has fired.
 
 .. note::
-   * Unlike its posix equivalent, getHostByName returns an IPv6 address
+   * Unlike its posix equivalent, ``getHostByName`` may return an IPv6 address
 
-   * IResolver contains separate functions for looking up each of the common DNS record types
+   * ``IResolver`` contains separate functions for looking up each of the common DNS record types
 
-   * IResolver includes a lower level query function for issuing arbitrary queries.
+   * ``IResolver`` includes a lower level ``query`` function for issuing arbitrary queries.
 
    * The :api:`twisted.names.client <names.client>` module ``directlyProvides``
      both the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>`
      and the :api:`twisted.names.internet.IResolver <IResolver>` interfaces.
 
-   * :api:`twisted.names.client.createResolver <createResolver>` constructs a global resolver
+   * :api:`twisted.names.client.createResolver <createResolver>` constructs a global resolver,
      which performs queries against the same DNS sources and servers used by the underlying operating system.
 
-     That is, it will the DNS server IP addresses from a local ``resolv.conf`` file
+     That is, it will use the DNS server IP addresses found in a local ``resolv.conf`` file
      (if the operating system provides such a file)
-     and it will use a OS specific hosts file path.
+     and it will use a OS specific ``hosts`` file path.
 
 
 Creating a New Resolver
@@ -106,8 +103,8 @@ Installing a Resolver in the Reactor
 You can also install a custom resolver into the reactor
 using the :api:`twisted.internet.interfaces.IReactoryPluggable <IReactorPluggable>` interface.
 
-The reactor uses its installed resolver to resolve hostnames
-that may be supplied to eg :api:`twisted.internet.interfaces.IReactoryTCP.connectTCP <connectTCP>`.
+The reactor uses its installed resolver when ever it needs to resolve hostnames.
+For example, when you supply a hostname to :api:`twisted.internet.interfaces.IReactoryTCP.connectTCP <connectTCP>`.
 
 Here's a short example that shows how to install an alternative resolver for the global reactor.
 
@@ -117,13 +114,13 @@ Here's a short example that shows how to install an alternative resolver for the
    from twisted.names import client
    reactor.installResolver(client.createResolver(servers=[('8.8.8.8', 53), ('8.8.4.4', 53)], hosts='alternate_hosts_file'))
 
-After this, all hostname lookups requested by the reactor will be sent to the Google DNS servers
+After this, all hostname lookups requested by the reactor will be sent to the Google DNS servers;
 instead of to the local operating system.
 
 .. note::
    By default the reactor uses the posix ``gethostbyname`` function provided by the operating system.
 
-   But ``gethostbyname`` is a blocking function, so it is called in a threadpool.
+   But ``gethostbyname`` is a blocking function, so it has to be called in a threadpool.
 
    Check out :api:`twisted.internet.base.ThreadedResolver <ThreadedResolver>`
    if you're interested in learning more about how the default threaded resolver works.
