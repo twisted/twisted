@@ -1,1 +1,0 @@
-twisted.conch.interfaces.ISFTPServer now defines the `avatar` attribute.
