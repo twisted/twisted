@@ -14,17 +14,19 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 
 from __future__ import division, absolute_import
 
-import socket
 import os
 import re
+import socket
+import warnings
+
+from socket import AF_INET6, AF_INET
 
 from zope.interface import implementer, directlyProvides
-import warnings
 
 from twisted.python.compat import _PY3
 from twisted.internet import interfaces, defer, error, fdesc, threads
-from twisted.internet.protocol import (
-        ClientFactory, Protocol, ProcessProtocol, Factory)
+from twisted.internet.protocol import ClientFactory, Factory
+from twisted.internet.protocol import ProcessProtocol, Protocol
 from twisted.internet.interfaces import IStreamServerEndpointStringParser
 from twisted.internet.interfaces import IStreamClientEndpointStringParser
 from twisted.python.filepath import FilePath
@@ -34,7 +36,6 @@ from twisted.python.failure import Failure
 from twisted.python import log
 from twisted.internet.address import _ProcessAddress, HostnameAddress
 from twisted.python.components import proxyForInterface
-from socket import AF_INET6, AF_INET
 from twisted.internet.task import LoopingCall
 
 if not _PY3:
@@ -1059,7 +1060,8 @@ def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
 
 
 def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
-              sslmethod=None, interface='', backlog=50, extraCertChain=None):
+              sslmethod=None, interface='', backlog=50, extraCertChain=None,
+              dhParameters=None):
     """
     Internal parser function for L{_parseServer} to convert the string
     arguments for an SSL (over TCP/IPv4) stream endpoint into the structured
@@ -1093,6 +1095,11 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
         the CA that signed your C{certKey}.
     @type extraCertChain: L{bytes}
 
+    @param dhParameters: The file name of a file containing parameters that are
+        required for Diffie-Hellman key exchange.  If this is not specified,
+        the forward secret C{DHE} ciphers aren't available for servers.
+    @type dhParameters: L{bytes}
+
     @return: a 2-tuple of (args, kwargs), describing  the parameters to
         L{IReactorSSL.listenSSL} (or, modulo argument 2, the factory, arguments
         to L{SSL4ServerEndpoint}.
@@ -1123,11 +1130,16 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
             )
     else:
         chainCertificates = None
+    if dhParameters is not None:
+        dhParameters = ssl.DiffieHellmanParameters.fromFile(
+            FilePath(dhParameters),
+        )
 
     cf = ssl.CertificateOptions(
         privateKey=privateCertificate.privateKey.original,
         certificate=privateCertificate.original,
         extraCertChain=chainCertificates,
+        dhParameters=dhParameters,
         **kw
     )
     return ((int(port), factory, cf),
