@@ -1958,7 +1958,7 @@ class Message(tputil.FancyEqMixin):
         'queries', 'answers', 'authority', 'additional'
     )
 
-    _flagNames = ('answer','auth', 'trunc', 'recDes', 'recAv', 'authenticData',
+    _flagNames = ('answer', 'auth', 'trunc', 'recDes', 'recAv', 'authenticData',
                   'checkingDisabled')
     _fieldNames = ('id', 'opCode', 'rCode', 'maxSize')
     _sectionNames = ('queries', 'answers', 'authority', 'additional')
