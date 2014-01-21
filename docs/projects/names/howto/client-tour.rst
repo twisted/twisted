@@ -124,3 +124,41 @@ instead of to the local operating system.
 
    Check out :api:`twisted.internet.base.ThreadedResolver <ThreadedResolver>`
    if you're interested in learning more about how the default threaded resolver works.
+
+
+Lower Level APIs
+----------------
+
+Here's an example of how to use the
+:api:`twisted.names.dns.DNSDatagramProtocol <DNSDatagramProtocol>` directly.
+
+This can be useful if you're trying to construct a test for the DNS protocol its self
+or if you're trying to build a custom DNS client.
+
+.. code-block:: python
+
+   from twisted.internet import task
+   from twisted.names import dns
+
+   def main(reactor):
+       proto = dns.DNSDatagramProtocol(controller=None)
+       reactor.listenUDP(0, proto)
+
+       d = proto.query(('8.8.8.8', 53), [dns.Query('www.example.com', dns.AAAA)])
+       d.addCallback(printResult)
+       return d
+
+   def printResult(res):
+       print 'ANSWERS: ', [a.payload for a in res.answers]
+
+   task.react(main)
+
+Th disadvantage of working at this low level is that you will need to handle query failures
+by manually re-issuing queries or by issuing followup TCP queries
+using the stream based :api:`twisted.names.dns.DNSProtocol <dns.DNSProtocol>`.
+
+These things are handled automatically by the higher level APIs in :api:`twisted.names.client <client>`.
+
+Note also that in this case, the deferred result of :api:`twisted.names.dns.DNSDatagramProtocol <dns.DNSDatagramProtocol.query>`
+is a :api:`twisted.names.dns.Message <dns.Message>` object,
+rather than a list of DNS records.
