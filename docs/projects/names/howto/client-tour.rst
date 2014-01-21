@@ -9,10 +9,8 @@ Twisted Names provides a layered selection of client APIs.
 In this section:
 
  - You will learn about the high level :api:`twisted.names.client <client>` API
- - You will learn about how you can use the client API interactively from the Python shell
-   (useful for DNS debugging and diagnostics)
- - You will learn about the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>`
-   and the :api:`twisted.internet.interfaces.IResolver <IResolver>` interfaces
+ - You will learn about how you can use the client API interactively from the Python shell (useful for DNS debugging and diagnostics)
+ - You will learn about the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>` and the :api:`twisted.internet.interfaces.IResolver <IResolver>` interfaces
  - You will learn about various implementations of those interfaces and when to use them
  - You will learn how to customise how the reactor carries out hostname resolution
  - You will also be introduced to some of the low level APIs
@@ -20,8 +18,7 @@ In this section:
 
 Using the Global Resolver
 -------------------------
-The easiest way to issue DNS queries from twisted, is to use the module level functions
-in :api:`twisted.names.client <names.client>`.
+The easiest way to issue DNS queries from twisted, is to use the module level functions in :api:`twisted.names.client <names.client>`.
 
 Here's an example of some DNS queries generated from an interactive Twisted shell.
 
@@ -46,16 +43,11 @@ Here's an example of some DNS queries generated from an interactive Twisted shel
 
 All the ``IResolverSimple`` and ``IResolver`` methods are asynchronous and therefore return ``deferreds``.
 
-:api:`twisted.names.client.getHostByName <getHostByName>` (part of ``IResolverSimple``) simply returns an IP address
-whereas :api:`twisted.names.client.lookupMailExchange <lookupMailExchange>` returns three lists of DNS records --
-representing answer records, authority records, and additional records.
+:api:`twisted.names.client.getHostByName <getHostByName>` (part of ``IResolverSimple``) simply returns an IP address whereas :api:`twisted.names.client.lookupMailExchange <lookupMailExchange>` returns three lists of DNS records -- representing answer records, authority records, and additional records.
 
-Since we are sending requests using using :api:`twisted.conch.stdio <twisted.conch.stdio>`
-you will notice that initially, the deferred returned by the DNS lookup functions, has not fired
- -- it is waiting for a response from the DNS server.
+Since we are sending requests using using :api:`twisted.conch.stdio <twisted.conch.stdio>` you will notice that initially, the deferred returned by the DNS lookup functions, has not fired -- it is waiting for a response from the DNS server.
 
-We type ``_`` (the default variable) a little later,
-to display the value of the deferred after an answer has been received and the deferred has fired.
+We type ``_`` (the default variable) a little later, to display the value of the deferred after an answer has been received and the deferred has fired.
 
 .. note::
    * Unlike its posix equivalent, ``getHostByName`` may return an IPv6 address
@@ -64,24 +56,18 @@ to display the value of the deferred after an answer has been received and the d
 
    * ``IResolver`` includes a lower level ``query`` function for issuing arbitrary queries.
 
-   * The :api:`twisted.names.client <names.client>` module ``directlyProvides``
-     both the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>`
-     and the :api:`twisted.names.internet.IResolver <IResolver>` interfaces.
+   * The :api:`twisted.names.client <names.client>` module ``directlyProvides`` both the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>` and the :api:`twisted.names.internet.IResolver <IResolver>` interfaces.
 
-   * :api:`twisted.names.client.createResolver <createResolver>` constructs a global resolver,
-     which performs queries against the same DNS sources and servers used by the underlying operating system.
+   * :api:`twisted.names.client.createResolver <createResolver>` constructs a global resolver, which performs queries against the same DNS sources and servers used by the underlying operating system.
 
-     That is, it will use the DNS server IP addresses found in a local ``resolv.conf`` file
-     (if the operating system provides such a file)
-     and it will use a OS specific ``hosts`` file path.
+     That is, it will use the DNS server IP addresses found in a local ``resolv.conf`` file (if the operating system provides such a file) and it will use a OS specific ``hosts`` file path.
 
 
 Creating a New Resolver
 -----------------------
 Now suppose we want to create a client Resolver which sends its queries to a specific server (or servers).
 
-In this case, we use :api:`twisted.names.client.Resolver <client.Resolver>` directly
-and pass it a list of preferred server IP addresses and ports.
+In this case, we use :api:`twisted.names.client.Resolver <client.Resolver>` directly and pass it a list of preferred server IP addresses and ports.
 
 For example, suppose we want to lookup names using the free Google DNS servers:
 
@@ -98,10 +84,10 @@ For example, suppose we want to lookup names using the free Google DNS servers:
 
 Here we are using the Google DNS server IP addresses and the standard DNS port (53).
 
+
 Installing a Resolver in the Reactor
 ------------------------------------
-You can also install a custom resolver into the reactor
-using the :api:`twisted.internet.interfaces.IReactoryPluggable <IReactorPluggable>` interface.
+You can also install a custom resolver into the reactor using the :api:`twisted.internet.interfaces.IReactoryPluggable <IReactorPluggable>` interface.
 
 The reactor uses its installed resolver when ever it needs to resolve hostnames.
 For example, when you supply a hostname to :api:`twisted.internet.interfaces.IReactoryTCP.connectTCP <connectTCP>`.
@@ -114,26 +100,22 @@ Here's a short example that shows how to install an alternative resolver for the
    from twisted.names import client
    reactor.installResolver(client.createResolver(servers=[('8.8.8.8', 53), ('8.8.4.4', 53)]))
 
-After this, all hostname lookups requested by the reactor will be sent to the Google DNS servers;
-instead of to the local operating system.
+After this, all hostname lookups requested by the reactor will be sent to the Google DNS servers; instead of to the local operating system.
 
 .. note::
    By default the reactor uses the posix ``gethostbyname`` function provided by the operating system.
 
    But ``gethostbyname`` is a blocking function, so it has to be called in a threadpool.
 
-   Check out :api:`twisted.internet.base.ThreadedResolver <ThreadedResolver>`
-   if you're interested in learning more about how the default threaded resolver works.
+   Check out :api:`twisted.internet.base.ThreadedResolver <ThreadedResolver>` if you're interested in learning more about how the default threaded resolver works.
 
 
 Lower Level APIs
 ----------------
 
-Here's an example of how to use the
-:api:`twisted.names.dns.DNSDatagramProtocol <DNSDatagramProtocol>` directly.
+Here's an example of how to use the :api:`twisted.names.dns.DNSDatagramProtocol <DNSDatagramProtocol>` directly.
 
-This can be useful if you're trying to construct a test for the DNS protocol its self
-or if you're trying to build a custom DNS client.
+This can be useful if you're trying to construct a test for the DNS protocol its self or if you're trying to build a custom DNS client.
 
 .. code-block:: python
 
@@ -153,18 +135,13 @@ or if you're trying to build a custom DNS client.
 
    task.react(main)
 
-Th disadvantage of working at this low level is that you will need to handle query failures
-by manually re-issuing queries or by issuing followup TCP queries
-using the stream based :api:`twisted.names.dns.DNSProtocol <dns.DNSProtocol>`.
+Th disadvantage of working at this low level is that you will need to handle query failures by manually re-issuing queries or by issuing followup TCP queries using the stream based :api:`twisted.names.dns.DNSProtocol <dns.DNSProtocol>`.
 
 These things are handled automatically by the higher level APIs in :api:`twisted.names.client <client>`.
 
-Note also that in this case, the deferred result of :api:`twisted.names.dns.DNSDatagramProtocol <dns.DNSDatagramProtocol.query>`
-is a :api:`twisted.names.dns.Message <dns.Message>` object,
-rather than a list of DNS records.
+Note also that in this case, the deferred result of :api:`twisted.names.dns.DNSDatagramProtocol <dns.DNSDatagramProtocol.query>` is a :api:`twisted.names.dns.Message <dns.Message>` object, rather than a list of DNS records.
 
 
 Further Reading
 ---------------
-Check out the :doc:`Twisted Names Examples <../examples/index>`
-which demonstrate how the client APIs can be used to create useful DNS diagnostic tools.
+Check out the :doc:`Twisted Names Examples <../examples/index>` which demonstrate how the client APIs can be used to create useful DNS diagnostic tools.
