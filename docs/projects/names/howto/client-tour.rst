@@ -112,7 +112,7 @@ Here's a short example that shows how to install an alternative resolver for the
 
    from twisted.internet import reactor
    from twisted.names import client
-   reactor.installResolver(client.createResolver(servers=[('8.8.8.8', 53), ('8.8.4.4', 53)], hosts='alternate_hosts_file'))
+   reactor.installResolver(client.createResolver(servers=[('8.8.8.8', 53), ('8.8.4.4', 53)]))
 
 After this, all hostname lookups requested by the reactor will be sent to the Google DNS servers;
 instead of to the local operating system.
