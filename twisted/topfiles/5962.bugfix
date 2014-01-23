@@ -1,0 +1,2 @@
+twisted.internet.task.advance now avoids running any callbacks which are added during its excecution, which prevents a possible infinite loop.
+

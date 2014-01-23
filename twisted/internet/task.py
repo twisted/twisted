@@ -786,11 +786,16 @@ class Clock:
         """
         self.rightNow += amount
         self._sortCalls()
-        while self.calls and self.calls[0].getTime() <= self.seconds():
-            call = self.calls.pop(0)
+        calls = self.calls
+        self.calls = []
+        while calls and calls[0].getTime() <= self.seconds():
+            call = calls.pop(0)
             call.called = 1
-            call.func(*call.args, **call.kw)
-            self._sortCalls()
+            # See ticket #6867 : call.func needs to handle exceptions.
+            # An exception puts self.calls in an invalid state
+            if call.func: # Can be None after cancel()
+                call.func(*call.args, **call.kw)
+        self.calls.extend(calls)
 
 
     def pump(self, timings):

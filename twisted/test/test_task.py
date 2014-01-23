@@ -90,6 +90,43 @@ class ClockTestCase(unittest.TestCase):
         self.failIf(call.active())
 
 
+    def _advanceCallingCallLater(self, advanceBy):
+        """
+        Adds a C{callLater} for immediate execution and advances the clock
+        by C{advanceBy} seconds.
+
+        @type advanceBy: number
+        @param advanceBy: Seconds to advance by.
+
+        @rtype: C{int}
+        @return: Number of times C{f} is called.
+        """
+        i = [0]
+        def f():
+            if i[0] < 6:
+                c.callLater(0, f)
+            i[0] += 1
+        c = task.Clock()
+        f()
+        c.advance(advanceBy)
+        return i[0]
+
+
+    def testAdvanceCallLaterZero(self):
+        """
+        C{f} calling C{Clock.callLater(0, f)} does not create an infinite loop
+        """
+        self.assertEqual(self._advanceCallingCallLater(0), 2)
+
+
+    def testAdvanceCallLaterZeroAdvanceOne(self):
+        """
+        Same as testAdvanceCallLaterZero in practice.
+        This test is included because it catches a bug in original proposed fix.
+        """
+        self.assertEqual(self._advanceCallingCallLater(1), 2)
+
+
     def testAdvanceCancel(self):
         """
         Test attemping to cancel the call in a callback.

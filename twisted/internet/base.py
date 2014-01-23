@@ -91,7 +91,10 @@ class DelayedCall:
             self.cancelled = 1
             if self.debug:
                 self._str = str(self)
-            del self.func, self.args, self.kw
+            self.func = None
+            self.args = None
+            self.kw = None
+
 
     def reset(self, secondsFromNow):
         """Reschedule this call for a different time
