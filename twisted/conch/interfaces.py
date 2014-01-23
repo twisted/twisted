@@ -96,11 +96,17 @@ class ISession(Interface):
 
 class ISFTPServer(Interface):
     """
-    The only attribute of this class is "avatar".  It is the avatar
-    returned by the Realm that we are authenticated with, and
-    represents the logged-in user.  Each method should check to verify
-    that the user has permission for their actions.
+    SFTP subsystem for server-side communication.
+
+    Each method should check to verify that the user has permission for
+    their actions.
     """
+
+    avatar = Attribute(
+        """
+        The avatar returned by the Realm that we are authenticated with,
+        and represents the logged-in user.
+        """)
 
     def gotVersion(otherVersion, extData):
         """

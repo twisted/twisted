@@ -148,6 +148,15 @@ class TestOurServerOurClient(SFTPTestBase):
         self.assertEqual(self._extData, {'conchTest' : 'ext data'})
 
 
+    def test_interface_implementation(self):
+        """
+        It implements the ISFTPServer interface.
+        """
+        self.assertTrue(
+            filetransfer.ISFTPServer.providedBy(self.server.client),
+            "ISFTPServer not provided by %r" % (self.server.client,))
+
+
     def test_openedFileClosedWithConnection(self):
         """
         A file opened with C{openFile} is close when the connection is lost.
