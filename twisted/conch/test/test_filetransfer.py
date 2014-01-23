@@ -153,8 +153,8 @@ class TestOurServerOurClient(SFTPTestBase):
         It implements the ISFTPServer interface.
         """
         self.assertTrue(
-            filetransfer.ISFTPServer.providedBy(self.server),
-            "ISFTPServer not provided by %r" % (self.server,))
+            filetransfer.ISFTPServer.providedBy(self.server.client),
+            "ISFTPServer not provided by %r" % (self.server.client,))
 
 
     def test_openedFileClosedWithConnection(self):
