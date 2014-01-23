@@ -1475,9 +1475,16 @@ class HTTP11ClientProtocolTests(TestCase):
         self.assertEqual(protocol._responseDeferred, None)
 
 
-    def test_quiescentCallbackCorrectlyInCorrectState_Correct(self):
+    def test_transportProducingWhenQuiescentAfterFullBody(self):
         """
-        
+        The C{quiescentCallback} passed to L{HTTP11ClientProtocol} will only be
+        invoked once that protocol is in a state similar to its initial state.
+        One of the aspects of this initial state is the producer-state of its
+        transport; an L{HTTP11ClientProtocol} begins with a transport that is
+        producing, i.e. not C{pauseProducing}'d.
+
+        Therefore, when C{quiescentCallback} is invoked the protocol will still
+        be producing.
         """
         quiescentResult = []
         def callback(p):
