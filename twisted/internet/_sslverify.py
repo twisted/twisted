@@ -669,13 +669,50 @@ class OpenSSLDefaultPaths(object):
     """
 
     def addCACertsToContext(self, context):
-        if platform.isLinux():
-            context.set_default_verify_paths()
-        else:
-            raise NotImplementedError(
-                "Only Linux supports platform-trusted CAs "
-                "(see #6371, #6372, #6334 for other plaforms)"
-            )
+        context.set_default_verify_paths()
+
+
+
+def platformTrust():
+    """
+    Attempt to discover a set of trusted certificate authority certificates
+    (or, in other words: trust roots, or root certificates) whose trust is
+    managed and updated by tools outside of Twisted.
+
+    Most often, this will be some approximation of an up-to-date list of
+    certificates distributed with web browser, and has similar trust
+    properties, and when developing code that uses it, you can think of it that
+    way.  However, the main point of this API is that the configuration of
+    which certificates are trusted is usually neither Twisted's responsibility
+    nor your application's: the user may use platform-specific tools for
+    defining which server certificates should be trusted by programs using TLS.
+
+    This should be a set of trust settings most appropriate for I{client} TLS
+    connections.  You should probably use this by default for any client TLS
+    connection that you create.  For servers, however, client certificates are
+    typically not verified; or, if they are, their verification will depend on
+    a custom, application-specific certificate authority.
+
+    @note: Currently, only Linux is supported, and only if OpenSSL's default
+        certificate verify paths are set; all other platforms' trust databases
+        are pending implementation.  See
+        U{https://twistedmatrix.com/trac/ticket/6371},
+        U{https://twistedmatrix.com/trac/ticket/6372}, and
+        U{https://twistedmatrix.com/trac/ticket/6334} for other platforms.
+
+    @return: an appropriate trust settings object for your platform.
+    @rtype: L{IOpenSSLTrustSettings}
+
+    @raise NotImplementedError: if this platform is not yet supported by
+        Twisted.  At present, only OpenSSL is supported.
+    """
+    if platform.isLinux():
+        return OpenSSLDefaultPaths()
+    else:
+        raise NotImplementedError(
+            "Only Linux supports platform-trusted CAs "
+            "(see #6371, #6372, #6334 for other plaforms)"
+        )
 
 
 
