@@ -677,13 +677,13 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_caCertsPlatformLinux(self):
         """
-        Specifying a C{caCerts} of L{sslverify.CASources.PLATFORM} when
+        Specifying a C{caCerts} of L{sslverify.OpenSSLDefaultPaths} when
         initializing C{OpenSSLCertificateOptions} loads the platform-provided
         trusted certificates.
         """
         opts = sslverify.OpenSSLCertificateOptions(
-            caCerts=sslverify.CASources.PLATFORM,
-            verify=True)
+            caCerts=sslverify.OpenSSLDefaultPaths(),
+        )
         called = []
         class TestContext(SSL.Context):
             def set_default_verify_paths(self):
@@ -697,13 +697,13 @@ class OpenSSLOptions(unittest.TestCase):
     def test_caCertsPlatformOther(self):
         """
         If L{OpenSSLCertificateOptions} is initialized with C{caCerts} set
-        to L{sslverify.CASources.PLATFORM}, a subsequent call to
+        to L{sslverify.OpenSSLDefaultPaths}, a subsequent call to
         L{OpenSSLCertificateOptions.getContext} will currently raise
         C{NotImplementedError} on non-Linux platforms.
         """
         opts = sslverify.OpenSSLCertificateOptions(
-            caCerts=sslverify.CASources.PLATFORM,
-            verify=True)
+            peerTrust=sslverify.OpenSSLDefaultPaths()
+        )
         self.assertRaises(NotImplementedError, opts.getContext)
 
     if platform.isLinux():
@@ -736,7 +736,7 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_caCertsPlatformRejectsRandomCA(self):
         """
-        Specifying a C{caCerts} of L{sslverify.CASources.PLATFORM} when
+        Specifying a C{caCerts} of L{sslverify.OpenSSLDefaultPaths} when
         initializing C{OpenSSLCertificateOptions} causes certificates issued
         by a newly created CA to be rejected by an SSL connection using these
         options.
@@ -760,7 +760,7 @@ class OpenSSLOptions(unittest.TestCase):
         serverOpts = ContextFactory()
         clientOpts = sslverify.OpenSSLCertificateOptions(
             verify=True,
-            caCerts=sslverify.CASources.PLATFORM)
+            caCerts=sslverify.OpenSSLDefaultPaths)
 
         onServerLost = defer.Deferred()
         onClientLost = defer.Deferred()
@@ -780,7 +780,7 @@ class OpenSSLOptions(unittest.TestCase):
 
     if not platform.isLinux():
         test_caCertsPlatformRejectsRandomCA.skip = (
-            "CASources.PLATFORM is currently only supported on Linux")
+            "OpenSSLDefaultPaths is currently only supported on Linux")
 
 
 

@@ -13,8 +13,9 @@ from OpenSSL import SSL, crypto
 from twisted.python.compat import nativeString, networkString
 from twisted.python import _reflectpy3 as reflect, util
 from twisted.python.runtime import platform
-from twisted.python.constants import Names, NamedConstant
 from twisted.internet.defer import Deferred
+from zope.interface import Interface, implementer
+
 from twisted.internet.error import VerifyError, CertificateError
 
 def _sessionCounter(counter=itertools.count()):
@@ -622,13 +623,59 @@ class KeyPair(PublicKey):
 
 
 
-class CASources(Names):
+class IOpenSSLTrustSettings(Interface):
     """
-    Constants defining sources for trusted certificate authorities.
+    Trust settings for an OpenSSL context.
     """
-    # Indicates that OpenSSLCertificateOptions should use the platform-provided
-    # database of trusted CAs.
-    PLATFORM = NamedConstant()
+
+    def addCACertsToContext(context):
+        """
+        Add any relevant certificate-authority certificates to the given SSL
+        context.
+
+        @param context: An SSL context for a connection which should be
+            verified by some certificate authority.
+        @type context:
+
+        @return: L{None}
+        """
+
+
+@implementer(IOpenSSLTrustSettings)
+class OpenSSLCertificateAuthorities(object):
+    """
+    Trust settings based on a list of certificates.
+    """
+
+    def __init__(self, caCerts):
+        """
+        @param caCerts: The certificate authorities.
+        @type caCerts: L{list} of L{SSL.X509}
+        """
+        self._caCerts = caCerts
+
+
+    def addCACertsToContext(self, context):
+        store = context.get_cert_store()
+        for cert in self._caCerts:
+            store.add_cert(cert)
+
+
+
+@implementer(IOpenSSLTrustSettings)
+class OpenSSLDefaultPaths(object):
+    """
+    Trust default paths.
+    """
+
+    def addCACertsToContext(self, context):
+        if platform.isLinux():
+            context.set_default_verify_paths()
+        else:
+            raise NotImplementedError(
+                "Only Linux supports platform-trusted CAs "
+                "(see #6371, #6372, #6334 for other plaforms)"
+            )
 
 
 
@@ -660,7 +707,8 @@ class OpenSSLCertificateOptions(object):
                  enableSessions=True,
                  fixBrokenPeers=False,
                  enableSessionTickets=False,
-                 extraCertChain=None):
+                 extraCertChain=None,
+                 peerTrust=None):
         """
         Create an OpenSSL context SSL connection context factory.
 
@@ -669,55 +717,76 @@ class OpenSSLCertificateOptions(object):
         @param certificate: An X509 object holding the certificate.
 
         @param method: The SSL protocol to use, one of SSLv23_METHOD,
-        SSLv2_METHOD, SSLv3_METHOD, TLSv1_METHOD.  Defaults to TLSv1_METHOD.
+            SSLv2_METHOD, SSLv3_METHOD, TLSv1_METHOD.  Defaults to
+            TLSv1_METHOD.
 
-        @param verify: If C{True}, verify certificates received from the peer
-            and fail the handshake if verification fails.  Otherwise, allow
-            anonymous sessions and sessions with certificates which fail
-            validation.  By default this is C{False}.
+        @param verify: Specifying this argument directly is deprecated;
+            instead, use a C{peerTrust} keyword argument.
 
-        @param caCerts: List of certificate authority certificate objects to
-            use to verify the peer's certificate, or L{CASources}C{.PLATFORM}
-            indicating that platform-provided trusted certificates should be
-            used.  Only used if verify is C{True} and will be ignored
-            otherwise.  Since verify is C{False} by default, this is C{None}
-            by default.
+            By default this is C{False}.
 
-        @type caCerts: C{list} of L{OpenSSL.crypto.X509}, or
-             L{CASources} constants.
+            If C{True}, verify certificates received from the peer and fail the
+            handshake if verification fails.  Otherwise, allow anonymous
+            sessions and sessions with certificates which fail validation.
+
+        @param caCerts: Specifying this argument directly is deprecated;
+            instead, use a C{peerTrust} keyword argument.
+
+            List of certificate authority certificate objects to use to verify
+            the peer's certificate, or L{CASources}C{.PLATFORM} indicating that
+            platform-provided trusted certificates should be used.  Only used
+            if verify is C{True} and will be ignored otherwise.  Since verify
+            is C{False} by default, this is C{None} by default.
+
+        @type caCerts: C{list} of L{OpenSSL.crypto.X509}, or L{CASources}
+            constants.
 
         @param verifyDepth: Depth in certificate chain down to which to verify.
-        If unspecified, use the underlying default (9).
+            If unspecified, use the underlying default (9).
 
-        @param requireCertificate: If True, do not allow anonymous sessions.
+        @param requireCertificate: Specifying this argument directly is
+            deprecated; instead, use a C{peerTrust} keyword argument.
 
-        @param verifyOnce: If True, do not re-verify the certificate
-        on session resumption.
+            If C{True}, do not allow anonymous sessions; defaults to C{True}.
+
+        @param verifyOnce: If True, do not re-verify the certificate on session
+            resumption.
 
         @param enableSingleUseKeys: If True, generate a new key whenever
-        ephemeral DH parameters are used to prevent small subgroup attacks.
+            ephemeral DH parameters are used to prevent small subgroup attacks.
 
         @param enableSessions: If True, set a session ID on each context.  This
-        allows a shortened handshake to be used when a known client reconnects.
+            allows a shortened handshake to be used when a known client
+            reconnects.
 
         @param fixBrokenPeers: If True, enable various non-spec protocol fixes
-        for broken SSL implementations.  This should be entirely safe,
-        according to the OpenSSL documentation, but YMMV.  This option is now
-        off by default, because it causes problems with connections between
-        peers using OpenSSL 0.9.8a.
+            for broken SSL implementations.  This should be entirely safe,
+            according to the OpenSSL documentation, but YMMV.  This option is
+            now off by default, because it causes problems with connections
+            between peers using OpenSSL 0.9.8a.
 
         @param enableSessionTickets: If True, enable session ticket extension
-        for session resumption per RFC 5077. Note there is no support for
-        controlling session tickets. This option is off by default, as some
-        server implementations don't correctly process incoming empty session
-        ticket extensions in the hello.
+            for session resumption per RFC 5077. Note there is no support for
+            controlling session tickets.  This option is off by default, as
+            some server implementations don't correctly process incoming empty
+            session ticket extensions in the hello.
 
         @param extraCertChain: List of certificates that I{complete} your
             verification chain if the certificate authority that signed your
             C{certificate} isn't widely supported.  Do I{not} add
             C{certificate} to it.
-
         @type extraCertChain: C{list} of L{OpenSSL.crypto.X509}
+
+        @param peerTrust: Specification of trust requirements of peers.  If
+            this argument is specified, the peer is verified, requires a
+            certificate, and the certificate must be one of those specified by
+            this object.
+
+            Note that this option I{overrides and supersedes} values specified
+            for C{caCerts}, C{verify}, and C{requireCertificate}; specifying
+            any of those options should be avoided in favor of this one.
+
+        @type peerTrust: L{IOpenSSLTrustSettings}
         """
 
         if (privateKey is None) != (certificate is None):
@@ -748,6 +817,14 @@ class OpenSSLCertificateOptions(object):
         self.enableSessions = enableSessions
         self.fixBrokenPeers = fixBrokenPeers
         self.enableSessionTickets = enableSessionTickets
+        if peerTrust is None:
+            if self.verify:
+                peerTrust = OpenSSLCertificateAuthorities(caCerts)
+        else:
+            self.verify = True
+            self.requireCertificate = True
+            peerTrust = IOpenSSLTrustSettings(peerTrust)
+        self.peerTrust = peerTrust
 
 
     def __getstate__(self):
@@ -791,18 +868,7 @@ class OpenSSLCertificateOptions(object):
                 verifyFlags |= SSL.VERIFY_FAIL_IF_NO_PEER_CERT
             if self.verifyOnce:
                 verifyFlags |= SSL.VERIFY_CLIENT_ONCE
-            if self.caCerts:
-                if self.caCerts is CASources.PLATFORM:
-                    if platform.isLinux():
-                        ctx.set_default_verify_paths()
-                    else:
-                        raise NotImplementedError(
-                            "Only Linux supports platform-trusted CAs "
-                            "(see #6371, #6372, #6334 for other plaforms)")
-                else:
-                    store = ctx.get_cert_store()
-                    for cert in self.caCerts:
-                        store.add_cert(cert)
+            self.peerTrust.addCACertsToContext(ctx)
 
         # It'd be nice if pyOpenSSL let us pass None here for this behavior (as
         # the underlying OpenSSL API call allows NULL to be passed).  It
