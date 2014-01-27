@@ -18,7 +18,7 @@ In this section you will learn:
 
 Using the Global Resolver
 -------------------------
-The easiest way to issue DNS queries from twisted is to use the module level functions in :api:`twisted.names.client <names.client>`.
+The easiest way to issue DNS queries from Twisted is to use the module level functions in :api:`twisted.names.client <names.client>`.
 
 Here's an example showing some DNS queries generated in an interactive ``twisted.conch`` shell.
 
