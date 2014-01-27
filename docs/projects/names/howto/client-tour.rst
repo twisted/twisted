@@ -109,11 +109,12 @@ Here's a short example that shows how to install an alternative resolver for the
 After this, all hostname lookups requested by the reactor will be sent to the Google DNS servers; instead of to the local operating system.
 
 .. note::
-   By default the reactor uses the posix ``gethostbyname`` function provided by the operating system.
 
-   But ``gethostbyname`` is a blocking function, so it has to be called in a threadpool.
+   * By default the reactor uses the posix ``gethostbyname`` function provided by the operating system,
 
-   Check out :api:`twisted.internet.base.ThreadedResolver <ThreadedResolver>` if you're interested in learning more about how the default threaded resolver works.
+   * but ``gethostbyname`` is a blocking function, so it has to be called in a threadpool.
+
+   * Check out :api:`twisted.internet.base.ThreadedResolver <ThreadedResolver>` if you're interested in learning more about how the default threaded resolver works.
 
 
 Lower Level APIs
