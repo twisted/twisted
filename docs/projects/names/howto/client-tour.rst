@@ -6,14 +6,14 @@ A Guided Tour of twisted.names.client
 =====================================
 Twisted Names provides a layered selection of client APIs.
 
-In this section:
+In this section you will learn:
 
-* You will learn about the high level :api:`twisted.names.client <client>` API.
-* You will learn about how you can use the client API interactively from the Python shell (useful for DNS debugging and diagnostics).
-* You will learn about the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>` and the :api:`twisted.internet.interfaces.IResolver <IResolver>` interfaces.
-* You will learn about various implementations of those interfaces and when to use them.
-* You will learn how to customise how the reactor carries out hostname resolution.
-* You will also be introduced to some of the low level APIs.
+* about the high level :api:`twisted.names.client <client>` API,
+* about how you can use the client API interactively from the Python shell (useful for DNS debugging and diagnostics),
+* about the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>` and the :api:`twisted.internet.interfaces.IResolver <IResolver>` interfaces,
+* about various implementations of those interfaces and when to use them,
+* how to customise how the reactor carries out hostname resolution,
+* and finally, you will also be introduced to some of the low level APIs.
 
 
 Using the Global Resolver
