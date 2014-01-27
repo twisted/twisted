@@ -50,18 +50,18 @@ Here's an example showing some DNS queries generated in an interactive ``twisted
    <Deferred at 0xf5cd40 current result: ([<RR name=twistedmatrix.com type=MX class=IN ttl=1s auth=False>], [], [])>
 
 
-All the ``IResolverSimple`` and ``IResolver`` methods are asynchronous and therefore return ``deferred``\ s.
+All the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>` and :api:`twisted.internet.interfaces.IResolver <IResolver>` methods are asynchronous and therefore return ``deferred``\ s.
 
-:api:`twisted.names.client.getHostByName <getHostByName>` (part of ``IResolverSimple``) simply returns an IP address whereas :api:`twisted.names.client.lookupMailExchange <lookupMailExchange>` returns three lists of DNS records.
+:api:`twisted.names.client.getHostByName <getHostByName>` (part of :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>`) returns an IP address whereas :api:`twisted.names.client.lookupMailExchange <lookupMailExchange>` returns three lists of DNS records.
 These three lists contain answer records, authority records, and additional records.
 
 
 .. note::
-   * Unlike its POSIX equivalent, ``getHostByName`` may return an IPv6 address.
+   * :api:`twisted.names.client.getHostByName <getHostByName>` may return an IPv6 address; unlike its stdlib equivelent (:func:`socket.gethostbyname`)
 
-   * ``IResolver`` contains separate functions for looking up each of the common DNS record types.
+   * :api:`twisted.internet.interfaces.IResolver <IResolver>` contains separate functions for looking up each of the common DNS record types.
 
-   * ``IResolver`` includes a lower level ``query`` function for issuing arbitrary queries.
+   * :api:`twisted.internet.interfaces.IResolver <IResolver>` includes a lower level ``query`` function for issuing arbitrary queries.
 
    * The :api:`twisted.names.client <names.client>` module ``directlyProvides`` both the :api:`twisted.internet.interfaces.IResolverSimple <IResolverSimple>` and the :api:`twisted.names.internet.IResolver <IResolver>` interfaces.
 
