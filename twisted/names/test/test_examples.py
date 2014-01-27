@@ -42,8 +42,12 @@ class ExampleTestBase(object):
         self.fakeOut = StringIO()
         self.patch(sys, 'stdout', self.fakeOut)
 
-        # Get branch root
-        here = FilePath(__file__).parent().parent().parent().parent()
+        # Get documentation root
+        here = (
+            FilePath(__file__)
+            .parent().parent().parent().parent()
+            .child('docs').child('projects')
+        )
 
         # Find the example script within this branch
         for childName in self.exampleRelativePath.split('/'):
@@ -133,7 +137,7 @@ class TestDnsTests(ExampleTestBase, TestCase):
     Test the testdns.py example script.
     """
 
-    exampleRelativePath = 'doc/names/examples/testdns.py'
+    exampleRelativePath = 'names/examples/testdns.py'
 
 
 
@@ -142,7 +146,7 @@ class GetHostByNameTests(ExampleTestBase, TestCase):
     Test the gethostbyname.py example script.
     """
 
-    exampleRelativePath = 'doc/names/examples/gethostbyname.py'
+    exampleRelativePath = 'names/examples/gethostbyname.py'
 
 
 
@@ -151,4 +155,4 @@ class DnsServiceTests(ExampleTestBase, TestCase):
     Test the dns-service.py example script.
     """
 
-    exampleRelativePath = 'doc/names/examples/dns-service.py'
+    exampleRelativePath = 'names/examples/dns-service.py'
