@@ -57,7 +57,7 @@ These three lists contain answer records, authority records, and additional reco
 
 
 .. note::
-   * Unlike its posix equivalent, ``getHostByName`` may return an IPv6 address.
+   * Unlike its POSIX equivalent, ``getHostByName`` may return an IPv6 address.
 
    * ``IResolver`` contains separate functions for looking up each of the common DNS record types.
 
@@ -110,7 +110,7 @@ After this, all hostname lookups requested by the reactor will be sent to the Go
 
 .. note::
 
-   * By default the reactor uses the posix ``gethostbyname`` function provided by the operating system,
+   * By default the reactor uses the POSIX ``gethostbyname`` function provided by the operating system,
 
    * but ``gethostbyname`` is a blocking function, so it has to be called in a threadpool.
 
