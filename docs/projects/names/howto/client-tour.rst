@@ -112,7 +112,7 @@ After this, all hostname lookups requested by the reactor will be sent to the Go
 
    * By default the reactor uses the POSIX ``gethostbyname`` function provided by the operating system,
 
-   * but ``gethostbyname`` is a blocking function, so it has to be called in a threadpool.
+   * but ``gethostbyname`` is a blocking function, so it has to be called in a thread pool.
 
    * Check out :api:`twisted.internet.base.ThreadedResolver <ThreadedResolver>` if you're interested in learning more about how the default threaded resolver works.
 
