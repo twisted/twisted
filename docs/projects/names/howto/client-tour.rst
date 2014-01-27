@@ -72,7 +72,7 @@ These three lists contain answer records, authority records, and additional reco
 
 Creating a New Resolver
 -----------------------
-Now suppose we want to create a client Resolver which sends its queries to a specific server (or servers).
+Now suppose we want to create a DNS client which sends its queries to a specific server (or servers).
 
 In this case, we use :api:`twisted.names.client.Resolver <client.Resolver>` directly and pass it a list of preferred server IP addresses and ports.
 
