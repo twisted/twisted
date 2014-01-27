@@ -8,46 +8,9 @@ Test cases for the L{twisted.python.reflect} module.
 import weakref
 from collections import deque
 
-try:
-    from ihooks import ModuleImporter
-except ImportError:
-    ModuleImporter = None
-
 from twisted.trial import unittest
 from twisted.python import reflect
 from twisted.python.versions import Version
-from twisted.python.test.test_reflectpy3 import LookupsTestCase
-
-
-class ImportHooksLookupTests(unittest.TestCase, LookupsTestCase):
-    """
-    Tests for lookup methods in the presence of L{ihooks}-style import hooks.
-    Runs all of the tests from L{LookupsTestCase} after installing a custom
-    import hook.
-    """
-    skip = ("ihooks support is broken, and has probably been broken since "
-            "Python 2.6. On the other hand, no one should use ihooks.")
-
-
-    def setUp(self):
-        """
-        Perturb the normal import behavior subtly by installing an import
-        hook.  No custom behavior is provided, but this adds some extra
-        frames to the call stack, which L{namedAny} must be able to account
-        for.
-        """
-        self.importer = ModuleImporter()
-        self.importer.install()
-
-
-    def tearDown(self):
-        """
-        Uninstall the custom import hook.
-        """
-        self.importer.uninstall()
-
-# Prevent trial from re-running these unnecessarily:
-del LookupsTestCase
 
 
 
