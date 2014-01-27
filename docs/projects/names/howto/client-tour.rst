@@ -96,7 +96,7 @@ Installing a Resolver in the Reactor
 ------------------------------------
 You can also install a custom resolver into the reactor using the :api:`twisted.internet.interfaces.IReactoryPluggable <IReactorPluggable>` interface.
 
-The reactor uses its installed resolver when ever it needs to resolve hostnames; for example, when you supply a hostname to :api:`twisted.internet.interfaces.IReactoryTCP.connectTCP <connectTCP>`.
+The reactor uses its installed resolver whenever it needs to resolve hostnames; for example, when you supply a hostname to :api:`twisted.internet.interfaces.IReactoryTCP.connectTCP <connectTCP>`.
 
 Here's a short example that shows how to install an alternative resolver for the global reactor:
 
