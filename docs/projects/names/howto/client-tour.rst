@@ -20,7 +20,16 @@ Using the Global Resolver
 -------------------------
 The easiest way to issue DNS queries from twisted is to use the module level functions in :api:`twisted.names.client <names.client>`.
 
-Here's an example showing some DNS queries generated in an interactive Twisted shell.
+Here's an example showing some DNS queries generated in an interactive ``twisted.conch`` shell.
+
+.. note::
+
+   The ``twisted.conch`` shell starts a ``reactor`` so that asynchronous operations can be run interactively and it prints the current result of ``deferred``\ s which have fired.
+
+   You'll notice that the ``deferred``\ s returned in the following examples do not immediately have a result -- they are waiting for a response from the DNS server.
+
+   So we type ``_`` (the default variable) a little later, to display the value of the ``deferred`` after an answer has been received and the ``deferred`` has fired.
+
 
 .. code-block:: console
 
@@ -41,14 +50,11 @@ Here's an example showing some DNS queries generated in an interactive Twisted s
    <Deferred at 0xf5cd40 current result: ([<RR name=twistedmatrix.com type=MX class=IN ttl=1s auth=False>], [], [])>
 
 
-All the ``IResolverSimple`` and ``IResolver`` methods are asynchronous and therefore return ``deferreds``.
+All the ``IResolverSimple`` and ``IResolver`` methods are asynchronous and therefore return ``deferred``\ s.
 
 :api:`twisted.names.client.getHostByName <getHostByName>` (part of ``IResolverSimple``) simply returns an IP address whereas :api:`twisted.names.client.lookupMailExchange <lookupMailExchange>` returns three lists of DNS records.
 These three lists contain answer records, authority records, and additional records.
 
-Since we are sending requests using :api:`twisted.conch.stdio <twisted.conch.stdio>` you'll notice that initially, the deferred returned by the DNS lookup functions, has not fired -- its waiting for a response from the DNS server.
-
-So we type ``_`` (the default variable) a little later, to display the value of the deferred after an answer has been received and the deferred has fired.
 
 .. note::
    * Unlike its posix equivalent, ``getHostByName`` may return an IPv6 address.
