@@ -33,7 +33,7 @@ used by the CPython and Sphinx documentation:
     * Use `^` (without overline) for subsubsections.
 
 In long documents it may be convenient to adopt higher level headings.
-See the `Sphinx documentation <http://sphinx-doc.org/rest.html#restructuredtext-primer>`
+See the `Sphinx documentation <http://sphinx-doc.org/rest.html#restructuredtext-primer>`_
 for suggestions.
 
 
