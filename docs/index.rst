@@ -21,3 +21,5 @@ Contents:
     projects/web/index
     projects/words/index
     projects/historic/index
+
+    glossary
