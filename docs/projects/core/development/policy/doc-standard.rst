@@ -63,8 +63,9 @@ to the referenced object could be used.
 When appropriate, longer code snippets and examples should be moved
 to the ``examples`` directory in the relevant subproject
 so that they can be appropriately unit tested.
+They then can be included by using the :rst:dir:`literalinclude`
 
-Otherwise, they can use the ``code-block`` directive::
+Otherwise, they can use the :rst:dir:`code-block` directive::
 
     .. code-block:: python
 
@@ -83,7 +84,8 @@ which will render as:
 or by simply ending a line with
 `:: <http://sphinx-doc.org/markup/code.html#showing-code-examples>`_\ ,
 which will use the default language highlighting for the document
-(Python if unspecified, or controllable via the ``highlight`` directive).
+(Python if unspecified,
+or controllable via the :rst:dir:`highlight` directive).
 
 
 Footnotes
