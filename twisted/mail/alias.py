@@ -26,7 +26,7 @@ def handle(result, line, filename, lineNo):
     """
     Parse a line from an aliases file.
 
-    @type result: L{dict} of L{bytes} -> L{list} of L{bytes}
+    @type result: L{dict} mapping L{bytes} to L{list} of L{bytes}
     @param result: A dictionary mapping username to aliases to which
         the results of parsing the line are added.
 
@@ -34,7 +34,7 @@ def handle(result, line, filename, lineNo):
     @param line: A line from an aliases file.
 
     @type filename: L{bytes}
-    @param filename: The name of the aliases file.
+    @param filename: The full or relative path to the aliases file.
 
     @type lineNo: L{int}
     @param lineNo: The position of the line within the aliases file.
@@ -77,18 +77,18 @@ def loadAliasFile(domains, filename=None, fp=None):
 
     Lines beginning with a C{#} are comments.
 
-    @type domains: L{dict} of L{bytes} -> L{IDomain} provider
+    @type domains: L{dict} mapping L{bytes} to L{IDomain} provider
     @param domains: A mapping of domain name to domain object.
 
     @type filename: L{bytes} or L{NoneType <types.NoneType>}
-    @param filename: The name of a file from which to load aliases.
-        If omitted, the C{fp} parameter must be specified.
+    @param filename: The full or relative path to a file from which to load
+        aliases. If omitted, the C{fp} parameter must be specified.
 
     @type fp: file-like object or L{NoneType <types.NoneType>}
     @param fp: The file from which to load aliases. If specified,
         the C{filename} parameter is ignored.
 
-    @rtype: L{dict} of L{bytes} -> L{AliasGroup}
+    @rtype: L{dict} mapping L{bytes} to L{AliasGroup}
     @return: A mapping from username to group of aliases.
     """
     result = {}
@@ -119,8 +119,16 @@ def loadAliasFile(domains, filename=None, fp=None):
 
 
 class IAlias(Interface):
+    """
+    An interface for aliases.
+    """
     def createMessageReceiver():
-        pass
+        """
+        Create a message receiver.
+
+        @rtype: L{IMessage <smtp.IMessage>} provider
+        @return: A message receiver.
+        """
 
 
 
@@ -128,14 +136,14 @@ class AliasBase:
     """
     The default base class for aliases.
 
-    @ivar domains: See L{__init__}
+    @ivar domains: See L{__init__}.
 
     @type original: L{Address}
     @ivar original: The original address being aliased.
     """
     def __init__(self, domains, original):
         """
-        @type domains: L{dict} of L{bytes} -> L{IDomain} provider
+        @type domains: L{dict} mapping L{bytes} to L{IDomain} provider
         @param domains: A mapping of domain name to domain object.
 
         @type original: L{bytes}
@@ -159,7 +167,7 @@ class AliasBase:
         """
         Map this alias to its ultimate destination.
 
-        @type aliasmap: L{dict} of L{bytes} -> L{AliasBase}
+        @type aliasmap: L{dict} mapping L{bytes} to L{AliasBase}
         @param aliasmap: A mapping of username to alias or group of aliases.
 
         @type memo: L{NoneType <types.NoneType>} or L{dict} of L{AliasBase}
@@ -195,8 +203,8 @@ class AddressAlias(AliasBase):
             converted into L{bytes}
         @param alias: The destination address.
 
-        @type args: 2-L{tuple} of (E{1}) L{dict} of L{bytes} -> L{IDomain}
-            provider, (E{2}) L{bytes}
+        @type args: 2-L{tuple} of (0) L{dict} mapping L{bytes} to L{IDomain}
+            provider, (1) L{bytes}
         @param args: Arguments for L{AliasBase.__init__}.
         """
         AliasBase.__init__(self, *args)
@@ -228,7 +236,7 @@ class AddressAlias(AliasBase):
         """
         Map this alias to its ultimate destination.
 
-        @type aliasmap: L{dict} of L{bytes} -> L{AliasBase}
+        @type aliasmap: L{dict} mapping L{bytes} to L{AliasBase}
         @param aliasmap: A mapping of username to alias or group of aliases.
 
         @type memo: L{NoneType <types.NoneType>} or L{dict} of L{AliasBase}
@@ -263,7 +271,7 @@ class FileWrapper:
     @ivar fp: A file used for temporary storage of the message.
 
     @type finalname: L{bytes}
-    @ivar finalname: The name of the file to which the message should be
+    @ivar finalname: The name of the file in which the message should be
         stored.
     """
     implements(smtp.IMessage)
@@ -271,7 +279,7 @@ class FileWrapper:
     def __init__(self, filename):
         """
         @type filename: L{bytes}
-        @param filename: The name of the file to which the message should be
+        @param filename: The name of the file in which the message should be
             stored.
         """
         self.fp = tempfile.TemporaryFile()
@@ -334,7 +342,7 @@ class FileAlias(AliasBase):
     """
     An alias which translates an address to a file.
 
-    @ivar filename: See L{__init__}
+    @ivar filename: See L{__init__}.
     """
     implements(IAlias)
 
@@ -343,8 +351,8 @@ class FileAlias(AliasBase):
         @type filename: L{bytes}
         @param filename: The name of the file in which to store the message.
 
-        @type args: 2-L{tuple} of (E{1}) L{dict} of L{bytes} -> L{IDomain}
-            provider, (E{2}) L{bytes}
+        @type args: 2-L{tuple} of (0) L{dict} mapping L{bytes} to L{IDomain}
+            provider, (1) L{bytes}
         @param args: Arguments for L{AliasBase.__init__}.
         """
         AliasBase.__init__(self, *args)
@@ -511,7 +519,6 @@ class MessageWrapper:
         """
         Ignore notification of lost connection.
         """
-        pass
 
 
     def __str__(self):
@@ -527,7 +534,7 @@ class MessageWrapper:
 
 class ProcessAliasProtocol(protocol.ProcessProtocol):
     """
-    A process protocol which calls an errback when the associated
+    A process protocol which errbacks a deferred when the associated
     process ends.
 
     @type onEnd: L{NoneType <types.NoneType>} or L{Deferred <defer.Deferred>}
@@ -574,8 +581,8 @@ class ProcessAlias(AliasBase):
         @param path: The command to invoke the program consisting of the path
             to the executable followed by any arguments.
 
-        @type args: 2-L{tuple} of (E{1}) L{dict} of L{bytes} -> L{IDomain}
-            provider, (E{2}) L{bytes}
+        @type args: 2-L{tuple} of (0) L{dict} mapping L{bytes} to L{IDomain}
+            provider, (1) L{bytes}
         @param args: Arguments for L{AliasBase.__init__}.
         """
 
@@ -641,7 +648,7 @@ class MultiWrapper:
     A message receiver which delivers a single message to multiple other
     message receivers.
 
-    @ivar objs: See L{__init__}
+    @ivar objs: See L{__init__}.
     """
     implements(smtp.IMessage)
 
@@ -723,8 +730,8 @@ class AliasGroup(AliasBase):
         @type items: L{list} of L{bytes}
         @param items: Aliases.
 
-        @type args: n-L{tuple} of (E{1}) L{dict} of L{bytes} -> L{IDomain}
-            provider, (E{2}) L{bytes}
+        @type args: n-L{tuple} of (0) L{dict} mapping L{bytes} to L{IDomain}
+            provider, (1) L{bytes}
         @param args: Arguments for L{AliasBase.__init__}.
         """
 
@@ -787,7 +794,7 @@ class AliasGroup(AliasBase):
         """
         Map each of the aliases in the group to its ultimate destination.
 
-        @type aliasmap: L{dict} of L{bytes} -> L{AliasBase}
+        @type aliasmap: L{dict} mapping L{bytes} to L{AliasBase}
         @param aliasmap: A mapping of username to alias or group of aliases.
 
         @type memo: L{NoneType <types.NoneType>} or L{dict} of L{AliasBase}
