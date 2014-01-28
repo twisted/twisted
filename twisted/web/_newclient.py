@@ -1461,6 +1461,10 @@ class HTTP11ClientProtocol(Protocol):
             not self._currentRequest.persistent):
             self._giveUp(Failure(reason))
         else:
+            # Just in case we had paused the transport, resume it before
+            # considering it quiescent again.
+            self.transport.resumeProducing()
+
             # We call the quiescent callback first, to ensure connection gets
             # added back to connection pool before we finish the request.
             try:

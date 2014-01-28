@@ -1475,6 +1475,51 @@ class HTTP11ClientProtocolTests(TestCase):
         self.assertEqual(protocol._responseDeferred, None)
 
 
+    def test_transportProducingWhenQuiescentAfterFullBody(self):
+        """
+        The C{quiescentCallback} passed to L{HTTP11ClientProtocol} will only be
+        invoked once that protocol is in a state similar to its initial state.
+        One of the aspects of this initial state is the producer-state of its
+        transport; an L{HTTP11ClientProtocol} begins with a transport that is
+        producing, i.e. not C{pauseProducing}'d.
+
+        Therefore, when C{quiescentCallback} is invoked the protocol will still
+        be producing.
+        """
+        quiescentResult = []
+        def callback(p):
+            self.assertEqual(p, protocol)
+            self.assertEqual(p.state, "QUIESCENT")
+            quiescentResult.append(p)
+
+        transport = StringTransport()
+        protocol = HTTP11ClientProtocol(callback)
+        protocol.makeConnection(transport)
+        requestDeferred = protocol.request(
+            Request('GET', '/', _boringHeaders, None, persistent=True))
+        protocol.dataReceived(
+            "HTTP/1.1 200 OK\r\n"
+            "Content-length: 3\r\n"
+            "\r\n"
+            "BBB" # _full_ content of the response.
+        )
+
+        response = self.successResultOf(requestDeferred)
+        # Sanity check: response should have full response body, just waiting
+        # for deliverBody
+        self.assertEqual(response._state, 'DEFERRED_CLOSE')
+
+        # The transport is quiescent, because the response has been received.
+        # If we were connection pooling here, it would have been returned to
+        # the pool.
+        self.assertEqual(len(quiescentResult), 1)
+
+        # And that transport is totally still reading, right? Because it would
+        # leak forever if it were sitting there disconnected from the
+        # reactor...
+        self.assertEqual(transport.producerState, 'producing')
+
+
     def test_quiescentCallbackCalledEmptyResponse(self):
         """
         The quiescentCallback is called before the request C{Deferred} fires,
