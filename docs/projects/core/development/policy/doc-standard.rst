@@ -63,7 +63,10 @@ to the referenced object could be used.
 When appropriate, longer code snippets and examples should be moved
 to the ``examples`` directory in the relevant subproject
 so that they can be appropriately unit tested.
-They then can be included by using the :rst:dir:`literalinclude`
+They then can be included by using the :rst:dir:`literalinclude` directive.
+If only a part of the file is needed in a given area,
+use the ``:pyobject:`` option to extract it by :term:`FQON`,
+not via line numbers, which can change and break documentation easily.
 
 Otherwise, they can use the :rst:dir:`code-block` directive::
 
