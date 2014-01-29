@@ -84,14 +84,11 @@ which will render as:
             def dataReceived(self, data):
                 self.transport.write(data)
 
-or by simply ending a line with
-`:: <http://sphinx-doc.org/markup/code.html#showing-code-examples>`_\ ,
+or by simply ending a line with `:: <http://sphinx-doc.org/markup/code.html#showing-code-examples>`_\ ,
 which will use the default language highlighting for the document
-(Python if unspecified,
-or controllable via the :rst:dir:`highlight` directive).
+(Python if unspecified or controllable via the :rst:dir:`highlight` directive).
 No special language or option is necessary to recognize console sessions,
-just include them in a code or literal block
-and they will be properly highlighted.
+just include them in a code or literal block and they will be recognized.
 
 
 Footnotes
