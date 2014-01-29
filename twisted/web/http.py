@@ -85,7 +85,7 @@ except ImportError:
         return (key.encode('charmap'), pdict)
 
 
-from zope.interface import implementer, directlyProvides
+from zope.interface import implementer, provider
 
 # twisted imports
 from twisted.python.compat import (
@@ -1851,6 +1851,7 @@ def _escape(s):
 
 
 
+@provider(IAccessLogFormatter)
 def commonLogFormatter(timestamp, request):
     """
     Generate a common log formatted log line for the given request.
@@ -1871,7 +1872,6 @@ def commonLogFormatter(timestamp, request):
             agent=agent,
             ))
     return line
-directlyProvides(commonLogFormatter, IAccessLogFormatter)
 
 
 
@@ -1903,13 +1903,13 @@ class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
 
 
 
+@provider(IAccessLogFormatter)
 def proxiedLogFormatter(timestamp, request):
     """
     Generate a common log formatted log line for the given request but use the
     value of the X-Forwarded-For header as the value for the client IP address.
     """
     return commonLogFormatter(timestamp, _XForwardedForRequest(request))
-directlyProvides(proxiedLogFormatter, IAccessLogFormatter)
 
 
 
