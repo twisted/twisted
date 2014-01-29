@@ -846,6 +846,9 @@ class AccessLogTests(unittest.TestCase):
         factory's log file.
         """
         reactor = Clock()
+        # Set the clock to an arbitrary point in time.  It doesn't matter when
+        # as long as it corresponds to the timestamp in the string literal in
+        # the assertion below.
         reactor.advance(1234567890)
 
         logPath = self.mktemp()
@@ -863,7 +866,7 @@ class AccessLogTests(unittest.TestCase):
             b'"1.2.3.4" '
             # Some blanks we never fill in
             b'- - '
-            # The current time
+            # The current time (circa 1234567890)
             b'[13/Feb/2009:23:31:30 +0000] '
             # Method, URI, version
             b'"GET /dummy HTTP/1.0" '
