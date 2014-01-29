@@ -143,8 +143,29 @@ Links or other long markup may extend beyond when necessary.
 
 
 __all__
--------
+^^^^^^^
 
 ``__all__`` is a module level list of strings,
 naming objects in the module that are public.
 Make sure publically exported classes, functions and constants are listed here.
+
+
+Other Tips
+----------
+
+* In case it wasn't obvious,
+  Sphinx is rather arbitrary and cranky about syntax and markup.
+  Watch the output of :command:`make html` or any other builder
+  for warnings or errors which can help point out mistakes.
+* A particular case of annoyance is the escaping of backticks after a role.
+  To suppress a space from appearing in the rendered output,
+  you can escape the space following the end of the role.
+
+  Example:
+
+        To open a file use :func:`open`\ .
+
+.. seealso::
+
+    `Gotchas <http://sphinx-doc.org/rest.html#gotchas>`_
+        The gotchas section of the official Sphinx documentation.
