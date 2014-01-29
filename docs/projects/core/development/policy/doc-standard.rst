@@ -13,7 +13,7 @@ Formatting
 Sphinx supports a huge variety of formatting and markup.
 A small selection of the various markup constructs are touched upon below,
 along with some stylistic specifications related to them.
-For more information, consult the
+For more information or a general overview of Sphinx, consult the
 `reStructuredText primer <http://sphinx-doc.org/rest.html#restructuredtext-primer>`_
 and other related documents in the official Sphinx documentation.
 
@@ -57,11 +57,11 @@ which renders as:
 
     This sentence contains an ``"important inlined string literal"``\ .
 
-Don't use backticks when a :ref:`link <links>`
-to the referenced object could be used.
+Don't use backticks when a :ref:`ref <ref>` link
+to the corresponding object could be used.
 
 When appropriate, longer code snippets and examples should be moved
-to the ``examples`` directory in the relevant subproject
+to the :file:`{project}/examples/` directory in the relevant subproject
 so that they can be appropriately unit tested.
 They then can be included by using the :rst:dir:`literalinclude` directive.
 If only a part of the file is needed in a given area,
@@ -89,6 +89,9 @@ or by simply ending a line with
 which will use the default language highlighting for the document
 (Python if unspecified,
 or controllable via the :rst:dir:`highlight` directive).
+No special language or option is necessary to recognize console sessions,
+just include them in a code or literal block
+and they will be properly highlighted.
 
 
 Footnotes
@@ -97,8 +100,6 @@ Footnotes
 `Sphinx footnotes <http://sphinx-doc.org/rest.html#footnotes>`_ can be created
 in either the named or numbered variety.
 
-
-.. _links:
 
 Links
 ^^^^^
