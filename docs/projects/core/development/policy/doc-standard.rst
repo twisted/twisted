@@ -27,8 +27,8 @@ when denoting header levels.
 Twisted adopts the more-or-less standard heirarchy
 used by the CPython and Sphinx documentation:
 
-    * Use `=` (without overline) for section headings, which typically will be
-      the highest level heading appearing in a document
+    * Use `=` (without overline) for section headings,
+      which typically will be the highest level heading appearing in a document
     * Use `-` (without overline) for subsections
     * Use `^` (without overline) for subsubsections.
 
