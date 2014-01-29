@@ -191,7 +191,7 @@ Other Tips
   To suppress a space from appearing in the rendered output,
   you can escape the space following the end of the role.
 
-  Example:
+  Example::
 
         To open a file use :func:`open`\ .
 
