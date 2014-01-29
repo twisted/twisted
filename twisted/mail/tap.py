@@ -33,24 +33,18 @@ class Options(usage.Options, strcred.AuthOptionMixin):
     @type synopsis: L{bytes}
     @ivar synopsis: A description of options for use in the usage message.
 
-    @type optParameters: L{list} of L{list} of (E{1}) L{bytes},
-        (E{2}) L{bytes}, (E{3}) L{object}, (E{4}) L{bytes},
-        (E{5}) L{NoneType <types.NoneType>} or callable which takes L{bytes}
-        and returns L{object}
-    @ivar optParameters: Information about supported parameters.  Each list
-        entry provides the following information for a parameter: long
-        parameter name, short parameter name, default value, description, and
-        optional coerce function.  The coerce function takes a string
-        argument and converts it into the value that will be stored for the
-        parameter.
+    @type optParameters: L{list} of L{list} of (0) L{bytes}, (1) L{bytes},
+        (2) L{object}, (3) L{bytes}, (4) L{NoneType <types.NoneType>} or
+        callable which takes L{bytes} and returns L{object}
+    @ivar optParameters: Information about supported parameters.  See
+        L{Options <twisted.python.usage.Options>} for details.
 
-    @type optFlags: L{list} of L{list} of (E{1}) L{bytes}, (E{2}) L{object},
-        (E{3}) L{bytes}
-    @ivar optFlags: Information about supported flags.  Each list
-        entry provides the following information about a flag: long flag
-        name, short flag name, and description.
+    @type optFlags: L{list} of L{list} of (0) L{bytes}, (1) L{bytes} or
+        L{NoneType <Types.NoneType>}, (2) L{bytes}
+    @ivar optFlags: Information about supported flags.  See
+        L{Options <twisted.python.usage.Options>} for details.
 
-    @type _protoDefaults: L{dict} of L{bytes} -> L{int}
+    @type _protoDefaults: L{dict} mapping L{bytes} to L{int}
     @ivar _protoDefaults: A mapping of default service to port.
 
     @type compData: L{Completions <usage.Completions>}
@@ -147,7 +141,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         Add an endpoint to a service.
 
         @type service: L{bytes}
-        @param service: A service, either C{"smtp"} or C{"pop3"}.
+        @param service: A service, either C{b'smtp'} or C{b'pop3'}.
 
         @type description: L{bytes}
         @param description: An endpoint description string or a TCP port
@@ -277,7 +271,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
 
         @type service: L{bytes}
         @param service: The type of service for which to retrieve endpoints,
-            either C{"pop3"} or C{"smtp"}.
+            either C{b'pop3'} or C{b'smtp'}.
 
         @rtype: L{list} of L{IStreamServerEndpoint
             <twisted.internet.interfaces.IStreamServerEndpoint>} provider
@@ -353,12 +347,12 @@ class AliasUpdater:
     A callable object which updates the aliases for a domain from an aliases(5)
     file.
 
-    @ivar domains: See L{__init__}
-    @ivar domain: See L{__init__}
+    @ivar domains: See L{__init__}.
+    @ivar domain: See L{__init__}.
     """
     def __init__(self, domains, domain):
         """
-        @type domains: L{dict} of L{bytes} -> L{IDomain} provider
+        @type domains: L{dict} mapping L{bytes} to L{IDomain} provider
         @param domains: A mapping of domain name to domain object
 
         @type domain: L{IAliasableDomain} provider
