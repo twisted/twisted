@@ -142,6 +142,36 @@ Documentation should be wrapped to 79 characters in rst source files.
 Links or other long markup may extend beyond when necessary.
 
 
+Versioning & Deprecations
+-------------------------
+
+Sphinx has :rst:dir:`versionadded` and :rst:dir:`versionchanged` directives,
+which can be used to denote when an object was added or changed respectively.
+
+For deprecations the :rst:dir:`deprecated` directive with version can be used.
+
+
+Python-specific Constructs
+--------------------------
+
+.. _ref:
+
+Linking to Python Objects
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For linking to Python objects in the Twisted codebase,
+(along with any additional locations as configured via :ref:`intersphinx <intersphinx>`)
+the `Python domain <http://sphinx-doc.org/domains.html#the-python-domain>`_
+contains a number of directives for classes, functions, attributes, exceptions,
+constants and more.
+
+.. note::
+
+    Using a role will not render the word or object type used in the role,
+    (i.e. ``:class:`Foo``` renders as ``Foo`` not ``the Foo class``)
+    so be careful to make the rendered text flow naturally otherwise.
+
+
 __all__
 ^^^^^^^
 
