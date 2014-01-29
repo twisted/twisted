@@ -836,13 +836,18 @@ class DummyRequestForLogTest(DummyRequest):
 
 
 
-class AccessLogTests(unittest.TestCase):
+class AccessLogTestsMixin(object):
     """
-    Tests for L{http.HTTPFactory.log}.
+    A mixin for L{TestCase} subclasses defining tests that apply to
+    L{HTTPFactory} and its subclasses.
     """
+    def factory(self, *args, **kwargs):
+        raise NotImplementedError("Subclass failed to override factory")
+
+
     def test_commonLogFormat(self):
         """
-        L{http.HTTPFactory.log} writes a I{common log format} line to the
+        The factory's C{log} method writes a I{common log format} line to the
         factory's log file.
         """
         reactor = Clock()
@@ -852,7 +857,7 @@ class AccessLogTests(unittest.TestCase):
         reactor.advance(1234567890)
 
         logPath = self.mktemp()
-        factory = http.HTTPFactory(logPath)
+        factory = self.factory(logPath=logPath)
         factory._reactor = reactor
         factory.startFactory()
 
@@ -884,8 +889,8 @@ class AccessLogTests(unittest.TestCase):
 
     def test_logFormatOverride(self):
         """
-        If a custom log formatter is passed to L{http.HTTPFactory} then it is
-        used to generate lines for the log file.
+        If the factory is initialized with a custom log formatter then that
+        formatter is used to generate lines for the log file.
         """
         def notVeryGoodFormatter(timestamp, request):
             return u"this is a bad log format"
@@ -894,7 +899,8 @@ class AccessLogTests(unittest.TestCase):
         reactor.advance(1234567890)
 
         logPath = self.mktemp()
-        factory = http.HTTPFactory(logPath, logFormatter=notVeryGoodFormatter)
+        factory = self.factory(
+            logPath=logPath, logFormatter=notVeryGoodFormatter)
         factory._reactor = reactor
         factory.startFactory()
         try:
@@ -905,6 +911,23 @@ class AccessLogTests(unittest.TestCase):
         self.assertEqual(
             b"this is a bad log format\n",
             FilePath(logPath).getContent())
+
+
+
+class HTTPFactoryAccessLogTests(AccessLogTestsMixin, unittest.TestCase):
+    """
+    Tests for L{http.HTTPFactory.log}.
+    """
+    factory = http.HTTPFactory
+
+
+
+class SiteAccessLogTests(AccessLogTestsMixin, unittest.TestCase):
+    """
+    Tests for L{server.Site.log}.
+    """
+    def factory(self, *args, **kwargs):
+        return server.Site(resource.Resource(), *args, **kwargs)
 
 
 

@@ -617,11 +617,16 @@ class Site(http.HTTPFactory):
     sessionFactory = Session
     sessionCheckTime = 1800
 
-    def __init__(self, resource, logPath=None, timeout=60*60*12):
+    def __init__(self, resource, *args, **kwargs):
         """
-        Initialize.
+        @param resource: The root of the resource hierarchy.  All request
+            traversal for requests received by this factory will begin at this
+            resource.
+        @type resource: L{IResource} provider
+
+        @see: L{twisted.web.http.HTTPFactory.__init__}
         """
-        http.HTTPFactory.__init__(self, logPath=logPath, timeout=timeout)
+        http.HTTPFactory.__init__(self, *args, **kwargs)
         self.sessions = {}
         self.resource = resource
 
