@@ -101,6 +101,29 @@ in either the named or numbered variety.
 Links
 ^^^^^
 
+Ordinary hyperlinks to arbitrary documents use syntax that look like::
+
+    `Link Title <http://{address}>`_
+
+where the trailing underscore is *required*;
+leaving it out will cause the link markup to render literally in the output.
+
+For referencing other documents within the Twisted documentation,
+use the :rst:role:`doc` role.
+Sections (or even `arbitrary locations <http://sphinx-doc.org/markup/inline.html#cross-referencing-arbitrary-locations>)
+in the documentation can be referenced via the :rst:role:`ref` role,
+after placing a label before the desired location in the documentation source.
+
+.. _intersphinx:
+
+Intersphinx is configured to enable to linking
+to objects or sections appearing in external (Sphinx) documentation,
+such as the standard library.
+
+    .. seealso::
+
+        The :attr:`intersphinx_mapping` in the :file:`conf.py` configuration
+
 
 Documentation Source Layout
 ---------------------------
