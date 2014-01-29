@@ -23,6 +23,7 @@ For subjects not covered here, see the :doc:`Twisted Web tutorial <../using-twis
   `Asynchronous responses (via Deferred) <asynchronous-deferred>`
   `Interrupted responses <interrupted>`
   `Logging errors <logging-errors>`
+  `Access logging <access-logging>`
   `WSGIs <wsgi>`
   `HTTP authentication <http-auth>`
   `Session basics <session-basics>`
