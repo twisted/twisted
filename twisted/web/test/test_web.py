@@ -5,6 +5,7 @@
 Tests for various parts of L{twisted.web}.
 """
 
+import os
 import zlib
 
 from zope.interface import implementer
@@ -914,7 +915,7 @@ class AccessLogTestsMixin(object):
             factory.stopFactory()
 
         self.assertEqual(
-            b"this is a bad log format\n",
+            b"this is a bad log format" + os.linesep,
             FilePath(logPath).getContent())
 
 
