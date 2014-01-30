@@ -1854,7 +1854,7 @@ def _escape(s):
 @provider(IAccessLogFormatter)
 def commonLogFormatter(timestamp, request):
     """
-    Generate a common log formatted log line for the given request.
+    @return: A common log formatted log line for the given request.
     """
     referrer = _escape(request.getHeader(b"referer") or b"-")
     agent = _escape(request.getHeader(b"user-agent") or b"-")
@@ -1882,8 +1882,9 @@ class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
     """
     def getClientIP(self):
         """
-        Get the client address (the first address) in the value of the
-        X-Forwarded-For header.  If the header is not present, return C{b"-"}.
+        @return: The client address (the first address) in the value of the
+            I{X-Forwarded-For header}.  If the header is not present, return
+            C{b"-"}.
         """
         return self._request.requestHeaders.getRawHeaders(
             b"x-forwarded-for", [b"-"])[0].split(b",")[0]
@@ -1891,14 +1892,26 @@ class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
     # These are missing from the interface.  Forward them manually.
     @property
     def clientproto(self):
+        """
+        @return: The protocol version in the request.
+        @rtype: L{bytes}
+        """
         return self._request.clientproto
 
     @property
     def code(self):
+        """
+        @return: The response code for the request.
+        @rtype: L{int}
+        """
         return self._request.code
 
     @property
     def sentLength(self):
+        """
+        @return: The number of bytes sent in the response body.
+        @rtype: L{int}
+        """
         return self._request.sentLength
 
 
@@ -1906,8 +1919,9 @@ class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
 @provider(IAccessLogFormatter)
 def proxiedLogFormatter(timestamp, request):
     """
-    Generate a common log formatted log line for the given request but use the
-    value of the X-Forwarded-For header as the value for the client IP address.
+    @return: A common log formatted log line for the given request but use the
+        value of the I{X-Forwarded-For} header as the value for the client IP
+        address.
     """
     return commonLogFormatter(timestamp, _XForwardedForRequest(request))
 
