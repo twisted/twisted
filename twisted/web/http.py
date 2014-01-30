@@ -1852,9 +1852,9 @@ def _escape(s):
 
 
 @provider(IAccessLogFormatter)
-def commonLogFormatter(timestamp, request):
+def combinedLogFormatter(timestamp, request):
     """
-    @return: A common log formatted log line for the given request.
+    @return: A combined log formatted log line for the given request.
     """
     referrer = _escape(request.getHeader(b"referer") or b"-")
     agent = _escape(request.getHeader(b"user-agent") or b"-")
@@ -1919,11 +1919,11 @@ class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
 @provider(IAccessLogFormatter)
 def proxiedLogFormatter(timestamp, request):
     """
-    @return: A common log formatted log line for the given request but use the
-        value of the I{X-Forwarded-For} header as the value for the client IP
-        address.
+    @return: A combined log formatted log line for the given request but use
+        the value of the I{X-Forwarded-For} header as the value for the client
+        IP address.
     """
-    return commonLogFormatter(timestamp, _XForwardedForRequest(request))
+    return combinedLogFormatter(timestamp, _XForwardedForRequest(request))
 
 
 
@@ -1969,7 +1969,7 @@ class HTTPFactory(protocol.ServerFactory):
         self.logPath = logPath
         self.timeOut = timeout
         if logFormatter is None:
-            logFormatter = commonLogFormatter
+            logFormatter = combinedLogFormatter
         self._logFormatter = logFormatter
 
         # For storing the cached log datetime and the callback to update it

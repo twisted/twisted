@@ -845,9 +845,9 @@ class AccessLogTestsMixin(object):
         raise NotImplementedError("Subclass failed to override factory")
 
 
-    def test_commonLogFormat(self):
+    def test_combinedLogFormat(self):
         """
-        The factory's C{log} method writes a I{common log format} line to the
+        The factory's C{log} method writes a I{combined log format} line to the
         factory's log file.
         """
         reactor = Clock()
@@ -931,16 +931,16 @@ class SiteAccessLogTests(AccessLogTestsMixin, unittest.TestCase):
 
 
 
-class CommonLogFormatterTests(unittest.TestCase):
+class CombinedLogFormatterTests(unittest.TestCase):
     """
-    Tests for L{twisted.web.http.commonLogFormatter}.
+    Tests for L{twisted.web.http.combinedLogFormatter}.
     """
     def test_interface(self):
         """
-        L{commonLogFormatter} provides L{IAccessLogFormatter}.
+        L{combinedLogFormatter} provides L{IAccessLogFormatter}.
         """
         self.assertTrue(verifyObject(
-                iweb.IAccessLogFormatter, http.commonLogFormatter))
+                iweb.IAccessLogFormatter, http.combinedLogFormatter))
 
 
     def test_nonASCII(self):
@@ -959,7 +959,7 @@ class CommonLogFormatterTests(unittest.TestCase):
         request.headers[b"referer"] = b"evil \x83"
         request.headers[b"user-agent"] = b"evil \x84"
 
-        line = http.commonLogFormatter(timestamp, request)
+        line = http.combinedLogFormatter(timestamp, request)
         self.assertEqual(
             u'"evil x-forwarded-for \\x80" - - [13/Feb/2009:23:31:30 +0000] '
             u'"POS\\x81 /dummy HTTP/1.0" 123 - "evil \\x83" "evil \\x84"',
@@ -989,7 +989,7 @@ class ProxiedLogFormatterTests(unittest.TestCase):
 
         timestamp = http.datetimeToLogString(reactor.seconds())
         request = DummyRequestForLogTest(http.HTTPFactory())
-        expected = http.commonLogFormatter(timestamp, request).replace(
+        expected = http.combinedLogFormatter(timestamp, request).replace(
             u"1.2.3.4", u"172.16.1.2")
         request.requestHeaders.setRawHeaders(
             b"x-forwarded-for", [b"172.16.1.2, 10.0.0.3, 192.168.1.4"])
