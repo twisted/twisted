@@ -680,10 +680,15 @@ class OpenSSLCertificateAuthorities(object):
 @implementer(IOpenSSLTrustSettings)
 class OpenSSLDefaultPaths(object):
     """
-    Trust default paths.
+    Trust the set of default verify paths that OpenSSL was built with, as
+    specified by U{SSL_CTX_set_default_verify_paths
+    <https://www.openssl.org/docs/ssl/SSL_CTX_load_verify_locations.html>}.
     """
 
     def addCACertsToContext(self, context):
+        """
+        Trust the default verify paths on the given context.
+        """
         context.set_default_verify_paths()
 
 
