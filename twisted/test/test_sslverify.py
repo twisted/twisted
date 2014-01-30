@@ -14,18 +14,21 @@ try:
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
+    from twisted.internet.ssl import platformTrust
     from twisted.internet import _sslverify as sslverify
+    from twisted.protocols.tls import TLSMemoryBIOFactory
 except ImportError:
     pass
 
+from twisted.test.iosim import connectedServerAndClient
+
 from twisted.python.compat import nativeString
-from twisted.python.runtime import platform
+
 from twisted.trial import unittest
 from twisted.internet import protocol, defer, reactor
 
 from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
-
 
 # A couple of static PEM-format certificates to be used by various tests.
 A_HOST_CERTIFICATE_PEM = """
@@ -682,7 +685,7 @@ class OpenSSLOptions(unittest.TestCase):
         trusted certificates.
         """
         opts = sslverify.OpenSSLCertificateOptions(
-            caCerts=sslverify.OpenSSLDefaultPaths(),
+            peerTrust=platformTrust(),
         )
         called = []
         class TestContext(SSL.Context):
@@ -692,24 +695,6 @@ class OpenSSLOptions(unittest.TestCase):
         opts._contextFactory = TestContext
         context = opts.getContext()
         self.assertEqual(called, [context])
-
-
-    def test_caCertsPlatformOther(self):
-        """
-        If L{OpenSSLCertificateOptions} is initialized with C{caCerts} set
-        to L{sslverify.OpenSSLDefaultPaths}, a subsequent call to
-        L{OpenSSLCertificateOptions.getContext} will currently raise
-        C{NotImplementedError} on non-Linux platforms.
-        """
-        opts = sslverify.OpenSSLCertificateOptions(
-            peerTrust=sslverify.OpenSSLDefaultPaths()
-        )
-        self.assertRaises(NotImplementedError, opts.getContext)
-
-    if platform.isLinux():
-        test_caCertsPlatformOther.skip = "Non-Linux test"
-    else:
-        test_caCertsPlatformLinux.skip = "Linux test"
 
 
     def _buildCAandServerCertificates(self):
@@ -736,10 +721,14 @@ class OpenSSLOptions(unittest.TestCase):
 
     def test_caCertsPlatformRejectsRandomCA(self):
         """
-        Specifying a C{caCerts} of L{sslverify.OpenSSLDefaultPaths} when
-        initializing C{OpenSSLCertificateOptions} causes certificates issued
-        by a newly created CA to be rejected by an SSL connection using these
-        options.
+        Specifying a C{peerTrust} of L{platformTrust} when initializing
+        C{OpenSSLCertificateOptions} causes certificates issued by a newly
+        created CA to be rejected by an SSL connection using these options.
+
+        Note that this test should I{always} pass, even on platforms where the
+        CA certificates are not installed, as long as L{platformTrust} rejects
+        completely invalid / unknown root CA certificates.  This is simply a
+        smoke test to make sure that verification is happening at all.
         """
         caSelfCert, serverCert = self._buildCAandServerCertificates()
         chainedCert = self.mktemp()
@@ -759,28 +748,45 @@ class OpenSSLOptions(unittest.TestCase):
 
         serverOpts = ContextFactory()
         clientOpts = sslverify.OpenSSLCertificateOptions(
-            verify=True,
-            caCerts=sslverify.OpenSSLDefaultPaths)
+            peerTrust=platformTrust()
+        )
 
-        onServerLost = defer.Deferred()
-        onClientLost = defer.Deferred()
-        self.loopback(serverOpts,
-                      clientOpts,
-                      onServerLost=onServerLost,
-                      onClientLost=onClientLost)
+        class GreetingServer(protocol.Protocol):
+            def connectionMade(self):
+                self.transport.write("greetings!")
 
-        d = defer.DeferredList([onClientLost, onServerLost],
-                               consumeErrors=True)
-        def afterLost(result):
-            ((cSuccess, cResult), (sSuccess, sResult)) = result
-            self.failIf(cSuccess)
-            self.failIf(sSuccess)
+        class ListeningClient(protocol.Protocol):
+            data = b''
+            def dataReceived(self, data):
+                self.data += data
+            def connectionLost(self, reason):
+                self.lostReason = reason
 
-        return d.addCallback(afterLost)
+        clientFactory = TLSMemoryBIOFactory(
+            clientOpts, isClient=True,
+            wrappedFactory=protocol.Factory.forProtocol(GreetingServer)
+        )
+        serverFactory = TLSMemoryBIOFactory(
+            serverOpts, isClient=False,
+            wrappedFactory=protocol.Factory.forProtocol(ListeningClient)
+        )
 
-    if not platform.isLinux():
-        test_caCertsPlatformRejectsRandomCA.skip = (
-            "OpenSSLDefaultPaths is currently only supported on Linux")
+        sProto, cProto, pump = connectedServerAndClient(
+            lambda: serverFactory.buildProtocol(None),
+            lambda: clientFactory.buildProtocol(None)
+        )
+
+        # No data was received.
+        self.assertEqual(cProto.wrappedProtocol.data, b'')
+
+        # It was an SSL Error.
+        self.assertEqual(cProto.wrappedProtocol.lostReason.type,
+                         SSL.Error)
+
+        # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
+        self.assertEqual(cProto.wrappedProtocol.lostReason.value.message[0][2],
+                         'tlsv1 alert unknown ca')
+
 
 
 

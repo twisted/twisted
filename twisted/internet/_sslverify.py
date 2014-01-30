@@ -12,7 +12,7 @@ from OpenSSL import SSL, crypto
 
 from twisted.python.compat import nativeString, networkString
 from twisted.python import _reflectpy3 as reflect, util
-from twisted.python.runtime import platform
+
 from twisted.internet.defer import Deferred
 from zope.interface import Interface, implementer
 
@@ -708,17 +708,45 @@ def platformTrust():
     defining which server certificates should be trusted by programs using TLS.
 
     This should be a set of trust settings most appropriate for I{client} TLS
-    connections.  You should probably use this by default for any client TLS
-    connection that you create.  For servers, however, client certificates are
-    typically not verified; or, if they are, their verification will depend on
-    a custom, application-specific certificate authority.
+    connections; i.e. those which need to verify a server's authenticity.  You
+    should probably use this by default for any client TLS connection that you
+    create.  For servers, however, client certificates are typically not
+    verified; or, if they are, their verification will depend on a custom,
+    application-specific certificate authority.
 
-    @note: Currently, only Linux is supported, and only if OpenSSL's default
-        certificate verify paths are set; all other platforms' trust databases
-        are pending implementation.  See
-        U{https://twistedmatrix.com/trac/ticket/6371},
-        U{https://twistedmatrix.com/trac/ticket/6372}, and
-        U{https://twistedmatrix.com/trac/ticket/6334} for other platforms.
+    @since: 14.0
+
+    @note: Currently, L{platformTrust} depends entirely upon your OpenSSL build
+        supporting a set of "L{default verify paths <OpenSSLDefaultPaths>}"
+        which correspond to certificate authority trust roots.  Unfortunately,
+        whether this is true of your system is both outside of Twisted's
+        control and difficult (if not impossible) for Twisted to detect
+        automatically.
+
+        Nevertheless, this ought to work as desired by default on:
+
+            - Ubuntu Linux machines with the U{ca-certificates
+              <https://launchpad.net/ubuntu/+source/ca-certificates>} package
+              installed,
+
+            - Mac OS X when using the system-installed version of OpenSSL (i.e.
+              I{not} one installed via MacPorts or Homebrew),
+
+            - any build of OpenSSL which has had certificate authority
+              certificates installed into its default verify paths (by default,
+              C{/usr/local/ssl/certs} if you've built your own OpenSSL), or
+
+            - any process where the C{SSL_CERT_FILE} environment variable is
+              set to the path of a file containing your desired CA certificates
+              bundle.
+
+        Hopefully soon, this API will be updated to use more sophisticated
+        trust-root discovery mechanisms; you can follow tickets in the Twisted
+        tracker for progress on this implementation on U{Microsoft Windows
+        <https://twistedmatrix.com/trac/ticket/6371>}, U{Mac OS X
+        <https://twistedmatrix.com/trac/ticket/6372>}, and U{a fallback for
+        other platforms which do not have native trust management tools
+        <https://twistedmatrix.com/trac/ticket/6934>}.
 
     @return: an appropriate trust settings object for your platform.
     @rtype: L{IOpenSSLTrustSettings}
@@ -726,13 +754,7 @@ def platformTrust():
     @raise NotImplementedError: if this platform is not yet supported by
         Twisted.  At present, only OpenSSL is supported.
     """
-    if platform.isLinux():
-        return OpenSSLDefaultPaths()
-    else:
-        raise NotImplementedError(
-            "Only Linux supports platform-trusted CAs "
-            "(see #6371, #6372, #6334 for other plaforms)"
-        )
+    return OpenSSLDefaultPaths()
 
 
 
