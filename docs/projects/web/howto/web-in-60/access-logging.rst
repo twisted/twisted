@@ -23,6 +23,34 @@ Do this by passing ``logPath`` to the initializer:
 .. code-block:: python
 
     ...
-
     factory = Site(root, logPath=b"/tmp/access-logging-demo.log")
 
+Or if you want to change the logging behavior of a server you're launching with ``twistd web`` then just pass the ``--logfile`` option:
+
+.. code-block:: shell
+
+    $ twistd -n web --logfile /tmp/access-logging-demo.log
+
+Apart from this, the rest of the server setup is the same.
+Once you pass ``logPath`` or use ``--logfile`` on the command line the server will produce a log file containing lines like:
+
+  "127.0.0.1" - - [30/Jan/2014:00:13:35 +0000] "GET / HTTP/1.1" 200 2753 "-" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.93 Safari/537.36"
+
+Any tools expecting combined log format messages should be able to work with these log files.
+
+:api:`twisted.web.server.Site <Site>` also allows the log format used to be customized using its ``logFormatter`` argument.
+Twisted Web come with one alternate formatter, :api:`twisted.web.http.proxiedLogFormatter`, which is for use behind a proxy that sets the ``X-Forwarded-For`` header.
+It logs the client address taken from this header rather than the network address of the client directly connected to the server.
+Here's the complete code for an example that both these features:
+
+.. code-block:: python
+
+    from twisted.web.http import proxiedLogFormatter
+    from twisted.web.server import Site
+    from twisted.web.static import File
+    from twisted.internet import reactor
+
+    resource = File('/tmp')
+    factory = Site(resource, logPath=b"/tmp/access-logging-demo.log", logFormatter=proxiedLogFormatter))
+    reactor.listenTCP(8888, factory)
+    reactor.run()
