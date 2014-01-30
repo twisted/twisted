@@ -979,10 +979,15 @@ class ProxiedLogFormatterTests(unittest.TestCase):
                 iweb.IAccessLogFormatter, http.proxiedLogFormatter))
 
 
-    def test_xforwardedfor(self):
+    def _xforwardedforTest(self, header):
         """
-        L{proxiedLogFormatter} logs the value of the I{X-Forwarded-For} header
-        in place of the client address field.
+        Assert that a request with the given value in its I{X-Forwarded-For}
+        header is logged by L{proxiedLogFormatter} the same way it would have
+        been logged by L{combinedLogFormatter} but with 172.16.1.2 as the
+        client address instead of the normal value.
+
+        @param header: An I{X-Forwarded-For} header with left-most address of
+            172.16.1.2.
         """
         reactor = Clock()
         reactor.advance(1234567890)
@@ -991,11 +996,26 @@ class ProxiedLogFormatterTests(unittest.TestCase):
         request = DummyRequestForLogTest(http.HTTPFactory())
         expected = http.combinedLogFormatter(timestamp, request).replace(
             u"1.2.3.4", u"172.16.1.2")
-        request.requestHeaders.setRawHeaders(
-            b"x-forwarded-for", [b"172.16.1.2, 10.0.0.3, 192.168.1.4"])
+        request.requestHeaders.setRawHeaders(b"x-forwarded-for", [header])
         line = http.proxiedLogFormatter(timestamp, request)
 
         self.assertEqual(expected, line)
+
+
+    def test_xforwardedfor(self):
+        """
+        L{proxiedLogFormatter} logs the value of the I{X-Forwarded-For} header
+        in place of the client address field.
+        """
+        self._xforwardedforTest(b"172.16.1.2, 10.0.0.3, 192.168.1.4")
+
+
+    def test_extraForwardedSpaces(self):
+        """
+        Any extra spaces around the address in the I{X-Forwarded-For} header
+        are stripped and not included in the log string.
+        """
+        self._xforwardedforTest(b" 172.16.1.2 , 10.0.0.3, 192.168.1.4")
 
 
 

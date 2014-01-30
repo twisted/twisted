@@ -1889,7 +1889,7 @@ class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
             C{b"-"}.
         """
         return self._request.requestHeaders.getRawHeaders(
-            b"x-forwarded-for", [b"-"])[0].split(b",")[0]
+            b"x-forwarded-for", [b"-"])[0].split(b",")[0].strip()
 
     # These are missing from the interface.  Forward them manually.
     @property
