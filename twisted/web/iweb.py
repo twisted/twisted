@@ -340,7 +340,7 @@ class IAccessLogFormatter(Interface):
         @type timestamp: L{unicode}
 
         @param request: The request object about which to log.
-        @type request: L{Request}
+        @type request: L{twisted.web.server.Request}
 
         @return: One line describing the request without a trailing newline.
         @rtype: L{unicode}
