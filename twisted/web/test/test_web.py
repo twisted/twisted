@@ -915,7 +915,9 @@ class AccessLogTestsMixin(object):
             factory.stopFactory()
 
         self.assertEqual(
-            b"this is a bad log format" + os.linesep,
+            # self.linesep is a sad thing.
+            # https://twistedmatrix.com/trac/ticket/6938
+            b"this is a bad log format" + self.linesep,
             FilePath(logPath).getContent())
 
 
@@ -925,6 +927,7 @@ class HTTPFactoryAccessLogTests(AccessLogTestsMixin, unittest.TestCase):
     Tests for L{http.HTTPFactory.log}.
     """
     factory = http.HTTPFactory
+    linesep = b"\n"
 
 
 
@@ -934,6 +937,8 @@ class SiteAccessLogTests(AccessLogTestsMixin, unittest.TestCase):
     """
     if _PY3:
         skip = "Site not ported to Python 3 yet."
+
+    linesep = os.linesep
 
     def factory(self, *args, **kwargs):
         return server.Site(resource.Resource(), *args, **kwargs)
