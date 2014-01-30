@@ -23,7 +23,7 @@ def make_api_link(name, rawtext, text, lineno, inliner,
         full_name = full_name.strip()
         label = label.strip('>').strip()
     else:
-        full_name = text
+        full_name = label = text
 
     #get the base url for api links from the config file
     env = inliner.document.settings.env
