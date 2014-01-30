@@ -842,6 +842,11 @@ class AccessLogTestsMixin(object):
     L{HTTPFactory} and its subclasses.
     """
     def factory(self, *args, **kwargs):
+        """
+        Get the factory class to apply logging tests to.
+
+        Subclasses must override this method.
+        """
         raise NotImplementedError("Subclass failed to override factory")
 
 
