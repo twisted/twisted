@@ -7,11 +7,12 @@
 This module implements Transport Layer Security (TLS) support for Twisted.  It
 requires U{PyOpenSSL <https://pypi.python.org/pypi/pyOpenSSL>}.
 
-TLS connections require a L{ContextFactory} that specifies TLS-related
-properties for their connections.  In this module you will find base classes
-for implementing your own context factories; server context factories should
-inherit from L{ContextFactory}, and client context factories should inherit
-from L{ClientContextFactory}.
+TLS connections require a L{ContextFactory} that specifies their security
+properties, such as certificate, private key, certificate authorities to verify
+the peer, allowed TLS protocol versions, cipher suites, and so on.  In this
+module you will find base classes for implementing your own context factories;
+server context factories should inherit from L{ContextFactory}, and client
+context factories should inherit from L{ClientContextFactory}.
 
 You will also find tools here for constructing context factories without
 implementing your own; L{CertificateOptions}, for example, can serve as a
