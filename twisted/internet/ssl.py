@@ -4,19 +4,15 @@
 
 
 """
-SSL transport. Requires PyOpenSSL (http://pypi.python.org/pypi/pyOpenSSL).
+TLS transport.  Requires U{PyOpenSSL <https://pypi.python.org/pypi/pyOpenSSL>}.
 
-SSL connections require a ContextFactory so they can create SSL contexts.
-End users should only use the ContextFactory classes directly - for SSL
-connections use the reactor.connectSSL/listenSSL and so on, as documented
-in IReactorSSL.
+SSL connections require a ContextFactory so they can create SSL contexts.  End
+users should only use the ContextFactory classes directly - for SSL connections
+use the reactor.connectSSL/listenSSL and so on, as documented in IReactorSSL.
 
-All server context factories should inherit from ContextFactory, and all
-client context factories should inherit from ClientContextFactory. At the
-moment this is not enforced, but in the future it might be.
-
-Future Plans:
-    - split module so reactor-specific classes are in a separate module
+All server context factories should inherit from ContextFactory, and all client
+context factories should inherit from ClientContextFactory.  At the moment this
+is not enforced, but in the future it might be.
 """
 
 from __future__ import division, absolute_import
