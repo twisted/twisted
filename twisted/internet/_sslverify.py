@@ -650,10 +650,12 @@ class IOpenSSLTrustSettings(Interface):
         """
 
 
+
 @implementer(IOpenSSLTrustSettings)
 class OpenSSLCertificateAuthorities(object):
     """
-    Trust settings based on a list of certificates.
+    Trust an explicitly-specified set of certificates, as represented by a list
+    of L{SSL.X509 objects.}
     """
 
     def __init__(self, caCerts):
