@@ -4,13 +4,18 @@
 
 
 """
-TLS transport.  Requires U{PyOpenSSL <https://pypi.python.org/pypi/pyOpenSSL>}.
+This module implements Transport Layer Security (TLS) support for Twisted.  It
+requires U{PyOpenSSL <https://pypi.python.org/pypi/pyOpenSSL>}.
 
-SSL connections require a L{ContextFactory} so they can create SSL contexts.
+TLS connections require a L{ContextFactory} that specifies TLS-related
+properties for their connections.  In this module you will find base classes
+for implementing your own context factories; server context factories should
+inherit from L{ContextFactory}, and client context factories should inherit
+from L{ClientContextFactory}.
 
-Server context factories should inherit from L{ContextFactory}, and client
-context factories should inherit from L{ClientContextFactory}.  At the moment
-this is not enforced, but in the future it might be.
+You will also find tools here for constructing context factories without
+implementing your own; L{CertificateOptions}, for example, can serve as a
+context factory for either a client or a server.
 
 Developers using Twisted, please ignore the L{Port}, L{Connector}, and
 L{Client} classes defined here, as these are details of certain reactors' TLS
@@ -27,6 +32,10 @@ following APIs:
     - L{connectSSL <twisted.internet.interfaces.IReactorSSL.connectSSL>}
 
     - L{listenSSL <twisted.internet.interfaces.IReactorSSL.listenSSL>}
+
+@note: "SSL" (Secure Sockets Layer) is an antiquated synonym for "TLS"
+    (Transport Layer Security).  You may see these terms used interchangeably
+    throughout the documentation.
 """
 
 from __future__ import division, absolute_import
