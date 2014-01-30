@@ -667,6 +667,10 @@ class OpenSSLCertificateAuthorities(object):
 
 
     def addCACertsToContext(self, context):
+        """
+        Add the list of certficates presented to C{__init__} to the given
+        context's certificate store.
+        """
         store = context.get_cert_store()
         for cert in self._caCerts:
             store.add_cert(cert)
