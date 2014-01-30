@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_ssl -*-
+# -*- test-case-name: twisted.test.test_ssl,twisted.test.test_sslverify -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
