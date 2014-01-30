@@ -419,12 +419,21 @@ class PrivateCertificate(Certificate):
 
 
     def options(self, *authorities):
+        """
+        Create a context factory using this L{PrivateCertificate}'s certificate
+        and private key.
+
+        @param authorities: A list of L{Certificate} object
+
+        @return: A context factory.
+        @rtype: L{OpenSSLCertificateOptions}
+        """
         options = dict(privateKey=self.privateKey.original,
                        certificate=self.original)
         if authorities:
-            options.update(dict(verify=True,
-                                requireCertificate=True,
-                                caCerts=[auth.original for auth in authorities]))
+            options.update(dict(peerTrust=OpenSSLCertificateAuthorities(
+                [auth.original for auth in authorities]
+            )))
         return OpenSSLCertificateOptions(**options)
 
 
