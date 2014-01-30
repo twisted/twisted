@@ -1855,6 +1855,8 @@ def _escape(s):
 def combinedLogFormatter(timestamp, request):
     """
     @return: A combined log formatted log line for the given request.
+
+    @see: L{IAccessLogFormatter}
     """
     referrer = _escape(request.getHeader(b"referer") or b"-")
     agent = _escape(request.getHeader(b"user-agent") or b"-")
@@ -1922,6 +1924,8 @@ def proxiedLogFormatter(timestamp, request):
     @return: A combined log formatted log line for the given request but use
         the value of the I{X-Forwarded-For} header as the value for the client
         IP address.
+
+    @see: L{IAccessLogFormatter}
     """
     return combinedLogFormatter(timestamp, _XForwardedForRequest(request))
 
