@@ -827,8 +827,8 @@ class OpenSSLCertificateOptions(object):
 
         @param peerTrust: Specification of trust requirements of peers.  If
             this argument is specified, the peer is verified, requires a
-            certificate, and the certificate must be one of those specified by
-            this object.
+            certificate, and the certificate must be signed by one of the
+            certificate authorities specified by this object.
 
             Note that this option I{overrides and supersedes} values specified
             for C{caCerts}, C{verify}, and C{requireCertificate}; specifying
