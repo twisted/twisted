@@ -1026,46 +1026,79 @@ class TestLogEscaping(unittest.TestCase):
         self.assertEqual(line, logged)
 
 
-    def testSimple(self):
+    def test_simple(self):
+        """
+        A I{GET} request is logged with no extra escapes.
+        """
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
         self.assertLogs(
-            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "-" "-"\n')
+            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] '
+            b'"GET /dummy HTTP/1.0" 123 - "-" "-"\n')
 
-    def testMethodQuote(self):
+
+    def test_methodQuote(self):
+        """
+        If the HTTP request method includes a quote, the quote is escaped.
+        """
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
         self.request.method = b'G"T'
         self.assertLogs(
-            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] "G\\"T /dummy HTTP/1.0" 123 - "-" "-"\n')
+            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] '
+            b'"G\\"T /dummy HTTP/1.0" 123 - "-" "-"\n')
 
-    def testRequestQuote(self):
+
+    def test_requestQuote(self):
+        """
+        If the HTTP request path includes a quote, the quote is escaped.
+        """
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
         self.request.uri = b'/dummy"withquote'
         self.assertLogs(
-            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] "GET /dummy\\"withquote HTTP/1.0" 123 - "-" "-"\n')
+            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] '
+            b'"GET /dummy\\"withquote HTTP/1.0" 123 - "-" "-"\n')
 
-    def testProtoQuote(self):
+
+    def test_protoQuote(self):
+        """
+        If the HTTP request version includes a quote, the quote is escaped.
+        """
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
         self.request.clientproto = b'HT"P/1.0'
         self.assertLogs(
-            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HT\\"P/1.0" 123 - "-" "-"\n')
+            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] '
+            b'"GET /dummy HT\\"P/1.0" 123 - "-" "-"\n')
 
-    def testRefererQuote(self):
+
+    def test_refererQuote(self):
+        """
+        If the value of the I{Referer} header contains a quote, the quote is
+        escaped.
+        """
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
-        self.request.headers[b'referer'] = b'http://malicious" ".website.invalid'
+        self.request.headers[b'referer'] = (
+            b'http://malicious" ".website.invalid')
         self.assertLogs(
-            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "http://malicious\\" \\".website.invalid" "-"\n')
+            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] '
+            b'"GET /dummy HTTP/1.0" 123 - '
+            b'"http://malicious\\" \\".website.invalid" "-"\n')
 
-    def testUserAgentQuote(self):
+
+    def test_userAgentQuote(self):
+        """
+        If the value of the I{User-Agent} header contains a quote, the quote is
+        escaped.
+        """
         self.site._logDateTime = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
             25, 'Oct', 2004, 12, 31, 59)
         self.request.headers[b'user-agent'] = b'Malicious Web" Evil'
         self.assertLogs(
-            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] "GET /dummy HTTP/1.0" 123 - "-" "Malicious Web\\" Evil"\n')
+            b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] '
+            b'"GET /dummy HTTP/1.0" 123 - "-" "Malicious Web\\" Evil"\n')
 
 
 
