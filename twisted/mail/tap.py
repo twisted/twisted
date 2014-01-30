@@ -40,7 +40,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         L{Options <twisted.python.usage.Options>} for details.
 
     @type optFlags: L{list} of L{list} of (0) L{bytes}, (1) L{bytes} or
-        L{NoneType <Types.NoneType>}, (2) L{bytes}
+        L{NoneType <types.NoneType>}, (2) L{bytes}
     @ivar optFlags: Information about supported flags.  See
         L{Options <twisted.python.usage.Options>} for details.
 
