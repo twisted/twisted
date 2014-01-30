@@ -1,22 +1,42 @@
-# -*- test-case-name: twisted.test.test_ssl -*-
+# -*- test-case-name: twisted.test.test_ssl,twisted.test.test_sslverify -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
 """
-SSL transport. Requires PyOpenSSL (http://pypi.python.org/pypi/pyOpenSSL).
+This module implements Transport Layer Security (TLS) support for Twisted.  It
+requires U{PyOpenSSL <https://pypi.python.org/pypi/pyOpenSSL>}.
 
-SSL connections require a ContextFactory so they can create SSL contexts.
-End users should only use the ContextFactory classes directly - for SSL
-connections use the reactor.connectSSL/listenSSL and so on, as documented
-in IReactorSSL.
+TLS connections require a L{ContextFactory} that specifies their security
+properties, such as certificate, private key, certificate authorities to verify
+the peer, allowed TLS protocol versions, cipher suites, and so on.  In this
+module you will find base classes for implementing your own context factories;
+server context factories should inherit from L{ContextFactory}, and client
+context factories should inherit from L{ClientContextFactory}.
 
-All server context factories should inherit from ContextFactory, and all
-client context factories should inherit from ClientContextFactory. At the
-moment this is not enforced, but in the future it might be.
+You will also find tools here for constructing context factories without
+implementing your own; L{CertificateOptions}, for example, can serve as a
+context factory for either a client or a server.
 
-Future Plans:
-    - split module so reactor-specific classes are in a separate module
+Developers using Twisted, please ignore the L{Port}, L{Connector}, and
+L{Client} classes defined here, as these are details of certain reactors' TLS
+implementations, exposed by accident (and remaining here only for compatibility
+reasons).  If you wish to establish a TLS connection, please use one of the
+following APIs:
+
+    - SSL endpoints for L{servers
+      <twisted.internet.endpoints.SSL4ServerEndpoint>} and L{clients
+      <twisted.integernet.endpoints.SSL4ClientEndpoint>}
+
+    - L{startTLS <twisted.internet.interfaces.ITLSTransport.startTLS>}
+
+    - L{connectSSL <twisted.internet.interfaces.IReactorSSL.connectSSL>}
+
+    - L{listenSSL <twisted.internet.interfaces.IReactorSSL.listenSSL>}
+
+@note: "SSL" (Secure Sockets Layer) is an antiquated synonym for "TLS"
+    (Transport Layer Security).  You may see these terms used interchangeably
+    throughout the documentation.
 """
 
 from __future__ import division, absolute_import
@@ -197,6 +217,7 @@ from twisted.internet._sslverify import (
     OpenSSLAcceptableCiphers as AcceptableCiphers,
     OpenSSLCertificateOptions as CertificateOptions,
     OpenSSLDiffieHellmanParameters as DiffieHellmanParameters,
+    platformTrust, OpenSSLDefaultPaths,
 )
 
 __all__ = [
@@ -206,4 +227,5 @@ __all__ = [
     'Certificate', 'CertificateRequest', 'PrivateCertificate',
     'KeyPair',
     'AcceptableCiphers', 'CertificateOptions', 'DiffieHellmanParameters',
-    ]
+    'platformTrust', 'OpenSSLDefaultPaths',
+]

@@ -15,22 +15,25 @@ from zope.interface import implementer
 try:
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
-    from OpenSSL.crypto import TYPE_RSA
+    from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
+    from twisted.internet.ssl import platformTrust
     from twisted.internet import _sslverify as sslverify
-
     skipSSL = False
+    from twisted.protocols.tls import TLSMemoryBIOFactory
 except ImportError:
     skipSSL = "OpenSSL is required for SSL tests."
+
+from twisted.test.iosim import connectedServerAndClient
 
 from twisted.python.compat import nativeString
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.filepath import FilePath
+
 from twisted.trial import unittest
 from twisted.internet import protocol, defer, reactor
 
 from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
-
 
 # A couple of static PEM-format certificates to be used by various tests.
 A_HOST_CERTIFICATE_PEM = """
@@ -861,6 +864,116 @@ class ProtocolVersionTests(unittest.TestCase):
                  ProtocolVersion.TLSv1_1,
                  ProtocolVersion.TLSv1_2]),
             self._protocols(sslverify.OpenSSLCertificateOptions()))
+
+
+    def test_caCertsPlatformLinux(self):
+        """
+        Specifying a C{caCerts} of L{sslverify.OpenSSLDefaultPaths} when
+        initializing C{OpenSSLCertificateOptions} loads the platform-provided
+        trusted certificates.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            peerTrust=platformTrust(),
+        )
+        called = []
+        class TestContext(SSL.Context):
+            def set_default_verify_paths(self):
+                SSL.Context.set_default_verify_paths(self)
+                called.append(self)
+        opts._contextFactory = TestContext
+        context = opts.getContext()
+        self.assertEqual(called, [context])
+
+
+    def _buildCAandServerCertificates(self):
+        """
+        Create a self-signed CA certificate and server certificate signed by
+        the CA.
+        """
+        serverDN = sslverify.DistinguishedName(commonName='example.com')
+        serverKey = sslverify.KeyPair.generate()
+        serverCertReq = serverKey.certificateRequest(serverDN)
+
+        caDN = sslverify.DistinguishedName(commonName='CA')
+        caKey= sslverify.KeyPair.generate()
+        caCertReq = caKey.certificateRequest(caDN)
+        caSelfCertData = caKey.signCertificateRequest(
+                caDN, caCertReq, lambda dn: True, 516)
+        caSelfCert = caKey.newCertificate(caSelfCertData)
+
+        serverCertData = caKey.signCertificateRequest(
+                caDN, serverCertReq, lambda dn: True, 516)
+        serverCert = serverKey.newCertificate(serverCertData)
+        return caSelfCert, serverCert
+
+
+    def test_caCertsPlatformRejectsRandomCA(self):
+        """
+        Specifying a C{peerTrust} of L{platformTrust} when initializing
+        C{OpenSSLCertificateOptions} causes certificates issued by a newly
+        created CA to be rejected by an SSL connection using these options.
+
+        Note that this test should I{always} pass, even on platforms where the
+        CA certificates are not installed, as long as L{platformTrust} rejects
+        completely invalid / unknown root CA certificates.  This is simply a
+        smoke test to make sure that verification is happening at all.
+        """
+        caSelfCert, serverCert = self._buildCAandServerCertificates()
+        chainedCert = self.mktemp()
+        with open(chainedCert, "wb") as f:
+            f.write(
+                serverCert.dump(FILETYPE_PEM) + caSelfCert.dump(FILETYPE_PEM))
+        privateKey = self.mktemp()
+        with open(privateKey, "wb") as f:
+            f.write(serverCert.privateKey.dump(FILETYPE_PEM))
+
+        class ContextFactory(object):
+            def getContext(self):
+                ctx = SSL.Context(SSL.TLSv1_METHOD)
+                ctx.use_certificate_chain_file(chainedCert)
+                ctx.use_privatekey_file(privateKey)
+                return ctx
+
+        serverOpts = ContextFactory()
+        clientOpts = sslverify.OpenSSLCertificateOptions(
+            peerTrust=platformTrust()
+        )
+
+        class GreetingServer(protocol.Protocol):
+            def connectionMade(self):
+                self.transport.write("greetings!")
+
+        class ListeningClient(protocol.Protocol):
+            data = b''
+            def dataReceived(self, data):
+                self.data += data
+            def connectionLost(self, reason):
+                self.lostReason = reason
+
+        clientFactory = TLSMemoryBIOFactory(
+            clientOpts, isClient=True,
+            wrappedFactory=protocol.Factory.forProtocol(GreetingServer)
+        )
+        serverFactory = TLSMemoryBIOFactory(
+            serverOpts, isClient=False,
+            wrappedFactory=protocol.Factory.forProtocol(ListeningClient)
+        )
+
+        sProto, cProto, pump = connectedServerAndClient(
+            lambda: serverFactory.buildProtocol(None),
+            lambda: clientFactory.buildProtocol(None)
+        )
+
+        # No data was received.
+        self.assertEqual(cProto.wrappedProtocol.data, b'')
+
+        # It was an SSL Error.
+        self.assertEqual(cProto.wrappedProtocol.lostReason.type,
+                         SSL.Error)
+
+        # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
+        self.assertEqual(cProto.wrappedProtocol.lostReason.value.message[0][2],
+                         'tlsv1 alert unknown ca')
 
 
     def test_SSLv23(self):

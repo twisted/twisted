@@ -167,6 +167,121 @@ For servers, it is desirable to offer Diffie-Hellman based key exchange that pro
 The ciphers are activated by default, however it is necessary to pass an instance of :api:`twisted.internet.ssl.DiffieHellmanParameters <DiffieHellmanParameters>` to ``CertificateOptions`` to be able to use them.
 
 
+    <h3>SSL client with server certificate verification</h3>
+    <p>
+      In the example above, the client did not attempt to verify the certificate presented by the server.
+
+      If you are writing a client which connects to a server on the Internet,
+      it is important to verify that server is using a trusted certificate.
+
+      If you don't verify the server certificate,
+      you can not be sure that you are communicating with the intended server.
+    </p>
+
+    <p>
+      Certificate verification is enabled by supplying a <code>verify=True</code> argument
+      to twisted.ssl.CertificateOptions.
+      You also have to supply a list of trusted certificate authorities.
+    </p>
+
+    <p>
+      If the server is using a self-signed certificate,
+      you can supply a copy of that certificate to the client.
+    </p>
+
+    <p>
+      If the server is using a certificate that has been signed
+      by a recognized root certificate authority,
+      you can supply a special PLATFORM flag.
+
+      This makes twisted.internet.ssl.OpenSSLCertificateOptions
+      load the trusted root certificates from your operating system.
+    </p>
+
+    <p>
+      Here is a short example, demonstrating how to enable verification
+      using the trusted root certificates from your operating system.
+    </p>
+
+    <a class="py-listing" href="listings/ssl/check_server_certificate.py">check_server_certificate.py</a>
+
+    <p>
+      If you use check_server_certificate.py
+      to check the echoserver_ssl.py example server (above)
+      you will see that the certificate verification fails.
+    </p>
+
+    <pre class="shell">
+$ python doc/core/howto/listings/ssl/check_server_certificate.py --verify localhost 8000
+SSL CONNECT ERROR: [('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed')]
+    </pre>
+
+    <p>
+      That's because the certificate used in the example
+      has not been signed by any of the certificate authorities
+      that are trusted by your operating system.
+
+      To verify self-signed certificates,
+      you need explicitly pass a list of trusted x509 certificate instances
+      (or trusted certificate authorites)
+      to the sslContextFactory.
+    </p>
+
+    <p>
+      PEM formatted certificates can be loaded using twisted.internet.ssl.Certificate.loadPEM
+      and the wrapped x509 certificate objects should be passed to the SSL context factory
+      as a list. Eg
+    </p>
+
+    <pre class="python">
+cert = ssl.Certificate.loadPEM(open(certificatePath).read())
+
+contextFactory = ssl.CertificateOptions(
+    verify=True,
+    caCerts=[cert.original]
+)
+    </pre>
+
+    <p>
+      You can try this using the check_server_certificates.py example and the echoserver_ssl.py example. eg
+    </p>
+    <pre class="shell">
+$ python check_server_certificate.py -v -t ./server.pem localhost 8000
+
+-----BEGIN CERTIFICATE-----
+MIIBaDCCARICAQEwDQYJKoZIhvcNAQEEBQAwPzEYMBYGA1UEAxMPd3d3LmV4YW1w
+bGUuY29tMSMwIQYDVQQKExpNeSBFeGFtcGxlIENvbXBhbnkgV2Vic2l0ZTAeFw0x
+MzA5MTQwMDAwMDBaFw0xNDA5MTMyMzU5NTlaMD8xGDAWBgNVBAMTD3d3dy5leGFt
+cGxlLmNvbTEjMCEGA1UEChMaTXkgRXhhbXBsZSBDb21wYW55IFdlYnNpdGUwXDAN
+BgkqhkiG9w0BAQEFAANLADBIAkEAwMcLGUdDAMl6dF05yrxe2LE1Is2F/mCA4+fG
+tyOVYcBGp9x4fB/ST/sr/IH/vfdUp2j/7S8e5wgEpVpkq/G8IQIDAQABMA0GCSqG
+SIb3DQEBBAUAA0EAVWDAH9c4hKMGXhBcAt01oVTqkKXRUf75dOxIY2FtonYFGBDK
+rxZb7KFwV1ahLidtJ77icI6ryoAidL7Z3oiq1Q==
+-----END CERTIFICATE-----
+
+SERVER CERTIFICATE: &lt;Certificate Subject=www.example.com Issuer=www.example.com&gt;
+    </pre>
+
+    <h4>Known Limitations</h4>
+    <div class="note">
+    <ol>
+      <li>
+        Platform certificates can currently only be loaded in Linux.
+        (See
+        <a href="//twistedmatrix.com/trac/ticket/6371"
+           title="enhancement: Support native Windows trusted CA database for SSL certificate validation (new)">#6371</a>,
+        <a href="//twistedmatrix.com/trac/ticket/6372"
+           title="enhancement: Support native OS X trusted CA database for SSL certificate validation (new)">#6372</a>)
+      </li>
+      <li>
+        Platform certificates are only available on Linux
+        if OpenSSL was properly configured at build time.
+      </li>
+    </ol>
+    </div>
+
+
+
 Using startTLS
 --------------
 

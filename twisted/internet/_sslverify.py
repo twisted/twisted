@@ -11,7 +11,12 @@ from hashlib import md5
 from OpenSSL import SSL, crypto
 from zope.interface import implementer
 
+from twisted.python.compat import nativeString, networkString
+from twisted.python import _reflectpy3 as reflect, util
+
 from twisted.internet.defer import Deferred
+from zope.interface import Interface, implementer
+
 from twisted.internet.error import VerifyError, CertificateError
 from twisted.internet.interfaces import IAcceptableCiphers, ICipher
 from twisted.python import _reflectpy3 as reflect, util
@@ -421,12 +426,21 @@ class PrivateCertificate(Certificate):
 
 
     def options(self, *authorities):
+        """
+        Create a context factory using this L{PrivateCertificate}'s certificate
+        and private key.
+
+        @param authorities: A list of L{Certificate} object
+
+        @return: A context factory.
+        @rtype: L{OpenSSLCertificateOptions}
+        """
         options = dict(privateKey=self.privateKey.original,
                        certificate=self.original)
         if authorities:
-            options.update(dict(verify=True,
-                                requireCertificate=True,
-                                caCerts=[auth.original for auth in authorities]))
+            options.update(dict(peerTrust=OpenSSLCertificateAuthorities(
+                [auth.original for auth in authorities]
+            )))
         return OpenSSLCertificateOptions(**options)
 
 
@@ -625,6 +639,132 @@ class KeyPair(PublicKey):
 
 
 
+class IOpenSSLTrustSettings(Interface):
+    """
+    Trust settings for an OpenSSL context.
+    """
+
+    def addCACertsToContext(context):
+        """
+        Add any relevant certificate-authority certificates to the given SSL
+        context.
+
+        @param context: An SSL context for a connection which should be
+            verified by some certificate authority.
+        @type context:
+
+        @return: L{None}
+        """
+
+
+
+@implementer(IOpenSSLTrustSettings)
+class OpenSSLCertificateAuthorities(object):
+    """
+    Trust an explicitly-specified set of certificates, as represented by a list
+    of L{SSL.X509 objects.}
+    """
+
+    def __init__(self, caCerts):
+        """
+        @param caCerts: The certificate authorities.
+        @type caCerts: L{list} of L{SSL.X509}
+        """
+        self._caCerts = caCerts
+
+
+    def addCACertsToContext(self, context):
+        """
+        Add the list of certficates presented to C{__init__} to the given
+        context's certificate store.
+        """
+        store = context.get_cert_store()
+        for cert in self._caCerts:
+            store.add_cert(cert)
+
+
+
+@implementer(IOpenSSLTrustSettings)
+class OpenSSLDefaultPaths(object):
+    """
+    Trust the set of default verify paths that OpenSSL was built with, as
+    specified by U{SSL_CTX_set_default_verify_paths
+    <https://www.openssl.org/docs/ssl/SSL_CTX_load_verify_locations.html>}.
+    """
+
+    def addCACertsToContext(self, context):
+        """
+        Trust the default verify paths on the given context.
+        """
+        context.set_default_verify_paths()
+
+
+
+def platformTrust():
+    """
+    Attempt to discover a set of trusted certificate authority certificates
+    (or, in other words: trust roots, or root certificates) whose trust is
+    managed and updated by tools outside of Twisted.
+
+    Most often, this will be some approximation of an up-to-date list of
+    certificates distributed with web browser, and has similar trust
+    properties, and when developing code that uses it, you can think of it that
+    way.  However, the main point of this API is that the configuration of
+    which certificates are trusted is usually neither Twisted's responsibility
+    nor your application's: the user may use platform-specific tools for
+    defining which server certificates should be trusted by programs using TLS.
+
+    This should be a set of trust settings most appropriate for I{client} TLS
+    connections; i.e. those which need to verify a server's authenticity.  You
+    should probably use this by default for any client TLS connection that you
+    create.  For servers, however, client certificates are typically not
+    verified; or, if they are, their verification will depend on a custom,
+    application-specific certificate authority.
+
+    @since: 14.0
+
+    @note: Currently, L{platformTrust} depends entirely upon your OpenSSL build
+        supporting a set of "L{default verify paths <OpenSSLDefaultPaths>}"
+        which correspond to certificate authority trust roots.  Unfortunately,
+        whether this is true of your system is both outside of Twisted's
+        control and difficult (if not impossible) for Twisted to detect
+        automatically.
+
+        Nevertheless, this ought to work as desired by default on:
+
+            - Ubuntu Linux machines with the U{ca-certificates
+              <https://launchpad.net/ubuntu/+source/ca-certificates>} package
+              installed,
+
+            - Mac OS X when using the system-installed version of OpenSSL (i.e.
+              I{not} one installed via MacPorts or Homebrew),
+
+            - any build of OpenSSL which has had certificate authority
+              certificates installed into its default verify paths (by default,
+              C{/usr/local/ssl/certs} if you've built your own OpenSSL), or
+
+            - any process where the C{SSL_CERT_FILE} environment variable is
+              set to the path of a file containing your desired CA certificates
+              bundle.
+
+        Hopefully soon, this API will be updated to use more sophisticated
+        trust-root discovery mechanisms; you can follow tickets in the Twisted
+        tracker for progress on this implementation on U{Microsoft Windows
+        <https://twistedmatrix.com/trac/ticket/6371>}, U{Mac OS X
+        <https://twistedmatrix.com/trac/ticket/6372>}, and U{a fallback for
+        other platforms which do not have native trust management tools
+        <https://twistedmatrix.com/trac/ticket/6934>}.
+
+    @return: an appropriate trust settings object for your platform.
+    @rtype: L{IOpenSSLTrustSettings}
+
+    @raise NotImplementedError: if this platform is not yet supported by
+        Twisted.  At present, only OpenSSL is supported.
+    """
+    return OpenSSLDefaultPaths()
+
+
+
 class OpenSSLCertificateOptions(object):
     """
     A factory for SSL context objects for both SSL servers and clients.
@@ -663,7 +803,8 @@ class OpenSSLCertificateOptions(object):
                  enableSessionTickets=False,
                  extraCertChain=None,
                  acceptableCiphers=None,
-                 dhParameters=None):
+                 dhParameters=None,
+                 peerTrust=None):
         """
         Create an OpenSSL context SSL connection context factory.
 
@@ -676,44 +817,57 @@ class OpenSSLCertificateOptions(object):
             constants provided by pyOpenSSL).  By default, a setting will be
             used which allows TLSv1.0, TLSv1.1, and TLSv1.2.
 
-        @param verify: If C{True}, verify certificates received from the peer
-            and fail the handshake if verification fails.  Otherwise, allow
-            anonymous sessions and sessions with certificates which fail
-            validation.  By default this is C{False}.
+        @param verify: Specifying this argument directly is deprecated;
+            instead, use a C{peerTrust} keyword argument.
 
-        @param caCerts: List of certificate authority certificate objects to
-            use to verify the peer's certificate.  Only used if verify is
-            C{True} and will be ignored otherwise.  Since verify is C{False} by
-            default, this is C{None} by default.
+            By default this is C{False}.
 
-        @type caCerts: C{list} of L{OpenSSL.crypto.X509}
+            If C{True}, verify certificates received from the peer and fail the
+            handshake if verification fails.  Otherwise, allow anonymous
+            sessions and sessions with certificates which fail validation.
+
+        @param caCerts: Specifying this argument directly is deprecated;
+            instead, use a C{peerTrust} keyword argument.
+
+            List of certificate authority certificate objects to use to verify
+            the peer's certificate, or L{CASources}C{.PLATFORM} indicating that
+            platform-provided trusted certificates should be used.  Only used
+            if verify is C{True} and will be ignored otherwise.  Since verify
+            is C{False} by default, this is C{None} by default.
+
+        @type caCerts: C{list} of L{OpenSSL.crypto.X509}, or L{CASources}
+            constants.
 
         @param verifyDepth: Depth in certificate chain down to which to verify.
-        If unspecified, use the underlying default (9).
+            If unspecified, use the underlying default (9).
 
-        @param requireCertificate: If True, do not allow anonymous sessions.
+        @param requireCertificate: Specifying this argument directly is
+            deprecated; instead, use a C{peerTrust} keyword argument.
 
-        @param verifyOnce: If True, do not re-verify the certificate
-        on session resumption.
+            If C{True}, do not allow anonymous sessions; defaults to C{True}.
+
+        @param verifyOnce: If True, do not re-verify the certificate on session
+            resumption.
 
         @param enableSingleUseKeys: If L{True}, generate a new key whenever
-            ephemeral DH and ECDH parameters are used to prevent small
-            subgroup attacks and to ensure perfect forward secrecy.
+            ephemeral DH and ECDH parameters are used to prevent small subgroup
+            attacks and to ensure perfect forward secrecy.
 
         @param enableSessions: If True, set a session ID on each context.  This
-        allows a shortened handshake to be used when a known client reconnects.
+            allows a shortened handshake to be used when a known client
+            reconnects.
 
         @param fixBrokenPeers: If True, enable various non-spec protocol fixes
-        for broken SSL implementations.  This should be entirely safe,
-        according to the OpenSSL documentation, but YMMV.  This option is now
-        off by default, because it causes problems with connections between
-        peers using OpenSSL 0.9.8a.
+            for broken SSL implementations.  This should be entirely safe,
+            according to the OpenSSL documentation, but YMMV.  This option is
+            now off by default, because it causes problems with connections
+            between peers using OpenSSL 0.9.8a.
 
         @param enableSessionTickets: If True, enable session ticket extension
-        for session resumption per RFC 5077. Note there is no support for
-        controlling session tickets. This option is off by default, as some
-        server implementations don't correctly process incoming empty session
-        ticket extensions in the hello.
+            for session resumption per RFC 5077. Note there is no support for
+            controlling session tickets.  This option is off by default, as
+            some server implementations don't correctly process incoming empty
+            session ticket extensions in the hello.
 
         @param extraCertChain: List of certificates that I{complete} your
             verification chain if the certificate authority that signed your
@@ -731,15 +885,23 @@ class OpenSSLCertificateOptions(object):
         @type dhParameters: L{DiffieHellmanParameters
             <twisted.internet.ssl.DiffieHellmanParameters>}
 
-        @raise ValueError: when C{privateKey} or C{certificate} are set
-            without setting the respective other.
+        @param peerTrust: Specification of trust requirements of peers.  If
+            this argument is specified, the peer is verified, requires a
+            certificate, and the certificate must be signed by one of the
+            certificate authorities specified by this object.
 
+            Note that this option I{overrides and supersedes} values specified
+            for C{caCerts}, C{verify}, and C{requireCertificate}; specifying
+            any of those options should be avoided in favor of this one.
+
+        @type peerTrust: L{IOpenSSLTrustSettings}
+
+        @raise ValueError: when C{privateKey} or C{certificate} are set without
+            setting the respective other.
         @raise ValueError: when C{verify} is L{True} but C{caCerts} doesn't
             specify any CA certificates.
-
         @raise ValueError: when C{extraCertChain} is passed without specifying
             C{privateKey} or C{certificate}.
-
         @raise ValueError: when C{acceptableCiphers} doesn't yield any usable
             ciphers for the current platform.
         """
@@ -791,6 +953,7 @@ class OpenSSLCertificateOptions(object):
         if fixBrokenPeers:
             self._options |= self._OP_ALL
         self.enableSessionTickets = enableSessionTickets
+
         if not enableSessionTickets:
             self._options |= self._OP_NO_TICKET
         self.dhParameters = dhParameters
@@ -809,6 +972,15 @@ class OpenSSLCertificateOptions(object):
                 'Supplied IAcceptableCiphers yielded no usable ciphers '
                 'on this platform.'
             )
+
+        if peerTrust is None:
+            if self.verify:
+                peerTrust = OpenSSLCertificateAuthorities(caCerts)
+        else:
+            self.verify = True
+            self.requireCertificate = True
+            peerTrust = IOpenSSLTrustSettings(peerTrust)
+        self.peerTrust = peerTrust
 
 
     def __getstate__(self):
@@ -852,10 +1024,7 @@ class OpenSSLCertificateOptions(object):
                 verifyFlags |= SSL.VERIFY_FAIL_IF_NO_PEER_CERT
             if self.verifyOnce:
                 verifyFlags |= SSL.VERIFY_CLIENT_ONCE
-            if self.caCerts:
-                store = ctx.get_cert_store()
-                for cert in self.caCerts:
-                    store.add_cert(cert)
+            self.peerTrust.addCACertsToContext(ctx)
 
         # It'd be nice if pyOpenSSL let us pass None here for this behavior (as
         # the underlying OpenSSL API call allows NULL to be passed).  It
