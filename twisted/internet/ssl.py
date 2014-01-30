@@ -6,13 +6,27 @@
 """
 TLS transport.  Requires U{PyOpenSSL <https://pypi.python.org/pypi/pyOpenSSL>}.
 
-SSL connections require a ContextFactory so they can create SSL contexts.  End
-users should only use the ContextFactory classes directly - for SSL connections
-use the reactor.connectSSL/listenSSL and so on, as documented in IReactorSSL.
+SSL connections require a L{ContextFactory} so they can create SSL contexts.
 
-All server context factories should inherit from ContextFactory, and all client
-context factories should inherit from ClientContextFactory.  At the moment this
-is not enforced, but in the future it might be.
+Server context factories should inherit from L{ContextFactory}, and client
+context factories should inherit from L{ClientContextFactory}.  At the moment
+this is not enforced, but in the future it might be.
+
+Developers using Twisted, please ignore the L{Port}, L{Connector}, and
+L{Client} classes defined here, as these are details of certain reactors' TLS
+implementations, exposed by accident (and remaining here only for compatibility
+reasons).  If you wish to establish a TLS connection, please use one of the
+following APIs:
+
+    - SSL endpoints for L{servers
+      <twisted.internet.endpoints.SSL4ServerEndpoint>} and L{clients
+      <twisted.integernet.endpoints.SSL4ClientEndpoint>}
+
+    - L{startTLS <twisted.internet.interfaces.ITLSTransport.startTLS>}
+
+    - L{connectSSL <twisted.internet.interfaces.IReactorSSL.connectSSL>}
+
+    - L{listenSSL <twisted.internet.interfaces.IReactorSSL.listenSSL>}
 """
 
 from __future__ import division, absolute_import
