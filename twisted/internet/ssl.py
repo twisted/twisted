@@ -212,7 +212,8 @@ class Connector(tcp.Connector):
 
 from twisted.internet._sslverify import (
     DistinguishedName, DN, Certificate, CertificateRequest, PrivateCertificate,
-    KeyPair, OpenSSLCertificateOptions as CertificateOptions
+    KeyPair, OpenSSLCertificateOptions as CertificateOptions,
+    platformTrust, OpenSSLDefaultPaths,
 )
 
 __all__ = [
@@ -221,5 +222,6 @@ __all__ = [
 
     # Re-exported from _sslverify.
     'DistinguishedName', 'DN', 'Certificate', 'CertificateRequest',
-    'PrivateCertificate', 'KeyPair', 'CertificateOptions',
+    'PrivateCertificate', 'KeyPair', 'CertificateOptions', 'platformTrust',
+    'OpenSSLDefaultPaths',
 ]
