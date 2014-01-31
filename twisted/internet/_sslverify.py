@@ -820,9 +820,9 @@ class OpenSSLCertificateOptions(object):
         @param verify: Specifying this argument directly is deprecated;
             instead, use a C{peerTrust} keyword argument.
 
-            By default this is C{False}.
+            By default this is L{False}.
 
-            If C{True}, verify certificates received from the peer and fail the
+            If L{True}, verify certificates received from the peer and fail the
             handshake if verification fails.  Otherwise, allow anonymous
             sessions and sessions with certificates which fail validation.
 
@@ -832,8 +832,8 @@ class OpenSSLCertificateOptions(object):
             List of certificate authority certificate objects to use to verify
             the peer's certificate, or L{CASources}C{.PLATFORM} indicating that
             platform-provided trusted certificates should be used.  Only used
-            if verify is C{True} and will be ignored otherwise.  Since verify
-            is C{False} by default, this is C{None} by default.
+            if verify is L{True} and will be ignored otherwise.  Since verify
+            is L{False} by default, this is C{None} by default.
 
         @type caCerts: C{list} of L{OpenSSL.crypto.X509}, or L{CASources}
             constants.
@@ -844,7 +844,7 @@ class OpenSSLCertificateOptions(object):
         @param requireCertificate: Specifying this argument directly is
             deprecated; instead, use a C{peerTrust} keyword argument.
 
-            If C{True}, do not allow anonymous sessions; defaults to C{True}.
+            If L{True}, do not allow anonymous sessions; defaults to L{True}.
 
         @param verifyOnce: If True, do not re-verify the certificate on session
             resumption.
