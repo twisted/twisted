@@ -193,7 +193,7 @@ certificates from your operating system.
 Here is a short example, demonstrating how to enable verification using the
 trusted root certificates from your operating system.
 
-:download:`element_1.py <listings/ssl/check_server_certificate.py>`
+:download:`check_server_certificate.py <listings/ssl/check_server_certificate.py>`
 
 .. literalinclude:: listings/ssl/check_server_certificate.py
 
@@ -362,8 +362,8 @@ largely under the dominion of pyOpenSSL, but few examples seem to exist on
 the web so for completeness a sample server and client are provided here.
 
 
-Client-authenticating server
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SSL server with client authentication via client certificate verification
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 .. code-block:: python
