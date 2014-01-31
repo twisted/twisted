@@ -662,7 +662,7 @@ class IOpenSSLTrustSettings(Interface):
 class OpenSSLCertificateAuthorities(object):
     """
     Trust an explicitly-specified set of certificates, as represented by a list
-    of L{SSL.X509 objects.}
+    of L{SSL.X509} objects.
     """
 
     def __init__(self, caCerts):
