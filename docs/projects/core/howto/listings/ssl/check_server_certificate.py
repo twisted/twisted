@@ -1,52 +1,28 @@
-from __future__ import print_function
 import sys
-
 from twisted.internet import defer, endpoints, protocol, ssl, task
-from pprint import pprint
-from twisted.internet.ssl import platformTrust
 
-def main(reactor, host, port):
-    contextFactory = ssl.CertificateOptions(peerTrust=platformTrust())
+def main(reactor, host, port=443):
+    contextFactory = ssl.CertificateOptions(peerTrust=ssl.platformTrust())
     port = int(port)
-    handshook = defer.Deferred()
+    done = defer.Deferred()
 
-    class HandshakeComplete(object):
-        def getContext(self):
-            ctx = contextFactory.getContext()
-            def cb(conn, where, code):
-                if where & ssl.SSL.SSL_CB_HANDSHAKE_DONE:
-                    handshook.callback(None)
-            ctx.set_info_callback(cb)
-            return ctx
-
-    class DelayedDisconnectProtocol(protocol.Protocol):
+    class ShowCertificate(protocol.Protocol):
+        def connectionMade(self):
+            self.transport.write(b"GET / HTTP/1.0\r\n\r\n")
+        def dataReceived(self, data):
+            certificate = ssl.Certificate(self.transport.getPeerCertificate())
+            print(certificate.dumpPEM())
+            self.transport.loseConnection()
         def connectionLost(self, reason):
-            if not hasattr(handshook, 'result'):
-                handshook.errback(reason)
+            if reason.check(ssl.SSL.Error):
+                print(reason.value)
+            done.callback(None)
 
-    proto = DelayedDisconnectProtocol()
-
-    connected = endpoints.connectProtocol(
+    endpoints.connectProtocol(
         endpoints.SSL4ClientEndpoint(reactor, host, port,
-                                     sslContextFactory=HandshakeComplete()),
-        proto
+                                     sslContextFactory=contextFactory),
+        ShowCertificate()
     )
-
-    def error(reason):
-        if reason.check(ssl.SSL.Error):
-            print("SSL Connection Error:")
-            pprint(reason.value)
-
-    def printCertificate(ignored):
-        x509 = proto.transport.getPeerCertificate()
-        if x509 is not None:
-            cert = ssl.Certificate(x509)
-            print(cert.dumpPEM())
-
-    return (
-        connected
-        .addCallback(lambda connected: handshook)
-        .addCallbacks(printCertificate, error)
-    )
+    return done
 
 task.react(main, sys.argv[1:])
