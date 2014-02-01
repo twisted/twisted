@@ -2331,6 +2331,21 @@ class IUDPTransport(Interface):
         upon completion.
         """
 
+    def setBroadcastAllowed(self, enabled):
+        """
+        Set whether this UDP port may broadcast.
+
+        @param enabled: Whether the port may broadcast.
+        @type enabled: C{bool}
+        """
+
+    def getBroadcastAllowed(self):
+        """
+        Checks if broadcast is currently allowed on this port.
+
+        @return: Whether this UDP port may broadcast.
+        @rtype: C{bool}
+        """
 
 
 class IUNIXDatagramTransport(Interface):
