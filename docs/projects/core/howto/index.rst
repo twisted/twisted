@@ -153,8 +153,7 @@ Developer Guides
 
     Add some security to your network transport.
   - :doc:`UDP Networking <udp>`
-
-    Multicast too!
+    How to use Twisted's UDP implementation, with additional Multicast and Broadcast functionality.
   - :doc:`Using processes <process>`
 
     Launching sub-processes, the correct way.

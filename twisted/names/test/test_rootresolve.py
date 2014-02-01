@@ -107,10 +107,16 @@ class MemoryDatagramTransport(object):
 
 
     def setBroadcastAllowed(self, enabled):
+        """
+        Dummy implementation to satisfy L{IUDPTransport}.
+        """
         pass
 
 
     def getBroadcastAllowed(self):
+        """
+        Dummy implementation to satisfy L{IUDPTransport}.
+        """
         pass
 
 

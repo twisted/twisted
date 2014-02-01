@@ -2336,7 +2336,7 @@ class IUDPTransport(Interface):
         Set whether this UDP port may broadcast.
 
         @param enabled: Whether the port may broadcast.
-        @type enabled: C{bool}
+        @type enabled: L{bool}
         """
 
     def getBroadcastAllowed():
@@ -2344,7 +2344,7 @@ class IUDPTransport(Interface):
         Checks if broadcast is currently allowed on this port.
 
         @return: Whether this UDP port may broadcast.
-        @rtype: C{bool}
+        @rtype: L{bool}
         """
 
 

@@ -311,7 +311,7 @@ class Port(abstract.FileHandle):
         Set whether this UDP port may broadcast. This is disabled by default.
 
         @param enabled: Whether the port may broadcast.
-        @type enabled: C{bool}
+        @type enabled: L{bool}
         """
         self.socket.setsockopt(
             socket.SOL_SOCKET, socket.SO_BROADCAST, enabled)
@@ -322,7 +322,7 @@ class Port(abstract.FileHandle):
         Checks if broadcast is currently allowed on this port.
 
         @return: Whether this UDP port may broadcast.
-        @rtype: C{bool}
+        @rtype: L{bool}
         """
         return operator.truth(
             self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST))
