@@ -2331,7 +2331,7 @@ class IUDPTransport(Interface):
         upon completion.
         """
 
-    def setBroadcastAllowed(self, enabled):
+    def setBroadcastAllowed(enabled):
         """
         Set whether this UDP port may broadcast.
 
@@ -2339,7 +2339,7 @@ class IUDPTransport(Interface):
         @type enabled: C{bool}
         """
 
-    def getBroadcastAllowed(self):
+    def getBroadcastAllowed():
         """
         Checks if broadcast is currently allowed on this port.
 
