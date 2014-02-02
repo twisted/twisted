@@ -10,7 +10,7 @@ from __future__ import division, absolute_import
 import os
 import struct
 import socket
-from errno import EPERM, EBADF, EINVAL, EAGAIN, EWOULDBLOCK, ENOENT
+from errno import EPERM, EBADF, EINVAL, EAGAIN, EWOULDBLOCK, ENOENT, ENODEV
 from random import randrange
 from collections import deque
 from itertools import cycle
@@ -580,7 +580,9 @@ class TestRealSystem(_RealSystem):
         try:
             return super(TestRealSystem, self).open(filename, *args, **kwargs)
         except OSError as e:
-            if ENOENT == e.errno and filename == b"/dev/net/tun":
+            # The device file may simply be missing.  The device file may also
+            # exist but be unsupported by the kernel.
+            if e.errno in (ENOENT, ENODEV) and filename == b"/dev/net/tun":
                 raise SkipTest("Platform lacks /dev/net/tun")
             raise
 
