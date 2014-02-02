@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 """
-An example demonstrating how to send and recieve UDP broadcast messages.
+An example demonstrating how to send and receive UDP broadcast messages.
 
 Every second, this application will send out a PING message with a unique ID.
 It will respond to all PING messages with a PONG (including ones sent by
@@ -13,7 +13,7 @@ network by the number of "RECV PONG".
 
 Run using twistd:
 
-* twistd -noy udpbroadcast.py
+$ twistd -ny udpbroadcast.py
 """
 
 from uuid import uuid4

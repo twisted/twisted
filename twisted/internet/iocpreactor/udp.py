@@ -308,7 +308,7 @@ class Port(abstract.FileHandle):
 
     def setBroadcastAllowed(self, enabled):
         """
-        Set whether this UDP port may broadcast. This is disabled by default.
+        Set whether this port may broadcast. This is disabled by default.
 
         @param enabled: Whether the port may broadcast.
         @type enabled: L{bool}
@@ -321,7 +321,7 @@ class Port(abstract.FileHandle):
         """
         Checks if broadcast is currently allowed on this port.
 
-        @return: Whether this UDP port may broadcast.
+        @return: Whether this port may broadcast.
         @rtype: L{bool}
         """
         return operator.truth(

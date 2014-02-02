@@ -398,9 +398,9 @@ class Port(base.BasePort):
 
     def setBroadcastAllowed(self, enabled):
         """
-        Set whether this UDP port may broadcast. This is disabled by default.
+        Set whether this port may broadcast. This is disabled by default.
 
-        @param enabled: Whether the socket may broadcast.
+        @param enabled: Whether the port may broadcast.
         @type enabled: L{bool}
         """
         self.socket.setsockopt(
@@ -411,7 +411,7 @@ class Port(base.BasePort):
         """
         Checks if broadcast is currently allowed on this port.
 
-        @return: Whether this UDP socket may broadcast.
+        @return: Whether this port may broadcast.
         @rtype: L{bool}
         """
         return operator.truth(
