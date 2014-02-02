@@ -290,8 +290,8 @@ Broadcast allows a different way of contacting several unknown hosts.
 Broadcasting via UDP sends a packet out to all hosts on the local network by sending to a magic broadcast address (``"<broadcast>"``).
 This broadcast is filtered by routers by default, and there are no "groups" like multicast, only different ports.
 
-Broadcast is enabled in Twisted's UDP implementation by passing ``True`` to :api:`twisted.internet.udp.Port.setBroadcastAllowed <setBroadcastAllowed>` on the port.
-Checking the broadcast status can be done with :api:`twisted.internet.udp.Port.getBroadcastAllowed <getBroadcastAllowed>` on the port.
+Broadcast is enabled by passing ``True`` to :api:`twisted.internet.interfaces.IUDPTransport.setBroadcastAllowed <setBroadcastAllowed>` on the port.
+Checking the broadcast status can be done with :api:`twisted.internet.interfaces.IUDPTransport.getBroadcastAllowed <getBroadcastAllowed>` on the port.
 
 For a complete example of this feature, see :download:`udpbroadcast.py </projects/core/examples/udpbroadcast.py>`.
 
