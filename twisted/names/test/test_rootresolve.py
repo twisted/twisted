@@ -105,6 +105,21 @@ class MemoryDatagramTransport(object):
         self._protocol.stopProtocol()
         return succeed(None)
 
+
+    def setBroadcastAllowed(self, enabled):
+        """
+        Dummy implementation to satisfy L{IUDPTransport}.
+        """
+        pass
+
+
+    def getBroadcastAllowed(self):
+        """
+        Dummy implementation to satisfy L{IUDPTransport}.
+        """
+        pass
+
+
 verifyClass(IUDPTransport, MemoryDatagramTransport)
 
 

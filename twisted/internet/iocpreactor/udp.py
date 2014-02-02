@@ -306,6 +306,28 @@ class Port(abstract.FileHandle):
             return address.IPv6Address('UDP', *(addr[:2]))
 
 
+    def setBroadcastAllowed(self, enabled):
+        """
+        Set whether this port may broadcast. This is disabled by default.
+
+        @param enabled: Whether the port may broadcast.
+        @type enabled: L{bool}
+        """
+        self.socket.setsockopt(
+            socket.SOL_SOCKET, socket.SO_BROADCAST, enabled)
+
+
+    def getBroadcastAllowed(self):
+        """
+        Checks if broadcast is currently allowed on this port.
+
+        @return: Whether this port may broadcast.
+        @rtype: L{bool}
+        """
+        return operator.truth(
+            self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST))
+
+
 
 class MulticastMixin:
     """

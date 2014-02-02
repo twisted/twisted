@@ -360,6 +360,17 @@ class UDPPortTestsMixin(object):
             error.InvalidAddressError, port.connect, 'example.invalid', 1)
 
 
+    def test_allowBroadcast(self):
+        """
+        L{IListeningPort.setBroadcastAllowed} sets broadcast to be allowed
+        on the socket.
+        """
+        reactor = self.buildReactor()
+        port = self.getListeningPort(reactor, DatagramProtocol())
+        port.setBroadcastAllowed(True)
+        self.assertTrue(port.getBroadcastAllowed())
+
+
 
 class UDPServerTestsBuilder(ReactorBuilder,
                             UDPPortTestsMixin, DatagramTransportTestsMixin):
