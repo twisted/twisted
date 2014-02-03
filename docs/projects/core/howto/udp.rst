@@ -8,10 +8,10 @@ UDP Networking
 
 Overview
 --------
-    
+
 Unlike TCP, UDP has no notion of connections.
 A UDP socket can receive datagrams from any server on the network and send datagrams to any host on the network.
-In addition, datagrams may arrive in any order, never arrive at all, or be duplicated in transit.    
+In addition, datagrams may arrive in any order, never arrive at all, or be duplicated in transit.
 
 Since there are no connections, we only use a single object, a protocol, for each UDP socket.
 We then use the reactor to connect this protocol to a UDP transport, using the :api:`twisted.internet.interfaces.IReactorUDP <twisted.internet.interfaces.IReactorUDP>` reactor API.
@@ -26,16 +26,16 @@ Received datagrams include the address they were sent from.
 When sending datagrams the destination address must be specified.
 
 Here is a simple example::
-    
+
     from twisted.internet.protocol import DatagramProtocol
     from twisted.internet import reactor
-    
+
     class Echo(DatagramProtocol):
-    
+
         def datagramReceived(self, data, (host, port)):
             print "received %r from %s:%d" % (data, host, port)
             self.transport.write(data, (host, port))
-    
+
     reactor.listenUDP(9999, Echo())
     reactor.run()
 
@@ -68,49 +68,49 @@ Here is a simple example:
 Connected UDP
 -------------
 
-A connected UDP socket is slightly different from a standard one -- it can only send and receive datagrams to/from a single address, but this does not in any way imply a connection.
-Datagrams may still arrive in any order, and the port on the other side may have no one listening.
+A connected UDP socket is slightly different from a standard one as it can only send and receive datagrams to/from a single address.
+However, this does not in any way imply a connection, as datagrams may still arrive in any order, and the port on the other side may have no one listening.
 The benefit of the connected UDP socket is that it it **may** provide notification of undelivered packages.
 This depends on many factors, almost all of which are out of the control of the application, but it still presents certain benefits which occasionally make it useful.
 
 Unlike a regular UDP protocol, we do not need to specify where to send datagrams and are not told where they came from since they can only come from the address to which the socket is 'connected'.
 
 .. code-block:: python
-    
+
     from twisted.internet.protocol import DatagramProtocol
     from twisted.internet import reactor
-    
+
     class Helloer(DatagramProtocol):
-    
+
         def startProtocol(self):
             host = "192.168.1.1"
             port = 1234
-    
+
             self.transport.connect(host, port)
             print "now we can only send to host %s port %d" % (host, port)
             self.transport.write("hello") # no need for address
-    
+
         def datagramReceived(self, data, (host, port)):
             print "received %r from %s:%d" % (data, host, port)
-    
+
         # Possibly invoked if there is no server listening on the
         # address to which we are sending.
         def connectionRefused(self):
             print "No one listening"
-    
+
     # 0 means any port, we don't care in this case
     reactor.listenUDP(0, Helloer())
     reactor.run()
 
 Note that ``connect()``, like ``write()`` will only accept IP addresses, not unresolved hostnames.
 To obtain the IP of a hostname use ``reactor.resolve()`` , e.g.::
-    
+
     from twisted.internet import reactor
-    
+
     def gotIP(ip):
         print "IP of 'example.com' is", ip
         reactor.callLater(3, reactor.stop)
-    
+
     reactor.resolve('example.com').addCallback(gotIP)
     reactor.run()
 
@@ -119,7 +119,7 @@ Connecting to a new address after a previous connection or making a connected po
 
 Multicast UDP
 -------------
-    
+
 Multicast allows a process to contact multiple hosts with a single packet, without knowing the specific IP address of any of the hosts.
 This is in contrast to normal, or unicast, UDP, where each datagram has a single IP as its destination.
 Multicast datagrams are sent to special multicast group addresses (in the IPv4 range 224.0.0.0 to 239.255.255.255), along with a corresponding port.
@@ -145,7 +145,7 @@ Note that a multicast socket will have a default TTL (time to live) of 1.
 That is, datagrams won't traverse more than one router hop, unless a higher TTL is set with :api:`twisted.internet.interfaces.IMulticastTransport.setTTL <setTTL>`.
 Other functionality provided by the multicast transport includes :api:`twisted.internet.interfaces.IMulticastTransport.setOutgoingInterface <setOutgoingInterface>` and :api:`twisted.internet.interfaces.IMulticastTransport.setLoopbackMode <setLoopbackMode>` -- see :api:`twisted.internet.interfaces.IMulticastTransport <IMulticastTransport>` for more information.
 
-    
+
 Broadcast UDP
 -------------
 
