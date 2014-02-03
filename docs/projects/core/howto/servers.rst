@@ -259,7 +259,7 @@ The only API you might not be familiar with is ``listenTCP``.
 :api:`twisted.internet.interfaces.IReactorTCP.listenTCP <listenTCP>` is the method which connects a ``Factory`` to the network.
 This is the lower-level API that :doc:`endpoints <endpoints>` wraps for you.
 
-Here's a sample transcript of a chat session (***this*** is text entered by the user):
+Here's a sample transcript of a chat session (``**this**`` is text entered by the user):
 
 .. code-block:: console
 
