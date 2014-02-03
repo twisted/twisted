@@ -431,14 +431,12 @@ class FakeModule(object):
 
 fakeCPythonPlatform = FakeModule({"python_implementation": lambda: "CPython"})
 fakeOtherPlatform = FakeModule({"python_implementation": lambda: "lvhpy"})
-emptyPlatform = FakeModule({})
 
 
 
 class WithPlatformTests(TestCase):
     """
-    Tests for L{_checkCPython} when used with a (fake) recent C{platform}
-    module.
+    Tests for L{_checkCPython} when used with a (fake) C{platform} module.
     """
     def test_cpython(self):
         """
@@ -454,73 +452,3 @@ class WithPlatformTests(TestCase):
         says we're not running on CPython.
         """
         self.assertFalse(dist._checkCPython(platform=fakeOtherPlatform))
-
-
-
-fakeCPythonSys = FakeModule({"subversion": ("CPython", None, None)})
-fakeOtherSys = FakeModule({"subversion": ("lvhpy", None, None)})
-
-
-def _checkCPythonWithEmptyPlatform(sys):
-    """
-    A partially applied L{_checkCPython} that uses an empty C{platform}
-    module (otherwise the code this test case is supposed to test won't
-    even be called).
-    """
-    return dist._checkCPython(platform=emptyPlatform, sys=sys)
-
-
-
-class WithSubversionTest(TestCase):
-    """
-    Tests for L{_checkCPython} when used with a (fake) recent (2.5+)
-    C{sys.subversion}. This is effectively only relevant for 2.5, since 2.6 and
-    beyond have L{platform.python_implementation}, which is tried first.
-    """
-    def test_cpython(self):
-        """
-        L{_checkCPython} returns C{True} when C{platform.python_implementation}
-        is unavailable and C{sys.subversion} says we're running on CPython.
-        """
-        isCPython = _checkCPythonWithEmptyPlatform(fakeCPythonSys)
-        self.assertTrue(isCPython)
-
-
-    def test_other(self):
-        """
-        L{_checkCPython} returns C{False} when C{platform.python_implementation}
-        is unavailable and C{sys.subversion} says we're not running on CPython.
-        """
-        isCPython = _checkCPythonWithEmptyPlatform(fakeOtherSys)
-        self.assertFalse(isCPython)
-
-
-
-oldCPythonSys = FakeModule({"modules": {}})
-oldPypySys = FakeModule({"modules": {"__pypy__": None}})
-
-
-class OldPythonsFallbackTest(TestCase):
-    """
-    Tests for L{_checkCPython} when used on a Python 2.4-like platform, when
-    neither C{platform.python_implementation} nor C{sys.subversion} is
-    available.
-    """
-    def test_cpython(self):
-        """
-        L{_checkCPython} returns C{True} when both
-        C{platform.python_implementation} and C{sys.subversion} are unavailable
-        and there is no C{__pypy__} module in C{sys.modules}.
-        """
-        isCPython = _checkCPythonWithEmptyPlatform(oldCPythonSys)
-        self.assertTrue(isCPython)
-
-
-    def test_pypy(self):
-        """
-        L{_checkCPython} returns C{False} when both
-        C{platform.python_implementation} and C{sys.subversion} are unavailable
-        and there is a C{__pypy__} module in C{sys.modules}.
-        """
-        isCPython = _checkCPythonWithEmptyPlatform(oldPypySys)
-        self.assertFalse(isCPython)
