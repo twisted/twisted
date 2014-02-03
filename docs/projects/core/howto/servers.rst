@@ -22,7 +22,7 @@ The ``buildProtocol`` method of the ``Factory`` is used to create a ``Protocol``
 
 It is usually useful to be able to offer the same service on multiple ports or network addresses.
 This is why the ``Factory`` does not listen to connections, and in fact does not know anything about the network.
-See :doc:`the endpoints documentation <endpoints>` for more information, or :api:`twisted.internet.interfaces.IReactorTCP.listenTCP <listenTCP>` and the other ``IReactor*.listen*`` APIs for the lower level APIs that endpoints are based on.
+See :doc:`the endpoints documentation <endpoints>` for more information, or :api:`twisted.internet.interfaces.IReactorTCP.listenTCP <IReactorTCP.listenTCP>` and the other ``IReactor*.listen*`` APIs for the lower level APIs that endpoints are based on.
 
 This document will explain each step of the way.
 
@@ -88,54 +88,22 @@ You will see why this object is called a "factory" in the next section.
 loseConnection() and abortConnection()
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+In the code above, ``loseConnection`` is called immediately after writing to the transport.
+The ``loseConnection`` call will close the connection only when all the data has been written by Twisted out to the operating system, so it is safe to use in this case without worrying about transport writes being lost.
+If a :doc:`producer <producers>` is being used with the transport, ``loseConnection`` will only close the connection once the producer is unregistered.
 
-
-In the code above, ``loseConnection`` is called immediately
-after writing to the transport. The ``loseConnection`` call will
-close the connection only when all the data has been written by Twisted
-out to the operating system, so it is safe to use in this case without
-worrying about transport writes being lost. If
-a :doc:`producer <producers>` is being used with the
-transport, ``loseConnection`` will only close the connection once
-the producer is unregistered.
-
-
-
-
-In some cases, waiting until all the data is written out is not what we
-want. Due to network failures, or bugs or maliciousness in the other side
-of the connection, data written to the transport may not be deliverable,
-and so even though ``loseConnection`` was called the connection
-will not be lost. In these cases, ``abortConnection`` can be
-used: it closes the connection immediately, regardless of buffered data
-that is still unwritten in the transport, or producers that are still
-registered. Note that ``abortConnection`` is only available in
-Twisted 11.1 and newer.
-
-
-
-
+In some cases, waiting until all the data is written out is not what we want.
+Due to network failures, or bugs or maliciousness in the other side of the connection, data written to the transport may not be deliverable, and so even though ``loseConnection`` was called the connection will not be lost.
+In these cases, ``abortConnection`` can be used: it closes the connection immediately, regardless of buffered data that is still unwritten in the transport, or producers that are still registered.
+Note that ``abortConnection`` is only available in Twisted 11.1 and newer.
 
 
 Using the Protocol
 ~~~~~~~~~~~~~~~~~~
 
+In this section, you will learn how to run a server which uses your ``Protocol``.
 
-
-In this section, you will learn how to run a server which uses your
-``Protocol`` .
-
-
-
-
-Here is code that will run the QOTD server discussed
-earlier:
-
-
-
-
-.. code-block:: python
-
+Here is code that will run the QOTD server discussed earlier::
 
     from twisted.internet.protocol import Factory
     from twisted.internet.endpoints import TCP4ServerEndpoint
@@ -150,85 +118,36 @@ earlier:
     endpoint.listen(QOTDFactory())
     reactor.run()
 
+In this example, I create a protocol ``Factory``.
+I want to tell this factory that its job is to build QOTD protocol instances, so I set its ``buildProtocol`` method to return instances of the QOTD class.
+Then, I want to listen on a TCP port, so I make a ``TCP4ServerEndpoint`` to identify the port that I want to bind to, and then pass the factory I just created to its ``listen`` method.
 
+Because this is a short example, nothing else has yet started up the Twisted reactor.
+``endpoint.listen`` tells the reactor to handle connections to the endpoint's address using a particular protocol, but the reactor needs to be *running* in order for it to do anything.
+``reactor.run()`` starts the reactor and then waits forever for connections to arrive on the port you've specified.
 
-In this example, I create a protocol ``Factory`` .  I want to tell this
-factory that its job is to build QOTD protocol instances, so I set its
-``buildProtocol`` method to return instances of the QOTD class.  Then, I want to listen
-on a TCP port, so I make a ``TCP4ServerEndpoint`` to identify the
-port that I want to bind to, and then pass the factory I just created to
-its ``listen``
-method.
+You can stop the reactor by hitting Control-C in a terminal or calling ``reactor.stop``.
 
-
-
-
-Because this is a short example, nothing else has yet started up the
-Twisted reactor.  ``endpoint.listen`` tells the reactor to handle
-connections to the endpoint's address using a particular protocol, but the
-reactor needs to be *running* in order for it to do anything.
-``reactor.run()`` starts the reactor and then waits forever for
-connections to arrive on the port you've specified.
-
-
-
-
-You can stop the reactor by hitting Control-C in a terminal or calling
-``reactor.stop`` .
-
-
-
-
-For more information on different ways you can listen for incoming
-connections, see :doc:`the documentation for the endpoints API <endpoints>` .
-
-
-
+For more information on different ways you can listen for incoming connections, see :doc:`the documentation for the endpoints API <endpoints>`.
 
 
 Helper Protocols
 ~~~~~~~~~~~~~~~~
 
-
-
 Many protocols build upon similar lower-level abstraction.
 The most popular in internet protocols is being line-based.
 Lines are usually terminated with a CR-LF combinations.
 
+However, quite a few protocols are mixed - they have line-based sections and then raw data sections.
+Examples include HTTP/1.1 and the Freenet protocol.
 
+For those cases, there is the ``LineReceiver`` protocol.
+This protocol dispatches to two different event handlers - ``lineReceived`` and ``rawDataReceived``.
+By default, only ``lineReceived`` will be called, once for each line.
+However, if ``setRawMode`` is called, the protocol will call ``rawDataReceived`` until ``setLineMode`` is called, which returns it to using ``lineReceived``.
+It also provides a method, ``sendLine``, that writes data to the transport along with the delimiter the class uses to split lines (by default, ``\r\n``).
 
-
-However, quite a few protocols are mixed - they have
-line-based sections and then raw data sections. Examples
-include HTTP/1.1 and the Freenet protocol.
-
-
-
-
-For those cases, there is the ``LineReceiver``
-protocol. This protocol dispatches to two different event
-handlers - ``lineReceived`` and
-``rawDataReceived`` . By default, only
-``lineReceived`` will be called, once for each line.
-However, if ``setRawMode`` is called, the protocol
-will call ``rawDataReceived`` until
-``setLineMode`` is called, which returns it to using
-``lineReceived`` . It also provides a method,
-``sendLine`` , that writes data to the transport along
-with the delimiter the class uses to split lines (by default,
-``\r\n`` ).
-
-
-
-
-Here is an example for a simple use of the line
-receiver:
-
-
-
-
-.. code-block:: python
-
+Here is an example for a simple use of the line receiver::
 
     from twisted.protocols.basic import LineReceiver
 
@@ -242,20 +161,9 @@ receiver:
             else:
                 self.sendLine(self.answers[None])
 
-
-
-
 Note that the delimiter is not part of the line.
 
-
-
-
-Several other, less popular, helpers exist, such as a
-netstring based protocol and a prefixed-message-length
-protocol.
-
-
-
+Several other, less popular, helpers exist, such as a netstring based protocol and a prefixed-message-length protocol.
 
 
 State Machines
