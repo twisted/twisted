@@ -69,9 +69,9 @@ Connected UDP
 -------------
 
 A connected UDP socket is slightly different from a standard one as it can only send and receive datagrams to/from a single address.
-However, this does not in any way imply a connection, as datagrams may still arrive in any order, and the port on the other side may have no one listening.
+However this does not in any way imply a connection as datagrams may still arrive in any order and the port on the other side may have no one listening.
 The benefit of the connected UDP socket is that it it **may** provide notification of undelivered packages.
-This depends on many factors, almost all of which are out of the control of the application, but it still presents certain benefits which occasionally make it useful.
+This depends on many factors (almost all of which are out of the control of the application) but still presents certain benefits which occasionally make it useful.
 
 Unlike a regular UDP protocol, we do not need to specify where to send datagrams and are not told where they came from since they can only come from the address to which the socket is 'connected'.
 
