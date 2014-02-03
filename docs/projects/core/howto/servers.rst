@@ -169,56 +169,25 @@ Several other, less popular, helpers exist, such as a netstring based protocol a
 State Machines
 ~~~~~~~~~~~~~~
 
+Many Twisted protocol handlers need to write a state machine to record the state they are at.
+Here are some pieces of advice which help to write state machines:
 
-
-Many Twisted protocol handlers need to write a state machine
-to record the state they are at. Here are some pieces of advice
-which help to write state machines:
-
-
-
-
-
-
-- Don't write big state machines. Prefer to write a state
-  machine which deals with one level of abstraction at a
-  time.
-- Don't mix application-specific code with Protocol
-  handling code. When the protocol handler has to make an
-  application-specific call, keep it as a method call.
-
-
-
-
+- Don't write big state machines.
+  Prefer to write a state machine which deals with one level of abstraction at a time.
+- Don't mix application-specific code with Protocol handling code.
+  When the protocol handler has to make an application-specific call, keep it as a method call.
 
 
 Factories
 ---------
 
-
-
-
 Simpler Protocol Creation
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-
-For a factory which simply instantiates instances of a
-specific protocol class, there is a simpler way to implement the factory.
-The default implementation of the ``buildProtocol`` method calls
-the ``protocol`` attribute of the factory to create
-a ``Protocol`` instance, and then sets an attribute on it
-called ``factory`` which points to the factory
-itself. This lets every ``Protocol`` access, and possibly
-modify, the persistent configuration.  Here is an example that uses these
-features instead of overriding ``buildProtocol`` :
-
-
-
-
-
-.. code-block:: python
-
+For a factory which simply instantiates instances of a specific protocol class, there is a simpler way to implement the factory.
+The default implementation of the ``buildProtocol`` method calls the ``protocol`` attribute of the factory to create a ``Protocol`` instance, and then sets an attribute on it called ``factory`` which points to the factory itself.
+This lets every ``Protocol`` access, and possibly modify, the persistent configuration.
+Here is an example that uses these features instead of overriding ``buildProtocol``::
 
     from twisted.internet.protocol import Factory, Protocol
     from twisted.internet.endpoints import TCP4ServerEndpoint
@@ -245,30 +214,12 @@ features instead of overriding ``buildProtocol`` :
     reactor.run()
 
 
-
-
-
 Factory Startup and Shutdown
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+A Factory has two methods to perform application-specific building up and tearing down (since a Factory is frequently persisted, it is often not appropriate to do them in ``__init__`` or ``__del__``, and would frequently be too early or too late).
 
-
-A Factory has two methods to perform application-specific
-building up and tearing down (since a Factory is frequently
-persisted, it is often not appropriate to do them in ``__init__``
-or ``__del__`` , and would frequently be too early or too late).
-
-
-
-
-Here is an example of a factory which allows its Protocols
-to write to a special log-file:
-
-
-
-
-.. code-block:: python
-
+Here is an example of a factory which allows its Protocols to write to a special log-file::
 
     from twisted.internet.protocol import Factory
     from twisted.protocols.basic import LineReceiver
@@ -294,46 +245,23 @@ to write to a special log-file:
             self.fp.close()
 
 
-
-
-
 Putting it All Together
 -----------------------
 
-
-
-As a final example, here's a simple chat server that allows
-users to choose a username and then communicate with other
-users. It demonstrates the use of shared state in the factory, a
-state machine for each individual protocol, and communication
-between different protocols.
-
-
-
-
+As a final example, here's a simple chat server that allows users to choose a username and then communicate with other users.
+It demonstrates the use of shared state in the factory, a state machine for each individual protocol, and communication between different protocols.
 
 :download:`chat.py <listings/servers/chat.py>`
 
 .. literalinclude:: listings/servers/chat.py
 
-
-The only API you might not be familiar with
-is ``listenTCP`` . :api:`twisted.internet.interfaces.IReactorTCP.listenTCP <listenTCP>` is
-the method which connects a ``Factory`` to the network.
-This is the lower-level API
-that :doc:`endpoints <endpoints>` wraps for you.
-
-
-
+The only API you might not be familiar with is ``listenTCP``.
+:api:`twisted.internet.interfaces.IReactorTCP.listenTCP <listenTCP>` is the method which connects a ``Factory`` to the network.
+This is the lower-level API that :doc:`endpoints <endpoints>` wraps for you.
 
 Here's a sample transcript of a chat session (***this*** is text entered by the user):
 
-
-
-
-
 .. code-block:: console
-
 
     $ ***telnet 127.0.0.1 8123***
     Trying 127.0.0.1...
@@ -349,7 +277,3 @@ Here's a sample transcript of a chat session (***this*** is text entered by the 
     ***twisted makes writing servers so easy!***
     <alice> I couldn't agree more
     <carrol> yeah, it's great
-
-
-
-
