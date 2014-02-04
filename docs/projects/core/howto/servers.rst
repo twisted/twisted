@@ -12,12 +12,12 @@ Overview
 This document explains how you can use Twisted to implement network protocol parsing and handling for TCP servers (the same code can be reused for SSL and Unix socket servers).
 There is a :doc:`separate document <udp>` covering UDP.
 
-Your protocol handling class will usually subclass :api:`twisted.internet.protocol.Protocol <Protocol>`.
+Your protocol handling class will usually subclass :api:`twisted.internet.protocol.Protocol`.
 Most protocol handlers inherit either from this class or from one of its convenience children.
 An instance of the protocol class is instantiated per-connection, on demand, and will go away when the connection is finished.
 This means that persistent configuration is not saved in the ``Protocol``.
 
-The persistent configuration is kept in a ``Factory`` class, which usually inherits from :api:`twisted.internet.protocol.Factory <Factory>`.
+The persistent configuration is kept in a ``Factory`` class, which usually inherits from :api:`twisted.internet.protocol.Factory`.
 The ``buildProtocol`` method of the ``Factory`` is used to create a ``Protocol`` for each new connection.
 
 It is usually useful to be able to offer the same service on multiple ports or network addresses.

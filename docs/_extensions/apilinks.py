@@ -25,6 +25,8 @@ def make_api_link(name, rawtext, text, lineno, inliner,
     else:
         full_name = label = text
 
+    label = repr(options)
+
     #get the base url for api links from the config file
     env = inliner.document.settings.env
     base_url =  env.config.apilinks_base_url
