@@ -12,12 +12,12 @@ Overview
 This document explains how you can use Twisted to implement network protocol parsing and handling for TCP servers (the same code can be reused for SSL and Unix socket servers).
 There is a :doc:`separate document <udp>` covering UDP.
 
-Your protocol handling class will usually subclass :api:`twisted.internet.protocol.Protocol <twisted.internet.protocol.Protocol>`.
+Your protocol handling class will usually subclass :api:`twisted.internet.protocol.Protocol <Protocol>`.
 Most protocol handlers inherit either from this class or from one of its convenience children.
 An instance of the protocol class is instantiated per-connection, on demand, and will go away when the connection is finished.
 This means that persistent configuration is not saved in the ``Protocol``.
 
-The persistent configuration is kept in a ``Factory`` class, which usually inherits from :api:`twisted.internet.protocol.Factory <twisted.internet.protocol.Factory>`.
+The persistent configuration is kept in a ``Factory`` class, which usually inherits from :api:`twisted.internet.protocol.Factory <Factory>`.
 The ``buildProtocol`` method of the ``Factory`` is used to create a ``Protocol`` for each new connection.
 
 It is usually useful to be able to offer the same service on multiple ports or network addresses.
@@ -56,7 +56,7 @@ Here is an example of a Protocol responding to another event::
 
 This protocol responds to the initial connection with a well known quote, and then terminates the connection.
 
-The connectionMade event is usually where set up of the connection object happens, as well as any initial greetings (as in the QOTD protocol above, which is actually based on RFC 865).
+The ``connectionMade`` event is usually where set up of the connection object happens, as well as any initial greetings (as in the QOTD protocol above, which is actually based on RFC 865).
 The ``connectionLost`` event is where tearing down of any connection-specific objects is done.
 Here is an example::
 
@@ -259,21 +259,22 @@ The only API you might not be familiar with is ``listenTCP``.
 :api:`twisted.internet.interfaces.IReactorTCP.listenTCP <listenTCP>` is the method which connects a ``Factory`` to the network.
 This is the lower-level API that :doc:`endpoints <endpoints>` wraps for you.
 
-Here's a sample transcript of a chat session (``***this***`` is text entered by the user):
+Here's a sample transcript of a chat session (text entered by the user is highlighted):
 
 .. code-block:: console
+    :emphasize-lines: 1,6,8,10,12
 
-    $ ***telnet 127.0.0.1 8123***
+    $ telnet 127.0.0.1 8123
     Trying 127.0.0.1...
     Connected to 127.0.0.1.
     Escape character is '^]'.
     What's your name?
-    ***test***
+    test
     Name taken, please choose another.
-    ***bob***
+    bob
     Welcome, bob!
-    ***hello***
+    hello
     <alice> hi bob
-    ***twisted makes writing servers so easy!***
+    twisted makes writing servers so easy!
     <alice> I couldn't agree more
     <carrol> yeah, it's great
