@@ -888,8 +888,7 @@ class AccessLogTestsMixin(object):
             # Value of the "Referer" header.  Probably incorrectly quoted.
             b'"-" '
             # Value pf the "User-Agent" header.  Probably incorrectly quoted.
-            b'"-"'
-            b"\n",
+            b'"-"' + self.linesep,
             FilePath(logPath).getContent())
 
 
