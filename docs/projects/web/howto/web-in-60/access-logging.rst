@@ -39,9 +39,9 @@ Once you pass ``logPath`` or use ``--logfile`` on the command line the server wi
 Any tools expecting combined log format messages should be able to work with these log files.
 
 :api:`twisted.web.server.Site <Site>` also allows the log format used to be customized using its ``logFormatter`` argument.
-Twisted Web come with one alternate formatter, :api:`twisted.web.http.proxiedLogFormatter <proxiedLogFormatter>`, which is for use behind a proxy that sets the ``X-Forwarded-For`` header.
+Twisted Web comes with one alternate formatter, :api:`twisted.web.http.proxiedLogFormatter <proxiedLogFormatter>`, which is for use behind a proxy that sets the ``X-Forwarded-For`` header.
 It logs the client address taken from this header rather than the network address of the client directly connected to the server.
-Here's the complete code for an example that both these features:
+Here's the complete code for an example that uses both these features:
 
 .. code-block:: python
 
@@ -51,6 +51,6 @@ Here's the complete code for an example that both these features:
     from twisted.internet import reactor
 
     resource = File('/tmp')
-    factory = Site(resource, logPath=b"/tmp/access-logging-demo.log", logFormatter=proxiedLogFormatter))
+    factory = Site(resource, logPath=b"/tmp/access-logging-demo.log", logFormatter=proxiedLogFormatter)
     reactor.listenTCP(8888, factory)
     reactor.run()
