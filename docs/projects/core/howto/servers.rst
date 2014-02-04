@@ -56,7 +56,7 @@ Here is an example of a Protocol responding to another event::
 
 This protocol responds to the initial connection with a well known quote, and then terminates the connection.
 
-The ``connectionMade`` event is usually where set up of the connection object happens, as well as any initial greetings (as in the QOTD protocol above, which is actually based on RFC 865).
+The connectionMade event is usually where set up of the connection object happens, as well as any initial greetings (as in the QOTD protocol above, which is actually based on RFC 865).
 The ``connectionLost`` event is where tearing down of any connection-specific objects is done.
 Here is an example::
 
@@ -259,22 +259,21 @@ The only API you might not be familiar with is ``listenTCP``.
 :api:`twisted.internet.interfaces.IReactorTCP.listenTCP <listenTCP>` is the method which connects a ``Factory`` to the network.
 This is the lower-level API that :doc:`endpoints <endpoints>` wraps for you.
 
-Here's a sample transcript of a chat session (text entered by the user is highlighted):
+Here's a sample transcript of a chat session (``***this***`` is text entered by the user):
 
 .. code-block:: console
-    :emphasize-lines: 1,6,8,10,12
 
-    $ telnet 127.0.0.1 8123
+    $ ***telnet 127.0.0.1 8123***
     Trying 127.0.0.1...
     Connected to 127.0.0.1.
     Escape character is '^]'.
     What's your name?
-    test
+    ***test***
     Name taken, please choose another.
-    bob
+    ***bob***
     Welcome, bob!
-    hello
+    ***hello***
     <alice> hi bob
-    twisted makes writing servers so easy!
+    ***twisted makes writing servers so easy!***
     <alice> I couldn't agree more
     <carrol> yeah, it's great
