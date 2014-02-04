@@ -30,9 +30,9 @@ This can be done using the function :api:`twisted.internet.interfaces.IReactorTh
 Running code in threads
 -----------------------
 
-Sometimes we may want to run methods in threads - for example, in order to access blocking APIs.
+Sometimes we may want to run methods in threads.
+For example, in order to access blocking APIs.
 Twisted provides methods for doing so using the :api:`twisted.internet.interfaces.IReactorThreads <IReactorThreads>` API.
-Additional utility functions are provided in :api:`twisted.internet.threads <twisted.internet.threads>`.
 Basically, these methods allow us to queue methods to be run by a thread pool.
 
 For example, to run a method in a thread we can do::
@@ -52,7 +52,7 @@ For example, to run a method in a thread we can do::
 Utility Methods
 ---------------
 
-The utility methods are not part of the :api:`twisted.internet.reactor <twisted.internet.reactor>` APIs, but are implemented in :api:`twisted.internet.threads <twisted.internet.threads>`.
+The utility methods are not part of the :api:`twisted.internet.reactor <reactor>` APIs, but are implemented in :api:`twisted.internet.threads <threads>`.
 
 If we have multiple methods to run sequentially within a thread, we can do::
 
@@ -114,7 +114,7 @@ If the function passed to it returns a Deferred, it will return the value the De
 Managing the Thread Pool
 ------------------------
 
-The thread pool is implemented by :api:`twisted.python.threadpool.ThreadPool <twisted.python.threadpool.ThreadPool>`.
+The thread pool is implemented by :api:`twisted.python.threadpool.ThreadPool <ThreadPool>`.
 
 We may want to modify the size of the thread pool, increasing or decreasing the number of threads in use.
 We can do this do this quite easily::
