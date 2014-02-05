@@ -1911,6 +1911,14 @@ class Record_SPF(Record_TXT):
 
 
 
+def responseFromMessage(cls, message):
+    """
+    """
+    r = cls(id=message.id, answer=True)
+    r.queries = message.queries[:]
+    return r
+
+
 class Message(tputil.FancyEqMixin):
     """
     L{Message} contains all the information represented by a single

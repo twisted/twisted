@@ -4543,3 +4543,51 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
             (15, 0),
             (standardMessage.rCode, standardMessage.additional[0].extendedRCODE)
         )
+
+
+class RespondToMessageTests(unittest.SynchronousTestCase):
+    def test_responseType(self):
+        """
+        L{dns.responseFromMessage} returns a new instance of C{cls}
+        """
+        class SuppliedClass(object):
+            id = 1
+            queries = []
+
+        expectedClass = dns.Message
+        r = dns.responseFromMessage(cls=expectedClass, message=SuppliedClass())
+        self.assertIsInstance(r, expectedClass)
+
+
+    def test_responseId(self):
+        """
+        L{dns.responseFromMessage} copies the C{id} attribute of the original
+        message.
+        """
+        r = dns.responseFromMessage(cls=dns.Message, message=dns.Message(id=1234))
+        self.assertEqual(1234, r.id)
+
+
+    def test_responseAnswer(self):
+        """
+        L{dns.responseFromMessage} sets the C{answer} flag to L{True}
+        """
+        request = dns.Message()
+        response = dns.responseFromMessage(cls=dns.Message, message=request)
+        self.assertEqual(
+            (False, True),
+            (request.answer, response.answer)
+        )
+
+
+    def test_responseQueries(self):
+        """
+        L{dns.responseFromMessage} copies the C{queries} attribute of the
+        original message.
+        """
+        message = dns.Message()
+        expectedQueries = [object(), object(), object()]
+        message.queries = expectedQueries[:]
+
+        r = dns.responseFromMessage(cls=dns.Message, message=message)
+        self.assertEqual(expectedQueries, r.queries)
