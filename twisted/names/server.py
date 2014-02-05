@@ -207,6 +207,8 @@ class DNSServerFactory(protocol.ServerFactory):
             or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
+        message.recAv = self.canRecurse
+        message.answer = 1
         message.rCode = dns.OK
         message.answers = ans
         for x in ans:
@@ -252,6 +254,9 @@ class DNSServerFactory(protocol.ServerFactory):
             or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
+        message.recAv = self.canRecurse
+        message.answer = 1
+
         if failure.check(dns.DomainError, dns.AuthoritativeDomainError):
             message.rCode = dns.ENAME
         else:
@@ -465,9 +470,6 @@ class DNSServerFactory(protocol.ServerFactory):
                 log.msg(
                     "%s query from %r" % (
                         s, address or proto.transport.getPeer()))
-
-        message.recAv = self.canRecurse
-        message.answer = 1
 
         if not self.allowQuery(message, proto, address):
             message.rCode = dns.EREFUSED
