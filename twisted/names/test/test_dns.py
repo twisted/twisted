@@ -4591,3 +4591,12 @@ class RespondToMessageTests(unittest.SynchronousTestCase):
 
         r = dns.responseFromMessage(cls=dns.Message, message=message)
         self.assertEqual(expectedQueries, r.queries)
+
+
+    def test_responseKwargs(self):
+        """
+        L{dns.responseFromMessage} accepts other C{kwargs} which are assigned to
+        the new message before it is returned.
+        """
+        response = dns.responseFromMessage(cls=dns.Message, message=dns.Message(), rCode=123)
+        self.assertEqual(123, response.rCode)

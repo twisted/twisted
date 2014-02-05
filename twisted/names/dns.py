@@ -1911,12 +1911,13 @@ class Record_SPF(Record_TXT):
 
 
 
-def responseFromMessage(cls, message):
+def responseFromMessage(cls, message, **kwargs):
     """
     """
-    r = cls(id=message.id, answer=True)
+    r = cls(id=message.id, answer=True, **kwargs)
     r.queries = message.queries[:]
     return r
+
 
 
 class Message(tputil.FancyEqMixin):
