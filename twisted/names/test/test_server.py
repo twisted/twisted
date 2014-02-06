@@ -209,7 +209,6 @@ class DNSServerFactoryTests(unittest.TestCase):
     """
     Tests for L{server.DNSServerFactory}.
     """
-
     def test_resolverType(self):
         """
         L{server.DNSServerFactory.resolver} is a L{resolve.ResolverChain}
@@ -705,6 +704,48 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertEqual(
             gotResolverErrorArgs,
             [((stubFailure, stubProtocol, m, dummyAddress), {})])
+
+
+    def test_messageFactory(self):
+        """
+        L{server.DNSServerFactory} has a C{_messageFactory} attribute which is
+        L{dns.Message} by default.
+        """
+        self.assertIs(dns.Message, server.DNSServerFactory._messageFactory)
+
+
+    def test_gotResolverResponseCallsMessageFactory(self):
+        """
+        L{server.DNSServerFactory.gotResolverResponse} calls
+        C{self._messageFactory._responseFromMessage} to generate a response
+        message from the request message. It supplies the request message and
+        other keyword arguments which should be passed to the response message
+        initialiser.
+        """
+        f = server.DNSServerFactory()
+        class RaisedArguments(Exception):
+            def __init__(self, args, kwargs):
+                self.args = args
+                self.kwargs = kwargs
+        class RaisingMessageFactory():
+            @classmethod
+            def _responseFromMessage(self, *args, **kwargs):
+                raise RaisedArguments(args, kwargs)
+        f._messageFactory = RaisingMessageFactory
+        f.canRecurse = object()
+
+        requestMessage = dns.Message()
+        e = self.assertRaises(
+            RaisedArguments,
+            f.gotResolverResponse,
+            ([], [], []),
+            protocol=None, message=requestMessage, address=None
+        )
+        self.assertEqual(
+            ((), dict(message=requestMessage, rCode=dns.OK, recAv=f.canRecurse,
+                      auth=False)),
+            (e.args, e.kwargs)
+        )
 
 
     def test_gotResolverResponse(self):

@@ -59,6 +59,8 @@ class DNSServerFactory(protocol.ServerFactory):
 
     protocol = dns.DNSProtocol
     cache = None
+    _messageFactory = dns.Message
+
 
     def __init__(self, authorities=None, caches=None, clients=None, verbose=0):
         """
@@ -207,14 +209,19 @@ class DNSServerFactory(protocol.ServerFactory):
             or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
-        message.recAv = self.canRecurse
-        message.answer = 1
-        message.rCode = dns.OK
-        message.answers = ans
+        authoritative = False
         for x in ans:
             if x.isAuthoritative():
-                message.auth = 1
+                authoritative = True
                 break
+
+        message = self._messageFactory._responseFromMessage(
+            message=message,
+            recAv=self.canRecurse,
+            rCode=dns.OK,
+            auth=authoritative
+        )
+        message.answers = ans
         message.authority = auth
         message.additional = add
         self.sendReply(protocol, message, address)

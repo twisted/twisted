@@ -2059,6 +2059,11 @@ class Message(tputil.FancyEqMixin):
         self.additional = []
 
 
+    @classmethod
+    def _responseFromMessage(cls, message, **kwargs):
+        return responseFromMessage(cls, message=message, **kwargs)
+
+
     def __repr__(self):
         """
         Generate a repr of this L{Message}.
