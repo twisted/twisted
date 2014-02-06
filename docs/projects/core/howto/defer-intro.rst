@@ -79,10 +79,6 @@ If "returning" no longer meant "finishing"?
 
 *Asynchronous operations*?
 
-
-
-
-
 How would we prevent our pod from hurtling into the still-closed doors?
 How could we respond to a potential failure to open the doors at all?
 What if opening the doors gave us some crucial information that we needed in order to launch the pod?
@@ -309,7 +305,8 @@ It is equivalent to::
 
     d.addCallbacks(g, g)
 
-Why "roughly" ?  Because if ``f`` raises, ``g`` will be passed a :api:`twisted.python.failure.Failure <Failure>` object representing the exception.
+Why "roughly"?
+Because if ``f`` raises, ``g`` will be passed a :api:`twisted.python.failure.Failure <Failure>` object representing the exception.
 Otherwise, ``g`` will be passed the asynchronous equivalent of the return value of ``f()`` (i.e. ``y``).
 
 
