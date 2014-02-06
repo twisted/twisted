@@ -174,6 +174,28 @@ class DNSServerFactory(protocol.ServerFactory):
                 time.time() - message.timeReceived))
 
 
+    def _responseFromMessage(self, message, answers, authority, additional):
+        """
+
+        """
+        authoritativeAnswer = False
+        for x in answers:
+            if x.isAuthoritative():
+                authoritativeAnswer = True
+                break
+
+        response = self._messageFactory._responseFromMessage(
+            message=message,
+            recAv=self.canRecurse,
+            rCode=dns.OK,
+            auth=authoritativeAnswer
+        )
+        response.answers = answers
+        response.authority = authority
+        response.additional = additional
+        return response
+
+
     def gotResolverResponse(self, (ans, auth, add), protocol, message, address):
         """
         A callback used by L{DNSServerFactory.handleQuery} for handling the
@@ -209,22 +231,8 @@ class DNSServerFactory(protocol.ServerFactory):
             or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
-        authoritative = False
-        for x in ans:
-            if x.isAuthoritative():
-                authoritative = True
-                break
-
-        message = self._messageFactory._responseFromMessage(
-            message=message,
-            recAv=self.canRecurse,
-            rCode=dns.OK,
-            auth=authoritative
-        )
-        message.answers = ans
-        message.authority = auth
-        message.additional = add
-        self.sendReply(protocol, message, address)
+        response = self._responseFromMessage(message, ans, auth, add)
+        self.sendReply(protocol, response, address)
 
         l = len(ans) + len(auth) + len(add)
         self._verboseLog("Lookup found %d record%s" % (l, l != 1 and "s" or ""))

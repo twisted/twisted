@@ -791,6 +791,36 @@ class DNSServerFactoryTests(unittest.TestCase):
             args
         )
 
+
+    def test_gotResolverResponseCallsResponseFromMessage(self):
+        """
+        L{server.DNSServerFactory.gotResolverResponse} calls
+        L{server.DNSServerFactory._responseFromMessage} to generate a response.
+        """
+        f = NoResponseDNSServerFactory()
+        class RaisedArguments(Exception):
+            def __init__(self, args, kwargs):
+                self.args = args
+                self.kwargs = kwargs
+        def raiser(*args, **kwargs):
+            raise RaisedArguments(args, kwargs)
+
+        f._responseFromMessage = raiser
+
+        m = dns.Message()
+        m.timeReceived = 1
+
+        e = self.assertRaises(
+            RaisedArguments,
+            f.gotResolverResponse,
+            ([], [], []),
+            protocol=None, message=m, address=None
+        )
+        self.assertEqual(
+            ((m, [], [], []), {}),
+            (e.args, e.kwargs)
+        )
+
     def test_gotResolverResponseAuthoritativeMessage(self):
         """
         L{server.DNSServerFactory.gotResolverResponse} marks the response
