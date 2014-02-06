@@ -866,40 +866,6 @@ class MessageTestCase(unittest.SynchronousTestCase):
         self.assertTrue(message.answers[0].auth)
 
 
-    def test_responseFromMessageResponseType(self):
-        """
-        L{dns.Message._responseFromMessage} is a constructor function which
-        generates a new I{answer} message from an existing L{dns.Message} like
-        instance.
-        """
-        request = dns.Message()
-        response = dns.Message._responseFromMessage(message=request)
-        self.assertIsNot(
-            request,
-            response
-        )
-        self.assertIsInstance(
-            response,
-            dns.Message)
-
-
-    def test_responseFromMessageResponseAttributes(self):
-        """
-        L{dns.Message._responseFromMessage} returns a message whose {id} is the
-        same as the supplied request message, whose queries are those of on the
-        request, and whose answer flag is set to L{True}. Other keyword
-        arguments are passed through to the message initialiser.
-        """
-        request = dns.Message(id=1234)
-        request.queries = [object()]
-        response = dns.Message._responseFromMessage(
-            message=request, rCode=1234, recAv=True)
-        self.assertEqual(
-            (request.id, request.queries, True, 1234, True),
-            (response.id, response.queries, response.answer,
-             response.rCode, response.recAv)
-        )
-
 
 class MessageComparisonTests(ComparisonTestsMixin,
                              unittest.SynchronousTestCase):
@@ -3738,6 +3704,41 @@ class CommonConstructorTestsMixin(object):
         self.assertEqual(self.messageFactory().additional, [])
 
 
+    def test_responseFromMessageResponseType(self):
+        """
+        L{dns.Message._responseFromMessage} is a constructor function which
+        generates a new I{answer} message from an existing L{dns.Message} like
+        instance.
+        """
+        request = self.messageFactory()
+        response = self.messageFactory._responseFromMessage(message=request)
+        self.assertIsNot(
+            request,
+            response
+        )
+        self.assertIsInstance(
+            response,
+            self.messageFactory)
+
+
+    def test_responseFromMessageResponseAttributes(self):
+        """
+        L{dns.Message._responseFromMessage} returns a message whose {id} is the
+        same as the supplied request message, whose queries are those of on the
+        request, and whose answer flag is set to L{True}. Other keyword
+        arguments are passed through to the message initialiser.
+        """
+        request = self.messageFactory(id=1234)
+        request.queries = [object()]
+        response = self.messageFactory._responseFromMessage(
+            message=request, rCode=1234, recAv=True)
+        self.assertEqual(
+            (request.id, request.queries, True, 1234, True),
+            (response.id, response.queries, response.answer,
+             response.rCode, response.recAv)
+        )
+
+
 
 class EDNSMessageConstructorTests(ConstructorTestsMixin,
                                   CommonConstructorTestsMixin,
@@ -3750,7 +3751,7 @@ class EDNSMessageConstructorTests(ConstructorTestsMixin,
 
 
 
-class MessageContstructorTests(ConstructorTestsMixin,
+class MessageConstructorTests(ConstructorTestsMixin,
                                CommonConstructorTestsMixin,
                                unittest.SynchronousTestCase):
     """

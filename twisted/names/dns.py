@@ -2430,6 +2430,11 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.additional = additional
 
 
+    @classmethod
+    def _responseFromMessage(cls, message, **kwargs):
+        return responseFromMessage(cls, message=message, **kwargs)
+
+
     def _toMessage(self):
         """
         Convert to a standard L{dns.Message}.
