@@ -1911,7 +1911,7 @@ class Record_SPF(Record_TXT):
 
 
 
-def responseFromMessage(cls, message, **kwargs):
+def _responseFromMessage(cls, message, **kwargs):
     """
     """
     r = cls(id=message.id, answer=True, **kwargs)
@@ -2061,7 +2061,7 @@ class Message(tputil.FancyEqMixin):
 
     @classmethod
     def _responseFromMessage(cls, message, **kwargs):
-        return responseFromMessage(cls, message=message, **kwargs)
+        return _responseFromMessage(cls, message=message, **kwargs)
 
 
     def __repr__(self):
@@ -2432,7 +2432,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     @classmethod
     def _responseFromMessage(cls, message, **kwargs):
-        return responseFromMessage(cls, message=message, **kwargs)
+        return _responseFromMessage(cls, message=message, **kwargs)
 
 
     def _toMessage(self):

@@ -4580,35 +4580,36 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         )
 
 
-class RespondToMessageTests(unittest.SynchronousTestCase):
+class RespondFromMessageTests(unittest.SynchronousTestCase):
     def test_responseType(self):
         """
-        L{dns.responseFromMessage} returns a new instance of C{cls}
+        L{dns._responseFromMessage} returns a new instance of C{cls}
         """
         class SuppliedClass(object):
             id = 1
             queries = []
 
         expectedClass = dns.Message
-        r = dns.responseFromMessage(cls=expectedClass, message=SuppliedClass())
+        r = dns._responseFromMessage(cls=expectedClass, message=SuppliedClass())
         self.assertIsInstance(r, expectedClass)
 
 
     def test_responseId(self):
         """
-        L{dns.responseFromMessage} copies the C{id} attribute of the original
+        L{dns._responseFromMessage} copies the C{id} attribute of the original
         message.
         """
-        r = dns.responseFromMessage(cls=dns.Message, message=dns.Message(id=1234))
+        r = dns._responseFromMessage(cls=dns.Message,
+                                     message=dns.Message(id=1234))
         self.assertEqual(1234, r.id)
 
 
     def test_responseAnswer(self):
         """
-        L{dns.responseFromMessage} sets the C{answer} flag to L{True}
+        L{dns._responseFromMessage} sets the C{answer} flag to L{True}
         """
         request = dns.Message()
-        response = dns.responseFromMessage(cls=dns.Message, message=request)
+        response = dns._responseFromMessage(cls=dns.Message, message=request)
         self.assertEqual(
             (False, True),
             (request.answer, response.answer)
@@ -4617,21 +4618,22 @@ class RespondToMessageTests(unittest.SynchronousTestCase):
 
     def test_responseQueries(self):
         """
-        L{dns.responseFromMessage} copies the C{queries} attribute of the
+        L{dns._responseFromMessage} copies the C{queries} attribute of the
         original message.
         """
         message = dns.Message()
         expectedQueries = [object(), object(), object()]
         message.queries = expectedQueries[:]
 
-        r = dns.responseFromMessage(cls=dns.Message, message=message)
+        r = dns._responseFromMessage(cls=dns.Message, message=message)
         self.assertEqual(expectedQueries, r.queries)
 
 
     def test_responseKwargs(self):
         """
-        L{dns.responseFromMessage} accepts other C{kwargs} which are assigned to
+        L{dns._responseFromMessage} accepts other C{kwargs} which are assigned to
         the new message before it is returned.
         """
-        response = dns.responseFromMessage(cls=dns.Message, message=dns.Message(), rCode=123)
+        response = dns._responseFromMessage(
+            cls=dns.Message, message=dns.Message(), rCode=123)
         self.assertEqual(123, response.rCode)
