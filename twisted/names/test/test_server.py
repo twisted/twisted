@@ -887,6 +887,36 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertIs(additional, expectedAdditional)
 
 
+    def test_gotResolverErrorCallsResponseFromMessage(self):
+        """
+        L{server.DNSServerFactory.gotResolverError} calls
+        L{server.DNSServerFactory._responseFromMessage} to generate a response.
+        """
+        f = NoResponseDNSServerFactory()
+        class RaisedArguments(Exception):
+            def __init__(self, args, kwargs):
+                self.args = args
+                self.kwargs = kwargs
+        def raiser(*args, **kwargs):
+            raise RaisedArguments(args, kwargs)
+
+        f._responseFromMessage = raiser
+
+        m = dns.Message()
+        m.timeReceived = 1
+
+        e = self.assertRaises(
+            RaisedArguments,
+            f.gotResolverError,
+            failure.Failure(error.DomainError()),
+            protocol=None, message=m, address=None
+        )
+        self.assertEqual(
+            ((), dict(message=m, rCode=dns.ENAME)),
+            (e.args, e.kwargs)
+        )
+
+
     def _assertMessageRcodeForError(self, responseError, expectedMessageCode):
         """
         L{server.DNSServerFactory.gotResolver} accepts a L{failure.Failure} and

@@ -278,16 +278,15 @@ class DNSServerFactory(protocol.ServerFactory):
             or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
-        message.recAv = self.canRecurse
-        message.answer = 1
-
         if failure.check(dns.DomainError, dns.AuthoritativeDomainError):
-            message.rCode = dns.ENAME
+            rCode = dns.ENAME
         else:
-            message.rCode = dns.ESERVER
+            rCode = dns.ESERVER
             log.err(failure)
 
-        self.sendReply(protocol, message, address)
+        response = self._responseFromMessage(message=message, rCode=rCode)
+
+        self.sendReply(protocol, response, address)
         self._verboseLog("Lookup failed")
 
 
