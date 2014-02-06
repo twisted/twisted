@@ -114,6 +114,7 @@ class DummyRequest(object):
         self.protoSession = session or Session(0, self)
         self.args = {}
         self.outgoingHeaders = {}
+        self.requestHeaders = Headers()
         self.responseHeaders = Headers()
         self.responseCode = None
         self.headers = {}

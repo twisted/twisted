@@ -85,16 +85,18 @@ except ImportError:
         return (key.encode('charmap'), pdict)
 
 
-from zope.interface import implementer
+from zope.interface import implementer, provider
 
 # twisted imports
-from twisted.python.compat import (_PY3, unicode, intToBytes, networkString,
-                                   nativeString)
+from twisted.python.compat import (
+    _PY3, unicode, intToBytes, networkString, nativeString)
+from twisted.python import log
+from twisted.python.components import proxyForInterface
 from twisted.internet import interfaces, reactor, protocol, address
 from twisted.internet.defer import Deferred
 from twisted.protocols import policies, basic
-from twisted.python import log
 
+from twisted.web.iweb import IRequest, IAccessLogFormatter
 from twisted.web.http_headers import _DictHeaders, Headers
 
 from twisted.web._responses import (
@@ -1823,6 +1825,112 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             request.connectionLost(reason)
 
 
+
+def _escape(s):
+    """
+    Return a string like python repr, but always escaped as if surrounding
+    quotes were double quotes.
+
+    @param s: The string to escape.
+    @type s: L{bytes} or L{unicode}
+
+    @return: An escaped string.
+    @rtype: L{unicode}
+    """
+    if not isinstance(s, bytes):
+        s = s.encode("ascii")
+
+    r = repr(s)
+    if not isinstance(r, unicode):
+        r = r.decode("ascii")
+    if r.startswith(u"b"):
+        r = r[1:]
+    if r.startswith(u"'"):
+        return r[1:-1].replace(u'"', u'\\"').replace(u"\\'", u"'")
+    return r[1:-1]
+
+
+
+@provider(IAccessLogFormatter)
+def combinedLogFormatter(timestamp, request):
+    """
+    @return: A combined log formatted log line for the given request.
+
+    @see: L{IAccessLogFormatter}
+    """
+    referrer = _escape(request.getHeader(b"referer") or b"-")
+    agent = _escape(request.getHeader(b"user-agent") or b"-")
+    line = (
+        u'"%(ip)s" - - %(timestamp)s "%(method)s %(uri)s %(protocol)s" '
+        u'%(code)d %(length)s "%(referrer)s" "%(agent)s"' % dict(
+            ip=_escape(request.getClientIP() or b"-"),
+            timestamp=timestamp,
+            method=_escape(request.method),
+            uri=_escape(request.uri),
+            protocol=_escape(request.clientproto),
+            code=request.code,
+            length=request.sentLength or u"-",
+            referrer=referrer,
+            agent=agent,
+            ))
+    return line
+
+
+
+class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
+    """
+    Add a layer on top of another request that only uses the value of an
+    X-Forwarded-For header as the result of C{getClientIP}.
+    """
+    def getClientIP(self):
+        """
+        @return: The client address (the first address) in the value of the
+            I{X-Forwarded-For header}.  If the header is not present, return
+            C{b"-"}.
+        """
+        return self._request.requestHeaders.getRawHeaders(
+            b"x-forwarded-for", [b"-"])[0].split(b",")[0].strip()
+
+    # These are missing from the interface.  Forward them manually.
+    @property
+    def clientproto(self):
+        """
+        @return: The protocol version in the request.
+        @rtype: L{bytes}
+        """
+        return self._request.clientproto
+
+    @property
+    def code(self):
+        """
+        @return: The response code for the request.
+        @rtype: L{int}
+        """
+        return self._request.code
+
+    @property
+    def sentLength(self):
+        """
+        @return: The number of bytes sent in the response body.
+        @rtype: L{int}
+        """
+        return self._request.sentLength
+
+
+
+@provider(IAccessLogFormatter)
+def proxiedLogFormatter(timestamp, request):
+    """
+    @return: A combined log formatted log line for the given request but use
+        the value of the I{X-Forwarded-For} header as the value for the client
+        IP address.
+
+    @see: L{IAccessLogFormatter}
+    """
+    return combinedLogFormatter(timestamp, _XForwardedForRequest(request))
+
+
+
 class HTTPFactory(protocol.ServerFactory):
     """
     Factory for HTTP server.
@@ -1834,6 +1942,16 @@ class HTTPFactory(protocol.ServerFactory):
     @ivar _logDateTimeCall: A delayed call for the next update to the cached
         log datetime string.
     @type _logDateTimeCall: L{IDelayedCall} provided
+
+    @ivar _logFormatter: See the C{logFormatter} parameter to L{__init__}
+
+    @ivar _nativeize: A flag that indicates whether the log file being written
+        to wants native strings (C{True}) or bytes (C{False}).  This is only to
+        support writing to L{twisted.python.log} which, unfortunately, works
+        with native strings.
+
+    @ivar _reactor: An L{IReactorTime} provider used to compute logging
+        timestamps.
     """
 
     protocol = HTTPChannel
@@ -1842,11 +1960,21 @@ class HTTPFactory(protocol.ServerFactory):
 
     timeOut = 60 * 60 * 12
 
-    def __init__(self, logPath=None, timeout=60*60*12):
+    _reactor = reactor
+
+    def __init__(self, logPath=None, timeout=60*60*12, logFormatter=None):
+        """
+        @param logFormatter: An object to format requests into log lines for
+            the access log.
+        @type logFormatter: L{IAccessLogFormatter} provider
+        """
         if logPath is not None:
             logPath = os.path.abspath(logPath)
         self.logPath = logPath
         self.timeOut = timeout
+        if logFormatter is None:
+            logFormatter = combinedLogFormatter
+        self._logFormatter = logFormatter
 
         # For storing the cached log datetime and the callback to update it
         self._logDateTime = None
@@ -1857,8 +1985,8 @@ class HTTPFactory(protocol.ServerFactory):
         """
         Update log datetime periodically, so we aren't always recalculating it.
         """
-        self._logDateTime = datetimeToLogString()
-        self._logDateTimeCall = reactor.callLater(1, self._updateLogDateTime)
+        self._logDateTime = datetimeToLogString(self._reactor.seconds())
+        self._logDateTimeCall = self._reactor.callLater(1, self._updateLogDateTime)
 
 
     def buildProtocol(self, addr):
@@ -1877,8 +2005,10 @@ class HTTPFactory(protocol.ServerFactory):
             self._updateLogDateTime()
 
         if self.logPath:
+            self._nativeize = False
             self.logFile = self._openLogFile(self.logPath)
         else:
+            self._nativeize = True
             self.logFile = log.logfile
 
 
@@ -1897,35 +2027,25 @@ class HTTPFactory(protocol.ServerFactory):
         """
         Override in subclasses, e.g. to use twisted.python.logfile.
         """
-        f = open(path, "a", 1)
+        f = open(path, "ab", 1)
         return f
 
-    def _escape(self, s):
-        # pain in the ass. Return a string like python repr, but always
-        # escaped as if surrounding quotes were "".
-        try:
-            s = nativeString(s)
-        except UnicodeError:
-            pass
-        r = repr(s)
-        if r[0] == "'":
-            return r[1:-1].replace('"', '\\"').replace("\\'", "'")
-        return r[1:-1]
 
     def log(self, request):
         """
-        Log a request's result to the logfile, by default in combined log format.
+        Write a line representing C{request} to the access log file.
+
+        @param request: The request object about which to log.
+        @type request: L{Request}
         """
-        if hasattr(self, "logFile"):
-            line = '%s - - %s "%s" %d %s "%s" "%s"\n' % (
-                request.getClientIP(),
-                # request.getUser() or "-", # the remote user is almost never important
-                self._logDateTime,
-                '%s %s %s' % (self._escape(request.method),
-                              self._escape(request.uri),
-                              self._escape(request.clientproto)),
-                request.code,
-                request.sentLength or "-",
-                self._escape(request.getHeader("referer") or "-"),
-                self._escape(request.getHeader("user-agent") or "-"))
-            self.logFile.write(line)
+        try:
+            logFile = self.logFile
+        except AttributeError:
+            pass
+        else:
+            line = self._logFormatter(self._logDateTime, request) + u"\n"
+            if self._nativeize:
+                line = nativeString(line)
+            else:
+                line = line.encode("utf-8")
+            logFile.write(line)

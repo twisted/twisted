@@ -23,6 +23,7 @@ Twisted Web In 60 Seconds
    asynchronous-deferred
    interrupted
    logging-errors
+   access-logging
    wsgi
    http-auth
    session-basics
@@ -53,6 +54,7 @@ here, see the :doc:`Twisted Web tutorial <../using-twistedweb>` and the API docu
 #. :doc:`Asynchronous responses (via Deferred) <asynchronous-deferred>` 
 #. :doc:`Interrupted responses <interrupted>` 
 #. :doc:`Logging errors <logging-errors>` 
+#. :doc:`Access logging <access-logging>` 
 #. :doc:`WSGIs <wsgi>` 
 #. :doc:`HTTP authentication <http-auth>` 
 #. :doc:`Session basics <session-basics>` 
