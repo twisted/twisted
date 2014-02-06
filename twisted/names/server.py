@@ -174,10 +174,17 @@ class DNSServerFactory(protocol.ServerFactory):
                 time.time() - message.timeReceived))
 
 
-    def _responseFromMessage(self, message, answers, authority, additional):
+    def _responseFromMessage(self, message, rCode=dns.OK,
+                             answers=None, authority=None, additional=None,):
         """
 
         """
+        if answers is None:
+            answers = []
+        if authority is None:
+            authority = []
+        if additional is None:
+            additional = []
         authoritativeAnswer = False
         for x in answers:
             if x.isAuthoritative():
@@ -187,7 +194,7 @@ class DNSServerFactory(protocol.ServerFactory):
         response = self._messageFactory._responseFromMessage(
             message=message,
             recAv=self.canRecurse,
-            rCode=dns.OK,
+            rCode=rCode,
             auth=authoritativeAnswer
         )
         response.answers = answers
@@ -231,7 +238,9 @@ class DNSServerFactory(protocol.ServerFactory):
             or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
-        response = self._responseFromMessage(message, ans, auth, add)
+        response = self._responseFromMessage(
+            message=message, rCode=dns.OK,
+            answers=ans, authority=auth, additional=add)
         self.sendReply(protocol, response, address)
 
         l = len(ans) + len(auth) + len(add)

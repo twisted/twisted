@@ -706,48 +706,6 @@ class DNSServerFactoryTests(unittest.TestCase):
             [((stubFailure, stubProtocol, m, dummyAddress), {})])
 
 
-    def test_messageFactory(self):
-        """
-        L{server.DNSServerFactory} has a C{_messageFactory} attribute which is
-        L{dns.Message} by default.
-        """
-        self.assertIs(dns.Message, server.DNSServerFactory._messageFactory)
-
-
-    def test_gotResolverResponseCallsMessageFactory(self):
-        """
-        L{server.DNSServerFactory.gotResolverResponse} calls
-        C{self._messageFactory._responseFromMessage} to generate a response
-        message from the request message. It supplies the request message and
-        other keyword arguments which should be passed to the response message
-        initialiser.
-        """
-        f = server.DNSServerFactory()
-        class RaisedArguments(Exception):
-            def __init__(self, args, kwargs):
-                self.args = args
-                self.kwargs = kwargs
-        class RaisingMessageFactory():
-            @classmethod
-            def _responseFromMessage(self, *args, **kwargs):
-                raise RaisedArguments(args, kwargs)
-        f._messageFactory = RaisingMessageFactory
-        f.canRecurse = object()
-
-        requestMessage = dns.Message()
-        e = self.assertRaises(
-            RaisedArguments,
-            f.gotResolverResponse,
-            ([], [], []),
-            protocol=None, message=requestMessage, address=None
-        )
-        self.assertEqual(
-            ((), dict(message=requestMessage, rCode=dns.OK, recAv=f.canRecurse,
-                      auth=False)),
-            (e.args, e.kwargs)
-        )
-
-
     def test_gotResolverResponse(self):
         """
         L{server.DNSServerFactory.gotResolverResponse} accepts a tuple of
@@ -768,28 +726,6 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertIs(message.answers, answers)
         self.assertIs(message.authority, authority)
         self.assertIs(message.additional, additional)
-
-
-    def test_gotResolverResponseNewMessage(self):
-        """
-        L{server.DNSServerFactory.gotResolverResponse} generates a response
-        message which is a copy of the request message.
-        """
-        args = []
-        f = server.DNSServerFactory()
-        f.canRecurse = True
-        f.sendReply = lambda *a: args.append(a)
-        answers = []
-        authority = []
-        additional = []
-        f.gotResolverResponse(
-            (answers, authority, additional),
-            protocol=None, message=dns.Message(), address=None)
-
-        self.assertEqual(
-            [(None, dns.Message(answer=True, recAv=True, ), None)],
-            args
-        )
 
 
     def test_gotResolverResponseCallsResponseFromMessage(self):
@@ -817,29 +753,94 @@ class DNSServerFactoryTests(unittest.TestCase):
             protocol=None, message=m, address=None
         )
         self.assertEqual(
-            ((m, [], [], []), {}),
+            ((), dict(message=m, rCode=dns.OK,
+                      answers=[], authority=[], additional=[])),
             (e.args, e.kwargs)
         )
 
-    def test_gotResolverResponseAuthoritativeMessage(self):
+
+    def test_responseFromMessageNewMessage(self):
         """
-        L{server.DNSServerFactory.gotResolverResponse} marks the response
+        L{server.DNSServerFactory._responseFromMessage} generates a response
+        message which is a copy of the request message.
+        """
+        f = server.DNSServerFactory()
+        request = dns.Message(answer=False, recAv=False)
+        response = f._responseFromMessage(message=request),
+
+        self.assertIsNot(request, response)
+
+
+    def test_responseFromMessageRecursionAvailable(self):
+        """
+        L{server.DNSServerFactory._responseFromMessage} generates a response
+        message whose C{recAV} attribute is L{True} if
+        L{server.DNSServerFactory.canRecurse} is L{True}.
+        """
+        f = server.DNSServerFactory()
+        f.canRecurse = True
+        response1 = f._responseFromMessage(message=dns.Message(recAv=False))
+        f.canRecurse = False
+        response2 = f._responseFromMessage(message=dns.Message(recAv=True))
+        self.assertEqual(
+            (True, False),
+            (response1.recAv, response2.recAv))
+
+
+    def test_messageFactory(self):
+        """
+        L{server.DNSServerFactory} has a C{_messageFactory} attribute which is
+        L{dns.Message} by default.
+        """
+        self.assertIs(dns.Message, server.DNSServerFactory._messageFactory)
+
+
+    def test_responseFromMessageCallsMessageFactory(self):
+        """
+        L{server.DNSServerFactory._responseFromMessage} calls
+        C{self._messageFactory._responseFromMessage} to generate a response
+        message from the request message. It supplies the request message and
+        other keyword arguments which should be passed to the response message
+        initialiser.
+        """
+        f = server.DNSServerFactory()
+        class RaisedArguments(Exception):
+            def __init__(self, args, kwargs):
+                self.args = args
+                self.kwargs = kwargs
+        class RaisingMessageFactory():
+            @classmethod
+            def _responseFromMessage(self, *args, **kwargs):
+                raise RaisedArguments(args, kwargs)
+        f._messageFactory = RaisingMessageFactory
+
+        requestMessage = dns.Message()
+        e = self.assertRaises(
+            RaisedArguments,
+            f._responseFromMessage,
+            message=requestMessage, rCode=dns.OK
+        )
+        self.assertEqual(
+            ((), dict(message=requestMessage, rCode=dns.OK, recAv=f.canRecurse,
+                      auth=False)),
+            (e.args, e.kwargs)
+        )
+
+
+    def test_responseFromMessageAuthoritativeMessage(self):
+        """
+        L{server.DNSServerFactory._responseFromMessage} marks the response
         message as authoritative if any of the answer records are authoritative.
         """
         f = server.DNSServerFactory()
-        answers = [dns.RRHeader(auth=True)]
-        authority = []
-        additional = []
-        e = self.assertRaises(
-            RaisingProtocol.WriteMessageArguments,
-            f.gotResolverResponse,
-            (answers, authority, additional),
-            protocol=RaisingProtocol(), message=dns.Message(), address=None)
-        (message,), kwargs = e.args
-
-        self.assertTrue(
-            message.auth,
-            'Message is not authoritative. message.auth=%r' % (message.auth,))
+        response1 = f._responseFromMessage(message=dns.Message(),
+                                           answers=[dns.RRHeader(auth=True)])
+        response2 = f._responseFromMessage(message=dns.Message(),
+                                           answers=[dns.RRHeader(auth=False)])
+        self.assertEqual(
+            (True, False),
+            (response1.auth, response2.auth),
+        )
 
 
     def test_gotResolverResponseLogging(self):
