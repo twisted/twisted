@@ -203,6 +203,11 @@ class DNSServerFactory(protocol.ServerFactory):
         # timereceived on every message in the tests.
         response.timeReceived = getattr(message, 'timeReceived', None)
 
+        # XXX: This is another hack. dns.Message.decode sets maxSize=0 which
+        # means that responses are never truncated. I'll maintain that behaviour
+        # here until #6949 is resolved.
+        response.maxSize = message.maxSize
+
         response.answers = answers
         response.authority = authority
         response.additional = additional

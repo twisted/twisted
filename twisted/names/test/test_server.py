@@ -789,9 +789,9 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_responseFromMessageTimeReceived(self):
         """
-        L{server.DNSServerFactory._responseFromMessage} generates a response message
-        whose C{timeReceived} attribute has the same value as that found on the
-        request.
+        L{server.DNSServerFactory._responseFromMessage} generates a response
+        message whose C{timeReceived} attribute has the same value as that found
+        on the request.
         """
         f = server.DNSServerFactory()
         request = dns.Message()
@@ -801,6 +801,23 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertEqual(
             request.timeReceived,
             response.timeReceived
+        )
+
+
+    def test_responseFromMessageMaxSize(self):
+        """
+        L{server.DNSServerFactory._responseFromMessage} generates a response
+        message whose C{maxSize} attribute has the same value as that found
+        on the request.
+        """
+        f = server.DNSServerFactory()
+        request = dns.Message()
+        request.maxSize = 0
+        response = f._responseFromMessage(message=request)
+
+        self.assertEqual(
+            request.maxSize,
+            response.maxSize
         )
 
 
