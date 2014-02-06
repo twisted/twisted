@@ -15,6 +15,26 @@ from twisted.trial import unittest
 
 
 
+class RaisedArguments(Exception):
+    """
+    An exception containing the arguments raised by L{raiser}.
+    """
+    def __init__(self, args, kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+
+
+def raiser(*args, **kwargs):
+    """
+    Raise a L{RaisedArguments} exception containing the supplied arguments.
+
+    Used as a fake when testing the call signatures of  methods and functions.
+    """
+    raise RaisedArguments(args, kwargs)
+
+
+
 class NoResponseDNSServerFactory(server.DNSServerFactory):
     """
     A L{server.DNSServerFactory} subclass which does not attempt to reply to any
@@ -734,13 +754,6 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory._responseFromMessage} to generate a response.
         """
         f = NoResponseDNSServerFactory()
-        class RaisedArguments(Exception):
-            def __init__(self, args, kwargs):
-                self.args = args
-                self.kwargs = kwargs
-        def raiser(*args, **kwargs):
-            raise RaisedArguments(args, kwargs)
-
         f._responseFromMessage = raiser
 
         m = dns.Message()
@@ -838,15 +851,8 @@ class DNSServerFactoryTests(unittest.TestCase):
         initialiser.
         """
         f = server.DNSServerFactory()
-        class RaisedArguments(Exception):
-            def __init__(self, args, kwargs):
-                self.args = args
-                self.kwargs = kwargs
-        class RaisingMessageFactory():
-            @classmethod
-            def _responseFromMessage(self, *args, **kwargs):
-                raise RaisedArguments(args, kwargs)
-        f._messageFactory = RaisingMessageFactory
+        self.patch(
+            f._messageFactory, '_responseFromMessage', staticmethod(raiser))
 
         requestMessage = dns.Message()
         e = self.assertRaises(
@@ -927,13 +933,6 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory._responseFromMessage} to generate a response.
         """
         f = NoResponseDNSServerFactory()
-        class RaisedArguments(Exception):
-            def __init__(self, args, kwargs):
-                self.args = args
-                self.kwargs = kwargs
-        def raiser(*args, **kwargs):
-            raise RaisedArguments(args, kwargs)
-
         f._responseFromMessage = raiser
 
         m = dns.Message()
