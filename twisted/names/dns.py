@@ -1913,6 +1913,24 @@ class Record_SPF(Record_TXT):
 
 def _responseFromMessage(cls, message, **kwargs):
     """
+    Generate a L{Message} like  instance suitable for use as the response to
+    C{message}.
+
+    The C{queries}, C{id} attributes will be copied from C{message} and the
+    C{answer} flag will be set to L{True}
+
+    @param cls: The response message constructor
+    @type cls: C{cls}
+
+    @param message: The request message
+    @type message: L{Message}
+
+    @param kwargs: Keyword arguments which will be passed to the initialiser
+        of the response message.
+    @type kwargs: L{dict}
+
+    @return: A response L{Message} instance.
+    @rtype: C{cls}
     """
     r = cls(id=message.id, answer=True, **kwargs)
     r.queries = message.queries[:]
@@ -2061,6 +2079,25 @@ class Message(tputil.FancyEqMixin):
 
     @classmethod
     def _responseFromMessage(cls, message, **kwargs):
+        """
+        Generate a L{Message} instance suitable for use as the response to
+        C{message}.
+
+        @see: L{_responseFromMessage}
+
+        @param cls: The response message constructor
+        @type cls: L{Message}
+
+        @param message: The request message
+        @type message: L{Message}
+
+        @param kwargs: Keyword arguments which will be passed to the initialiser
+            of the response message.
+        @type kwargs: L{dict}
+
+        @return: A response L{Message} instance.
+        @rtype: L{Message}
+        """
         return _responseFromMessage(cls, message=message, **kwargs)
 
 
@@ -2432,6 +2469,25 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     @classmethod
     def _responseFromMessage(cls, message, **kwargs):
+        """
+        Generate a L{_EDNSMessage} instance suitable for use as the response to
+        C{message}.
+
+        @see: L{_responseFromMessage}
+
+        @param cls: The response message constructor
+        @type cls: L{_EDNSMessage}
+
+        @param message: The request message
+        @type message: L{_EDNSMessage}
+
+        @param kwargs: Keyword arguments which will be passed to the initialiser
+            of the response message.
+        @type kwargs: L{dict}
+
+        @return: A response L{_EDNSMessage} instance.
+        @rtype: L{_EDNSMessage}
+        """
         return _responseFromMessage(cls, message=message, **kwargs)
 
 

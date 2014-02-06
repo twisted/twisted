@@ -175,9 +175,49 @@ class DNSServerFactory(protocol.ServerFactory):
 
 
     def _responseFromMessage(self, message, rCode=dns.OK,
-                             answers=None, authority=None, additional=None,):
+                             answers=None, authority=None, additional=None):
         """
+        Generate a L{Message} instance suitable for use as the response to
+        C{message}.
 
+        C{queries} will be copied from the request to the response.
+
+        C{rCode}, C{answers}, C{authority} and C{additional} will be assigned to
+        the response, if supplied.
+
+        The C{recAv} flag will be set on the response if the C{canRecurse} flag
+        on this L{DNSServerFactory} is set to L{True}.
+
+        The C{auth} flag will be set on the response if *any* of the supplied
+        C{answers} have their C{auth} flag set to L{True}.
+
+        The response will have the same C{maxSize} as the request.
+
+        Additionally, the response will have a C{timeReceived} attribute whose
+        value is that of the original request and the
+
+        @see: L{dns._responseFromMessage}
+
+        @param message: The request message
+        @type message: L{Message}
+
+        @param rCode: The response code which will be assigned to the response.
+        @type message: L{int}
+
+        @param answers: An optional list of answer records which will be
+            assigned to the response.
+        @type answers: L{list} of L{dns.RRHeader}
+
+        @param authority: An optional list of authority records which will be
+            assigned to the response.
+        @type authority: L{list} of L{dns.RRHeader}
+
+        @param additional: An optional list of additional records which will be
+            assigned to the response.
+        @type additional: L{list} of L{dns.RRHeader}
+
+        @return: A response L{Message} instance.
+        @rtype: L{Message}
         """
         if answers is None:
             answers = []
