@@ -33,6 +33,7 @@ Running code in threads
 Sometimes we may want to run methods in threads.
 For example, in order to access blocking APIs.
 Twisted provides methods for doing so using the :api:`twisted.internet.interfaces.IReactorThreads <IReactorThreads>` API.
+Additional utility functions are provided in :api:`twisted.internet.threads <twisted.internet.threads>`.
 Basically, these methods allow us to queue methods to be run by a thread pool.
 
 For example, to run a method in a thread we can do::
