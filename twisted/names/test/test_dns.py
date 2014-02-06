@@ -4581,6 +4581,10 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
 
 class RespondFromMessageTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{dns._responseFromMessage}; the shared functionality of
+    L{_EDNSMessage._responseFromMessage} and L{dns.Message._responseMessage}
+    """
     def test_responseType(self):
         """
         L{dns._responseFromMessage} returns a new instance of C{cls}
@@ -4631,8 +4635,8 @@ class RespondFromMessageTests(unittest.SynchronousTestCase):
 
     def test_responseKwargs(self):
         """
-        L{dns._responseFromMessage} accepts other C{kwargs} which are assigned to
-        the new message before it is returned.
+        L{dns._responseFromMessage} accepts other C{kwargs} which are assigned
+        to the new message before it is returned.
         """
         response = dns._responseFromMessage(
             cls=dns.Message, message=dns.Message(), rCode=123)
