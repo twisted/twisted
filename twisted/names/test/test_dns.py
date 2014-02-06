@@ -4580,6 +4580,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         )
 
 
+
 class RespondFromMessageTests(unittest.SynchronousTestCase):
     """
     Tests for L{dns._responseFromMessage}; the shared functionality of
