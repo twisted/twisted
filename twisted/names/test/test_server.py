@@ -1020,25 +1020,6 @@ class DNSServerFactoryTests(unittest.TestCase):
             protocol=NoopProtocol(), message=dns.Message(), address=None)
 
 
-    def test_gotResolverErrorNewMessage(self):
-        """
-        L{server.DNSServerFactory.gotResolverError} generates a response
-        message which is a copy of the request message.
-        """
-        args = []
-        f = server.DNSServerFactory()
-        f.canRecurse = True
-        f.sendReply = lambda *a: args.append(a)
-        f.gotResolverError(
-            failure.Failure(error.DomainError()),
-            protocol=None, message=dns.Message(), address=None)
-
-        self.assertEqual(
-            [(None, dns.Message(rCode=dns.ENAME, answer=True, recAv=True, ), None)],
-            args
-        )
-
-
     def test_sendReplyWithAddress(self):
         """
         If L{server.DNSServerFactory.sendReply} is supplied with a protocol
