@@ -197,9 +197,16 @@ class DNSServerFactory(protocol.ServerFactory):
             rCode=rCode,
             auth=authoritativeAnswer
         )
+
+        # XXX: Timereceived is a hack which probably shouldn't be tacked onto
+        # the message. Use getattr here so that we don't have to set the
+        # timereceived on every message in the tests.
+        response.timeReceived = getattr(message, 'timeReceived', None)
+
         response.answers = answers
         response.authority = authority
         response.additional = additional
+
         return response
 
 

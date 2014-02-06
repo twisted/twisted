@@ -787,6 +787,23 @@ class DNSServerFactoryTests(unittest.TestCase):
             (response1.recAv, response2.recAv))
 
 
+    def test_responseFromMessageTimeReceived(self):
+        """
+        L{server.DNSServerFactory._responseFromMessage} generates a response message
+        whose C{timeReceived} attribute has the same value as that found on the
+        request.
+        """
+        f = server.DNSServerFactory()
+        request = dns.Message()
+        request.timeReceived = 1234
+        response = f._responseFromMessage(message=request)
+
+        self.assertEqual(
+            request.timeReceived,
+            response.timeReceived
+        )
+
+
     def test_messageFactory(self):
         """
         L{server.DNSServerFactory} has a C{_messageFactory} attribute which is
