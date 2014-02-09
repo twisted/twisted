@@ -845,14 +845,13 @@ class DNSServerFactoryTests(unittest.TestCase):
     def test_responseFromMessageCallsMessageFactory(self):
         """
         L{server.DNSServerFactory._responseFromMessage} calls
-        C{self._messageFactory._responseFromMessage} to generate a response
+        C{dns._responseFromMessage} to generate a response
         message from the request message. It supplies the request message and
         other keyword arguments which should be passed to the response message
         initialiser.
         """
         f = server.DNSServerFactory()
-        self.patch(
-            f._messageFactory, '_responseFromMessage', staticmethod(raiser))
+        self.patch(dns, '_responseFromMessage', raiser)
 
         requestMessage = dns.Message()
         e = self.assertRaises(
@@ -861,8 +860,8 @@ class DNSServerFactoryTests(unittest.TestCase):
             message=requestMessage, rCode=dns.OK
         )
         self.assertEqual(
-            ((), dict(message=requestMessage, rCode=dns.OK, recAv=f.canRecurse,
-                      auth=False)),
+            ((), dict(cls=f._messageFactory, message=requestMessage,
+                      rCode=dns.OK, recAv=f.canRecurse, auth=False)),
             (e.args, e.kwargs)
         )
 

@@ -2077,30 +2077,6 @@ class Message(tputil.FancyEqMixin):
         self.additional = []
 
 
-    @classmethod
-    def _responseFromMessage(cls, message, **kwargs):
-        """
-        Generate a L{Message} instance suitable for use as the response to
-        C{message}.
-
-        @see: L{_responseFromMessage}
-
-        @param cls: The response message constructor
-        @type cls: L{Message}
-
-        @param message: The request message
-        @type message: L{Message}
-
-        @param kwargs: Keyword arguments which will be passed to the initialiser
-            of the response message.
-        @type kwargs: L{dict}
-
-        @return: A response L{Message} instance.
-        @rtype: L{Message}
-        """
-        return _responseFromMessage(cls, message=message, **kwargs)
-
-
     def __repr__(self):
         """
         Generate a repr of this L{Message}.
@@ -2465,30 +2441,6 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         if additional is None:
             additional = []
         self.additional = additional
-
-
-    @classmethod
-    def _responseFromMessage(cls, message, **kwargs):
-        """
-        Generate a L{_EDNSMessage} instance suitable for use as the response to
-        C{message}.
-
-        @see: L{_responseFromMessage}
-
-        @param cls: The response message constructor
-        @type cls: L{_EDNSMessage}
-
-        @param message: The request message
-        @type message: L{_EDNSMessage}
-
-        @param kwargs: Keyword arguments which will be passed to the initialiser
-            of the response message.
-        @type kwargs: L{dict}
-
-        @return: A response L{_EDNSMessage} instance.
-        @rtype: L{_EDNSMessage}
-        """
-        return _responseFromMessage(cls, message=message, **kwargs)
 
 
     def _toMessage(self):

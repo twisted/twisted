@@ -231,7 +231,8 @@ class DNSServerFactory(protocol.ServerFactory):
                 authoritativeAnswer = True
                 break
 
-        response = self._messageFactory._responseFromMessage(
+        response = dns._responseFromMessage(
+            cls=self._messageFactory,
             message=message,
             recAv=self.canRecurse,
             rCode=rCode,
