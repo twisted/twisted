@@ -67,10 +67,9 @@ Documentation and Support
 Examples on how to use Twisted APIs are located in ``docs/projects/core/examples/``; this might ease the learning curve a little bit, since all these files are kept as short as possible.
 Twisted uses `Sphinx <http://sphinx-doc.org>`_ for documentation, and the HTML documentation can be built locally by::
 
-    cd docs
-    make html
+    ./bin/admin/build-docs .
 
-You can then find the built HTML documentation in ``docs/_build/html/``.
+You can then find the built HTML documentation in ``doc/``.
 The developer guides for each Twisted project can be found under their respective headers -- this should be your starting point when looking for documentation.
 
 Help is available on the `Twisted mailing list <http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_.
