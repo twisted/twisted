@@ -4571,9 +4571,12 @@ class ResponseFromMessageTests(unittest.SynchronousTestCase):
             queries = []
 
         expectedClass = dns.Message
-        r = dns._responseFromMessage(responseConstructor=expectedClass,
-                                     message=SuppliedClass())
-        self.assertIsInstance(r, expectedClass)
+
+        self.assertIsInstance(
+            dns._responseFromMessage(responseConstructor=expectedClass,
+                                     message=SuppliedClass()),
+            expectedClass
+        )
 
 
     def test_responseId(self):
@@ -4581,9 +4584,11 @@ class ResponseFromMessageTests(unittest.SynchronousTestCase):
         L{dns._responseFromMessage} copies the C{id} attribute of the original
         message.
         """
-        r = dns._responseFromMessage(responseConstructor=dns.Message,
-                                     message=dns.Message(id=1234))
-        self.assertEqual(1234, r.id)
+        self.assertEqual(
+            1234,
+            dns._responseFromMessage(responseConstructor=dns.Message,
+                                     message=dns.Message(id=1234)).id
+        )
 
 
     def test_responseAnswer(self):
@@ -4604,13 +4609,15 @@ class ResponseFromMessageTests(unittest.SynchronousTestCase):
         L{dns._responseFromMessage} copies the C{queries} attribute of the
         original message.
         """
-        message = dns.Message()
+        request = dns.Message()
         expectedQueries = [object(), object(), object()]
-        message.queries = expectedQueries[:]
+        request.queries = expectedQueries[:]
 
-        r = dns._responseFromMessage(responseConstructor=dns.Message,
-                                     message=message)
-        self.assertEqual(expectedQueries, r.queries)
+        self.assertEqual(
+            expectedQueries,
+            dns._responseFromMessage(responseConstructor=dns.Message,
+                                     message=request).queries
+        )
 
 
     def test_responseKwargs(self):
@@ -4618,6 +4625,9 @@ class ResponseFromMessageTests(unittest.SynchronousTestCase):
         L{dns._responseFromMessage} accepts other C{kwargs} which are assigned
         to the new message before it is returned.
         """
-        response = dns._responseFromMessage(
-            responseConstructor=dns.Message, message=dns.Message(), rCode=123)
-        self.assertEqual(123, response.rCode)
+        self.assertEqual(
+            123,
+            dns._responseFromMessage(
+                responseConstructor=dns.Message, message=dns.Message(),
+                rCode=123).rCode
+        )

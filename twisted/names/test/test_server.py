@@ -753,20 +753,20 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.gotResolverResponse} calls
         L{server.DNSServerFactory._responseFromMessage} to generate a response.
         """
-        f = NoResponseDNSServerFactory()
-        f._responseFromMessage = raiser
+        factory = NoResponseDNSServerFactory()
+        factory._responseFromMessage = raiser
 
-        m = dns.Message()
-        m.timeReceived = 1
+        request = dns.Message()
+        request.timeReceived = 1
 
         e = self.assertRaises(
             RaisedArguments,
-            f.gotResolverResponse,
+            factory.gotResolverResponse,
             ([], [], []),
-            protocol=None, message=m, address=None
+            protocol=None, message=request, address=None
         )
         self.assertEqual(
-            ((), dict(message=m, rCode=dns.OK,
+            ((), dict(message=request, rCode=dns.OK,
                       answers=[], authority=[], additional=[])),
             (e.args, e.kwargs)
         )
@@ -777,9 +777,9 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory._responseFromMessage} generates a response
         message which is a copy of the request message.
         """
-        f = server.DNSServerFactory()
+        factory = server.DNSServerFactory()
         request = dns.Message(answer=False, recAv=False)
-        response = f._responseFromMessage(message=request),
+        response = factory._responseFromMessage(message=request),
 
         self.assertIsNot(request, response)
 
@@ -790,11 +790,13 @@ class DNSServerFactoryTests(unittest.TestCase):
         message whose C{recAV} attribute is L{True} if
         L{server.DNSServerFactory.canRecurse} is L{True}.
         """
-        f = server.DNSServerFactory()
-        f.canRecurse = True
-        response1 = f._responseFromMessage(message=dns.Message(recAv=False))
-        f.canRecurse = False
-        response2 = f._responseFromMessage(message=dns.Message(recAv=True))
+        factory = server.DNSServerFactory()
+        factory.canRecurse = True
+        response1 = factory._responseFromMessage(
+            message=dns.Message(recAv=False))
+        factory.canRecurse = False
+        response2 = factory._responseFromMessage(
+            message=dns.Message(recAv=True))
         self.assertEqual(
             (True, False),
             (response1.recAv, response2.recAv))
@@ -806,15 +808,12 @@ class DNSServerFactoryTests(unittest.TestCase):
         message whose C{timeReceived} attribute has the same value as that found
         on the request.
         """
-        f = server.DNSServerFactory()
+        factory = server.DNSServerFactory()
         request = dns.Message()
         request.timeReceived = 1234
-        response = f._responseFromMessage(message=request)
+        response = factory._responseFromMessage(message=request)
 
-        self.assertEqual(
-            request.timeReceived,
-            response.timeReceived
-        )
+        self.assertEqual(request.timeReceived, response.timeReceived)
 
 
     def test_responseFromMessageMaxSize(self):
@@ -823,15 +822,12 @@ class DNSServerFactoryTests(unittest.TestCase):
         message whose C{maxSize} attribute has the same value as that found
         on the request.
         """
-        f = server.DNSServerFactory()
+        factory = server.DNSServerFactory()
         request = dns.Message()
         request.maxSize = 0
-        response = f._responseFromMessage(message=request)
+        response = factory._responseFromMessage(message=request)
 
-        self.assertEqual(
-            request.maxSize,
-            response.maxSize
-        )
+        self.assertEqual(request.maxSize, response.maxSize)
 
 
     def test_messageFactory(self):
@@ -850,18 +846,18 @@ class DNSServerFactoryTests(unittest.TestCase):
         other keyword arguments which should be passed to the response message
         initialiser.
         """
-        f = server.DNSServerFactory()
+        factory = server.DNSServerFactory()
         self.patch(dns, '_responseFromMessage', raiser)
 
-        requestMessage = dns.Message()
+        request = dns.Message()
         e = self.assertRaises(
             RaisedArguments,
-            f._responseFromMessage,
-            message=requestMessage, rCode=dns.OK
+            factory._responseFromMessage,
+            message=request, rCode=dns.OK
         )
         self.assertEqual(
-            ((), dict(responseConstructor=f._messageFactory,
-                      message=requestMessage, rCode=dns.OK, recAv=f.canRecurse,
+            ((), dict(responseConstructor=factory._messageFactory,
+                      message=request, rCode=dns.OK, recAv=factory.canRecurse,
                       auth=False)),
             (e.args, e.kwargs)
         )
@@ -872,11 +868,11 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory._responseFromMessage} marks the response
         message as authoritative if any of the answer records are authoritative.
         """
-        f = server.DNSServerFactory()
-        response1 = f._responseFromMessage(message=dns.Message(),
-                                           answers=[dns.RRHeader(auth=True)])
-        response2 = f._responseFromMessage(message=dns.Message(),
-                                           answers=[dns.RRHeader(auth=False)])
+        factory = server.DNSServerFactory()
+        response1 = factory._responseFromMessage(
+            message=dns.Message(), answers=[dns.RRHeader(auth=True)])
+        response2 = factory._responseFromMessage(
+            message=dns.Message(), answers=[dns.RRHeader(auth=False)])
         self.assertEqual(
             (True, False),
             (response1.auth, response2.auth),
