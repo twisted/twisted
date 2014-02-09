@@ -4546,7 +4546,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
 
 
-class RespondFromMessageTests(unittest.SynchronousTestCase):
+class ResponseFromMessageTests(unittest.SynchronousTestCase):
     """
     Tests for L{dns._responseFromMessage}; the shared functionality of
     L{_EDNSMessage._responseFromMessage} and L{dns.Message._responseMessage}
@@ -4559,10 +4559,7 @@ class RespondFromMessageTests(unittest.SynchronousTestCase):
         """
         request = dns.Message()
         response = dns._responseFromMessage(cls=dns.Message, message=request)
-        self.assertIsNot(
-            request,
-            response
-        )
+        self.assertIsNot(request, response)
 
 
     def test_responseType(self):
