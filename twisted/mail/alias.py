@@ -559,8 +559,8 @@ class ProcessAlias(AliasBase):
     An alias which is handled by the execution of a program.
 
     @type path: L{list} of L{bytes}
-    @ivar path: The arguments to pass to the process. The first string should
-        be the executable's name.
+    @ivar path: The arguments to pass to the process. The first string is
+        the executable's name.
 
     @type program: L{bytes}
     @ivar program: The path of the program to be executed.
