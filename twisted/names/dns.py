@@ -1911,28 +1911,29 @@ class Record_SPF(Record_TXT):
 
 
 
-def _responseFromMessage(cls, message, **kwargs):
+def _responseFromMessage(responseConstructor, message, **kwargs):
     """
-    Generate a L{Message} like  instance suitable for use as the response to
+    Generate a L{Message} like instance suitable for use as the response to
     C{message}.
 
     The C{queries}, C{id} attributes will be copied from C{message} and the
-    C{answer} flag will be set to L{True}
+    C{answer} flag will be set to L{True}.
 
-    @param cls: The response message constructor
-    @type cls: C{cls}
+    @param responseConstructor: A response message constructor with an
+         initializer signature matching L{dns.Message.__init__}.
+    @type responseConstructor: L{dns.Message} or L{dns._EDNSMessage}
 
-    @param message: The request message
+    @param message: A request message.
     @type message: L{Message}
 
     @param kwargs: Keyword arguments which will be passed to the initialiser
         of the response message.
     @type kwargs: L{dict}
 
-    @return: A response L{Message} instance.
-    @rtype: C{cls}
+    @return: A L{Message} like response instance.
+    @rtype: C{responseConstructor}
     """
-    r = cls(id=message.id, answer=True, **kwargs)
+    r = responseConstructor(id=message.id, answer=True, **kwargs)
     r.queries = message.queries[:]
     return r
 

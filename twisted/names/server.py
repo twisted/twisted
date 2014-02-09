@@ -232,7 +232,7 @@ class DNSServerFactory(protocol.ServerFactory):
                 break
 
         response = dns._responseFromMessage(
-            cls=self._messageFactory,
+            responseConstructor=self._messageFactory,
             message=message,
             recAv=self.canRecurse,
             rCode=rCode,

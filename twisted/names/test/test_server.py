@@ -860,8 +860,9 @@ class DNSServerFactoryTests(unittest.TestCase):
             message=requestMessage, rCode=dns.OK
         )
         self.assertEqual(
-            ((), dict(cls=f._messageFactory, message=requestMessage,
-                      rCode=dns.OK, recAv=f.canRecurse, auth=False)),
+            ((), dict(responseConstructor=f._messageFactory,
+                      message=requestMessage, rCode=dns.OK, recAv=f.canRecurse,
+                      auth=False)),
             (e.args, e.kwargs)
         )
 
