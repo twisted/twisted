@@ -5,6 +5,8 @@
 Tests for L{twisted.python._dist3}.
 """
 
+from __future__ import division
+
 from twisted.trial.unittest import TestCase
 
 from twisted.python._dist3 import modulesToInstall

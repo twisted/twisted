@@ -7,6 +7,8 @@ Support for installing Twisted on Python 3.
 Only necessary while parts of Twisted are unported.
 """
 
+from __future__ import division
+
 # A list of modules that have been ported, e.g. "twisted.python.versions"; a
 # package name (e.g. "twisted.python") indicates the corresponding __init__.py
 # file has been ported (e.g. "twisted/python/__init__.py"). To reduce merge
