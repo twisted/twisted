@@ -1933,9 +1933,9 @@ def _responseFromMessage(responseConstructor, message, **kwargs):
     @return: A L{Message} like response instance.
     @rtype: C{responseConstructor}
     """
-    r = responseConstructor(id=message.id, answer=True, **kwargs)
-    r.queries = message.queries[:]
-    return r
+    response = responseConstructor(id=message.id, answer=True, **kwargs)
+    response.queries = message.queries[:]
+    return response
 
 
 

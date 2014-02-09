@@ -928,20 +928,20 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.gotResolverError} calls
         L{server.DNSServerFactory._responseFromMessage} to generate a response.
         """
-        f = NoResponseDNSServerFactory()
-        f._responseFromMessage = raiser
+        factory = NoResponseDNSServerFactory()
+        factory._responseFromMessage = raiser
 
-        m = dns.Message()
-        m.timeReceived = 1
+        request = dns.Message()
+        request.timeReceived = 1
 
         e = self.assertRaises(
             RaisedArguments,
-            f.gotResolverError,
+            factory.gotResolverError,
             failure.Failure(error.DomainError()),
-            protocol=None, message=m, address=None
+            protocol=None, message=request, address=None
         )
         self.assertEqual(
-            ((), dict(message=m, rCode=dns.ENAME)),
+            ((), dict(message=request, rCode=dns.ENAME)),
             (e.args, e.kwargs)
         )
 
