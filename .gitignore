@@ -6,3 +6,4 @@ _trial_temp*/
 build/
 dropin.cache
 docs/_build/
+doc/
