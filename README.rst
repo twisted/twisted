@@ -64,14 +64,14 @@ Some of these tests may fail if you:
 Documentation and Support
 -------------------------
 
-Examples on how to use Twisted APIs are located in ``docs/projects/core/examples``; this might ease the learning curve a little bit, since all these files are kept as short as possible.
+Examples on how to use Twisted APIs are located in ``docs/projects/core/examples/``; this might ease the learning curve a little bit, since all these files are kept as short as possible.
 Twisted uses `Sphinx <http://sphinx-doc.org>`_ for documentation, and the HTML documentation can be built locally by::
 
     cd docs
     make html
 
 You can then find the built HTML documentation in ``docs/_build/html/``.
-The index of all the core HOWTOs can be found under the *Twisted Core* header - this should be your starting point when looking for documentation.
+The developer guides for each Twisted project can be found under their respective headers -- this should be your starting point when looking for documentation.
 
 Help is available on the `Twisted mailing list <http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_.
 
