@@ -245,7 +245,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         # XXX: Timereceived is a hack which probably shouldn't be tacked onto
         # the message. Use getattr here so that we don't have to set the
-        # timereceived on every message in the tests.
+        # timereceived on every message in the tests. See #6957.
         response.timeReceived = getattr(message, 'timeReceived', None)
 
         # XXX: This is another hack. dns.Message.decode sets maxSize=0 which
