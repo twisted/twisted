@@ -13,24 +13,24 @@ What is this?
 Twisted is an event-based framework for internet applications.
 It includes modules for many different purposes, including the following:
 
-- twisted.application
-  A "Service" system that allows you to organize your application in hierarchies with well-defined startup and dependency semantics,
-- twisted.cred
-  A general credentials and authentication system that facilitates pluggable authentication backends,
-- twisted.enterprise
-  Asynchronous database access, compatible with any Python DBAPI2.0 modules,
-- twisted.internet
-  Low-level asynchronous networking APIs that allow you to define your own protocols that run over certain transports,
-- twisted.manhole
-  A tool for remote debugging of your services which gives you a Python interactive interpreter,
-- twisted.protocols
-  Basic protocol implementations and helpers for your own protocol implementations,
-- twisted.python
-  A large set of utilities for Python tricks, reflection, text processing, and anything else,
-- twisted.spread
-  A secure, fast remote object system,
-- twisted.trial
-  A unit testing framework that integrates well with Twisted-based code.
+twisted.application
+    A "Service" system that allows you to organize your application in hierarchies with well-defined startup and dependency semantics,
+twisted.cred
+    A general credentials and authentication system that facilitates pluggable authentication backends,
+twisted.enterprise
+    Asynchronous database access, compatible with any Python DBAPI2.0 modules,
+twisted.internet
+    Low-level asynchronous networking APIs that allow you to define your own protocols that run over certain transports,
+twisted.manhole
+    A tool for remote debugging of your services which gives you a Python interactive interpreter,
+twisted.protocols
+    Basic protocol implementations and helpers for your own protocol implementations,
+twisted.python
+    A large set of utilities for Python tricks, reflection, text processing, and anything else,
+twisted.spread
+    A secure, fast remote object system,
+twisted.trial
+    A unit testing framework that integrates well with Twisted-based code.
 
 Twisted supports integration of the Win32, Tk, GTK+ and GTK+ 2 event loops with its main event loop.
 There is experimental support for Mac OS X and wxPython event loop integration, which you use at your peril.
