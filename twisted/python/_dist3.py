@@ -46,7 +46,7 @@ modules = [
     "twisted.internet.test.reactormixins",
     "twisted.internet.threads",
     "twisted.internet.udp",
-    "twisted.internet.util",
+    "twisted.internet.utils",
     "twisted.names",
     "twisted.names.cache",
     "twisted.names.client",
