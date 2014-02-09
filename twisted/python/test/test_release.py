@@ -429,7 +429,8 @@ class ProjectTest(TestCase):
                 directory.createDirectory()
             directory.child('__init__.py').setContent('')
         directory.child('topfiles').createDirectory()
-        directory.child('topfiles').child('README.rst').setContent(version.base())
+        directory.child('topfiles').child(
+            'README.rst').setContent(version.base())
         replaceProjectVersion(
             directory.child('_version.py').path, version)
         return Project(directory)
@@ -467,8 +468,8 @@ class ProjectTest(TestCase):
         project.updateVersion(newVersion)
         self.assertEqual(project.getVersion(), newVersion)
         self.assertEqual(
-            project.directory.child("topfiles").child("README.rst").getContent(),
-            "3.2.9")
+            project.directory.child("topfiles").child(
+                "README.rst").getContent(), "3.2.9")
 
 
     def test_repr(self):
