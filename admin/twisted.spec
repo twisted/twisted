@@ -52,7 +52,7 @@ cp -a doc/man/*.1 "$RPM_BUILD_ROOT"/%{_mandir}/man1/
 
 %files
 %defattr(755,root,root)
-%doc CREDITS LICENSE README
+%doc CREDITS LICENSE README.rst
 %{_bindir}/*
 %attr(644,-,-) %{_mandir}/man1/*
 %{_libdir}/python%{py_libver}/site-packages/twisted/

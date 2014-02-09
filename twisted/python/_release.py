@@ -174,7 +174,7 @@ def changeAllProjectVersions(root, prerelease, patch, today=None):
         # have to handle it specially.
         if packageName == "twisted":
             _changeVersionInFile(
-                oldVersion, newVersion, root.child('README').path)
+                oldVersion, newVersion, root.child('README.rst').path)
 
         project.updateVersion(newVersion)
 
@@ -219,7 +219,7 @@ class Project(object):
                               version)
         _changeVersionInFile(
             oldVersion, version,
-            self.directory.child("topfiles").child("README").path)
+            self.directory.child("topfiles").child("README.rst").path)
 
 
 

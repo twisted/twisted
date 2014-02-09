@@ -293,7 +293,7 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         # arbitrary.
         packageName = 'foo'
         oldVersion = Version(packageName, 2, 5, 0)
-        file = self.makeFile('README',
+        file = self.makeFile('README.rst',
                              "Hello and welcome to %s." % oldVersion.base())
 
         newVersion = Version(packageName, 7, 6, 0)
@@ -312,27 +312,27 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
         root = FilePath(self.mktemp())
         root.createDirectory()
         structure = {
-            "README": "Hi this is 1.0.0.",
+            "README.rst": "Hi this is 1.0.0.",
             "twisted": {
                 "topfiles": {
-                    "README": "Hi this is 1.0.0"},
+                    "README.rst": "Hi this is 1.0.0"},
                 "_version.py": genVersion("twisted", 1, 0, 0),
                 "web": {
                     "topfiles": {
-                        "README": "Hi this is 1.0.0"},
+                        "README.rst": "Hi this is 1.0.0"},
                     "_version.py": genVersion("twisted.web", 1, 0, 0)}}}
         self.createStructure(root, structure)
         releaseDate = date(2010, 1, 1)
         changeAllProjectVersions(root, False, False, releaseDate)
         outStructure = {
-            "README": "Hi this is 10.0.0.",
+            "README.rst": "Hi this is 10.0.0.",
             "twisted": {
                 "topfiles": {
-                    "README": "Hi this is 10.0.0"},
+                    "README.rst": "Hi this is 10.0.0"},
                 "_version.py": genVersion("twisted", 10, 0, 0),
                 "web": {
                     "topfiles": {
-                        "README": "Hi this is 10.0.0"},
+                        "README.rst": "Hi this is 10.0.0"},
                     "_version.py": genVersion("twisted.web", 10, 0, 0)}}}
         self.assertStructure(root, outStructure)
 
@@ -353,16 +353,16 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
                    "==================================\n"
                    "\n")
         structure = {
-            "README": "Hi this is 1.0.0.",
+            "README.rst": "Hi this is 1.0.0.",
             "NEWS": coreNews + webNews,
             "twisted": {
                 "topfiles": {
-                    "README": "Hi this is 1.0.0",
+                    "README.rst": "Hi this is 1.0.0",
                     "NEWS": coreNews},
                 "_version.py": genVersion("twisted", 1, 0, 0),
                 "web": {
                     "topfiles": {
-                        "README": "Hi this is 1.0.0pre1",
+                        "README.rst": "Hi this is 1.0.0pre1",
                         "NEWS": webNews},
                     "_version.py": genVersion("twisted.web", 1, 0, 0, 1)}}}
         self.createStructure(root, structure)
@@ -375,16 +375,16 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
                    "==============================\n"
                    "\n")
         outStructure = {
-            "README": "Hi this is 10.0.0.",
+            "README.rst": "Hi this is 10.0.0.",
             "NEWS": coreNews + webNews,
             "twisted": {
                 "topfiles": {
-                    "README": "Hi this is 10.0.0",
+                    "README.rst": "Hi this is 10.0.0",
                     "NEWS": coreNews},
                 "_version.py": genVersion("twisted", 10, 0, 0),
                 "web": {
                     "topfiles": {
-                        "README": "Hi this is 1.0.0",
+                        "README.rst": "Hi this is 1.0.0",
                         "NEWS": webNews},
                     "_version.py": genVersion("twisted.web", 1, 0, 0)}}}
         self.assertStructure(root, outStructure)
@@ -429,7 +429,7 @@ class ProjectTest(TestCase):
                 directory.createDirectory()
             directory.child('__init__.py').setContent('')
         directory.child('topfiles').createDirectory()
-        directory.child('topfiles').child('README').setContent(version.base())
+        directory.child('topfiles').child('README.rst').setContent(version.base())
         replaceProjectVersion(
             directory.child('_version.py').path, version)
         return Project(directory)
@@ -467,7 +467,7 @@ class ProjectTest(TestCase):
         project.updateVersion(newVersion)
         self.assertEqual(project.getVersion(), newVersion)
         self.assertEqual(
-            project.directory.child("topfiles").child("README").getContent(),
+            project.directory.child("topfiles").child("README.rst").getContent(),
             "3.2.9")
 
 
@@ -1459,7 +1459,7 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
         """
         manInput1 = "pretend there's some troff in here or something"
         structure = {
-            "README": "Twisted",
+            "README.rst": "Twisted",
             "unrelated": "x",
             "LICENSE": "copyright!",
             "setup.py": "import toplevel",
@@ -1469,7 +1469,7 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                 "web": {
                     "__init__.py": "import WEB",
                     "topfiles": {"setup.py": "import WEBINSTALL",
-                                 "README": "WEB!"}},
+                                 "README.rst": "WEB!"}},
                 "words": {"__init__.py": "import WORDS"},
                 "plugins": {"twisted_web.py": "import WEBPLUG",
                             "twisted_words.py": "import WORDPLUG"}},
@@ -1489,7 +1489,7 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
             return True
 
         outStructure = {
-            "README": "Twisted",
+            "README.rst": "Twisted",
             "unrelated": "x",
             "LICENSE": "copyright!",
             "setup.py": "import toplevel",
@@ -1498,7 +1498,7 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
             "twisted": {
                 "web": {"__init__.py": "import WEB",
                         "topfiles": {"setup.py": "import WEBINSTALL",
-                                     "README": "WEB!"}},
+                                     "README.rst": "WEB!"}},
                 "words": {"__init__.py": "import WORDS"},
                 "plugins": {"twisted_web.py": "import WEBPLUG",
                             "twisted_words.py": "import WORDPLUG"}},
@@ -1525,7 +1525,7 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                 "web": {
                     "__init__.py": "import WEB",
                     "topfiles": {"setup.py": "import WEBINSTALL",
-                                 "README": "WEB!"}}},
+                                 "README.rst": "WEB!"}}},
             "doc": {"historic": {"hello": "there"},
                     "other": "contents"}}
 
@@ -1535,7 +1535,7 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                 "web": {
                     "__init__.py": "import WEB",
                     "topfiles": {"setup.py": "import WEBINSTALL",
-                                 "README": "WEB!"}}},
+                                 "README.rst": "WEB!"}}},
             "doc": {"other": "contents"}}
 
         self.createStructure(self.rootDir, structure)
@@ -1556,7 +1556,7 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
            else in plugins is.
         """
         structure = {
-            "README": "HI!@",
+            "README.rst": "HI!@",
             "unrelated": "x",
             "LICENSE": "copyright!",
             "setup.py": "import toplevel",
@@ -1566,13 +1566,13 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                 "web": {
                     "__init__.py": "import WEB",
                     "topfiles": {"setup.py": "import WEBINSTALL",
-                                 "README": "WEB!"}},
+                                 "README.rst": "WEB!"}},
                 "words": {"__init__.py": "import WORDS"},
                 "plugins": {"twisted_web.py": "import WEBPLUG",
                             "twisted_words.py": "import WORDPLUG"}}}
 
         outStructure = {
-            "README": "WEB!",
+            "README.rst": "WEB!",
             "LICENSE": "copyright!",
             "setup.py": "import WEBINSTALL",
             "bin": {"websetroot": "SET ROOT"},
@@ -1631,14 +1631,14 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                                     "twisted_whatever.py": "include!",
                                     "cred.py": "include!"},
                         "topfiles": {"setup.py": "import CORE",
-                                     "README": "core readme"}},
+                                     "README.rst": "core readme"}},
             "bin": {"twistd": "TWISTD",
                     "web": {"websetroot": "websetroot"}}}
 
         outStructure = {
             "LICENSE": "copyright!",
             "setup.py": "import CORE",
-            "README": "core readme",
+            "README.rst": "core readme",
             "twisted": {"__init__.py": "twisted",
                         "python": {"__init__.py": "python",
                                    "roots.py": "roots!"},
@@ -1663,7 +1663,7 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
                 "web": {
                     "__init__.py": "import WEB",
                     "topfiles": {"setup.py": "import WEBINSTALL",
-                                 "README": "WEB!"}}},
+                                 "README.rst": "WEB!"}}},
             "doc": {"web": {"howto": {"index.html": "hello"}}},
             }
 
@@ -1697,7 +1697,7 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
                     checkout.path])
 
         structure = {
-            "README": "Twisted",
+            "README.rst": "Twisted",
             "unrelated": "x",
             "LICENSE": "copyright!",
             "setup.py": "import toplevel",
@@ -1705,12 +1705,12 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
                     "twistd": "TWISTD"},
             "twisted": {
                 "topfiles": {"setup.py": "import TOPINSTALL",
-                             "README": "CORE!"},
+                             "README.rst": "CORE!"},
                 "_version.py": genVersion("twisted", 1, 2, 0),
                 "words": {"__init__.py": "import WORDS",
                           "_version.py": genVersion("twisted.words", 1, 2, 0),
                           "topfiles": {"setup.py": "import WORDSINSTALL",
-                                       "README": "WORDS!"}},
+                                       "README.rst": "WORDS!"}},
                 "plugins": {"twisted_web.py": "import WEBPLUG",
                             "twisted_words.py": "import WORDPLUG",
                             "twisted_yay.py": "import YAY"}},
@@ -1727,7 +1727,7 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
             return True
 
         twistedStructure = {
-            "README": "Twisted",
+            "README.rst": "Twisted",
             "unrelated": "x",
             "LICENSE": "copyright!",
             "setup.py": "import toplevel",
@@ -1735,12 +1735,12 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
                     "words": {"im": "import im"}},
             "twisted": {
                 "topfiles": {"setup.py": "import TOPINSTALL",
-                             "README": "CORE!"},
+                             "README.rst": "CORE!"},
                 "_version.py": genVersion("twisted", 1, 2, 0),
                 "words": {"__init__.py": "import WORDS",
                           "_version.py": genVersion("twisted.words", 1, 2, 0),
                           "topfiles": {"setup.py": "import WORDSINSTALL",
-                                       "README": "WORDS!"}},
+                                       "README.rst": "WORDS!"}},
                 "plugins": {"twisted_web.py": "import WEBPLUG",
                             "twisted_words.py": "import WORDPLUG",
                             "twisted_yay.py": "import YAY"}},
@@ -1748,7 +1748,7 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
 
         coreStructure = {
             "setup.py": "import TOPINSTALL",
-            "README": "CORE!",
+            "README.rst": "CORE!",
             "LICENSE": "copyright!",
             "bin": {"twistd": "TWISTD"},
             "twisted": {
@@ -1757,7 +1757,7 @@ class BuildAllTarballsTest(DistributionBuilderTestBase):
         }
 
         wordsStructure = {
-            "README": "WORDS!",
+            "README.rst": "WORDS!",
             "LICENSE": "copyright!",
             "setup.py": "import WORDSINSTALL",
             "bin": {"im": "import im"},
