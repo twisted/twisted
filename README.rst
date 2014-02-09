@@ -35,7 +35,7 @@ twisted.trial
 Twisted supports integration of the Win32, Tk, GTK+ and GTK+ 2 event loops with its main event loop.
 There is experimental support for Mac OS X and wxPython event loop integration, which you use at your peril.
 
-For more information, visit `the Twisted website <http://www.twistedmatrix.com>`_, or `join the mailing list <http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_
+For more information, visit `the Twisted website <http://www.twistedmatrix.com>`_, or `join the mailing list <http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_.
 
 There are many official Twisted subprojects, including clients and servers for web, mail, DNS, and more.
 You can find out more about these projects `on the Twisted website <http://twistedmatrix.com/trac/wiki/TwistedProjects>`_.
@@ -52,7 +52,7 @@ Unit Tests
 
 See our unit tests run proving that the software is BugFree(TM):
 
-    % trial twisted
+    trial twisted
 
 Some of these tests may fail if you:
 
