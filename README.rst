@@ -65,7 +65,8 @@ Documentation and Support
 -------------------------
 
 Examples on how to use Twisted APIs are located in ``docs/projects/core/examples/``; this might ease the learning curve a little bit, since all these files are kept as short as possible.
-Twisted uses `Sphinx <http://sphinx-doc.org>`_ for documentation, and the HTML documentation can be built locally by::
+Twisted uses `Sphinx <http://sphinx-doc.org>`_ for documentation (You will need Sphinx 1.2 or later).
+The HTML documentation can be built locally by::
 
     ./bin/admin/build-docs .
 
