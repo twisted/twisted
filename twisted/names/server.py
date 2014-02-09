@@ -55,6 +55,10 @@ class DNSServerFactory(protocol.ServerFactory):
         instance as the one and only positional argument.  Defaults to
         L{dns.DNSProtocol}.
     @type protocol: L{IProtocolFactory} constructor
+
+    @ivar _messageFactory: A response message constructor with an initializer
+         signature matching L{dns.Message.__init__}.
+    @type _messageFactory: C{callable}
     """
 
     protocol = dns.DNSProtocol

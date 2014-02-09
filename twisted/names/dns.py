@@ -1921,7 +1921,7 @@ def _responseFromMessage(responseConstructor, message, **kwargs):
 
     @param responseConstructor: A response message constructor with an
          initializer signature matching L{dns.Message.__init__}.
-    @type responseConstructor: L{dns.Message} or L{dns._EDNSMessage}
+    @type responseConstructor: C{callable}
 
     @param message: A request message.
     @type message: L{Message}
