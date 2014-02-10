@@ -2466,7 +2466,8 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             # Assign the lower 4 bits to the message
             rCode=self.rCode & 0xf,
             authenticData=self.authenticData,
-            checkingDisabled=self.checkingDisabled)
+            checkingDisabled=self.checkingDisabled,
+            maxSize=self.maxSize)
 
         m.queries = self.queries[:]
         m.answers = self.answers[:]
