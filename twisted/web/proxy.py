@@ -23,10 +23,10 @@ import urlparse
 from urllib import quote as urlquote
 
 from twisted.internet import reactor
-from twisted.internet.protocol import ClientFactory
+from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
-from twisted.web.http import HTTPClient, Request, HTTPChannel
+from twisted.web.http import HTTPClient, Request, HTTPChannel, HTTPFactory
 
 
 
@@ -165,7 +165,7 @@ class ProxyRequest(Request):
 
 class Proxy(HTTPChannel):
     """
-    This class implements a simple web proxy.
+    This class implements a simple web proxy without CONNECT support.
 
     Since it inherits from L{twisted.web.http.HTTPChannel}, to use it you
     should do something like this::
@@ -176,9 +176,147 @@ class Proxy(HTTPChannel):
 
     Make the HTTPFactory a listener on a port as per usual, and you have
     a fully-functioning web proxy!
+
+    For a proxy with CONNECT support, see
+    L{twisted.web.proxy.TunnelProxyFactory}.
     """
 
     requestFactory = ProxyRequest
+
+
+
+class TunnelProxyRequest (ProxyRequest):
+    """
+    A request processor which supports the CONNECT method.
+    """
+    def process(self):
+        if self.method == 'CONNECT':
+            self._processConnect()
+        else:
+            return ProxyRequest.process(self)
+
+    def _processConnect(self):
+        try:
+            host, portStr = self.uri.split(':', 1)
+            port = int(portStr)
+        except ValueError:
+            # Either the connect parameter is not HOST:PORT or PORT is
+            # not an integer, in which case this request is invalid.
+            self.setResponseCode(400)
+            self.finish()
+        else:
+            self.reactor.connectTCP(host, port, TunnelProtocolFactory(self))
+
+
+
+class TunnelProxy (Proxy):
+    """
+    This class implements a simple web proxy with CONNECT support as
+    defined here:
+
+    http://tools.ietf.org/id/draft-luotonen-web-proxy-tunneling-01.txt
+
+    This is a draft specification, but a wide-spread protocol; the
+    unfinished specification is a reference in RFC 2616:
+
+    http://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html
+
+    It inherits from L{Proxy} and expects
+    L{twisted.web.proxy.TunnelProxyFactory} as a factory.
+
+        f = TunnelProxyFactory()
+
+    Make the TunnelProxyFactory a listener on a port as per usual,
+    and you have a fully-functioning web proxy which supports CONNECT.
+    This should support typical web usage with common browsers.
+
+    @ivar _tunnelproto: This is part of a private interface between
+        TunnelProxy and TunnelProtocol. This is either None or a
+        TunnelProtocol connected to a server due to a CONNECT request.
+        If this is set, then the stream from the user agent is forwarded
+        to the target HOST:PORT of the CONNECT request.
+    """
+    requestFactory = TunnelProxyRequest
+
+    def __init__(self):
+        self._tunnelproto = None
+        Proxy.__init__(self)
+
+    def _registerTunnel(self, tunnelproto):
+        """
+        This is a private interface for L{TunnelProtocol}.  This sets
+        L{_tunnelproto} to which to forward the stream from the user
+        agent.  This should only be set after the tunnel to the target
+        HOST:PORT is established.
+        """
+        # BUG: I'm not familiar enough with Twisted coding style:
+        # Should assert be used for internal contracts?
+        # Should assert messages be long and detailed like this?
+        # How should the length of this line be handled?
+        assert self._tunnelproto is None, 'Precondition failure: Multiple TunnelProtocols set: self._tunnelproto == %r; new tunnelproto == %r' % (self._tunnelproto, tunnelproto)
+        self._tunnelproto = tunnelproto
+
+    def dataReceived(self, data):
+        """
+        If there is a tunnel connection, forward the stream; otherwise
+        behave just like Proxy.
+        """
+        if self._tunnelproto is None:
+            Proxy.dataReceived(self, data)
+        else:
+            self._tunnelproto.transport.write(data)
+
+
+
+class TunnelProxyFactory (HTTPFactory):
+    """
+    Factory for an HTTP proxy.
+    """
+
+    protocol = TunnelProxy
+
+
+class TunnelProtocol (Protocol):
+    """
+    When a user agent makes a CONNECT request to a TunnelProxy, this
+    protocol implements the proxy's client logic.
+
+    When the proxy connects to the target host, it responds to the user
+    agent's request with an HTTP 200.  After that, it relays the stream
+    from the target host back through the connection to the user agent.
+    """
+    # BUG: Handle early disconnects and other edge cases.
+
+    def __init__(self, request):
+        self._request = request
+        self._channel = request.channel
+        self._peertransport = request.channel.transport
+
+    def connectionMade(self):
+        self._channel._registerTunnel(self)
+        self._request.setResponseCode(200, 'Connection established')
+
+        # Write nothing to trigger sending the response headers, but do
+        # not call finish, which may close the connection:
+        self._request.write('')
+
+    def dataReceived(self, data):
+        self._peertransport.write(data)
+
+
+
+class TunnelProtocolFactory (ClientFactory):
+    protocol = TunnelProtocol
+
+    def __init__(self, request):
+        self._request = request
+
+    def buildProtocol(self, addr):
+        return self.protocol(self._request)
+
+    def clientConnectionFailed(self, connector, reason):
+        self._request.setResponseCode(501, 'Gateway error')
+        self._request.finish()
 
 
 

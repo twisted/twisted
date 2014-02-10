@@ -4,6 +4,7 @@
 """
 Test for L{twisted.web.proxy}.
 """
+from cStringIO import StringIO
 
 from twisted.trial.unittest import TestCase
 from twisted.test.proto_helpers import StringTransportWithDisconnection
@@ -13,6 +14,8 @@ from twisted.web.resource import Resource
 from twisted.web.server import Site
 from twisted.web.proxy import ReverseProxyResource, ProxyClientFactory
 from twisted.web.proxy import ProxyClient, ProxyRequest, ReverseProxyRequest
+from twisted.web.proxy import TunnelProtocolFactory, TunnelProtocol
+from twisted.web.proxy import TunnelProxy, TunnelProxyRequest
 from twisted.web.test.test_web import DummyRequest
 
 
@@ -420,8 +423,10 @@ class ProxyClientFactoryTestCase(TestCase):
 
 class ProxyRequestTestCase(TestCase):
     """
-    Tests for L{ProxyRequest}.
+    Tests for L{ProxyRequest} or subclasses.
     """
+
+    requestClass = ProxyRequest
 
     def _testProcess(self, uri, expectedURI, method="GET", data=""):
         """
@@ -431,7 +436,7 @@ class ProxyRequestTestCase(TestCase):
         transport = StringTransportWithDisconnection()
         channel = DummyChannel(transport)
         reactor = MemoryReactor()
-        request = ProxyRequest(channel, False, reactor)
+        request = self.requestClass(channel, False, reactor)
         request.gotLength(len(data))
         request.handleContentChunk(data)
         request.requestReceived(method, 'http://example.com%s' % (uri,),
@@ -490,7 +495,7 @@ class ProxyRequestTestCase(TestCase):
         transport = StringTransportWithDisconnection()
         channel = DummyChannel(transport)
         reactor = MemoryReactor()
-        request = ProxyRequest(channel, False, reactor)
+        request = self.requestClass(channel, False, reactor)
         request.gotLength(0)
         request.requestReceived('GET', 'http://example.com:1234/foo/bar',
                                 'HTTP/1.0')
@@ -499,6 +504,242 @@ class ProxyRequestTestCase(TestCase):
         self.assertEqual(len(reactor.tcpClients), 1)
         self.assertEqual(reactor.tcpClients[0][0], "example.com")
         self.assertEqual(reactor.tcpClients[0][1], 1234)
+
+
+
+class DummyTunnelProxyFactory (object):
+    def __init__(self):
+        # Stored calls to log for test verification:
+        self._logCalls = []
+
+    def log(self, *a, **kw):
+        # Save the arguments for later test verification:
+        self._logCalls.append((a,kw))
+
+
+
+class DummyTunnelChannel (DummyChannel):
+    def __init__(self, transport, factory):
+        DummyChannel.__init__(self, transport)
+        self.factory = factory
+        self._requestDoneCalls = []
+        self._registerTunnelCalls = []
+
+    def _registerTunnel(self, *a, **kw):
+        self._registerTunnelCalls.append((a,kw))
+
+    def requestDone(self, *a, **kw):
+        self._requestDoneCalls.append((a,kw))
+
+
+
+class TunnelProxyRequestTestCase(ProxyRequestTestCase):
+    """
+    Tests for L{TunnelProxyRequest} including all tests in base class
+    for L{ProxyRequest}.
+    """
+
+    requestClass = TunnelProxyRequest
+
+    def _buildRequestAndConnect(self, hostPort):
+        """
+        Set up a transport, factory, and request, then call
+        requestReceived with CONNECT method.
+        """
+        self.transport = StringTransportWithDisconnection()
+        self.factory = DummyTunnelProxyFactory()
+        self.channel = DummyTunnelChannel(self.transport, self.factory)
+
+        self.reactor = MemoryReactor()
+        self.request = self.requestClass(self.channel, False, self.reactor)
+
+        self.request.gotLength(0)
+        self.request.requestReceived('CONNECT', hostPort, 'HTTP/1.0')
+
+    def _verifyResponseWithoutConnect(self, expectedResponseCode):
+        """
+        Verify cases where processing a CONNECT method returns an response
+        without attempting any tcp connections.
+        """
+        # No TCP connections attempted:
+        self.assertEqual(len(self.reactor.tcpClients), 0)
+
+        # Request finished with a 403 status code:
+        self.assert_(self.request.finished)
+        self.assertEqual(expectedResponseCode, self.request.code)
+
+        # Request played nicely with the channel and factory:
+        self.assertEqual([((self.request,), {})], self.factory._logCalls)
+        self.assertEqual([((self.request,), {})], self.channel._requestDoneCalls)
+
+    def test_successfulConnect(self):
+        """
+        Check that L{TunnelProxyRequest.process} handles the CONNECT method
+        to port 443.
+        """
+        expectedHost = 'example.com'
+        expectedPort = 443
+
+        hostPort = '%s:%d' % (expectedHost, expectedPort)
+
+        self._buildRequestAndConnect(hostPort)
+
+        self.assertEqual(len(self.reactor.tcpClients), 1)
+
+        tcpClients = self.reactor.tcpClients
+        [ (actualHost, actualPort, actualFactory, _, _) ] = tcpClients
+
+        self.assertEqual(expectedHost, actualHost)
+        self.assertEqual(expectedPort, actualPort)
+        self.assertIsInstance(actualFactory, TunnelProtocolFactory)
+
+    def test_connectToMalformedAuthorityWithoutPort(self):
+        """
+        Check that L{TunnelProxyRequest.process} handles the CONNECT method
+        with a malformed authority missing the port field.
+        """
+        # Missing a port:
+        self._buildRequestAndConnect('foo')
+        self._verifyResponseWithoutConnect(400)
+
+    def test_connectToMalformedAuthorityWithNonIntPort(self):
+        # Non-integer port:
+        self._buildRequestAndConnect('foo:bar')
+        self._verifyResponseWithoutConnect(400)
+
+    def test_connectToMalformedAuthorityWithExtraColons(self):
+        # Too many colons:
+        self._buildRequestAndConnect('foo:42:59')
+        self._verifyResponseWithoutConnect(400)
+
+
+
+class DummyTunnelProtocol(object):
+    def __init__(self, transport):
+        self.transport = transport
+
+
+
+class TunnelProxyTestCase(TestCase):
+    """
+    Tests for L{TunnelProxy}.
+    """
+    def test_nonTunneledDataReceived(self):
+        """
+        Verify that a TunnelProxy processes incoming data just like a
+        Proxy when there is no established tunnel.
+        """
+        # We don't test a complete line or more to exercise less of the underlying stack:
+        data = 'GET '
+
+        proxy = TunnelProxy()
+        proxy.dataReceived(data)
+
+        # We awkwardly verify by inspecting behind private interfaces:
+        self.assertEqual(data, proxy._buffer)
+
+    def test_tunneledDataReceived(self):
+        """
+        Verify that a TunnelProxy forwards any input from the user-agent
+        to any established tunnel directly.
+        """
+        data = 'Stuff in a tunnel with \r\n to tickle any invalid http processing.\r\n\r\n'
+
+        # We only need .write so no need for more sophisticated dummy transports:
+        transport = StringIO()
+        tunnel = DummyTunnelProtocol(transport)
+
+        proxy = TunnelProxy()
+        proxy._registerTunnel(tunnel)
+        proxy.dataReceived(data)
+
+        self.assertEqual(data, transport.getvalue())
+
+
+
+class DummyTunnelRequest(object):
+    def __init__(self, channel):
+        self.channel = channel
+        self._setResponseCodeCalls = []
+        self._writeCalls = []
+        self._finishCalls = []
+
+    def setResponseCode(self, *a, **kw):
+        self._setResponseCodeCalls.append((a,kw))
+
+    def write(self, *a, **kw):
+        self._writeCalls.append((a,kw))
+
+    def finish(self, *a, **kw):
+        self._finishCalls.append((a,kw))
+
+
+
+class TunnelProtocolFactoryTestCase(TestCase):
+    """
+    Tests for L{TunnelProtocolFactory}.
+    """
+    def _buildFactory(self, request):
+        return TunnelProtocolFactory(request)
+
+    def test_buildProtocol(self):
+        dummyProtocolClass = lambda *a, **kw: (a, kw)
+        dummyRequestSingleton = object()
+
+        factory = self._buildFactory(dummyRequestSingleton)
+
+        # Some finagling under the hood to test the buildProtocol method:
+        factory.protocol = dummyProtocolClass
+
+        dummyProtocolResult = factory.buildProtocol(None)
+
+        self.assertEqual(((dummyRequestSingleton,), {}), dummyProtocolResult)
+
+    def test_clientConnectionFailed(self):
+        dummyRequest = DummyTunnelRequest(None)
+
+        factory = self._buildFactory(dummyRequest)
+        factory.clientConnectionFailed(None, None)
+
+        self.assertEqual([((501, 'Gateway error'), {})], dummyRequest._setResponseCodeCalls)
+        self.assertEqual([((), {})], dummyRequest._finishCalls)
+
+
+
+class TunnelProtocolTestCase(TestCase):
+    """
+    Tests for L{TunnelProtocol}.
+    """
+    def test_makeConnection(self):
+        """
+        Verify that when a connection is made a 200 response is sent
+        and a tunnel is established.
+        """
+        channel = DummyTunnelChannel(transport=None, factory=None)
+        request = DummyTunnelRequest(channel)
+
+        tunnelproto = TunnelProtocol(request)
+        tunnelproto.makeConnection(None)
+
+        self.assertEqual([((tunnelproto,), {})], channel._registerTunnelCalls)
+        self.assertEqual([((200, 'Connection established'), {})], request._setResponseCodeCalls)
+        self.assertEqual([(('',), {})], request._writeCalls)
+
+    def test_dataReceived(self):
+        """
+        Verify that the stream from the server is forwarded to the
+        user-agent.
+        """
+        data = 'Hello World of Test!'
+
+        transport = StringIO() # We expect only .write
+        channel = DummyTunnelChannel(transport=transport, factory=None)
+        request = DummyTunnelRequest(channel)
+
+        tunnelproto = TunnelProtocol(request)
+        tunnelproto.dataReceived(data)
+
+        self.assertEqual(data, transport.getvalue()) 
 
 
 

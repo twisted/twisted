@@ -1,4 +1,3 @@
-
 :LastChangedDate: $LastChangedDate$
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
@@ -59,6 +58,8 @@ Virtual hosts and proxies
 - :download:`proxy.py` -
   use ``twisted.web.proxy.Proxy`` to make the simplest
   proxy
+- :download:`connect-proxy.py` -
+  use ``twisted.web.proxy.TunnelProxy`` to make a proxy that supports the CONNECT method
 - :download:`logging-proxy.py` - example of
   subclassing the core classes of ``twisted.web.proxy``
   to log requests through a proxy
@@ -124,7 +125,3 @@ Miscellaneous
   ``twisted.spread.pb``
 - :download:`soap.py` - use
   ``twisted.web.soap`` to publish SOAP methods
-
-
-
-
