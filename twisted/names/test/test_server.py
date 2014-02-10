@@ -856,7 +856,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertEqual(
             ((), dict(responseConstructor=factory._messageFactory,
                       message=request, rCode=dns.OK, recAv=factory.canRecurse,
-                      auth=False)),
+                      auth=False, ednsVersion=None)),
             (e.args, e.kwargs)
         )
 
@@ -875,6 +875,18 @@ class DNSServerFactoryTests(unittest.TestCase):
             (True, False),
             (response1.auth, response2.auth),
         )
+
+
+    def test_responseFromMessageEDNSVersion(self):
+        """
+        L{server.DNSServerFactory._responseFromMessage} sets the message as
+        ednsVersion = None to prevent the use of EDNS  features during encoding.
+        """
+        factory = server.DNSServerFactory()
+        response = factory._responseFromMessage(
+            message=dns._EDNSMessage(ednsVersion=0))
+
+        self.assertEqual(None, response.ednsVersion,)
 
 
     def test_gotResolverResponseLogging(self):
@@ -1023,7 +1035,8 @@ class DNSServerFactoryTests(unittest.TestCase):
         factory.sendReply = (
             lambda protocol, response, address: responses.append(response)
         )
-        request = dns._EDNSMessage(authenticData=True, checkingDisabled=True)
+        request = dns._EDNSMessage(ednsVersion=0,
+                                   authenticData=True, checkingDisabled=True)
         request.answers = [object(), object()]
         request.authority = [object(), object()]
         request.additional = [object(), object()]
@@ -1032,7 +1045,10 @@ class DNSServerFactoryTests(unittest.TestCase):
             protocol=None, message=request, address=None
         )
 
-        self.assertEqual([dns._EDNSMessage(rCode=3, answer=True)], responses)
+        self.assertEqual(
+            [dns._EDNSMessage(ednsVersion=None, rCode=3, answer=True)],
+            responses
+        )
 
 
     def test_gotResolverResponseResetsResponseAttributes(self):
@@ -1057,7 +1073,10 @@ class DNSServerFactoryTests(unittest.TestCase):
             protocol=None, message=request, address=None
         )
 
-        self.assertEqual([dns._EDNSMessage(rCode=0, answer=True)], responses)
+        self.assertEqual(
+            [dns._EDNSMessage(ednsVersion=None, rCode=0, answer=True)],
+            responses
+        )
 
 
     def test_sendReplyWithAddress(self):

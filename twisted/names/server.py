@@ -195,6 +195,9 @@ class DNSServerFactory(protocol.ServerFactory):
         The C{auth} flag will be set on the response if *any* of the supplied
         C{answers} have their C{auth} flag set to L{True}.
 
+        The C{ednsVersion} field will be set to L{None} on the response to turn
+        off all I{EDNS} features.
+
         The response will have the same C{maxSize} as the request.
 
         Additionally, the response will have a C{timeReceived} attribute whose
@@ -240,7 +243,10 @@ class DNSServerFactory(protocol.ServerFactory):
             message=message,
             recAv=self.canRecurse,
             rCode=rCode,
-            auth=authoritativeAnswer
+            auth=authoritativeAnswer,
+            # Turn off all EDNS features until we implement server-side EDNS
+            # behaviour.
+            ednsVersion=None
         )
 
         # XXX: Timereceived is a hack which probably shouldn't be tacked onto
