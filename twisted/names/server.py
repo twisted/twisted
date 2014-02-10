@@ -57,13 +57,13 @@ class DNSServerFactory(protocol.ServerFactory):
     @type protocol: L{IProtocolFactory} constructor
 
     @ivar _messageFactory: A response message constructor with an initializer
-         signature matching L{dns.Message.__init__}.
+         signature matching L{dns._EDNSMessage.__init__}.
     @type _messageFactory: C{callable}
     """
 
     protocol = dns.DNSProtocol
     cache = None
-    _messageFactory = dns.Message
+    _messageFactory = dns._EDNSMessage
 
 
     def __init__(self, authorities=None, caches=None, clients=None, verbose=0):
@@ -151,7 +151,7 @@ class DNSServerFactory(protocol.ServerFactory):
         @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
 
         @param message: The DNS message to be sent.
-        @type message: L{dns.Message}
+        @type message: L{dns._EDNSMessage}
 
         @param address: The address to which the message will be sent or L{None}
             if C{protocol} is a stream protocol.
@@ -289,7 +289,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         @param message: The original DNS query message for which a response
             message will be constructed.
-        @type message: L{dns.Message}
+        @type message: L{dns._EDNSMessage}
 
         @param address: The address to which the response message will be sent
             or L{None} if C{protocol} is a stream protocol.
@@ -329,7 +329,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         @param message: The original DNS query message for which a response
             message will be constructed.
-        @type message: L{dns.Message}
+        @type message: L{dns._EDNSMessage}
 
         @param address: The address to which the response message will be sent
             or L{None} if C{protocol} is a stream protocol.
@@ -370,7 +370,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         @param message: The original DNS query message for which a response
             message will be constructed.
-        @type message: L{dns.Message}
+        @type message: L{dns._EDNSMessage}
 
         @param address: The address to which the response message will be sent
             or L{None} if C{protocol} is a stream protocol.
@@ -406,7 +406,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         @param message: The original DNS query message for which a response
             message will be constructed.
-        @type message: L{dns.Message}
+        @type message: L{dns._EDNSMessage}
 
         @param address: The address to which the response message will be sent
             or L{None} if C{protocol} is a stream protocol.
@@ -434,7 +434,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         @param message: The original DNS query message for which a response
             message will be constructed.
-        @type message: L{dns.Message}
+        @type message: L{dns._EDNSMessage}
 
         @param address: The address to which the response message will be sent
             or L{None} if C{protocol} is a stream protocol.
@@ -462,7 +462,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         @param message: The original DNS query message for which a response
             message will be constructed.
-        @type message: L{dns.Message}
+        @type message: L{dns._EDNSMessage}
 
         @param address: The address to which the response message will be sent
             or L{None} if C{protocol} is a stream protocol.
@@ -490,7 +490,7 @@ class DNSServerFactory(protocol.ServerFactory):
 
         @param message: The original DNS query message for which a response
             message will be constructed.
-        @type message: L{dns.Message}
+        @type message: L{dns._EDNSMessage}
 
         @param address: The address to which the response message will be sent
             or L{None} if C{protocol} is a stream protocol.
@@ -523,7 +523,7 @@ class DNSServerFactory(protocol.ServerFactory):
         logged in more or less detail depending on the value of C{verbose}.
 
         @param message: The DNS message that was received.
-        @type message: L{dns.Message}
+        @type message: L{dns._EDNSMessage}
 
         @param proto: The DNS protocol instance which received the message
         @type proto: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}
@@ -576,7 +576,7 @@ class DNSServerFactory(protocol.ServerFactory):
         Override in a subclass to implement alternative policies.
 
         @param message: The DNS message that was received.
-        @type message: L{dns.Message}
+        @type message: L{dns._EDNSMessage}
 
         @param protocol: The DNS protocol instance which received the message
         @type protocol: L{dns.DNSDatagramProtocol} or L{dns.DNSProtocol}

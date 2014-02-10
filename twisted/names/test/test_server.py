@@ -436,7 +436,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.messageReceived} logs about an empty query if
         the message had no queries and C{verbose} is C{>0}.
         """
-        m = dns.Message()
+        m = dns._EDNSMessage()
         f = NoResponseDNSServerFactory(verbose=1)
 
         assertLogMessage(
@@ -451,9 +451,9 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.messageReceived} logs the query types of all
         queries in the message if C{verbose} is set to C{1}.
         """
-        m = dns.Message()
-        m.addQuery(name='example.com', type=dns.MX)
-        m.addQuery(name='example.com', type=dns.AAAA)
+        m = dns._EDNSMessage(
+            queries=[dns.Query(name='example.com', type=dns.MX),
+                     dns.Query(name='example.com', type=dns.AAAA)])
         f = NoResponseDNSServerFactory(verbose=1)
 
         assertLogMessage(
@@ -468,9 +468,9 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.messageReceived} logs the repr of all queries
         in the message if C{verbose} is set to C{2}.
         """
-        m = dns.Message()
-        m.addQuery(name='example.com', type=dns.MX)
-        m.addQuery(name='example.com', type=dns.AAAA)
+        m = dns._EDNSMessage(
+            queries=[dns.Query(name='example.com', type=dns.MX),
+                     dns.Query(name='example.com', type=dns.AAAA)])
         f = NoResponseDNSServerFactory(verbose=2)
 
         assertLogMessage(
@@ -486,7 +486,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.messageReceived} assigns a unix timestamp to
         the received message.
         """
-        m = dns.Message()
+        m = dns._EDNSMessage()
         f = NoResponseDNSServerFactory()
         t = object()
         self.patch(server.time, 'time', lambda: t)
@@ -501,7 +501,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.allowQuery} along with the receiving protocol
         and origin address.
         """
-        message = dns.Message()
+        message = dns._EDNSMessage()
         dummyProtocol = object()
         dummyAddress = object()
 
@@ -535,7 +535,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         e = self.assertRaises(
             SendReplyException,
             f.messageReceived,
-            message=dns.Message(), proto=None, address=None)
+            message=dns._EDNSMessage(), proto=None, address=None)
         (proto, message, address), kwargs = e.args
 
         self.assertEqual(message.rCode, dns.EREFUSED)
@@ -552,7 +552,7 @@ class DNSServerFactoryTests(unittest.TestCase):
 
         @param message: The message which is expected to be passed to the
             C{methodName} method.
-        @type message: L{dns.Message}
+        @type message: L{dns._EDNSMessage}
         """
         # Make it appear to have some queries so that
         # DNSServerFactory.allowQuery allows it.
@@ -575,7 +575,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         C{OP_QUERY} on to L{DNSServerFactory.handleQuery}.
         """
         self._messageReceivedTest(
-            'handleQuery', dns.Message(opCode=dns.OP_QUERY))
+            'handleQuery', dns._EDNSMessage(opCode=dns.OP_QUERY))
 
 
     def test_inverseQueryMessageReceived(self):
@@ -584,7 +584,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         C{OP_INVERSE} on to L{DNSServerFactory.handleInverseQuery}.
         """
         self._messageReceivedTest(
-            'handleInverseQuery', dns.Message(opCode=dns.OP_INVERSE))
+            'handleInverseQuery', dns._EDNSMessage(opCode=dns.OP_INVERSE))
 
 
     def test_statusMessageReceived(self):
@@ -593,7 +593,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         C{OP_STATUS} on to L{DNSServerFactory.handleStatus}.
         """
         self._messageReceivedTest(
-            'handleStatus', dns.Message(opCode=dns.OP_STATUS))
+            'handleStatus', dns._EDNSMessage(opCode=dns.OP_STATUS))
 
 
     def test_notifyMessageReceived(self):
@@ -602,7 +602,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         C{OP_NOTIFY} on to L{DNSServerFactory.handleNotify}.
         """
         self._messageReceivedTest(
-            'handleNotify', dns.Message(opCode=dns.OP_NOTIFY))
+            'handleNotify', dns._EDNSMessage(opCode=dns.OP_NOTIFY))
 
 
     def test_updateMessageReceived(self):
@@ -613,7 +613,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         This may change if the implementation ever covers update messages.
         """
         self._messageReceivedTest(
-            'handleOther', dns.Message(opCode=dns.OP_UPDATE))
+            'handleOther', dns._EDNSMessage(opCode=dns.OP_UPDATE))
 
 
     def test_connectionTracking(self):
@@ -640,9 +640,9 @@ class DNSServerFactoryTests(unittest.TestCase):
         supplied message and dispatches it to
         L{server.DNSServerFactory.resolver.query}.
         """
-        m = dns.Message()
-        m.addQuery(b'one.example.com')
-        m.addQuery(b'two.example.com')
+        m = dns._EDNSMessage(
+            queries=[dns.Query(b'one.example.com'),
+                     dns.Query(b'two.example.com')])
         f = server.DNSServerFactory()
         f.resolver = RaisingResolver()
 
@@ -675,8 +675,7 @@ class DNSServerFactoryTests(unittest.TestCase):
             gotResolverResponseArgs.append((args, kwargs))
         f.gotResolverResponse = fakeGotResolverResponse
 
-        m = dns.Message()
-        m.addQuery(b'one.example.com')
+        m = dns._EDNSMessage(queries=[dns.Query(b'one.example.com')])
         stubProtocol = NoopProtocol()
         dummyAddress = object()
 
@@ -711,8 +710,7 @@ class DNSServerFactoryTests(unittest.TestCase):
             gotResolverErrorArgs.append((args, kwargs))
         f.gotResolverError = fakeGotResolverError
 
-        m = dns.Message()
-        m.addQuery(b'one.example.com')
+        m = dns._EDNSMessage(queries=[dns.Query(b'one.example.com')])
         stubProtocol = NoopProtocol()
         dummyAddress = object()
 
@@ -740,7 +738,7 @@ class DNSServerFactoryTests(unittest.TestCase):
             RaisingProtocol.WriteMessageArguments,
             f.gotResolverResponse,
             (answers, authority, additional),
-            protocol=RaisingProtocol(), message=dns.Message(), address=None)
+            protocol=RaisingProtocol(), message=dns._EDNSMessage(), address=None)
         (message,), kwargs = e.args
 
         self.assertIs(message.answers, answers)
@@ -756,7 +754,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         factory = NoResponseDNSServerFactory()
         factory._responseFromMessage = raiser
 
-        request = dns.Message()
+        request = dns._EDNSMessage()
         request.timeReceived = 1
 
         e = self.assertRaises(
@@ -778,7 +776,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         message which is a copy of the request message.
         """
         factory = server.DNSServerFactory()
-        request = dns.Message(answer=False, recAv=False)
+        request = dns._EDNSMessage(answer=False, recAv=False)
         response = factory._responseFromMessage(message=request),
 
         self.assertIsNot(request, response)
@@ -793,10 +791,10 @@ class DNSServerFactoryTests(unittest.TestCase):
         factory = server.DNSServerFactory()
         factory.canRecurse = True
         response1 = factory._responseFromMessage(
-            message=dns.Message(recAv=False))
+            message=dns._EDNSMessage(recAv=False))
         factory.canRecurse = False
         response2 = factory._responseFromMessage(
-            message=dns.Message(recAv=True))
+            message=dns._EDNSMessage(recAv=True))
         self.assertEqual(
             (True, False),
             (response1.recAv, response2.recAv))
@@ -809,7 +807,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         on the request.
         """
         factory = server.DNSServerFactory()
-        request = dns.Message()
+        request = dns._EDNSMessage()
         request.timeReceived = 1234
         response = factory._responseFromMessage(message=request)
 
@@ -823,7 +821,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         on the request.
         """
         factory = server.DNSServerFactory()
-        request = dns.Message()
+        request = dns._EDNSMessage()
         request.maxSize = 0
         response = factory._responseFromMessage(message=request)
 
@@ -833,9 +831,9 @@ class DNSServerFactoryTests(unittest.TestCase):
     def test_messageFactory(self):
         """
         L{server.DNSServerFactory} has a C{_messageFactory} attribute which is
-        L{dns.Message} by default.
+        L{dns._EDNSMessage} by default.
         """
-        self.assertIs(dns.Message, server.DNSServerFactory._messageFactory)
+        self.assertIs(dns._EDNSMessage, server.DNSServerFactory._messageFactory)
 
 
     def test_responseFromMessageCallsMessageFactory(self):
@@ -849,7 +847,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         factory = server.DNSServerFactory()
         self.patch(dns, '_responseFromMessage', raiser)
 
-        request = dns.Message()
+        request = dns._EDNSMessage()
         e = self.assertRaises(
             RaisedArguments,
             factory._responseFromMessage,
@@ -870,9 +868,9 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         factory = server.DNSServerFactory()
         response1 = factory._responseFromMessage(
-            message=dns.Message(), answers=[dns.RRHeader(auth=True)])
+            message=dns._EDNSMessage(), answers=[dns.RRHeader(auth=True)])
         response2 = factory._responseFromMessage(
-            message=dns.Message(), answers=[dns.RRHeader(auth=False)])
+            message=dns._EDNSMessage(), answers=[dns.RRHeader(auth=False)])
         self.assertEqual(
             (True, False),
             (response1.auth, response2.auth),
@@ -894,7 +892,7 @@ class DNSServerFactoryTests(unittest.TestCase):
             ["Lookup found 3 records"],
             f.gotResolverResponse,
             (answers, authority, additional),
-            protocol=NoopProtocol(), message=dns.Message(), address=None)
+            protocol=NoopProtocol(), message=dns._EDNSMessage(), address=None)
 
 
     def test_gotResolverResponseCaching(self):
@@ -904,8 +902,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         """
         f = NoResponseDNSServerFactory(caches=[RaisingCache()])
 
-        m = dns.Message()
-        m.addQuery(b'example.com')
+        m = dns._EDNSMessage(queries=[dns.Query(b'example.com')])
         expectedAnswers = [dns.RRHeader()]
         expectedAuthority = []
         expectedAdditional = []
@@ -931,7 +928,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         factory = NoResponseDNSServerFactory()
         factory._responseFromMessage = raiser
 
-        request = dns.Message()
+        request = dns._EDNSMessage()
         request.timeReceived = 1
 
         e = self.assertRaises(
@@ -967,7 +964,7 @@ class DNSServerFactoryTests(unittest.TestCase):
             RaisingProtocol.WriteMessageArguments,
             f.gotResolverError,
             failure.Failure(responseError),
-            protocol=RaisingProtocol(), message=dns.Message(), address=None)
+            protocol=RaisingProtocol(), message=dns._EDNSMessage(), address=None)
         (message,), kwargs = e.args
 
         self.assertEqual(message.rCode, expectedMessageCode)
@@ -1012,7 +1009,7 @@ class DNSServerFactoryTests(unittest.TestCase):
             ["Lookup failed"],
             f.gotResolverError,
             failure.Failure(error.DomainError()),
-            protocol=NoopProtocol(), message=dns.Message(), address=None)
+            protocol=NoopProtocol(), message=dns._EDNSMessage(), address=None)
 
 
     def test_gotResolverErrorResetsResponseAttributes(self):
@@ -1026,7 +1023,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         factory.sendReply = (
             lambda protocol, response, address: responses.append(response)
         )
-        request = dns.Message(authenticData=True, checkingDisabled=True)
+        request = dns._EDNSMessage(authenticData=True, checkingDisabled=True)
         request.answers = [object(), object()]
         request.authority = [object(), object()]
         request.additional = [object(), object()]
@@ -1035,7 +1032,7 @@ class DNSServerFactoryTests(unittest.TestCase):
             protocol=None, message=request, address=None
         )
 
-        self.assertEqual([dns.Message(rCode=3, answer=True)], responses)
+        self.assertEqual([dns._EDNSMessage(rCode=3, answer=True)], responses)
 
 
     def test_gotResolverResponseResetsResponseAttributes(self):
@@ -1050,7 +1047,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         factory.sendReply = (
             lambda protocol, response, address: responses.append(response)
         )
-        request = dns.Message(authenticData=True, checkingDisabled=True)
+        request = dns._EDNSMessage(authenticData=True, checkingDisabled=True)
         request.answers = [object(), object()]
         request.authority = [object(), object()]
         request.additional = [object(), object()]
@@ -1060,7 +1057,7 @@ class DNSServerFactoryTests(unittest.TestCase):
             protocol=None, message=request, address=None
         )
 
-        self.assertEqual([dns.Message(rCode=0, answer=True)], responses)
+        self.assertEqual([dns._EDNSMessage(rCode=0, answer=True)], responses)
 
 
     def test_sendReplyWithAddress(self):
@@ -1069,7 +1066,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         *and* an address tuple it will supply that address to
         C{protocol.writeMessage}.
         """
-        m = dns.Message()
+        m = dns._EDNSMessage()
         dummyAddress = object()
         f = server.DNSServerFactory()
         e = self.assertRaises(
@@ -1089,7 +1086,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         no address tuple it will supply only a message to
         C{protocol.writeMessage}.
         """
-        m = dns.Message()
+        m = dns._EDNSMessage()
         f = server.DNSServerFactory()
         e = self.assertRaises(
             RaisingProtocol.WriteMessageArguments,
@@ -1108,7 +1105,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         the supplied message has no answers.
         """
         self.patch(server.time, 'time', lambda: 2)
-        m = dns.Message()
+        m = dns._EDNSMessage()
         m.timeReceived = 1
         f = server.DNSServerFactory(verbose=2)
         assertLogMessage(
@@ -1127,7 +1124,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         those sections.
         """
         self.patch(server.time, 'time', lambda: 2)
-        m = dns.Message()
+        m = dns._EDNSMessage()
         m.answers.append(dns.RRHeader(payload=dns.Record_A('127.0.0.1')))
         m.authority.append(dns.RRHeader(payload=dns.Record_A('127.0.0.1')))
         m.additional.append(dns.RRHeader(payload=dns.Record_A('127.0.0.1')))
@@ -1154,7 +1151,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         e = self.assertRaises(
             RaisingProtocol.WriteMessageArguments,
             f.handleInverseQuery,
-            message=dns.Message(), protocol=RaisingProtocol(), address=None)
+            message=dns._EDNSMessage(), protocol=RaisingProtocol(), address=None)
         (message,), kwargs = e.args
 
         self.assertEqual(message.rCode, dns.ENOTIMP)
@@ -1170,7 +1167,7 @@ class DNSServerFactoryTests(unittest.TestCase):
             self,
             ["Inverse query from ('::1', 53)"],
             f.handleInverseQuery,
-            message=dns.Message(),
+            message=dns._EDNSMessage(),
             protocol=NoopProtocol(),
             address=('::1', 53))
 
@@ -1184,7 +1181,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         e = self.assertRaises(
             RaisingProtocol.WriteMessageArguments,
             f.handleStatus,
-            message=dns.Message(), protocol=RaisingProtocol(), address=None)
+            message=dns._EDNSMessage(), protocol=RaisingProtocol(), address=None)
         (message,), kwargs = e.args
 
         self.assertEqual(message.rCode, dns.ENOTIMP)
@@ -1200,7 +1197,7 @@ class DNSServerFactoryTests(unittest.TestCase):
             self,
             ["Status request from ('::1', 53)"],
             f.handleStatus,
-            message=dns.Message(),
+            message=dns._EDNSMessage(),
             protocol=NoopProtocol(),
             address=('::1', 53))
 
@@ -1214,7 +1211,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         e = self.assertRaises(
             RaisingProtocol.WriteMessageArguments,
             f.handleNotify,
-            message=dns.Message(), protocol=RaisingProtocol(), address=None)
+            message=dns._EDNSMessage(), protocol=RaisingProtocol(), address=None)
         (message,), kwargs = e.args
 
         self.assertEqual(message.rCode, dns.ENOTIMP)
@@ -1230,7 +1227,7 @@ class DNSServerFactoryTests(unittest.TestCase):
             self,
             ["Notify message from ('::1', 53)"],
             f.handleNotify,
-            message=dns.Message(),
+            message=dns._EDNSMessage(),
             protocol=NoopProtocol(),
             address=('::1', 53))
 
@@ -1244,7 +1241,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         e = self.assertRaises(
             RaisingProtocol.WriteMessageArguments,
             f.handleOther,
-            message=dns.Message(), protocol=RaisingProtocol(), address=None)
+            message=dns._EDNSMessage(), protocol=RaisingProtocol(), address=None)
         (message,), kwargs = e.args
 
         self.assertEqual(message.rCode, dns.ENOTIMP)
@@ -1260,6 +1257,6 @@ class DNSServerFactoryTests(unittest.TestCase):
             self,
             ["Unknown op code (0) from ('::1', 53)"],
             f.handleOther,
-            message=dns.Message(),
+            message=dns._EDNSMessage(),
             protocol=NoopProtocol(),
             address=('::1', 53))
