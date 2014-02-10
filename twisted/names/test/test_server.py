@@ -15,6 +15,26 @@ from twisted.trial import unittest
 
 
 
+class RaisedArguments(Exception):
+    """
+    An exception containing the arguments raised by L{raiser}.
+    """
+    def __init__(self, args, kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+
+
+def raiser(*args, **kwargs):
+    """
+    Raise a L{RaisedArguments} exception containing the supplied arguments.
+
+    Used as a fake when testing the call signatures of  methods and functions.
+    """
+    raise RaisedArguments(args, kwargs)
+
+
+
 class NoResponseDNSServerFactory(server.DNSServerFactory):
     """
     A L{server.DNSServerFactory} subclass which does not attempt to reply to any
@@ -209,7 +229,6 @@ class DNSServerFactoryTests(unittest.TestCase):
     """
     Tests for L{server.DNSServerFactory}.
     """
-
     def test_resolverType(self):
         """
         L{server.DNSServerFactory.resolver} is a L{resolve.ResolverChain}
@@ -729,25 +748,135 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertIs(message.additional, additional)
 
 
-    def test_gotResolverResponseAuthoritativeMessage(self):
+    def test_gotResolverResponseCallsResponseFromMessage(self):
         """
-        L{server.DNSServerFactory.gotResolverResponse} marks the response
+        L{server.DNSServerFactory.gotResolverResponse} calls
+        L{server.DNSServerFactory._responseFromMessage} to generate a response.
+        """
+        factory = NoResponseDNSServerFactory()
+        factory._responseFromMessage = raiser
+
+        request = dns.Message()
+        request.timeReceived = 1
+
+        e = self.assertRaises(
+            RaisedArguments,
+            factory.gotResolverResponse,
+            ([], [], []),
+            protocol=None, message=request, address=None
+        )
+        self.assertEqual(
+            ((), dict(message=request, rCode=dns.OK,
+                      answers=[], authority=[], additional=[])),
+            (e.args, e.kwargs)
+        )
+
+
+    def test_responseFromMessageNewMessage(self):
+        """
+        L{server.DNSServerFactory._responseFromMessage} generates a response
+        message which is a copy of the request message.
+        """
+        factory = server.DNSServerFactory()
+        request = dns.Message(answer=False, recAv=False)
+        response = factory._responseFromMessage(message=request),
+
+        self.assertIsNot(request, response)
+
+
+    def test_responseFromMessageRecursionAvailable(self):
+        """
+        L{server.DNSServerFactory._responseFromMessage} generates a response
+        message whose C{recAV} attribute is L{True} if
+        L{server.DNSServerFactory.canRecurse} is L{True}.
+        """
+        factory = server.DNSServerFactory()
+        factory.canRecurse = True
+        response1 = factory._responseFromMessage(
+            message=dns.Message(recAv=False))
+        factory.canRecurse = False
+        response2 = factory._responseFromMessage(
+            message=dns.Message(recAv=True))
+        self.assertEqual(
+            (True, False),
+            (response1.recAv, response2.recAv))
+
+
+    def test_responseFromMessageTimeReceived(self):
+        """
+        L{server.DNSServerFactory._responseFromMessage} generates a response
+        message whose C{timeReceived} attribute has the same value as that found
+        on the request.
+        """
+        factory = server.DNSServerFactory()
+        request = dns.Message()
+        request.timeReceived = 1234
+        response = factory._responseFromMessage(message=request)
+
+        self.assertEqual(request.timeReceived, response.timeReceived)
+
+
+    def test_responseFromMessageMaxSize(self):
+        """
+        L{server.DNSServerFactory._responseFromMessage} generates a response
+        message whose C{maxSize} attribute has the same value as that found
+        on the request.
+        """
+        factory = server.DNSServerFactory()
+        request = dns.Message()
+        request.maxSize = 0
+        response = factory._responseFromMessage(message=request)
+
+        self.assertEqual(request.maxSize, response.maxSize)
+
+
+    def test_messageFactory(self):
+        """
+        L{server.DNSServerFactory} has a C{_messageFactory} attribute which is
+        L{dns.Message} by default.
+        """
+        self.assertIs(dns.Message, server.DNSServerFactory._messageFactory)
+
+
+    def test_responseFromMessageCallsMessageFactory(self):
+        """
+        L{server.DNSServerFactory._responseFromMessage} calls
+        C{dns._responseFromMessage} to generate a response
+        message from the request message. It supplies the request message and
+        other keyword arguments which should be passed to the response message
+        initialiser.
+        """
+        factory = server.DNSServerFactory()
+        self.patch(dns, '_responseFromMessage', raiser)
+
+        request = dns.Message()
+        e = self.assertRaises(
+            RaisedArguments,
+            factory._responseFromMessage,
+            message=request, rCode=dns.OK
+        )
+        self.assertEqual(
+            ((), dict(responseConstructor=factory._messageFactory,
+                      message=request, rCode=dns.OK, recAv=factory.canRecurse,
+                      auth=False)),
+            (e.args, e.kwargs)
+        )
+
+
+    def test_responseFromMessageAuthoritativeMessage(self):
+        """
+        L{server.DNSServerFactory._responseFromMessage} marks the response
         message as authoritative if any of the answer records are authoritative.
         """
-        f = server.DNSServerFactory()
-        answers = [dns.RRHeader(auth=True)]
-        authority = []
-        additional = []
-        e = self.assertRaises(
-            RaisingProtocol.WriteMessageArguments,
-            f.gotResolverResponse,
-            (answers, authority, additional),
-            protocol=RaisingProtocol(), message=dns.Message(), address=None)
-        (message,), kwargs = e.args
-
-        self.assertTrue(
-            message.auth,
-            'Message is not authoritative. message.auth=%r' % (message.auth,))
+        factory = server.DNSServerFactory()
+        response1 = factory._responseFromMessage(
+            message=dns.Message(), answers=[dns.RRHeader(auth=True)])
+        response2 = factory._responseFromMessage(
+            message=dns.Message(), answers=[dns.RRHeader(auth=False)])
+        self.assertEqual(
+            (True, False),
+            (response1.auth, response2.auth),
+        )
 
 
     def test_gotResolverResponseLogging(self):
@@ -792,6 +921,29 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertIs(answers, expectedAnswers)
         self.assertIs(authority, expectedAuthority)
         self.assertIs(additional, expectedAdditional)
+
+
+    def test_gotResolverErrorCallsResponseFromMessage(self):
+        """
+        L{server.DNSServerFactory.gotResolverError} calls
+        L{server.DNSServerFactory._responseFromMessage} to generate a response.
+        """
+        factory = NoResponseDNSServerFactory()
+        factory._responseFromMessage = raiser
+
+        request = dns.Message()
+        request.timeReceived = 1
+
+        e = self.assertRaises(
+            RaisedArguments,
+            factory.gotResolverError,
+            failure.Failure(error.DomainError()),
+            protocol=None, message=request, address=None
+        )
+        self.assertEqual(
+            ((), dict(message=request, rCode=dns.ENAME)),
+            (e.args, e.kwargs)
+        )
 
 
     def _assertMessageRcodeForError(self, responseError, expectedMessageCode):
@@ -861,6 +1013,54 @@ class DNSServerFactoryTests(unittest.TestCase):
             f.gotResolverError,
             failure.Failure(error.DomainError()),
             protocol=NoopProtocol(), message=dns.Message(), address=None)
+
+
+    def test_gotResolverErrorResetsResponseAttributes(self):
+        """
+        L{server.DNSServerFactory.gotResolverError} does not allow request
+        attributes to leak into the response ie it sends a response with AD, CD
+        set to 0 and empty response record sections.
+        """
+        factory = server.DNSServerFactory()
+        responses = []
+        factory.sendReply = (
+            lambda protocol, response, address: responses.append(response)
+        )
+        request = dns.Message(authenticData=True, checkingDisabled=True)
+        request.answers = [object(), object()]
+        request.authority = [object(), object()]
+        request.additional = [object(), object()]
+        factory.gotResolverError(
+            failure.Failure(error.DomainError()),
+            protocol=None, message=request, address=None
+        )
+
+        self.assertEqual([dns.Message(rCode=3, answer=True)], responses)
+
+
+    def test_gotResolverResponseResetsResponseAttributes(self):
+        """
+        L{server.DNSServerFactory.gotResolverResponse} does not allow request
+        attributes to leak into the response ie it sends a response with AD, CD
+        set to 0 and none of the records in the request answer sections are
+        copied to the response.
+        """
+        factory = server.DNSServerFactory()
+        responses = []
+        factory.sendReply = (
+            lambda protocol, response, address: responses.append(response)
+        )
+        request = dns.Message(authenticData=True, checkingDisabled=True)
+        request.answers = [object(), object()]
+        request.authority = [object(), object()]
+        request.additional = [object(), object()]
+
+        factory.gotResolverResponse(
+            ([], [], []),
+            protocol=None, message=request, address=None
+        )
+
+        self.assertEqual([dns.Message(rCode=0, answer=True)], responses)
 
 
     def test_sendReplyWithAddress(self):

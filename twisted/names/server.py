@@ -55,10 +55,16 @@ class DNSServerFactory(protocol.ServerFactory):
         instance as the one and only positional argument.  Defaults to
         L{dns.DNSProtocol}.
     @type protocol: L{IProtocolFactory} constructor
+
+    @ivar _messageFactory: A response message constructor with an initializer
+         signature matching L{dns.Message.__init__}.
+    @type _messageFactory: C{callable}
     """
 
     protocol = dns.DNSProtocol
     cache = None
+    _messageFactory = dns.Message
+
 
     def __init__(self, authorities=None, caches=None, clients=None, verbose=0):
         """
@@ -172,6 +178,88 @@ class DNSServerFactory(protocol.ServerFactory):
                 time.time() - message.timeReceived))
 
 
+    def _responseFromMessage(self, message, rCode=dns.OK,
+                             answers=None, authority=None, additional=None):
+        """
+        Generate a L{Message} instance suitable for use as the response to
+        C{message}.
+
+        C{queries} will be copied from the request to the response.
+
+        C{rCode}, C{answers}, C{authority} and C{additional} will be assigned to
+        the response, if supplied.
+
+        The C{recAv} flag will be set on the response if the C{canRecurse} flag
+        on this L{DNSServerFactory} is set to L{True}.
+
+        The C{auth} flag will be set on the response if *any* of the supplied
+        C{answers} have their C{auth} flag set to L{True}.
+
+        The response will have the same C{maxSize} as the request.
+
+        Additionally, the response will have a C{timeReceived} attribute whose
+        value is that of the original request and the
+
+        @see: L{dns._responseFromMessage}
+
+        @param message: The request message
+        @type message: L{Message}
+
+        @param rCode: The response code which will be assigned to the response.
+        @type message: L{int}
+
+        @param answers: An optional list of answer records which will be
+            assigned to the response.
+        @type answers: L{list} of L{dns.RRHeader}
+
+        @param authority: An optional list of authority records which will be
+            assigned to the response.
+        @type authority: L{list} of L{dns.RRHeader}
+
+        @param additional: An optional list of additional records which will be
+            assigned to the response.
+        @type additional: L{list} of L{dns.RRHeader}
+
+        @return: A response L{Message} instance.
+        @rtype: L{Message}
+        """
+        if answers is None:
+            answers = []
+        if authority is None:
+            authority = []
+        if additional is None:
+            additional = []
+        authoritativeAnswer = False
+        for x in answers:
+            if x.isAuthoritative():
+                authoritativeAnswer = True
+                break
+
+        response = dns._responseFromMessage(
+            responseConstructor=self._messageFactory,
+            message=message,
+            recAv=self.canRecurse,
+            rCode=rCode,
+            auth=authoritativeAnswer
+        )
+
+        # XXX: Timereceived is a hack which probably shouldn't be tacked onto
+        # the message. Use getattr here so that we don't have to set the
+        # timereceived on every message in the tests. See #6957.
+        response.timeReceived = getattr(message, 'timeReceived', None)
+
+        # XXX: This is another hack. dns.Message.decode sets maxSize=0 which
+        # means that responses are never truncated. I'll maintain that behaviour
+        # here until #6949 is resolved.
+        response.maxSize = message.maxSize
+
+        response.answers = answers
+        response.authority = authority
+        response.additional = additional
+
+        return response
+
+
     def gotResolverResponse(self, (ans, auth, add), protocol, message, address):
         """
         A callback used by L{DNSServerFactory.handleQuery} for handling the
@@ -207,15 +295,10 @@ class DNSServerFactory(protocol.ServerFactory):
             or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
-        message.rCode = dns.OK
-        message.answers = ans
-        for x in ans:
-            if x.isAuthoritative():
-                message.auth = 1
-                break
-        message.authority = auth
-        message.additional = add
-        self.sendReply(protocol, message, address)
+        response = self._responseFromMessage(
+            message=message, rCode=dns.OK,
+            answers=ans, authority=auth, additional=add)
+        self.sendReply(protocol, response, address)
 
         l = len(ans) + len(auth) + len(add)
         self._verboseLog("Lookup found %d record%s" % (l, l != 1 and "s" or ""))
@@ -253,12 +336,14 @@ class DNSServerFactory(protocol.ServerFactory):
         @type address: L{tuple} or L{None}
         """
         if failure.check(dns.DomainError, dns.AuthoritativeDomainError):
-            message.rCode = dns.ENAME
+            rCode = dns.ENAME
         else:
-            message.rCode = dns.ESERVER
+            rCode = dns.ESERVER
             log.err(failure)
 
-        self.sendReply(protocol, message, address)
+        response = self._responseFromMessage(message=message, rCode=rCode)
+
+        self.sendReply(protocol, response, address)
         self._verboseLog("Lookup failed")
 
 
@@ -465,9 +550,6 @@ class DNSServerFactory(protocol.ServerFactory):
                 log.msg(
                     "%s query from %r" % (
                         s, address or proto.transport.getPeer()))
-
-        message.recAv = self.canRecurse
-        message.answer = 1
 
         if not self.allowQuery(message, proto, address):
             message.rCode = dns.EREFUSED
