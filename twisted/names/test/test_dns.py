@@ -3026,6 +3026,81 @@ class MessageTruncated(object):
 
 
 
+class MessageTruncated512(object):
+    """
+    A message with bytes that are truncated at 512 bytes.
+    """
+    @classmethod
+    def bytes(cls):
+        """
+        Bytes which are expected when encoding an instance constructed using
+        C{kwargs} and which are expected to result in an identical instance when
+        decoded.
+
+        @return: The L{bytes} of a wire encoded message.
+        """
+        return (
+            b'\x01\x00' # ID: 256
+            b'\x82' # QR: 1, OPCODE: 0, AA: 0, TC: 1, RD: 0
+            b'\x00' # RA: 0, Z, RCODE: 0
+            b'\x00\x01' # Number of queries
+            b'\x00\x01' # Number of answers
+            b'\x00\x00' # Number of authorities
+            b'\x00\x64' # Number of additionals
+            # Query
+            b'\x07example\x03com\x00'
+            b'\x00\x02' # Type NS
+            b'\x00\x01' # Class IN
+            # Answer
+            b'\xc0\x0c' # Compression reference
+            b'\x00\x02' # Type NS
+            b'\x00\x01' # Class IN
+            b'\x00\x00\x00\x00' # TTL
+            b'\x00\x06' # RD length
+            b'\x03ns1\xc0\x0c' # RDATA
+            + b''.join((
+            # Additional
+            b'\xc0)' # Compression
+            b'\x00\x01' # Type A
+            b'\x00\x01' # Class IN
+            b'\x00\x00\x00\x00' # TTL
+            b'\x00\x04' # RD length
+            b'\xc0\x00\x02%s' # RDATA
+            ) % (chr(i),) for  i in range(29))
+            + b'\xc0' # Trailing start of another additional record
+        )
+
+
+    @classmethod
+    def kwargs(cls):
+        """
+        Keyword constructor arguments which are expected to result in an
+        instance which returns C{bytes} when encoded.
+
+        @return: A L{dict} of keyword arguments.
+        """
+        return dict(
+            id=256,
+            answer=1,
+            opCode=0,
+            auth=0,
+            trunc=1,
+            recDes=0,
+            recAv=0,
+            rCode=0,
+            ednsVersion=None,
+            maxSize=512,
+            queries=[dns.Query(name=b'example.com', type=dns.NS)],
+            answers=[dns.RRHeader(name=b'example.com',
+                                  type=dns.NS,
+                                  payload=dns.Record_NS(b'ns1.example.com'))],
+            additional=[dns.RRHeader(name=b'ns1.example.com',
+                                     type=dns.A,
+                                     payload=dns.Record_A(b'192.0.2.%s' % (i,)))
+                        for i in range(100)])
+
+
+
 class MessageNonAuthoritative(object):
     """
     A minimal non-authoritative message.
@@ -4310,6 +4385,18 @@ class StandardEncodingTestsMixin(object):
             MessageTruncated.bytes())
 
 
+    def test_truncatedMessageTruncation(self):
+        """
+        A message whose payload exceeds C{maxSize} will be truncated to
+        C{maxSize} and its C{trunc} attribute will be set.
+        """
+        m = self.messageFactory(**MessageTruncated512.kwargs())
+        self.assertEqual(
+            (m.trunc, m.toStr()),
+            (True, MessageTruncated512.bytes())
+        )
+
+
     def test_truncatedMessageDecode(self):
         """
         The message instance created by decoding a truncated message is marked
@@ -4445,6 +4532,16 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
         ednsMessage = dns._EDNSMessage(ednsVersion=1)
         ednsMessage.toStr()
         self.assertEqual(ednsMessage.additional, [])
+
+
+    def test_toMessageCopiesMaxSize(self):
+        """
+        L{dns._EDNSMessage._toMessage} copies the C{maxSize} value to the
+        L{dns.Message} instance.
+        """
+        ednsMessage = dns._EDNSMessage(maxSize=999)
+        standardMessage = ednsMessage._toMessage()
+        self.assertEqual(999, standardMessage.maxSize)
 
 
     def test_optHeaderPosition(self):
