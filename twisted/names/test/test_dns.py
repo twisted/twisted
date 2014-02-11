@@ -3096,7 +3096,7 @@ class MessageTruncated512(object):
                                   payload=dns.Record_NS(b'ns1.example.com'))],
             additional=[dns.RRHeader(name=b'ns1.example.com',
                                      type=dns.A,
-                                     payload=dns.Record_A(b'192.0.2.%s' % (i,)))
+                                     payload=dns.Record_A('192.0.2.%s' % (i,)))
                         for i in range(100)])
 
 
