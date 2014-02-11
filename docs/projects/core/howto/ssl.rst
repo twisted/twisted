@@ -170,51 +170,39 @@ The ciphers are activated by default, however it is necessary to pass an instanc
 SSL client with server certificate verification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In the example above, the client did not attempt to verify the certificate
-presented by the server. If you are writing a client which connects to a server
-on the Internet, it is important to verify that server is using a trusted
-certificate. If you don't verify the server certificate, you can not be sure
-that you are communicating with the intended server.
+In the example above, the client did not attempt to verify the certificate presented by the server.
+If you are writing a client which connects to a server on the Internet, it is important to verify that server is using a trusted certificate.
+If you don't verify the server certificate, you can not be sure that you are communicating with the intended server.
 
+Certificate verification is enabled by supplying a `verify=True` argument to :api:`twisted.internet.ssl.CertificateOptions`.
+You also have to supply a list of trusted certificate authority certificates.
+ 
+If the server is using a self-signed certificate, you can supply a copy of that certificate to the client.
 
-Certificate verification is enabled by supplying a `verify=True` argument to
-twisted.ssl.CertificateOptions.  You also have to supply a list of trusted
-certificate authorities.
+If the server is using a certificate that has been signed by a recognized root certificate authority, you can supply a special PLATFORM flag.
 
-If the server is using a self-signed certificate, you can supply a copy of that
-certificate to the client.
+This makes twisted.internet.ssl.OpenSSLCertificateOptions load the trusted root certificates from your operating system.
 
-If the server is using a certificate that has been signed by a recognized root
-certificate authority, you can supply a special PLATFORM flag.
-
-This makes twisted.internet.ssl.OpenSSLCertificateOptions load the trusted root
-certificates from your operating system.
-
-Here is a short example, demonstrating how to enable verification using the
-trusted root certificates from your operating system.
+Here is a short example, demonstrating how to enable verification using the trusted root certificates from your operating system.
 
 :download:`check_server_certificate.py <listings/ssl/check_server_certificate.py>`
 
 .. literalinclude:: listings/ssl/check_server_certificate.py
 
-If you use check_server_certificate.py to check the echoserver_ssl.py example
-server (above) you will see that the certificate verification fails.
+If you use check_server_certificate.py to check the echoserver_ssl.py example server (above) you will see that the certificate verification fails.
 
 .. code-block:: text
 
    $ python doc/core/howto/listings/ssl/check_server_certificate.py --verify localhost 8000
    SSL CONNECT ERROR: [('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed')]
 
-That's because the certificate used in the example has not been signed by any
-of the certificate authorities that are trusted by your operating system.
+That's because the certificate used in the example has not been signed by any of the certificate authorities that are trusted by your operating system.
 
-To verify self-signed certificates, you need explicitly pass a list of trusted
-x509 certificate instances (or trusted certificate authorites) to the
+To verify self-signed certificates, you need explicitly pass a list of trusted x509 certificate instances (or trusted certificate authorites) to the
 sslContextFactory.
 
-PEM formatted certificates can be loaded using
-twisted.internet.ssl.Certificate.loadPEM and the wrapped x509 certificate
-objects should be passed to the SSL context factory as a list. For example:
+PEM formatted certificates can be loaded using twisted.internet.ssl.Certificate.loadPEM and the wrapped x509 certificate objects should be passed to the SSL context factory as a list.
+For example:
  
 .. code-block:: python
 
@@ -225,8 +213,8 @@ objects should be passed to the SSL context factory as a list. For example:
        caCerts=[cert.original]
    )
 
-You can try this using the check_server_certificates.py example and the
-echoserver_ssl.py example.  For example:
+You can try this using the check_server_certificates.py example and the echoserver_ssl.py example.
+For example:
 
 .. code-block:: text
 
