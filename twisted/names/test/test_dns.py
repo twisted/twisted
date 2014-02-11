@@ -3058,15 +3058,15 @@ class MessageTruncated512(object):
             b'\x00\x00\x00\x00' # TTL
             b'\x00\x06' # RD length
             b'\x03ns1\xc0\x0c' # RDATA
-            + b''.join((
+            + (
             # Additional
             b'\xc0)' # Compression
             b'\x00\x01' # Type A
             b'\x00\x01' # Class IN
             b'\x00\x00\x00\x00' # TTL
             b'\x00\x04' # RD length
-            b'\xc0\x00\x02%s' # RDATA
-            ) % (chr(i),) for  i in range(29))
+            b'\xc0\x00\x02\x64' # RDATA
+            ) * 29
             + b'\xc0' # Trailing start of another additional record
         )
 
@@ -3096,7 +3096,7 @@ class MessageTruncated512(object):
                                   payload=dns.Record_NS(b'ns1.example.com'))],
             additional=[dns.RRHeader(name=b'ns1.example.com',
                                      type=dns.A,
-                                     payload=dns.Record_A('192.0.2.%s' % (i,)))
+                                     payload=dns.Record_A(b'192.0.2.100'))
                         for i in range(100)])
 
 
