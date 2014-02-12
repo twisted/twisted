@@ -674,7 +674,7 @@ class IOpenSSLTrustSettings(Interface):
 
         @param context: An SSL context for a connection which should be
             verified by some certificate authority.
-        @type context:
+        @type context: L{OpenSSL.SSL.Context}
 
         @return: L{None}
         """
