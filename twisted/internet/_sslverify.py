@@ -9,19 +9,16 @@ import itertools
 from hashlib import md5
 
 from OpenSSL import SSL, crypto
-from zope.interface import implementer
-
-from twisted.python.compat import nativeString, networkString
-from twisted.python import _reflectpy3 as reflect, util
-
-from twisted.internet.defer import Deferred
 from zope.interface import Interface, implementer
 
-from twisted.internet.error import VerifyError, CertificateError
-from twisted.internet.interfaces import IAcceptableCiphers, ICipher
 from twisted.python import _reflectpy3 as reflect, util
 from twisted.python.compat import nativeString, networkString, unicode
 from twisted.python.util import FancyEqMixin
+
+from twisted.internet.defer import Deferred
+
+from twisted.internet.error import VerifyError, CertificateError
+from twisted.internet.interfaces import IAcceptableCiphers, ICipher
 
 
 
