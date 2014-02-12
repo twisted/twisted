@@ -70,6 +70,23 @@ These three lists contain answer records, authority records, and additional reco
      That is, it will use the DNS server IP addresses found in a local ``resolv.conf`` file (if the operating system provides such a file) and it will use an OS specific ``hosts`` file path.
 
 
+A simple example
+~~~~~~~~~~~~~~~~
+
+So now let's use the IResolver interface to write a short DNS command, which will lookup the reverse domain name associated with an IP address  and print out all the Pointer records associated with it.
+
+Lets start with a function to create a reverse DNS name from an IP address.
+
+.. literalinclude:: listings/names/reverse-lookup.py
+   :pyobject: reverseNameFromIPAddress
+
+A reverse domain name is just the IPv4 address reversed and prepended to the special ``in-addr.arpa`` parent domain name.
+
+.. note::
+   * You can read more about reverse DNS names in :rfc:`1034#section-5.2.1`.
+   * We'll ignore IPv6 addresses in this example, but you can read more about reverse IPv6 address names in :rfc:`3596#section-2.5` and the example could easily be extended to support these.
+   * You might also consider using `netaddr <https://pypi.python.org/pypi/netaddr/>`_,  which can generate reverse DNS names and which also includes sophisticated IP network and IP address handling.
+
 Creating a New Resolver
 -----------------------
 Now suppose we want to create a DNS client which sends its queries to a specific server (or servers).
