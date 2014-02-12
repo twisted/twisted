@@ -159,6 +159,7 @@ class DistinguishedName(dict):
 DN = DistinguishedName
 
 
+
 class CertBase:
     """
     Base class for public (certificate only) and private (certificate + key
@@ -182,8 +183,8 @@ class CertBase:
         """
         Retrieve the subject of this certificate.
 
-        @rtype: L{DistinguishedName}
         @return: A copy of the subject of this certificate.
+        @rtype: L{DistinguishedName}
         """
         return self._copyName('subject')
 
@@ -191,6 +192,9 @@ class CertBase:
     def __conform__(self, interface):
         """
         Convert this L{CertBase} into a provider of the given L{interface}.
+
+        @param interface: The interface to conform to.
+        @type interface: L{zope.interface.Interface}
         """
         if interface is IOpenSSLTrustSettings:
             return OpenSSLCertificateAuthorities([self.original])
