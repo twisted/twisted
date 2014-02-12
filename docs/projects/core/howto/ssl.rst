@@ -171,46 +171,63 @@ SSL client with server certificate verification
 
 In the example above, the client did not attempt to verify the certificate presented by the server.
 If you are writing a client which connects to a server on the Internet, it is important to verify that server is using a trusted certificate.
-If you don't verify the server certificate, you can not be sure that you are communicating with the intended server.
+If you don't verify the server's certificate, you can not be sure that you are communicating with the intended server.
 
-Certificate verification is enabled by supplying a `verify=True` argument to :api:`twisted.internet.ssl.CertificateOptions`.
-You also have to supply a list of trusted certificate authority certificates.
- 
-If the server is using a self-signed certificate, you can supply a copy of that certificate to the client.
+Peer certificate verification is enabled by supplying a ``peerTrust`` argument to :api:`twisted.internet.ssl.CertificateOptions <CertificateOptions>`.
+This argument specifies the list of certificate authorities which you trust, and for what purpose.
 
-If the server is using a certificate that has been signed by a recognized root certificate authority, you can supply a special PLATFORM flag.
+For the majority of *client* applications using TLS, you will want to get the list of trusted root certificates from your platform - meaning, your operating system, your desktop environment, or your TLS implementor's configuration - and verify the server against that.
+This list of certificates will generally include most of the certificate authorities commonly accepted by web browsers to, but more importantly, it should also be under the control of the end-user who is using your software, taking security decisions about who to trust out of your code and placing it into the hands of those responsible for securing the systems where your code runs.
 
-This makes twisted.internet.ssl.OpenSSLCertificateOptions load the trusted root certificates from your operating system.
+To support this common use-case, Twisted provides a function, :api:`twisted.internet.ssl.platformTrust <platformTrust>`, to obtain a set of trusted root certificates based on Twisted's best-effort attempt to discover the current platform's configuration.
 
-Here is a short example, demonstrating how to enable verification using the trusted root certificates from your operating system.
+.. note::
+
+   Currently, Twisted only supports loading of OpenSSL's default trust roots, which will work on OS X and some Linux environments.
+   Work is ongoing to make :api:`twisted.internet.ssl.platformTrust <platformTrust>` more robust; for example, to fall back to the `certifi` package if no platform trust roots are available.
+   When this happens, you shouldn't need to change your code.
+
+Here is a short example, demonstrating how to enable verification using the trusted root certificates from your platform with :api:`twisted.internet.ssl.platformTrust <platformTrust>` and :api:`twisted.internet.ssl.CertificateOptions <CertificateOptions>`.
 
 :download:`check_server_certificate.py <listings/ssl/check_server_certificate.py>`
 
 .. literalinclude:: listings/ssl/check_server_certificate.py
 
+.. warning::
+
+   While ``platformTrust`` currently verifies that a certificate *has a valid path to a trusted authority*, it doesn't check to see if that certificate is valid *for the host you're connecting to*.
+   For example, while (as of this writing) you can see that ``www.twistedmatrix.com`` has a perfectly valid certificate, ``dornkirk.twistedmatrix.com`` advertises the same certificate, despite the fact that that certificate is valid for ``www`` but not ``dornkirk``, and this tool will output certificates for both of them.
+
+   If you are writing software that wants a regular, HTTPS-style secure connection, you need to be sure to examine the data in `Certificate.getSubject()`.
+
+   In the future, we hope that Twisted will do more of this for you to make it easier to be secure by default; see tickets :trac:`#5190` and :trac:`#4888` for more information about progress.
+
+While the `platformTrust` works for applications that want to talk securely to arbitrary hosts on the public internet, some applications have more specific security needs.
+
+For example, you might run a server for which there is only one dedicated client, and you have your own certificate authority specifically for that software, distinct from your users' general trust preferences.
+
 If you use check_server_certificate.py to check the echoserver_ssl.py example server (above) you will see that the certificate verification fails.
 
 .. code-block:: text
 
-   $ python doc/core/howto/listings/ssl/check_server_certificate.py --verify localhost 8000
+   $ python check_server_certificate.py localhost 8000
    SSL CONNECT ERROR: [('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed')]
 
 That's because the certificate used in the example has not been signed by any of the certificate authorities that are trusted by your operating system.
 
-To verify self-signed certificates, you need explicitly pass a list of trusted x509 certificate instances (or trusted certificate authorites) to the
-sslContextFactory.
+If, instead, you check a TLS connection likely to have a trusted root, like Qualys SSL Labs' website, you should see the certificate get printed out:
 
-PEM formatted certificates can be loaded using twisted.internet.ssl.Certificate.loadPEM and the wrapped x509 certificate objects should be passed to the SSL context factory as a list.
-For example:
+.. code-block:: text
+
+    $ python check_server_certificate.py www.ssllabs.com
+    <Certificate Subject=www.ssllabs.com ...>
+
+Certificates in the PEM format can be loaded using :api:`twisted.internet.ssl.Certificate.loadPEM <Certificate.loadPEM>` and passed as a certificate authority by simply passing the :api:`twisted.internet.ssl.Certificate <Certificate>` object as the ``peerTrust`` argument, like this:
  
 .. code-block:: python
 
    cert = ssl.Certificate.loadPEM(open(certificatePath).read())
-
-   contextFactory = ssl.CertificateOptions(
-       verify=True,
-       caCerts=[cert.original]
-   )
+   contextFactory = ssl.CertificateOptions(peerTrust=cert)
 
 You can try this using the check_server_certificates.py example and the echoserver_ssl.py example.
 For example:
@@ -231,7 +248,6 @@ For example:
   -----END CERTIFICATE-----
 
   SERVER CERTIFICATE: <Certificate Subject=www.example.com Issuer=www.example.com>
-
 
 Using startTLS
 --------------
