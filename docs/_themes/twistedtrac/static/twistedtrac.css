@@ -447,3 +447,7 @@ div.bodywrapper {
 	margin-right: 300px;
 	padding-left: 40px;
 }
+
+a.api {
+    font-family: monospace;
+}
