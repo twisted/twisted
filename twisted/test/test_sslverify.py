@@ -866,7 +866,7 @@ class ProtocolVersionTests(unittest.TestCase):
             self._protocols(sslverify.OpenSSLCertificateOptions()))
 
 
-    def test_caCertsPlatformLinux(self):
+    def test_caCertsPlatformDefaults(self):
         """
         Specifying a C{caCerts} of L{sslverify.OpenSSLDefaultPaths} when
         initializing C{OpenSSLCertificateOptions} loads the platform-provided
@@ -907,37 +907,26 @@ class ProtocolVersionTests(unittest.TestCase):
         return caSelfCert, serverCert
 
 
-    def test_caCertsPlatformRejectsRandomCA(self):
+    def loopbackTLSConnection(self, peerTrust, privateKeyFile,
+                              chainedCertFile=None):
         """
-        Specifying a C{peerTrust} of L{platformTrust} when initializing
-        C{OpenSSLCertificateOptions} causes certificates issued by a newly
-        created CA to be rejected by an SSL connection using these options.
+        Create a loopback TLS connection with the given trust and keys.
 
-        Note that this test should I{always} pass, even on platforms where the
-        CA certificates are not installed, as long as L{platformTrust} rejects
-        completely invalid / unknown root CA certificates.  This is simply a
-        smoke test to make sure that verification is happening at all.
+        @param peerTrust: the C{peerTrust} argument for the client connection's
+            context.
+
+        @param chainedCertFile: The name of the chained certficate file.
+
+        @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
+        @rtype: L{tuple}
         """
-        caSelfCert, serverCert = self._buildCAandServerCertificates()
-        chainedCert = self.mktemp()
-        with open(chainedCert, "wb") as f:
-            f.write(
-                serverCert.dump(FILETYPE_PEM) + caSelfCert.dump(FILETYPE_PEM))
-        privateKey = self.mktemp()
-        with open(privateKey, "wb") as f:
-            f.write(serverCert.privateKey.dump(FILETYPE_PEM))
-
         class ContextFactory(object):
             def getContext(self):
                 ctx = SSL.Context(SSL.TLSv1_METHOD)
-                ctx.use_certificate_chain_file(chainedCert)
-                ctx.use_privatekey_file(privateKey)
+                if chainedCertFile is not None:
+                    ctx.use_certificate_chain_file(chainedCertFile)
+                ctx.use_privatekey_file(privateKeyFile)
                 return ctx
-
-        serverOpts = ContextFactory()
-        clientOpts = sslverify.OpenSSLCertificateOptions(
-            peerTrust=platformTrust()
-        )
 
         class GreetingServer(protocol.Protocol):
             def connectionMade(self):
@@ -949,6 +938,9 @@ class ProtocolVersionTests(unittest.TestCase):
                 self.data += data
             def connectionLost(self, reason):
                 self.lostReason = reason
+
+        serverOpts = ContextFactory()
+        clientOpts = sslverify.OpenSSLCertificateOptions(peerTrust=peerTrust)
 
         clientFactory = TLSMemoryBIOFactory(
             clientOpts, isClient=True,
@@ -963,13 +955,46 @@ class ProtocolVersionTests(unittest.TestCase):
             lambda: serverFactory.buildProtocol(None),
             lambda: clientFactory.buildProtocol(None)
         )
+        return sProto, cProto, pump
 
+
+    def asDumped(self, *dumpables):
+        """
+        Create a temporary file to store some serializable-as-PEM objects in,
+        and return its name.
+        """
+        fname = self.mktemp()
+        with open(fname, "wb") as f:
+            for dumpable in dumpables:
+                f.write(dumpable.dump(FILETYPE_PEM))
+        return fname
+
+
+    def test_peerTrustPlatformRejectsRandomCA(self):
+        """
+        Specifying a C{peerTrust} of L{platformTrust} when initializing
+        C{OpenSSLCertificateOptions} causes certificates issued by a newly
+        created CA to be rejected by an SSL connection using these options.
+
+        Note that this test should I{always} pass, even on platforms where the
+        CA certificates are not installed, as long as L{platformTrust} rejects
+        completely invalid / unknown root CA certificates.  This is simply a
+        smoke test to make sure that verification is happening at all.
+        """
+        caSelfCert, serverCert = self._buildCAandServerCertificates()
+        chainedCert = self.asDumped(serverCert, caSelfCert)
+        privateKey = self.asDumped(serverCert.privateKey)
+
+        sProto, cProto, pump = self.loopbackTLSConnection(
+            peerTrust=platformTrust(),
+            privateKeyFile=privateKey,
+            chainedCertFile=chainedCert,
+        )
         # No data was received.
         self.assertEqual(cProto.wrappedProtocol.data, b'')
 
         # It was an SSL Error.
-        self.assertEqual(cProto.wrappedProtocol.lostReason.type,
-                         SSL.Error)
+        self.assertEqual(cProto.wrappedProtocol.lostReason.type, SSL.Error)
 
         # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
         self.assertEqual(cProto.wrappedProtocol.lostReason.value.message[0][2],
