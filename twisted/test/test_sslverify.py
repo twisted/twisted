@@ -889,6 +889,11 @@ class ProtocolVersionTests(unittest.TestCase):
         """
         Create a self-signed CA certificate and server certificate signed by
         the CA.
+
+        @return: a 2-tuple of C{(certificate_authority_certificate,
+            server_certificate)}
+        @rtype: L{tuple} of (L{sslverify.Certificate},
+            L{sslverify.PrivateCertificate})
         """
         serverDN = sslverify.DistinguishedName(commonName='example.com')
         serverKey = sslverify.KeyPair.generate()
