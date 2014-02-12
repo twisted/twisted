@@ -649,9 +649,12 @@ class KeyPair(PublicKey):
 class IOpenSSLTrustSettings(Interface):
     """
     Trust settings for an OpenSSL context.
+
+    Note that this interface's methods are private, so things outside of
+    Twisted shouldn't implement it.
     """
 
-    def addCACertsToContext(context):
+    def _addCACertsToContext(context):
         """
         Add any relevant certificate-authority certificates to the given SSL
         context.
@@ -680,7 +683,7 @@ class OpenSSLCertificateAuthorities(object):
         self._caCerts = caCerts
 
 
-    def addCACertsToContext(self, context):
+    def _addCACertsToContext(self, context):
         """
         Add the list of certficates presented to C{__init__} to the given
         context's certificate store.
@@ -699,7 +702,7 @@ class OpenSSLDefaultPaths(object):
     <https://www.openssl.org/docs/ssl/SSL_CTX_load_verify_locations.html>}.
     """
 
-    def addCACertsToContext(self, context):
+    def _addCACertsToContext(self, context):
         """
         Trust the default verify paths on the given context.
         """
@@ -1031,7 +1034,7 @@ class OpenSSLCertificateOptions(object):
                 verifyFlags |= SSL.VERIFY_FAIL_IF_NO_PEER_CERT
             if self.verifyOnce:
                 verifyFlags |= SSL.VERIFY_CLIENT_ONCE
-            self.peerTrust.addCACertsToContext(ctx)
+            self.peerTrust._addCACertsToContext(ctx)
 
         # It'd be nice if pyOpenSSL let us pass None here for this behavior (as
         # the underlying OpenSSL API call allows NULL to be passed).  It
