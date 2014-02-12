@@ -235,7 +235,7 @@ The loaded ``Certificate`` object can then be used as a certificate authority by
    cert = ssl.Certificate.loadPEM(open(certificatePath).read())
    contextFactory = ssl.CertificateOptions(peerTrust=cert)
 
-So let's modify ``check_server_certificate.py`` to do just that:
+So let's modify ``check_server_certificate.py`` to do just that, with ``echoserve_ssl.py``'s dummy certificate as its ``peerTrust``:
 
 :download:`check_echo_certificate.py <listings/ssl/check_echo_certificate.py>`
 
@@ -248,6 +248,7 @@ While running ``python echoserve_ssl.py`` in the background, you can run this:
 
   $ python check_echo_certificate.py localhost 8000
   <Certificate Subject=www.example.com Issuer=www.example.com>
+
 
 Using startTLS
 --------------
@@ -262,7 +263,6 @@ encrypted channel by examining the packet payloads with a tool like
 
 startTLS server
 ~~~~~~~~~~~~~~~
-
 
 .. code-block:: python
 
