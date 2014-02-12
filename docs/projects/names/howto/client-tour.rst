@@ -77,15 +77,22 @@ So now let's use the IResolver interface to write a short DNS command, which wil
 
 Lets start with a function to create a reverse DNS name from an IP address.
 
-.. literalinclude:: listings/names/reverse-lookup.py
+.. literalinclude:: listings/names/reverse_lookup.py
    :pyobject: reverseNameFromIPAddress
 
-A reverse domain name is just the IPv4 address reversed and prepended to the special ``in-addr.arpa`` parent domain name.
+A reverse domain name is just the IPv4 address reversed and prepended to the special ``in-addr.arpa`` parent domain name. eg
+
+.. code-block:: python
+
+   >>> reverseNameFromIPAddress('192.0.2.100')
+   '100.2.0.192.in-addr.arpa'
 
 .. note::
    * You can read more about reverse DNS names in :rfc:`1034#section-5.2.1`.
    * We'll ignore IPv6 addresses in this example, but you can read more about reverse IPv6 address names in :rfc:`3596#section-2.5` and the example could easily be extended to support these.
    * You might also consider using `netaddr <https://pypi.python.org/pypi/netaddr/>`_,  which can generate reverse DNS names and which also includes sophisticated IP network and IP address handling.
+
+
 
 Creating a New Resolver
 -----------------------

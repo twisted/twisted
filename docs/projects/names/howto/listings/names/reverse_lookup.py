@@ -5,9 +5,13 @@ $ python  docs/projects/names/examples/reverse-lookup.py 1.2.3.4  2.3.4.5  3.4.5
 5.4.3.2.in-addr.arpa IN <PTR name=ALyon-651-1-21-5.w2-3.abo.wanadoo.fr ttl=172796>
 6.5.4.3.in-addr.arpa IN <PTR name=n003-000-000-000.static.ge.com ttl=43196>
 """
-import sys
+# if __name__ == '__main__':
+#     import sys
+#     from twisted.internet import task
+#     from reverse_lookup import main
+#     task.react(main, sys.argv[1:])
 
-from twisted.internet import defer, task
+from twisted.internet import defer
 from twisted.names import client
 
 def printResult(result):
@@ -28,5 +32,3 @@ def main(reactor, *ipAddresses):
         d.addCallback(printResult)
         pending.append(d)
     return defer.DeferredList(pending, consumeErrors=True)
-
-task.react(main, sys.argv[1:])
