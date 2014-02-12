@@ -166,6 +166,9 @@ class CertBase:
     """
     Base class for public (certificate only) and private (certificate + key
     pair) certificates.
+
+    @ivar original: The underlying OpenSSL certificate object.
+    @type original: L{OpenSSL.crypto.X509}
     """
 
     def __init__(self, original):
@@ -186,6 +189,15 @@ class CertBase:
         @return: A copy of the subject of this certificate.
         """
         return self._copyName('subject')
+
+
+    def __conform__(self, interface):
+        """
+        Convert this L{CertBase} into a provider of the given L{interface}.
+        """
+        if interface is IOpenSSLTrustSettings:
+            return OpenSSLCertificateAuthorities([self.original])
+        return NotImplemented
 
 
 
