@@ -926,14 +926,18 @@ class ProtocolVersionTests(unittest.TestCase):
                 if chainedCertFile is not None:
                     ctx.use_certificate_chain_file(chainedCertFile)
                 ctx.use_privatekey_file(privateKeyFile)
+                # Let the test author know if they screwed something up.
+                ctx.check_privatekey()
                 return ctx
 
         class GreetingServer(protocol.Protocol):
+            greeting = "greetings!"
             def connectionMade(self):
-                self.transport.write("greetings!")
+                self.transport.write(self.greeting)
 
         class ListeningClient(protocol.Protocol):
             data = b''
+            lostReason = None
             def dataReceived(self, data):
                 self.data += data
             def connectionLost(self, reason):
@@ -970,7 +974,7 @@ class ProtocolVersionTests(unittest.TestCase):
         return fname
 
 
-    def test_peerTrustPlatformRejectsRandomCA(self):
+    def test_peerTrustPlatformRejectsUntrustedCA(self):
         """
         Specifying a C{peerTrust} of L{platformTrust} when initializing
         C{OpenSSLCertificateOptions} causes certificates issued by a newly
@@ -1011,10 +1015,11 @@ class ProtocolVersionTests(unittest.TestCase):
         s, c, pump = self.loopbackTLSConnection(
             peerTrust=caCert,
             privateKeyFile=self.asDumped(serverCert.privateKey),
+            chainedCertFile=self.asDumped(serverCert),
         )
-        s.wrappedProtocol.transport.write(b"TEST")
         pump.flush()
-        self.assertEqual(c.wrappedProtocol.data, b"TEST")
+        self.assertIdentical(c.wrappedProtocol.lostReason, None)
+        self.assertEqual(c.wrappedProtocol.data, s.wrappedProtocol.greeting)
 
 
     def test_SSLv23(self):
