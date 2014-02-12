@@ -238,6 +238,10 @@ div.admonition {
     background-color: #FFFFCC;
 }
 
+div.admonition.warning {
+    background-color: #FFCCCC;
+}
+
 div.admonition dt {
     font-weight: bold;
 }
