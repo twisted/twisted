@@ -3,17 +3,16 @@
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
-Using SSL in Twisted
+Using TLS in Twisted
 ====================
 
 
 Overview
 --------
 
-This document describes how to use SSL in Twisted servers and clients. It
-assumes that you know what SSL is, what some of the major reasons to use it
-are, and how to generate your own SSL certificates, in particular self-signed
-certificates. It also assumes that you are comfortable with creating TCP
+This document describes how to secure your communications using TLS (Transport Layer Security) - also known as SSL (Secure Sockets Layer) - in Twisted servers and clients.
+It assumes that you know what TLS is, what some of the major reasons to use it are, and how to generate your own SSL certificates, in particular self-signed certificates.
+It also assumes that you are comfortable with creating TCP
 servers and clients as described in the :doc:`server howto <servers>` and :doc:`client howto <clients>` . After reading this
 document you should be able to create servers and clients that can use SSL to
 encrypt their connections, switch from using an unencrypted channel to an
