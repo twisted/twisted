@@ -919,8 +919,13 @@ class ProtocolVersionTests(unittest.TestCase):
 
         @param peerTrust: the C{peerTrust} argument for the client connection's
             context.
+        @type peerTrust: L{sslverify.IOpenSSLTrustSettings}
+
+        @param privateKeyFile: The name of the file containing the private key.
+        @type privateKeyFile: L{str} (native string; file name)
 
         @param chainedCertFile: The name of the chained certficate file.
+        @type chainedCertFile: L{str} (native string; file name)
 
         @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
         @rtype: L{tuple}
