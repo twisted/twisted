@@ -11,7 +11,7 @@ def main(reactor, host, port=443):
             self.transport.write(b"GET / HTTP/1.0\r\n\r\n")
         def dataReceived(self, data):
             certificate = ssl.Certificate(self.transport.getPeerCertificate())
-            print(certificate.dumpPEM())
+            print(certificate)
             self.transport.loseConnection()
         def connectionLost(self, reason):
             if reason.check(ssl.SSL.Error):
