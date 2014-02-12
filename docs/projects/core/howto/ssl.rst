@@ -193,20 +193,30 @@ Here is a short example, demonstrating how to enable verification using the trus
 
 .. literalinclude:: listings/ssl/check_server_certificate.py
 
+You can use this tool fairly simply to retrieve certificates from an HTTPS server with a valid SSL certificate, by running it with a host name.
+For example:
+
+.. code-block:: text
+
+    $ python check_server_certificate.py www.twistedmatrix.com
+    <Certificate Subject=www.twistedmatrix.com ...>
+
 .. warning::
 
-   While ``platformTrust`` currently verifies that a certificate *has a valid path to a trusted authority*, it doesn't check to see if that certificate is valid *for the host you're connecting to*.
-   For example, while (as of this writing) you can see that ``www.twistedmatrix.com`` has a perfectly valid certificate, ``dornkirk.twistedmatrix.com`` advertises the same certificate, despite the fact that that certificate is valid for ``www`` but not ``dornkirk``, and this tool will output certificates for both of them.
+   While ``platformTrust`` currently verifies that a certificate *has a valid trust path to a certificate authority*, it doesn't check to see if that certificate is *the right one for the host you're connecting to*.
+   For example, while (as of this writing) you can see that ``www.twistedmatrix.com`` has a perfectly valid certificate, ``dornkirk.twistedmatrix.com`` advertises the same certificate, despite the fact that that certificate is valid for ``www.`` but not ``dornkirk.``, and ``check_server_certificate.py`` will output certificates for both of them as if they're valid.
 
-   If you are writing software that wants a regular, HTTPS-style secure connection, you need to be sure to examine the data in `Certificate.getSubject()`.
+   If you are writing software that wants a regular, HTTPS-style secure connection, you need to be sure to examine the data in ``Certificate.getSubject()``.
 
    In the future, we hope that Twisted will do more of this for you to make it easier to be secure by default; see tickets :trac:`#5190` and :trac:`#4888` for more information about progress.
 
-While the `platformTrust` works for applications that want to talk securely to arbitrary hosts on the public internet, some applications have more specific security needs.
-
+While the ``platformTrust`` works for applications that want to talk securely to arbitrary hosts on the public internet, some applications have more specific security needs.
 For example, you might run a server for which there is only one dedicated client, and you have your own certificate authority specifically for that software, distinct from your users' general trust preferences.
+Or you might want to set up trust settings for development, to ensure that you're testing encryption, but don't want the rest of your operating system to trust that throw-away certificate.
+In these cases you might want to use a self-signed certificate and verify the server was using that certificate.
+Let's say we wanted to do this with the included ``echoserve_ssl.py`` example.
 
-If you use check_server_certificate.py to check the echoserver_ssl.py example server (above) you will see that the certificate verification fails.
+If you use ``check_server_certificate.py`` to check the ``echoserve_ssl.py`` example server (above) you will see that the certificate verification fails.
 
 .. code-block:: text
 
@@ -214,40 +224,30 @@ If you use check_server_certificate.py to check the echoserver_ssl.py example se
    SSL CONNECT ERROR: [('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed')]
 
 That's because the certificate used in the example has not been signed by any of the certificate authorities that are trusted by your operating system.
+You certainly wouldn't want your entire system to trust the dummy certificate that comes with Twisted!
+However, we can modify ``check_server_certificate.py`` to load that certificate, instead.
 
-If, instead, you check a TLS connection likely to have a trusted root, like Qualys SSL Labs' website, you should see the certificate get printed out:
-
-.. code-block:: text
-
-    $ python check_server_certificate.py www.ssllabs.com
-    <Certificate Subject=www.ssllabs.com ...>
-
-Certificates in the PEM format can be loaded using :api:`twisted.internet.ssl.Certificate.loadPEM <Certificate.loadPEM>` and passed as a certificate authority by simply passing the :api:`twisted.internet.ssl.Certificate <Certificate>` object as the ``peerTrust`` argument, like this:
+Certificates in the PEM format can be loaded using :api:`twisted.internet.ssl.Certificate.loadPEM <Certificate.loadPEM>`, just as we did with ``PrivateCertificate``, above.
+The loaded ``Certificate`` object can then be used as a certificate authority by passing the :api:`twisted.internet.ssl.Certificate <Certificate>` object as the ``peerTrust`` argument, like this:
  
 .. code-block:: python
 
    cert = ssl.Certificate.loadPEM(open(certificatePath).read())
    contextFactory = ssl.CertificateOptions(peerTrust=cert)
 
-You can try this using the check_server_certificates.py example and the echoserver_ssl.py example.
-For example:
+So let's modify ``check_server_certificate.py`` to do just that:
+
+:download:`check_echo_certificate.py <listings/ssl/check_echo_certificate.py>`
+
+.. literalinclude:: listings/ssl/check_echo_certificate.py
+
+This is just the same as above, just specifying a different ``peerTrust``.
+While running ``python echoserve_ssl.py`` in the background, you can run this:
 
 .. code-block:: text
 
-  $ python check_server_certificate.py -v -t ./server.pem localhost 8000
-
-  -----BEGIN CERTIFICATE-----
-  MIIBaDCCARICAQEwDQYJKoZIhvcNAQEEBQAwPzEYMBYGA1UEAxMPd3d3LmV4YW1w
-  bGUuY29tMSMwIQYDVQQKExpNeSBFeGFtcGxlIENvbXBhbnkgV2Vic2l0ZTAeFw0x
-  MzA5MTQwMDAwMDBaFw0xNDA5MTMyMzU5NTlaMD8xGDAWBgNVBAMTD3d3dy5leGFt
-  cGxlLmNvbTEjMCEGA1UEChMaTXkgRXhhbXBsZSBDb21wYW55IFdlYnNpdGUwXDAN
-  BgkqhkiG9w0BAQEFAANLADBIAkEAwMcLGUdDAMl6dF05yrxe2LE1Is2F/mCA4+fG
-  tyOVYcBGp9x4fB/ST/sr/IH/vfdUp2j/7S8e5wgEpVpkq/G8IQIDAQABMA0GCSqG
-  SIb3DQEBBAUAA0EAVWDAH9c4hKMGXhBcAt01oVTqkKXRUf75dOxIY2FtonYFGBDK
-  rxZb7KFwV1ahLidtJ77icI6ryoAidL7Z3oiq1Q==
-  -----END CERTIFICATE-----
-
-  SERVER CERTIFICATE: <Certificate Subject=www.example.com Issuer=www.example.com>
+  $ python check_echo_certificate.py localhost 8000
+  <Certificate Subject=www.example.com Issuer=www.example.com>
 
 Using startTLS
 --------------
