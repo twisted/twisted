@@ -1001,6 +1001,22 @@ class ProtocolVersionTests(unittest.TestCase):
                          'tlsv1 alert unknown ca')
 
 
+    def test_peerTrustSpecificCertificate(self):
+        """
+        Specifying a L{Certificate} object for L{peerTrust} will result in that
+        certificate being the only trust root for a client.
+        """
+        caCert, serverCert = self._buildCAandServerCertificates()
+        otherCa, otherServer = self._buildCAandServerCertificates()
+        s, c, pump = self.loopbackTLSConnection(
+            peerTrust=caCert,
+            privateKeyFile=self.asDumped(serverCert.privateKey),
+        )
+        s.wrappedProtocol.transport.write(b"TEST")
+        pump.flush()
+        self.assertEqual(c.wrappedProtocol.data, b"TEST")
+
+
     def test_SSLv23(self):
         """
         When L{sslverify.OpenSSLCertificateOptions} is initialized with
