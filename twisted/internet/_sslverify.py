@@ -163,13 +163,20 @@ DN = DistinguishedName
 
 
 class CertBase:
+    """
+    Base class for public (certificate only) and private (certificate + key
+    pair) certificates.
+    """
+
     def __init__(self, original):
         self.original = original
+
 
     def _copyName(self, suffix):
         dn = DistinguishedName()
         dn._copyFrom(getattr(self.original, 'get_'+suffix)())
         return dn
+
 
     def getSubject(self):
         """
