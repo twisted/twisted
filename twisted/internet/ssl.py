@@ -1,7 +1,6 @@
-# -*- test-case-name: twisted.test.test_ssl,twisted.test.test_sslverify -*-
+# -*- test-case-name: twisted.test.test_ssl -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
 
 """
 This module implements Transport Layer Security (TLS) support for Twisted.  It

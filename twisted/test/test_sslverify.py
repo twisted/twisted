@@ -932,6 +932,12 @@ class ProtocolVersionTests(unittest.TestCase):
         """
         class ContextFactory(object):
             def getContext(self):
+                """
+                Create a context for the server side of the connection.
+
+                @return: an SSL context using a certificate and key.
+                @rtype: C{OpenSSL.SSL.Context}
+                """
                 ctx = SSL.Context(SSL.TLSv1_METHOD)
                 if chainedCertFile is not None:
                     ctx.use_certificate_chain_file(chainedCertFile)
@@ -976,6 +982,12 @@ class ProtocolVersionTests(unittest.TestCase):
         """
         Create a temporary file to store some serializable-as-PEM objects in,
         and return its name.
+
+        @param dumpables: an object from pyOpenSSL with a C{dump} method,
+            taking a pyOpenSSL filetype.
+
+        @return: the name of a file where all of the dumpables were dumped in
+            PEM format.
         """
         fname = self.mktemp()
         with open(fname, "wb") as f:
