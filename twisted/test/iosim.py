@@ -41,15 +41,17 @@ class TLSNegotiation:
 
 
 
+implementer(interfaces.IAddress)
 class FakeAddress(object):
     """
     The default address type for the host and peer of L{FakeTransport}
     connections.
     """
-    implements(interfaces.IAddress)
 
 
 
+@implementer(interfaces.ITransport,
+             interfaces.ITLSTransport) # ha ha not really
 class FakeTransport:
     """
     A wrapper around a file-like object to make it behave as a Transport.
@@ -57,10 +59,8 @@ class FakeTransport:
     This doesn't actually stream the file to the attached protocol,
     and is thus useful mainly as a utility for debugging protocols.
     """
-    implements(interfaces.ITransport,
-               interfaces.ITLSTransport) # ha ha not really
 
-    _nextserial = itertools.count().next
+    _nextserial = staticmethod(lambda: next(itertools.count()))
     closed = 0
     disconnecting = 0
     disconnected = 0
