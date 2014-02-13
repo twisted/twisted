@@ -15,7 +15,7 @@ try:
 except ImportError:
     pass
 
-from zope.interface import implements, directlyProvides
+from zope.interface import implementer, directlyProvides
 
 from twisted.python.failure import Failure
 from twisted.internet import error
