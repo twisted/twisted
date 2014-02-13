@@ -941,7 +941,7 @@ class ProtocolVersionTests(unittest.TestCase):
                 return ctx
 
         class GreetingServer(protocol.Protocol):
-            greeting = "greetings!"
+            greeting = b"greetings!"
             def connectionMade(self):
                 self.transport.write(self.greeting)
 
@@ -1011,8 +1011,8 @@ class ProtocolVersionTests(unittest.TestCase):
         self.assertEqual(cProto.wrappedProtocol.lostReason.type, SSL.Error)
 
         # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
-        self.assertEqual(cProto.wrappedProtocol.lostReason.value.message[0][2],
-                         'tlsv1 alert unknown ca')
+        err = cProto.wrappedProtocol.lostReason.value
+        self.assertEqual(err.args[0][0][2], 'tlsv1 alert unknown ca')
 
 
     def test_peerTrustSpecificCertificate(self):
