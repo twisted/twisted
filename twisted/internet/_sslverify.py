@@ -191,10 +191,10 @@ class CertBase:
 
     def __conform__(self, interface):
         """
-        Convert this L{CertBase} into a provider of the given L{Interface}.
+        Convert this L{CertBase} into a provider of the given interface.
 
         @param interface: The interface to conform to.
-        @type interface: L{Interface}
+        @type interface: C{zope.interface.Interface}
 
         @return: an L{IOpenSSLTrustSettings} provider or C{NotImplemented}
         @rtype: C{interface} or L{NotImplemented}
@@ -873,8 +873,7 @@ class OpenSSLCertificateOptions(object):
             ignored otherwise.  Since verify is L{False} by default, this is
             C{None} by default.
 
-        @type caCerts: C{list} of L{OpenSSL.crypto.X509}, or L{CASources}
-            constants.
+        @type caCerts: C{list} of L{OpenSSL.crypto.X509}
 
         @param verifyDepth: Depth in certificate chain down to which to verify.
             If unspecified, use the underlying default (9).
