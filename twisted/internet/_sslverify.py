@@ -166,7 +166,7 @@ class CertBase:
     pair) certificates.
 
     @ivar original: The underlying OpenSSL certificate object.
-    @type original: L{OpenSSL.crypto.X509}
+    @type original: C{OpenSSL.crypto.X509}
     """
 
     def __init__(self, original):
@@ -191,10 +191,13 @@ class CertBase:
 
     def __conform__(self, interface):
         """
-        Convert this L{CertBase} into a provider of the given L{interface}.
+        Convert this L{CertBase} into a provider of the given L{Interface}.
 
         @param interface: The interface to conform to.
-        @type interface: L{zope.interface.Interface}
+        @type interface: L{Interface}
+
+        @return: an L{IOpenSSLTrustSettings} provider or C{NotImplemented}
+        @rtype: C{interface} or L{NotImplemented}
         """
         if interface is IOpenSSLTrustSettings:
             return OpenSSLCertificateAuthorities([self.original])
@@ -453,7 +456,7 @@ class PrivateCertificate(Certificate):
         @param authorities: A list of L{Certificate} object
 
         @return: A context factory.
-        @rtype: L{OpenSSLCertificateOptions}
+        @rtype: L{CertificateOptions <twisted.internet.ssl.CertificateOptions>}
         """
         options = dict(privateKey=self.privateKey.original,
                        certificate=self.original)
@@ -674,7 +677,7 @@ class IOpenSSLTrustSettings(Interface):
 
         @param context: An SSL context for a connection which should be
             verified by some certificate authority.
-        @type context: L{OpenSSL.SSL.Context}
+        @type context: C{OpenSSL.SSL.Context}
 
         @return: L{None}
         """
@@ -685,13 +688,13 @@ class IOpenSSLTrustSettings(Interface):
 class OpenSSLCertificateAuthorities(object):
     """
     Trust an explicitly-specified set of certificates, as represented by a list
-    of L{SSL.X509} objects.
+    of C{OpenSSL.crypto.X509} objects.
     """
 
     def __init__(self, caCerts):
         """
         @param caCerts: The certificate authorities.
-        @type caCerts: L{list} of L{SSL.X509}
+        @type caCerts: L{list} of C{OpenSSL.crypto.X509}
         """
         self._caCerts = caCerts
 
@@ -853,10 +856,9 @@ class OpenSSLCertificateOptions(object):
             instead, use a C{peerTrust} keyword argument.
 
             List of certificate authority certificate objects to use to verify
-            the peer's certificate, or L{CASources}C{.PLATFORM} indicating that
-            platform-provided trusted certificates should be used.  Only used
-            if verify is L{True} and will be ignored otherwise.  Since verify
-            is L{False} by default, this is C{None} by default.
+            the peer's certificate.  Only used if verify is L{True} and will be
+            ignored otherwise.  Since verify is L{False} by default, this is
+            C{None} by default.
 
         @type caCerts: C{list} of L{OpenSSL.crypto.X509}, or L{CASources}
             constants.

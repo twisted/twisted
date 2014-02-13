@@ -26,7 +26,7 @@ following APIs:
 
     - SSL endpoints for L{servers
       <twisted.internet.endpoints.SSL4ServerEndpoint>} and L{clients
-      <twisted.integernet.endpoints.SSL4ClientEndpoint>}
+      <twisted.internet.endpoints.SSL4ClientEndpoint>}
 
     - L{startTLS <twisted.internet.interfaces.ITLSTransport.startTLS>}
 
