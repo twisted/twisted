@@ -176,11 +176,19 @@ class FakeTransport:
         self.tls = TLSNegotiation(contextFactory, connectState)
         self.tlsbuf = []
 
+
     def getOutBuffer(self):
+        """
+        Get the pending writes from this transport, clearing them from the
+        pending buffer.
+
+        @return: the bytes written with C{transport.write}
+        @rtype: L{bytes}
+        """
         S = self.stream
         if S:
             self.stream = []
-            return ''.join(S)
+            return b''.join(S)
         elif self.tls is not None:
             if self.tls.readyToSend:
                 # Only _send_ the TLS negotiation "packet" if I'm ready to.
@@ -190,6 +198,7 @@ class FakeTransport:
                 return None
         else:
             return None
+
 
     def bufferReceived(self, buf):
         if isinstance(buf, TLSNegotiation):
