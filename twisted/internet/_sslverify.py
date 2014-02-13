@@ -700,6 +700,16 @@ class OpenSSLCertificateAuthorities(object):
 
 
     def _addCACertsToContext(self, context):
+        """
+        Add any relevant certificate-authority certificates to the given SSL
+        context.
+
+        @param context: An SSL context for a connection which should be
+            verified by some certificate authority.
+        @type context: C{OpenSSL.SSL.Context}
+
+        @return: L{None}
+        """
         store = context.get_cert_store()
         for cert in self._caCerts:
             store.add_cert(cert)
@@ -715,6 +725,16 @@ class OpenSSLDefaultPaths(object):
     """
 
     def _addCACertsToContext(self, context):
+        """
+        Add any relevant certificate-authority certificates to the given SSL
+        context.
+
+        @param context: An SSL context for a connection which should be
+            verified by some certificate authority.
+        @type context: C{OpenSSL.SSL.Context}
+
+        @return: L{None}
+        """
         context.set_default_verify_paths()
 
 
