@@ -375,9 +375,10 @@ class ProxyClientTestCase(TestCase):
         self.assertForwardsResponse(
             request, 200, 'OK', headers.items(), '')
 
+
     def test_parentDisconnected(self):
         """
-        Check that the client disconnects if the parent request is dropped.
+        The client should disconnect if the parent request is dropped.
         """
         request = self.makeRequest('foo')
         client = self.makeProxyClient(request, headers={"accept": "text/html"})
@@ -389,6 +390,19 @@ class ProxyClientTestCase(TestCase):
         self.assertTrue(client.transport.connected)
         request.processingFailed(main.CONNECTION_LOST)
         self.assertFalse(client.transport.connected)
+
+
+    def test_parentDisconnectedEarly(self):
+        """
+        The proxy should survive a parent disconnection before the client
+        connects.
+        """
+        request = self.makeRequest('foo')
+        client = self.makeProxyClient(request, headers={"accept": "text/html"})
+        request.processingFailed(main.CONNECTION_LOST)
+
+        # Note: this test is a little bit odd.  We're testing that the
+        # processingFailed call doesn't raise an exception.
 
 
 

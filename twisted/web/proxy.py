@@ -49,10 +49,10 @@ class ProxyClient(HTTPClient):
         headers.pop('keep-alive', None)
         self.headers = headers
         self.data = data
-        father.notifyFinish().addErrback(self.fatherFailed)
 
 
     def connectionMade(self):
+        self.father.notifyFinish().addErrback(self._fatherFailed)
         self.sendCommand(self.command, self.rest)
         for header, value in self.headers.items():
             self.sendHeader(header, value)
@@ -90,10 +90,14 @@ class ProxyClient(HTTPClient):
             self.transport.loseConnection()
 
 
-    def fatherFailed(self, failure):
-        if not self._finished:
-            self.transport.loseConnection()
-            self._finished = True
+    def _fatherFailed(self, failure):
+        """
+        This is called when the proxy's client disconnects or otherwise aborts.
+        We want to abort, too, so that we don't tie up resources on the
+        server we're connecting to.
+        """
+        self._finished = True
+        self.transport.loseConnection()
 
 
 
