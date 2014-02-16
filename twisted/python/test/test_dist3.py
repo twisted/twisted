@@ -2,14 +2,14 @@
 # See LICENSE for details.
 
 """
-Tests for L{twisted.python._dist3}.
+Tests for L{twisted.python.dist3}.
 """
 
 from __future__ import division
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python._dist3 import modulesToInstall
+from twisted.python.dist3 import modulesToInstall
 from twisted.python.filepath import FilePath
 
 

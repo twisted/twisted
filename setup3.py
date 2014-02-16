@@ -36,7 +36,7 @@ def main():
     if os.path.exists('twisted'):
         sys.path.insert(0, '.')
 
-    from twisted.python._dist3 import modulesToInstall
+    from twisted.python.dist3 import modulesToInstall
     from twisted.python.dist import STATIC_PACKAGE_METADATA
 
     args = STATIC_PACKAGE_METADATA.copy()
