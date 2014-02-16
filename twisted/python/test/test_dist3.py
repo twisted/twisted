@@ -7,6 +7,7 @@ Tests for L{twisted.python.dist3}.
 
 from __future__ import division
 
+import os
 from twisted.trial.unittest import TestCase
 
 from twisted.python.dist3 import modulesToInstall
@@ -30,13 +31,13 @@ class ModulesToInstallTests(TestCase):
         All modules listed in L{modulesToInstall} exist.
         """
         import twisted
-        root = FilePath(twisted.__file__.encode("utf-8")).parent().parent()
+        root = os.path.dirname(os.path.dirname(twisted.__file__))
         for module in modulesToInstall:
-            segments = module.encode("utf-8").split(b".")
-            segments[-1] += b".py"
-            path = root.descendant(segments)
-            alternateSegments = module.encode("utf-8").split(b".") + [
-                b"__init__.py"]
-            packagePath = root.descendant(alternateSegments)
-            self.assertTrue(path.exists() or packagePath.exists(),
-                            "Module %s does not exist" % (module,))
+            segments = module.split(".")
+            segments[-1] += ".py"
+            path = os.path.join(root, *segments)
+            alternateSegments = module.split(".") + ["__init__.py"]
+            packagePath = os.path.join(root, *alternateSegments)
+            self.assertTrue(os.path.exists(path) or
+                            os.path.exists(packagePath),
+                            "Module {0} does not exist".format(module))
