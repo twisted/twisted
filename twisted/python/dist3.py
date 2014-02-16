@@ -87,7 +87,7 @@ modules = [
     "twisted.python.constants",
     "twisted.python.context",
     "twisted.python.deprecate",
-    "twisted.python._dist3",
+    "twisted.python.dist3",
     "twisted.python.failure",
     "twisted.python.filepath",
     "twisted.python.lockfile",
