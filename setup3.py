@@ -10,9 +10,8 @@
 from __future__ import division, absolute_import
 
 import sys
+import os
 from distutils.command.sdist import sdist
-
-from twisted.python._dist3 import modulesToInstall
 
 
 class DisabledSdist(sdist):
@@ -32,6 +31,12 @@ def main():
     except ImportError:
         from distutils.core import setup
 
+    # Make sure the to-be-installed version of Twisted is used, if available,
+    # since we're importing from it:
+    if os.path.exists('twisted'):
+        sys.path.insert(0, '.')
+
+    from twisted.python._dist3 import modulesToInstall
     from twisted.python.dist import STATIC_PACKAGE_METADATA
 
     args = STATIC_PACKAGE_METADATA.copy()
