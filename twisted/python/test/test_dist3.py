@@ -11,7 +11,6 @@ import os
 from twisted.trial.unittest import TestCase
 
 from twisted.python.dist3 import modulesToInstall
-from twisted.python.filepath import FilePath
 
 
 class ModulesToInstallTests(TestCase):
