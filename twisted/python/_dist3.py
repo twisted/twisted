@@ -6,14 +6,30 @@
 Support for installing Twisted on Python 3.
 
 Only necessary while parts of Twisted are unported.
+
+@var modules: A list of modules that have been ported,
+    e.g. "twisted.python.versions"; a package name (e.g. "twisted.python")
+    indicates the corresponding __init__.py file has been ported
+    (e.g. "twisted/python/__init__.py"). To reduce merge conflicts, add new
+    lines in alphabetical sort.
+
+@var testModules: A list of test modules that have been ported, e.g
+    "twisted.python.test.test_versions". To reduce merge conflicts, add new
+    lines in alphabetical sort.
+
+@var almostModules: A list of any other modules which are needed by any of the
+    modules in the other two lists, but which themselves have not actually
+    been properly ported to Python 3.  These modules might work well enough to
+    satisfy some of the requirements of the modules that depend on them, but
+    cannot be considered generally usable otherwise.
+
+@var modulesToInstall: A list of all modules that should be installed on
+    Python 3.
 """
 
 from __future__ import division
 
-# A list of modules that have been ported, e.g. "twisted.python.versions"; a
-# package name (e.g. "twisted.python") indicates the corresponding __init__.py
-# file has been ported (e.g. "twisted/python/__init__.py"). To reduce merge
-# conflicts, add new lines in alphabetical sort.
+
 modules = [
     "twisted",
     "twisted.copyright",
@@ -115,9 +131,6 @@ modules = [
 
 
 
-# A list of test modules that have been ported, e.g
-# "twisted.python.test.test_versions". To reduce merge conflicts, add new
-# lines in alphabetical sort.
 testModules = [
     "twisted.internet.test.test_abstract",
     "twisted.internet.test.test_address",
@@ -205,11 +218,6 @@ testModules = [
 
 
 
-# A list of any other modules which are needed by any of the modules in the
-# other two lists, but which themselves have not actually been properly ported
-# to Python 3.  These modules might work well enough to satisfy some of the
-# requirements of the modules that depend on them, but cannot be considered
-# generally usable otherwise.
 almostModules = [
     # Missing test coverage, see #6156:
     "twisted.internet._sslverify",
@@ -249,9 +257,4 @@ almostModules = [
 
 
 
-def modulesToInstall():
-    """
-    @return: List of module names (as C{str}) that should be installed on
-        Python 3.
-    """
-    return modules + testModules + almostModules
+modulesToInstall = modules + testModules + almostModules

@@ -21,9 +21,8 @@ class ModulesToInstallTests(TestCase):
         """
         L{modulesToInstall} includes some obvious module names.
         """
-        modules = modulesToInstall()
-        self.assertIn("twisted.internet.reactor", modules)
-        self.assertIn("twisted.python.test.test_dist3", modules)
+        self.assertIn("twisted.internet.reactor", modulesToInstall)
+        self.assertIn("twisted.python.test.test_dist3", modulesToInstall)
 
 
     def test_exist(self):
@@ -32,7 +31,7 @@ class ModulesToInstallTests(TestCase):
         """
         import twisted
         root = FilePath(twisted.__file__.encode("utf-8")).parent().parent()
-        for module in modulesToInstall():
+        for module in modulesToInstall:
             segments = module.encode("utf-8").split(b".")
             segments[-1] += b".py"
             path = root.descendant(segments)
