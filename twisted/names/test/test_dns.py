@@ -4672,3 +4672,95 @@ class ResponseFromMessageTests(unittest.SynchronousTestCase):
                 responseConstructor=dns.Message, message=dns.Message(),
                 rCode=123).rCode
         )
+
+
+
+class Foo(object):
+    def __init__(self,
+                 field1=1, field2=2, alwaysShowField='AS',
+                 flagTrue=True, flagFalse=False, section1=None):
+        self.field1 = field1
+        self.field2 = field2
+        self.alwaysShowField = alwaysShowField
+        self.flagTrue = flagTrue
+        self.flagFalse = flagFalse
+
+        if section1 is None:
+            section1 = []
+        self.section1 = section1
+
+
+    def __repr__(self):
+        return dns._compactRepr(
+            self,
+            alwaysShow='alwaysShowField'.split(),
+            fieldNames='field1 field2 alwaysShowField'.split(),
+            flagNames='flagTrue flagFalse'.split(),
+            sectionNames='section1 section2'.split()
+        )
+
+
+
+class CompactReprTests(unittest.SynchronousTestCase):
+    """
+    Tests for L[dns._compactRepr}.
+    """
+    messageFactory = Foo
+    def test_defaults(self):
+        """
+        L{dns._compactRepr} omits field values and sections which have the
+        default value. Flags which are True are always shown.
+        """
+        self.assertEqual(
+            "<Foo alwaysShowField='AS' flags=flagTrue>",
+            repr(self.messageFactory())
+        )
+
+
+    def test_flagsIfSet(self):
+        """
+        L{dns._compactRepr} displays flags if they have a non-default value.
+        """
+        m = self.messageFactory(flagTrue=True, flagFalse=True)
+        self.assertEqual(
+            '<Foo '
+            "alwaysShowField='AS' "
+            'flags=flagTrue,flagFalse'
+            '>',
+            repr(m),
+        )
+
+
+    def test_nonDefautFields(self):
+        """
+        L{dns._compactRepr} displays field values if they differ from their
+        defaults.
+        """
+        m = self.messageFactory(field1=10, field2=20)
+        self.assertEqual(
+            '<Foo '
+            'field1=10 '
+            'field2=20 '
+            "alwaysShowField='AS' "
+            'flags=flagTrue'
+            '>',
+            repr(m),
+        )
+
+
+    def test_nonDefaultSections(self):
+        """
+        L{dns._compactRepr} displays sections which differ from their defaults.
+        """
+        m = self.messageFactory()
+        m.section1 = [1, 1, 1]
+        m.section2 = [2, 2, 2]
+        self.assertEqual(
+            '<Foo '
+            "alwaysShowField='AS' "
+            'flags=flagTrue '
+            'section1=[1, 1, 1] '
+            'section2=[2, 2, 2]'
+            '>',
+            repr(m),
+        )

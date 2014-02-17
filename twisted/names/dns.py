@@ -1939,9 +1939,12 @@ def _responseFromMessage(responseConstructor, message, **kwargs):
 
 
 
-def _compactRepr(obj, flagNames=None, fieldNames=None, sectionNames=None):
+def _compactRepr(obj, alwaysShow=None, flagNames=None, fieldNames=None, sectionNames=None):
     """
     """
+    if alwaysShow is None:
+        alwaysShow = []
+
     if flagNames is None:
         flagNames = []
 
@@ -1953,7 +1956,7 @@ def _compactRepr(obj, flagNames=None, fieldNames=None, sectionNames=None):
 
     setFlags = []
     for name in flagNames:
-        if getattr(obj, name, False) == True:
+        if name in alwaysShow or getattr(obj, name, False) == True:
             setFlags.append(name)
 
     out = ['<', obj.__class__.__name__]
@@ -1966,7 +1969,7 @@ def _compactRepr(obj, flagNames=None, fieldNames=None, sectionNames=None):
     for name in fieldNames:
         defaultValue = defaults.get(name)
         fieldValue = getattr(obj, name, defaultValue)
-        if name == 'id' or fieldValue != defaultValue:
+        if (name in alwaysShow) or (fieldValue != defaultValue):
             out.append(' %s=%r' % (name, fieldValue))
 
     if setFlags:
@@ -2131,7 +2134,8 @@ class Message(tputil.FancyEqMixin):
             flagNames=('answer', 'auth', 'trunc', 'recDes', 'recAv',
                        'authenticData', 'checkingDisabled'),
             fieldNames=('id', 'opCode', 'rCode', 'maxSize'),
-            sectionNames=('queries', 'answers', 'authority', 'additional')
+            sectionNames=('queries', 'answers', 'authority', 'additional'),
+            alwaysShow=('id',)
         )
 
 
@@ -2465,7 +2469,8 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
             flagNames=('answer', 'auth', 'trunc', 'recDes', 'recAv',
                        'authenticData', 'checkingDisabled', 'dnssecOK'),
             fieldNames=('id', 'opCode', 'rCode', 'maxSize', 'ednsVersion'),
-            sectionNames=('queries', 'answers', 'authority', 'additional')
+            sectionNames=('queries', 'answers', 'authority', 'additional'),
+            alwaysShow=('id',)
         )
 
 
