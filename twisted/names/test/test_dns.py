@@ -4676,9 +4676,17 @@ class ResponseFromMessageTests(unittest.SynchronousTestCase):
 
 
 class Foo(object):
+    """
+    An example class for use in L{dns._compactRepr} tests.
+    It follows the pattern of initialiser settable flags, fields and sections
+    found in L{dns.Message} and L{dns._EDNSMessage}.
+    """
     def __init__(self,
                  field1=1, field2=2, alwaysShowField='AS',
                  flagTrue=True, flagFalse=False, section1=None):
+        """
+        Set some flags, fields and sections as public attributes.
+        """
         self.field1 = field1
         self.field2 = field2
         self.alwaysShowField = alwaysShowField
@@ -4691,6 +4699,9 @@ class Foo(object):
 
 
     def __repr__(self):
+        """
+        Call L{dns._compactRepr} to generate a string representation.
+        """
         return dns._compactRepr(
             self,
             alwaysShow='alwaysShowField'.split(),
