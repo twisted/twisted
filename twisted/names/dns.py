@@ -921,7 +921,7 @@ class RRHeader(tputil.FancyEqMixin):
     def __str__(self):
         t = QUERY_TYPES.get(self.type, EXT_QUERIES.get(self.type, 'UNKNOWN (%d)' % self.type))
         c = QUERY_CLASSES.get(self.cls, 'UNKNOWN (%d)' % self.cls)
-        return '<RR name=%s type=%s class=%s ttl=%ds auth=%s payload=%s>' % (self.name, t, c, self.ttl, self.auth and 'True' or 'False', self.payload)
+        return '<RR name=%s type=%s class=%s ttl=%ds auth=%s>' % (self.name, t, c, self.ttl, self.auth and 'True' or 'False')
 
 
     __repr__ = __str__
