@@ -1939,8 +1939,23 @@ def _responseFromMessage(responseConstructor, message, **kwargs):
 
 
 
-def _compactRepr(obj, alwaysShow=None, flagNames=None, fieldNames=None, sectionNames=None):
+def _compactRepr(obj, alwaysShow=None, flagNames=None, fieldNames=None,
+                 sectionNames=None):
     """
+    Return a L{str} representation of C{obj} which only shows fields with
+    non-default values, flags which are True and sections which have been
+    explicitly set.
+
+    @param obj: The instance whose repr is being generated.
+    @param alwaysShow: A L{list} of field names which should always be shown.
+    @param flagNames: A L{list} of flag attribute names which should be shown if
+        they are L{True}.
+    @param fieldNames: A L{list} of field attribute names which should be shown
+        if they have non-default values.
+    @param sectionNames: A L{list} of section attribute names which should be
+        shown if they have been assigned a value.
+
+    @return: A L{str} representation of C{obj}.
     """
     if alwaysShow is None:
         alwaysShow = []
