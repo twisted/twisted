@@ -3828,32 +3828,73 @@ class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
             [dns.RRHeader(b'example.com', payload=dns.Record_A('1.2.3.4'))])
 
 
-    def test_repr(self):
+    def test_reprDefaults(self):
         """
-        L{dns._EDNSMessage.__repr__} displays the id, answer, opCode, auth,
-        trunc, recDes, recAv attributes of the message.
+        L{dns._EDNSMessage.__repr__} omits field values and sections which are
+        identical to their defaults. The id field value is always shown.
         """
         self.assertEqual(
-            repr(self.messageFactory()),
+            '<_EDNSMessage id=0>',
+            repr(self.messageFactory())
+        )
+
+
+    def test_reprFlagsIfSet(self):
+        """
+        L{dns._EDNSMessage.__repr__} displays flags if they are L{True}.
+        """
+        m = self.messageFactory(answer=True, auth=True, trunc=True, recDes=True,
+                                recAv=True, authenticData=True,
+                                checkingDisabled=True, dnssecOK=True)
+        self.assertEqual(
             '<_EDNSMessage '
             'id=0 '
-            'answer=False '
-            'opCode=0 '
-            'auth=False '
-            'trunc=False '
-            'recDes=False '
-            'recAv=False '
-            'rCode=0 '
-            'ednsVersion=0 '
-            'dnssecOK=False '
-            'authenticData=False '
-            'checkingDisabled=False '
-            'maxSize=512 '
-            'queries=[] '
-            'answers=[] '
-            'authority=[] '
-            'additional=[]'
-            '>')
+            'flags=answer,auth,trunc,recDes,recAv,authenticData,'
+            'checkingDisabled,dnssecOK'
+            '>',
+            repr(m),
+        )
+
+
+    def test_reprNonDefautFields(self):
+        """
+        L{dns._EDNSMessage.__repr__} displays field values if they differ from
+        their defaults.
+        """
+        m = self.messageFactory(id=10, opCode=20, rCode=30, maxSize=40,
+                                ednsVersion=50)
+        self.assertEqual(
+            '<_EDNSMessage '
+            'id=10 '
+            'opCode=20 '
+            'rCode=30 '
+            'maxSize=40 '
+            'ednsVersion=50'
+            '>',
+            repr(m),
+        )
+
+
+    def test_reprNonDefaultSections(self):
+        """
+        L{dns.Message.__repr__} displays sections which differ from their
+        defaults.
+        """
+        m = self.messageFactory()
+        m.queries = [1, 2, 3]
+        m.answers = [4, 5, 6]
+        m.authority = [7, 8, 9]
+        m.additional = [10, 11, 12]
+        self.assertEqual(
+            '<_EDNSMessage '
+            'id=0 '
+            'queries=[1, 2, 3] '
+            'answers=[4, 5, 6] '
+            'authority=[7, 8, 9] '
+            'additional=[10, 11, 12]'
+            '>',
+            repr(m),
+        )
 
 
     def test_fromStrCallsMessageFactory(self):
