@@ -667,6 +667,35 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         return OPT
 
 
+    def _toRRHeader(self):
+        """
+        Convert this L{_OPTHeader} to L{dns.RRHeader}.
+
+         * C{udpPayloadSize} is assigned to the I{class} field;
+         * C{extendedRCODE}, C{version} and C{dnssecOK} are combined into the
+           I{ttl} field;
+         * Options are encoded, wrapped in an L{UnknownRecord} and assigned to
+           the C{payload} of the resulting L{dns.RRHeader}.
+
+        @return: A L{dns.RRHeader} record.
+        """
+        b = BytesIO()
+        for o in self.options:
+            o.encode(b)
+        optionBytes = b.getvalue()
+
+        return RRHeader(
+            name=self.name.name,
+            type=self.type,
+            cls=self.udpPayloadSize,
+            ttl=(
+                self.extendedRCODE << 24
+                | self.version << 16
+                | self.dnssecOK << 15),
+            payload=UnknownRecord(optionBytes)
+        )
+
+
     def encode(self, strio, compDict=None):
         """
         Encode this L{_OPTHeader} instance to bytes.
@@ -680,21 +709,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             have have already been written to this stream and that may
             be used for DNS name compression.
         """
-        b = BytesIO()
-        for o in self.options:
-            o.encode(b)
-        optionBytes = b.getvalue()
-
-        RRHeader(
-            name=self.name.name,
-            type=self.type,
-            cls=self.udpPayloadSize,
-            ttl=(
-                self.extendedRCODE << 24
-                | self.version << 16
-                | self.dnssecOK << 15),
-            payload=UnknownRecord(optionBytes)
-        ).encode(strio, compDict)
+        self._toRRHeader().encode(strio, compDict)
 
 
     def decode(self, strio, length=None):
@@ -906,7 +921,7 @@ class RRHeader(tputil.FancyEqMixin):
     def __str__(self):
         t = QUERY_TYPES.get(self.type, EXT_QUERIES.get(self.type, 'UNKNOWN (%d)' % self.type))
         c = QUERY_CLASSES.get(self.cls, 'UNKNOWN (%d)' % self.cls)
-        return '<RR name=%s type=%s class=%s ttl=%ds auth=%s>' % (self.name, t, c, self.ttl, self.auth and 'True' or 'False')
+        return '<RR name=%s type=%s class=%s ttl=%ds auth=%s payload=%s>' % (self.name, t, c, self.ttl, self.auth and 'True' or 'False', self.payload)
 
 
     __repr__ = __str__

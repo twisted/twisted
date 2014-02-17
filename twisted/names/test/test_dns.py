@@ -2442,6 +2442,18 @@ class OPTNonStandardAttributes(object):
             dnssecOK=True)
 
 
+    @classmethod
+    def rrHeader(cls):
+        """
+        Return a new L{dns.RRHeader} instance.
+
+        @return: A L{dns.RRHeader} instance with attributes that
+            match the encoded record returned by L{bytes}.
+        """
+        return dns.RRHeader(type=dns.OPT, cls=512, ttl=(3<<24|4<<16|True<<15),
+                            payload=dns.UnknownRecord())
+
+
 
 class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
     """
@@ -2563,6 +2575,15 @@ class OPTHeaderTests(ComparisonTestsMixin, unittest.TestCase):
         """
         h = dns._OPTHeader(options=[(1, 1, b'\x00')])
         self.assertEqual(h.options, [(1, 1, b'\x00')])
+
+
+    def test_toRRHeader(self):
+        """
+        L{dns._OPTHeader._toRRHeader} returns a L{dns.RRHeader} instance whose
+        attributes values are derived by combining I{OPT} specific field values.
+        """
+        self.assertEqual(OPTNonStandardAttributes.rrHeader(),
+                         OPTNonStandardAttributes.object()._toRRHeader())
 
 
     def test_encode(self):
@@ -4456,13 +4477,7 @@ class EDNSMessageEDNSEncodingTests(unittest.SynchronousTestCase):
 
         @see: U{https://tools.ietf.org/html/rfc6891#section-6.1.1}
         """
-        # XXX: We need an _OPTHeader.toRRHeader method. See #6779.
-        b = BytesIO()
-        optRecord = dns._OPTHeader(version=1)
-        optRecord.encode(b)
-        optRRHeader = dns.RRHeader()
-        b.seek(0)
-        optRRHeader.decode(b)
+        optRRHeader = dns._OPTHeader(version=1)._toRRHeader()
         m = dns.Message()
         m.additional = [optRRHeader]
 
