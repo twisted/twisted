@@ -369,50 +369,6 @@ class IStandardMessageFactory(Interface):
 
 
 
-class IEDNSMessage(IStandardMessage):
-    """
-    An Extended DNS message.
-
-    Extends L{IStandardMessage} with extra attributes and flags.
-
-    @see: U{http://tools.ietf.org/html/rfc6891#section-4}
-    """
-    ednsVersion = Attribute(
-        """
-        Indicates the EDNS implementation level. Set to L{None} to prevent any
-        EDNS attributes and options being added to the encoded byte string.
-        """)
-    dnssecOK = Attribute(
-        """
-        DNSSEC OK bit as defined by U{RFC3225
-        3<https://tools.ietf.org/html/rfc3225#section-3>}.
-          """)
-
-
-
-class IEDNSMessageFactory(IStandardMessageFactory):
-    """
-    An extended DNS message factory.
-    """
-    def __call__(id=0, answer=0, opCode=0, recDes=0, recAv=0, auth=0, rCode=OK,
-                 trunc=0, maxSize=512, authenticData=0, checkingDisabled=0,
-                 ednsVersion=0, dnssecOK=False):
-        """
-        @see: L{IStandardMessageFactory} for standard factory argument
-             documentation.
-
-        @param ednsVersion: Indicates the EDNS implementation level. Set to
-            L{None} to prevent any EDNS attributes and options being added to
-            the encoded byte string.
-        @type ednsVersion: L{int} or L{None}
-
-        @param dnssecOK: DNSSEC OK bit as defined by
-            U{RFC3225 3<https://tools.ietf.org/html/rfc3225#section-3>}.
-        @type dnssecOK: C{bool}
-        """
-
-
-
 def _nameToLabels(name):
     """
     Split a domain name into its constituent labels.
@@ -2186,7 +2142,7 @@ class Message(tputil.FancyEqMixin, object):
                        auth=0, rCode=OK, trunc=0, maxSize=512,
                        authenticData=0, checkingDisabled=0):
         """
-        @see: L{IStandardMessageFactory}
+        @see: L{IStandardMessageFactory} for argument documentation.
         """
         self.maxSize = maxSize
         self.id = id
@@ -2397,7 +2353,7 @@ class Message(tputil.FancyEqMixin, object):
 
 
 
-@implementer(IEDNSMessage)
+@implementer(IStandardMessage)
 class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     An I{EDNS} message.
@@ -2417,13 +2373,22 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     @see: I{IStandardMessage} for standard message attribute documentation.
 
+    @param ednsVersion: Indicates the EDNS implementation level. Set to L{None}
+        to prevent any EDNS attributes and options being added to the encoded
+        byte string.
+    @type ednsVersion: L{int} or L{None}
+
+    @param dnssecOK: DNSSEC OK bit as defined by
+        U{RFC3225 3<https://tools.ietf.org/html/rfc3225#section-3>}.
+    @type dnssecOK: C{bool}
+
     @ivar _messageFactory: A constructor of L{Message} instances. Called by
         C{_toMessage} and C{_fromMessage}.
     """
     # This is the way to declare that a class constructor / initialiser provides
     # a factory interface.
     # See http://docs.zope.org/zope3/Book/ifaceschema/interface/show.html#declaring-provided-interfaces
-    classProvides(IEDNSMessageFactory)
+    classProvides(IStandardMessageFactory)
 
     showAttributes = (
         'id', 'answer', 'opCode', 'auth', 'trunc',
@@ -2448,7 +2413,7 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         @see: U{RFC3225 section-3<https://tools.ietf.org/html/rfc3225#section-3>}
         @see: U{RFC6891 section-6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}
 
-        @see: L{IEDNSMessageFactory} for initialiser arguments.
+        @see: L{IStandardMessageFactory} for initialiser arguments.
         """
         self.id = id
         self.answer = answer

@@ -4731,39 +4731,44 @@ class ResponseFromMessageTests(unittest.SynchronousTestCase):
 
 
 
-class MessageInterfaceTests(unittest.SynchronousTestCase):
+class MessageInterfaceTestsMixin(object):
     """
     Tests for the interfaces provided by L{dns.Message} and L{dns._EDNSMessage}.
     """
     def test_messageFactory(self):
         """
-        L{dns.Message} provides L{dns.IMessageFactory}.
+        C{messageFactory} provides L{dns.IMessageFactory}.
 
         XXX: verifyObject doesn't correctly work on classes with classProvides
         See https://bugs.launchpad.net/zope.interface/+bug/675424
         """
-        self.assertTrue(verifyObject(dns.IStandardMessageFactory, dns.Message))
+        self.assertTrue(
+            verifyObject(dns.IStandardMessageFactory, self.messageFactory))
 
 
     def test_messageInterface(self):
         """
-        L{dns.Message} implements L{dns.IStandardMessage}.
+        C{messageFactory} implements L{dns.IStandardMessage}.
         """
-        self.assertTrue(verifyObject(dns.IStandardMessage, dns.Message()))
+        self.assertTrue(
+            verifyObject(dns.IStandardMessage, self.messageFactory()))
 
 
-    def test_ednsMessageFactory(self):
-        """
-        L{dns._EDNSMessage} implements L{dns.IEDNSMessageFactory}.
 
-        XXX: verifyObject doesn't correctly work on classes with classProvides
-        See https://bugs.launchpad.net/zope.interface/+bug/675424
-        """
-        self.assertTrue(verifyObject(dns.IEDNSMessageFactory, dns._EDNSMessage))
+class MessageInterfaceTests(MessageInterfaceTestsMixin,
+                            unittest.SynchronousTestCase):
+    """
+    Tests that L{dns.Message} provides the L{dns.IStandardMessage} and
+    L{dns.IStandardMessageFactory} interfaces.
+    """
+    messageFactory = dns.Message
 
 
-    def test_ednsMessageInterface(self):
-        """
-        L{dns._EDNSMessage} implements L{dns.IEDNSMessage}.
-        """
-        self.assertTrue(verifyObject(dns.IEDNSMessage, dns._EDNSMessage()))
+
+class EDNSMessageInterfaceTests(MessageInterfaceTestsMixin,
+                                unittest.SynchronousTestCase):
+    """
+    Tests that L{dns._EDNSMessage} provides the L{dns.IStandardMessage} and
+    L{dns.IStandardMessageFactory} interfaces.
+    """
+    messageFactory = dns._EDNSMessage
