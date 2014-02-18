@@ -195,7 +195,9 @@ class DNSServerFactory(protocol.ServerFactory):
         C{answers} have their C{auth} flag set to L{True}.
 
         The C{ednsVersion} field will be set to L{None} on the response to turn
-        off all I{EDNS} features.
+        off all I{EDNS} features. In future, L{DNSServerFactory} will be able to
+        negotiate EDNS version and payload sizes with EDNS aware clients. See
+        https://twistedmatrix.com/trac/ticket/5669.
 
         The response will have the same C{maxSize} as the request.
 
@@ -245,6 +247,7 @@ class DNSServerFactory(protocol.ServerFactory):
             auth=authoritativeAnswer,
             # Turn off all EDNS features until we implement server-side EDNS
             # behaviour.
+            # See https://twistedmatrix.com/trac/ticket/5669
             ednsVersion=None
         )
 
