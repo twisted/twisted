@@ -2115,8 +2115,8 @@ class Message(tputil.FancyEqMixin, object):
     @ivar _sectionNames: The names of attributes representing the record
         sections of this message.
     """
-    # This is the way to declare that a class constructor / initialiser provides
-    # a factory interface.
+    # Declare that the class constructor / initialiser provides a factory
+    # interface.
     # See http://docs.zope.org/zope3/Book/ifaceschema/interface/show.html#declaring-provided-interfaces
     classProvides(IStandardMessageFactory)
 
@@ -2385,8 +2385,8 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     @ivar _messageFactory: A constructor of L{Message} instances. Called by
         C{_toMessage} and C{_fromMessage}.
     """
-    # This is the way to declare that a class constructor / initialiser provides
-    # a factory interface.
+    # Declare that the class constructor / initialiser provides a factory
+    # interface.
     # See http://docs.zope.org/zope3/Book/ifaceschema/interface/show.html#declaring-provided-interfaces
     classProvides(IStandardMessageFactory)
 

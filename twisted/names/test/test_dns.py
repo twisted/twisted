@@ -4734,12 +4734,16 @@ class ResponseFromMessageTests(unittest.SynchronousTestCase):
 class MessageInterfaceTestsMixin(object):
     """
     Tests for the interfaces provided by L{dns.Message} and L{dns._EDNSMessage}.
+
+    TestCase classes that mixin these tests must provide a C{messageFactory}
+    attribute whose value is the message class under test. eg L{dns.Message}.
     """
     def test_messageFactory(self):
         """
         C{messageFactory} provides L{dns.IMessageFactory}.
 
-        XXX: verifyObject doesn't correctly work on classes with classProvides
+        XXX: verifyObject doesn't actually verify class objects which have been
+        marked as directlyProviding a factory interface.
         See https://bugs.launchpad.net/zope.interface/+bug/675424
         """
         self.assertTrue(
