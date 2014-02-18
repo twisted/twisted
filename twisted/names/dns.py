@@ -210,7 +210,10 @@ from twisted.names.error import DNSQueryTimeoutError
 
 class IStandardMessage(Interface):
     """
-    A DNS message.
+    The attributes representing the fields, flags and sections of an RFC1035 DNS
+    message.
+
+    @see: U{https://tools.ietf.org/html/rfc1035#section-4}
     """
     id = Attribute(
         """
@@ -220,8 +223,8 @@ class IStandardMessage(Interface):
         """)
     answer = Attribute(
         """
-        A one bit field that specifies whether this message is a query (0), or a
-        response (1).
+        A one bit field that specifies whether this message is a query (C{0}),
+        or a response (C{1}).
         """)
     opCode = Attribute(
         """
@@ -231,15 +234,14 @@ class IStandardMessage(Interface):
     recDes = Attribute(
         """
         Recursion Desired - this bit may be set in a query and is copied into
-        the response.  If RD is set, it directs the name server to pursue the
-        query recursively.  Recursive query support is optional.
+        the response.  If C{recDes} is L{True}, it directs the name server to
+        pursue the query recursively.  Recursive query support is optional.
         """)
     recAv = Attribute(
         """
         Recursion Available - this bit is set or cleared in a response and
         denotes whether recursive query support is available in the name server.
-        """
-    )
+        """)
     auth = Attribute(
         """
         Authoritative Answer - this bit is valid in responses and specifies that
@@ -370,6 +372,10 @@ class IStandardMessageFactory(Interface):
 class IEDNSMessage(IStandardMessage):
     """
     An Extended DNS message.
+
+    Extends L{IStandardMessage} with extra attributes and flags.
+
+    @see: U{http://tools.ietf.org/html/rfc6891#section-4}
     """
     ednsVersion = Attribute(
         """
