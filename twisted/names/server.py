@@ -225,7 +225,7 @@ class DNSServerFactory(protocol.ServerFactory):
         @type additional: L{list} of L{dns.RRHeader}
 
         @return: A response message.
-        @rtype: L{dns.IEDNSMessage}
+        @rtype: L{dns._EDNSMessage}
         """
         if answers is None:
             answers = []
