@@ -396,8 +396,7 @@ class IEDNSMessageFactory(IStandardMessageFactory):
     """
     def __call__(id=0, answer=0, opCode=0, recDes=0, recAv=0, auth=0, rCode=OK,
                  trunc=0, maxSize=512, authenticData=0, checkingDisabled=0,
-                 ednsVersion=0, dnssecOK=False,
-                 queries=None, answers=None, authority=None, additional=None):
+                 ednsVersion=0, dnssecOK=False):
         """
         @see: L{IStandardMessageFactory} for standard factory argument
              documentation.
@@ -410,20 +409,6 @@ class IEDNSMessageFactory(IStandardMessageFactory):
         @param dnssecOK: DNSSEC OK bit as defined by
             U{RFC3225 3<https://tools.ietf.org/html/rfc3225#section-3>}.
         @type dnssecOK: C{bool}
-
-        @param queries: The L{list} of L{Query} associated with this message.
-        @type queries: L{list} of L{Query}
-
-        @param answers: The L{list} of answers associated with this message.
-        @type answers: L{list} of L{RRHeader}
-
-        @param authority: The L{list} of authority records associated with this
-            message.
-        @type authority: L{list} of L{RRHeader}
-
-        @param additional: The L{list} of additional records associated with
-            this message.
-        @type additional: L{list} of L{RRHeader}
         """
 
 
