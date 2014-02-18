@@ -51,7 +51,7 @@ from io import BytesIO
 
 AF_INET6 = socket.AF_INET6
 
-from zope.interface import implementer, Interface, Attribute
+from zope.interface import implementer, classProvides, Interface, Attribute
 
 
 # Twisted imports
@@ -205,6 +205,220 @@ class IRecord(Interface):
 # suppose. -exarkun
 from twisted.names.error import DomainError, AuthoritativeDomainError
 from twisted.names.error import DNSQueryTimeoutError
+
+
+
+class IStandardMessage(Interface):
+    """
+    A DNS message.
+    """
+    id = Attribute(
+        """
+        A 16 bit identifier assigned by the program that generates any kind of
+        query.  This identifier is copied to the corresponding reply and can be
+        used by the requester to match up replies to outstanding queries.
+        """)
+    answer = Attribute(
+        """
+        A one bit field that specifies whether this message is a query (0), or a
+        response (1).
+        """)
+    opCode = Attribute(
+        """
+        A four bit field that specifies kind of query in this message.  This
+        value is set by the originator of a query and copied into the response.
+        """)
+    recDes = Attribute(
+        """
+        Recursion Desired - this bit may be set in a query and is copied into
+        the response.  If RD is set, it directs the name server to pursue the
+        query recursively.  Recursive query support is optional.
+        """)
+    recAv = Attribute(
+        """
+        Recursion Available - this bit is set or cleared in a response and
+        denotes whether recursive query support is available in the name server.
+        """
+    )
+    auth = Attribute(
+        """
+        Authoritative Answer - this bit is valid in responses and specifies that
+        the responding name server is an authority for the domain name in
+        question section.
+        """)
+    rCode = Attribute(
+        """
+        A response code, used to indicate success or failure in a message which
+        is a response from a server to a client request.
+        """)
+    trunc = Attribute(
+        """
+        A flag indicating that this message was truncated due to length greater
+        than that permitted on the transmission channel.
+        """)
+    maxSize = Attribute(
+        """
+        The requestor's UDP payload size is the number of octets of the largest
+        UDP payload that can be reassembled and delivered in the requestor's
+        network stack.
+        """)
+    authenticData = Attribute(
+        """
+        A flag indicating in a response that all the data included in the answer
+        and authority portion of the response has been authenticated by the
+        server according to the policies of that server.  See U{RFC2535
+        section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
+        """)
+    checkingDisabled = Attribute(
+        """
+        A flag indicating in a query that pending (non-authenticated) data is
+        acceptable to the resolver sending the query.  See U{RFC2535
+        section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
+        """)
+    queries = Attribute(
+        """
+        The queries which are being asked of or answered by DNS server.
+        """)
+    answers = Attribute(
+        """
+        Records containing the answers to C{queries} if this is a response
+        message.
+        """)
+    authority = Attribute(
+        """
+        Records containing information about the authoritative DNS servers for
+        the names in C{queries}.
+        """)
+    additional = Attribute(
+        """
+        Records containing IP addresses of host names in C{answers} and
+        C{authority}.
+        """)
+
+
+
+class IStandardMessageFactory(Interface):
+    """
+    A constructor of L{IStandardMessage} providers.
+    """
+    def __call__(id=0, answer=0, opCode=0, recDes=0, recAv=0, auth=0, rCode=OK,
+                 trunc=0, maxSize=512, authenticData=0, checkingDisabled=0):
+        """
+        Construct an L{IStandardMessage} provider.
+
+        @param id: A 16 bit identifier assigned by the program that generates
+            any kind of query.  This identifier is copied the corresponding
+            reply and can be used by the requester to match up replies to
+            outstanding queries.
+        @type id: L{int}
+
+        @param answer: A one bit field that specifies whether this message is a
+            query (0), or a response (1).
+        @type answer: L{bool}
+
+        @param opCode: A four bit field that specifies kind of query in this
+            message.  This value is set by the originator of a query and copied
+            into the response.
+        @type opCode: L{int}
+
+        @param recDes: Recursion Desired - this bit may be set in a query and is
+            copied into the response.  If set, it directs the name server to
+            pursue the query recursively. Recursive query support is optional.
+        @type recDes: L{bool}
+
+        @param recAv: Recursion Available - this bit is set or cleared in a
+            response, and denotes whether recursive query support is available
+            in the name server.
+        @type recAv: L{bool}
+
+        @param auth: Authoritative Answer - this bit is valid in responses, and
+            specifies that the responding name server is an authority for the
+            domain name in question section.
+        @type auth: L{bool}
+
+        @param rCode: Extended 12-bit RCODE. Derived from the 4 bits defined in
+            U{RFC1035 4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
+            and the upper 8bits defined in U{RFC6891
+            6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}.
+        @type rCode: L{int}
+
+        @param trunc: Truncation - specifies that this message was truncated due
+            to length greater than that permitted on the transmission channel.
+        @type trunc: L{bool}
+
+        @param authenticData: A flag indicating in a response that all the data
+            included in the answer and authority portion of the response has
+            been authenticated by the server according to the policies of that
+            server.
+            See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
+        @type authenticData: L{bool}
+
+        @param checkingDisabled: A flag indicating in a query that pending
+            (non-authenticated) data is acceptable to the resolver sending the
+            query.
+            See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
+        @type authenticData: L{bool}
+
+        @param maxSize: The requestor's UDP payload size is the number of octets
+            of the largest UDP payload that can be reassembled and delivered in
+            the requestor's network stack.
+        @type maxSize: L{int}
+        """
+
+
+
+class IEDNSMessage(IStandardMessage):
+    """
+    An Extended DNS message.
+    """
+    ednsVersion = Attribute(
+        """
+        Indicates the EDNS implementation level. Set to L{None} to prevent any
+        EDNS attributes and options being added to the encoded byte string.
+        """)
+    dnssecOK = Attribute(
+        """
+        DNSSEC OK bit as defined by U{RFC3225
+        3<https://tools.ietf.org/html/rfc3225#section-3>}.
+          """)
+
+
+
+class IEDNSMessageFactory(IStandardMessageFactory):
+    """
+    An extended DNS message factory.
+    """
+    def __call__(id=0, answer=0, opCode=0, recDes=0, recAv=0, auth=0, rCode=OK,
+                 trunc=0, maxSize=512, authenticData=0, checkingDisabled=0,
+                 ednsVersion=0, dnssecOK=False,
+                 queries=None, answers=None, authority=None, additional=None):
+        """
+        @see: L{IStandardMessageFactory} for standard factory argument
+             documentation.
+
+        @param ednsVersion: Indicates the EDNS implementation level. Set to
+            L{None} to prevent any EDNS attributes and options being added to
+            the encoded byte string.
+        @type ednsVersion: L{int} or L{None}
+
+        @param dnssecOK: DNSSEC OK bit as defined by
+            U{RFC3225 3<https://tools.ietf.org/html/rfc3225#section-3>}.
+        @type dnssecOK: C{bool}
+
+        @param queries: The L{list} of L{Query} associated with this message.
+        @type queries: L{list} of L{Query}
+
+        @param answers: The L{list} of answers associated with this message.
+        @type answers: L{list} of L{RRHeader}
+
+        @param authority: The L{list} of authority records associated with this
+            message.
+        @type authority: L{list} of L{RRHeader}
+
+        @param additional: The L{list} of additional records associated with
+            this message.
+        @type additional: L{list} of L{RRHeader}
+        """
 
 
 
@@ -1939,38 +2153,13 @@ def _responseFromMessage(responseConstructor, message, **kwargs):
 
 
 
-class Message(tputil.FancyEqMixin):
+@implementer(IStandardMessage)
+class Message(tputil.FancyEqMixin, object):
     """
     L{Message} contains all the information represented by a single
     DNS request or response.
 
-    @ivar id: See L{__init__}
-    @ivar answer: See L{__init__}
-    @ivar opCode: See L{__init__}
-    @ivar recDes: See L{__init__}
-    @ivar recAv: See L{__init__}
-    @ivar auth: See L{__init__}
-    @ivar rCode: See L{__init__}
-    @ivar trunc: See L{__init__}
-    @ivar maxSize: See L{__init__}
-    @ivar authenticData: See L{__init__}
-    @ivar checkingDisabled: See L{__init__}
-
-    @ivar queries: The queries which are being asked of or answered by
-        DNS server.
-    @type queries: L{list} of L{Query}
-
-    @ivar answers: Records containing the answers to C{queries} if
-        this is a response message.
-    @type answers: L{list} of L{RRHeader}
-
-    @ivar authority: Records containing information about the
-        authoritative DNS servers for the names in C{queries}.
-    @type authority: L{list} of L{RRHeader}
-
-    @ivar additional: Records containing IP addresses of host names
-        in C{answers} and C{authority}.
-    @type additional: L{list} of L{RRHeader}
+    @see: L{IStandardMessage} for attribute documentation.
 
     @ivar _flagNames: The names of attributes representing the flag header
         fields.
@@ -1979,6 +2168,11 @@ class Message(tputil.FancyEqMixin):
     @ivar _sectionNames: The names of attributes representing the record
         sections of this message.
     """
+    # This is the way to declare that a class constructor / initialiser provides
+    # a factory interface.
+    # See http://docs.zope.org/zope3/Book/ifaceschema/interface/show.html#declaring-provided-interfaces
+    classProvides(IStandardMessageFactory)
+
     compareAttributes = (
         'id', 'answer', 'opCode', 'recDes', 'recAv',
         'auth', 'rCode', 'trunc', 'maxSize',
@@ -2001,64 +2195,7 @@ class Message(tputil.FancyEqMixin):
                        auth=0, rCode=OK, trunc=0, maxSize=512,
                        authenticData=0, checkingDisabled=0):
         """
-        @param id: A 16 bit identifier assigned by the program that
-            generates any kind of query.  This identifier is copied to
-            the corresponding reply and can be used by the requester
-            to match up replies to outstanding queries.
-        @type id: L{int}
-
-        @param answer: A one bit field that specifies whether this
-            message is a query (0), or a response (1).
-        @type answer: L{int}
-
-        @param opCode: A four bit field that specifies kind of query in
-            this message.  This value is set by the originator of a query
-            and copied into the response.
-        @type opCode: L{int}
-
-        @param recDes: Recursion Desired - this bit may be set in a
-            query and is copied into the response.  If RD is set, it
-            directs the name server to pursue the query recursively.
-            Recursive query support is optional.
-        @type recDes: L{int}
-
-        @param recAv: Recursion Available - this bit is set or cleared
-            in a response and denotes whether recursive query support
-            is available in the name server.
-        @type recAv: L{int}
-
-        @param auth: Authoritative Answer - this bit is valid in
-            responses and specifies that the responding name server
-            is an authority for the domain name in question section.
-        @type auth: L{int}
-
-        @ivar rCode: A response code, used to indicate success or failure in a
-            message which is a response from a server to a client request.
-        @type rCode: C{0 <= int < 16}
-
-        @param trunc: A flag indicating that this message was
-            truncated due to length greater than that permitted on the
-            transmission channel.
-        @type trunc: L{int}
-
-        @param maxSize: The requestor's UDP payload size is the number
-            of octets of the largest UDP payload that can be
-            reassembled and delivered in the requestor's network
-            stack.
-        @type maxSize: L{int}
-
-        @param authenticData: A flag indicating in a response that all
-            the data included in the answer and authority portion of
-            the response has been authenticated by the server
-            according to the policies of that server.
-            See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
-        @type authenticData: L{int}
-
-        @param checkingDisabled: A flag indicating in a query that
-            pending (non-authenticated) data is acceptable to the
-            resolver sending the query.
-            See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
-        @type authenticData: L{int}
+        @see: L{IStandardMessageFactory}
         """
         self.maxSize = maxSize
         self.id = id
@@ -2269,6 +2406,7 @@ class Message(tputil.FancyEqMixin):
 
 
 
+@implementer(IEDNSMessage)
 class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     An I{EDNS} message.
@@ -2286,28 +2424,15 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     @see: U{https://tools.ietf.org/html/rfc6891}
 
-    @ivar id: See L{__init__}
-    @ivar answer: See L{__init__}
-    @ivar opCode: See L{__init__}
-    @ivar auth: See L{__init__}
-    @ivar trunc: See L{__init__}
-    @ivar recDes: See L{__init__}
-    @ivar recAv: See L{__init__}
-    @ivar rCode: See L{__init__}
-    @ivar ednsVersion: See L{__init__}
-    @ivar dnssecOK: See L{__init__}
-    @ivar authenticData: See L{__init__}
-    @ivar checkingDisabled: See L{__init__}
-    @ivar maxSize: See L{__init__}
-
-    @ivar queries: See L{__init__}
-    @ivar answers: See L{__init__}
-    @ivar authority: See L{__init__}
-    @ivar additional: See L{__init__}
+    @see: I{IStandardMessage} for standard message attribute documentation.
 
     @ivar _messageFactory: A constructor of L{Message} instances. Called by
         C{_toMessage} and C{_fromMessage}.
     """
+    # This is the way to declare that a class constructor / initialiser provides
+    # a factory interface.
+    # See http://docs.zope.org/zope3/Book/ifaceschema/interface/show.html#declaring-provided-interfaces
+    classProvides(IEDNSMessageFactory)
 
     showAttributes = (
         'id', 'answer', 'opCode', 'auth', 'trunc',
@@ -2327,91 +2452,12 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         """
         Construct a new L{_EDNSMessage}
 
-        @see U{RFC1035 section-4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
-        @see U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}
-        @see U{RFC3225 section-3<https://tools.ietf.org/html/rfc3225#section-3>}
-        @see U{RFC6891 section-6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}
+        @see: U{RFC1035 section-4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
+        @see: U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}
+        @see: U{RFC3225 section-3<https://tools.ietf.org/html/rfc3225#section-3>}
+        @see: U{RFC6891 section-6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}
 
-        @param id: A 16 bit identifier assigned by the program that generates
-            any kind of query.  This identifier is copied the corresponding
-            reply and can be used by the requester to match up replies to
-            outstanding queries.
-        @type id: L{int}
-
-        @param answer: A one bit field that specifies whether this message is a
-            query (0), or a response (1).
-        @type answer: L{bool}
-
-        @param opCode: A four bit field that specifies kind of query in this
-            message.  This value is set by the originator of a query and copied
-            into the response.
-        @type opCode: L{int}
-
-        @param auth: Authoritative Answer - this bit is valid in responses, and
-            specifies that the responding name server is an authority for the
-            domain name in question section.
-        @type auth: L{bool}
-
-        @param trunc: Truncation - specifies that this message was truncated due
-            to length greater than that permitted on the transmission channel.
-        @type trunc: L{bool}
-
-        @param recDes: Recursion Desired - this bit may be set in a query and is
-            copied into the response.  If set, it directs the name server to
-            pursue the query recursively. Recursive query support is optional.
-        @type recDes: L{bool}
-
-        @param recAv: Recursion Available - this bit is set or cleared in a
-            response, and denotes whether recursive query support is available
-            in the name server.
-        @type recAv: L{bool}
-
-        @param rCode: Extended 12-bit RCODE. Derived from the 4 bits defined in
-            U{RFC1035 4.1.1<https://tools.ietf.org/html/rfc1035#section-4.1.1>}
-            and the upper 8bits defined in U{RFC6891
-            6.1.3<https://tools.ietf.org/html/rfc6891#section-6.1.3>}.
-        @type rCode: L{int}
-
-        @param ednsVersion: Indicates the EDNS implementation level. Set to
-            L{None} to prevent any EDNS attributes and options being added to
-            the encoded byte string.
-        @type ednsVersion: L{int} or L{None}
-
-        @param dnssecOK: DNSSEC OK bit as defined by
-            U{RFC3225 3<https://tools.ietf.org/html/rfc3225#section-3>}.
-        @type dnssecOK: C{bool}
-
-        @param authenticData: A flag indicating in a response that all the data
-            included in the answer and authority portion of the response has
-            been authenticated by the server according to the policies of that
-            server.
-            See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
-        @type authenticData: L{bool}
-
-        @param checkingDisabled: A flag indicating in a query that pending
-            (non-authenticated) data is acceptable to the resolver sending the
-            query.
-            See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
-        @type authenticData: L{bool}
-
-        @param maxSize: The requestor's UDP payload size is the number of octets
-            of the largest UDP payload that can be reassembled and delivered in
-            the requestor's network stack.
-        @type maxSize: L{int}
-
-        @param queries: The L{list} of L{Query} associated with this message.
-        @type queries: L{list} of L{Query}
-
-        @param answers: The L{list} of answers associated with this message.
-        @type answers: L{list} of L{RRHeader}
-
-        @param authority: The L{list} of authority records associated with this
-            message.
-        @type authority: L{list} of L{RRHeader}
-
-        @param additional: The L{list} of additional records associated with
-            this message.
-        @type additional: L{list} of L{RRHeader}
+        @see: L{IEDNSMessageFactory} for initialiser arguments.
         """
         self.id = id
         self.answer = answer
