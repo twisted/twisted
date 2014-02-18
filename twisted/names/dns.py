@@ -51,7 +51,7 @@ from io import BytesIO
 
 AF_INET6 = socket.AF_INET6
 
-from zope.interface import implementer, classProvides, Interface, Attribute
+from zope.interface import implementer, provider, Interface, Attribute
 
 
 # Twisted imports
@@ -2101,6 +2101,7 @@ def _responseFromMessage(responseConstructor, message, **kwargs):
 
 
 @implementer(IStandardMessage)
+@provider(IStandardMessageFactory)
 class Message(tputil.FancyEqMixin, object):
     """
     L{Message} contains all the information represented by a single
@@ -2115,11 +2116,6 @@ class Message(tputil.FancyEqMixin, object):
     @ivar _sectionNames: The names of attributes representing the record
         sections of this message.
     """
-    # Declare that the class constructor / initialiser provides a factory
-    # interface.
-    # See http://docs.zope.org/zope3/Book/ifaceschema/interface/show.html#declaring-provided-interfaces
-    classProvides(IStandardMessageFactory)
-
     compareAttributes = (
         'id', 'answer', 'opCode', 'recDes', 'recAv',
         'auth', 'rCode', 'trunc', 'maxSize',
@@ -2354,6 +2350,7 @@ class Message(tputil.FancyEqMixin, object):
 
 
 @implementer(IStandardMessage)
+@provider(IStandardMessageFactory)
 class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     """
     An I{EDNS} message.
@@ -2385,11 +2382,6 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
     @ivar _messageFactory: A constructor of L{Message} instances. Called by
         C{_toMessage} and C{_fromMessage}.
     """
-    # Declare that the class constructor / initialiser provides a factory
-    # interface.
-    # See http://docs.zope.org/zope3/Book/ifaceschema/interface/show.html#declaring-provided-interfaces
-    classProvides(IStandardMessageFactory)
-
     showAttributes = (
         'id', 'answer', 'opCode', 'auth', 'trunc',
         'recDes', 'recAv', 'rCode', 'ednsVersion', 'dnssecOK',
