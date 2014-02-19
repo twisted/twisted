@@ -1592,9 +1592,16 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     @ivar _transferDecoder: C{None} or an instance of
         L{_ChunkedTransferDecoder} if the request body uses the I{chunked}
         Transfer-Encoding.
+    @ivar maxHeaders: Maximum number of headers allowed per request.
+    @ivar totalHeadersSize: Maximum bytes for request line plus all headers
+        from the request.
+
+    Maximum length for initial request line and each header is defined
+    by L{basic.LineReceiver.MAX_LENGTH}.
     """
 
-    maxHeaders = 500 # max number of headers allowed per request
+    maxHeaders = 500
+    totalHeadersSize = 16384
 
     length = 0
     persistent = 1
@@ -1607,6 +1614,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     _savedTimeOut = None
     _receivedHeaderCount = 0
+    _receivedHeaderSize = 0
 
     def __init__(self):
         # the request queue
@@ -1617,8 +1625,19 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     def connectionMade(self):
         self.setTimeout(self.timeOut)
 
+
     def lineReceived(self, line):
+        """
+        Called for each line from request until the end of headers when
+        it enters binary mode.
+        """
         self.resetTimeout()
+
+        self._receivedHeaderSize += len(line)
+        if (self._receivedHeaderSize > self.totalHeadersSize):
+            self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
+            self.transport.loseConnection()
+            return
 
         if self.__first_line:
             # if this connection is not persistent, drop any data which
@@ -1718,6 +1737,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         # reset ALL state variables, so we don't interfere with next request
         self.length = 0
         self._receivedHeaderCount = 0
+        self._receivedHeaderSize = 0
         self.__first_line = 1
         self._transferDecoder = None
         del self._command, self._path, self._version
