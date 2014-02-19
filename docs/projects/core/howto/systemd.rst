@@ -4,14 +4,13 @@
 
 Deploying Twisted with systemd
 ==============================
-``systemd``
 
 Introduction
 ------------
 In this tutorial you will learn how to start a Twisted service
-using ``systemd`` .
+using ``systemd``\ .
 
-You will also learn how to start the service using ``socket activation`` .
+You will also learn how to start the service using ``socket activation``\ .
 
 .. note::
 
@@ -138,7 +137,7 @@ User / Group
   child processes.
 
   This example uses an un-privileged user "nobody" and
-  un-privileged group "nobody" .
+  un-privileged group "nobody".
 
   This is an important security measure which ensures that the
   Twisted sub-process can not access restricted areas of the
@@ -249,7 +248,7 @@ boot time.
 The ``multi-user.target`` is an example
 of
 a `"special" systemd unit <http://www.freedesktop.org/software/systemd/man/systemd.special.html>`_. Later in this tutorial you will learn how to
-use another special unit - the ``sockets.target`` .
+use another special unit - the ``sockets.target``\ .
 
 Test that the service is automatically restarted
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -326,7 +325,7 @@ already dropped. This allows a Twisted service to be configured
 and restarted by a non-root user.
 
 Twisted (since version 12.2) includes
-a ```systemd``  endpoint API and a corresponding  string ports syntax <endpoints.html>`_ ``systemd`` .
+a ```systemd``  endpoint API and a corresponding  string ports syntax <endpoints.html>`_ ``systemd``\ .
 
 The following example builds on the previous example, demonstrating
 how to enable socket activation for a simple Twisted web server.
@@ -385,7 +384,7 @@ ExecStart
 
   The ``index=0`` endpoint argument
   makes ``twistd`` adopt the first file descriptor
-  inherited from ``systemd`` .
+  inherited from ``systemd``.
 
   Socket activation is also technically possible
   with other socket families and types, but Twisted currently
@@ -482,7 +481,7 @@ service. eg
 Conclusion
 ----------
 In this tutorial you have learned how to deploy a Twisted service
-using ``systemd`` . You have also learned how the service can be started
+using ``systemd``\ . You have also learned how the service can be started
 on demand, using socket activation.
 
 .. _limitations:
@@ -490,9 +489,9 @@ on demand, using socket activation.
 Limitations and Known Issues
 ----------------------------
 #. Twisted can not accept UNIX or datagram sockets
-   from ``systemd`` .
+   from ``systemd``\ .
 #. Twisted does not support listening for SSL connections on
-   sockets inherited from ``systemd`` .
+   sockets inherited from ``systemd``\ .
 
 Further Reading
 ---------------
