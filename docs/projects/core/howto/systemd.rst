@@ -97,7 +97,10 @@ the http://www.freedesktop.org/software/systemd/man/systemd.service.html
 file at ``/etc/systemd/system/www.example.com.service``
 with the following content:
 
-listings/systemd/www.example.com.static.service
+:download:`/etc/systemd/system/www.example.com.service <listings/systemd/www.example.com.static.service>`
+
+.. literalinclude:: listings/systemd/www.example.com.static.service
+   :language: ini
 
 This configuration file contains the following note worthy
 directives:
@@ -344,7 +347,10 @@ the http://www.freedesktop.org/software/systemd/man/systemd.socket.html
 file at ``/etc/systemd/system/www.example.com.socket``
 with the following content:
 
-listings/systemd/www.example.com.socket
+:download:`/etc/systemd/system/www.example.com.socket <listings/systemd/www.example.com.socket>`
+
+.. literalinclude:: listings/systemd/www.example.com.socket
+   :language: ini
 
 This configuration file contains the following important
 directives:
@@ -365,7 +371,10 @@ WantedBy=sockets.target
 You also need to modify the ``systemd.service`` file as
 follows:
 
-listings/systemd/www.example.com.socketactivated.service
+:download:`/etc/systemd/system/www.example.com.service <listings/systemd/www.example.com.socketactivated.service>`
+
+.. literalinclude:: listings/systemd/www.example.com.socketactivated.service
+   :language: ini
 
 Note the following important directives and changes:
 
