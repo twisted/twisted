@@ -80,7 +80,7 @@ Twisted
 Basic Systemd Service Configuration
 -----------------------------------
 The essential configuration file for a ``systemd`` service is the
-http://www.freedesktop.org/software/systemd/man/systemd.service.html
+`service <http://www.freedesktop.org/software/systemd/man/systemd.service.html>`_
 file.
 
 Later in this tutorial, you will learn about some other types of
@@ -93,7 +93,7 @@ server immediately on system boot.
 Create a systemd.service file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Create
-the http://www.freedesktop.org/software/systemd/man/systemd.service.html
+the `service <http://www.freedesktop.org/software/systemd/man/systemd.service.html>`_
 file at ``/etc/systemd/system/www.example.com.service``
 with the following content:
 
@@ -160,13 +160,13 @@ WantedBy
   in the ``[Install]`` section of configuration
   file.
 
-  The `special         <http://www.freedesktop.org/software/systemd/man/systemd.special.html>`_ is used in this example so
+  The special `multi-user.target <http://www.freedesktop.org/software/systemd/man/systemd.special.html#multi-user.target>`_ is used in this example so
   that ``systemd`` starts the ``twistd web``
   service when it reaches the multi-user stage of the boot
   sequence.
 
 There are many more service directives which are documented in the
-http://www.freedesktop.org/software/systemd/man/systemd.directives.html.
+`systemd.directives man page <http://www.freedesktop.org/software/systemd/man/systemd.directives.html>`_.
 
 Reload ``systemd``
 ~~~~~~~~~~~~~~~~~~
@@ -224,7 +224,7 @@ syslog messages or by using the new ``journalctl`` tool
 in Fedora.
 
 See
-the http://www.freedesktop.org/software/systemd/man/systemctl.htmlfor details of other ``systemctl`` command
+the `systemctl man page <http://www.freedesktop.org/software/systemd/man/systemctl.html>`_ for details of other ``systemctl`` command
 line options.
 
 Enable the service
@@ -248,7 +248,7 @@ boot time.
 
 The ``multi-user.target`` is an example
 of
-a http://www.freedesktop.org/software/systemd/man/systemd.special.html. Later in this tutorial you will learn how to
+a `"special" systemd unit <http://www.freedesktop.org/software/systemd/man/systemd.special.html>`_. Later in this tutorial you will learn how to
 use another special unit - the ``sockets.target`` .
 
 Test that the service is automatically restarted
@@ -259,7 +259,7 @@ restart the ``twistd`` process if and when it exits
 unexpectedly.
 
 You can read about other ``Restart`` options in
-the http://www.freedesktop.org/software/systemd/man/systemd.service.html
+the `systemd.service man page <http://www.freedesktop.org/software/systemd/man/systemd.service.html>`_.
 
 Try killing the ``twistd`` process and then checking its status
 again:
@@ -294,7 +294,7 @@ Socket Activation
 -----------------
 First you need to understand what "socket activation" is. This
 extract from
-the `systemd  daemon man page <http://www.freedesktop.org/software/systemd/man/daemon.html>`_ explains it quite clearly.
+the `systemd daemon man page <http://www.freedesktop.org/software/systemd/man/daemon.html>`_ explains it quite clearly.
 
     In a socket-based activation scheme the creation and
     binding of the listening socket as primary communication channel of
@@ -343,7 +343,7 @@ how to enable socket activation for a simple Twisted web server.
 Create a systemd.socket file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Create
-the http://www.freedesktop.org/software/systemd/man/systemd.socket.html
+the `systemd.socket <http://www.freedesktop.org/software/systemd/man/systemd.socket.html>`_
 file at ``/etc/systemd/system/www.example.com.socket``
 with the following content:
 
@@ -364,7 +364,7 @@ ListenStream=0.0.0.0:80
 WantedBy=sockets.target
 
   This is
-  a `special        target <http://www.freedesktop.org/software/systemd/man/systemd.special.html>`_ used by all socket activated
+  a `special target <http://www.freedesktop.org/software/systemd/man/systemd.special.html#sockets.target>`_ used by all socket activated
   services. ``systemd`` will automatically bind to all
   such socket activation ports during boot up.
 
@@ -496,4 +496,4 @@ Limitations and Known Issues
 
 Further Reading
 ---------------
-- http://www.freedesktop.org/wiki/Software/systemd/
+- `systemd Documentation <http://www.freedesktop.org/wiki/Software/systemd/>`_
