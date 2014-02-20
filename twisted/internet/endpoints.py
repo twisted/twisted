@@ -1498,7 +1498,7 @@ def quoteStringArgument(argument):
 
     @rtype: C{bytes}
     """
-    return argument.replace('\\', '\\\\').replace(':', '\\:')
+    return argument.replace(b'\\', b'\\\\').replace(b':', b'\\:')
 
 
 
@@ -1708,13 +1708,14 @@ def clientFromString(reactor, description):
     You can create a UNIX client endpoint with the 'path' argument and optional
     'lockfile' and 'timeout' arguments::
 
-        clientFromString(reactor, "unix:path=/var/foo/bar:lockfile=1:timeout=9")
+        clientFromString(
+            reactor, b"unix:path=/var/foo/bar:lockfile=1:timeout=9")
 
     or, with the path as a positional argument with or without optional
     arguments as in the following 2 examples::
 
-        clientFromString(reactor, "unix:/var/foo/bar")
-        clientFromString(reactor, "unix:/var/foo/bar:lockfile=1:timeout=9")
+        clientFromString(reactor, b"unix:/var/foo/bar")
+        clientFromString(reactor, b"unix:/var/foo/bar:lockfile=1:timeout=9")
 
     This function is also extensible; new endpoint types may be registered as
     L{IStreamClientEndpointStringParserWithReactor} plugins.  See that

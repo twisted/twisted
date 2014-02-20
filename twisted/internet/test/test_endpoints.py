@@ -2319,12 +2319,12 @@ class ServerStringTests(unittest.TestCase):
         """
         reactor = object()
         server = endpoints.serverFromString(
-            reactor, "tcp:1234:backlog=12:interface=10.0.0.1")
+            reactor, b"tcp:1234:backlog=12:interface=10.0.0.1")
         self.assertIsInstance(server, endpoints.TCP4ServerEndpoint)
         self.assertIs(server._reactor, reactor)
         self.assertEqual(server._port, 1234)
         self.assertEqual(server._backlog, 12)
-        self.assertEqual(server._interface, "10.0.0.1")
+        self.assertEqual(server._interface, b"10.0.0.1")
 
 
     def test_ssl(self):
@@ -2336,14 +2336,14 @@ class ServerStringTests(unittest.TestCase):
         reactor = object()
         server = endpoints.serverFromString(
             reactor,
-            "ssl:1234:backlog=12:privateKey=%s:"
-            "certKey=%s:sslmethod=TLSv1_METHOD:interface=10.0.0.1"
+            b"ssl:1234:backlog=12:privateKey=%s:"
+            b"certKey=%s:sslmethod=TLSv1_METHOD:interface=10.0.0.1"
             % (escapedPEMPathName, escapedPEMPathName))
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
         self.assertIs(server._reactor, reactor)
         self.assertEqual(server._port, 1234)
         self.assertEqual(server._backlog, 12)
-        self.assertEqual(server._interface, "10.0.0.1")
+        self.assertEqual(server._interface, b"10.0.0.1")
         self.assertEqual(server._sslContextFactory.method, TLSv1_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
@@ -2356,7 +2356,7 @@ class ServerStringTests(unittest.TestCase):
         """
         reactor = object()
         server = endpoints.serverFromString(
-            reactor, "ssl:4321:privateKey=%s" % (escapedPEMPathName,))
+            reactor, b"ssl:4321:privateKey=%s" % (escapedPEMPathName,))
         self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
         self.assertIs(server._reactor, reactor)
         self.assertEqual(server._port, 4321)
@@ -2369,7 +2369,7 @@ class ServerStringTests(unittest.TestCase):
 
     # Use a class variable to ensure we use the exactly same endpoint string
     # except for the chain file itself.
-    SSL_CHAIN_TEMPLATE = "ssl:1234:privateKey=%s:extraCertChain=%s"
+    SSL_CHAIN_TEMPLATE = b"ssl:1234:privateKey=%s:extraCertChain=%s"
 
 
     def test_sslChainLoads(self):
@@ -2433,10 +2433,10 @@ class ServerStringTests(unittest.TestCase):
         reactor = object()
         endpoint = endpoints.serverFromString(
             reactor,
-            "unix:/var/foo/bar:backlog=7:mode=0123:lockfile=1")
+            b"unix:/var/foo/bar:backlog=7:mode=0123:lockfile=1")
         self.assertIsInstance(endpoint, endpoints.UNIXServerEndpoint)
         self.assertIs(endpoint._reactor, reactor)
-        self.assertEqual(endpoint._address, "/var/foo/bar")
+        self.assertEqual(endpoint._address, b"/var/foo/bar")
         self.assertEqual(endpoint._backlog, 7)
         self.assertEqual(endpoint._mode, 0o123)
         self.assertEqual(endpoint._wantPID, True)
@@ -2452,7 +2452,7 @@ class ServerStringTests(unittest.TestCase):
         to the new API, you'll get a C{ValueError}.
         """
         value = self.assertRaises(
-            ValueError, endpoints.serverFromString, None, "4321")
+            ValueError, endpoints.serverFromString, None, b"4321")
         self.assertEqual(
             str(value),
             "Unqualified strport description passed to 'service'."
@@ -2467,7 +2467,7 @@ class ServerStringTests(unittest.TestCase):
         value = self.assertRaises(
             # faster-than-light communication not supported
             ValueError, endpoints.serverFromString, None,
-            "ftl:andromeda/carcosa/hali/2387")
+            b"ftl:andromeda/carcosa/hali/2387")
         self.assertEqual(
             str(value),
             "Unknown endpoint type: 'ftl'")
@@ -2484,7 +2484,7 @@ class ServerStringTests(unittest.TestCase):
         # Plugin is set up: now actually test.
         notAReactor = object()
         fakeEndpoint = endpoints.serverFromString(
-            notAReactor, "fake:hello:world:yes=no:up=down")
+            notAReactor, b"fake:hello:world:yes=no:up=down")
         from twisted.plugins.fakeendpoint import fake
         self.assertIs(fakeEndpoint.parser, fake)
         self.assertEqual(fakeEndpoint.args, (notAReactor, 'hello', 'world'))
@@ -2732,15 +2732,15 @@ class SSLClientStringTests(unittest.TestCase):
         reactor = object()
         client = endpoints.clientFromString(
             reactor,
-            "ssl:host=example.net:port=4321:privateKey=%s:"
-            "certKey=%s:bindAddress=10.0.0.3:timeout=3:caCertsDir=%s" %
+            b"ssl:host=example.net:port=4321:privateKey=%s:"
+            b"certKey=%s:bindAddress=10.0.0.3:timeout=3:caCertsDir=%s" %
             (escapedPEMPathName, escapedPEMPathName, escapedCAsPathName))
         self.assertIsInstance(client, endpoints.SSL4ClientEndpoint)
         self.assertIs(client._reactor, reactor)
-        self.assertEqual(client._host, "example.net")
+        self.assertEqual(client._host, b"example.net")
         self.assertEqual(client._port, 4321)
         self.assertEqual(client._timeout, 3)
-        self.assertEqual(client._bindAddress, ("10.0.0.3", 0))
+        self.assertEqual(client._bindAddress, (b"10.0.0.3", 0))
         certOptions = client._sslContextFactory
         self.assertIsInstance(certOptions, CertificateOptions)
         ctx = certOptions.getContext()
@@ -2769,15 +2769,15 @@ class SSLClientStringTests(unittest.TestCase):
         reactor = object()
         client = endpoints.clientFromString(
             reactor,
-            "ssl:example.net:4321:privateKey=%s:"
-            "certKey=%s:bindAddress=10.0.0.3:timeout=3:caCertsDir=%s" %
+            b"ssl:example.net:4321:privateKey=%s:"
+            b"certKey=%s:bindAddress=10.0.0.3:timeout=3:caCertsDir=%s" %
             (escapedPEMPathName, escapedPEMPathName, escapedCAsPathName))
         self.assertIsInstance(client, endpoints.SSL4ClientEndpoint)
         self.assertIs(client._reactor, reactor)
-        self.assertEqual(client._host, "example.net")
+        self.assertEqual(client._host, b"example.net")
         self.assertEqual(client._port, 4321)
         self.assertEqual(client._timeout, 3)
-        self.assertEqual(client._bindAddress, ("10.0.0.3", 0))
+        self.assertEqual(client._bindAddress, (b"10.0.0.3", 0))
 
 
     def test_sslWithDefaults(self):
@@ -2787,10 +2787,10 @@ class SSLClientStringTests(unittest.TestCase):
         whose context factory is initialized with default values.
         """
         reactor = object()
-        client = endpoints.clientFromString(reactor, "ssl:example.net:4321")
+        client = endpoints.clientFromString(reactor, b"ssl:example.net:4321")
         self.assertIsInstance(client, endpoints.SSL4ClientEndpoint)
         self.assertIs(client._reactor, reactor)
-        self.assertEqual(client._host, "example.net")
+        self.assertEqual(client._host, b"example.net")
         self.assertEqual(client._port, 4321)
         certOptions = client._sslContextFactory
         self.assertEqual(certOptions.method, SSLv23_METHOD)
@@ -2827,7 +2827,7 @@ class SSLClientStringTests(unittest.TestCase):
         """
         reactor = object()
         client = endpoints.clientFromString(
-            reactor, "ssl:host=simple.example.org:port=4321")
+            reactor, b"ssl:host=simple.example.org:port=4321")
         certOptions = client._sslContextFactory
         self.assertIsInstance(certOptions, CertificateOptions)
         self.assertEqual(certOptions.verify, False)
@@ -3086,12 +3086,12 @@ class TCP6ServerEndpointPluginTests(unittest.TestCase):
         'tcp6' endpoint string description.
         """
         ep = endpoints.serverFromString(
-            MemoryReactor(), "tcp6:8080:backlog=12:interface=\:\:1")
+            MemoryReactor(), b"tcp6:8080:backlog=12:interface=\:\:1")
         self.assertIsInstance(ep, endpoints.TCP6ServerEndpoint)
         self.assertIsInstance(ep._reactor, MemoryReactor)
         self.assertEqual(ep._port, 8080)
         self.assertEqual(ep._backlog, 12)
-        self.assertEqual(ep._interface, '::1')
+        self.assertEqual(ep._interface, b'::1')
 
 
 
@@ -3131,7 +3131,7 @@ class StandardIOEndpointPluginTests(unittest.TestCase):
         L{serverFromString} returns a L{StandardIOEndpoint} instance with a
         'stdio' endpoint string description.
         """
-        ep = endpoints.serverFromString(MemoryReactor(), "stdio:")
+        ep = endpoints.serverFromString(MemoryReactor(), b"stdio:")
         self.assertIsInstance(ep, endpoints.StandardIOEndpoint)
         self.assertIsInstance(ep._reactor, MemoryReactor)
 
