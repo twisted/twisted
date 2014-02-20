@@ -2207,6 +2207,7 @@ class ParserTestCase(unittest.TestCase):
 
     f = "Factory"
 
+
     def parse(self, *a, **kw):
         """
         Provide a hook for test_strports to substitute the deprecated API.
@@ -2214,31 +2215,53 @@ class ParserTestCase(unittest.TestCase):
         return endpoints._parseServer(*a, **kw)
 
 
+    def _lookupParserClass(self, endpointParser):
+        """Provide a way for test methods to lookup a parser class
+           based on input type
+        """
+        parsers = list(getPlugins(
+            interfaces.IStreamServerEndpointStringParser))
+
+        for p in parsers:
+            if isinstance(p, endpointParser):
+                break
+        else:
+            self.fail("Did not find %s server parser in %r" % (endpointParser.prefix, parsers))
+
+        return p
+
+
     def test_simpleTCP(self):
         """
         Simple strings with a 'tcp:' prefix should be parsed as TCP.
         """
+        p = self._lookupParserClass(endpoints._TCP4ServerParser)
+
         self.assertEqual(
             self.parse('tcp:80', self.f),
-            ('TCP', (80, self.f), {'interface': '', 'backlog': 50}))
+            (p, ['80'], {}))
 
 
     def test_interfaceTCP(self):
         """
         TCP port descriptions parse their 'interface' argument as a string.
         """
+        p = self._lookupParserClass(endpoints._TCP4ServerParser)
+
         self.assertEqual(
             self.parse('tcp:80:interface=127.0.0.1', self.f),
-            ('TCP', (80, self.f), {'interface': '127.0.0.1', 'backlog': 50}))
+            (p, ['80'], {'interface': '127.0.0.1' }))
 
 
     def test_backlogTCP(self):
         """
         TCP port descriptions parse their 'backlog' argument as an integer.
         """
+        p = self._lookupParserClass(endpoints._TCP4ServerParser)
+
         self.assertEqual(
             self.parse('tcp:80:backlog=6', self.f),
-            ('TCP', (80, self.f), {'interface': '', 'backlog': 6}))
+            (p, ['80'], {'backlog': 6}))
 
 
     def test_simpleUNIX(self):
@@ -2247,30 +2270,33 @@ class ParserTestCase(unittest.TestCase):
         defaults for C{'mode'}, C{'backlog'}, and C{'wantPID'} when passed a
         string with the C{'unix:'} prefix and no other parameter values.
         """
+        p = self._lookupParserClass(endpoints._UNIXServerParser)
+
         self.assertEqual(
             self.parse('unix:/var/run/finger', self.f),
-            ('UNIX', ('/var/run/finger', self.f),
-             {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
+            (p, ['/var/run/finger'], {}))
 
 
     def test_modeUNIX(self):
         """
         C{mode} can be set by including C{"mode=<some integer>"}.
         """
+        p = self._lookupParserClass(endpoints._UNIXServerParser)
+
         self.assertEqual(
             self.parse('unix:/var/run/finger:mode=0660', self.f),
-            ('UNIX', ('/var/run/finger', self.f),
-             {'mode': 0o660, 'backlog': 50, 'wantPID': True}))
+            (p, ['/var/run/finger'], {'mode': '0660'}))
 
 
     def test_wantPIDUNIX(self):
         """
         C{wantPID} can be set to false by included C{"lockfile=0"}.
         """
+        p = self._lookupParserClass(endpoints._UNIXServerParser)
+
         self.assertEqual(
             self.parse('unix:/var/run/finger:lockfile=0', self.f),
-            ('UNIX', ('/var/run/finger', self.f),
-             {'mode': 0o666, 'backlog': 50, 'wantPID': False}))
+            (p, ['/var/run/finger'], {'lockfile': '0'}))
 
 
     def test_escape(self):
@@ -2278,10 +2304,11 @@ class ParserTestCase(unittest.TestCase):
         Backslash can be used to escape colons and backslashes in port
         descriptions.
         """
+        p = self._lookupParserClass(endpoints._UNIXServerParser)
+
         self.assertEqual(
             self.parse(r'unix:foo\:bar\=baz\:qux\\', self.f),
-            ('UNIX', ('foo:bar=baz:qux\\', self.f),
-             {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
+            (p, ['foo:bar=baz:qux\\'], {}))
 
 
     def test_quoteStringArgument(self):
@@ -2299,10 +2326,11 @@ class ParserTestCase(unittest.TestCase):
         In strports descriptions, '=' in a parameter value does not need to be
         quoted; it will simply be parsed as part of the value.
         """
+        p = self._lookupParserClass(endpoints._UNIXServerParser)
+
         self.assertEqual(
             self.parse(r'unix:address=foo=bar', self.f),
-            ('UNIX', ('foo=bar', self.f),
-             {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
+            (p, [], {'address':'foo=bar'} ))
 
 
     def test_nonstandardDefault(self):
@@ -2311,10 +2339,11 @@ class ParserTestCase(unittest.TestCase):
         the third 'mode' argument may be specified to L{endpoints.parse} to
         indicate a default other than TCP.
         """
+        p = self._lookupParserClass(endpoints._UNIXServerParser)
+
         self.assertEqual(
             self.parse('filename', self.f, 'unix'),
-            ('UNIX', ('filename', self.f),
-             {'mode': 0o666, 'backlog': 50, 'wantPID': True}))
+            (p, ['filename'], {}))
 
 
     def test_unknownType(self):
@@ -2525,7 +2554,7 @@ class ServerStringTests(unittest.TestCase):
             notAReactor, "fake:hello:world:yes=no:up=down")
         from twisted.plugins.fakeendpoint import fake
         self.assertIs(fakeEndpoint.parser, fake)
-        self.assertEqual(fakeEndpoint.args, (notAReactor, 'hello', 'world'))
+        self.assertEqual(fakeEndpoint.args, ('hello', 'world'))
         self.assertEqual(fakeEndpoint.kwargs, dict(yes='no', up='down'))
 
 
@@ -3043,6 +3072,52 @@ class SystemdEndpointPluginTests(unittest.TestCase):
 
 
 
+class TCP4ServerEndpointPluginTests(unittest.TestCase):
+    """
+    Unit tests for the TCP IPv4 stream server endpoint string description
+    parser.
+    """
+    _parserClass = endpoints._TCP4ServerParser
+
+    def test_pluginDiscovery(self):
+        """
+        L{endpoints._TCP4ServerParser} is found as a plugin for
+        L{interfaces.IStreamServerEndpointStringParser} interface.
+        """
+        parsers = list(getPlugins(
+            interfaces.IStreamServerEndpointStringParser))
+        for p in parsers:
+            if isinstance(p, self._parserClass):
+                break
+        else:
+            self.fail(
+                "Did not find TCP4ServerEndpoint parser in %r" % (parsers,))
+
+
+    def test_interface(self):
+        """
+        L{endpoints._TCP4ServerParser} instances provide
+        L{interfaces.IStreamServerEndpointStringParser}.
+        """
+        parser = self._parserClass()
+        self.assertTrue(verifyObject(
+            interfaces.IStreamServerEndpointStringParser, parser))
+
+    def test_stringDescription(self):
+        """
+        L{serverFromString} returns a L{TCP4ServerEndpoint} instance with a
+        'tcp' endpoint string description.
+        """
+        ep = endpoints.serverFromString(
+            MemoryReactor(), "tcp:80:backlog=50:interface=")
+        self.assertIsInstance(ep, endpoints.TCP4ServerEndpoint)
+        self.assertIsInstance(ep._reactor, MemoryReactor)
+        self.assertEqual(ep._port, 80)
+        self.assertEqual(ep._backlog, 50)
+        self.assertEqual(ep._interface, '')
+
+
+
 class TCP6ServerEndpointPluginTests(unittest.TestCase):
     """
     Unit tests for the TCP IPv6 stream server endpoint string description
@@ -3087,6 +3162,103 @@ class TCP6ServerEndpointPluginTests(unittest.TestCase):
         self.assertEqual(ep._port, 8080)
         self.assertEqual(ep._backlog, 12)
         self.assertEqual(ep._interface, '::1')
+
+
+
+class UNIXServerEndpointPluginTests(unittest.TestCase):
+    """
+    Unit tests for the UNIX stream server endpoint string description
+    parser.
+    """
+    _parserClass = endpoints._UNIXServerParser
+
+    def test_pluginDiscovery(self):
+        """
+        L{endpoints._UNIXServerParser} is found as a plugin for
+        L{interfaces.IStreamServerEndpointStringParser} interface.
+        """
+        parsers = list(getPlugins(
+            interfaces.IStreamServerEndpointStringParser))
+        for p in parsers:
+            if isinstance(p, self._parserClass):
+                break
+        else:
+            self.fail(
+                "Did not find UNIXServerEndpoint parser in %r" % (parsers,))
+
+    def test_interface(self):
+        """
+        L{endpoints._UNIXServerParser} instances provide
+        L{interfaces.IStreamServerEndpointStringParser}.
+        """
+        parser = self._parserClass()
+        self.assertTrue(verifyObject(
+            interfaces.IStreamServerEndpointStringParser, parser))
+
+    def test_stringDescription(self):
+        """
+        L{serverFromString} returns a L{UNIXServerEndpoint} instance with a
+        'unix' endpoint string description.
+        """
+        ep = endpoints.serverFromString(
+            MemoryReactor(), "unix:/var/foo/bar:backlog=7:mode=0123:lockfile=1")
+        self.assertIsInstance(ep, endpoints.UNIXServerEndpoint)
+        self.assertIsInstance(ep._reactor, MemoryReactor)
+        self.assertEqual(ep._address, "/var/foo/bar")
+        self.assertEqual(ep._backlog, 7)
+        self.assertEqual(ep._mode, 0o123)
+        self.assertEqual(ep._wantPID, True)
+
+
+
+class SSL4ServerEndpointPluginTests(unittest.TestCase):
+    """
+    Unit tests for the SSL stream server endpoint string description
+    parser.
+    """
+    _parserClass = endpoints._SSL4ServerParser
+
+    def test_pluginDiscovery(self):
+        """
+        L{endpoints._SSL4ServerParser} is found as a plugin for
+        L{interfaces.IStreamServerEndpointStringParser} interface.
+        """
+        parsers = list(getPlugins(
+            interfaces.IStreamServerEndpointStringParser))
+        for p in parsers:
+            if isinstance(p, self._parserClass):
+                break
+        else:
+            self.fail(
+                "Did not find SSL4ServerEndpoint parser in %r" % (parsers,))
+
+    def test_interface(self):
+        """
+        L{endpoints._SSL4ServerParser} instances provide
+        L{interfaces.IStreamServerEndpointStringParser}.
+        """
+        parser = self._parserClass()
+        self.assertTrue(verifyObject(
+            interfaces.IStreamServerEndpointStringParser, parser))
+
+    def test_stringDescription(self):
+        """
+        L{serverFromString} returns a L{SSL4ServerEndpoint} instance with a
+        'ssl' endpoint string description.
+        """
+        reactor = MemoryReactor()
+        ep = endpoints.serverFromString(
+            reactor, "ssl:4321:privateKey=%s" % (escapedPEMPathName,))
+        self.assertIsInstance(ep, endpoints.SSL4ServerEndpoint)
+        self.assertIs(ep._reactor, reactor)
+        self.assertEqual(ep._port, 4321)
+        self.assertEqual(ep._backlog, 50)
+        self.assertEqual(ep._interface, "")
+        self.assertEqual(ep._sslContextFactory.method, SSLv23_METHOD)
+        ctx = ep._sslContextFactory.getContext()
+        self.assertIsInstance(ctx, ContextType)
+        self.assertIsInstance(ep, endpoints.SSL4ServerEndpoint)
+        self.assertIsInstance(ep._reactor, MemoryReactor)
 
 
 

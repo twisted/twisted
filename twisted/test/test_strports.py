@@ -9,10 +9,14 @@ from twisted.trial.unittest import TestCase
 from twisted.application import strports
 from twisted.application import internet
 from twisted.internet.test.test_endpoints import ParserTestCase
+from twisted.internet import endpoints, interfaces
 from twisted.internet.protocol import Factory
 from twisted.internet.endpoints import TCP4ServerEndpoint, UNIXServerEndpoint
 
+from twisted.python.compat import _PY3
 
+if not _PY3:
+    from twisted.plugin import getPlugins
 
 class DeprecatedParseTestCase(ParserTestCase):
     """
@@ -35,8 +39,21 @@ class DeprecatedParseTestCase(ParserTestCase):
         """
         Base numeric ports should be parsed as TCP.
         """
-        self.assertEqual(self.parse('80', self.f),
-                         ('TCP', (80, self.f), {'interface':'', 'backlog':50}))
+        _parserClass = endpoints._TCP4ServerParser
+
+        parsers = list(getPlugins(
+            interfaces.IStreamServerEndpointStringParser))
+
+        for p in parsers:
+            if isinstance(p, _parserClass):
+                break
+        else:
+            self.fail("Did not find tcp4 server parser in %r" % (parsers,))
+
+        self.assertEqual(
+            self.parse('80', self.f),
+            (p, ['80'], {}))
+
 
 
     def test_allKeywords(self):
@@ -44,8 +61,20 @@ class DeprecatedParseTestCase(ParserTestCase):
         A collection of keyword arguments with no prefixed type, like 'port=80',
         will be parsed as keyword arguments to 'tcp'.
         """
-        self.assertEqual(self.parse('port=80', self.f),
-                         ('TCP', (80, self.f), {'interface':'', 'backlog':50}))
+        _parserClass = endpoints._TCP4ServerParser
+
+        parsers = list(getPlugins(
+            interfaces.IStreamServerEndpointStringParser))
+
+        for p in parsers:
+            if isinstance(p, _parserClass):
+                break
+        else:
+            self.fail("Did not find tcp4 server parser in %r" % (parsers,))
+
+        self.assertEqual(
+            self.parse('port=80', self.f),
+            (p, [], {'port': '80'}))
 
 
 
@@ -131,3 +160,5 @@ class ServiceTestCase(TestCase):
         self.assertEqual(len(warnings), 1)
 
 
+if _PY3:
+    del (DeprecatedParseTestCase.test_simpleNumeric, DeprecatedParseTestCase.test_allKeywords,)

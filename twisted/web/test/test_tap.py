@@ -10,7 +10,7 @@ import os, stat
 from twisted.python.usage import UsageError
 from twisted.python.filepath import FilePath
 from twisted.internet.interfaces import IReactorUNIX
-from twisted.internet import reactor
+from twisted.internet import reactor, endpoints, interfaces
 from twisted.python.threadpool import ThreadPool
 from twisted.trial.unittest import TestCase
 from twisted.application import strports
@@ -22,6 +22,11 @@ from twisted.web.wsgi import WSGIResource
 from twisted.web.tap import Options, makePersonalServerFactory, makeService
 from twisted.web.twcgi import CGIScript
 from twisted.web.script import PythonScript
+
+from twisted.python.compat import _PY3
+
+if not _PY3:
+    from twisted.plugin import getPlugins
 
 
 from twisted.spread.pb import PBServerFactory
@@ -140,9 +145,19 @@ class ServiceTests(TestCase):
         options.parseOptions(['--personal'])
         path = os.path.expanduser(
             os.path.join('~', UserDirectory.userSocketName))
+
+        parsers = list(getPlugins(
+            interfaces.IStreamServerEndpointStringParser))
+
+        for p in parsers:
+            if isinstance(p, endpoints._UNIXServerParser):
+                break
+        else:
+            self.fail("Did not find unix server parser in %r" % (parsers,))
+
         self.assertEqual(
             strports.parse(options['port'], None)[:2],
-            ('UNIX', (path, None)))
+            (p, [path]))
 
     if not IReactorUNIX.providedBy(reactor):
         test_defaultPersonalPath.skip = (
@@ -154,11 +169,22 @@ class ServiceTests(TestCase):
         If the I{--port} option is not specified, L{Options} defaults the port
         to C{8080}.
         """
+        _parserClass = endpoints._TCP4ServerParser
+
+        parsers = list(getPlugins(
+            interfaces.IStreamServerEndpointStringParser))
+
+        for p in parsers:
+            if isinstance(p, _parserClass):
+                break
+        else:
+            self.fail("Did not find tcp4 server parser in %r" % (parsers,))
+
         options = Options()
         options.parseOptions([])
         self.assertEqual(
             strports.parse(options['port'], None)[:2],
-            ('TCP', (8080, None)))
+            (p, ['8080']))
 
 
     def test_wsgi(self):
@@ -194,3 +220,6 @@ class ServiceTests(TestCase):
             exc = self.assertRaises(
                 UsageError, options.parseOptions, ['--wsgi', name])
             self.assertEqual(str(exc), "No such WSGI application: %r" % (name,))
+
+if _PY3:
+    del (ServiceTests.test_defaultPersonalPath,)

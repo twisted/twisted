@@ -999,64 +999,251 @@ class AdoptedStreamServerEndpoint(object):
         return defer.succeed(port)
 
 
-
-def _parseTCP(factory, port, interface="", backlog=50):
+@implementer(IPlugin, IStreamClientEndpointStringParser)
+class _TCP4ClientParser(object):
     """
-    Internal parser function for L{_parseServer} to convert the string
-    arguments for a TCP(IPv4) stream endpoint into the structured arguments.
+    Stream client endpoint string parser for the TCP4ClientEndpoint type.
 
-    @param factory: the protocol factory being parsed, or C{None}.  (This was a
-        leftover argument from when this code was in C{strports}, and is now
-        mostly None and unused.)
-
-    @type factory: L{IProtocolFactory} or C{NoneType}
-
-    @param port: the integer port number to bind
-    @type port: C{str}
-
-    @param interface: the interface IP to listen on
-    @param backlog: the length of the listen queue
-    @type backlog: C{str}
-
-    @return: a 2-tuple of (args, kwargs), describing  the parameters to
-        L{IReactorTCP.listenTCP} (or, modulo argument 2, the factory, arguments
-        to L{TCP4ServerEndpoint}.
+    @ivar prefix: See L{IStreamClientEndpointStringParser.prefix}.
     """
-    return (int(port), factory), {'interface': interface,
-                                  'backlog': int(backlog)}
+    prefix = "tcp"
+
+    def _parseClient(self, reactor, host, port, timeout=30, bindAddress=None):
+        """
+        Internal parser function for L{_parseClient} to convert the string
+        arguments into structured arguments for the L{TCP4ClientEndpoint}
+
+        @param reactor: An L{IReactorTCP} provider.
+
+        @param host: A hostname, used when connecting
+        @type host: str
+
+        @param port: The port number, used when connecting
+        @type port: int
+
+        @param timeout: The number of seconds to wait before assuming the
+            connection has failed.
+        @type timeout: int
+
+        @param bindAddress: A (host, port) tuple of local address to bind to,
+            or None.
+        @type bindAddress: tuple
+        """
+        return TCP4ClientEndpoint(reactor, host, port, timeout, bindAddress)
+
+
+    def parseStreamClient(self, reactor, *args, **kwargs):
+        # Redirects to another function (self._parseClient), tricks zope.interface
+        # into believing the interface is correctly implemented.
+        kwargs = _parseClientTCP(*args, **kwargs)
+        host = kwargs.pop('host', None)
+        port = kwargs.pop('port', None)
+        timeout = kwargs.pop('timeout', 30)
+        bindAddress = kwargs.pop('bindAddress', None)
+
+        return self._parseClient(reactor, host, port, timeout, bindAddress)
 
 
 
-def _parseUNIX(factory, address, mode='666', backlog=50, lockfile=True):
+@implementer(IPlugin, IStreamServerEndpointStringParser)
+class _TCP4ServerParser(object):
     """
-    Internal parser function for L{_parseServer} to convert the string
-    arguments for a UNIX (AF_UNIX/SOCK_STREAM) stream endpoint into the
-    structured arguments.
+    Stream server endpoint string parser for the TCP4ServerEndpoint type.
 
-    @param factory: the protocol factory being parsed, or C{None}.  (This was a
-        leftover argument from when this code was in C{strports}, and is now
-        mostly None and unused.)
-
-    @type factory: L{IProtocolFactory} or C{NoneType}
-
-    @param address: the pathname of the unix socket
-    @type address: C{str}
-
-    @param backlog: the length of the listen queue
-    @type backlog: C{str}
-
-    @param lockfile: A string '0' or '1', mapping to True and False
-        respectively.  See the C{wantPID} argument to C{listenUNIX}
-
-    @return: a 2-tuple of (args, kwargs), describing  the parameters to
-        L{IReactorTCP.listenUNIX} (or, modulo argument 2, the factory,
-        arguments to L{UNIXServerEndpoint}.
+    @ivar prefix: See L{IStreamServerEndpointStringParser.prefix}.
     """
-    return (
-        (address, factory),
-        {'mode': int(mode, 8), 'backlog': int(backlog),
-         'wantPID': bool(int(lockfile))})
+    prefix = "tcp"
 
+    def _parseServer(self, reactor, port, backlog=50, interface=''):
+        """
+        Internal parser function for L{_parseServer} to convert the string
+        arguments into structured arguments for the L{TCP4ServerEndpoint}
+
+        @param reactor: An L{IReactorTCP} provider.
+
+        @param port: The port number used for listening
+        @type port: int
+
+        @param backlog: Size of the listen queue
+        @type backlog: int
+
+        @param interface: The hostname to bind to
+        @type interface: str
+        """
+        port = int(port)
+        backlog = int(backlog)
+        return TCP4ServerEndpoint(reactor, port, backlog, interface)
+
+
+    def parseStreamServer(self, reactor, *args, **kwargs):
+        # Redirects to another function (self._parseServer), tricks zope.interface
+        # into believing the interface is correctly implemented.
+        return self._parseServer(reactor, *args, **kwargs)
+
+
+
+@implementer(IPlugin, IStreamServerEndpointStringParser)
+class _UNIXServerParser(object):
+    """
+    Stream server endpoint string parser for the UNIXServerEndpoint type.
+
+    @ivar prefix: See L{IStreamServerEndpointStringParser.prefix}.
+    """
+    prefix = "unix"
+
+    def _parseServer(self, reactor, address, mode='666', backlog=50, lockfile=True):
+        """
+        Internal parser function for L{_parseServer} to convert the string
+        arguments for a UNIX (AF_UNIX/SOCK_STREAM) stream endpoint into the
+        structured arguments.
+
+        @param reactor: An L{IReactorUNIX} provider.
+
+        @param address: the pathname of the unix socket
+        @type address: C{str}
+
+        @param mode: mode to set on the unix socket.  This parameter is
+            deprecated.  Permissions should be set on the directory which
+            contains the UNIX socket.
+        @type mode: C{str}
+
+        @param backlog: the length of the listen queue
+        @type backlog: C{str}
+
+        @param lockfile: A string '0' or '1', mapping to True and False
+            respectively.  See the C{wantPID} argument to C{listenUNIX}
+        """
+        backlog = int(backlog)
+        mode = int(mode, 8)
+        wantPID = bool(int(lockfile))
+        return UNIXServerEndpoint(reactor, address, backlog, mode, wantPID)
+
+
+    def parseStreamServer(self, reactor, *args, **kwargs):
+        # Redirects to another function (self._parseServer), tricks zope.interface
+        # into believing the interface is correctly implemented.
+        return self._parseServer(reactor, *args, **kwargs)
+
+
+
+@implementer(IPlugin, IStreamClientEndpointStringParser)
+class _UNIXClientParser(object):
+    """
+    Stream client endpoint string parser for the UNIXClientEndpoint type.
+
+    @ivar prefix: See L{IStreamClientEndpointStringParser.prefix}.
+    """
+    prefix = "unix"
+
+    def _parseClient(self, reactor, path, timeout=30, checkPID=0):
+        """
+        @param reactor: An L{IReactorUNIX} provider.
+
+        @param path: The path to the Unix socket file, used when connecting
+        @type path: str
+
+        @param timeout: Number of seconds to wait before assuming the
+            connection has failed.
+        @type timeout: int
+
+        @param checkPID: If True, check for a pid file to verify that a server
+            is listening.
+        @type checkPID: bool
+        """
+        return UNIXClientEndpoint(reactor, path, timeout, checkPID)
+
+
+    def parseStreamClient(self, reactor, *args, **kwargs):
+        # Redirects to another function (self._parseClient), tricks zope.interface
+        # into believing the interface is correctly implemented.
+        kwargs = _parseClientUNIX(*args, **kwargs)
+        path = kwargs.pop('path', None)
+        return self._parseClient(reactor, path, **kwargs)
+
+
+
+@implementer(IPlugin, IStreamServerEndpointStringParser)
+class _SSL4ServerParser(object):
+    """
+    Stream server endpoint string parser for the SSL4ServerEndpoint type.
+
+    @ivar prefix: See L{IStreamServerEndpointStringParser.prefix}.
+    """
+    prefix = "ssl"
+
+    def _parseServer(self, reactor, port, sslContextFactory, backlog=50, interface=''):
+        """
+        @param reactor: An L{IReactorSSL} provider.
+
+        @param port: The port number used for listening
+        @type port: int
+
+        @param sslContextFactory: An instance of
+            L{twisted.internet.ssl.ContextFactory}.
+
+        @param backlog: Size of the listen queue
+        @type backlog: int
+
+        @param interface: The hostname to bind to, defaults to '' (all)
+        @type interface: str
+        """
+        return SSL4ServerEndpoint(reactor, port, sslContextFactory, backlog, interface)
+
+
+    def parseStreamServer(self, reactor, *args, **kwargs):
+        # Redirects to another function (self._parseServer), tricks zope.interface
+        # into believing the interface is correctly implemented.
+        (args, kwargs) = _parseSSL(None, *args, **kwargs)
+        port = args[0]
+        cf = args[2]
+
+        return self._parseServer(reactor, port, cf, **kwargs)
+
+
+
+@implementer(IPlugin, IStreamClientEndpointStringParser)
+class _SSL4ClientParser(object):
+    """
+    Stream client endpoint string parser for the SSL4ClientEndpoint type.
+
+    @ivar prefix: See L{IStreamClientEndpointStringParser.prefix}.
+    """
+    prefix = "ssl"
+
+    def _parseClient(self, reactor, host, port, cf, timeout=30, bindAddress=None):
+        """
+        @param reactor: An L{IReactorSSL} provider.
+
+        @param host: A hostname, used when connecting
+        @type host: str
+
+        @param port: The port number, used when connecting
+        @type port: int
+
+        @param cf: SSL Configuration information as an instance
+            of L{twisted.internet.ssl.ContextFactory}.
+
+        @param timeout: Number of seconds to wait before assuming the
+            connection has failed.
+        @type timeout: int
+
+        @param bindAddress: A (host, port) tuple of local address to bind to,
+            or None.
+        @type bindAddress: tuple
+
+        """
+        return SSL4ClientEndpoint(reactor, host, port, cf, timeout, bindAddress)
+
+    def parseStreamClient(self, reactor, *args, **kwargs):
+        # Redirects to another function (self._parseClient), tricks zope.interface
+        # into believing the interface is correctly implemented.
+        kwargs = _parseClientSSL(*args, **kwargs)
+        host = kwargs.pop('host', None)
+        cf = kwargs.pop('sslContextFactory', None)
+        port = kwargs.pop('port', None)
+        timeout = kwargs.pop('timeout', 30)
+        bindAddress = kwargs.pop('bindAddress', None)
+        return self._parseClient(reactor, host, port, cf, timeout, bindAddress)
 
 
 def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
@@ -1260,11 +1447,6 @@ class _TCP6ServerParser(object):
 
 
 
-_serverParsers = {"tcp": _parseTCP,
-                  "unix": _parseUNIX,
-                  "ssl": _parseSSL,
-                  }
-
 _OP, _STRING = range(2)
 
 def _tokenize(description):
@@ -1334,19 +1516,6 @@ def _parse(description):
     return args, kw
 
 
-# Mappings from description "names" to endpoint constructors.
-_endpointServerFactories = {
-    'TCP': TCP4ServerEndpoint,
-    'SSL': SSL4ServerEndpoint,
-    'UNIX': UNIXServerEndpoint,
-    }
-
-_endpointClientFactories = {
-    'TCP': TCP4ClientEndpoint,
-    'SSL': SSL4ClientEndpoint,
-    'UNIX': UNIXClientEndpoint,
-    }
-
 
 _NO_DEFAULT = object()
 
@@ -1371,6 +1540,9 @@ def _parseServer(description, factory, default=None):
     @return: a 3-tuple of (plugin or name, arguments, keyword arguments)
     """
     args, kw = _parse(description)
+
+    if 'backlog' in kw:
+        kw['backlog'] = int(kw['backlog'])
     if not args or (len(args) == 1 and not kw):
         deprecationMessage = (
             "Unqualified strport description passed to 'service'."
@@ -1386,15 +1558,12 @@ def _parseServer(description, factory, default=None):
         # been warned.
         args[0:0] = [default]
     endpointType = args[0]
-    parser = _serverParsers.get(endpointType)
-    if parser is None:
-        # If the required parser is not found in _server, check if
-        # a plugin exists for the endpointType
-        for plugin in getPlugins(IStreamServerEndpointStringParser):
-            if plugin.prefix == endpointType:
-                return (plugin, args[1:], kw)
-        raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
-    return (endpointType.upper(),) + parser(factory, *args[1:], **kw)
+
+    for plugin in getPlugins(IStreamServerEndpointStringParser):
+        if plugin.prefix == endpointType:
+            return (plugin, args[1:], kw)
+
+    raise ValueError("Unknown endpoint type: '%s'" % (endpointType,))
 
 
 
@@ -1403,15 +1572,8 @@ def _serverFromStringLegacy(reactor, description, default):
     Underlying implementation of L{serverFromString} which avoids exposing the
     deprecated 'default' argument to anything but L{strports.service}.
     """
-    nameOrPlugin, args, kw = _parseServer(description, None, default)
-    if type(nameOrPlugin) is not str:
-        plugin = nameOrPlugin
-        return plugin.parseStreamServer(reactor, *args, **kw)
-    else:
-        name = nameOrPlugin
-    # Chop out the factory.
-    args = args[:1] + args[2:]
-    return _endpointServerFactories[name](reactor, *args, **kw)
+    plugin, args, kw = _parseServer(description, None, default)
+    return plugin.parseStreamServer(reactor, *args, **kw)
 
 
 
@@ -1523,13 +1685,12 @@ def _parseClientTCP(*args, **kwargs):
 
     @return: The coerced values as a C{dict}.
     """
-
     if len(args) == 2:
-        kwargs['port'] = int(args[1])
+        kwargs['port'] = args[1]
         kwargs['host'] = args[0]
     elif len(args) == 1:
-        if 'host' in kwargs:
-            kwargs['port'] = int(args[0])
+        if 'host' in kwargs and 'port' not in kwargs:
+            kwargs['port'] = args[0]
         else:
             kwargs['host'] = args[0]
 
@@ -1649,7 +1810,7 @@ def _parseClientUNIX(*args, **kwargs):
 
     @return: The coerced values as a C{dict}.
     """
-    if len(args) == 1:
+    if len(args) == 1 and 'path' not in kwargs:
         kwargs['path'] = args[0]
 
     try:
@@ -1661,12 +1822,6 @@ def _parseClientUNIX(*args, **kwargs):
     except KeyError:
         pass
     return kwargs
-
-_clientParsers = {
-    'TCP': _parseClientTCP,
-    'SSL': _parseClientSSL,
-    'UNIX': _parseClientUNIX,
-    }
 
 
 
@@ -1743,13 +1898,12 @@ def clientFromString(reactor, description):
     args, kwargs = _parse(description)
     aname = args.pop(0)
     name = aname.upper()
+
     for plugin in getPlugins(IStreamClientEndpointStringParser):
         if plugin.prefix.upper() == name:
-            return plugin.parseStreamClient(*args, **kwargs)
-    if name not in _clientParsers:
-        raise ValueError("Unknown endpoint type: %r" % (aname,))
-    kwargs = _clientParsers[name](*args, **kwargs)
-    return _endpointClientFactories[name](reactor, **kwargs)
+            return plugin.parseStreamClient(reactor, *args, **kwargs)
+
+    raise ValueError("Unknown endpoint type: %r" % (aname,))
 
 
 

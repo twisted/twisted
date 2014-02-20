@@ -25,7 +25,7 @@ class FakeClientParser(PluginBase):
 
     implements(IStreamClientEndpointStringParser)
 
-    def parseStreamClient(self, *a, **kw):
+    def parseStreamClient(self, reactor, *a, **kw):
         return StreamClient(self, a, kw)
 
 
@@ -34,7 +34,7 @@ class FakeParser(PluginBase):
 
     implements(IStreamServerEndpointStringParser)
 
-    def parseStreamServer(self, *a, **kw):
+    def parseStreamServer(self, reactor, *a, **kw):
         return StreamServer(self, a, kw)
 
 
