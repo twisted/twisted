@@ -11,6 +11,9 @@ from __future__ import division, absolute_import
 
 from zope.interface import Interface, Attribute
 
+from twisted.python import deprecate
+from twisted.python.versions import Version
+
 
 class IAddress(Interface):
     """
@@ -2506,6 +2509,9 @@ class IStreamServerEndpointStringParser(Interface):
 
 class IStreamClientEndpointStringParser(Interface):
     """
+    This interface is deprecated since Twisted 14.0; please use the
+    L{IStreamClientEndpointStringParserWithReactor} interface instead.
+
     An L{IStreamClientEndpointStringParser} is a parser which can convert
     a set of string C{*args} and C{**kwargs} into an L{IStreamClientEndpoint}
     provider.
@@ -2518,6 +2524,11 @@ class IStreamClientEndpointStringParser(Interface):
     C{twisted.plugins} package, that plugin's C{parseStreamClient} method will
     be used to produce endpoints for any description string that begins with
     the result of that L{IStreamClientEndpointStringParser}'s prefix attribute.
+
+    If a L{IStreamClientEndpointStringParserWithReactor} plugin and
+    L{IStreamClientEndpointStringParser} plugin share the same prefix, the
+    L{IStreamClientEndpointStringParserWithReactor} plugin will be preferred.
+
     """
 
     prefix = Attribute(
@@ -2549,4 +2560,69 @@ class IStreamClientEndpointStringParser(Interface):
 
         @return: a client endpoint
         @rtype: L{IStreamClientEndpoint}
+        """
+
+deprecate.deprecatedModuleAttribute(
+    Version("Twisted", 14, 0, 0),
+    "This interface has been superseded by "
+    "IStreamClientEndpointStringParserWithReactor.",
+    __name__,
+    "IStreamClientEndpointStringParser")
+
+
+
+class IStreamClientEndpointStringParserWithReactor(Interface):
+    """
+    An L{IStreamClientEndpointStringParserWithReactor} is a parser which can
+    convert a set of string C{*args} and C{**kwargs} into an
+    L{IStreamClientEndpoint} provider. It's much like
+    L{IStreamClientEndpointStringParser}, except that the reactor is passed
+    along to L{parseStreamClient} too.
+
+    This interface is really only useful in the context of the plugin system
+    for L{endpoints.clientFromString}.  See the document entitled "I{The
+    Twisted Plugin System}" for more details on how to write a plugin.
+
+    If you place an L{IStreamClientEndpointStringParserWithReactor} plugin in
+    the C{twisted.plugins} package, that plugin's C{parseStreamClient} method
+    will be used to produce endpoints for any description string that begins
+    with the result of that L{IStreamClientEndpointStringParserWithReactor}'s
+    prefix attribute.
+
+    If a L{IStreamClientEndpointStringParserWithReactor} plugin and
+    L{IStreamClientEndpointStringParser} plugin share the same prefix, the
+    L{IStreamClientEndpointStringParserWithReactor} plugin will be preferred.
+    """
+
+    prefix = Attribute(
+        """
+        L{bytes}, the description prefix to respond to.  For example, an
+        L{IStreamClientEndpointStringParserWithReactor} plugin which had
+        C{b"foo"} for its C{prefix} attribute would be called for endpoint
+        descriptions like C{b"foo:bar:baz"} or C{b"foo:"}.
+        """
+    )
+
+
+    def parseStreamClient(reactor, *args, **kwargs):
+        """
+        This method is invoked by L{endpoints.clientFromString}, if the type of
+        endpoint matches the return value from this
+        L{IStreamClientEndpointStringParserWithReactor}'s C{prefix} method.
+
+        @param reactor: The reactor passed to L{endpoints.clientFromString}.
+
+        @param args: The byte string arguments, minus the endpoint type, in the
+            endpoint description string, parsed according to the rules
+            described in L{endpoints.quoteStringArgument}.  For example, if the
+            description were C{b"my-type:foo:bar:baz=qux"}, C{args} would be
+            C{(b'foo', b'bar')}
+
+        @param kwargs: The byte string arguments from the endpoint description
+            passed as keyword arguments.  For example, if the description were
+            C{b"my-type:foo:bar:baz=qux"}, C{kwargs} would be
+            C{dict(baz=b'qux')}.
+
+        @return: a client endpoint
+        @rtype: a provider of L{IStreamClientEndpoint}
         """

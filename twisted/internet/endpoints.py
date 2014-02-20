@@ -27,8 +27,9 @@ from twisted.python.compat import _PY3
 from twisted.internet import interfaces, defer, error, fdesc, threads
 from twisted.internet.protocol import ClientFactory, Factory
 from twisted.internet.protocol import ProcessProtocol, Protocol
-from twisted.internet.interfaces import IStreamServerEndpointStringParser
-from twisted.internet.interfaces import IStreamClientEndpointStringParser
+from twisted.internet.interfaces import (
+    IStreamServerEndpointStringParser, IStreamClientEndpointStringParser,
+    IStreamClientEndpointStringParserWithReactor)
 from twisted.python.filepath import FilePath
 from twisted.python.systemd import ListenFDs
 from twisted.internet.abstract import isIPv6Address
@@ -1419,26 +1420,27 @@ def serverFromString(reactor, description):
     """
     Construct a stream server endpoint from an endpoint description string.
 
-    The format for server endpoint descriptions is a simple string.  It is a
-    prefix naming the type of endpoint, then a colon, then the arguments for
+    The format for server endpoint descriptions is a simple byte string.  It is
+    a prefix naming the type of endpoint, then a colon, then the arguments for
     that endpoint.
 
     For example, you can call it like this to create an endpoint that will
     listen on TCP port 80::
 
-        serverFromString(reactor, "tcp:80")
+        serverFromString(reactor, b"tcp:80")
 
     Additional arguments may be specified as keywords, separated with colons.
     For example, you can specify the interface for a TCP server endpoint to
     bind to like this::
 
-        serverFromString(reactor, "tcp:80:interface=127.0.0.1")
+        serverFromString(reactor, b"tcp:80:interface=127.0.0.1")
 
     SSL server endpoints may be specified with the 'ssl' prefix, and the
     private key and certificate files may be specified by the C{privateKey} and
     C{certKey} arguments::
 
-        serverFromString(reactor, "ssl:443:privateKey=key.pem:certKey=crt.pem")
+        serverFromString(
+            reactor, b"ssl:443:privateKey=key.pem:certKey=crt.pem")
 
     If a private key file name (C{privateKey}) isn't provided, a "server.pem"
     file is assumed to exist which contains the private key. If the certificate
@@ -1449,14 +1451,14 @@ def serverFromString(reactor, description):
     use if you want to specify a full pathname argument on Windows::
 
         serverFromString(reactor,
-            "ssl:443:privateKey=C\\:/key.pem:certKey=C\\:/cert.pem")
+            b"ssl:443:privateKey=C\\:/key.pem:certKey=C\\:/cert.pem")
 
     finally, the 'unix' prefix may be used to specify a filesystem UNIX socket,
     optionally with a 'mode' argument to specify the mode of the socket file
     created by C{listen}::
 
-        serverFromString(reactor, "unix:/var/run/finger")
-        serverFromString(reactor, "unix:/var/run/finger:mode=660")
+        serverFromString(reactor, b"unix:/var/run/finger")
+        serverFromString(reactor, b"unix:/var/run/finger:mode=660")
 
     This function is also extensible; new endpoint types may be registered as
     L{IStreamServerEndpointStringParser} plugins.  See that interface for more
@@ -1465,6 +1467,7 @@ def serverFromString(reactor, description):
     @param reactor: The server endpoint will be constructed with this reactor.
 
     @param description: The strports description to parse.
+    @type description: L{bytes}
 
     @return: A new endpoint which can be used to listen with the parameters
         given by by C{description}.
@@ -1486,7 +1489,7 @@ def quoteStringArgument(argument):
     backslashes, some care is necessary if, for example, you have a pathname,
     you may be tempted to interpolate into a string like this::
 
-        serverFromString("ssl:443:privateKey=%s" % (myPathName,))
+        serverFromString(reactor, b"ssl:443:privateKey=%s" % (myPathName,))
 
     This may appear to work, but will have portability issues (Windows
     pathnames, for example).  Usually you should just construct the appropriate
@@ -1496,19 +1499,19 @@ def quoteStringArgument(argument):
     configuration file which has strports descriptions in it.  To be correct in
     those cases, do this instead::
 
-        serverFromString("ssl:443:privateKey=%s" %
+        serverFromString(reactor, b"ssl:443:privateKey=%s" %
                          (quoteStringArgument(myPathName),))
 
     @param argument: The part of the endpoint description string you want to
         pass through.
 
-    @type argument: C{str}
+    @type argument: C{bytes}
 
     @return: The quoted argument.
 
-    @rtype: C{str}
+    @rtype: C{bytes}
     """
-    return argument.replace('\\', '\\\\').replace(':', '\\:')
+    return argument.replace(b'\\', b'\\\\').replace(b':', b'\\:')
 
 
 
@@ -1681,35 +1684,35 @@ def clientFromString(reactor, description):
     You can create a TCP client endpoint with the 'host' and 'port' arguments,
     like so::
 
-        clientFromString(reactor, "tcp:host=www.example.com:port=80")
+        clientFromString(reactor, b"tcp:host=www.example.com:port=80")
 
     or, without specifying host and port keywords::
 
-        clientFromString(reactor, "tcp:www.example.com:80")
+        clientFromString(reactor, b"tcp:www.example.com:80")
 
     Or you can specify only one or the other, as in the following 2 examples::
 
-        clientFromString(reactor, "tcp:host=www.example.com:80")
-        clientFromString(reactor, "tcp:www.example.com:port=80")
+        clientFromString(reactor, b"tcp:host=www.example.com:80")
+        clientFromString(reactor, b"tcp:www.example.com:port=80")
 
     or an SSL client endpoint with those arguments, plus the arguments used by
     the server SSL, for a client certificate::
 
-        clientFromString(reactor, "ssl:web.example.com:443:"
-                                  "privateKey=foo.pem:certKey=foo.pem")
+        clientFromString(reactor, b"ssl:web.example.com:443:"
+                                  b"privateKey=foo.pem:certKey=foo.pem")
 
     to specify your certificate trust roots, you can identify a directory with
     PEM files in it with the C{caCertsDir} argument::
 
-        clientFromString(reactor, "ssl:host=web.example.com:port=443:"
-                                  "caCertsDir=/etc/ssl/certs")
+        clientFromString(reactor, b"ssl:host=web.example.com:port=443:"
+                                  b"caCertsDir=/etc/ssl/certs")
 
     Both TCP and SSL client endpoint description strings can include a
     'bindAddress' keyword argument, whose value should be a local IPv4
     address. This fixes the client socket to that IP address::
 
-        clientFromString(reactor, "tcp:www.example.com:80:"
-                                  "bindAddress=192.0.2.100")
+        clientFromString(reactor, b"tcp:www.example.com:80:"
+                                  b"bindAddress=192.0.2.100")
 
     NB: Fixed client ports are not currently supported in TCP or SSL
     client endpoints. The client socket will always use an ephemeral
@@ -1718,21 +1721,23 @@ def clientFromString(reactor, description):
     You can create a UNIX client endpoint with the 'path' argument and optional
     'lockfile' and 'timeout' arguments::
 
-        clientFromString(reactor, "unix:path=/var/foo/bar:lockfile=1:timeout=9")
+        clientFromString(
+            reactor, b"unix:path=/var/foo/bar:lockfile=1:timeout=9")
 
     or, with the path as a positional argument with or without optional
     arguments as in the following 2 examples::
 
-        clientFromString(reactor, "unix:/var/foo/bar")
-        clientFromString(reactor, "unix:/var/foo/bar:lockfile=1:timeout=9")
+        clientFromString(reactor, b"unix:/var/foo/bar")
+        clientFromString(reactor, b"unix:/var/foo/bar:lockfile=1:timeout=9")
 
     This function is also extensible; new endpoint types may be registered as
-    L{IStreamClientEndpointStringParser} plugins.  See that interface for more
-    information.
+    L{IStreamClientEndpointStringParserWithReactor} plugins.  See that
+    interface for more information.
 
     @param reactor: The client endpoint will be constructed with this reactor.
 
     @param description: The strports description to parse.
+    @type description: L{bytes}
 
     @return: A new endpoint which can be used to connect with the parameters
         given by by C{description}.
@@ -1743,6 +1748,9 @@ def clientFromString(reactor, description):
     args, kwargs = _parse(description)
     aname = args.pop(0)
     name = aname.upper()
+    for plugin in getPlugins(IStreamClientEndpointStringParserWithReactor):
+        if plugin.prefix.upper() == name:
+            return plugin.parseStreamClient(reactor, *args, **kwargs)
     for plugin in getPlugins(IStreamClientEndpointStringParser):
         if plugin.prefix.upper() == name:
             return plugin.parseStreamClient(*args, **kwargs)
