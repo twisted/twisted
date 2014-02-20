@@ -467,6 +467,63 @@ class RequestTests(unittest.TestCase):
         request.requestReceived(b'GET', b'/foo%2Fbar', b'HTTP/1.0')
         self.assertEqual(request.prePathURL(), b'http://example.com/foo%2Fbar')
 
+    def makeRequest(self, channel):
+        """
+        Return a request instance attached to `channel`.
+        """
+        request = server.Request(channel, 1)
+        request.sitepath = []
+        request.site = channel.site
+        return request
+
+    def makeRawCookie(self, key, value, path, secure):
+        """
+        Return the serialization of a cookie.
+        """
+        securePart = ''
+        if secure:
+            securePart = '; Secure'
+        return '%s=%s; Path=%s%s' % (key, value, path, securePart)
+
+
+    def test_getSessionCreateSessionHTTP(self):
+        """
+        When request is using HTTP (not secured) transport, new session
+        cookies are set without `Secure` flag.
+        """
+        request = self.makeRequest(channel=DummyChannel())
+
+        session = request.getSession()
+        self.addCleanup(lambda: session.expire())
+
+        cookie = self.makeRawCookie(
+            key=b'TWISTED_SESSION',
+            value=session.uid,
+            path='/',
+            secure=False,
+            )
+        self.assertEqual([cookie], request.cookies)
+
+
+    def test_getSessionCreateSessionHTTPS(self):
+        """
+        When request is using HTTPS (secured) transport, new session
+        cookies are created with `Secure` flag.
+        """
+        channel = DummyChannel()
+        channel.transport = DummyChannel.SSL()
+        request = self.makeRequest(channel=channel)
+
+        session = request.getSession()
+        self.addCleanup(lambda: session.expire())
+
+        cookie = self.makeRawCookie(
+            key=b'TWISTED_SESSION',
+            value=session.uid,
+            path='/',
+            secure=True,
+            )
+        self.assertEqual([cookie], request.cookies)
 
 
 class GzipEncoderTests(unittest.TestCase):
