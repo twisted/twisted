@@ -1476,7 +1476,7 @@ def quoteStringArgument(argument):
     backslashes, some care is necessary if, for example, you have a pathname,
     you may be tempted to interpolate into a string like this::
 
-        serverFromString(b"ssl:443:privateKey=%s" % (myPathName,))
+        serverFromString(reactor, b"ssl:443:privateKey=%s" % (myPathName,))
 
     This may appear to work, but will have portability issues (Windows
     pathnames, for example).  Usually you should just construct the appropriate
@@ -1486,7 +1486,7 @@ def quoteStringArgument(argument):
     configuration file which has strports descriptions in it.  To be correct in
     those cases, do this instead::
 
-        serverFromString(b"ssl:443:privateKey=%s" %
+        serverFromString(reactor, b"ssl:443:privateKey=%s" %
                          (quoteStringArgument(myPathName),))
 
     @param argument: The part of the endpoint description string you want to

@@ -2571,5 +2571,5 @@ class IStreamClientEndpointStringParserWithReactor(Interface):
             C{dict(baz=b'qux')}.
 
         @return: a client endpoint
-        @rtype: an implementer of L{IStreamClientEndpoint}
+        @rtype: a provider of L{IStreamClientEndpoint}
         """
