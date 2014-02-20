@@ -1417,3 +1417,26 @@ class PortStringification(unittest.TestCase):
         if _PY3:
             testSSL.skip = ("Re-enable once the Python 3 SSL port is done.")
 
+
+
+class IStreamClientEndpointStringParserTests(unittest.TestCase):
+    """
+    Tests for L{twisted.internet.interfaces.IStreamClientEndpointStringParser}.
+    """
+    def test_deprecated(self):
+        """
+        Accessing L{IStreamClientEndpointStringParser} via the
+        I{IStreamClientEndpointStringParser} attribute of
+        L{twisted.internet.interfaces} results in a deprecation warning being
+        emitted.
+        """
+        interfaces.IStreamClientEndpointStringParser
+
+        warnings = self.flushWarnings([self.test_deprecated])
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            "twisted.internet.interfaces.IStreamClientEndpointStringParser "
+            "was deprecated in Twisted 14.0.0: This interface has been "
+            "superseded by IStreamClientEndpointStringParserWithReactor.")
+        self.assertEqual(len(warnings), 1)
