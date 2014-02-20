@@ -394,12 +394,7 @@ class Request(Copyable, http.Request, components.Componentized):
             # if it still hasn't been set, fix it up.
             if not self.session:
                 self.session = self.site.makeSession()
-                self.addCookie(
-                    cookiename,
-                    self.session.uid,
-                    path=b'/',
-                    secure=self.isSecure(),
-                    )
+                self.addCookie(cookiename, self.session.uid, path=b'/')
         self.session.touch()
         if sessionInterface:
             return self.session.getComponent(sessionInterface)
