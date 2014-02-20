@@ -1939,6 +1939,68 @@ def _responseFromMessage(responseConstructor, message, **kwargs):
 
 
 
+def _compactRepr(obj, alwaysShow=None, flagNames=None, fieldNames=None,
+                 sectionNames=None):
+    """
+    Return a L{str} representation of C{obj} which only shows fields with
+    non-default values, flags which are True and sections which have been
+    explicitly set.
+
+    @param obj: The instance whose repr is being generated.
+    @param alwaysShow: A L{list} of field names which should always be shown.
+    @param flagNames: A L{list} of flag attribute names which should be shown if
+        they are L{True}.
+    @param fieldNames: A L{list} of field attribute names which should be shown
+        if they have non-default values.
+    @param sectionNames: A L{list} of section attribute names which should be
+        shown if they have been assigned a value.
+
+    @return: A L{str} representation of C{obj}.
+    """
+    if alwaysShow is None:
+        alwaysShow = []
+
+    if flagNames is None:
+        flagNames = []
+
+    if fieldNames is None:
+        fieldNames = []
+
+    if sectionNames is None:
+        sectionNames = []
+
+    setFlags = []
+    for name in flagNames:
+        if name in alwaysShow or getattr(obj, name, False) == True:
+            setFlags.append(name)
+
+    out = ['<', obj.__class__.__name__]
+
+    # Get the argument names and values from the constructor.
+    argspec = inspect.getargspec(obj.__class__.__init__)
+    # Reverse the args and defaults to avoid mapping positional arguments
+    # which don't have a default.
+    defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
+    for name in fieldNames:
+        defaultValue = defaults.get(name)
+        fieldValue = getattr(obj, name, defaultValue)
+        if (name in alwaysShow) or (fieldValue != defaultValue):
+            out.append(' %s=%r' % (name, fieldValue))
+
+    if setFlags:
+        out.append(' flags=%s' % (','.join(setFlags),))
+
+    for name in sectionNames:
+        section = getattr(obj, name, [])
+        if section:
+            out.append(' %s=%r' % (name, section))
+
+    out.append('>')
+
+    return ''.join(out)
+
+
+
 class Message(tputil.FancyEqMixin):
     """
     L{Message} contains all the information represented by a single
@@ -1985,11 +2047,6 @@ class Message(tputil.FancyEqMixin):
         'authenticData', 'checkingDisabled',
         'queries', 'answers', 'authority', 'additional'
     )
-
-    _flagNames = ('answer', 'auth', 'trunc', 'recDes', 'recAv', 'authenticData',
-                  'checkingDisabled')
-    _fieldNames = ('id', 'opCode', 'rCode', 'maxSize')
-    _sectionNames = ('queries', 'answers', 'authority', 'additional')
 
     headerFmt = "!H2B4H"
     headerSize = struct.calcsize(headerFmt)
@@ -2087,35 +2144,14 @@ class Message(tputil.FancyEqMixin):
 
         @return: The native string repr.
         """
-        setFlags = []
-        for name in self._flagNames:
-            if getattr(self, name, False) == True:
-                setFlags.append(name)
-
-        out = ['<', self.__class__.__name__]
-
-        # Get the argument names and values from the constructor.
-        argspec = inspect.getargspec(self.__class__.__init__)
-        # Reverse the args and defaults to avoid mapping positional arguments
-        # which don't have a default.
-        defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
-        for name in self._fieldNames:
-            defaultValue = defaults.get(name)
-            fieldValue = getattr(self, name, defaultValue)
-            if name == 'id' or fieldValue != defaultValue:
-                out.append(' %s=%r' % (name, fieldValue))
-
-        if setFlags:
-            out.append(' flags=%s' % (','.join(setFlags),))
-
-        for name in self._sectionNames:
-            section = getattr(self, name, [])
-            if section:
-                out.append(' %s=%r' % (name, section))
-
-        out.append('>')
-
-        return ''.join(out)
+        return _compactRepr(
+            self,
+            flagNames=('answer', 'auth', 'trunc', 'recDes', 'recAv',
+                       'authenticData', 'checkingDisabled'),
+            fieldNames=('id', 'opCode', 'rCode', 'maxSize'),
+            sectionNames=('queries', 'answers', 'authority', 'additional'),
+            alwaysShow=('id',)
+        )
 
 
     def addQuery(self, name, type=ALL_RECORDS, cls=IN):
@@ -2269,7 +2305,7 @@ class Message(tputil.FancyEqMixin):
 
 
 
-class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
+class _EDNSMessage(tputil.FancyEqMixin, object):
     """
     An I{EDNS} message.
 
@@ -2309,13 +2345,11 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         C{_toMessage} and C{_fromMessage}.
     """
 
-    showAttributes = (
+    compareAttributes = (
         'id', 'answer', 'opCode', 'auth', 'trunc',
         'recDes', 'recAv', 'rCode', 'ednsVersion', 'dnssecOK',
         'authenticData', 'checkingDisabled', 'maxSize',
         'queries', 'answers', 'authority', 'additional')
-
-    compareAttributes = showAttributes
 
     _messageFactory = Message
 
@@ -2442,6 +2476,17 @@ class _EDNSMessage(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         if additional is None:
             additional = []
         self.additional = additional
+
+
+    def __repr__(self):
+        return _compactRepr(
+            self,
+            flagNames=('answer', 'auth', 'trunc', 'recDes', 'recAv',
+                       'authenticData', 'checkingDisabled', 'dnssecOK'),
+            fieldNames=('id', 'opCode', 'rCode', 'maxSize', 'ednsVersion'),
+            sectionNames=('queries', 'answers', 'authority', 'additional'),
+            alwaysShow=('id',)
+        )
 
 
     def _toMessage(self):
