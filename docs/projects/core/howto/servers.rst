@@ -212,6 +212,8 @@ Here is an example that uses these features instead of overriding ``buildProtoco
     endpoint.listen(QOTDFactory("configurable quote"))
     reactor.run()
 
+If all you need is a simple factory that builds a protocol without any additional behavior, Twisted 13.1 added :api:`twisted.internet.protocol.Factory.forProtocol <Factory.forProtocol>`, an even simpler approach.
+
 
 Factory Startup and Shutdown
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
