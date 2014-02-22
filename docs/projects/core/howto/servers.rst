@@ -31,7 +31,8 @@ Protocols
 ---------
 
 As mentioned above, this, along with auxiliary classes and functions, is where most of the code is.
-A Twisted protocol handles data in an asynchronous manner: the protocol responds to events as they arrive from the network; the events arrive as calls to methods on the protocol.
+A Twisted protocol handles data in an asynchronous manner.
+The protocol responds to events as they arrive from the network and the events arrive as calls to methods on the protocol.
 
 Here is a simple example::
 
@@ -56,7 +57,7 @@ Here is an example of a Protocol responding to another event::
 
 This protocol responds to the initial connection with a well known quote, and then terminates the connection.
 
-The connectionMade event is usually where set up of the connection object happens, as well as any initial greetings (as in the QOTD protocol above, which is actually based on RFC 865).
+The ``connectionMade`` event is usually where setup of the connection object happens, as well as any initial greetings (as in the QOTD protocol above, which is actually based on :rfc:`865`).
 The ``connectionLost`` event is where tearing down of any connection-specific objects is done.
 Here is an example::
 
@@ -68,13 +69,13 @@ Here is an example::
             self.factory = factory
 
         def connectionMade(self):
-            self.factory.numProtocols = self.factory.numProtocols+1
+            self.factory.numProtocols = self.factory.numProtocols + 1
             self.transport.write(
                 "Welcome! There are currently %d open connections.\n" %
                 (self.factory.numProtocols,))
 
         def connectionLost(self, reason):
-            self.factory.numProtocols = self.factory.numProtocols-1
+            self.factory.numProtocols = self.factory.numProtocols - 1
 
         def dataReceived(self, data):
             self.transport.write(data)
@@ -122,7 +123,6 @@ In this example, I create a protocol ``Factory``.
 I want to tell this factory that its job is to build QOTD protocol instances, so I set its ``buildProtocol`` method to return instances of the QOTD class.
 Then, I want to listen on a TCP port, so I make a ``TCP4ServerEndpoint`` to identify the port that I want to bind to, and then pass the factory I just created to its ``listen`` method.
 
-Because this is a short example, nothing else has yet started up the Twisted reactor.
 ``endpoint.listen`` tells the reactor to handle connections to the endpoint's address using a particular protocol, but the reactor needs to be *running* in order for it to do anything.
 ``reactor.run()`` starts the reactor and then waits forever for connections to arrive on the port you've specified.
 
@@ -134,15 +134,14 @@ For more information on different ways you can listen for incoming connections, 
 Helper Protocols
 ~~~~~~~~~~~~~~~~
 
-Many protocols build upon similar lower-level abstraction.
-The most popular in internet protocols is being line-based.
-Lines are usually terminated with a CR-LF combinations.
+Many protocols build upon similar lower-level abstractions.
 
+Many popular internet protocols are line-based, containing text data terminated by line breaks (commonly CR-LF), rather than containing straight raw data.
 However, quite a few protocols are mixed - they have line-based sections and then raw data sections.
 Examples include HTTP/1.1 and the Freenet protocol.
 
-For those cases, there is the ``LineReceiver`` protocol.
-This protocol dispatches to two different event handlers - ``lineReceived`` and ``rawDataReceived``.
+For those cases, there is the :api:`twisted.protocols.basic.LineReceiver <LineReceiver>`` protocol.
+This protocol dispatches to two different event handlers -- ``lineReceived`` and ``rawDataReceived``.
 By default, only ``lineReceived`` will be called, once for each line.
 However, if ``setRawMode`` is called, the protocol will call ``rawDataReceived`` until ``setLineMode`` is called, which returns it to using ``lineReceived``.
 It also provides a method, ``sendLine``, that writes data to the transport along with the delimiter the class uses to split lines (by default, ``\r\n``).
@@ -153,7 +152,7 @@ Here is an example for a simple use of the line receiver::
 
     class Answer(LineReceiver):
 
-        answers = {'How are you?': 'Fine', None : "I don't know what you mean"}
+        answers = {'How are you?': 'Fine', None: "I don't know what you mean"}
 
         def lineReceived(self, line):
             if self.answers.has_key(line):
@@ -163,7 +162,7 @@ Here is an example for a simple use of the line receiver::
 
 Note that the delimiter is not part of the line.
 
-Several other, less popular, helpers exist, such as a netstring based protocol and a prefixed-message-length protocol.
+Several other helpers exist, such as a :api:`twisted.protocols.basic.NetstringReceiver <netstring based protocol>` and :api:`twisted.protocols.basic.IntNStringReceiver <prefixed-message-length protocols>`.
 
 
 State Machines
@@ -228,7 +227,7 @@ Here is an example of a factory which allows its Protocols to write to a special
     class LoggingProtocol(LineReceiver):
 
         def lineReceived(self, line):
-            self.factory.fp.write(line+'\n')
+            self.factory.fp.write(line + '\n')
 
 
     class LogfileFactory(Factory):
@@ -259,21 +258,22 @@ The only API you might not be familiar with is ``listenTCP``.
 :api:`twisted.internet.interfaces.IReactorTCP.listenTCP <listenTCP>` is the method which connects a ``Factory`` to the network.
 This is the lower-level API that :doc:`endpoints <endpoints>` wraps for you.
 
-Here's a sample transcript of a chat session (``***this***`` is text entered by the user):
+Here's a sample transcript of a chat session (emphasised text is entered by the user):
 
 .. code-block:: console
+   :emphasize-lines: 1,6,8,10,12
 
-    $ ***telnet 127.0.0.1 8123***
+    $ telnet 127.0.0.1 8123
     Trying 127.0.0.1...
     Connected to 127.0.0.1.
     Escape character is '^]'.
     What's your name?
-    ***test***
+    test
     Name taken, please choose another.
-    ***bob***
+    bob
     Welcome, bob!
-    ***hello***
+    hello
     <alice> hi bob
-    ***twisted makes writing servers so easy!***
+    twisted makes writing servers so easy!
     <alice> I couldn't agree more
     <carrol> yeah, it's great
