@@ -130,8 +130,7 @@ class SerialNumber(FancyStrMixin, object):
 
         @type other: L{SerialNumber}
         """
-        other = self._convertOther(other)
-        return other._number != self._number
+        return not self.__eq__(other)
 
 
     def __lt__(self, other):
