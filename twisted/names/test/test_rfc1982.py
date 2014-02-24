@@ -123,7 +123,8 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_leForeignType(self):
         """
-        <= comparison of L{SerialNumber} with a non-L{SerialNumber} instance returns False.
+        <= comparison of L{SerialNumber} with a non-L{SerialNumber} instance raises
+        L{TypeError}.
         """
         self.assertRaises(TypeError, lambda: SerialNumber(1) <= object())
 
@@ -138,7 +139,8 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_geForeignType(self):
         """
-        >= comparison of L{SerialNumber} with a non-L{SerialNumber} instance returns False.
+        >= comparison of L{SerialNumber} with a non-L{SerialNumber} instance
+        raises L{TypeError}.
         """
         self.assertRaises(TypeError, lambda: SerialNumber(1) >= object())
 
@@ -152,7 +154,8 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_ltForeignType(self):
         """
-        < comparison of L{SerialNumber} with a non-L{SerialNumber} instance returns False.
+        < comparison of L{SerialNumber} with a non-L{SerialNumber} instance
+        raises L{TypeError}.
         """
         self.assertRaises(TypeError, lambda: SerialNumber(1) < object())
 
@@ -166,7 +169,8 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_gtForeignType(self):
         """
-        > comparison of L{SerialNumber} with a non-L{SerialNumber} instance returns False.
+        > comparison of L{SerialNumber} with a non-L{SerialNumber} instance
+          raises L{TypeError}.
         """
         self.assertRaises(TypeError, lambda: SerialNumber(2) > object())
 
