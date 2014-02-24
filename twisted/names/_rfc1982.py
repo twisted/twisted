@@ -27,7 +27,7 @@ RFC4034_TIME_FORMAT = '%Y%m%d%H%M%S'
 
 
 
-class SNA(FancyStrMixin, object):
+class SerialNumber(FancyStrMixin, object):
     """
     An RFC1982 Serial Number.
 
@@ -42,10 +42,10 @@ class SNA(FancyStrMixin, object):
     @ivar _serialBits: See C{serialBits} of L{__init__}.
     @ivar _number: See C{number} of L{__init__}.
     @ivar _modulo: The value at which wrapping will occur.
-    @ivar _halfRing: Half C{_modulo}. If another L{SNA} value is larger than
+    @ivar _halfRing: Half C{_modulo}. If another L{SerialNumber} value is larger than
         this, it would lead to a wrapped value which is larger than the first
         and comparisons are therefore ambiguous.
-    @ivar _maxAdd: Half C{_modulo} plus 1. If another L{SNA} value is larger
+    @ivar _maxAdd: Half C{_modulo} plus 1. If another L{SerialNumber} value is larger
         than this, it would lead to a wrapped value which is larger than the
         first. Comparisons with the original value would therefore be ambiguous.
     """
@@ -57,7 +57,7 @@ class SNA(FancyStrMixin, object):
 
     def __init__(self, number, serialBits=32):
         """
-        Construct an L{SNA} instance.
+        Construct an L{SerialNumber} instance.
 
         @param number: An L{int} which will be stored as the modulo
             C{number % 2 ^ serialBits}
@@ -78,20 +78,20 @@ class SNA(FancyStrMixin, object):
     def _convertOther(self, other):
         """
         Check that a foreign object is suitable for use in the comparison or
-        arithmetic magic methods of this L{SNA} instance. Raise L{TypeError} if
+        arithmetic magic methods of this L{SerialNumber} instance. Raise L{TypeError} if
         not.
 
         @param other: The foreign L{object} to be checked.
         @return: C{other} after compatibility checks and possible coercion.
         @raises: L{TypeError} if C{other} is not compatible.
         """
-        if not isinstance(other, SNA):
+        if not isinstance(other, SerialNumber):
             raise TypeError(
                 'cannot compare or combine %r and %r' % (self, other))
 
         if self._serialBits != other._serialBits:
             raise TypeError(
-                'cannot compare or combine SNA instances with different '
+                'cannot compare or combine SerialNumber instances with different '
                 'serialBits. %r and %r' % (self, other))
 
         return other
@@ -99,7 +99,7 @@ class SNA(FancyStrMixin, object):
 
     def __str__(self):
         """
-        Return a string representation of this L{SNA} instance.
+        Return a string representation of this L{SerialNumber} instance.
 
         @rtype: L{nativeString}
         """
@@ -108,7 +108,7 @@ class SNA(FancyStrMixin, object):
 
     def __int__(self):
         """
-        @return: The integer value of this L{SNA} instance.
+        @return: The integer value of this L{SerialNumber} instance.
         @rtype: L{int}
         """
         return self._number
@@ -116,9 +116,9 @@ class SNA(FancyStrMixin, object):
 
     def __eq__(self, other):
         """
-        Allow rich equality comparison with another L{SNA} instance.
+        Allow rich equality comparison with another L{SerialNumber} instance.
 
-        @type other: L{SNA}
+        @type other: L{SerialNumber}
         """
         other = self._convertOther(other)
         return other._number == self._number
@@ -126,9 +126,9 @@ class SNA(FancyStrMixin, object):
 
     def __ne__(self, other):
         """
-        Allow rich equality comparison with another L{SNA} instance.
+        Allow rich equality comparison with another L{SerialNumber} instance.
 
-        @type other: L{SNA}
+        @type other: L{SerialNumber}
         """
         other = self._convertOther(other)
         return other._number != self._number
@@ -136,9 +136,9 @@ class SNA(FancyStrMixin, object):
 
     def __lt__(self, other):
         """
-        Allow I{less than} comparison with another L{SNA} instance.
+        Allow I{less than} comparison with another L{SerialNumber} instance.
 
-        @type other: L{SNA}
+        @type other: L{SerialNumber}
         """
         other = self._convertOther(other)
         return (
@@ -152,9 +152,9 @@ class SNA(FancyStrMixin, object):
 
     def __gt__(self, other):
         """
-        Allow I{greater than} comparison with another L{SNA} instance.
+        Allow I{greater than} comparison with another L{SerialNumber} instance.
 
-        @type other: L{SNA}
+        @type other: L{SerialNumber}
         @rtype: L{bool}
         """
         other = self._convertOther(other)
@@ -169,9 +169,9 @@ class SNA(FancyStrMixin, object):
 
     def __le__(self, other):
         """
-        Allow I{less than or equal} comparison with another L{SNA} instance.
+        Allow I{less than or equal} comparison with another L{SerialNumber} instance.
 
-        @type other: L{SNA}
+        @type other: L{SerialNumber}
         @rtype: L{bool}
         """
         other = self._convertOther(other)
@@ -180,9 +180,9 @@ class SNA(FancyStrMixin, object):
 
     def __ge__(self, other):
         """
-        Allow I{greater than or equal} comparison with another L{SNA} instance.
+        Allow I{greater than or equal} comparison with another L{SerialNumber} instance.
 
-        @type other: L{SNA}
+        @type other: L{SerialNumber}
         @rtype: L{bool}
         """
         other = self._convertOther(other)
@@ -191,7 +191,7 @@ class SNA(FancyStrMixin, object):
 
     def __add__(self, other):
         """
-        Allow I{addition} with another L{SNA} instance.
+        Allow I{addition} with another L{SerialNumber} instance.
 
         Serial numbers may be incremented by the addition of a positive
         integer n, where n is taken from the range of integers
@@ -209,14 +209,14 @@ class SNA(FancyStrMixin, object):
 
         @see: U{http://tools.ietf.org/html/rfc1982#section-3.1}
 
-        @type other: L{SNA}
-        @rtype: L{SNA}
+        @type other: L{SerialNumber}
+        @rtype: L{SerialNumber}
         @raises: L{ArithmeticError} if C{other} is more than C{_maxAdd}
             ie more than half the maximum value of this serial number.
         """
         other = self._convertOther(other)
         if other._number <= self._maxAdd:
-            return SNA(
+            return SerialNumber(
                 (self._number + other._number) % self._modulo,
                 serialBits=self._serialBits)
         else:
@@ -227,7 +227,7 @@ class SNA(FancyStrMixin, object):
 
     def __hash__(self):
         """
-        Allow L{SNA} instances to be hashed for use as L{dict} keys.
+        Allow L{SerialNumber} instances to be hashed for use as L{dict} keys.
 
         @rtype: L{int}
         """
@@ -237,11 +237,11 @@ class SNA(FancyStrMixin, object):
     @classmethod
     def fromRFC4034DateString(cls, utcDateString):
         """
-        Create an L{_SNA} instance from a date string in format 'YYYYMMDDHHMMSS'
+        Create an L{SerialNumber} instance from a date string in format 'YYYYMMDDHHMMSS'
         described in
         U{RFC4034 3.2<https://tools.ietf.org/html/rfc4034#section-3.2>}.
 
-        The L{_SNA} instance stores the date as a 32bit UNIX timestamp.
+        The L{SerialNumber} instance stores the date as a 32bit UNIX timestamp.
 
         @see: U{https://tools.ietf.org/html/rfc4034#section-3.1.5}
 
@@ -249,7 +249,7 @@ class SNA(FancyStrMixin, object):
             which will be converted to seconds since the UNIX epoch.
         @type utcDateString: L{unicode}
 
-        @return: An L{_SNA} instance containing the supplied date as a 32bit
+        @return: An L{SerialNumber} instance containing the supplied date as a 32bit
             UNIX timestamp.
         """
         parsedDate = datetime.strptime(utcDateString, RFC4034_TIME_FORMAT)
@@ -259,7 +259,7 @@ class SNA(FancyStrMixin, object):
 
     def toRFC4034DateString(self):
         """
-        Calculate a date by treating the current L{_SNA} value as a UNIX
+        Calculate a date by treating the current L{SerialNumber} value as a UNIX
         timestamp and return a date string in the format described in
         U{RFC4034 3.2<https://tools.ietf.org/html/rfc4034#section-3.2>}.
 
@@ -273,4 +273,4 @@ class SNA(FancyStrMixin, object):
 
 
 
-__all__ = ['SNA']
+__all__ = ['SerialNumber']
