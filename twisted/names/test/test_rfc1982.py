@@ -203,9 +203,6 @@ class SerialNumberTests(unittest.TestCase):
         """
         L{SerialNumber.__add__} returns a wrapped value when s1 plus the s2 would result
         in a value greater than the C{maxVal}.
-
-        XXX: I've got a feeling we need more tests demonstrating how results
-        vary with different s2 values.
         """
         s = SerialNumber(1)
         maxVal = s._halfRing + s._halfRing - 1
