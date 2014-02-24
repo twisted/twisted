@@ -70,6 +70,108 @@ These three lists contain answer records, authority records, and additional reco
      That is, it will use the DNS server IP addresses found in a local ``resolv.conf`` file (if the operating system provides such a file) and it will use an OS specific ``hosts`` file path.
 
 
+A simple example
+~~~~~~~~~~~~~~~~
+
+In this section you will learn how the :api:`twisted.internet.interfaces.IResolver<IResolver>` interface can be used to write a utility for performing a `reverse DNS lookup <https://en.wikipedia.org/wiki/Reverse_DNS_lookup>`_ for an IPv4 address.
+`dig <https://en.wikipedia.org/wiki/Dig_(command)>`_ can do this too, so lets start by examining its output:
+
+.. code-block:: console
+
+   $ dig -x 127.0.0.1
+   ...
+   ;; QUESTION SECTION:
+   ;1.0.0.127.in-addr.arpa.		IN	PTR
+
+   ;; ANSWER SECTION:
+   1.0.0.127.in-addr.arpa.	86400	IN	PTR	localhost.
+   ...
+
+As you can see, ``dig`` has performed a DNS query with the following attributes:
+
+* Name: ``1.0.0.127.in-addr.arpa.``
+* Class: ``IN``
+* Type: ``PTR``
+
+The *name* is a **reverse domain name** and is derived by reversing an IPv4 address and prepending it to the special *in-addr.arpa* parent domain name.
+So, lets write a function to create a reverse domain name from an IP address.
+
+.. literalinclude:: listings/names/reverse_lookup.py
+   :pyobject: reverseNameFromIPAddress
+
+We can test the output from a python shell:
+
+.. code-block:: python
+
+   >>> reverseNameFromIPAddress('192.0.2.100')
+   '100.2.0.192.in-addr.arpa'
+
+We're going to use :api:`twisted.names.client.lookupPointer` to perform the actual DNS lookup.
+So lets examine the output of ``lookupPointer`` so that we can design a function to format and print its results in a style similar to ``dig``.
+
+.. note::
+   ``lookupPointer`` is an asynchronous function, so we'll use an interactive ``twisted.conch`` shell here.
+
+.. code-block:: console
+
+   $ python -m twisted.conch.stdio
+
+.. code-block:: python
+
+   >>> from twisted.names import client
+   >>> from reverse_lookup import reverseNameFromIPAddress
+   >>> d = client.lookupPointer(name=reverseNameFromIPAddress('127.0.0.1'))
+   >>> d
+   <Deferred at 0x286b170 current result: ([<RR name=1.0.0.127.in-addr.arpa type=PTR class=IN ttl=86400s auth=False>], [], [])>
+   >>> d.result
+   ([<RR name=1.0.0.127.in-addr.arpa type=PTR class=IN ttl=86400s auth=False>], [], [])
+
+The deferred result of ``lookupPointer`` is a tuple containing three lists of records; **answers**, **authority**, and **additional**.
+The actual record is a :api:`twisted.names.dns.Record_PTR<Record_PTR>` instance which can be reached via the :api:`twisted.names.dns.RRHeader<RRHeader>`\ ``.payload`` attribute.
+
+.. code-block:: python
+
+   >>> recordHeader = d.result[0][0]
+   >>> recordHeader.payload
+   <PTR name=localhost ttl=86400>
+
+So, now we've found the information we need, lets create a function that extracts the first *answer* and prints the domain name and the record payload.
+
+.. literalinclude:: listings/names/reverse_lookup.py
+   :pyobject: printResult
+
+
+And lets test the output:
+
+.. code-block:: console
+
+   >>> from twisted.names import dns
+   >>> printResult(([dns.RRHeader(name='1.0.0.127.in-addr.arpa', type=dns.PTR, payload=dns.Record_PTR('localhost'))], [], []))
+   1.0.0.127.in-addr.arpa IN <PTR name=localhost ttl=None>
+
+Fine! Now we can assemble the pieces in a ``main`` function, which we'll call using :api:`twisted.internet.task.react`.
+Here's the complete script.
+
+:download:`listings/names/reverse_lookup.py <listings/names/reverse_lookup.py>`
+
+.. literalinclude:: listings/names/reverse_lookup.py
+
+The output looks like this:
+
+.. code-block:: console
+
+   $ python reverse_lookup.py 127.0.0.1
+   1.0.0.127.in-addr.arpa IN <PTR name=localhost ttl=86400>
+
+.. note::
+   * You can read more about reverse domain names in :rfc:`1034#section-5.2.1`.
+   * We've ignored IPv6 addresses in this example, but you can read more about reverse IPv6 domain names in :rfc:`3596#section-2.5` and the example could easily be extended to support these.
+   * You might also consider using `netaddr <https://pypi.python.org/pypi/netaddr/>`_,  which can generate reverse domain names and which also includes sophisticated IP network and IP address handling.
+   * This script only prints the first answer, but sometimes you'll get multiple answers due to CNAME indirection, for example in the case of classless reverse zones.
+   * All lookups and responses are handled asynchronously, so the script could be extended to perform thousands of reverse DNS lookups in parallel.
+
+Next you should study :download:`../examples/multi_reverse_lookup.py <../examples/multi_reverse_lookup.py>` which extends this example to perform both IPv4 and IPv6 addresses and which can perform multiple reverse DNS lookups in parallel.
+
 Creating a New Resolver
 -----------------------
 Now suppose we want to create a DNS client which sends its queries to a specific server (or servers).
