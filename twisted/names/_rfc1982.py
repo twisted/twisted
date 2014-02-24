@@ -29,7 +29,7 @@ RFC4034_TIME_FORMAT = '%Y%m%d%H%M%S'
 
 class SNA(FancyStrMixin, object):
     """
-    A Serial Number Arithmetic helper class.
+    An RFC1982 Serial Number.
 
     This class implements RFC1982 DNS Serial Number Arithmetic.
 
