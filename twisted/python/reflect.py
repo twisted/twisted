@@ -135,6 +135,7 @@ if not _PY3:
         else:
             return ISNT
 
+
     # These functions are still imported by libraries used in turn by the
     # Twisted unit tests, like Nevow 0.10. Since they are deprecated,
     # there's no need to port them to Python 3 (hence the condition above).
@@ -238,8 +239,8 @@ def findInstances(start, t):
 
 
 if not _PY3:
-    # The function objgrep() currently doesn't work on Python 3 due to some edge
-    # cases, as described in #6986.
+    # The function objgrep() currently doesn't work on Python 3 due to some
+    # edge cases, as described in #6986.
     # twisted.python.reflect is quite important and objgrep is not used in
     # Twisted itself, so in #5929, we decided to port everything but objgrep()
     # and to finish the porting in #6986
