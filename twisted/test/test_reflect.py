@@ -5,9 +5,12 @@
 Test cases for the L{twisted.python.reflect} module.
 """
 
+from __future__ import division, absolute_import
+
 import weakref
 from collections import deque
 
+from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.python import reflect
 from twisted.python.versions import Version
@@ -15,6 +18,11 @@ from twisted.python.versions import Version
 
 
 class ObjectGrep(unittest.TestCase):
+    if _PY3:
+        # This is to be removed when fixing #6986
+        skip = "twisted.python.reflect.objgrep hasn't been ported to Python 3"
+
+
     def test_dictionary(self):
         """
         Test references search through a dictionnary, as a key or as a value.
@@ -77,9 +85,12 @@ class ObjectGrep(unittest.TestCase):
         o = Dummy()
         m = o.dummy
 
-        self.assertIn(".im_self", reflect.objgrep(m, m.im_self, reflect.isSame))
-        self.assertIn(".im_class", reflect.objgrep(m, m.im_class, reflect.isSame))
-        self.assertIn(".im_func", reflect.objgrep(m, m.im_func, reflect.isSame))
+        self.assertIn(".__self__",
+                      reflect.objgrep(m, m.__self__, reflect.isSame))
+        self.assertIn(".__self__.__class__",
+                      reflect.objgrep(m, m.__self__.__class__, reflect.isSame))
+        self.assertIn(".__func__",
+                      reflect.objgrep(m, m.__func__, reflect.isSame))
 
     def test_everything(self):
         """
@@ -99,7 +110,8 @@ class ObjectGrep(unittest.TestCase):
         m = i.method
         w = weakref.ref(m)
 
-        self.assertIn("().im_self.attr[2][0][2]{'Foosh'}", reflect.objgrep(w, o, reflect.isSame))
+        self.assertIn("().__self__.attr[2][0][2]{'Foosh'}",
+                      reflect.objgrep(w, o, reflect.isSame))
 
     def test_depthLimit(self):
         """
@@ -128,11 +140,16 @@ class ObjectGrep(unittest.TestCase):
 
 
 class GetClass(unittest.TestCase):
+    if _PY3:
+        oldClassNames = ['type']
+    else:
+        oldClassNames = ['class', 'classobj']
+
     def testOld(self):
         class OldClass:
             pass
         old = OldClass()
-        self.assertIn(reflect.getClass(OldClass).__name__, ('class', 'classobj'))
+        self.assertIn(reflect.getClass(OldClass).__name__, self.oldClassNames)
         self.assertEqual(reflect.getClass(old).__name__, 'OldClass')
 
     def testNew(self):
@@ -143,25 +160,31 @@ class GetClass(unittest.TestCase):
         self.assertEqual(reflect.getClass(new).__name__, 'NewClass')
 
 
-class DeprecationTestCase(unittest.TestCase):
-    """
-    Test deprecations in twisted.python.reflect
-    """
+if not _PY3:
+    # The functions tested below are deprecated but still used by external
+    # projects like Nevow 0.10. They are not going to be ported to Python 3
+    # (hence the condition above) and will be removed as soon as no project used
+    # by Twisted will depend on these functions. Also, have a look at the
+    # comments related to those functions in twisted.python.reflect.
+    class DeprecationTestCase(unittest.TestCase):
+        """
+        Test deprecations in twisted.python.reflect
+        """
 
-    def test_allYourBase(self):
-        """
-        Test deprecation of L{reflect.allYourBase}. See #5481 for removal.
-        """
-        self.callDeprecated(
-            (Version("Twisted", 11, 0, 0), "inspect.getmro"),
-            reflect.allYourBase, DeprecationTestCase)
+        def test_allYourBase(self):
+            """
+            Test deprecation of L{reflect.allYourBase}. See #5481 for removal.
+            """
+            self.callDeprecated(
+                (Version("Twisted", 11, 0, 0), "inspect.getmro"),
+                reflect.allYourBase, DeprecationTestCase)
 
 
-    def test_accumulateBases(self):
-        """
-        Test deprecation of L{reflect.accumulateBases}. See #5481 for removal.
-        """
-        l = []
-        self.callDeprecated(
-            (Version("Twisted", 11, 0, 0), "inspect.getmro"),
-            reflect.accumulateBases, DeprecationTestCase, l, None)
+        def test_accumulateBases(self):
+            """
+            Test deprecation of L{reflect.accumulateBases}. See #5481 for removal.
+            """
+            l = []
+            self.callDeprecated(
+                (Version("Twisted", 11, 0, 0), "inspect.getmro"),
+                reflect.accumulateBases, DeprecationTestCase, l, None)
