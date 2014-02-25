@@ -117,8 +117,8 @@ if not _PY3:
             return clazz
         return currclass
 
-    # class graph nonsense
 
+    # Class graph nonsense
     # I should really have a better name for this...
     def isinst(inst,clazz):
         if type(inst) != compat.InstanceType or type(clazz)!= types.ClassType:
@@ -237,56 +237,64 @@ def findInstances(start, t):
     return objgrep(start, t, isOfType)
 
 
-def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None, showUnknowns=0, maxDepth=None):
-    """
-    An insanely CPU-intensive process for finding stuff.
-    """
-    if paths is None:
-        paths = []
-    if seen is None:
-        seen = {}
-    if eq(start, goal):
-        paths.append(path)
-    if id(start) in seen:
-        if seen[id(start)] is start:
-            return
-    if maxDepth is not None:
-        if maxDepth == 0:
-            return
-        maxDepth -= 1
-    seen[id(start)] = start
-    # Make an alias for those arguments which are passed recursively to objgrep
-    # for container objects.
-    args = (paths, seen, showUnknowns, maxDepth)
-    if isinstance(start, dict):
-        for k, v in start.items():
-            objgrep(k, goal, eq, path+'{'+repr(v)+'}', *args)
-            objgrep(v, goal, eq, path+'['+repr(k)+']', *args)
-    elif isinstance(start, (list, tuple, deque)):
-        for idx, _elem in enumerate(start):
-            objgrep(start[idx], goal, eq, path+'['+str(idx)+']', *args)
-    elif isinstance(start, types.MethodType):
-        objgrep(start.__self__, goal, eq, path+'.__self__', *args)
-        objgrep(start.__func__, goal, eq, path+'.__func__', *args)
-        objgrep(start.__self__.__class__, goal, eq, path+'.__self__.__class__',
-                *args)
-    elif hasattr(start, '__dict__'):
-        for k, v in start.__dict__.items():
-            objgrep(v, goal, eq, path+'.'+k, *args)
-        if isinstance(start, compat.InstanceType):
-            objgrep(start.__class__, goal, eq, path+'.__class__', *args)
-    elif isinstance(start, weakref.ReferenceType):
-        objgrep(start(), goal, eq, path+'()', *args)
-    elif (isinstance(start, (compat.StringType,
-                    int, types.FunctionType,
-                     types.BuiltinMethodType, RegexType, float,
-                     type(None), compat.FileType)) or
-          type(start).__name__ in ('wrapper_descriptor', 'method_descriptor',
-                                   'member_descriptor', 'getset_descriptor')):
-        pass
-    elif showUnknowns:
-        print('unknown type', type(start), start)
-    return paths
+if not _PY3:
+    # The function objgrep() currently doesn't work on Python 3 due to some edge
+    # cases, as described in #6986.
+    # twisted.python.reflect is quite important and objgrep is not used in
+    # Twisted itself, so in #5929, we decided to port everything but objgrep()
+    # and to finish the porting in #6986
+    def objgrep(start, goal, eq=isLike, path='', paths=None, seen=None,
+                showUnknowns=0, maxDepth=None):
+        """
+        An insanely CPU-intensive process for finding stuff.
+        """
+        if paths is None:
+            paths = []
+        if seen is None:
+            seen = {}
+        if eq(start, goal):
+            paths.append(path)
+        if id(start) in seen:
+            if seen[id(start)] is start:
+                return
+        if maxDepth is not None:
+            if maxDepth == 0:
+                return
+            maxDepth -= 1
+        seen[id(start)] = start
+        # Make an alias for those arguments which are passed recursively to
+        # objgrep for container objects.
+        args = (paths, seen, showUnknowns, maxDepth)
+        if isinstance(start, dict):
+            for k, v in start.items():
+                objgrep(k, goal, eq, path+'{'+repr(v)+'}', *args)
+                objgrep(v, goal, eq, path+'['+repr(k)+']', *args)
+        elif isinstance(start, (list, tuple, deque)):
+            for idx, _elem in enumerate(start):
+                objgrep(start[idx], goal, eq, path+'['+str(idx)+']', *args)
+        elif isinstance(start, types.MethodType):
+            objgrep(start.__self__, goal, eq, path+'.__self__', *args)
+            objgrep(start.__func__, goal, eq, path+'.__func__', *args)
+            objgrep(start.__self__.__class__, goal, eq,
+                    path+'.__self__.__class__', *args)
+        elif hasattr(start, '__dict__'):
+            for k, v in start.__dict__.items():
+                objgrep(v, goal, eq, path+'.'+k, *args)
+            if isinstance(start, compat.InstanceType):
+                objgrep(start.__class__, goal, eq, path+'.__class__', *args)
+        elif isinstance(start, weakref.ReferenceType):
+            objgrep(start(), goal, eq, path+'()', *args)
+        elif (isinstance(start, (compat.StringType,
+                        int, types.FunctionType,
+                         types.BuiltinMethodType, RegexType, float,
+                         type(None), compat.FileType)) or
+              type(start).__name__ in ('wrapper_descriptor',
+                                       'method_descriptor', 'member_descriptor',
+                                       'getset_descriptor')):
+            pass
+        elif showUnknowns:
+            print('unknown type', type(start), start)
+        return paths
 
 
 
@@ -305,3 +313,8 @@ __all__ = [
     'accumulateClassDict', 'accumulateClassList', 'isSame', 'isLike',
     'modgrep', 'isOfType', 'findInstances', 'objgrep', 'filenameToModuleName',
     'fullyQualifiedName']
+
+
+if _PY3:
+    # This is to be removed when fixing #6986
+    __all__.remove('objgrep')

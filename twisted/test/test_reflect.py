@@ -18,6 +18,11 @@ from twisted.python.versions import Version
 
 
 class ObjectGrep(unittest.TestCase):
+    if _PY3:
+        # This is to be removed when fixing #6986
+        skip = "twisted.python.reflect.objgrep hasn't been ported to Python 3"
+
+
     def test_dictionary(self):
         """
         Test references search through a dictionnary, as a key or as a value.
