@@ -8,9 +8,9 @@ Utilities for handling RFC1982 Serial Number Arithmetic.
 @see: U{http://tools.ietf.org/html/rfc1982}
 
 @var RFC4034_TIME_FORMAT: RRSIG Time field presentation format. The Signature
-   Expiration Time and Inception Time field values MUST be represented either as
-   an unsigned decimal integer indicating seconds since 1 January 1970 00:00:00
-   UTC, or in the form YYYYMMDDHHmmSS in UTC. See U{RRSIG Presentation
+   Expiration Time and Inception Time field values MUST be represented either
+   as an unsigned decimal integer indicating seconds since 1 January 1970
+   00:00:00 UTC, or in the form YYYYMMDDHHmmSS in UTC. See U{RRSIG Presentation
    Format<https://tools.ietf.org/html/rfc4034#section-3.2>}
 """
 
@@ -92,8 +92,8 @@ class SerialNumber(FancyStrMixin, object):
 
         if self._serialBits != other._serialBits:
             raise TypeError(
-                'cannot compare or combine SerialNumber instances with different '
-                'serialBits. %r and %r' % (self, other))
+                'cannot compare or combine SerialNumber instances with '
+                'different serialBits. %r and %r' % (self, other))
 
         return other
 
