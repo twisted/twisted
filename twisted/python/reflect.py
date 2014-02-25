@@ -179,20 +179,20 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
 
       class Soy:
         properties = {\"taste\": \"bland\"}
-    
+
       class Plant:
         properties = {\"colour\": \"green\"}
-    
+
       class Seaweed(Plant):
         pass
-    
+
       class Lunch(Soy, Seaweed):
         properties = {\"vegan\": 1 }
-    
+
       dct = {}
-    
+
       accumulateClassDict(Lunch, \"properties\", dct)
-    
+
       print dct
 
     {\"taste\": \"bland\", \"colour\": \"green\", \"vegan\": 1}
