@@ -30,15 +30,16 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_serialBitsOverride(self):
         """
-        L{SerialNumber.__init__} accepts a C{serialBits} argument whose value is assigned
-        to L{SerialNumber.serialBits}.
+        L{SerialNumber.__init__} accepts a C{serialBits} argument whose value is
+        assigned to L{SerialNumber.serialBits}.
         """
         self.assertEqual(SerialNumber(1, serialBits=8)._serialBits, 8)
 
 
     def test_repr(self):
         """
-        L{SerialNumber.__repr__} returns a string containing number and serialBits.
+        L{SerialNumber.__repr__} returns a string containing number and
+        serialBits.
         """
         self.assertEqual(
             '<SerialNumber number=123 serialBits=32>',
@@ -48,22 +49,24 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_str(self):
         """
-        L{SerialNumber.__str__} returns a string representation of the current value.
+        L{SerialNumber.__str__} returns a string representation of the current
+        value.
         """
         self.assertEqual(str(SerialNumber(123)), '123')
 
 
     def test_int(self):
         """
-        L{SerialNumber.__int__} returns an integer representation of the current value.
+        L{SerialNumber.__int__} returns an integer representation of the current
+        value.
         """
         self.assertEqual(int(SerialNumber(123)), 123)
 
 
     def test_hash(self):
         """
-        L{SerialNumber.__hash__} allows L{SerialNumber} instances to be hashed for use as
-        dictionary keys.
+        L{SerialNumber.__hash__} allows L{SerialNumber} instances to be hashed
+        for use as dictionary keys.
         """
         self.assertEqual(hash(SerialNumber(1)), hash(SerialNumber(1)))
         self.assertNotEqual(hash(SerialNumber(1)), hash(SerialNumber(2)))
@@ -71,8 +74,8 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_convertOtherSerialBitsMismatch(self):
         """
-        L{SerialNumber._convertOther} raises L{TypeError} if the other SerialNumber instance has a
-        different C{serialBits} value.
+        L{SerialNumber._convertOther} raises L{TypeError} if the other
+        SerialNumber instance has a different C{serialBits} value.
         """
         s1 = SerialNumber(0, serialBits=8)
         s2 = SerialNumber(0, serialBits=16)
@@ -93,7 +96,8 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_eqForeignType(self):
         """
-        == comparison of L{SerialNumber} with a non-L{SerialNumber} instance raises L{TypeError}.
+        == comparison of L{SerialNumber} with a non-L{SerialNumber} instance
+        raises L{TypeError}.
         """
         self.assertRaises(TypeError, lambda: SerialNumber(1) == object())
 
@@ -108,7 +112,8 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_neForeignType(self):
         """
-        != comparison of L{SerialNumber} with a non-L{SerialNumber} instance raises L{TypeError}.
+        != comparison of L{SerialNumber} with a non-L{SerialNumber} instance
+        raises L{TypeError}.
         """
         self.assertRaises(TypeError, lambda: SerialNumber(1) != object())
 
@@ -123,8 +128,8 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_leForeignType(self):
         """
-        <= comparison of L{SerialNumber} with a non-L{SerialNumber} instance raises
-        L{TypeError}.
+        <= comparison of L{SerialNumber} with a non-L{SerialNumber} instance
+        raises L{TypeError}.
         """
         self.assertRaises(TypeError, lambda: SerialNumber(1) <= object())
 
@@ -184,14 +189,16 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_addForeignType(self):
         """
-        Addition of L{SerialNumber} with a non-L{SerialNumber} instance raises L{TypeError}.
+        Addition of L{SerialNumber} with a non-L{SerialNumber} instance raises
+        L{TypeError}.
         """
         self.assertRaises(TypeError, lambda: SerialNumber(1) + object())
 
 
     def test_addOutOfRangeHigh(self):
         """
-        L{SerialNumber} cannot be added with other SerialNumber values larger than C{_maxAdd}.
+        L{SerialNumber} cannot be added with other SerialNumber values larger
+        than C{_maxAdd}.
         """
         maxAdd = SerialNumber(1)._maxAdd
         self.assertRaises(
@@ -201,8 +208,8 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_maxVal(self):
         """
-        L{SerialNumber.__add__} returns a wrapped value when s1 plus the s2 would result
-        in a value greater than the C{maxVal}.
+        L{SerialNumber.__add__} returns a wrapped value when s1 plus the s2
+        would result in a value greater than the C{maxVal}.
         """
         s = SerialNumber(1)
         maxVal = s._halfRing + s._halfRing - 1
@@ -213,9 +220,9 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_fromRFC4034DateString(self):
         """
-        L{SerialNumber.fromRFC4034DateString} accepts a datetime string argument of the
-        form 'YYYYMMDDhhmmss' and returns an L{SerialNumber} instance whose value is the
-        unix timestamp corresponding to that UTC date.
+        L{SerialNumber.fromRFC4034DateString} accepts a datetime string argument
+        of the form 'YYYYMMDDhhmmss' and returns an L{SerialNumber} instance
+        whose value is the unix timestamp corresponding to that UTC date.
         """
         self.assertEqual(
             SerialNumber(1325376000),
@@ -225,8 +232,8 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_toRFC4034DateString(self):
         """
-        L{DateSerialNumber.toRFC4034DateString} interprets the current value as a unix
-        timestamp and returns a date string representation of that date.
+        L{DateSerialNumber.toRFC4034DateString} interprets the current value as
+        a unix timestamp and returns a date string representation of that date.
         """
         self.assertEqual(
             '20120101000000',
@@ -236,8 +243,8 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_unixEpoch(self):
         """
-        L{SerialNumber.toRFC4034DateString} stores 32bit timestamps relative to the UNIX
-        epoch.
+        L{SerialNumber.toRFC4034DateString} stores 32bit timestamps relative to
+        the UNIX epoch.
         """
         self.assertEqual(
             SerialNumber(0).toRFC4034DateString(),
@@ -257,8 +264,8 @@ class SerialNumberTests(unittest.TestCase):
 
     def test_Y2038Problem(self):
         """
-        L{SerialNumber} raises ArithmeticError when used to add dates more than 68 years
-        in the future.
+        L{SerialNumber} raises ArithmeticError when used to add dates more than
+        68 years in the future.
         """
         maxAddTime = calendar.timegm(
             datetime(2038, 1, 19, 3, 14, 7).utctimetuple())
@@ -276,7 +283,8 @@ class SerialNumberTests(unittest.TestCase):
 
 def assertUndefinedComparison(testCase, s1, s2):
     """
-    A custom assertion for L{SerialNumber} values that cannot be meaningfully compared.
+    A custom assertion for L{SerialNumber} values that cannot be meaningfully
+    compared.
 
     "Note that there are some pairs of values s1 and s2 for which s1 is not
     equal to s2, but for which s1 is neither greater than, nor less than, s2.
@@ -384,9 +392,12 @@ class SerialNumber8BitTests(unittest.TestCase):
         Addition is as expected in this space, for example: 255+1 == 0,
         100+100 == 200, and 200+100 == 44.
         """
-        self.assertEqual(serialNumber8(255) + serialNumber8(1), serialNumber8(0))
-        self.assertEqual(serialNumber8(100) + serialNumber8(100), serialNumber8(200))
-        self.assertEqual(serialNumber8(200) + serialNumber8(100), serialNumber8(44))
+        self.assertEqual(
+            serialNumber8(255) + serialNumber8(1), serialNumber8(0))
+        self.assertEqual(
+            serialNumber8(100) + serialNumber8(100), serialNumber8(200))
+        self.assertEqual(
+            serialNumber8(200) + serialNumber8(100), serialNumber8(44))
 
 
     def test_gt(self):
@@ -414,8 +425,11 @@ class SerialNumber8BitTests(unittest.TestCase):
         cause surprising errors, or be useful as it is the only defined way to
         actually cause a serial number to decrease.
         """
-        self.assertTrue(serialNumber8(100) + serialNumber8(100) > serialNumber8(100))
-        self.assertTrue(serialNumber8(100) + serialNumber8(100) + serialNumber8(100) < serialNumber8(100))
+        self.assertTrue(
+            serialNumber8(100) + serialNumber8(100) > serialNumber8(100))
+        self.assertTrue(
+            serialNumber8(100) + serialNumber8(100) + serialNumber8(100)
+            < serialNumber8(100))
 
 
     def test_undefined(self):

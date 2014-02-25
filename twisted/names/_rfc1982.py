@@ -42,12 +42,13 @@ class SerialNumber(FancyStrMixin, object):
     @ivar _serialBits: See C{serialBits} of L{__init__}.
     @ivar _number: See C{number} of L{__init__}.
     @ivar _modulo: The value at which wrapping will occur.
-    @ivar _halfRing: Half C{_modulo}. If another L{SerialNumber} value is larger than
-        this, it would lead to a wrapped value which is larger than the first
-        and comparisons are therefore ambiguous.
-    @ivar _maxAdd: Half C{_modulo} plus 1. If another L{SerialNumber} value is larger
+    @ivar _halfRing: Half C{_modulo}. If another L{SerialNumber} value is larger
         than this, it would lead to a wrapped value which is larger than the
-        first. Comparisons with the original value would therefore be ambiguous.
+        first and comparisons are therefore ambiguous.
+    @ivar _maxAdd: Half C{_modulo} plus 1. If another L{SerialNumber} value is
+        larger than this, it would lead to a wrapped value which is larger than
+        the first. Comparisons with the original value would therefore be
+        ambiguous.
     """
 
     showAttributes = (
@@ -78,8 +79,8 @@ class SerialNumber(FancyStrMixin, object):
     def _convertOther(self, other):
         """
         Check that a foreign object is suitable for use in the comparison or
-        arithmetic magic methods of this L{SerialNumber} instance. Raise L{TypeError} if
-        not.
+        arithmetic magic methods of this L{SerialNumber} instance. Raise
+        L{TypeError} if not.
 
         @param other: The foreign L{object} to be checked.
         @return: C{other} after compatibility checks and possible coercion.
@@ -168,7 +169,8 @@ class SerialNumber(FancyStrMixin, object):
 
     def __le__(self, other):
         """
-        Allow I{less than or equal} comparison with another L{SerialNumber} instance.
+        Allow I{less than or equal} comparison with another L{SerialNumber}
+        instance.
 
         @type other: L{SerialNumber}
         @rtype: L{bool}
@@ -179,7 +181,8 @@ class SerialNumber(FancyStrMixin, object):
 
     def __ge__(self, other):
         """
-        Allow I{greater than or equal} comparison with another L{SerialNumber} instance.
+        Allow I{greater than or equal} comparison with another L{SerialNumber}
+        instance.
 
         @type other: L{SerialNumber}
         @rtype: L{bool}
@@ -236,9 +239,9 @@ class SerialNumber(FancyStrMixin, object):
     @classmethod
     def fromRFC4034DateString(cls, utcDateString):
         """
-        Create an L{SerialNumber} instance from a date string in format 'YYYYMMDDHHMMSS'
-        described in
-        U{RFC4034 3.2<https://tools.ietf.org/html/rfc4034#section-3.2>}.
+        Create an L{SerialNumber} instance from a date string in format
+        'YYYYMMDDHHMMSS' described in U{RFC4034
+        3.2<https://tools.ietf.org/html/rfc4034#section-3.2>}.
 
         The L{SerialNumber} instance stores the date as a 32bit UNIX timestamp.
 
@@ -248,8 +251,8 @@ class SerialNumber(FancyStrMixin, object):
             which will be converted to seconds since the UNIX epoch.
         @type utcDateString: L{unicode}
 
-        @return: An L{SerialNumber} instance containing the supplied date as a 32bit
-            UNIX timestamp.
+        @return: An L{SerialNumber} instance containing the supplied date as a
+            32bit UNIX timestamp.
         """
         parsedDate = datetime.strptime(utcDateString, RFC4034_TIME_FORMAT)
         secondsSinceEpoch = calendar.timegm(parsedDate.utctimetuple())
