@@ -213,10 +213,10 @@ class IPump(Interface):
                          a fount
                       +----+--------+               +-----  a
                      / +---+------+ | | data flow  / +----  fount
-                    / /           | | v           / /
+         a tube --->/ /           | | v           / /
                    /o+---O a pump | |            /o+---O a pump
                   / /             | |  a drain  / /
-        a     ---+ /              | +----+-----+ /
+        a     ---+ /              | +----+-----+ /<--- a tube
         drain ----+               +------+------+
 
               =========> direction of flow =========>
