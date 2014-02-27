@@ -4,8 +4,7 @@
 #
 from twisted.trial import unittest
 
-from twisted.internet import protocol, reactor, error
-from twisted.python import failure
+from twisted.internet import protocol
 from twisted.pair import rawudp
 
 class MyProtocol(protocol.DatagramProtocol):
