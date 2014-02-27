@@ -18,7 +18,7 @@ What you should already know
 
 - Python :-)
 - How to write a simple Twisted Server (see :doc:`this tutorial <servers>` to learn how)
-- Familiarity with using database interfaces (see `the documentation for DBAPI 2.0 <http://www.python.org/dev/peps/pep-0249/>`_ or this `article <http://www.amk.ca/python/writing/DB-API.html>`_ by Andrew Kuchling)
+- Familiarity with using database interfaces (see `the documentation for DBAPI 2.0 <http://www.python.org/dev/peps/pep-0249/>`_)
 
 
 Quick Overview
