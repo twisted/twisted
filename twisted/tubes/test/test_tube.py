@@ -373,6 +373,7 @@ class TubeTest(TestCase):
         any other invocations of L{_TubeFount.flowTo}.
         """
         tubeFount = self.ff.flowTo(self.tubeDrain)
+        self.assertEquals(tubeFount.drain, None)
         tubeFount.flowTo(None)
 
 
