@@ -121,14 +121,14 @@ Here is code that will run the QOTD server discussed earlier::
 
 In this example, I create a protocol ``Factory``.
 I want to tell this factory that its job is to build QOTD protocol instances, so I set its ``buildProtocol`` method to return instances of the QOTD class.
-Then, I want to listen on a TCP port, so I make a ``TCP4ServerEndpoint`` to identify the port that I want to bind to, and then pass the factory I just created to its ``listen`` method.
+Then, I want to listen on a TCP port, so I make a :api:`twisted.internet.endpoints.TCP4ServerEndpoint <TCP4ServerEndpoint>` to identify the port that I want to bind to, and then pass the factory I just created to its ``listen`` method.
 
-``endpoint.listen`` tells the reactor to handle connections to the endpoint's address using a particular protocol, but the reactor needs to be *running* in order for it to do anything.
+``endpoint.listen()`` tells the reactor to handle connections to the endpoint's address using a particular protocol, but the reactor needs to be *running* in order for it to do anything.
 ``reactor.run()`` starts the reactor and then waits forever for connections to arrive on the port you've specified.
-
-You can stop the reactor by hitting Control-C in a terminal or calling ``reactor.stop``.
+You can stop the reactor by hitting Control-C in a terminal or calling ``reactor.stop()``.
 
 For more information on different ways you can listen for incoming connections, see :doc:`the documentation for the endpoints API <endpoints>`.
+For more information on using the reactor, see :doc:`the reactor overview <reactor-basics>`.
 
 
 Helper Protocols
@@ -136,7 +136,7 @@ Helper Protocols
 
 Many protocols build upon similar lower-level abstractions.
 
-Many popular internet protocols are line-based, containing text data terminated by line breaks (commonly CR-LF), rather than containing straight raw data.
+For example, many popular internet protocols are line-based, containing text data terminated by line breaks (commonly CR-LF), rather than containing straight raw data.
 However, quite a few protocols are mixed - they have line-based sections and then raw data sections.
 Examples include HTTP/1.1 and the Freenet protocol.
 
