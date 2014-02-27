@@ -15,6 +15,7 @@ from unittest import TestCase
 
 from twisted import _checkRequirements
 from twisted.python.compat import _PY3
+from twisted.trial import unittest
 
 
 # This is somewhat generally useful and should probably be part of a public API
@@ -676,3 +677,20 @@ class RealZopeInterfaceTests(TestCase, ZopeInterfaceTestsMixin):
             else:
                 raise SkipTest("Mismatched system version of zope.interface")
 
+
+
+class LoreDeprecationTests(unittest.TestCase):
+    """
+    Contains tests to make sure Lore is marked as deprecated.
+    """
+    def test_loreDeprecation(self):
+        """
+        L{twisted.lore} is deprecated since Twisted 14.0.
+        """
+        from twisted import lore
+        warningsShown = self.flushWarnings([self.test_loreDeprecation])
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+            "twisted.lore was deprecated in Twisted 14.0.0: "
+            "Use Sphinx instead.",
+            warningsShown[0]['message'])
