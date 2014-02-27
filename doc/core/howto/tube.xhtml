@@ -8,9 +8,16 @@
 <body>
 <h1>An Introduction to Tubes</h1>
 
+<h2>Quick Description</h2>
 <p>
-All programs transform input to output.
-In the context of doing some blocking calculation, transforming input to output just looks like this:
+The <code class="API">twisted.tubes</code> package implements a set of interfaces and a system for automatic propagation and manual management of data-agnostic flow-control, and composable processing of typed data.
+However, unless you've had experience writing distributed systems before, that description might not make sense.
+If that's the case, this next section should explain what <code class="API">twisted.tubes</code> is, and why you would want to use it.
+</p>
+
+<h2>Long Description</h2>
+<p>
+All programs transform input to output.  Here's a simple example:
 </p>
 
 <pre class="python">
@@ -20,8 +27,18 @@ def process(input):
 </pre>
 
 <p>
-However, when doing I/O with Twisted, not every input corresponds to exactly one output, so we can't always write synchronous functions like <code>process</code>.
-Sometimes we need to wait for more input before we can generate some output; sometimes one piece of input will generate multiple outputs.
+Writing programs like this is simple, but often useless, because this structure makes some assumptions which are rarely true.
+<code>process</code> (and functions like it) assume that…
+<ul>
+    <li>…each input corresponds to only one output; in a <em>useful</em> program, one input may result in zero, one, or more outputs.</li>
+    <li>…the input can be computed from stuff that's already in memory; in a <em>useful</em> program, you will need to load data from elsewhere.</li>
+    <li>…simply returning the value is enough to send it on to the relevant output; in a <em>useful</em> program, one almost always needs to call a specific API to send output somewhere.</li>
+    <li>…the system waiting for output is always ready to accept more; in a <em>useful</em> program, buffer sizes are limited, networks are slow, and you may have to wait before producing more output.</li>
+</ul>
+</p>
+
+<p>
+The <code>twisted.tubes</code> package exists to help you create <em>useful</em> programs, by providing both a structure that handles many of these issues when they can be addressed automatically, and tools to help you manage them when you need to deal with them manually.
 </p>
 
 <p>
@@ -33,20 +50,18 @@ If your program receives <code>b"hello\r"</code>, and then <em>later</em> receiv
 
 <p>
 Also, when dealing with streams of data from networks, it's common to want to send data somewhere as well as receiving it from somewhere.
-Even if your program is concerned with converting a sequence bytes into a sequence of lines, it needs to be aware of the fact that its output buffer may be full, and unprepared to receive any more lines.
-For example, the line-splitting code above might be used in a proxy that relays output from a cloud server with a very fast datacenter uplink, to computers on very slow consumer networks.
-The cloud server's output will easily outpace a home network's input, which means that if the line parser is going as fast as it can, lines will pile up in outgoing buffers while waiting to be sent out, and consume all of the proxy's memory.
+Even if your all that your program is concerned with is converting a sequence bytes into a sequence of lines, it still needs to be aware of the fact that its output buffer may be full, and unprepared to receive any more lines.
+For example, the line-splitting code above might be used in a proxy that relays output from a server with a very fast, low-latency uplink, to client computers on very slow high-latency networks.
+The (fast) server's output will easily outpace a (slow) client's input, which means that if the line parser is going as fast as it can, lines will pile up in outgoing buffers while waiting to be sent out, and consume all of the proxy's memory.
 When this happens, the line parsing program needs to tell <em>its</em> input to slow down, by indicating that it should no longer produce bytes, until the program consuming the line parser's output is ready again.
 </p>
 
 <p>
-The <code>twisted.tubes</code> package contains several interfaces and utilities for passing inputs to outputs, buffering intermediary data, and dealing with flow-control.
-<code>tubes</code> will solve some of the problems above for you automatically, and for those problems you need to solve yourself, it will provide common abstractions that make solving them easier.
-This document will teach you how to use the <code>twisted.tubes</code> package.
+That's where the <code>twisted.tubes</code> package comes in; the rest of this document will teach you how to use the them.
 </p>
 
 <div class="note">
-If you've used Twisted before, you may notice that half of this is exactly what <code class="API" base="twisted.protocols.basic">LineReceiver</code> does, and that there are lots of related classes that can do similar things for other message types.
+If you've used Twisted before, you may notice that half of the line-splitting above is exactly what <code class="API" base="twisted.protocols.basic">LineReceiver</code> does, and that there are lots of related classes that can do similar things for other message types.
 The other half is handled by <a href="producers.xhtml"><code>IProducer</code> and <code>IConsumer</code></a>.
 <code>tubes</code> is a <em>newer</em> interface than those things, and you will find it somewhat improved.
 If you're writing new code, you should generally prefer to use <code>tubes</code>.
@@ -63,13 +78,14 @@ There are three ways in which <code>tubes</code> is better than using producers,
     </li>
     <li>
     <code>twisted.tubes</code> <em>handles flow control automatically</em>.
-    The manual flow-control notifications provided by <code>IProducer</code> and <code>IConsumer</code> are still used internally in <code>tubes</code> to hook up to <code>twisted.internet</code>, but the interfaces defined in <code>tubes</code> itself are considerably more flexible, as they allow you to hook together chains of arbitrary length, as opposed to just getting buffer notifications for a single connection.
+    The manual flow-control notifications provided by <code>IProducer</code> and <code>IConsumer</code> are still used internally in <code>tubes</code> to hook up to <code>twisted.internet</code>, but the interfaces defined in <code>tubes</code> itself are considerably more flexible, as they allow you to hook together chains of arbitrary length, as opposed to just getting buffer notifications for a single connection to a single object.
     </li>
 </ol>
 </div>
 
+<h2>Tutorial</h2>
 <p>
-Before we get into the interesting applications of the API, let's start with the simplest example; the simplest way to process any data is to avoid processing it entirely, to pass input straight on to output.
+Let's start with the simplest example; the simplest way to process any data is to avoid processing it entirely, to pass input straight on to output.
 In a networking context, that means an echo server.
 Here's a complete program which uses interfaces defined by <code>twisted.tubes</code> to send its input straight on to its output:
 </p>
