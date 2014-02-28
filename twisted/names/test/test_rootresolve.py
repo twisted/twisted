@@ -187,24 +187,26 @@ class RootResolverTests(TestCase):
         # And a DNS packet sent.
         [(packet, address)] = transport._sentPackets
 
-        msg = Message()
-        msg.fromStr(packet)
+        message = Message()
+        message.fromStr(packet)
 
         # It should be a query with the parameters used above.
-        self.assertEqual(msg.queries, [Query(b'foo.example.com', A, IN)])
-        self.assertEqual(msg.answers, [])
-        self.assertEqual(msg.authority, [])
-        self.assertEqual(msg.additional, [])
+        self.assertEqual(message.queries, [Query(b'foo.example.com', A, IN)])
+        self.assertEqual(message.answers, [])
+        self.assertEqual(message.authority, [])
+        self.assertEqual(message.additional, [])
 
         response = []
         d.addCallback(response.append)
         self.assertEqual(response, [])
 
         # Once a reply is received, the Deferred should fire.
-        del msg.queries[:]
-        msg.answer = 1
-        msg.answers.append(RRHeader(b'foo.example.com', payload=Record_A('5.8.13.21')))
-        transport._protocol.datagramReceived(msg.toStr(), ('1.1.2.3', 1053))
+        del message.queries[:]
+        message.answer = 1
+        message.answers.append(RRHeader(
+            b'foo.example.com', payload=Record_A('5.8.13.21')))
+        transport._protocol.datagramReceived(
+            message.toStr(), ('1.1.2.3', 1053))
         return response[0]
 
 
