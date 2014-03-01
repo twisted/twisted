@@ -12,6 +12,7 @@ import sys
 from types import ModuleType, FunctionType
 
 from twisted import _checkRequirements
+from twisted.python import reflect
 from twisted.python.compat import _PY3
 from twisted.trial.unittest import TestCase
 
@@ -685,10 +686,9 @@ class LoreDeprecationTests(TestCase):
         """
         L{twisted.lore} is deprecated since Twisted 14.0.
         """
-        __import__("twisted.lore")
-        warningsShown = self.flushWarnings([self.test_loreDeprecation])
+        reflect.namedAny("twisted.lore")
+        warningsShown = self.flushWarnings()
         self.assertEqual(1, len(warningsShown))
         self.assertEqual(
             "twisted.lore was deprecated in Twisted 14.0.0: "
-            "Use Sphinx instead.",
-            warningsShown[0]['message'])
+            "Use Sphinx instead.", warningsShown[0]['message'])
