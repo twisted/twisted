@@ -111,8 +111,8 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
 
     def test_adjustingWhenPoolStopped(self):
         """
-        Making sure that a stopped pool doesn't start new workers when the size
-        is adjusted.
+        L{ThreadPool.adjustPoolsize} only modifies the pool size and does not
+        start new workers while the pool is not running.
         """
         pool = threadpool.ThreadPool(0, 5)
         pool.start()

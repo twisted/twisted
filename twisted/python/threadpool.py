@@ -33,6 +33,11 @@ class ThreadPool:
     L{callInThread} and L{stop} should only be called from
     a single thread, unless you make a subclass where L{stop} and
     L{_startSomeWorkers} are synchronized.
+
+    @ivar started: Whether or not the thread pool is currently running.
+    @type started: L{bool}
+    @ivar threads: List of workers currently running in this thread pool.
+    @type threads: L{list}
     """
     min = 5
     max = 20
