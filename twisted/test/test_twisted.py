@@ -11,11 +11,9 @@ from __future__ import division, absolute_import
 import sys
 from types import ModuleType, FunctionType
 
-from unittest import TestCase
-
 from twisted import _checkRequirements
 from twisted.python.compat import _PY3
-from twisted.trial import unittest
+from twisted.trial.unittest import TestCase
 
 
 # This is somewhat generally useful and should probably be part of a public API
@@ -679,7 +677,7 @@ class RealZopeInterfaceTests(TestCase, ZopeInterfaceTestsMixin):
 
 
 
-class LoreDeprecationTests(unittest.TestCase):
+class LoreDeprecationTests(TestCase):
     """
     Contains tests to make sure Lore is marked as deprecated.
     """
@@ -687,8 +685,7 @@ class LoreDeprecationTests(unittest.TestCase):
         """
         L{twisted.lore} is deprecated since Twisted 14.0.
         """
-        from twisted import lore
-        lore # to shut up pyflakes
+        __import__("twisted.lore")
         warningsShown = self.flushWarnings([self.test_loreDeprecation])
         self.assertEqual(1, len(warningsShown))
         self.assertEqual(

@@ -11,5 +11,14 @@ migrating from Lore.
 Maintainer: Andrew Bennetts
 """
 
+# TODO
+# Abstract
+# Bibliography
+# Index
+# Allow non-web image formats (EPS, specifically)
+# Allow pickle output and input to minimize parses
+# Numbered headers
+# Navigational aides
+
 from twisted.lore._version import version
 __version__ = version.short()
