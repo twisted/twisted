@@ -109,6 +109,18 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
         self.assertEqual(len(pool.threads), 3)
 
 
+    def test_adjustingWhenPoolStopped(self):
+        """
+        L{ThreadPool.adjustPoolsize} only modifies the pool size and does not
+        start new workers while the pool is not running.
+        """
+        pool = threadpool.ThreadPool(0, 5)
+        pool.start()
+        pool.stop()
+        pool.adjustPoolsize(2)
+        self.assertEqual(len(pool.threads), 0)
+
+
     def test_threadCreationArguments(self):
         """
         Test that creating threads in the threadpool with application-level
