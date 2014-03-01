@@ -11,10 +11,10 @@ from __future__ import division, absolute_import
 import sys
 from types import ModuleType, FunctionType
 
-from unittest import TestCase
-
 from twisted import _checkRequirements
+from twisted.python import reflect
 from twisted.python.compat import _PY3
+from twisted.trial.unittest import TestCase
 
 
 # This is somewhat generally useful and should probably be part of a public API
@@ -676,3 +676,19 @@ class RealZopeInterfaceTests(TestCase, ZopeInterfaceTestsMixin):
             else:
                 raise SkipTest("Mismatched system version of zope.interface")
 
+
+
+class LoreDeprecationTests(TestCase):
+    """
+    Contains tests to make sure Lore is marked as deprecated.
+    """
+    def test_loreDeprecation(self):
+        """
+        L{twisted.lore} is deprecated since Twisted 14.0.
+        """
+        reflect.namedAny("twisted.lore")
+        warningsShown = self.flushWarnings()
+        self.assertEqual(1, len(warningsShown))
+        self.assertEqual(
+            "twisted.lore was deprecated in Twisted 14.0.0: "
+            "Use Sphinx instead.", warningsShown[0]['message'])
