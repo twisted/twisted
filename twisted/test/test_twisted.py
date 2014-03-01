@@ -688,6 +688,7 @@ class LoreDeprecationTests(unittest.TestCase):
         L{twisted.lore} is deprecated since Twisted 14.0.
         """
         from twisted import lore
+        lore # to shut up pyflakes
         warningsShown = self.flushWarnings([self.test_loreDeprecation])
         self.assertEqual(1, len(warningsShown))
         self.assertEqual(
