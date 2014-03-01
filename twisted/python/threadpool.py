@@ -219,6 +219,7 @@ class ThreadPool:
         Shutdown the threads in the threadpool.
         """
         self.joined = True
+        self.started = False
         threads = copy.copy(self.threads)
         while self.workers:
             self.q.put(WorkerStop)
