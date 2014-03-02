@@ -338,25 +338,34 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
     def _tryHandshake(self):
         """
-        Attempts to handshake.  OpenSSL wants us to keep trying to
-        handshake until either it works or fails (as opposed to needing
-        to do I/O).
+        Attempt to make progress on the handshake.
+
+        This tells OpenSSL to try to do some handshake work and then flushes
+        the send buffer if necessary.
         """
         while True:
             try:
                 self._tlsConnection.do_handshake()
             except WantReadError:
-                self._flushSendBIO()  # do_handshake may have queued up a send
-                return
-            except WantWriteError:
+                # do_handshake may have written to the send buffer and now be
+                # waiting for a reply.
                 self._flushSendBIO()
-                # And try again immediately
+            except WantWriteError:
+                # do_handshake tried to write to the send buffer but found
+                # there was no room to do so.  Make some room and then repeat
+                # the loop so it has a chance to write what it wanted to write.
+                self._flushSendBIO()
+                # And give it that chance now.
+                continue
             except Error:
                 self._tlsShutdownFinished(Failure())
-                return
             else:
                 self._handshakeFinished(None)
-                return
+
+            # Either the handshake is done or we encountered an obstacle that
+            # requires some bytes to arrive over the network.  Stop trying to
+            # handshake.
+            break
 
 
     def _handshakeFinished(self, error):
