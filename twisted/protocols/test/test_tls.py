@@ -32,6 +32,7 @@ from twisted.python.failure import Failure
 from twisted.python import log
 from twisted.internet.interfaces import ISystemHandle, ISSLTransport
 from twisted.internet.interfaces import IPushProducer
+from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.protocol import Protocol, ClientFactory, ServerFactory
@@ -324,8 +325,9 @@ class TLSMemoryBIOTests(TestCase):
 
     def test_handshakeInterrupted(self):
         """
-        L{TLSMemoryBIOProtocol.whenHandshakeDone} should correctly handle
-        a failure in the middle of a handshake.
+        If the connection is lost in the middle of the TLS handshake then the
+        L{Deferred} returned by L{TLSMemoryBIOProtocol.whenHandshakeDone} fires
+        with a L{Failure}.
         """
         clientFactory = ClientFactory()
         clientFactory.protocol = Protocol
@@ -346,26 +348,24 @@ class TLSMemoryBIOTests(TestCase):
 
     def test_notifyAfterSuccessfulHandshake(self):
         """
-        Calling L{TLSMemoryBIOProtocol.whenHandshakeDone} after a
-        successful handshake should work.
+        If L{TLSMemoryBIOProtocol.whenHandshakeDone} is called after the
+        handshake has already completed then it returns a L{Deferred} that
+        fires immediately.
         """
-        tlsClient, tlsServer, handshakeDeferred, _ = self.handshakeProtocols()
+        tlsClient, tlsServer, handshaking, _ = self.handshakeProtocols()
 
-        result = Deferred()
-
-        def check(_):
-            d = tlsClient.whenHandshakeDone()
-            d.addCallback(result.callback)
-            d.addErrback(result.errback)
-
-        handshakeDeferred.addCallback(check)
-        return result
+        def check(ignored):
+            self.assertIs(
+                None, self.successResultOf(tlsClient.whenHandshakeDone()))
+        checking = handshaking.addCallback(check)
+        return checking
 
 
     def test_notifyAfterFailedHandshake(self):
         """
-        Calling L{TLSMemoryBIOProtocol.whenHandshakeDone} after a
-        failed handshake should work.
+        If L{TLSMemoryBIOProtocol.whenHandshakeDone} is called after the
+        handshake has already failed then it returns a L{Deferred} that fires
+        immediately.
         """
         clientFactory = ClientFactory()
         clientFactory.protocol = Protocol
@@ -387,24 +387,17 @@ class TLSMemoryBIOTests(TestCase):
             serverContextFactory, False, serverFactory)
         sslServerProtocol = wrapperFactory.buildProtocol(None)
 
-        connectionDeferred = loopbackAsync(sslServerProtocol, sslClientProtocol)
+        loopbackAsync(sslServerProtocol, sslClientProtocol)
 
-        result = Deferred()
+        handshaking = sslClientProtocol.whenHandshakeDone()
+        self.assertFailure(handshaking, Exception)
 
-        def fail(_):
-            result.errback(False)
-
-        def check(reason):
-            d = sslClientProtocol.whenHandshakeDone()
-            if not d.called:
-                result.errback(Exception('notification should be called'))
-                return
-            d.addCallback(fail)
-            d.addErrback(lambda _: result.callback(None))
-
-        sslClientProtocol.whenHandshakeDone().addCallbacks(fail, check)
-
-        return gatherResults([connectionDeferred, result])
+        def check(exception):
+            handshaking = sslClientProtocol.whenHandshakeDone()
+            secondException = self.failureResultOf(handshaking).value
+            self.assertEqual(exception, secondException)
+        checking = handshaking.addCallback(check)
+        return checking
 
 
     def test_handshakeAfterConnectionLost(self):
@@ -805,13 +798,15 @@ class TLSMemoryBIOTests(TestCase):
         return handshakeDeferred
 
 
-    def _test_connectionLostOnlyAfterUnderlyingCloses(self, handshake_ok):
+    def _test_connectionLostOnlyAfterUnderlyingCloses(self, handshake):
         """
-        The user protocol's connectionLost is only called when transport
-        underlying TLS is disconnected.
+        Assert that the user protocol's connectionLost is only called when
+        transport underlying TLS connection has been disconnected.
 
-        @param handshake_ok: L{True} if the handshake should succeed; else
-                             L{False}.
+        @param handshake: If L{True} then the TLS handshake will succeed before
+            the underlying TLS connection is disconnected.  If C{False} then
+            the TLS handshake will fail before the underlying TLS connection is
+            disconnected.
         """
         class LostProtocol(Protocol):
             disconnected = None
@@ -824,34 +819,45 @@ class TLSMemoryBIOTests(TestCase):
         transport = StringTransport()
         tlsProtocol.makeConnection(transport)
 
-        # Pretend TLS shutdown finished cleanly; the underlying transport
-        # should be told to close, but the user protocol should not yet be
-        # notified:
-        if handshake_ok:
-            errmsg = "ono"
+        if handshake:
+            # Pretend TLS shutdown finished cleanly; the underlying transport
+            # should be told to close, but the user protocol should not yet be
+            # notified:
+            expected = ConnectionDone
             tlsProtocol._tlsShutdownFinished(None)
         else:
-            errmsg = "handshake error"
-            tlsProtocol._tlsShutdownFinished(Failure(ConnectionLost(errmsg)))
+            # Pretend the TLS handshake failed.
+            expected = Error
+            tlsProtocol._tlsShutdownFinished(Failure(Error()))
+
+        # At this point the transport should have been told to disconnect ...
         self.assertEqual(transport.disconnecting, True)
+        # ... but the application shouldn't have been told that it is
+        # disconnected yet.
         self.assertEqual(protocol.disconnected, None)
 
         # Now close the underlying connection; the user protocol should be
         # notified with the given reason (since TLS closed cleanly):
-        tlsProtocol.connectionLost(Failure(ConnectionLost("ono")))
-        self.assertTrue(protocol.disconnected.check(ConnectionLost))
-        self.assertEqual(protocol.disconnected.value.args, (errmsg,))
+        tlsProtocol.connectionLost(Failure(CONNECTION_DONE))
+
+        self.assertTrue(protocol.disconnected.check(expected))
 
 
     def test_connectionLostOnlyAfterUnderlyingClosesHandshakeOK(self):
         """
-        If the handshake succeeds and then the underlying connection closes,
-        the underlying failure should be propagated.
+        If the handshake succeeds and then the underlying connection closes
+        then the reason passed to the application protocol is the reason for the
+        underlying transport closing.
         """
         return self._test_connectionLostOnlyAfterUnderlyingCloses(True)
 
 
     def test_connectionLostOnlyAfterUnderlyingClosesHandshakeFailed(self):
+        """
+        If the handshake fails and then the underlying connection closes then
+        the reason passed to the application protocol is the reason for the
+        handshake failure.
+        """
         return self._test_connectionLostOnlyAfterUnderlyingCloses(False)
 
 
