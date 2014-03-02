@@ -244,8 +244,9 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         since it has a protocol which it has already called C{makeConnection}
         on, and which has no interest in a new transport.  See #3821.
 
-    @ivar _handshaking: A flag indicating whether or not the handshake is
-        complete (C{True}) or not (C{False}).
+    @ivar _handshaking: C{True} if the handshake has yet to be completed,
+        C{False} if it has completed.
+    @type _handshaking: L{bool}
 
     @ivar _handshakeError: If the handshake failed, then this will store
         the reason (a L{twisted.python.failure.Failure} object).
@@ -382,10 +383,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             deferreds = self._handshakeDeferreds
             self._handshakeDeferreds = None
             for d in deferreds:
-                if error is None:
-                    d.callback(None)
-                else:
-                    d.errback(error)
+                d.callback(error)
 
 
     def _flushSendBIO(self):

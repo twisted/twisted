@@ -32,7 +32,7 @@ from twisted.python.failure import Failure
 from twisted.python import log
 from twisted.internet.interfaces import ISystemHandle, ISSLTransport
 from twisted.internet.interfaces import IPushProducer
-from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
+from twisted.internet.main import CONNECTION_DONE
 from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.protocol import Protocol, ClientFactory, ServerFactory
