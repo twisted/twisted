@@ -325,6 +325,9 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
 
     def whenHandshakeDone(self):
+        """
+        See L{twisted.internet.interfaces.ISSLTransport.whenHandshakeDone}.
+        """
         d = defer.Deferred()
         if self._handshakeDone:
             if self._handshakeError is None:
@@ -351,25 +354,32 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             except WantWriteError:
                 self._flushSendBIO()
                 # And try again immediately
-            except Error as e:
+            except Error:
                 self._tlsShutdownFinished(Failure())
                 return
             else:
-                self._handshakeSucceeded()
+                self._handshakeFinished(None)
                 return
 
 
-    def _handshakeSucceeded(self):
+    def _handshakeFinished(self, error):
         """
         Mark the handshake done and notify everyone.  It's okay to call
         this more than once.
+
+        @param error: A L{twisted.python.failure.Failure} object to indicate
+                      failure or None to indicate success.
         """
         if not self._handshakeDone:
             self._handshakeDone = True
+            self._handshakeError = error
             deferreds = self._handshakeDeferreds
             self._handshakeDeferreds = None
             for d in deferreds:
-                d.callback(None)
+                if error is None:
+                    d.callback(None)
+                else:
+                    d.errback(error)
 
 
     def _flushSendBIO(self):
@@ -487,24 +497,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         Called when TLS connection has gone away; tell underlying transport to
         disconnect.
         """
-        if not self._handshakeDone:
-            # This is a handshake failure (either an explicit failure from
-            # OpenSSL or an implicit failure due to a dropped transport
-            # connection).
-            #
-            # Note: Some testcases evilly call _tlsShutdownFinished(None)
-            # before the handshake finishes.  This can't happen in real life
-            # (none of the call sites allow it), so it's okay that we'll
-            # crash if there's actually anyone waiting for notification
-            # of the handshake result.
-            self._handshakeDone = True
-            self._handshakeError = reason
-
-            deferreds = self._handshakeDeferreds
-            self._handshakeDeferreds = None
-            for d in deferreds:
-                d.errback(reason)
-
+        self._handshakeFinished(reason)
         self._reason = reason
         self._lostTLSConnection = True
         # Using loseConnection causes the application protocol's
@@ -601,7 +594,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             else:
                 # SSL_write can transparently complete a handshake.  If we
                 # get here, then we're done handshaking.
-                self._handshakeSucceeded()
+                self._handshakeFinished(None)
                 self._flushSendBIO()
                 alreadySent += sent
 

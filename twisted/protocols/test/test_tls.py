@@ -334,6 +334,29 @@ class TLSMemoryBIOTests(TestCase):
                 connectionDeferred])
 
 
+    def test_handshakeInterrupted(self):
+        """
+        L{TLSMemoryBIOProtocol.whenHandshakeDone} should correctly handle
+        a failure in the middle of a handshake.
+        """
+        clientConnectionLost = Deferred()
+        clientFactory = ClientFactory()
+        clientFactory.protocol = Protocol
+
+        clientContextFactory = TestContextFactory()
+        wrapperFactory = TLSMemoryBIOFactory(
+            clientContextFactory, True, clientFactory)
+        sslClientProtocol = wrapperFactory.buildProtocol(None)
+        handshakeDeferred = sslClientProtocol.whenHandshakeDone()
+
+        # The server will disconnect as soon as it receives some data.
+        sslServerProtocol = AccumulatingProtocol(1)
+
+        loopbackAsync(sslServerProtocol, sslClientProtocol)
+
+        return self.assertFailure(handshakeDeferred, Error)
+
+
     def test_notifyAfterSuccessfulHandshake(self):
         """
         Calling L{TLSMemoryBIOProtocol.whenHandshakeDone} after a
@@ -357,7 +380,6 @@ class TLSMemoryBIOTests(TestCase):
         Calling L{TLSMemoryBIOProtocol.whenHandshakeDone} after a
         failed handshake should work.
         """
-        clientConnectionLost = Deferred()
         clientFactory = ClientFactory()
         clientFactory.protocol = Protocol
 
@@ -366,7 +388,6 @@ class TLSMemoryBIOTests(TestCase):
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
-        serverConnectionLost = Deferred()
         serverFactory = ServerFactory()
         serverFactory.protocol = Protocol
 
@@ -427,7 +448,6 @@ class TLSMemoryBIOTests(TestCase):
         sslServerProtocol = wrapperFactory.buildProtocol(None)
 
         connectionDeferred = loopbackAsync(sslServerProtocol, sslClientProtocol)
-        result = Deferred()
 
         def checkSide(side):
             return self.assertFailure(side.whenHandshakeDone(), Error)
@@ -532,7 +552,6 @@ class TLSMemoryBIOTests(TestCase):
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
-        handshakeDeferred = sslClientProtocol.whenHandshakeDone()
 
         serverProtocol = AccumulatingProtocol(len(bytes))
         serverFactory = ServerFactory()
@@ -801,10 +820,13 @@ class TLSMemoryBIOTests(TestCase):
         return handshakeDeferred
 
 
-    def test_connectionLostOnlyAfterUnderlyingCloses(self):
+    def _test_connectionLostOnlyAfterUnderlyingCloses(self, handshake_ok):
         """
         The user protocol's connectionLost is only called when transport
         underlying TLS is disconnected.
+
+        @param handshake_ok: L{True} if the handshake should succeed; else
+                             L{False}.
         """
         class LostProtocol(Protocol):
             disconnected = None
@@ -820,7 +842,12 @@ class TLSMemoryBIOTests(TestCase):
         # Pretend TLS shutdown finished cleanly; the underlying transport
         # should be told to close, but the user protocol should not yet be
         # notified:
-        tlsProtocol._tlsShutdownFinished(None)
+        if handshake_ok:
+            errmsg = "ono"
+            tlsProtocol._tlsShutdownFinished(None)
+        else:
+            errmsg = "handshake error"
+            tlsProtocol._tlsShutdownFinished(Failure(ConnectionLost(errmsg)))
         self.assertEqual(transport.disconnecting, True)
         self.assertEqual(protocol.disconnected, None)
 
@@ -828,7 +855,19 @@ class TLSMemoryBIOTests(TestCase):
         # notified with the given reason (since TLS closed cleanly):
         tlsProtocol.connectionLost(Failure(ConnectionLost("ono")))
         self.assertTrue(protocol.disconnected.check(ConnectionLost))
-        self.assertEqual(protocol.disconnected.value.args, ("ono",))
+        self.assertEqual(protocol.disconnected.value.args, (errmsg,))
+
+
+    def test_connectionLostOnlyAfterUnderlyingClosesHandshakeOK(self):
+        """
+        If the handshake succeeds and then the underlying connection closes,
+        the underlying failure should be propagated.
+        """
+        return self._test_connectionLostOnlyAfterUnderlyingCloses(True)
+
+
+    def test_connectionLostOnlyAfterUnderlyingClosesHandshakeFailed(self):
+        return self._test_connectionLostOnlyAfterUnderlyingCloses(False)
 
 
     def test_loseConnectionTwice(self):
