@@ -244,7 +244,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         since it has a protocol which it has already called C{makeConnection}
         on, and which has no interest in a new transport.  See #3821.
 
-    @ivar _handshakeDone: A flag indicating whether or not the handshake is
+    @ivar _handshaking: A flag indicating whether or not the handshake is
         complete (C{True}) or not (C{False}).
 
     @ivar _handshakeError: If the handshake failed, then this will store
@@ -267,7 +267,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     """
 
     _reason = None
-    _handshakeDone = False
+    _handshaking = True
     _handshakeError = None
     _lostTLSConnection = False
     _writeBlockedOnRead = False
@@ -329,10 +329,10 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         See L{twisted.internet.interfaces.ISSLTransport.whenHandshakeDone}.
         """
         d = defer.Deferred()
-        if self._handshakeDone:
-            d.callback(self._handshakeError)
-        else:
+        if self._handshaking:
             self._handshakeDeferreds.append(d)
+        else:
+            d.callback(self._handshakeError)
         return d
 
 
@@ -376,8 +376,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         @param error: A L{twisted.python.failure.Failure} object to indicate
                       failure or None to indicate success.
         """
-        if not self._handshakeDone:
-            self._handshakeDone = True
+        if self._handshaking:
+            self._handshaking = False
             self._handshakeError = error
             deferreds = self._handshakeDeferreds
             self._handshakeDeferreds = None
@@ -413,9 +413,9 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         # SSL_read can transparently complete a handshake, but we can't
         # rely on it: if the handshake is done but there's no application
         # data, then SSL_read won't tell us.
-        if not self._handshakeDone:
+        if self._handshaking:
             self._tryHandshake()
-        if not self._handshakeDone:
+        if self._handshaking:
             return  # Save some effort: SSL_read can't possibly work
 
         # Keep trying this until an error indicates we should stop or we
