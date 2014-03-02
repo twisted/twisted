@@ -798,7 +798,7 @@ class TLSMemoryBIOTests(TestCase):
         return handshakeDeferred
 
 
-    def _test_connectionLostOnlyAfterUnderlyingCloses(self, handshake):
+    def _connectionLostOnlyAfterUnderlyingCloses(self, handshake):
         """
         Assert that the user protocol's connectionLost is only called when
         transport underlying TLS connection has been disconnected.
@@ -849,7 +849,7 @@ class TLSMemoryBIOTests(TestCase):
         then the reason passed to the application protocol is the reason for the
         underlying transport closing.
         """
-        return self._test_connectionLostOnlyAfterUnderlyingCloses(True)
+        return self._connectionLostOnlyAfterUnderlyingCloses(True)
 
 
     def test_connectionLostOnlyAfterUnderlyingClosesHandshakeFailed(self):
@@ -858,7 +858,7 @@ class TLSMemoryBIOTests(TestCase):
         the reason passed to the application protocol is the reason for the
         handshake failure.
         """
-        return self._test_connectionLostOnlyAfterUnderlyingCloses(False)
+        return self._connectionLostOnlyAfterUnderlyingCloses(False)
 
 
     def test_loseConnectionTwice(self):

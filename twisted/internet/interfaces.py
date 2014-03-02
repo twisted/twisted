@@ -2162,12 +2162,12 @@ class ISSLTransport(ITCPTransport):
 
     def whenHandshakeDone():
         """
-        Returns a Deferred that will complete when the initial handshake
-        is done and will errback if the handshake fails.  (Connection
-        loss during the handshake is considered to be a handshake failure.)
+        Returns a Deferred that will complete when the initial handshake is
+        done and will errback if the handshake fails.  (Connection loss during
+        the handshake is considered to be a handshake failure.)
 
-        If the handshake is already complete, then the returned Deferred
-        will already be complete.
+        If the handshake is already complete, then the returned Deferred will
+        already be complete.
         """
 
 

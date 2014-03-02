@@ -249,13 +249,12 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     @type _handshaking: L{bool}
 
     @ivar _handshakeError: If the handshake failed, then this will store
-        the reason (a L{twisted.python.failure.Failure} object).
-        Otherwise it will be C{None}.
+        the reason.  Otherwise it is C{None}.
+    @type _handshakeError: L{Failure} or L{NoneType}
 
-    @ivar _handshakeDeferreds: If the handshake is not done, then this
-        is a list of L{twisted.internet.defer.Deferred} instances to
-        be completed when the handshake finishes.  Once the handshake
-        is done, this is C{None}.
+    @ivar _handshakeDeferreds: If the handshake is not done then this is a list
+        of L{twisted.internet.defer.Deferred} instances to be completed when
+        the handshake finishes.  Once the handshake is done, this is C{None}.
 
     @ivar _reason: If an unexpected L{OpenSSL.SSL.Error} occurs which causes
         the connection to be lost, it is saved here.  If appropriate, this may
@@ -326,9 +325,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
 
     def whenHandshakeDone(self):
-        """
-        See L{twisted.internet.interfaces.ISSLTransport.whenHandshakeDone}.
-        """
         d = defer.Deferred()
         if self._handshaking:
             self._handshakeDeferreds.append(d)
@@ -600,8 +596,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
                 self._tlsShutdownFinished(Failure())
                 break
             else:
-                # SSL_write can transparently complete a handshake.  If we
-                # get here, then we're done handshaking.
+                # SSL_write can transparently complete a handshake.  If we get
+                # here, then we're done handshaking.
                 self._handshakeFinished(None)
                 self._flushSendBIO()
                 alreadySent += sent
