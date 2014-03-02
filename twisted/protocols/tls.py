@@ -330,10 +330,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         """
         d = defer.Deferred()
         if self._handshakeDone:
-            if self._handshakeError is None:
-                d.callback(None)
-            else:
-                d.errback(self._handshakeError)
+            d.callback(self._handshakeError)
         else:
             self._handshakeDeferreds.append(d)
         return d
