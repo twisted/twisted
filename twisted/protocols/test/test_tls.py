@@ -21,9 +21,9 @@ else:
     # Otherwise, the pyOpenSSL dependency must be satisfied, so all these
     # imports will work.
     from OpenSSL.crypto import X509Type
-    from OpenSSL.SSL import (TLSv1_METHOD, Error, Context, ConnectionType,
-                             WantReadError)
-    from twisted.internet.ssl import PrivateCertificate
+    from OpenSSL.SSL import (
+        TLSv1_METHOD, Error, ConnectionType, WantReadError)
+    from twisted.internet.ssl import PrivateCertificate, CertificateOptions
     from twisted.test.ssl_helpers import (ClientTLSContext, ServerTLSContext,
                                           certPath)
 
@@ -40,18 +40,6 @@ from twisted.protocols.loopback import loopbackAsync, collapsingPumpPolicy
 from twisted.trial.unittest import TestCase
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
 from twisted.test.proto_helpers import StringTransport
-
-
-class TestContextFactory:
-    """
-    L{TestContextFactory} is a trivial factory for SSL contexts.
-    """
-    def getContext(self):
-        """
-        Create and return an SSL context.
-        """
-        return Context(TLSv1_METHOD)
-
 
 
 class AccumulatingProtocol(Protocol):
@@ -253,7 +241,7 @@ class TLSMemoryBIOTests(TestCase):
         clientFactory = ClientFactory()
         clientFactory.protocol = Protocol
 
-        clientContextFactory = TestContextFactory()
+        clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -296,7 +284,7 @@ class TLSMemoryBIOTests(TestCase):
             lambda: ConnectionLostNotifyingProtocol(
                 clientConnectionLost))
 
-        clientContextFactory = TestContextFactory()
+        clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -339,11 +327,10 @@ class TLSMemoryBIOTests(TestCase):
         L{TLSMemoryBIOProtocol.whenHandshakeDone} should correctly handle
         a failure in the middle of a handshake.
         """
-        clientConnectionLost = Deferred()
         clientFactory = ClientFactory()
         clientFactory.protocol = Protocol
 
-        clientContextFactory = TestContextFactory()
+        clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -383,7 +370,7 @@ class TLSMemoryBIOTests(TestCase):
         clientFactory = ClientFactory()
         clientFactory.protocol = Protocol
 
-        clientContextFactory = TestContextFactory()
+        clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -425,16 +412,14 @@ class TLSMemoryBIOTests(TestCase):
         Make sure that the correct handshake paths get run after a connection
         is lost.
         """
-        clientConnectionLost = Deferred()
         clientFactory = ClientFactory()
         clientFactory.protocol = Protocol
 
-        clientContextFactory = TestContextFactory()
+        clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
-        serverConnectionLost = Deferred()
         serverFactory = ServerFactory()
         serverFactory.protocol = Protocol
 
@@ -466,7 +451,7 @@ class TLSMemoryBIOTests(TestCase):
         clientFactory = ClientFactory()
         clientFactory.protocol = Protocol
 
-        clientContextFactory = TestContextFactory()
+        clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -506,7 +491,7 @@ class TLSMemoryBIOTests(TestCase):
         clientFactory = ClientFactory()
         clientFactory.protocol = lambda: clientProtocol
 
-        clientContextFactory = TestContextFactory()
+        clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -548,7 +533,7 @@ class TLSMemoryBIOTests(TestCase):
         clientFactory = ClientFactory()
         clientFactory.protocol = sendingProtocol
 
-        clientContextFactory = TestContextFactory()
+        clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -649,7 +634,7 @@ class TLSMemoryBIOTests(TestCase):
         clientFactory = ClientFactory()
         clientFactory.protocol = SimpleSendingProtocol
 
-        clientContextFactory = TestContextFactory()
+        clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -688,7 +673,7 @@ class TLSMemoryBIOTests(TestCase):
         clientFactory = ClientFactory()
         clientFactory.protocol = SimpleSendingProtocol
 
-        clientContextFactory = TestContextFactory()
+        clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -723,7 +708,7 @@ class TLSMemoryBIOTests(TestCase):
             lambda: ConnectionLostNotifyingProtocol(
                 clientConnectionLost))
 
-        clientContextFactory = TestContextFactory()
+        clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
@@ -763,7 +748,7 @@ class TLSMemoryBIOTests(TestCase):
         clientProtocol = NotifyingProtocol(clientConnectionLost)
         clientFactory.protocol = lambda: clientProtocol
 
-        clientContextFactory = TestContextFactory()
+        clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
