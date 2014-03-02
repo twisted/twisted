@@ -413,8 +413,12 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         # data, then SSL_read won't tell us.
         if self._handshaking:
             self._tryHandshake()
+
+        # Check again, the handshake may have completed.
         if self._handshaking:
-            return  # Save some effort: SSL_read can't possibly work
+            # If not, save some effort.  Reading application bytes (SSL_read)
+            # can't possibly return anything useful.
+            return
 
         # Keep trying this until an error indicates we should stop or we
         # close the connection.  Looping is necessary to make sure we
