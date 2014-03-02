@@ -378,45 +378,56 @@ This can be used to identify clients at the beginning of a connection, for examp
 
 .. code-block:: python
 
-    from twisted.internet import ssl, reactor
+    from sys import stdout
+
+    from twisted.python.log import startLogging, msg
+    from twisted.python.filepath import FilePath
+    from twisted.internet.defer import Deferred
+    from twisted.internet.task import react
+    from twisted.internet.ssl import Certificate, PrivateCertificate
     from twisted.internet.interfaces import ISSLTransport
     from twisted.internet.protocol import Factory, Protocol
 
     class WhoAreYou(Protocol):
         def connectionMade(self):
             if ISSLTransport.providedBy(self.transport):
-                self.transport.whenHandshakeDone().addCallbacks(self._handshakeDone,
-                                                                self._handshakeFail)
+                handshaking = self.transport.whenHandshakeDone()
+                handshaking.addCallbacks(
+                    self._handshakeDone, self._handshakeFail)
             else:
-                print 'Client is not using SSL'
+                msg(format="Client is not using SSL")
                 self.transport.loseConnection()
 
         def _handshakeDone(self, _):
-            print 'Client handshake succeeded: %r' % \
-                (self.transport.getPeerCertificate().get_subject())
+            subject = self.transport.getPeerCertificate().get_subject()
+            msg(format="Client handshake succeeded: %(subject)r", subject=subject)
             self.transport.loseConnection()
 
         def _handshakeFail(self, reason):
-            print 'Client handshake failed: %r' % reason.value
+            msg(format="Client handshake failed: %(reason)r", reason=reason.value)
             self.transport.loseConnection()
 
-    if __name__ == '__main__':
-        factory = Factory()
-        factory.protocol = WhoAreYou
+    def main(reactor):
+        factory = Factory.forProtocol(WhoAreYou)
+        keys = FilePath(b"keys")
+        ca = keys.child(b"ca.pem")
+        key = keys.child(b"server.key")
+        cert = keys.child(b"server.crt")
 
-        with open("keys/ca.pem") as certAuthCertFile:
-            certAuthCert = ssl.Certificate.loadPEM(certAuthCertFile.read())
-
-        with open("keys/server.key") as keyFile:
-            with open("keys/server.crt") as certFile:
-                serverCert = ssl.PrivateCertificate.loadPEM(
-                    keyFile.read() + certFile.read())
+        certAuthCert = Certificate.loadPEM(ca.getContent())
+        serverCert = PrivateCertificate.loadPEM(
+            key.getContent() + cert.getContent())
 
         contextFactory = serverCert.options(certAuthCert)
 
         reactor.listenTCP(8000, factory)
         reactor.listenSSL(8001, factory, contextFactory)
-        reactor.run()
+
+        return Deferred()
+
+    if __name__ == '__main__':
+        startLogging(stdout)
+        react(main, [])
 
 
 Other facilities
