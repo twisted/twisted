@@ -371,11 +371,11 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
     def _handshakeFinished(self, error):
         """
-        Mark the handshake done and notify everyone.  It's okay to call
-        this more than once.
+        Mark the handshake done and notify everyone.  It's safe to call this
+        more than once (all calls except the first will be ignored).
 
-        @param error: A L{twisted.python.failure.Failure} object to indicate
-                      failure or None to indicate success.
+        @param error: The reason the handshake failed or C{None} if it succeeded.
+        @type error: L{Failure} or L{NoneType}
         """
         if self._handshaking:
             self._handshaking = False
