@@ -366,10 +366,57 @@ Client with certificates
         reactor.run()
 
 
-Notice this client code does not pass any certificate authority
-certificates to ``PrivateCertificate.options`` .  This means that
-it will not validate the server's certificate, it will only present its
-certificate to the server for validation.
+Notice this client code does not pass any certificate authority certificates to ``PrivateCertificate.options``\ .
+This means that it will not validate the server's certificate, it will only present its certificate to the server for validation.
+
+
+Detecting Handshake Completion
+------------------------------
+
+You can detect a completed handshake using :api:`twisted.internet.interfaces.ISSLTransport.whenHandshakeDone <ISSLTransport>`.
+This can be used to identify clients at the beginning of a connection, for example.
+
+.. code-block:: python
+
+    from twisted.internet import ssl, reactor
+    from twisted.internet.interfaces import ISSLTransport
+    from twisted.internet.protocol import Factory, Protocol
+
+    class WhoAreYou(Protocol):
+        def connectionMade(self):
+            if ISSLTransport.providedBy(self.transport):
+                self.transport.whenHandshakeDone().addCallbacks(self._handshakeDone,
+                                                                self._handshakeFail)
+            else:
+                print 'Client is not using SSL'
+                self.transport.loseConnection()
+
+        def _handshakeDone(self, _):
+            print 'Client handshake succeeded: %r' % \
+                (self.transport.getPeerCertificate().get_subject())
+            self.transport.loseConnection()
+
+        def _handshakeFail(self, reason):
+            print 'Client handshake failed: %r' % reason.value
+            self.transport.loseConnection()
+
+    if __name__ == '__main__':
+        factory = Factory()
+        factory.protocol = WhoAreYou
+
+        with open("keys/ca.pem") as certAuthCertFile:
+            certAuthCert = ssl.Certificate.loadPEM(certAuthCertFile.read())
+
+        with open("keys/server.key") as keyFile:
+            with open("keys/server.crt") as certFile:
+                serverCert = ssl.PrivateCertificate.loadPEM(
+                    keyFile.read() + certFile.read())
+
+        contextFactory = serverCert.options(certAuthCert)
+
+        reactor.listenTCP(8000, factory)
+        reactor.listenSSL(8001, factory, contextFactory)
+        reactor.run()
 
 
 Other facilities
