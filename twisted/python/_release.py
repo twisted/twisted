@@ -351,6 +351,7 @@ class APIBuilder(object):
              "--html-viewsource-base", sourceURL,
              "--add-package", packagePath.path,
              "--html-output", outputPath.path,
+             "--output-pickle", outputPath.child('system.pickle').path,
              "--html-write-function-pages", "--quiet", "--make-html"])
 
 

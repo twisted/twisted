@@ -690,6 +690,35 @@ class APIBuilderTestCase(TestCase):
         self.assertEqual(stdout.getvalue(), '')
 
 
+    def test_generatesPickle(self):
+        """
+        L{BuildAPIDocsScript.buildAPIDocs} generates a I{system.pickle} pickle.
+        """
+        stdout = StringIO()
+        self.patch(sys, 'stdout', stdout)
+
+        projectName = "Foobar"
+        packageName = "quux"
+        projectURL = "scheme:project"
+        sourceURL = "scheme:source"
+
+        inputPath = FilePath(self.mktemp()).child(packageName)
+        inputPath.makedirs()
+        inputPath.child("__init__.py").setContent("")
+
+        outputPath = FilePath(self.mktemp())
+        outputPath.makedirs()
+
+        builder = APIBuilder()
+        builder.build(projectName, projectURL, sourceURL, inputPath,
+                      outputPath)
+
+        picklePath = outputPath.child("system.pickle")
+        self.assertTrue(
+            picklePath.exists(),
+            "System pickle %r did not exist." % (outputPath.path,))
+
+
     def test_apiBuilderScriptMainRequiresTwoArguments(self):
         """
         SystemExit is raised when the incorrect number of command line
