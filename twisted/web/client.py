@@ -741,11 +741,11 @@ def downloadPage(url, file, contextFactory=None, *args, **kwargs):
 
 from twisted.web.error import SchemeNotSupported
 if not _PY3:
-    from twisted.web._newclient import Request, Response, HTTP11ClientProtocol
-    from twisted.web._newclient import ResponseDone, ResponseFailed
-    from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
     from twisted.web._newclient import (
-        ResponseNeverReceived, PotentialDataLoss, _WrapperException)
+        Request, Response, HTTP11ClientProtocol,
+        ResponseDone, ResponseFailed, ResponseNeverReceived,
+        RequestNotSent, RequestTransmissionFailed,
+        RequestGenerationFailed, PotentialDataLoss, _WrapperException)
 
 try:
     from OpenSSL import SSL
@@ -1820,8 +1820,14 @@ def readBody(response):
 
 
 __all__ = [
-    'PartialDownloadError', 'HTTPPageGetter', 'HTTPPageDownloader',
-    'HTTPClientFactory', 'HTTPDownloader', 'getPage', 'downloadPage',
-    'ResponseDone', 'Response', 'ResponseFailed', 'Agent', 'CookieAgent',
-    'ProxyAgent', 'ContentDecoderAgent', 'GzipDecoder', 'RedirectAgent',
-    'HTTPConnectionPool', 'readBody', 'BrowserLikeRedirectAgent']
+    'PartialDownloadError', 'ResponseFailed', 'RequestGenerationFailed',
+    'ResponseDone',
+
+    'HTTPPageGetter', 'HTTPPageDownloader', 'HTTPClientFactory',
+    'HTTPDownloader', 'getPage', 'downloadPage',
+
+    'Agent', 'CookieAgent', 'ProxyAgent', 'ContentDecoderAgent',
+    'RedirectAgent', 'GzipDecoder', 'BrowserLikeRedirectAgent',
+
+    'Response', 'HTTPConnectionPool', 'readBody',
+    ]
