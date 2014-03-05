@@ -3,10 +3,10 @@
 # See LICENSE for details.
 
 """
-twisted.python.threadpool: a pool of threads to which we dispatch tasks.
+An implementation of a pool of threads to which we dispatch tasks with.
 
-In most cases you can just use C{reactor.callInThread} and friends
-instead of creating a thread pool directly.
+In most cases you can just use C{reactor.callInThread} and friends instead of
+creating a thread pool directly.
 """
 
 from __future__ import division, absolute_import
@@ -16,8 +16,8 @@ try:
 except ImportError:
     from queue import Queue
 import contextlib
-import threading
 import copy
+import threading
 
 from twisted.python import log, context, failure
 
@@ -25,19 +25,21 @@ from twisted.python import log, context, failure
 WorkerStop = object()
 
 
-class ThreadPool:
+class ThreadPool(object):
     """
-    This class (hopefully) generalizes the functionality of a pool of
-    threads to which work can be dispatched.
+    This class generalizes the functionality of a pool of threads to
+    which work can be dispatched.
 
-    L{callInThread} and L{stop} should only be called from
-    a single thread, unless you make a subclass where L{stop} and
-    L{_startSomeWorkers} are synchronized.
+    L{callInThread} and L{stop} should only be called from a single thread,
+    unless you make a subclass where L{stop} and L{_startSomeWorkers} are
+    synchronized.
 
     @ivar started: Whether or not the thread pool is currently running.
     @type started: L{bool}
     @ivar threads: List of workers currently running in this thread pool.
     @type threads: L{list}
+    @ivar max: Maximum amount of running threads allowed in the pool.
+    @
     """
     min = 5
     max = 20
@@ -53,8 +55,10 @@ class ThreadPool:
         """
         Create a new threadpool.
 
-        @param minthreads: minimum number of threads in the pool
-        @param maxthreads: maximum number of threads in the pool
+        @param minthreads: Minimum number of threads in the pool.
+        @type minthreads: L{int}
+        @param maxthreads: Maximum number of threads in the pool.
+        @type maxthreads: L{int}
         """
         assert minthreads >= 0, 'minimum is negative'
         assert minthreads <= maxthreads, 'minimum is greater than maximum'
@@ -114,9 +118,7 @@ class ThreadPool:
         Call a callable object in a separate thread.
 
         @param func: callable object to be called in separate thread
-
         @param *args: positional arguments to be passed to C{func}
-
         @param **kw: keyword args to be passed to C{func}
         """
         self.callInThreadWithCallback(None, func, *args, **kw)
@@ -124,18 +126,18 @@ class ThreadPool:
 
     def callInThreadWithCallback(self, onResult, func, *args, **kw):
         """
-        Call a callable object in a separate thread and call C{onResult}
-        with the return value, or a L{twisted.python.failure.Failure}
-        if the callable raises an exception.
+        Call a callable object in a separate thread and call C{onResult} with
+        the return value, or a L{twisted.python.failure.Failure} if the callable
+        raises an exception.
 
-        The callable is allowed to block, but the C{onResult} function
-        must not block and should perform as little work as possible.
+        The callable is allowed to block, but the C{onResult} function must not
+        block and should perform as little work as possible.
 
-        A typical action for C{onResult} for a threadpool used with a
-        Twisted reactor would be to schedule a
-        L{twisted.internet.defer.Deferred} to fire in the main
-        reactor thread using C{.callFromThread}.  Note that C{onResult}
-        is called inside the separate thread, not inside the reactor thread.
+        A typical action for C{onResult} for a threadpool used with a Twisted
+        reactor would be to schedule a L{twisted.internet.defer.Deferred} to
+        fire in the main reactor thread using C{.callFromThread}. Note that
+        C{onResult} is called inside the separate thread, not inside the reactor
+        thread.
 
         @param onResult: a callable with the signature C{(success, result)}.
             If the callable returns normally, C{onResult} is called with
@@ -145,11 +147,8 @@ class ThreadPool:
 
             Optionally, C{onResult} may be C{None}, in which case it is not
             called at all.
-
         @param func: callable object to be called in separate thread
-
         @param *args: positional arguments to be passed to C{func}
-
         @param **kwargs: keyword arguments to be passed to C{func}
         """
         if self.joined:
@@ -164,11 +163,10 @@ class ThreadPool:
     @contextlib.contextmanager
     def _workerState(self, stateList, workerThread):
         """
-        Manages adding and removing this worker from a list of workers
-        in a particular state.
+        Manages adding and removing this worker from a list of workers in a
+        particular state.
 
         @param stateList: the list managing workers in this state
-
         @param workerThread: the thread the worker is running in, used to
             represent the worker in stateList
         """
@@ -230,7 +228,7 @@ class ThreadPool:
             self.q.put(WorkerStop)
             self.workers -= 1
 
-        # and let's just make sure
+        # And let's just make sure
         # FIXME: threads that have died before calling stop() are not joined.
         for thread in threads:
             thread.join()
@@ -261,7 +259,7 @@ class ThreadPool:
 
 
     def dumpStats(self):
-        log.msg('queue: %s'   % self.q.queue)
-        log.msg('waiters: %s' % self.waiters)
-        log.msg('workers: %s' % self.working)
-        log.msg('total: %s'   % self.threads)
+        log.msg('queue: %s'   % (self.q.queue,))
+        log.msg('waiters: %s' % (self.waiters,))
+        log.msg('workers: %s' % (self.working,))
+        log.msg('total: %s'   % (self.threads,))
