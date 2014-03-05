@@ -194,10 +194,10 @@ startTLS server
 
     class TLSServer(LineReceiver):
         def lineReceived(self, line):
-            print "received: " + line
+            print("received: " + line)
 
             if line == "STARTTLS":
-                print "-- Switching to TLS"
+                print("-- Switching to TLS")
                 self.sendLine('READY')
 
                 self.transport.startTLS(self.factory.contextFactory)
@@ -222,7 +222,7 @@ startTLS client
 
 .. code-block:: python
 
-
+    from __future__ import print_function
     from twisted.internet import reactor, ssl
     from twisted.internet.protocol import ClientFactory
     from twisted.protocols.basic import LineReceiver
@@ -242,7 +242,7 @@ startTLS client
                 self.sendLine(l)
 
         def lineReceived(self, line):
-            print "received: " + line
+            print("received: " + line)
             if line == "READY":
                 self.transport.startTLS(ssl.CertificateOptions())
                 for l in self.posttext:
@@ -253,11 +253,11 @@ startTLS client
         protocol = TLSClient
 
         def clientConnectionFailed(self, connector, reason):
-            print "connection failed: ", reason.getErrorMessage()
+            print("connection failed: ", reason.getErrorMessage())
             reactor.stop()
 
         def clientConnectionLost(self, connector, reason):
-            print "connection lost: ", reason.getErrorMessage()
+            print("connection lost: ", reason.getErrorMessage())
             reactor.stop()
 
     if __name__ == "__main__":
@@ -332,16 +332,17 @@ Client with certificates
 .. code-block:: python
 
 
+    from __future__ import print_function
     from twisted.internet import ssl, reactor
     from twisted.internet.protocol import ClientFactory, Protocol
 
     class EchoClient(Protocol):
         def connectionMade(self):
-            print "hello, world"
+            print("hello, world")
             self.transport.write("hello, world!")
 
         def dataReceived(self, data):
-            print "Server said:", data
+            print("Server said:", data)
             self.transport.loseConnection()
 
 
@@ -349,11 +350,11 @@ Client with certificates
         protocol = EchoClient
 
         def clientConnectionFailed(self, connector, reason):
-            print "Connection failed - goodbye!"
+            print("Connection failed - goodbye!")
             reactor.stop()
 
         def clientConnectionLost(self, connector, reason):
-            print "Connection lost - goodbye!"
+            print("Connection lost - goodbye!")
             reactor.stop()
 
 
