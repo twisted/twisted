@@ -10,8 +10,8 @@ Using TLS in Twisted
 Overview
 --------
 
-This document describes how to secure your communications using TLS (Transport Layer Security) - also known as SSL (Secure Sockets Layer) - in Twisted servers and clients.
-It assumes that you know what TLS is, what some of the major reasons to use it are, and how to generate your own SSL certificates, in particular self-signed certificates.
+This document describes how to secure your communications using TLS (Transport Layer Security) --- also known as SSL (Secure Sockets Layer) --- in Twisted servers and clients.
+It assumes that you know what TLS is, what some of the major reasons to use it are, and how to generate your own certificates.
 It also assumes that you are comfortable with creating TCP
 servers and clients as described in the :doc:`server howto <servers>` and :doc:`client howto <clients>` . After reading this
 document you should be able to create servers and clients that can use SSL to
@@ -23,22 +23,16 @@ Using SSL in Twisted requires that you have
 verify that you do is to run ``from OpenSSL import SSL`` at a
 python prompt and not get an error.
 
-Twisted provides SSL support as a transport - that is, as an alternative
-to TCP.  When using SSL, use of the TCP APIs you're already familiar
-with, ``TCP4ClientEndpoint`` and ``TCP4ServerEndpoint`` -
-or ``reactor.listenTCP`` and ``reactor.connectTCP`` -
-is replaced by use of parallel SSL APIs.  To create an SSL server, use
-:api:`twisted.internet.endpoints.SSL4ServerEndpoint <SSL4ServerEndpoint>` or
-:api:`twisted.internet.interfaces.IReactorSSL.listenSSL <listenSSL>` .
-To create an SSL client, use
-:api:`twisted.internet.endpoints.SSL4ClientEndpoint <SSL4ClientEndpoint>` or
-:api:`twisted.internet.interfaces.IReactorSSL.connectSSL <connectSSL>` .
+Twisted provides SSL support as a transport --- that is, as an alternative to TCP.
+When using SSL, use of the TCP APIs you're already familiar with, ``TCP4ClientEndpoint`` and ``TCP4ServerEndpoint`` --- or ``reactor.listenTCP`` and ``reactor.connectTCP`` --- is replaced by use of parallel SSL APIs.
+To create an SSL server, use :api:`twisted.internet.endpoints.SSL4ServerEndpoint <SSL4ServerEndpoint>` or :api:`twisted.internet.interfaces.IReactorSSL.listenSSL <listenSSL>` .
+To create an SSL client, use :api:`twisted.internet.endpoints.SSL4ClientEndpoint <SSL4ClientEndpoint>` or :api:`twisted.internet.interfaces.IReactorSSL.connectSSL <connectSSL>` .
 
 SSL connections require SSL contexts. As with protocols, these context
-objects are created by factories - so that each connection can be given a
+objects are created by factories --- so that each connection can be given a
 unique context, if necessary.  The context factories typically also keep
 state which is necessary to properly configure an SSL context object for
-its desired use - for example, private key or certificate data.  The
+its desired use --- for example, private key or certificate data.  The
 context factory is passed as a mandatory argument to any and all of the
 SSL APIs mentioned in the previous
 paragraph.  :api:`twisted.internet.ssl.CertificateOptions <twisted.internet.ssl.CertificateOptions>`
@@ -105,7 +99,7 @@ If you don't verify the server's certificate, you can not be sure that you are c
 Peer certificate verification is enabled by supplying a ``peerTrust`` argument to :api:`twisted.internet.ssl.CertificateOptions <CertificateOptions>`.
 This argument specifies the list of certificate authorities which you trust, and for what purpose.
 
-For the majority of *client* applications using TLS, you will want to get the list of trusted root certificates from your platform - meaning, your operating system, your desktop environment, or your TLS implementor's configuration - and verify the server against that.
+For the majority of *client* applications using TLS, you will want to get the list of trusted root certificates from your platform --- meaning, your operating system, your desktop environment, or your TLS implementor's configuration --- and verify the server against that.
 This list of certificates will generally include most of the certificate authorities commonly accepted by web browsers to, but more importantly, it should also be under the control of the end-user who is using your software, taking security decisions about who to trust out of your code and placing it into the hands of those responsible for securing the systems where your code runs.
 
 To support this common use-case, Twisted provides a function, :api:`twisted.internet.ssl.platformTrust <platformTrust>`, to obtain a set of trusted root certificates based on Twisted's best-effort attempt to discover the current platform's configuration.
