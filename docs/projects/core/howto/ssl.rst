@@ -100,8 +100,12 @@ To support this common use-case, Twisted provides a function, :api:`twisted.inte
 
 .. note::
 
-   Currently, Twisted only supports loading of OpenSSL's default trust roots, which will work on OS X and some Linux environments.
-   Work is ongoing to make :api:`twisted.internet.ssl.platformTrust <platformTrust>` more robust; for example, to fall back to `the "certifi" package <http://pypi.python.org/pypi/certifi>`_ if no platform trust roots are available.
+   Currently, Twisted only supports loading of OpenSSL's default trust roots.
+   If you've built OpenSSL yourself, you must take care to include these in the appropriate location.
+   If you're using the OpenSSL shipped as part of Mac OS X 10.5-10.9, this behavior will also be correct.
+   If you're using Debian, or one of its derivatives like Ubuntu, install the `ca-certificates` package to ensure you have trust roots available, and this behavior should also be correct.
+   Work is ongoing to make :api:`twisted.internet.ssl.platformTrust <platformTrust>` more robust.
+   For example, :api:`twisted.internet.ssl.platformTrust <platformTrust>` should fall back to `the "certifi" package <http://pypi.python.org/pypi/certifi>`_ if no platform trust roots are available but it doesn't do that yet.
    When this happens, you shouldn't need to change your code.
 
 Here is a short example, demonstrating how to enable verification using the trusted root certificates from your platform with :api:`twisted.internet.ssl.platformTrust <platformTrust>` and :api:`twisted.internet.ssl.CertificateOptions <CertificateOptions>`.
