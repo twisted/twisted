@@ -360,7 +360,13 @@ def connectedServerAndClient(ServerClass, ClientClass,
                              clientTransportFactory=makeFakeClient,
                              serverTransportFactory=makeFakeServer,
                              debug=False):
-    """Returns a 3-tuple: (client, server, pump)
+    """
+    @param ServerClass: a callable that produces the server-side protocol.
+    @type ServerClass: 0-argument callable returning L{IProtocol} provider.
+
+    @param ClientClass: like C{ServerClass} but for the other side of the
+        connection.
+    @type ClientClass: 0-argument callable returning L{IProtocol} provider.
     """
     c = ClientClass()
     s = ServerClass()
