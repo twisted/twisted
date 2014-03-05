@@ -286,7 +286,7 @@ largely under the dominion of pyOpenSSL, but few examples seem to exist on
 the web so for completeness a sample server and client are provided here.
 
 
-SSL server with client authentication via client certificate verification
+TLS server with client authentication via client certificate verification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
