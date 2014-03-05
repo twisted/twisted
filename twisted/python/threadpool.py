@@ -27,19 +27,31 @@ WorkerStop = object()
 
 class ThreadPool(object):
     """
-    This class generalizes the functionality of a pool of threads to
-    which work can be dispatched.
+    Generalizes the functionality of a pool of threads to which work can be
+    dispatched.
 
     L{callInThread} and L{stop} should only be called from a single thread,
     unless you make a subclass where L{stop} and L{_startSomeWorkers} are
     synchronized.
 
+    @ivar q: Queue of tasks to run.
+    @type q: L{Queue}
     @ivar started: Whether or not the thread pool is currently running.
     @type started: L{bool}
-    @ivar threads: List of workers currently running in this thread pool.
+    @ivar joined: The inverse of L{ThreadPool.started}.
+    @type joined: L{bool}
+    @ivar workers: Number of workers currently running in this thread pool.
+    @type workers: L{int}
+    @ivar waiters: Number of workers currently waiting in this thread pool.
+    @type waiters: L{int}
+    @ivar threads: List of threads currently running in this thread pool.
     @type threads: L{list}
+    @ivar min: Minimum amount of running threads allowed in the pool.
+    @type min: L{int}
     @ivar max: Maximum amount of running threads allowed in the pool.
-    @
+    @type max: L{int}
+    @ivar name: Name used to identify the thread pool.
+    @type name: L{bytes} or L{NoneType <types.NoneType>}
     """
     min = 5
     max = 20
@@ -53,12 +65,14 @@ class ThreadPool(object):
 
     def __init__(self, minthreads=5, maxthreads=20, name=None):
         """
-        Create a new threadpool.
+        Create a new L{ThreadPool}.
 
-        @param minthreads: Minimum number of threads in the pool.
+        @param minthreads: Minimum number of threads allowed in the pool.
         @type minthreads: L{int}
-        @param maxthreads: Maximum number of threads in the pool.
+        @param maxthreads: Maximum number of threads allowed in the pool.
         @type maxthreads: L{int}
+        @param name: Name used to identify the thread pool.
+        @type name: L{bytes} or L{NoneType <types.NoneType>}
         """
         assert minthreads >= 0, 'minimum is negative'
         assert minthreads <= maxthreads, 'minimum is greater than maximum'
@@ -82,6 +96,9 @@ class ThreadPool(object):
 
 
     def startAWorker(self):
+        """
+        Start a new worker.
+        """
         self.workers += 1
         name = "PoolThread-%s-%s" % (self.name or id(self), self.workers)
         newThread = self.threadFactory(target=self._worker, name=name)
@@ -90,6 +107,9 @@ class ThreadPool(object):
 
 
     def stopAWorker(self):
+        """
+        Stop the next worker that is finished.
+        """
         self.q.put(WorkerStop)
         self.workers -= 1
 
@@ -107,6 +127,10 @@ class ThreadPool(object):
 
 
     def _startSomeWorkers(self):
+        """
+        Start enough workers to handle the current queue, but no more than
+        L{ThreadPool.max}.
+        """
         neededSize = self.q.qsize() + len(self.working)
         # Create enough, but not too many
         while self.workers < min(self.max, neededSize):
@@ -118,8 +142,8 @@ class ThreadPool(object):
         Call a callable object in a separate thread.
 
         @param func: callable object to be called in separate thread
-        @param *args: positional arguments to be passed to C{func}
-        @param **kw: keyword args to be passed to C{func}
+        @param args: positional arguments to be passed to C{func}
+        @param kw: keyword args to be passed to C{func}
         """
         self.callInThreadWithCallback(None, func, *args, **kw)
 
@@ -127,8 +151,8 @@ class ThreadPool(object):
     def callInThreadWithCallback(self, onResult, func, *args, **kw):
         """
         Call a callable object in a separate thread and call C{onResult} with
-        the return value, or a L{twisted.python.failure.Failure} if the callable
-        raises an exception.
+        the return value, or a L{twisted.python.failure.Failure} if the
+        callable raises an exception.
 
         The callable is allowed to block, but the C{onResult} function must not
         block and should perform as little work as possible.
@@ -136,8 +160,8 @@ class ThreadPool(object):
         A typical action for C{onResult} for a threadpool used with a Twisted
         reactor would be to schedule a L{twisted.internet.defer.Deferred} to
         fire in the main reactor thread using C{.callFromThread}. Note that
-        C{onResult} is called inside the separate thread, not inside the reactor
-        thread.
+        C{onResult} is called inside the separate thread, not inside the
+        reactor thread.
 
         @param onResult: a callable with the signature C{(success, result)}.
             If the callable returns normally, C{onResult} is called with
@@ -145,11 +169,11 @@ class ThreadPool(object):
             callable. If the callable throws an exception, C{onResult} is
             called with C{(False, failure)}.
 
-            Optionally, C{onResult} may be C{None}, in which case it is not
-            called at all.
-        @param func: callable object to be called in separate thread
-        @param *args: positional arguments to be passed to C{func}
-        @param **kwargs: keyword arguments to be passed to C{func}
+            Optionally, C{onResult} may be L{NoneType <types.NoneType>}, in
+            which case it is not called at all.
+        @param func: callable object to be called in separate thread.
+        @param args: positional arguments to be passed to C{func}.
+        @param kw: keyword arguments to be passed to C{func}.
         """
         if self.joined:
             return
@@ -166,9 +190,9 @@ class ThreadPool(object):
         Manages adding and removing this worker from a list of workers in a
         particular state.
 
-        @param stateList: the list managing workers in this state
+        @param stateList: the list managing workers in this state.
         @param workerThread: the thread the worker is running in, used to
-            represent the worker in stateList
+            represent the worker in stateList.
         """
         stateList.append(workerThread)
         try:
@@ -219,7 +243,9 @@ class ThreadPool(object):
 
     def stop(self):
         """
-        Shutdown the threads in the threadpool.
+        Stop all the threads in the threadpool.
+
+        If threads are still working, this will be blocking.
         """
         self.joined = True
         self.started = False
@@ -235,6 +261,14 @@ class ThreadPool(object):
 
 
     def adjustPoolsize(self, minthreads=None, maxthreads=None):
+        """
+        Adjust the pool size, starting or stopping workers if required.
+
+        @param minthreads: Minimum number of threads allowed in the pool.
+        @type minthreads: L{int}
+        @param maxthreads: Maximum number of threads allowed in the pool.
+        @type maxthreads: L{int}
+        """
         if minthreads is None:
             minthreads = self.min
         if maxthreads is None:
@@ -259,6 +293,9 @@ class ThreadPool(object):
 
 
     def dumpStats(self):
+        """
+        Dump some statistics about the current queue, workers and threads.
+        """
         log.msg('queue: %s'   % (self.q.queue,))
         log.msg('waiters: %s' % (self.waiters,))
         log.msg('workers: %s' % (self.working,))
