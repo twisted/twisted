@@ -12,16 +12,10 @@ Overview
 
 This document describes how to secure your communications using TLS (Transport Layer Security) --- also known as SSL (Secure Sockets Layer) --- in Twisted servers and clients.
 It assumes that you know what TLS is, what some of the major reasons to use it are, and how to generate your own certificates.
-It also assumes that you are comfortable with creating TCP
-servers and clients as described in the :doc:`server howto <servers>` and :doc:`client howto <clients>` . After reading this
-document you should be able to create servers and clients that can use SSL to
-encrypt their connections, switch from using an unencrypted channel to an
-encrypted one mid-connection, and require client authentication.
+It also assumes that you are comfortable with creating TCP servers and clients as described in the :doc:`server howto <servers>` and :doc:`client howto <clients>` .
+After reading this document you should be able to create servers and clients that can use SSL to encrypt their connections, switch from using an unencrypted channel to an encrypted one mid-connection, and require client authentication.
 
-Using SSL in Twisted requires that you have
-`pyOpenSSL <http://launchpad.net/pyopenssl>`_ installed. A quick test to
-verify that you do is to run ``from OpenSSL import SSL`` at a
-python prompt and not get an error.
+Using SSL in Twisted requires that you have `pyOpenSSL <http://launchpad.net/pyopenssl>`_ installed. A quick test to verify that you do is to run ``from OpenSSL import SSL`` at a python prompt and not get an error.
 
 Twisted provides SSL support as a transport --- that is, as an alternative to TCP.
 When using SSL, use of the TCP APIs you're already familiar with, ``TCP4ClientEndpoint`` and ``TCP4ServerEndpoint`` --- or ``reactor.listenTCP`` and ``reactor.connectTCP`` --- is replaced by use of parallel SSL APIs.
