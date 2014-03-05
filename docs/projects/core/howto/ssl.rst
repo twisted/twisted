@@ -94,7 +94,7 @@ Peer certificate verification is enabled by supplying a ``peerTrust`` argument t
 This argument specifies the list of certificate authorities which you trust, and for what purpose.
 
 For the majority of *client* applications using TLS, you will want to get the list of trusted root certificates from your platform --- meaning, your operating system, your desktop environment, or your TLS implementor's configuration --- and verify the server against that.
-This list of certificates will generally include most of the certificate authorities commonly accepted by web browsers to, but more importantly, it should also be under the control of the end-user who is using your software, taking security decisions about who to trust out of your code and placing it into the hands of those responsible for securing the systems where your code runs.
+This list of certificates will generally include most of the certificate authorities commonly accepted by web browsers, but more importantly, it should also be under the control of the end-user who is using your software, taking security decisions about who to trust out of your code and placing it into the hands of those responsible for securing the systems where your code runs.
 
 To support this common use-case, Twisted provides a function, :api:`twisted.internet.ssl.platformTrust <platformTrust>`, to obtain a set of trusted root certificates based on Twisted's best-effort attempt to discover the current platform's configuration.
 
