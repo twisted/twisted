@@ -68,87 +68,16 @@ the `core examples <../examples/index.html>`_
 SSL echo server
 ~~~~~~~~~~~~~~~
 
-..  Don't diverge this from doc/core/examples/echoserv_ssl.py
+:download:`echoserv_ssl.py <../examples/echoserv_ssl.py>`
 
-
-.. code-block:: python
-
-
-    if __name__ == '__main__':
-        import echoserv_ssl
-        raise SystemExit(echoserv_ssl.main())
-
-    import sys
-
-    from twisted.internet import reactor
-    from twisted.internet.protocol import Factory
-    from twisted.internet import ssl, reactor
-    from twisted.python import log
-
-    import echoserv
-
-    def main():
-        with open('server.pem') as keyAndCert:
-            cert = ssl.PrivateCertificate.loadPEM(keyAndCert.read())
-
-        log.startLogging(sys.stdout)
-        factory = Factory()
-        factory.protocol = echoserv.Echo
-        reactor.listenSSL(8000, factory, cert.options())
-        reactor.run()
-
+.. literalinclude:: ../examples/echoserv_ssl.py
 
 SSL echo client
 ~~~~~~~~~~~~~~~
 
-..  Don't diverge this from doc/core/examples/echoclient_ssl.py
+:download:`echoserv_ssl.py <../examples/echoclient_ssl.py>`
 
-
-.. code-block:: python
-
-
-    if __name__ == '__main__':
-        import echoclient_ssl
-        raise SystemExit(echoclient_ssl.main())
-
-    import sys
-
-    from twisted.internet.protocol import ClientFactory
-    from twisted.protocols.basic import LineReceiver
-    from twisted.internet import ssl, reactor
-
-
-    class EchoClient(LineReceiver):
-        end="Bye-bye!"
-        def connectionMade(self):
-            self.sendLine("Hello, world!")
-            self.sendLine("What a fine day it is.")
-            self.sendLine(self.end)
-
-        def connectionLost(self, reason):
-            print 'connection lost (protocol)'
-
-        def lineReceived(self, line):
-            print "receive:", line
-            if line==self.end:
-                self.transport.loseConnection()
-
-    class EchoClientFactory(ClientFactory):
-        protocol = EchoClient
-
-        def clientConnectionFailed(self, connector, reason):
-            print 'connection failed:', reason.getErrorMessage()
-            reactor.stop()
-
-        def clientConnectionLost(self, connector, reason):
-            print 'connection lost:', reason.getErrorMessage()
-            reactor.stop()
-
-    def main():
-        factory = EchoClientFactory()
-        reactor.connectSSL('localhost', 8000, factory, ssl.CertificateOptions())
-        reactor.run()
-
+.. literalinclude:: ../examples/echoclient_ssl.py
 
 Notice how all of the protocol code from the TCP version of the echo client and server examples is the same (imported or repeated) in these SSL versions -- only the reactor method used to initiate a network action is different.
 
