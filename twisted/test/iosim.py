@@ -51,7 +51,7 @@ class FakeAddress(object):
 
 
 @implementer(interfaces.ITransport,
-             interfaces.ITLSTransport) # ha ha not really
+             interfaces.ITLSTransport)
 class FakeTransport:
     """
     A wrapper around a file-like object to make it behave as a Transport.
