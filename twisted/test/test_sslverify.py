@@ -1034,14 +1034,15 @@ class ProtocolVersionTests(unittest.TestCase):
         """
         caCert, serverCert = self._buildCAandServerCertificates()
         otherCa, otherServer = self._buildCAandServerCertificates()
-        s, c, pump = self.loopbackTLSConnection(
+        sProto, cProto, pump = self.loopbackTLSConnection(
             peerTrust=caCert,
             privateKeyFile=self.asDumped(serverCert.privateKey),
             chainedCertFile=self.asDumped(serverCert),
         )
         pump.flush()
-        self.assertIs(c.wrappedProtocol.lostReason, None)
-        self.assertEqual(c.wrappedProtocol.data, s.wrappedProtocol.greeting)
+        self.assertIs(cProto.wrappedProtocol.lostReason, None)
+        self.assertEqual(cProto.wrappedProtocol.data,
+                         sProto.wrappedProtocol.greeting)
 
 
     def test_SSLv23(self):
