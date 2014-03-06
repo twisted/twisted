@@ -999,8 +999,9 @@ class ProtocolVersionTests(unittest.TestCase):
     def test_peerTrustPlatformRejectsUntrustedCA(self):
         """
         Specifying a C{peerTrust} of L{platformTrust} when initializing
-        C{OpenSSLCertificateOptions} causes certificates issued by a newly
-        created CA to be rejected by an SSL connection using these options.
+        L{sslverify.OpenSSLCertificateOptions} causes certificates issued by a
+        newly created CA to be rejected by an SSL connection using these
+        options.
 
         Note that this test should I{always} pass, even on platforms where the
         CA certificates are not installed, as long as L{platformTrust} rejects
