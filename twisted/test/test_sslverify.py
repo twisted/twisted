@@ -1,4 +1,4 @@
-# Copyright 2005 Divmod, Inc.  See LICENSE file for details
+# copyright 2005 Divmod, Inc.  See LICENSE file for details
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -1040,7 +1040,7 @@ class ProtocolVersionTests(unittest.TestCase):
             chainedCertFile=self.asDumped(serverCert),
         )
         pump.flush()
-        self.assertIdentical(c.wrappedProtocol.lostReason, None)
+        self.assertIs(c.wrappedProtocol.lostReason, None)
         self.assertEqual(c.wrappedProtocol.data, s.wrappedProtocol.greeting)
 
 
