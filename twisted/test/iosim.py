@@ -332,24 +332,26 @@ def connect(serverProtocol, serverTransport,
     @param serverTransport: The transport to associate with C{serverProtocol}.
     @type serverTransport: L{FakeTransport}
 
-    @param clientProtocol: The transport to associate with C{clientProtocol}.
+    @param clientProtocol: The protocol to use on the initiating side of the
+        connection.
     @type clientProtocol: L{IProtocol} provider
 
-    @param clientTransport:
+    @param clientTransport: The transport to associate with C{clientProtocol}.
     @type clientTransport: L{FakeTransport}
 
     @param debug: A flag indicating whether to log information about what the
         L{IOPump} is doing.
     @type debug: L{bool}
 
-    @return: An L{IOPump} which connects C{serverProtocol} and C{clientProtocol}
-        and delivers bytes between them when it is pumped.
+    @return: An L{IOPump} which connects C{serverProtocol} and
+        C{clientProtocol} and delivers bytes between them when it is pumped.
     @rtype: L{IOPump}
     """
     serverProtocol.makeConnection(serverTransport)
     clientProtocol.makeConnection(clientTransport)
     pump = IOPump(
-        clientProtocol, serverProtocol, clientTransport, serverTransport, debug)
+        clientProtocol, serverProtocol, clientTransport, serverTransport, debug
+    )
     # kick off server greeting, etc
     pump.flush()
     return pump
@@ -361,12 +363,33 @@ def connectedServerAndClient(ServerClass, ClientClass,
                              serverTransportFactory=makeFakeServer,
                              debug=False):
     """
+    Connect a given server and client class to each other.
+
     @param ServerClass: a callable that produces the server-side protocol.
     @type ServerClass: 0-argument callable returning L{IProtocol} provider.
 
     @param ClientClass: like C{ServerClass} but for the other side of the
         connection.
     @type ClientClass: 0-argument callable returning L{IProtocol} provider.
+
+    @param clientTransportFactory: a callable that produces the transport which
+        will be attached to the protocol returned from C{ClientClass}.
+    @type clientTransportFactory: callable taking (L{IProtocol}) and returning
+        L{FakeTransport}
+
+    @param serverTransportFactory: a callable that produces the transport which
+        will be attached to the protocol returned from C{ServerClass}.
+    @type serverTransportFactory: callable taking (L{IProtocol}) and returning
+        L{FakeTransport}
+
+    @param debug: Should this dump an escaped version of all traffic on this
+        connection to stdout for inspection?
+    @type debug: L{bool}
+
+    @return: the client protocol, the server protocol, and an L{IOPump} which,
+        when its C{pump} and C{flush} methods are called, will move data
+        between the created client and server protocol instances.
+    @rtype: 3-L{tuple} of L{IProtocol}, L{IProtocol}, L{IOPump}
     """
     c = ClientClass()
     s = ServerClass()
