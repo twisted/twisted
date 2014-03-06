@@ -1019,7 +1019,7 @@ class ProtocolVersionTests(unittest.TestCase):
         # No data was received.
         self.assertEqual(cProto.wrappedProtocol.data, b'')
 
-        # It was an SSL Error.
+        # It was an L{SSL.Error}.
         self.assertEqual(cProto.wrappedProtocol.lostReason.type, SSL.Error)
 
         # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
