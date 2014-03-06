@@ -987,8 +987,9 @@ class ProtocolVersionTests(unittest.TestCase):
             taking a pyOpenSSL file-type constant, such as
             L{OpenSSL.crypto.FILETYPE_PEM} or L{OpenSSL.crypto.FILETYPE_ASN1}.
 
-        @return: the name of a file where all of the dumpables were dumped in
+        @return: the path to a file where all of the dumpables were dumped in
             PEM format.
+        @rtype: L{str}
         """
         fname = self.mktemp()
         with open(fname, "wb") as f:
