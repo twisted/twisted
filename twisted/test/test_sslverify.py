@@ -138,52 +138,81 @@ class FakeContext(object):
     U{pyOpenSSL bug<https://bugs.launchpad.net/pyopenssl/+bug/1173899>}.
 
     @ivar _method: See C{method} parameter of L{__init__}.
+
     @ivar _options: C{int} of C{OR}ed values from calls of L{set_options}.
+
     @ivar _certificate: Set by L{use_certificate}.
+
     @ivar _privateKey: Set by L{use_privatekey}.
+
     @ivar _verify: Set by L{set_verify}.
+
     @ivar _verifyDepth: Set by L{set_verify_depth}.
+
     @ivar _sessionID: Set by L{set_session_id}.
+
     @ivar _extraCertChain: Accumulated C{list} of all extra certificates added
         by L{add_extra_chain_cert}.
+
     @ivar _cipherList: Set by L{set_cipher_list}.
+
     @ivar _dhFilename: Set by L{load_tmp_dh}.
+
+    @ivar _defaultVerifyPathsSet: Set by L{set_default_verify_paths}
     """
     _options = 0
 
     def __init__(self, method):
         self._method = method
         self._extraCertChain = []
+        self._defaultVerifyPathsSet = False
+
 
     def set_options(self, options):
         self._options |= options
 
+
     def use_certificate(self, certificate):
         self._certificate = certificate
+
 
     def use_privatekey(self, privateKey):
         self._privateKey = privateKey
 
+
     def check_privatekey(self):
         return None
+
 
     def set_verify(self, flags, callback):
         self._verify = flags, callback
 
+
     def set_verify_depth(self, depth):
         self._verifyDepth = depth
+
 
     def set_session_id(self, sessionID):
         self._sessionID = sessionID
 
+
     def add_extra_chain_cert(self, cert):
         self._extraCertChain.append(cert)
+
 
     def set_cipher_list(self, cipherList):
         self._cipherList = cipherList
 
+
     def load_tmp_dh(self, dhfilename):
         self._dhFilename = dhfilename
+
+
+    def set_default_verify_paths(self):
+        """
+        Set the default paths for the platform.
+        """
+        self._defaultVerifyPathsSet = True
 
 
 
@@ -875,17 +904,14 @@ class ProtocolVersionTests(unittest.TestCase):
         opts = sslverify.OpenSSLCertificateOptions(
             peerTrust=platformTrust(),
         )
-        called = []
-        class TestContext(SSL.Context):
-            def set_default_verify_paths(self):
-                SSL.Context.set_default_verify_paths(self)
-                called.append(self)
-        opts._contextFactory = TestContext
-        context = opts.getContext()
-        self.assertEqual(called, [context])
+        fc = FakeContext(SSL.TLSv1_METHOD)
+        opts._contextFactory = lambda method: fc
+        opts.getContext()
+        self.assertTrue(fc._defaultVerifyPathsSet)
 
 
-    def _buildCAandServerCertificates(self):
+    @staticmethod
+    def certificatesForAuthorityAndServer():
         """
         Create a self-signed CA certificate and server certificate signed by
         the CA.
@@ -1012,7 +1038,7 @@ class ProtocolVersionTests(unittest.TestCase):
         completely invalid / unknown root CA certificates.  This is simply a
         smoke test to make sure that verification is happening at all.
         """
-        caSelfCert, serverCert = self._buildCAandServerCertificates()
+        caSelfCert, serverCert = self.certificatesForAuthorityAndServer()
         chainedCert = self.pathContainingDumpOf(serverCert, caSelfCert)
         privateKey = self.pathContainingDumpOf(serverCert.privateKey)
 
@@ -1037,8 +1063,8 @@ class ProtocolVersionTests(unittest.TestCase):
         Specifying a L{Certificate} object for L{peerTrust} will result in that
         certificate being the only trust root for a client.
         """
-        caCert, serverCert = self._buildCAandServerCertificates()
-        otherCa, otherServer = self._buildCAandServerCertificates()
+        caCert, serverCert = self.certificatesForAuthorityAndServer()
+        otherCa, otherServer = self.certificatesForAuthorityAndServer()
         sProto, cProto, pump = self.loopbackTLSConnection(
             peerTrust=caCert,
             privateKeyFile=self.pathContainingDumpOf(serverCert.privateKey),
