@@ -978,7 +978,7 @@ class ProtocolVersionTests(unittest.TestCase):
         return sProto, cProto, pump
 
 
-    def asDumped(self, *dumpables):
+    def pathContainingDumpOf(self, *dumpables):
         """
         Create a temporary file to store some serializable-as-PEM objects in,
         and return its name.
@@ -1012,8 +1012,8 @@ class ProtocolVersionTests(unittest.TestCase):
         smoke test to make sure that verification is happening at all.
         """
         caSelfCert, serverCert = self._buildCAandServerCertificates()
-        chainedCert = self.asDumped(serverCert, caSelfCert)
-        privateKey = self.asDumped(serverCert.privateKey)
+        chainedCert = self.pathContainingDumpOf(serverCert, caSelfCert)
+        privateKey = self.pathContainingDumpOf(serverCert.privateKey)
 
         sProto, cProto, pump = self.loopbackTLSConnection(
             peerTrust=platformTrust(),
@@ -1040,8 +1040,8 @@ class ProtocolVersionTests(unittest.TestCase):
         otherCa, otherServer = self._buildCAandServerCertificates()
         sProto, cProto, pump = self.loopbackTLSConnection(
             peerTrust=caCert,
-            privateKeyFile=self.asDumped(serverCert.privateKey),
-            chainedCertFile=self.asDumped(serverCert),
+            privateKeyFile=self.pathContainingDumpOf(serverCert.privateKey),
+            chainedCertFile=self.pathContainingDumpOf(serverCert),
         )
         pump.flush()
         self.assertIs(cProto.wrappedProtocol.lostReason, None)
