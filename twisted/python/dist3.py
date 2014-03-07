@@ -212,7 +212,7 @@ testModules = [
     "twisted.trial.test.test_tests",
     "twisted.trial.test.test_util",
     "twisted.trial.test.test_warning",
-    # downloadPage tests weren't ported:
+    # The downloadPage tests weren't ported:
     "twisted.web.test.test_webclient",
     "twisted.web.test.test_http",
     "twisted.web.test.test_http_headers",
