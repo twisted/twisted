@@ -17,9 +17,10 @@ if sys.argv[1:]:
     testModules = sys.argv[1:]
 else:
     modules = {}
-    with open(os.path.join(twistedPath, "setup3.py")) as setup:
-        data = setup.read()
-        code = compile(data, "setup3.py", "exec")
+    path = os.path.join(twistedPath, "twisted", "python", "dist3.py")
+    with open(path) as dist3:
+        data = dist3.read()
+        code = compile(data, "dist3.py", "exec")
         exec(code, modules)
     testModules = modules["testModules"]
 

@@ -14,14 +14,12 @@ Porting to Python 3
 Introduction
 ------------
 
-
-    
 Twisted is currently being ported to work with Python 3.3. This
 document covers Twisted-specific issues in porting your code to Python
 3.
 
-    
-
+Only some parts of Twisted have been ported, and therefore only a subset of modules are installed under Python 3.
+You can see the full list of ported modules in :api:`twisted.python.dist3 <twisted.python.dist3>`.
 
 
 API Differences
