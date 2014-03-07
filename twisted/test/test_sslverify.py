@@ -986,7 +986,8 @@ class ProtocolVersionTests(unittest.TestCase):
         @param dumpables: arguments are objects from pyOpenSSL with a C{dump}
             method, taking a pyOpenSSL file-type constant, such as
             L{OpenSSL.crypto.FILETYPE_PEM} or L{OpenSSL.crypto.FILETYPE_ASN1}.
-        @type dumpables: L{tuple} of L{int}
+        @type dumpables: L{tuple} of L{object} with C{dump} method taking
+            L{int} returning L{bytes}
 
         @return: the path to a file where all of the dumpables were dumped in
             PEM format.
