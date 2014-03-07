@@ -924,7 +924,7 @@ class ProtocolVersionTests(unittest.TestCase):
         @param privateKeyFile: The name of the file containing the private key.
         @type privateKeyFile: L{str} (native string; file name)
 
-        @param chainedCertFile: The name of the chained certficate file.
+        @param chainedCertFile: The name of the chained certificate file.
         @type chainedCertFile: L{str} (native string; file name)
 
         @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
