@@ -897,12 +897,12 @@ class ProtocolVersionTests(unittest.TestCase):
 
     def test_caCertsPlatformDefaults(self):
         """
-        Specifying a C{caCerts} of L{sslverify.OpenSSLDefaultPaths} when
-        initializing C{OpenSSLCertificateOptions} loads the platform-provided
-        trusted certificates.
+        Specifying a C{peerTrust} of L{sslverify.OpenSSLDefaultPaths} when
+        initializing L{sslverify.OpenSSLCertificateOptions} loads the
+        platform-provided trusted certificates.
         """
         opts = sslverify.OpenSSLCertificateOptions(
-            peerTrust=platformTrust(),
+            peerTrust=sslverify.OpenSSLDefaultPaths(),
         )
         fc = FakeContext(SSL.TLSv1_METHOD)
         opts._contextFactory = lambda method: fc
