@@ -3,7 +3,7 @@ import sys
 from twisted.internet import defer, endpoints, protocol, ssl, task
 
 def main(reactor, host, port=443):
-    contextFactory = ssl.CertificateOptions(peerTrust=ssl.platformTrust())
+    contextFactory = ssl.CertificateOptions(trustRoot=ssl.platformTrust())
     port = int(port)
     done = defer.Deferred()
 

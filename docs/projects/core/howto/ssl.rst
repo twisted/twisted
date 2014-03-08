@@ -90,7 +90,7 @@ In the example above, the client did not attempt to verify the certificate prese
 If you are writing a client which connects to a server on the Internet, it is important to verify that server is using a trusted certificate.
 If you don't verify the server's certificate, you can not be sure that you are communicating with the intended server.
 
-Peer certificate verification is enabled by supplying a ``peerTrust`` argument to :api:`twisted.internet.ssl.CertificateOptions <CertificateOptions>`.
+Peer certificate verification is enabled by supplying a ``trustRoot`` argument to :api:`twisted.internet.ssl.CertificateOptions <CertificateOptions>`.
 This argument specifies the list of certificate authorities which you trust, and for what purpose.
 
 For the majority of *client* applications using TLS, you will want to get the list of trusted root certificates from your platform --- meaning, your operating system, your desktop environment, or your TLS implementor's configuration --- and verify the server against that.
@@ -149,20 +149,20 @@ You certainly wouldn't want your entire system to trust the dummy certificate th
 However, we can modify ``check_server_certificate.py`` to load that certificate, instead.
 
 Certificates in the PEM format can be loaded using :api:`twisted.internet.ssl.Certificate.loadPEM <Certificate.loadPEM>`, just as we did with ``PrivateCertificate``, above.
-The loaded ``Certificate`` object can then be used as a certificate authority by passing the :api:`twisted.internet.ssl.Certificate <Certificate>` object as the ``peerTrust`` argument, like this:
+The loaded ``Certificate`` object can then be used as a certificate authority by passing the :api:`twisted.internet.ssl.Certificate <Certificate>` object as the ``trustRoot`` argument, like this:
  
 .. code-block:: python
 
    cert = ssl.Certificate.loadPEM(open(certificatePath).read())
-   contextFactory = ssl.CertificateOptions(peerTrust=cert)
+   contextFactory = ssl.CertificateOptions(trustRoot=cert)
 
-So let's modify ``check_server_certificate.py`` to do just that, with ``echoserve_ssl.py``'s dummy certificate as its ``peerTrust``:
+So let's modify ``check_server_certificate.py`` to do just that, with ``echoserve_ssl.py``'s dummy certificate as its ``trustRoot``:
 
 :download:`check_echo_certificate.py <listings/ssl/check_echo_certificate.py>`
 
 .. literalinclude:: listings/ssl/check_echo_certificate.py
 
-This is just the same as above, just specifying a different ``peerTrust``.
+This is just the same as above, just specifying a different ``trustRoot``.
 While running ``python echoserve_ssl.py`` in the background, you can run this:
 
 .. code-block:: text

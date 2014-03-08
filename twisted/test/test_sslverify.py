@@ -897,12 +897,12 @@ class ProtocolVersionTests(unittest.TestCase):
 
     def test_caCertsPlatformDefaults(self):
         """
-        Specifying a C{peerTrust} of L{sslverify.OpenSSLDefaultPaths} when
+        Specifying a C{trustRoot} of L{sslverify.OpenSSLDefaultPaths} when
         initializing L{sslverify.OpenSSLCertificateOptions} loads the
         platform-provided trusted certificates.
         """
         opts = sslverify.OpenSSLCertificateOptions(
-            peerTrust=sslverify.OpenSSLDefaultPaths(),
+            trustRoot=sslverify.OpenSSLDefaultPaths(),
         )
         fc = FakeContext(SSL.TLSv1_METHOD)
         opts._contextFactory = lambda method: fc
@@ -938,14 +938,14 @@ class ProtocolVersionTests(unittest.TestCase):
         return caSelfCert, serverCert
 
 
-    def loopbackTLSConnection(self, peerTrust, privateKeyFile,
+    def loopbackTLSConnection(self, trustRoot, privateKeyFile,
                               chainedCertFile=None):
         """
         Create a loopback TLS connection with the given trust and keys.
 
-        @param peerTrust: the C{peerTrust} argument for the client connection's
+        @param trustRoot: the C{trustRoot} argument for the client connection's
             context.
-        @type peerTrust: L{sslverify.IOpenSSLTrustSettings}
+        @type trustRoot: L{sslverify.IOpenSSLTrustSettings}
 
         @param privateKeyFile: The name of the file containing the private key.
         @type privateKeyFile: L{str} (native string; file name)
@@ -986,7 +986,7 @@ class ProtocolVersionTests(unittest.TestCase):
                 self.lostReason = reason
 
         serverOpts = ContextFactory()
-        clientOpts = sslverify.OpenSSLCertificateOptions(peerTrust=peerTrust)
+        clientOpts = sslverify.OpenSSLCertificateOptions(trustRoot=trustRoot)
 
         clientFactory = TLSMemoryBIOFactory(
             clientOpts, isClient=True,
@@ -1026,9 +1026,9 @@ class ProtocolVersionTests(unittest.TestCase):
         return fname
 
 
-    def test_peerTrustPlatformRejectsUntrustedCA(self):
+    def test_trustRootPlatformRejectsUntrustedCA(self):
         """
-        Specifying a C{peerTrust} of L{platformTrust} when initializing
+        Specifying a C{trustRoot} of L{platformTrust} when initializing
         L{sslverify.OpenSSLCertificateOptions} causes certificates issued by a
         newly created CA to be rejected by an SSL connection using these
         options.
@@ -1043,7 +1043,7 @@ class ProtocolVersionTests(unittest.TestCase):
         privateKey = self.pathContainingDumpOf(serverCert.privateKey)
 
         sProto, cProto, pump = self.loopbackTLSConnection(
-            peerTrust=platformTrust(),
+            trustRoot=platformTrust(),
             privateKeyFile=privateKey,
             chainedCertFile=chainedCert,
         )
@@ -1058,15 +1058,15 @@ class ProtocolVersionTests(unittest.TestCase):
         self.assertEqual(err.args[0][0][2], 'tlsv1 alert unknown ca')
 
 
-    def test_peerTrustSpecificCertificate(self):
+    def test_trustRootSpecificCertificate(self):
         """
-        Specifying a L{Certificate} object for L{peerTrust} will result in that
+        Specifying a L{Certificate} object for L{trustRoot} will result in that
         certificate being the only trust root for a client.
         """
         caCert, serverCert = self.certificatesForAuthorityAndServer()
         otherCa, otherServer = self.certificatesForAuthorityAndServer()
         sProto, cProto, pump = self.loopbackTLSConnection(
-            peerTrust=caCert,
+            trustRoot=caCert,
             privateKeyFile=self.pathContainingDumpOf(serverCert.privateKey),
             chainedCertFile=self.pathContainingDumpOf(serverCert),
         )

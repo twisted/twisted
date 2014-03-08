@@ -461,7 +461,7 @@ class PrivateCertificate(Certificate):
         options = dict(privateKey=self.privateKey.original,
                        certificate=self.original)
         if authorities:
-            options.update(dict(peerTrust=OpenSSLCertificateAuthorities(
+            options.update(dict(trustRoot=OpenSSLCertificateAuthorities(
                 [auth.original for auth in authorities]
             )))
         return OpenSSLCertificateOptions(**options)
@@ -843,7 +843,7 @@ class OpenSSLCertificateOptions(object):
                  extraCertChain=None,
                  acceptableCiphers=None,
                  dhParameters=None,
-                 peerTrust=None):
+                 trustRoot=None):
         """
         Create an OpenSSL context SSL connection context factory.
 
@@ -857,7 +857,7 @@ class OpenSSLCertificateOptions(object):
             used which allows TLSv1.0, TLSv1.1, and TLSv1.2.
 
         @param verify: Specifying this argument directly is deprecated;
-            instead, use a C{peerTrust} keyword argument.
+            instead, use a C{trustRoot} keyword argument.
 
             By default this is L{False}.
 
@@ -866,7 +866,7 @@ class OpenSSLCertificateOptions(object):
             sessions and sessions with certificates which fail validation.
 
         @param caCerts: Specifying this argument directly is deprecated;
-            instead, use a C{peerTrust} keyword argument.
+            instead, use a C{trustRoot} keyword argument.
 
             List of certificate authority certificate objects to use to verify
             the peer's certificate.  Only used if verify is L{True} and will be
@@ -879,7 +879,7 @@ class OpenSSLCertificateOptions(object):
             If unspecified, use the underlying default (9).
 
         @param requireCertificate: Specifying this argument directly is
-            deprecated; instead, use a C{peerTrust} keyword argument.
+            deprecated; instead, use a C{trustRoot} keyword argument.
 
             If L{True}, do not allow anonymous sessions; defaults to L{True}.
 
@@ -901,7 +901,7 @@ class OpenSSLCertificateOptions(object):
             between peers using OpenSSL 0.9.8a.
 
         @param enableSessionTickets: If True, enable session ticket extension
-            for session resumption per RFC 5077. Note there is no support for
+            for session resumption per RFC 5077.  Note there is no support for
             controlling session tickets.  This option is off by default, as
             some server implementations don't correctly process incoming empty
             session ticket extensions in the hello.
@@ -922,7 +922,7 @@ class OpenSSLCertificateOptions(object):
         @type dhParameters: L{DiffieHellmanParameters
             <twisted.internet.ssl.DiffieHellmanParameters>}
 
-        @param peerTrust: Specification of trust requirements of peers.  If
+        @param trustRoot: Specification of trust requirements of peers.  If
             this argument is specified, the peer is verified, requires a
             certificate, and the certificate must be signed by one of the
             certificate authorities specified by this object.
@@ -931,7 +931,7 @@ class OpenSSLCertificateOptions(object):
             for C{caCerts}, C{verify}, and C{requireCertificate}; specifying
             any of those options should be avoided in favor of this one.
 
-        @type peerTrust: L{IOpenSSLTrustSettings}
+        @type trustRoot: L{IOpenSSLTrustSettings}
 
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
@@ -1010,14 +1010,14 @@ class OpenSSLCertificateOptions(object):
                 'on this platform.'
             )
 
-        if peerTrust is None:
+        if trustRoot is None:
             if self.verify:
-                peerTrust = OpenSSLCertificateAuthorities(caCerts)
+                trustRoot = OpenSSLCertificateAuthorities(caCerts)
         else:
             self.verify = True
             self.requireCertificate = True
-            peerTrust = IOpenSSLTrustSettings(peerTrust)
-        self.peerTrust = peerTrust
+            trustRoot = IOpenSSLTrustSettings(trustRoot)
+        self.trustRoot = trustRoot
 
 
     def __getstate__(self):
@@ -1061,7 +1061,7 @@ class OpenSSLCertificateOptions(object):
                 verifyFlags |= SSL.VERIFY_FAIL_IF_NO_PEER_CERT
             if self.verifyOnce:
                 verifyFlags |= SSL.VERIFY_CLIENT_ONCE
-            self.peerTrust._addCACertsToContext(ctx)
+            self.trustRoot._addCACertsToContext(ctx)
 
         # It'd be nice if pyOpenSSL let us pass None here for this behavior (as
         # the underlying OpenSSL API call allows NULL to be passed).  It
