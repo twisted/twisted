@@ -361,13 +361,15 @@ class TubeTest(TestCase):
         class Switcher(Pump):
             def received(self, data):
                 if data == "switch":
+                    yield "switching"
                     destinationPump.tube.switch(series(Switchee(), fakeDrain))
+                    yield "switched"
                 else:
-                    return [data]
+                    yield data
 
         class Switchee(Pump):
             def received(self, data):
-                yield "switched " + data
+                yield "switched({})".format(data)
 
         fakeDrain = self.fd
         destinationPump = PassthruPump()
@@ -379,7 +381,10 @@ class TubeTest(TestCase):
         self.ff.drain.receive("before")
         self.ff.drain.receive("switch")
         self.ff.drain.receive("after")
-        self.assertEquals(self.fd.received, ["before", "switched after"])
+        self.assertEqual(self.fd.received,
+                         ["before", "switching",
+                          "switched(switched)",
+                          "switched(after)"])
 
 
     def test_initiallyEnthusiasticFountBecomesDisillusioned(self):
