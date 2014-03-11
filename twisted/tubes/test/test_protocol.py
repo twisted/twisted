@@ -111,6 +111,17 @@ class FlowingAdapterTests(TestCase):
         self.assertEquals(self.pump.wasStopped, False)
 
 
+    def test_flowStoppedStopsConnection(self):
+        """
+        L{_ProtocolDrain.flowStopped} will close the underlying connection by
+        calling C{loseConnection} on it.
+        """
+        self.adaptedFount.flowTo(self.tube)
+        self.adaptedDrain.flowStopped(Failure(ZeroDivisionError()))
+        self.assertEquals(self.adaptedProtocol.transport.disconnecting, True)
+        self.assertEquals(self.pump.wasStopped, False)
+
+
     def test_connectionLostSendsFlowStopped(self):
         """
         When C{connectionLost} is called on a L{_ProtocolPlumbing} and it has
