@@ -62,7 +62,6 @@ class FakeDrain(object):
     inputType = IFakeInput
 
     fount = None
-    stopped = None
 
     def __init__(self):
         self.received = []

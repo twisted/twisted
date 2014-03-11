@@ -235,10 +235,14 @@ class TubeTest(TestCase):
         self.assertEquals(reasons, [])
         self.assertEquals(self.fd.received, [])
 
-        self.ff.drain.flowStopped(Failure(ZeroDivisionError()))
+        stopReason = Failure(ZeroDivisionError())
+
+        self.ff.drain.flowStopped(stopReason)
         self.assertEquals(self.fd.received, ["conclusion"])
         self.assertEquals(len(reasons), 1)
         self.assertIdentical(reasons[0].type, ZeroDivisionError)
+
+        self.assertEqual(self.fd.stopped, [stopReason])
 
 
     def test_pumpFlowSwitching(self):

@@ -265,7 +265,7 @@ class IPump(Interface):
         lower-level data source that this L{Pump} is interacting with.
 
         @return: An iterable of values to propagate to the downstream drain
-            attached to this L{IPump}.
+            attached to this L{IPump}.  Something something L{Deferred}.
         @rtype: iterable of L{IPump.outputType}
         """
 
@@ -285,6 +285,11 @@ class IPump(Interface):
             L{IFount.stopFlow}, since it has no control over whether additional
             data will be synthesized / processed by I{its} fount, there's no
             useful work it can do.
+
+        @return: The same as L{IPump.received}; values returned (or yielded) by
+            this method will be propagated before the L{IDrain.flowStopped}
+            notification to the downstream drain.
+        @rtype: same as L{IPump.received}
         """
 
 
