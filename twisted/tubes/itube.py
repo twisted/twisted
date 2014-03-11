@@ -263,6 +263,10 @@ class IPump(Interface):
         """
         An item was received from 'upstream', i.e. the framework, or the
         lower-level data source that this L{Pump} is interacting with.
+
+        @return: An iterable of values to propagate to the downstream drain
+            attached to this L{IPump}.
+        @rtype: iterable of L{IPump.outputType}
         """
 
 

@@ -234,6 +234,7 @@ class TubeTest(TestCase):
         self.ff.flowTo(series(Ender(), self.fd))
         self.assertEquals(reasons, [])
         self.assertEquals(self.fd.received, [])
+
         self.ff.drain.flowStopped(Failure(ZeroDivisionError()))
         self.assertEquals(self.fd.received, ["conclusion"])
         self.assertEquals(len(reasons), 1)
