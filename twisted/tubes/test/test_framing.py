@@ -153,42 +153,6 @@ class LineTests(TestCase):
         self.assertEquals(fd2.received, ['hello\r\n', 'world'])
 
 
-    def test_switchingSelfWhileReceiving(self):
-        """
-        Switching drains downstream delivers data in order.
-        """
-        lines = bytesToLines()
-        ff = FakeFount()
-        fd1 = FakeDrain()
-        fd2 = FakeDrain()
-
-        class SwitchAfterFirstLine(Pump):
-            seenFirstLine = False
-
-            def received(self, line):
-                if not self.seenFirstLine:
-                    self.seenFirstLine = True
-                else:
-                    downstream.tube.switch(fd2)
-                yield line
-
-        @implementer(ISwitchablePump)
-        class Downstream(Pump):
-            def received(self, line):
-                yield (line + "(downstream)")
-
-            def reassemble(self, data):
-                return data
-
-        downstream = Downstream()
-
-        cc = series(lines, SwitchAfterFirstLine(), downstream, fd1)
-        ff.flowTo(cc)
-        ff.drain.receive('spam\r\neggs\r\nspameggs\r\nspamspam\r\n')
-        self.assertEquals(fd1.received, ['spam(downstream)'])
-        self.assertEquals(fd2.received, ['eggs', 'spameggs', 'spamspam'])
-
-
 
 class PackedPrefixTests(TestCase):
     """

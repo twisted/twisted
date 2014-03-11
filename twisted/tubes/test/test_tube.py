@@ -310,13 +310,14 @@ class TubeTest(TestCase):
         self.assertEquals(fakeDrain.received, ["switched to switchee"])
 
 
-    def test_pumpFlowSwitching_WithCheese(self):
-        # XXX RENAME
+    def test_pumpFlowSwitchingReassembly(self):
         """
-        The L{_Tube} of a L{Pump} sends on reassembled data to a newly
-        specified L{Drain}.
+        The L{_Tube} of a L{Pump} sends on reassembled data - the return value
+        of L{Pump.reassemble} to a newly specified L{Drain}; it is only called
+        with un-consumed elements of data (those which have never been passed
+        to C{receive}).
         """
-        testCase = self
+        preSwitch = []
         @implementer(ISwitchablePump)
         class ReassemblingPump(Pump):
             def received(self, datum):
@@ -325,13 +326,13 @@ class TubeTest(TestCase):
 
             def reassemble(self, data):
                 for element in data:
-                    yield 'BORK'
+                    yield '(bork was here)'
                     yield element
 
         class Switcher(Pump):
             def received(self, data):
                 # Sanity check: this should be the only input ever received.
-                testCase.assertEqual(data, "switch")
+                preSwitch.append(data)
                 sourcePump.tube.switch(series(Switchee(), fakeDrain))
                 return ()
 
@@ -344,17 +345,18 @@ class TubeTest(TestCase):
         firstDrain = series(sourcePump)
         self.ff.flowTo(firstDrain).flowTo(series(Switcher(), fakeDrain))
 
-        self.ff.drain.receive("switchBORKto switchee")
+        self.ff.drain.receive("beforeBORKto switchee")
 
-        self.assertEquals(self.fd.received, ["switched BORK",
-                                             "switched to switchee"])
+        self.assertEqual(preSwitch, ["before"])
+        self.assertEqual(self.fd.received, ["switched (bork was here)",
+                                            "switched to switchee"])
 
 
-    def test_pumpFlowSwitching_TheWorks(self):
-        # XXX RENAME
+    def test_pumpFlowSwitchingControlsWhereOutputGoes(self):
         """
-        Switching a pump that has never received data works I{just fine} thank
-        you very much.
+        If a tube A with a pump Ap is flowing to a tube B with a switchable
+        pump Bp, Ap.received may switch B to a drain C, and C will receive any
+        outputs produced by that received call; B (and Bp) will not.
         """
         class Switcher(Pump):
             def received(self, data):
