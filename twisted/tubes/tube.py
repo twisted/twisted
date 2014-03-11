@@ -228,8 +228,8 @@ class _TubeDrain(_TubePiece):
         """
         This tube has now stopped.
         """
+        self._tube._flowStoppingReason = reason
         self._tube._deliverFrom(lambda: self._pump.stopped(reason))
-        self._tube._tfount.drain.flowStopped(reason)
 
 
 
@@ -340,6 +340,11 @@ class _Tube(object):
 
     @ivar _pauseBecausePauseCalled: an L{IPause} from the upstream fount,
         present because pauseFlow has been called.
+
+    @ivar _flowStoppingReason: If this is not C{None}, then call C{flowStopped}
+        on the downstream L{IDrain} at the next opportunity, where "the next
+        opportunity" is when the last L{Deferred} yielded from L{IPump.stopped}
+        has fired.
     """
 
     _currentlyPaused = False
@@ -404,6 +409,7 @@ class _Tube(object):
         return self._unbufferIterator()
 
     _unbuffering = False
+    _flowStoppingReason = None
 
     def _unbufferIterator(self):
         if self._unbuffering:
@@ -415,6 +421,8 @@ class _Tube(object):
             value = next(self._pendingIterator, whatever)
             if value is whatever:
                 self._pendingIterator = None
+                if self._flowStoppingReason is not None:
+                    self._tfount.drain.flowStopped(self._flowStoppingReason)
                 break
             if isinstance(value, Deferred):
                 anPause = self._tfount.pauseFlow()
