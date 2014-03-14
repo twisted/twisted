@@ -745,13 +745,19 @@ def platformTrust():
     (or, in other words: trust roots, or root certificates) whose trust is
     managed and updated by tools outside of Twisted.
 
-    Most often, this will be some approximation of an up-to-date list of
-    certificates distributed with web browser, and has similar trust
-    properties, and when developing code that uses it, you can think of it that
-    way.  However, the main point of this API is that the configuration of
-    which certificates are trusted is usually neither Twisted's responsibility
-    nor your application's: the user may use platform-specific tools for
+    If you are writing any client-side TLS code with Twisted, you should use
+    this as the C{trustRoot} argument to L{ssl.CertificateOptions
+    <OpenSSLCertificateOptions>}.
+
+    The result of this function should be like the up-to-date list of
+    certificates in a web browser.  When developing code that uses
+    C{platformTrust}, you can think of it that way.  However, the choice of
+    which certificate authorities to trust is never Twisted's responsibility.
+    Unless you're writing a very unusual application or library, it's not your
+    code's responsibility either.  The user may use platform-specific tools for
     defining which server certificates should be trusted by programs using TLS.
+    The purpose of using this API is to respect that decision as much as
+    possible.
 
     This should be a set of trust settings most appropriate for I{client} TLS
     connections; i.e. those which need to verify a server's authenticity.  You
