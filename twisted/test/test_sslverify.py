@@ -1,4 +1,4 @@
-# copyright 2005 Divmod, Inc.  See LICENSE file for details
+# Copyright 2005 Divmod, Inc.  See LICENSE file for details
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -205,6 +205,9 @@ def pathContainingDumpOf(testCase, *dumpables):
     """
     Create a temporary file to store some serializable-as-PEM objects in, and
     return its name.
+
+    @param testCase: a test case to use for generating a temporary directory.
+    @type testCase: L{twisted.trial.unittest.TestCase}
 
     @param dumpables: arguments are objects from pyOpenSSL with a C{dump}
         method, taking a pyOpenSSL file-type constant, such as

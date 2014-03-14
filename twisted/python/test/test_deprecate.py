@@ -801,8 +801,18 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
 
     def checkPassed(self, func, *args, **kw):
         """
-        Test an invocation of L{passed} with the given function,
-        arguments, and keyword arguments.
+        Test an invocation of L{passed} with the given function, arguments, and
+        keyword arguments.
+
+        @param func: A function whose argspec to pass to L{_passed}.
+        @type func: A callable.
+
+        @param args: The arguments which could be passed to L{func}.
+
+        @param kw: The keyword arguments which could be passed to L{func}.
+
+        @return: L{_passed}'s return value
+        @rtype: L{dict}
         """
         return _passed(inspect.getargspec(func), args, kw)
 

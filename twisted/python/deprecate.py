@@ -545,6 +545,19 @@ def _passed(argspec, positional, keyword):
     Take an L{inspect.ArgSpec}, a tuple of positional arguments, and a dict of
     keyword arguments, and return a mapping of arguments that were actually
     passed to their passed values.
+
+    @param argspec: The argument specification for the function to inspect.
+    @type argspec: L{inspect.ArgSpec}
+
+    @param positional: The positional arguments that were passed.
+    @type positional: L{tuple}
+
+    @param keyword: The keyword arguments that were passed.
+    @type keyword: L{dict}
+
+    @return: A dictionary mapping argument names (those declared in C{argspec})
+        to values that were passed explicitly by the user.
+    @rtype: L{dict} mapping L{str} to L{object}
     """
     result = {}
     unpassed = len(argspec.args) - len(positional)
@@ -578,6 +591,14 @@ def _mutuallyExclusiveArguments(argumentPairs):
     @param argumentPairs: pairs of argument identifiers, each pair indicating
         an argument that may not be passed in conjunction with another.
     @type argumentPairs: sequence of 2-sequences of L{str}
+
+    @return: A decorator, used like so::
+
+            @_mutuallyExclusiveArguments([["tweedledum", "tweedledee"]])
+            def function(tweedledum=1, tweedledee=2):
+                "Don't pass tweedledum and tweedledee at the same time."
+
+    @rtype: 1-argument callable taking a callable and returning a callable.
     """
     def wrapper(wrappee):
         argspec = inspect.getargspec(wrappee)
