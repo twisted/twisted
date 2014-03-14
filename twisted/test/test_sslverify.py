@@ -899,7 +899,7 @@ class ProtocolVersionTests(unittest.TestCase):
         """
         Specifying a C{trustRoot} of L{sslverify.OpenSSLDefaultPaths} when
         initializing L{sslverify.OpenSSLCertificateOptions} loads the
-        platform-provided trusted certificates.
+        platform-provided trusted certificates via C{set_default_verify_paths}.
         """
         opts = sslverify.OpenSSLCertificateOptions(
             trustRoot=sslverify.OpenSSLDefaultPaths(),
