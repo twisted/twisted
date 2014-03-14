@@ -1033,6 +1033,28 @@ class ProtocolVersionTests(unittest.TestCase):
             self._protocols(sslverify.OpenSSLCertificateOptions()))
 
 
+    def test_SSLv23(self):
+        """
+        When L{sslverify.OpenSSLCertificateOptions} is initialized with
+        C{SSLv23_METHOD} all versions of TLS and SSLv3 are allowed.
+        """
+        self.assertEqual(
+            set([ProtocolVersion.SSLv3,
+                 ProtocolVersion.TLSv1_0,
+                 ProtocolVersion.TLSv1_1,
+                 ProtocolVersion.TLSv1_2]),
+            self._protocols(sslverify.OpenSSLCertificateOptions(
+                    method=SSL.SSLv23_METHOD)))
+
+
+
+class TrustRootTests(unittest.TestCase):
+    """
+    Tests for L{sslverify.OpenSSLCertificateOptions}' C{trustRoot} argument,
+    L{sslverify.platformTrust}, and their interactions.
+    """
+
+
     def test_caCertsPlatformDefaults(self):
         """
         Specifying a C{trustRoot} of L{sslverify.OpenSSLDefaultPaths} when
@@ -1096,20 +1118,6 @@ class ProtocolVersionTests(unittest.TestCase):
         self.assertIs(cProto.wrappedProtocol.lostReason, None)
         self.assertEqual(cProto.wrappedProtocol.data,
                          sProto.wrappedProtocol.greeting)
-
-
-    def test_SSLv23(self):
-        """
-        When L{sslverify.OpenSSLCertificateOptions} is initialized with
-        C{SSLv23_METHOD} all versions of TLS and SSLv3 are allowed.
-        """
-        self.assertEqual(
-            set([ProtocolVersion.SSLv3,
-                 ProtocolVersion.TLSv1_0,
-                 ProtocolVersion.TLSv1_1,
-                 ProtocolVersion.TLSv1_2]),
-            self._protocols(sslverify.OpenSSLCertificateOptions(
-                    method=SSL.SSLv23_METHOD)))
 
 
 
