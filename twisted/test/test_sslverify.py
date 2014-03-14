@@ -1238,6 +1238,12 @@ class FakeLib(object):
     def OBJ_sn2nid(self, snName):
         """
         Create a L{FakeNID} with C{snName} and return it.
+
+        @param snName: a free form name that gets passed to the constructor
+            of L{FakeNID}.
+
+        @return: a new L{FakeNID}.
+        @rtype: L{FakeNID}.
         """
         return FakeNID(snName)
 
@@ -1245,6 +1251,9 @@ class FakeLib(object):
     def EC_KEY_new_by_curve_name(self, nid):
         """
         Create a L{FakeECKey}, save it to C{_createdKeys} and return it.
+
+        @return: a new L{FakeECKey}
+        @rtype: L{FakeECKey}
         """
         key = FakeECKey(nid)
         self._createdKeys.add(key)
@@ -1254,6 +1263,9 @@ class FakeLib(object):
     def EC_KEY_free(self, key):
         """
         Remove C{key} from C{_createdKey}.
+
+        @param key: a key object to be freed; i.e. removed from
+            C{_createdKeys}.
 
         @raises ValueError: If C{key} is not in C{_createdKeys} and thus not
             created by us.
@@ -1267,6 +1279,9 @@ class FakeLib(object):
     def SSL_CTX_set_tmp_ecdh(self, ffiContext, key):
         """
         Does not do anything.
+
+        @param ffiContext: ignored
+        @param key: ignored
         """
 
 
