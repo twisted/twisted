@@ -201,6 +201,30 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
     return sProto, cProto, pump
 
 
+
+def pathContainingDumpOf(testCase, *dumpables):
+    """
+    Create a temporary file to store some serializable-as-PEM objects in, and
+    return its name.
+
+    @param dumpables: arguments are objects from pyOpenSSL with a C{dump}
+        method, taking a pyOpenSSL file-type constant, such as
+        L{OpenSSL.crypto.FILETYPE_PEM} or L{OpenSSL.crypto.FILETYPE_ASN1}.
+    @type dumpables: L{tuple} of L{object} with C{dump} method taking L{int}
+        returning L{bytes}
+
+    @return: the path to a file where all of the dumpables were dumped in PEM
+        format.
+    @rtype: L{str}
+    """
+    fname = testCase.mktemp()
+    with open(fname, "wb") as f:
+        for dumpable in dumpables:
+            f.write(dumpable.dump(FILETYPE_PEM))
+    return fname
+
+
+
 class DataCallbackProtocol(protocol.Protocol):
     def dataReceived(self, data):
         d, self.factory.onData = self.factory.onData, None
@@ -1024,28 +1048,6 @@ class ProtocolVersionTests(unittest.TestCase):
         self.assertTrue(fc._defaultVerifyPathsSet)
 
 
-    def pathContainingDumpOf(self, *dumpables):
-        """
-        Create a temporary file to store some serializable-as-PEM objects in,
-        and return its name.
-
-        @param dumpables: arguments are objects from pyOpenSSL with a C{dump}
-            method, taking a pyOpenSSL file-type constant, such as
-            L{OpenSSL.crypto.FILETYPE_PEM} or L{OpenSSL.crypto.FILETYPE_ASN1}.
-        @type dumpables: L{tuple} of L{object} with C{dump} method taking
-            L{int} returning L{bytes}
-
-        @return: the path to a file where all of the dumpables were dumped in
-            PEM format.
-        @rtype: L{str}
-        """
-        fname = self.mktemp()
-        with open(fname, "wb") as f:
-            for dumpable in dumpables:
-                f.write(dumpable.dump(FILETYPE_PEM))
-        return fname
-
-
     def test_trustRootPlatformRejectsUntrustedCA(self):
         """
         Specifying a C{trustRoot} of L{platformTrust} when initializing
@@ -1059,8 +1061,8 @@ class ProtocolVersionTests(unittest.TestCase):
         smoke test to make sure that verification is happening at all.
         """
         caSelfCert, serverCert = certificatesForAuthorityAndServer()
-        chainedCert = self.pathContainingDumpOf(serverCert, caSelfCert)
-        privateKey = self.pathContainingDumpOf(serverCert.privateKey)
+        chainedCert = pathContainingDumpOf(self, serverCert, caSelfCert)
+        privateKey = pathContainingDumpOf(self, serverCert.privateKey)
 
         sProto, cProto, pump = loopbackTLSConnection(
             trustRoot=platformTrust(),
@@ -1087,8 +1089,8 @@ class ProtocolVersionTests(unittest.TestCase):
         otherCa, otherServer = certificatesForAuthorityAndServer()
         sProto, cProto, pump = loopbackTLSConnection(
             trustRoot=caCert,
-            privateKeyFile=self.pathContainingDumpOf(serverCert.privateKey),
-            chainedCertFile=self.pathContainingDumpOf(serverCert),
+            privateKeyFile=pathContainingDumpOf(self, serverCert.privateKey),
+            chainedCertFile=pathContainingDumpOf(self, serverCert),
         )
         pump.flush()
         self.assertIs(cProto.wrappedProtocol.lostReason, None)
