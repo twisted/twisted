@@ -328,6 +328,26 @@ class OpenSSLOptions(unittest.TestCase):
         )
 
 
+    def test_constructorDoesNotAllowLegacyWithTrustRoot(self):
+        """
+        C{verify}, C{requireCertificate}, and C{caCerts} must not be specified
+        by the caller (to be I{any} value, even the default!) when specifying
+        C{trustRoot}.
+        """
+        self.assertRaises(
+            TypeError,
+            sslverify.OpenSSLCertificateOptions,
+            privateKey=self.sKey, certificate=self.sCert,
+            verify=True, trustRoot=None, caCerts=self.caCerts,
+        )
+        self.assertRaises(
+            TypeError,
+            sslverify.OpenSSLCertificateOptions,
+            privateKey=self.sKey, certificate=self.sCert,
+            trustRoot=None, requireCertificate=True,
+        )
+
+
     def test_constructorAllowsCACertsWithoutVerify(self):
         """
         It's currently a NOP, but valid.

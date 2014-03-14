@@ -827,6 +827,13 @@ class OpenSSLCertificateOptions(object):
                                            0x00400000)
     _OP_SINGLE_ECDH_USE = getattr(SSL, 'OP_SINGLE_ECDH_USE ', 0x00080000)
 
+
+    from twisted.python.deprecate import _mutuallyExclusiveArguments
+    @_mutuallyExclusiveArguments([
+        ['trustRoot', 'requireCertificate'],
+        ['trustRoot', 'verify'],
+        ['trustRoot', 'caCerts'],
+    ])
     def __init__(self,
                  privateKey=None,
                  certificate=None,
@@ -856,17 +863,16 @@ class OpenSSLCertificateOptions(object):
             constants provided by pyOpenSSL).  By default, a setting will be
             used which allows TLSv1.0, TLSv1.1, and TLSv1.2.
 
-        @param verify: Specifying this argument directly is deprecated;
-            instead, use a C{trustRoot} keyword argument.
-
+        @param verify: Please use a C{trustRoot} keyword argument instead,
+            since it provides the same functionality in a less error-prone way.
             By default this is L{False}.
 
             If L{True}, verify certificates received from the peer and fail the
             handshake if verification fails.  Otherwise, allow anonymous
             sessions and sessions with certificates which fail validation.
 
-        @param caCerts: Specifying this argument directly is deprecated;
-            instead, use a C{trustRoot} keyword argument.
+        @param caCerts: Please use a C{trustRoot} keyword argument instead,
+            since it provides the same functionality in a less error-prone way.
 
             List of certificate authority certificate objects to use to verify
             the peer's certificate.  Only used if verify is L{True} and will be
@@ -878,8 +884,9 @@ class OpenSSLCertificateOptions(object):
         @param verifyDepth: Depth in certificate chain down to which to verify.
             If unspecified, use the underlying default (9).
 
-        @param requireCertificate: Specifying this argument directly is
-            deprecated; instead, use a C{trustRoot} keyword argument.
+        @param requireCertificate: Please use a C{trustRoot} keyword argument
+            instead, since it provides the same functionality in a less
+            error-prone way.
 
             If L{True}, do not allow anonymous sessions; defaults to L{True}.
 
@@ -900,11 +907,11 @@ class OpenSSLCertificateOptions(object):
             now off by default, because it causes problems with connections
             between peers using OpenSSL 0.9.8a.
 
-        @param enableSessionTickets: If True, enable session ticket extension
-            for session resumption per RFC 5077.  Note there is no support for
-            controlling session tickets.  This option is off by default, as
-            some server implementations don't correctly process incoming empty
-            session ticket extensions in the hello.
+        @param enableSessionTickets: If L{True}, enable session ticket
+            extension for session resumption per RFC 5077.  Note there is no
+            support for controlling session tickets.  This option is off by
+            default, as some server implementations don't correctly process
+            incoming empty session ticket extensions in the hello.
 
         @param extraCertChain: List of certificates that I{complete} your
             verification chain if the certificate authority that signed your
@@ -923,13 +930,14 @@ class OpenSSLCertificateOptions(object):
             <twisted.internet.ssl.DiffieHellmanParameters>}
 
         @param trustRoot: Specification of trust requirements of peers.  If
-            this argument is specified, the peer is verified, requires a
-            certificate, and the certificate must be signed by one of the
+            this argument is specified, the peer is verified.  It requires a
+            certificate, and that certificate must be signed by one of the
             certificate authorities specified by this object.
 
-            Note that this option I{overrides and supersedes} values specified
-            for C{caCerts}, C{verify}, and C{requireCertificate}; specifying
-            any of those options should be avoided in favor of this one.
+            Note that since this option specifies the same information as
+            C{caCerts}, C{verify}, and C{requireCertificate}, specifying any of
+            those options in combination with this one will raise a
+            L{TypeError}.
 
         @type trustRoot: L{IOpenSSLTrustSettings}
 
@@ -941,6 +949,10 @@ class OpenSSLCertificateOptions(object):
             C{privateKey} or C{certificate}.
         @raise ValueError: when C{acceptableCiphers} doesn't yield any usable
             ciphers for the current platform.
+
+        @raise TypeError: if C{trustRoot} is passed in combination with
+            C{caCert}, C{verify}, or C{requireCertificate}.  Please prefer
+            C{trustRoot} in new code, as its semantics are less tricky.
         """
 
         if (privateKey is None) != (certificate is None):
