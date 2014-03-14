@@ -166,7 +166,7 @@ class CertBase:
     pair) certificates.
 
     @ivar original: The underlying OpenSSL certificate object.
-    @type original: C{OpenSSL.crypto.X509}
+    @type original: L{OpenSSL.crypto.X509}
     """
 
     def __init__(self, original):
@@ -194,9 +194,9 @@ class CertBase:
         Convert this L{CertBase} into a provider of the given interface.
 
         @param interface: The interface to conform to.
-        @type interface: C{zope.interface.Interface}
+        @type interface: L{Interface}
 
-        @return: an L{IOpenSSLTrustSettings} provider or C{NotImplemented}
+        @return: an L{IOpenSSLTrustSettings} provider or L{NotImplemented}
         @rtype: C{interface} or L{NotImplemented}
         """
         if interface is IOpenSSLTrustSettings:
@@ -672,12 +672,12 @@ class IOpenSSLTrustSettings(Interface):
 
     def _addCACertsToContext(context):
         """
-        Add any relevant certificate-authority certificates to the given SSL
-        context.
+        Add certificate-authority certificates to an SSL context whose
+        connections should trust those authorities.
 
         @param context: An SSL context for a connection which should be
             verified by some certificate authority.
-        @type context: C{OpenSSL.SSL.Context}
+        @type context: L{OpenSSL.SSL.Context}
 
         @return: L{None}
         """
@@ -687,14 +687,15 @@ class IOpenSSLTrustSettings(Interface):
 @implementer(IOpenSSLTrustSettings)
 class OpenSSLCertificateAuthorities(object):
     """
-    Trust an explicitly-specified set of certificates, as represented by a list
-    of C{OpenSSL.crypto.X509} objects.
+    Trust an explicitly specified set of certificates, represented by a list of
+    L{OpenSSL.crypto.X509} objects.
     """
 
     def __init__(self, caCerts):
         """
-        @param caCerts: The certificate authorities.
-        @type caCerts: L{list} of C{OpenSSL.crypto.X509}
+        @param caCerts: The certificate authorities to trust when using this
+            object as a C{trustRoot} for L{OpenSSLCertificateOptions}.
+        @type caCerts: L{list} of L{OpenSSL.crypto.X509}
         """
         self._caCerts = caCerts
 
