@@ -795,6 +795,11 @@ class OpenSSLCertificateOptions(object):
             self._options |= self._OP_NO_TICKET
         self.dhParameters = dhParameters
 
+        try:
+            self._ecCurve = _OpenSSLECCurve(_defaultCurveName)
+        except NotImplementedError:
+            self._ecCurve = None
+
         if acceptableCiphers is None:
             acceptableCiphers = defaultCiphers
         # This needs to run when method and _options are finalized.
@@ -877,7 +882,82 @@ class OpenSSLCertificateOptions(object):
             ctx.load_tmp_dh(self.dhParameters._dhFile.path)
         ctx.set_cipher_list(nativeString(self._cipherString))
 
+        if self._ecCurve is not None:
+            try:
+                self._ecCurve.addECKeyToContext(ctx)
+            except BaseException:
+                pass  # ECDHE support is best effort only.
+
         return ctx
+
+
+
+class _OpenSSLECCurve(FancyEqMixin, object):
+    """
+    A private representation of an OpenSSL ECC curve.
+    """
+    compareAttributes = ("snName", )
+
+    def __init__(self, snName):
+        """
+        @param snName: The name of the curve as used by C{OBJ_sn2nid}.
+        @param snName: L{unicode}
+
+        @raises NotImplementedError: If ECC support is not available.
+        @raises ValueError: If C{snName} is not a supported curve.
+        """
+        self.snName = nativeString(snName)
+
+        # As soon as pyOpenSSL supports ECDHE directly, attempt to use its
+        # APIs first.  See #7033.
+
+        # If pyOpenSSL is based on cryptography.io (0.14+), we use its
+        # bindings directly to set the ECDHE curve.
+        try:
+            binding = self._getBinding()
+            self._lib = binding.lib
+            self._ffi = binding.ffi
+            self._nid = self._lib.OBJ_sn2nid(self.snName)
+            if self._nid == self._lib.NID_undef:
+                raise ValueError("Unknown ECC curve.")
+        except AttributeError:
+            raise NotImplementedError(
+                "This version of pyOpenSSL does not support ECC."
+            )
+
+
+    def _getBinding(self):
+        """
+        Attempt to get cryptography's binding instance.
+
+        @raises NotImplementedError: If underlying pyOpenSSL is not based on
+            cryptography.
+
+        @return: cryptograpy bindings.
+        @rtype: C{cryptography.hazmat.bindings.openssl.Binding}
+        """
+        try:
+            from OpenSSL._util import binding
+            return binding
+        except ImportError:
+            raise NotImplementedError(
+                "This version of pyOpenSSL does not support ECC."
+            )
+
+
+    def addECKeyToContext(self, context):
+        """
+        Add an temporary EC key to C{context}.
+
+        @param context: The context to add a key to.
+        @type context: L{OpenSSL.SSL.Context}
+        """
+        ecKey = self._lib.EC_KEY_new_by_curve_name(self._nid)
+        if ecKey == self._ffi.NULL:
+            raise EnvironmentError("EC key creation failed.")
+
+        self._lib.SSL_CTX_set_tmp_ecdh(context._context, ecKey)
+        self._lib.EC_KEY_free(ecKey)
 
 
 
@@ -996,6 +1076,7 @@ defaultCiphers = OpenSSLAcceptableCiphers.fromOpenSSLCipherString(
     "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:"
     "DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS"
 )
+_defaultCurveName = u"prime256v1"
 
 
 

@@ -490,6 +490,58 @@ class OpenSSLOptions(unittest.TestCase):
         )
 
 
+    def test_ecDoesNotBreakConstructor(self):
+        """
+        Missing ECC does not break the constructor and sets C{_ecCurve} to
+        L{None}.
+        """
+        def raiser(self):
+            raise NotImplementedError
+        self.patch(sslverify._OpenSSLECCurve, "_getBinding", raiser)
+
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+        )
+        self.assertIs(None, opts._ecCurve)
+
+
+    def test_ecNeverBreaksGetContext(self):
+        """
+        ECDHE support is best effort only and errors are ignored.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+        )
+        opts._ecCurve = object()
+        ctx = opts.getContext()
+        self.assertIsInstance(ctx, SSL.Context)
+
+
+    def test_ecSuccessWithRealBindings(self):
+        """
+        Integration test that checks the positive code path to ensure that we
+        use the API properly.
+        """
+        try:
+            defaultCurve = sslverify._OpenSSLECCurve(
+                sslverify._defaultCurveName
+            )
+        except NotImplementedError:
+            raise unittest.SkipTest(
+                "Underlying pyOpenSSL is not based on cryptography."
+            )
+        opts = sslverify.OpenSSLCertificateOptions(
+            privateKey=self.sKey,
+            certificate=self.sCert,
+        )
+        self.assertEqual(defaultCurve, opts._ecCurve)
+        # Exercise positive code path.  getContext swallows errors so we do it
+        # explicitly by hand.
+        opts._ecCurve.addECKeyToContext(opts.getContext())
+
+
     def test_abbreviatingDistinguishedNames(self):
         """
         Check that abbreviations used in certificates correctly map to
@@ -1142,3 +1194,253 @@ class TestDiffieHellmanParameters(unittest.TestCase):
             self.filePath
         )
         self.assertEqual(self.filePath, params._dhFile)
+
+
+
+class FakeECKey(object):
+    """
+    An introspectable fake of a key.
+
+    @ivar _nid: A free form nid.
+    """
+    def __init__(self, nid):
+        self._nid = nid
+
+
+
+class FakeNID(object):
+    """
+    An introspectable fake of a NID.
+
+    @ivar _snName: A free form sn name.
+    """
+    def __init__(self, snName):
+        self._snName = snName
+
+
+
+class FakeLib(object):
+    """
+    An introspectable fake of cryptography's lib object.
+
+    @ivar _createdKey: A set of keys that have been created by this instance.
+    @type _createdKey: L{set} of L{FakeKey}
+
+    @cvar NID_undef: A symbolic constant for undefined NIDs.
+    @type NID_undef: L{FakeNID}
+    """
+    NID_undef = FakeNID("undef")
+
+    def __init__(self):
+        self._createdKeys = set()
+
+
+    def OBJ_sn2nid(self, snName):
+        """
+        Create a L{FakeNID} with C{snName} and return it.
+
+        @param snName: a free form name that gets passed to the constructor
+            of L{FakeNID}.
+
+        @return: a new L{FakeNID}.
+        @rtype: L{FakeNID}.
+        """
+        return FakeNID(snName)
+
+
+    def EC_KEY_new_by_curve_name(self, nid):
+        """
+        Create a L{FakeECKey}, save it to C{_createdKeys} and return it.
+
+        @param nid: an arbitrary object that is passed to the constructor of
+            L{FakeECKey}.
+
+        @return: a new L{FakeECKey}
+        @rtype: L{FakeECKey}
+        """
+        key = FakeECKey(nid)
+        self._createdKeys.add(key)
+        return key
+
+
+    def EC_KEY_free(self, key):
+        """
+        Remove C{key} from C{_createdKey}.
+
+        @param key: a key object to be freed; i.e. removed from
+            C{_createdKeys}.
+
+        @raises ValueError: If C{key} is not in C{_createdKeys} and thus not
+            created by us.
+        """
+        try:
+            self._createdKeys.remove(key)
+        except KeyError:
+            raise ValueError("Unallocated EC key attempted to free.")
+
+
+    def SSL_CTX_set_tmp_ecdh(self, ffiContext, key):
+        """
+        Does not do anything.
+
+        @param ffiContext: ignored
+        @param key: ignored
+        """
+
+
+
+class TestFakeLib(unittest.TestCase):
+    """
+    Tests for FakeLib
+    """
+    def test_objSn2Nid(self):
+        """
+        Returns a L{FakeNID} with correct name.
+        """
+        nid = FakeNID("test")
+        self.assertEqual("test", nid._snName)
+
+
+    def test_emptyKeys(self):
+        """
+        A new L{FakeLib} has an empty set for created keys.
+        """
+        self.assertEqual(set(), FakeLib()._createdKeys)
+
+
+    def test_newKey(self):
+        """
+        If a new key is created, it's added to C{_createdKeys}.
+        """
+        lib = FakeLib()
+        key = lib.EC_KEY_new_by_curve_name(FakeNID("name"))
+        self.assertEqual(set([key]), lib._createdKeys)
+
+
+    def test_freeUnknownKey(self):
+        """
+        Raise L{ValueError} if an unknown key is attempted to be freed.
+        """
+        key = FakeECKey(object())
+        self.assertRaises(
+            ValueError,
+            FakeLib().EC_KEY_free, key
+        )
+
+
+    def test_freeKnownKey(self):
+        """
+        Freeing an allocated key removes it from C{_createdKeys}.
+        """
+        lib = FakeLib()
+        key = lib.EC_KEY_new_by_curve_name(FakeNID("name"))
+        lib.EC_KEY_free(key)
+        self.assertEqual(set(), lib._createdKeys)
+
+
+
+class FakeFFI(object):
+    """
+    A fake of a cryptography's ffi object.
+
+    @cvar NULL: Symbolic constant for CFFI's NULL objects.
+    """
+    NULL = object()
+
+
+
+class FakeBinding(object):
+    """
+    A fake of cryptography's binding object.
+
+    @type lib: L{FakeLib}
+    @type ffi: L{FakeFFI}
+    """
+    def __init__(self, lib=None, ffi=None):
+        self.lib = lib or FakeLib()
+        self.ffi = ffi or FakeFFI()
+
+
+
+class TestECCurve(unittest.TestCase):
+    """
+    Tests for twisted.internet._sslverify.OpenSSLECCurve.
+    """
+    if skipSSL:
+        skip = skipSSL
+
+    def test_missingBinding(self):
+        """
+        Raise L{NotImplementedError} if pyOpenSSL is not based on cryptography.
+        """
+        def raiser(self):
+            raise NotImplementedError
+        self.patch(sslverify._OpenSSLECCurve, "_getBinding", raiser)
+        self.assertRaises(
+            NotImplementedError,
+            sslverify._OpenSSLECCurve, sslverify._defaultCurveName,
+        )
+
+
+    def test_nonECbinding(self):
+        """
+        Raise L{NotImplementedError} if pyOpenSSL is based on cryptography but
+        cryptography lacks required EC methods.
+        """
+        def raiser(self):
+            raise AttributeError
+        lib = FakeLib()
+        lib.OBJ_sn2nid = raiser
+        self.patch(sslverify._OpenSSLECCurve,
+                   "_getBinding",
+                   lambda self: FakeBinding(lib=lib))
+        self.assertRaises(
+            NotImplementedError,
+            sslverify._OpenSSLECCurve, sslverify._defaultCurveName,
+        )
+
+
+    def test_wrongName(self):
+        """
+        Raise L{ValueError} on unknown sn names.
+        """
+        lib = FakeLib()
+        lib.OBJ_sn2nid = lambda self: FakeLib.NID_undef
+        self.patch(sslverify._OpenSSLECCurve,
+                   "_getBinding",
+                   lambda self: FakeBinding(lib=lib))
+        self.assertRaises(
+            ValueError,
+            sslverify._OpenSSLECCurve, u"doesNotExist",
+        )
+
+
+    def test_keyFails(self):
+        """
+        Raise L{EnvironmentError} if key creation fails.
+        """
+        lib = FakeLib()
+        lib.EC_KEY_new_by_curve_name = lambda *a, **kw: FakeFFI.NULL
+        self.patch(sslverify._OpenSSLECCurve,
+                   "_getBinding",
+                   lambda self: FakeBinding(lib=lib))
+        curve = sslverify._OpenSSLECCurve(sslverify._defaultCurveName)
+        self.assertRaises(
+            EnvironmentError,
+            curve.addECKeyToContext, object()
+        )
+
+
+    def test_keyGetsFreed(self):
+        """
+        Don't leak a key when adding it to a context.
+        """
+        lib = FakeLib()
+        self.patch(sslverify._OpenSSLECCurve,
+                   "_getBinding",
+                   lambda self: FakeBinding(lib=lib))
+        curve = sslverify._OpenSSLECCurve(sslverify._defaultCurveName)
+        ctx = FakeContext(None)
+        ctx._context = None
+        curve.addECKeyToContext(ctx)
+        self.assertEqual(set(), lib._createdKeys)
