@@ -728,8 +728,8 @@ def platformTrust():
     managed and updated by tools outside of Twisted.
 
     If you are writing any client-side TLS code with Twisted, you should use
-    this as the C{trustRoot} argument to L{ssl.CertificateOptions
-    <OpenSSLCertificateOptions>}.
+    this as the C{trustRoot} argument to L{CertificateOptions
+    <twisted.internet.ssl.CertificateOptions>}.
 
     The result of this function should be like the up-to-date list of
     certificates in a web browser.  When developing code that uses
