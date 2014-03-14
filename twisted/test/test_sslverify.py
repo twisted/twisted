@@ -108,6 +108,71 @@ def makeCertificate(**kw):
 
 
 
+def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
+    """
+    Create a loopback TLS connection with the given trust and keys.
+
+    @param trustRoot: the C{trustRoot} argument for the client connection's
+        context.
+    @type trustRoot: L{sslverify.IOpenSSLTrustSettings}
+
+    @param privateKeyFile: The name of the file containing the private key.
+    @type privateKeyFile: L{str} (native string; file name)
+
+    @param chainedCertFile: The name of the chained certificate file.
+    @type chainedCertFile: L{str} (native string; file name)
+
+    @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
+    @rtype: L{tuple}
+    """
+    class ContextFactory(object):
+        def getContext(self):
+            """
+            Create a context for the server side of the connection.
+
+            @return: an SSL context using a certificate and key.
+            @rtype: C{OpenSSL.SSL.Context}
+            """
+            ctx = SSL.Context(SSL.TLSv1_METHOD)
+            if chainedCertFile is not None:
+                ctx.use_certificate_chain_file(chainedCertFile)
+            ctx.use_privatekey_file(privateKeyFile)
+            # Let the test author know if they screwed something up.
+            ctx.check_privatekey()
+            return ctx
+
+    class GreetingServer(protocol.Protocol):
+        greeting = b"greetings!"
+        def connectionMade(self):
+            self.transport.write(self.greeting)
+
+    class ListeningClient(protocol.Protocol):
+        data = b''
+        lostReason = None
+        def dataReceived(self, data):
+            self.data += data
+        def connectionLost(self, reason):
+            self.lostReason = reason
+
+    serverOpts = ContextFactory()
+    clientOpts = sslverify.OpenSSLCertificateOptions(trustRoot=trustRoot)
+
+    clientFactory = TLSMemoryBIOFactory(
+        clientOpts, isClient=True,
+        wrappedFactory=protocol.Factory.forProtocol(GreetingServer)
+    )
+    serverFactory = TLSMemoryBIOFactory(
+        serverOpts, isClient=False,
+        wrappedFactory=protocol.Factory.forProtocol(ListeningClient)
+    )
+
+    sProto, cProto, pump = connectedServerAndClient(
+        lambda: serverFactory.buildProtocol(None),
+        lambda: clientFactory.buildProtocol(None)
+    )
+    return sProto, cProto, pump
+
+
 class DataCallbackProtocol(protocol.Protocol):
     def dataReceived(self, data):
         d, self.factory.onData = self.factory.onData, None
@@ -959,72 +1024,6 @@ class ProtocolVersionTests(unittest.TestCase):
         return caSelfCert, serverCert
 
 
-    def loopbackTLSConnection(self, trustRoot, privateKeyFile,
-                              chainedCertFile=None):
-        """
-        Create a loopback TLS connection with the given trust and keys.
-
-        @param trustRoot: the C{trustRoot} argument for the client connection's
-            context.
-        @type trustRoot: L{sslverify.IOpenSSLTrustSettings}
-
-        @param privateKeyFile: The name of the file containing the private key.
-        @type privateKeyFile: L{str} (native string; file name)
-
-        @param chainedCertFile: The name of the chained certificate file.
-        @type chainedCertFile: L{str} (native string; file name)
-
-        @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
-        @rtype: L{tuple}
-        """
-        class ContextFactory(object):
-            def getContext(self):
-                """
-                Create a context for the server side of the connection.
-
-                @return: an SSL context using a certificate and key.
-                @rtype: C{OpenSSL.SSL.Context}
-                """
-                ctx = SSL.Context(SSL.TLSv1_METHOD)
-                if chainedCertFile is not None:
-                    ctx.use_certificate_chain_file(chainedCertFile)
-                ctx.use_privatekey_file(privateKeyFile)
-                # Let the test author know if they screwed something up.
-                ctx.check_privatekey()
-                return ctx
-
-        class GreetingServer(protocol.Protocol):
-            greeting = b"greetings!"
-            def connectionMade(self):
-                self.transport.write(self.greeting)
-
-        class ListeningClient(protocol.Protocol):
-            data = b''
-            lostReason = None
-            def dataReceived(self, data):
-                self.data += data
-            def connectionLost(self, reason):
-                self.lostReason = reason
-
-        serverOpts = ContextFactory()
-        clientOpts = sslverify.OpenSSLCertificateOptions(trustRoot=trustRoot)
-
-        clientFactory = TLSMemoryBIOFactory(
-            clientOpts, isClient=True,
-            wrappedFactory=protocol.Factory.forProtocol(GreetingServer)
-        )
-        serverFactory = TLSMemoryBIOFactory(
-            serverOpts, isClient=False,
-            wrappedFactory=protocol.Factory.forProtocol(ListeningClient)
-        )
-
-        sProto, cProto, pump = connectedServerAndClient(
-            lambda: serverFactory.buildProtocol(None),
-            lambda: clientFactory.buildProtocol(None)
-        )
-        return sProto, cProto, pump
-
-
     def pathContainingDumpOf(self, *dumpables):
         """
         Create a temporary file to store some serializable-as-PEM objects in,
@@ -1063,7 +1062,7 @@ class ProtocolVersionTests(unittest.TestCase):
         chainedCert = self.pathContainingDumpOf(serverCert, caSelfCert)
         privateKey = self.pathContainingDumpOf(serverCert.privateKey)
 
-        sProto, cProto, pump = self.loopbackTLSConnection(
+        sProto, cProto, pump = loopbackTLSConnection(
             trustRoot=platformTrust(),
             privateKeyFile=privateKey,
             chainedCertFile=chainedCert,
@@ -1086,7 +1085,7 @@ class ProtocolVersionTests(unittest.TestCase):
         """
         caCert, serverCert = self.certificatesForAuthorityAndServer()
         otherCa, otherServer = self.certificatesForAuthorityAndServer()
-        sProto, cProto, pump = self.loopbackTLSConnection(
+        sProto, cProto, pump = loopbackTLSConnection(
             trustRoot=caCert,
             privateKeyFile=self.pathContainingDumpOf(serverCert.privateKey),
             chainedCertFile=self.pathContainingDumpOf(serverCert),
