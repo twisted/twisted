@@ -1053,7 +1053,8 @@ class TrustRootTests(unittest.TestCase):
     Tests for L{sslverify.OpenSSLCertificateOptions}' C{trustRoot} argument,
     L{sslverify.platformTrust}, and their interactions.
     """
-
+    if skipSSL:
+        skip = skipSSL
 
     def test_caCertsPlatformDefaults(self):
         """
