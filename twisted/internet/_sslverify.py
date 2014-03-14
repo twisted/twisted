@@ -909,7 +909,7 @@ class _OpenSSLECCurve(FancyEqMixin, object):
         self.snName = nativeString(snName)
 
         # As soon as pyOpenSSL supports ECDHE directly, attempt to use its
-        # APIs first.
+        # APIs first.  See #7033.
 
         # If pyOpenSSL is based on cryptography.io (0.14+), we use its
         # bindings directly to set the ECDHE curve.
