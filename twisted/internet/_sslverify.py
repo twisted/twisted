@@ -787,9 +787,9 @@ def platformTrust():
               bundle.
 
         Hopefully soon, this API will be updated to use more sophisticated
-        trust-root discovery mechanisms; you can follow tickets in the Twisted
-        tracker for progress on this implementation on U{Microsoft Windows
-        <https://twistedmatrix.com/trac/ticket/6371>}, U{Mac OS X
+        trust-root discovery mechanisms.  Until then, you can follow tickets in
+        the Twisted tracker for progress on this implementation on U{Microsoft
+        Windows <https://twistedmatrix.com/trac/ticket/6371>}, U{Mac OS X
         <https://twistedmatrix.com/trac/ticket/6372>}, and U{a fallback for
         other platforms which do not have native trust management tools
         <https://twistedmatrix.com/trac/ticket/6934>}.
