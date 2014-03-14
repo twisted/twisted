@@ -11,6 +11,7 @@ from hashlib import md5
 from OpenSSL import SSL, crypto
 from zope.interface import Interface, implementer
 
+from twisted.python.deprecate import _mutuallyExclusiveArguments
 from twisted.python import _reflectpy3 as reflect, util
 from twisted.python.compat import nativeString, networkString, unicode
 from twisted.python.util import FancyEqMixin
@@ -196,10 +197,10 @@ class CertBase:
         @param interface: The interface to conform to.
         @type interface: L{Interface}
 
-        @return: an L{IOpenSSLTrustSettings} provider or L{NotImplemented}
+        @return: an L{IOpenSSLTrustRoot} provider or L{NotImplemented}
         @rtype: C{interface} or L{NotImplemented}
         """
-        if interface is IOpenSSLTrustSettings:
+        if interface is IOpenSSLTrustRoot:
             return OpenSSLCertificateAuthorities([self.original])
         return NotImplemented
 
@@ -662,7 +663,7 @@ class KeyPair(PublicKey):
 
 
 
-class IOpenSSLTrustSettings(Interface):
+class IOpenSSLTrustRoot(Interface):
     """
     Trust settings for an OpenSSL context.
 
@@ -684,7 +685,7 @@ class IOpenSSLTrustSettings(Interface):
 
 
 
-@implementer(IOpenSSLTrustSettings)
+@implementer(IOpenSSLTrustRoot)
 class OpenSSLCertificateAuthorities(object):
     """
     Trust an explicitly specified set of certificates, represented by a list of
@@ -707,7 +708,7 @@ class OpenSSLCertificateAuthorities(object):
 
 
 
-@implementer(IOpenSSLTrustSettings)
+@implementer(IOpenSSLTrustRoot)
 class OpenSSLDefaultPaths(object):
     """
     Trust the set of default verify paths that OpenSSL was built with, as
@@ -782,7 +783,7 @@ def platformTrust():
         <https://twistedmatrix.com/trac/ticket/6934>}.
 
     @return: an appropriate trust settings object for your platform.
-    @rtype: L{IOpenSSLTrustSettings}
+    @rtype: L{IOpenSSLTrustRoot}
 
     @raise NotImplementedError: if this platform is not yet supported by
         Twisted.  At present, only OpenSSL is supported.
@@ -815,7 +816,6 @@ class OpenSSLCertificateOptions(object):
     _OP_SINGLE_ECDH_USE = getattr(SSL, 'OP_SINGLE_ECDH_USE ', 0x00080000)
 
 
-    from twisted.python.deprecate import _mutuallyExclusiveArguments
     @_mutuallyExclusiveArguments([
         ['trustRoot', 'requireCertificate'],
         ['trustRoot', 'verify'],
@@ -926,7 +926,7 @@ class OpenSSLCertificateOptions(object):
             those options in combination with this one will raise a
             L{TypeError}.
 
-        @type trustRoot: L{IOpenSSLTrustSettings}
+        @type trustRoot: L{IOpenSSLTrustRoot}
 
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
@@ -1015,7 +1015,7 @@ class OpenSSLCertificateOptions(object):
         else:
             self.verify = True
             self.requireCertificate = True
-            trustRoot = IOpenSSLTrustSettings(trustRoot)
+            trustRoot = IOpenSSLTrustRoot(trustRoot)
         self.trustRoot = trustRoot
 
 
