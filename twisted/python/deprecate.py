@@ -537,3 +537,56 @@ def warnAboutFunction(offender, warningString):
         module_globals=None)
 
     warn_explicit(warningString, **kwargs)
+
+
+
+def _passed(argspec, positional, keyword):
+    """
+    Take an L{inspect.ArgSpec}, a tuple of positional arguments, and a dict of
+    keyword arguments, and return a mapping of arguments that were actually
+    passed to their passed values.
+    """
+    result = {}
+    unpassed = len(argspec.args) - len(positional)
+    if argspec.keywords is not None:
+        kwargs = result[argspec.keywords] = {}
+    if unpassed < 0:
+        if argspec.varargs is None:
+            raise TypeError("Too many arguments.")
+        else:
+            result[argspec.varargs] = positional[len(argspec.args):]
+    for name, value in zip(argspec.args, positional):
+        result[name] = value
+    for name, value in keyword.items():
+        if name in argspec.args:
+            if name in result:
+                raise TypeError("Already passed.")
+            result[name] = value
+        elif argspec.keywords is not None:
+            kwargs[name] = value
+        else:
+            raise TypeError("no such param")
+    return result
+
+
+
+def _mutuallyExclusiveArguments(argumentPairs):
+    """
+    Decorator which causes its decoratee to raise a L{TypeError} if two of the
+    given arguments are passed at the same time.
+
+    @param argumentPairs: pairs of argument identifiers, each pair indicating
+        an argument that may not be passed in conjunction with another.
+    @type argumentPairs: sequence of 2-sequences of L{str}
+    """
+    def wrapper(wrappee):
+        argspec = inspect.getargspec(wrappee)
+        @wraps(wrappee)
+        def wrapped(*args, **kwargs):
+            arguments = _passed(argspec, args, kwargs)
+            for this, that in argumentPairs:
+                if this in arguments and that in arguments:
+                    raise TypeError("nope")
+            return wrappee(*args, **kwargs)
+        return wrapped
+    return wrapper
