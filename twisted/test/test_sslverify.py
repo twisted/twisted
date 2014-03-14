@@ -9,7 +9,6 @@ Tests for L{twisted.internet._sslverify}.
 from __future__ import division, absolute_import
 
 import itertools
-import inspect
 
 from zope.interface import implementer
 
