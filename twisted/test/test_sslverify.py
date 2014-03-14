@@ -108,6 +108,34 @@ def makeCertificate(**kw):
 
 
 
+def certificatesForAuthorityAndServer():
+    """
+    Create a self-signed CA certificate and server certificate signed by
+    the CA.
+
+    @return: a 2-tuple of C{(certificate_authority_certificate,
+        server_certificate)}
+    @rtype: L{tuple} of (L{sslverify.Certificate},
+        L{sslverify.PrivateCertificate})
+    """
+    serverDN = sslverify.DistinguishedName(commonName='example.com')
+    serverKey = sslverify.KeyPair.generate()
+    serverCertReq = serverKey.certificateRequest(serverDN)
+
+    caDN = sslverify.DistinguishedName(commonName='CA')
+    caKey= sslverify.KeyPair.generate()
+    caCertReq = caKey.certificateRequest(caDN)
+    caSelfCertData = caKey.signCertificateRequest(
+            caDN, caCertReq, lambda dn: True, 516)
+    caSelfCert = caKey.newCertificate(caSelfCertData)
+
+    serverCertData = caKey.signCertificateRequest(
+            caDN, serverCertReq, lambda dn: True, 516)
+    serverCert = serverKey.newCertificate(serverCertData)
+    return caSelfCert, serverCert
+
+
+
 def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
     """
     Create a loopback TLS connection with the given trust and keys.
@@ -996,34 +1024,6 @@ class ProtocolVersionTests(unittest.TestCase):
         self.assertTrue(fc._defaultVerifyPathsSet)
 
 
-    @staticmethod
-    def certificatesForAuthorityAndServer():
-        """
-        Create a self-signed CA certificate and server certificate signed by
-        the CA.
-
-        @return: a 2-tuple of C{(certificate_authority_certificate,
-            server_certificate)}
-        @rtype: L{tuple} of (L{sslverify.Certificate},
-            L{sslverify.PrivateCertificate})
-        """
-        serverDN = sslverify.DistinguishedName(commonName='example.com')
-        serverKey = sslverify.KeyPair.generate()
-        serverCertReq = serverKey.certificateRequest(serverDN)
-
-        caDN = sslverify.DistinguishedName(commonName='CA')
-        caKey= sslverify.KeyPair.generate()
-        caCertReq = caKey.certificateRequest(caDN)
-        caSelfCertData = caKey.signCertificateRequest(
-                caDN, caCertReq, lambda dn: True, 516)
-        caSelfCert = caKey.newCertificate(caSelfCertData)
-
-        serverCertData = caKey.signCertificateRequest(
-                caDN, serverCertReq, lambda dn: True, 516)
-        serverCert = serverKey.newCertificate(serverCertData)
-        return caSelfCert, serverCert
-
-
     def pathContainingDumpOf(self, *dumpables):
         """
         Create a temporary file to store some serializable-as-PEM objects in,
@@ -1058,7 +1058,7 @@ class ProtocolVersionTests(unittest.TestCase):
         completely invalid / unknown root CA certificates.  This is simply a
         smoke test to make sure that verification is happening at all.
         """
-        caSelfCert, serverCert = self.certificatesForAuthorityAndServer()
+        caSelfCert, serverCert = certificatesForAuthorityAndServer()
         chainedCert = self.pathContainingDumpOf(serverCert, caSelfCert)
         privateKey = self.pathContainingDumpOf(serverCert.privateKey)
 
@@ -1083,8 +1083,8 @@ class ProtocolVersionTests(unittest.TestCase):
         Specifying a L{Certificate} object for L{trustRoot} will result in that
         certificate being the only trust root for a client.
         """
-        caCert, serverCert = self.certificatesForAuthorityAndServer()
-        otherCa, otherServer = self.certificatesForAuthorityAndServer()
+        caCert, serverCert = certificatesForAuthorityAndServer()
+        otherCa, otherServer = certificatesForAuthorityAndServer()
         sProto, cProto, pump = loopbackTLSConnection(
             trustRoot=caCert,
             privateKeyFile=self.pathContainingDumpOf(serverCert.privateKey),
