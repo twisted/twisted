@@ -1252,6 +1252,9 @@ class FakeLib(object):
         """
         Create a L{FakeECKey}, save it to C{_createdKeys} and return it.
 
+        @param nid: an arbitrary object that is passed to the constructor of
+            L{FakeECKey}.
+
         @return: a new L{FakeECKey}
         @rtype: L{FakeECKey}
         """
