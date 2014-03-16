@@ -839,3 +839,26 @@ if not _PY3:
             self.callDeprecated(
                 (Version("Twisted", 11, 0, 0), "inspect.getmro"),
                 reflect.accumulateBases, DeprecationTestCase, l, None)
+
+
+        def test_getcurrent(self):
+            """
+            Test deprecation of L{reflect.getcurrent}.
+            """
+
+            class C:
+                pass
+
+            self.callDeprecated(
+                Version("Twisted", 14, 0, 0),
+                reflect.getcurrent, C)
+
+
+        def test_isinst(self):
+            """
+            Test deprecation of L{reflect.isinst}.
+            """
+
+            self.callDeprecated(
+                (Version("Twisted", 14, 0, 0), "isinstance"),
+                reflect.isinst, object(), object)
