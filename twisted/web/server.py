@@ -34,7 +34,7 @@ else:
 from twisted.internet import address
 from twisted.web import iweb, http, html
 from twisted.web.http import unquote
-from twisted.python import log, _reflectpy3 as reflect, failure, components
+from twisted.python import log, reflect, failure, components
 from twisted import copyright
 # Re-enable as part of #6178 when twisted.web.util is ported to Python 3:
 if not _PY3:

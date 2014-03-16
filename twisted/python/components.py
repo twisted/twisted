@@ -36,7 +36,7 @@ from zope.interface.adapter import AdapterRegistry
 
 # twisted imports
 from twisted.python.compat import NativeStringIO
-from twisted.python import _reflectpy3 as reflect
+from twisted.python import reflect
 
 
 

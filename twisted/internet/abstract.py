@@ -14,7 +14,7 @@ from zope.interface import implementer
 
 # Twisted Imports
 from twisted.python.compat import _PY3, unicode, lazyByteSlice
-from twisted.python import _reflectpy3 as reflect, failure
+from twisted.python import reflect, failure
 from twisted.internet import interfaces, main
 
 if _PY3:

@@ -18,7 +18,7 @@ from zope.interface import Interface
 
 from twisted.python.compat import unicode, _PY3
 from twisted.python import context
-from twisted.python import _reflectpy3 as reflect
+from twisted.python import reflect
 from twisted.python import util
 from twisted.python import failure
 from twisted.python.threadable import synchronize

@@ -21,7 +21,7 @@ import opcode
 from inspect import getmro
 
 from twisted.python.compat import _PY3, NativeStringIO as StringIO
-from twisted.python import _reflectpy3 as reflect
+from twisted.python import reflect
 
 count = 0
 traceupLength = 4

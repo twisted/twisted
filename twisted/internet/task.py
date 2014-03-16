@@ -16,7 +16,7 @@ import time
 from zope.interface import implementer
 
 from twisted.python import log
-from twisted.python import _reflectpy3 as reflect
+from twisted.python import reflect
 from twisted.python.failure import Failure
 
 from twisted.internet import base, defer

@@ -52,7 +52,7 @@ from zope.interface import implementer, providedBy, directlyProvides
 from twisted.python.compat import unicode
 from twisted.python.failure import Failure
 from twisted.python import log
-from twisted.python._reflectpy3 import safe_str
+from twisted.python.reflect import safe_str
 from twisted.internet.interfaces import ISystemHandle, ISSLTransport
 from twisted.internet.interfaces import IPushProducer, ILoggingContext
 from twisted.internet.main import CONNECTION_LOST
