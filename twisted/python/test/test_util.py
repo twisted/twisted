@@ -20,6 +20,7 @@ from twisted.trial.util import suppress as SUPPRESS
 
 from twisted.python.compat import _PY3
 from twisted.python import util
+from twisted.python.reflect import fullyQualifiedName
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorProcess
 from twisted.internet.protocol import ProcessProtocol
@@ -28,10 +29,8 @@ from twisted.internet.error import ProcessDone
 
 if _PY3:
     MockOS = None
-    from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 else:
     from twisted.test.test_process import MockOS
-    from twisted.python.reflect import fullyQualifiedName
 
 
 

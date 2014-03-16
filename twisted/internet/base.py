@@ -21,7 +21,7 @@ from twisted.internet.interfaces import IReactorCore, IReactorTime, IReactorThre
 from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolver
 from twisted.internet.interfaces import IConnector, IDelayedCall
 from twisted.internet import fdesc, main, error, abstract, defer, threads
-from twisted.python import log, failure, _reflectpy3 as reflect
+from twisted.python import log, failure, reflect
 from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
 

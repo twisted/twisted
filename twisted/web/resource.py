@@ -18,7 +18,7 @@ import warnings
 from zope.interface import Attribute, Interface, implementer
 
 from twisted.python.compat import nativeString, unicode
-from twisted.python._reflectpy3 import prefixedMethodNames
+from twisted.python.reflect import prefixedMethodNames
 from twisted.python.components import proxyForInterface
 
 from twisted.web._responses import FORBIDDEN, NOT_FOUND

@@ -14,7 +14,7 @@ import pdb
 import linecache
 
 from twisted.python.compat import NativeStringIO, _PY3
-from twisted.python import _reflectpy3 as reflect
+from twisted.python import reflect
 from twisted.python import failure
 
 from twisted.trial.unittest import SynchronousTestCase
