@@ -205,8 +205,7 @@ class NMEAProtocol(LineReceiver, _sentence._PositioningSentenceProducerMixin):
         if self._sentenceCallback is not None:
             self._sentenceCallback(sentence)
 
-        if self._receiver is not None:
-            self._receiver.sentenceReceived(sentence)
+        self._receiver.sentenceReceived(sentence)
 
 
     _SENTENCE_CONTENTS = {
