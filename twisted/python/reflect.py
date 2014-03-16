@@ -471,12 +471,9 @@ def getClass(obj):
 if not _PY3:
     # The following functions aren't documented, nor tested, have much simpler
     # builtin implementations and are not used within Twisted or "known"
-    # projects. There are to be deprecated in
-    # https://twistedmatrix.com/trac/ticket/6859
-    # Refer to this ticket, as well as
-    # https://twistedmatrix.com/trac/ticket/5929?replyto=27#comment:28 and
-    # following comments for more information.
+    # projects.
 
+    @deprecated(Version("Twisted", 14, 0, 0))
     def getcurrent(clazz):
         assert type(clazz) == types.ClassType, 'must be a class...'
         module = namedModule(clazz.__module__)
@@ -488,6 +485,7 @@ if not _PY3:
 
     # Class graph nonsense
     # I should really have a better name for this...
+    @deprecated(Version("Twisted", 14, 0, 0), "isinstance")
     def isinst(inst,clazz):
         if type(inst) != compat.InstanceType or type(clazz)!= types.ClassType:
             return isinstance(inst,clazz)
