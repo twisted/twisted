@@ -1103,6 +1103,23 @@ class NMEAReceiverTest(TestCase):
         self._receiverTest(sentences, callbacksFired)
 
 
+    def test_GGAWithDateInState(self):
+        """
+        When receiving a GPGGA sentence and a date was already in the
+        state, the new time (from the GPGGA sentence) is combined with
+        that date.
+        """
+        self.adapter._state["_date"] = datetime.date(2014, 1, 1)
+
+        sentences = [GPGGA]
+        callbacksFired = ['positionReceived',
+                          'positionErrorReceived',
+                          'altitudeReceived',
+                          'timeReceived']
+
+        self._receiverTest(sentences, callbacksFired)
+
+
     def test_RMCSentences(self):
         """
         A sequence of RMC sentences fires C{positionReceived},

@@ -935,9 +935,10 @@ class NMEAAdapter(object):
         C{datetime.datetime} object suitable for sending to the
         L{IPositioningReceiver}.
         """
-        for key in ["_date", "_time"]:
-            if key not in self._sentenceData:
-                return
+        if not any(k in self._sentenceData for k in ["_date", "_time"]):
+            # If the sentence has neither date nor time, there's
+            # nothing new to combine here.
+            return
 
         date, time = [self._sentenceData.get(key) or self._state.get(key)
                       for key in ('_date', '_time')]
