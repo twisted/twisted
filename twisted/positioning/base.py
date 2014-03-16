@@ -161,13 +161,14 @@ class Angle(object, FancyEqMixin):
             or it is a known type but the supplied value was out of the
             allowable range for said type.
         """
+        if angleType is not None and angleType not in self._RANGE_EXPRESSIONS:
+            raise ValueError("Unknown angle type")
+
         if angle is not None and angleType is not None:
-            try:
-                if not self._RANGE_EXPRESSIONS[angleType](angle):
-                    template = "Angle {0} not in allowed range for type {1}"
-                    raise ValueError(template.format(angle, angleType))
-            except KeyError:
-                raise ValueError("Unknown angle type")
+            rangeExpression = self._RANGE_EXPRESSIONS[angleType]
+            if not rangeExpression(angle):
+                template = "Angle {0} not in allowed range for type {1}"
+                raise ValueError(template.format(angle, angleType))
 
         self.angleType = angleType
         self._angle = angle

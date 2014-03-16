@@ -41,6 +41,13 @@ class AngleTests(TestCase):
         self.assertEqual("<Angle of unknown type (1.0 degrees)>", repr(a))
 
 
+    def test_bogusType(self):
+        """
+        Trying to create an angle with a bogus type raises C{ValueError}.
+        """
+        self.assertRaises(ValueError, base.Angle, angleType="BOGUS")
+
+
 
 class HeadingTests(TestCase):
     """
