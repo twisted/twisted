@@ -4,7 +4,7 @@
 """
 Generic positioning base classes.
 
-@since: 13.2
+@since: 14.0
 """
 from functools import partial
 from operator import attrgetter
