@@ -183,7 +183,7 @@ class ChecksumTests(TestCase):
 
 
 
-class NMEAReceiverSetup:
+class NMEAReceiverSetup(object):
     """
     A mixin for tests that need an NMEA receiver (and a protocol attached to
     it).
