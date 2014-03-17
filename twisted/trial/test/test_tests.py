@@ -1331,9 +1331,9 @@ class AsynchronousIterateTestsTests(IterateTestsMixin, unittest.TestCase):
 
 
 
-class TrialWarningsTests(unittest.SynchronousTestCase):
+class TrialGeneratorFunctionFailureTests(unittest.SynchronousTestCase):
     """
-    Tests for trial-emitted warnings.
+    Tests for failures related to generator functions in test cases.
     """
 
     def test_failureOnGeneratorFunction(self):
@@ -1352,7 +1352,7 @@ class TrialWarningsTests(unittest.SynchronousTestCase):
                 A method which is also a generator function, for testing
                 purposes.
                 """
-                self.assert_(False)
+                self.fail('this should never be reached')
                 yield
 
         testCase = GeneratorTestCase('test_generator')
@@ -1363,7 +1363,7 @@ class TrialWarningsTests(unittest.SynchronousTestCase):
             result.failures[0][1].value.args[0],
             '<bound method GeneratorTestCase.test_generator of <twisted.trial.'
             'test.test_tests.GeneratorTestCase testMethod=test_generator>> is '
-            'a generator function')
+            'a generator function and therefore will never run')
 
 
     def test_synchronousTestCaseFailureOnGeneratorFunction(self):
@@ -1382,7 +1382,7 @@ class TrialWarningsTests(unittest.SynchronousTestCase):
                 A method which is also a generator function, for testing
                 purposes.
                 """
-                self.assert_(False)
+                self.fail('this should never be reached')
                 yield
 
         testCase = GeneratorSynchronousTestCase('test_generator')
@@ -1393,4 +1393,5 @@ class TrialWarningsTests(unittest.SynchronousTestCase):
             result.failures[0][1].value.args[0],
             '<bound method GeneratorSynchronousTestCase.test_generator of '
             '<twisted.trial.test.test_tests.GeneratorSynchronousTestCase '
-            'testMethod=test_generator>> is a generator function')
+            'testMethod=test_generator>> is a generator function and '
+            'therefore will never run')

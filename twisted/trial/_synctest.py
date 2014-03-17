@@ -1209,7 +1209,8 @@ class SynchronousTestCase(_Assertions):
         """
         if inspect.isgeneratorfunction(method):
             exc = self.failureException(
-                '%r is a generator function' % (method,))
+                '%r is a generator function and therefore will never run' % (
+                    method,))
             result.addFailure(self, failure.Failure(exc))
             return True
         try:
