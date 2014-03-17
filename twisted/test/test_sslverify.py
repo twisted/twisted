@@ -15,22 +15,27 @@ from zope.interface import implementer
 try:
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
-    from OpenSSL.crypto import TYPE_RSA
-    from twisted.internet import _sslverify as sslverify
-
+    from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
     skipSSL = False
 except ImportError:
     skipSSL = "OpenSSL is required for SSL tests."
 
+from twisted.test.iosim import connectedServerAndClient
+
 from twisted.python.compat import nativeString
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.filepath import FilePath
+
 from twisted.trial import unittest
 from twisted.internet import protocol, defer, reactor
 
 from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
 
+if not skipSSL:
+    from twisted.internet.ssl import platformTrust
+    from twisted.internet import _sslverify as sslverify
+    from twisted.protocols.tls import TLSMemoryBIOFactory
 
 # A couple of static PEM-format certificates to be used by various tests.
 A_HOST_CERTIFICATE_PEM = """
@@ -104,6 +109,126 @@ def makeCertificate(**kw):
 
 
 
+def certificatesForAuthorityAndServer():
+    """
+    Create a self-signed CA certificate and server certificate signed by
+    the CA.
+
+    @return: a 2-tuple of C{(certificate_authority_certificate,
+        server_certificate)}
+    @rtype: L{tuple} of (L{sslverify.Certificate},
+        L{sslverify.PrivateCertificate})
+    """
+    serverDN = sslverify.DistinguishedName(commonName='example.com')
+    serverKey = sslverify.KeyPair.generate()
+    serverCertReq = serverKey.certificateRequest(serverDN)
+
+    caDN = sslverify.DistinguishedName(commonName='CA')
+    caKey= sslverify.KeyPair.generate()
+    caCertReq = caKey.certificateRequest(caDN)
+    caSelfCertData = caKey.signCertificateRequest(
+            caDN, caCertReq, lambda dn: True, 516)
+    caSelfCert = caKey.newCertificate(caSelfCertData)
+
+    serverCertData = caKey.signCertificateRequest(
+            caDN, serverCertReq, lambda dn: True, 516)
+    serverCert = serverKey.newCertificate(serverCertData)
+    return caSelfCert, serverCert
+
+
+
+def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
+    """
+    Create a loopback TLS connection with the given trust and keys.
+
+    @param trustRoot: the C{trustRoot} argument for the client connection's
+        context.
+    @type trustRoot: L{sslverify.IOpenSSLTrustRoot}
+
+    @param privateKeyFile: The name of the file containing the private key.
+    @type privateKeyFile: L{str} (native string; file name)
+
+    @param chainedCertFile: The name of the chained certificate file.
+    @type chainedCertFile: L{str} (native string; file name)
+
+    @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
+    @rtype: L{tuple}
+    """
+    class ContextFactory(object):
+        def getContext(self):
+            """
+            Create a context for the server side of the connection.
+
+            @return: an SSL context using a certificate and key.
+            @rtype: C{OpenSSL.SSL.Context}
+            """
+            ctx = SSL.Context(SSL.TLSv1_METHOD)
+            if chainedCertFile is not None:
+                ctx.use_certificate_chain_file(chainedCertFile)
+            ctx.use_privatekey_file(privateKeyFile)
+            # Let the test author know if they screwed something up.
+            ctx.check_privatekey()
+            return ctx
+
+    class GreetingServer(protocol.Protocol):
+        greeting = b"greetings!"
+        def connectionMade(self):
+            self.transport.write(self.greeting)
+
+    class ListeningClient(protocol.Protocol):
+        data = b''
+        lostReason = None
+        def dataReceived(self, data):
+            self.data += data
+        def connectionLost(self, reason):
+            self.lostReason = reason
+
+    serverOpts = ContextFactory()
+    clientOpts = sslverify.OpenSSLCertificateOptions(trustRoot=trustRoot)
+
+    clientFactory = TLSMemoryBIOFactory(
+        clientOpts, isClient=True,
+        wrappedFactory=protocol.Factory.forProtocol(GreetingServer)
+    )
+    serverFactory = TLSMemoryBIOFactory(
+        serverOpts, isClient=False,
+        wrappedFactory=protocol.Factory.forProtocol(ListeningClient)
+    )
+
+    sProto, cProto, pump = connectedServerAndClient(
+        lambda: serverFactory.buildProtocol(None),
+        lambda: clientFactory.buildProtocol(None)
+    )
+    return sProto, cProto, pump
+
+
+
+def pathContainingDumpOf(testCase, *dumpables):
+    """
+    Create a temporary file to store some serializable-as-PEM objects in, and
+    return its name.
+
+    @param testCase: a test case to use for generating a temporary directory.
+    @type testCase: L{twisted.trial.unittest.TestCase}
+
+    @param dumpables: arguments are objects from pyOpenSSL with a C{dump}
+        method, taking a pyOpenSSL file-type constant, such as
+        L{OpenSSL.crypto.FILETYPE_PEM} or L{OpenSSL.crypto.FILETYPE_ASN1}.
+    @type dumpables: L{tuple} of L{object} with C{dump} method taking L{int}
+        returning L{bytes}
+
+    @return: the path to a file where all of the dumpables were dumped in PEM
+        format.
+    @rtype: L{str}
+    """
+    fname = testCase.mktemp()
+    with open(fname, "wb") as f:
+        for dumpable in dumpables:
+            f.write(dumpable.dump(FILETYPE_PEM))
+    return fname
+
+
+
 class DataCallbackProtocol(protocol.Protocol):
     def dataReceived(self, data):
         d, self.factory.onData = self.factory.onData, None
@@ -135,52 +260,81 @@ class FakeContext(object):
     U{pyOpenSSL bug<https://bugs.launchpad.net/pyopenssl/+bug/1173899>}.
 
     @ivar _method: See C{method} parameter of L{__init__}.
+
     @ivar _options: C{int} of C{OR}ed values from calls of L{set_options}.
+
     @ivar _certificate: Set by L{use_certificate}.
+
     @ivar _privateKey: Set by L{use_privatekey}.
+
     @ivar _verify: Set by L{set_verify}.
+
     @ivar _verifyDepth: Set by L{set_verify_depth}.
+
     @ivar _sessionID: Set by L{set_session_id}.
+
     @ivar _extraCertChain: Accumulated C{list} of all extra certificates added
         by L{add_extra_chain_cert}.
+
     @ivar _cipherList: Set by L{set_cipher_list}.
+
     @ivar _dhFilename: Set by L{load_tmp_dh}.
+
+    @ivar _defaultVerifyPathsSet: Set by L{set_default_verify_paths}
     """
     _options = 0
 
     def __init__(self, method):
         self._method = method
         self._extraCertChain = []
+        self._defaultVerifyPathsSet = False
+
 
     def set_options(self, options):
         self._options |= options
 
+
     def use_certificate(self, certificate):
         self._certificate = certificate
+
 
     def use_privatekey(self, privateKey):
         self._privateKey = privateKey
 
+
     def check_privatekey(self):
         return None
+
 
     def set_verify(self, flags, callback):
         self._verify = flags, callback
 
+
     def set_verify_depth(self, depth):
         self._verifyDepth = depth
+
 
     def set_session_id(self, sessionID):
         self._sessionID = sessionID
 
+
     def add_extra_chain_cert(self, cert):
         self._extraCertChain.append(cert)
+
 
     def set_cipher_list(self, cipherList):
         self._cipherList = cipherList
 
+
     def load_tmp_dh(self, dhfilename):
         self._dhFilename = dhfilename
+
+
+    def set_default_verify_paths(self):
+        """
+        Set the default paths for the platform.
+        """
+        self._defaultVerifyPathsSet = True
 
 
 
@@ -292,6 +446,26 @@ class OpenSSLOptions(unittest.TestCase):
             ValueError,
             sslverify.OpenSSLCertificateOptions,
             privateKey=self.sKey, certificate=self.sCert, verify=True
+        )
+
+
+    def test_constructorDoesNotAllowLegacyWithTrustRoot(self):
+        """
+        C{verify}, C{requireCertificate}, and C{caCerts} must not be specified
+        by the caller (to be I{any} value, even the default!) when specifying
+        C{trustRoot}.
+        """
+        self.assertRaises(
+            TypeError,
+            sslverify.OpenSSLCertificateOptions,
+            privateKey=self.sKey, certificate=self.sCert,
+            verify=True, trustRoot=None, caCerts=self.caCerts,
+        )
+        self.assertRaises(
+            TypeError,
+            sslverify.OpenSSLCertificateOptions,
+            privateKey=self.sKey, certificate=self.sCert,
+            trustRoot=None, requireCertificate=True,
         )
 
 
@@ -927,6 +1101,80 @@ class ProtocolVersionTests(unittest.TestCase):
                  ProtocolVersion.TLSv1_2]),
             self._protocols(sslverify.OpenSSLCertificateOptions(
                     method=SSL.SSLv23_METHOD)))
+
+
+
+class TrustRootTests(unittest.TestCase):
+    """
+    Tests for L{sslverify.OpenSSLCertificateOptions}' C{trustRoot} argument,
+    L{sslverify.platformTrust}, and their interactions.
+    """
+    if skipSSL:
+        skip = skipSSL
+
+    def test_caCertsPlatformDefaults(self):
+        """
+        Specifying a C{trustRoot} of L{sslverify.OpenSSLDefaultPaths} when
+        initializing L{sslverify.OpenSSLCertificateOptions} loads the
+        platform-provided trusted certificates via C{set_default_verify_paths}.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            trustRoot=sslverify.OpenSSLDefaultPaths(),
+        )
+        fc = FakeContext(SSL.TLSv1_METHOD)
+        opts._contextFactory = lambda method: fc
+        opts.getContext()
+        self.assertTrue(fc._defaultVerifyPathsSet)
+
+
+    def test_trustRootPlatformRejectsUntrustedCA(self):
+        """
+        Specifying a C{trustRoot} of L{platformTrust} when initializing
+        L{sslverify.OpenSSLCertificateOptions} causes certificates issued by a
+        newly created CA to be rejected by an SSL connection using these
+        options.
+
+        Note that this test should I{always} pass, even on platforms where the
+        CA certificates are not installed, as long as L{platformTrust} rejects
+        completely invalid / unknown root CA certificates.  This is simply a
+        smoke test to make sure that verification is happening at all.
+        """
+        caSelfCert, serverCert = certificatesForAuthorityAndServer()
+        chainedCert = pathContainingDumpOf(self, serverCert, caSelfCert)
+        privateKey = pathContainingDumpOf(self, serverCert.privateKey)
+
+        sProto, cProto, pump = loopbackTLSConnection(
+            trustRoot=platformTrust(),
+            privateKeyFile=privateKey,
+            chainedCertFile=chainedCert,
+        )
+        # No data was received.
+        self.assertEqual(cProto.wrappedProtocol.data, b'')
+
+        # It was an L{SSL.Error}.
+        self.assertEqual(cProto.wrappedProtocol.lostReason.type, SSL.Error)
+
+        # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
+        err = cProto.wrappedProtocol.lostReason.value
+        self.assertEqual(err.args[0][0][2], 'tlsv1 alert unknown ca')
+
+
+    def test_trustRootSpecificCertificate(self):
+        """
+        Specifying a L{Certificate} object for L{trustRoot} will result in that
+        certificate being the only trust root for a client.
+        """
+        caCert, serverCert = certificatesForAuthorityAndServer()
+        otherCa, otherServer = certificatesForAuthorityAndServer()
+        sProto, cProto, pump = loopbackTLSConnection(
+            trustRoot=caCert,
+            privateKeyFile=pathContainingDumpOf(self, serverCert.privateKey),
+            chainedCertFile=pathContainingDumpOf(self, serverCert),
+        )
+        pump.flush()
+        self.assertIs(cProto.wrappedProtocol.lostReason, None)
+        self.assertEqual(cProto.wrappedProtocol.data,
+                         sProto.wrappedProtocol.greeting)
 
 
 

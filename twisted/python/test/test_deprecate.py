@@ -7,7 +7,7 @@ Tests for Twisted's deprecation framework, L{twisted.python.deprecate}.
 
 from __future__ import division, absolute_import
 
-import sys, types, warnings
+import sys, types, warnings, inspect
 from os.path import normcase
 from warnings import simplefilter, catch_warnings
 try:
@@ -21,7 +21,9 @@ from twisted.python.deprecate import DEPRECATION_WARNING_FORMAT
 from twisted.python.deprecate import (
     getDeprecationWarningString,
     deprecated, _appendToDocstring, _getDeprecationDocstring,
-    _fullyQualifiedName as fullyQualifiedName)
+    _fullyQualifiedName as fullyQualifiedName,
+    _passed, _mutuallyExclusiveArguments
+)
 
 from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
@@ -789,3 +791,127 @@ class TestAppendToDocstring(SynchronousTestCase):
         _appendToDocstring(multiLineDocstring, "Appended text.")
         self.assertEqual(
             expectedDocstring.__doc__, multiLineDocstring.__doc__)
+
+
+
+class MutualArgumentExclusionTests(SynchronousTestCase):
+    """
+    Tests for L{mutuallyExclusiveArguments}.
+    """
+
+    def checkPassed(self, func, *args, **kw):
+        """
+        Test an invocation of L{passed} with the given function, arguments, and
+        keyword arguments.
+
+        @param func: A function whose argspec to pass to L{_passed}.
+        @type func: A callable.
+
+        @param args: The arguments which could be passed to L{func}.
+
+        @param kw: The keyword arguments which could be passed to L{func}.
+
+        @return: L{_passed}'s return value
+        @rtype: L{dict}
+        """
+        return _passed(inspect.getargspec(func), args, kw)
+
+
+    def test_passed_simplePositional(self):
+        """
+        L{passed} identifies the arguments passed by a simple
+        positional test.
+        """
+        def func(a, b):
+            pass
+        self.assertEqual(self.checkPassed(func, 1, 2), dict(a=1, b=2))
+
+
+    def test_passed_tooManyArgs(self):
+        """
+        L{passed} raises a L{TypeError} if too many arguments are
+        passed.
+        """
+        def func(a, b):
+            pass
+        self.assertRaises(TypeError, self.checkPassed, func, 1, 2, 3)
+
+
+    def test_passed_doublePassKeyword(self):
+        """
+        L{passed} raises a L{TypeError} if a argument is passed both
+        positionally and by keyword.
+        """
+        def func(a):
+            pass
+        self.assertRaises(TypeError, self.checkPassed, func, 1, a=2)
+
+
+    def test_passed_unspecifiedKeyword(self):
+        """
+        L{passed} raises a L{TypeError} if a keyword argument not
+        present in the function's declaration is passed.
+        """
+        def func(a):
+            pass
+        self.assertRaises(TypeError, self.checkPassed, func, 1, z=2)
+
+
+    def test_passed_star(self):
+        """
+        L{passed} places additional positional arguments into a tuple
+        under the name of the star argument.
+        """
+        def func(a, *b):
+            pass
+        self.assertEqual(self.checkPassed(func, 1, 2, 3),
+                         dict(a=1, b=(2, 3)))
+
+
+    def test_passed_starStar(self):
+        """
+        Additional keyword arguments are passed as a dict to the star star
+        keyword argument.
+        """
+        def func(a, **b):
+            pass
+        self.assertEqual(self.checkPassed(func, 1, x=2, y=3, z=4),
+                         dict(a=1, b=dict(x=2, y=3, z=4)))
+
+
+    def test_passed_noDefaultValues(self):
+        """
+        The results of L{passed} only include arguments explicitly
+        passed, not default values.
+        """
+        def func(a, b, c=1, d=2, e=3):
+            pass
+        self.assertEqual(self.checkPassed(func, 1, 2, e=7),
+                         dict(a=1, b=2, e=7))
+
+
+    def test_mutualExclusionPrimeDirective(self):
+        """
+        L{mutuallyExclusiveArguments} does not interfere in its
+        decoratee's operation, either its receipt of arguments or its return
+        value.
+        """
+        @_mutuallyExclusiveArguments([('a', 'b')])
+        def func(x, y, a=3, b=4):
+            return x + y + a + b
+
+        self.assertEqual(func(1, 2), 10)
+        self.assertEqual(func(1, 2, 7), 14)
+        self.assertEqual(func(1, 2, b=7), 13)
+
+
+    def test_mutualExclusionExcludesByKeyword(self):
+        """
+        L{mutuallyExclusiveArguments} raises a L{TypeError}n if its
+        decoratee is passed a pair of mutually exclusive arguments.
+        """
+        @_mutuallyExclusiveArguments([['a', 'b']])
+        def func(a=3, b=4):
+            return a + b
+
+        self.assertRaises(TypeError, func, a=3, b=4)

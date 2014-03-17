@@ -235,6 +235,11 @@ div.admonition {
     margin-top: 10px;
     margin-bottom: 10px;
     padding: 7px;
+    background-color: #FFFFCC;
+}
+
+div.admonition.warning {
+    background-color: #FFCCCC;
 }
 
 div.admonition dt {
@@ -445,4 +450,8 @@ div.documentwrapper {
 div.bodywrapper {
 	margin-right: 300px;
 	padding-left: 40px;
+}
+
+a.api {
+    font-family: monospace;
 }
