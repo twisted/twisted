@@ -64,6 +64,7 @@ Developer Guides
    pb-cred
    pb-limits
    python3
+   positioning
    glossary
    debug-with-emacs
 
@@ -306,6 +307,12 @@ Developer Guides
   - :doc:`Authentication with Perspective Broker <pb-cred>`
   - :doc:`PB Limits <pb-limits>`
 
+
+- .. _core-howto-index-positioning:
+
+  Positioning
+
+  - :doc:`Twisted Positioning <positioning>`
 
 
 - .. _core-howto-index-appendix:
