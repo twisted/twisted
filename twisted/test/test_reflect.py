@@ -358,17 +358,6 @@ class LookupsTestCase(TestCase):
             self.assertIs(result, default)
 
 
-    def test_requireModuleOtherError(self):
-        """
-        When module import fails with error, other than ImportError, it
-        raises that error.
-        """
-        self.assertRaises(
-            ValueError,
-            reflect.requireModule, 'twisted..python',
-            )
-
-
     def test_requireModuleDefaultNone(self):
         """
         When module import fails it returns C{None} by default.
@@ -376,7 +365,6 @@ class LookupsTestCase(TestCase):
         result = reflect.requireModule('no.such.module')
 
         self.assertIs(None, result)
-
 
 
     def test_requireModuleRequestedImport(self):
