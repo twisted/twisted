@@ -99,9 +99,6 @@ class CallbackTests(TestCase):
 
 
 
-
-
-
 class BrokenSentenceCallbackTests(TestCase):
     """
     Tests for broken NMEA sentence callbacks.
