@@ -104,7 +104,7 @@ class TestCase(SynchronousTestCase):
             onTimeout, util.suppress(category=DeprecationWarning))
         method = getattr(self, methodName)
         if inspect.isgeneratorfunction(method):
-            exc = self.failureException(
+            exc = TypeError(
                 '%r is a generator function and therefore will never run' % (
                     method,))
             return defer.fail(exc)

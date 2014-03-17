@@ -1208,10 +1208,10 @@ class SynchronousTestCase(_Assertions):
             should be made, C{False} otherwise.
         """
         if inspect.isgeneratorfunction(method):
-            exc = self.failureException(
+            exc = TypeError(
                 '%r is a generator function and therefore will never run' % (
                     method,))
-            result.addFailure(self, failure.Failure(exc))
+            result.addError(self, failure.Failure(exc))
             return True
         try:
             runWithWarningsSuppressed(suppress, method)
