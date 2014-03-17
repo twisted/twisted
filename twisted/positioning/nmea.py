@@ -824,6 +824,7 @@ class NMEAAdapter(object):
         @type sentence: L{NMEASentence}
         """
         self.currentSentence = sentence
+        self._sentenceData = {}
 
         try:
             self._validateCurrentSentence()

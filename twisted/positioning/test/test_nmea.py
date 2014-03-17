@@ -1021,6 +1021,31 @@ class NMEAReceiverTest(TestCase):
         self.protocol = nmea.NMEAProtocol(self.adapter)
 
 
+    def test_onlyFireWhenCurrentSentenceHasNewInformation(self):
+        """
+        If the current sentence does not contain any new fields for a
+        particular callback, that callback is not called; even if all
+        necessary information is still in the state from one or more
+        previous messages.
+        """
+        self.protocol.lineReceived(GPGGA)
+
+        GPGGACallbacks = set(['positionReceived',
+                              'positionErrorReceived',
+                              'altitudeReceived'])
+        self.assertEqual(set(self.receiver.called.keys()), GPGGACallbacks)
+
+        self.receiver.clear()
+        self.assertNotEqual(self.adapter._state, {})
+
+        # GPHDT contains heading infromation but not position,
+        # altitude or anything like that; but that information is
+        # still in the state.
+        self.protocol.lineReceived(GPHDT)
+        GPHDTCallbacks = set(['headingReceived'])
+        self.assertEqual(set(self.receiver.called.keys()), GPHDTCallbacks)
+
+
     def _receiverTest(self, sentences, expectedFired=(), extraTest=None):
         """
         A generic test for NMEA receiver behavior.
