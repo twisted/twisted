@@ -182,6 +182,7 @@ testModules = [
     "twisted.test.test_failure",
     "twisted.test.test_fdesc",
     "twisted.test.test_internet",
+    "twisted.test.test_iosim",
     "twisted.test.test_iutils",
     "twisted.test.test_lockfile",
     "twisted.test.test_log",
