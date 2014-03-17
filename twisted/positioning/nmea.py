@@ -702,7 +702,7 @@ class NMEAAdapter(object):
                 # break, and watch the test case fail.
                 # ML thread about this issue: http://goo.gl/1KNUi
                 # Related CPython bug: http://bugs.python.org/issue2506
-                continue # pragma: no cover
+                continue
 
             satellite = base.Satellite(prn, azimuth, elevation, snr)
             beaconInformation.seenBeacons.add(satellite)
