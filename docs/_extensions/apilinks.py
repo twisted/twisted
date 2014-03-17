@@ -33,6 +33,8 @@ def make_api_link(name, rawtext, text, lineno, inliner,
     # ...hmmm, maybe this is good enough after all
     ref = ''.join((base_url, full_name, '.html'))
 
+    options.update(classes=["api"])
+
     node = nodes.reference(rawtext, utils.unescape(label), refuri=ref,
                            **options)
 
