@@ -106,6 +106,7 @@ modules = [
     "twisted.python.versions",
     "twisted.test",
     "twisted.test.proto_helpers",
+    "twisted.test.iosim",
     "twisted.test.ssl_helpers",
     "twisted.trial",
     "twisted.trial._asynctest",
