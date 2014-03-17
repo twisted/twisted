@@ -345,6 +345,42 @@ class LookupsTestCase(TestCase):
                 "identifiers, not %r" % (invalidName,))
 
 
+    def test_requireModuleImportError(self):
+        """
+        When module import fails with ImportError it returns the specified
+        default value.
+        """
+        for name in ['nosuchmtopodule', 'no.such.module']:
+            default = object()
+
+            result = reflect.requireModule(name, default=default)
+
+            self.assertIs(result, default)
+
+
+    def test_requireModuleDefaultNone(self):
+        """
+        When module import fails it returns C{None} by default.
+        """
+        result = reflect.requireModule('no.such.module')
+
+        self.assertIs(None, result)
+
+
+    def test_requireModuleRequestedImport(self):
+        """
+        When module import succeed it returns the module and not the default
+        value.
+        """
+        from twisted.python import monkey
+        default = object()
+
+        self.assertIs(
+            reflect.requireModule('twisted.python.monkey', default=default),
+            monkey,
+            )
+
+
 
 class Breakable(object):
 
