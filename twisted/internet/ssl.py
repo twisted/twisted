@@ -6,22 +6,8 @@
 This module implements Transport Layer Security (TLS) support for Twisted.  It
 requires U{PyOpenSSL <https://pypi.python.org/pypi/pyOpenSSL>}.
 
-TLS connections require a L{ContextFactory} that specifies their security
-properties, such as certificate, private key, certificate authorities to verify
-the peer, allowed TLS protocol versions, cipher suites, and so on.  In this
-module you will find base classes for implementing your own context factories;
-server context factories should inherit from L{ContextFactory}, and client
-context factories should inherit from L{ClientContextFactory}.
-
-You will also find tools here for constructing context factories without
-implementing your own; L{CertificateOptions}, for example, can serve as a
-context factory for either a client or a server.
-
-Developers using Twisted, please ignore the L{Port}, L{Connector}, and
-L{Client} classes defined here, as these are details of certain reactors' TLS
-implementations, exposed by accident (and remaining here only for compatibility
-reasons).  If you wish to establish a TLS connection, please use one of the
-following APIs:
+If you wish to establish a TLS connection, please use one of the following
+APIs:
 
     - SSL endpoints for L{servers
       <twisted.internet.endpoints.SSL4ServerEndpoint>} and L{clients
@@ -32,6 +18,28 @@ following APIs:
     - L{connectSSL <twisted.internet.interfaces.IReactorSSL.connectSSL>}
 
     - L{listenSSL <twisted.internet.interfaces.IReactorSSL.listenSSL>}
+
+These APIs all require C{contextFactory} argument that specifies their security
+properties, such as certificate, private key, certificate authorities to verify
+the peer, allowed TLS protocol versions, cipher suites, and so on.  The
+recommended value for this argument is a L{CertificateOptions} instance; see
+its documentation for an explanation of the available options.
+
+In this module you will also find the base classes for implementing your own
+context factories.  However, be warned that implementing your own context
+factory is both difficult and dangerous; the Twisted team has worked hard to
+make L{CertificateOptions}' API comprehensible and unsurprising, and the
+Twisted team is actively maintaining it to ensure that it becomes more secure
+over time.  If you are really absolutely sure that you want to take on the risk
+of implementing your own context factory based on the pyOpenSSL API, server
+context factories may inherit from L{ContextFactory}, and client context
+factories may inherit from L{ClientContextFactory}.
+
+Developers using Twisted, please ignore the L{Port}, L{Connector}, and
+L{Client} classes defined here, as these are details of certain reactors' TLS
+implementations, exposed by accident (and remaining here only for compatibility
+reasons).  If you wish to establish a TLS connection, please use one of the
+APIs listed above.
 
 @note: "SSL" (Secure Sockets Layer) is an antiquated synonym for "TLS"
     (Transport Layer Security).  You may see these terms used interchangeably
