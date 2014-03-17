@@ -1,1 +1,1 @@
-trial now marks a test method as a failure if that test method is a generator function.
+trial's TestCase will now mark a test method as a failure if that test method is a generator function.
