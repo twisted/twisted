@@ -1336,7 +1336,7 @@ class TrialGeneratorFunctionTests(unittest.SynchronousTestCase):
     Tests for generator function methods in test cases.
     """
 
-    def test_failureOnGeneratorFunction(self):
+    def test_errorOnGeneratorFunction(self):
         """
         In a TestCase, a test method which is a generator function is reported
         as an error, as such a method will never run assertions.
@@ -1368,7 +1368,7 @@ class TrialGeneratorFunctionTests(unittest.SynchronousTestCase):
             'a generator function and therefore will never run')
 
 
-    def test_synchronousTestCaseFailureOnGeneratorFunction(self):
+    def test_synchronousTestCaseErrorOnGeneratorFunction(self):
         """
         In a SynchronousTestCase, a test method which is a generator function
         is reported as an error, as such a method will never run assertions.
