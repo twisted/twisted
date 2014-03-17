@@ -10,7 +10,9 @@ from __future__ import division, absolute_import
 from twisted.trial.unittest import TestCase
 
 from twisted.python.constants import (
-    NamedConstant, Names, ValueConstant, Values, FlagConstant, Flags)
+    NamedConstant, Names, ValueConstant, Values, FlagConstant, Flags
+)
+
 
 
 class NamedConstantTests(TestCase):
@@ -72,9 +74,9 @@ class NamedConstantTests(TestCase):
 
     def test_hash(self):
         """
-        Because two different L{NamedConstant} instances do not compare as equal
-        to each other, they also have different hashes to avoid collisions when
-        added to a C{dict} or C{set}.
+        Because two different L{NamedConstant} instances do not compare as
+        equal to each other, they also have different hashes to avoid
+        collisions when added to a C{dict} or C{set}.
         """
         first = NamedConstant()
         first._realize(self.container, "bar", None)
@@ -103,8 +105,8 @@ class _ConstantsTestsMixin(object):
 
     def _initializedOnceTest(self, container, constantName):
         """
-        Assert that C{container._enumerants} does not change as a side-effect of
-        one of its attributes being accessed.
+        Assert that C{container._enumerants} does not change as a side-effect
+        of one of its attributes being accessed.
 
         @param container: A L{_ConstantsContainer} subclass which will be
             tested.
@@ -113,8 +115,8 @@ class _ConstantsTestsMixin(object):
         """
         first = container._enumerants
 
-        # Accessing an attribute of the container should not have any observable
-        # side-effect on the _enumerants attribute.
+        # Accessing an attribute of the container should not have any
+        # observable side-effect on the _enumerants attribute.
         getattr(container, constantName)
 
         second = container._enumerants
@@ -213,8 +215,8 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
 
     def test_attributeIdentity(self):
         """
-        Repeated access of an attribute associated with a L{NamedConstant} value
-        in a L{Names} subclass results in the same object.
+        Repeated access of an attribute associated with a L{NamedConstant}
+        value in a L{Names} subclass results in the same object.
         """
         self.assertIdentical(self.METHOD.GET, self.METHOD.GET)
 
@@ -245,8 +247,8 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
 
     def test_iterconstantsIdentity(self):
         """
-        The constants returned from L{Names.iterconstants} are identical on each
-        call to that method.
+        The constants returned from L{Names.iterconstants} are identical on
+        each call to that method.
         """
         constants = list(self.METHOD.iterconstants())
         again = list(self.METHOD.iterconstants())
@@ -351,8 +353,9 @@ class ValuesTests(TestCase, _ConstantsTestsMixin):
 
     def test_representation(self):
         """
-        The string representation of a constant on a L{Values} subclass includes
-        the name of the L{Values} subclass and the name of the constant itself.
+        The string representation of a constant on a L{Values} subclass
+        includes the name of the L{Values} subclass and the name of the
+        constant itself.
         """
         self.assertEqual("<STATUS=OK>", repr(self.STATUS.OK))
 
@@ -421,8 +424,8 @@ class ValuesTests(TestCase, _ConstantsTestsMixin):
 
     def test_attributeIdentity(self):
         """
-        Repeated access of an attribute associated with a L{ValueConstant} value
-        in a L{Values} subclass results in the same object.
+        Repeated access of an attribute associated with a L{ValueConstant}
+        value in a L{Values} subclass results in the same object.
         """
         self.assertIdentical(self.STATUS.OK, self.STATUS.OK)
 
@@ -440,8 +443,8 @@ class ValuesTests(TestCase, _ConstantsTestsMixin):
 
     def test_attributeIterconstantsIdentity(self):
         """
-        The constants returned from L{Values.iterconstants} are identical to the
-        constants accessible using attributes.
+        The constants returned from L{Values.iterconstants} are identical to
+        the constants accessible using attributes.
         """
         constants = list(self.STATUS.iterconstants())
         self.assertIdentical(self.STATUS.OK, constants[0])
@@ -559,9 +562,9 @@ class FlagsTests(_FlagsTestsMixin, TestCase, _ConstantsTestsMixin):
 
     def test_lookupByValue(self):
         """
-        Constants can be looked up by their associated value, defined implicitly
-        by the position in which the constant appears in the class definition or
-        explicitly by the argument passed to L{FlagConstant}.
+        Constants can be looked up by their associated value, defined
+        implicitly by the position in which the constant appears in the class
+        definition or explicitly by the argument passed to L{FlagConstant}.
         """
         flag = self.FXF.lookupByValue(0x01)
         self.assertIdentical(flag, self.FXF.READ)
@@ -586,7 +589,7 @@ class FlagsTests(_FlagsTestsMixin, TestCase, _ConstantsTestsMixin):
         """
         class TIMEX(Flags):
             # (timex.mode)
-            ADJ_OFFSET = FlagConstant(0x0001) # time offset
+            ADJ_OFFSET = FlagConstant(0x0001)  # time offset
 
             #  xntp 3.4 compatibility names
             MOD_OFFSET = FlagConstant(0x0001)
@@ -645,8 +648,8 @@ class FlagsTests(_FlagsTestsMixin, TestCase, _ConstantsTestsMixin):
 
     def test_iterconstantsIdentity(self):
         """
-        The constants returned from L{Flags.iterconstants} are identical on each
-        call to that method.
+        The constants returned from L{Flags.iterconstants} are identical on
+        each call to that method.
         """
         constants = list(self.FXF.iterconstants())
         again = list(self.FXF.iterconstants())
@@ -679,7 +682,9 @@ class FlagConstantSimpleOrTests(_FlagsTestsMixin, TestCase):
         constants.
         """
         flag = self.FXF.READ | self.FXF.WRITE
-        self.assertEqual(self.FXF.READ.value | self.FXF.WRITE.value, flag.value)
+        self.assertEqual(
+            self.FXF.READ.value | self.FXF.WRITE.value, flag.value
+        )
 
 
     def test_name(self):
@@ -706,7 +711,7 @@ class FlagConstantSimpleOrTests(_FlagsTestsMixin, TestCase):
         iterated upon to yield the original constants.
         """
         self.assertEqual(
-            set(self.FXF.WRITE & self.FXF.READ), # No flags
+            set(self.FXF.WRITE & self.FXF.READ),  # No flags
             set(()))
         self.assertEqual(
             set(self.FXF.WRITE),
@@ -739,8 +744,8 @@ class FlagConstantSimpleOrTests(_FlagsTestsMixin, TestCase):
 class FlagConstantSimpleAndTests(_FlagsTestsMixin, TestCase):
     """
     Tests for the C{&} operator as defined for L{FlagConstant} instances, used
-    to create new L{FlagConstant} instances representing the common parts of two
-    existing L{FlagConstant} instances from the same L{Flags} class.
+    to create new L{FlagConstant} instances representing the common parts of
+    two existing L{FlagConstant} instances from the same L{Flags} class.
     """
     def test_value(self):
         """
@@ -788,13 +793,15 @@ class FlagConstantSimpleExclusiveOrTests(_FlagsTestsMixin, TestCase):
     def test_value(self):
         """
         The value of the L{FlagConstant} which results from C{^} has all of the
-        bits set which were set in exactly one of the values of the two original
-        constants.
+        bits set which were set in exactly one of the values of the two
+        original constants.
         """
         readWrite = (self.FXF.READ | self.FXF.WRITE)
         writeAppend = (self.FXF.WRITE | self.FXF.APPEND)
         flag = readWrite ^ writeAppend
-        self.assertEqual(self.FXF.READ.value | self.FXF.APPEND.value, flag.value)
+        self.assertEqual(
+            self.FXF.READ.value | self.FXF.APPEND.value, flag.value
+        )
 
 
     def test_name(self):
@@ -812,8 +819,8 @@ class FlagConstantSimpleExclusiveOrTests(_FlagsTestsMixin, TestCase):
     def test_representation(self):
         """
         The string representation of a L{FlagConstant} instance which results
-        from C{^} includes the names of only the flags which were set in exactly
-        one of the two original constants.
+        from C{^} includes the names of only the flags which were set in
+        exactly one of the two original constants.
         """
         readWrite = (self.FXF.READ | self.FXF.WRITE)
         writeAppend = (self.FXF.WRITE | self.FXF.APPEND)
@@ -868,3 +875,254 @@ class FlagConstantNegationTests(_FlagsTestsMixin, TestCase):
         """
         flag = ~self.FXF.WRITE
         self.assertEqual("<FXF={APPEND,EXCLUSIVE,READ,TEXT}>", repr(flag))
+
+
+
+class OrderedConstantsTests(TestCase):
+    """
+    Tests for the ordering of constants.  All constants are ordered by
+    the order in which they are defined in their container class.
+    The ordering of constants that are not in the same container is not
+    defined.
+    """
+    def test_orderedNameConstants_lt(self):
+        """
+        L{twisted.python.constants.NamedConstant} preserves definition
+        order in C{<} comparisons.
+        """
+        self.assertTrue(NamedLetters.alpha < NamedLetters.beta)
+
+
+    def test_orderedNameConstants_le(self):
+        """
+        L{twisted.python.constants.NamedConstant} preserves definition
+        order in C{<=} comparisons.
+        """
+        self.assertTrue(NamedLetters.alpha <= NamedLetters.alpha)
+        self.assertTrue(NamedLetters.alpha <= NamedLetters.beta)
+
+
+    def test_orderedNameConstants_gt(self):
+        """
+        L{twisted.python.constants.NamedConstant} preserves definition
+        order in C{>} comparisons.
+        """
+        self.assertTrue(NamedLetters.beta > NamedLetters.alpha)
+
+
+    def test_orderedNameConstants_ge(self):
+        """
+        L{twisted.python.constants.NamedConstant} preserves definition
+        order in C{>=} comparisons.
+        """
+        self.assertTrue(NamedLetters.alpha >= NamedLetters.alpha)
+        self.assertTrue(NamedLetters.beta >= NamedLetters.alpha)
+
+
+    def test_orderedValueConstants_lt(self):
+        """
+        L{twisted.python.constants.ValueConstant} preserves definition
+        order in C{<} comparisons.
+        """
+        self.assertTrue(ValuedLetters.alpha < ValuedLetters.digamma)
+        self.assertTrue(ValuedLetters.digamma < ValuedLetters.zeta)
+
+
+    def test_orderedValueConstants_le(self):
+        """
+        L{twisted.python.constants.ValueConstant} preserves definition
+        order in C{<=} comparisons.
+        """
+        self.assertTrue(ValuedLetters.alpha <= ValuedLetters.alpha)
+        self.assertTrue(ValuedLetters.alpha <= ValuedLetters.digamma)
+        self.assertTrue(ValuedLetters.digamma <= ValuedLetters.zeta)
+
+
+    def test_orderedValueConstants_gt(self):
+        """
+        L{twisted.python.constants.ValueConstant} preserves definition
+        order in C{>} comparisons.
+        """
+        self.assertTrue(ValuedLetters.digamma > ValuedLetters.alpha)
+        self.assertTrue(ValuedLetters.zeta > ValuedLetters.digamma)
+
+
+    def test_orderedValueConstants_ge(self):
+        """
+        L{twisted.python.constants.ValueConstant} preserves definition
+        order in C{>=} comparisons.
+        """
+        self.assertTrue(ValuedLetters.alpha >= ValuedLetters.alpha)
+        self.assertTrue(ValuedLetters.digamma >= ValuedLetters.alpha)
+        self.assertTrue(ValuedLetters.zeta >= ValuedLetters.digamma)
+
+
+    def test_orderedFlagConstants_lt(self):
+        """
+        L{twisted.python.constants.FlagConstant} preserves definition
+        order in C{<} comparisons.
+        """
+        self.assertTrue(PizzaToppings.mozzarella < PizzaToppings.pesto)
+        self.assertTrue(PizzaToppings.pesto < PizzaToppings.pepperoni)
+
+
+    def test_orderedFlagConstants_le(self):
+        """
+        L{twisted.python.constants.FlagConstant} preserves definition
+        order in C{<=} comparisons.
+        """
+        self.assertTrue(PizzaToppings.mozzarella <= PizzaToppings.mozzarella)
+        self.assertTrue(PizzaToppings.mozzarella <= PizzaToppings.pesto)
+        self.assertTrue(PizzaToppings.pesto <= PizzaToppings.pepperoni)
+
+
+    def test_orderedFlagConstants_gt(self):
+        """
+        L{twisted.python.constants.FlagConstant} preserves definition
+        order in C{>} comparisons.
+        """
+        self.assertTrue(PizzaToppings.pesto > PizzaToppings.mozzarella)
+        self.assertTrue(PizzaToppings.pepperoni > PizzaToppings.pesto)
+
+
+    def test_orderedFlagConstants_ge(self):
+        """
+        L{twisted.python.constants.FlagConstant} preserves definition
+        order in C{>=} comparisons.
+        """
+        self.assertTrue(PizzaToppings.mozzarella >= PizzaToppings.mozzarella)
+        self.assertTrue(PizzaToppings.pesto >= PizzaToppings.mozzarella)
+        self.assertTrue(PizzaToppings.pepperoni >= PizzaToppings.pesto)
+
+
+    def test_orderedDifferentConstants_lt(self):
+        """
+        L{twisted.python.constants._Constant.__lt__} returns C{NotImplemented}
+        when comparing constants of different types.
+        """
+        self.assertEquals(
+            NotImplemented,
+            NamedLetters.alpha.__lt__(ValuedLetters.alpha)
+        )
+
+
+    def test_orderedDifferentConstants_le(self):
+        """
+        L{twisted.python.constants._Constant.__le__} returns C{NotImplemented}
+        when comparing constants of different types.
+        """
+        self.assertEquals(
+            NotImplemented,
+            NamedLetters.alpha.__le__(ValuedLetters.alpha)
+        )
+
+
+    def test_orderedDifferentConstants_gt(self):
+        """
+        L{twisted.python.constants._Constant.__gt__} returns C{NotImplemented}
+        when comparing constants of different types.
+        """
+        self.assertEquals(
+            NotImplemented,
+            NamedLetters.alpha.__gt__(ValuedLetters.alpha)
+        )
+
+
+    def test_orderedDifferentConstants_ge(self):
+        """
+        L{twisted.python.constants._Constant.__ge__} returns C{NotImplemented}
+        when comparing constants of different types.
+        """
+        self.assertEquals(
+            NotImplemented,
+            NamedLetters.alpha.__ge__(ValuedLetters.alpha)
+        )
+
+
+    def test_orderedDifferentContainers_lt(self):
+        """
+        L{twisted.python.constants._Constant.__lt__} returns C{NotImplemented}
+        when comparing constants belonging to different containers.
+        """
+        self.assertEquals(
+            NotImplemented,
+            NamedLetters.alpha.__lt__(MoreNamedLetters.digamma)
+        )
+
+
+    def test_orderedDifferentContainers_le(self):
+        """
+        L{twisted.python.constants._Constant.__le__} returns C{NotImplemented}
+        when comparing constants belonging to different containers.
+        """
+        self.assertEquals(
+            NotImplemented,
+            NamedLetters.alpha.__le__(MoreNamedLetters.digamma)
+        )
+
+
+    def test_orderedDifferentContainers_gt(self):
+        """
+        L{twisted.python.constants._Constant.__gt__} returns C{NotImplemented}
+        when comparing constants belonging to different containers.
+        """
+        self.assertEquals(
+            NotImplemented,
+            NamedLetters.alpha.__gt__(MoreNamedLetters.digamma)
+        )
+
+
+    def test_orderedDifferentContainers_ge(self):
+        """
+        L{twisted.python.constants._Constant.__ge__} returns C{NotImplemented}
+        when comparing constants belonging to different containers.
+        """
+        self.assertEquals(
+            NotImplemented,
+            NamedLetters.alpha.__ge__(MoreNamedLetters.digamma)
+        )
+
+
+
+class NamedLetters(Names):
+    """
+    Some letters, named.
+    """
+    alpha = NamedConstant()
+    beta  = NamedConstant()
+
+
+
+class MoreNamedLetters(Names):
+    """
+    Some more letters, named.
+    """
+    digamma = NamedConstant()
+    zeta  = NamedConstant()
+
+
+
+class ValuedLetters(Values):
+    """
+    Some more letters, with cooresponding unicode values.
+    """
+    # Note u'\u0391' < u'\u03dc' > u'\u0396'.  We are ensuring here that the
+    # definition is order different from the order of the values, which lets us
+    # test that we're not somehow ordering by value and happen the get the same
+    # results.
+    alpha   = ValueConstant(u'\u0391')
+    digamma = ValueConstant(u'\u03dc')
+    zeta    = ValueConstant(u'\u0396')
+
+
+
+class PizzaToppings(Flags):
+    """
+    Some pizza toppings, with obviously meaningful bitwise values.
+    """
+    # Note 1<<1 < 1<<4 > 1<<2, so we are ensuring here that the definition
+    # order is different from the order of the values, which lets us test that
+    # we're not somehow ordering by value and happen the get the same results.
+    mozzarella = FlagConstant(1 << 1)
+    pesto      = FlagConstant(1 << 4)
+    pepperoni  = FlagConstant(1 << 2)

@@ -39,10 +39,82 @@ class _Constant(object):
 
     def __repr__(self):
         """
-        Return text identifying both which constant this is and which collection
-        it belongs to.
+        Return text identifying both which constant this is and which
+        collection it belongs to.
         """
         return "<%s=%s>" % (self._container.__name__, self.name)
+
+
+    def __lt__(self, other):
+        """
+        Implements C{<}.  Order is defined by instantiation order.
+
+        @param other: An object.
+
+        @return: C{NotImplemented} if C{other} is not a constant belonging to
+            the same container as this constant, C{True} if this constant is
+            defined before C{other}, otherwise C{False}.
+        """
+        if (
+            not isinstance(other, self.__class__) or
+            not self._container == other._container
+        ):
+            return NotImplemented
+        return self._index < other._index
+
+
+    def __le__(self, other):
+        """
+        Implements C{<=}.  Order is defined by instantiation order.
+
+        @param other: An object.
+
+        @return: C{NotImplemented} if C{other} is not a constant belonging to
+            the same container as this constant, C{True} if this constant is
+            defined before or equal to C{other}, otherwise C{False}.
+        """
+        if (
+            not isinstance(other, self.__class__) or
+            not self._container == other._container
+        ):
+            return NotImplemented
+        return self is other or self._index < other._index
+
+
+    def __gt__(self, other):
+        """
+        Implements C{>}.  Order is defined by instantiation order.
+
+        @param other: An object.
+
+        @return: C{NotImplemented} if C{other} is not a constant belonging to
+            the same container as this constant, C{True} if this constant is
+            defined after C{other}, otherwise C{False}.
+        """
+        if (
+            not isinstance(other, self.__class__) or
+            not self._container == other._container
+        ):
+            return NotImplemented
+        return self._index > other._index
+
+
+    def __ge__(self, other):
+        """
+        Implements C{>=}.  Order is defined by instantiation order.
+
+        @param other: An object.
+
+        @return: C{NotImplemented} if C{other} is not a constant belonging to
+            the same container as this constant, C{True} if this constant is
+            defined after or equal to C{other}, otherwise C{False}.
+        """
+        if (
+            not isinstance(other, self.__class__) or
+            not self._container == other._container
+        ):
+            return NotImplemented
+        return self is other or self._index > other._index
 
 
     def _realize(self, container, name, value):
@@ -109,9 +181,9 @@ class _ConstantsContainerType(type):
             descriptor._realize(cls, enumerant, value)
             enumerants[enumerant] = descriptor
 
-        # Save the dictionary which contains *only* constants (distinct from any
-        # other attributes the application may have given the container) where
-        # the class can use it later (eg for lookupByName).
+        # Save the dictionary which contains *only* constants (distinct from
+        # any other attributes the application may have given the container)
+        # where the class can use it later (eg for lookupByName).
         cls._enumerants = enumerants
 
         return cls
@@ -173,8 +245,8 @@ class _ConstantsContainer(_ConstantsContainerType('', (object,), {})):
         Retrieve a constant by its name or raise a C{ValueError} if there is no
         constant associated with that name.
 
-        @param name: A C{str} giving the name of one of the constants defined by
-            C{cls}.
+        @param name: A C{str} giving the name of one of the constants defined
+            by C{cls}.
 
         @raise ValueError: If C{name} is not the name of one of the constants
             defined by C{cls}.
@@ -247,8 +319,8 @@ class Values(_ConstantsContainer):
     @classmethod
     def lookupByValue(cls, value):
         """
-        Retrieve a constant by its value or raise a C{ValueError} if there is no
-        constant associated with that value.
+        Retrieve a constant by its value or raise a C{ValueError} if there is
+        no constant associated with that value.
 
         @param value: The value of one of the constants defined by C{cls}.
 
@@ -309,12 +381,12 @@ class FlagConstant(_Constant):
         @param container: The L{Flags} subclass this constant is part of.
 
         @param names: When a single-flag value is being initialized, a C{str}
-            giving the name of that flag.  This is the case which happens when a
-            L{Flags} subclass is being initialized and L{FlagConstant} instances
-            from its body are being realized.  Otherwise, a C{set} of C{str}
-            giving names of all the flags set on this L{FlagConstant} instance.
-            This is the case when two flags are combined using C{|}, for
-            example.
+            giving the name of that flag.  This is the case which happens when
+            a L{Flags} subclass is being initialized and L{FlagConstant}
+            instances from its body are being realized.  Otherwise, a C{set} of
+            C{str} giving names of all the flags set on this L{FlagConstant}
+            instance.  This is the case when two flags are combined using C{|},
+            for example.
         """
         if isinstance(names, str):
             name = names
@@ -412,8 +484,8 @@ class Flags(Values):
 
         @param name: The name of the constant to create.
 
-        @param descriptor: An instance of a L{FlagConstant} which is assigned to
-            C{name}.
+        @param descriptor: An instance of a L{FlagConstant} which is assigned
+            to C{name}.
 
         @return: Either the value passed to the C{descriptor} constructor, or
             the next power of 2 value which will be assigned to C{descriptor},
