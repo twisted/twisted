@@ -32,9 +32,10 @@ from twisted.internet import protocol, defer, reactor
 from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
 
-from twisted.internet.ssl import platformTrust
-from twisted.internet import _sslverify as sslverify
-from twisted.protocols.tls import TLSMemoryBIOFactory
+if not skipSSL:
+    from twisted.internet.ssl import platformTrust
+    from twisted.internet import _sslverify as sslverify
+    from twisted.protocols.tls import TLSMemoryBIOFactory
 
 # A couple of static PEM-format certificates to be used by various tests.
 A_HOST_CERTIFICATE_PEM = """
