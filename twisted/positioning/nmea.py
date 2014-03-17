@@ -570,26 +570,18 @@ class NMEAAdapter(object):
             raise ValueError("bad hemisphere/direction: %s" % (hemisphere,))
 
 
-    def _convert(self, sourceKey, converter=float, destinationKey=None):
+    def _convert(self, key, converter):
         """
         A simple conversion fix.
 
-        @param sourceKey: The attribute name of the value to fix.
-        @type sourceKey: C{str} (Python identifier)
+        @param key: The attribute name of the value to fix.
+        @type key: native string (Python identifier)
 
         @param converter: The function that converts the value.
         @type converter: unary callable
-
-        @param destinationKey: The target attribute key. If unset or
-            C{None}, same as C{sourceKey}.
-        @type destinationKey: C{str} (Python identifier)
         """
-        currentValue = getattr(self.currentSentence, sourceKey)
-
-        if destinationKey is None:
-            destinationKey = sourceKey
-
-        self._sentenceData[destinationKey] = converter(currentValue)
+        currentValue = getattr(self.currentSentence, key)
+        self._sentenceData[key] = converter(currentValue)
 
 
     _STATEFUL_UPDATE = {
