@@ -1121,7 +1121,7 @@ class _OpenSSLECCurve(FancyEqMixin, object):
             binding = self._getBinding()
             self._lib = binding.lib
             self._ffi = binding.ffi
-            self._nid = self._lib.OBJ_sn2nid(self.snName)
+            self._nid = self._lib.OBJ_sn2nid(self.snName.encode('ascii'))
             if self._nid == self._lib.NID_undef:
                 raise ValueError("Unknown ECC curve.")
         except AttributeError:
