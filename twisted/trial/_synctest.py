@@ -1207,6 +1207,12 @@ class SynchronousTestCase(_Assertions):
         @return: C{True} if the method fails and no further method/fixture calls
             should be made, C{False} otherwise.
         """
+        if inspect.isgeneratorfunction(method):
+            exc = TypeError(
+                '%r is a generator function and therefore will never run' % (
+                    method,))
+            result.addError(self, failure.Failure(exc))
+            return True
         try:
             runWithWarningsSuppressed(suppress, method)
         except SkipTest as e:
