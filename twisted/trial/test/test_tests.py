@@ -1340,7 +1340,6 @@ class TrialGeneratorFunctionTests(unittest.SynchronousTestCase):
         """
         In a TestCase, a test method which is a generator function is reported
         as an error, as such a method will never run assertions.
-
         """
 
         class GeneratorTestCase(unittest.TestCase):
