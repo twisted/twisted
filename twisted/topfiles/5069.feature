@@ -1,1 +1,0 @@
-The new interface twisted.internet.interfaces.IStreamClientEndpointStringParserWithReactor will supply the reactor to its parseStreamClient method, passed along from twisted.internet.endpoints.clientFromString.
