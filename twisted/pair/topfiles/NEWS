@@ -1,17 +1,3 @@
-Twisted Pair 14.0.0pre1 (2014-03-19)
-====================================
-
-Features
---------
- - twisted.pair.tuntap now has complete test coverage, basic
-   documentation, and works without the difficult-to-find system
-   bindings it used to require. (#6169)
-
-Other
------
- - #6898, #6931, #6993
-
-
 Twisted Pair 13.2.0 (2013-10-29)
 ================================
 
