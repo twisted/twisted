@@ -26,6 +26,7 @@ from twisted.internet.error import ConnectionLost
 from twisted.internet.protocol import Protocol, Factory
 from twisted.internet.defer import Deferred, succeed, CancelledError
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
+from twisted.internet.ssl import OpenSSLDefaultPaths
 from twisted.web.client import FileBodyProducer, Request, HTTPConnectionPool
 from twisted.web.client import _WebToNormalContextFactory, ResponseDone
 from twisted.web.client import WebClientContextFactory, _HTTP11ClientFactory
@@ -1152,6 +1153,16 @@ class WebClientContextFactoryTests(TestCase):
         """
         ctx = WebClientContextFactory().getContext('example.com', 443)
         self.assertIsInstance(ctx, ssl.SSL.Context)
+
+
+    def test_setsTrustRootOnContextToDefaultTrustRoot(self):
+        """
+        The L{CertificateOptions} has C{trustRoot} set to the default trust
+        roots.
+        """
+        ctx = WebClientContextFactory()
+        self.assertIsInstance(
+            ctx._contextFactory.trustRoot, OpenSSLDefaultPaths)
 
 
     if ssl is None:

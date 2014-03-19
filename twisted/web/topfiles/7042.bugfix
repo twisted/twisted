@@ -1,0 +1,1 @@
+twisted.web.client.Agent now verifies that the provided server certificate in a TLS connection is trusted by the platform.
