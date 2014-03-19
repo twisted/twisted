@@ -26,7 +26,6 @@ from twisted.internet.error import ConnectionLost
 from twisted.internet.protocol import Protocol, Factory
 from twisted.internet.defer import Deferred, succeed, CancelledError
 from twisted.internet.endpoints import TCP4ClientEndpoint, SSL4ClientEndpoint
-from twisted.internet.ssl import OpenSSLDefaultPaths
 from twisted.web.client import FileBodyProducer, Request, HTTPConnectionPool
 from twisted.web.client import _WebToNormalContextFactory, ResponseDone
 from twisted.web.client import WebClientContextFactory, _HTTP11ClientFactory
@@ -37,7 +36,7 @@ from twisted.web.error import SchemeNotSupported
 
 try:
     from twisted.internet import ssl
-except:
+except ImportError:
     ssl = None
 
 
@@ -1162,11 +1161,13 @@ class WebClientContextFactoryTests(TestCase):
         """
         ctx = WebClientContextFactory()
         self.assertIsInstance(
-            ctx._contextFactory.trustRoot, OpenSSLDefaultPaths)
+            ctx._contextFactory.trustRoot, ssl.OpenSSLDefaultPaths)
 
 
     if ssl is None:
         test_returnsContext.skip = "SSL not present, cannot run SSL tests."
+        test_setsTrustRootOnContextToDefaultTrustRoot.skip = (
+            "SSL not present, cannot run SSL tests.")
     else:
         test_missingSSL.skip = "SSL present."
 
