@@ -1,1 +1,0 @@
-twisted.web.client.Agent now correctly manage flow-control on pooled connections, and therefore requests will no longer hang sometimes when deliverBody is not called synchronously within the callback on Request.
