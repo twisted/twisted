@@ -156,7 +156,7 @@ This broadcast is filtered by routers by default, and there are no "groups" like
 Broadcast is enabled by passing ``True`` to :api:`twisted.internet.interfaces.IUDPTransport.setBroadcastAllowed <setBroadcastAllowed>` on the port.
 Checking the broadcast status can be done with :api:`twisted.internet.interfaces.IUDPTransport.getBroadcastAllowed <getBroadcastAllowed>` on the port.
 
-For a complete example of this feature, see :download:`udpbroadcast.py </projects/core/examples/udpbroadcast.py>`.
+For a complete example of this feature, see :download:`udpbroadcast.py <../examples/udpbroadcast.py>`.
 
 
 IPv6
