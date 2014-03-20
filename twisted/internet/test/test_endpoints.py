@@ -3357,6 +3357,16 @@ class TLSWrapperClientEndpointTests(unittest.TestCase):
         self.assertTrue(self.endpoint.factory.isClient)
 
 
+    def test_transportOfTransportOfWrappedProtocol(self):
+        """
+        The transport of the wrapped L{Protocol}'s transport is the transport
+        passed to C{makeConnection}.
+        """
+        proto = self.successResultOf(self.wrapper.connect(self.factory))
+        self.assertIdentical(
+            proto.transport.transport, self.endpoint.transport)
+
+
 
 if _PY3:
     del (StandardIOEndpointsTestCase, UNIXEndpointsTestCase, ParserTestCase,
