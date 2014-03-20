@@ -1844,6 +1844,34 @@ if TLSMemoryBIOFactory is not None:
 
 
 
+    @implementer(IPlugin, IStreamClientEndpointStringParserWithReactor)
+    class _TLSWrapperClientEndpointParser(object):
+        """
+        Stream client endpoint string parser for the
+
+        @ivar prefix: See
+            L{IStreamClientEndpointStringParserWithReactor.prefix}.
+        """
+        prefix = 'tls'
+
+        def _parseClient(self, reactor, wrappedEndpoint, **kwargs):
+            wrappedEndpoint = clientFromString(reactor, wrappedEndpoint)
+            kwargs = _parseSSLOptions(kwargs)
+            contextFactory = kwargs.pop('sslContextFactory')
+            if kwargs:
+                raise TypeError(
+                    'extra keyword arguments present', list(kwargs.keys()))
+            return TLSWrapperClientEndpoint(contextFactory, wrappedEndpoint)
+
+
+        def parseStreamClient(self, reactor, *args, **kwargs):
+            # Redirects to another function (self._parseServer); tricks
+            # zope.interface into believing the interface is correctly
+            # implemented.
+            return self._parseClient(reactor, *args, **kwargs)
+
+
+
 if _PY3:
     for name in __all__[:]:
         if name not in __all3__:
