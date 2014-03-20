@@ -167,7 +167,7 @@ TLS
    The latter three arguments have the same semantics as the SSL client.
    This client connects to the wrapped endpoint and then upgrades to TLS as soon as the connection is established.
 
-   For example, ``tls:{tcp:example.com:443}:caCertsDir=/etc/ssl/certs`` .
+   For example, ``tls:tcp\:example.com\:443:caCertsDir=/etc/ssl/certs`` .
 
    Or, from python code::
 
