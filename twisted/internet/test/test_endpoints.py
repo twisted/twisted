@@ -3330,7 +3330,7 @@ class TLSWrapperClientEndpointTests(unittest.TestCase):
 
     def test_connectionCancellation(self):
         """
-        Cancellation propagates upward to connect's L{Deferred}.
+        Cancellation propagates upward to C{connect}'s L{Deferred}.
         """
         canceled = []
         self.endpoint.deferred = defer.Deferred(canceled.append)
