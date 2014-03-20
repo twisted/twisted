@@ -162,6 +162,19 @@ UNIX
 
    For example, ``unix:path=/var/run/web.sock``.
 
+TLS
+   Supported arguments: ``wrappedEndpoint``, ``certKey``, ``privateKey``, ``caCertsDir``.
+   The latter three arguments have the same semantics as the SSL client.
+   This client connects to the wrapped endpoint and then upgrades to TLS as soon as the connection is established.
+
+   For example, ``tls:{tcp:example.com:443}:caCertsDir=/etc/ssl/certs`` .
+
+   Or, from python code::
+
+     wrapped = TCP4ClientEndpoint('example.com', 443)
+     endpoint = TLSWrapperClientEndpoint(contextFactory, wrapped)
+     conn = endpoint.connect(Factory.forProtocol(Protocol))
+
 TCP (Hostname)
    Supported arguments: ``host``, ``port``, ``timeout``.
    ``host`` is a hostname to connect to.
