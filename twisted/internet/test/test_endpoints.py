@@ -3284,9 +3284,6 @@ class TLSWrapperClientEndpointTests(unittest.TestCase):
     Tests for L{TLSWrapperClientEndpoint}.
     """
 
-    if skipSSL:
-        skip = skipSSL
-
 
     def setUp(self):
         self.endpoint = FakeEndpoint()
