@@ -6,7 +6,6 @@
 Twisted Web
 ===========
 
-
 .. toctree::
    :hidden:
 
@@ -14,14 +13,9 @@ Twisted Web
    examples/index
 
 
+- :doc:`Developer guides <howto/index>`
 
+  Documentation on using Twisted Web to develop your own applications
+- :doc:`Examples <examples/index>`
 
-
-- :doc:`Developer guides <howto/index>` : documentation on using
-  Twisted Web to develop your own applications
-- :doc:`Examples <examples/index>` : short code examples using
-  Twisted Web
-
-
-
-
+  Short code examples using Twisted Web

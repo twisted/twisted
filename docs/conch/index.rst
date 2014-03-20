@@ -6,7 +6,6 @@
 Twisted Conch
 =============
 
-
 .. toctree::
    :hidden:
 
@@ -14,14 +13,9 @@ Twisted Conch
    examples/index
 
 
+- :doc:`Developer guides <howto/index>`
 
+  Documentation on using Twisted Conch to develop your own applications
+- :doc:`Examples <examples/index>`
 
-
-- :doc:`Developer guides <howto/index>` : documentation on using
-  Twisted Conch to develop your own applications
-- :doc:`Examples <examples/index>` : short code examples using
-  Twisted Conch
-
-
-
-
+  Short code examples using Twisted Conch

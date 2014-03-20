@@ -6,7 +6,6 @@
 Developer Guides
 ================
 
-
 .. toctree::
    :hidden:
 
@@ -14,12 +13,5 @@ Developer Guides
    extend-lore
 
 
-
-
-
-
 - :doc:`Lore documentation system <lore>`
 - :doc:`Extending Lore <extend-lore>`
-
-
-

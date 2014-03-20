@@ -6,6 +6,7 @@
 Twisted Lore
 ============
 
+Please note that as of Twisted 14.0, Lore is deprecated.
 
 .. toctree::
    :hidden:
@@ -14,14 +15,9 @@ Twisted Lore
    examples/index
 
 
+- :doc:`Developer guides <howto/index>`
 
+  Documentation on using Twisted Lore to develop your own applications
+- :doc:`Examples <examples/index>`
 
-
-- :doc:`Developer guides <howto/index>` : documentation on using
-  Twisted Lore to develop your own applications
-- :doc:`Examples <examples/index>` : short code examples using
-  Twisted Lore
-
-
-
-
+  Short code examples using Twisted Lore

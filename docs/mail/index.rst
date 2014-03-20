@@ -6,7 +6,6 @@
 Twisted Mail
 ============
 
-
 .. toctree::
    :hidden:
 
@@ -14,14 +13,9 @@ Twisted Mail
    tutorial/smtpclient/smtpclient
 
 
+- :doc:`Examples <examples/index>`
 
+  Short code examples using Twisted Mail
+- :doc:`Twisted Mail Tutorial <tutorial/smtpclient/smtpclient>`
 
-
-- :doc:`Examples <examples/index>` : short code examples using
-  Twisted Mail
-- :doc:`Twisted Mail Tutorial <tutorial/smtpclient/smtpclient>` : Building
-  an SMTP Client from Scratch
-
-
-
-
+  Building an SMTP Client from Scratch

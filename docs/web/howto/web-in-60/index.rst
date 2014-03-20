@@ -30,16 +30,8 @@ Twisted Web In 60 Seconds
    session-store
    session-endings
 
-
-
-
-This set of examples contains short, complete applications
-of :api:`twisted.web <twisted.web>` . For subjects not covered
-here, see the :doc:`Twisted Web tutorial <../using-twistedweb>` and the API documentation.
-
-
-
-
+This set of examples contains short, complete applications of :api:`twisted.web <twisted.web>`.
+For subjects not covered here, see the :doc:`Twisted Web tutorial <../using-twistedweb>` and the API documentation.
 
 #. :doc:`Serving static content from a directory <static-content>` 
 #. :doc:`Generating a page dynamically <dynamic-content>` 
@@ -60,5 +52,3 @@ here, see the :doc:`Twisted Web tutorial <../using-twistedweb>` and the API docu
 #. :doc:`Session basics <session-basics>` 
 #. :doc:`Storing objects in the session <session-store>` 
 #. :doc:`Session endings <session-endings>` 
-
-
