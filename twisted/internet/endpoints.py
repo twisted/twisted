@@ -1591,7 +1591,7 @@ def _loadCAsFromDir(directoryPath):
 
 
 
-def _parseSSLOptions(kwargs):
+def _parseClientSSLOptions(kwargs):
     """
     Parse common arguments for SSL endpoints, creating an L{CertificateOptions}
     instance.
@@ -1657,9 +1657,8 @@ def _parseClientSSL(*args, **kwargs):
 
     @return: The coerced values as a C{dict}.
     """
-    from twisted.internet import ssl
     kwargs = _parseClientTCP(*args, **kwargs)
-    return _parseSSLOptions(kwargs)
+    return _parseClientSSLOptions(kwargs)
 
 
 
@@ -1813,30 +1812,36 @@ class TLSWrapperClientEndpoint(object):
     A wrapper endpoint which upgrades to TLS as soon as the connection is
     established.
 
-    @param contextFactory: The TLS context factory which will be used when
-        upgrading to TLS.
-    @type contextFactory: L{twisted.internet.ssl.ClientContextFactory}
-
-    @param endpoint: The endpoint to wrap.
-    @type endpoint: An L{IStreamClientEndpoint} provider.
+    @since: 14.1
     """
 
     def __init__(self, contextFactory, wrappedEndpoint,
                  _wrapper=TLSMemoryBIOFactory):
+        """
+        @param contextFactory: The TLS context factory which will be used when
+            upgrading to TLS.
+        @type contextFactory: L{twisted.internet.ssl.ClientContextFactory}
+
+        @param endpoint: The endpoint to wrap.
+        @type endpoint: An L{IStreamClientEndpoint} provider.
+        """
         if _wrapper is None:
             raise NotImplementedError('SSL support unavailable')
         self._contextFactory = contextFactory
         self._wrappedEndpoint = wrappedEndpoint
         self._wrapper = _wrapper
 
+
     def connect(self, fac):
         """
         Connect to the wrapped endpoint, then start TLS.
 
+        @param fac: The factory to use in the connection.
+        @type: An L{IProtocolFactory} provider.
+
         @return: A L{Deferred} which fires with the same L{Protocol} as
             C{wrappedEndpoint.connect(fac)} fires with. If that L{Deferred}
             errbacks, so will the returned deferred.
-
         """
         fac = self._wrapper(self._contextFactory, True, fac)
         d = self._wrappedEndpoint.connect(fac)
@@ -1848,7 +1853,7 @@ class TLSWrapperClientEndpoint(object):
 @implementer(IPlugin, IStreamClientEndpointStringParserWithReactor)
 class _TLSWrapperClientEndpointParser(object):
     """
-    Stream client endpoint string parser for the
+    Stream client endpoint string parser for L{TLSWrapperClientEndpoint}.
 
     @ivar prefix: See
         L{IStreamClientEndpointStringParserWithReactor.prefix}.
@@ -1856,8 +1861,25 @@ class _TLSWrapperClientEndpointParser(object):
     prefix = 'tls'
 
     def _parseClient(self, reactor, wrappedEndpoint, **kwargs):
+        """
+        Internal method to construct an endpoint from string parameters.
+
+        @param reactor: The reactor to pass to L{clientFromString}.
+
+        @param wrappedEndpoint: A string describing the endpoint to connect to
+            before starting TLS, which is passed to L{clientFromString}.
+        @type wrappedEndpoint: L{bytes}
+
+        @param kwargs: Extra arguments for creating the TLS context. This can
+            contain keys C{certKey}, C{privateKey}, and C{caCertsDir}. See
+            L{_parseClientSSL}. Passing arguments not listed will cause a
+            L{ValueError} to be raised.
+        @type kwargs: L{dict}
+
+        @return: An instance of L{TLSWrapperClientEndpoint}.
+        """
         wrappedEndpoint = clientFromString(reactor, wrappedEndpoint)
-        kwargs = _parseSSLOptions(kwargs)
+        kwargs = _parseClientSSLOptions(kwargs)
         contextFactory = kwargs.pop('sslContextFactory')
         if kwargs:
             raise TypeError(
@@ -1866,9 +1888,20 @@ class _TLSWrapperClientEndpointParser(object):
 
 
     def parseStreamClient(self, reactor, *args, **kwargs):
-        # Redirects to another function (self._parseServer); tricks
-        # zope.interface into believing the interface is correctly
-        # implemented.
+        """
+        Redirects to another function (self._parseClient); tricks
+        zope.interface into believing the interface is correctly implemented.
+
+        @param reactor: The reactor passed to L{clientFromString}.
+
+        @param args: The positional arguments in the endpoint description.
+        @type args: L{tuple}
+
+        @param kwargs: The named arguments in the endpoint description.
+        @type kwargs: L{dict}
+
+        @return: An instance of L{TLSWrapperClientEndpoint}.
+        """
         return self._parseClient(reactor, *args, **kwargs)
 
 
