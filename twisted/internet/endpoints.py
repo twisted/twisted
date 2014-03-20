@@ -1807,68 +1807,69 @@ def connectProtocol(endpoint, protocol):
 
 
 
-if TLSMemoryBIOFactory is not None:
-    @implementer(interfaces.IStreamClientEndpoint)
-    class TLSWrapperClientEndpoint(object):
+@implementer(interfaces.IStreamClientEndpoint)
+class TLSWrapperClientEndpoint(object):
+    """
+    A wrapper endpoint which upgrades to TLS as soon as the connection is
+    established.
+
+    @param contextFactory: The TLS context factory which will be used when
+        upgrading to TLS.
+    @type contextFactory: L{twisted.internet.ssl.ClientContextFactory}
+
+    @param endpoint: The endpoint to wrap.
+    @type endpoint: An L{IStreamClientEndpoint} provider.
+    """
+
+    def __init__(self, contextFactory, wrappedEndpoint,
+                 _wrapper=TLSMemoryBIOFactory):
+        if _wrapper is None:
+            raise NotImplementedError('SSL support unavailable')
+        self._contextFactory = contextFactory
+        self._wrappedEndpoint = wrappedEndpoint
+        self._wrapper = _wrapper
+
+    def connect(self, fac):
         """
-        A wrapper endpoint which upgrades to TLS as soon as the connection is
-        established.
+        Connect to the wrapped endpoint, then start TLS.
 
-        @param contextFactory: The TLS context factory which will be used when
-            upgrading to TLS.
-        @type contextFactory: L{twisted.internet.ssl.ClientContextFactory}
+        @return: A L{Deferred} which fires with the same L{Protocol} as
+            C{wrappedEndpoint.connect(fac)} fires with. If that L{Deferred}
+            errbacks, so will the returned deferred.
 
-        @param endpoint: The endpoint to wrap.
-        @type endpoint: An L{IStreamClientEndpoint} provider.
         """
-
-        _wrapper = TLSMemoryBIOFactory
-
-        def __init__(self, contextFactory, wrappedEndpoint):
-            self._contextFactory = contextFactory
-            self._wrappedEndpoint = wrappedEndpoint
-
-        def connect(self, fac):
-            """
-            Connect to the wrapped endpoint, then start TLS.
-
-            @return: A L{Deferred} which fires with the same L{Protocol} as
-                C{wrappedEndpoint.connect(fac)} fires with. If that L{Deferred}
-                errbacks, so will the returned deferred.
-
-            """
-            fac = self._wrapper(self._contextFactory, True, fac)
-            d = self._wrappedEndpoint.connect(fac)
-            d.addCallback(lambda proto: proto.wrappedProtocol)
-            return d
+        fac = self._wrapper(self._contextFactory, True, fac)
+        d = self._wrappedEndpoint.connect(fac)
+        d.addCallback(lambda proto: proto.wrappedProtocol)
+        return d
 
 
 
-    @implementer(IPlugin, IStreamClientEndpointStringParserWithReactor)
-    class _TLSWrapperClientEndpointParser(object):
-        """
-        Stream client endpoint string parser for the
+@implementer(IPlugin, IStreamClientEndpointStringParserWithReactor)
+class _TLSWrapperClientEndpointParser(object):
+    """
+    Stream client endpoint string parser for the
 
-        @ivar prefix: See
-            L{IStreamClientEndpointStringParserWithReactor.prefix}.
-        """
-        prefix = 'tls'
+    @ivar prefix: See
+        L{IStreamClientEndpointStringParserWithReactor.prefix}.
+    """
+    prefix = 'tls'
 
-        def _parseClient(self, reactor, wrappedEndpoint, **kwargs):
-            wrappedEndpoint = clientFromString(reactor, wrappedEndpoint)
-            kwargs = _parseSSLOptions(kwargs)
-            contextFactory = kwargs.pop('sslContextFactory')
-            if kwargs:
-                raise TypeError(
-                    'extra keyword arguments present', list(kwargs.keys()))
-            return TLSWrapperClientEndpoint(contextFactory, wrappedEndpoint)
+    def _parseClient(self, reactor, wrappedEndpoint, **kwargs):
+        wrappedEndpoint = clientFromString(reactor, wrappedEndpoint)
+        kwargs = _parseSSLOptions(kwargs)
+        contextFactory = kwargs.pop('sslContextFactory')
+        if kwargs:
+            raise TypeError(
+                'extra keyword arguments present', list(kwargs.keys()))
+        return TLSWrapperClientEndpoint(contextFactory, wrappedEndpoint)
 
 
-        def parseStreamClient(self, reactor, *args, **kwargs):
-            # Redirects to another function (self._parseServer); tricks
-            # zope.interface into believing the interface is correctly
-            # implemented.
-            return self._parseClient(reactor, *args, **kwargs)
+    def parseStreamClient(self, reactor, *args, **kwargs):
+        # Redirects to another function (self._parseServer); tricks
+        # zope.interface into believing the interface is correctly
+        # implemented.
+        return self._parseClient(reactor, *args, **kwargs)
 
 
 

@@ -3292,8 +3292,7 @@ class TLSWrapperClientEndpointTests(unittest.TestCase):
         self.endpoint = FakeEndpoint()
         self.context = object()
         self.wrapper = endpoints.TLSWrapperClientEndpoint(
-            self.context, self.endpoint)
-        self.wrapper._wrapper = UppercaseWrapperFactory
+            self.context, self.endpoint, _wrapper=UppercaseWrapperFactory)
         self.factory = NetstringFactory()
 
 
@@ -3365,6 +3364,18 @@ class TLSWrapperClientEndpointTests(unittest.TestCase):
         proto = self.successResultOf(self.wrapper.connect(self.factory))
         self.assertIdentical(
             proto.transport.transport, self.endpoint.transport)
+
+
+    def test_noSSLSupport(self):
+        """
+        If SSL is not supported, L{TLSMemoryBIOFactory} will be L{None}, which
+        causes C{_wrapper} to also be L{None}. If C{_wrapper} is L{None}, then
+        an exception is raised.
+        """
+        self.assertRaises(
+            NotImplementedError,
+            endpoints.TLSWrapperClientEndpoint,
+            self.context, self.factory, _wrapper=None)
 
 
 
