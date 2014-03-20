@@ -1591,30 +1591,20 @@ def _loadCAsFromDir(directoryPath):
 
 
 
-def _parseClientSSL(*args, **kwargs):
+def _parseSSLOptions(kwargs):
     """
-    Perform any argument value coercion necessary for SSL client parameters.
+    Parse common arguments for SSL endpoints, creating an L{CertificateOptions}
+    instance.
 
-    Valid keyword arguments to this function are all L{IReactorSSL.connectSSL}
-    arguments except for C{contextFactory}.  Instead, C{certKey} (the path name
-    of the certificate file) C{privateKey} (the path name of the private key
-    associated with the certificate) are accepted and used to construct a
-    context factory.
+    @param kwargs: A dict of keyword arguments to be parsed, potentially
+        containing keys C{certKey}, C{privateKey}, and C{caCertsDir}. See
+        L{_parseClientSSL}.
 
-    Valid positional arguments to this function are host and port.
+    @type kwargs: L{dict}
 
-    @param caCertsDir: The one parameter which is not part of
-        L{IReactorSSL.connectSSL}'s signature, this is a path name used to
-        construct a list of certificate authority certificates.  The directory
-        will be scanned for files ending in C{.pem}, all of which will be
-        considered valid certificate authorities for this connection.
-
-    @type caCertsDir: C{str}
-
-    @return: The coerced values as a C{dict}.
+    @return: The remaining arguments, including a new key C{sslContextFactory}.
     """
     from twisted.internet import ssl
-    kwargs = _parseClientTCP(*args, **kwargs)
     certKey = kwargs.pop('certKey', None)
     privateKey = kwargs.pop('privateKey', None)
     caCertsDir = kwargs.pop('caCertsDir', None)
@@ -1642,6 +1632,34 @@ def _parseClientSSL(*args, **kwargs):
         caCerts=caCerts
     )
     return kwargs
+
+
+
+def _parseClientSSL(*args, **kwargs):
+    """
+    Perform any argument value coercion necessary for SSL client parameters.
+
+    Valid keyword arguments to this function are all L{IReactorSSL.connectSSL}
+    arguments except for C{contextFactory}.  Instead, C{certKey} (the path name
+    of the certificate file) C{privateKey} (the path name of the private key
+    associated with the certificate) are accepted and used to construct a
+    context factory.
+
+    Valid positional arguments to this function are host and port.
+
+    @param caCertsDir: The one parameter which is not part of
+        L{IReactorSSL.connectSSL}'s signature, this is a path name used to
+        construct a list of certificate authority certificates.  The directory
+        will be scanned for files ending in C{.pem}, all of which will be
+        considered valid certificate authorities for this connection.
+
+    @type caCertsDir: C{str}
+
+    @return: The coerced values as a C{dict}.
+    """
+    from twisted.internet import ssl
+    kwargs = _parseClientTCP(*args, **kwargs)
+    return _parseSSLOptions(kwargs)
 
 
 
