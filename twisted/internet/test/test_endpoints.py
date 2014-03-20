@@ -28,7 +28,7 @@ from twisted.python.systemd import ListenFDs
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 from twisted.python import log
-from twisted.protocols import basic
+from twisted.protocols import basic, policies
 from twisted.internet.task import Clock
 from twisted.test.proto_helpers import (MemoryReactorClock as MemoryReactor)
 from twisted.test import __file__ as testInitPath
@@ -3213,6 +3213,148 @@ class ConnectProtocolTests(unittest.TestCase):
 
         endpoint = Endpoint()
         self.assertIs(result, endpoints.connectProtocol(endpoint, object()))
+
+
+
+class FakeEndpoint(object):
+    def __init__(self, failure=None):
+        self.failure = failure
+        self.deferred = None
+
+
+    def connect(self, fac):
+        if self.deferred is not None:
+            return self.deferred
+        self.factory = fac
+        self.proto = fac.buildProtocol(None)
+        transport = StringTransport()
+        self.proto.makeConnection(transport)
+        self.transport = transport
+        return defer.succeed(self.proto)
+
+
+
+class UppercaseWrapperProtocol(policies.ProtocolWrapper):
+    def dataReceived(self, data):
+        policies.ProtocolWrapper.dataReceived(self, data.upper())
+
+
+    def write(self, data):
+        policies.ProtocolWrapper.write(self, data.upper())
+
+
+    def writeSequence(self, seq):
+        for data in seq:
+            self.write(data)
+
+
+
+class UppercaseWrapperFactory(policies.WrappingFactory):
+    protocol = UppercaseWrapperProtocol
+
+    def __init__(self, context, isClient, factory):
+        self.context = context
+        self.isClient = isClient
+        policies.WrappingFactory.__init__(self, factory)
+
+
+
+class NetstringTracker(basic.NetstringReceiver):
+    def __init__(self):
+        self.strings = []
+
+
+    def stringReceived(self, string):
+        self.strings.append(string)
+
+
+
+class NetstringFactory(protocol.ClientFactory):
+    protocol = NetstringTracker
+
+
+
+class FakeError(Exception):
+    pass
+
+
+
+class TLSWrapperClientEndpointTests(unittest.TestCase):
+    """
+    Tests for L{TLSWrapperClientEndpoint}.
+    """
+
+    if skipSSL:
+        skip = skipSSL
+
+
+    def setUp(self):
+        self.endpoint = FakeEndpoint()
+        self.context = object()
+        self.wrapper = endpoints.TLSWrapperClientEndpoint(
+            self.context, self.endpoint)
+        self.wrapper._wrapper = UppercaseWrapperFactory
+        self.factory = NetstringFactory()
+
+
+    def test_wrappingBehavior(self):
+        """
+        Any modifications performed by the underlying L{ProtocolWrapper}
+        propagate through to the wrapped L{Protocol}.
+        """
+        proto = self.successResultOf(self.wrapper.connect(self.factory))
+        self.endpoint.proto.dataReceived(b'5:hello,')
+        self.assertEqual(proto.strings, [b'HELLO'])
+
+
+    def test_methodsAvailable(self):
+        """
+        Methods defined on the wrapped L{Protocol} are accessible from the
+        L{Protocol} returned from C{connect}'s L{Deferred}.
+        """
+        proto = self.successResultOf(self.wrapper.connect(self.factory))
+        proto.sendString(b'spam')
+        self.assertEqual(self.endpoint.transport.value(), b'4:SPAM,')
+
+
+    def test_connectionFailure(self):
+        """
+        Connection failures propagate upward to C{connect}'s L{Deferred}.
+        """
+        self.endpoint.deferred = defer.Deferred()
+        d = self.wrapper.connect(self.factory)
+        self.assertNoResult(d)
+        self.endpoint.deferred.errback(FakeError())
+        self.failureResultOf(d, FakeError)
+
+
+    def test_connectionCancellation(self):
+        """
+        Cancellation propagates upward to connect's L{Deferred}.
+        """
+        canceled = []
+        self.endpoint.deferred = defer.Deferred(canceled.append)
+        d = self.wrapper.connect(self.factory)
+        self.assertNoResult(d)
+        d.cancel()
+        self.assert_(canceled)
+        self.failureResultOf(d, defer.CancelledError)
+
+
+    def test_contextPassing(self):
+        """
+        The SSL context object is passed along to the wrapper.
+        """
+        self.successResultOf(self.wrapper.connect(self.factory))
+        self.assertIdentical(self.context, self.endpoint.factory.context)
+
+
+    def test_clientMode(self):
+        """
+        The wrapper is set in client mode.
+        """
+        self.successResultOf(self.wrapper.connect(self.factory))
+        self.assertTrue(self.endpoint.factory.isClient)
 
 
 

@@ -51,6 +51,11 @@ else:
     NamedConstant = object
     Names = object
 
+try:
+    from twisted.protocols.tls import TLSMemoryBIOFactory
+except ImportError:
+    TLSMemoryBIOFactory = None
+
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
            "TCP4ClientEndpoint", "TCP6ClientEndpoint",
@@ -1781,6 +1786,43 @@ def connectProtocol(endpoint, protocol):
         def buildProtocol(self, addr):
             return protocol
     return endpoint.connect(OneShotFactory())
+
+
+
+if TLSMemoryBIOFactory is not None:
+    @implementer(interfaces.IStreamClientEndpoint)
+    class TLSWrapperClientEndpoint(object):
+        """
+        A wrapper endpoint which upgrades to TLS as soon as the connection is
+        established.
+
+        @param contextFactory: The TLS context factory which will be used when
+            upgrading to TLS.
+        @type contextFactory: L{twisted.internet.ssl.ClientContextFactory}
+
+        @param endpoint: The endpoint to wrap.
+        @type endpoint: An L{IStreamClientEndpoint} provider.
+        """
+
+        _wrapper = TLSMemoryBIOFactory
+
+        def __init__(self, contextFactory, wrappedEndpoint):
+            self.contextFactory = contextFactory
+            self.wrappedEndpoint = wrappedEndpoint
+
+        def connect(self, fac):
+            """
+            Connect to the wrapped endpoint, then start TLS.
+
+            @return: A L{Deferred} which fires with the same L{Protocol} as
+                C{wrappedEndpoint.connect(fac)} fires with. If that L{Deferred}
+                errbacks, so will the returned deferred.
+
+            """
+            fac = self._wrapper(self.contextFactory, True, fac)
+            d = self.wrappedEndpoint.connect(fac)
+            d.addCallback(lambda proto: proto.wrappedProtocol)
+            return d
 
 
 
