@@ -168,6 +168,8 @@ TLS
    This client connects to the wrapped endpoint and then upgrades to TLS as soon as the connection is established.
 
    For example, ``tls:tcp\:example.com\:443:caCertsDir=/etc/ssl/certs`` .
+   This connects to the endpoint ``tcp:example.com:443`` before starting TLS.
+   The colons are escaped because the TLS endpoint string syntax itself calls ``clientFromString`` to create the wrapped endpoint, and expects a single string argument.
 
    Or, from python code::
 
