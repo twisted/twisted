@@ -1825,8 +1825,8 @@ if TLSMemoryBIOFactory is not None:
         _wrapper = TLSMemoryBIOFactory
 
         def __init__(self, contextFactory, wrappedEndpoint):
-            self.contextFactory = contextFactory
-            self.wrappedEndpoint = wrappedEndpoint
+            self._contextFactory = contextFactory
+            self._wrappedEndpoint = wrappedEndpoint
 
         def connect(self, fac):
             """
@@ -1837,8 +1837,8 @@ if TLSMemoryBIOFactory is not None:
                 errbacks, so will the returned deferred.
 
             """
-            fac = self._wrapper(self.contextFactory, True, fac)
-            d = self.wrappedEndpoint.connect(fac)
+            fac = self._wrapper(self._contextFactory, True, fac)
+            d = self._wrappedEndpoint.connect(fac)
             d.addCallback(lambda proto: proto.wrappedProtocol)
             return d
 
