@@ -32,15 +32,16 @@ The Twisted Daemon is a program that knows how to run :api:`twisted.application.
 Strictly speaking, ``twistd`` is not necessary.
 Fetching the application, getting the ``IService`` component, calling ``startService()``, scheduling ``stopService()`` when the reactor shuts down, and then calling ``reactor.run()`` could be done manually.
 
-``twistd``, however, supplies many options which are highly useful for program set up:
+However, ``twistd`` supplies many options which are highly useful for program set up:
 
-- Choosing a reactor (for more on reactors, see :doc:`Choosing a Reactor <choosing-reactor>`),
-- Automatically logging to a logfile,
-- Daemonizing ("forking to the background"), and more.
+- choosing a reactor (for more on reactors, see :doc:`Choosing a Reactor <choosing-reactor>`),
+- logging configuration (see the :doc:`logging <logging>` documentation for more),
+- daemonizing (forking to the background),
+- and more.
 
 ``twistd`` supports all Applications mentioned above -- and an additional one.
 Sometimes it is convenient to write the code for building a class in straight Python.
-One big source of such Python files is the :doc:`examples </projects/core/examples/index>` directory.
+One big source of such Python files is the :doc:`examples <../examples/index>` directory.
 When a straight Python file which defines an ``Application`` object called ``application`` is used, use the ``-y`` option.
 
 When ``twistd`` runs, it records its process id in a ``twistd.pid`` file (this can be configured via a command line switch).
