@@ -34,8 +34,12 @@ except ImportError:
     # There is no version of startTLS available
     class _TLSConnectionMixin(object):
         TLS = False
+
+
     class _TLSClientMixin(object):
         pass
+
+
     class _TLSServerMixin(object):
         pass
 
