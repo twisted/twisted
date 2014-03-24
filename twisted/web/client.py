@@ -750,7 +750,7 @@ if not _PY3:
 try:
     from OpenSSL import SSL
 
-    from twisted.internet.ssl import CertificateOptions, OpenSSLDefaultPaths
+    from twisted.internet.ssl import CertificateOptions, platformTrust
 except ImportError:
     class WebClientContextFactory(object):
         """
@@ -768,7 +768,7 @@ else:
         def __init__(self):
             self._contextFactory = CertificateOptions(
                 method=SSL.SSLv23_METHOD,
-                trustRoot=OpenSSLDefaultPaths(),
+                trustRoot=platformTrust(),
             )
 
         def getContext(self, hostname, port):
