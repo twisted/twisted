@@ -58,4 +58,4 @@ In this case, the command
     twistd -n web --path /tmp
 
 will accomplish the same thing as the above server.
-See :doc:`helper programs <../../../core/howto/basics>` in the sTwisted Core documentation for more information on using ``twistd``.
+See :doc:`helper programs <../../../core/howto/basics>` in the Twisted Core documentation for more information on using ``twistd``.
