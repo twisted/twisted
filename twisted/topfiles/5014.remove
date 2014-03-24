@@ -1,0 +1,1 @@
+Support for versions of pyOpenSSL older than 0.10 has been removed. Affected users should upgrade pyOpenSSL.
