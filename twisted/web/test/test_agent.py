@@ -36,7 +36,7 @@ from twisted.web.error import SchemeNotSupported
 
 try:
     from twisted.internet import ssl
-except:
+except ImportError:
     ssl = None
 
 
@@ -1154,8 +1154,20 @@ class WebClientContextFactoryTests(TestCase):
         self.assertIsInstance(ctx, ssl.SSL.Context)
 
 
+    def test_setsTrustRootOnContextToDefaultTrustRoot(self):
+        """
+        The L{CertificateOptions} has C{trustRoot} set to the default trust
+        roots.
+        """
+        ctx = WebClientContextFactory()
+        self.assertIsInstance(
+            ctx._contextFactory.trustRoot, ssl.OpenSSLDefaultPaths)
+
+
     if ssl is None:
         test_returnsContext.skip = "SSL not present, cannot run SSL tests."
+        test_setsTrustRootOnContextToDefaultTrustRoot.skip = (
+            "SSL not present, cannot run SSL tests.")
     else:
         test_missingSSL.skip = "SSL present."
 

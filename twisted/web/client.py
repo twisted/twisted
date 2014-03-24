@@ -750,7 +750,7 @@ if not _PY3:
 try:
     from OpenSSL import SSL
 
-    from twisted.internet.ssl import CertificateOptions
+    from twisted.internet.ssl import CertificateOptions, platformTrust
 except ImportError:
     class WebClientContextFactory(object):
         """
@@ -762,11 +762,16 @@ except ImportError:
 else:
     class WebClientContextFactory(object):
         """
-        A web context factory which ignores the hostname and port and does no
-        certificate verification.
+        A web context factory which ignores the hostname and port. It performs
+        basic certificate verification, however the lack of validation of
+        service identity (e.g. hostname validation) means it is still
+        vulnerable to MITM attacks (#4888).
         """
         def __init__(self):
-            self._contextFactory = CertificateOptions(method=SSL.SSLv23_METHOD)
+            self._contextFactory = CertificateOptions(
+                method=SSL.SSLv23_METHOD,
+                trustRoot=platformTrust(),
+            )
 
         def getContext(self, hostname, port):
             """
