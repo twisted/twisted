@@ -31,24 +31,18 @@ try:
         ClientMixin as _TLSClientMixin,
         ServerMixin as _TLSServerMixin)
 except ImportError:
-    try:
-        if _PY3:
-            # We're never going to port the old SSL code to Python 3:
-            raise
-        # Try to get the socket BIO based startTLS implementation, available in
-        # all pyOpenSSL versions
-        from twisted.internet._oldtls import (
-            ConnectionMixin as _TLSConnectionMixin,
-            ClientMixin as _TLSClientMixin,
-            ServerMixin as _TLSServerMixin)
-    except ImportError:
-        # There is no version of startTLS available
-        class _TLSConnectionMixin(object):
-            TLS = False
-        class _TLSClientMixin(object):
-            pass
-        class _TLSServerMixin(object):
-            pass
+    # There is no version of startTLS available
+    class _TLSConnectionMixin(object):
+        TLS = False
+
+
+    class _TLSClientMixin(object):
+        pass
+
+
+    class _TLSServerMixin(object):
+        pass
+
 
 if platformType == 'win32':
     # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN

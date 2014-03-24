@@ -9,11 +9,8 @@ from __future__ import division, absolute_import
 
 __metaclass__ = type
 
-import sys, operator
-
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
 from twisted.internet.interfaces import (
@@ -23,7 +20,7 @@ from twisted.internet.endpoints import (
     SSL4ServerEndpoint, SSL4ClientEndpoint, TCP4ClientEndpoint)
 from twisted.internet.error import ConnectionClosed
 from twisted.internet.task import Cooperator
-from twisted.trial.unittest import TestCase, SkipTest
+from twisted.trial.unittest import SkipTest
 from twisted.python.runtime import platform
 
 from twisted.internet.test.test_core import ObjectModelIntegrationMixin
@@ -388,51 +385,3 @@ class AbortSSLConnectionTest(ReactorBuilder, AbortConnectionMixin, ContextGenera
             raise SkipTest("OpenSSL not available.")
 
 globals().update(AbortSSLConnectionTest.makeTestCaseClasses())
-
-class OldTLSDeprecationTest(TestCase):
-    """
-    Tests for the deprecation of L{twisted.internet._oldtls}, the implementation
-    module for L{IReactorSSL} used when only an old version of pyOpenSSL is
-    available.
-    """
-    if _PY3:
-        skip = "_oldtls not supported on Python 3."
-
-    def test_warning(self):
-        """
-        The use of L{twisted.internet._oldtls} is deprecated, and emits a
-        L{DeprecationWarning}.
-        """
-        # Since _oldtls depends on OpenSSL, just skip this test if it isn't
-        # installed on the system.  Faking it would be error prone.
-        try:
-            import OpenSSL
-        except ImportError:
-            raise SkipTest("OpenSSL not available.")
-
-        # Change the apparent version of OpenSSL to one support for which is
-        # deprecated.  And have it change back again after the test.
-        self.patch(OpenSSL, '__version__', '0.5')
-
-        # If the module was already imported, the import statement below won't
-        # execute its top-level code.  Take it out of sys.modules so the import
-        # system re-evaluates it.  Arrange to put the original back afterwards.
-        # Also handle the case where it hasn't yet been imported.
-        try:
-            oldtls = sys.modules['twisted.internet._oldtls']
-        except KeyError:
-            self.addCleanup(sys.modules.pop, 'twisted.internet._oldtls')
-        else:
-            del sys.modules['twisted.internet._oldtls']
-            self.addCleanup(
-                operator.setitem, sys.modules, 'twisted.internet._oldtls',
-                oldtls)
-
-        # The actual test.
-        import twisted.internet._oldtls
-        warnings = self.flushWarnings()
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            "Support for pyOpenSSL 0.5 is deprecated.  "
-            "Upgrade to pyOpenSSL 0.10 or newer.")
