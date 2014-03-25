@@ -159,20 +159,6 @@ class IPv4AddressTCPTestCase(unittest.SynchronousTestCase,
         return IPv4Address("TCP", "127.0.0.2", 0)
 
 
-    def test_bwHackDeprecation(self):
-        """
-        If a value is passed for the C{_bwHack} parameter to L{IPv4Address},
-        a deprecation warning is emitted.
-        """
-        # Construct this for warning side-effects, disregard the actual object.
-        IPv4Address("TCP", "127.0.0.3", 0, _bwHack="TCP")
-
-        message = (
-            "twisted.internet.address.IPv4Address._bwHack is deprecated "
-            "since Twisted 11.0")
-        return self.assertDeprecations(self.test_bwHackDeprecation, message)
-
-
 
 class IPv4AddressUDPTestCase(unittest.SynchronousTestCase,
                              IPv4AddressTestCaseMixin):
@@ -190,20 +176,6 @@ class IPv4AddressUDPTestCase(unittest.SynchronousTestCase,
         Like L{buildAddress}, but with a different fixed address.
         """
         return IPv4Address("UDP", "127.0.0.2", 0)
-
-
-    def test_bwHackDeprecation(self):
-        """
-        If a value is passed for the C{_bwHack} parameter to L{IPv4Address},
-        a deprecation warning is emitted.
-        """
-        # Construct this for warning side-effects, disregard the actual object.
-        IPv4Address("UDP", "127.0.0.3", 0, _bwHack="UDP")
-
-        message = (
-            "twisted.internet.address.IPv4Address._bwHack is deprecated "
-            "since Twisted 11.0")
-        return self.assertDeprecations(self.test_bwHackDeprecation, message)
 
 
 
@@ -274,20 +246,6 @@ class UNIXAddressTestCase(unittest.SynchronousTestCase, AddressTestCaseMixin):
         self.assertEqual(
             hash(UNIXAddress(self._socketAddress)), hash(UNIXAddress(linkName)))
     test_hashOfLinkedFiles.skip = symlinkSkip
-
-
-    def test_bwHackDeprecation(self):
-        """
-        If a value is passed for the C{_bwHack} parameter to L{UNIXAddress},
-        a deprecation warning is emitted.
-        """
-        # Construct this for warning side-effects, disregard the actual object.
-        UNIXAddress(self.mktemp(), _bwHack='UNIX')
-
-        message = (
-            "twisted.internet.address.UNIXAddress._bwHack is deprecated "
-            "since Twisted 11.0")
-        return self.assertDeprecations(self.test_bwHackDeprecation, message)
 
 
 
