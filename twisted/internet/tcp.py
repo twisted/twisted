@@ -108,6 +108,11 @@ else:
 
 
 class _SocketCloser(object):
+    """
+    @ivar _shouldShutdown: Set to C{True} if C{shutdown} should be called
+        before callling C{close} on the underlying socket.
+    @type _shouldShutdown: C{bool}
+    """
     _shouldShutdown = True
 
     def _closeSocket(self, orderly):
@@ -118,7 +123,7 @@ class _SocketCloser(object):
         skt = self.socket
         try:
             if orderly:
-                if not self._shouldShutdown:
+                if self._shouldShutdown:
                     skt.shutdown(2)
             else:
                 # Set SO_LINGER to 1,0 which, by convention, causes a
