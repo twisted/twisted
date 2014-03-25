@@ -41,11 +41,12 @@ from twisted.trial import unittest
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
-from twisted.python.reflect import qual, getClass
+from twisted.python.reflect import getClass
 from twisted.conch.ssh import address, service, common
 from twisted.test import proto_helpers
 
 from twisted.conch.error import ConchError
+
 
 class MockTransportBase(transport.SSHTransportBase):
     """
@@ -2192,81 +2193,3 @@ class RandomNumberTestCase(unittest.TestCase):
         self.assertEqual(
             transport._generateX(random, 8),
             64)
-
-
-
-class OldFactoryTestCase(unittest.TestCase):
-    """
-    The old C{SSHFactory.getPublicKeys}() returned mappings of key names to
-    strings of key blobs and mappings of key names to PyCrypto key objects from
-    C{SSHFactory.getPrivateKeys}() (they could also be specified with the
-    C{publicKeys} and C{privateKeys} attributes).  This is no longer supported
-    by the C{SSHServerTransport}, so we warn the user if they create an old
-    factory.
-    """
-    if dependencySkip:
-        skip = dependencySkip
-
-    def test_getPublicKeysWarning(self):
-        """
-        If the return value of C{getPublicKeys}() isn't a mapping from key
-        names to C{Key} objects, then warn the user and convert the mapping.
-        """
-        sshFactory = MockOldFactoryPublicKeys()
-        self.assertWarns(DeprecationWarning,
-                "Returning a mapping from strings to strings from"
-                " getPublicKeys()/publicKeys (in %s) is deprecated.  Return "
-                "a mapping from strings to Key objects instead." %
-                (qual(MockOldFactoryPublicKeys),),
-                factory.__file__, sshFactory.startFactory)
-        self.assertEqual(sshFactory.publicKeys, MockFactory().getPublicKeys())
-
-
-    def test_getPrivateKeysWarning(self):
-        """
-        If the return value of C{getPrivateKeys}() isn't a mapping from key
-        names to C{Key} objects, then warn the user and convert the mapping.
-        """
-        sshFactory = MockOldFactoryPrivateKeys()
-        self.assertWarns(DeprecationWarning,
-                "Returning a mapping from strings to PyCrypto key objects from"
-                " getPrivateKeys()/privateKeys (in %s) is deprecated.  Return"
-                " a mapping from strings to Key objects instead." %
-                (qual(MockOldFactoryPrivateKeys),),
-                factory.__file__, sshFactory.startFactory)
-        self.assertEqual(sshFactory.privateKeys,
-                          MockFactory().getPrivateKeys())
-
-
-    def test_publicKeysWarning(self):
-        """
-        If the value of the C{publicKeys} attribute isn't a mapping from key
-        names to C{Key} objects, then warn the user and convert the mapping.
-        """
-        sshFactory = MockOldFactoryPublicKeys()
-        sshFactory.publicKeys = sshFactory.getPublicKeys()
-        self.assertWarns(DeprecationWarning,
-                "Returning a mapping from strings to strings from"
-                " getPublicKeys()/publicKeys (in %s) is deprecated.  Return "
-                "a mapping from strings to Key objects instead." %
-                (qual(MockOldFactoryPublicKeys),),
-                factory.__file__, sshFactory.startFactory)
-        self.assertEqual(sshFactory.publicKeys, MockFactory().getPublicKeys())
-
-
-    def test_privateKeysWarning(self):
-        """
-        If the return value of C{privateKeys} attribute isn't a mapping from
-        key names to C{Key} objects, then warn the user and convert the
-        mapping.
-        """
-        sshFactory = MockOldFactoryPrivateKeys()
-        sshFactory.privateKeys = sshFactory.getPrivateKeys()
-        self.assertWarns(DeprecationWarning,
-                "Returning a mapping from strings to PyCrypto key objects from"
-                " getPrivateKeys()/privateKeys (in %s) is deprecated.  Return"
-                " a mapping from strings to Key objects instead." %
-                (qual(MockOldFactoryPrivateKeys),),
-                factory.__file__, sshFactory.startFactory)
-        self.assertEqual(sshFactory.privateKeys,
-                          MockFactory().getPrivateKeys())
