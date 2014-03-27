@@ -2160,6 +2160,16 @@ class ISSLTransport(ITCPTransport):
         Return an object with the peer's certificate info.
         """
 
+    def whenHandshakeDone():
+        """
+        Returns a Deferred that will complete when the initial handshake is
+        done and will errback if the handshake fails.  (Connection loss during
+        the handshake is considered to be a handshake failure.)
+
+        If the handshake is already complete, then the returned Deferred will
+        already be complete.
+        """
+
 
 
 class ICipher(Interface):
@@ -2167,8 +2177,7 @@ class ICipher(Interface):
     A TLS cipher.
     """
     fullName = Attribute(
-        "The fully qualified name of the cipher in L{unicode}."
-    )
+        "The fully qualified name of the cipher in L{unicode}.")
 
 
 

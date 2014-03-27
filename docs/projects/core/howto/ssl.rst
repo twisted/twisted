@@ -370,10 +370,68 @@ Client with certificates
         reactor.run()
 
 
-Notice this client code does not pass any certificate authority
-certificates to ``PrivateCertificate.options`` .  This means that
-it will not validate the server's certificate, it will only present its
-certificate to the server for validation.
+Notice this client code does not pass any certificate authority certificates to ``PrivateCertificate.options``\ .
+This means that it will not validate the server's certificate, it will only present its certificate to the server for validation.
+
+
+Detecting Handshake Completion
+------------------------------
+
+You can detect a completed handshake using :api:`twisted.internet.interfaces.ISSLTransport.whenHandshakeDone <ISSLTransport>`.
+This can be used to identify clients at the beginning of a connection, for example.
+
+.. code-block:: python
+
+    from sys import stdout
+
+    from twisted.python.log import startLogging, msg
+    from twisted.python.filepath import FilePath
+    from twisted.internet.defer import Deferred
+    from twisted.internet.task import react
+    from twisted.internet.ssl import Certificate, PrivateCertificate
+    from twisted.internet.interfaces import ISSLTransport
+    from twisted.internet.protocol import Factory, Protocol
+
+    class WhoAreYou(Protocol):
+        def connectionMade(self):
+            if ISSLTransport.providedBy(self.transport):
+                handshaking = self.transport.whenHandshakeDone()
+                handshaking.addCallbacks(
+                    self._handshakeDone, self._handshakeFail)
+            else:
+                msg(format="Client is not using SSL")
+                self.transport.loseConnection()
+
+        def _handshakeDone(self, _):
+            subject = self.transport.getPeerCertificate().get_subject()
+            msg(format="Client handshake succeeded: %(subject)r", subject=subject)
+            self.transport.loseConnection()
+
+        def _handshakeFail(self, reason):
+            msg(format="Client handshake failed: %(reason)r", reason=reason.value)
+            self.transport.loseConnection()
+
+    def main(reactor):
+        factory = Factory.forProtocol(WhoAreYou)
+        keys = FilePath(b"keys")
+        ca = keys.child(b"ca.pem")
+        key = keys.child(b"server.key")
+        cert = keys.child(b"server.crt")
+
+        certAuthCert = Certificate.loadPEM(ca.getContent())
+        serverCert = PrivateCertificate.loadPEM(
+            key.getContent() + cert.getContent())
+
+        contextFactory = serverCert.options(certAuthCert)
+
+        reactor.listenTCP(8000, factory)
+        reactor.listenSSL(8001, factory, contextFactory)
+
+        return Deferred()
+
+    if __name__ == '__main__':
+        startLogging(stdout)
+        react(main, [])
 
 
 Other facilities
