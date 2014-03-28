@@ -12,17 +12,16 @@ from zope.interface import Interface, directlyProvides
 
 from twisted.python.compat import intToBytes, iterbytes
 try:
-    from twisted.protocols.tls import TLSMemoryBIOProtocol, TLSMemoryBIOFactory
-    from twisted.protocols.tls import _PullToPush, _ProducerMembrane
+    from OpenSSL.crypto import X509Type
+    from OpenSSL.SSL import TLSv1_METHOD, Error, ConnectionType, WantReadError
 except ImportError:
     # Skip the whole test module if it can't be imported.
     skip = "pyOpenSSL 0.10 or newer required for twisted.protocol.tls"
 else:
     # Otherwise, the pyOpenSSL dependency must be satisfied, so all these
     # imports will work.
-    from OpenSSL.crypto import X509Type
-    from OpenSSL.SSL import (
-        TLSv1_METHOD, Error, ConnectionType, WantReadError)
+    from twisted.protocols.tls import TLSMemoryBIOProtocol, TLSMemoryBIOFactory
+    from twisted.protocols.tls import _PullToPush, _ProducerMembrane
     from twisted.internet.ssl import PrivateCertificate, CertificateOptions
     from twisted.test.ssl_helpers import (ClientTLSContext, ServerTLSContext,
                                           certPath)
