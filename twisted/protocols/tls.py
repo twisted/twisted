@@ -360,6 +360,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             succeeded.
         @type error: L{Failure} or L{NoneType}
         """
+        self._handshaking = False
 
 
     def _flushSendBIO(self):
