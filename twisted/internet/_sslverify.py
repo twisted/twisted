@@ -684,6 +684,26 @@ class IOpenSSLTrustRoot(Interface):
 
 
 
+class ICanVerifyOpenSSLCertificates(Interface):
+    """
+    Verification callback.
+    """
+
+    def _verifyCertificate(connection):
+        """
+        Verify the peer's certificate.
+
+        @param connection: An SSL connection.
+        @param connection: L{OpenSSL.SSL.Connection}
+
+        @raise: An exception detailing the verification error if the
+            certificate could not be verified.
+
+        @return: L{None} if the certificate could be verified.
+        """
+
+
+
 @implementer(IOpenSSLTrustRoot)
 class OpenSSLCertificateAuthorities(object):
     """
