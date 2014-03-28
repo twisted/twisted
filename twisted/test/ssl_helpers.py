@@ -21,6 +21,7 @@ from twisted.protocols.tls import TLSMemoryBIOFactory
 
 from OpenSSL import SSL
 from OpenSSL.crypto import PKey, X509, TYPE_RSA, FILETYPE_PEM
+from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
 
 certPath = nativeString(FilePath(__file__.encode("utf-8")
                     ).sibling(b"server.pem").path)
@@ -191,3 +192,28 @@ def pathContainingDumpOf(testCase, *dumpables):
         for dumpable in dumpables:
             f.write(dumpable.dump(FILETYPE_PEM))
     return fname
+
+
+def handshakeProtocols():
+    """
+    Start handshake between TLS client and server.
+    """
+    clientFactory = ClientFactory()
+    clientFactory.protocol = Protocol
+
+    clientContextFactory = ssl.CertificateOptions(method=SSL.TLSv1_METHOD)
+    wrapperFactory = TLSMemoryBIOFactory(
+        clientContextFactory, True, clientFactory)
+    sslClientProtocol = wrapperFactory.buildProtocol(None)
+    handshakeDeferred = sslClientProtocol.whenHandshakeDone()
+
+    serverFactory = ServerFactory()
+    serverFactory.protocol = Protocol
+
+    serverContextFactory = ServerTLSContext()
+    wrapperFactory = TLSMemoryBIOFactory(
+        serverContextFactory, False, serverFactory)
+    sslServerProtocol = wrapperFactory.buildProtocol(None)
+
+
+
