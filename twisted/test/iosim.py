@@ -56,8 +56,12 @@ class FakeTransport:
     """
     A wrapper around a file-like object to make it behave as a Transport.
 
-    This doesn't actually stream the file to the attached protocol,
-    and is thus useful mainly as a utility for debugging protocols.
+    This doesn't actually stream the file to the attached protocol, and is thus
+    useful mainly as a utility for debugging protocols.
+
+    @note: This needs to be unified with
+        L{twisted.test.proto_helpers.StringTransport}
+    @see: U{https://twistedmatrix.com/trac/ticket/5167}
     """
 
     _nextserial = staticmethod(lambda counter=itertools.count(): next(counter))
@@ -249,11 +253,27 @@ def makeFakeServer(serverProtocol):
 
 
 
-class IOPump:
-    """Utility to pump data between clients and servers for protocol testing.
-
-    Perhaps this is a utility worthy of being in protocol.py?
+class IOPump(object):
     """
+    An L{IOPump} is an in-memory connection between a client L{IProtocol} and a
+    server L{IProtocol}.
+
+    @ivar client: The client protocol.
+    @type client: L{IProtocol}
+
+    @ivar server: The server protocol.
+    @ivar server: L{IProtocol}
+
+    @ivar clientIO: The transport to be associated with C{client}
+    @type clientIO: L{FakeTransport}
+
+    @ivar serverIO: The transport to be associated with C{server}
+    @type serverIO: L{FakeTransport}
+
+    @ivar debug: Whether or not to print a dump of the traffic to standard
+        output.
+    """
+
     def __init__(self, client, server, clientIO, serverIO, debug):
         self.client = client
         self.server = server
@@ -278,7 +298,8 @@ class IOPump:
 
 
     def pump(self, debug=False):
-        """Move data back and forth.
+        """
+        Move data back and forth.
 
         Returns whether any data was moved.
         """
