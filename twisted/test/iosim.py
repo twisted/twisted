@@ -272,6 +272,7 @@ class IOPump(object):
 
     @ivar debug: Whether or not to print a dump of the traffic to standard
         output.
+    @type debug: L{bool}
     """
 
     def __init__(self, client, server, clientIO, serverIO, debug):
