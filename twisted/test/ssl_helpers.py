@@ -161,11 +161,10 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
         wrappedFactory=protocol.Factory.forProtocol(ListeningClient)
     )
 
-    sProto, cProto, pump = connectedServerAndClient(
+    return connectedServerAndClient(
         lambda: serverFactory.buildProtocol(None),
         lambda: clientFactory.buildProtocol(None)
     )
-    return sProto, cProto, pump
 
 
 
