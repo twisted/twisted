@@ -252,10 +252,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         reason.  Otherwise it is C{None}.
     @type _handshakeError: L{Failure} or L{NoneType}
 
-    @ivar _handshakeDeferreds: If the handshake is not done then this is a list
-        of L{twisted.internet.defer.Deferred} instances to be completed when
-        the handshake finishes.  Once the handshake is done, this is C{None}.
-
     @ivar _reason: If an unexpected L{OpenSSL.SSL.Error} occurs which causes
         the connection to be lost, it is saved here.  If appropriate, this may
         be used as the reason passed to the application protocol's
@@ -276,7 +272,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     def __init__(self, factory, wrappedProtocol, _connectWrapped=True):
         ProtocolWrapper.__init__(self, factory, wrappedProtocol)
         self._connectWrapped = _connectWrapped
-        self._handshakeDeferreds = []
 
 
     def getHandle(self):
@@ -361,16 +356,10 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         Mark the handshake done and notify everyone.  It's safe to call this
         more than once (all calls except the first will be ignored).
 
-        @param error: The reason the handshake failed or C{None} if it succeeded.
+        @param error: The reason the handshake failed or C{None} if it
+            succeeded.
         @type error: L{Failure} or L{NoneType}
         """
-        if self._handshaking:
-            self._handshaking = False
-            self._handshakeError = error
-            deferreds = self._handshakeDeferreds
-            self._handshakeDeferreds = None
-            for d in deferreds:
-                d.callback(error)
 
 
     def _flushSendBIO(self):
