@@ -29,10 +29,11 @@ implement SSL and TLS.  Typical usage of this module looks like this::
     reactor.run()
 
 This API offers somewhat more flexibility than
-L{twisted.internet.interfaces.IReactorSSL}; for example, a L{TLSMemoryBIOProtocol}
-instance can use another instance of L{TLSMemoryBIOProtocol} as its transport,
-yielding TLS over TLS - useful to implement onion routing.  It can also be used
-to run TLS over unusual transports, such as UNIX sockets and stdio.
+L{twisted.internet.interfaces.IReactorSSL}; for example, a
+L{TLSMemoryBIOProtocol} instance can use another instance of
+L{TLSMemoryBIOProtocol} as its transport, yielding TLS over TLS - useful to
+implement onion routing.  It can also be used to run TLS over unusual
+transports, such as UNIX sockets and stdio.
 """
 
 from __future__ import division, absolute_import
@@ -217,17 +218,16 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     transport before delivering them to the wrapped protocol.
 
     In addition to producer events from the underlying transport, the need to
-    wait for reads before a write can proceed means the
-    L{TLSMemoryBIOProtocol} may also want to pause a producer. Pause/resume
-    events are therefore merged using the L{_ProducerMembrane}
-    wrapper. Non-streaming (pull) producers are supported by wrapping them
-    with L{_PullToPush}.
+    wait for reads before a write can proceed means the L{TLSMemoryBIOProtocol}
+    may also want to pause a producer.  Pause/resume events are therefore
+    merged using the L{_ProducerMembrane} wrapper.  Non-streaming (pull)
+    producers are supported by wrapping them with L{_PullToPush}.
 
     @ivar _tlsConnection: The L{OpenSSL.SSL.Connection} instance which is
         encrypted and decrypting this connection.
 
     @ivar _lostTLSConnection: A flag indicating whether connection loss has
-        already been dealt with (C{True}) or not (C{False}). TLS disconnection
+        already been dealt with (C{True}) or not (C{False}).  TLS disconnection
         is distinct from the underlying connection being lost.
 
     @ivar _writeBlockedOnRead: A flag indicating whether further writing must
@@ -248,8 +248,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         C{False} if it has completed.
     @type _handshaking: L{bool}
 
-    @ivar _handshakeError: If the handshake failed, then this will store
-        the reason.  Otherwise it is C{None}.
+    @ivar _handshakeError: If the handshake failed, then this will store the
+        reason.  Otherwise it is C{None}.
     @type _handshakeError: L{Failure} or L{NoneType}
 
     @ivar _handshakeDeferreds: If the handshake is not done then this is a list
