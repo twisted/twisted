@@ -218,7 +218,6 @@ class ConsoleInput:
             self.rkeymap[getattr(gtk.keysyms, keysymName)] = keysymName
 
     def _on_key_press_event(self, entry, event):
-        stopSignal = False
         ksym = self.rkeymap.get(event.keyval, None)
 
         mods = []

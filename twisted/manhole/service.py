@@ -17,13 +17,9 @@ from zope.interface import implements, Interface
 # sibling imports
 import explorer
 
-# system imports
-from cStringIO import StringIO
-
 import string
 import sys
 import traceback
-import types
 
 
 class FakeStdIO:
