@@ -77,7 +77,7 @@ class Connection(abstract.FileHandle, _SocketCloser, _AbortingMixin):
 
     def _closeWriteConnection(self):
         try:
-            getattr(self.socket, self._socketShutdownMethod)(1)
+            self.socket.shutdown(1)
         except socket.error:
             pass
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
