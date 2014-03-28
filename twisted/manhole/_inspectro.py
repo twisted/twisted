@@ -315,7 +315,7 @@ class LogViewer:
             vals.append(p.outLog[0][0])
         self.startTime = min(vals)
         p.logViewer = self
-        self.xml = x = gtk.glade.XML(sibpath(__file__, "logview.glade"))
+        self.xml = gtk.glade.XML(sibpath(__file__, "logview.glade"))
         self.xml.signal_autoconnect(self)
         self.loglist = self.xml.get_widget("loglist")
         # setup model, connect it to my treeview

@@ -12,7 +12,7 @@ from twisted.spread import pb
 from twisted.python import usage, util
 from twisted.cred import portal, checkers
 from twisted.application import strports
-import os, sys
+
 
 class Options(usage.Options):
     synopsis = "[options]"
