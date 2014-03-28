@@ -108,7 +108,8 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
 
     @param trustRoot: the C{trustRoot} argument for the client connection's
         context.
-    @type trustRoot: L{twisted.internet._sslverify.IOpenSSLTrustRoot}
+    @type trustRoot: L{twisted.internet._sslverify.IOpenSSLTrustRoot} or
+        something adaptable to it.
 
     @param privateKeyFile: The name of the file containing the private key.
     @type privateKeyFile: L{str} (native string; file name)
