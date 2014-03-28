@@ -324,15 +324,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         self._tryHandshake()
 
 
-    def whenHandshakeDone(self):
-        d = defer.Deferred()
-        if self._handshaking:
-            self._handshakeDeferreds.append(d)
-        else:
-            d.callback(self._handshakeError)
-        return d
-
-
     def _tryHandshake(self):
         """
         Attempt to make progress on the handshake.
