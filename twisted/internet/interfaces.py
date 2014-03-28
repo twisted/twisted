@@ -1827,6 +1827,20 @@ class IProtocol(Interface):
         """
 
 
+
+class ITLSProtocol(IProtocol):
+    """
+    An L{ITLSProtocol} is an L{IProtocol} which can receive transport layer
+    security events from its transport.
+    """
+
+    def handshakeComplete():
+        """
+        Called when the TLS handshake completes.
+        """
+
+
+
 class IProcessProtocol(Interface):
     """
     Interface for process-related event handlers.
@@ -2158,16 +2172,6 @@ class ISSLTransport(ITCPTransport):
     def getPeerCertificate():
         """
         Return an object with the peer's certificate info.
-        """
-
-    def whenHandshakeDone():
-        """
-        Returns a Deferred that will complete when the initial handshake is
-        done and will errback if the handshake fails.  (Connection loss during
-        the handshake is considered to be a handshake failure.)
-
-        If the handshake is already complete, then the returned Deferred will
-        already be complete.
         """
 
 
