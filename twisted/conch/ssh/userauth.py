@@ -671,12 +671,13 @@ class SSHUserAuthClient(service.SSHService):
         @rtype: C{bool}
         """
         d = defer.maybeDeferred(self.getPublicKey)
-        d.addBoth(self._cbGetPublicKey)
+        d.addErrback(log.err, "getPublicKey failed on %s" % (self,))
+        d.addCallback(self._cbGetPublicKey)
         return d
 
 
     def _cbGetPublicKey(self, publicKey):
-        if not isinstance(publicKey, keys.Key): # failure or None
+        if not isinstance(publicKey, keys.Key):
             publicKey = None
         if publicKey is not None:
             self.lastPublicKey = publicKey

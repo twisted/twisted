@@ -816,11 +816,23 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
         If there's no public key, auth_publickey should return a Deferred
         called back with a False value.
         """
-        self.authClient.getPublicKey = lambda x: None
+        self.authClient.getPublicKey = lambda: None
         d = self.authClient.tryAuth('publickey')
         def check(result):
             self.assertFalse(result)
         return d.addCallback(check)
+
+
+    def test_publickeyFailure(self):
+        """
+        When the auth client's getPublicKey method raises an exception, it
+        is logged.
+        """
+        self.authClient.getPublicKey = lambda: 1 / 0
+        d = self.authClient.tryAuth('publickey')
+        self.assertFalse(self.successResultOf(d))
+        self.flushLoggedErrors(ZeroDivisionError)
+
 
     def test_password(self):
         """
