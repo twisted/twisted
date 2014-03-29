@@ -55,7 +55,7 @@ else:
     from twisted.conch.endpoints import (
         _ISSHConnectionCreator, AuthenticationFailed, SSHCommandAddress,
         SSHCommandClientEndpoint, _ReadFile, _NewConnectionHelper,
-        _ExistingConnectionHelper)
+        _ExistingConnectionHelper, _UserAuth)
 
     from twisted.conch.ssh.transport import SSHClientTransport
 
@@ -1490,3 +1490,15 @@ class NewConnectionHelperTests(TestCase):
         connection.transport.transport = Abortable()
         helper.cleanupConnection(connection, True)
         self.assertTrue(connection.transport.transport.aborted)
+
+
+
+class UserAuthTests(TestCase):
+    """Tests for L{endpoints._UserAuth}."""
+
+    def test_getPublicKeyEmpty(self):
+        """
+        When the keys are exhausted, L{_UserAuth.getPublicKey} returns None.
+        """
+        auth = _UserAuth("username", "command")
+        self.assertIsNone(auth.getPublicKey())

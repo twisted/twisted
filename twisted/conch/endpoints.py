@@ -300,6 +300,7 @@ class _UserAuth(SSHUserAuthClient):
             self.key = self.keys.pop(0)
         else:
             self.key = None
+            return
         return self.key.public()
 
 
