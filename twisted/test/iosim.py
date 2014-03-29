@@ -304,35 +304,33 @@ class IOPump(object):
 
         Returns whether any data was moved.
         """
-        if self.debug or debug:
+        debug = self.debug or debug
+        if debug:
             print('-- GLUG --')
         sData = self.serverIO.getOutBuffer()
         cData = self.clientIO.getOutBuffer()
         self.clientIO._checkProducer()
         self.serverIO._checkProducer()
-        if self.debug or debug:
-            print('.')
-            # XXX slightly buggy in the face of incremental output
-            if cData:
-                print('C: ' + repr(cData))
-            if sData:
-                print('S: ' + repr(sData))
         if cData:
+            if debug:
+                print("C:", repr(cData))
             self.serverIO.bufferReceived(cData)
         if sData:
+            if debug:
+                print("S:", repr(sData))
             self.clientIO.bufferReceived(sData)
         if cData or sData:
             return True
         if (self.serverIO.disconnecting and
             not self.serverIO.disconnected):
-            if self.debug or debug:
+            if debug:
                 print('* C')
             self.serverIO.disconnected = True
             self.clientIO.disconnecting = True
             self.clientIO.reportDisconnect()
             return True
         if self.clientIO.disconnecting and not self.clientIO.disconnected:
-            if self.debug or debug:
+            if debug:
                 print('* S')
             self.clientIO.disconnected = True
             self.serverIO.disconnecting = True
@@ -343,7 +341,7 @@ class IOPump(object):
 
 
 def connect(serverProtocol, serverTransport,
-            clientProtocol, clientTransport, debug=False):
+            clientProtocol, clientTransport, debug=False, kickoff=True):
     """
     Create a new L{IOPump} connecting two protocols.
 
@@ -365,6 +363,9 @@ def connect(serverProtocol, serverTransport,
         L{IOPump} is doing.
     @type debug: L{bool}
 
+    @param kickoff: A flag indicating whether to automatically issue a
+        L{IOPump.flush} before returning.
+
     @return: An L{IOPump} which connects C{serverProtocol} and
         C{clientProtocol} and delivers bytes between them when it is pumped.
     @rtype: L{IOPump}
@@ -374,8 +375,8 @@ def connect(serverProtocol, serverTransport,
     pump = IOPump(
         clientProtocol, serverProtocol, clientTransport, serverTransport, debug
     )
-    # kick off server greeting, etc
-    pump.flush()
+    if kickoff:
+        pump.flush()
     return pump
 
 
@@ -383,7 +384,7 @@ def connect(serverProtocol, serverTransport,
 def connectedServerAndClient(ServerClass, ClientClass,
                              clientTransportFactory=makeFakeClient,
                              serverTransportFactory=makeFakeServer,
-                             debug=False):
+                             debug=False, kickoff=True):
     """
     Connect a given server and client class to each other.
 
@@ -417,4 +418,4 @@ def connectedServerAndClient(ServerClass, ClientClass,
     s = ServerClass()
     cio = clientTransportFactory(c)
     sio = serverTransportFactory(s)
-    return c, s, connect(s, sio, c, cio, debug)
+    return c, s, connect(s, sio, c, cio, debug, kickoff)

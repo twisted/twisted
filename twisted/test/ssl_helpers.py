@@ -103,7 +103,26 @@ def certificatesForAuthorityAndServer():
 
 
 
-def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
+class GreetingServer(protocol.Protocol):
+    greeting = b"greetings!"
+    lostReason = None
+    def connectionMade(self):
+        self.transport.write(self.greeting)
+    def connectionLost(self, reason):
+        self.lostReason = reason
+
+class ListeningClient(protocol.Protocol):
+    data = b''
+    lostReason = None
+    def dataReceived(self, data):
+        self.data += data
+    def connectionLost(self, reason):
+        self.lostReason = reason
+
+def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None,
+                          debug=False, kickoff=True,
+                          serverProtocol=GreetingServer,
+                          clientProtocol=ListeningClient):
     """
     Create a loopback TLS connection with the given trust and keys.
 
@@ -130,6 +149,7 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
             @rtype: C{OpenSSL.SSL.Context}
             """
             ctx = SSL.Context(SSL.TLSv1_METHOD)
+            ctx.use_certificate_file(privateKeyFile)
             if chainedCertFile is not None:
                 ctx.use_certificate_chain_file(chainedCertFile)
             ctx.use_privatekey_file(privateKeyFile)
@@ -137,34 +157,41 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
             ctx.check_privatekey()
             return ctx
 
-    class GreetingServer(protocol.Protocol):
-        greeting = b"greetings!"
-        def connectionMade(self):
-            self.transport.write(self.greeting)
-
-    class ListeningClient(protocol.Protocol):
-        data = b''
-        lostReason = None
-        def dataReceived(self, data):
-            self.data += data
-        def connectionLost(self, reason):
-            self.lostReason = reason
-
     serverOpts = ContextFactory()
     clientOpts = ssl.CertificateOptions(trustRoot=trustRoot)
 
     clientFactory = TLSMemoryBIOFactory(
         clientOpts, isClient=True,
-        wrappedFactory=protocol.Factory.forProtocol(GreetingServer)
+        wrappedFactory=protocol.Factory.forProtocol(serverProtocol)
     )
     serverFactory = TLSMemoryBIOFactory(
         serverOpts, isClient=False,
-        wrappedFactory=protocol.Factory.forProtocol(ListeningClient)
+        wrappedFactory=protocol.Factory.forProtocol(clientProtocol)
     )
 
     return connectedServerAndClient(
         lambda: serverFactory.buildProtocol(None),
-        lambda: clientFactory.buildProtocol(None)
+        lambda: clientFactory.buildProtocol(None),
+        debug=debug,
+        kickoff=kickoff,
+    )
+
+
+
+def connectedTLSForTest(testCase, **kw):
+    """
+    Automatically create everything necessary for a loopback TLS connection
+    from a L{TestCase}.
+
+    @param testCase: A test case to generate temporary directories for dummy
+        certificates and such.
+    """
+    authority, server = certificatesForAuthorityAndServer()
+    return loopbackTLSConnection(
+        trustRoot=authority,
+        privateKeyFile=pathContainingDumpOf(testCase, server.privateKey,
+                                            server),
+        **kw
     )
 
 
@@ -192,28 +219,3 @@ def pathContainingDumpOf(testCase, *dumpables):
         for dumpable in dumpables:
             f.write(dumpable.dump(FILETYPE_PEM))
     return fname
-
-
-def handshakeProtocols():
-    """
-    Start handshake between TLS client and server.
-    """
-    clientFactory = ClientFactory()
-    clientFactory.protocol = Protocol
-
-    clientContextFactory = ssl.CertificateOptions(method=SSL.TLSv1_METHOD)
-    wrapperFactory = TLSMemoryBIOFactory(
-        clientContextFactory, True, clientFactory)
-    sslClientProtocol = wrapperFactory.buildProtocol(None)
-    handshakeDeferred = sslClientProtocol.whenHandshakeDone()
-
-    serverFactory = ServerFactory()
-    serverFactory.protocol = Protocol
-
-    serverContextFactory = ServerTLSContext()
-    wrapperFactory = TLSMemoryBIOFactory(
-        serverContextFactory, False, serverFactory)
-    sslServerProtocol = wrapperFactory.buildProtocol(None)
-
-
-

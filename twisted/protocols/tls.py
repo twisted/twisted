@@ -343,7 +343,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             except Error:
                 self._tlsShutdownFinished(Failure())
             else:
-                self._handshakeFinished(None)
+                self._handshakeFinished()
 
             # Either the handshake is done or we encountered an obstacle that
             # requires some bytes to arrive over the network.  Stop trying to
@@ -351,7 +351,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             break
 
 
-    def _handshakeFinished(self, error):
+    def _handshakeFinished(self):
         """
         Mark the handshake done and notify everyone.  It's safe to call this
         more than once (all calls except the first will be ignored).
@@ -361,6 +361,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         @type error: L{Failure} or L{NoneType}
         """
         self._handshaking = False
+        self.wrappedProtocol.handshakeCompleted()
 
 
     def _flushSendBIO(self):
@@ -405,8 +406,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             try:
                 bytes = self._tlsConnection.recv(2 ** 15)
             except WantReadError:
-                # The newly received bytes might not have been enough to produce
-                # any application data.
+                # The newly received bytes might not have been enough to
+                # produce any application data.
                 break
             except ZeroReturnError:
                 # TLS has shut down and no more TLS data will be received over
@@ -417,8 +418,9 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
                 self._tlsShutdownFinished(None)
             except Error as e:
                 # Something went pretty wrong.  For example, this might be a
-                # handshake failure (because there were no shared ciphers, because
-                # a certificate failed to verify, etc).  TLS can no longer proceed.
+                # handshake failure (because there were no shared ciphers,
+                # because a certificate failed to verify, etc).  TLS can no
+                # longer proceed.
 
                 # Squash EOF in violation of protocol into ConnectionLost; we
                 # create Failure before calling _flushSendBio so that no new
@@ -482,7 +484,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         Called when TLS connection has gone away; tell underlying transport to
         disconnect.
         """
-        self._handshakeFinished(reason)
         self._reason = reason
         self._lostTLSConnection = True
         # Using loseConnection causes the application protocol's
@@ -579,7 +580,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             else:
                 # SSL_write can transparently complete a handshake.  If we get
                 # here, then we're done handshaking.
-                self._handshakeFinished(None)
+                self._handshakeFinished()
                 self._flushSendBIO()
                 alreadySent += sent
 
