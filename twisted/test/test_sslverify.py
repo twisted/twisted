@@ -993,19 +993,20 @@ class TrustRootTests(unittest.TestCase):
         smoke test to make sure that verification is happening at all.
         """
         caSelfCert, serverCert = certificatesForAuthorityAndServer()
-        chainedCert = pathContainingDumpOf(self, serverCert, caSelfCert)
-        privateKey = pathContainingDumpOf(self, serverCert.privateKey)
+        privateKey = pathContainingDumpOf(self, serverCert,
+                                          serverCert.privateKey)
 
         sProto, cProto, pump = loopbackTLSConnection(
-            trustRoot=platformTrust(),
-            privateKeyFile=privateKey,
-            chainedCertFile=chainedCert,
+            trustRoot=platformTrust(), privateKeyFile=privateKey,
+            chainedCertFile=pathContainingDumpOf(self, caSelfCert)
         )
+
         # No data was received.
         self.assertEqual(cProto.wrappedProtocol.data, b'')
 
         # It was an L{SSL.Error}.
-        self.assertEqual(cProto.wrappedProtocol.lostReason.type, SSL.Error)
+        self.assertTrue(cProto.wrappedProtocol.lostReason.check(SSL.Error),
+                        SSL.Error)
 
         # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
         err = cProto.wrappedProtocol.lostReason.value
@@ -1021,8 +1022,8 @@ class TrustRootTests(unittest.TestCase):
         otherCa, otherServer = certificatesForAuthorityAndServer()
         sProto, cProto, pump = loopbackTLSConnection(
             trustRoot=caCert,
-            privateKeyFile=pathContainingDumpOf(self, serverCert.privateKey),
-            chainedCertFile=pathContainingDumpOf(self, serverCert),
+            privateKeyFile=pathContainingDumpOf(self, serverCert,
+                                                serverCert.privateKey),
         )
         pump.flush()
         self.assertIs(cProto.wrappedProtocol.lostReason, None)
