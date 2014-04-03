@@ -150,11 +150,11 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None,
             """
             ctx = SSL.Context(SSL.TLSv1_METHOD)
             ctx.use_certificate_file(privateKeyFile)
-            if chainedCertFile is not None:
-                ctx.use_certificate_chain_file(chainedCertFile)
             ctx.use_privatekey_file(privateKeyFile)
             # Let the test author know if they screwed something up.
             ctx.check_privatekey()
+            if chainedCertFile is not None:
+                ctx.use_certificate_chain_file(chainedCertFile)
             return ctx
 
     serverOpts = ContextFactory()
