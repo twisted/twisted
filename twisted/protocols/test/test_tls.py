@@ -264,13 +264,6 @@ class TLSMemoryBIOTests(TestCase):
         self.assertIdentical(clientProtocol.transport, sslProtocol)
 
 
-    def test_handshake(self):
-        """
-        The TLS handshake is performed when L{TLSMemoryBIOProtocol} is
-        connected to a transport.
-        """
-
-
     def test_handshakeFailure(self):
         """
         L{TLSMemoryBIOProtocol} reports errors in the handshake process to the
