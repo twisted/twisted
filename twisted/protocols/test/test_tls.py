@@ -346,6 +346,7 @@ class TLSMemoryBIOTests(TestCase):
         """
         @implementer(IProtocol)
         class JustTheInterfacePlease(object):
+            handshook = False
             def makeConnection(self, transport):
                 pass
 
