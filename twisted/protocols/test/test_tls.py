@@ -27,6 +27,8 @@ else:
                                           certPath)
 from twisted.test.ssl_helpers import connectedTLSForTest
 from twisted.internet.interfaces import ITLSProtocol
+from twisted.internet.interfaces import IProtocol
+from zope.interface.declarations import implementer
 
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
@@ -336,13 +338,35 @@ class TLSMemoryBIOTests(TestCase):
         self.assertFalse(pump.flush())
 
 
-
     def test_handshakeSucceededOldProtocol(self):
         """
         When the TLS handshake succeeds, a protocol which does not declare that
         it provides L{ITLSProtocol} will not have C{handshakeSucceeded} invoked
         upon it.
         """
+        @implementer(IProtocol)
+        class JustTheInterfacePlease(object):
+            def makeConnection(self, transport):
+                pass
+
+            def dataReceived(self, data):
+                pass
+
+            def connectionLost(self, reason):
+                pass
+
+            def handshakeCompleted(self):
+                self.handshook = True
+
+        c, s, pump = connectedTLSForTest(self,
+                                         clientProtocol=JustTheInterfacePlease,
+                                         serverProtocol=JustTheInterfacePlease)
+
+        # Handshake all the way.
+        pump.flush()
+
+        self.assertEquals(c.wrappedProtocol.handshook, False)
+        self.assertEquals(c.wrappedProtocol.handshook, False)
 
 
     # def test_getPeerCertificate(self):
