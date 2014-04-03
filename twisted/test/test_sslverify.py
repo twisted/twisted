@@ -21,6 +21,9 @@ from twisted.test.ssl_helpers import makeCertificate
 from twisted.test.ssl_helpers import certificatesForAuthorityAndServer
 from twisted.test.ssl_helpers import pathContainingDumpOf
 from twisted.test.ssl_helpers import loopbackTLSConnection
+from twisted.test.ssl_helpers import pumpTLS
+from twisted.internet.protocol import Protocol
+from twisted.test.proto_helpers import AccumulatingProtocol
 from twisted.python.filepath import FilePath
 
 from twisted.trial import unittest
@@ -30,7 +33,7 @@ from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
 
 if not skipSSL:
-    from twisted.internet.ssl import platformTrust
+    from twisted.internet.ssl import platformTrust, CertificateOptions
     from twisted.internet import _sslverify as sslverify
 
 # A couple of static PEM-format certificates to be used by various tests.
@@ -993,25 +996,43 @@ class TrustRootTests(unittest.TestCase):
         smoke test to make sure that verification is happening at all.
         """
         caSelfCert, serverCert = certificatesForAuthorityAndServer()
-        privateKey = pathContainingDumpOf(
-            self, serverCert, serverCert.privateKey
-        )
+        caOtherCert, unusedServerCert = certificatesForAuthorityAndServer()
 
-        sProto, cProto, pump = loopbackTLSConnection(
-            trustRoot=platformTrust(),
-            privateKeyFile=privateKey,
+        class SendSomething(AccumulatingProtocol):
+            def connectionMade(self):
+                self.transport.write(b'something')
+
+        sProto, cProto, pump = pumpTLS(
+            serverProtocol=SendSomething,
+            clientProtocol=AccumulatingProtocol,
+            clientContextFactory=CertificateOptions(
+                # trustRoot=platformTrust()
+                trustRoot=caOtherCert,
+            ),
+            serverContextFactory=CertificateOptions(
+                certificate=serverCert.original,
+                privateKey=serverCert.privateKey.original,
+            ),
             debug=True,
+            kickoff=False,
         )
+        pump.pump()
+        pump.pump()
+        pump.pump()
+        pump.pump()
 
         # No data was received.
         self.assertEqual(cProto.wrappedProtocol.data, b'')
 
         # It was an L{SSL.Error}.
-        self.assertTrue(cProto.wrappedProtocol.lostReason.check(SSL.Error),
+        self.assertTrue(cProto.wrappedProtocol.closedReason.check(SSL.Error),
                         SSL.Error)
 
+        print()
+        print("Client reason", cProto.wrappedProtocol.closedReason.value)
+        print("Server reason", sProto.wrappedProtocol.closedReason.value)
         # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
-        err = cProto.wrappedProtocol.lostReason.value
+        err = cProto.wrappedProtocol.closedReason.value
         self.assertEqual(err.args[0][0][2], 'tlsv1 alert unknown ca')
 
 

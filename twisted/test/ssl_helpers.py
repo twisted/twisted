@@ -154,20 +154,31 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None,
                                         # method=SSL.TLSv1_METHOD
     )
     clientOpts.getContext()
+    return pumpTLS(clientOpts, serverOpts, clientProtocol, serverProtocol,
+                   debug=debug, kickoff=kickoff)
+
+
+
+def pumpTLS(clientContextFactory=ssl.CertificateOptions(),
+            serverContextFactory=ssl.CertificateOptions(),
+            clientProtocol=Protocol, serverProtocol=Protocol,
+            **kw):
+
+    clientContextFactory.getContext()
+    serverContextFactory.getContext()
     clientFactory = TLSMemoryBIOFactory(
-        clientOpts, isClient=True,
+        clientContextFactory, isClient=True,
         wrappedFactory=protocol.Factory.forProtocol(serverProtocol)
     )
     serverFactory = TLSMemoryBIOFactory(
-        serverOpts, isClient=False,
+        serverContextFactory, isClient=False,
         wrappedFactory=protocol.Factory.forProtocol(clientProtocol)
     )
 
     return connectedServerAndClient(
         lambda: serverFactory.buildProtocol(None),
         lambda: clientFactory.buildProtocol(None),
-        debug=debug,
-        kickoff=kickoff,
+        **kw
     )
 
 
