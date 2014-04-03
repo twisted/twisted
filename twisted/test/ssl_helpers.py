@@ -140,26 +140,20 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None,
     @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
     @rtype: L{tuple}
     """
-    class ContextFactory(object):
-        def getContext(self):
-            """
-            Create a context for the server side of the connection.
-
-            @return: an SSL context using a certificate and key.
-            @rtype: C{OpenSSL.SSL.Context}
-            """
-            ctx = SSL.Context(SSL.TLSv1_METHOD)
-            ctx.use_certificate_file(privateKeyFile)
-            ctx.use_privatekey_file(privateKeyFile)
-            # Let the test author know if they screwed something up.
-            ctx.check_privatekey()
-            if chainedCertFile is not None:
-                ctx.use_certificate_chain_file(chainedCertFile)
-            return ctx
-
-    serverOpts = ContextFactory()
-    clientOpts = ssl.CertificateOptions(trustRoot=trustRoot)
-
+    serverOpts = ssl.CertificateOptions(
+        privateKey=ssl.KeyPair.load(
+            FilePath(privateKeyFile).getContent(), SSL.FILETYPE_PEM
+        ).original,
+        certificate=ssl.Certificate.loadPEM(
+            FilePath(privateKeyFile).getContent()
+        ).original,
+        # method=SSL.TLSv1_METHOD
+    )
+    serverOpts.getContext()
+    clientOpts = ssl.CertificateOptions(trustRoot=trustRoot,
+                                        # method=SSL.TLSv1_METHOD
+    )
+    clientOpts.getContext()
     clientFactory = TLSMemoryBIOFactory(
         clientOpts, isClient=True,
         wrappedFactory=protocol.Factory.forProtocol(serverProtocol)
