@@ -60,8 +60,10 @@ class AccumulatingProtocol(protocol.Protocol):
             self.factory.protocolConnectionMade = None
             d.callback(self)
 
+
     def dataReceived(self, data):
         self.data += data
+
 
     def connectionLost(self, reason):
         self.closed = 1
@@ -69,6 +71,7 @@ class AccumulatingProtocol(protocol.Protocol):
         if self.closedDeferred is not None:
             d, self.closedDeferred = self.closedDeferred, None
             d.callback(None)
+
 
 
 class LineSendingProtocol(basic.LineReceiver):
