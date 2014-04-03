@@ -408,6 +408,39 @@ class TLSMemoryBIOTests(TestCase):
         return handshakeDeferred
 
 
+    def writeBeforeHandshakeTest(self, sendingProtocol, bytes):
+        """
+        Run test where client sends data before handshake, given the sending
+        protocol and expected bytes.
+        """
+        clientFactory = ClientFactory()
+        clientFactory.protocol = sendingProtocol
+
+        clientContextFactory, handshakeDeferred = (
+            HandshakeCallbackContextFactory.factoryAndDeferred())
+        wrapperFactory = TLSMemoryBIOFactory(
+            clientContextFactory, True, clientFactory)
+        sslClientProtocol = wrapperFactory.buildProtocol(None)
+
+        serverProtocol = AccumulatingProtocol(len(bytes))
+        serverFactory = ServerFactory()
+        serverFactory.protocol = lambda: serverProtocol
+
+        serverContextFactory = ServerTLSContext()
+        wrapperFactory = TLSMemoryBIOFactory(
+            serverContextFactory, False, serverFactory)
+        sslServerProtocol = wrapperFactory.buildProtocol(None)
+
+        connectionDeferred = loopbackAsync(sslServerProtocol, sslClientProtocol)
+
+        # Wait for the connection to end, then make sure the server received
+        # the bytes sent by the client.
+        def cbConnectionDone(ignored):
+            self.assertEqual(b"".join(serverProtocol.received), bytes)
+        connectionDeferred.addCallback(cbConnectionDone)
+        return connectionDeferred
+
+
     def test_writeAfterHandshake(self):
         """
         Bytes written to L{TLSMemoryBIOProtocol} before the handshake is
