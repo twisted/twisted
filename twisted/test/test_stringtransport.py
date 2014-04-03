@@ -178,7 +178,7 @@ class StringTransportTests(TestCase):
         """
         If a peer address is passed to L{StringTransport.__init__}, that
         value is returned from L{StringTransport.getPeer}.
-        """        
+        """
         address = object()
         self.assertIdentical(
             StringTransport(peerAddress=address).getPeer(), address)
