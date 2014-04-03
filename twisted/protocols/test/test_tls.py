@@ -38,8 +38,8 @@ from twisted.python import log
 from twisted.internet.interfaces import ISystemHandle, ISSLTransport
 from twisted.internet.interfaces import IPushProducer
 from twisted.internet.main import CONNECTION_DONE
-from twisted.internet.error import ConnectionDone
-from twisted.internet.defer import Deferred, gatherResults
+from twisted.internet.error import ConnectionDone, ConnectionLost
+from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol, ClientFactory, ServerFactory
 from twisted.internet.task import TaskStopped
 from twisted.protocols.loopback import loopbackAsync
@@ -828,62 +828,56 @@ class TLSMemoryBIOTests(TestCase):
         self.assertEqual(calls, [1])
 
 
-    # def test_unexpectedEOF(self):
-    #     """
-    #     Unexpected disconnects get converted to ConnectionLost errors.
-    #     """
-    #     tlsClient, tlsServer, handshakeDeferred, disconnectDeferred = (
-    #         self.handshakeProtocols())
-    #     serverProtocol = tlsServer.wrappedProtocol
-    #     data = []
-    #     reason = []
-    #     serverProtocol.dataReceived = data.append
-    #     serverProtocol.connectionLost = reason.append
+    def test_unexpectedEOF(self):
+        """
+        Unexpected disconnects get converted to ConnectionLost errors.
+        """
+        tlsClient, tlsServer, pump = connectedTLSForTest(self, kickoff=False)
+        serverProtocol = tlsServer.wrappedProtocol
 
-    #     # Write data, then disconnect *underlying* transport, resulting in an
-    #     # unexpected TLS disconnect:
-    #     def handshakeDone(ign):
-    #         tlsClient.write(b"hello")
-    #         tlsClient.transport.loseConnection()
-    #     handshakeDeferred.addCallback(handshakeDone)
+        # Write data, then disconnect *underlying* transport, resulting in an
+        # unexpected TLS disconnect:
+        def handshakeDone():
+            tlsClient.write(b"hello")
+            tlsClient.transport.loseConnection()
+        tlsClient.wrappedProtocol.handshakeCompleted = handshakeDone
+        pump.flush()
 
-    #     # Receiver should be disconnected, with ConnectionLost notification
-    #     # (masking the Unexpected EOF SSL error):
-    #     def disconnected(ign):
-    #         self.assertTrue(reason[0].check(ConnectionLost), reason[0])
-    #     disconnectDeferred.addCallback(disconnected)
-    #     return disconnectDeferred
+        # Receiver should be disconnected, with ConnectionLost notification
+        # (masking the Unexpected EOF SSL error):
+        reason = serverProtocol.lostReason
+        self.assertTrue(reason.check(ConnectionLost), reason)
 
 
-    # def test_errorWriting(self):
-    #     """
-    #     Errors while writing cause the protocols to be disconnected.
-    #     """
-    #     tlsClient, tlsServer, pump = connectedTLSForTest(self)
+    def test_errorWriting(self):
+        """
+        Errors while writing cause the protocols to be disconnected.
+        """
+        tlsClient, tlsServer, pump = connectedTLSForTest(self, kickoff=False)
 
-    #     # Pretend TLS connection is unhappy sending:
-    #     class Wrapper(object):
-    #         def __init__(self, wrapped):
-    #             self._wrapped = wrapped
-    #         def __getattr__(self, attr):
-    #             return getattr(self._wrapped, attr)
-    #         def send(self, *args):
-    #             raise Error("ONO!")
-    #     tlsClient._tlsConnection = Wrapper(tlsClient._tlsConnection)
+        # Pretend TLS connection is unhappy sending:
+        class Wrapper(object):
+            def __init__(self, wrapped):
+                self._wrapped = wrapped
+            def __getattr__(self, attr):
+                return getattr(self._wrapped, attr)
+            def send(self, *args):
+                raise Error("ONO!")
+        tlsClient._tlsConnection = Wrapper(tlsClient._tlsConnection)
 
-    #     # Write some data:
-    #     def handshakeDone(ign):
-    #         handshakeDone.yes = True
-    #         tlsClient.write(b"hello")
-    #     handshakeDone.yes = False
-    #     tlsClient.handshakeDone = handshakeDone
+        # Write some data:
+        def handshakeDone():
+            handshakeDone.yes = True
+            tlsClient.write(b"hello")
+        handshakeDone.yes = False
+        tlsClient.wrappedProtocol.handshakeCompleted = handshakeDone
 
-    #     pump.flush()
+        pump.flush()
 
-    #     reason = tlsClient.protocol.lostReason
-    #     self.assertNotIdentical(reason, None, "Connection not lost.")
-    #     # Failed writer should be disconnected with SSL error:
-    #     self.assertTrue(reason.check(Error), reason[0])
+        reason = tlsClient.wrappedProtocol.lostReason
+        self.assertNotIdentical(reason, None, "Connection not lost.")
+        # Failed writer should be disconnected with SSL error:
+        self.assertTrue(reason.check(Error), reason)
 
 
 
