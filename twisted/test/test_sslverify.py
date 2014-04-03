@@ -993,12 +993,14 @@ class TrustRootTests(unittest.TestCase):
         smoke test to make sure that verification is happening at all.
         """
         caSelfCert, serverCert = certificatesForAuthorityAndServer()
-        privateKey = pathContainingDumpOf(self, serverCert,
-                                          serverCert.privateKey)
+        privateKey = pathContainingDumpOf(
+            self, serverCert, serverCert.privateKey
+        )
 
         sProto, cProto, pump = loopbackTLSConnection(
-            trustRoot=platformTrust(), privateKeyFile=privateKey,
-            chainedCertFile=pathContainingDumpOf(self, caSelfCert)
+            trustRoot=platformTrust(),
+            privateKeyFile=privateKey,
+            debug=True,
         )
 
         # No data was received.
