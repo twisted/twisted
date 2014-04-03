@@ -408,50 +408,50 @@ class TLSMemoryBIOTests(TestCase):
         return handshakeDeferred
 
 
-    # def test_writeAfterHandshake(self):
-    #     """
-    #     Bytes written to L{TLSMemoryBIOProtocol} before the handshake is
-    #     complete are received by the protocol on the other side of the
-    #     connection once the handshake succeeds.
-    #     """
-    #     bytes = b"some bytes"
+    def test_writeAfterHandshake(self):
+        """
+        Bytes written to L{TLSMemoryBIOProtocol} before the handshake is
+        complete are received by the protocol on the other side of the
+        connection once the handshake succeeds.
+        """
+        bytes = b"some bytes"
 
-    #     clientProtocol = Protocol()
-    #     clientFactory = ClientFactory()
-    #     clientFactory.protocol = lambda: clientProtocol
+        clientProtocol = Protocol()
+        clientFactory = ClientFactory()
+        clientFactory.protocol = lambda: clientProtocol
 
-    #     clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
-    #     wrapperFactory = TLSMemoryBIOFactory(
-    #         clientContextFactory, True, clientFactory)
-    #     sslClientProtocol = wrapperFactory.buildProtocol(None)
-    #     handshakeDeferred = sslClientProtocol.whenHandshakeDone()
+        clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
+        wrapperFactory = TLSMemoryBIOFactory(
+            clientContextFactory, True, clientFactory)
+        sslClientProtocol = wrapperFactory.buildProtocol(None)
+        handshakeDeferred = sslClientProtocol.whenHandshakeDone()
 
-    #     serverProtocol = AccumulatingProtocol(len(bytes))
-    #     serverFactory = ServerFactory()
-    #     serverFactory.protocol = lambda: serverProtocol
+        serverProtocol = AccumulatingProtocol(len(bytes))
+        serverFactory = ServerFactory()
+        serverFactory.protocol = lambda: serverProtocol
 
-    #     serverContextFactory = ServerTLSContext()
-    #     wrapperFactory = TLSMemoryBIOFactory(
-    #         serverContextFactory, False, serverFactory)
-    #     sslServerProtocol = wrapperFactory.buildProtocol(None)
+        serverContextFactory = ServerTLSContext()
+        wrapperFactory = TLSMemoryBIOFactory(
+            serverContextFactory, False, serverFactory)
+        sslServerProtocol = wrapperFactory.buildProtocol(None)
 
-    #     connectionDeferred = loopbackAsync(sslServerProtocol, sslClientProtocol)
+        connectionDeferred = loopbackAsync(sslServerProtocol, sslClientProtocol)
 
-    #     # Wait for the handshake to finish before writing anything.
-    #     def cbHandshook(ignored):
-    #         clientProtocol.transport.write(bytes)
+        # Wait for the handshake to finish before writing anything.
+        def cbHandshook(ignored):
+            clientProtocol.transport.write(bytes)
 
-    #         # The server will drop the connection once it gets the bytes.
-    #         return connectionDeferred
-    #     handshakeDeferred.addCallback(cbHandshook)
+            # The server will drop the connection once it gets the bytes.
+            return connectionDeferred
+        handshakeDeferred.addCallback(cbHandshook)
 
-    #     # Once the connection is lost, make sure the server received the
-    #     # expected bytes.
-    #     def cbDisconnected(ignored):
-    #         self.assertEqual(b"".join(serverProtocol.received), bytes)
-    #     handshakeDeferred.addCallback(cbDisconnected)
+        # Once the connection is lost, make sure the server received the
+        # expected bytes.
+        def cbDisconnected(ignored):
+            self.assertEqual(b"".join(serverProtocol.received), bytes)
+        handshakeDeferred.addCallback(cbDisconnected)
 
-    #     return handshakeDeferred
+        return handshakeDeferred
 
 
     # def test_writeBeforeHandshake(self):
