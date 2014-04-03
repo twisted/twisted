@@ -137,7 +137,7 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None,
     @param chainedCertFile: The name of the chained certificate file.
     @type chainedCertFile: L{str} (native string; file name)
 
-    @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
+    @return: 3-tuple of client-protocol, server-protocol, and L{IOPump}
     @rtype: L{tuple}
     """
     serverOpts = ssl.CertificateOptions(
@@ -154,8 +154,9 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None,
                                         # method=SSL.TLSv1_METHOD
     )
     clientOpts.getContext()
-    return pumpTLS(clientOpts, serverOpts, clientProtocol, serverProtocol,
-                   debug=debug, kickoff=kickoff)
+    c, s, p = pumpTLS(clientOpts, serverOpts, clientProtocol, serverProtocol,
+                      debug=debug, kickoff=kickoff)
+    return c, s, p
 
 
 
@@ -166,13 +167,14 @@ def pumpTLS(clientContextFactory=ssl.CertificateOptions(),
 
     clientContextFactory.getContext()
     serverContextFactory.getContext()
+
     clientFactory = TLSMemoryBIOFactory(
         clientContextFactory, isClient=True,
-        wrappedFactory=protocol.Factory.forProtocol(serverProtocol)
+        wrappedFactory=protocol.Factory.forProtocol(clientProtocol)
     )
     serverFactory = TLSMemoryBIOFactory(
         serverContextFactory, isClient=False,
-        wrappedFactory=protocol.Factory.forProtocol(clientProtocol)
+        wrappedFactory=protocol.Factory.forProtocol(serverProtocol)
     )
 
     return connectedServerAndClient(

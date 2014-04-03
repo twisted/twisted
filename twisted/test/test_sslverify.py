@@ -1002,24 +1002,17 @@ class TrustRootTests(unittest.TestCase):
             def connectionMade(self):
                 self.transport.write(b'something')
 
-        sProto, cProto, pump = pumpTLS(
+        cProto, sProto, pump = pumpTLS(
             serverProtocol=SendSomething,
             clientProtocol=AccumulatingProtocol,
             clientContextFactory=CertificateOptions(
-                # trustRoot=platformTrust()
-                trustRoot=caOtherCert,
+                trustRoot=platformTrust(),
             ),
             serverContextFactory=CertificateOptions(
                 certificate=serverCert.original,
                 privateKey=serverCert.privateKey.original,
             ),
-            debug=True,
-            kickoff=False,
         )
-        pump.pump()
-        pump.pump()
-        pump.pump()
-        pump.pump()
 
         # No data was received.
         self.assertEqual(cProto.wrappedProtocol.data, b'')
@@ -1028,12 +1021,8 @@ class TrustRootTests(unittest.TestCase):
         self.assertTrue(cProto.wrappedProtocol.closedReason.check(SSL.Error),
                         SSL.Error)
 
-        print()
-        print("Client reason", cProto.wrappedProtocol.closedReason.value)
-        print("Server reason", sProto.wrappedProtocol.closedReason.value)
-        # Some combination of OpenSSL and PyOpenSSL is bad at reporting errors.
         err = cProto.wrappedProtocol.closedReason.value
-        self.assertEqual(err.args[0][0][2], 'tlsv1 alert unknown ca')
+        self.assertEqual(err.args[0][0][2], 'certificate verify failed')
 
 
     def test_trustRootSpecificCertificate(self):
@@ -1043,7 +1032,7 @@ class TrustRootTests(unittest.TestCase):
         """
         caCert, serverCert = certificatesForAuthorityAndServer()
         otherCa, otherServer = certificatesForAuthorityAndServer()
-        sProto, cProto, pump = loopbackTLSConnection(
+        cProto, sProto, pump = loopbackTLSConnection(
             trustRoot=caCert,
             privateKeyFile=pathContainingDumpOf(self, serverCert,
                                                 serverCert.privateKey),
