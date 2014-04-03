@@ -361,8 +361,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             succeeded.
         @type error: L{Failure} or L{NoneType}
         """
-        self._handshaking = False
-        if ITLSProtocol.providedBy(self.wrappedProtocol):
+        if self._handshaking and ITLSProtocol.providedBy(self.wrappedProtocol):
+            self._handshaking = False
             self.wrappedProtocol.handshakeCompleted()
 
 
