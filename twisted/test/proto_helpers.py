@@ -45,12 +45,14 @@ class AccumulatingProtocol(protocol.Protocol):
     """
     made = closed = 0
     closedReason = None
-
     closedDeferred = None
-
     data = b""
-
     factory = None
+    handshook = False
+
+    def handshakeCompleted(self):
+        self.handshook = True
+
 
     def connectionMade(self):
         self.made = 1
