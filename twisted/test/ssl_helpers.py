@@ -154,9 +154,8 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None,
                                         # method=SSL.TLSv1_METHOD
     )
     clientOpts.getContext()
-    c, s, p = pumpTLS(clientOpts, serverOpts, clientProtocol, serverProtocol,
-                      debug=debug, kickoff=kickoff)
-    return c, s, p
+    return pumpTLS(clientOpts, serverOpts, clientProtocol, serverProtocol,
+                   debug=debug, kickoff=kickoff)
 
 
 
