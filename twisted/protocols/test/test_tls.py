@@ -370,42 +370,42 @@ class TLSMemoryBIOTests(TestCase):
         self.assertEquals(c.wrappedProtocol.handshook, False)
 
 
-    # def test_getPeerCertificate(self):
-    #     """
-    #     L{TLSMemoryBIOProtocol.getPeerCertificate} returns the
-    #     L{OpenSSL.crypto.X509Type} instance representing the peer's
-    #     certificate.
-    #     """
-    #     # Set up a client and server so there's a certificate to grab.
-    #     clientFactory = ClientFactory()
-    #     clientFactory.protocol = Protocol
+    def test_getPeerCertificate(self):
+        """
+        L{TLSMemoryBIOProtocol.getPeerCertificate} returns the
+        L{OpenSSL.crypto.X509Type} instance representing the peer's
+        certificate.
+        """
+        # Set up a client and server so there's a certificate to grab.
+        clientFactory = ClientFactory()
+        clientFactory.protocol = Protocol
 
-    #     clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
-    #     wrapperFactory = TLSMemoryBIOFactory(
-    #         clientContextFactory, True, clientFactory)
-    #     sslClientProtocol = wrapperFactory.buildProtocol(None)
-    #     handshakeDeferred = sslClientProtocol.whenHandshakeDone()
+        clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
+        wrapperFactory = TLSMemoryBIOFactory(
+            clientContextFactory, True, clientFactory)
+        sslClientProtocol = wrapperFactory.buildProtocol(None)
+        handshakeDeferred = sslClientProtocol.whenHandshakeDone()
 
-    #     serverFactory = ServerFactory()
-    #     serverFactory.protocol = Protocol
+        serverFactory = ServerFactory()
+        serverFactory.protocol = Protocol
 
-    #     serverContextFactory = ServerTLSContext()
-    #     wrapperFactory = TLSMemoryBIOFactory(
-    #         serverContextFactory, False, serverFactory)
-    #     sslServerProtocol = wrapperFactory.buildProtocol(None)
+        serverContextFactory = ServerTLSContext()
+        wrapperFactory = TLSMemoryBIOFactory(
+            serverContextFactory, False, serverFactory)
+        sslServerProtocol = wrapperFactory.buildProtocol(None)
 
-    #     loopbackAsync(sslServerProtocol, sslClientProtocol)
+        loopbackAsync(sslServerProtocol, sslClientProtocol)
 
-    #     # Wait for the handshake
-    #     def cbHandshook(ignored):
-    #         # Grab the server's certificate and check it out
-    #         cert = sslClientProtocol.getPeerCertificate()
-    #         self.assertIsInstance(cert, X509Type)
-    #         self.assertEqual(
-    #             cert.digest('md5'),
-    #             b'9B:A4:AB:43:10:BE:82:AE:94:3E:6B:91:F2:F3:40:E8')
-    #     handshakeDeferred.addCallback(cbHandshook)
-    #     return handshakeDeferred
+        # Wait for the handshake
+        def cbHandshook(ignored):
+            # Grab the server's certificate and check it out
+            cert = sslClientProtocol.getPeerCertificate()
+            self.assertIsInstance(cert, X509Type)
+            self.assertEqual(
+                cert.digest('md5'),
+                b'9B:A4:AB:43:10:BE:82:AE:94:3E:6B:91:F2:F3:40:E8')
+        handshakeDeferred.addCallback(cbHandshook)
+        return handshakeDeferred
 
 
     # def test_writeAfterHandshake(self):
