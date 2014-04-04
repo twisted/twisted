@@ -24,19 +24,19 @@ from twisted.internet import interfaces
 
 class TLSNegotiation:
     def __init__(self, obj, connectState):
-        self.obj = obj
+        self._obj = obj
         self.connectState = connectState
         self.sent = False
         self.readyToSend = connectState
 
     def __repr__(self):
-        return 'TLSNegotiation(%r)' % (self.obj,)
+        return 'TLSNegotiation(%r)' % (self._obj,)
 
     def pretendToVerify(self, other, tpt):
         # Set the transport problems list here?  disconnections?
         # hmmmmm... need some negative path tests.
 
-        if not self.obj.iosimVerify(other.obj):
+        if not self._obj.iosimVerify(other._obj):
             tpt.disconnectReason = NativeOpenSSLError()
             tpt.loseConnection()
 
@@ -67,13 +67,13 @@ class FakeTransport(StringTransportWithDisconnection):
 
     _nextserial = staticmethod(lambda counter=itertools.count(): next(counter))
     _aborting = True
-    closed = 0
+    _disconnectionReported = False
     disconnecting = 0
     disconnected = 0
     disconnectReason = error.ConnectionDone("Connection done")
     producer = None
     streamingProducer = 0
-    tls = None
+    _tls = None
 
     def __init__(self, protocol, isServer, hostAddress=None, peerAddress=None):
         """
@@ -111,8 +111,8 @@ class FakeTransport(StringTransportWithDisconnection):
 
 
     def write(self, data):
-        if self.tls is not None:
-            self.tlsbuf.append(data)
+        if self._tls is not None:
+            self._tlsbuf.append(data)
         else:
             self._stream.append(data)
 
@@ -140,18 +140,24 @@ class FakeTransport(StringTransportWithDisconnection):
     def writeSequence(self, iovec):
         self.write("".join(iovec))
 
+
     def loseConnection(self):
         self.disconnecting = True
 
+
     def abortConnection(self):
-        self._aborting = True
+        self._aborted = True
+        self.loseConnection()
+
 
     def reportDisconnect(self):
-        if self.tls is not None:
+        self.disconnecting = True
+        if self._tls is not None:
             # We were in the middle of negotiating!  Must have been a TLS problem.
             err = NativeOpenSSLError()
         else:
             err = self.disconnectReason
+        self._disconnectionReported = True
         self.protocol.connectionLost(Failure(err))
 
     def logPrefix(self):
@@ -160,30 +166,13 @@ class FakeTransport(StringTransportWithDisconnection):
         """
         return "iosim"
 
-    def getPeer(self):
-        return self.peerAddress
-
-    def getHost(self):
-        return self.hostAddress
-
-    def resumeProducing(self):
-        # Never sends data anyways
-        pass
-
-    def pauseProducing(self):
-        # Never sends data anyways
-        pass
-
-    def stopProducing(self):
-        self.loseConnection()
-
     def startTLS(self, contextFactory, beNormal=True):
         # Nothing's using this feature yet, but startTLS has an undocumented
         # second argument which defaults to true; if set to False, servers will
         # behave like clients and clients will behave like servers.
         connectState = self.isServer ^ beNormal
-        self.tls = TLSNegotiation(contextFactory, connectState)
-        self.tlsbuf = []
+        self._tls = TLSNegotiation(contextFactory, connectState)
+        self._tlsbuf = []
 
 
     def getOutBuffer(self):
@@ -198,11 +187,11 @@ class FakeTransport(StringTransportWithDisconnection):
         if S:
             self._stream = []
             return b''.join(S)
-        elif self.tls is not None:
-            if self.tls.readyToSend:
+        elif self._tls is not None:
+            if self._tls.readyToSend:
                 # Only _send_ the TLS negotiation "packet" if I'm ready to.
-                self.tls.sent = True
-                return self.tls
+                self._tls.sent = True
+                return self._tls
             else:
                 return None
         else:
@@ -210,21 +199,23 @@ class FakeTransport(StringTransportWithDisconnection):
 
 
     def bufferReceived(self, buf):
+        if self._disconnectionReported:
+            return
         if isinstance(buf, TLSNegotiation):
-            assert self.tls is not None # By the time you're receiving a
+            assert self._tls is not None # By the time you're receiving a
                                         # negotiation, you have to have called
                                         # startTLS already.
-            if self.tls.sent:
-                self.tls.pretendToVerify(buf, self)
-                self.tls = None # we're done with the handshake if we've gotten
+            if self._tls.sent:
+                self._tls.pretendToVerify(buf, self)
+                self._tls = None # we're done with the handshake if we've gotten
                                 # this far... although maybe it failed...?
                 # TLS started!  Unbuffer...
-                b, self.tlsbuf = self.tlsbuf, None
+                b, self._tlsbuf = self._tlsbuf, None
                 self.writeSequence(b)
                 directlyProvides(self, interfaces.ISSLTransport)
             else:
                 # We haven't sent our own TLS negotiation: time to do that!
-                self.tls.readyToSend = True
+                self._tls.readyToSend = True
         else:
             self.protocol.dataReceived(buf)
 
@@ -331,14 +322,12 @@ class IOPump(object):
             if debug:
                 print('* C')
             self.serverIO.disconnected = True
-            self.clientIO.disconnecting = True
             self.clientIO.reportDisconnect()
             return True
         if self.clientIO.disconnecting and not self.clientIO.disconnected:
             if debug:
                 print('* S')
             self.clientIO.disconnected = True
-            self.serverIO.disconnecting = True
             self.serverIO.reportDisconnect()
             return True
         return False
