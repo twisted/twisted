@@ -58,8 +58,7 @@ def buildTLSProtocol(server=False, transport=None):
     """
     # We want to accumulate bytes without disconnecting, so set high limit:
     clientProtocol = AccumulatingProtocol()
-    clientFactory = ClientFactory()
-    clientFactory.protocol = lambda: clientProtocol
+    clientFactory = Factory.forProtocol(lambda: clientProtocol)
 
     if server:
         contextFactory = ServerTLSContext()
@@ -197,9 +196,7 @@ class TLSMemoryBIOTests(TestCase):
         the protocol it wraps to a transport.
         """
         clientProtocol = Protocol()
-        clientFactory = ClientFactory()
-        clientFactory.protocol = lambda: clientProtocol
-
+        clientFactory = Factory.forProtocol(lambda: clientProtocol)
         contextFactory = ClientTLSContext()
         wrapperFactory = TLSMemoryBIOFactory(
             contextFactory, True, clientFactory)
@@ -220,10 +217,8 @@ class TLSMemoryBIOTests(TestCase):
         and disconnects the underlying transport.
         """
         clientConnectionLost = Deferred()
-        clientFactory = ClientFactory()
-        clientFactory.protocol = (
-            lambda: ConnectionLostNotifyingProtocol(
-                clientConnectionLost))
+        clientFactory = Factory.forProtocol(
+            lambda: ConnectionLostNotifyingProtocol(clientConnectionLost))
 
         clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
@@ -231,10 +226,8 @@ class TLSMemoryBIOTests(TestCase):
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
         serverConnectionLost = Deferred()
-        serverFactory = ServerFactory()
-        serverFactory.protocol = (
-            lambda: ConnectionLostNotifyingProtocol(
-                serverConnectionLost))
+        serverFactory = Factory.forProtocol(
+            lambda: ConnectionLostNotifyingProtocol(serverConnectionLost))
 
         # This context factory rejects any clients which do not present a
         # certificate.
@@ -358,11 +351,14 @@ class TLSMemoryBIOTests(TestCase):
                          b'9B:A4:AB:43:10:BE:82:AE:94:3E:6B:91:F2:F3:40:E8')
 
 
-    def writeBeforeHandshakeTest(self, sendingProtocol, octets):
+    def writeBeforeHandshakeTest(self, sendingProtocol, octets,
+                                 expected=None):
         """
         Run test where client sends data before handshake, given the sending
         protocol and expected bytes.
         """
+        if expected == None:
+            expected = octets
         clientFactory = Factory.forProtocol(sendingProtocol)
 
         wrapperFactory = TLSMemoryBIOFactory(CertificateOptions(), True,
@@ -370,8 +366,7 @@ class TLSMemoryBIOTests(TestCase):
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
         serverProtocol = AccumulatingProtocol()
-        serverFactory = ServerFactory()
-        serverFactory.protocol = lambda: serverProtocol
+        serverFactory = Factory.forProtocol(lambda: serverProtocol)
 
         serverContextFactory = ServerTLSContext()
         wrapperFactory = TLSMemoryBIOFactory(
@@ -381,7 +376,7 @@ class TLSMemoryBIOTests(TestCase):
         c, s, p = connectedServerAndClient(lambda: sslServerProtocol,
                                            lambda: sslClientProtocol)
 
-        self.assertEqual(serverProtocol.data, octets)
+        self.assertEqual(serverProtocol.data, expected)
 
 
     def test_writeAfterHandshake(self):
@@ -494,18 +489,14 @@ class TLSMemoryBIOTests(TestCase):
                 for b in octets:
                     self.transport.write(b)
 
-        clientFactory = ClientFactory()
-        clientFactory.protocol = SimpleSendingProtocol
-
+        clientFactory = Factory.forProtocol(SimpleSendingProtocol)
         clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
         serverProtocol = AccumulatingProtocol()
-        serverFactory = ServerFactory()
-        serverFactory.protocol = lambda: serverProtocol
-
+        serverFactory = Factory.forProtocol(lambda: serverProtocol)
         serverContextFactory = ServerTLSContext()
         wrapperFactory = TLSMemoryBIOFactory(
             serverContextFactory, False, serverFactory)
@@ -531,18 +522,14 @@ class TLSMemoryBIOTests(TestCase):
             def connectionMade(self):
                 self.transport.write(octets * factor)
 
-        clientFactory = ClientFactory()
-        clientFactory.protocol = SimpleSendingProtocol
-
+        clientFactory = Factory.forProtocol(SimpleSendingProtocol)
         clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
             clientContextFactory, True, clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
         serverProtocol = AccumulatingProtocol()
-        serverFactory = ServerFactory()
-        serverFactory.protocol = lambda: serverProtocol
-
+        serverFactory = Factory.forProtocol(lambda: serverProtocol)
         serverContextFactory = ServerTLSContext()
         wrapperFactory = TLSMemoryBIOFactory(
             serverContextFactory, False, serverFactory)
@@ -559,10 +546,8 @@ class TLSMemoryBIOTests(TestCase):
         reported to the application.
         """
         clientConnectionLost = Deferred()
-        clientFactory = ClientFactory()
-        clientFactory.protocol = (
-            lambda: ConnectionLostNotifyingProtocol(
-                clientConnectionLost))
+        clientFactory = Factory.forProtocol(
+            lambda: ConnectionLostNotifyingProtocol(clientConnectionLost))
 
         clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
