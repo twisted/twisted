@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_amp.TLSTest,twisted.test.test_iosim -*-
+# -*- test-case-name: twisted.test.test_amp.TLSTest,twisted.test.test_iosim,twisted.test.test_pb,twisted.protocols.test.test_tls -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -14,6 +14,7 @@ try:
     from OpenSSL.SSL import Error as NativeOpenSSLError
 except ImportError:
     pass
+from twisted.test.proto_helpers import StringTransportWithDisconnection
 
 from zope.interface import implementer, directlyProvides
 
@@ -41,7 +42,7 @@ class TLSNegotiation:
 
 
 
-implementer(interfaces.IAddress)
+@implementer(interfaces.IAddress)
 class FakeAddress(object):
     """
     The default address type for the host and peer of L{FakeTransport}
@@ -52,7 +53,7 @@ class FakeAddress(object):
 
 @implementer(interfaces.ITransport,
              interfaces.ITLSTransport)
-class FakeTransport:
+class FakeTransport(StringTransportWithDisconnection):
     """
     A wrapper around a file-like object to make it behave as a Transport.
 
@@ -65,6 +66,7 @@ class FakeTransport:
     """
 
     _nextserial = staticmethod(lambda counter=itertools.count(): next(counter))
+    _aborting = True
     closed = 0
     disconnecting = 0
     disconnected = 0
@@ -92,7 +94,7 @@ class FakeTransport:
         """
         self.protocol = protocol
         self.isServer = isServer
-        self.stream = []
+        self._stream = []
         self.serial = self._nextserial()
         if hostAddress is None:
             hostAddress = FakeAddress()
@@ -112,7 +114,7 @@ class FakeTransport:
         if self.tls is not None:
             self.tlsbuf.append(data)
         else:
-            self.stream.append(data)
+            self._stream.append(data)
 
     def _checkProducer(self):
         # Cheating; this is called at "idle" times to allow producers to be
@@ -124,7 +126,7 @@ class FakeTransport:
         """From abstract.FileDescriptor
         """
         self.producer = producer
-        self.streamingProducer = streaming
+        self._streamingProducer = streaming
         if not streaming:
             producer.resumeProducing()
 
@@ -140,6 +142,9 @@ class FakeTransport:
 
     def loseConnection(self):
         self.disconnecting = True
+
+    def abortConnection(self):
+        self._aborting = True
 
     def reportDisconnect(self):
         if self.tls is not None:
@@ -189,9 +194,9 @@ class FakeTransport:
         @return: the bytes written with C{transport.write}
         @rtype: L{bytes}
         """
-        S = self.stream
+        S = self._stream
         if S:
-            self.stream = []
+            self._stream = []
             return b''.join(S)
         elif self.tls is not None:
             if self.tls.readyToSend:
