@@ -30,6 +30,8 @@ from twisted.test.ssl_helpers import connectedTLSForTest
 from twisted.internet.interfaces import IProtocol
 from zope.interface.declarations import implementer
 from twisted.test.iosim import connectedServerAndClient
+from zope.interface.declarations import implementer_only
+from twisted.internet.protocol import Factory
 from twisted.test.proto_helpers import AccumulatingProtocol
 
 from twisted.python.filepath import FilePath
@@ -363,27 +365,15 @@ class TLSMemoryBIOTests(TestCase):
         it provides L{ITLSProtocol} will not have C{handshakeSucceeded} invoked
         upon it.
         """
-        @implementer(IProtocol)
-        class JustTheInterfacePlease(object):
+        @implementer_only(IProtocol)
+        class JustTheInterfacePlease(Protocol):
             handshook = False
-            def makeConnection(self, transport):
-                pass
-
-            def dataReceived(self, data):
-                pass
-
-            def connectionLost(self, reason):
-                pass
-
             def handshakeCompleted(self):
                 self.handshook = True
 
         c, s, pump = connectedTLSForTest(self,
                                          clientProtocol=JustTheInterfacePlease,
                                          serverProtocol=JustTheInterfacePlease)
-
-        # Handshake all the way.
-        pump.flush()
 
         self.assertEquals(c.wrappedProtocol.handshook, False)
         self.assertEquals(c.wrappedProtocol.handshook, False)
@@ -396,25 +386,19 @@ class TLSMemoryBIOTests(TestCase):
         certificate.
         """
         # Set up a client and server so there's a certificate to grab.
-        clientFactory = ClientFactory()
-        clientFactory.protocol = Protocol
-
+        clientFactory = Factory.forProtocol(Protocol)
         clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
-        wrapperFactory = TLSMemoryBIOFactory(
-            clientContextFactory, True, clientFactory)
+        wrapperFactory = TLSMemoryBIOFactory(clientContextFactory, True,
+                                             clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
-        serverFactory = ServerFactory()
-        serverFactory.protocol = Protocol
-
+        serverFactory = Factory.forProtocol(Protocol)
         serverContextFactory = ServerTLSContext()
-        wrapperFactory = TLSMemoryBIOFactory(
-            serverContextFactory, False, serverFactory)
+        wrapperFactory = TLSMemoryBIOFactory(serverContextFactory, False,
+                                             serverFactory)
         sslServerProtocol = wrapperFactory.buildProtocol(None)
 
-        # Wait for the handshake
         def cbHandshook():
-            # Grab the server's certificate and check it out
             cbHandshook.cert = sslClientProtocol.getPeerCertificate()
         cbHandshook.cert = None
         sslClientProtocol.wrappedProtocol.handshakeCompleted = cbHandshook
@@ -422,13 +406,9 @@ class TLSMemoryBIOTests(TestCase):
         c, s, p = connectedServerAndClient(lambda: sslServerProtocol,
                                            lambda: sslClientProtocol)
 
-        p.flush()
-
         self.assertIsInstance(cbHandshook.cert, X509Type)
-        self.assertEqual(
-            cbHandshook.cert.digest('md5'),
-            b'9B:A4:AB:43:10:BE:82:AE:94:3E:6B:91:F2:F3:40:E8'
-        )
+        self.assertEqual(cbHandshook.cert.digest('md5'),
+                         b'9B:A4:AB:43:10:BE:82:AE:94:3E:6B:91:F2:F3:40:E8')
 
 
     def writeBeforeHandshakeTest(self, sendingProtocol, octets):
@@ -470,8 +450,7 @@ class TLSMemoryBIOTests(TestCase):
         octets = b"some octets"
 
         clientProtocol = Protocol()
-        clientFactory = ClientFactory()
-        clientFactory.protocol = lambda: clientProtocol
+        clientFactory = Factory.forProtocol(lambda: clientProtocol)
 
         clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
         wrapperFactory = TLSMemoryBIOFactory(
@@ -479,8 +458,7 @@ class TLSMemoryBIOTests(TestCase):
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
         serverProtocol = AccumulatingProtocol()
-        serverFactory = ServerFactory()
-        serverFactory.protocol = lambda: serverProtocol
+        serverFactory = Factory.forProtocol(lambda: serverProtocol)
 
         serverContextFactory = ServerTLSContext()
         wrapperFactory = TLSMemoryBIOFactory(
@@ -669,22 +647,20 @@ class TLSMemoryBIOTests(TestCase):
         shuts down the underlying connection cleanly on both sides, after
         transmitting all buffered data.
         """
-        clientFactory = ClientFactory()
         clientProtocol = AccumulatingProtocol()
-        clientFactory.protocol = lambda: clientProtocol
+        clientFactory = Factory.forProtocol(lambda: clientProtocol)
 
         clientContextFactory = CertificateOptions(method=TLSv1_METHOD)
-        wrapperFactory = TLSMemoryBIOFactory(
-            clientContextFactory, True, clientFactory)
+        wrapperFactory = TLSMemoryBIOFactory(clientContextFactory, True,
+                                             clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
         serverProtocol = AccumulatingProtocol()
-        serverFactory = ServerFactory()
-        serverFactory.protocol = lambda: serverProtocol
+        serverFactory = Factory.forProtocol(lambda: serverProtocol)
 
         serverContextFactory = ServerTLSContext()
-        wrapperFactory = TLSMemoryBIOFactory(
-            serverContextFactory, False, serverFactory)
+        wrapperFactory = TLSMemoryBIOFactory(serverContextFactory, False,
+                                             serverFactory)
         sslServerProtocol = wrapperFactory.buildProtocol(None)
 
         chunkOfBytes = b"123456890" * 100000
