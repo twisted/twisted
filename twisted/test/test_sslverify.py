@@ -17,12 +17,12 @@ except ImportError:
     skipSSL = "OpenSSL is required for SSL tests."
 
 from twisted.python.constants import NamedConstant, Names
-from twisted.test.ssl_helpers import makeCertificate
-from twisted.test.ssl_helpers import certificatesForAuthorityAndServer
-from twisted.test.ssl_helpers import pathContainingDumpOf
-from twisted.test.ssl_helpers import loopbackTLSConnection
-from twisted.test.ssl_helpers import pumpTLS
-from twisted.internet.protocol import Protocol
+
+from twisted.test.ssl_helpers import (
+    makeCertificate, certificatesForAuthorityAndServer, pathContainingDumpOf,
+    loopbackTLSConnection, pumpTLS
+)
+
 from twisted.test.proto_helpers import AccumulatingProtocol
 from twisted.python.filepath import FilePath
 
