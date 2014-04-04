@@ -305,10 +305,8 @@ class TLSMemoryBIOTests(TestCase):
         clientConnectionLost.addCallback(cbConnectionLost)
         serverConnectionLost.addCallback(cbConnectionLost)
 
-        c, s, p = connectedServerAndClient(
-            lambda: sslServerProtocol,
-            lambda: sslClientProtocol
-        )
+        c, s, p = connectedServerAndClient(lambda: sslServerProtocol,
+                                           lambda: sslClientProtocol)
 
         # Additionally, the underlying transport should have been told to
         # go away.
@@ -421,10 +419,8 @@ class TLSMemoryBIOTests(TestCase):
         cbHandshook.cert = None
         sslClientProtocol.wrappedProtocol.handshakeCompleted = cbHandshook
 
-        c, s, p = connectedServerAndClient(
-            lambda: sslServerProtocol,
-            lambda: sslClientProtocol,
-        )
+        c, s, p = connectedServerAndClient(lambda: sslServerProtocol,
+                                           lambda: sslClientProtocol)
 
         p.flush()
 
@@ -459,10 +455,8 @@ class TLSMemoryBIOTests(TestCase):
             serverContextFactory, False, serverFactory)
         sslServerProtocol = wrapperFactory.buildProtocol(None)
 
-        c, s, p = connectedServerAndClient(
-            lambda: sslServerProtocol,
-            lambda: sslClientProtocol,
-        )
+        c, s, p = connectedServerAndClient(lambda: sslServerProtocol,
+                                           lambda: sslClientProtocol)
 
         self.assertEqual(serverProtocol.data, octets)
 
