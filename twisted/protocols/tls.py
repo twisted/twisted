@@ -466,11 +466,15 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
         self._flushReceiveBIO()
 
+    _tlsShuttingDown = False
 
     def _shutdownTLS(self):
         """
         Initiate, or reply to, the shutdown handshake of the TLS layer.
         """
+        if self._tlsShuttingDown:
+            return
+        self._tlsShuttingDown = True
         shutdownSuccess = self._tlsConnection.shutdown()
         self._flushSendBIO()
         if shutdownSuccess:

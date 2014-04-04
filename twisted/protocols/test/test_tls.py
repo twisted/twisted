@@ -14,7 +14,7 @@ from twisted.python.compat import intToBytes, iterbytes
 try:
     from OpenSSL.crypto import X509Type
     from OpenSSL.SSL import (TLSv1_METHOD, Error, ConnectionType,
-                             WantReadError, Context)
+                             WantReadError)
 except ImportError:
     # Skip the whole test module if it can't be imported.
     skip = "pyOpenSSL 0.10 or newer required for twisted.protocol.tls"
@@ -24,14 +24,15 @@ else:
     from twisted.protocols.tls import TLSMemoryBIOProtocol, TLSMemoryBIOFactory
     from twisted.protocols.tls import _PullToPush, _ProducerMembrane
     from twisted.internet.ssl import PrivateCertificate, CertificateOptions
-    from twisted.test.ssl_helpers import (ClientTLSContext, ServerTLSContext,
-                                          certPath)
-from twisted.test.ssl_helpers import connectedTLSForTest
+    from twisted.test.ssl_helpers import (
+        ClientTLSContext, ServerTLSContext, certPath, connectedTLSForTest,
+        makeCertificate
+    )
 from twisted.internet.interfaces import IProtocol
-from zope.interface.declarations import implementer
 from twisted.test.iosim import connectedServerAndClient
 from zope.interface.declarations import implementer_only
 from twisted.internet.protocol import Factory
+from twisted.internet._sslverify import Certificate
 from twisted.test.proto_helpers import AccumulatingProtocol
 
 from twisted.python.filepath import FilePath
@@ -352,16 +353,14 @@ class TLSMemoryBIOTests(TestCase):
 
 
     def writeBeforeHandshakeTest(self, sendingProtocol, octets,
-                                 expected=None):
+                                 clientContextFactory=CertificateOptions()):
         """
         Run test where client sends data before handshake, given the sending
         protocol and expected bytes.
         """
-        if expected == None:
-            expected = octets
         clientFactory = Factory.forProtocol(sendingProtocol)
 
-        wrapperFactory = TLSMemoryBIOFactory(CertificateOptions(), True,
+        wrapperFactory = TLSMemoryBIOFactory(clientContextFactory, True,
                                              clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
@@ -369,14 +368,14 @@ class TLSMemoryBIOTests(TestCase):
         serverFactory = Factory.forProtocol(lambda: serverProtocol)
 
         serverContextFactory = ServerTLSContext()
-        wrapperFactory = TLSMemoryBIOFactory(
-            serverContextFactory, False, serverFactory)
+        wrapperFactory = TLSMemoryBIOFactory(serverContextFactory, False,
+                                             serverFactory)
         sslServerProtocol = wrapperFactory.buildProtocol(None)
 
         c, s, p = connectedServerAndClient(lambda: sslServerProtocol,
                                            lambda: sslClientProtocol)
 
-        self.assertEqual(serverProtocol.data, expected)
+        self.assertEqual(serverProtocol.data, octets)
 
 
     def test_writeAfterHandshake(self):
@@ -429,6 +428,40 @@ class TLSMemoryBIOTests(TestCase):
                 self.transport.write(bytes)
 
         self.writeBeforeHandshakeTest(SimpleSendingProtocol, bytes)
+
+
+    def test_writeBeforeHandshake_verifyFail(self):
+        """
+        Bytes written to L{TLSMemoryBIOProtocol} before the handshake is
+        complete are I{not} received by the protocol on the other side of the
+        connection if the handshake fails due to certificate verification.
+        """
+        bytes = b"some bytes"
+        class SimpleSendingProtocol(Protocol):
+            def connectionMade(self):
+                self.transport.write(bytes)
+        key, x509 = makeCertificate()
+        self.writeBeforeHandshakeTest(
+            SimpleSendingProtocol, b'',
+            clientContextFactory=CertificateOptions(
+                trustRoot=Certificate(x509)
+            )
+        )
+
+
+    def test_writeBeforeHandshake_handshakeCompleteLoses(self):
+        """
+        Bytes written to L{TLSMemoryBIOProtocol} before the handshake is
+        complete are I{not} received by the protocol on the other side fo the
+        connection if the C{handshakeCompleted} callback drops the connection.
+        """
+        class NotSoSimpleSendingProtocol(Protocol):
+            def connectionMade(self):
+                self.transport.write(b"cheerio")
+
+            def handshakeCompleted(self):
+                self.transport.loseConnection()
+        self.writeBeforeHandshakeTest(NotSoSimpleSendingProtocol, b'')
 
 
     def test_writeSequence(self):
