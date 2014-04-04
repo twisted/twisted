@@ -452,13 +452,12 @@ class TLSMemoryBIOTests(TestCase):
     def test_writeBeforeHandshake_handshakeCompleteLoses(self):
         """
         Bytes written to L{TLSMemoryBIOProtocol} before the handshake is
-        complete are I{not} received by the protocol on the other side fo the
+        complete are I{not} received by the protocol on the other side of the
         connection if the C{handshakeCompleted} callback drops the connection.
         """
         class NotSoSimpleSendingProtocol(Protocol):
             def connectionMade(self):
                 self.transport.write(b"cheerio")
-
             def handshakeCompleted(self):
                 self.transport.loseConnection()
         self.writeBeforeHandshakeTest(NotSoSimpleSendingProtocol, b'')

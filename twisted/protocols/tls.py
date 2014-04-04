@@ -46,21 +46,24 @@ try:
 except TypeError as e:
     if str(e) != "argument must be an int, or have a fileno() method.":
         raise
-    raise ImportError("twisted.protocols.tls requires pyOpenSSL 0.10 or newer.")
+    raise ImportError(
+        "twisted.protocols.tls requires pyOpenSSL 0.10 or newer."
+    )
 
 from zope.interface import implementer, providedBy, directlyProvides
 
 from twisted.python.compat import unicode
 from twisted.python.failure import Failure
 from twisted.python import log
-from twisted.internet.interfaces import ITLSProtocol
 from twisted.python.reflect import safe_str
-from twisted.internet.interfaces import ISystemHandle, ISSLTransport
-from twisted.internet.interfaces import IPushProducer, ILoggingContext
-from twisted.internet import defer
+
+from twisted.internet.interfaces import (
+    ISystemHandle, ISSLTransport, IPushProducer, ILoggingContext, ITLSProtocol)
+
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import cooperate
+
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 
 
