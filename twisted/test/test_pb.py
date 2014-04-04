@@ -8,7 +8,6 @@ TODO: update protocol level tests to use new connection API, leaving
 only specific tests for old API.
 """
 
-# issue1195 TODOs: replace pump.pump() with something involving Deferreds.
 # Clean up warning suppression.
 
 import sys, os, time, gc, weakref
@@ -25,6 +24,8 @@ from twisted.protocols.policies import WrappingFactory
 from twisted.python import failure, log
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.cred import portal, checkers, credentials
+from twisted.test.iosim import connectedServerAndClient
+
 
 
 class Dummy(pb.Viewable):
@@ -53,69 +54,8 @@ class DummyRealm(object):
                 return iface, DummyPerspective(avatarId), lambda: None
 
 
-class IOPump:
-    """
-    Utility to pump data between clients and servers for protocol testing.
 
-    Perhaps this is a utility worthy of being in protocol.py?
-    """
-    def __init__(self, client, server, clientIO, serverIO):
-        self.client = client
-        self.server = server
-        self.clientIO = clientIO
-        self.serverIO = serverIO
-
-
-    def flush(self):
-        """
-        Pump until there is no more input or output or until L{stop} is called.
-        This does not run any timers, so don't use it with any code that calls
-        reactor.callLater.
-        """
-        # failsafe timeout
-        self._stop = False
-        timeout = time.time() + 5
-        while not self._stop and self.pump():
-            if time.time() > timeout:
-                return
-
-
-    def stop(self):
-        """
-        Stop a running L{flush} operation, even if data remains to be
-        transferred.
-        """
-        self._stop = True
-
-
-    def pump(self):
-        """
-        Move data back and forth.
-
-        Returns whether any data was moved.
-        """
-        self.clientIO.seek(0)
-        self.serverIO.seek(0)
-        cData = self.clientIO.read()
-        sData = self.serverIO.read()
-        self.clientIO.seek(0)
-        self.serverIO.seek(0)
-        self.clientIO.truncate()
-        self.serverIO.truncate()
-        self.client.transport._checkProducer()
-        self.server.transport._checkProducer()
-        for byte in cData:
-            self.server.dataReceived(byte)
-        for byte in sData:
-            self.client.dataReceived(byte)
-        if cData or sData:
-            return 1
-        else:
-            return 0
-
-
-
-def connectedServerAndClient(realm=None):
+def connectedBrokers(realm=None, **kw):
     """
     Connect a client and server L{Broker} together with an L{IOPump}
 
@@ -129,14 +69,9 @@ def connectedServerAndClient(realm=None):
     factory = pb.PBServerFactory(portal.Portal(realm, [checker]))
     serverBroker = factory.buildProtocol(('127.0.0.1',))
 
-    clientTransport = StringIO()
-    serverTransport = StringIO()
-    clientBroker.makeConnection(protocol.FileWrapper(clientTransport))
-    serverBroker.makeConnection(protocol.FileWrapper(serverTransport))
-    pump = IOPump(clientBroker, serverBroker, clientTransport, serverTransport)
-    # Challenge-response authentication:
-    pump.flush()
-    return clientBroker, serverBroker, pump
+    return connectedServerAndClient(lambda: serverBroker, lambda: clientBroker,
+                                    **kw)
+
 
 
 class SimpleRemote(pb.Referenceable):
@@ -543,7 +478,7 @@ class BrokerTestCase(unittest.TestCase):
         self.fail("This should cause an error, not %s" % (result,))
 
     def test_reference(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
 
         class X(pb.Referenceable):
             def remote_catch(self,arg):
@@ -567,7 +502,7 @@ class BrokerTestCase(unittest.TestCase):
         self.assertEqual(y.remoteMethod('throw'), y.remoteMethod('throw'))
 
     def test_result(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         for x, y in (c, s), (s, c):
             # test reflexivity
             foo = SimpleRemote()
@@ -590,22 +525,23 @@ class BrokerTestCase(unittest.TestCase):
     def test_tooManyRefs(self):
         l = []
         e = []
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         foo = NestedRemote()
         s.setNameForLocal("foo", foo)
         x = c.remoteForName("foo")
         for igno in xrange(pb.MAX_BROKER_REFS + 10):
-            if s.transport.closed or c.transport.closed:
+            if s.transport.disconnecting or c.transport.disconnecting:
                 break
             x.callRemote("getSimple").addCallbacks(l.append, e.append)
             pump.pump()
         expected = (pb.MAX_BROKER_REFS - 1)
-        self.assertTrue(s.transport.closed, "transport was not closed")
+        self.assertTrue(s.transport.disconnecting,
+                        "transport was not disconnecting")
         self.assertEqual(len(l), expected,
                           "expected %s got %s" % (expected, len(l)))
 
     def test_copy(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         foo = NestedCopy()
         s.setNameForLocal("foo", foo)
         x = c.remoteForName("foo")
@@ -618,7 +554,7 @@ class BrokerTestCase(unittest.TestCase):
         self.assertEqual(self.thunkResult.z[0], 'test')
 
     def test_observe(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
 
         # this is really testing the comparison between remote objects, to make
         # sure that you can *UN*observe when you have an observer architecture.
@@ -638,7 +574,7 @@ class BrokerTestCase(unittest.TestCase):
         self.assertEqual(b.obj, 1, 'notified too much')
 
     def test_defer(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         d = DeferredRemote()
         s.setNameForLocal("d", d)
         e = c.remoteForName("d")
@@ -654,7 +590,7 @@ class BrokerTestCase(unittest.TestCase):
 
 
     def test_refcount(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         foo = NestedRemote()
         s.setNameForLocal("foo", foo)
         bar = c.remoteForName("foo")
@@ -681,7 +617,7 @@ class BrokerTestCase(unittest.TestCase):
         self.assertNotIn(rluid, s.localObjects)
 
     def test_cache(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         obj = NestedCache()
         obj2 = NestedComplicatedCache()
         vcc = obj2.c
@@ -755,7 +691,7 @@ class BrokerTestCase(unittest.TestCase):
             os.unlink('None-None-TESTING.pub') # from RemotePublished.getFileName
         except OSError:
             pass # Sometimes it's not there.
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         foo = GetPublisher()
         # foo.pub.timestamp = 1.0
         s.setNameForLocal("foo", foo)
@@ -769,7 +705,7 @@ class BrokerTestCase(unittest.TestCase):
         self.assertEqual(obj.yayIGotPublished, 1)
         # timestamp's dirty, we don't have a cache file
         self.assertEqual(obj._wasCleanWhenLoaded, 0)
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         s.setNameForLocal("foo", foo)
         bar = c.remoteForName("foo")
         bar.callRemote('getPub').addCallbacks(accum.append, self.thunkErrorBad)
@@ -783,7 +719,7 @@ class BrokerTestCase(unittest.TestCase):
 
 
     def test_factoryCopy(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         ID = 99
         obj = NestedCopy()
         s.setNameForLocal("foo", obj)
@@ -852,7 +788,7 @@ class PagingTestCase(unittest.TestCase):
         Test L{util.StringPager}, passing a callback to fire when all pages
         are sent.
         """
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         s.setNameForLocal("foo", Pagerizer(finishedCallback, 'hello', value=10))
         x = c.remoteForName("foo")
         l = []
@@ -871,7 +807,7 @@ class PagingTestCase(unittest.TestCase):
         """
         Test L{util.StringPager} without a callback.
         """
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         s.setNameForLocal("foo", Pagerizer(None))
         x = c.remoteForName("foo")
         l = []
@@ -889,7 +825,7 @@ class PagingTestCase(unittest.TestCase):
         filenameEmpty = self.mktemp()
         fd = file(filenameEmpty, 'w')
         fd.close()
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         pagerizer = FilePagerizer(filenameEmpty, None)
         s.setNameForLocal("bar", pagerizer)
         x = c.remoteForName("bar")
@@ -910,7 +846,7 @@ class PagingTestCase(unittest.TestCase):
         Test L{util.FilePager}, passing a callback to fire when all pages
         are sent, and verify that the pager doesn't keep chunks in memory.
         """
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         pagerizer = FilePagerizer(self.filename, finishedCallback,
                                   'frodo', value = 9)
         s.setNameForLocal("bar", pagerizer)
@@ -932,7 +868,7 @@ class PagingTestCase(unittest.TestCase):
         """
         Test L{util.FilePager} without a callback.
         """
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         pagerizer = FilePagerizer(self.filename, None)
         s.setNameForLocal("bar", pagerizer)
         x = c.remoteForName("bar")
@@ -989,7 +925,7 @@ class DisconnectionTestCase(unittest.TestCase):
         self.objectCallback = 1
 
     def test_badSerialization(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         pump.pump()
         s.setNameForLocal("o", BadCopySet())
         g = c.remoteForName("o")
@@ -999,7 +935,7 @@ class DisconnectionTestCase(unittest.TestCase):
         self.assertEqual(len(l), 1)
 
     def test_disconnection(self):
-        c, s, pump = connectedServerAndClient()
+        c, s, pump = connectedBrokers()
         pump.pump()
         s.setNameForLocal("o", SimpleRemote())
 
@@ -1183,8 +1119,8 @@ class NewCredLeakTests(unittest.TestCase):
         def setMindRef(mind):
             self.mindRef = weakref.ref(mind)
 
-        clientBroker, serverBroker, pump = connectedServerAndClient(
-                LeakyRealm(setMindRef))
+        clientBroker, serverBroker, pump = connectedBrokers(
+            LeakyRealm(setMindRef))
 
         # log in from the client
         connectionBroken = []
@@ -1196,9 +1132,8 @@ class NewCredLeakTests(unittest.TestCase):
                     pb.respond(challenge, 'guest'), mind)
         d.addCallback(cbResponse)
         def connectionLost(_):
-            pump.stop() # don't try to pump data anymore - it won't work
             connectionBroken.append(1)
-            serverBroker.connectionLost(failure.Failure(RuntimeError("boom")))
+            serverBroker.transport.abortConnection()
         d.addCallback(connectionLost)
 
         # flush out the response and connectionLost
