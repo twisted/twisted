@@ -262,15 +262,16 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         unregistered.
     """
 
-    _reason = None
-    _handshaking = True
-    _lostTLSConnection = False
-    _writeBlockedOnRead = False
-    _producer = None
 
     def __init__(self, factory, wrappedProtocol, _connectWrapped=True):
         ProtocolWrapper.__init__(self, factory, wrappedProtocol)
         self._connectWrapped = _connectWrapped
+        self._preHandshakeWrites = []
+        self._reason = None
+        self._handshaking = True
+        self._lostTLSConnection = False
+        self._writeBlockedOnRead = False
+        self._producer = None
 
 
     def getHandle(self):
@@ -360,8 +361,10 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         @type error: L{Failure} or L{NoneType}
         """
         if self._handshaking and ITLSProtocol.providedBy(self.wrappedProtocol):
-            self._handshaking = False
             self.wrappedProtocol.handshakeCompleted()
+            self._handshaking = False
+            for data in self._preHandshakeWrites:
+                self.write(data)
 
 
     def _flushSendBIO(self):
@@ -527,7 +530,14 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             self._shutdownTLS()
 
 
-    def write(self, bytes):
+    def abortConnection(self):
+        """
+        Abort the connection without sending a TLS close alert.
+        """
+        super(TLSMemoryBIOProtocol, self).abortConnection()
+
+
+    def write(self, data):
         """
         Process the given application bytes and send any resulting TLS traffic
         which arrives in the send BIO.
@@ -535,14 +545,17 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         If C{loseConnection} was called, subsequent calls to C{write} will
         drop the bytes on the floor.
         """
-        if isinstance(bytes, unicode):
-            raise TypeError("Must write bytes to a TLS transport, not unicode.")
+        if self._handshaking:
+            self._preHandshakeWrites.append(data)
+            return
+        if isinstance(data, unicode):
+            raise TypeError("Must write data to a TLS transport, not unicode.")
         # Writes after loseConnection are not supported, unless a producer has
         # been registered, in which case writes can happen until the producer
         # is unregistered:
         if self.disconnecting and self._producer is None:
             return
-        self._write(bytes)
+        self._write(data)
 
 
     def _write(self, bytes):
