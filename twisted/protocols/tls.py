@@ -252,10 +252,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         C{False} if it has completed.
     @type _handshaking: L{bool}
 
-    @ivar _handshakeError: If the handshake failed, then this will store the
-        reason.  Otherwise it is C{None}.
-    @type _handshakeError: L{Failure} or L{NoneType}
-
     @ivar _reason: If an unexpected L{OpenSSL.SSL.Error} occurs which causes
         the connection to be lost, it is saved here.  If appropriate, this may
         be used as the reason passed to the application protocol's
@@ -268,7 +264,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
     _reason = None
     _handshaking = True
-    _handshakeError = None
     _lostTLSConnection = False
     _writeBlockedOnRead = False
     _producer = None
