@@ -51,59 +51,6 @@ from twisted.test.proto_helpers import StringTransport
 
 
 
-class HandshakeCallbackContextFactory(object):
-    """
-    L{HandshakeCallbackContextFactory} is a factory for SSL contexts which
-    allows applications to get notification when the SSL handshake completes.
-
-    @ivar _finished: A L{Deferred} which will be called back when the handshake
-        is done.
-    """
-
-    # pyOpenSSL needs to expose this.
-    # https://bugs.launchpad.net/pyopenssl/+bug/372832
-    SSL_CB_HANDSHAKE_DONE = 0x20
-
-    def __init__(self):
-        self._finished = Deferred()
-
-
-    def factoryAndDeferred(cls):
-        """
-        Create a new L{HandshakeCallbackContextFactory} and return a two-tuple
-        of it and a L{Deferred} which will fire when a connection created with
-        it completes a TLS handshake.
-        """
-        contextFactory = cls()
-        return contextFactory, contextFactory._finished
-    factoryAndDeferred = classmethod(factoryAndDeferred)
-
-
-    def _info(self, connection, where, ret):
-        """
-        This is the "info callback" on the context.  It will be called
-        periodically by pyOpenSSL with information about the state of a
-        connection.  When it indicates the handshake is complete, it will fire
-        C{self._finished}.
-        """
-        if where & self.SSL_CB_HANDSHAKE_DONE:
-            self._finished.callback(None)
-
-
-    def getContext(self):
-        """
-        Create and return an SSL context configured to use L{self._info} as the
-        info callback.
-        """
-        context = Context(TLSv1_METHOD)
-        context.set_info_callback(self._info)
-        return context
-
-
-
-
-
-
 def buildTLSProtocol(server=False, transport=None):
     """
     Create a protocol hooked up to a TLS transport hooked up to a
@@ -416,14 +363,10 @@ class TLSMemoryBIOTests(TestCase):
         Run test where client sends data before handshake, given the sending
         protocol and expected bytes.
         """
-        clientFactory = ClientFactory()
-        clientFactory.protocol = sendingProtocol
+        clientFactory = Factory.forProtocol(sendingProtocol)
 
-        clientContextFactory, handshakeDeferred = (
-            HandshakeCallbackContextFactory.factoryAndDeferred()
-        )
-        wrapperFactory = TLSMemoryBIOFactory(
-            clientContextFactory, True, clientFactory)
+        wrapperFactory = TLSMemoryBIOFactory(CertificateOptions(), True,
+                                             clientFactory)
         sslClientProtocol = wrapperFactory.buildProtocol(None)
 
         serverProtocol = AccumulatingProtocol()
