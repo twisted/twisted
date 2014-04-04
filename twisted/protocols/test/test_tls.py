@@ -569,6 +569,7 @@ class TLSMemoryBIOTests(TestCase):
 
         connectedServerAndClient(lambda: sslServerProtocol,
                                  lambda: sslClientProtocol)
+        self.assertEqual(len(serverProtocol.data), len(octets * factor))
         self.assertEqual(serverProtocol.data, octets * factor)
 
 
