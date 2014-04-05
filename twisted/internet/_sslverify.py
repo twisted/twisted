@@ -1094,7 +1094,7 @@ class OpenSSLCertificateOptions(object):
             def info_callback(connection, where, ret):
                 if where & SSL.SSL_CB_HANDSHAKE_START:
                     connection.set_tlsext_host_name(
-                        self.hostname.encode("ascii")
+                        self.hostname.encode("idna")
                     )
 
                 from service_identity import verify_hostname, VerificationError
