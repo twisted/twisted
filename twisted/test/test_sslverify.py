@@ -109,7 +109,7 @@ def makeCertificate(**kw):
 
 
 
-def certificatesForAuthorityAndServer():
+def certificatesForAuthorityAndServer(commonName=b'example.com'):
     """
     Create a self-signed CA certificate and server certificate signed by
     the CA.
@@ -119,11 +119,11 @@ def certificatesForAuthorityAndServer():
     @rtype: L{tuple} of (L{sslverify.Certificate},
         L{sslverify.PrivateCertificate})
     """
-    serverDN = sslverify.DistinguishedName(commonName='example.com')
+    serverDN = sslverify.DistinguishedName(commonName=commonName)
     serverKey = sslverify.KeyPair.generate()
     serverCertReq = serverKey.certificateRequest(serverDN)
 
-    caDN = sslverify.DistinguishedName(commonName='CA')
+    caDN = sslverify.DistinguishedName(commonName=b'CA')
     caKey= sslverify.KeyPair.generate()
     caCertReq = caKey.certificateRequest(caDN)
     caSelfCertData = caKey.signCertificateRequest(
@@ -1175,6 +1175,62 @@ class TrustRootTests(unittest.TestCase):
         self.assertIs(cProto.wrappedProtocol.lostReason, None)
         self.assertEqual(cProto.wrappedProtocol.data,
                          sProto.wrappedProtocol.greeting)
+
+
+
+class ServiceIdentityTests(unittest.TestCase):
+    """
+    Service identity.
+    """
+
+    def test_invalidHostname(self):
+        """
+        When a certificate containing an invalid hostname is received from the
+        server, the connection is immediately dropped.
+        """
+        from twisted.protocols.tls import TLSMemoryBIOFactory
+
+        caCert, serverCert = certificatesForAuthorityAndServer(
+            "wrong-host.example.com"
+        )
+        serverOpts = sslverify.OpenSSLCertificateOptions(
+            privateKey=serverCert.privateKey.original,
+            certificate=serverCert.original,
+        )
+        clientOpts = sslverify.OpenSSLCertificateOptions(
+            trustRoot=caCert,
+            hostname=u"correct-host.example.com"
+        )
+
+        class GreetingServer(protocol.Protocol):
+            greeting = b"greetings!"
+            def connectionMade(self):
+                self.transport.write(self.greeting)
+
+        class ListeningClient(protocol.Protocol):
+            data = b''
+            lostReason = None
+            def dataReceived(self, data):
+                self.data += data
+                def connectionLost(self, reason):
+                    self.lostReason = reason
+
+        clientFactory = TLSMemoryBIOFactory(
+            clientOpts, isClient=True,
+            wrappedFactory=protocol.Factory.forProtocol(GreetingServer)
+        )
+        serverFactory = TLSMemoryBIOFactory(
+            serverOpts, isClient=False,
+            wrappedFactory=protocol.Factory.forProtocol(ListeningClient)
+        )
+        cProto, sProto, pump = connectedServerAndClient(
+            lambda: clientFactory.buildProtocol(None),
+            lambda: serverFactory.buildProtocol(None)
+        )
+        # p.flush()
+        self.assertEqual(cProto.wrappedProtocol.data,
+                         b'')
+
 
 
 

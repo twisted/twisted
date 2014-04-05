@@ -836,7 +836,8 @@ class OpenSSLCertificateOptions(object):
                  extraCertChain=None,
                  acceptableCiphers=None,
                  dhParameters=None,
-                 trustRoot=None):
+                 trustRoot=None,
+                 hostname=None):
         """
         Create an OpenSSL context SSL connection context factory.
 
