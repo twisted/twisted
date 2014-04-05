@@ -1250,6 +1250,24 @@ class ServiceIdentityTests(unittest.TestCase):
         self.assertIsInstance(sErr, ConnectionClosed)
 
 
+    def test_validHostname(self):
+        """
+        Whenever a valid certificate containing a valid hostname is received,
+        connection proceeds normally.
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"valid.example.com",
+            u"valid.example.com",
+        )
+        self.assertEqual(cProto.wrappedProtocol.data,
+                         b'greetings!')
+
+        cErr = cProto.wrappedProtocol.lostReason
+        sErr = sProto.wrappedProtocol.lostReason
+        self.assertIdentical(cErr, None)
+        self.assertIdentical(sErr, None)
+
+
 
 class _NotSSLTransport:
     def getHandle(self):
