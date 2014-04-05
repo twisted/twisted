@@ -22,6 +22,7 @@ except ImportError:
 
 from twisted.test.iosim import connectedServerAndClient
 
+from twisted.internet.error import ConnectionClosed
 from twisted.python.compat import nativeString
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.filepath import FilePath
@@ -1176,11 +1177,6 @@ class TrustRootTests(unittest.TestCase):
         self.assertIs(cProto.wrappedProtocol.lostReason, None)
         self.assertEqual(cProto.wrappedProtocol.data,
                          sProto.wrappedProtocol.greeting)
-        cErr = cProto.wrappedProtocol.lostReason.value
-        sErr = sProto.wrappedProtocol.lostReason.value
-
-        self.assertIsInstance(SSL.Error, cErr)
-        self.assertIsInstance(SSL.Error, sErr)
 
 
 
@@ -1189,15 +1185,11 @@ class ServiceIdentityTests(unittest.TestCase):
     Service identity.
     """
 
-    def test_invalidHostname(self):
-        """
-        When a certificate containing an invalid hostname is received from the
-        server, the connection is immediately dropped.
-        """
+    def serviceIdentitySetup(self, clientHostname, serverHostname):
         from twisted.protocols.tls import TLSMemoryBIOFactory
 
         caCert, serverCert = certificatesForAuthorityAndServer(
-            "wrong-host.example.com"
+            serverHostname
         )
         serverOpts = sslverify.OpenSSLCertificateOptions(
             privateKey=serverCert.privateKey.original,
@@ -1205,21 +1197,24 @@ class ServiceIdentityTests(unittest.TestCase):
         )
         clientOpts = sslverify.OpenSSLCertificateOptions(
             trustRoot=caCert,
-            hostname=u"correct-host.example.com"
+            hostname=clientHostname,
         )
 
         class GreetingServer(protocol.Protocol):
             greeting = b"greetings!"
+            lostReason = None
             def connectionMade(self):
                 self.transport.write(self.greeting)
+            def connectionLost(self, reason):
+                self.lostReason = reason
 
         class ListeningClient(protocol.Protocol):
             data = b''
             lostReason = None
             def dataReceived(self, data):
                 self.data += data
-                def connectionLost(self, reason):
-                    self.lostReason = reason
+            def connectionLost(self, reason):
+                self.lostReason = reason
 
         clientFactory = TLSMemoryBIOFactory(
             clientOpts, isClient=True,
@@ -1229,14 +1224,30 @@ class ServiceIdentityTests(unittest.TestCase):
             serverOpts, isClient=False,
             wrappedFactory=protocol.Factory.forProtocol(ListeningClient)
         )
-        cProto, sProto, pump = connectedServerAndClient(
+        return connectedServerAndClient(
             lambda: clientFactory.buildProtocol(None),
             lambda: serverFactory.buildProtocol(None)
         )
-        # p.flush()
+
+
+    def test_invalidHostname(self):
+        """
+        When a certificate containing an invalid hostname is received from the
+        server, the connection is immediately dropped.
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"wrong-host.example.com",
+            u"correct-host.example.com",
+        )
         self.assertEqual(cProto.wrappedProtocol.data,
                          b'')
 
+        cErr = cProto.wrappedProtocol.lostReason.value
+        sErr = sProto.wrappedProtocol.lostReason.value
+
+        from service_identity import VerificationError
+        self.assertNotIdentical(cErr, VerificationError)
+        self.assertIsInstance(sErr, ConnectionClosed)
 
 
 
