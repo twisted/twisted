@@ -1172,9 +1172,15 @@ class TrustRootTests(unittest.TestCase):
             chainedCertFile=pathContainingDumpOf(self, serverCert),
         )
         pump.flush()
+        pump.flush()
         self.assertIs(cProto.wrappedProtocol.lostReason, None)
         self.assertEqual(cProto.wrappedProtocol.data,
                          sProto.wrappedProtocol.greeting)
+        cErr = cProto.wrappedProtocol.lostReason.value
+        sErr = sProto.wrappedProtocol.lostReason.value
+
+        self.assertIsInstance(SSL.Error, cErr)
+        self.assertIsInstance(SSL.Error, sErr)
 
 
 
