@@ -1092,6 +1092,11 @@ class OpenSSLCertificateOptions(object):
         ctx.set_verify(verifyFlags, _verifyCallback)
         if self.hostname is not None:
             def info_callback(connection, where, ret):
+                if where & SSL.SSL_CB_HANDSHAKE_START:
+                    connection.set_tlsext_host_name(
+                        self.hostname.encode("ascii")
+                    )
+
                 from service_identity import verify_hostname, VerificationError
                 if where & SSL.SSL_CB_HANDSHAKE_DONE:
                     try:

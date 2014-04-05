@@ -1283,14 +1283,14 @@ class ServiceIdentityTests(unittest.TestCase):
         names = []
         def setupServerContext(ctx):
             def servername_received(conn):
-                names.append(conn.get_servername())
+                names.append(conn.get_servername().decode("ascii"))
             ctx.set_tlsext_servername_callback(servername_received)
         cProto, sProto, pump = self.serviceIdentitySetup(
             u"valid.example.com",
             u"valid.example.com",
             setupServerContext
         )
-        self.assertEqual(names, u"valid.example.com")
+        self.assertEqual(names, [u"valid.example.com"])
 
 
 
