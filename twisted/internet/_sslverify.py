@@ -1077,11 +1077,17 @@ class OpenSSLCertificateOptions(object):
         ctx.set_verify(verifyFlags, _verifyCallback)
         if self.hostname is not None:
             def info_callback(connection, where, ret):
-                from service_identity import VerificationError
+                from service_identity import verify_hostname, VerificationError
                 if where & SSL.SSL_CB_HANDSHAKE_DONE:
-                    connection.get_app_data()._failVerification(
-                        Failure(VerificationError())
-                    )
+                    try:
+                        verify_hostname(
+                            connection.get_peer_certificate(),
+                            self.hostname,
+                        )
+                    except:
+                        connection.get_app_data()._failVerification(
+                            Failure(VerificationError())
+                        )
             ctx.set_info_callback(info_callback)
 
         if self.verifyDepth is not None:
