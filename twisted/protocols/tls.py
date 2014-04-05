@@ -294,6 +294,9 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         """
         tlsContext = self.factory._contextFactory.getContext()
         self._tlsConnection = Connection(tlsContext, None)
+        from twisted.internet.ssl import CertificateOptions
+        if isinstance(self.factory._contextFactory, CertificateOptions):
+            self._tlsConnection.set_app_data(self)
         if self.factory._isClient:
             self._tlsConnection.set_connect_state()
         else:
