@@ -487,6 +487,25 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             self._shutdownTLS()
 
 
+    def abortConnection(self):
+        """
+        Tear down TLS state so that if the connection is aborted mid-handshake
+        we don't deliver any further data from the application.
+        """
+        self.disconnecting = True
+        self._shutdownTLS()
+        self.transport.abortConnection()
+
+
+    def _failVerification(self, reason):
+        """
+        Cheating hook for CertificateOptions to sneak in a more descriptive
+        error about the connection failure.
+        """
+        self._reason = reason
+        self.abortConnection()
+
+
     def write(self, bytes):
         """
         Process the given application bytes and send any resulting TLS traffic

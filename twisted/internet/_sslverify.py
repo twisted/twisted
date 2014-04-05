@@ -18,6 +18,7 @@ from twisted.internet.interfaces import IAcceptableCiphers, ICipher
 from twisted.python import reflect, util
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 from twisted.python.compat import nativeString, networkString, unicode
+from twisted.python.failure import Failure
 from twisted.python.util import FancyEqMixin
 
 
@@ -1076,8 +1077,11 @@ class OpenSSLCertificateOptions(object):
         ctx.set_verify(verifyFlags, _verifyCallback)
         if self.hostname is not None:
             def info_callback(connection, where, ret):
+                from service_identity import VerificationError
                 if where & SSL.SSL_CB_HANDSHAKE_DONE:
-                    connection.shutdown()
+                    connection.get_app_data()._failVerification(
+                        Failure(VerificationError())
+                    )
             ctx.set_info_callback(info_callback)
 
         if self.verifyDepth is not None:
