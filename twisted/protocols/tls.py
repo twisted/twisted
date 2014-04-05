@@ -272,6 +272,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         self._lostTLSConnection = False
         self._writeBlockedOnRead = False
         self._producer = None
+        self._aborting = False
 
 
     def getHandle(self):
@@ -360,11 +361,18 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
             succeeded.
         @type error: L{Failure} or L{NoneType}
         """
-        if self._handshaking and ITLSProtocol.providedBy(self.wrappedProtocol):
-            self.wrappedProtocol.handshakeCompleted()
+        if self._handshaking:
+            if ITLSProtocol.providedBy(self.wrappedProtocol):
+                self.wrappedProtocol.handshakeCompleted()
             self._handshaking = False
+            if self._aborting:
+                return
+            shouldResume = True
             for data in self._preHandshakeWrites:
-                self.write(data)
+                writePaused = self._write(data)
+                shouldResume = shouldResume and not writePaused
+            if shouldResume and self._producer is not None:
+                self._producer.resumeProducing()
 
 
     def _flushSendBIO(self):
@@ -534,7 +542,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         """
         Abort the connection without sending a TLS close alert.
         """
-        super(TLSMemoryBIOProtocol, self).abortConnection()
+        self._aborting = True
+        return self.transport.abortConnection()
 
 
     def write(self, data):
@@ -545,15 +554,17 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         If C{loseConnection} was called, subsequent calls to C{write} will
         drop the bytes on the floor.
         """
-        if self._handshaking:
-            self._preHandshakeWrites.append(data)
-            return
         if isinstance(data, unicode):
             raise TypeError("Must write data to a TLS transport, not unicode.")
         # Writes after loseConnection are not supported, unless a producer has
         # been registered, in which case writes can happen until the producer
         # is unregistered:
         if self.disconnecting and self._producer is None:
+            return
+        if self._handshaking:
+            self._preHandshakeWrites.append(data)
+            if self._producer is not None:
+                self._producer.pauseProducing()
             return
         self._write(data)
 
@@ -585,7 +596,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
                 self._appSendBuffer.append(bytes[alreadySent:])
                 if self._producer is not None:
                     self._producer.pauseProducing()
-                break
+                    return True
+                return False
             except Error:
                 # Pretend TLS connection disconnected, which will trigger
                 # disconnect of underlying transport. The error will be passed
@@ -593,13 +605,14 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
                 # other SSL implementation doesn't, but losing helpful
                 # debugging information is a bad idea.
                 self._tlsShutdownFinished(Failure())
-                break
+                return False
             else:
                 # SSL_write can transparently complete a handshake.  If we get
                 # here, then we're done handshaking.
                 self._handshakeFinished()
                 self._flushSendBIO()
                 alreadySent += sent
+        return False
 
 
     def writeSequence(self, iovec):
