@@ -15,23 +15,47 @@ except ImportError:
     SSL_CB_HANDSHAKE_START = 0x10
     SSL_CB_HANDSHAKE_DONE = 0x20
 
-try:
-    from service_identity import verify_hostname, VerificationError
-except ImportError:
-    class VerificationError(Exception):
-        """
-        Not a very useful verification error.
-        """
 
-    def verify_hostname(peer_certificate, hostname):
-        """
-        Verify that a hostname matches.
-        """
-        commonName = peer_certificate.get_subject().commonName
-        hostname = hostname.encode("idna")
-        if commonName != hostname:
-            raise VerificationError(commonName + "!=" + hostname)
+class SimpleVerificationError(Exception):
+    """
+    Not a very useful verification error.
+    """
 
+
+def simple_verify_hostname(peer_certificate, hostname):
+    """
+    Check only the common name in the certificate and only for an exact match.
+
+    This is to provide I{something} in the way of hostname verification to
+    users who haven't upgraded past OpenSSL 0.12 or installed
+    C{service_identity}.  This check is overly strict, relies on a deprecated
+    TLS feature, and lots of valid CNs will fail.
+    """
+    commonName = peer_certificate.get_subject().commonName
+    hostname = hostname.encode("idna")
+    if commonName != hostname:
+        raise VerificationError(repr(commonName) + "!=" +
+                                repr(hostname))
+
+
+def _selectVerifyImplementation():
+    """
+    U{service_identity <https://pypi.python.org/pypi/service_identity>}
+    requires pyOpenSSL 0.12 or better but our dependency is still back at 0.10.
+    Determine if pyOpenSSL has the requisite feature, and whether
+    C{service_identity} is installed.  If so, use it.  If not, use simplistic
+    and incorrect checking as implemented in L{simple_verify_hostname}.
+    """
+    if hasattr(crypto.X509, "get_extension_count"):
+        try:
+            from service_identity import verify_hostname, VerificationError
+            return verify_hostname, VerificationError
+        except ImportError:
+            pass
+    return simple_verify_hostname, SimpleVerificationError
+
+
+verify_hostname, VerificationError = _selectVerifyImplementation()
 
 
 from zope.interface import Interface, implementer
@@ -1118,9 +1142,11 @@ class OpenSSLCertificateOptions(object):
         if self.hostname is not None:
             def info_callback(connection, where, ret):
                 if where & SSL_CB_HANDSHAKE_START:
-                    connection.set_tlsext_host_name(
-                        self.hostname.encode("idna")
+                    set_host_name = getattr(
+                        connection, "set_tlsext_host_name",
+                        lambda name: None
                     )
+                    set_host_name(self.hostname.encode("idna"))
                     return
                 if where & SSL_CB_HANDSHAKE_DONE:
                     try:
