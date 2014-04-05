@@ -9,6 +9,31 @@ import itertools
 from hashlib import md5
 
 from OpenSSL import SSL, crypto
+try:
+    from OpenSSL.SSL import SSL_CB_HANDSHAKE_DONE, SSL_CB_HANDSHAKE_START
+except ImportError:
+    SSL_CB_HANDSHAKE_START = 0x10
+    SSL_CB_HANDSHAKE_DONE = 0x20
+
+try:
+    from service_identity import verify_hostname, VerificationError
+except ImportError:
+    class VerificationError(Exception):
+        """
+        Not a very useful verification error.
+        """
+
+    def verify_hostname(peer_certificate, hostname):
+        """
+        Verify that a hostname matches.
+        """
+        commonName = peer_certificate.get_subject().commonName
+        hostname = hostname.encode("idna")
+        if commonName != hostname:
+            raise VerificationError(commonName + "!=" + hostname)
+
+
+
 from zope.interface import Interface, implementer
 
 from twisted.internet.defer import Deferred
@@ -1092,22 +1117,20 @@ class OpenSSLCertificateOptions(object):
         ctx.set_verify(verifyFlags, _verifyCallback)
         if self.hostname is not None:
             def info_callback(connection, where, ret):
-                if where & SSL.SSL_CB_HANDSHAKE_START:
+                if where & SSL_CB_HANDSHAKE_START:
                     connection.set_tlsext_host_name(
                         self.hostname.encode("idna")
                     )
-
-                from service_identity import verify_hostname, VerificationError
-                if where & SSL.SSL_CB_HANDSHAKE_DONE:
+                    return
+                if where & SSL_CB_HANDSHAKE_DONE:
                     try:
                         verify_hostname(
                             connection.get_peer_certificate(),
                             self.hostname,
                         )
                     except:
-                        connection.get_app_data()._failVerification(
-                            Failure(VerificationError())
-                        )
+                        transport = connection.get_app_data()
+                        transport._failVerification(Failure())
             ctx.set_info_callback(info_callback)
 
         if self.verifyDepth is not None:

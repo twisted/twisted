@@ -17,8 +17,13 @@ try:
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
     skipSSL = False
+    if hasattr(SSL.Context, "set_tlsext_servername_callback"):
+        skipSNI = False
+    else:
+        skipSNI = "PyOpenSSL 0.13 or greater required for SNI support."
 except ImportError:
     skipSSL = "OpenSSL is required for SSL tests."
+    skipSNI = skipSSL
 
 from twisted.test.iosim import connectedServerAndClient
 
@@ -34,7 +39,7 @@ from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
 
 if not skipSSL:
-    from twisted.internet.ssl import platformTrust
+    from twisted.internet.ssl import platformTrust, VerificationError
     from twisted.internet import _sslverify as sslverify
     from twisted.protocols.tls import TLSMemoryBIOFactory
 
@@ -1250,7 +1255,6 @@ class ServiceIdentityTests(unittest.TestCase):
         cErr = cProto.wrappedProtocol.lostReason.value
         sErr = sProto.wrappedProtocol.lostReason.value
 
-        from service_identity import VerificationError
         self.assertNotIdentical(cErr, VerificationError)
         self.assertIsInstance(sErr, ConnectionClosed)
 
@@ -1291,6 +1295,7 @@ class ServiceIdentityTests(unittest.TestCase):
             setupServerContext
         )
         self.assertEqual(names, [u"valid.example.com"])
+    test_hostnameIsIndicated.skip = skipSNI
 
 
     def test_hostnameEncoding(self):
@@ -1307,6 +1312,7 @@ class ServiceIdentityTests(unittest.TestCase):
             hello, hello, setupServerContext
         )
         self.assertEqual(names, [hello])
+    test_hostnameEncoding.skip = skipSNI
 
 
 
