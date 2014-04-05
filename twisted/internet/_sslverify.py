@@ -929,6 +929,21 @@ class OpenSSLCertificateOptions(object):
 
         @type trustRoot: L{IOpenSSLTrustRoot}
 
+        @param hostname: The expected name of the remote host.  This serves two
+            purposes: first, and most importantly, it verifies that the
+            certificate received from the server correctly identifies the
+            specified hostname.  Only clients should use this parameter, but
+            I{all} clients should pass this parameter.  A client which does
+            I{not} specify this parameter is not verifying the identity of the
+            host that it's communicating with, and, if using a general-purpose
+            set of trust roots such as L{platformTrust}, is therefore
+            vulnerable to nearly arbitrary man-in-the-middle attacks.  The
+            second purpose it serves is (if the local L{pyOpenSSL} supports it)
+            to use the U{Server Name Indication extension
+            <https://en.wikipedia.org/wiki/Server_Name_Indication>} to indicate
+            to the server which certificate should be used.
+        @type hostname: L{unicode}
+
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
         @raise ValueError: when C{verify} is L{True} but C{caCerts} doesn't
