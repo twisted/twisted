@@ -1022,6 +1022,7 @@ class OpenSSLCertificateOptions(object):
             self.requireCertificate = True
             trustRoot = IOpenSSLTrustRoot(trustRoot)
         self.trustRoot = trustRoot
+        self.hostname = hostname
 
 
     def __getstate__(self):
@@ -1073,6 +1074,11 @@ class OpenSSLCertificateOptions(object):
         def _verifyCallback(conn, cert, errno, depth, preverify_ok):
             return preverify_ok
         ctx.set_verify(verifyFlags, _verifyCallback)
+        if self.hostname is not None:
+            def info_callback(connection, where, ret):
+                if where & SSL.SSL_CB_HANDSHAKE_DONE:
+                    connection.shutdown()
+            ctx.set_info_callback(info_callback)
 
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)
