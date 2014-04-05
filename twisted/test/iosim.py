@@ -137,6 +137,15 @@ class FakeTransport:
     def loseConnection(self):
         self.disconnecting = True
 
+
+    def abortConnection(self):
+        """
+        For the time being, this is the same as loseConnection; no buffered
+        data will be lost.
+        """
+        self.disconnecting = True
+
+
     def reportDisconnect(self):
         if self.tls is not None:
             # We were in the middle of negotiating!  Must have been a TLS problem.
