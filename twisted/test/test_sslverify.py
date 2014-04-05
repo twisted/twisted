@@ -1190,7 +1190,7 @@ class ServiceIdentityTests(unittest.TestCase):
         from twisted.protocols.tls import TLSMemoryBIOFactory
 
         caCert, serverCert = certificatesForAuthorityAndServer(
-            serverHostname
+            serverHostname.encode("idna")
         )
         serverOpts = sslverify.OpenSSLCertificateOptions(
             privateKey=serverCert.privateKey.original,
@@ -1298,19 +1298,15 @@ class ServiceIdentityTests(unittest.TestCase):
         Hostnames are encoded as IDNA.
         """
         names = []
+        hello = u"h\N{LATIN SMALL LETTER A WITH ACUTE}llo.example.com"
         def setupServerContext(ctx):
             def servername_received(conn):
                 names.append(conn.get_servername().decode("idna"))
             ctx.set_tlsext_servername_callback(servername_received)
         cProto, sProto, pump = self.serviceIdentitySetup(
-            u"h\N{LATIN SMALL LETTER A WITH ACUTE}llo.example.com",
-            u"h\N{LATIN SMALL LETTER A WITH ACUTE}llo.example.com",
-            setupServerContext
+            hello, hello, setupServerContext
         )
-        self.assertEqual(
-            names,
-            [u"h\N{LATIN SMALL LETTER A WITH ACUTE}llo.example.com"]
-        )
+        self.assertEqual(names, [hello])
 
 
 
