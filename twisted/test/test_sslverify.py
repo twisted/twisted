@@ -1185,7 +1185,8 @@ class ServiceIdentityTests(unittest.TestCase):
     Service identity.
     """
 
-    def serviceIdentitySetup(self, clientHostname, serverHostname):
+    def serviceIdentitySetup(self, clientHostname, serverHostname,
+                             serverContextSetup=lambda ctx: None):
         from twisted.protocols.tls import TLSMemoryBIOFactory
 
         caCert, serverCert = certificatesForAuthorityAndServer(
@@ -1195,6 +1196,7 @@ class ServiceIdentityTests(unittest.TestCase):
             privateKey=serverCert.privateKey.original,
             certificate=serverCert.original,
         )
+        serverContextSetup(serverOpts.getContext())
         clientOpts = sslverify.OpenSSLCertificateOptions(
             trustRoot=caCert,
             hostname=clientHostname,
@@ -1215,6 +1217,9 @@ class ServiceIdentityTests(unittest.TestCase):
                 self.data += data
             def connectionLost(self, reason):
                 self.lostReason = reason
+
+        self.serverOpts = serverOpts
+        self.clientOpts = clientOpts
 
         clientFactory = TLSMemoryBIOFactory(
             clientOpts, isClient=True,
@@ -1266,6 +1271,26 @@ class ServiceIdentityTests(unittest.TestCase):
         sErr = sProto.wrappedProtocol.lostReason
         self.assertIdentical(cErr, None)
         self.assertIdentical(sErr, None)
+
+
+    def test_hostnameIsIndicated(self):
+        """
+        Specifying the C{hostname} argument to L{CertificateOptions} also sets
+        the U{Server Name Extension
+        <https://en.wikipedia.org/wiki/Server_Name_Indication>} TLS indication
+        field to the correct value.
+        """
+        names = []
+        def setupServerContext(ctx):
+            def servername_received(conn):
+                names.append(conn.get_servername())
+            ctx.set_tlsext_servername_callback(servername_received)
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"valid.example.com",
+            u"valid.example.com",
+            setupServerContext
+        )
+        self.assertEqual(names, u"valid.example.com")
 
 
 
