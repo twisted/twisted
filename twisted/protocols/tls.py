@@ -423,7 +423,14 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         """
         Initiate, or reply to, the shutdown handshake of the TLS layer.
         """
-        shutdownSuccess = self._tlsConnection.shutdown()
+        try:
+            shutdownSuccess = self._tlsConnection.shutdown()
+        except Error:
+            # Mid-handshake, a call to shutdown() can result in a
+            # WantWantReadError, or rather an SSL_ERR_WANT_READ; but pyOpenSSL
+            # doesn't allow us to get at the error.  See:
+            # https://github.com/pyca/pyopenssl/issues/91
+            shutdownSuccess = False
         self._flushSendBIO()
         if shutdownSuccess:
             # Both sides have shutdown, so we can start closing lower-level
