@@ -1293,6 +1293,26 @@ class ServiceIdentityTests(unittest.TestCase):
         self.assertEqual(names, [u"valid.example.com"])
 
 
+    def test_hostnameEncoding(self):
+        """
+        Hostnames are encoded as IDNA.
+        """
+        names = []
+        def setupServerContext(ctx):
+            def servername_received(conn):
+                names.append(conn.get_servername().decode("idna"))
+            ctx.set_tlsext_servername_callback(servername_received)
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"h\N{LATIN SMALL LETTER A WITH ACUTE}llo.example.com",
+            u"h\N{LATIN SMALL LETTER A WITH ACUTE}llo.example.com",
+            setupServerContext
+        )
+        self.assertEqual(
+            names,
+            [u"h\N{LATIN SMALL LETTER A WITH ACUTE}llo.example.com"]
+        )
+
+
 
 class _NotSSLTransport:
     def getHandle(self):
