@@ -6,9 +6,11 @@
 from __future__ import division, absolute_import
 
 import itertools
+import warnings
+
 from hashlib import md5
 
-from OpenSSL import SSL, crypto
+from OpenSSL import SSL, crypto, version
 try:
     from OpenSSL.SSL import SSL_CB_HANDSHAKE_DONE, SSL_CB_HANDSHAKE_START
 except ImportError:
@@ -46,12 +48,34 @@ def _selectVerifyImplementation():
     C{service_identity} is installed.  If so, use it.  If not, use simplistic
     and incorrect checking as implemented in L{simple_verify_hostname}.
     """
+
+    whatsWrong = (
+        "Without the service_identity module and a recent enough pyOpenSSL to"
+        "support it, Twisted can perform only rudimentary TLS client hostname"
+        "verification.  Many valid certificate/hostname mappings may be "
+        "rejected."
+    )
+
     if hasattr(crypto.X509, "get_extension_count"):
         try:
             from service_identity import verify_hostname, VerificationError
             return verify_hostname, VerificationError
         except ImportError:
-            pass
+            warnings.warn(
+                "You do not have the service_identity module installed. "
+                "Please install it from "
+                "<https://pypi.python.org/pypi/service_identity>. "
+                + whatsWrong
+            )
+    else:
+        warnings.warn(
+            "Your version of pyOpenSSL, {0}, is out of date.  "
+            "Please upgrade to at least 0.12 and install service_identity "
+            "from <https://pypi.python.org/pypi/service_identity>. "
+            .format(version.__version__) + whatsWrong,
+            UserWarning
+        )
+
     return simple_verify_hostname, SimpleVerificationError
 
 
