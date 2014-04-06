@@ -15,7 +15,7 @@ def main(reactor, host, port=443):
             print(certificate)
             self.transport.loseConnection()
         def connectionLost(self, reason):
-            if reason.check(ssl.SSL.Error):
+            if not reason.check(error.ConnectionClosed):
                 print(reason.value)
             done.callback(None)
 
