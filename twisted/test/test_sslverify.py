@@ -1228,15 +1228,15 @@ class ServiceIdentityTests(unittest.TestCase):
 
         clientFactory = TLSMemoryBIOFactory(
             clientOpts, isClient=True,
-            wrappedFactory=protocol.Factory.forProtocol(GreetingServer)
+            wrappedFactory=protocol.Factory.forProtocol(ListeningClient)
         )
         serverFactory = TLSMemoryBIOFactory(
             serverOpts, isClient=False,
-            wrappedFactory=protocol.Factory.forProtocol(ListeningClient)
+            wrappedFactory=protocol.Factory.forProtocol(GreetingServer)
         )
         return connectedServerAndClient(
+            lambda: serverFactory.buildProtocol(None),
             lambda: clientFactory.buildProtocol(None),
-            lambda: serverFactory.buildProtocol(None)
         )
 
 
