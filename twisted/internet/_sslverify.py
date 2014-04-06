@@ -43,7 +43,7 @@ def _idnaBytes(text):
 
 
 
-def simple_verify_hostname(peer_certificate, hostname):
+def simple_verify_hostname(connection, hostname):
     """
     Check only the common name in the certificate and only for an exact match.
 
@@ -52,7 +52,7 @@ def simple_verify_hostname(peer_certificate, hostname):
     C{service_identity}.  This check is overly strict, relies on a deprecated
     TLS feature, and lots of valid CNs will fail.
     """
-    commonName = peer_certificate.get_subject().commonName
+    commonName = connection.get_peer_certificate().get_subject().commonName
     hostname = _idnaBytes(hostname)
     if commonName != hostname:
         raise VerificationError(repr(commonName) + "!=" +
@@ -78,7 +78,8 @@ def _selectVerifyImplementation():
 
     if hasattr(crypto.X509, "get_extension_count"):
         try:
-            from service_identity import verify_hostname, VerificationError
+            from service_identity import VerificationError
+            from service_identity.pyopenssl import verify_hostname
             return verify_hostname, VerificationError
         except ImportError:
             warnings.warn(
@@ -1201,10 +1202,7 @@ class OpenSSLCertificateOptions(object):
                     return
                 if where & SSL_CB_HANDSHAKE_DONE:
                     try:
-                        verify_hostname(
-                            connection.get_peer_certificate(),
-                            self._hostnameASCII,
-                        )
+                        verify_hostname(connection, self._hostnameASCII)
                     except:
                         f = Failure()
                         transport = connection.get_app_data()
