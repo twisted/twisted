@@ -1112,6 +1112,9 @@ class OpenSSLCertificateOptions(object):
             trustRoot = IOpenSSLTrustRoot(trustRoot)
         self.trustRoot = trustRoot
         self.hostname = hostname
+        if hostname is not None:
+            self._hostnameBytes = hostname.encode("idna")
+            self._hostnameASCII = self._hostnameBytes.decode("utf-8")
 
 
     def __getstate__(self):
@@ -1170,13 +1173,13 @@ class OpenSSLCertificateOptions(object):
                         connection, "set_tlsext_host_name",
                         lambda name: None
                     )
-                    set_host_name(self.hostname.encode("idna"))
+                    set_host_name(self._hostnameBytes)
                     return
                 if where & SSL_CB_HANDSHAKE_DONE:
                     try:
                         verify_hostname(
                             connection.get_peer_certificate(),
-                            self.hostname,
+                            self._hostnameASCII,
                         )
                     except:
                         f = Failure()
