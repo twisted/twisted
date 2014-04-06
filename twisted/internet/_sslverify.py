@@ -24,6 +24,25 @@ class SimpleVerificationError(Exception):
     """
 
 
+def _idnaBytes(text):
+    """
+    Convert some text typed by a human into some ASCII bytes.
+
+    @param text: A domain name, hopefully.
+    @type text: L{unicode}
+
+    @return: The domain name's IDNA representation, encoded as bytes.
+    @rtype: L{bytes}
+    """
+    try:
+        import idna
+    except ImportError:
+        return text.encode("idna")
+    else:
+        return idna.encode(text).encode("ascii")
+
+
+
 def simple_verify_hostname(peer_certificate, hostname):
     """
     Check only the common name in the certificate and only for an exact match.
@@ -34,10 +53,11 @@ def simple_verify_hostname(peer_certificate, hostname):
     TLS feature, and lots of valid CNs will fail.
     """
     commonName = peer_certificate.get_subject().commonName
-    hostname = hostname.encode("idna")
+    hostname = _idnaBytes(hostname)
     if commonName != hostname:
         raise VerificationError(repr(commonName) + "!=" +
                                 repr(hostname))
+
 
 
 def _selectVerifyImplementation():
@@ -80,6 +100,7 @@ def _selectVerifyImplementation():
 
 
 verify_hostname, VerificationError = _selectVerifyImplementation()
+
 
 
 from zope.interface import Interface, implementer
@@ -1113,7 +1134,7 @@ class OpenSSLCertificateOptions(object):
         self.trustRoot = trustRoot
         self.hostname = hostname
         if hostname is not None:
-            self._hostnameBytes = hostname.encode("idna")
+            self._hostnameBytes = _idnaBytes(hostname)
             self._hostnameASCII = self._hostnameBytes.decode("utf-8")
 
 
