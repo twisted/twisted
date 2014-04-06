@@ -497,11 +497,13 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         self.transport.abortConnection()
 
 
+    _verificationFailed = False
     def _failVerification(self, reason):
         """
         Cheating hook for CertificateOptions to sneak in a more descriptive
         error about the connection failure.
         """
+        self._verificationFailed = True
         self._reason = reason
         self.abortConnection()
 
