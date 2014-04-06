@@ -7,7 +7,8 @@ certificate = ssl.Certificate.loadPEM(
 )
 
 def main(reactor, host, port=443):
-    contextFactory = ssl.CertificateOptions(trustRoot=certificate)
+    contextFactory = ssl.CertificateOptions(trustRoot=certificate,
+                                            hostname=host.decode("utf-8"))
     port = int(port)
     done = defer.Deferred()
 
