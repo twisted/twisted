@@ -389,7 +389,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
                 # If we got application bytes, the handshake must be done by
                 # now.  Keep track of this to control error reporting later.
                 self._handshakeDone = True
-                ProtocolWrapper.dataReceived(self, bytes)
+                if not self._verificationFailed:
+                    ProtocolWrapper.dataReceived(self, bytes)
 
         # The received bytes might have generated a response which needs to be
         # sent now.  For example, the handshake involves several round-trip
