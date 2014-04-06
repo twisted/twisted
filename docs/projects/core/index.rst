@@ -1,4 +1,3 @@
-
 :LastChangedDate: $LastChangedDate$
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
@@ -15,8 +14,7 @@ Twisted Core
     specifications/index
     development/index
 
-
-
+Twisted is an event-driven networking engine written in Python and licensed under the open source MIT licdense.
 
 
 - :doc:`Developer guides <howto/index>` : documentation on using
