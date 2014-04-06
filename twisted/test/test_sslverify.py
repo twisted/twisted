@@ -1312,6 +1312,14 @@ class ServiceIdentityTests(unittest.TestCase):
             hello, hello, setupServerContext
         )
         self.assertEqual(names, [hello])
+        self.assertEqual(cProto.wrappedProtocol.data,
+                         b'greetings!')
+
+        cErr = cProto.wrappedProtocol.lostReason
+        sErr = sProto.wrappedProtocol.lostReason
+        self.assertIdentical(cErr, None)
+        self.assertIdentical(sErr, None)
+
     test_hostnameEncoding.skip = skipSNI
 
 
