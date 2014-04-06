@@ -1179,8 +1179,9 @@ class OpenSSLCertificateOptions(object):
                             self.hostname,
                         )
                     except:
+                        f = Failure()
                         transport = connection.get_app_data()
-                        transport._failVerification(Failure())
+                        transport._failVerification(f)
             ctx.set_info_callback(info_callback)
 
         if self.verifyDepth is not None:
