@@ -85,7 +85,9 @@ def _selectVerifyImplementation():
                 "You do not have the service_identity module installed. "
                 "Please install it from "
                 "<https://pypi.python.org/pypi/service_identity>. "
-                + whatsWrong
+                + whatsWrong,
+                UserWarning,
+                stacklevel=2
             )
     else:
         warnings.warn(
@@ -93,7 +95,8 @@ def _selectVerifyImplementation():
             "Please upgrade to at least 0.12 and install service_identity "
             "from <https://pypi.python.org/pypi/service_identity>. "
             .format(version.__version__) + whatsWrong,
-            UserWarning
+            UserWarning,
+            stacklevel=2
         )
 
     return simple_verify_hostname, SimpleVerificationError
