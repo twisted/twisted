@@ -1210,14 +1210,20 @@ class ServiceIdentityTests(unittest.TestCase):
         class GreetingServer(protocol.Protocol):
             greeting = b"greetings!"
             lostReason = None
+            data = b''
             def connectionMade(self):
                 self.transport.write(self.greeting)
+            def dataReceived(self, data):
+                self.data += data
             def connectionLost(self, reason):
                 self.lostReason = reason
 
-        class ListeningClient(protocol.Protocol):
+        class GreetingClient(protocol.Protocol):
+            greeting = b'cheerio!'
             data = b''
             lostReason = None
+            def connectionMade(self):
+                self.transport.write(self.greeting)
             def dataReceived(self, data):
                 self.data += data
             def connectionLost(self, reason):
@@ -1228,7 +1234,7 @@ class ServiceIdentityTests(unittest.TestCase):
 
         clientFactory = TLSMemoryBIOFactory(
             clientOpts, isClient=True,
-            wrappedFactory=protocol.Factory.forProtocol(ListeningClient)
+            wrappedFactory=protocol.Factory.forProtocol(GreetingClient)
         )
         serverFactory = TLSMemoryBIOFactory(
             serverOpts, isClient=False,
@@ -1249,8 +1255,8 @@ class ServiceIdentityTests(unittest.TestCase):
             u"wrong-host.example.com",
             u"correct-host.example.com",
         )
-        self.assertEqual(cProto.wrappedProtocol.data,
-                         b'')
+        self.assertEqual(cProto.wrappedProtocol.data, b'')
+        self.assertEqual(sProto.wrappedProtocol.data, b'')
 
         cErr = cProto.wrappedProtocol.lostReason.value
         sErr = sProto.wrappedProtocol.lostReason.value
