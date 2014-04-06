@@ -1255,7 +1255,7 @@ class ServiceIdentityTests(unittest.TestCase):
         cErr = cProto.wrappedProtocol.lostReason.value
         sErr = sProto.wrappedProtocol.lostReason.value
 
-        self.assertNotIdentical(cErr, VerificationError)
+        self.assertIsInstance(cErr, VerificationError)
         self.assertIsInstance(sErr, ConnectionClosed)
 
 
