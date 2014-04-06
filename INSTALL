@@ -7,6 +7,10 @@ Requirements
   pyOpenSSL (<http://launchpad.net/pyopenssl>) is required for any SSL APIs.
   Version 0.10 or newer is required.
 
+  pem (<https://pypi.python.org/pypi/pem>), version 0.2 or newer, is also
+  required for SSL APIs which may need to parse PEM-format data (certificates,
+  for example).
+
   On Windows pywin32 (<http://sourceforge.net/projects/pywin32/files/>) is
   required.  Build 215 or later is highly recommended for reliable operation
   (this is already included in ActivePython).

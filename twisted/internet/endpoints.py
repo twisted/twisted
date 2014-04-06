@@ -15,7 +15,6 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 from __future__ import division, absolute_import
 
 import os
-import re
 import socket
 import warnings
 
@@ -1117,13 +1116,11 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     keyPEM = FilePath(privateKey).getContent()
     privateCertificate = ssl.PrivateCertificate.loadPEM(certPEM + keyPEM)
     if extraCertChain is not None:
-        matches = re.findall(
-            r'(-----BEGIN CERTIFICATE-----\n.+?\n-----END CERTIFICATE-----)',
-            FilePath(extraCertChain).getContent(),
-            flags=re.DOTALL
-        )
-        chainCertificates = [ssl.Certificate.loadPEM(chainCertPEM).original
-                             for chainCertPEM in matches]
+        import pem
+        chainPEM = FilePath(extraCertChain).getContent()
+        chainCertificates = [
+            ssl.Certificate.loadPEM(chainCert.pem_str).original
+            for chainCert in pem.parse(chainPEM)]
         if not chainCertificates:
             raise ValueError(
                 "Specified chain file '%s' doesn't contain any valid "
