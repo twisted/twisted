@@ -216,17 +216,16 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     transport before delivering them to the wrapped protocol.
 
     In addition to producer events from the underlying transport, the need to
-    wait for reads before a write can proceed means the
-    L{TLSMemoryBIOProtocol} may also want to pause a producer. Pause/resume
-    events are therefore merged using the L{_ProducerMembrane}
-    wrapper. Non-streaming (pull) producers are supported by wrapping them
-    with L{_PullToPush}.
+    wait for reads before a write can proceed means the L{TLSMemoryBIOProtocol}
+    may also want to pause a producer.  Pause/resume events are therefore
+    merged using the L{_ProducerMembrane} wrapper.  Non-streaming (pull)
+    producers are supported by wrapping them with L{_PullToPush}.
 
     @ivar _tlsConnection: The L{OpenSSL.SSL.Connection} instance which is
         encrypted and decrypting this connection.
 
     @ivar _lostTLSConnection: A flag indicating whether connection loss has
-        already been dealt with (C{True}) or not (C{False}). TLS disconnection
+        already been dealt with (C{True}) or not (C{False}).  TLS disconnection
         is distinct from the underlying connection being lost.
 
     @ivar _writeBlockedOnRead: A flag indicating whether further writing must
@@ -261,6 +260,10 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     @ivar _producer: The current producer registered via C{registerProducer},
         or C{None} if no producer has been registered or a previous one was
         unregistered.
+
+    @ivar _aborted: C{abortConnection} has been called.  No further data will
+        be received to the wrapped protocol's C{dataReceived}.
+    @type _aborted: L{bool}
     """
 
     _reason = None
@@ -268,6 +271,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     _lostTLSConnection = False
     _writeBlockedOnRead = False
     _producer = None
+    _aborted = False
 
     def __init__(self, factory, wrappedProtocol, _connectWrapped=True):
         ProtocolWrapper.__init__(self, factory, wrappedProtocol)
@@ -389,7 +393,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
                 # If we got application bytes, the handshake must be done by
                 # now.  Keep track of this to control error reporting later.
                 self._handshakeDone = True
-                if not self._verificationFailed:
+                if not self._aborted:
                     ProtocolWrapper.dataReceived(self, bytes)
 
         # The received bytes might have generated a response which needs to be
@@ -449,7 +453,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         Called when TLS connection has gone away; tell underlying transport to
         disconnect.
         """
-        self._reason = reason
+        if self._reason is None:
+            self._reason = reason
         self._lostTLSConnection = True
         # Using loseConnection causes the application protocol's
         # connectionLost method to be invoked non-reentrantly, which is always
@@ -493,18 +498,17 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         Tear down TLS state so that if the connection is aborted mid-handshake
         we don't deliver any further data from the application.
         """
+        self._aborted = True
         self.disconnecting = True
         self._shutdownTLS()
         self.transport.abortConnection()
 
 
-    _verificationFailed = False
     def _failVerification(self, reason):
         """
         Cheating hook for CertificateOptions to sneak in a more descriptive
         error about the connection failure.
         """
-        self._verificationFailed = True
         self._reason = reason
         self.abortConnection()
 
