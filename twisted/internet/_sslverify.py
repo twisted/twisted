@@ -1206,22 +1206,7 @@ class OpenSSLCertificateOptions(object):
             return preverify_ok
         ctx.set_verify(verifyFlags, _verifyCallback)
         if self.hostname is not None:
-            def infoCallback(connection, where, ret):
-                if where & SSL_CB_HANDSHAKE_START:
-                    setHostNameIndication = getattr(
-                        connection, "set_tlsext_host_name",
-                        lambda name: None
-                    )
-                    setHostNameIndication(self._hostnameBytes)
-                    return
-                if where & SSL_CB_HANDSHAKE_DONE:
-                    try:
-                        verify_hostname(connection, self._hostnameASCII)
-                    except:
-                        f = Failure()
-                        transport = connection.get_app_data()
-                        transport._failVerification(f)
-            ctx.set_info_callback(infoCallback)
+            ctx.set_info_callback(self._identityVerifyingInfoCallback)
 
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)
@@ -1243,6 +1228,37 @@ class OpenSSLCertificateOptions(object):
                 pass  # ECDHE support is best effort only.
 
         return ctx
+
+
+    def _identityVerifyingInfoCallback(self, connection, where, ret):
+        """
+        C{info_callback} for a pyOpenSSL that verifies the hostname in the
+        presented certificate matches the one passed ot this
+        L{OpenSSLCertificateOptions}.
+
+        @param connection: the connection which is handshaking.
+        @type connection: L{OpenSSL.SSL.Connection}
+
+        @param where: flags indicating progress through a TLS handshake.
+        @type where: L{int}
+
+        @param ret: ignored
+        @type ret: ignored
+        """
+        if where & SSL_CB_HANDSHAKE_START:
+            setHostNameIndication = getattr(
+                connection, "set_tlsext_host_name",
+                lambda name: None
+            )
+            setHostNameIndication(self._hostnameBytes)
+        elif where & SSL_CB_HANDSHAKE_DONE:
+            try:
+                verify_hostname(connection, self._hostnameASCII)
+            except:
+                f = Failure()
+                transport = connection.get_app_data()
+                transport._failVerification(f)
+
 
 
 
