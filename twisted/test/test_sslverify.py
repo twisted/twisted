@@ -1194,7 +1194,8 @@ class ServiceIdentityTests(unittest.TestCase):
     C{hostname} argument to L{sslverify.OpenSSLCertificateOptions}.
     """
 
-    skip = skipSSL
+    if skipSSL:
+        skip = skipSSL
 
     def serviceIdentitySetup(self, clientHostname, serverHostname,
                              serverContextSetup=lambda ctx: None):
@@ -1352,6 +1353,35 @@ class ServiceIdentityTests(unittest.TestCase):
         self.assertIdentical(sErr, None)
 
     test_hostnameEncoding.skip = skipSNI
+
+
+    def test_fallback(self):
+        """
+        L{sslverify.simpleVerifyHostname} checks string equality on the
+        commonName of a connection's certificate's subject, doing nothing if it
+        matches and raising L{VerificationError} if it doesn't.
+        """
+        name = 'something.example.com'
+        class Connection(object):
+            def get_peer_certificate(self):
+                """
+                Fake of L{OpenSSL.SSL.Connection.get_peer_certificate}.
+
+                @return: A certificate with a known common name.
+                @rtype: L{OpenSSL.crypto.X509}
+                """
+                cert = X509()
+                cert.get_subject().commonName = name
+                return cert
+        conn = Connection()
+        self.assertIdentical(
+            sslverify.simpleVerifyHostname(conn, u'something.example.com'),
+            None
+        )
+        self.assertRaises(
+            sslverify.SimpleVerificationError,
+            sslverify.simpleVerifyHostname, conn, u'nonsense'
+        )
 
 
 
