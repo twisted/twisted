@@ -17,11 +17,17 @@ try:
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
     skipSSL = False
+    if hasattr(SSL.Context, "set_tlsext_servername_callback"):
+        skipSNI = False
+    else:
+        skipSNI = "PyOpenSSL 0.13 or greater required for SNI support."
 except ImportError:
     skipSSL = "OpenSSL is required for SSL tests."
+    skipSNI = skipSSL
 
 from twisted.test.iosim import connectedServerAndClient
 
+from twisted.internet.error import ConnectionClosed
 from twisted.python.compat import nativeString
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.filepath import FilePath
@@ -33,7 +39,7 @@ from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
 
 if not skipSSL:
-    from twisted.internet.ssl import platformTrust
+    from twisted.internet.ssl import platformTrust, VerificationError
     from twisted.internet import _sslverify as sslverify
     from twisted.protocols.tls import TLSMemoryBIOFactory
 
@@ -109,21 +115,24 @@ def makeCertificate(**kw):
 
 
 
-def certificatesForAuthorityAndServer():
+def certificatesForAuthorityAndServer(commonName=b'example.com'):
     """
-    Create a self-signed CA certificate and server certificate signed by
-    the CA.
+    Create a self-signed CA certificate and server certificate signed by the
+    CA.
+
+    @param commonName: The C{commonName} to embed in the certificate.
+    @type commonName: L{bytes}
 
     @return: a 2-tuple of C{(certificate_authority_certificate,
         server_certificate)}
     @rtype: L{tuple} of (L{sslverify.Certificate},
         L{sslverify.PrivateCertificate})
     """
-    serverDN = sslverify.DistinguishedName(commonName='example.com')
+    serverDN = sslverify.DistinguishedName(commonName=commonName)
     serverKey = sslverify.KeyPair.generate()
     serverCertReq = serverKey.certificateRequest(serverDN)
 
-    caDN = sslverify.DistinguishedName(commonName='CA')
+    caDN = sslverify.DistinguishedName(commonName=b'CA')
     caKey= sslverify.KeyPair.generate()
     caCertReq = caKey.certificateRequest(caDN)
     caSelfCertData = caKey.signCertificateRequest(
@@ -1172,9 +1181,177 @@ class TrustRootTests(unittest.TestCase):
             chainedCertFile=pathContainingDumpOf(self, serverCert),
         )
         pump.flush()
+        pump.flush()
         self.assertIs(cProto.wrappedProtocol.lostReason, None)
         self.assertEqual(cProto.wrappedProtocol.data,
                          sProto.wrappedProtocol.greeting)
+
+
+
+class ServiceIdentityTests(unittest.TestCase):
+    """
+    Tests for the verification of the peer's service's identity via the
+    C{hostname} argument to L{sslverify.OpenSSLCertificateOptions}.
+    """
+
+    skip = skipSSL
+
+    def serviceIdentitySetup(self, clientHostname, serverHostname,
+                             serverContextSetup=lambda ctx: None):
+        """
+        Connect a server and a client.
+
+        @param clientHostname: The I{client's idea} of the server's hostname;
+            passed as the C{hostname} to the
+            L{sslverify.OpenSSLCertificateOptions} instance.
+        @type clientHostname: L{unicode}
+
+        @param serverHostname: The I{server's own idea} of the server's
+            hostname; present in the certificate presented by the server.
+        @type serverHostname: L{unicode}
+
+        @param serverContextSetup: a 1-argument callable invoked with the
+            L{OpenSSL.SSL.Context} after it's produced.
+        @type serverContextSetup: L{callable} taking L{OpenSSL.SSL.Context}
+            returning L{NoneType}.
+
+        @return: see L{connectedServerAndClient}.
+        @rtype: see L{connectedServerAndClient}.
+        """
+        caCert, serverCert = certificatesForAuthorityAndServer(
+            serverHostname.encode("idna")
+        )
+        serverOpts = sslverify.OpenSSLCertificateOptions(
+            privateKey=serverCert.privateKey.original,
+            certificate=serverCert.original,
+        )
+        serverContextSetup(serverOpts.getContext())
+        clientOpts = sslverify.OpenSSLCertificateOptions(
+            trustRoot=caCert,
+            hostname=clientHostname,
+        )
+
+        class GreetingServer(protocol.Protocol):
+            greeting = b"greetings!"
+            lostReason = None
+            data = b''
+            def connectionMade(self):
+                self.transport.write(self.greeting)
+            def dataReceived(self, data):
+                self.data += data
+            def connectionLost(self, reason):
+                self.lostReason = reason
+
+        class GreetingClient(protocol.Protocol):
+            greeting = b'cheerio!'
+            data = b''
+            lostReason = None
+            def connectionMade(self):
+                self.transport.write(self.greeting)
+            def dataReceived(self, data):
+                self.data += data
+            def connectionLost(self, reason):
+                self.lostReason = reason
+
+        self.serverOpts = serverOpts
+        self.clientOpts = clientOpts
+
+        clientFactory = TLSMemoryBIOFactory(
+            clientOpts, isClient=True,
+            wrappedFactory=protocol.Factory.forProtocol(GreetingClient)
+        )
+        serverFactory = TLSMemoryBIOFactory(
+            serverOpts, isClient=False,
+            wrappedFactory=protocol.Factory.forProtocol(GreetingServer)
+        )
+        return connectedServerAndClient(
+            lambda: serverFactory.buildProtocol(None),
+            lambda: clientFactory.buildProtocol(None),
+        )
+
+
+    def test_invalidHostname(self):
+        """
+        When a certificate containing an invalid hostname is received from the
+        server, the connection is immediately dropped.
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"wrong-host.example.com",
+            u"correct-host.example.com",
+        )
+        self.assertEqual(cProto.wrappedProtocol.data, b'')
+        self.assertEqual(sProto.wrappedProtocol.data, b'')
+
+        cErr = cProto.wrappedProtocol.lostReason.value
+        sErr = sProto.wrappedProtocol.lostReason.value
+
+        self.assertIsInstance(cErr, VerificationError)
+        self.assertIsInstance(sErr, ConnectionClosed)
+
+
+    def test_validHostname(self):
+        """
+        Whenever a valid certificate containing a valid hostname is received,
+        connection proceeds normally.
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"valid.example.com",
+            u"valid.example.com",
+        )
+        self.assertEqual(cProto.wrappedProtocol.data,
+                         b'greetings!')
+
+        cErr = cProto.wrappedProtocol.lostReason
+        sErr = sProto.wrappedProtocol.lostReason
+        self.assertIdentical(cErr, None)
+        self.assertIdentical(sErr, None)
+
+
+    def test_hostnameIsIndicated(self):
+        """
+        Specifying the C{hostname} argument to L{CertificateOptions} also sets
+        the U{Server Name Extension
+        <https://en.wikipedia.org/wiki/Server_Name_Indication>} TLS indication
+        field to the correct value.
+        """
+        names = []
+        def setupServerContext(ctx):
+            def servername_received(conn):
+                names.append(conn.get_servername().decode("ascii"))
+            ctx.set_tlsext_servername_callback(servername_received)
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"valid.example.com",
+            u"valid.example.com",
+            setupServerContext
+        )
+        self.assertEqual(names, [u"valid.example.com"])
+
+    test_hostnameIsIndicated.skip = skipSNI
+
+
+    def test_hostnameEncoding(self):
+        """
+        Hostnames are encoded as IDNA.
+        """
+        names = []
+        hello = u"h\N{LATIN SMALL LETTER A WITH ACUTE}llo.example.com"
+        def setupServerContext(ctx):
+            def servername_received(conn):
+                names.append(conn.get_servername().decode("idna"))
+            ctx.set_tlsext_servername_callback(servername_received)
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            hello, hello, setupServerContext
+        )
+        self.assertEqual(names, [hello])
+        self.assertEqual(cProto.wrappedProtocol.data,
+                         b'greetings!')
+
+        cErr = cProto.wrappedProtocol.lostReason
+        sErr = sProto.wrappedProtocol.lostReason
+        self.assertIdentical(cErr, None)
+        self.assertIdentical(sErr, None)
+
+    test_hostnameEncoding.skip = skipSNI
 
 
 

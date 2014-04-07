@@ -6,9 +6,121 @@
 from __future__ import division, absolute_import
 
 import itertools
+import warnings
+
 from hashlib import md5
 
-from OpenSSL import SSL, crypto
+from OpenSSL import SSL, crypto, version
+try:
+    from OpenSSL.SSL import SSL_CB_HANDSHAKE_DONE, SSL_CB_HANDSHAKE_START
+except ImportError:
+    SSL_CB_HANDSHAKE_START = 0x10
+    SSL_CB_HANDSHAKE_DONE = 0x20
+
+
+class SimpleVerificationError(Exception):
+    """
+    Not a very useful verification error.
+    """
+
+
+def _idnaBytes(text):
+    """
+    Convert some text typed by a human into some ASCII bytes.
+
+    @param text: A domain name, hopefully.
+    @type text: L{unicode}
+
+    @return: The domain name's IDNA representation, encoded as bytes.
+    @rtype: L{bytes}
+    """
+    try:
+        import idna
+    except ImportError:
+        return text.encode("idna")
+    else:
+        return idna.encode(text).encode("ascii")
+
+
+
+def simpleVerifyHostname(connection, hostname):
+    """
+    Check only the common name in the certificate presented by the peer and
+    only for an exact match.
+
+    This is to provide I{something} in the way of hostname verification to
+    users who haven't upgraded past OpenSSL 0.12 or installed
+    C{service_identity}.  This check is overly strict, relies on a deprecated
+    TLS feature (you're supposed to ignore the commonName if the
+    subjectAlternativeName extensions are present, I believe), and lots of
+    valid certificates will fail.
+
+    @param connection: the OpenSSL connection to verify.@
+    @type connection: L{OpenSSL.SSL.Connection}
+
+    @param hostname: The hostname expected by the user.
+    @type hostname: L{unicode}
+
+    @raise VerificationError: if the common name and hostname don't match.
+    """
+    commonName = connection.get_peer_certificate().get_subject().commonName
+    hostname = _idnaBytes(hostname)
+    if commonName != hostname:
+        raise VerificationError(repr(commonName) + "!=" +
+                                repr(hostname))
+
+
+
+def _selectVerifyImplementation():
+    """
+    U{service_identity <https://pypi.python.org/pypi/service_identity>}
+    requires pyOpenSSL 0.12 or better but our dependency is still back at 0.10.
+    Determine if pyOpenSSL has the requisite feature, and whether
+    C{service_identity} is installed.  If so, use it.  If not, use simplistic
+    and incorrect checking as implemented in L{simpleVerifyHostname}.
+
+    @return: 2-tuple of (C{verify_hostname}, C{VerificationError})
+    @rtype: L{tuple}
+    """
+
+    whatsWrong = (
+        "Without the service_identity module and a recent enough pyOpenSSL to"
+        "support it, Twisted can perform only rudimentary TLS client hostname"
+        "verification.  Many valid certificate/hostname mappings may be "
+        "rejected."
+    )
+
+    if hasattr(crypto.X509, "get_extension_count"):
+        try:
+            from service_identity import VerificationError
+            from service_identity.pyopenssl import verify_hostname
+            return verify_hostname, VerificationError
+        except ImportError:
+            warnings.warn(
+                "You do not have the service_identity module installed. "
+                "Please install it from "
+                "<https://pypi.python.org/pypi/service_identity>. "
+                + whatsWrong,
+                UserWarning,
+                stacklevel=2
+            )
+    else:
+        warnings.warn(
+            "Your version of pyOpenSSL, {0}, is out of date.  "
+            "Please upgrade to at least 0.12 and install service_identity "
+            "from <https://pypi.python.org/pypi/service_identity>. "
+            .format(version.__version__) + whatsWrong,
+            UserWarning,
+            stacklevel=2
+        )
+
+    return simpleVerifyHostname, SimpleVerificationError
+
+
+verifyHostname, VerificationError = _selectVerifyImplementation()
+
+
+
 from zope.interface import Interface, implementer
 
 from twisted.internet.defer import Deferred
@@ -18,6 +130,7 @@ from twisted.internet.interfaces import IAcceptableCiphers, ICipher
 from twisted.python import reflect, util
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 from twisted.python.compat import nativeString, networkString, unicode
+from twisted.python.failure import Failure
 from twisted.python.util import FancyEqMixin
 
 
@@ -836,7 +949,8 @@ class OpenSSLCertificateOptions(object):
                  extraCertChain=None,
                  acceptableCiphers=None,
                  dhParameters=None,
-                 trustRoot=None):
+                 trustRoot=None,
+                 hostname=None):
         """
         Create an OpenSSL context SSL connection context factory.
 
@@ -926,6 +1040,21 @@ class OpenSSLCertificateOptions(object):
             L{TypeError}.
 
         @type trustRoot: L{IOpenSSLTrustRoot}
+
+        @param hostname: The expected name of the remote host.  This serves two
+            purposes: first, and most importantly, it verifies that the
+            certificate received from the server correctly identifies the
+            specified hostname.  Only clients should use this parameter, but
+            I{all} clients should pass this parameter.  A client which does
+            I{not} specify this parameter is not verifying the identity of the
+            host that it's communicating with, and, if using a general-purpose
+            set of trust roots such as L{platformTrust}, is therefore
+            vulnerable to nearly arbitrary man-in-the-middle attacks.  The
+            second purpose it serves is (if the local C{pyOpenSSL} supports it)
+            to use the U{Server Name Indication extension
+            <https://en.wikipedia.org/wiki/Server_Name_Indication>} to indicate
+            to the server which certificate should be used.
+        @type hostname: L{unicode}
 
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
@@ -1021,6 +1150,10 @@ class OpenSSLCertificateOptions(object):
             self.requireCertificate = True
             trustRoot = IOpenSSLTrustRoot(trustRoot)
         self.trustRoot = trustRoot
+        self.hostname = hostname
+        if hostname is not None:
+            self._hostnameBytes = _idnaBytes(hostname)
+            self._hostnameASCII = self._hostnameBytes.decode("utf-8")
 
 
     def __getstate__(self):
@@ -1072,6 +1205,8 @@ class OpenSSLCertificateOptions(object):
         def _verifyCallback(conn, cert, errno, depth, preverify_ok):
             return preverify_ok
         ctx.set_verify(verifyFlags, _verifyCallback)
+        if self.hostname is not None:
+            ctx.set_info_callback(self._identityVerifyingInfoCallback)
 
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)
@@ -1093,6 +1228,36 @@ class OpenSSLCertificateOptions(object):
                 pass  # ECDHE support is best effort only.
 
         return ctx
+
+
+    def _identityVerifyingInfoCallback(self, connection, where, ret):
+        """
+        C{info_callback} for a pyOpenSSL that verifies the hostname in the
+        presented certificate matches the one passed to this
+        L{CertificateOptions <twisted.internet.ssl.CertificateOptions>}.
+
+        @param connection: the connection which is handshaking.
+        @type connection: L{OpenSSL.SSL.Connection}
+
+        @param where: flags indicating progress through a TLS handshake.
+        @type where: L{int}
+
+        @param ret: ignored
+        @type ret: ignored
+        """
+        if where & SSL_CB_HANDSHAKE_START:
+            setHostNameIndication = getattr(
+                connection, "set_tlsext_host_name",
+                lambda name: None
+            )
+            setHostNameIndication(self._hostnameBytes)
+        elif where & SSL_CB_HANDSHAKE_DONE:
+            try:
+                verifyHostname(connection, self._hostnameASCII)
+            except:
+                f = Failure()
+                transport = connection.get_app_data()
+                transport._failVerification(f)
 
 
 

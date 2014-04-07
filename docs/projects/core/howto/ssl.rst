@@ -120,16 +120,23 @@ For example:
 .. code-block:: text
 
     $ python check_server_certificate.py www.twistedmatrix.com
-    <Certificate Subject=www.twistedmatrix.com ...>
+    OK: <Certificate Subject=www.twistedmatrix.com ...>
+    $ python check_server_certificate.py www.cacert.org
+    BAD: [(... 'certificate verify failed')]
+    $ python check_server_certificate.py dornkirk.twistedmatrix.com
+    BAD: No service reference ID could be validated against certificate.
 
 .. warning::
 
    While ``platformTrust`` currently verifies that a certificate *has a valid trust path to a certificate authority*, it doesn't check to see if that certificate is *the right one for the host you're connecting to*.
-   For example, while (as of this writing) you can see that ``www.twistedmatrix.com`` has a perfectly valid certificate, ``dornkirk.twistedmatrix.com`` advertises the same certificate, despite the fact that that certificate is valid for ``www.`` but not ``dornkirk.``, and ``check_server_certificate.py`` will output certificates for both of them as if they're valid.
 
-   If you are writing software that wants a regular, HTTPS-style secure connection, you need to be sure to examine the data in ``Certificate.getSubject()``.
+   Always make sure to also pass the ``hostname`` parameter to :api:`twisted.internet.ssl.CertificateOptions <CertificateOptions>` to indicate which hostname is preferred.
 
-   In the future, we hope that Twisted will do more of this for you to make it easier to be secure by default; see tickets :trac:`#5190` and :trac:`#4888` for more information about progress.
+.. note::
+
+   To *properly* validate your ``hostname`` parameter according to RFC6125, please also install the `"service_identity" <https://pypi.python.org/pypi/service_identity>`_ and `"idna" <https://pypi.python.org/pypi/idna>`_ packages from PyPI.
+   Twisted will currently make a conservative guess as to the correctness of your certificate, but this will reject a large number of potentially valid certificates.
+   `service_identity` implements the standard correctly and it will be a required dependency for SSL in a future release of Twisted.
 
 While the ``platformTrust`` works for applications that want to talk securely to arbitrary hosts on the public internet, some applications have more specific security needs.
 For example, you might run a server for which there is only one dedicated client, and you have your own certificate authority specifically for that software, distinct from your users' general trust preferences.
