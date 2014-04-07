@@ -24,6 +24,8 @@ try:
 except ImportError:
     skipSSL = "OpenSSL is required for SSL tests."
     skipSNI = skipSSL
+else:
+    from twisted.protocols.tls import TLSMemoryBIOFactory
 
 from twisted.test.iosim import connectedServerAndClient
 
@@ -1190,10 +1192,10 @@ class ServiceIdentityTests(unittest.TestCase):
     Service identity.
     """
 
+    skip = skipSSL
+
     def serviceIdentitySetup(self, clientHostname, serverHostname,
                              serverContextSetup=lambda ctx: None):
-        from twisted.protocols.tls import TLSMemoryBIOFactory
-
         caCert, serverCert = certificatesForAuthorityAndServer(
             serverHostname.encode("idna")
         )
@@ -1301,6 +1303,7 @@ class ServiceIdentityTests(unittest.TestCase):
             setupServerContext
         )
         self.assertEqual(names, [u"valid.example.com"])
+
     test_hostnameIsIndicated.skip = skipSNI
 
 
