@@ -1364,6 +1364,12 @@ class ServiceIdentityTests(unittest.TestCase):
         name = 'something.example.com'
         class Connection(object):
             def get_peer_certificate(self):
+                """
+                Fake of L{OpenSSL.SSL.Connection.get_peer_certificate}.
+
+                @return: A certificate with a known common name.
+                @rtype: L{OpenSSL.crypto.X509}
+                """
                 cert = X509()
                 cert.get_subject().commonName = name
                 return cert
