@@ -221,6 +221,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     merged using the L{_ProducerMembrane} wrapper.  Non-streaming (pull)
     producers are supported by wrapping them with L{_PullToPush}.
 
+
     @ivar _tlsConnection: The L{OpenSSL.SSL.Connection} instance which is
         encrypted and decrypting this connection.
 
@@ -508,6 +509,10 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         """
         Cheating hook for CertificateOptions to sneak in a more descriptive
         error about the connection failure.
+
+        @param reason: The reason that the verification failed; reported to the
+            application protocol's
+        @type reason: L{Failure}
         """
         self._reason = reason
         self.abortConnection()

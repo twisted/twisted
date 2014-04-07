@@ -1203,13 +1203,13 @@ class OpenSSLCertificateOptions(object):
             return preverify_ok
         ctx.set_verify(verifyFlags, _verifyCallback)
         if self.hostname is not None:
-            def info_callback(connection, where, ret):
+            def infoCallback(connection, where, ret):
                 if where & SSL_CB_HANDSHAKE_START:
-                    set_host_name = getattr(
+                    setHostNameIndication = getattr(
                         connection, "set_tlsext_host_name",
                         lambda name: None
                     )
-                    set_host_name(self._hostnameBytes)
+                    setHostNameIndication(self._hostnameBytes)
                     return
                 if where & SSL_CB_HANDSHAKE_DONE:
                     try:
@@ -1218,7 +1218,7 @@ class OpenSSLCertificateOptions(object):
                         f = Failure()
                         transport = connection.get_app_data()
                         transport._failVerification(f)
-            ctx.set_info_callback(info_callback)
+            ctx.set_info_callback(infoCallback)
 
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)

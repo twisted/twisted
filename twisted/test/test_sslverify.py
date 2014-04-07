@@ -119,8 +119,11 @@ def makeCertificate(**kw):
 
 def certificatesForAuthorityAndServer(commonName=b'example.com'):
     """
-    Create a self-signed CA certificate and server certificate signed by
-    the CA.
+    Create a self-signed CA certificate and server certificate signed by the
+    CA.
+
+    @param commonName: The C{commonName} to embed in the certificate.
+    @type commonName: L{bytes}
 
     @return: a 2-tuple of C{(certificate_authority_certificate,
         server_certificate)}
@@ -1189,13 +1192,34 @@ class TrustRootTests(unittest.TestCase):
 
 class ServiceIdentityTests(unittest.TestCase):
     """
-    Service identity.
+    Tests for the verification of the peer's service's identity via the
+    C{hostname} argument to L{sslverify.OpenSSLCertificateOptions}.
     """
 
     skip = skipSSL
 
     def serviceIdentitySetup(self, clientHostname, serverHostname,
                              serverContextSetup=lambda ctx: None):
+        """
+        Connect a server and a client.
+
+        @param clientHostname: The I{client's idea} of the server's hostname;
+            passed as the C{hostname} to the
+            L{sslverify.OpenSSLCertificateOptions} instance.
+        @type clientHostname: L{unicode}
+
+        @param serverHostname: The I{server's own idea} of the server's
+            hostname; present in the certificate presented by the server.
+        @type serverHostname: L{unicode}
+
+        @param serverContextSetup: a 1-argument callable invoked with the
+            L{OpenSSL.SSL.Context} after it's produced.
+        @type serverContextSetup: L{callable} taking L{OpenSSL.SSL.Context}
+            returning L{NoneType}.
+
+        @return: see L{connectedServerAndClient}.
+        @rtype: see L{connectedServerAndClient}.
+        """
         caCert, serverCert = certificatesForAuthorityAndServer(
             serverHostname.encode("idna")
         )
