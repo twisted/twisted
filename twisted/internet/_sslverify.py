@@ -1233,8 +1233,8 @@ class OpenSSLCertificateOptions(object):
     def _identityVerifyingInfoCallback(self, connection, where, ret):
         """
         C{info_callback} for a pyOpenSSL that verifies the hostname in the
-        presented certificate matches the one passed ot this
-        L{OpenSSLCertificateOptions}.
+        presented certificate matches the one passed to this
+        L{CertificateOptions <twisted.internet.ssl.CertificateOptions>}.
 
         @param connection: the connection which is handshaking.
         @type connection: L{OpenSSL.SSL.Connection}
