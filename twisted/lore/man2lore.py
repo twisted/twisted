@@ -197,7 +197,7 @@ class ManConverter(object):
             if arg.lower() == "ar":
                 text += " \\fU%s\\fR" % (args.pop(0),)
             elif arg.lower() == "op":
-                ign = args.pop(0)
+                args.pop(0)
                 text += " [\\fU%s\\fR]" % (args.pop(0),)
 
         self.text(text)

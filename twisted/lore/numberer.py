@@ -1,6 +1,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+numberSections = None
+filenum = None
+
 
 def reset():
     resetFilenum()
