@@ -117,7 +117,7 @@ def _selectVerifyImplementation():
     return simpleVerifyHostname, SimpleVerificationError
 
 
-verify_hostname, VerificationError = _selectVerifyImplementation()
+verifyHostname, VerificationError = _selectVerifyImplementation()
 
 
 
@@ -1253,7 +1253,7 @@ class OpenSSLCertificateOptions(object):
             setHostNameIndication(self._hostnameBytes)
         elif where & SSL_CB_HANDSHAKE_DONE:
             try:
-                verify_hostname(connection, self._hostnameASCII)
+                verifyHostname(connection, self._hostnameASCII)
             except:
                 f = Failure()
                 transport = connection.get_app_data()
