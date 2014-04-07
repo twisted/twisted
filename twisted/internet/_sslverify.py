@@ -1261,7 +1261,6 @@ class OpenSSLCertificateOptions(object):
 
 
 
-
 class _OpenSSLECCurve(FancyEqMixin, object):
     """
     A private representation of an OpenSSL ECC curve.
