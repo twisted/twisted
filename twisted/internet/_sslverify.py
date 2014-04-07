@@ -64,7 +64,6 @@ def simpleVerifyHostname(connection, hostname):
     @raise VerificationError: if the common name and hostname don't match.
     """
     commonName = connection.get_peer_certificate().get_subject().commonName
-    hostname = _idnaBytes(hostname)
     if commonName != hostname:
         raise VerificationError(repr(commonName) + "!=" +
                                 repr(hostname))
