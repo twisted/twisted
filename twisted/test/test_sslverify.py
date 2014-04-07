@@ -24,8 +24,6 @@ try:
 except ImportError:
     skipSSL = "OpenSSL is required for SSL tests."
     skipSNI = skipSSL
-else:
-    from twisted.protocols.tls import TLSMemoryBIOFactory
 
 from twisted.test.iosim import connectedServerAndClient
 
