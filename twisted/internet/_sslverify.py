@@ -43,14 +43,25 @@ def _idnaBytes(text):
 
 
 
-def simple_verify_hostname(connection, hostname):
+def simpleVerifyHostname(connection, hostname):
     """
-    Check only the common name in the certificate and only for an exact match.
+    Check only the common name in the certificate presented by the peer and
+    only for an exact match.
 
     This is to provide I{something} in the way of hostname verification to
     users who haven't upgraded past OpenSSL 0.12 or installed
     C{service_identity}.  This check is overly strict, relies on a deprecated
-    TLS feature, and lots of valid CNs will fail.
+    TLS feature (you're supposed to ignore the commonName if the
+    subjectAlternativeName extensions are present, I believe), and lots of
+    valid certificates will fail.
+
+    @param connection: the OpenSSL connection to verify.@
+    @type connection: L{OpenSSL.SSL.Connection}
+
+    @param hostname: The hostname expected by the user.
+    @type hostname: L{unicode}
+
+    @raise VerificationError: if the common name and hostname don't match.
     """
     commonName = connection.get_peer_certificate().get_subject().commonName
     hostname = _idnaBytes(hostname)
@@ -100,7 +111,7 @@ def _selectVerifyImplementation():
             stacklevel=2
         )
 
-    return simple_verify_hostname, SimpleVerificationError
+    return simpleVerifyHostname, SimpleVerificationError
 
 
 verify_hostname, VerificationError = _selectVerifyImplementation()
