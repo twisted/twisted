@@ -1036,7 +1036,7 @@ class OpenSSLCertificateOptions(object):
             host that it's communicating with, and, if using a general-purpose
             set of trust roots such as L{platformTrust}, is therefore
             vulnerable to nearly arbitrary man-in-the-middle attacks.  The
-            second purpose it serves is (if the local L{pyOpenSSL} supports it)
+            second purpose it serves is (if the local C{pyOpenSSL} supports it)
             to use the U{Server Name Indication extension
             <https://en.wikipedia.org/wiki/Server_Name_Indication>} to indicate
             to the server which certificate should be used.
