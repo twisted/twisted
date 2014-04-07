@@ -77,7 +77,10 @@ def _selectVerifyImplementation():
     requires pyOpenSSL 0.12 or better but our dependency is still back at 0.10.
     Determine if pyOpenSSL has the requisite feature, and whether
     C{service_identity} is installed.  If so, use it.  If not, use simplistic
-    and incorrect checking as implemented in L{simple_verify_hostname}.
+    and incorrect checking as implemented in L{simpleVerifyHostname}.
+
+    @return: 2-tuple of (C{verify_hostname}, C{VerificationError})
+    @rtype: L{tuple}
     """
 
     whatsWrong = (
