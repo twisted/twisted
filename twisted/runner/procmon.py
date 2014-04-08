@@ -5,8 +5,6 @@
 """
 Support for starting, monitoring, and restarting child process.
 """
-import warnings
-
 from twisted.python import log
 from twisted.internet import error, protocol, reactor as _reactor
 from twisted.application import service
