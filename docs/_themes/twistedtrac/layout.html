@@ -252,6 +252,13 @@
       {%- if not embedded %}{% if not theme_nosidebar|tobool %}
         <div class="bodywrapper">
       {%- endif %}{% endif %}
+          <div id="current-docs-container" style="display: none">
+            <em>
+              <a id="current-docs-link">
+                Go to the latest version of this document.
+              </a>
+            </em>
+          </div>
           <div class="body">
             {% block body %} {% endblock %}
           </div>
@@ -277,5 +284,17 @@
       </p>
       <p class="right"></p>
     </div>
+    <script type="text/javascript">
+      if (window.location.pathname.indexOf('/current/') == -1) {
+          <!-- Give the user a link to this page, but in the current version of the docs. -->
+          var link = document.getElementById('current-docs-link');
+          link.href = window.location.pathname.replace(/\/\d+\.\d+\.\d+/, '/current');
+          <!-- And make it visible -->
+          var container = document.getElementById('current-docs-container');
+          container.style.display = '';
+          delete link;
+          delete container;
+      }
+    </script>
   </body>
 </html>
