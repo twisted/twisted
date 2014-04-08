@@ -1,6 +1,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+indexFilename = None
+entries = None
+
 
 def setIndexFilename(filename='index.xhtml'):
     global indexFilename

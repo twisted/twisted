@@ -21,7 +21,6 @@ class TexiSpitter(latex.BaseLatexSpitter):
     baseLevel = 1
 
     def writeNodeData(self, node):
-        buf = StringIO()
         latex.getLatexText(node, self.writer, texiEscape, entities)
 
     def visitNode_title(self, node):

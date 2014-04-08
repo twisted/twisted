@@ -141,7 +141,7 @@ class DefaultTagCheckerTests(TestCase):
                 checker.check(document, filename)
             finally:
                 patch.restore()
-        except ProcessingFailure, e:
+        except ProcessingFailure:
             if expectSuccess:
                 raise
         else:
