@@ -1,1 +1,0 @@
-twisted.internet.interfaces.IStreamClientEndpointStringParser is now deprecated in favor of twisted.internet.interfaces.IStreamClientEndpointStringParserWithReactor.
