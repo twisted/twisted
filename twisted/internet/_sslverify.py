@@ -902,6 +902,7 @@ def platformTrust():
 
 
 
+@implementer(IOpenSSLConnectionFactory)
 class OpenSSLCertificateOptions(object):
     """
     A factory for SSL context objects for both SSL servers and clients.
@@ -1149,7 +1150,9 @@ class OpenSSLCertificateOptions(object):
             trustRoot = IOpenSSLTrustRoot(trustRoot)
         self.trustRoot = trustRoot
         self.hostname = hostname
-        if hostname is not None:
+        if hostname is None:
+            self.__class__ = OpenSSLCertificateOptionsLegacyContextFactory
+        else:
             self._hostnameBytes = _idnaBytes(hostname)
             self._hostnameASCII = self._hostnameBytes.decode("utf-8")
 
@@ -1256,6 +1259,25 @@ class OpenSSLCertificateOptions(object):
                 f = Failure()
                 transport = connection.get_app_data()
                 transport._failVerification(f)
+
+
+    def connectionForTLSProtocol(self, protocol, side):
+        context = self._makeContext()
+        connection = side(SSL.Connection(context, None))
+        connection.set_app_data(protocol)
+        return connection
+
+
+
+@implementer_only()
+class OpenSSLCertificateOptionsLegacyContextFactory(OpenSSLCertificateOptions):
+    """
+    Since there is no inverse to L{zope.interface.directlyProvides}, but I'd
+    like L{OpenSSLCertificateOptions} to show up in the API documentation under
+    "known implementations" of L{IOpenSSLConnectionFactory}, this class exists
+    to have the exact same behavior but allow us to de-provide that interface
+    when invoked "old-style", i.e. with no hostname.
+    """
 
 
 
