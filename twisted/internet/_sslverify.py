@@ -65,8 +65,8 @@ def simpleVerifyHostname(connection, hostname):
     """
     commonName = connection.get_peer_certificate().get_subject().commonName
     if commonName != hostname:
-        raise VerificationError(repr(commonName) + "!=" +
-                                repr(hostname))
+        raise SimpleVerificationError(repr(commonName) + "!=" +
+                                      repr(hostname))
 
 
 
