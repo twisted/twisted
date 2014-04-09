@@ -53,8 +53,10 @@ from twisted.python.compat import unicode
 from twisted.python.failure import Failure
 from twisted.python import log
 from twisted.python.reflect import safe_str
-from twisted.internet.interfaces import ISystemHandle, ISSLTransport
-from twisted.internet.interfaces import IPushProducer, ILoggingContext
+from twisted.internet.interfaces import (
+    IOpenSSLConnectionFactory, TLSSide,
+    ISystemHandle, ISSLTransport, IPushProducer, ILoggingContext
+)
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import cooperate
@@ -296,15 +298,11 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         Connect this wrapper to the given transport and initialize the
         necessary L{OpenSSL.SSL.Connection} with a memory BIO.
         """
-        tlsContext = self.factory._contextFactory.getContext()
-        self._tlsConnection = Connection(tlsContext, None)
-        from twisted.internet.ssl import CertificateOptions
-        if isinstance(self.factory._contextFactory, CertificateOptions):
-            self._tlsConnection.set_app_data(self)
-        if self.factory._isClient:
-            self._tlsConnection.set_connect_state()
-        else:
-            self._tlsConnection.set_accept_state()
+        self._tlsConnection = (
+            self.factory._connectionFactory.connectionForTLSProtocol(
+                self, self.factory._side
+            )
+        )
         self._appSendBuffer = []
 
         # Add interfaces provided by the transport we are wrapping:
@@ -624,28 +622,73 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
 
 
+@implementer(IOpenSSLConnectionFactory)
+class _ConnectionFactory(object):
+    """
+    Adapter converting "something" (ideally something like a
+    L{twisted.internet.ssl.ContextFactory}) into an
+    L{IOpenSSLConnectionFactory}.
+    """
+
+    def __init__(self, oldStyleContextFactory):
+        """
+        Construct a L{_ConnectionFactory} with an old-style context factory.
+
+        @param oldStyleContextFactory: A factory that can produce contexts.
+        @type oldStyleContextFactory: L{twisted.internet.ssl.ContextFactory} or
+            something like it.
+        """
+        oldStyleContextFactory.getContext()
+        self._oldStyleContextFactory = oldStyleContextFactory
+
+
+    def connectionForTLSProtocol(self, protocol, side):
+        """
+        Construct a L{Connection}.
+        """
+        context = self._oldStyleContextFactory.getContext()
+        return side(Connection(context, None))
+
+
+
 class TLSMemoryBIOFactory(WrappingFactory):
     """
     L{TLSMemoryBIOFactory} adds TLS to connections.
 
-    @ivar _contextFactory: The TLS context factory which will be used to define
-        certain TLS connection parameters.
+    @ivar _connectionFactory: The connection factory used to provide OpenSSL
+        connection objects.
+    @type _connectionFactory: L{IOpenSSLConnectionFactory}
 
-    @ivar _isClient: A flag which is C{True} if this is a client TLS
-        connection, C{False} if it is a server TLS connection.
+    @ivar _side: An indication of the side of this connection that this
+        L{TLSMemoryBIOFactory} is creating connections for.
+    @type _side: L{TLSSide}
     """
     protocol = TLSMemoryBIOProtocol
 
     noisy = False  # disable unnecessary logging.
 
     def __init__(self, contextFactory, isClient, wrappedFactory):
-        WrappingFactory.__init__(self, wrappedFactory)
-        self._contextFactory = contextFactory
-        self._isClient = isClient
+        """
+        @param contextFactory: Configuration parameters used to create an
+            OpenSSL connection.
+        @type contextFactory: L{IOpenSSLConnectionFactory} or, for
+            compatibility, L{twisted.internet.ssl.ContextFactory}.
 
-        # Force some parameter checking in pyOpenSSL.  It's better to fail now
-        # than after we've set up the transport.
-        contextFactory.getContext()
+        @param isClient: Is this a factory for TLS client connections; in other
+            words, those that will send a C{ClientHello} greeting?  L{True} if
+            so, L{False} otherwise.
+        @type isClient: L{bool}
+
+        @param wrappedFactory: A factory which will create the
+            application-level protocol.
+        @type wrappedFactory: L{twisted.internet.interfaces.IProtocolFactory}
+        """
+        WrappingFactory.__init__(self, wrappedFactory)
+        if not IOpenSSLConnectionFactory.providedBy(contextFactory):
+            contextFactory = _ConnectionFactory(contextFactory)
+        self._connectionFactory = IOpenSSLConnectionFactory(contextFactory)
+        self._side = {True: TLSSide.client,
+                      False: TLSSide.server}[isClient]
 
 
     def logPrefix(self):
