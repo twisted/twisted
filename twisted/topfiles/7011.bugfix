@@ -1,1 +1,0 @@
-twisted.python.threadpool.ThreadPool no longer starts new workers when its pool size is changed while the pool is not running.

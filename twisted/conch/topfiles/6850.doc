@@ -1,1 +1,0 @@
-The docstring for twisted.conch.ssh.userauth.SSHUserAuthClient is now clearer on how the preferredOrder instance variable is handled.

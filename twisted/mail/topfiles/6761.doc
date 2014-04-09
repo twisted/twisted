@@ -1,2 +1,0 @@
-twisted.mail.pop3client public classes now appear as part of the
-twisted.mail.pop3 API.

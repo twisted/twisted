@@ -1,4 +1,0 @@
-twisted.names.server.DNSServerFactory now responds with messages whose flags and
-fields are reset to their default values instead of copying these from the
-request. This means that AD and CD flags, and EDNS OPT records in the request
-are no longer mirrored back to the client.

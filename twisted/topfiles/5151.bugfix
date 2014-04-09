@@ -1,1 +1,0 @@
-If a ProcessProtocol.processExited method raised an exception a broken process handler would be left in the global process state leading to errors later on. This has been fixed and now an error will be logged instead.
