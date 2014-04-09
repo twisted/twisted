@@ -13,6 +13,7 @@ from zope.interface import Interface, Attribute
 
 from twisted.python import deprecate
 from twisted.python.versions import Version
+from twisted.python.constants import Names, NamedConstant
 
 
 class IAddress(Interface):
@@ -2132,6 +2133,60 @@ class IUNIXTransport(ITransport):
         """
 
 
+class _ServerSideConstant(NamedConstant):
+    def __call__(self, connection):
+        connection.set_accept_state()
+        return connection
+
+class _ClientSideConstant(NamedConstant):
+    def __call__(self, connection):
+        connection.set_connect_state()
+        return connection
+
+
+
+class TLSSide(Names):
+    """
+    Constants for the roles that a TLS connection can play.
+
+    Each constant is callable, and when called with an
+    L{OpenSSL.SSL.Connection} and configures it for that connection side and
+    returns it.
+
+    @ivar client: The client side.  TLS connections in this role should
+        initiate the connection with a C{ClientHello}.
+
+    @ivar server: The server side.  TLS connections in this role should wait
+        for a C{ClientHello} and reply.
+    """
+    client = _ClientSideConstant()
+    server = _ServerSideConstant()
+
+
+
+class IOpenSSLConnectionFactory(Interface):
+    """
+    Factory for L{OpenSSL.SSL.Connection} objects.
+    """
+
+    def connectionForTLSProtocol(tlsProtocol, side):
+        """
+        Create a connection for the given protocol and connection type.
+
+        @param tlsProtocol: the protocol (client or server) making the request.
+        @type tlsProtocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}.
+
+        @param side: Is this TLS connection a client or server?  In other
+            words: should it send C{ClientHello} or wait to send
+            C{ServerHello}?
+        @type side: L{TLSSide}
+
+        @return: an OpenSSL connection object configured appropriately for the
+            given Twisted protocol.
+        @rtype: L{OpenSSL.SSL.Connection}
+        """
+
+
 
 class ITLSTransport(ITCPTransport):
     """
@@ -2144,8 +2199,9 @@ class ITLSTransport(ITCPTransport):
         """
         Initiate TLS negotiation.
 
-        @param contextFactory: A context factory
-            (see L{ssl.py<twisted.internet.ssl>})
+        @param contextFactory: An object which creates appropriately configured
+            TLS connection.
+        @type contextFactory: L{IOpenSSLConnectionFactory} or 
         """
 
 
