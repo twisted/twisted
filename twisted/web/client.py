@@ -750,11 +750,16 @@ if not _PY3:
     from twisted.web._newclient import (
         ResponseNeverReceived, PotentialDataLoss, _WrapperException)
 
+
+_deprecateContextFactory = deprecated(
+    Version("Twisted", 14, 0, 0),
+    "twisted.web.client.WebClientConnectionCreator"
+)
+
 try:
     from OpenSSL import SSL
 except ImportError:
-    @deprecated(Version("Twisted", 14, 0),
-                "twisted.web.client.WebClientConnectionCreator")
+    @_deprecateContextFactory
     class WebClientContextFactory(object):
         """
         A web context factory which doesn't work because the necessary SSL
@@ -776,8 +781,7 @@ except ImportError:
 
 else:
     from twisted.internet.ssl import CertificateOptions, platformTrust
-    @deprecated(Version("Twisted", 14, 0, 0),
-                "twisted.web.client.WebClientConnectionCreator")
+    @_deprecateContextFactory
     class WebClientContextFactory(object):
         """
         A web context factory which ignores the hostname and port. It performs
