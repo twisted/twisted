@@ -28,8 +28,7 @@ from zope.interface import implementer, directlyProvides
 from twisted.python.compat import _PY3, nativeString, intToBytes
 from twisted.python import log
 from twisted.python.failure import Failure
-from twisted.internet.interfaces import (IOpenSSLClientConnectionCreator,
-                                         IOpenSSLServerConnectionCreator)
+from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version
 from twisted.web import http
