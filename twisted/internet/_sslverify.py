@@ -1262,11 +1262,11 @@ class OpenSSLCertificateOptions(object):
             except:
                 f = Failure()
                 transport = connection.get_app_data()
-                transport._failVerification(f)
+                transport.failVerification(f)
 
 
     def clientConnectionForTLS(self, protocol):
-        context = self._makeContext()
+        context = self.getContext()
         connection = SSL.Connection(context, None)
         connection.set_app_data(protocol)
         return connection
