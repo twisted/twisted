@@ -2135,7 +2135,7 @@ class IUNIXTransport(ITransport):
 
 class IOpenSSLServerConnectionCreator(Interface):
     """
-    A provider of L{IOpenSSLConnectionCreator} can create
+    A provider of L{IOpenSSLServerConnectionCreator} can create
     L{OpenSSL.SSL.Connection} objects for TLS servers.
     """
 
@@ -2143,7 +2143,7 @@ class IOpenSSLServerConnectionCreator(Interface):
         """
         Create a connection for the given protocol.
 
-        @param tlsProtocol: the protocol (client or server) making the request.
+        @param tlsProtocol: the protocol server making the request.
         @type tlsProtocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}.
 
         @return: an OpenSSL connection object configured appropriately for the
@@ -2155,15 +2155,15 @@ class IOpenSSLServerConnectionCreator(Interface):
 
 class IOpenSSLClientConnectionCreator(Interface):
     """
-    A provider of L{IOpenSSLConnectionCreator} can create
-    L{OpenSSL.SSL.Connection} objects for TLS servers.
+    A provider of L{IOpenSSLClientConnectionCreator} can create
+    L{OpenSSL.SSL.Connection} objects for TLS clients.
     """
 
     def clientConnectionForTLS(tlsProtocol):
         """
         Create a connection for the given protocol.
 
-        @param tlsProtocol: the protocol (client or server) making the request.
+        @param tlsProtocol: the client protocol making the request.
         @type tlsProtocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}.
 
         @return: an OpenSSL connection object configured appropriately for the
