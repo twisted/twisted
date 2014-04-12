@@ -54,8 +54,7 @@ from twisted.python.failure import Failure
 from twisted.python import log
 from twisted.python.reflect import safe_str
 from twisted.internet.interfaces import (
-    IOpenSSLConnectionFactory, TLSSide,
-    ISystemHandle, ISSLTransport, IPushProducer, ILoggingContext
+    TLSSide, ISystemHandle, ISSLTransport, IPushProducer, ILoggingContext
 )
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
