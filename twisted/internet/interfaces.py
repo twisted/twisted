@@ -2186,7 +2186,11 @@ class ITLSTransport(ITCPTransport):
 
         @param contextFactory: An object which creates appropriately configured
             TLS connection.
-        @type contextFactory: L{IOpenSSLConnectionFactory} or 
+        @type contextFactory: L{IOpenSSLClientConnectionCreator} or
+            L{IOpenSSLServerConnectionCreator}, depending on whether this
+            L{ITLSTransport} is a server or not.  If the appropriate interface
+            is not provided, must be an old-style
+            L{twisted.internet.ssl.ContextFactory} or similar.
         """
 
 

@@ -644,6 +644,9 @@ class _ConnectionFactory(object):
         """
         Create an L{OpenSSL.SSL.Connection} object.
 
+        @param protocol: The protocol initiating a TLS connection.
+        @type protocol: L{TLSMemoryBIOProtocol}
+
         @return: a connection
         @rtype: L{OpenSSL.SSL.Connection}
         """
