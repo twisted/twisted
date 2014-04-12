@@ -1281,10 +1281,11 @@ class OpenSSLCertificateOptions(object):
 class OpenSSLCertificateOptionsLegacyContextFactory(OpenSSLCertificateOptions):
     """
     Since there is no inverse to L{zope.interface.directlyProvides}, but I'd
-    like L{OpenSSLCertificateOptions} to show up in the API documentation under
-    "known implementations" of L{IOpenSSLConnectionFactory}, this class exists
-    to have the exact same behavior but allow us to de-provide that interface
-    when invoked "old-style", i.e. with no hostname.
+    like L{twisted.internet.ssl.CertificateOptions} to show up in the API
+    documentation under "known implementations" of
+    L{IOpenSSLClientConnectionCreator} L{IOpenSSLServerConnectionCreator}, this
+    class exists to have the exact same behavior but allow us to de-provide
+    that interface when invoked "old-style", i.e. with no hostname.
     """
 
 
