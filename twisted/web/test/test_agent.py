@@ -32,6 +32,7 @@ from twisted.web.client import WebClientContextFactory, _HTTP11ClientFactory
 from twisted.web.iweb import UNKNOWN_LENGTH, IAgent, IBodyProducer, IResponse
 from twisted.web.http_headers import Headers
 from twisted.web._newclient import HTTP11ClientProtocol, Response
+from twisted.web.client import WebClientConnectionCreator
 from twisted.web.error import SchemeNotSupported
 
 try:
@@ -1121,12 +1122,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
                               _WebToNormalContextFactory)
         # Default context factory was used:
         self.assertIsInstance(endpoint._sslContextFactory._webContext,
-                              WebClientContextFactory)
-        self.assertIsInstance(
-            endpoint._sslContextFactory._webContext._getCertificateOptions(
-                'example.com', 443),
-            ssl.CertificateOptions
-        )
+                              WebClientConnectionCreator)
 
 
 
