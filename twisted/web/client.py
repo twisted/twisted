@@ -21,7 +21,9 @@ except ImportError:
     def urlunparse(parts):
         result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
         return result.encode("charmap")
+
 import zlib
+from functools import wraps
 
 from zope.interface import implementer, directlyProvides
 
@@ -759,98 +761,98 @@ _deprecateContextFactory = deprecated(
 try:
     from OpenSSL import SSL
 except ImportError:
-
-    @_deprecateContextFactory
-    class WebClientContextFactory(object):
-        """
-        A web context factory which doesn't work because the necessary SSL
-        support is missing.
-        """
-
-        def getContext(self, hostname, port):
-            raise NotImplementedError("SSL support unavailable")
-
-
-    class WebClientConnectionCreator(object):
-        """
-        A web client TLS connection creator which doesn't work becasue the
-        necessary SSL support is missing.
-        """
-
-        def connectionForNetloc(self, hostname, port):
-            raise NotImplementedError("SSL support unavailable")
-
+    SSL = None
 else:
-
     from twisted.internet.ssl import CertificateOptions, platformTrust
-    @_deprecateContextFactory
-    class WebClientContextFactory(object):
+
+
+def _requireSSL(decoratee):
+    """
+    The decorated method requires SSL support, or it raises
+    L{NotImplementedError}.
+    """
+    if SSL is None:
+        @wraps(decoratee)
+        def raiseNotImplemented(*a, **kw):
+            raise NotImplementedError("SSL support unavailable")
+        return raiseNotImplemented
+    return decoratee
+
+
+
+@_deprecateContextFactory
+class WebClientContextFactory(object):
+    """
+    A web context factory which ignores the hostname and port.  It performs
+    basic certificate verification, however the lack of validation of service
+    identity (e.g.  hostname validation) means it is still vulnerable to MITM
+    attacks (#4888).
+    """
+
+    def _getCertificateOptions(self, hostname, port):
         """
-        A web context factory which ignores the hostname and port. It performs
-        basic certificate verification, however the lack of validation of
-        service identity (e.g. hostname validation) means it is still
-        vulnerable to MITM attacks (#4888).
+        Return a L{CertificateOptions}.
+
+        @param bytes hostname: ignored
+        @param int port: ignored
+
+        @return: A new CertificateOptions instance.
+        @rtype: L{CertificateOptions}
         """
-        def _getCertificateOptions(self, hostname, port):
-            """
-            Return a L{CertificateOptions}.
-
-            @param bytes hostname: ignored
-            @param int port: ignored
-
-            @return: A new CertificateOptions instance.
-            @rtype: L{CertificateOptions}
-            """
-            return CertificateOptions(
-                method=SSL.SSLv23_METHOD,
-                trustRoot=platformTrust(),
-                hostname=hostname.decode('ascii')
-            )
+        return CertificateOptions(
+            method=SSL.SSLv23_METHOD,
+            trustRoot=platformTrust(),
+            hostname=hostname.decode('ascii')
+        )
 
 
-        def getContext(self, hostname, port):
-            """
-            Return an L{OpenSSL.SSL.Context}.
-
-            @param hostname: ignored
-            @param port: ignored
-
-            @return: A new SSL context.
-            @rtype: L{OpenSSL.SSL.Context}
-            """
-            return self._getCertificateOptions(hostname, port).getContext()
-
-
-
-    class WebClientConnectionCreator(object):
+    @_requireSSL
+    def getContext(self, hostname, port):
         """
-        SSL connection creator for web clients.
+        Return an L{OpenSSL.SSL.Context}.
+
+        @param hostname: ignored
+        @param port: ignored
+
+        @return: A new SSL context.
+        @rtype: L{OpenSSL.SSL.Context}
         """
-        def __init__(self, trustRoot=platformTrust()):
-            self._trustRoot = trustRoot
+        return self._getCertificateOptions(hostname, port).getContext()
 
 
-        def connectionForNetloc(self, tls, hostname, port):
-            """
-            Get an SSL connection for a given network location.
 
-            @param tls: The TLS protocol to create a connection for.
-            @type tls: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
+class WebClientConnectionCreator(object):
+    """
+    SSL connection creator for web clients.
+    """
+    def __init__(self, trustRoot=None):
+        if trustRoot is None and SSL is not None:
+            trustRoot = platformTrust()
+        self._trustRoot = trustRoot
 
-            @param hostname: The hostname part of the URI.
-            @type hostname: L{bytes}
 
-            @param port: The port part of the URI.
-            @type port: L{int}
+    @_requireSSL
+    def connectionForNetloc(self, tls, hostname, port):
+        """
+        Get an SSL connection for a given network location.
 
-            @return: a configured SSL connection
-            @rtype: L{OpenSSL.SSL.Connection}
-            """
-            return CertificateOptions(
-                method=SSL.SSLv23_METHOD,
-                trustRoot=self._trustRoot,
-                hostname=hostname.decode('ascii')
-            ).clientConnectionForTLS(tls)
+        @param tls: The TLS protocol to create a connection for.
+        @type tls: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
+
+        @param hostname: The hostname part of the URI.
+        @type hostname: L{bytes}
+
+        @param port: The port part of the URI.
+        @type port: L{int}
+
+        @return: a configured SSL connection
+        @rtype: L{OpenSSL.SSL.Connection}
+        """
+        return CertificateOptions(
+            method=SSL.SSLv23_METHOD,
+            trustRoot=self._trustRoot,
+            hostname=hostname.decode('ascii')
+        ).clientConnectionForTLS(tls)
 
 
 
