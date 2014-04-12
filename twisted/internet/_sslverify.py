@@ -1265,11 +1265,15 @@ class OpenSSLCertificateOptions(object):
                 transport._failVerification(f)
 
 
-    def connectionForTLSServer(self, protocol):
+    def clientConnectionForTLS(self, protocol):
         context = self._makeContext()
-        connection = side(SSL.Connection(context, None))
+        connection = SSL.Connection(context, None)
         connection.set_app_data(protocol)
         return connection
+
+
+    def serverConnectionForTLS(self, protocol):
+        return self.clientConnectionForTLS(protocol)
 
 
 

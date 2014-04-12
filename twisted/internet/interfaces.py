@@ -2140,7 +2140,7 @@ class IOpenSSLServerConnectionCreator(Interface):
     L{OpenSSL.SSL.Connection} objects for TLS servers.
     """
 
-    def connectionForTLSServer(tlsProtocol):
+    def serverConnectionForTLS(tlsProtocol):
         """
         Create a connection for the given protocol.
 
@@ -2160,7 +2160,7 @@ class IOpenSSLClientConnectionCreator(Interface):
     L{OpenSSL.SSL.Connection} objects for TLS servers.
     """
 
-    def connectionForTLSClient(tlsProtocol):
+    def clientConnectionForTLS(tlsProtocol):
         """
         Create a connection for the given protocol.
 

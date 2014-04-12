@@ -53,9 +53,11 @@ from zope.interface import implementer, providedBy, directlyProvides
 from twisted.python.compat import unicode
 from twisted.python.failure import Failure
 from twisted.python import log
+from twisted.internet.interfaces import IOpenSSLServerConnectionCreator
+from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
 from twisted.python.reflect import safe_str
 from twisted.internet.interfaces import (
-    TLSSide, ISystemHandle, ISSLTransport, IPushProducer, ILoggingContext
+    ISystemHandle, ISSLTransport, IPushProducer, ILoggingContext
 )
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
@@ -298,11 +300,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         Connect this wrapper to the given transport and initialize the
         necessary L{OpenSSL.SSL.Connection} with a memory BIO.
         """
-        self._tlsConnection = (
-            self.factory._connectionFactory.connectionForTLSProtocol(
-                self, self.factory._side
-            )
-        )
+        self._tlsConnection = self.factory._createConnection(self)
         self._appSendBuffer = []
 
         # Add interfaces provided by the transport we are wrapping:
@@ -622,12 +620,12 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
 
 
-@implementer(IOpenSSLConnectionFactory)
+@implementer(IOpenSSLClientConnectionCreator, IOpenSSLServerConnectionCreator)
 class _ConnectionFactory(object):
     """
     Adapter converting "something" (ideally something like a
     L{twisted.internet.ssl.ContextFactory}) into an
-    L{IOpenSSLConnectionFactory}.
+    L{IOpenSSLClientConnectionCreator} or L{IOpenSSLServerConnectionCreator}.
     """
 
     def __init__(self, oldStyleContextFactory):
@@ -642,12 +640,24 @@ class _ConnectionFactory(object):
         self._oldStyleContextFactory = oldStyleContextFactory
 
 
-    def connectionForTLSProtocol(self, protocol, side):
+    def _connectionForTLS(self, protocol):
         """
-        Construct a L{Connection}.
+        Create an L{OpenSSL.SSL.Connection} object.
+
+        @return: a connection
+        @rtype: L{OpenSSL.SSL.Connection}
         """
         context = self._oldStyleContextFactory.getContext()
-        return side(Connection(context, None))
+        return Connection(context, None)
+
+
+    def serverConnectionForTLS(self, protocol):
+        return self._connectionForTLS(protocol)
+
+
+    def clientConnectionForTLS(self, protocol):
+        return self._connectionForTLS(protocol)
+
 
 
 
@@ -655,13 +665,10 @@ class TLSMemoryBIOFactory(WrappingFactory):
     """
     L{TLSMemoryBIOFactory} adds TLS to connections.
 
-    @ivar _connectionFactory: The connection factory used to provide OpenSSL
-        connection objects.
-    @type _connectionFactory: L{IOpenSSLConnectionFactory}
-
-    @ivar _side: An indication of the side of this connection that this
-        L{TLSMemoryBIOFactory} is creating connections for.
-    @type _side: L{TLSSide}
+    @ivar _connectionCreator: a callable which creates an SSL connection
+        object.
+    @type _connectionCreator: 1-argument callable taking
+        L{TLSMemoryBIOProtocol} and returning L{OpenSSL.SSL.Connection}.
     """
     protocol = TLSMemoryBIOProtocol
 
@@ -684,11 +691,16 @@ class TLSMemoryBIOFactory(WrappingFactory):
         @type wrappedFactory: L{twisted.internet.interfaces.IProtocolFactory}
         """
         WrappingFactory.__init__(self, wrappedFactory)
-        if not IOpenSSLConnectionFactory.providedBy(contextFactory):
+        if isClient:
+            creatorInterface = IOpenSSLClientConnectionCreator
+            self._postCreate = lambda c: c.set_connect_state()
+        else:
+            creatorInterface = IOpenSSLServerConnectionCreator
+            self._postCreate = lambda c: c.set_accept_state()
+        if not creatorInterface.providedBy(contextFactory):
             contextFactory = _ConnectionFactory(contextFactory)
-        self._connectionFactory = IOpenSSLConnectionFactory(contextFactory)
-        self._side = {True: TLSSide.client,
-                      False: TLSSide.server}[isClient]
+        self._connectionCreator = getattr(contextFactory,
+                                          list(creatorInterface)[0])
 
 
     def logPrefix(self):
@@ -703,4 +715,18 @@ class TLSMemoryBIOFactory(WrappingFactory):
         else:
             logPrefix = self.wrappedFactory.__class__.__name__
         return "%s (TLS)" % (logPrefix,)
+
+
+    def _createConnection(self, tlsProtocol):
+        """
+        Create an OpenSSL connection and set it up good.
+
+        @param tlsProtocol: The protocol which is establishing the connection.
+
+        @type: L{TLSMemoryBIOProtocol}
+        """
+        connection = self._connectionCreator(tlsProtocol)
+        self._postCreate(connection)
+        return connection
+
 
