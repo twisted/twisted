@@ -767,11 +767,22 @@ else:
         service identity (e.g. hostname validation) means it is still
         vulnerable to MITM attacks (#4888).
         """
-        def __init__(self):
-            self._contextFactory = CertificateOptions(
+        def _getCertificateOptions(self, hostname, port):
+            """
+            Return a L{CertificateOptions}.
+
+            @param bytes hostname: ignored
+            @param int port: ignored
+
+            @return: A new CertificateOptions instance.
+            @rtype: L{CertificateOptions}
+            """
+            return CertificateOptions(
                 method=SSL.SSLv23_METHOD,
                 trustRoot=platformTrust(),
+                hostname=hostname.decode('ascii')
             )
+
 
         def getContext(self, hostname, port):
             """
@@ -783,7 +794,7 @@ else:
             @return: A new SSL context.
             @rtype: L{OpenSSL.SSL.Context}
             """
-            return self._contextFactory.getContext()
+            return self._getCertificateOptions(hostname, port).getContext()
 
 
 

@@ -1,0 +1,1 @@
+Agent requests to https URLs now verify the hostname in the URL matches the hostname in the server presented certificate.
