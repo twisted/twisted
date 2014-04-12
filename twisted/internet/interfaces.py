@@ -13,7 +13,6 @@ from zope.interface import Interface, Attribute
 
 from twisted.python import deprecate
 from twisted.python.versions import Version
-from twisted.python.constants import Names, NamedConstant
 
 
 class IAddress(Interface):
