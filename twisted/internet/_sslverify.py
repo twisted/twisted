@@ -17,13 +17,12 @@ except ImportError:
     SSL_CB_HANDSHAKE_START = 0x10
     SSL_CB_HANDSHAKE_DONE = 0x20
 
-from zope.interface import Interface, implementer, implementer_only
+from zope.interface import Interface, implementer, directlyProvides
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
 
 from twisted.internet.interfaces import (
-    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
-    IOpenSSLServerConnectionCreator
+    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator
 )
 
 from twisted.python import reflect, util
@@ -905,8 +904,6 @@ def platformTrust():
 
 
 
-@implementer(IOpenSSLClientConnectionCreator,
-             IOpenSSLServerConnectionCreator)
 class OpenSSLCertificateOptions(object):
     """
     A factory for SSL context objects for both SSL servers and clients.
@@ -1154,11 +1151,10 @@ class OpenSSLCertificateOptions(object):
             trustRoot = IOpenSSLTrustRoot(trustRoot)
         self.trustRoot = trustRoot
         self.hostname = hostname
-        if hostname is None:
-            self.__class__ = OpenSSLCertificateOptionsLegacyContextFactory
-        else:
+        if hostname is not None:
             self._hostnameBytes = _idnaBytes(hostname)
             self._hostnameASCII = self._hostnameBytes.decode("utf-8")
+            directlyProvides(self, IOpenSSLClientConnectionCreator)
 
 
     def __getstate__(self):
@@ -1274,19 +1270,6 @@ class OpenSSLCertificateOptions(object):
 
     def serverConnectionForTLS(self, protocol):
         return self.clientConnectionForTLS(protocol)
-
-
-
-@implementer_only()
-class OpenSSLCertificateOptionsLegacyContextFactory(OpenSSLCertificateOptions):
-    """
-    Since there is no inverse to L{zope.interface.directlyProvides}, but I'd
-    like L{twisted.internet.ssl.CertificateOptions} to show up in the API
-    documentation under "known implementations" of
-    L{IOpenSSLClientConnectionCreator} L{IOpenSSLServerConnectionCreator}, this
-    class exists to have the exact same behavior but allow us to de-provide
-    that interface when invoked "old-style", i.e. with no hostname.
-    """
 
 
 
