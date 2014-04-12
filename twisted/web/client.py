@@ -821,9 +821,16 @@ else:
         """
         SSL connection creator for web clients.
         """
+        def __init__(self, trustRoot=platformTrust()):
+            self._trustRoot = trustRoot
+
+
         def connectionForNetloc(self, tls, hostname, port):
             """
             Get an SSL connection for a given network location.
+
+            @param tls: The TLS protocol to create a connection for.
+            @type tls: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
 
             @param hostname: The hostname part of the URI.
             @type hostname: L{bytes}
@@ -836,7 +843,7 @@ else:
             """
             return CertificateOptions(
                 method=SSL.SSLv23_METHOD,
-                trustRoot=platformTrust(),
+                trustRoot=self._trustRoot,
                 hostname=hostname.decode('ascii')
             ).clientConnectionForTLS(tls)
 
