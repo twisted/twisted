@@ -2137,11 +2137,15 @@ class IOpenSSLServerConnectionCreator(Interface):
     """
     A provider of L{IOpenSSLServerConnectionCreator} can create
     L{OpenSSL.SSL.Connection} objects for TLS servers.
+
+    @warning: Creating OpenSSL connection objects is subtle, error-prone, and
+        security-critical.  Before implementing this interface yourself,
+        consider using L{twisted.internet.ssl.CertificateOptions}.
     """
 
     def serverConnectionForTLS(tlsProtocol):
         """
-        Create a connection for the given protocol.
+        Create a connection for the given server protocol.
 
         @param tlsProtocol: the protocol server making the request.
         @type tlsProtocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}.
@@ -2157,11 +2161,15 @@ class IOpenSSLClientConnectionCreator(Interface):
     """
     A provider of L{IOpenSSLClientConnectionCreator} can create
     L{OpenSSL.SSL.Connection} objects for TLS clients.
+
+    @warning: Creating OpenSSL connection objects is subtle, error-prone, and
+        security-critical.  Before implementing this interface yourself,
+        consider using L{twisted.internet.ssl.CertificateOptions}.
     """
 
     def clientConnectionForTLS(tlsProtocol):
         """
-        Create a connection for the given protocol.
+        Create a connection for the given client protocol.
 
         @param tlsProtocol: the client protocol making the request.
         @type tlsProtocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}.
