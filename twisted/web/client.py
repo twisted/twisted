@@ -983,8 +983,8 @@ class _RetryingHTTP11ClientProtocol(object):
                                       ResponseNeverReceived)):
             return False
         if isinstance(exception, _WrapperException):
-            for failure in exception.reasons:
-                if failure.check(defer.CancelledError):
+            for aFailure in exception.reasons:
+                if aFailure.check(defer.CancelledError):
                     return False
         if bodyProducer is not None:
             return False
