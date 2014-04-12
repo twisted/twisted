@@ -24,13 +24,18 @@ from twisted.python.runtime import platformType
 from twisted.python import versions, deprecate
 
 try:
-    # Try to get the memory BIO based startTLS implementation, available since
-    # pyOpenSSL 0.10
+    __import__("OpenSSL.SSL")
+except ImportError:
+    TLS = False
+else:
+    TLS = True
+
+if TLS:
     from twisted.internet._newtls import (
         ConnectionMixin as _TLSConnectionMixin,
         ClientMixin as _TLSClientMixin,
         ServerMixin as _TLSServerMixin)
-except ImportError:
+else:
     # There is no version of startTLS available
     class _TLSConnectionMixin(object):
         TLS = False
