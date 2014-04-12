@@ -680,8 +680,9 @@ class TLSMemoryBIOFactory(WrappingFactory):
         """
         @param contextFactory: Configuration parameters used to create an
             OpenSSL connection.
-        @type contextFactory: L{IOpenSSLConnectionFactory} or, for
-            compatibility, L{twisted.internet.ssl.ContextFactory}.
+        @type contextFactory: L{IOpenSSLClientConnectionCreator} or
+            L{IOpenSSLServerConnectionCreator}, or, for compatibility with
+            older code, L{twisted.internet.ssl.ContextFactory}.
 
         @param isClient: Is this a factory for TLS client connections; in other
             words, those that will send a C{ClientHello} greeting?  L{True} if
