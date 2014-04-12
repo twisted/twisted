@@ -663,7 +663,6 @@ class _ConnectionFactory(object):
 
 
 
-
 class TLSMemoryBIOFactory(WrappingFactory):
     """
     L{TLSMemoryBIOFactory} adds TLS to connections.
