@@ -759,15 +759,16 @@ _deprecateContextFactory = deprecated(
 try:
     from OpenSSL import SSL
 except ImportError:
+
     @_deprecateContextFactory
     class WebClientContextFactory(object):
         """
         A web context factory which doesn't work because the necessary SSL
         support is missing.
         """
+
         def getContext(self, hostname, port):
             raise NotImplementedError("SSL support unavailable")
-
 
 
     class WebClientConnectionCreator(object):
@@ -780,6 +781,7 @@ except ImportError:
             raise NotImplementedError("SSL support unavailable")
 
 else:
+
     from twisted.internet.ssl import CertificateOptions, platformTrust
     @_deprecateContextFactory
     class WebClientContextFactory(object):
