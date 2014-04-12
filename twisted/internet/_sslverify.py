@@ -20,8 +20,11 @@ except ImportError:
 from zope.interface import Interface, implementer, implementer_only
 from twisted.internet.defer import Deferred
 from twisted.internet.error import VerifyError, CertificateError
-from twisted.internet.interfaces import IAcceptableCiphers, ICipher
-from twisted.internet.interfaces import IOpenSSLConnectionFactory
+
+from twisted.internet.interfaces import (
+    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator,
+    IOpenSSLServerConnectionCreator
+)
 
 from twisted.python import reflect, util
 from twisted.python.deprecate import _mutuallyExclusiveArguments
@@ -902,7 +905,8 @@ def platformTrust():
 
 
 
-@implementer(IOpenSSLConnectionFactory)
+@implementer(IOpenSSLClientConnectionCreator,
+             IOpenSSLServerConnectionCreator)
 class OpenSSLCertificateOptions(object):
     """
     A factory for SSL context objects for both SSL servers and clients.
