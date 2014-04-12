@@ -29,10 +29,11 @@ implement SSL and TLS.  Typical usage of this module looks like this::
     reactor.run()
 
 This API offers somewhat more flexibility than
-L{twisted.internet.interfaces.IReactorSSL}; for example, a L{TLSMemoryBIOProtocol}
-instance can use another instance of L{TLSMemoryBIOProtocol} as its transport,
-yielding TLS over TLS - useful to implement onion routing.  It can also be used
-to run TLS over unusual transports, such as UNIX sockets and stdio.
+L{twisted.internet.interfaces.IReactorSSL}; for example, a
+L{TLSMemoryBIOProtocol} instance can use another instance of
+L{TLSMemoryBIOProtocol} as its transport, yielding TLS over TLS - useful to
+implement onion routing.  It can also be used to run TLS over unusual
+transports, such as UNIX sockets and stdio.
 """
 
 from __future__ import division, absolute_import
