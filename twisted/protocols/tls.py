@@ -725,8 +725,10 @@ class TLSMemoryBIOFactory(WrappingFactory):
         Create an OpenSSL connection and set it up good.
 
         @param tlsProtocol: The protocol which is establishing the connection.
+        @type tlsProtocol: L{TLSMemoryBIOProtocol}
 
-        @type: L{TLSMemoryBIOProtocol}
+        @return: an SSL connection object for C{tlsProtocol} to use
+        @rtype: L{OpenSSL.SSL.Connection}
         """
         connection = self._connectionCreator(tlsProtocol)
         self._postCreate(connection)
