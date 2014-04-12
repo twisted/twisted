@@ -23,11 +23,15 @@ except ImportError:
         return result.encode("charmap")
 import zlib
 
-from zope.interface import implementer
+from zope.interface import implementer, directlyProvides
 
 from twisted.python.compat import _PY3, nativeString, intToBytes
 from twisted.python import log
 from twisted.python.failure import Failure
+from twisted.internet.interfaces import (IOpenSSLClientConnectionCreator,
+                                         IOpenSSLServerConnectionCreator)
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
 from twisted.internet.interfaces import IProtocol
@@ -749,9 +753,9 @@ if not _PY3:
 
 try:
     from OpenSSL import SSL
-
-    from twisted.internet.ssl import CertificateOptions, platformTrust
 except ImportError:
+    @deprecated(Version("Twisted", 14, 0),
+                "twisted.web.client.WebClientConnectionCreator")
     class WebClientContextFactory(object):
         """
         A web context factory which doesn't work because the necessary SSL
@@ -759,7 +763,22 @@ except ImportError:
         """
         def getContext(self, hostname, port):
             raise NotImplementedError("SSL support unavailable")
+
+
+
+    class WebClientConnectionCreator(object):
+        """
+        A web client TLS connection creator which doesn't work becasue the
+        necessary SSL support is missing.
+        """
+
+        def connectionForNetloc(self, hostname, port):
+            raise NotImplementedError("SSL support unavailable")
+
 else:
+    from twisted.internet.ssl import CertificateOptions, platformTrust
+    @deprecated(Version("Twisted", 14, 0, 0),
+                "twisted.web.client.WebClientConnectionCreator")
     class WebClientContextFactory(object):
         """
         A web context factory which ignores the hostname and port. It performs
@@ -798,6 +817,31 @@ else:
 
 
 
+    class WebClientConnectionCreator(object):
+        """
+        SSL connection creator for web clients.
+        """
+        def connectionForNetloc(self, tls, hostname, port):
+            """
+            Get an SSL connection for a given network location.
+
+            @param hostname: The hostname part of the URI.
+            @type hostname: L{bytes}
+
+            @param port: The port part of the URI.
+            @type port: L{int}
+
+            @return: a configured SSL connection
+            @rtype: L{OpenSSL.SSL.Connection}
+            """
+            return CertificateOptions(
+                method=SSL.SSLv23_METHOD,
+                trustRoot=platformTrust(),
+                hostname=hostname.decode('ascii')
+            ).clientConnectionForTLS(tls)
+
+
+
 class _WebToNormalContextFactory(object):
     """
     Adapt a web context factory to a normal context factory.
@@ -815,6 +859,8 @@ class _WebToNormalContextFactory(object):
         self._webContext = webContext
         self._hostname = hostname
         self._port = port
+        if hasattr(self._webContext, "connectionForNetloc"):
+            directlyProvides(self, IOpenSSLClientConnectionCreator)
 
 
     def getContext(self):
@@ -823,6 +869,11 @@ class _WebToNormalContextFactory(object):
         hostname and port number and return the resulting context object.
         """
         return self._webContext.getContext(self._hostname, self._port)
+
+
+    def clientConnectionForTLS(self, tlsProtocol):
+        return self._webContext.connectionForNetloc(tlsProtocol,
+                                                    self._hostname, self._port)
 
 
 
@@ -1242,7 +1293,7 @@ class Agent(_AgentBase):
     @since: 9.0
     """
 
-    def __init__(self, reactor, contextFactory=WebClientContextFactory(),
+    def __init__(self, reactor, contextFactory=WebClientConnectionCreator(),
                  connectTimeout=None, bindAddress=None,
                  pool=None):
         _AgentBase.__init__(self, reactor, pool)
