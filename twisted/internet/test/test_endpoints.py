@@ -3217,12 +3217,27 @@ class ConnectProtocolTests(unittest.TestCase):
 
 
 class FakeEndpoint(object):
-    def __init__(self, failure=None):
-        self.failure = failure
+    """
+    A fake endpoint which connects to a L{StringTransport}.
+
+    @ivar deferred: A L{Deferred} to be returned instead from C{connect} if
+        non-L{None}.
+    """
+
+    def __init__(self):
         self.deferred = None
 
 
     def connect(self, fac):
+        """
+        Connect a factory to a L{StringTransport}.
+
+        @param fac: A factory.
+        @type fac: An L{IProtocolFactory} provider.
+
+        @return: A L{Deferred} which fires with the L{IProtocol} returned from
+            C{fac.buildProtcol}.
+        """
         if self.deferred is not None:
             return self.deferred
         self.factory = fac
@@ -3235,21 +3250,52 @@ class FakeEndpoint(object):
 
 
 class UppercaseWrapperProtocol(policies.ProtocolWrapper):
+    """
+    A wrapper protocol which uppercases all strings passed through it.
+    """
+
     def dataReceived(self, data):
+        """
+        Uppercase a string passed in from the transport.
+
+        @param data: The string to uppercase.
+        @type data: L{bytes}
+        """
         policies.ProtocolWrapper.dataReceived(self, data.upper())
 
 
     def write(self, data):
+        """
+        Uppercase a string passed out to the transport.
+
+        @param data: The string to uppercase.
+        @type data: L{bytes}
+        """
         policies.ProtocolWrapper.write(self, data.upper())
 
 
     def writeSequence(self, seq):
+        """
+        Uppercase a series of strings passed out to the transport.
+
+        @param seq: An iterable of strings.
+        """
         for data in seq:
             self.write(data)
 
 
 
 class UppercaseWrapperFactory(policies.WrappingFactory):
+    """
+    A wrapper factory which uppercases all strings passed through it.
+
+    @param context: A context factory, to persist for tests.
+    @param isClient: A boolean indicating this is supposed to be a client
+        getting wrapped, to persist for tests.
+    @param factory: The factory to wrap.
+    @type factory: an L{IProtocolFactory} provider
+    """
+
     protocol = UppercaseWrapperProtocol
 
     def __init__(self, context, isClient, factory):
@@ -3260,22 +3306,42 @@ class UppercaseWrapperFactory(policies.WrappingFactory):
 
 
 class NetstringTracker(basic.NetstringReceiver):
+    """
+    A netstring receiver which keeps track of the strings received.
+
+    @ivar strings: A L{list} of received strings, in order.
+    """
+
     def __init__(self):
         self.strings = []
 
 
     def stringReceived(self, string):
+        """
+        Receive a string and append it to C{self.strings}.
+
+        @param string: The string to be appended to C{self.strings}.
+        """
         self.strings.append(string)
 
 
 
 class NetstringFactory(protocol.ClientFactory):
+    """
+    A factory for L{NetstringTracker} protocols.
+    """
+
     protocol = NetstringTracker
 
 
 
 class FakeError(Exception):
-    pass
+    """
+    An error which isn't really an error.
+
+    This is raised in the L{TLSWrapperClientEndpoint} tests in place of a
+    'real' exception.
+    """
 
 
 
@@ -3283,7 +3349,6 @@ class TLSWrapperClientEndpointTests(unittest.TestCase):
     """
     Tests for L{TLSWrapperClientEndpoint}.
     """
-
 
     def setUp(self):
         self.endpoint = FakeEndpoint()
