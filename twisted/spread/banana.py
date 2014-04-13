@@ -79,6 +79,8 @@ def setPrefixLimit(limit):
     """
     global _PREFIX_LIMIT
     _PREFIX_LIMIT = limit
+
+_PREFIX_LIMIT = None
 setPrefixLimit(64)
 
 SIZE_LIMIT = 640 * 1024   # 640k is all you'll ever need :-)
