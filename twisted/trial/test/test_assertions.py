@@ -362,11 +362,12 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
 
 
     def test_failUnlessRaises_noException(self):
+        return_value = 3
         try:
-            self.failUnlessRaises(ValueError, lambda : None)
+            self.failUnlessRaises(ValueError, lambda : return_value)
         except self.failureException as e:
             self.assertEqual(str(e),
-                                 'ValueError not raised (None returned)')
+                                 'ValueError not raised (3 returned)')
         else:
             self.fail("Exception not raised. Should have failed")
 
@@ -385,6 +386,53 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
             pass
         else:
             self.fail("Should have raised exception")
+
+
+    def test_assertRaises_contextExpected(self):
+        """
+        Test succeeds when called with context for expected exception. Raised
+        exceptions is stored in context's `exception` member.
+        """
+        exception = ValueError('marker')
+
+        with self.assertRaises(ValueError) as context:
+            raise exception
+
+        self.assertIs(exception, context.exception)
+
+
+    def test_assertRaises_contextUnexpected(self):
+        """
+        Raises failureException when expected exception raised by the code
+        withing the context does not match.
+        """
+        with self.assertRaises(self.failureException) as context:
+
+            with self.assertRaises(ValueError):
+                raise TypeError('marker')
+
+        message = context.exception.message
+        self.assertTrue(message.startswith(
+                '<type \'exceptions.TypeError\'> raised instead of '
+                'ValueError:\n Traceback'
+                ))
+
+
+    def test_assertRaises_contextNoException(self):
+        """
+        Raises failureException when no exception is raised by the code
+        from withing the context.
+        """
+        with self.assertRaises(self.failureException) as context:
+
+            with self.assertRaises(ValueError):
+                # No exception is raised.
+                pass
+
+        message = context.exception.message
+        # '(None returned)' text is here for backward compatibility and should
+        # be ignored for context manager use case.
+        self.assertEqual(message, 'ValueError not raised (None returned)')
 
 
     def test_failIfEqual_basic(self):

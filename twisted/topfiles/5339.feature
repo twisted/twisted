@@ -1,0 +1,1 @@
+twisted.trial.unittest.SynchronousTestCase.assertRaises now support context manager.
