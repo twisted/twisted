@@ -24,18 +24,13 @@ from twisted.python.runtime import platformType
 from twisted.python import versions, deprecate
 
 try:
-    __import__("OpenSSL.SSL")
-except ImportError:
-    TLS = False
-else:
-    TLS = True
-
-if TLS:
+    # Try to get the memory BIO based startTLS implementation, available since
+    # pyOpenSSL 0.10
     from twisted.internet._newtls import (
         ConnectionMixin as _TLSConnectionMixin,
         ClientMixin as _TLSClientMixin,
         ServerMixin as _TLSServerMixin)
-else:
+except ImportError:
     # There is no version of startTLS available
     class _TLSConnectionMixin(object):
         TLS = False
@@ -50,14 +45,16 @@ else:
 
 
 if platformType == 'win32':
-    # no such thing as WSAEPERM or error code 10001 according to winsock.h or
-    # MSDN
+    # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
     EPERM = object()
     from errno import WSAEINVAL as EINVAL
     from errno import WSAEWOULDBLOCK as EWOULDBLOCK
     from errno import WSAEINPROGRESS as EINPROGRESS
     from errno import WSAEALREADY as EALREADY
+    from errno import WSAECONNRESET as ECONNRESET
     from errno import WSAEISCONN as EISCONN
+    from errno import WSAENOTCONN as ENOTCONN
+    from errno import WSAEINTR as EINTR
     from errno import WSAENOBUFS as ENOBUFS
     from errno import WSAEMFILE as EMFILE
     # No such thing as WSAENFILE, either.
@@ -74,7 +71,10 @@ else:
     from errno import EWOULDBLOCK
     from errno import EINPROGRESS
     from errno import EALREADY
+    from errno import ECONNRESET
     from errno import EISCONN
+    from errno import ENOTCONN
+    from errno import EINTR
     from errno import ENOBUFS
     from errno import EMFILE
     from errno import ENFILE
