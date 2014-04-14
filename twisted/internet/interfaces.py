@@ -2138,6 +2138,8 @@ class IOpenSSLServerConnectionCreator(Interface):
     A provider of L{IOpenSSLServerConnectionCreator} can create
     L{OpenSSL.SSL.Connection} objects for TLS servers.
 
+    @see: L{twisted.internet.ssl}
+
     @warning: Creating OpenSSL connection objects is subtle, error-prone, and
         security-critical.  Before implementing this interface yourself,
         consider using L{twisted.internet.ssl.CertificateOptions}.
@@ -2161,6 +2163,8 @@ class IOpenSSLClientConnectionCreator(Interface):
     """
     A provider of L{IOpenSSLClientConnectionCreator} can create
     L{OpenSSL.SSL.Connection} objects for TLS clients.
+
+    @see: L{twisted.internet.ssl}
 
     @warning: Creating OpenSSL connection objects is subtle, error-prone, and
         security-critical.  Before implementing this interface yourself,

@@ -19,11 +19,11 @@ APIs:
 
     - L{listenSSL <twisted.internet.interfaces.IReactorSSL.listenSSL>}
 
-These APIs all require C{contextFactory} argument that specifies their security
-properties, such as certificate, private key, certificate authorities to verify
-the peer, allowed TLS protocol versions, cipher suites, and so on.  The
-recommended value for this argument is a L{CertificateOptions} instance; see
-its documentation for an explanation of the available options.
+These APIs all require a C{contextFactory} argument that specifies their
+security properties, such as certificate, private key, certificate authorities
+to verify the peer, allowed TLS protocol versions, cipher suites, and so on.
+The recommended value for this argument is a L{CertificateOptions} instance;
+see its documentation for an explanation of the available options.
 
 The C{contextFactory} name is a bit of an anachronism now, as context factories
 have been replaced with "connection creators", but these objects serve the same
