@@ -1,27 +1,11 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """Utilities for building L{PB<twisted.spread.pb>} clients with L{Tkinter}.
 """
 from Tkinter import (
-    ACTIVE,
-    Button,
-    Canvas,
-    E,
-    END,
-    Entry,
-    Frame,
-    Label,
-    LEFT,
-    Listbox,
-    mainloop,
-    N,
-    S,
-    StringVar,
-    Toplevel,
-    Tk,
-    W,)
+    ACTIVE, Button, Canvas, E, END, Entry, Frame, Label, LEFT, Listbox,
+    mainloop, N, S, StringVar, Toplevel, Tk, W)
 from tkSimpleDialog import _QueryString
 from tkFileDialog import _Dialog
 from twisted.spread import pb
