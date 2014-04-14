@@ -667,6 +667,10 @@ class TLSMemoryBIOFactory(WrappingFactory):
     """
     L{TLSMemoryBIOFactory} adds TLS to connections.
 
+    @ivar _creatorInterface: the interface which L{_connectionCreator} is
+        expected to implement.
+    @type _creatorInterface: L{zope.interface.Interface}
+
     @ivar _connectionCreator: a callable which creates an SSL connection
         object.
     @type _connectionCreator: 1-argument callable taking
@@ -696,14 +700,12 @@ class TLSMemoryBIOFactory(WrappingFactory):
         WrappingFactory.__init__(self, wrappedFactory)
         if isClient:
             creatorInterface = IOpenSSLClientConnectionCreator
-            self._postCreate = lambda c: c.set_connect_state()
         else:
             creatorInterface = IOpenSSLServerConnectionCreator
-            self._postCreate = lambda c: c.set_accept_state()
+        self._creatorInterface = creatorInterface
         if not creatorInterface.providedBy(contextFactory):
             contextFactory = _ConnectionFactory(contextFactory)
-        self._connectionCreator = getattr(contextFactory,
-                                          list(creatorInterface)[0])
+        self._connectionCreator = contextFactory
 
 
     def logPrefix(self):
@@ -730,8 +732,13 @@ class TLSMemoryBIOFactory(WrappingFactory):
         @return: an SSL connection object for C{tlsProtocol} to use
         @rtype: L{OpenSSL.SSL.Connection}
         """
-        connection = self._connectionCreator(tlsProtocol)
-        self._postCreate(connection)
+        connectionCreator = self._connectionCreator
+        if self._creatorInterface is IOpenSSLClientConnectionCreator:
+            connection = connectionCreator.clientConnectionForTLS(tlsProtocol)
+            connection.set_connect_state()
+        else:
+            connection = connectionCreator.serverConnectionForTLS(tlsProtocol)
+            connection.set_accept_state()
         return connection
 
 
