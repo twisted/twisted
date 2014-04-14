@@ -66,7 +66,7 @@ class BaseLogFile:
         else:
             if self.defaultMode is not None:
                 # Set the lowest permissions
-                oldUmask = os.umask(0777)
+                oldUmask = os.umask(0o777)
                 try:
                     self._file = file(self.path, "w+", 1)
                 finally:
@@ -178,7 +178,7 @@ class LogFile(BaseLogFile):
         """
         filename = "%s.%d" % (self.path, identifier)
         if not os.path.exists(filename):
-            raise ValueError, "no such logfile exists"
+            raise ValueError("no such logfile exists")
         return LogReader(filename)
 
     def write(self, data):
@@ -266,7 +266,7 @@ class DailyLogFile(BaseLogFile):
             return self.getCurrentLog()
         filename = "%s.%s" % (self.path, self.suffix(identifier))
         if not os.path.exists(filename):
-            raise ValueError, "no such logfile exists"
+            raise ValueError("no such logfile exists")
         return LogReader(filename)
 
     def write(self, data):
