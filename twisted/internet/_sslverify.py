@@ -83,8 +83,8 @@ def _selectVerifyImplementation():
     """
 
     whatsWrong = (
-        "Without the service_identity module and a recent enough pyOpenSSL to"
-        "support it, Twisted can perform only rudimentary TLS client hostname"
+        "Without the service_identity module and a recent enough pyOpenSSL to "
+        "support it, Twisted can perform only rudimentary TLS client hostname "
         "verification.  Many valid certificate/hostname mappings may be "
         "rejected."
     )
