@@ -1559,8 +1559,6 @@ class LiveFireExercise(unittest.TestCase):
         map(service.portals[''].registerChecker, domain.getCredentialsCheckers())
 
         service.setQueue(mail.relay.DomainQueuer(service))
-        manager = mail.relaymanager.SmartHostSMTPRelayingManager(service.queue, None)
-        helper = mail.relaymanager.RelayStateHelper(manager, 1)
 
         f = service.getSMTPFactory()
 
@@ -1621,7 +1619,6 @@ class LiveFireExercise(unittest.TestCase):
         destServ.addDomain('destination.domain', domain)
         os.mkdir('destinationQueue')
         destServ.setQueue(mail.relaymanager.Queue('destinationQueue'))
-        manager2 = mail.relaymanager.SmartHostSMTPRelayingManager(destServ.queue)
         helper = mail.relaymanager.RelayStateHelper(manager, 1)
         helper.startService()
 

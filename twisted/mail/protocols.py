@@ -17,8 +17,6 @@ from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
 
 from twisted import cred
-import twisted.cred.error
-import twisted.cred.credentials
 
 from twisted.mail import relay
 

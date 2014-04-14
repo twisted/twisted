@@ -11,11 +11,11 @@ from twisted.python.usage import UsageError
 from twisted.mail import protocols
 from twisted.mail.tap import Options, makeService
 from twisted.python.filepath import FilePath
+from twisted.python.reflect import namedAny
 from twisted.internet import endpoints, defer
-from twisted.python import util
 
 try:
-    import OpenSSL
+    namedAny('OpenSSL')
 except ImportError, e:
     sslSkip = str(e)
 else:

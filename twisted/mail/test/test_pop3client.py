@@ -587,7 +587,7 @@ elif interfaces.IReactorSSL(reactor, None) is None:
 
 import twisted.mail.pop3client
 
-class POP3ClientMiscTestCase(unittest.TestCase):
+class POP3ClientModuleStructureTestCase(unittest.TestCase):
     """
     Miscellaneous tests more to do with module/package structure than
     anything to do with the POP3 client.

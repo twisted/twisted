@@ -32,10 +32,6 @@ from twisted.python import util, log
 from twisted.python import failure
 
 from twisted import cred
-import twisted.cred.error
-import twisted.cred.checkers
-import twisted.cred.credentials
-import twisted.cred.portal
 
 from twisted.test.proto_helpers import StringTransport, StringTransportWithDisconnection
 
@@ -613,10 +609,10 @@ class IMAP4HelperTestCase(unittest.TestCase):
             p = imap4._FetchParser()
             p.parseString(inp)
             self.assertEqual(len(p.result), outp[0])
-            p = [str(p).lower() for p in p.result]
-            p.sort()
+            expectedResult = [str(token).lower() for token in p.result]
+            expectedResult.sort()
             outp[1].sort()
-            self.assertEqual(p, outp[1])
+            self.assertEqual(expectedResult, outp[1])
 
 
     def test_fetchParserBody(self):
@@ -1645,7 +1641,8 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
 
     def testPartialAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
-        message = open(infile)
+        # Create the initial file.
+        open(infile)
         SimpleServer.theAccount.addMailbox('PARTIAL/SUBTHING')
         def login():
             return self.client.login('testuser', 'password-test')
@@ -2431,7 +2428,8 @@ class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
             protocol.lineReceived('0002 OK SELECT')
             return d
         def fetch():
-            d = protocol.fetchSpecific('1:*',
+            protocol.fetchSpecific(
+                '1:*',
                 headerType='HEADER.FIELDS',
                 headerArgs=['SUBJECT'])
             self.assertRaises(
@@ -4751,19 +4749,20 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
 
 
     def testFailedStartTLS(self):
-        failure = []
+        failures = []
         def breakServerTLS(ign):
             self.server.canStartTLS = False
 
         self.connected.addCallback(breakServerTLS)
         self.connected.addCallback(lambda ign: self.client.startTLS())
-        self.connected.addErrback(lambda err: failure.append(err.trap(imap4.IMAP4Exception)))
+        self.connected.addErrback(
+            lambda err: failures.append(err.trap(imap4.IMAP4Exception)))
         self.connected.addCallback(self._cbStopClient)
         self.connected.addErrback(self._ebGeneral)
 
         def check(ignored):
-            self.failUnless(failure)
-            self.assertIdentical(failure[0], imap4.IMAP4Exception)
+            self.failUnless(failures)
+            self.assertIdentical(failures[0], imap4.IMAP4Exception)
         return self.loopback().addCallback(check)
 
 

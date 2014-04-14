@@ -189,7 +189,6 @@ class MyPOP3Downloader(pop3.POP3Client):
     def handle_APOP(self, line):
         parts = line.split()
         code = parts[0]
-        data = (parts[1:] or ['NONE'])[0]
         if code != '+OK':
             print parts
             raise AssertionError, 'code is ' + code

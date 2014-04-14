@@ -695,7 +695,7 @@ class StringListMailbox:
             the mailbox.
         """
         if i is None:
-            return [self.listMessages(i) for i in range(len(self.msgs))]
+            return [self.listMessages(msg) for msg in range(len(self.msgs))]
         if i in self._delete:
             return 0
         return len(self.msgs[i])

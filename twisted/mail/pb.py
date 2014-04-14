@@ -3,10 +3,9 @@
 
 
 from twisted.spread import pb
-from twisted.spread import banana
 
 import os
-import types
+
 
 class Maildir(pb.Referenceable):
 
