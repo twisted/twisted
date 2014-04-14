@@ -9,6 +9,7 @@ import sys
 
 try:
     import _preamble
+    _preamble  # Silence the linter.
 except ImportError:
     sys.exc_clear()
 

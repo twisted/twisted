@@ -7,7 +7,6 @@ Post-install GUI to compile to pyc and unpack twisted doco.
 """
 
 import sys
-import zipfile
 import py_compile
 
 # we're going to ignore failures to import tkinter and fall back
@@ -21,14 +20,13 @@ tkdll='tk84.dll'
 if which(tkdll) or which('DLLs/%s' % tkdll):
     try:
         import Tkinter
-        from Tkinter import *
         from twisted.internet import tksupport
     except ImportError:
         pass
 
 # twisted
 from twisted.internet import reactor, defer
-from twisted.python import failure, log, zipstream, util, usage, log
+from twisted.python import failure, log, zipstream, usage
 # local
 import os.path
 
@@ -55,8 +53,8 @@ class ProgressBar:
         self.labelText=labelText
         self.labelFormat=labelFormat
         self.value=value
-        self.frame=Frame(master, relief=appearance, bd=bd)
-        self.canvas=Canvas(self.frame, height=height, width=width, bd=0,
+        self.frame=Tkinter.Frame(master, relief=appearance, bd=bd)
+        self.canvas=Tkinter.Canvas(self.frame, height=height, width=width, bd=0,
                            highlightthickness=0, background=background)
         self.scale=self.canvas.create_rectangle(0, 0, width, height,
                                                 fill=fillColor)
@@ -136,7 +134,7 @@ class Progressor:
         b=self.bar
         try:
             b.updateProgress(b.max - self.remaining)
-        except TclError:
+        except Tkinter.TclError:
             self.stopping=1
         except:
             deferred.errback(failure.Failure())

@@ -11,7 +11,6 @@ from zope.interface import implements
 
 from twisted import plugin
 from twisted.cred.strcred import ICheckerFactory
-from twisted.cred.credentials import ISSHPrivateKey
 
 
 sshKeyCheckerFactoryHelp = """

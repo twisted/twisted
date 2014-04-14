@@ -26,7 +26,6 @@ from twisted.python.versions import Version
 from twisted.internet import protocol, defer, reactor
 
 from twisted import cred
-import twisted.cred.error
 from twisted.cred.credentials import UsernameHashedPassword, UsernamePassword
 
 

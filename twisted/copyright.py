@@ -9,6 +9,7 @@ from __future__ import division, absolute_import
 
 from twisted import __version__ as version, version as longversion
 
+version  # Silence the linter.
 longversion = str(longversion)
 
 copyright="""\

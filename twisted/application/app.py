@@ -6,9 +6,7 @@ import sys, os, pdb, getpass, traceback, signal
 from operator import attrgetter
 
 from twisted.python import runtime, log, usage, failure, util, logfile
-from twisted.python.versions import Version
 from twisted.python.reflect import qual, namedAny
-from twisted.python.deprecate import deprecated
 from twisted.python.log import ILogObserver
 from twisted.persisted import sob
 from twisted.application import service, reactors
@@ -18,7 +16,6 @@ from twisted import copyright, plugin
 # Expose the new implementation of installReactor at the old location.
 from twisted.application.reactors import installReactor
 from twisted.application.reactors import NoSuchReactor
-
 
 
 class _BasicProfiler(object):
@@ -331,7 +328,7 @@ def getPassphrase(needed):
 
 def getSavePassphrase(needed):
     if needed:
-        passphrase = util.getPassword("Encryption passphrase: ")
+        return util.getPassword("Encryption passphrase: ")
     else:
         return None
 

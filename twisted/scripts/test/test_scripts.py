@@ -160,6 +160,7 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         installer tool chain, is deprecated.
         """
         from twisted.scripts import tkunzip
+        tkunzip  # Silence the linter.
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_deprecatedTkunzip])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
@@ -175,6 +176,7 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         The entire L{twisted.scripts.tapconvert} module is deprecated.
         """
         from twisted.scripts import tapconvert
+        tapconvert  # Silence the linter.
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_deprecatedTapconvert])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
