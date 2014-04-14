@@ -425,7 +425,6 @@ class JellyTestCase(unittest.TestCase):
 
 
     def test_newStyleClasses(self):
-        j = jelly.jelly(D)
         uj = jelly.unjelly(D)
         self.assertIdentical(D, uj)
 
@@ -537,8 +536,8 @@ class JellyTestCase(unittest.TestCase):
     def test_newStyleClassesAttributes(self):
         n = TestNode()
         n1 = TestNode(n)
-        n11 = TestNode(n1)
-        n2 = TestNode(n)
+        TestNode(n1)
+        TestNode(n)
         # Jelly it
         jel = jelly.jelly(n)
         m = jelly.unjelly(jel)

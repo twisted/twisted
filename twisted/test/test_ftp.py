@@ -1156,7 +1156,7 @@ class DTPFactoryTests(unittest.TestCase):
         cancelled by L{ftp.DTPFactory.buildProtocol}.
         """
         self.factory.setTimeout(10)
-        protocol = self.factory.buildProtocol(None)
+        self.factory.buildProtocol(None)
         # Make sure the call is no longer active.
         self.assertFalse(self.reactor.calls)
 
@@ -1434,7 +1434,6 @@ class FTPClientTests(unittest.TestCase):
                      '550 Failed to open file.']
         f.buildProtocol = lambda addr: PrintLines(responses)
 
-        client = ftp.FTPClient(passive=1)
         cc = protocol.ClientCreator(reactor, ftp.FTPClient, passive=1)
         d = cc.connectTCP('127.0.0.1', portNum)
         def gotClient(client):

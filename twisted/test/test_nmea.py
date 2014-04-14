@@ -7,7 +7,7 @@
 import StringIO
 
 from twisted.trial import unittest
-from twisted.internet import reactor, protocol
+from twisted.internet import protocol
 from twisted.python import reflect
 
 from twisted.protocols.gps import nmea

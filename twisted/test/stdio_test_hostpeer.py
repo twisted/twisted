@@ -9,6 +9,7 @@ that ITransport.getHost() and ITransport.getPeer() work for process transports.
 """
 
 import sys, _preamble
+_preamble  # Silence the linter
 
 from twisted.internet import stdio, protocol
 from twisted.python import reflect

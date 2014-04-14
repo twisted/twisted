@@ -421,8 +421,11 @@ class SQLiteConnector(DBTestConnector):
     num_iterations = 1 # slow
 
     def can_connect(self):
-        try: import sqlite
-        except: return False
+        try:
+            import sqlite
+            sqlite  # Silence the linter.
+        except:
+            return False
         return True
 
     def startDB(self):
@@ -509,8 +512,11 @@ class FirebirdConnector(DBTestConnector):
     num_iterations = 5 # slow
 
     def can_connect(self):
-        try: import kinterbasdb
-        except: return False
+        try:
+            import kinterbasdb
+            kinterbasdb  # Silence the linter.
+        except:
+            return False
         try:
             self.startDB()
             self.stopDB()
@@ -656,7 +662,7 @@ class NonThreadPool(object):
         success = True
         try:
             result = f(*a, **kw)
-        except Exception, e:
+        except Exception:
             success = False
             result = Failure()
         onResult(success, result)

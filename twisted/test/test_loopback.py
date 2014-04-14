@@ -11,7 +11,6 @@ from zope.interface import implementer
 
 from twisted.python.compat import _PY3, intToBytes
 from twisted.trial import unittest
-from twisted.trial.util import suppress as SUPPRESS
 from twisted.protocols import basic, loopback
 from twisted.internet import defer
 from twisted.internet.protocol import Protocol

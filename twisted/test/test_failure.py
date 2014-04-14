@@ -217,6 +217,7 @@ class FailureTestCase(SynchronousTestCase):
         """
         if captureVars:
             exampleLocalVar = 'xyz'
+            exampleLocalVar  # Silence the linter.
 
         f = getDivisionFailure(captureVars=captureVars)
         out = NativeStringIO()
@@ -272,6 +273,7 @@ class FailureTestCase(SynchronousTestCase):
         """
         if captureVars:
             exampleLocalVar = 'abcde'
+            exampleLocalVar  # Silence the linter.
 
         f = getDivisionFailure()
         out = NativeStringIO()
@@ -319,6 +321,7 @@ class FailureTestCase(SynchronousTestCase):
         """
         if captureVars:
             exampleLocalVar = 'xyzzy'
+            exampleLocalVar  # Silence the linter.
 
         f = getDivisionFailure(captureVars=captureVars)
         out = NativeStringIO()

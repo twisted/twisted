@@ -333,7 +333,7 @@ class TestFileDBChecker(unittest.TestCase):
         oldOutput = cred_file.theFileCheckerFactory.errorOutput
         newOutput = StringIO.StringIO()
         cred_file.theFileCheckerFactory.errorOutput = newOutput
-        checker = strcred.makeChecker('file:' + self._fakeFilename())
+        strcred.makeChecker('file:' + self._fakeFilename())
         cred_file.theFileCheckerFactory.errorOutput = oldOutput
         self.assertIn(cred_file.invalidFileWarning, newOutput.getvalue())
 
@@ -349,6 +349,9 @@ class TestSSHChecker(unittest.TestCase):
     try:
         import Crypto
         import pyasn1
+        # Silence the linter.
+        Crypto
+        pyasn1
     except ImportError:
         skip = "PyCrypto is not available"
 

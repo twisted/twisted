@@ -25,6 +25,7 @@ skipWindowsNopywin32 = None
 if platform.isWindows():
     try:
         import win32process
+        win32process  # Silence the linter.
     except ImportError:
         skipWindowsNopywin32 = ("On windows, spawnProcess is not available "
                                 "in the absence of win32process.")

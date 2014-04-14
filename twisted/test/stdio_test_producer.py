@@ -9,6 +9,7 @@ that process transports implement IProducer properly.
 """
 
 import sys, _preamble
+_preamble  # Silence the linter.
 
 from twisted.internet import stdio, protocol
 from twisted.python import log, reflect

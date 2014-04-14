@@ -1365,13 +1365,13 @@ class AppLoggerTestCase(unittest.TestCase):
         logger = app.AppLogger({"logfile": "-"})
         logFiles = _patchFileLogObserver(self.patch)
 
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 1)
         self.assertIdentical(logFiles[0], sys.stdout)
 
         logger = app.AppLogger({"logfile": ""})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 2)
         self.assertIdentical(logFiles[1], sys.stdout)
@@ -1386,7 +1386,7 @@ class AppLoggerTestCase(unittest.TestCase):
         filename = self.mktemp()
         logger = app.AppLogger({"logfile": filename})
 
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path,
@@ -1448,12 +1448,12 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         logFiles = _patchFileLogObserver(self.patch)
 
         logger = UnixAppLogger({"logfile": "-", "nodaemon": True})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
         self.assertEqual(len(logFiles), 1)
         self.assertIdentical(logFiles[0], sys.stdout)
 
         logger = UnixAppLogger({"logfile": "", "nodaemon": True})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
         self.assertEqual(len(logFiles), 2)
         self.assertIdentical(logFiles[1], sys.stdout)
 
@@ -1477,7 +1477,7 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         logFiles = _patchFileLogObserver(self.patch)
         filename = self.mktemp()
         logger = UnixAppLogger({"logfile": filename})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path, os.path.abspath(filename))

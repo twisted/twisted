@@ -8,6 +8,7 @@ the code in C{twisted/__init__.py}.
 
 from __future__ import division, absolute_import
 
+import re
 import sys
 from types import ModuleType, FunctionType
 
@@ -36,10 +37,11 @@ class SetAsideModule(object):
         C{sys.modules}, remove them from it, and return whatever was found.
         """
         modules = dict([
-                (name, module)
-                for (name, module)
+                (moduleName, module)
+                for (moduleName, module)
                 in list(sys.modules.items())
-                if name == self.name or name.startswith(self.name + ".")])
+                if (moduleName == self.name or
+                    moduleName.startswith(self.name + "."))])
         for name in modules:
             del sys.modules[name]
         return modules
@@ -589,6 +591,7 @@ class ZopeInterfaceTestsMixin(object):
                 self.install((3, 8))
                 try:
                     from zope import interface
+                    interface  # Silence the linter.
                 except Exception as exc:
                     self.assertEqual(
                         "zope.interface.exceptions.InvalidInterface: "

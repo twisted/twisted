@@ -5,7 +5,7 @@
 Tests for implementations of L{IReactorUNIX} and L{IReactorUNIXDatagram}.
 """
 
-import stat, os, sys, types
+import os, sys, types
 import socket
 
 from twisted.internet import interfaces, reactor, protocol, error, address, defer, utils
@@ -66,7 +66,7 @@ class UnixSocketTestCase(unittest.TestCase):
         clientFactory = MyClientFactory()
         clientConnMade = defer.Deferred()
         clientFactory.protocolConnectionMade = clientConnMade
-        c = reactor.connectUNIX(filename, clientFactory)
+        reactor.connectUNIX(filename, clientFactory)
         d = defer.gatherResults([serverConnMade, clientConnMade])
         def allConnected((serverProtocol, clientProtocol)):
 
@@ -100,7 +100,7 @@ class UnixSocketTestCase(unittest.TestCase):
         clientFactory = MyClientFactory()
         clientConnMade = defer.Deferred()
         clientFactory.protocolConnectionMade = clientConnMade
-        c = reactor.connectUNIX(filename, clientFactory, checkPID=1)
+        reactor.connectUNIX(filename, clientFactory, checkPID=1)
 
         d = defer.gatherResults([serverConnMade, clientConnMade])
         def _portStuff((serverProtocol, clientProto)):
@@ -175,7 +175,7 @@ class UnixSocketTestCase(unittest.TestCase):
         def ranStupidChild(ign):
             d = defer.Deferred()
             f = FailedConnectionClientFactory(d)
-            c = reactor.connectUNIX(self.filename, f, checkPID=True)
+            reactor.connectUNIX(self.filename, f, checkPID=True)
             return self.assertFailure(d, error.BadFileError)
         return self._uncleanSocketTest(ranStupidChild)
 

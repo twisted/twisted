@@ -17,6 +17,9 @@ if platform.isWindows():
     try:
         from win32api import OpenProcess
         import pywintypes
+        # Silent the linter.
+        OpenProcess
+        pywintypes
     except ImportError:
         skipKill = ("On windows, lockfile.kill is not implemented in the "
                     "absence of win32api and/or pywintypes.")
@@ -290,7 +293,7 @@ class LockingTestCase(unittest.TestCase):
             # Windows implementation of rmlink does, a readlink call
             # will fail with EACCES.
             raise IOError(errno.EACCES, None)
-        readlinkPatch = self.patch(lockfile, 'readlink', fakeReadlink)
+        self.patch(lockfile, 'readlink', fakeReadlink)
 
         lockf = self.mktemp()
         lock = lockfile.FilesystemLock(lockf)

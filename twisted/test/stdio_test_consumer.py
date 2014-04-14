@@ -9,6 +9,7 @@ that process transports implement IConsumer properly.
 """
 
 import sys, _preamble
+_preamble  # Silence the linter.
 
 from twisted.python import log, reflect
 from twisted.internet import stdio, protocol
