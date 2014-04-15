@@ -371,6 +371,28 @@ def _keysFromFilepaths(filepaths, parsekey):
 
 
 @implementer(IAuthorizedKeysDB)
+class InMemoryKeyMappingDontUse(object):
+    """
+    Object that provides SSH public keys based on a dictionary of usernames
+    mapped to L{twisted.conch.keys.Key}s.  This should NOT be used, except in
+    examples or tests.
+
+    @ivar mapping: C{dict} of usernames mapped to iterables of
+    L{twisted.conch.keys.Key}s
+    """
+    def __init__(self, mapping):
+        self.mapping = mapping
+
+
+    def getAuthorizedKeys(self, username):
+        """
+        @see: L{ess.checkers.ISSHPublicKeyDB}
+        """
+        return self.mapping.get(username, [])
+
+
+
+@implementer(IAuthorizedKeysDB)
 class AuthorizedKeysFilesMapping(object):
     """
     Object that provides SSH public keys based on a dictionary of usernames
