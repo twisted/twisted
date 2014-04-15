@@ -340,7 +340,7 @@ def readAuthorizedKeyFile(fileobj, parsekey=keys.Key.fromString):
     @param fileobj: an open file object which can be read from
     @param parsekey: a callable that takes a string and returns a
         L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
-        default is L{twisted.conch.keys.Key.fromString}
+        default is L{twisted.conch.ssh.keys.Key.fromString}
 
     @return: an iterable of L{twisted.conch.ssh.keys.Key}
 
@@ -358,10 +358,10 @@ def readAuthorizedKeyFile(fileobj, parsekey=keys.Key.fromString):
 
 def _keysFromFilepaths(filepaths, parsekey):
     """
-    @param filepaths: iterator of L{twisted.python.filepath.Filepath}
+    @param filepaths: iterator of L{twisted.python.filepath.FilePath}
     @param parsekey: a callable that takes a string and returns a
         L{twisted.conch.ssh.keys.Key}
-    @return: generator of L{twisted.conch.keys.Key}
+    @return: generator of L{twisted.conch.ssh.keys.Key}
 
     @since: 14.0.0
     """
@@ -380,10 +380,10 @@ def _keysFromFilepaths(filepaths, parsekey):
 class InMemoryKeyMapping(object):
     """
     Object that provides SSH public keys based on a dictionary of usernames
-    mapped to L{twisted.conch.keys.Key}s.
+    mapped to L{twisted.conch.ssh.keys.Key}s.
 
     @ivar mapping: C{dict} of usernames mapped to iterables of
-    L{twisted.conch.keys.Key}s
+    L{twisted.conch.ssh.keys.Key}s
 
     @since: 14.0.0
     """
@@ -393,7 +393,7 @@ class InMemoryKeyMapping(object):
 
     def getAuthorizedKeys(self, username):
         """
-        @see: L{ess.checkers.ISSHPublicKeyDB}
+        @see: L{IAuthorizedKeysDB}
         """
         return self.mapping.get(username, [])
 
@@ -409,7 +409,7 @@ class AuthorizedKeysFilesMapping(object):
         files
     @ivar parsekey: a callable that takes a string and returns a
         L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
-        default is L{twisted.conch.keys.Key.fromString}
+        default is L{twisted.conch.ssh.keys.Key.fromString}
 
     @since: 14.0.0
     """
@@ -420,7 +420,7 @@ class AuthorizedKeysFilesMapping(object):
 
     def getAuthorizedKeys(self, username):
         """
-        @see: L{ess.checkers.ISSHPublicKeyDB}
+        @see: L{IAuthorizedKeysDB}
         """
         return _keysFromFilepaths(
             (FilePath(f) for f in self.mapping.get(username, [])),
@@ -438,7 +438,7 @@ class UNIXAuthorizedKeysFiles(object):
         (default is the Python module L{pwd})
     @ivar parsekey: a callable that takes a string and returns a
         L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
-        default is L{twisted.conch.keys.Key.fromString}
+        default is L{twisted.conch.ssh.keys.Key.fromString}
 
     @since: 14.0.0
     """
