@@ -517,8 +517,10 @@ if Crypto is not None and pyasn1 is not None:
             self.onClose.callback(None)
 
 
-    conchTestPublicKeyDB = checkers.InMemoryKeyMappingDontUse(
-        {'testuser': [keys.Key.fromString(publicDSA_openssh)]})
+    def conchTestPublicKeyChecker():
+        conchTestPublicKeyDB = checkers.InMemoryKeyMappingDontUse(
+            {'testuser': [keys.Key.fromString(publicDSA_openssh)]})
+        return checkers.SSHPublicKeyChecker(conchTestPublicKeyDB)
 
 
 
@@ -545,8 +547,7 @@ class SSHProtocolTestCase(unittest.TestCase):
         p = portal.Portal(self.realm)
         sshpc = ConchTestSSHChecker()
         sshpc.registerChecker(ConchTestPasswordChecker())
-        sshpc.registerChecker(
-            checkers.SSHPublicKeyChecker(conchTestPublicKeyDB))
+        sshpc.registerChecker(conchTestPublicKeyChecker())
         p.registerChecker(sshpc)
         fac = ConchTestServerFactory()
         fac.portal = p

@@ -33,7 +33,7 @@ from twisted.conch.test.keydata import publicDSA_openssh, privateDSA_openssh
 from twisted.conch.test.test_ssh import Crypto, pyasn1
 try:
     from twisted.conch.test.test_ssh import ConchTestServerFactory, \
-        ConchTestPublicKeyChecker
+        conchTestPublicKeyChecker
 except ImportError:
     pass
 
@@ -311,7 +311,7 @@ class ConchServerSetupMixin:
         """
         realm = self.realmFactory()
         p = portal.Portal(realm)
-        p.registerChecker(ConchTestPublicKeyChecker())
+        p.registerChecker(conchTestPublicKeyChecker())
         factory = ConchTestServerFactory()
         factory.portal = p
         return factory
