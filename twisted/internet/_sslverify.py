@@ -774,9 +774,9 @@ class KeyPair(PublicKey):
             self.signRequestObject(dn, self.requestObject(dn), serialNumber),
             self)
 
-KeyPair.__getstate__ = deprecated(Version("Twisted", 13, 1, 0),
+KeyPair.__getstate__ = deprecated(Version("Twisted", 14, 1, 0),
     "a real persistence system")(KeyPair.__getstate__)
-KeyPair.__setstate__ = deprecated(Version("Twisted", 13, 1, 0),
+KeyPair.__setstate__ = deprecated(Version("Twisted", 14, 1, 0),
     "a real persistence system")(KeyPair.__setstate__)
 
 
@@ -1267,9 +1267,9 @@ class OpenSSLCertificateOptions(object):
 
 
 
-OpenSSLCertificateOptions.__getstate__ = deprecated(Version("Twisted", 13, 1, 0),
+OpenSSLCertificateOptions.__getstate__ = deprecated(Version("Twisted", 14, 1, 0),
     "a real persistence system")(OpenSSLCertificateOptions.__getstate__)
-OpenSSLCertificateOptions.__setstate__ = deprecated(Version("Twisted", 13, 1, 0),
+OpenSSLCertificateOptions.__setstate__ = deprecated(Version("Twisted", 14, 1, 0),
     "a real persistence system")(OpenSSLCertificateOptions.__setstate__)
 
 
@@ -1493,6 +1493,3 @@ class OpenSSLDiffieHellmanParameters(object):
             <twisted.internet.ssl.DiffieHellmanParameters>}
         """
         return cls(filePath)
-
-
-

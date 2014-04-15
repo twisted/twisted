@@ -1028,6 +1028,8 @@ class DeprecationTests(unittest.SynchronousTestCase):
     Tests for deprecation of L{sslverify.OpenSSLCertificateOptions}'s support of
     the pickle protocol.
     """
+    if skipSSL:
+        skip = skipSSL
 
     def test_getstateDeprecation(self):
         """
@@ -1035,7 +1037,7 @@ class DeprecationTests(unittest.SynchronousTestCase):
         L{sslverify.OpenSSLCertificateOptions.__getstate__}.
         """
         self.callDeprecated(
-            (Version("Twisted", 13, 1, 0), "a real persistence system"),
+            (Version("Twisted", 14, 1, 0), "a real persistence system"),
             sslverify.OpenSSLCertificateOptions().__getstate__)
 
 
@@ -1046,13 +1048,13 @@ class DeprecationTests(unittest.SynchronousTestCase):
         """
         state = sslverify.OpenSSLCertificateOptions().__getstate__()
         self.callDeprecated(
-            (Version("Twisted", 13, 1, 0), "a real persistence system"),
+            (Version("Twisted", 14, 1, 0), "a real persistence system"),
             sslverify.OpenSSLCertificateOptions().__setstate__, state)
 
     test_setstateDeprecation.suppress = [util.suppress(
         message =
         "twisted.internet._sslverify.OpenSSLCertificateOptions.__getstate__ "
-        "was deprecated in Twisted 13.1.0; please use a real persistence "
+        "was deprecated in Twisted 14.1.0; please use a real persistence "
         "system instead",
         category = DeprecationWarning)]
 
@@ -1524,9 +1526,6 @@ class Constructors(unittest.TestCase):
                 _ActualSSLTransport()).serialNumber(),
             12346)
 
-if interfaces.IReactorSSL(reactor, None) is None:
-    Constructors.skip = "Reactor does not support SSL, cannot run SSL tests"
-
 
 
 class TestOpenSSLCipher(unittest.TestCase):
@@ -1949,6 +1948,8 @@ class KeyPair(unittest.TestCase):
     """
     Tests for L{sslverify.KeyPair}.
     """
+    if skipSSL:
+        skip = skipSSL
 
     def setUp(self):
         """
@@ -1963,7 +1964,7 @@ class KeyPair(unittest.TestCase):
         Test deprecation of L{_sslverify.KeyPair.__getstate__}.
         """
         self.callDeprecated(
-            (Version("Twisted", 13, 1, 0), "a real persistence system"),
+            (Version("Twisted", 14, 1, 0), "a real persistence system"),
             sslverify.KeyPair(self.sKey).__getstate__)
 
 
@@ -1973,16 +1974,11 @@ class KeyPair(unittest.TestCase):
         """
         state = sslverify.KeyPair(self.sKey).__getstate__()
         self.callDeprecated(
-            (Version("Twisted", 13, 1, 0), "a real persistence system"),
+            (Version("Twisted", 14, 1, 0), "a real persistence system"),
             sslverify.KeyPair(self.sKey).__setstate__, state)
 
     test_setstateDeprecation.suppress = [util.suppress(
         message = "twisted.internet._sslverify.KeyPair.__getstate__ "
-        "was deprecated in Twisted 13.1.0; please use a real persistence "
+        "was deprecated in Twisted 14.1.0; please use a real persistence "
         "system instead",
         category = DeprecationWarning)]
-
-
-
-if interfaces.IReactorSSL(reactor, None) is None:
-    KeyPair.skip = "Reactor does not support SSL, cannot run SSL tests"
