@@ -1,47 +1,24 @@
-
 :LastChangedDate: $LastChangedDate$
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
 
+
 Configuring and Using the Twisted Web Server
 ============================================
-
-
-
-
 
 
 Twisted Web Development
 -----------------------
 .. _web-howto-using-twistedweb-development:
 
-
-
-
-
-
-
-
 Twisted Web serves Python objects that implement the interface
 IResource.
-
-
-
-
-
 
 .. image:: ../img/web-process.png
 
 
-
-
-
 Main Concepts
 ~~~~~~~~~~~~~
-
-
-
-
 
 - :ref:`Site Objects <web-howto-using-twistedweb-sites>` are responsible for
   creating ``HTTPChannel`` instances to parse the HTTP request,
@@ -53,23 +30,11 @@ Main Concepts
 - :ref:`Resource rendering <web-howto-using-twistedweb-rendering>` occurs when Twisted Web locates a leaf Resource object. A Resource can either return an html string or write to the request object.
 - :ref:`Session <web-howto-using-twistedweb-sessions>` objects allow you to store information across multiple requests. Each individual browser using the system has a unique Session instance.
 
-
-
-
-
 The Twisted Web server is started through the Twisted Daemonizer, as in:
 
-
-
-
-
 .. code-block:: console
-
     
     % twistd web
-
-
-
 
 
 Site Objects
@@ -77,33 +42,15 @@ Site Objects
 
 .. _web-howto-using-twistedweb-sites:
 
-
-
-
-
-
-
-
 Site objects serve as the glue between a port to listen for HTTP requests on, and a root Resource object.
 
-
-
-
 When using ``twistd -n web --path /foo/bar/baz`` , a Site object is created with a root Resource that serves files out of the given path.
-
-
-
 
 You can also create a ``Site`` instance by hand, passing
 it a ``Resource`` object which will serve as the root of the
 site:
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.web import server, resource
     from twisted.internet import reactor
@@ -118,59 +65,26 @@ site:
     reactor.run()
 
 
-
-
-
 Resource objects
 ~~~~~~~~~~~~~~~~
 
 .. _web-howto-using-twistedweb-resources:
 
-
-
-
-
-
-
-
 ``Resource`` objects represent a single URL segment of a site. During URL parsing, ``getChild`` is called on the current ``Resource`` to produce the next ``Resource`` object.
-
-
-
 
 When the leaf Resource is reached, either because there were no more URL segments or a Resource had isLeaf set to True, the leaf Resource is rendered by calling ``render(request)`` . See "Resource Rendering" below for more about this.
 
-
-
-
 During the Resource location process, the URL segments which have already been processed and those which have not yet been processed are available in ``request.prepath`` and ``request.postpath`` .
-
-
-
 
 A Resource can know where it is in the URL tree by looking at ``request.prepath`` , a list of URL segment strings.
 
-
-
-
 A Resource can know which path segments will be processed after it by looking at ``request.postpath`` .
-
-
-
 
 If the URL ends in a slash, for example ``http://example.com/foo/bar/`` , the final URL segment will be an empty string. Resources can thus know if they were requested with or without a final slash.
 
-
-
-
 Here is a simple Resource object:
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.web.resource import Resource
     
@@ -187,42 +101,20 @@ Here is a simple Resource object:
     resource = Hello()
 
 
-
-
-
 Resource Trees
 ~~~~~~~~~~~~~~
 
 .. _web-howto-using-twistedweb-trees:
 
-
-
-
-
-
-
-
 Resources can be arranged in trees using ``putChild`` . ``putChild`` puts a Resource instance into another Resource instance, making it available at the given path segment name:
 
-
-
-
-
 .. code-block:: python
-
     
     root = Hello()
     root.putChild('fred', Hello())
     root.putChild('bob', Hello())
 
-
-
-
 If this root resource is served as the root of a Site instance, the following URLs will all be valid:
-
-
-
-
 
 - ``http://example.com/`` 
 - ``http://example.com/fred`` 
@@ -230,41 +122,18 @@ If this root resource is served as the root of a Site instance, the following UR
 - ``http://example.com/fred/`` 
 - ``http://example.com/bob/`` 
 
-
-
-
-
-
 .rpy scripts
 ~~~~~~~~~~~~
 
 .. _web-howto-using-twistedweb-rpys:
 
-
-
-
-
-
-
-
 Files with the extension ``.rpy`` are python scripts which, when placed in a directory served by Twisted Web, will be executed when visited through the web.
-
-
-
 
 An ``.rpy`` script must define a variable, ``resource`` , which is the Resource object that will render the request.
 
-
-
-
 ``.rpy`` files are very convenient for rapid development and prototyping. Since they are executed on every web request, defining a Resource subclass in an ``.rpy`` will make viewing the results of changes to your class visible simply by refreshing the page:
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.web.resource import Resource
     
@@ -274,17 +143,9 @@ An ``.rpy`` script must define a variable, ``resource`` , which is the Resource 
     
     resource = MyResource()
 
-
-
-
 However, it is often a better idea to define Resource subclasses in Python modules. In order for changes in modules to be visible, you must either restart the Python process, or reload the module:
 
-
-
-
-
 .. code-block:: python
-
     
     import myresource
     
@@ -293,22 +154,11 @@ However, it is often a better idea to define Resource subclasses in Python modul
     
     resource = myresource.MyResource()
 
-
-
-
 Creating a Twisted Web server which serves a directory is easy:
 
-
-
-
-
 .. code-block:: console
-
     
     % twistd -n web --path /Users/dsp/Sites
-
-
-
 
 
 Resource rendering
@@ -316,28 +166,11 @@ Resource rendering
 
 .. _web-howto-using-twistedweb-rendering:
 
-
-
-
-
-
-
-
 Resource rendering occurs when Twisted Web locates a leaf Resource object to handle a web request. A Resource's ``render`` method may do various things to produce output which will be sent back to the browser:
-
-
-
-
 
 - Return a string
 - Call ``request.write("stuff")`` as many times as desired, then call ``request.finish()`` and return ``server.NOT_DONE_YET`` (This is deceptive, since you are in fact done with the request, but is the correct way to do this)
 - Request a ``Deferred`` , return ``server.NOT_DONE_YET`` , and call ``request.write("stuff")`` and ``request.finish()`` later, in a callback on the ``Deferred`` .
-
-
-
-
-
-
 
 The :api:`twisted.web.resource.Resource <Resource>` 
 class, which is usually what one's Resource classes subclass, has a
@@ -355,15 +188,8 @@ arguments passed to the resource regardless of whether they used GET
 (``?foo=bar&baz=quux`` , and so forth) or POST.
 
 
-
-
-
-
 Request encoders
 ~~~~~~~~~~~~~~~~
-
-
-
 
 When using a :api:`twisted.web.resource.Resource <Resource>` ,
 one can specify wrap it using a
@@ -374,12 +200,7 @@ By default twisted provides
 :api:`twisted.web.server.GzipEncoderFactory <GzipEncoderFactory>` which
 manages standard gzip compression. You can use it this way:
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.web.server import Site, GzipEncoderFactory
     from twisted.web.resource import Resource, EncodingResourceWrapper
@@ -396,24 +217,13 @@ manages standard gzip compression. You can use it this way:
     reactor.listenTCP(8080, site)
     reactor.run()
 
-
-
-
-
 Using compression on SSL served resources where the user can influence the
 content can lead to information leak, so be careful which resources use
 request encoders.
 
-
-
-
-
 Note that only encoder can be used per request: the first encoder factory
 returning an object will be used, so the order in which they are specified
 matters.
-
-
-
 
 
 Session
@@ -421,28 +231,11 @@ Session
 
 .. _web-howto-using-twistedweb-sessions:
 
-
-
-
-
-
-
-
 HTTP is a stateless protocol; every request-response is treated as an individual unit, distinguishable from any other request only by the URL requested. With the advent of Cookies in the mid nineties, dynamic web servers gained the ability to distinguish between requests coming from different *browser sessions* by sending a Cookie to a browser. The browser then sends this cookie whenever it makes a request to a web server, allowing the server to track which requests come from which browser session.
-
-
-
 
 Twisted Web provides an abstraction of this browser-tracking behavior called the *Session object* . Calling ``request.getSession()`` checks to see if a session cookie has been set; if not, it creates a unique session id, creates a Session object, stores it in the Site, and returns it. If a session object already exists, the same session object is returned. In this way, you can store data specific to the session in the session object.
 
-
-
-
-
 .. image:: ../img/web-session.png
-
-
-
 
 
 Proxies and reverse proxies
@@ -450,46 +243,23 @@ Proxies and reverse proxies
 
 .. _web-howto-using-twistedweb-proxies:
 
-
-
-
-
-
-
-
 A proxy is a general term for a server that functions as an intermediary
 between clients and other servers.
-
-
-
 
 Twisted supports two main proxy variants: a :api:`twisted.web.proxy.Proxy <Proxy>` and a :api:`twisted.web.proxy.ReverseProxy <ReverseProxy>` .
 
 
-
-
-
 Proxy
 ^^^^^
-
-
 
 A proxy forwards requests made by a client to a destination server. Proxies
 typically sit on the internal network for a client or out on the internet, and
 have many uses, including caching, packet filtering, auditing, and circumventing
 local access restrictions to web content.
 
-
-
-
 Here is an example of a simple but complete web proxy:
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.web import proxy, http
     from twisted.internet import reactor
@@ -501,14 +271,8 @@ Here is an example of a simple but complete web proxy:
     reactor.listenTCP(8080, ProxyFactory())
     reactor.run()
 
-
-
-
 With this proxy running, you can configure your web browser to use``localhost:8080`` as a proxy. After doing so, when browsing the web
 all requests will go through this proxy.
-
-
-
 
 :api:`twisted.web.proxy.Proxy <Proxy>` inherits
 from :api:`twisted.web.http.HTTPChannel <http.HTTPChannel>` . Each client
@@ -521,29 +285,16 @@ from :api:`twisted.web.http.HTTPClient <http.HTTPClient>` . Subclass ``ProxyRequ
 customize the way requests are processed or logged.
 
 
-
-
-
 ReverseProxyResource
 ^^^^^^^^^^^^^^^^^^^^
-
-
 
 A reverse proxy retrieves resources from other servers on behalf of a
 client. Reverse proxies typically sit inside the server's internal network and
 are used for caching, application firewalls, and load balancing.
 
-
-
-
 Here is an example of a basic reverse proxy:
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.internet import reactor
     from twisted.web import proxy, server
@@ -552,24 +303,15 @@ Here is an example of a basic reverse proxy:
     reactor.listenTCP(8080, site)
     reactor.run()
 
-
-
-
 With this reverse proxy running locally, you can
 visit ``http://localhost:8080`` in your web browser, and the reverse
 proxy will proxy your connection to``www.yahoo.com`` .
-
-
-
 
 In this example we use ``server.Site`` to serve
 a ``ReverseProxyResource`` directly. There is
 also a ``ReverseProxy`` family of classes
 in ``twisted.web.proxy`` mirroring those of the ``Proxy`` 
 family:
-
-
-
 
 Like ``Proxy`` , :api:`twisted.web.proxy.ReverseProxy <ReverseProxy>` inherits
 from ``http.HTTPChannel`` . Each client request to the reverse proxy
@@ -578,20 +320,12 @@ server. Like ``ProxyRequest`` , :api:`twisted.web.proxy.ReverseProxyRequest <Rev
 the :api:`twisted.web.proxy.ProxyClient <ProxyClient>` protocol for
 the connection.
 
-
-
-
 Additional examples of proxies and reverse proxies can be found in
 the `Twisted web examples <../examples/index.html>`_ 
 
 
-
-
-
 Advanced Configuration
 ----------------------
-
-
 
 Non-trivial configurations of Twisted Web are achieved with Python
 configuration files. This is a Python snippet which builds up a
@@ -603,18 +337,10 @@ a :api:`twisted.web.server.Site <twisted.web.server.Site>` . The resulting file
 can then be run with ``twistd -y`` . Alternatively a reactor object can be used directly to make
 a runnable script.
 
-
-
-
 The ``Site`` will wrap a ``Resource`` object -- the
 root.
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.application import internet, service
     from twisted.web import static, server
@@ -626,38 +352,22 @@ root.
     i = internet.TCPServer(80, site)
     i.setServiceParent(sc)
 
-
-
-
 Most advanced configurations will be in the form of tweaking the
 root resource object.
-
-
-
 
 
 Adding Children
 ~~~~~~~~~~~~~~~
 
-
-
 Usually, the root's children will be based on the filesystem's contents.
 It is possible to override the filesystem by explicit ``putChild`` 
 methods.
-
-
-
 
 Here are two examples. The first one adds a ``/doc`` child
 to serve the documentation of the installed packages, while the second
 one adds a ``cgi-bin`` directory for CGI scripts.
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.internet import reactor
     from twisted.web import static, server
@@ -667,12 +377,7 @@ one adds a ``cgi-bin`` directory for CGI scripts.
     reactor.listenTCP(80, server.Site(root))
     reactor.run()
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.internet import reactor
     from twisted.web import static, server, twcgi
@@ -683,13 +388,8 @@ one adds a ``cgi-bin`` directory for CGI scripts.
     reactor.run()
 
 
-
-
-
 Modifying File Resources
 ~~~~~~~~~~~~~~~~~~~~~~~~
-
-
 
 ``File`` resources, be they root object or children
 thereof, have two important attributes that often need to be
@@ -699,19 +399,11 @@ files are treated as "index files" -- served up when a directory
 is rendered. ``processors`` determine how certain file
 extensions are treated.
 
-
-
-
 Here is an example for both, creating a site where all ``.rpy`` 
 extensions are Resource Scripts, and which renders directories by
 searching for a ``index.rpy`` file.
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.application import internet, service
     from twisted.web import static, server, script
@@ -725,19 +417,11 @@ searching for a ``index.rpy`` file.
     i = internet.TCPServer(80, site)
     i.setServiceParent(sc)
 
-
-
-
 ``File`` objects also have a method called ``ignoreExt`` .
 This method can be used to give extension-less URLs to users, so that
 implementation is hidden. Here is an example:
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.application import internet, service
     from twisted.web import static, server, script
@@ -751,21 +435,13 @@ implementation is hidden. Here is an example:
     i = internet.TCPServer(80, site)
     i.setServiceParent(sc)
 
-
-
-
 Now, a URL such as ``/foo`` might be served from a Resource
 Script called ``foo.rpy`` , if no file by the name of ``foo`` 
 exists.
 
 
-
-
-
 Virtual Hosts
 ~~~~~~~~~~~~~
-
-
 
 Virtual hosting is done via a special resource, that should be used
 as the root resource
@@ -774,12 +450,7 @@ attribute named ``default`` , which holds the default
 website. If a different root for some other name is desired,
 the ``addHost`` method should be called.
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.application import internet, service
     from twisted.web import static, server, vhost, script
@@ -808,23 +479,13 @@ the ``addHost`` method should be called.
     i.setServiceParent(sc)
 
 
-
-
-
 Advanced Techniques
 ~~~~~~~~~~~~~~~~~~~
-
-
 
 Since the configuration is a Python snippet, it is possible to
 use the full power of Python. Here are some simple examples:
 
-
-
-
-
 .. code-block:: python
-
     
     # No need for configuration of virtual hosts -- just make sure
     # a directory /var/vhosts/<vhost name> exists:
@@ -842,12 +503,7 @@ use the full power of Python. Here are some simple examples:
     i = internet.TCPServer(80, site)
     i.setServiceParent(sc)
 
-
-
-
-
 .. code-block:: python
-
     
     # Determine ports we listen on based on a file with numbers:
     from twisted.web import vhost, static, server
@@ -863,150 +519,71 @@ use the full power of Python. Here are some simple examples:
         serviceCollection.addCollection(internet.TCPServer(num, site))
 
 
-
-
-
-
 Running a Twisted Web Server
 ----------------------------
-
-
 
 In many cases, you'll end up repeating common usage patterns of
 twisted.web. In those cases you'll probably want to use Twisted's
 pre-configured web server setup.
 
-
-
-
 The easiest way to run a Twisted Web server is with the Twisted Daemonizer.
 For example, this command will run a web server which serves static files from
 a particular directory:
 
-
-
-
-
 .. code-block:: console
-
     
     % twistd web --path /path/to/web/content
-
-
-
 
 If you just want to serve content from your own home directory, the
 following will do:
 
-
-
-
-
 .. code-block:: console
-
     
     % twistd web --path ~/public_html/
-
-
-
 
 You can stop the server at any time by going back to the directory you
 started it in and running the command:
 
-
-
-
-
 .. code-block:: console
-
     
     % kill `cat twistd.pid`
 
-
-
-
 Some other configuration options are available as well:  
-
-
-
-
-
 
 - ``--port`` : Specify the port for the web
   server to listen on.  This defaults to 8080.  
 - ``--logfile`` : Specify the path to the
   log file. 
 
-
-
-
-
 The full set of options that are available can be seen with:  
 
-
-
-
-
 .. code-block:: console
-
     
     % twistd web --help
-
-
-
 
 
 Serving Flat HTML
 ~~~~~~~~~~~~~~~~~
 
-
-
 Twisted Web serves flat HTML files just as it does any other flat file.  
 
-
-
 .. _web-howto-using-twistedweb-resourcescripts:
-
-
-
-
-
-
 
 
 Resource Scripts
 ~~~~~~~~~~~~~~~~
 
-
-
 A Resource script is a Python file ending with the extension ``.rpy`` , which is required to create an instance of a (subclass of a) :api:`twisted.web.resource.Resource <twisted.web.resource.Resource>` . 
 
-
-
-
 Resource scripts have 3 special variables: 
-
-
-
-
-
 
 - ``__file__`` : The name of the .rpy file, including the full path.  This variable is automatically defined and present within the namespace.  
 - ``registry`` : An object of class :api:`twisted.web.static.Registry <static.Registry>` . It can be used to access and set persistent data keyed by a class.
 - ``resource`` : The variable which must be defined by the script and set to the resource instance that will be used to render the page. 
 
-
-
-
-
 A very simple Resource Script might look like:  
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.web import resource
     class MyGreatResource(resource.Resource):
@@ -1015,18 +592,10 @@ A very simple Resource Script might look like:
     
     resource = MyGreatResource()
 
-
-
-
 A slightly more complicated resource script, which accesses some
 persistent data, might look like:
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.web import resource
     from SillyWeb import Counter
@@ -1043,19 +612,11 @@ persistent data, might look like:
     
     resource = MyResource()
 
-
-
-
 This is assuming you have the ``SillyWeb.Counter`` module,
 implemented something like the following:
 
-
-
-
-
 .. code-block:: python
 
-    
     class Counter:
     
         def __init__(self):
@@ -1068,56 +629,28 @@ implemented something like the following:
             return self.value
 
 
-
-
-
 Web UIs
 ~~~~~~~
-
-
-
 
 The `Nevow <https://launchpad.net/nevow>`_ framework, available as
 part of the `Quotient <https://launchpad.net/quotient>`_ project,
 is an advanced system for giving Web UIs to your application. Nevow uses Twisted Web but is
 not itself part of Twisted.
 
-
-
 .. _web-howto-using-twistedweb-spreadablewebservers:
-
-
-
-
-
-
 
 
 Spreadable Web Servers
 ~~~~~~~~~~~~~~~~~~~~~~
 
-
-
 One of the most interesting applications of Twisted Web is the distributed webserver; multiple servers can all answer requests on the same port, using the :api:`twisted.spread <twisted.spread>` package for "spreadable" computing.  In two different directories, run the commands:  
 
-
-
-
-
 .. code-block:: console
-
     
     % twistd web --user
     % twistd web --personal [other options, if you desire]
 
-
-
-
 Once you're running both of these instances, go to ``http://localhost:8080/your_username.twistd/`` -- you will see the front page from the server you created with the ``--personal`` option.  What's happening here is that the request you've sent is being relayed from the central (User) server to your own (Personal) server, over a PB connection.  This technique can be highly useful for small "community" sites; using the code that makes this demo work, you can connect one HTTP port to multiple resources running with different permissions on the same machine, on different local machines, or even over the internet to a remote site.  
-
-
-
-
 
 By default, a personal server listens on a UNIX socket in the owner's home
 directory.  The ``--port`` option can be used to make
@@ -1134,13 +667,8 @@ keep track of whether the server socket is in use and automatically delete
 it when it is not.
 
 
-
-
-
 Serving PHP/Perl/CGI
 ~~~~~~~~~~~~~~~~~~~~
-
-
 
 Everything related to CGI is located in
 the ``twisted.web.twcgi`` , and it's here you'll find the
@@ -1150,18 +678,10 @@ kind of resource if you are using a non-unix operating system (such as
 Windows), or if the default resources has wrong pathnames to the
 parsers.
 
-
-
-
 The following snippet is a .rpy that serves perl-files. Look at ``twisted.web.twcgi`` 
 for more examples regarding twisted.web and CGI.
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.web import static, twcgi
     
@@ -1174,72 +694,40 @@ for more examples regarding twisted.web and CGI.
     resource.indexNames = ['index.pl']
 
 
-
-
-
 Serving WSGI Applications
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
 
 `WSGI <http://wsgi.org>`_ is the Web Server Gateway
 Interface. It is a specification for web servers and application servers to
 communicate with Python web applications. All modern Python web frameworks
 support the WSGI interface.
 
-
-
-
 The easiest way to get started with WSGI application is to use the twistd
 command:
 
-
-
-
-
 .. code-block:: console
-
     
     % twistd -n web --wsgi=helloworld.application
-
-
-
 
 This assumes that you have a WSGI application called application in
 your helloworld module/package, which might look like this:
 
-
-
-
-
 .. code-block:: python
-
     
     def application(environ, start_response):
         """Basic WSGI Application"""
         start_response('200 OK', [('Content-type','text/plain')])
         return ['Hello World!']
 
-
-
-
 The above setup will be suitable for many applications where all that is
 needed is to server the WSGI application at the site's root. However, for
 greater control, Twisted provides support for using WSGI applications as
 resources ``twisted.web.wsgi.WSGIResource`` .
 
-
-
-
 Here is an example of a WSGI application being served as the root resource
 for a site, in the following tac file:
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.web import server
     from twisted.web.wsgi import WSGIResource
@@ -1267,36 +755,19 @@ for a site, in the following tac file:
     server = strports.service('tcp:8080', server.Site(wsgiAppAsResource))
     server.setServiceParent(application)
 
-
-
-
 This can then be run like any other .tac file:
 
-
-
-
-
 .. code-block:: console
-
     
     % twistd -ny myapp.tac
-
-
-
 
 Because of the synchronous nature of WSGI, each application call (for
 each request) is called within a thread, and the result is written back to the
 web server. For this, a ``twisted.python.threadpool.ThreadPool`` 
 instance is used.
 
-
-
-
-
 Using VHostMonster
 ~~~~~~~~~~~~~~~~~~
-
-
 
 It is common to use one server (for example, Apache) on a site with multiple
 names which then uses reverse proxy (in Apache, via ``mod_proxy`` ) to different
@@ -1305,80 +776,42 @@ configuration causes miscommunication: the internal server firmly believes it
 is running on "internal-name:port" , and will generate URLs to that effect,
 which will be completely wrong when received by the client.
 
-
-
-
 While Apache has the ProxyPassReverse directive, it is really a hack
 and is nowhere near comprehensive enough. Instead, the recommended practice
 in case the internal web server is Twisted Web is to use VHostMonster.
 
-
-
-
 From the Twisted side, using VHostMonster is easy: just drop a file named
 (for example) ``vhost.rpy`` containing the following:
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.web import vhost
     resource = vhost.VHostMonsterResource()
 
-
-
-
 Make sure the web server is configured with the correct processors
 for the ``rpy`` extensions (the web server ``twistd web --path`` generates by default is so configured).
 
-
-
-
 From the Apache side, instead of using the following ProxyPass directive:
 
-
-
-
-
 ::
-
     
     <VirtualHost ip-addr>
     ProxyPass / http://localhost:8538/
     ServerName example.com
     </VirtualHost>
 
-
-
-
 Use the following directive:
-
-
-
-
 
 ::
 
-    
     <VirtualHost ip-addr>
     ProxyPass / http://localhost:8538/vhost.rpy/http/example.com:80/
     ServerName example.com
     </VirtualHost>
 
-
-
-
 Here is an example for Twisted Web's reverse proxy:
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.application import internet, service
     from twisted.web import proxy, server, vhost
@@ -1394,13 +827,8 @@ Here is an example for Twisted Web's reverse proxy:
     i.setServiceParent(sc)
 
 
-
-
-
 Rewriting URLs
 --------------
-
-
 
 Sometimes it is convenient to modify the content of
 the :api:`twisted.web.server.Request <Request>` object
@@ -1414,23 +842,12 @@ request object, and possible modify it. After all rewrite rules run,
 the child resolution chain continues as if the wrapped resource,
 rather than the :api:`twisted.web.rewrite.RewriterResource <RewriterResource>` , was the child.
 
-
-
-
 Here is an example, using the only rule currently supplied by Twisted
 itself:
 
-
-
-
-
 .. code-block:: python
-
     
     default_root = rewrite.RewriterResource(default, rewrite.tildeToUsers)
-
-
-
 
 This causes the URL ``/~foo/bar.html`` to be treated
 like ``/users/foo/bar.html`` . If done after setting
@@ -1439,23 +856,13 @@ configuration similar to the classical configuration of web server,
 common since the first NCSA servers.
 
 
-
-
-
 Knowing When We're Not Wanted
 -----------------------------
-
-
 
 Sometimes it is useful to know when the other side has broken the connection.
 Here is an example which does that:
 
-
-
-
-
 .. code-block:: python
-
     
     from twisted.web.resource import Resource
     from twisted.web import server
@@ -1475,20 +882,12 @@ Here is an example which does that:
     
     resource = ExampleResource()
 
-
-
-
 This will allow us to run statistics on the log-file to see how many users
 are frustrated after merely 10 seconds.
 
 
-
-
-
 As-Is Serving
 -------------
-
-
 
 Sometimes, you want to be able to send headers and status
 directly. While you can do this with a :api:`twisted.web.script.ResourceScript <ResourceScript>` , an easier way is to
@@ -1496,17 +895,9 @@ use :api:`twisted.web.static.ASISProcessor <ASISProcessor>` .
 Use it by, for example, adding it as a processor for
 the ``.asis`` extension. Here is a sample file:
 
-
-
-
-
 ::
-
     
     HTTP/1.0 200 OK
     Content-Type: text/html
     
     Hello world
-
-
-
