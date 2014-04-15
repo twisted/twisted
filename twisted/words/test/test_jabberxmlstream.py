@@ -1141,7 +1141,6 @@ class StreamManagerTest(unittest.TestCase):
         sm = self.streamManager
         handler = FailureReasonXMPPHandler()
         handler.setHandlerParent(sm)
-        xs = xmlstream.XmlStream(xmlstream.Authenticator())
         sm._disconnected(failure.Failure(Exception("no reason")))
         self.assertEqual(True, handler.gotFailureReason)
 

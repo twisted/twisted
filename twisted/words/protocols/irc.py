@@ -1760,6 +1760,7 @@ class IRCClient(basic.LineReceiver):
             "XXX!!! Help!  I need to bind a socket, have it listen, and tell me its address.  "
             "(and stop accepting once we've made a single connection.)")
 
+        my_address = None
         my_address = struct.pack("!I", my_address)
 
         args = ['SEND', name, my_address, str(port)]

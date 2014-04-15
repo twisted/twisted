@@ -5,6 +5,7 @@
 Tests for L{twisted.words.xish.domish}, a DOM-like library for XMPP.
 """
 
+from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 from twisted.words.xish import domish
 
@@ -256,10 +257,10 @@ class DomishExpatStreamTestCase(DomishStreamTestsMixin, unittest.TestCase):
     """
     streamClass = domish.ExpatElementStream
 
-    try:
-        import pyexpat
-    except ImportError:
+    if requireModule('pyexpat', default=None) is None:
         skip = "pyexpat is required for ExpatElementStream tests."
+    else:
+        skip = None
 
 
 
