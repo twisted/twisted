@@ -149,6 +149,7 @@ class LineOnlyTester(basic.LineOnlyReceiver):
         self.received.append(line)
 
 
+
 class LineReceiverTestCase(unittest.SynchronousTestCase):
     """
     Test L{twisted.protocols.basic.LineReceiver}, using the C{LineTester}
@@ -1083,7 +1084,7 @@ class ProducerTestCase(unittest.SynchronousTestCase):
         being resumed.
 
         L{ConsumingProtocol} is a L{LineReceiver} that pauses itself after
-        every line, and writes that that line to its transport.
+        every line, and writes that line to its transport.
         """
         p = ConsumingProtocol()
         t = OnlyProducerTransport()
