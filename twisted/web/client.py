@@ -21,18 +21,13 @@ except ImportError:
     def urlunparse(parts):
         result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
         return result.encode("charmap")
-
 import zlib
-from functools import wraps
 
-from zope.interface import implementer, directlyProvides
+from zope.interface import implementer
 
 from twisted.python.compat import _PY3, nativeString, intToBytes
 from twisted.python import log
 from twisted.python.failure import Failure
-from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
-from twisted.python.deprecate import deprecated
-from twisted.python.versions import Version
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
 from twisted.internet.interfaces import IProtocol
@@ -752,107 +747,43 @@ if not _PY3:
     from twisted.web._newclient import (
         ResponseNeverReceived, PotentialDataLoss, _WrapperException)
 
-
-_deprecateContextFactory = deprecated(
-    Version("Twisted", 14, 0, 0),
-    "twisted.web.client.WebClientConnectionCreator"
-)
-
 try:
     from OpenSSL import SSL
-except ImportError:
-    SSL = None
-else:
+
     from twisted.internet.ssl import CertificateOptions, platformTrust
-
-
-def _requireSSL(decoratee):
-    """
-    The decorated method requires SSL support, or it raises
-    L{NotImplementedError}.
-    """
-    if SSL is None:
-        @wraps(decoratee)
-        def raiseNotImplemented(*a, **kw):
+except ImportError:
+    class WebClientContextFactory(object):
+        """
+        A web context factory which doesn't work because the necessary SSL
+        support is missing.
+        """
+        def getContext(self, hostname, port):
             raise NotImplementedError("SSL support unavailable")
-        return raiseNotImplemented
-    return decoratee
-
-
-
-@_deprecateContextFactory
-class WebClientContextFactory(object):
-    """
-    A web context factory which ignores the hostname and port.  It performs
-    basic certificate verification, however the lack of validation of service
-    identity (e.g.  hostname validation) means it is still vulnerable to MITM
-    attacks (#4888).
-    """
-
-    def _getCertificateOptions(self, hostname, port):
+else:
+    class WebClientContextFactory(object):
         """
-        Return a L{CertificateOptions}.
-
-        @param bytes hostname: ignored
-        @param int port: ignored
-
-        @return: A new CertificateOptions instance.
-        @rtype: L{CertificateOptions}
+        A web context factory which ignores the hostname and port. It performs
+        basic certificate verification, however the lack of validation of
+        service identity (e.g. hostname validation) means it is still
+        vulnerable to MITM attacks (#4888).
         """
-        return CertificateOptions(
-            method=SSL.SSLv23_METHOD,
-            trustRoot=platformTrust(),
-            hostname=hostname.decode('ascii')
-        )
+        def __init__(self):
+            self._contextFactory = CertificateOptions(
+                method=SSL.SSLv23_METHOD,
+                trustRoot=platformTrust(),
+            )
 
+        def getContext(self, hostname, port):
+            """
+            Return an L{OpenSSL.SSL.Context}.
 
-    @_requireSSL
-    def getContext(self, hostname, port):
-        """
-        Return an L{OpenSSL.SSL.Context}.
+            @param hostname: ignored
+            @param port: ignored
 
-        @param hostname: ignored
-        @param port: ignored
-
-        @return: A new SSL context.
-        @rtype: L{OpenSSL.SSL.Context}
-        """
-        return self._getCertificateOptions(hostname, port).getContext()
-
-
-
-class WebClientConnectionCreator(object):
-    """
-    SSL connection creator for web clients.
-    """
-    def __init__(self, trustRoot=None):
-        if trustRoot is None and SSL is not None:
-            trustRoot = platformTrust()
-        self._trustRoot = trustRoot
-
-
-    @_requireSSL
-    def connectionForNetloc(self, tls, hostname, port):
-        """
-        Get an SSL connection for a given network location.
-
-        @param tls: The TLS protocol to create a connection for.
-        @type tls: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
-
-        @param hostname: The hostname part of the URI.
-        @type hostname: L{bytes}
-
-        @param port: The port part of the URI.
-        @type port: L{int}
-
-        @return: a configured SSL connection
-        @rtype: L{OpenSSL.SSL.Connection}
-        """
-        return CertificateOptions(
-            method=SSL.SSLv23_METHOD,
-            trustRoot=self._trustRoot,
-            hostname=hostname.decode('ascii')
-        ).clientConnectionForTLS(tls)
+            @return: A new SSL context.
+            @rtype: L{OpenSSL.SSL.Context}
+            """
+            return self._contextFactory.getContext()
 
 
 
@@ -873,8 +804,6 @@ class _WebToNormalContextFactory(object):
         self._webContext = webContext
         self._hostname = hostname
         self._port = port
-        if hasattr(self._webContext, "connectionForNetloc"):
-            directlyProvides(self, IOpenSSLClientConnectionCreator)
 
 
     def getContext(self):
@@ -883,11 +812,6 @@ class _WebToNormalContextFactory(object):
         hostname and port number and return the resulting context object.
         """
         return self._webContext.getContext(self._hostname, self._port)
-
-
-    def clientConnectionForTLS(self, tlsProtocol):
-        return self._webContext.connectionForNetloc(tlsProtocol,
-                                                    self._hostname, self._port)
 
 
 
@@ -1048,8 +972,8 @@ class _RetryingHTTP11ClientProtocol(object):
                                       ResponseNeverReceived)):
             return False
         if isinstance(exception, _WrapperException):
-            for aFailure in exception.reasons:
-                if aFailure.check(defer.CancelledError):
+            for failure in exception.reasons:
+                if failure.check(defer.CancelledError):
                     return False
         if bodyProducer is not None:
             return False
@@ -1307,7 +1231,7 @@ class Agent(_AgentBase):
     @since: 9.0
     """
 
-    def __init__(self, reactor, contextFactory=WebClientConnectionCreator(),
+    def __init__(self, reactor, contextFactory=WebClientContextFactory(),
                  connectTimeout=None, bindAddress=None,
                  pool=None):
         _AgentBase.__init__(self, reactor, pool)

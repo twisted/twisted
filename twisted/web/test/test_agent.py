@@ -32,13 +32,10 @@ from twisted.web.client import WebClientContextFactory, _HTTP11ClientFactory
 from twisted.web.iweb import UNKNOWN_LENGTH, IAgent, IBodyProducer, IResponse
 from twisted.web.http_headers import Headers
 from twisted.web._newclient import HTTP11ClientProtocol, Response
-from twisted.web.client import WebClientConnectionCreator
-from twisted.web.client import WebClientConnectionCreator
 from twisted.web.error import SchemeNotSupported
 
 try:
     from twisted.internet import ssl
-    from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
 except ImportError:
     ssl = None
 
@@ -1124,52 +1121,12 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
                               _WebToNormalContextFactory)
         # Default context factory was used:
         self.assertIsInstance(endpoint._sslContextFactory._webContext,
-                              WebClientConnectionCreator)
-
-
-    def test_connectHTTPSCustomConnectionCreator(self):
-        """
-        If a custom L{WebClientConnectionCreator}-like object is passed to
-        L{Agent.__init__} it will be used to determine the SSL parameters for
-        HTTPS requests.  When an HTTPS request is made, the hostname and port
-        number of the request URL will be passed to the connection creator's
-        C{connectionForNetloc} method.  The resulting context object will be
-        used to establish the SSL connection.
-        """
-        expectedHost = 'example.org'
-        expectedPort = 20443
-        class JustEnoughConnection(object):
-            handshakeStarted = False
-            connectState = False
-            def do_handshake(self):
-                self.handshakeStarted = True
-            def set_connect_state(self):
-                self.connectState = True
-
-        expectedConnection = JustEnoughConnection()
-
-        contextArgs = []
-        class StubWebClientConnectionCreator(object):
-            def connectionForNetloc(self, tls, hostname, port):
-                contextArgs.append((tls, hostname, port))
-                return expectedConnection
-        expectedCreator = StubWebClientConnectionCreator()
-        reactor = self.Reactor()
-        agent = client.Agent(reactor, expectedCreator)
-        endpoint = agent._getEndpoint('https', expectedHost, expectedPort)
-        endpoint.connect(Factory.forProtocol(Protocol))
-        passedFactory = reactor.sslClients[-1][2]
-        passedContextFactory = reactor.sslClients[-1][3]
-        tlsFactory = TLSMemoryBIOFactory(
-            passedContextFactory, True, passedFactory
+                              WebClientContextFactory)
+        self.assertIsInstance(
+            endpoint._sslContextFactory._webContext._contextFactory,
+            ssl.CertificateOptions
         )
-        tlsProtocol = tlsFactory.buildProtocol(None)
-        tlsProtocol.makeConnection(StringTransport())
-        tls = contextArgs[0][0]
-        self.assertIsInstance(tls, TLSMemoryBIOProtocol)
-        self.assertEqual(contextArgs[0][1:], (expectedHost, expectedPort))
-        self.assertTrue(expectedConnection.handshakeStarted)
-        self.assertTrue(expectedConnection.connectState)
+
 
 
 class WebClientContextFactoryTests(TestCase):
@@ -1203,27 +1160,13 @@ class WebClientContextFactoryTests(TestCase):
         roots.
         """
         ctx = WebClientContextFactory()
-        certificateOptions = ctx._getCertificateOptions('example.com', 443)
         self.assertIsInstance(
-            certificateOptions.trustRoot, ssl.OpenSSLDefaultPaths)
-
-
-    def test_setsHostnameOnContext(self):
-        """
-        The L{CertificateOptions} has C{hostname} set to the hostname passed to
-        C{getContext}.
-        """
-        ctx = WebClientContextFactory()
-        certificateOptions = ctx._getCertificateOptions(
-            'example.com', 443)
-        self.assertEqual(certificateOptions.hostname, u'example.com')
+            ctx._contextFactory.trustRoot, ssl.OpenSSLDefaultPaths)
 
 
     if ssl is None:
         test_returnsContext.skip = "SSL not present, cannot run SSL tests."
         test_setsTrustRootOnContextToDefaultTrustRoot.skip = (
-            "SSL not present, cannot run SSL tests.")
-        test_setsHostnameOnContext.skip = (
             "SSL not present, cannot run SSL tests.")
     else:
         test_missingSSL.skip = "SSL present."
