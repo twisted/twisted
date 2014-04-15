@@ -120,6 +120,18 @@ class TestDeferred(TestTester):
         self.failUnless(result.wasSuccessful())
         self.assertEqual(result.testsRun, 1)
         self.failUnless(detests.DeferredTests.touched)
+    test_passGenerated.supress = [util.suppress(
+        message="twisted.internet.defer.deferredGenerator is deprecated")]
+
+
+    def test_passInlineCallbacks(self):
+        """
+        The body of a L{defer.inlineCallbacks} decorated test gets run.
+        """
+        result = self.runTest('test_passInlineCallbacks')
+        self.failUnless(result.wasSuccessful())
+        self.assertEqual(result.testsRun, 1)
+        self.failUnless(detests.DeferredTests.touched)
 
     def test_fail(self):
         result = self.runTest('test_fail')
