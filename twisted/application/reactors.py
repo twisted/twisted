@@ -7,7 +7,7 @@ Plugin-based system for enumerating available reactors and installing one of
 them.
 """
 
-from zope.interface import Interface, Attribute, implements
+from zope.interface import Interface, Attribute, implementer
 
 from twisted.plugin import IPlugin, getPlugins
 from twisted.python.reflect import namedAny
@@ -41,14 +41,13 @@ class NoSuchReactor(KeyError):
     """
 
 
+
+@implementer(IPlugin, IReactorInstaller)
 class Reactor(object):
     """
     @ivar moduleName: The fully-qualified Python name of the module of which
     the install callable is an attribute.
     """
-    implements(IPlugin, IReactorInstaller)
-
-
     def __init__(self, shortName, moduleName, description):
         self.shortName = shortName
         self.moduleName = moduleName
