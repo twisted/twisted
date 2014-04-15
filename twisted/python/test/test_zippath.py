@@ -33,10 +33,10 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
     """
     def setUp(self):
         AbstractFilePathTestCase.setUp(self)
-        zipit(self.cmn, self.cmn + '.zip')
-        self.path = ZipArchive(self.cmn + '.zip')
+        zipit(self.cmn, self.cmn + b'.zip')
+        self.path = ZipArchive(self.cmn + b'.zip')
         self.root = self.path
-        self.all = [x.replace(self.cmn, self.cmn + '.zip') for x in self.all]
+        self.all = [x.replace(self.cmn, self.cmn + b'.zip') for x in self.all]
 
 
     def test_zipPathRepr(self):
