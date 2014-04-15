@@ -7,8 +7,6 @@ Tests for L{twisted.internet.defer.deferredGenerator} and related APIs.
 
 from __future__ import division, absolute_import
 
-import sys
-
 from twisted.internet import reactor
 
 from twisted.trial import unittest
