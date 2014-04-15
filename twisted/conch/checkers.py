@@ -322,6 +322,8 @@ deprecatedModuleAttribute(
 class IAuthorizedKeysDB(Interface):
     """
     An object that provides valid authorized ssh keys mapped to usernames
+
+    @since: 14.0.0
     """
     def getAuthorizedKeys(avatarId):
         """
@@ -341,6 +343,8 @@ def readAuthorizedKeyFile(fileobj, parsekey=keys.Key.fromString):
         default is L{twisted.conch.keys.Key.fromString}
 
     @return: an iterable of L{twisted.conch.ssh.keys.Key}
+
+    @since: 14.0.0
     """
     for line in fileobj:
         line = line.strip()
@@ -358,6 +362,8 @@ def _keysFromFilepaths(filepaths, parsekey):
     @param parsekey: a callable that takes a string and returns a
         L{twisted.conch.ssh.keys.Key}
     @return: generator of L{twisted.conch.keys.Key}
+
+    @since: 14.0.0
     """
     for fp in filepaths:
         if fp.exists():
@@ -371,14 +377,15 @@ def _keysFromFilepaths(filepaths, parsekey):
 
 
 @implementer(IAuthorizedKeysDB)
-class InMemoryKeyMappingDontUse(object):
+class InMemoryKeyMapping(object):
     """
     Object that provides SSH public keys based on a dictionary of usernames
-    mapped to L{twisted.conch.keys.Key}s.  This should NOT be used, except in
-    examples or tests.
+    mapped to L{twisted.conch.keys.Key}s.
 
     @ivar mapping: C{dict} of usernames mapped to iterables of
     L{twisted.conch.keys.Key}s
+
+    @since: 14.0.0
     """
     def __init__(self, mapping):
         self.mapping = mapping
@@ -403,6 +410,8 @@ class AuthorizedKeysFilesMapping(object):
     @ivar parsekey: a callable that takes a string and returns a
         L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
         default is L{twisted.conch.keys.Key.fromString}
+
+    @since: 14.0.0
     """
     def __init__(self, mapping, parsekey=keys.Key.fromString):
         self.mapping = mapping
@@ -430,6 +439,8 @@ class UNIXAuthorizedKeysFiles(object):
     @ivar parsekey: a callable that takes a string and returns a
         L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
         default is L{twisted.conch.keys.Key.fromString}
+
+    @since: 14.0.0
     """
     def __init__(self, userdb=None, parsekey=keys.Key.fromString):
         self.userdb = userdb
@@ -464,6 +475,8 @@ class SSHPublicKeyChecker(object):
     used instead of L{twisted.conch.checkers.SSHPublicKeyDatabase}.
 
     @ivar keydb: a provider of L{IAuthorizedKeysDB}
+
+    @since: 14.0.0
     """
     credentialInterfaces = (ISSHPrivateKey,)
 

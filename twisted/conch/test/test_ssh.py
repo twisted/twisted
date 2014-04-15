@@ -518,7 +518,7 @@ if Crypto is not None and pyasn1 is not None:
 
 
     def conchTestPublicKeyChecker():
-        conchTestPublicKeyDB = checkers.InMemoryKeyMappingDontUse(
+        conchTestPublicKeyDB = checkers.InMemoryKeyMapping(
             {'testuser': [keys.Key.fromString(publicDSA_openssh)]})
         return checkers.SSHPublicKeyChecker(conchTestPublicKeyDB)
 

@@ -46,8 +46,7 @@ else:
     from twisted.conch.ssh.channel import SSHChannel
     from twisted.conch.ssh.agent import SSHAgentServer
     from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
-    from twisted.conch.checkers import (
-        SSHPublicKeyChecker, InMemoryKeyMappingDontUse)
+    from twisted.conch.checkers import SSHPublicKeyChecker, InMemoryKeyMapping
     from twisted.conch.avatar import ConchUser
 
     from twisted.conch.test.keydata import (
@@ -976,7 +975,7 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
         """
         mapping = {k: [Key.fromString(v).public()]
                    for k, v in users.iteritems()}
-        checker = SSHPublicKeyChecker(InMemoryKeyMappingDontUse(mapping))
+        checker = SSHPublicKeyChecker(InMemoryKeyMapping(mapping))
         portal.registerChecker(checker)
 
 

@@ -7,7 +7,7 @@ from twisted.cred import portal
 from twisted.conch import avatar
 from twisted.conch.checkers import (
     InMemoryUsernamePasswordDatabaseDontUse,
-    SSHPublicKeyChecker, InMemoryKeyMappingDontUse)
+    SSHPublicKeyChecker, InMemoryKeyMapping)
 from twisted.conch.ssh import factory, userauth, connection, keys, session
 from twisted.internet import reactor, protocol
 from twisted.python import log
@@ -105,7 +105,7 @@ class ExampleFactory(factory.SSHFactory):
 portal = portal.Portal(ExampleRealm())
 passwdDB = InMemoryUsernamePasswordDatabaseDontUse()
 passwdDB.addUser('user', 'password')
-sshDB = SSHPublicKeyChecker(InMemoryKeyMappingDontUse(
+sshDB = SSHPublicKeyChecker(InMemoryKeyMapping(
     {'user': [keys.Key.fromString(data=publicKey)]}))
 portal.registerChecker(passwdDB)
 portal.registerChecker(sshDB)
