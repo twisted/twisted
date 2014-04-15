@@ -2428,7 +2428,9 @@ class TimeoutTests(unittest.TestCase):
         d = defer.Deferred(cancelled.append)
 
         defer.timeoutDeferred(reactor, d, 10)
-        reactor.advance(10.1)
+        reactor.advance(9.9)
+        self.assertNoResult(d)
+        reactor.advance(0.11)
         self.failureResultOf(d, defer.CancelledError)
         self.assertEqual(cancelled, [d])
         self.assertFalse(reactor.getDelayedCalls())
