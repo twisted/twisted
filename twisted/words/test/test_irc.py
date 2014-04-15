@@ -2277,6 +2277,15 @@ class DccTests(unittest.TestCase):
             ['foo.txt', '127.0.0.1', '1025']))])
 
 
+    def test_dccSendNotImplemented(self):
+        """
+        L{irc.IRCClient.dccDoSend} is raises C{NotImplementedError}
+        """
+        client = irc.IRCClient()
+        self.assertRaises(NotImplementedError,
+                          client.dccSend, 'username', None)
+
+
     def test_dccSendMalformedRequest(self):
         """
         L{irc.IRCClient.dcc_SEND} raises L{irc.IRCBadMessage} when it is passed
