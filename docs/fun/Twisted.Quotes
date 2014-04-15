@@ -19,3 +19,9 @@
 %
 <radix> so markdown can't be used for poetry
 <radix> oh wait &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; yes it can
+%
+<hawkowl> you know what this email server needs
+<hawkowl> global state
+%
+<exarkun> I think there is probably a fundamental problem relying on TLS PFS to keep a baby announcement secret, anyway.
+%
