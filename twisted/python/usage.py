@@ -12,14 +12,18 @@ U{http://twistedmatrix.com/projects/core/documentation/howto/options.html},
 or doc/core/howto/options.xhtml in your Twisted directory.
 """
 
+from __future__ import division, absolute_import
+
 # System Imports
+import inspect
 import os
 import sys
 import getopt
 from os import path
+import textwrap
 
 # Sibling Imports
-from twisted.python import reflect, text, util
+from twisted.python import reflect, util
 
 
 class UsageError(Exception):
@@ -52,7 +56,7 @@ class CoerceParameter(object):
                              % (parameterName,))
         try:
             value = self.coerce(value)
-        except ValueError, e:
+        except ValueError as e:
             raise UsageError("Parameter type enforcement failed: %s" % (e,))
 
         self.options.opts[parameterName] = value
@@ -188,13 +192,13 @@ class Options(dict):
         as dictionary keys.  This is an internal feature used to implement
         the parser.  Do not rely on it in application code.
         """
-        return int(id(self) % sys.maxint)
+        return int(id(self) % sys.maxsize)
 
     def opt_help(self):
         """
         Display this help and exit.
         """
-        print self.__str__()
+        print(self.__str__())
         sys.exit(0)
 
     def opt_version(self):
@@ -202,7 +206,7 @@ class Options(dict):
         Display Twisted version and exit.
         """
         from twisted import copyright
-        print "Twisted version:", copyright.version
+        print("Twisted version:", copyright.version)
         sys.exit(0)
 
     #opt_h = opt_help # this conflicted with existing 'host' options.
@@ -232,7 +236,7 @@ class Options(dict):
         try:
             opts, args = getopt.getopt(options,
                                        self.shortOpt, self.longOpt)
-        except getopt.error, e:
+        except getopt.error as e:
             raise UsageError(str(e))
 
         for opt, arg in opts:
@@ -432,13 +436,11 @@ class Options(dict):
                 reverse_dct[method] = []
             reverse_dct[method].append(name.replace('_', '-'))
 
-        cmpLength = lambda a, b: cmp(len(a), len(b))
-
         for method, names in reverse_dct.items():
             if len(names) < 2:
                 continue
             names_ = names[:]
-            names_.sort(cmpLength)
+            names_.sort(key=len)
             longest = names_.pop()
             for name in names_:
                 synonyms[name] = longest
@@ -535,7 +537,7 @@ class Options(dict):
 
         if longdesc:
             longdesc = ('\n' +
-                        '\n'.join(text.wordWrap(longdesc, width)).strip()
+                        '\n'.join(textwrap.wrap(longdesc, width)).strip()
                         + '\n')
 
         if optDicts:
@@ -935,7 +937,7 @@ def docMakeChunks(optList, width=80):
                 doc = "%s. %s" % (doc, d.doc)
 
         if doc:
-            column2_l = text.wordWrap(doc, colWidth2)
+            column2_l = textwrap.wrap(doc, colWidth2)
         else:
             column2_l = ['']
 
@@ -950,10 +952,10 @@ def docMakeChunks(optList, width=80):
 
 
 def flagFunction(method, name=None):
-    reqArgs = method.im_func.func_code.co_argcount
+    reqArgs = len(inspect.getargspec(method).args)
     if reqArgs > 2:
         raise UsageError('Invalid Option function for %s' %
-                         (name or method.func_name))
+                         (name or method.__name__))
     if reqArgs == 2:
         # argName = method.im_func.func_code.co_varnames[1]
         return 0
