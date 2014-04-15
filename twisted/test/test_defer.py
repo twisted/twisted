@@ -2374,13 +2374,11 @@ class TimeoutTests(unittest.TestCase):
         """
         reactor = Clock()
         cancelled = []
-        result = []
         d = defer.Deferred(cancelled.append)
-        d.addCallback(result.append)
 
         defer.timeoutDeferred(reactor, d, 10)
         d.callback("success")
-        self.assertEqual(result, ["success"])
+        self.assertEqual(self.successResultOf(d), "success")
         self.assertEqual(cancelled, [])
         # Timeout should have been cancelled:
         self.assertFalse(reactor.getDelayedCalls())
@@ -2393,14 +2391,12 @@ class TimeoutTests(unittest.TestCase):
         """
         reactor = Clock()
         cancelled = []
-        result = []
         d = defer.Deferred(cancelled.append)
-        d.addErrback(result.append)
 
         defer.timeoutDeferred(reactor, d, 10)
         f = failure.Failure(RuntimeError())
         d.errback(f)
-        self.assertEqual(result, [f])
+        self.failureResultOf(d, RuntimeError)
         self.assertEqual(cancelled, [])
         # Timeout should have been cancelled:
         self.assertFalse(reactor.getDelayedCalls())
@@ -2412,13 +2408,11 @@ class TimeoutTests(unittest.TestCase):
         L{defer.Deferred}'s C{cancel()} method is called.
         """
         reactor = Clock()
-        result = []
         d = defer.Deferred()
-        d.addErrback(result.append)
 
         defer.timeoutDeferred(reactor, d, 10)
         d.cancel()
-        self.assertIsInstance(result[0].value, defer.CancelledError)
+        self.failureResultOf(d, defer.CancelledError)
 
         # Timeout should have been cancelled:
         self.assertFalse(reactor.getDelayedCalls())
@@ -2431,13 +2425,11 @@ class TimeoutTests(unittest.TestCase):
         """
         reactor = Clock()
         cancelled = []
-        result = []
         d = defer.Deferred(cancelled.append)
-        d.addErrback(result.append)
 
         defer.timeoutDeferred(reactor, d, 10)
         reactor.advance(10.1)
-        self.assertIsInstance(result[0].value, defer.CancelledError)
+        self.failureResultOf(d, defer.CancelledError)
         self.assertEqual(cancelled, [d])
         self.assertFalse(reactor.getDelayedCalls())
 
@@ -2464,16 +2456,13 @@ class TimeoutTests(unittest.TestCase):
         # If we fire the original Deferred, this will cancel the first
         # timeout, even though the Deferred is now waiting again for a second
         # Deferred:
-        result = []
-        original.addBoth(result.append)
         original.callback(1)
         reactor.advance(1)
-        self.assertEqual(result, [])
+        self.assertNoResult(original)
 
         # However, the 2nd timeout is still there:
         reactor.advance(1)
-        self.assertEqual(len(result), 1)
-        self.assertIsInstance(result[0].value, defer.CancelledError)
+        self.failureResultOf(original, defer.CancelledError)
 
 
     def test_cancelReturnedDelayedCall(self):
@@ -2482,9 +2471,7 @@ class TimeoutTests(unittest.TestCase):
         scheduled timeout, allowing the caller to cancel the timeout manually.
         """
         reactor = Clock()
-        result = []
         d = defer.Deferred()
-        d.addCallback(result.append)
 
         delayedCall = defer.timeoutDeferred(reactor, d, 10)
         self.assertTrue(IDelayedCall.providedBy(delayedCall))
@@ -2493,4 +2480,4 @@ class TimeoutTests(unittest.TestCase):
         delayedCall.cancel()
         reactor.advance(11)
         d.callback(u"success")
-        self.assertEqual(result, [u"success"])
+        self.assertEqual(self.successResultOf(d), u"success")
