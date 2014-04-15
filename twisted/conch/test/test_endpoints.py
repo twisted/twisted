@@ -59,7 +59,6 @@ else:
 
     from twisted.conch.ssh.transport import SSHClientTransport
 
-from twisted.python.fakepwd import UserDatabase
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.iosim import FakeTransport, connect
 
