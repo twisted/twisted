@@ -28,6 +28,7 @@ from twisted.cred.credentials import UsernamePassword, IUsernamePassword, \
 from twisted.cred.error import UnhandledCredentials, UnauthorizedLogin
 from twisted.python.fakepwd import UserDatabase, ShadowDatabase
 from twisted.test.test_process import MockOS
+from twisted.conch import checkers
 
 try:
     import Crypto.Cipher.DES3
@@ -37,7 +38,6 @@ except ImportError:
 else:
     dependencySkip = None
     from twisted.conch.ssh import keys
-    from twisted.conch import checkers
     from twisted.conch.error import NotEnoughAuthentication, ValidPublicKey
     from twisted.conch.test import keydata
 
@@ -868,6 +868,9 @@ class SSHPublicKeyCheckerTestCase(TestCase):
     """
     Tests for L{checkers.SSHPublicKeyChecker}
     """
+    skip = cryptSkip or dependencySkip
+
+
     def setUp(self):
         self.credentials = SSHPrivateKey(
             'alice', 'ssh-rsa', keydata.publicRSA_openssh, 'foo',
