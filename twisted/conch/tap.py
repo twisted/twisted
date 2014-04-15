@@ -47,7 +47,8 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         # UNIXPasswordDatabase is used, instead of twisted.plugins.cred_unix's
         # checker
         super(Options, self).addChecker(conch_checkers.UNIXPasswordDatabase())
-        super(Options, self).addChecker(conch_checkers.SSHPublicKeyDatabase())
+        super(Options, self).addChecker(conch_checkers.SSHPublicKeyChecker(
+            conch_checkers.UNIXAuthorizedKeysFiles()))
         if pamauth is not None:
             super(Options, self).addChecker(
                 checkers.PluggableAuthenticationModulesChecker())
