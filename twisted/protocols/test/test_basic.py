@@ -149,6 +149,7 @@ class LineOnlyTester(basic.LineOnlyReceiver):
         self.received.append(line)
 
 
+
 class LineReceiverTestCase(unittest.SynchronousTestCase):
     """
     Test L{twisted.protocols.basic.LineReceiver}, using the C{LineTester}
@@ -218,7 +219,7 @@ a'''
 
     rawpauseOutput1 = [b'twiddle1', b'twiddle2', b'len 5', b'rawpause', b'']
     rawpauseOutput2 = [b'twiddle1', b'twiddle2', b'len 5', b'rawpause',
-                        b'12345', b'twiddle3']
+                       b'12345', b'twiddle3']
 
 
     def test_rawPausing(self):
@@ -264,8 +265,8 @@ a'''
         t = proto_helpers.StringIOWithoutClosing()
         a.makeConnection(protocol.FileWrapper(t))
         a.dataReceived(b'produce\nhello world\nunproduce\ngoodbye\n')
-        self.assertEqual(a.received,
-                          [b'produce', b'hello world', b'unproduce', b'goodbye'])
+        self.assertEqual(
+            a.received, [b'produce', b'hello world', b'unproduce', b'goodbye'])
 
 
     def test_clearLineBuffer(self):
@@ -449,6 +450,7 @@ class LineOnlyReceiverTestCase(unittest.SynchronousTestCase):
     """
     Tests for L{twisted.protocols.basic.LineOnlyReceiver}.
     """
+
     buffer = b"""foo
     bleakness
     desolation
@@ -716,7 +718,7 @@ class NetstringReceiverTestCase(unittest.SynchronousTestCase, LPTestCaseMixin):
         """
         tooLong = self.netstringReceiver.MAX_LENGTH + 1
         self.netstringReceiver.dataReceived(b"".join(
-                (bytes(tooLong), b":", b"a" * tooLong)))
+            (bytes(tooLong), b":", b"a" * tooLong)))
         self.assertTrue(self.transport.disconnecting)
 
 
@@ -814,7 +816,7 @@ class IntNTestCaseMixin(LPTestCaseMixin):
         r = self.getProtocol()
         r.sendString(b"b" * 16)
         self.assertEqual(r.transport.value(),
-            struct.pack(r.structFormat, 16) + b"b" * 16)
+                         struct.pack(r.structFormat, 16) + b"b" * 16)
 
 
     def test_lengthLimitExceeded(self):
@@ -968,7 +970,8 @@ class TestInt32(TestMixin, basic.Int32StringReceiver):
 
 
 
-class Int32TestCase(unittest.SynchronousTestCase, IntNTestCaseMixin, RecvdAttributeMixin):
+class Int32TestCase(unittest.SynchronousTestCase, IntNTestCaseMixin,
+                    RecvdAttributeMixin):
     """
     Test case for int32-prefixed protocol
     """
@@ -998,7 +1001,8 @@ class TestInt16(TestMixin, basic.Int16StringReceiver):
 
 
 
-class Int16TestCase(unittest.SynchronousTestCase, IntNTestCaseMixin, RecvdAttributeMixin):
+class Int16TestCase(unittest.SynchronousTestCase, IntNTestCaseMixin,
+                    RecvdAttributeMixin):
     """
     Test case for int16-prefixed protocol
     """
@@ -1056,7 +1060,8 @@ class TestInt8(TestMixin, basic.Int8StringReceiver):
 
 
 
-class Int8TestCase(unittest.SynchronousTestCase, IntNTestCaseMixin, RecvdAttributeMixin):
+class Int8TestCase(unittest.SynchronousTestCase, IntNTestCaseMixin,
+                   RecvdAttributeMixin):
     """
     Test case for int8-prefixed protocol
     """
@@ -1088,8 +1093,10 @@ class Int8TestCase(unittest.SynchronousTestCase, IntNTestCaseMixin, RecvdAttribu
 
 
 class OnlyProducerTransport(object):
-    # Transport which isn't really a transport, just looks like one to
-    # someone not looking very hard.
+    """
+    Transport which isn't really a transport, just looks like one to
+    someone not looking very hard.
+    """
 
     paused = False
     disconnecting = False
@@ -1112,7 +1119,9 @@ class OnlyProducerTransport(object):
 
 
 class ConsumingProtocol(basic.LineReceiver):
-    # Protocol that really, really doesn't want any more bytes.
+    """
+    Protocol that really, really doesn't want any more bytes.
+    """
 
     def lineReceived(self, line):
         self.transport.write(line)
@@ -1121,52 +1130,78 @@ class ConsumingProtocol(basic.LineReceiver):
 
 
 class ProducerTestCase(unittest.SynchronousTestCase):
+    """
+    Tests for L{basic._PausableMixin} and L{basic.LineReceiver.paused}.
+    """
 
-    def testPauseResume(self):
+    def test_pauseResume(self):
+        """
+        When L{basic.LineReceiver} is paused, it doesn't deliver lines to
+        L{basic.LineReceiver.lineReceived} and delivers them immediately upon
+        being resumed.
+
+        L{ConsumingProtocol} is a L{LineReceiver} that pauses itself after
+        every line, and writes that line to its transport.
+        """
         p = ConsumingProtocol()
         t = OnlyProducerTransport()
         p.makeConnection(t)
 
+        # Deliver a partial line.
+        # This doesn't trigger a pause and doesn't deliver a line.
         p.dataReceived(b'hello, ')
-        self.failIf(t.data)
-        self.failIf(t.paused)
-        self.failIf(p.paused)
+        self.assertEqual(t.data, [])
+        self.assertFalse(t.paused)
+        self.assertFalse(p.paused)
 
+        # Deliver the rest of the line.
+        # This triggers the pause, and the line is echoed.
         p.dataReceived(b'world\r\n')
-
         self.assertEqual(t.data, [b'hello, world'])
-        self.failUnless(t.paused)
-        self.failUnless(p.paused)
+        self.assertTrue(t.paused)
+        self.assertTrue(p.paused)
 
+        # Unpausing doesn't deliver more data, and the protocol is unpaused.
         p.resumeProducing()
+        self.assertEqual(t.data, [b'hello, world'])
+        self.assertFalse(t.paused)
+        self.assertFalse(p.paused)
 
-        self.failIf(t.paused)
-        self.failIf(p.paused)
-
+        # Deliver two lines at once.
+        # The protocol is paused after receiving and echoing the first line.
         p.dataReceived(b'hello\r\nworld\r\n')
-
         self.assertEqual(t.data, [b'hello, world', b'hello'])
-        self.failUnless(t.paused)
-        self.failUnless(p.paused)
+        self.assertTrue(t.paused)
+        self.assertTrue(p.paused)
 
+        # Unpausing delivers the waiting line, and causes the protocol to
+        # pause agin.
         p.resumeProducing()
-        p.dataReceived(b'goodbye\r\n')
-
         self.assertEqual(t.data, [b'hello, world', b'hello', b'world'])
-        self.failUnless(t.paused)
-        self.failUnless(p.paused)
+        self.assertTrue(t.paused)
+        self.assertTrue(p.paused)
 
+        # Deliver a line while paused.
+        # This doesn't have a visible effect.
+        p.dataReceived(b'goodbye\r\n')
+        self.assertEqual(t.data, [b'hello, world', b'hello', b'world'])
+        self.assertTrue(t.paused)
+        self.assertTrue(p.paused)
+
+        # Unpausing delivers the waiting line, and causes the protocol to
+        # pause agin.
         p.resumeProducing()
+        self.assertEqual(
+            t.data, [b'hello, world', b'hello', b'world', b'goodbye'])
+        self.assertTrue(t.paused)
+        self.assertTrue(p.paused)
 
-        self.assertEqual(t.data, [b'hello, world', b'hello', b'world', b'goodbye'])
-        self.failUnless(t.paused)
-        self.failUnless(p.paused)
-
+        # Unpausing doesn't deliver more data, and the protocol is unpaused.
         p.resumeProducing()
-
-        self.assertEqual(t.data, [b'hello, world', b'hello', b'world', b'goodbye'])
-        self.failIf(t.paused)
-        self.failIf(p.paused)
+        self.assertEqual(
+            t.data, [b'hello, world', b'hello', b'world', b'goodbye'])
+        self.assertFalse(t.paused)
+        self.assertFalse(p.paused)
 
 
 
