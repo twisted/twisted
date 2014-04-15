@@ -923,7 +923,7 @@ class waitForDeferred:
     def __init__(self, d):
         warnings.warn(
             "twisted.internet.defer.waitForDeferred was deprecated in "
-            "Twisted 13.2.0; please use twisted.internet.defer.inlineCallbacks "
+            "Twisted 14.1.0; please use twisted.internet.defer.inlineCallbacks "
             "instead", DeprecationWarning, stacklevel=2)
 
         if not isinstance(d, Deferred):
@@ -994,7 +994,7 @@ def _deferGenerator(g, deferred):
 
 
 
-@deprecated(Version('Twisted', 13, 2, 0),
+@deprecated(Version('Twisted', 14, 1, 0),
             "twisted.internet.defer.inlineCallbacks")
 def deferredGenerator(f):
     """
