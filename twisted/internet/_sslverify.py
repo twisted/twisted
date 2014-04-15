@@ -132,6 +132,8 @@ from twisted.python.compat import nativeString, networkString, unicode
 from twisted.python.failure import Failure
 from twisted.python.util import FancyEqMixin
 
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version
 
 
 def _sessionCounter(counter=itertools.count()):
@@ -772,6 +774,11 @@ class KeyPair(PublicKey):
             self.signRequestObject(dn, self.requestObject(dn), serialNumber),
             self)
 
+KeyPair.__getstate__ = deprecated(Version("Twisted", 13, 1, 0),
+    "a real persistence system")(KeyPair.__getstate__)
+KeyPair.__setstate__ = deprecated(Version("Twisted", 13, 1, 0),
+    "a real persistence system")(KeyPair.__setstate__)
+
 
 
 class IOpenSSLTrustRoot(Interface):
@@ -1260,6 +1267,13 @@ class OpenSSLCertificateOptions(object):
 
 
 
+OpenSSLCertificateOptions.__getstate__ = deprecated(Version("Twisted", 13, 1, 0),
+    "a real persistence system")(OpenSSLCertificateOptions.__getstate__)
+OpenSSLCertificateOptions.__setstate__ = deprecated(Version("Twisted", 13, 1, 0),
+    "a real persistence system")(OpenSSLCertificateOptions.__setstate__)
+
+
+
 class _OpenSSLECCurve(FancyEqMixin, object):
     """
     A private representation of an OpenSSL ECC curve.
@@ -1479,3 +1493,6 @@ class OpenSSLDiffieHellmanParameters(object):
             <twisted.internet.ssl.DiffieHellmanParameters>}
         """
         return cls(filePath)
+
+
+
