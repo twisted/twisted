@@ -1623,6 +1623,11 @@ def timeoutDeferred(reactor, deferred, seconds):
 
     @see: L{Deferred.cancel}.
 
+    The timeout only waits for callbacks that were added before
+    L{timeoutDeferred} was called. If the L{Deferred} is fired then the
+    timeout will be removed, even if callbacks added after
+    L{timeoutDeferred} are still waiting for a result to become available.
+
     @type reactor: L{IReactorTime}
     @param reactor: A provider of L{twisted.internet.interfaces.IReactorTime}.
 
