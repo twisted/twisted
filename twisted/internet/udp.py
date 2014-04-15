@@ -31,6 +31,7 @@ if platformType == 'win32':
     from errno import WSAEINTR, WSAEMSGSIZE, WSAETIMEDOUT
     from errno import WSAECONNREFUSED, WSAECONNRESET, WSAENETRESET
     from errno import WSAEINPROGRESS
+    from errno import WSAENOPROTOOPT as ENOPROTOOPT
 
     # Classify read and write errors
     _sockErrReadIgnore = [WSAEINTR, WSAEWOULDBLOCK, WSAEMSGSIZE, WSAEINPROGRESS]
