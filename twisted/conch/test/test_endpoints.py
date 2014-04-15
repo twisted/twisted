@@ -973,8 +973,8 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
             OpenSSH-formatted private keys.
         @type users: C{dict}
         """
-        mapping = {k: [Key.fromString(v).public()]
-                   for k, v in users.iteritems()}
+        mapping = dict([(k,[Key.fromString(v).public()])
+                        for k, v in users.iteritems()])
         checker = SSHPublicKeyChecker(InMemoryKeyMapping(mapping))
         portal.registerChecker(checker)
 
