@@ -623,7 +623,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 @implementer(IOpenSSLClientConnectionCreator, IOpenSSLServerConnectionCreator)
 class _ConnectionFactory(object):
     """
-    Adapter converting "something" (ideally something like a
+    Adapter wrapping "something" (ideally something like a
     L{twisted.internet.ssl.ContextFactory}) into an
     L{IOpenSSLClientConnectionCreator} or L{IOpenSSLServerConnectionCreator}.
     """
