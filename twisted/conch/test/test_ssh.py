@@ -17,6 +17,8 @@ try:
 except ImportError:
     pyasn1 = None
 
+from zope.interface import implementer
+
 from twisted.conch.ssh import common, session, forwarding
 from twisted.conch import avatar, error
 from twisted.conch.test.keydata import publicRSA_openssh, privateRSA_openssh
@@ -316,13 +318,12 @@ if Crypto is not None and pyasn1 is not None:
             for i in xrange(256 * 256):
                 self.assertEqual(c(), struct.pack('!H', (i + 1) % (2 ** 16)))
 
-
-    class ConchTestPublicKeyChecker(checkers.SSHPublicKeyDatabase):
-        def checkKey(self, credentials):
-            blob = keys.Key.fromString(publicDSA_openssh).blob()
-            if credentials.username == 'testuser' and credentials.blob == blob:
-                return True
-            return False
+    @implementer(checkers.IAuthorizedKeysDB)
+    class ConchTestPublicKeyDB(object):
+        def getAuthorizedKeys(self, username):
+            if username == 'testuser':
+                return (keys.Key.fromString(publicDSA_openssh),)
+            return ()
 
 
     class ConchTestPasswordChecker:
@@ -549,7 +550,8 @@ class SSHProtocolTestCase(unittest.TestCase):
         p = portal.Portal(self.realm)
         sshpc = ConchTestSSHChecker()
         sshpc.registerChecker(ConchTestPasswordChecker())
-        sshpc.registerChecker(ConchTestPublicKeyChecker())
+        sshpc.registerChecker(
+            checkers.SSHPublicKeyChecker(ConchTestPublicKeyDB()))
         p.registerChecker(sshpc)
         fac = ConchTestServerFactory()
         fac.portal = p
