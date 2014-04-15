@@ -12,6 +12,8 @@ U{http://twistedmatrix.com/projects/core/documentation/howto/options.html},
 or doc/core/howto/options.xhtml in your Twisted directory.
 """
 
+from __future__ import print_function
+
 # System Imports
 import os
 import sys
@@ -52,7 +54,7 @@ class CoerceParameter(object):
                              % (parameterName,))
         try:
             value = self.coerce(value)
-        except ValueError, e:
+        except ValueError as e:
             raise UsageError("Parameter type enforcement failed: %s" % (e,))
 
         self.options.opts[parameterName] = value
@@ -194,7 +196,7 @@ class Options(dict):
         """
         Display this help and exit.
         """
-        print self.__str__()
+        print(self.__str__())
         sys.exit(0)
 
     def opt_version(self):
@@ -202,7 +204,7 @@ class Options(dict):
         Display Twisted version and exit.
         """
         from twisted import copyright
-        print "Twisted version:", copyright.version
+        print("Twisted version:", copyright.version)
         sys.exit(0)
 
     #opt_h = opt_help # this conflicted with existing 'host' options.
@@ -232,7 +234,7 @@ class Options(dict):
         try:
             opts, args = getopt.getopt(options,
                                        self.shortOpt, self.longOpt)
-        except getopt.error, e:
+        except getopt.error as e:
             raise UsageError(str(e))
 
         for opt, arg in opts:
