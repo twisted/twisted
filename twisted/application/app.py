@@ -265,7 +265,8 @@ def fixPdb():
 
 
     def help_stop(self):
-        print("""stop - Continue execution, then cleanly shutdown the twisted reactor.""")
+        print("stop - Continue execution, then cleanly shutdown the twisted "
+              "reactor.")
 
 
     def set_quit(self):
