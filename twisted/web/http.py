@@ -92,7 +92,7 @@ from twisted.python.compat import (
     _PY3, unicode, intToBytes, networkString, nativeString)
 from twisted.python import log
 from twisted.python.components import proxyForInterface
-from twisted.internet import interfaces, reactor, protocol, address
+from twisted.internet import interfaces, protocol, address
 from twisted.internet.defer import Deferred
 from twisted.protocols import policies, basic
 
@@ -1959,14 +1959,16 @@ class HTTPFactory(protocol.ServerFactory):
 
     timeOut = 60 * 60 * 12
 
-    _reactor = reactor
-
-    def __init__(self, logPath=None, timeout=60*60*12, logFormatter=None):
+    def __init__(self, logPath=None, timeout=60*60*12, logFormatter=None,
+                 reactor=None):
         """
         @param logFormatter: An object to format requests into log lines for
             the access log.
         @type logFormatter: L{IAccessLogFormatter} provider
         """
+        if reactor is None:
+            from twisted.internet import reactor
+        self._reactor = reactor
         if logPath is not None:
             logPath = os.path.abspath(logPath)
         self.logPath = logPath
