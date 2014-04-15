@@ -364,6 +364,7 @@ class LineOnlyReceiverTestCase(unittest.SynchronousTestCase):
     """
     Tests for L{twisted.protocols.basic.LineOnlyReceiver}.
     """
+
     buffer = b"""foo
     bleakness
     desolation
