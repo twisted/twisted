@@ -1,0 +1,1 @@
+twisted.conch.checkers.SSHPublicKeyDatabase is now deprecated in favor of a twisted.conch.checkers.SSHPublicKeyChecker instantiated with a twisted.conch.checkers.UNIXAuthorizedKeyFiles.
