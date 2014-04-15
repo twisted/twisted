@@ -197,6 +197,23 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         self.checker._userdb = userdb
 
 
+    def test_deprecated(self):
+        """
+        L{SSHPublicKeyDatabase} is deprecated as of version 14.0
+        """
+        warningsShown = self.flushWarnings(
+            offendingFunctions=[self.setUp])
+        self.assertEqual(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            "twisted.conch.checkers.SSHPublicKeyDatabase "
+            "was deprecated in Twisted 14.0.0: Please use "
+            "twisted.conch.checkers.SSHPublicKeyChecker, "
+            "initialized with an instance of "
+            "twisted.conch.checkers.UNIXAuthorizedKeysFiles instead.")
+        self.assertEqual(len(warningsShown), 1)
+
+
     def _testCheckKey(self, filename):
         self.sshDir.child(filename).setContent(self.content)
         user = UsernamePassword("user", "password")

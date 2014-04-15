@@ -40,8 +40,10 @@ from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 from twisted.internet import defer
 from twisted.python import failure, reflect, log
+from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.util import runAsEffectiveUser
 from twisted.python.filepath import FilePath
+from twisted.python.versions import Version
 
 
 
@@ -305,3 +307,11 @@ class SSHProtocolChecker:
         """
         return True
 
+
+
+deprecatedModuleAttribute(
+        Version("Twisted", 14, 0, 0),
+        ("Please use twisted.conch.checkers.SSHPublicKeyChecker, "
+         "initialized with an instance of "
+         "twisted.conch.checkers.UNIXAuthorizedKeysFiles instead."),
+        __name__, "SSHPublicKeyDatabase")
