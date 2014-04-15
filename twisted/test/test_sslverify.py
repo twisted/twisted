@@ -1033,8 +1033,7 @@ class DeprecationTests(unittest.SynchronousTestCase):
 
     def test_getstateDeprecation(self):
         """
-        Test deprecation of
-        L{sslverify.OpenSSLCertificateOptions.__getstate__}.
+        L{sslverify.OpenSSLCertificateOptions.__getstate__} is deprecated.
         """
         self.callDeprecated(
             (Version("Twisted", 14, 1, 0), "a real persistence system"),
@@ -1043,8 +1042,7 @@ class DeprecationTests(unittest.SynchronousTestCase):
 
     def test_setstateDeprecation(self):
         """
-        Test deprecation of
-        L{sslverify.OpenSSLCertificateOptions.__setstate__}.
+        L{sslverify.OpenSSLCertificateOptions.__setstate__} is deprecated.
         """
         self.callDeprecated(
             (Version("Twisted", 14, 1, 0), "a real persistence system"),
@@ -1951,9 +1949,10 @@ class KeyPair(unittest.TestCase):
             O=b"Server Test Certificate",
             CN=b"server")[0]
 
+
     def test_getstateDeprecation(self):
         """
-        Test deprecation of L{sslverify.KeyPair.__getstate__}.
+        L{sslverify.KeyPair.__getstate__} is deprecated.
         """
         self.callDeprecated(
             (Version("Twisted", 14, 1, 0), "a real persistence system"),
@@ -1962,7 +1961,7 @@ class KeyPair(unittest.TestCase):
 
     def test_setstateDeprecation(self):
         """
-        Test deprecation of L{sslverify.KeyPair.__setstate__}.
+        {sslverify.KeyPair.__setstate__} is deprecated.
         """
         state = sslverify.KeyPair(self.sKey).dump()
         self.callDeprecated(
