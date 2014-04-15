@@ -27,7 +27,7 @@ else:
 
 from twisted.python.filepath import IFilePath, FilePath, AbstractFilePath
 
-from zope.interface import implements
+from zope.interface import implementer
 
 # using FilePath here exclusively rather than os to make sure that we don't do
 # anything OS-path-specific here.
@@ -36,12 +36,11 @@ ZIP_PATH_SEP = '/'              # In zipfiles, "/" is universally used as the
                                 # path separator, regardless of platform.
 
 
+@implementer(IFilePath)
 class ZipPath(AbstractFilePath):
     """
     I represent a file or directory contained within a zip file.
     """
-
-    implements(IFilePath)
 
     sep = ZIP_PATH_SEP
 
