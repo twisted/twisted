@@ -105,11 +105,15 @@ class BaseDefgenTests:
 def deprecatedDeferredGenerator(f):
     """
     Calls L{deferredGenerator} while suppressing the deprecation warning.
+
+    @param f: Function to call
+    @return: Return value of function.
     """
     return runWithWarningsSuppressed(
         [ SUPPRESS(message="twisted.internet.defer.deferredGenerator was "
                           "deprecated") ],
         deferredGenerator, f)
+
 
 
 class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
@@ -335,8 +339,8 @@ class DeprecateDeferredGenerator(unittest.SynchronousTestCase):
         self.assertEqual(
             warnings[0]['message'],
             "twisted.internet.defer.deferredGenerator was deprecated in "
-            "Twisted 13.2.0; please use twisted.internet.defer.inlineCallbacks "
-            "instead")
+            "Twisted 13.2.0; please use "
+            "twisted.internet.defer.inlineCallbacks instead")
 
     def test_waitForDeferredDeprecated(self):
         """
@@ -351,5 +355,5 @@ class DeprecateDeferredGenerator(unittest.SynchronousTestCase):
         self.assertEqual(
             warnings[0]['message'],
             "twisted.internet.defer.waitForDeferred was deprecated in "
-            "Twisted 13.2.0; please use twisted.internet.defer.inlineCallbacks "
-            "instead")
+            "Twisted 13.2.0; please use "
+            "twisted.internet.defer.inlineCallbacks instead")
