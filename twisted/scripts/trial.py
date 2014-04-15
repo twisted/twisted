@@ -599,8 +599,8 @@ def run():
     config = Options()
     try:
         config.parseOptions()
-    except usage.error, ue:
-        raise SystemExit, "%s: %s" % (sys.argv[0], ue)
+    except usage.error as ue:
+        raise SystemExit("%s: %s" % (sys.argv[0], ue))
     _initialDebugSetup(config)
 
     try:
