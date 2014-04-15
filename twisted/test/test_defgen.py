@@ -119,6 +119,7 @@ def deprecatedDeferredGenerator(f):
 class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
 
     # First provide all the generator impls necessary for BaseDefgenTests
+    @deprecatedDeferredGenerator
     def _genBasics(self):
 
         x = waitForDeferred(getThing())
@@ -135,18 +136,20 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
             self.assertEqual(str(e), 'OMG')
         yield "WOOSH"
         return
-    _genBasics = deprecatedDeferredGenerator(_genBasics)
 
+
+    @deprecatedDeferredGenerator
     def _genBuggy(self):
         yield waitForDeferred(getThing())
         1//0
-    _genBuggy = deprecatedDeferredGenerator(_genBuggy)
 
 
+    @deprecatedDeferredGenerator
     def _genNothing(self):
         if 0: yield 1
-    _genNothing = deprecatedDeferredGenerator(_genNothing)
 
+
+    @deprecatedDeferredGenerator
     def _genHandledTerminalFailure(self):
         x = waitForDeferred(defer.fail(TerminalException("Handled Terminal Failure")))
         yield x
@@ -154,9 +157,9 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
             x.getResult()
         except TerminalException:
             pass
-    _genHandledTerminalFailure = deprecatedDeferredGenerator(_genHandledTerminalFailure)
 
 
+    @deprecatedDeferredGenerator
     def _genHandledTerminalAsyncFailure(self, d):
         x = waitForDeferred(d)
         yield x
@@ -164,7 +167,6 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
             x.getResult()
         except TerminalException:
             pass
-    _genHandledTerminalAsyncFailure = deprecatedDeferredGenerator(_genHandledTerminalAsyncFailure)
 
 
     def _genStackUsage(self):
@@ -317,6 +319,7 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
         self.assertIn("inlineCallbacks",
             str(self.assertRaises(TypeError, _noYield)))
+
 
 
 class DeprecateDeferredGenerator(unittest.SynchronousTestCase):
