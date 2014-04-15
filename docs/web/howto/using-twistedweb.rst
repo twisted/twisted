@@ -702,6 +702,9 @@ Interface. It is a specification for web servers and application servers to
 communicate with Python web applications. All modern Python web frameworks
 support the WSGI interface.
 
+Using ``twisted web``
+^^^^^^^^^^^^^^^^^^^^^
+
 The easiest way to get started with WSGI application is to use the twistd
 command:
 
@@ -723,6 +726,10 @@ The above setup will be suitable for many applications where all that is
 needed is to server the WSGI application at the site's root. However, for
 greater control, Twisted provides support for using WSGI applications as
 resources ``twisted.web.wsgi.WSGIResource`` .
+
+
+Using ``twisted.web.wsgi.Resource``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Here is an example of a WSGI application being served as the root resource
 for a site, in the following tac file:
@@ -765,6 +772,31 @@ Because of the synchronous nature of WSGI, each application call (for
 each request) is called within a thread, and the result is written back to the
 web server. For this, a ``twisted.python.threadpool.ThreadPool`` 
 instance is used.
+
+
+Using paste.deploy
+~~~~~~~~~~~~~~~~~~
+
+Quite a few WSGI application use `paste.deploy <http://pythonpaste.org/deploy/` and ``paster serve`` for configuration.
+Twisted provides hooks to be able to use twisted as a container when using paste.
+
+The simplest example is:
+
+.. code-block:: console
+
+    % paster serve --server egg:Twisted paste.cfg start
+
+If you want more control over the server, you can also spcify twisted as the server in the paste config file::
+
+    [server:twisted]
+    use = egg:Twisted
+    port = tcp:80 ssl:443:privateKey=ssl.key:certKey=ssl.crt
+    theadPoolSize = 5
+
+.. code-block:: console
+
+    % paster serve --server-name twisted paste.cfg start
+
 
 Using VHostMonster
 ~~~~~~~~~~~~~~~~~~
