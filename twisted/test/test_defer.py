@@ -2452,19 +2452,36 @@ class TimeoutTests(unittest.TestCase):
         waiting = defer.Deferred()
         original.addCallback(lambda ign: waiting)
 
-        # Add a second timeout:
-        defer.timeoutDeferred(reactor, original, 2)
-
-        # If we fire the original Deferred, this will cancel the first
-        # timeout, even though the Deferred is now waiting again for a second
+        # If we fire the original Deferred, this will remove the timeout,
+        # even though the Deferred is now waiting again for a second
         # Deferred:
         original.callback(1)
         reactor.advance(1)
         self.assertNoResult(original)
 
-        # However, the 2nd timeout is still there:
-        reactor.advance(1)
-        self.failureResultOf(original, defer.CancelledError)
+
+    def test_multipleTimeouts(self):
+        """
+        L{defer.timeoutDeferred} can be called multiple times on a L{Deferred};
+        even if the first is removed, the others will still be active if
+        there are intervening callbacks waiting.
+        """
+        original = defer.Deferred()
+        reactor = Clock()
+
+        # Add the initial timeout:
+        defer.timeoutDeferred(reactor, original, 1)
+
+        # Add another callback, waiting for another Deferred:
+        waiting = defer.Deferred()
+        original.addCallback(lambda ign: waiting)
+        delayedCall = defer.timeoutDeferred(reactor, waiting, 2)
+
+        # Remove first timeout:
+        original.callback(1)
+
+        # Second timeout is still active:
+        self.assertTrue(delayedCall.active())
 
 
     def test_cancelReturnedDelayedCall(self):
