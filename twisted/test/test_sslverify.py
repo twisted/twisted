@@ -1961,7 +1961,7 @@ class KeyPair(unittest.TestCase):
 
     def test_getstateDeprecation(self):
         """
-        Test deprecation of L{_sslverify.KeyPair.__getstate__}.
+        Test deprecation of L{sslverify.KeyPair.__getstate__}.
         """
         self.callDeprecated(
             (Version("Twisted", 14, 1, 0), "a real persistence system"),
@@ -1970,7 +1970,7 @@ class KeyPair(unittest.TestCase):
 
     def test_setstateDeprecation(self):
         """
-        Test deprecation of L{_sslverify.KeyPair.__setstate__}.
+        Test deprecation of L{sslverify.KeyPair.__setstate__}.
         """
         state = sslverify.KeyPair(self.sKey).__getstate__()
         self.callDeprecated(
