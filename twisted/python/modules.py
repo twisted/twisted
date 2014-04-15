@@ -62,7 +62,7 @@ import sys
 import zipimport
 import inspect
 import warnings
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 
 from twisted.python.components import registerAdapter
 from twisted.python.filepath import FilePath, UnlistableError
@@ -476,16 +476,20 @@ class IPathImportMapper(Interface):
         L{ZipPath}, but more might be added later).
         """
 
+
+
+@implementer(IPathImportMapper)
 class _DefaultMapImpl:
     """ Wrapper for the default importer, i.e. None.  """
-    implements(IPathImportMapper)
     def mapPath(self, fsPathString):
         return FilePath(fsPathString)
 _theDefaultMapper = _DefaultMapImpl()
 
+
+
+@implementer(IPathImportMapper)
 class _ZipMapImpl:
     """ IPathImportMapper implementation for zipimport.ZipImporter.  """
-    implements(IPathImportMapper)
     def __init__(self, importer):
         self.importer = importer
 
