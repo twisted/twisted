@@ -7,6 +7,7 @@ This module contains implementations of IFilePath for zip files.
 
 See the constructor for ZipArchive for use.
 """
+from __future__ import print_function, division, absolute_import
 
 __metaclass__ = type
 

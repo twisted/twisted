@@ -100,6 +100,7 @@ modules = [
     "twisted.python.test",
     "twisted.python.test.deprecatedattributes",
     "twisted.python.test.modules_helpers",
+    "twisted.python.test.test_zippath",
     "twisted.python.threadable",
     "twisted.python.threadpool",
     "twisted.python.usage",
