@@ -28,7 +28,6 @@ from twisted.cred.credentials import UsernamePassword, IUsernamePassword, \
 from twisted.cred.error import UnhandledCredentials, UnauthorizedLogin
 from twisted.python.fakepwd import UserDatabase, ShadowDatabase
 from twisted.test.test_process import MockOS
-from twisted.conch import checkers
 
 try:
     import Crypto.Cipher.DES3
@@ -38,6 +37,7 @@ except ImportError:
 else:
     dependencySkip = None
     from twisted.conch.ssh import keys
+    from twisted.conch import checkers
     from twisted.conch.error import NotEnoughAuthentication, ValidPublicKey
     from twisted.conch.test import keydata
 
@@ -629,6 +629,9 @@ class AuthorizedKeyFileReaderTestCase(TestCase):
     """
     Tests for L{checkers.readAuthorizedKeyFile}
     """
+    skip = dependencySkip
+
+
     def test_ignoresComments(self):
         """
         L{checkers.readAuthorizedKeyFile} does not attempt to turn comments
@@ -660,14 +663,14 @@ class AuthorizedKeyFileReaderTestCase(TestCase):
         L{checkers.readAuthorizedKeyFile} does not raise an exception
         when a key fails to parse, but rather just keeps going
         """
-        def fail_on_some(line):
+        def failOnSome(line):
             if line.startswith('f'):
                 raise Exception('failed to parse')
             return line
 
         fileobj = StringIO('failed key\ngood key')
         result = checkers.readAuthorizedKeyFile(fileobj,
-                                                parsekey=fail_on_some)
+                                                parsekey=failOnSome)
         self.assertEqual(['good key'], list(result))
 
 
@@ -676,6 +679,9 @@ class InMemoryKeyMappingTestCase(TestCase):
     """
     Tests for L{checkers.InMemoryKeyMapping}
     """
+    skip = dependencySkip
+
+
     def test_implementsInterface(self):
         """
         L{checkers.InMemoryKeyMapping} implements
@@ -711,6 +717,9 @@ class AuthorizedKeysFilesMappingTestCase(TestCase):
     """
     Tests for L{checkers.AuthorizedKeysFilesMapping}
     """
+    skip = dependencySkip
+
+
     def setUp(self):
         self.root = FilePath(self.mktemp())
         self.root.makedirs()
@@ -780,6 +789,9 @@ class UNIXAuthorizedKeysFilesTestCase(TestCase):
     """
     Tests for L{checkers.UNIXAuthorizedKeysFiles}
     """
+    skip = dependencySkip
+
+
     def setUp(self):
         mockos = MockOS()
         mockos.path = FilePath(self.mktemp())
@@ -860,6 +872,9 @@ _KeyDB = namedtuple('KeyDB', ['getAuthorizedKeys'])
 
 
 class _DummyException(Exception):
+    """
+    Fake exception to be used for testing
+    """
     pass
 
 
@@ -868,7 +883,7 @@ class SSHPublicKeyCheckerTestCase(TestCase):
     """
     Tests for L{checkers.SSHPublicKeyChecker}
     """
-    skip = cryptSkip or dependencySkip
+    skip = dependencySkip
 
 
     def setUp(self):

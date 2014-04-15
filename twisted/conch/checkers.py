@@ -327,6 +327,9 @@ class IAuthorizedKeysDB(Interface):
     """
     def getAuthorizedKeys(avatarId):
         """
+        Gets an iterable of authorized keys that are valid for the given
+        C{avatarId}.
+
         @param avatarId: C{str} the id of the avatar
         @return: an iterable of L{twisted.conch.ssh.keys.Key}
         """
@@ -358,6 +361,9 @@ def readAuthorizedKeyFile(fileobj, parsekey=keys.Key.fromString):
 
 def _keysFromFilepaths(filepaths, parsekey):
     """
+    Helper function that turns an iterable of filepaths into a generator of
+    keys.
+
     @param filepaths: iterator of L{twisted.python.filepath.FilePath}
     @param parsekey: a callable that takes a string and returns a
         L{twisted.conch.ssh.keys.Key}
@@ -393,7 +399,7 @@ class InMemoryKeyMapping(object):
 
     def getAuthorizedKeys(self, username):
         """
-        @see: L{IAuthorizedKeysDB}
+        @see: L{IAuthorizedKeysDB.getAuthorizedKeys}
         """
         return self.mapping.get(username, [])
 
@@ -420,7 +426,7 @@ class AuthorizedKeysFilesMapping(object):
 
     def getAuthorizedKeys(self, username):
         """
-        @see: L{IAuthorizedKeysDB}
+        @see: L{IAuthorizedKeysDB.getAuthorizedKeys}
         """
         return _keysFromFilepaths(
             (FilePath(f) for f in self.mapping.get(username, [])),
@@ -451,7 +457,7 @@ class UNIXAuthorizedKeysFiles(object):
 
     def getAuthorizedKeys(self, username):
         """
-        @see: L{IAuthorizedKeysDB}
+        @see: L{IAuthorizedKeysDB.getAuthorizedKeys}
         """
         try:
             passwd = self.userdb.getpwnam(username)

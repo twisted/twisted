@@ -518,6 +518,12 @@ if Crypto is not None and pyasn1 is not None:
 
 
     def conchTestPublicKeyChecker():
+        """
+        Produces a SSHPublicKeyChecker with an in-memory key mapping with
+        a single use: 'testuser'
+
+        @return: L{twisted.conch.checkers.SSHPublicKeyChecker}
+        """
         conchTestPublicKeyDB = checkers.InMemoryKeyMapping(
             {'testuser': [keys.Key.fromString(publicDSA_openssh)]})
         return checkers.SSHPublicKeyChecker(conchTestPublicKeyDB)
