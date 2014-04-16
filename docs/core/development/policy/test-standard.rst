@@ -256,6 +256,72 @@ In no case should new unit tests use the global reactor.
 
 
 
+.. _core-development-policy-test-standard-docstrings:  Documenting Tests
+------------------------------------------------------------------------
+
+
+
+
+All tests (in particular, all new tests) must have docstrings.
+Test docstrings should make a positive statement about the attributes of the desired behavior of the code under test.
+
+
+
+
+
+Here is a guide to writing good docstrings:
+
+
+
+
+
+#. Write the first docstring that comes to mind. It will almost certainly be:
+
+
+       Test that input is parsed correctly.
+
+
+#. Get rid of "Test that" or "Check that" . We know it's a test.
+
+
+       Input should be parsed correctly.
+
+
+#. Seriously?! Why'd you have to go and add "should" ? It's a test, it's all about "should" .
+
+
+       Input is parsed correctly.
+
+
+#. "Correctly" , "properly" , and "as we expect" are all redundant. Axe them too.
+
+
+       Input is parsed.
+
+
+#.
+   Look at what's left.
+   Is it saying anything at all?
+   If so, great.
+   If not, consider adding something specific about the test behaviour and perhaps even why it's desirable behaviour to have.
+
+
+       Input is parsed into an immutable dict according to the config schema,
+       so we get config info without worrying about input validation all the time.
+
+
+
+
+
+
+Further thoughts
+~~~~~~~~~~~~~~~~
+
+
+Saying that something "does not raise an exception"  is not helpful;
+most code doesn't raise an exception and it doesn't do a whole bunch of other things too.
+
+
 
 Skipping tests, TODO items
 --------------------------
@@ -551,7 +617,7 @@ Links
 - A chapter on `Unit Testing <http://diveintopython.org/unit_testing/index.html>`_ 
   in Mark Pilgrim's `Dive Into      Python <http://diveintopython.org>`_ .
 - `unittest <http://docs.python.org/library/unittest.html>`_ module documentation, in the `Python Library      Reference <http://docs.python.org/library>`_ .
-- `UnitTest <http://c2.com/cgi/wiki?UnitTest>`__ on
+- `UnitTest <http://c2.com/cgi/wiki?UnitTest>`_ on
   the `PortlandPatternRepository      Wiki <http://c2.com/cgi/wiki>`_ , where all the cool `ExtremeProgramming <http://c2.com/cgi/wiki?ExtremeProgramming>`_ kids hang out.
 - `Unit      Tests <http://www.extremeprogramming.org/rules/unittests.html>`_ in `Extreme Programming: A Gentle Introduction <http://www.extremeprogramming.org>`_ .
 - Ron Jeffries expounds on the importance of `Unit      Tests at 100% <http://www.xprogramming.com/xpmag/expUnitTestsAt100.htm>`_ .
