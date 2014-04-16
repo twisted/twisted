@@ -184,6 +184,10 @@ class Options(dict):
             self.synonyms.update(synonyms)
             self._dispatch.update(dispatch)
 
+
+    __hash__ = object.__hash__
+
+
     def opt_help(self):
         """
         Display this help and exit.
