@@ -195,10 +195,6 @@ class Port(tcp.Port):
         tcp.Port.__init__(self, port, factory, backlog, interface, reactor)
         self.ctxFactory = ctxFactory
 
-        # Force some parameter checking in pyOpenSSL.  It's better to fail now
-        # than after we've set up the transport.
-        ctxFactory.getContext()
-
 
     def _getLogPrefix(self, factory):
         """
