@@ -1227,10 +1227,7 @@ class ServiceIdentityTests(unittest.TestCase):
             certificate=serverCert.original,
         )
         serverContextSetup(serverOpts.getContext())
-        clientOpts = sslverify.OpenSSLCertificateOptions(
-            trustRoot=caCert,
-            hostname=clientHostname,
-        )
+        clientOpts = sslverify.clientTLS(clientHostname, caCert)
 
         class GreetingServer(protocol.Protocol):
             greeting = b"greetings!"

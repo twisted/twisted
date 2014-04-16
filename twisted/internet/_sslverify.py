@@ -904,9 +904,135 @@ def platformTrust():
 
 
 
+@implementer(IOpenSSLClientConnectionCreator)
+class _ClientTLS(object):
+    """
+    Client creator for TLS.
+
+    @see: L{clientTLS}
+    """
+
+    def __init__(self, hostname, ctx):
+        self._ctx = ctx
+        self._hostname = hostname
+        self._hostnameBytes = _idnaBytes(hostname)
+        self._hostnameASCII = self._hostnameBytes.decode("utf-8")
+        ctx.set_info_callback(self._identityVerifyingInfoCallback)
+
+
+    def _commonConnectionForTLS(self, protocol):
+        """
+        Common client/server implementation of producing an L{SSL.Connection}.
+
+        @param protocol: the TLS protocol initiating the connection.
+        @type protocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
+
+        @return: the configured client connection.
+        @rtype: L{OpenSSL.SSL.Connection}
+        """
+        context = self._ctx
+        connection = SSL.Connection(context, None)
+        connection.set_app_data(protocol)
+        return connection
+
+
+    def clientConnectionForTLS(self, protocol):
+        """
+        Create a TLS connection for a client.
+
+        @note: This will call C{set_app_data} on its connection.  If you're
+            delegating to this implementation of this method, don't ever call
+            C{set_app_data} or C{set_info_callback} on the returned connection,
+            or you'll break the implementation of various features of this
+            class.
+
+        @param protocol: the TLS protocol initiating the connection.
+        @type protocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
+
+        @return: the configured client connection.
+        @rtype: L{OpenSSL.SSL.Connection}
+        """
+        return self._commonConnectionForTLS(protocol)
+
+
+    def _identityVerifyingInfoCallback(self, connection, where, ret):
+        """
+        C{info_callback} for a pyOpenSSL that verifies the hostname in the
+        presented certificate matches the one passed to this
+        L{CertificateOptions <twisted.internet.ssl.CertificateOptions>}.
+
+        @param connection: the connection which is handshaking.
+        @type connection: L{OpenSSL.SSL.Connection}
+
+        @param where: flags indicating progress through a TLS handshake.
+        @type where: L{int}
+
+        @param ret: ignored
+        @type ret: ignored
+        """
+        if where & SSL_CB_HANDSHAKE_START:
+            setHostNameIndication = getattr(
+                connection, "set_tlsext_host_name",
+                lambda name: None
+            )
+            setHostNameIndication(self._hostnameBytes)
+        elif where & SSL_CB_HANDSHAKE_DONE:
+            try:
+                verifyHostname(connection, self._hostnameASCII)
+            except:
+                f = Failure()
+                transport = connection.get_app_data()
+                transport.failVerification(f)
+
+
+
+def clientTLS(hostname, trustRoot=platformTrust(),
+              **kw):
+    """
+    Create a L{client connection creator <IOpenSSLClientConnectionCreator>} for
+    use with APIs such as L{SSL4ClientEndpoint
+    <twisted.internet.endpoints.SSL4ClientEndpoint>}, L{connectSSL
+    <twisted.internet.interfaces.IReactorSSL.connectSSL>}, and L{startTLS
+    <twisted.internet.interfaces.ITLSTransport.startTLS>}.
+
+    @param hostname: The expected name of the remote host.  This serves two
+        purposes: first, and most importantly, it verifies that the certificate
+        received from the server correctly identifies the specified hostname.
+        The second purpose is (if the local C{pyOpenSSL} supports it) to use
+        the U{Server Name Indication extension
+        <https://en.wikipedia.org/wiki/Server_Name_Indication>} to indicate to
+        the server which certificate should be used.
+    @type hostname: L{unicode}
+
+    @param trustRoot: Specification of trust requirements of peers.  This may
+        be a L{Certificate} or the result of L{platformTrust}.  By default it
+        is L{platformTrust} and you probably shouldn't adjust it unless you
+        really know what you're doing.
+    @type trustRoot: L{IOpenSSLTrustRoot}
+
+    @param extraCertificateOptions: keyword-only argument; this is a dictionary
+        of additional keyword arguments to be presented to
+        L{CertificateOptions}.  Please avoid using this unless you absolutely
+        need to; any time you need to pass an option here that is a bug in this
+        interface.
+    @type extraCertificateOptions: L{dict}
+
+    @return: A client connection creator.
+    @rtype: L{IOpenSSLClientConnectionCreator}
+    """
+    extraCertificateOptions = kw.pop('extraCertificateOptions', None) or {}
+    certificateOptions = OpenSSLCertificateOptions(
+        **extraCertificateOptions
+    )
+    return _ClientTLS(hostname, certificateOptions.getContext())
+
+
+
 class OpenSSLCertificateOptions(object):
     """
-    A factory for SSL context objects for both SSL servers and clients.
+    A L{CertificateOptions <twisted.internet.ssl.CertificateOptions>} specifies
+    the security properties for a client or server TLS connection used with
+    OpenSSL.
 
     @ivar _options: Any option flags to set on the L{OpenSSL.SSL.Context}
         object that will be created.
@@ -949,8 +1075,7 @@ class OpenSSLCertificateOptions(object):
                  extraCertChain=None,
                  acceptableCiphers=None,
                  dhParameters=None,
-                 trustRoot=None,
-                 hostname=None):
+                 trustRoot=None):
         """
         Create an OpenSSL context SSL connection context factory.
 
@@ -1040,21 +1165,6 @@ class OpenSSLCertificateOptions(object):
             L{TypeError}.
 
         @type trustRoot: L{IOpenSSLTrustRoot}
-
-        @param hostname: The expected name of the remote host.  This serves two
-            purposes: first, and most importantly, it verifies that the
-            certificate received from the server correctly identifies the
-            specified hostname.  Only clients should use this parameter, but
-            I{all} clients should pass this parameter.  A client which does
-            I{not} specify this parameter is not verifying the identity of the
-            host that it's communicating with, and, if using a general-purpose
-            set of trust roots such as L{platformTrust}, is therefore
-            vulnerable to nearly arbitrary man-in-the-middle attacks.  The
-            second purpose it serves is (if the local C{pyOpenSSL} supports it)
-            to use the U{Server Name Indication extension
-            <https://en.wikipedia.org/wiki/Server_Name_Indication>} to indicate
-            to the server which certificate should be used.
-        @type hostname: L{unicode}
 
         @raise ValueError: when C{privateKey} or C{certificate} are set without
             setting the respective other.
@@ -1150,11 +1260,6 @@ class OpenSSLCertificateOptions(object):
             self.requireCertificate = True
             trustRoot = IOpenSSLTrustRoot(trustRoot)
         self.trustRoot = trustRoot
-        self.hostname = hostname
-        if hostname is not None:
-            self._hostnameBytes = _idnaBytes(hostname)
-            self._hostnameASCII = self._hostnameBytes.decode("utf-8")
-            directlyProvides(self, IOpenSSLClientConnectionCreator)
 
 
     def __getstate__(self):
@@ -1206,9 +1311,6 @@ class OpenSSLCertificateOptions(object):
         def _verifyCallback(conn, cert, errno, depth, preverify_ok):
             return preverify_ok
         ctx.set_verify(verifyFlags, _verifyCallback)
-        if self.hostname is not None:
-            ctx.set_info_callback(self._identityVerifyingInfoCallback)
-
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)
 
@@ -1229,70 +1331,6 @@ class OpenSSLCertificateOptions(object):
                 pass  # ECDHE support is best effort only.
 
         return ctx
-
-
-    def _identityVerifyingInfoCallback(self, connection, where, ret):
-        """
-        C{info_callback} for a pyOpenSSL that verifies the hostname in the
-        presented certificate matches the one passed to this
-        L{CertificateOptions <twisted.internet.ssl.CertificateOptions>}.
-
-        @param connection: the connection which is handshaking.
-        @type connection: L{OpenSSL.SSL.Connection}
-
-        @param where: flags indicating progress through a TLS handshake.
-        @type where: L{int}
-
-        @param ret: ignored
-        @type ret: ignored
-        """
-        if where & SSL_CB_HANDSHAKE_START:
-            setHostNameIndication = getattr(
-                connection, "set_tlsext_host_name",
-                lambda name: None
-            )
-            setHostNameIndication(self._hostnameBytes)
-        elif where & SSL_CB_HANDSHAKE_DONE:
-            try:
-                verifyHostname(connection, self._hostnameASCII)
-            except:
-                f = Failure()
-                transport = connection.get_app_data()
-                transport.failVerification(f)
-
-
-    def _commonConnectionForTLS(self, protocol):
-        """
-        Common client/server implementation of producing an L{SSL.Connection}.
-
-        @param protocol: the TLS protocol initiating the connection.
-        @type protocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
-
-        @return: the configured client connection.
-        @rtype: L{OpenSSL.SSL.Connection}
-        """
-        context = self.getContext()
-        connection = SSL.Connection(context, None)
-        connection.set_app_data(protocol)
-        return connection
-
-
-    def clientConnectionForTLS(self, protocol):
-        """
-        Create a TLS connection for a client.
-
-        Note that this will call C{set_app_data} on its connection.  If you're
-        delegating to this implementation of this method, don't ever call
-        C{set_app_data} or C{set_info_callback} on the returned connection, or
-        you'll break the implementation of various features of this class.
-
-        @param protocol: the TLS protocol initiating the connection.
-        @type protocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
-
-        @return: the configured client connection.
-        @rtype: L{OpenSSL.SSL.Connection}
-        """
-        return self._commonConnectionForTLS(protocol)
 
 
 
