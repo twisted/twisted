@@ -3178,10 +3178,7 @@ class IFTPShellTestsMixin:
 
         self.createDirectory('ned')
         d = self.shell.stat(('ned',), ('hardlinks',))
-        def cb(res):
-            self.assertEqual(res, [1])
-        d.addCallback(cb)
-        return d
+        self.assertEqual(self.successResultOf(d), [1])
 
 
     def test_statOwnerGroupNotImplemented(self):
@@ -3205,10 +3202,7 @@ class IFTPShellTestsMixin:
 
         self.createDirectory('ned')
         d = self.shell.stat(('ned',), ('owner', 'group'))
-        def cb(res):
-            self.assertEqual(res, ["USER", 'GROUP'])
-        d.addCallback(cb)
-        return d
+        self.assertEqual(self.successResultOf(d), ["USER", 'GROUP'])
 
 
     def test_statNotExisting(self):
