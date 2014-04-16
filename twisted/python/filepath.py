@@ -1573,7 +1573,7 @@ class FilePath(AbstractFilePath):
         # definition - but the getter and setter both need the same function
         # in order for the 'deprecated' decorator to produce the right
         # deprecation string.
-        if value != _SpecialNoValue:
+        if value is _SpecialNoValue:
             return self._statinfo
         else:
             self._statinfo = value

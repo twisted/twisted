@@ -1402,6 +1402,16 @@ class FilePathTestCase(AbstractFilePathTestCase):
             "getsize(), isdir(), getModificationTime(), etc. instead")
 
 
+    def test_deprecateStatinfoSetterSets(self):
+        """
+        Setting L{twisted.python.filepath.FilePath.statinfo} changes the value
+        of _statinfo such that getting statinfo again returns the new value.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp.statinfo = None
+        self.assertEquals(fp.statinfo, None)
+
+
     def test_filePathNotDeprecated(self):
         """
         While accessing L{twisted.python.filepath.FilePath.statinfo} is
