@@ -478,11 +478,11 @@ class OpenSSLOptions(unittest.TestCase):
         )
 
 
-    def test_clientTLSExtraKeywords(self):
+    def test_settingsForClientTLSExtraKeywords(self):
         """
         When passed a keyword parameter other than C{extraCertificateOptions},
-        L{sslverify.clientTLS} raises an exception just like a normal Python
-        function would.
+        L{sslverify.settingsForClientTLS} raises an exception just like a
+        normal Python function would.
         """
         error = self.assertRaises(
             TypeError,
@@ -491,7 +491,8 @@ class OpenSSLOptions(unittest.TestCase):
         )
         self.assertEqual(
             str(error),
-            "clientTLS() got an unexpected keyword argument 'someRandomThing'"
+            "settingsForClientTLS() got an unexpected keyword argument "
+            "'someRandomThing'"
         )
 
 

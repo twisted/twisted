@@ -910,7 +910,7 @@ class _ClientTLSSettings(object):
     """
     Client creator for TLS.
 
-    @see: L{clientTLS}
+    @see: L{settingsForClientTLS}
     """
 
     def __init__(self, hostname, ctx):
@@ -1014,7 +1014,7 @@ def settingsForClientTLS(hostname, trustRoot=platformTrust(), **kw):
     extraCertificateOptions = kw.pop('extraCertificateOptions', None) or {}
     if kw:
         raise TypeError(
-            "clientTLS() got an unexpected keyword argument '{arg}'".format(
+            "settingsForClientTLS() got an unexpected keyword argument '{arg}'".format(
                 arg=kw.popitem()[0]
             )
         )
