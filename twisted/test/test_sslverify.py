@@ -486,9 +486,7 @@ class OpenSSLOptions(unittest.TestCase):
         """
         error = self.assertRaises(
             TypeError,
-            sslverify.clientTLS,
-            hostname=u'alpha',
-            someRandomThing=u'beta',
+            sslverify.clientTLS, hostname=u'alpha', someRandomThing=u'beta',
         )
         self.assertEqual(
             str(error),
