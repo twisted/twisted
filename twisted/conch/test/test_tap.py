@@ -29,6 +29,7 @@ from twisted.cred import error
 from twisted.cred.credentials import IPluggableAuthenticationModules
 from twisted.cred.credentials import ISSHPrivateKey
 from twisted.cred.credentials import IUsernamePassword, UsernamePassword
+from twisted.python.reflect import namedAny
 
 from twisted.trial.unittest import TestCase
 
@@ -82,7 +83,7 @@ class MakeServiceTest(TestCase):
         """
         numCheckers = 2
         try:
-            from twisted.cred import pamauth
+            namedAny('twisted.cred.pamauth')
             self.assertIn(IPluggableAuthenticationModules,
                 self.options['credInterfaces'],
                 "PAM should be one of the modules")

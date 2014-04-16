@@ -16,7 +16,7 @@ if getpass.getpass == getpass.unix_getpass:
         reload(getpass)
 
 from twisted.conch.ssh import keys
-from twisted.python import filepath, log, usage, randbytes
+from twisted.python import failure, filepath, log, usage, randbytes
 
 
 
@@ -74,11 +74,9 @@ def run():
 
 
 def handleError():
-    from twisted.python import failure
     global exitStatus
     exitStatus = 2
     log.err(failure.Failure())
-    reactor.stop()
     raise
 
 
@@ -108,7 +106,6 @@ def printFingerprint(options):
     try:
         key = keys.Key.fromFile(options['filename'])
         obj = key.keyObject
-        string = key.blob()
         print '%s %s %s' % (
             obj.size() + 1,
             key.fingerprint(),

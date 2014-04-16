@@ -9,7 +9,6 @@ Tests for L{twisted.conch.ssh.filetransfer}.
 import os
 import re
 import struct
-import sys
 
 from twisted.trial import unittest
 try:

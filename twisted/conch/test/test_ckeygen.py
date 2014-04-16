@@ -9,9 +9,10 @@ import getpass
 import sys
 from StringIO import StringIO
 
+from twisted.python.reflect import namedAny
 try:
-    import Crypto
-    import pyasn1
+    namedAny('Crypto')
+    namedAny('pyasn1')
 except ImportError:
     skip = "PyCrypto and pyasn1 required for twisted.conch.scripts.ckeygen."
 else:

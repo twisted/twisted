@@ -6,7 +6,8 @@
 Implementation module for the `tkconch` command.
 """
 
-import Tkinter, tkFileDialog, tkFont, tkMessageBox, string
+import Tkinter, tkFileDialog, tkMessageBox
+from twisted.conch import error
 from twisted.conch.ui import tkvt100
 from twisted.conch.ssh import transport, userauth, connection, common, keys
 from twisted.conch.ssh import session, forwarding, channel
@@ -472,7 +473,7 @@ class SSHConnection(connection.SSHConnection):
                         (remotePort, hostport))
                 data = forwarding.packGlobal_tcpip_forward(
                     ('0.0.0.0', remotePort))
-                d = self.sendGlobalRequest('tcpip-forward', data)
+                self.sendGlobalRequest('tcpip-forward', data)
                 self.remoteForwards[remotePort] = hostport
 
 class SSHSession(channel.SSHChannel):

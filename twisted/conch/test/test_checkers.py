@@ -16,6 +16,7 @@ import os, base64
 
 from twisted.python import util
 from twisted.python.failure import Failure
+from twisted.python.reflect import namedAny
 from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
@@ -26,8 +27,8 @@ from twisted.python.fakepwd import UserDatabase, ShadowDatabase
 from twisted.test.test_process import MockOS
 
 try:
-    import Crypto.Cipher.DES3
-    import pyasn1
+    namedAny('Crypto.Cipher.DES3')
+    namedAny('pyasn1')
 except ImportError:
     dependencySkip = "can't run without Crypto and PyASN1"
 else:

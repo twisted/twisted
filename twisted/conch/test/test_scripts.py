@@ -4,23 +4,23 @@
 """
 Tests for the command-line interfaces to conch.
 """
-
+from twisted.python.reflect import namedAny
 try:
-    import pyasn1
+    namedAny('pyasn1')
 except ImportError:
     pyasn1Skip =  "Cannot run without PyASN1"
 else:
     pyasn1Skip = None
 
 try:
-    import Crypto
+    namedAny('Crypto')
 except ImportError:
     cryptoSkip = "can't run w/o PyCrypto"
 else:
     cryptoSkip = None
 
 try:
-    import tty
+    namedAny('tty')
 except ImportError:
     ttySkip = "can't run w/o tty"
 else:

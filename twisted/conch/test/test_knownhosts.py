@@ -8,9 +8,10 @@ Tests for L{twisted.conch.client.knownhosts}.
 import os
 from binascii import Error as BinasciiError, b2a_base64, a2b_base64
 
+from twisted.python.reflect import namedAny
 try:
-    import Crypto
-    import pyasn1
+    namedAny('Crypto')
+    namedAny('pyasn1')
 except ImportError:
     skip = "PyCrypto and PyASN1 required for twisted.conch.knownhosts."
 else:

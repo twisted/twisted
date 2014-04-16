@@ -497,7 +497,7 @@ class TelnetTransportTestCase(unittest.TestCase):
         # fail quickly with the right exception.
         s = self.p.getOptionState('\x24')
         s.him.state = 'yes'
-        d2 = self.p.dont('\x24') # fires after the first line of _final
+        self.p.dont('\x24') # fires after the first line of _final
 
         def _do(x):
             d = self.p.do('\x24')

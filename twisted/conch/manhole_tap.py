@@ -11,8 +11,6 @@ from zope.interface import implements
 
 from twisted.internet import protocol
 from twisted.application import service, strports
-from twisted.conch.ssh import session
-from twisted.conch import interfaces as iconch
 from twisted.cred import portal, checkers
 from twisted.python import usage
 

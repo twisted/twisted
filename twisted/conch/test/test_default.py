@@ -4,9 +4,10 @@
 """
 Tests for L{twisted.conch.client.default}.
 """
+from twisted.python.reflect import namedAny
 try:
-    import Crypto.Cipher.DES3
-    import pyasn1
+    namedAny('Crypto.Cipher.DES3')
+    namedAny('pyasn1')
 except ImportError:
     skip = "PyCrypto and PyASN1 required for twisted.conch.client.default."
 else:

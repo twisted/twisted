@@ -19,11 +19,12 @@ from twisted.cred.portal import IRealm, Portal
 from twisted.conch.error import ConchError, ValidPublicKey
 from twisted.internet import defer, task
 from twisted.protocols import loopback
+from twisted.python.reflect import namedAny
 from twisted.trial import unittest
 
 try:
-    import Crypto.Cipher.DES3
-    import pyasn1
+    namedAny('Crypto.Cipher.DES3')
+    namedAny('pyasn1')
 except ImportError:
     keys = None
 

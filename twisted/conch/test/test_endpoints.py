@@ -15,6 +15,7 @@ from zope.interface import implementer
 from twisted.python.log import msg
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
+from twisted.python.reflect import namedAny
 from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.defer import CancelledError, Deferred, succeed, fail
@@ -31,8 +32,8 @@ from twisted.conch.interfaces import IConchUser
 from twisted.conch.error import ConchError, UserRejectedKey, HostKeyChanged
 
 try:
-    from Crypto.Cipher import AES
-    from pyasn1 import type
+    namedAny('Crypto.Cipher.AES')
+    namedAny('pyasn1.type')
 except ImportError as e:
     skip = "can't run w/o PyCrypto and pyasn1 (%s)" % (e,)
     SSHFactory = SSHUserAuthServer = SSHConnection = Key = SSHChannel = \

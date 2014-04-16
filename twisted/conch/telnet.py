@@ -974,7 +974,6 @@ class TelnetBootstrapProtocol(TelnetProtocol, ProtocolTransportMixin):
     linemodeSubcommands = {
         LINEMODE_SLC: 'SLC'}
     def telnet_LINEMODE(self, bytes):
-        revmap = {}
         linemodeSubcommand = bytes[0]
         if 0:
             # XXX TODO: This should be enabled to parse linemode subnegotiation.
