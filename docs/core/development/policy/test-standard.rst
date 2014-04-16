@@ -162,7 +162,7 @@ so they can be applied to all of the reactor implementations automatically.
 In no case should new unit tests use the global reactor.
 
 
-.. _core-development-policy-test-standard-docstrings:
+.. _documenting-docstrings:
 
 Documenting Tests
 -----------------
@@ -188,7 +188,7 @@ Here is a guide to writing good docstrings:
 
        Input is parsed.
 
-4.  Look at what's left.
+4. Look at what's left.
    Is it saying anything at all?
    If so, great.
    If not, consider adding something specific about the test behaviour and perhaps even why it's desirable behaviour to have.

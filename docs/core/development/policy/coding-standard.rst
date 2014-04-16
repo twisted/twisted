@@ -159,24 +159,14 @@ such as ``twisted/mail/pop3.py`` , use the
 
 .. code-block:: console
 
-    
     $ bin/trial twisted/mail/pop3.py
 
-
-
-    
-All unit test methods should have docstrings specifying at a high
-level the intent of the test. That is, a description that users of the
-method would understand.
-
-    
-
+All unit test methods should have docstrings specifying at a high level the intent of the test.
+That is, a description that users of the method would understand.
+See the :ref:`test standard <documenting-docstrings>` for more details.
 
 If you modify, or write a new, HOWTO, please read the `Lore <http://twistedmatrix.com/trac/wiki/TwistedLore>`_ 
 documentation to learn how to format the docs.
-
-    
-
 
 
 Copyright Header
@@ -212,9 +202,9 @@ Whitespace
 
 
     
-Indentation is 4 spaces per indent.
-Tabs are not allowed.
-It is preferred that every block appears on a new line, so that control structure indentation is always visible.
+Indentation is 4 spaces per indent. Tabs are not allowed. It
+is preferred that every block appear on a new line, so that
+control structure indentation is always visible.
 
     
 
