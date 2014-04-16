@@ -16,7 +16,8 @@ from twisted.python import log
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
 
-from twisted import cred
+from twisted.cred.credentials import CramMD5Credentials, UsernamePassword
+from twisted.cred.error import UnauthorizedLogin
 
 from twisted.mail import relay
 
@@ -290,7 +291,7 @@ class ESMTPFactory(SMTPFactory):
         """
         SMTPFactory.__init__(self, *args)
         self.challengers = {
-            'CRAM-MD5': cred.credentials.CramMD5Credentials
+            'CRAM-MD5': CramMD5Credentials
         }
 
 
@@ -354,7 +355,7 @@ class VirtualPOP3(pop3.POP3):
         try:
             portal = self.service.lookupPortal(domain)
         except KeyError:
-            return defer.fail(cred.error.UnauthorizedLogin())
+            return defer.fail(UnauthorizedLogin())
         else:
             return portal.login(
                 pop3.APOPCredentials(self.magic, user, digest),
@@ -388,10 +389,10 @@ class VirtualPOP3(pop3.POP3):
         try:
             portal = self.service.lookupPortal(domain)
         except KeyError:
-            return defer.fail(cred.error.UnauthorizedLogin())
+            return defer.fail(UnauthorizedLogin())
         else:
             return portal.login(
-                cred.credentials.UsernamePassword(user, password),
+                UsernamePassword(user, password),
                 None,
                 pop3.IMailbox
             )
