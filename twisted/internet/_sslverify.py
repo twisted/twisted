@@ -1261,15 +1261,38 @@ class OpenSSLCertificateOptions(object):
                 transport.failVerification(f)
 
 
-    def clientConnectionForTLS(self, protocol):
+    def _commonConnectionForTLS(self, protocol):
+        """
+        Common client/server implementation of producing an L{SSL.Connection}.
+
+        @param protocol: the TLS protocol initiating the connection.
+        @type protocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
+
+        @return: the configured client connection.
+        @rtype: L{OpenSSL.SSL.Connection}
+        """
         context = self.getContext()
         connection = SSL.Connection(context, None)
         connection.set_app_data(protocol)
         return connection
 
 
-    def serverConnectionForTLS(self, protocol):
-        return self.clientConnectionForTLS(protocol)
+    def clientConnectionForTLS(self, protocol):
+        """
+        Create a TLS connection for a client.
+
+        Note that this will call C{set_app_data} on its connection.  If you're
+        delegating to this implementation of this method, don't ever call
+        C{set_app_data} or C{set_info_callback} on the returned connection, or
+        you'll break the implementation of various features of this class.
+
+        @param protocol: the TLS protocol initiating the connection.
+        @type protocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
+
+        @return: the configured client connection.
+        @rtype: L{OpenSSL.SSL.Connection}
+        """
+        return self._commonConnectionForTLS(protocol)
 
 
 
