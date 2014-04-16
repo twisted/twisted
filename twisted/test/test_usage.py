@@ -689,7 +689,6 @@ class OptionsInternalTest(unittest.TestCase):
     Tests internal behavior of C{usage.Options}.
     """
 
-
     def test_optionsAliasesOrder(self):
         """
         Options which are synonyms to another option are aliases towards the
@@ -701,13 +700,16 @@ class OptionsInternalTest(unittest.TestCase):
                 This is a option method with a very long name, that is going to
                 be aliased.
                 """
-                pass
 
             opt_short = opt_very_very_long
             opt_s = opt_very_very_long
 
         opts = Opts()
 
-        self.assertEqual("very-very-long", opts.synonyms['s'])
-        self.assertEqual("very-very-long", opts.synonyms['short'])
-        self.assertEqual("very-very-long", opts.synonyms['very-very-long'])
+        self.assertEqual(
+            dict.fromkeys(
+                ["s", "short", "very-very-long"], "very-very-long"), {
+                "s": opts.synonyms["s"],
+                "short": opts.synonyms["short"],
+                "very-very-long": opts.synonyms["very-very-long"],
+                })
