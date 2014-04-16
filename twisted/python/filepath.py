@@ -1550,21 +1550,29 @@ class FilePath(AbstractFilePath):
             destination.changed()
 
 
-    @property
-    @deprecated(Version('Twisted', 14, 0, 0),
-        "other FilePath methods such as getsize(), "
-        "isdir(), getModificationTime(), etc.")
-    def statinfo(self):
+    def statinfo(self, *args):
         """
         FilePath.statinfo is deprecated, but there is no API in
         twisted.python.deprecate to deprecate an instance attribute.
-        Therefore, _statinfo is now a private attribute, and statinfo is a
-        property that emits a deprecation warning and returns _statinfo
+        Therefore, _statinfo is now a private attribute, and statinfo is hack
+        of a property that emits a deprecation warning and returns _statinfo
+        on getting and sets _statinfo on setting.
 
-        @return: _statinfo
+        @return: C{_statinfo} if getting, C{None} if setting
         """
-        return self._statinfo
+        if not args:
+            return self._statinfo
+        else:
+            self._statinfo = args[0]
 
+
+
+# This is all a terrible hack to get statinfo deprecated
+_tmp = deprecated(
+    Version('Twisted', 14, 0, 0),
+    "other FilePath methods such as getsize(), "
+    "isdir(), getModificationTime(), etc.")(FilePath.statinfo)
+FilePath.statinfo = property(_tmp, _tmp)
 
 
 FilePath.clonePath = FilePath

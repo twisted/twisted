@@ -1370,18 +1370,34 @@ class FilePathTestCase(AbstractFilePathTestCase):
             "rwxrw-r--")
 
 
-    def test_deprecateStatinfo(self):
+    def test_deprecateStatinfoGetter(self):
         """
-        Accessing L{twisted.python.filepath.FilePath.statinfo} is deprecated.
+        Getting L{twisted.python.filepath.FilePath.statinfo} is deprecated.
         """
         fp = filepath.FilePath(self.mktemp())
         fp.statinfo
-        warningInfo = self.flushWarnings([self.test_deprecateStatinfo])
+        warningInfo = self.flushWarnings([self.test_deprecateStatinfoGetter])
         self.assertEquals(len(warningInfo), 1)
         self.assertEquals(warningInfo[0]['category'], DeprecationWarning)
         self.assertEquals(
             warningInfo[0]['message'],
-            "twisted.python.filepath.statinfo was deprecated in "
+            "twisted.python.filepath.FilePath.statinfo was deprecated in "
+            "Twisted 14.0.0; please use other FilePath methods such as "
+            "getsize(), isdir(), getModificationTime(), etc. instead")
+
+
+    def test_deprecateStatinfoSetter(self):
+        """
+        Setting L{twisted.python.filepath.FilePath.statinfo} is deprecated.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp.statinfo = None
+        warningInfo = self.flushWarnings([self.test_deprecateStatinfoSetter])
+        self.assertEquals(len(warningInfo), 1)
+        self.assertEquals(warningInfo[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            warningInfo[0]['message'],
+            "twisted.python.filepath.FilePath.statinfo was deprecated in "
             "Twisted 14.0.0; please use other FilePath methods such as "
             "getsize(), isdir(), getModificationTime(), etc. instead")
 
