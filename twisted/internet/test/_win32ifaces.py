@@ -109,9 +109,9 @@ def win32GetLinkLocalIPv6Addresses():
     retList = []
     for i in range(addrList[0].iAddressCount):
         retBytes.value = addressStringBufLength
-        addr = addrList[0].Address[i]
+        address = addrList[0].Address[i]
         ret = WSAAddressToString(
-            addr.lpSockaddr, addr.iSockaddrLength, 0, addressStringBuf,
+            address.lpSockaddr, address.iSockaddrLength, 0, addressStringBuf,
             byref(retBytes))
         if ret:
             raise RuntimeError("WSAAddressToString failure")

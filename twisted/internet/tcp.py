@@ -51,10 +51,7 @@ if platformType == 'win32':
     from errno import WSAEWOULDBLOCK as EWOULDBLOCK
     from errno import WSAEINPROGRESS as EINPROGRESS
     from errno import WSAEALREADY as EALREADY
-    from errno import WSAECONNRESET as ECONNRESET
     from errno import WSAEISCONN as EISCONN
-    from errno import WSAENOTCONN as ENOTCONN
-    from errno import WSAEINTR as EINTR
     from errno import WSAENOBUFS as ENOBUFS
     from errno import WSAEMFILE as EMFILE
     # No such thing as WSAENFILE, either.
@@ -71,10 +68,7 @@ else:
     from errno import EWOULDBLOCK
     from errno import EINPROGRESS
     from errno import EALREADY
-    from errno import ECONNRESET
     from errno import EISCONN
-    from errno import ENOTCONN
-    from errno import EINTR
     from errno import ENOBUFS
     from errno import EMFILE
     from errno import ENFILE

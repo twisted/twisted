@@ -7,10 +7,11 @@ Tests for the inotify wrapper in L{twisted.internet.inotify}.
 
 from twisted.internet import defer, reactor
 from twisted.python import filepath, runtime
+from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
 try:
-    from twisted.python import _inotify
+    requireModule('twisted.python._inotify')
 except ImportError:
     inotify = None
 else:

@@ -653,7 +653,6 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
         d = self.ep.listen(StdioFactory())
 
         def checkProtocol(stdioOb):
-            from twisted.python.runtime import platform
             if platform.isWindows():
                 self.assertIsInstance(stdioOb.proto, basic.LineReceiver)
             else:
@@ -2459,7 +2458,7 @@ class ServerStringTests(unittest.TestCase):
         test_ssl.skip = test_sslWithDefaults.skip = skipSSL
         test_sslChainLoads.skip = skipSSL
         test_sslChainFileMustContainCert.skip = skipSSL
-        test_sslDHparameters = skipSSL
+        test_sslDHparameters.skip = skipSSL
 
 
     def test_unix(self):

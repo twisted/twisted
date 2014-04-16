@@ -89,7 +89,7 @@ class PortableGtkReactor(_glibbase.PortableGlibReactorBase):
                                                    useGtk=useGtk)
 
 
-def install(useGtk=True):
+def posixInstall(useGtk=True):
     """
     Configure the twisted mainloop to be run inside the gtk mainloop.
 
@@ -112,7 +112,9 @@ def portableInstall(useGtk=True):
     return reactor
 
 
-if runtime.platform.getType() != 'posix':
+if runtime.platform.getType() == 'posix':
+    install = posixInstall
+else:
     install = portableInstall
 
 

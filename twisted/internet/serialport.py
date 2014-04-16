@@ -77,11 +77,11 @@ class BaseSerialPort:
     def setRTS(self, on = 1):
         self._serial.setRTS(on)
 
-class SerialPort(BaseSerialPort):
-    pass
 
-# replace SerialPort with appropriate serial port
+
 if os.name == 'posix':
     from twisted.internet._posixserialport import SerialPort
 elif sys.platform == 'win32':
     from twisted.internet._win32serialport import SerialPort
+else:
+    raise NotImplementedError('OS not supported.')

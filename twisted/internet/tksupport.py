@@ -30,10 +30,9 @@ fix::
 """
 
 # system imports
-import Tkinter, tkSimpleDialog, tkMessageBox
+import tkSimpleDialog, tkMessageBox
 
 # twisted imports
-from twisted.python import log
 from twisted.internet import task
 
 

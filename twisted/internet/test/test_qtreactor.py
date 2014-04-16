@@ -4,18 +4,19 @@
 import sys
 
 from twisted.trial import unittest
+from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
-from twisted.python.util import sibpath
-from twisted.internet.utils import getProcessOutputAndValue
 
 
 skipWindowsNopywin32 = None
 if platform.isWindows():
     try:
-        import win32process
+        requireModule('win32process')
     except ImportError:
         skipWindowsNopywin32 = ("On windows, spawnProcess is not available "
                                 "in the absence of win32process.")
+
+
 
 class QtreactorTestCase(unittest.TestCase):
     """
@@ -30,6 +31,6 @@ class QtreactorTestCase(unittest.TestCase):
         sys.modules["qtreactor"] = None
         from twisted.plugins.twisted_qtstub import errorMessage
         try:
-            import twisted.internet.qtreactor
+            requireModule('twisted.internet.qtreactor')
         except ImportError, e:
             self.assertEqual(str(e), errorMessage)
