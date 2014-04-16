@@ -369,15 +369,6 @@ class ListeningTestCase(unittest.TestCase):
 
 
 
-def callWithSpew(f):
-    from twisted.python.util import spewerWithLinenums as spewer
-    import sys
-    sys.settrace(spewer)
-    try:
-        f()
-    finally:
-        sys.settrace(None)
-
 class LoopbackTestCase(unittest.TestCase):
     """
     Test loopback connections.
