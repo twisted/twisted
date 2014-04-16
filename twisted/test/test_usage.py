@@ -5,6 +5,8 @@
 Tests for L{twisted.python.usage}, a command line option parsing library.
 """
 
+from __future__ import division, absolute_import
+
 from twisted.trial import unittest
 from twisted.python import usage
 
@@ -393,7 +395,7 @@ class HelpStringTest(unittest.TestCase):
         """
         try:
             self.nice.__str__()
-        except Exception, e:
+        except Exception as e:
             self.fail(e)
 
     def test_whitespaceStripFlagsAndParameters(self):
@@ -610,3 +612,104 @@ class CompleterNotImplementedTestCase(unittest.TestCase):
                 action = cls(None)
             self.assertRaises(NotImplementedError, action._shellCode,
                               None, "bad_shell_type")
+
+
+
+class FlagFunctionTest(unittest.TestCase):
+    """
+    Tests for L{usage.flagFunction}.
+    """
+
+    class SomeClass(object):
+        """
+        Dummy class for L{usage.flagFunction} tests.
+        """
+        def oneArg(self, a):
+            """
+            A one argument method to be tested by L{usage.flagFunction}.
+
+            @param a: a useless argument to satisfy the function's signature.
+            """
+
+        def noArg(self):
+            """
+            A no argument method to be tested by L{usage.flagFunction}.
+            """
+
+        def manyArgs(self, a, b, c):
+            """
+            A multipe arguments method to be tested by L{usage.flagFunction}.
+
+            @param a: a useless argument to satisfy the function's signature.
+            @param b: a useless argument to satisfy the function's signature.
+            @param c: a useless argument to satisfy the function's signature.
+            """
+
+
+    def test_hasArg(self):
+        """
+        L{usage.flagFunction} returns C{False} if the method checked allows
+        exactly one argument.
+        """
+        self.assertIs(False, usage.flagFunction(self.SomeClass().oneArg))
+
+
+    def test_noArg(self):
+        """
+        L{usage.flagFunction} returns C{True} if the method checked allows
+        exactly no argument.
+        """
+        self.assertIs(True, usage.flagFunction(self.SomeClass().noArg))
+
+
+    def test_tooManyArguments(self):
+        """
+        L{usage.flagFunction} raises L{usage.UsageError} if the method checked
+        allows more than one argument.
+        """
+        exc = self.assertRaises(
+            usage.UsageError, usage.flagFunction, self.SomeClass().manyArgs)
+        self.assertEqual("Invalid Option function for manyArgs", str(exc))
+
+
+    def test_tooManyArgumentsAndSpecificErrorMessage(self):
+        """
+        L{usage.flagFunction} uses the given method name in the error message
+        raised when the method allows too many arguments.
+        """
+        exc = self.assertRaises(
+            usage.UsageError,
+            usage.flagFunction, self.SomeClass().manyArgs, "flubuduf")
+        self.assertEqual("Invalid Option function for flubuduf", str(exc))
+
+
+
+class OptionsInternalTest(unittest.TestCase):
+    """
+    Tests internal behavior of C{usage.Options}.
+    """
+
+    def test_optionsAliasesOrder(self):
+        """
+        Options which are synonyms to another option are aliases towards the
+        longest option name.
+        """
+        class Opts(usage.Options):
+            def opt_very_very_long(self):
+                """
+                This is a option method with a very long name, that is going to
+                be aliased.
+                """
+
+            opt_short = opt_very_very_long
+            opt_s = opt_very_very_long
+
+        opts = Opts()
+
+        self.assertEqual(
+            dict.fromkeys(
+                ["s", "short", "very-very-long"], "very-very-long"), {
+                "s": opts.synonyms["s"],
+                "short": opts.synonyms["short"],
+                "very-very-long": opts.synonyms["very-very-long"],
+                })

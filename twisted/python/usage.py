@@ -13,15 +13,18 @@ or doc/core/howto/options.xhtml in your Twisted directory.
 """
 
 from __future__ import print_function
+from __future__ import division, absolute_import
 
 # System Imports
+import inspect
 import os
 import sys
 import getopt
 from os import path
+import textwrap
 
 # Sibling Imports
-from twisted.python import reflect, text, util
+from twisted.python import reflect, util
 
 
 class UsageError(Exception):
@@ -430,15 +433,11 @@ class Options(dict):
                 reverse_dct[method] = []
             reverse_dct[method].append(name.replace('_', '-'))
 
-        cmpLength = lambda a, b: cmp(len(a), len(b))
-
         for method, names in reverse_dct.items():
             if len(names) < 2:
                 continue
-            names_ = names[:]
-            names_.sort(cmpLength)
-            longest = names_.pop()
-            for name in names_:
+            longest = max(names, key=len)
+            for name in names:
                 synonyms[name] = longest
 
         return longOpt, shortOpt, docs, settings, synonyms, dispatch
@@ -533,7 +532,7 @@ class Options(dict):
 
         if longdesc:
             longdesc = ('\n' +
-                        '\n'.join(text.wordWrap(longdesc, width)).strip()
+                        '\n'.join(textwrap.wrap(longdesc, width)).strip()
                         + '\n')
 
         if optDicts:
@@ -933,7 +932,7 @@ def docMakeChunks(optList, width=80):
                 doc = "%s. %s" % (doc, d.doc)
 
         if doc:
-            column2_l = text.wordWrap(doc, colWidth2)
+            column2_l = textwrap.wrap(doc, colWidth2)
         else:
             column2_l = ['']
 
@@ -947,15 +946,36 @@ def docMakeChunks(optList, width=80):
     return optChunks
 
 
+
 def flagFunction(method, name=None):
-    reqArgs = method.im_func.func_code.co_argcount
+    """
+    Determine whether a function is an optional handler for a I{flag} or an
+    I{option}.
+
+    A I{flag} handler takes no additional arguments.  It is used to handle
+    command-line arguments like I{--nodaemon}.
+
+    An I{option} handler takes one argument.  It is used to handle command-line
+    arguments like I{--path=/foo/bar}.
+
+    @param method: The bound method object to inspect.
+
+    @param name: The name of the option for which the function is a handle.
+    @type name: L{str}
+
+    @raise UsageError: If the method takes more than one argument.
+
+    @return: If the method is a flag handler, return C{True}.  Otherwise return
+        C{False}.
+    """
+    reqArgs = len(inspect.getargspec(method).args)
     if reqArgs > 2:
         raise UsageError('Invalid Option function for %s' %
-                         (name or method.func_name))
+                         (name or method.__name__))
     if reqArgs == 2:
-        # argName = method.im_func.func_code.co_varnames[1]
-        return 0
-    return 1
+        return False
+    return True
+
 
 
 def portCoerce(value):
@@ -967,5 +987,3 @@ def portCoerce(value):
         raise ValueError("Port number not in range: %s" % (value,))
     return value
 portCoerce.coerceDoc = "Must be an int between 0 and 65535."
-
-
