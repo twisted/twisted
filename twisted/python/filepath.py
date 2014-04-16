@@ -585,6 +585,14 @@ class Permissions(FancyEqMixin, object):
             [x.shorthand() for x in (self.user, self.group, self.other)])
 
 
+class _SpecialNoValue(object):
+    """
+    An object that represents 'no value', to be used in deprecating statinfo.
+
+    Please remove once statinfo is removed.
+    """
+    pass
+
 
 @comparable
 @implementer(IFilePath)
@@ -1550,20 +1558,25 @@ class FilePath(AbstractFilePath):
             destination.changed()
 
 
-    def statinfo(self, *args):
+    def statinfo(self, value=_SpecialNoValue):
         """
-        FilePath.statinfo is deprecated, but there is no API in
-        twisted.python.deprecate to deprecate an instance attribute.
-        Therefore, _statinfo is now a private attribute, and statinfo is hack
-        of a property that emits a deprecation warning and returns _statinfo
-        on getting and sets _statinfo on setting.
+        FilePath.statinfo is deprecated.
 
+        @param value: value to set statinfo to, if setting a value
         @return: C{_statinfo} if getting, C{None} if setting
         """
-        if not args:
+        # This is a pretty awful hack to use the deprecated decorator to
+        # deprecate a class attribute.  Ideally, there would just be a
+        # statinfo property and a statinfo property setter, but the
+        # 'deprecated' decorator does not produce the correct FQDN on class
+        # methods.  So the property stuff needs to be set outside the class
+        # definition - but the getter and setter both need the same function
+        # in order for the 'deprecated' decorator to produce the right
+        # deprecation string.
+        if value != _SpecialNoValue:
             return self._statinfo
         else:
-            self._statinfo = args[0]
+            self._statinfo = value
 
 
 
