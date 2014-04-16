@@ -1078,6 +1078,7 @@ class FancyStrMixinTests(unittest.TestCase):
         self.assertEqual(str(obj), repr(obj))
 
 
+
 class PadToTest(unittest.TestCase):
     """
     Tests for L{util.padTo}.
@@ -1085,58 +1086,66 @@ class PadToTest(unittest.TestCase):
 
     def test_default(self):
         """
-        Pad a list with the default value.
+        C{None} values can be added to a list to cause it to have a certain
+        length.
         """
-        l = []
-        res = util.padTo(3, l)
-        self.assertEqual([None] * 3, res)
+        padded = util.padTo(3, [])
+        self.assertEqual([None] * 3, padded)
 
 
     def test_specificDefaultValue(self):
         """
-        Pad a list with a specific value.
+        A specific value can be added to a list to cause it to have a certain
+        length.
         """
-        l = []
-        res = util.padTo(4, l, "x")
-        self.assertEqual(["x"] * 4, res)
+        padded = util.padTo(4, [], "x")
+        self.assertEqual(["x"] * 4, padded)
 
 
     def test_padNonEmptyList(self):
         """
-        Pad a list which already contains elements.
+        A list which already has some items has the padding value added after
+        those items.
         """
-        l = [1, 2]
-        res = util.padTo(3, l, "z")
-        self.assertEqual([1, 2, "z"], res)
+        padded = util.padTo(3, [1, 2], "z")
+        self.assertEqual([1, 2, "z"], padded)
 
 
     def test_padToSmallerSize(self):
         """
-        L{util.padTo} can't pad a list if the size requested is smaller than the
-        size of the list to pad.
+        L{util.padTo} can't pad a list if the size requested is smaller than
+        the size of the list to pad.
         """
-        l = [1, 2]
-        self.assertRaises(ValueError, util.padTo, 1, l)
+        self.assertRaises(ValueError, util.padTo, 1, [1, 2])
 
 
     def test_alreadyPadded(self):
         """
-        Padding a list to the exact size of this list just returns a copy.
+        If the list is already the length indicated by the padding argument
+        then a list with the same value is returned.
         """
-        l = [1, 2]
-        res = util.padTo(len(l), l)
-        self.assertEqual(l, res)
-        self.assertNotEqual(id(res), id(l))
+        items = [1, 2]
+        padded = util.padTo(len(items), items)
+        self.assertEqual(items, padded)
+
+
+    def test_alreadyPaddedCopies(self):
+        """
+        If the list is already the length indicated by the padding argument
+        then the return value is a copy of the input.
+        """
+        items = [1, 2]
+        padded = util.padTo(len(items), items)
+        self.assertIsNot(padded, items)
 
 
     def test_makeCopy(self):
         """
         L{util.padTo} doesn't modify the input list but makes a copy.
         """
-        l = []
-        res = util.padTo(4, l)
-        self.assertEqual([], l)
-        self.assertNotEqual(id(res), id(l))
+        items = []
+        util.padTo(4, items)
+        self.assertEqual([], items)
 
 
 if _PY3:
