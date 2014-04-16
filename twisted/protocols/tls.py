@@ -53,11 +53,10 @@ from zope.interface import implementer, providedBy, directlyProvides
 from twisted.python.compat import unicode
 from twisted.python.failure import Failure
 from twisted.python import log
-from twisted.internet.interfaces import IOpenSSLServerConnectionCreator
-from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
 from twisted.python.reflect import safe_str
 from twisted.internet.interfaces import (
-    ISystemHandle, ISSLTransport, IPushProducer, ILoggingContext
+    ISystemHandle, ISSLTransport, IPushProducer, ILoggingContext,
+    IOpenSSLServerConnectionCreator, IOpenSSLClientConnectionCreator,
 )
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
@@ -655,10 +654,38 @@ class _ConnectionFactory(object):
 
 
     def serverConnectionForTLS(self, protocol):
+        """
+        Construct an SSL server connection from the wrapped old-style context
+        factory.
+
+        @note: Since old-style context factories don't distinguish between
+            clients and servers, this is exactly the same as
+            L{_ConnectionFactory.clientConnectionForTLS}.
+
+        @param protocol: The protocol initiating a TLS connection.
+        @type protocol: L{TLSMemoryBIOProtocol}
+
+        @return: a connection
+        @rtype: L{OpenSSL.SSL.Connection}
+        """
         return self._connectionForTLS(protocol)
 
 
     def clientConnectionForTLS(self, protocol):
+        """
+        Construct an SSL server connection from the wrapped old-style context
+        factory.
+
+        @note: Since old-style context factories don't distinguish between
+            clients and servers, this is exactly the same as
+            L{_ConnectionFactory.serverConnectionForTLS}.
+
+        @param protocol: The protocol initiating a TLS connection.
+        @type protocol: L{TLSMemoryBIOProtocol}
+
+        @return: a connection
+        @rtype: L{OpenSSL.SSL.Connection}
+        """
         return self._connectionForTLS(protocol)
 
 
