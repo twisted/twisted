@@ -1178,5 +1178,3 @@ class Connector(base.BaseConnector):
         @see: L{twisted.internet.interfaces.IConnector.getDestination}.
         """
         return self._addressType('TCP', self.host, self.port)
-
-

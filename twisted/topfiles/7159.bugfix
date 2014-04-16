@@ -1,0 +1,1 @@
+twisted.internet.interfaces.IReactorMulticast.listenMultiple works again RHEL 6's python 2.6.
