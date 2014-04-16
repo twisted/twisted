@@ -6,7 +6,7 @@
 
 
 import StringIO, os, pdb, sys
-from zope.interface import implements
+from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.trial.itrial import IReporter, ITestCase
@@ -33,12 +33,11 @@ class CapturingDebugger(object):
 
 
 
+@implementer(IReporter)
 class CapturingReporter(object):
     """
     Reporter that keeps a log of all actions performed on it.
     """
-
-    implements(IReporter)
 
     stream = None
     tbformat = None
