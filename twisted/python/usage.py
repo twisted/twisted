@@ -436,10 +436,8 @@ class Options(dict):
         for method, names in reverse_dct.items():
             if len(names) < 2:
                 continue
-            names_ = names[:]
-            names_.sort(key=len)
-            longest = names_.pop()
-            for name in names_:
+            longest = max(names, key=len)
+            for name in names:
                 synonyms[name] = longest
 
         return longOpt, shortOpt, docs, settings, synonyms, dispatch
