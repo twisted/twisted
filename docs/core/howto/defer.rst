@@ -825,14 +825,66 @@ cancelled (assuming it's not too late to do so). Care should be taken not to``ca
 
 
 
+Timeouts
+~~~~~~~~
+
+Adding timeouts to ``Deferred``-returning APIs is easy.
+All we need to do is cancel the ``Deferred`` if a timeout is hit without the ``Deferred`` having a result.
+:api:`twisted.internet.defer.timeoutDeferred <timeOotDeferred>`
+provides such functionality.
+For example:
+
+.. code-block:: python
+
+    from twisted.internet import reactor
+    from twisted.internet.defer import timeoutDeferred
+
+    deferred = makeSomeRequest()
+    # Cancel the Deferred if you don't get the result in 10 seconds.
+    timeoutDeferred(reactor, deferred, 10)
+    deferred.addCallback(gotResult)
+
+If the request doesn't have a result in 10 seconds, ``deferred.cancel()`` will be called and hopefully the ongoing operation will be cleaned up somehow.
+
+One case worth nothing is that a ``Deferred`` can be put back into waiting state by a callback returning another ``Deferred``.
+If this callback is added before adding the timeout, ``timeoutDeferred`` will try to cancel the additional ``Deferred`` that is being waited on.
+However, if the callback which returns another ``Deferred`` is added after adding the timeout then the timeout won't be aware of this additional ``Deferred``.
+For example:
+
+.. code-block:: python
+
+    from twisted.python import log
+    from twisted.internet import reactor
+    from twisted.internet.defer import timeoutDeferred
+
+    deferred = makeSomeRequest()
+    timeoutDeferred(reactor, deferred, 10)
+    def retry(failure):
+        log.err(failure)
+        return makeSomeRequest()
+    deferred.addErrback(retry)
+
+In this example we have some retry logic that is added *after* the timeout.
+If e.g. the connection is refused in the first second then the timeout will be canceled.
+As a result even if the second request then takes more than 10 seconds to finish no timeout will occur.
+If we want the timeout to apply to both requests we need to call ``timeoutDeferred`` after the retry logic:
+
+.. code-block:: python
+
+    from twisted.python import log
+    from twisted.internet import reactor
+    from twisted.internet.defer import timeoutDeferred
+
+    deferred = makeSomeRequest()
+    def retry(failure):
+        log.err(failure)
+        return makeSomeRequest()
+    deferred.addErrback(retry)
+    timeoutDeferred(reactor, deferred, 10)
+
+
+
 .. _core-howto-defer-deferredlist:
-
-
-
-
-
-
-
 
 DeferredList
 ------------
@@ -1217,10 +1269,6 @@ manually, there is also a convenience method to help you.
   This is the same as ``self.addCallbacks(otherDeferred.callback, otherDeferred.errback)`` 
   
   
-
-    
-
-
 
 
 See also
