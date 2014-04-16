@@ -1077,6 +1077,68 @@ class FancyStrMixinTests(unittest.TestCase):
         obj = Foo()
         self.assertEqual(str(obj), repr(obj))
 
+
+class PadToTest(unittest.TestCase):
+    """
+    Tests for L{util.padTo}.
+    """
+
+    def test_default(self):
+        """
+        Pad a list with the default value.
+        """
+        l = []
+        res = util.padTo(3, l)
+        self.assertEqual([None] * 3, res)
+
+
+    def test_specificDefaultValue(self):
+        """
+        Pad a list with a specific value.
+        """
+        l = []
+        res = util.padTo(4, l, "x")
+        self.assertEqual(["x"] * 4, res)
+
+
+    def test_padNonEmptyList(self):
+        """
+        Pad a list which already contains elements.
+        """
+        l = [1, 2]
+        res = util.padTo(3, l, "z")
+        self.assertEqual([1, 2, "z"], res)
+
+
+    def test_padToSmallerSize(self):
+        """
+        L{util.padTo} can't pad a list if the size requested is smaller than the
+        size of the list to pad.
+        """
+        l = [1, 2]
+        self.assertRaises(ValueError, util.padTo, 1, l)
+
+
+    def test_alreadyPadded(self):
+        """
+        Padding a list to the exact size of this list just returns a copy.
+        """
+        l = [1, 2]
+        res = util.padTo(len(l), l)
+        self.assertEqual(l, res)
+        self.assertNotEqual(id(res), id(l))
+
+
+    def test_makeCopy(self):
+        """
+        L{util.padTo} doesn't modify the input list but makes a copy.
+        """
+        l = []
+        res = util.padTo(4, l)
+        self.assertEqual([], l)
+        self.assertNotEqual(id(res), id(l))
+
+
 if _PY3:
     del (SwitchUIDTest, SearchUpwardsTest, RunAsEffectiveUserTests,
          OrderedDictTest, IntervalDifferentialTestCase, UtilTestCase,

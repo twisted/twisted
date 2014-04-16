@@ -13,15 +13,18 @@ or doc/core/howto/options.xhtml in your Twisted directory.
 """
 
 from __future__ import print_function
+from __future__ import division, absolute_import
 
 # System Imports
+import inspect
 import os
 import sys
 import getopt
 from os import path
+import textwrap
 
 # Sibling Imports
-from twisted.python import reflect, text, util
+from twisted.python import reflect, util
 
 
 class UsageError(Exception):
@@ -430,13 +433,11 @@ class Options(dict):
                 reverse_dct[method] = []
             reverse_dct[method].append(name.replace('_', '-'))
 
-        cmpLength = lambda a, b: cmp(len(a), len(b))
-
         for method, names in reverse_dct.items():
             if len(names) < 2:
                 continue
             names_ = names[:]
-            names_.sort(cmpLength)
+            names_.sort(key=len)
             longest = names_.pop()
             for name in names_:
                 synonyms[name] = longest
@@ -533,7 +534,7 @@ class Options(dict):
 
         if longdesc:
             longdesc = ('\n' +
-                        '\n'.join(text.wordWrap(longdesc, width)).strip()
+                        '\n'.join(textwrap.wrap(longdesc, width)).strip()
                         + '\n')
 
         if optDicts:
@@ -933,7 +934,7 @@ def docMakeChunks(optList, width=80):
                 doc = "%s. %s" % (doc, d.doc)
 
         if doc:
-            column2_l = text.wordWrap(doc, colWidth2)
+            column2_l = textwrap.wrap(doc, colWidth2)
         else:
             column2_l = ['']
 
@@ -948,10 +949,10 @@ def docMakeChunks(optList, width=80):
 
 
 def flagFunction(method, name=None):
-    reqArgs = method.im_func.func_code.co_argcount
+    reqArgs = len(inspect.getargspec(method).args)
     if reqArgs > 2:
         raise UsageError('Invalid Option function for %s' %
-                         (name or method.func_name))
+                         (name or method.__name__))
     if reqArgs == 2:
         # argName = method.im_func.func_code.co_varnames[1]
         return 0
