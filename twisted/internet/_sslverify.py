@@ -1004,6 +1004,10 @@ def settingsForClientTLS(hostname, trustRoot=platformTrust(), **kw):
         interface.
     @type extraCertificateOptions: L{dict}
 
+    @param kw: (Backwards compatibility hack to allow keyword-only arguments on
+        Python 2.  Please ignore; arbitrary keyword arguments will be errors.)
+    @type kw: L{dict}
+
     @return: A client connection creator.
     @rtype: L{IOpenSSLClientConnectionCreator}
     """
