@@ -2140,7 +2140,7 @@ class IOpenSSLServerConnectionCreator(Interface):
 
     @see: L{twisted.internet.ssl}
 
-    @warning: Creating OpenSSL connection objects is subtle, error-prone, and
+    @note: Creating OpenSSL connection objects is subtle, error-prone, and
         security-critical.  Before implementing this interface yourself,
         consider using L{twisted.internet.ssl.CertificateOptions}.
     """
@@ -2166,7 +2166,7 @@ class IOpenSSLClientConnectionCreator(Interface):
 
     @see: L{twisted.internet.ssl}
 
-    @warning: Creating OpenSSL connection objects is subtle, error-prone, and
+    @note: Creating OpenSSL connection objects is subtle, error-prone, and
         security-critical.  Before implementing this interface yourself,
         consider using L{twisted.internet.ssl.CertificateOptions}.
     """
