@@ -63,7 +63,7 @@ def ResourceScript(path, registry):
             'recache': cs.recache}
     try:
         execfile(path, glob, glob)
-    except AlreadyCached, ac:
+    except AlreadyCached as ac:
         return ac.args[0]
     rsrc = glob['resource']
     if cs.doCache and rsrc is not noRsrc:

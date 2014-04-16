@@ -535,7 +535,7 @@ class FlattenerErrorTests(TestCase):
 
         try:
             f()
-        except RuntimeError, exc:
+        except RuntimeError as exc:
             # Get the traceback, minus the info for *this* frame
             tbinfo = traceback.extract_tb(sys.exc_info()[2])[1:]
         else:

@@ -35,7 +35,7 @@ class OpenSSHFactory(factory.SSHFactory):
                         os.path.join(self.dataRoot, filename))
                     t = common.getNS(k.blob())[0]
                     ks[t] = k
-                except Exception, e:
+                except Exception as e:
                     log.msg('bad public key file %s: %s' % (filename, e))
         return ks
 
@@ -50,7 +50,7 @@ class OpenSSHFactory(factory.SSHFactory):
                 fullPath = os.path.join(self.dataRoot, filename)
                 try:
                     key = keys.Key.fromFile(fullPath)
-                except IOError, e:
+                except IOError as e:
                     if e.errno == errno.EACCES:
                         # Not allowed, let's switch to root
                         key = runAsEffectiveUser(0, 0, keys.Key.fromFile, fullPath)
@@ -58,7 +58,7 @@ class OpenSSHFactory(factory.SSHFactory):
                         privateKeys[keyType] = key
                     else:
                         raise
-                except Exception, e:
+                except Exception as e:
                     log.msg('bad private key file %s: %s' % (filename, e))
                 else:
                     keyType = keys.objectType(key.keyObject)

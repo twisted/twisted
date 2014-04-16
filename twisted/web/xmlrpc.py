@@ -142,13 +142,13 @@ class XMLRPC(resource.Resource):
         try:
             args, functionPath = xmlrpclib.loads(request.content.read(),
                 use_datetime=self.useDateTime)
-        except Exception, e:
+        except Exception as e:
             f = Fault(self.FAILURE, "Can't deserialize input: %s" % (e,))
             self._cbRender(f, request)
         else:
             try:
                 function = self.lookupProcedure(functionPath)
-            except Fault, f:
+            except Fault as f:
                 self._cbRender(f, request)
             else:
                 # Use this list to track whether the response has failed or not.
@@ -178,7 +178,7 @@ class XMLRPC(resource.Resource):
                 content = xmlrpclib.dumps(
                     result, methodresponse=True,
                     allow_none=self.allowNone)
-            except Exception, e:
+            except Exception as e:
                 f = Fault(self.FAILURE, "Can't serialize output: %s" % (e,))
                 content = xmlrpclib.dumps(f, methodresponse=True,
                                           allow_none=self.allowNone)

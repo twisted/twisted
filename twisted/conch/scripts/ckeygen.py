@@ -6,6 +6,8 @@
 Implementation module for the `ckeygen` command.
 """
 
+from __future__ import print_function
+
 import sys, os, getpass, socket
 if getpass.getpass == getpass.unix_getpass:
     try:
@@ -48,8 +50,8 @@ def run():
     options = GeneralOptions()
     try:
         options.parseOptions(sys.argv[1:])
-    except usage.UsageError, u:
-        print 'ERROR: %s' % u
+    except usage.UsageError as u:
+        print('ERROR: %s' % u)
         options.opt_help()
         sys.exit(1)
     log.discardLogs()

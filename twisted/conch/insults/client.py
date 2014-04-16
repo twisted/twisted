@@ -2,6 +2,8 @@
 You don't really want to use this module. Try insults.py instead.
 """
 
+from __future__ import print_function
+
 from twisted.internet import protocol
 
 class InsultsClient(protocol.Protocol):
@@ -124,7 +126,7 @@ class InsultsClient(protocol.Protocol):
             elif command[0] == 'attributes':
                 redraw += '\x1b[%sm' % ';'.join(map(str, command[1]))
             else:
-                print command
+                print(command)
         self.commandQueue = []
         self.transport.write(redraw)
 

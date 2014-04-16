@@ -228,9 +228,9 @@ class SSIBuddy:
                     self.alertWhen.append('unaway')
             elif k == 0x013e:
                 self.alertSound = v
- 
+
     def oscarRep(self, groupID, buddyID):
-        tlvData = reduce(lambda x,y: x+y, map(lambda (k,v):TLV(k,v), self.tlvs.items()), '\000\000')
+        tlvData = "\000\000" + "".join(map(lambda a: TLV(*a), self.tlvs.items()))
         return struct.pack('!H', len(self.name)) + self.name + \
                struct.pack('!HH', groupID, buddyID) + '\000\000' + tlvData
 

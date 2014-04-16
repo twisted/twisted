@@ -133,12 +133,12 @@ class Profile:
         for c in string:
             for table in self.prohibiteds:
                 if table.lookup(c):
-                    raise UnicodeError, "Invalid character %s" % repr(c)
+                    raise UnicodeError("Invalid character %s" % repr(c))
 
     def check_unassigneds(self, string):
         for c in string:
             if stringprep.in_table_a1(c):
-                raise UnicodeError, "Unassigned code point %s" % repr(c)
+                raise UnicodeError("Unassigned code point %s" % repr(c))
 
     def check_bidirectionals(self, string):
         found_LCat = False
@@ -151,11 +151,11 @@ class Profile:
                 found_LCat = True
 
         if found_LCat and found_RandALCat:
-            raise UnicodeError, "Violation of BIDI Requirement 2"
+            raise UnicodeError("Violation of BIDI Requirement 2")
 
         if found_RandALCat and not (stringprep.in_table_d1(string[0]) and
                                     stringprep.in_table_d1(string[-1])):
-            raise UnicodeError, "Violation of BIDI Requirement 3"
+            raise UnicodeError("Violation of BIDI Requirement 3")
 
 
 class NamePrep:
@@ -206,15 +206,15 @@ class NamePrep:
     def check_prohibiteds(self, string):
         for c in string:
            if c in self.prohibiteds:
-               raise UnicodeError, "Invalid character %s" % repr(c)
+               raise UnicodeError("Invalid character %s" % repr(c))
 
     def nameprep(self, label):
         label = idna.nameprep(label)
         self.check_prohibiteds(label)
         if label[0] == '-':
-            raise UnicodeError, "Invalid leading hyphen-minus"
+            raise UnicodeError("Invalid leading hyphen-minus")
         if label[-1] == '-':
-            raise UnicodeError, "Invalid trailing hyphen-minus"
+            raise UnicodeError("Invalid trailing hyphen-minus")
         return label
 
 

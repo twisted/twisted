@@ -5,6 +5,8 @@
 Test cases for L{twisted.words.protocols.msn}.
 """
 
+from __future__ import print_function
+
 import StringIO
 from hashlib import md5
 
@@ -30,7 +32,7 @@ else:
 
 
 def printError(f):
-    print f
+    print(f)
 
 
 class PassportTests(unittest.TestCase):
@@ -470,11 +472,15 @@ class MessageHandlingTests(unittest.TestCase):
         self.client.checkMessage(m)
         self.failUnless((self.client.state == 'INFO'), msg='Failed to detect file transfer info')
 
-    def fileResponse(self, (accept, cookie, info)):
-        if accept and cookie == 1234: self.client.state = 'RESPONSE'
+    def fileResponse(self, data):
+        (accept, cookie, info) = data
+        if accept and cookie == 1234:
+            self.client.state = 'RESPONSE'
 
-    def fileInfo(self, (accept, ip, port, aCookie, info)):
-        if accept and ip == '192.168.0.1' and port == 6891 and aCookie == 4321: self.client.state = 'INFO'
+    def fileInfo(self, data):
+        (accept, ip, port, aCookie, info) = data
+        if accept and ip == '192.168.0.1' and port == 6891 and aCookie == 4321:
+            self.client.state = 'INFO'
 
 
 class FileTransferTestCase(unittest.TestCase):

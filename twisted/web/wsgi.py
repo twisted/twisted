@@ -12,6 +12,7 @@ from sys import exc_info
 
 from zope.interface import implements
 
+from twisted.python.compat import reraise
 from twisted.python.log import msg, err
 from twisted.python.failure import Failure
 from twisted.web.resource import IResource
@@ -254,7 +255,7 @@ class _WSGIResponse:
         This will be called in a non-I/O thread.
         """
         if self.started and excInfo is not None:
-            raise excInfo[0], excInfo[1], excInfo[2]
+            reraise(excInfo[1], excInfo[2])
         self.status = status
         self.headers = headers
         return self.write

@@ -71,6 +71,8 @@ TODO
 @author: Sam Jordan
 """
 
+from __future__ import print_function
+
 import types, operator, os
 from random import randint
 from urllib import quote, unquote
@@ -140,7 +142,7 @@ def checkParamLen(num, expected, cmd, error=None):
     if error == None:
         error = "Invalid Number of Parameters for %s" % cmd
     if num != expected:
-        raise MSNProtocolError, error
+        raise MSNProtocolError(error)
 
 def _parseHeader(h, v):
     """
@@ -285,7 +287,7 @@ class PassportLogin(HTTPClient):
                 handler(info)
             else:
                 raise Exception()
-        except Exception, e:
+        except Exception as e:
             self.deferred.errback(failure.Failure(e))
 
     def handleResponse(self, r):
@@ -449,7 +451,7 @@ class MSNContact:
         elif t == HAS_PAGER:
             self.hasPager = value
         else:
-            raise ValueError, "Invalid Phone Type"
+            raise ValueError("Invalid Phone Type")
 
     def addToList(self, listType):
         """
@@ -643,16 +645,16 @@ class MSNEventBase(LineReceiver):
             try:
                 header, value = line.split(':')
             except ValueError:
-                raise MSNProtocolError, "Invalid Message Header"
+                raise MSNProtocolError("Invalid Message Header")
             self.currentMessage.setHeader(header, unquote(value).lstrip())
             return
         try:
             cmd, params = line.split(' ', 1)
         except ValueError:
-            raise MSNProtocolError, "Invalid Message, %s" % repr(line)
+            raise MSNProtocolError("Invalid Message, %s" % repr(line))
 
         if len(cmd) != 3:
-            raise MSNProtocolError, "Invalid Command, %s" % repr(cmd)
+            raise MSNProtocolError("Invalid Command, %s" % repr(cmd))
         if cmd.isdigit():
             errorCode = int(cmd)
             id = int(params.split()[0])
@@ -668,7 +670,7 @@ class MSNEventBase(LineReceiver):
         if handler:
             try:
                 handler(params.split())
-            except MSNProtocolError, why:
+            except MSNProtocolError as why:
                 self.gotBadLine(line, why)
         else:
             self.handle_UNKNOWN(cmd, params.split())
@@ -700,7 +702,7 @@ class MSNEventBase(LineReceiver):
         try:
             messageLen = int(params[2])
         except ValueError:
-            raise MSNProtocolError, "Invalid Parameter for MSG length argument"
+            raise MSNProtocolError("Invalid Parameter for MSG length argument")
         self.currentMessage = MSNMessage(length=messageLen, userHandle=params[0], screenName=unquote(params[1]))
 
     def handle_UNKNOWN(self, cmd, params):
@@ -754,7 +756,7 @@ class DispatchClient(MSNEventBase):
 
     def handle_XFR(self, params):
         if len(params) < 4:
-            raise MSNProtocolError, "Invalid number of parameters for XFR"
+            raise MSNProtocolError("Invalid number of parameters for XFR")
         id, refType, addr = params[:3]
         # was addr a host:port pair?
         try:
@@ -835,7 +837,7 @@ class NotificationClient(MSNEventBase):
 
     def handle_USR(self, params):
         if len(params) != 4 and len(params) != 6:
-            raise MSNProtocolError, "Invalid Number of Parameters for USR"
+            raise MSNProtocolError("Invalid Number of Parameters for USR")
 
         mechanism = params[1]
         if mechanism == "OK":
@@ -943,7 +945,7 @@ class NotificationClient(MSNEventBase):
             elif params[0].lower() == "n":
                 self._getStateData('list').autoAdd = 1
             else:
-                raise MSNProtocolError, "Invalid Paramater for GTC" # debug
+                raise MSNProtocolError("Invalid Paramater for GTC") # debug
         else:
             id = int(params[0])
             if params[1].lower() == "a":
@@ -951,7 +953,7 @@ class NotificationClient(MSNEventBase):
             elif params[1].lower() == "n":
                 self._fireCallback(id, 1)
             else:
-                raise MSNProtocolError, "Invalid Paramater for GTC" # debug
+                raise MSNProtocolError("Invalid Paramater for GTC") # debug
 
     def handle_SYN(self, params):
         id = int(params[0])
@@ -997,24 +999,24 @@ class NotificationClient(MSNEventBase):
         checkParamLen(len(params), 5, 'ADG')
         id = int(params[0])
         if not self._fireCallback(id, int(params[1]), unquote(params[2]), int(params[3])):
-            raise MSNProtocolError, "ADG response does not match up to a request" # debug
+            raise MSNProtocolError("ADG response does not match up to a request") # debug
 
     def handle_RMG(self, params):
         checkParamLen(len(params), 3, 'RMG')
         id = int(params[0])
         if not self._fireCallback(id, int(params[1]), int(params[2])):
-            raise MSNProtocolError, "RMG response does not match up to a request" # debug
+            raise MSNProtocolError("RMG response does not match up to a request") # debug
 
     def handle_REG(self, params):
         checkParamLen(len(params), 5, 'REG')
         id = int(params[0])
         if not self._fireCallback(id, int(params[1]), int(params[2]), unquote(params[3])):
-            raise MSNProtocolError, "REG response does not match up to a request" # debug
+            raise MSNProtocolError("REG response does not match up to a request") # debug
 
     def handle_ADD(self, params):
         numParams = len(params)
         if numParams < 5 or params[1].upper() not in ('AL','BL','RL','FL'):
-            raise MSNProtocolError, "Invalid Paramaters for ADD" # debug
+            raise MSNProtocolError("Invalid Paramaters for ADD") # debug
         id = int(params[0])
         listType = params[1].lower()
         listVer = int(params[2])
@@ -1022,7 +1024,7 @@ class NotificationClient(MSNEventBase):
         groupID = None
         if numParams == 6: # they sent a group id
             if params[1].upper() != "FL":
-                raise MSNProtocolError, "Only forward list can contain groups" # debug
+                raise MSNProtocolError("Only forward list can contain groups") # debug
             groupID = int(params[5])
         if not self._fireCallback(id, listCodeToID[listType], userHandle, listVer, groupID):
             self.userAddedMe(userHandle, unquote(params[4]), listVer)
@@ -1030,7 +1032,7 @@ class NotificationClient(MSNEventBase):
     def handle_REM(self, params):
         numParams = len(params)
         if numParams < 4 or params[1].upper() not in ('AL','BL','FL','RL'):
-            raise MSNProtocolError, "Invalid Paramaters for REM" # debug
+            raise MSNProtocolError("Invalid Paramaters for REM") # debug
         id = int(params[0])
         listType = params[1].lower()
         listVer = int(params[2])
@@ -1038,7 +1040,7 @@ class NotificationClient(MSNEventBase):
         groupID = None
         if numParams == 5:
             if params[1] != "FL":
-                raise MSNProtocolError, "Only forward list can contain groups" # debug
+                raise MSNProtocolError("Only forward list can contain groups") # debug
             groupID = int(params[4])
         if not self._fireCallback(id, listCodeToID[listType], userHandle, listVer, groupID):
             if listType.upper() == "RL":
@@ -1060,7 +1062,7 @@ class NotificationClient(MSNEventBase):
             port = MSN_PORT
 
         if not self._fireCallback(id, host, int(port), params[4]):
-            raise MSNProtocolError, "Got XFR (referral) that I didn't ask for .. should this happen?" # debug
+            raise MSNProtocolError("Got XFR (referral) that I didn't ask for .. should this happen?") # debug
 
     def handle_RNG(self, params):
         checkParamLen(len(params), 6, 'RNG')
@@ -1081,7 +1083,7 @@ class NotificationClient(MSNEventBase):
         elif params[0] == "SSD":
             self.serverGoingDown()
         else:
-            raise MSNProtocolError, "Invalid Parameters received for OUT" # debug
+            raise MSNProtocolError("Invalid Parameters received for OUT") # debug
 
     # callbacks
 
@@ -1731,7 +1733,7 @@ class SwitchboardClient(MSNEventBase):
 
     def connectionMade(self):
         MSNEventBase.connectionMade(self)
-        print 'sending initial stuff'
+        print('sending initial stuff')
         self._sendInit()
 
     def connectionLost(self, reason):
@@ -2151,7 +2153,7 @@ class FileReceive(LineReceiver):
             path = os.path.join(directory, file)
             if os.path.exists(path) and not self.overwrite:
                 log.msg('File already exists...')
-                raise IOError, "File Exists" # is this all we should do here?
+                raise IOError("File Exists") # is this all we should do here?
             self.file = open(os.path.join(directory, file), 'wb')
         else:
             self.file = file
