@@ -1,0 +1,1 @@
+twisted.web.http.proxiedLogFormatter can now be used with twisted.web.http.HTTPFactory (and subclasses) to record X-Forwarded-For values to the access log when the HTTP server is deployed behind a reverse proxy.

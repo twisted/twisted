@@ -1,0 +1,18 @@
+[Unit]
+Description=Example Web Server
+
+[Service]
+ExecStart=/usr/bin/twistd \
+    --nodaemon \
+    --pidfile= \
+    web --port 8080 --path .
+
+WorkingDirectory=/srv/www/www.example.com/static
+
+User=nobody
+Group=nobody
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

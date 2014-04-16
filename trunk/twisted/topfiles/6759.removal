@@ -1,0 +1,1 @@
+FTPClient.changeDirectory was deprecated in 8.2 and is now removed.

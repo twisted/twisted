@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
+"http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<!-- Created with Sodipodi ("http://www.sodipodi.com/") -->
+<svg
+   id="svg137"
+   sodipodi:version="0.31"
+   width="11in"
+   height="8in"
+   sodipodi:docbase="/home/washort/projects/PyCon/"
+   sodipodi:docname="/home/washort/projects/PyCon/adapters2.svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs
+     id="defs139" />
+  <sodipodi:namedview
+     id="base"
+     snaptoguides="false"
+     showgrid="false" />
+<g>
+<animateTransform attributeName="transform" attributeType="XML" begin="1s" dur="3s" values="1,1;1.5,1.5" type="scale" fill="freeze" additive="sum" />
+<animateMotion begin="1s" dur="3s" fill="freeze" path="M 0 0 L -40 -300"/>
+<g style="fill-rule:evenodd;stroke-width:10;stroke:#000000;stroke-opacity:1;stroke-dasharray:none;stroke-linejoin:bevel;fill-opacity:1;">
+<animate attributeName="stroke-opacity" attributeType="CSS" begin="1s" dur="3s" from="1" to="0.4" fill="freeze"/>
+<animate attributeName="fill-opacity" attributeType="CSS" begin="1s" dur="3s" from="1" to="0.4" fill="freeze"/>
+  <polygon
+     sodipodi:type="star"
+     style="font-size:12;fill:#3e62db"
+     id="polygon152"
+     sodipodi:sides="6"
+     sodipodi:cx="355.625061"
+     sodipodi:cy="167.987030"
+     sodipodi:r1="183.750000"
+     sodipodi:r2="159.132095"
+     sodipodi:arg1="0.000000"
+     sodipodi:arg2="0.523599"
+     points="539.375,167.987 493.437,247.553 447.5,327.119 355.625,327.119 263.75,327.119 217.813,247.553 171.875,167.987 217.813,88.4209 263.75,8.85486 355.625,8.85493 447.5,8.85486 493.438,88.421 539.375,167.987 "
+     transform="matrix(0.5,0,0,0.5,462.812,244.007)" />
+  <polygon
+     sodipodi:type="star"
+     style="font-size:12;fill:#d86264"
+     id="polygon234"
+     sodipodi:sides="6"
+     sodipodi:cx="355.625061"
+     sodipodi:cy="167.987030"
+     sodipodi:r1="183.750000"
+     sodipodi:r2="159.132095"
+     sodipodi:arg1="0.000000"
+     sodipodi:arg2="0.523599"
+     points="539.375,167.987 493.437,247.553 447.5,327.119 355.625,327.119 263.75,327.119 217.813,247.553 171.875,167.987 217.813,88.4209 263.75,8.85486 355.625,8.85493 447.5,8.85486 493.438,88.421 539.375,167.987 "
+     transform="matrix(0.5,0,0,0.5,634.521,144.935)" />
+  <polygon
+     sodipodi:type="star"
+     style="font-size:12;fill:#d86264"
+     id="polygon243"
+     sodipodi:sides="6"
+     sodipodi:cx="355.625061"
+     sodipodi:cy="167.987030"
+     sodipodi:r1="183.750000"
+     sodipodi:r2="159.132095"
+     sodipodi:arg1="0.000000"
+     sodipodi:arg2="0.523599"
+     points="539.375,167.987 493.437,247.553 447.5,327.119 355.625,327.119 263.75,327.119 217.813,247.553 171.875,167.987 217.813,88.4209 263.75,8.85486 355.625,8.85493 447.5,8.85486 493.438,88.421 539.375,167.987 "
+     transform="matrix(0.5,0,0,0.5,634.604,342.45)" />
+
+  <polygon
+     sodipodi:type="star"
+     style="font-size:12;;fill:#d86264"
+     id="polygon252"
+     sodipodi:sides="6"
+     sodipodi:cx="355.625061"
+     sodipodi:cy="167.987030"
+     sodipodi:r1="183.750000"
+     sodipodi:r2="159.132095"
+     sodipodi:arg1="0.000000"
+     sodipodi:arg2="0.523599"
+     points="539.375,167.987 493.437,247.553 447.5,327.119 355.625,327.119 263.75,327.119 217.813,247.553 171.875,167.987 217.813,88.4209 263.75,8.85486 355.625,8.85493 447.5,8.85486 493.438,88.421 539.375,167.987 "
+     transform="matrix(0.5,0,0,0.5,290.377,145.564)" />
+
+  <polygon
+     sodipodi:type="star"
+     style="font-size:12;fill:#d86264"
+     id="polygon261"
+     sodipodi:sides="6"
+     sodipodi:cx="355.625061"
+     sodipodi:cy="167.987030"
+     sodipodi:r1="183.750000"
+     sodipodi:r2="159.132095"
+     sodipodi:arg1="0.000000"
+     sodipodi:arg2="0.523599"
+     points="539.375,167.987 493.437,247.553 447.5,327.119 355.625,327.119 263.75,327.119 217.813,247.553 171.875,167.987 217.813,88.4209 263.75,8.85486 355.625,8.85493 447.5,8.85486 493.438,88.421 539.375,167.987 "
+     transform="matrix(0.5,0,0,0.5,462.169,442.179)" />
+
+  <polygon
+     sodipodi:type="star"
+     style="font-size:12;fill:#d86264"
+     id="polygon270"
+     sodipodi:sides="6"
+     sodipodi:cx="355.625061"
+     sodipodi:cy="167.987030"
+     sodipodi:r1="183.750000"
+     sodipodi:r2="159.132095"
+     sodipodi:arg1="0.000000"
+     sodipodi:arg2="0.523599"
+     points="539.375,167.987 493.437,247.553 447.5,327.119 355.625,327.119 263.75,327.119 217.813,247.553 171.875,167.987 217.813,88.4209 263.75,8.85486 355.625,8.85493 447.5,8.85486 493.438,88.421 539.375,167.987 "
+     transform="matrix(0.5,0,0,0.5,462.812,45.8392)" />
+
+    <g style="stroke-width:2pt">
+  <path
+     d="M 538.285 387.439 L 571.873 407.105 "
+     id="path372"
+     transform="translate(171.25,-20)" />
+  <path
+     d="M 538.285 308.11 L 572.315 288.223 "
+     id="path373"
+     transform="translate(171.25,-20)" />
+  <path
+     d="M 365.044 287.781 L 400.399 308.552 "
+     id="path376"
+     transform="translate(171.25,-20)" />
+  <path
+     d="M 468.9 465.883 L 468.9 426.993 "
+     id="path377"
+     transform="translate(171.25,-20)" />
+  <path
+     d="M 469.342 268.335 L 469.342 229.445 "
+     id="path378"
+     transform="translate(171.25,-20)" /></g>
+</g>
+  <path
+     style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-opacity:0.398649;stroke-width:2pt;stroke-linejoin:miter;stroke-linecap:butt;fill-opacity:1;"
+     d="M 365.928 407.547 L 399.957 387.66 "
+     id="path379"
+     transform="translate(171.25,-20)" />
+<polygon
+     sodipodi:type="star"
+     style="font-size:12;fill:#d86264;fill-rule:evenodd;stroke-width:10;stroke:#000000;stroke-opacity:1;stroke-dasharray:none;stroke-linejoin:bevel;fill-opacity:1;"
+     id="polygon225"
+     sodipodi:sides="6"
+     sodipodi:cx="355.625061"
+     sodipodi:cy="167.987030"
+     sodipodi:r1="183.750000"
+     sodipodi:r2="159.132095"
+     sodipodi:arg1="0.000000"
+     sodipodi:arg2="0.523599"
+     points="539.375,167.987 493.437,247.553 447.5,327.119 355.625,327.119 263.75,327.119 217.813,247.553 171.875,167.987 217.813,88.4209 263.75,8.85486 355.625,8.85493 447.5,8.85486 493.438,88.421 539.375,167.987 "
+     transform="matrix(0.5,0,0,0.5,290.836,343.189)" />
+<g style="fill:#000000;stroke:none;font-family:URW Gothic L;font-style:normal;font-weight:normal;font-size:36;fill-opacity:1;stroke-opacity:1;stroke-width:1pt;stroke-linejoin:miter;stroke-linecap:butt;text-anchor:start;writing-mode:lr;" >
+<animate attributeName="fill-opacity" attributeType="CSS" begin="1s" dur="3s" from="1" to="0.4" fill="freeze"/> 
+  <text
+     x="594.546"
+     y="312.197"
+     id="text383">
+    <tspan
+       x="594.546"
+       y="312.197"
+       sodipodi:role="line"
+       id="tspan476">
+Thing</tspan>
+    <tspan
+       x="594.546"
+       y="348.197"
+       sodipodi:role="line"
+       id="tspan478">
+</tspan>
+  </text>
+  <text
+     x="394.315"
+     y="230.363"
+     id="text388">
+    <tspan
+       x="394.315"
+       y="230.363"
+       sodipodi:role="line"
+       id="tspan504">
+Weapon</tspan>
+  </text>
+
+  <text
+     x="569.441"
+     y="524.279"
+     id="text396">
+    <tspan
+       x="569.441"
+       y="524.279"
+       sodipodi:role="line"
+       id="tspan460">
+Portable</tspan>
+  </text>
+  <text
+     style="font-size:18;font-style:italic"
+     x="561.266"
+     y="347.885"
+     id="text480">
+    <tspan
+       x="561.266"
+       y="347.885"
+       sodipodi:role="line"
+       id="tspan496">
+(Componentized)</tspan>
+  </text>
+  
+  <text
+     style="font-size:18;font-style:italic"
+     x="594.854"
+     y="548.526"
+     id="text498">
+    <tspan
+       x="594.854"
+       y="548.526"
+       sodipodi:role="line"
+       id="tspan499">
+(Adapter)</tspan>
+  </text>
+  <text
+     style="font-size:18;font-style:italic"
+     x="422.496"
+     y="254.194"
+     id="text501">
+    <tspan
+       x="422.496"
+       y="254.194"
+       sodipodi:role="line"
+       id="tspan502">
+(Adapter)</tspan>
+  </text>
+  </g>
+<text
+     style="fill:#000000;stroke:none;font-family:URW Gothic L;font-style:italic;font-weight:normal;font-size:18;text-anchor:start;writing-mode:lr;fill-opacity:1;troke-opacity:1;stroke-width:1pt;stroke-linejoin:miter;stroke-linecap:butt;"
+     x="422.496"
+     y="451.299"
+     id="text489">
+    <tspan
+       x="422.496"
+       y="451.299"
+       sodipodi:role="line"
+       id="tspan494">
+(Adapter)</tspan>
+  </text>
+  <text
+     style="fill:#000000;stroke:none;font-family:URW Gothic L;font-style:roman;font-weight:normal;font-size:26;text-anchor:start;writing-mode:lr;fill-opacity:1;stroke-opacity:1;stroke-width:1pt;stroke-linejoin:miter;stroke-linecap:butt;"
+     x="388.457"
+     y="430.303"
+     id="text393">
+    <tspan
+       x="388.457"
+       y="430.303"
+       sodipodi:role="line"
+       id="tspan458">
+Merchandise</tspan>
+  </text>
+</g>
+</svg>

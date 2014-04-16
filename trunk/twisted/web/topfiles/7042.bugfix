@@ -1,0 +1,1 @@
+twisted.web.client.Agent now verifies that the provided server certificate in a TLS connection is trusted by the platform. Until #4888 is completed there are still known MITM attack vectors against Agent. Applications which were relying on the absence of certificate checking will now receive an SSL error.

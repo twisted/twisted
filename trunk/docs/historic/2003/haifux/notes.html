@@ -1,0 +1,60 @@
+<html><head><title>Notes</title></head><body>
+<h1>Notes</h1>
+
+<p>[translated roughly from Hebrew]</p>
+
+<h2>Introduction</h2>
+
+<ul>
+<li>Name: Moshe Zadka</li>
+<li>Twisted developer [Debian, Python]</li>
+<li>Not:<ul>
+<li>XML talk (XML is: standarised, flexibl, internationalized)</li>
+<li>Gettysburg in Power Point</li>
+<li>Touching lots of things briefly</li>
+</ul></li>
+<ul>How to do more than one thing at once?<ul>
+<li>Fork (Apache)</li>
+<li>Thread (AOLServer)</li>
+<li>Cheat (GUI programs)</li>
+</ul></li>
+<li>Main loop calling our code.</li>
+<li>Let's develop a network program!</li>
+</ul>
+
+<h2>Discussion</h2>
+
+<ul>
+<li>What is blocking?
+<ul>
+<li>There is a UNIX concept of blocking...</li>
+<li>...which is not really relevant.</li>
+<li>Connecting to an accepting UNIX domain socket is blocking...</li>
+<li>...reading a file from NFS is not.</li>
+</ul></li>
+<li>Wait a minute: why is that interesting?<ul>
+<li>GUI -- humans (0.1s-1s)</li>
+<li>Network: connections might get refused</li>
+</ul></li>
+<li>Typical scenario: listen buffer 5, 1e6 connections/day --
+    don't dawdle for more than 0.08s</li>
+<li>These are the numbers that matter!</li>
+<li>Useful criterion: blocking==takes more than 0.01s on normal load.</li>
+<li>Depends on hardware, etc.</li>
+<li>Real world :(</li>
+<li>But a useful rule of thumb when coding.</li>
+<li>Trick: reactor.callLater(0,)</li>
+<li>Continuation-passing-style, tail-call-optimization</li>
+<li>But not pure -- not optimal</li>
+</ul>
+
+<h2>References</h2>
+
+<ul>
+<li>Plonk</li>
+<li>twistedmatrix.com</li>
+<li>mailing list</li>
+<li>irc -- #twisted</li>
+</ul>
+
+</body></html>

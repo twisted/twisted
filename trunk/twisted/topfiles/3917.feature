@@ -1,0 +1,1 @@
+trial's TestCase will now report a test method as an error if that test method is a generator function, preventing an issue when a user forgets to decorate a test method with defer.inlineCallbacks, causing the test method to not run.
