@@ -184,13 +184,9 @@ class Options(dict):
             self.synonyms.update(synonyms)
             self._dispatch.update(dispatch)
 
-    def __hash__(self):
-        """
-        Define a custom hash function so that Options instances can be used
-        as dictionary keys.  This is an internal feature used to implement
-        the parser.  Do not rely on it in application code.
-        """
-        return int(id(self) % sys.maxint)
+
+    __hash__ = object.__hash__
+
 
     def opt_help(self):
         """
