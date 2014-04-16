@@ -14,7 +14,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 from twisted.internet import endpoints, defer
 
-if requireModule('OpenSSL', default=None) is None:
+if requireModule('OpenSSL') is None:
     sslSkip = 'Missing OpenSSL package.'
 else:
     sslSkip = None
