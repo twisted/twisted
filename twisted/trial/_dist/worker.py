@@ -11,7 +11,7 @@ This module implements the worker classes.
 
 import os
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.interfaces import ITransport, IAddress
@@ -190,21 +190,21 @@ class LocalWorkerAMP(AMP):
 
 
 
+@implementer(IAddress)
 class LocalWorkerAddress(object):
     """
     A L{IAddress} implementation meant to provide stub addresses for
     L{ITransport.getPeer} and L{ITransport.getHost}.
     """
-    implements(IAddress)
 
 
 
+@implementer(ITransport)
 class LocalWorkerTransport(object):
     """
     A stub transport implementation used to support L{AMP} over a
     L{ProcessProtocol} transport.
     """
-    implements(ITransport)
 
     def __init__(self, transport):
         self._transport = transport
