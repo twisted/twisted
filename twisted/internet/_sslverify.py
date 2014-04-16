@@ -1021,6 +1021,12 @@ def clientTLS(hostname, trustRoot=platformTrust(),
     @rtype: L{IOpenSSLClientConnectionCreator}
     """
     extraCertificateOptions = kw.pop('extraCertificateOptions', None) or {}
+    if kw:
+        raise TypeError(
+            "clientTLS() got an unexpected keyword argument '{arg}'".format(
+                arg=kw.popitem()[0]
+            )
+        )
     certificateOptions = OpenSSLCertificateOptions(
         **extraCertificateOptions
     )
