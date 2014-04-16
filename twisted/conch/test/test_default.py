@@ -4,18 +4,15 @@
 """
 Tests for L{twisted.conch.client.default}.
 """
-from twisted.python.reflect import namedAny
-try:
-    namedAny('Crypto.Cipher.DES3')
-    namedAny('pyasn1')
-except ImportError:
-    skip = "PyCrypto and PyASN1 required for twisted.conch.client.default."
-else:
+from twisted.python.reflect import requireModule
+
+if requireModule('Crypto.Cipher.DES3') and requireModule('pyasn1'):
     from twisted.conch.client.agent import SSHAgentClient
     from twisted.conch.client.default import SSHUserAuthClient
     from twisted.conch.client.options import ConchOptions
     from twisted.conch.ssh.keys import Key
-
+else:
+    skip = "PyCrypto and PyASN1 required for twisted.conch.client.default."
 
 from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath

@@ -9,15 +9,12 @@ import os
 
 from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
-from twisted.python.reflect import namedAny
+from twisted.python.reflect import requireModule
 
-try:
-    namedAny('Crypto.Cipher.DES3')
-    namedAny('pyasn1')
-except ImportError:
-    OpenSSHFactory = None
-else:
+if requireModule('Crypto.Cipher.DES3') and requireModule('pyasn1'):
     from twisted.conch.openssh_compat.factory import OpenSSHFactory
+else:
+    OpenSSHFactory = None
 
 from twisted.conch.test import keydata
 from twisted.test.test_process import MockOS

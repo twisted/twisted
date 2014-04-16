@@ -2,7 +2,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.python.reflect import namedAny
+from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 
@@ -481,7 +481,7 @@ class Deprecations(unittest.TestCase):
         """
         The L{insults.colors} module is deprecated
         """
-        namedAny('twisted.conch.insults.colors')
+        requireModule('twisted.conch.insults.colors')
         self.ensureDeprecated("twisted.conch.insults.colors was deprecated "
                               "in Twisted 10.1.0: Please use "
                               "twisted.conch.insults.helper instead.")
@@ -491,7 +491,7 @@ class Deprecations(unittest.TestCase):
         """
         The L{insults.client} module is deprecated
         """
-        namedAny('twisted.conch.insults.client')
+        requireModule('twisted.conch.insults.client')
         self.ensureDeprecated("twisted.conch.insults.client was deprecated "
                               "in Twisted 10.1.0: Please use "
                               "twisted.conch.insults.insults instead.")

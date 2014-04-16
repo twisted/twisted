@@ -19,13 +19,15 @@ from twisted.cred.portal import IRealm, Portal
 from twisted.conch.error import ConchError, ValidPublicKey
 from twisted.internet import defer, task
 from twisted.protocols import loopback
-from twisted.python.reflect import namedAny
+from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
-try:
-    namedAny('Crypto.Cipher.DES3')
-    namedAny('pyasn1')
-except ImportError:
+if requireModule('Crypto.Cipher.DES3') and requireModule('pyasn1'):
+    from twisted.conch.ssh.common import NS
+    from twisted.conch.checkers import SSHProtocolChecker
+    from twisted.conch.ssh import keys, userauth, transport
+    from twisted.conch.test import keydata
+else:
     keys = None
 
 
@@ -40,11 +42,6 @@ except ImportError:
             """
             A stub class so that later class definitions won't die.
             """
-else:
-    from twisted.conch.ssh.common import NS
-    from twisted.conch.checkers import SSHProtocolChecker
-    from twisted.conch.ssh import keys, userauth, transport
-    from twisted.conch.test import keydata
 
 
 
