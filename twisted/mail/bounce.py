@@ -61,16 +61,23 @@ def generateBounce(message, failedFrom, failedTo, transcript=''):
         transcript = '''\
 I'm sorry, the following address has permanent errors: %(failedTo)s.
 I've given up, and I will not retry the message again.
-''' % vars()
+''' % {'failedTo': failedTo}
 
-    boundary = "%s_%s_%s" % (time.time(), os.getpid(), 'XXXXX')
     failedAddress = rfc822.AddressList(failedTo)[0][1]
-    failedDomain = failedAddress.split('@', 1)[1]
-    messageID = smtp.messageid(uniq='bounce')
-    ctime = time.ctime(time.time())
+    data = {
+        'boundary': "%s_%s_%s" % (time.time(), os.getpid(), 'XXXXX'),
+        'ctime': time.ctime(time.time()),
+        'failedAddress': failedAddress,
+        'failedDomain': failedAddress.split('@', 1)[1],
+        'failedFrom': failedFrom,
+        'failedTo': failedTo,
+        'messageID': smtp.messageid(uniq='bounce'),
+        'message': message,
+        'transcript': transcript,
+        }
 
     fp = StringIO.StringIO()
-    fp.write(BOUNCE_FORMAT % vars())
+    fp.write(BOUNCE_FORMAT % data)
     orig = message.tell()
     message.seek(2, 0)
     sz = message.tell()

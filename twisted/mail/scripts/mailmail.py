@@ -134,7 +134,6 @@ def parseOptions(argv):
         'date': [],
     }
 
-    headers = []
     buffer = StringIO.StringIO()
     while 1:
         write = 1

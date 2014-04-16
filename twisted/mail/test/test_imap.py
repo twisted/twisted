@@ -19,6 +19,7 @@ import types
 
 from zope.interface import implements
 
+from twisted.python.filepath import FilePath
 from twisted.mail.imap4 import MessageSet
 from twisted.mail import imap4
 from twisted.protocols import loopback
@@ -31,11 +32,11 @@ from twisted.trial import unittest
 from twisted.python import util, log
 from twisted.python import failure
 
-from twisted import cred
-import twisted.cred.error
-import twisted.cred.checkers
-import twisted.cred.credentials
-import twisted.cred.portal
+from twisted.cred.portal import Portal
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.error import UnauthorizedLogin
+from twisted.cred.credentials import (
+    IUsernameHashedPassword, IUsernamePassword, CramMD5Credentials)
 
 from twisted.test.proto_helpers import StringTransport, StringTransportWithDisconnection
 
@@ -613,10 +614,10 @@ class IMAP4HelperTestCase(unittest.TestCase):
             p = imap4._FetchParser()
             p.parseString(inp)
             self.assertEqual(len(p.result), outp[0])
-            p = [str(p).lower() for p in p.result]
-            p.sort()
+            expectedResult = [str(token).lower() for token in p.result]
+            expectedResult.sort()
             outp[1].sort()
-            self.assertEqual(p, outp[1])
+            self.assertEqual(expectedResult, outp[1])
 
 
     def test_fetchParserBody(self):
@@ -1057,8 +1058,8 @@ class SimpleServer(imap4.IMAP4Server):
         imap4.IMAP4Server.__init__(self, *args, **kw)
         realm = TestRealm()
         realm.theAccount = Account('testuser')
-        portal = cred.portal.Portal(realm)
-        c = cred.checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        portal = Portal(realm)
+        c = InMemoryUsernamePasswordDatabaseDontUse()
         self.checker = c
         self.portal = portal
         portal.registerChecker(c)
@@ -1076,7 +1077,7 @@ class SimpleServer(imap4.IMAP4Server):
     def authenticateLogin(self, username, password):
         if username == self._username and password == self._password:
             return imap4.IAccount, self.theAccount, lambda: None
-        raise cred.error.UnauthorizedLogin()
+        raise UnauthorizedLogin()
 
 
 class SimpleClient(imap4.IMAP4Client):
@@ -1155,7 +1156,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
 
     def testCapabilityWithAuth(self):
         caps = {}
-        self.server.challengers['CRAM-MD5'] = cred.credentials.CramMD5Credentials
+        self.server.challengers['CRAM-MD5'] = CramMD5Credentials
         def getCaps():
             def gotCaps(c):
                 caps.update(c)
@@ -1645,7 +1646,8 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
 
     def testPartialAppend(self):
         infile = util.sibpath(__file__, 'rfc822.message')
-        message = open(infile)
+        # Create the initial file.
+        FilePath(infile).touch()
         SimpleServer.theAccount.addMailbox('PARTIAL/SUBTHING')
         def login():
             return self.client.login('testuser', 'password-test')
@@ -1875,7 +1877,7 @@ class TestRealm:
         return imap4.IAccount, self.theAccount, lambda: None
 
 class TestChecker:
-    credentialInterfaces = (cred.credentials.IUsernameHashedPassword, cred.credentials.IUsernamePassword)
+    credentialInterfaces = (IUsernameHashedPassword, IUsernamePassword)
 
     users = {
         'testuser': 'secret'
@@ -1890,7 +1892,7 @@ class TestChecker:
     def _cbCheck(self, result, username):
         if result:
             return username
-        raise cred.error.UnauthorizedLogin()
+        raise UnauthorizedLogin()
 
 class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
     def setUp(self):
@@ -1898,7 +1900,7 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
 
         realm = TestRealm()
         realm.theAccount = Account('testuser')
-        portal = cred.portal.Portal(realm)
+        portal = Portal(realm)
         portal.registerChecker(TestChecker())
         self.server.portal = portal
 
@@ -1906,7 +1908,7 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.account = realm.theAccount
 
     def testCramMD5(self):
-        self.server.challengers['CRAM-MD5'] = cred.credentials.CramMD5Credentials
+        self.server.challengers['CRAM-MD5'] = CramMD5Credentials
         cAuth = imap4.CramMD5ClientAuthenticator('testuser')
         self.client.registerAuthenticator(cAuth)
 
@@ -1927,7 +1929,7 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.assertEqual(self.server.account, self.account)
 
     def testFailedCramMD5(self):
-        self.server.challengers['CRAM-MD5'] = cred.credentials.CramMD5Credentials
+        self.server.challengers['CRAM-MD5'] = CramMD5Credentials
         cAuth = imap4.CramMD5ClientAuthenticator('testuser')
         self.client.registerAuthenticator(cAuth)
 
@@ -2431,7 +2433,8 @@ class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
             protocol.lineReceived('0002 OK SELECT')
             return d
         def fetch():
-            d = protocol.fetchSpecific('1:*',
+            protocol.fetchSpecific(
+                '1:*',
                 headerType='HEADER.FIELDS',
                 headerArgs=['SUBJECT'])
             self.assertRaises(
@@ -4751,19 +4754,20 @@ class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
 
 
     def testFailedStartTLS(self):
-        failure = []
+        failures = []
         def breakServerTLS(ign):
             self.server.canStartTLS = False
 
         self.connected.addCallback(breakServerTLS)
         self.connected.addCallback(lambda ign: self.client.startTLS())
-        self.connected.addErrback(lambda err: failure.append(err.trap(imap4.IMAP4Exception)))
+        self.connected.addErrback(
+            lambda err: failures.append(err.trap(imap4.IMAP4Exception)))
         self.connected.addCallback(self._cbStopClient)
         self.connected.addErrback(self._ebGeneral)
 
         def check(ignored):
-            self.failUnless(failure)
-            self.assertIdentical(failure[0], imap4.IMAP4Exception)
+            self.failUnless(failures)
+            self.assertIdentical(failures[0], imap4.IMAP4Exception)
         return self.loopback().addCallback(check)
 
 

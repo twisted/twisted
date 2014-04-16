@@ -44,10 +44,8 @@ from twisted.internet.defer import maybeDeferred
 from twisted.python import log, text
 from twisted.internet import interfaces
 
-from twisted import cred
-import twisted.cred.error
-import twisted.cred.credentials
-
+from twisted.cred import credentials
+from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
 
 # locale-independent month names to use instead of strftime's
 _MONTH_NAMES = dict(zip(
@@ -383,11 +381,11 @@ class Command:
         if unuse:
             unusedCallback(unuse)
 
-class LOGINCredentials(cred.credentials.UsernamePassword):
+class LOGINCredentials(credentials.UsernamePassword):
     def __init__(self):
         self.challenges = ['Password\0', 'User Name\0']
         self.responses = ['password', 'username']
-        cred.credentials.UsernamePassword.__init__(self, None, None)
+        credentials.UsernamePassword.__init__(self, None, None)
 
     def getChallenge(self):
         return self.challenges.pop()
@@ -398,9 +396,9 @@ class LOGINCredentials(cred.credentials.UsernamePassword):
     def moreChallenges(self):
         return bool(self.challenges)
 
-class PLAINCredentials(cred.credentials.UsernamePassword):
+class PLAINCredentials(credentials.UsernamePassword):
     def __init__(self):
-        cred.credentials.UsernamePassword.__init__(self, None, None)
+        credentials.UsernamePassword.__init__(self, None, None)
 
     def getChallenge(self):
         return ''
@@ -1017,9 +1015,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         self.setTimeout(self.POSTAUTH_TIMEOUT)
 
     def __ebAuthResp(self, failure, tag):
-        if failure.check(cred.error.UnauthorizedLogin):
+        if failure.check(UnauthorizedLogin):
             self.sendNegativeResponse(tag, 'Authentication failed: unauthorized')
-        elif failure.check(cred.error.UnhandledCredentials):
+        elif failure.check(UnhandledCredentials):
             self.sendNegativeResponse(tag, 'Authentication failed: server misconfigured')
         else:
             self.sendBadResponse(tag, 'Server error: login failed unexpectedly')
@@ -1073,10 +1071,10 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         """
         if self.portal:
             return self.portal.login(
-                cred.credentials.UsernamePassword(user, passwd),
+                credentials.UsernamePassword(user, passwd),
                 None, IAccount
             )
-        raise cred.error.UnauthorizedLogin()
+        raise UnauthorizedLogin()
 
     def __cbLogin(self, (iface, avatar, logout), tag):
         if iface is not IAccount:
@@ -1090,7 +1088,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.setTimeout(self.POSTAUTH_TIMEOUT)
 
     def __ebLogin(self, failure, tag):
-        if failure.check(cred.error.UnauthorizedLogin):
+        if failure.check(UnauthorizedLogin):
             self.sendNegativeResponse(tag, 'LOGIN failed')
         else:
             self.sendBadResponse(tag, 'Server error: ' + str(failure.value))
@@ -2112,8 +2110,6 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def __cbCopy(self, messages, tag, mbox):
         # XXX - This should handle failures with a rollback or something
         addedDeferreds = []
-        addedIDs = []
-        failures = []
 
         fastCopyMbox = IMessageCopier(mbox, None)
         for (id, msg) in messages:
@@ -4835,8 +4831,8 @@ def statusRequestHelper(mbox, names):
 def parseAddr(addr):
     if addr is None:
         return [(None, None, None),]
-    addrs = email.Utils.getaddresses([addr])
-    return [[fn or None, None] + addr.split('@') for fn, addr in addrs]
+    addr = email.Utils.getaddresses([addr])
+    return [[fn or None, None] + address.split('@') for fn, address in addr]
 
 def getEnvelope(msg):
     headers = msg.getHeaders(True)
