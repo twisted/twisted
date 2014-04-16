@@ -146,7 +146,7 @@ def getCache(module):
             buckets[fpp] = []
         bucket = buckets[fpp]
         bucket.append(plugmod)
-    for pseudoPackagePath, bucket in buckets.iteritems():
+    for pseudoPackagePath, bucket in buckets.items():
         dropinPath = pseudoPackagePath.child('dropin.cache')
         try:
             lastCached = dropinPath.getModificationTime()
@@ -207,7 +207,7 @@ def getPlugins(interface, package=None):
     if package is None:
         import twisted.plugins as package
     allDropins = getCache(package)
-    for dropin in allDropins.itervalues():
+    for dropin in allDropins.values():
         for plugin in dropin.plugins:
             try:
                 adapted = interface(plugin, None)
