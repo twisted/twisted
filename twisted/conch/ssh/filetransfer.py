@@ -55,6 +55,7 @@ class FileTransferBase(protocol.Protocol):
                 log.err()
                 continue
 
+
     def _parseAttributes(self, data):
         flags ,= struct.unpack('!L', data[:4])
         attrs = {}

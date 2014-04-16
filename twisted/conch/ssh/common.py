@@ -18,6 +18,7 @@ except ImportError:
             RuntimeWarning)
 
 
+
 def NS(t):
     """
     net string
