@@ -478,6 +478,24 @@ class OpenSSLOptions(unittest.TestCase):
         )
 
 
+    def test_clientTLSExtraKeywords(self):
+        """
+        When passed a keyword parameter other than C{extraCertificateOptions},
+        L{sslverify.clientTLS} raises an exception just like a normal Python
+        function would.
+        """
+        error = self.assertRaises(
+            TypeError,
+            sslverify.clientTLS,
+            hostname=u'alpha',
+            someRandomThing=u'beta',
+        )
+        self.assertEqual(
+            str(error),
+            "clientTLS() got an unexpected keyword argument 'someRandomThing'"
+        )
+
+
     def test_constructorAllowsCACertsWithoutVerify(self):
         """
         It's currently a NOP, but valid.
