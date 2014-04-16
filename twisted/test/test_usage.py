@@ -7,8 +7,6 @@ Tests for L{twisted.python.usage}, a command line option parsing library.
 
 from __future__ import division, absolute_import
 
-import sys
-
 from twisted.trial import unittest
 from twisted.python import usage
 
