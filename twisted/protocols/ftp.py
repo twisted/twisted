@@ -10,7 +10,6 @@ An FTP protocol implementation
 import os
 import time
 import re
-import operator
 import stat
 import errno
 import fnmatch
@@ -425,9 +424,23 @@ class DTP(object, protocol.Protocol):
 
 
     def _formatOneListResponse(self, name, size, directory, permissions, hardlinks, modified, owner, group):
-        def formatMode(mode):
-            return ''.join([mode & (256 >> n) and 'rwx'[n % 3] or '-' for n in range(9)])
+        """
+        Helper method to format one entry's info into a text entry like:
+        'drwxrwxrwx   0 user   group   0 Jan 01  1970 filename.txt'
 
+        @param name: C{str} name of the entry (file or directory or link)
+        @param size: C{int} size of the entry
+        @param directory: evals to C{bool} - whether the entry is a directory
+        @param permissions: L{twisted.python.filepath.Permissions} object
+            representing that entry's permissions
+        @param hardlinks: C{int} number of hardlinks
+        @param modified: C{float} - entry's last modified time in seconds
+            since the epoch
+        @param owner: C{str} username of the owner
+        @param group: C{str} group name of the owner
+
+        @return: C{str} in the requisite format
+        """
         def formatDate(mtime):
             now = time.gmtime()
             info = {
@@ -448,13 +461,14 @@ class DTP(object, protocol.Protocol):
 
         return format % {
             'directory': directory and 'd' or '-',
-            'permissions': formatMode(permissions),
+            'permissions': permissions.shorthand(),
             'hardlinks': hardlinks,
             'owner': owner[:8],
             'group': group[:8],
             'size': size,
             'date': formatDate(time.gmtime(modified)),
             'name': name}
+
 
     def sendListResponse(self, name, response):
         self.sendLine(self._formatOneListResponse(name, *response))
@@ -1928,34 +1942,87 @@ class FTPAnonymousShell(object):
         @type keys: C{iterable}
         """
         filePath.restat()
-        return [getattr(self, '_stat_' + k)(filePath.statinfo) for k in keys]
-
-    _stat_size = operator.attrgetter('st_size')
-    _stat_permissions = operator.attrgetter('st_mode')
-    _stat_hardlinks = operator.attrgetter('st_nlink')
-    _stat_modified = operator.attrgetter('st_mtime')
+        return [getattr(self, '_stat_' + k)(filePath) for k in keys]
 
 
-    def _stat_owner(self, st):
+    def _stat_size(self, fp):
+        """
+        Get the filepath's size as an int
+
+        @param fp: L{twisted.python.filepath.FilePath}
+        @return: C{int} representing the size
+        """
+        return fp.getsize()
+
+
+    def _stat_permissions(self, fp):
+        """
+        Get the filepath's permissions object
+
+        @param fp: L{twisted.python.filepath.FilePath}
+        @return: L{twisted.python.filepath.Permissions} of C{fp}
+        """
+        return fp.getPermissions()
+
+
+    def _stat_hardlinks(self, fp):
+        """
+        Get the number of hardlinks for the filepath
+
+        @param fp: L{twisted.python.filepath.FilePath}
+        @return: C{int} representing the number of hardlinks
+        """
+        return fp.getNumberOfHardLinks()
+
+
+    def _stat_modified(self, fp):
+        """
+        Get the filepath's last modified date
+
+        @param fp: L{twisted.python.filepath.FilePath}
+        @return: C{int} as seconds since the epoch
+        """
+        return fp.getModificationTime()
+
+
+    def _stat_owner(self, fp):
+        """
+        Get the filepath's owner's username
+
+        @param fp: L{twisted.python.filepath.FilePath}
+        @return: C{str} representing the owner's username
+        """
         if pwd is not None:
             try:
-                return pwd.getpwuid(st.st_uid)[0]
+                return pwd.getpwuid(fp.getUserID())[0]
             except KeyError:
                 pass
-        return str(st.st_uid)
+        return str(fp.getUserID())
 
 
-    def _stat_group(self, st):
+    def _stat_group(self, fp):
+        """
+        Get the filepath's owner's group
+
+        @param fp: L{twisted.python.filepath.FilePath}
+        @return: C{str} representing the owner's group
+        """
         if grp is not None:
             try:
-                return grp.getgrgid(st.st_gid)[0]
+                return grp.getgrgid(fp.getGroupID())[0]
             except KeyError:
                 pass
-        return str(st.st_gid)
+        return str(fp.getGroupID())
 
 
-    def _stat_directory(self, st):
-        return bool(st.st_mode & stat.S_IFDIR)
+    def _stat_directory(self, fp):
+        """
+        Get whether the filepath is a directory
+
+        @param fp: L{twisted.python.filepath.FilePath}
+        @return: C{bool}
+        """
+        return fp.isdir()
 
 
 
