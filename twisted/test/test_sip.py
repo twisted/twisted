@@ -8,13 +8,9 @@
 from twisted.trial import unittest, util
 from twisted.protocols import sip
 from twisted.internet import defer, reactor, utils
-from twisted.python.versions import Version
-
-from twisted.test import proto_helpers
 
 from twisted import cred
-import twisted.cred.portal
-import twisted.cred.checkers
+from twisted.cred import checkers, portal
 
 from zope.interface import implements
 
@@ -604,8 +600,8 @@ class RegistrationTestCase(unittest.TestCase):
 
     def addPortal(self):
         r = TestRealm()
-        p = cred.portal.Portal(r)
-        c = cred.checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        p = portal.Portal(r)
+        c = checkers.InMemoryUsernamePasswordDatabaseDontUse()
         c.addUser('userXname@127.0.0.1', 'passXword')
         p.registerChecker(c)
         self.proxy.portal = p
@@ -613,69 +609,6 @@ class RegistrationTestCase(unittest.TestCase):
     def testFailedAuthentication(self):
         self.addPortal()
         self.register()
-
-        self.assertEqual(len(self.registry.users), 0)
-        self.assertEqual(len(self.sent), 1)
-        dest, m = self.sent[0]
-        self.assertEqual(m.code, 401)
-
-
-    def test_basicAuthentication(self):
-        """
-        Test that registration with basic authentication suceeds.
-        """
-        self.addPortal()
-        self.proxy.authorizers = self.proxy.authorizers.copy()
-        self.proxy.authorizers['basic'] = sip.BasicAuthorizer()
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_basicAuthentication])
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(
-            warnings[0]['message'],
-            "twisted.protocols.sip.BasicAuthorizer was deprecated in "
-            "Twisted 9.0.0")
-        self.assertEqual(
-            warnings[0]['category'],
-            DeprecationWarning)
-        r = sip.Request("REGISTER", "sip:bell.example.com")
-        r.addHeader("to", "sip:joe@bell.example.com")
-        r.addHeader("contact", "sip:joe@client.com:1234")
-        r.addHeader("via", sip.Via("client.com").toString())
-        r.addHeader("authorization",
-                    "Basic " + "userXname:passXword".encode('base64'))
-        self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
-
-        self.assertEqual(len(self.registry.users), 1)
-        self.assertEqual(len(self.sent), 1)
-        dest, m = self.sent[0]
-        self.assertEqual(m.code, 200)
-
-
-    def test_failedBasicAuthentication(self):
-        """
-        Failed registration with basic authentication results in an
-        unauthorized error response.
-        """
-        self.addPortal()
-        self.proxy.authorizers = self.proxy.authorizers.copy()
-        self.proxy.authorizers['basic'] = sip.BasicAuthorizer()
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_failedBasicAuthentication])
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(
-            warnings[0]['message'],
-            "twisted.protocols.sip.BasicAuthorizer was deprecated in "
-            "Twisted 9.0.0")
-        self.assertEqual(
-            warnings[0]['category'],
-            DeprecationWarning)
-        r = sip.Request("REGISTER", "sip:bell.example.com")
-        r.addHeader("to", "sip:joe@bell.example.com")
-        r.addHeader("contact", "sip:joe@client.com:1234")
-        r.addHeader("via", sip.Via("client.com").toString())
-        r.addHeader(
-            "authorization", "Basic " + "userXname:password".encode('base64'))
-        self.proxy.datagramReceived(r.toString(), ("client.com", 5060))
 
         self.assertEqual(len(self.registry.users), 0)
         self.assertEqual(len(self.sent), 1)
@@ -855,11 +788,6 @@ Content-Length: 0\r
 \r
 """
 
-class FakeDigestAuthorizer(sip.DigestAuthorizer):
-    def generateNonce(self):
-        return '92956076410767313901322208775'
-    def generateOpaque(self):
-        return '1674186428'
 
 
 class FakeRegistry(sip.InMemoryRegistry):
@@ -883,102 +811,3 @@ class FakeRegistry(sip.InMemoryRegistry):
         d = sip.InMemoryRegistry.registerAddress(
             self, domainURL, logicalURL, physicalURL)
         return d.addCallback(self._cbReg)
-
-class AuthorizationTestCase(unittest.TestCase):
-    def setUp(self):
-        self.proxy = sip.RegisterProxy(host="intarweb.us")
-        self.proxy.authorizers = self.proxy.authorizers.copy()
-        self.proxy.authorizers['digest'] = FakeDigestAuthorizer()
-
-        self.registry = FakeRegistry("intarweb.us")
-        self.proxy.registry = self.proxy.locator = self.registry
-        self.transport = proto_helpers.FakeDatagramTransport()
-        self.proxy.transport = self.transport
-
-        r = TestRealm()
-        p = cred.portal.Portal(r)
-        c = cred.checkers.InMemoryUsernamePasswordDatabaseDontUse()
-        c.addUser('exarkun@intarweb.us', 'password')
-        p.registerChecker(c)
-        self.proxy.portal = p
-    setUp = utils.suppressWarnings(setUp,
-        util.suppress(category=DeprecationWarning,
-            message=r'twisted.protocols.sip.DigestAuthorizer was deprecated'))
-
-    def tearDown(self):
-        for d, uri in self.registry.users.values():
-            d.cancel()
-        del self.proxy
-
-    def testChallenge(self):
-        self.proxy.datagramReceived(registerRequest, ("127.0.0.1", 5632))
-
-        self.assertEqual(
-            self.transport.written[-1],
-            ((challengeResponse, ("127.0.0.1", 5632)))
-        )
-        self.transport.written = []
-
-        self.proxy.datagramReceived(authRequest, ("127.0.0.1", 5632))
-
-        self.assertEqual(
-            self.transport.written[-1],
-            ((okResponse, ("127.0.0.1", 5632)))
-        )
-    testChallenge.suppress = [
-        util.suppress(
-            category=DeprecationWarning,
-            message=r'twisted.protocols.sip.DigestAuthorizer was deprecated'),
-        util.suppress(
-            category=DeprecationWarning,
-            message=r'twisted.protocols.sip.DigestedCredentials was deprecated'),
-        util.suppress(
-            category=DeprecationWarning,
-            message=r'twisted.protocols.sip.DigestCalcHA1 was deprecated'),
-        util.suppress(
-            category=DeprecationWarning,
-            message=r'twisted.protocols.sip.DigestCalcResponse was deprecated')]
-
-
-
-class DeprecationTests(unittest.TestCase):
-    """
-    Tests for deprecation of obsolete components of L{twisted.protocols.sip}.
-    """
-
-    def test_deprecatedDigestCalcHA1(self):
-        """
-        L{sip.DigestCalcHA1} is deprecated.
-        """
-        self.callDeprecated(Version("Twisted", 9, 0, 0),
-                            sip.DigestCalcHA1, '', '', '', '', '', '')
-
-
-    def test_deprecatedDigestCalcResponse(self):
-        """
-        L{sip.DigestCalcResponse} is deprecated.
-        """
-        self.callDeprecated(Version("Twisted", 9, 0, 0),
-                            sip.DigestCalcResponse, '', '', '', '', '', '', '',
-                            '')
-
-    def test_deprecatedBasicAuthorizer(self):
-        """
-        L{sip.BasicAuthorizer} is deprecated.
-        """
-        self.callDeprecated(Version("Twisted", 9, 0, 0), sip.BasicAuthorizer)
-
-
-    def test_deprecatedDigestAuthorizer(self):
-        """
-        L{sip.DigestAuthorizer} is deprecated.
-        """
-        self.callDeprecated(Version("Twisted", 9, 0, 0), sip.DigestAuthorizer)
-
-
-    def test_deprecatedDigestedCredentials(self):
-        """
-        L{sip.DigestedCredentials} is deprecated.
-        """
-        self.callDeprecated(Version("Twisted", 9, 0, 0),
-                            sip.DigestedCredentials, '', {}, {})
