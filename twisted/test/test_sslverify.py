@@ -854,7 +854,7 @@ class OpenSSLOptions(unittest.TestCase):
 
     test_certificateOptionsSerialization.suppress = [
         util.suppress(category = DeprecationWarning,
-                      message='twisted.internet._sslverify.*__[gs]etstate__')]
+            message='twisted\.internet\._sslverify\.*__[gs]etstate__')]
 
 
     def test_certificateOptionsSessionTickets(self):
@@ -1025,8 +1025,8 @@ class OpenSSLOptions(unittest.TestCase):
 
 class DeprecationTests(unittest.SynchronousTestCase):
     """
-    Tests for deprecation of L{sslverify.OpenSSLCertificateOptions}'s support of
-    the pickle protocol.
+    Tests for deprecation of L{sslverify.OpenSSLCertificateOptions}'s support
+    of the pickle protocol.
     """
     if skipSSL:
         skip = skipSSL

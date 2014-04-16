@@ -1267,10 +1267,12 @@ class OpenSSLCertificateOptions(object):
 
 
 
-OpenSSLCertificateOptions.__getstate__ = deprecated(Version("Twisted", 14, 1, 0),
-    "a real persistence system")(OpenSSLCertificateOptions.__getstate__)
-OpenSSLCertificateOptions.__setstate__ = deprecated(Version("Twisted", 14, 1, 0),
-    "a real persistence system")(OpenSSLCertificateOptions.__setstate__)
+OpenSSLCertificateOptions.__getstate__ = deprecated(
+        Version("Twisted", 14, 1, 0),
+        "a real persistence system")(OpenSSLCertificateOptions.__getstate__)
+OpenSSLCertificateOptions.__setstate__ = deprecated(
+        Version("Twisted", 14, 1, 0),
+        "a real persistence system")(OpenSSLCertificateOptions.__setstate__)
 
 
 
