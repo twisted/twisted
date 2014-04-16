@@ -830,8 +830,7 @@ Timeouts
 
 Adding timeouts to ``Deferred``-returning APIs is easy.
 All we need to do is cancel the ``Deferred`` if a timeout is hit without the ``Deferred`` having a result.
-:api:`twisted.internet.defer.timeoutDeferred <timeOotDeferred>`
-provides such functionality.
+:api:`twisted.internet.defer.timeoutDeferred <timeoutDeferred>` provides such functionality.
 For example:
 
 .. code-block:: python
@@ -846,7 +845,7 @@ For example:
 
 If the request doesn't have a result in 10 seconds, ``deferred.cancel()`` will be called and hopefully the ongoing operation will be cleaned up somehow.
 
-One case worth nothing is that a ``Deferred`` can be put back into waiting state by a callback returning another ``Deferred``.
+One case worth noting is that a ``Deferred`` can be put back into waiting state by a callback returning another ``Deferred``.
 If this callback is added before adding the timeout, ``timeoutDeferred`` will try to cancel the additional ``Deferred`` that is being waited on.
 However, if the callback which returns another ``Deferred`` is added after adding the timeout then the timeout won't be aware of this additional ``Deferred``.
 For example:
