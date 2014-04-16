@@ -31,7 +31,11 @@ from twisted.trial import unittest
 from twisted.python import util, log
 from twisted.python import failure
 
-from twisted import cred
+from twisted.cred.portal import Portal
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.error import UnauthorizedLogin
+from twisted.cred.credentials import (
+    IUsernameHashedPassword, IUsernamePassword, CramMD5Credentials)
 
 from twisted.test.proto_helpers import StringTransport, StringTransportWithDisconnection
 
@@ -1053,8 +1057,8 @@ class SimpleServer(imap4.IMAP4Server):
         imap4.IMAP4Server.__init__(self, *args, **kw)
         realm = TestRealm()
         realm.theAccount = Account('testuser')
-        portal = cred.portal.Portal(realm)
-        c = cred.checkers.InMemoryUsernamePasswordDatabaseDontUse()
+        portal = Portal(realm)
+        c = InMemoryUsernamePasswordDatabaseDontUse()
         self.checker = c
         self.portal = portal
         portal.registerChecker(c)
@@ -1072,7 +1076,7 @@ class SimpleServer(imap4.IMAP4Server):
     def authenticateLogin(self, username, password):
         if username == self._username and password == self._password:
             return imap4.IAccount, self.theAccount, lambda: None
-        raise cred.error.UnauthorizedLogin()
+        raise UnauthorizedLogin()
 
 
 class SimpleClient(imap4.IMAP4Client):
@@ -1151,7 +1155,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
 
     def testCapabilityWithAuth(self):
         caps = {}
-        self.server.challengers['CRAM-MD5'] = cred.credentials.CramMD5Credentials
+        self.server.challengers['CRAM-MD5'] = CramMD5Credentials
         def getCaps():
             def gotCaps(c):
                 caps.update(c)
@@ -1872,7 +1876,7 @@ class TestRealm:
         return imap4.IAccount, self.theAccount, lambda: None
 
 class TestChecker:
-    credentialInterfaces = (cred.credentials.IUsernameHashedPassword, cred.credentials.IUsernamePassword)
+    credentialInterfaces = (IUsernameHashedPassword, IUsernamePassword)
 
     users = {
         'testuser': 'secret'
@@ -1887,7 +1891,7 @@ class TestChecker:
     def _cbCheck(self, result, username):
         if result:
             return username
-        raise cred.error.UnauthorizedLogin()
+        raise UnauthorizedLogin()
 
 class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
     def setUp(self):
@@ -1895,7 +1899,7 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
 
         realm = TestRealm()
         realm.theAccount = Account('testuser')
-        portal = cred.portal.Portal(realm)
+        portal = Portal(realm)
         portal.registerChecker(TestChecker())
         self.server.portal = portal
 
@@ -1903,7 +1907,7 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.account = realm.theAccount
 
     def testCramMD5(self):
-        self.server.challengers['CRAM-MD5'] = cred.credentials.CramMD5Credentials
+        self.server.challengers['CRAM-MD5'] = CramMD5Credentials
         cAuth = imap4.CramMD5ClientAuthenticator('testuser')
         self.client.registerAuthenticator(cAuth)
 
@@ -1924,7 +1928,7 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
         self.assertEqual(self.server.account, self.account)
 
     def testFailedCramMD5(self):
-        self.server.challengers['CRAM-MD5'] = cred.credentials.CramMD5Credentials
+        self.server.challengers['CRAM-MD5'] = CramMD5Credentials
         cAuth = imap4.CramMD5ClientAuthenticator('testuser')
         self.client.registerAuthenticator(cAuth)
 
