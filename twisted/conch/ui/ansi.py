@@ -49,13 +49,13 @@ class AnsiParser:
 
     # Terminators for erasure ansi controls - unsupported
     ERASE_SET = ('J', 'K', 'P')
-    
+
     # Terminators for mode change ansi controls - unsupported
     MODE_SET = ('h', 'l')
-    
+
     # Terminators for keyboard assignment ansi controls - unsupported
     ASSIGN_SET = ('p',)
-    
+
     # Terminators for color change ansi controls - supported
     COLOR_SET = ('m',)
 
@@ -68,7 +68,7 @@ class AnsiParser:
         self.display = 1
         self.prepend = ''
 
-    
+
     def stripEscapes(self, string):
         """
         Remove all ANSI color escapes from the given string.
@@ -103,14 +103,14 @@ class AnsiParser:
             str = self.prepend + str
             self.prepend = ''
         parts = str.split('\x1B')
-        
+
         if len(parts) == 1:
             self.writeString(self.formatText(parts[0]))
         else:
             self.writeString(self.formatText(parts[0]))
             for s in parts[1:]:
                 L = len(s)
-                i = 0 
+                i = 0
                 type = None
                 while i < L:
                     if s[i] not in string.digits+'[;?':
@@ -130,7 +130,7 @@ class AnsiParser:
                     return
                 type = _setmap.get(s[i], None)
                 if type is None:
-                    continue 
+                    continue
 
                 if type == AnsiParser.COLOR_SET:
                     self.parseColor(s[:i + 1])
@@ -145,7 +145,7 @@ class AnsiParser:
                     self.parseErase(erase)
                     self.writeString(self.formatText(s))
                 elif type == AnsiParser.MODE_SET:
-                    mode, s = s[:i+1], s[i+1:]
+                    s = s[i+1:]
                     #self.parseErase('2J')
                     self.writeString(self.formatText(s))
                 elif i == L:
