@@ -31,6 +31,7 @@ if platformType == 'win32':
     from errno import WSAEINTR, WSAEMSGSIZE, WSAETIMEDOUT
     from errno import WSAECONNREFUSED, WSAECONNRESET, WSAENETRESET
     from errno import WSAEINPROGRESS
+    from errno import WSAENOPROTOOPT as ENOPROTOOPT
 
     # Classify read and write errors
     _sockErrReadIgnore = [WSAEINTR, WSAEWOULDBLOCK, WSAEMSGSIZE, WSAEINPROGRESS]
@@ -44,6 +45,7 @@ if platformType == 'win32':
     EINTR = WSAEINTR
 else:
     from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED, EAGAIN
+    from errno import ENOPROTOOPT
     _sockErrReadIgnore = [EAGAIN, EINTR, EWOULDBLOCK]
     _sockErrReadRefuse = [ECONNREFUSED]
 
@@ -494,5 +496,12 @@ class MulticastPort(MulticastMixin, Port):
         if self.listenMultiple:
             skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             if hasattr(socket, "SO_REUSEPORT"):
-                skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+                try:
+                    skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+                except socket.error as le:
+                    # RHEL6 defines SO_REUSEPORT but it doesn't work
+                    if le.errno == ENOPROTOOPT:
+                        pass
+                    else:
+                        raise
         return skt

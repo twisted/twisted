@@ -1092,12 +1092,11 @@ class ChatService(OSCARService):
                 self.members.remove(u)
         self.bos.chatMemberLeft(self,user)
 
-    def oscar_0E_06(self,snac):
-        data = snac[3]
-        user,rest=self.bos.parseUser(snac[3][14:],1)
+    def oscar_0E_06(self, snac):
+        user, rest = self.bos.parseUser(snac[3][14:], 1)
         tlvs = readTLVs(rest[8:])
-        message=tlvs[1]
-        self.bos.chatReceiveMessage(self,user,message)
+        message = tlvs[1]
+        self.bos.chatReceiveMessage(self, user, message)
 
     def sendMessage(self,message):
         tlvs=TLV(0x02,"us-ascii")+TLV(0x03,"en")+TLV(0x01,message)

@@ -27,7 +27,8 @@ from functools import wraps
 # Twisted imports
 from twisted.python.compat import cmp, comparable
 from twisted.python import lockfile, log, failure
-from twisted.python.deprecate import warnAboutFunction
+from twisted.python.deprecate import warnAboutFunction, deprecated
+from twisted.python.versions import Version
 
 
 
@@ -920,6 +921,11 @@ class waitForDeferred:
     """
 
     def __init__(self, d):
+        warnings.warn(
+            "twisted.internet.defer.waitForDeferred was deprecated in "
+            "Twisted 14.1.0; please use twisted.internet.defer.inlineCallbacks "
+            "instead", DeprecationWarning, stacklevel=2)
+
         if not isinstance(d, Deferred):
             raise TypeError("You must give waitForDeferred a Deferred. You gave it %r." % (d,))
         self.d = d
@@ -988,6 +994,8 @@ def _deferGenerator(g, deferred):
 
 
 
+@deprecated(Version('Twisted', 14, 1, 0),
+            "twisted.internet.defer.inlineCallbacks")
 def deferredGenerator(f):
     """
     L{deferredGenerator} and L{waitForDeferred} help you write

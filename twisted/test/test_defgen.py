@@ -7,8 +7,6 @@ Tests for L{twisted.internet.defer.deferredGenerator} and related APIs.
 
 from __future__ import division, absolute_import
 
-import sys
-
 from twisted.internet import reactor
 
 from twisted.trial import unittest
@@ -16,6 +14,8 @@ from twisted.trial import unittest
 from twisted.internet.defer import waitForDeferred, deferredGenerator, Deferred
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet import defer
+from twisted.trial.util import suppress as SUPPRESS
+from twisted.python.util import runWithWarningsSuppressed
 
 
 def getThing():
@@ -100,10 +100,24 @@ class BaseDefgenTests:
 
 
 
+def deprecatedDeferredGenerator(f):
+    """
+    Calls L{deferredGenerator} while suppressing the deprecation warning.
+
+    @param f: Function to call
+    @return: Return value of function.
+    """
+    return runWithWarningsSuppressed(
+        [ SUPPRESS(message="twisted.internet.defer.deferredGenerator was "
+                          "deprecated") ],
+        deferredGenerator, f)
+
+
 
 class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
 
     # First provide all the generator impls necessary for BaseDefgenTests
+    @deprecatedDeferredGenerator
     def _genBasics(self):
 
         x = waitForDeferred(getThing())
@@ -120,18 +134,20 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
             self.assertEqual(str(e), 'OMG')
         yield "WOOSH"
         return
-    _genBasics = deferredGenerator(_genBasics)
 
+
+    @deprecatedDeferredGenerator
     def _genBuggy(self):
         yield waitForDeferred(getThing())
         1//0
-    _genBuggy = deferredGenerator(_genBuggy)
 
 
+    @deprecatedDeferredGenerator
     def _genNothing(self):
         if 0: yield 1
-    _genNothing = deferredGenerator(_genNothing)
 
+
+    @deprecatedDeferredGenerator
     def _genHandledTerminalFailure(self):
         x = waitForDeferred(defer.fail(TerminalException("Handled Terminal Failure")))
         yield x
@@ -139,9 +155,9 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
             x.getResult()
         except TerminalException:
             pass
-    _genHandledTerminalFailure = deferredGenerator(_genHandledTerminalFailure)
 
 
+    @deprecatedDeferredGenerator
     def _genHandledTerminalAsyncFailure(self, d):
         x = waitForDeferred(d)
         yield x
@@ -149,7 +165,6 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
             x.getResult()
         except TerminalException:
             pass
-    _genHandledTerminalAsyncFailure = deferredGenerator(_genHandledTerminalAsyncFailure)
 
 
     def _genStackUsage(self):
@@ -159,14 +174,14 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
             yield x
             x = x.getResult()
         yield 0
-    _genStackUsage = deferredGenerator(_genStackUsage)
+    _genStackUsage = deprecatedDeferredGenerator(_genStackUsage)
 
     def _genStackUsage2(self):
         for x in range(5000):
             # Test with yielding a random value
             yield 1
         yield 0
-    _genStackUsage2 = deferredGenerator(_genStackUsage2)
+    _genStackUsage2 = deprecatedDeferredGenerator(_genStackUsage2)
 
     # Tests unique to deferredGenerator
 
@@ -178,11 +193,14 @@ class DeferredGeneratorTests(BaseDefgenTests, unittest.TestCase):
         # See the comment _deferGenerator about d.callback(Deferred).
         def _genDeferred():
             yield getThing()
-        _genDeferred = deferredGenerator(_genDeferred)
+        _genDeferred = deprecatedDeferredGenerator(_genDeferred)
 
         return self.assertFailure(_genDeferred(), TypeError)
 
-
+    suppress = [
+            SUPPRESS(message='twisted.internet.defer.waitForDeferred was '
+                             'deprecated')
+            ]
 
 class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
     # First provide all the generator impls necessary for BaseDefgenTests
@@ -299,3 +317,44 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
         self.assertIn("inlineCallbacks",
             str(self.assertRaises(TypeError, _noYield)))
+
+
+
+class DeprecateDeferredGenerator(unittest.SynchronousTestCase):
+    """
+    Tests that L{DeferredGeneratorTests} and L{waitForDeferred} are
+    deprecated.
+    """
+
+    def test_deferredGeneratorDeprecated(self):
+        """
+        L{deferredGenerator} is deprecated.
+        """
+        @deferredGenerator
+        def decoratedFunction():
+            yield None
+
+        warnings = self.flushWarnings([self.test_deferredGeneratorDeprecated])
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            "twisted.internet.defer.deferredGenerator was deprecated in "
+            "Twisted 14.1.0; please use "
+            "twisted.internet.defer.inlineCallbacks instead")
+
+    def test_waitForDeferredDeprecated(self):
+        """
+        L{waitForDeferred} is deprecated.
+        """
+        d = Deferred()
+        waitForDeferred(d)
+
+        warnings = self.flushWarnings([self.test_waitForDeferredDeprecated])
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]['message'],
+            "twisted.internet.defer.waitForDeferred was deprecated in "
+            "Twisted 14.1.0; please use "
+            "twisted.internet.defer.inlineCallbacks instead")

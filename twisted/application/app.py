@@ -2,6 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import print_function
+
 import sys, os, pdb, getpass, traceback, signal
 from operator import attrgetter
 
@@ -64,7 +66,7 @@ class ProfileRunner(_BasicProfiler):
         """
         try:
             import profile
-        except ImportError, e:
+        except ImportError as e:
             self._reportImportError("profile", e)
 
         p = profile.Profile()
@@ -92,7 +94,7 @@ class HotshotRunner(_BasicProfiler):
         """
         try:
             import hotshot.stats
-        except (ImportError, SystemExit), e:
+        except (ImportError, SystemExit) as e:
             # Certain versions of Debian (and Debian derivatives) raise
             # SystemExit when importing hotshot if the "non-free" profiler
             # module is not installed.  Someone eventually recognized this
@@ -133,7 +135,7 @@ class CProfileRunner(_BasicProfiler):
         """
         try:
             import cProfile, pstats
-        except ImportError, e:
+        except ImportError as e:
             self._reportImportError("cProfile", e)
 
         p = cProfile.Profile()
@@ -263,7 +265,8 @@ def fixPdb():
 
 
     def help_stop(self):
-        print """stop - Continue execution, then cleanly shutdown the twisted reactor."""
+        print("stop - Continue execution, then cleanly shutdown the twisted "
+              "reactor.")
 
 
     def set_quit(self):
@@ -451,7 +454,7 @@ def getApplication(config, passphrase):
         log.msg("Loading %s..." % filename)
         application = service.loadApplication(filename, style, passphrase)
         log.msg("Loaded.")
-    except Exception, e:
+    except Exception as e:
         s = "Failed to load application: %s" % e
         if isinstance(e, KeyError) and e.args[0] == "application":
             s += """
@@ -515,7 +518,7 @@ class ReactorSelectionMixin:
                    "See the list of available reactors with "
                    "--help-reactors" % (shortName,))
             raise usage.UsageError(msg)
-        except Exception, e:
+        except Exception as e:
             msg = ("The specified reactor cannot be used, failed with error: "
                    "%s.\nSee the list of available reactors with "
                    "--help-reactors" % (e,))
@@ -610,7 +613,7 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
         if self['logger'] is not None:
             try:
                 self['logger'] = namedAny(self['logger'])
-            except Exception, e:
+            except Exception as e:
                 raise usage.UsageError("Logger '%s' could not be imported: %s" 
                                        % (self['logger'], e))
 
@@ -635,9 +638,9 @@ def run(runApp, ServerOptions):
     config = ServerOptions()
     try:
         config.parseOptions()
-    except usage.error, ue:
-        print config
-        print "%s: %s" % (sys.argv[0], ue)
+    except usage.error as ue:
+        print(config)
+        print("%s: %s" % (sys.argv[0], ue))
     else:
         runApp(config)
 

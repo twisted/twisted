@@ -11,18 +11,17 @@ test is over.
 @since: 12.3
 """
 
-from zope.interface import implements
+from zope.interface import implementer
 from twisted.trial.itrial import IReporter
 from twisted.python.components import proxyForInterface
 
 
 
+@implementer(IReporter)
 class DistReporter(proxyForInterface(IReporter)):
     """
     See module docstring.
     """
-
-    implements(IReporter)
 
     def __init__(self, original):
         super(DistReporter, self).__init__(original)
