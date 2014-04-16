@@ -3159,6 +3159,58 @@ class IFTPShellTestsMixin:
         return d
 
 
+    def test_statHardlinksNotImplemented(self):
+        """
+        If L{twisted.python.filepath.FilePath.getNumberOfHardLinks} is not
+        implemented, the number returned is 1
+        """
+        pathFunc = self.shell._path
+
+        def raiseNotImplemented():
+            raise NotImplementedError
+
+        def notImplementedFilePath(path):
+            f = pathFunc(path)
+            f.getNumberOfHardLinks = raiseNotImplemented
+            return f
+
+        self.shell._path = notImplementedFilePath
+
+        self.createDirectory('ned')
+        d = self.shell.stat(('ned',), ('hardlinks',))
+        def cb(res):
+            self.assertEqual(res, [1])
+        d.addCallback(cb)
+        return d
+
+
+    def test_statOwnerGroupNotImplemented(self):
+        """
+        If L{twisted.python.filepath.FilePath.getUserID} or
+        L{twisted.python.filepath.FilePath.getGroupID} are not implemented,
+        the owner returned is "USER" and the group is returned as "GROUP"
+        """
+        pathFunc = self.shell._path
+
+        def raiseNotImplemented():
+            raise NotImplementedError
+
+        def notImplementedFilePath(path):
+            f = pathFunc(path)
+            f.getUserID = raiseNotImplemented
+            f.getGroupID = raiseNotImplemented
+            return f
+
+        self.shell._path = notImplementedFilePath
+
+        self.createDirectory('ned')
+        d = self.shell.stat(('ned',), ('owner', 'group'))
+        def cb(res):
+            self.assertEqual(res, ["USER", 'GROUP'])
+        d.addCallback(cb)
+        return d
+
+
     def test_statNotExisting(self):
         """
         stat should fail with L{ftp.FileNotFoundError} on a file that doesn't

@@ -1967,12 +1967,16 @@ class FTPAnonymousShell(object):
 
     def _stat_hardlinks(self, fp):
         """
-        Get the number of hardlinks for the filepath
+        Get the number of hardlinks for the filepath - if the number of
+        hardlinks is not yet implemented (say in Windows), just return 1
 
         @param fp: L{twisted.python.filepath.FilePath}
         @return: C{int} representing the number of hardlinks
         """
-        return fp.getNumberOfHardLinks()
+        try:
+            return fp.getNumberOfHardLinks()
+        except NotImplementedError:
+            return 1
 
 
     def _stat_modified(self, fp):
@@ -1987,32 +1991,44 @@ class FTPAnonymousShell(object):
 
     def _stat_owner(self, fp):
         """
-        Get the filepath's owner's username
+        Get the filepath's owner's username.  If this is not implemented
+        (say in Windows) return the string "USER"
 
         @param fp: L{twisted.python.filepath.FilePath}
         @return: C{str} representing the owner's username
         """
-        if pwd is not None:
-            try:
-                return pwd.getpwuid(fp.getUserID())[0]
-            except KeyError:
-                pass
-        return str(fp.getUserID())
+        try:
+            userID = fp.getUserID()
+        except NotImplementedError:
+            return "USER"
+        else:
+            if pwd is not None:
+                try:
+                    return pwd.getpwuid(userID)[0]
+                except KeyError:
+                    pass
+            return str(userID)
 
 
     def _stat_group(self, fp):
         """
-        Get the filepath's owner's group
+        Get the filepath's owner's group.  If this is not implemented
+        (say in Windows) return the string "GROUP"
 
         @param fp: L{twisted.python.filepath.FilePath}
         @return: C{str} representing the owner's group
         """
-        if grp is not None:
-            try:
-                return grp.getgrgid(fp.getGroupID())[0]
-            except KeyError:
-                pass
-        return str(fp.getGroupID())
+        try:
+            groupID = fp.getGroupID()
+        except NotImplementedError:
+            return "GROUP"
+        else:
+            if grp is not None:
+                try:
+                    return grp.getgrgid(groupID)[0]
+                except KeyError:
+                    pass
+            return str(groupID)
 
 
     def _stat_directory(self, fp):
