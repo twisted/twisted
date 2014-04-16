@@ -905,7 +905,7 @@ def platformTrust():
 
 
 @implementer(IOpenSSLClientConnectionCreator)
-class _ClientTLS(object):
+class _ClientTLSSettings(object):
     """
     Client creator for TLS.
 
@@ -918,22 +918,6 @@ class _ClientTLS(object):
         self._hostnameBytes = _idnaBytes(hostname)
         self._hostnameASCII = self._hostnameBytes.decode("utf-8")
         ctx.set_info_callback(self._identityVerifyingInfoCallback)
-
-
-    def _commonConnectionForTLS(self, protocol):
-        """
-        Common client/server implementation of producing an L{SSL.Connection}.
-
-        @param protocol: the TLS protocol initiating the connection.
-        @type protocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
-
-        @return: the configured client connection.
-        @rtype: L{OpenSSL.SSL.Connection}
-        """
-        context = self._ctx
-        connection = SSL.Connection(context, None)
-        connection.set_app_data(protocol)
-        return connection
 
 
     def clientConnectionForTLS(self, protocol):
@@ -952,7 +936,10 @@ class _ClientTLS(object):
         @return: the configured client connection.
         @rtype: L{OpenSSL.SSL.Connection}
         """
-        return self._commonConnectionForTLS(protocol)
+        context = self._ctx
+        connection = SSL.Connection(context, None)
+        connection.set_app_data(protocol)
+        return connection
 
 
     def _identityVerifyingInfoCallback(self, connection, where, ret):
@@ -986,8 +973,7 @@ class _ClientTLS(object):
 
 
 
-def clientTLS(hostname, trustRoot=platformTrust(),
-              **kw):
+def settingsForClientTLS(hostname, trustRoot=platformTrust(), **kw):
     """
     Create a L{client connection creator <IOpenSSLClientConnectionCreator>} for
     use with APIs such as L{SSL4ClientEndpoint
@@ -1030,7 +1016,7 @@ def clientTLS(hostname, trustRoot=platformTrust(),
     certificateOptions = OpenSSLCertificateOptions(
         **extraCertificateOptions
     )
-    return _ClientTLS(hostname, certificateOptions.getContext())
+    return _ClientTLSSettings(hostname, certificateOptions.getContext())
 
 
 

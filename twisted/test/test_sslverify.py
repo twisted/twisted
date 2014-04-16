@@ -486,7 +486,8 @@ class OpenSSLOptions(unittest.TestCase):
         """
         error = self.assertRaises(
             TypeError,
-            sslverify.clientTLS, hostname=u'alpha', someRandomThing=u'beta',
+            sslverify.settingsForClientTLS,
+            hostname=u'alpha', someRandomThing=u'beta',
         )
         self.assertEqual(
             str(error),
@@ -1243,7 +1244,7 @@ class ServiceIdentityTests(unittest.TestCase):
             certificate=serverCert.original,
         )
         serverContextSetup(serverOpts.getContext())
-        clientOpts = sslverify.clientTLS(clientHostname, caCert)
+        clientOpts = sslverify.settingsForClientTLS(clientHostname, caCert)
 
         class GreetingServer(protocol.Protocol):
             greeting = b"greetings!"
