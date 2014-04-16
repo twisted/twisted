@@ -1,9 +1,0 @@
-*.egg-info/
-*.o
-*.py[co]
-*.so
-_trial_temp*/
-build/
-dropin.cache
-doc/
-docs/_build/

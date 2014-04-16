@@ -1,1 +1,0 @@
-unsignedID and setIDFunction, previously part of twisted.python.util and deprecated since 13.0, have now been removed.

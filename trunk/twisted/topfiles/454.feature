@@ -1,1 +1,0 @@
-Twisted's UDP implementation now supports broadcasting.
