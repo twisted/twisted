@@ -15,6 +15,7 @@ from zope.interface import implementer
 from twisted.python.log import msg
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
+from twisted.python.reflect import requireModule
 from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.defer import CancelledError, Deferred, succeed, fail
@@ -30,15 +31,7 @@ from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 from twisted.conch.interfaces import IConchUser
 from twisted.conch.error import ConchError, UserRejectedKey, HostKeyChanged
 
-try:
-    from Crypto.Cipher import AES
-    from pyasn1 import type
-except ImportError as e:
-    skip = "can't run w/o PyCrypto and pyasn1 (%s)" % (e,)
-    SSHFactory = SSHUserAuthServer = SSHConnection = Key = SSHChannel = \
-        SSHAgentServer = KnownHostsFile = SSHPublicKeyDatabase = ConchUser = \
-        object
-else:
+if requireModule('Crypto.Cipher.AES') and requireModule('pyasn1.type'):
     from twisted.conch.ssh.factory import SSHFactory
     from twisted.conch.ssh.userauth import SSHUserAuthServer
     from twisted.conch.ssh.connection import SSHConnection
@@ -58,6 +51,11 @@ else:
         _ExistingConnectionHelper)
 
     from twisted.conch.ssh.transport import SSHClientTransport
+else:
+    skip = "can't run w/o PyCrypto and pyasn1"
+    SSHFactory = SSHUserAuthServer = SSHConnection = Key = SSHChannel = \
+        SSHAgentServer = KnownHostsFile = SSHPublicKeyDatabase = ConchUser = \
+        object
 
 from twisted.python.fakepwd import UserDatabase
 from twisted.test.proto_helpers import StringTransport

@@ -16,6 +16,7 @@ import os, base64
 
 from twisted.python import util
 from twisted.python.failure import Failure
+from twisted.python.reflect import requireModule
 from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
@@ -25,17 +26,14 @@ from twisted.cred.error import UnhandledCredentials, UnauthorizedLogin
 from twisted.python.fakepwd import UserDatabase, ShadowDatabase
 from twisted.test.test_process import MockOS
 
-try:
-    import Crypto.Cipher.DES3
-    import pyasn1
-except ImportError:
-    dependencySkip = "can't run without Crypto and PyASN1"
-else:
+if requireModule('Crypto.Cipher.DES3') and requireModule('pyasn1'):
     dependencySkip = None
     from twisted.conch.ssh import keys
     from twisted.conch import checkers
     from twisted.conch.error import NotEnoughAuthentication, ValidPublicKey
     from twisted.conch.test import keydata
+else:
+    dependencySkip = "can't run without Crypto and PyASN1"
 
 if getattr(os, 'geteuid', None) is None:
     euidSkip = "Cannot run without effective UIDs (questionable)"

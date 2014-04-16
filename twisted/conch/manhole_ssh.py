@@ -12,7 +12,6 @@ from zope.interface import implements
 
 from twisted.conch import avatar, interfaces as iconch, error as econch
 from twisted.conch.ssh import factory, keys, session
-from twisted.cred import credentials, checkers, portal
 from twisted.python import components
 
 from twisted.conch.insults import insults
@@ -35,11 +34,11 @@ class TerminalSessionTransport:
         self.avatar = avatar
         self.chainedProtocol = chainedProtocol
 
-        session = self.proto.session
+        protoSession = self.proto.session
 
         self.proto.makeConnection(
             _Glue(write=self.chainedProtocol.dataReceived,
-                  loseConnection=lambda: avatar.conn.sendClose(session),
+                  loseConnection=lambda: avatar.conn.sendClose(protoSession),
                   name="SSH Proto Transport"))
 
         def loseConnection():

@@ -51,11 +51,10 @@ class FileTransferBase(protocol.Protocol):
                 continue
             try:
                 f(data)
-            except:
+            except Exception:
                 log.err()
                 continue
-                reqId ,= struct.unpack('!L', data[:4])
-                self._ebStatus(failure.Failure(e), reqId)
+
 
     def _parseAttributes(self, data):
         flags ,= struct.unpack('!L', data[:4])

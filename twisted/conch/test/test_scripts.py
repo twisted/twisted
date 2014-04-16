@@ -4,27 +4,22 @@
 """
 Tests for the command-line interfaces to conch.
 """
+from twisted.python.reflect import requireModule
 
-try:
-    import pyasn1
-except ImportError:
-    pyasn1Skip =  "Cannot run without PyASN1"
-else:
+if requireModule('pyasn1'):
     pyasn1Skip = None
-
-try:
-    import Crypto
-except ImportError:
-    cryptoSkip = "can't run w/o PyCrypto"
 else:
+    pyasn1Skip =  "Cannot run without PyASN1"
+
+if requireModule('Crypto'):
     cryptoSkip = None
-
-try:
-    import tty
-except ImportError:
-    ttySkip = "can't run w/o tty"
 else:
+    cryptoSkip = "can't run w/o PyCrypto"
+
+if requireModule('tty'):
     ttySkip = None
+else:
+    ttySkip = "can't run w/o tty"
 
 try:
     import Tkinter
