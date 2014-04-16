@@ -1,1 +1,1 @@
-Added a dependency on the six module, and simplified setup.py to always require setuptools.
+Twisted now depends on six, and it's installation requires setuptools.
