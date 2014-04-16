@@ -220,10 +220,9 @@ class Connector(tcp.Connector):
 
 
 
-from twisted.internet._sslverify import DistinguishedName, DN, Certificate
-from twisted.internet._sslverify import CertificateRequest, PrivateCertificate
-from twisted.internet._sslverify import KeyPair
 from twisted.internet._sslverify import (
+    KeyPair, DistinguishedName, DN, Certificate,
+    CertificateRequest, PrivateCertificate,
     OpenSSLAcceptableCiphers as AcceptableCiphers,
     OpenSSLCertificateOptions as CertificateOptions,
     OpenSSLDiffieHellmanParameters as DiffieHellmanParameters,

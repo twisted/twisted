@@ -17,21 +17,6 @@ except ImportError:
     SSL_CB_HANDSHAKE_START = 0x10
     SSL_CB_HANDSHAKE_DONE = 0x20
 
-from zope.interface import Interface, implementer, directlyProvides
-from twisted.internet.defer import Deferred
-from twisted.internet.error import VerifyError, CertificateError
-
-from twisted.internet.interfaces import (
-    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator
-)
-
-from twisted.python import reflect, util
-from twisted.python.deprecate import _mutuallyExclusiveArguments
-from twisted.python.compat import nativeString, networkString, unicode
-from twisted.python.failure import Failure
-from twisted.python.util import FancyEqMixin
-
-
 
 class SimpleVerificationError(Exception):
     """
@@ -132,6 +117,22 @@ def _selectVerifyImplementation():
 
 
 verifyHostname, VerificationError = _selectVerifyImplementation()
+
+
+
+from zope.interface import Interface, implementer
+
+from twisted.internet.defer import Deferred
+from twisted.internet.error import VerifyError, CertificateError
+from twisted.internet.interfaces import (
+    IAcceptableCiphers, ICipher, IOpenSSLClientConnectionCreator
+)
+
+from twisted.python import reflect, util
+from twisted.python.deprecate import _mutuallyExclusiveArguments
+from twisted.python.compat import nativeString, networkString, unicode
+from twisted.python.failure import Failure
+from twisted.python.util import FancyEqMixin
 
 
 
