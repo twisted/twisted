@@ -3162,7 +3162,7 @@ class IFTPShellTestsMixin:
     def test_statHardlinksNotImplemented(self):
         """
         If L{twisted.python.filepath.FilePath.getNumberOfHardLinks} is not
-        implemented, the number returned is 1
+        implemented, the number returned is 0
         """
         pathFunc = self.shell._path
 
@@ -3178,14 +3178,14 @@ class IFTPShellTestsMixin:
 
         self.createDirectory('ned')
         d = self.shell.stat(('ned',), ('hardlinks',))
-        self.assertEqual(self.successResultOf(d), [1])
+        self.assertEqual(self.successResultOf(d), [0])
 
 
     def test_statOwnerGroupNotImplemented(self):
         """
         If L{twisted.python.filepath.FilePath.getUserID} or
         L{twisted.python.filepath.FilePath.getGroupID} are not implemented,
-        the owner returned is "USER" and the group is returned as "GROUP"
+        the owner returned is "0" and the group is returned as "0"
         """
         pathFunc = self.shell._path
 
@@ -3202,7 +3202,7 @@ class IFTPShellTestsMixin:
 
         self.createDirectory('ned')
         d = self.shell.stat(('ned',), ('owner', 'group'))
-        self.assertEqual(self.successResultOf(d), ["USER", 'GROUP'])
+        self.assertEqual(self.successResultOf(d), ["0", '0'])
 
 
     def test_statNotExisting(self):

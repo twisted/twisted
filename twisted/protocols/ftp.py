@@ -1968,7 +1968,11 @@ class FTPAnonymousShell(object):
     def _stat_hardlinks(self, fp):
         """
         Get the number of hardlinks for the filepath - if the number of
-        hardlinks is not yet implemented (say in Windows), just return 1
+        hardlinks is not yet implemented (say in Windows), just return 0 since
+        stat-ing a file in Windows seems to return C{st_nlink=0}.
+
+        (Reference:
+        U{http://stackoverflow.com/questions/5275731/os-stat-on-windows})
 
         @param fp: L{twisted.python.filepath.FilePath}
         @return: C{int} representing the number of hardlinks
@@ -1976,7 +1980,7 @@ class FTPAnonymousShell(object):
         try:
             return fp.getNumberOfHardLinks()
         except NotImplementedError:
-            return 1
+            return 0
 
 
     def _stat_modified(self, fp):
@@ -1992,7 +1996,11 @@ class FTPAnonymousShell(object):
     def _stat_owner(self, fp):
         """
         Get the filepath's owner's username.  If this is not implemented
-        (say in Windows) return the string "USER"
+        (say in Windows) return the string "0" since stat-ing a file in
+        Windows seems to return C{st_uid=0}.
+
+        (Reference:
+        U{http://stackoverflow.com/questions/5275731/os-stat-on-windows})
 
         @param fp: L{twisted.python.filepath.FilePath}
         @return: C{str} representing the owner's username
@@ -2000,7 +2008,7 @@ class FTPAnonymousShell(object):
         try:
             userID = fp.getUserID()
         except NotImplementedError:
-            return "USER"
+            return "0"
         else:
             if pwd is not None:
                 try:
@@ -2013,7 +2021,11 @@ class FTPAnonymousShell(object):
     def _stat_group(self, fp):
         """
         Get the filepath's owner's group.  If this is not implemented
-        (say in Windows) return the string "GROUP"
+        (say in Windows) return the string "0" since stat-ing a file in
+        Windows seems to return C{st_gid=0}.
+
+        (Reference:
+        U{http://stackoverflow.com/questions/5275731/os-stat-on-windows})
 
         @param fp: L{twisted.python.filepath.FilePath}
         @return: C{str} representing the owner's group
@@ -2021,7 +2033,7 @@ class FTPAnonymousShell(object):
         try:
             groupID = fp.getGroupID()
         except NotImplementedError:
-            return "GROUP"
+            return "0"
         else:
             if grp is not None:
                 try:
