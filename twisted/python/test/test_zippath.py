@@ -50,7 +50,7 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         """
         child = self.path.child("foo")
         pathRepr = "ZipPath(%r)" % (
-            os.path.abspath(self.cmn + ".zip" + os.sep + 'foo'),)
+            os.path.abspath(self.cmn + b".zip" + os.sep.encode() + b'foo'),)
 
         # Check for an absolute path
         self.assertEqual(repr(child), pathRepr)
@@ -72,7 +72,8 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         """
         child = self.path.child("foo").child("..").child("bar")
         pathRepr = "ZipPath(%r)" % (
-            self.cmn + ".zip" + os.sep.join(["", "foo", "..", "bar"]))
+            self.cmn +
+            (".zip" + os.sep.join(["", "foo", "..", "bar"])).encode("utf-8"))
         self.assertEqual(repr(child), pathRepr)
 
 
@@ -82,8 +83,8 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         string literals are escaped in the ZipPath repr.
         """
         child = self.path.child("'")
-        path = self.cmn + ".zip" + os.sep.join(["", "'"])
-        pathRepr = "ZipPath('%s')" % (path.encode('string-escape'),)
+        path = self.cmn + (".zip" + os.sep.join(["", "'"])).encode("utf-8")
+        pathRepr = "ZipPath('%s')" % (path,)
         self.assertEqual(repr(child), pathRepr)
 
 
@@ -92,7 +93,7 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         Make sure that invoking ZipArchive's repr prints the correct class
         name and an absolute path to the zip file.
         """
-        pathRepr = 'ZipArchive(%r)' % (os.path.abspath(self.cmn + '.zip'),)
+        pathRepr = 'ZipArchive(%r)' % (os.path.abspath(self.cmn + b'.zip'),)
 
         # Check for an absolute path
         self.assertEqual(repr(self.path), pathRepr)
