@@ -247,7 +247,7 @@ class TestUnixChecker(unittest.TestCase):
 
     if None in (pwd, spwd, crypt):
         availability = []
-        for module, name in ((pwd, "pwd"), (spwd, "swpd"), (crypt, "crypt")):
+        for module, name in ((pwd, "pwd"), (spwd, "spwd"), (crypt, "crypt")):
             if module is None:
                 availability += [name]
         for method in (test_unixCheckerSucceeds,
@@ -343,7 +343,7 @@ class TestSSHChecker(unittest.TestCase):
     """
     Tests for the --auth=sshkey:... checker.  The majority of the tests for the
     ssh public key database checker are in
-    L{twisted.conch.test.test_checkers.SSHPublicKeyDatabaseTestCase}.
+    L{twisted.conch.test.test_checkers.SSHPublicKeyCheckerTestCase}.
     """
 
     try:

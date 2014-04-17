@@ -13,6 +13,10 @@ else:
     cryptSkip = None
 
 import os, base64
+from collections import namedtuple
+from cStringIO import StringIO
+
+from zope.interface.verify import verifyObject
 
 from twisted.python import util
 from twisted.python.failure import Failure
@@ -193,6 +197,23 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
             'user', 'password', 1, 2, 'first last',
             self.mockos.path.path, '/bin/shell')
         self.checker._userdb = userdb
+
+
+    def test_deprecated(self):
+        """
+        L{SSHPublicKeyDatabase} is deprecated as of version 14.0
+        """
+        warningsShown = self.flushWarnings(
+            offendingFunctions=[self.setUp])
+        self.assertEqual(warningsShown[0]['category'], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]['message'],
+            "twisted.conch.checkers.SSHPublicKeyDatabase "
+            "was deprecated in Twisted 14.0.0: Please use "
+            "twisted.conch.checkers.SSHPublicKeyChecker, "
+            "initialized with an instance of "
+            "twisted.conch.checkers.UNIXAuthorizedKeysFiles instead.")
+        self.assertEqual(len(warningsShown), 1)
 
 
     def _testCheckKey(self, filename):
@@ -599,3 +620,359 @@ class UNIXPasswordDatabaseTests(TestCase):
 
         cred = UsernamePassword('carol', '*')
         self.assertUnauthorizedLogin(checker.requestAvatarId(cred))
+
+
+
+class AuthorizedKeyFileReaderTestCase(TestCase):
+    """
+    Tests for L{checkers.readAuthorizedKeyFile}
+    """
+    skip = dependencySkip
+
+
+    def test_ignoresComments(self):
+        """
+        L{checkers.readAuthorizedKeyFile} does not attempt to turn comments
+        into keys
+        """
+        fileobj = StringIO('# this comment is ignored\n'
+                           'this is not\n'
+                           '# this is again\n'
+                           'and this is not')
+        result = checkers.readAuthorizedKeyFile(fileobj, lambda x: x)
+        self.assertEqual(['this is not', 'and this is not'], list(result))
+
+
+    def test_ignoresLeadingWhitespaceAndEmptyLines(self):
+        """
+        L{checkers.readAuthorizedKeyFile} ignores leading whitespace in
+        lines, as well as empty lines
+        """
+        fileobj = StringIO("""
+                           # ignore
+                           not ignored
+                           """)
+        result = checkers.readAuthorizedKeyFile(fileobj, parsekey=lambda x: x)
+        self.assertEqual(['not ignored'], list(result))
+
+
+    def test_ignoresUnparsableKeys(self):
+        """
+        L{checkers.readAuthorizedKeyFile} does not raise an exception
+        when a key fails to parse, but rather just keeps going
+        """
+        def failOnSome(line):
+            if line.startswith('f'):
+                raise Exception('failed to parse')
+            return line
+
+        fileobj = StringIO('failed key\ngood key')
+        result = checkers.readAuthorizedKeyFile(fileobj,
+                                                parsekey=failOnSome)
+        self.assertEqual(['good key'], list(result))
+
+
+
+class InMemoryKeyMappingTestCase(TestCase):
+    """
+    Tests for L{checkers.InMemoryKeyMapping}
+    """
+    skip = dependencySkip
+
+
+    def test_implementsInterface(self):
+        """
+        L{checkers.InMemoryKeyMapping} implements
+        L{checkers.IAuthorizedKeysDB}
+        """
+        keydb = checkers.InMemoryKeyMapping({'alice': ['key']})
+        verifyObject(checkers.IAuthorizedKeysDB, keydb)
+
+
+    def test_noKeysForUnauthorizedUser(self):
+        """
+        If the user is not in the mapping provided to
+        L{checkers.InMemoryKeyMapping}, an empty iterator is returned
+        by L{checkers.InMemoryKeyMapping.getAuthorizedKeys}
+        """
+        keydb = checkers.InMemoryKeyMapping({'alice': ['keys']})
+        self.assertEqual([], list(keydb.getAuthorizedKeys('bob')))
+
+
+    def test_allKeysForAuthorizedUser(self):
+        """
+        If the user is in the mapping provided to
+        L{checkers.InMemoryKeyMapping}, an iterator with all the keys
+        is returned by
+        L{checkers.AuthorizedKeysFilesMapping.getAuthorizedKeys}
+        """
+        keydb = checkers.InMemoryKeyMapping({'alice': ['a', 'b']})
+        self.assertEqual(['a', 'b'], list(keydb.getAuthorizedKeys('alice')))
+
+
+
+class AuthorizedKeysFilesMappingTestCase(TestCase):
+    """
+    Tests for L{checkers.AuthorizedKeysFilesMapping}
+    """
+    skip = dependencySkip
+
+
+    def setUp(self):
+        self.root = FilePath(self.mktemp())
+        self.root.makedirs()
+
+        authorizedKeys = [self.root.child('key{0}'.format(i))
+                           for i in range(2)]
+        for i, fp in enumerate(authorizedKeys):
+            fp.setContent('file {0} key 1\nfile {0} key 2'.format(i))
+
+        self.authorizedPaths = [fp.path for fp in authorizedKeys]
+
+
+    def test_implementsInterface(self):
+        """
+        L{checkers.AuthorizedKeysFilesMapping} implements
+        L{checkers.IAuthorizedKeysDB}
+        """
+        keydb = checkers.AuthorizedKeysFilesMapping(
+            {'alice': self.authorizedPaths})
+        verifyObject(checkers.IAuthorizedKeysDB, keydb)
+
+
+    def test_noKeysForUnauthorizedUser(self):
+        """
+        If the user is not in the mapping provided to
+        L{checkers.AuthorizedKeysFilesMapping}, an empty iterator is returned
+        by L{checkers.AuthorizedKeysFilesMapping.getAuthorizedKeys}
+        """
+        keydb = checkers.AuthorizedKeysFilesMapping(
+            {'alice': self.authorizedPaths}, lambda x: x)
+        self.assertEqual([], list(keydb.getAuthorizedKeys('bob')))
+
+
+    def test_allKeysInAllAuthorizedFilesForAuthorizedUser(self):
+        """
+        If the user is in the mapping provided to
+        L{checkers.AuthorizedKeysFilesMapping}, an iterator with all the keys
+        in all the authorized files is returned by
+        L{checkers.AuthorizedKeysFilesMapping.getAuthorizedKeys}
+        """
+        keydb = checkers.AuthorizedKeysFilesMapping(
+            {'alice': self.authorizedPaths}, lambda x: x)
+        keys = ['file 0 key 1', 'file 0 key 2',
+                'file 1 key 1', 'file 1 key 2']
+        self.assertEqual(keys, list(keydb.getAuthorizedKeys('alice')))
+
+
+    def test_ignoresNonexistantOrUnreadableFile(self):
+        """
+        L{checkers.AuthorizedKeysFilesMapping.getAuthorizedKeys} returns only
+        the keys in the authorized files named that exist and are readable
+        """
+        directory = self.root.child('key2')
+        directory.makedirs()
+
+        keydb = checkers.AuthorizedKeysFilesMapping(
+            {'alice': [directory.path,
+                       self.root.child('key3').path,
+                       self.authorizedPaths[0]]},
+            lambda x: x)
+        self.assertEqual(['file 0 key 1', 'file 0 key 2'],
+                         list(keydb.getAuthorizedKeys('alice')))
+
+
+
+class UNIXAuthorizedKeysFilesTestCase(TestCase):
+    """
+    Tests for L{checkers.UNIXAuthorizedKeysFiles}
+    """
+    skip = dependencySkip
+
+
+    def setUp(self):
+        mockos = MockOS()
+        mockos.path = FilePath(self.mktemp())
+        mockos.path.makedirs()
+
+        self.userdb = UserDatabase()
+        self.userdb.addUser('alice', 'password', 1, 2, 'alice lastname',
+                            mockos.path.path, '/bin/shell')
+
+        self.sshDir = mockos.path.child('.ssh')
+        self.sshDir.makedirs()
+        authorizedKeys = self.sshDir.child('authorized_keys')
+        authorizedKeys.setContent('key 1\nkey 2')
+
+
+    def test_implementsInterface(self):
+        """
+        L{checkers.UNIXAuthorizedKeysFiles} implements
+        L{checkers.IAuthorizedKeysDB}
+        """
+        keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb)
+        verifyObject(checkers.IAuthorizedKeysDB, keydb)
+
+
+    def test_noKeysForUnauthorizedUser(self):
+        """
+        If the user is not in the user database provided to
+        L{checkers.UNIXAuthorizedKeysFiles}, an empty iterator is returned
+        by L{checkers.UNIXAuthorizedKeysFiles.getAuthorizedKeys}
+        """
+        keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb,
+                                                 parsekey=lambda x: x)
+        self.assertEqual([], list(keydb.getAuthorizedKeys('bob')))
+
+
+    def test_allKeysInAllAuthorizedFilesForAuthorizedUser(self):
+        """
+        If the user is in the user database provided to
+        L{checkers.UNIXAuthorizedKeysFiles}, an iterator with all the keys in
+        C{~/.ssh/authorized_keys} and C{~/.ssh/authorized_keys2} is returned
+        by L{checkers.UNIXAuthorizedKeysFiles.getAuthorizedKeys}
+        """
+        self.sshDir.child('authorized_keys2').setContent('key 3')
+        keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb,
+                                                 parsekey=lambda x: x)
+        self.assertEqual(['key 1', 'key 2', 'key 3'],
+                         list(keydb.getAuthorizedKeys('alice')))
+
+
+    def test_ignoresNonexistantFile(self):
+        """
+        L{checkers.AuthorizedKeysFilesMapping.getAuthorizedKeys} returns only
+        the keys in C{~/.ssh/authorized_keys} and C{~/.ssh/authorized_keys2}
+        if they exist
+        """
+        keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb,
+                                                 parsekey=lambda x: x)
+        self.assertEqual(['key 1', 'key 2'],
+                         list(keydb.getAuthorizedKeys('alice')))
+
+
+    def test_ignoresUnreadableFile(self):
+        """
+        L{checkers.AuthorizedKeysFilesMapping.getAuthorizedKeys} returns only
+        the keys in C{~/.ssh/authorized_keys} and C{~/.ssh/authorized_keys2}
+        if they are readable
+        """
+        self.sshDir.child('authorized_keys2').makedirs()
+        keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb,
+                                                 parsekey=lambda x: x)
+        self.assertEqual(['key 1', 'key 2'],
+                         list(keydb.getAuthorizedKeys('alice')))
+
+
+
+_KeyDB = namedtuple('KeyDB', ['getAuthorizedKeys'])
+
+
+
+class _DummyException(Exception):
+    """
+    Fake exception to be used for testing
+    """
+    pass
+
+
+
+class SSHPublicKeyCheckerTestCase(TestCase):
+    """
+    Tests for L{checkers.SSHPublicKeyChecker}
+    """
+    skip = dependencySkip
+
+
+    def setUp(self):
+        self.credentials = SSHPrivateKey(
+            'alice', 'ssh-rsa', keydata.publicRSA_openssh, 'foo',
+             keys.Key.fromString(keydata.privateRSA_openssh).sign('foo'))
+        self.keydb = _KeyDB(lambda _: [
+            keys.Key.fromString(keydata.publicRSA_openssh)])
+        self.checker = checkers.SSHPublicKeyChecker(self.keydb)
+
+
+    def test_credentialsWithoutSignature(self):
+        """
+        Calling L{checkers.SSHPublicKeyChecker.requestAvatarId} with
+        credentials that do not have a signature fails with L{ValidPublicKey}
+        """
+        self.credentials.signature = None
+        self.failureResultOf(self.checker.requestAvatarId(self.credentials),
+                             ValidPublicKey)
+
+
+    def test_credentialsWithBadKey(self):
+        """
+        Calling L{checkers.SSHPublicKeyChecker.requestAvatarId} with
+        credentials that have a bad key fails with L{keys.BadKeyError}
+        """
+        self.credentials.blob = ''
+        self.failureResultOf(self.checker.requestAvatarId(self.credentials),
+                             keys.BadKeyError)
+
+
+    def test_failureGettingAuthorizedKeys(self):
+        """
+        If L{checkers.IAuthorizedKeysDB.getAuthorizedKeys} raises an
+        exception, L{checkers.SSHPublicKeyChecker.requestAvatarId} fails with
+        L{UnauthorizedLogin}
+        """
+        def fail(_):
+            raise _DummyException()
+
+        self.keydb = _KeyDB(fail)
+        self.checker = checkers.SSHPublicKeyChecker(self.keydb)
+        self.failureResultOf(self.checker.requestAvatarId(self.credentials),
+                             UnauthorizedLogin)
+        self.flushLoggedErrors(_DummyException)
+
+
+    def test_credentialsNoMatchingKey(self):
+        """
+        If L{checkers.IAuthorizedKeysDB.getAuthorizedKeys} returns no keys
+        that match the credentials,
+        L{checkers.SSHPublicKeyChecker.requestAvatarId} fails with
+        L{UnauthorizedLogin}
+        """
+        self.credentials.blob = keydata.publicDSA_openssh
+        self.failureResultOf(self.checker.requestAvatarId(self.credentials),
+                             UnauthorizedLogin)
+
+
+    def test_credentialsInvalidSignature(self):
+        """
+        Calling L{checkers.SSHPublicKeyChecker.requestAvatarId} with
+        credentials that are incorrectly signed fails with
+        L{UnauthorizedLogin}
+        """
+        self.credentials.signature = (
+            keys.Key.fromString(keydata.privateDSA_openssh).sign('foo'))
+        self.failureResultOf(self.checker.requestAvatarId(self.credentials),
+                             UnauthorizedLogin)
+
+
+    def test_failureVerifyingKey(self):
+        """
+        If L{keys.Key.verify} raises an exception,
+        L{checkers.SSHPublicKeyChecker.requestAvatarId} fails with
+        L{UnauthorizedLogin}
+        """
+        def fail(*args, **kwargs):
+            raise _DummyException()
+
+        self.patch(keys.Key, 'verify', fail)
+
+        self.failureResultOf(self.checker.requestAvatarId(self.credentials),
+                             UnauthorizedLogin)
+        self.flushLoggedErrors(_DummyException)
+
+
+    def test_usernameReturnedOnSuccess(self):
+        """
+        L{checker.SSHPublicKeyChecker.requestAvatarId}, if successful,
+        callbacks with the username
+        """
+        d = self.checker.requestAvatarId(self.credentials)
+        self.assertEqual('alice', self.successResultOf(d))
