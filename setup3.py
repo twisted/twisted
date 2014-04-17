@@ -26,10 +26,7 @@ class DisabledSdist(sdist):
 
 
 def main():
-    try:
-        from setuptools import setup
-    except ImportError:
-        from distutils.core import setup
+    from setuptools import setup
 
     # Make sure the to-be-installed version of Twisted is used, if available,
     # since we're importing from it:
