@@ -56,11 +56,17 @@ class ZipPath(AbstractFilePath):
         @param pathInArchive: a ZIP_PATH_SEP-separated string.
         """
         self.archive = archive
-        self.pathInArchive = pathInArchive
+
+        # keep pathInArchive as bytes
+        if isinstance(pathInArchive, bytes):
+            self.pathInArchive = pathInArchive
+        else:
+            self.pathInArchive = pathInArchive.encode(ENCODING)
+
         # self.path pretends to be os-specific because that's the way the
         # 'zipimport' module does it.
         self.path = os.path.join(archive.zipfile.filename.encode(),
-                                 *(self.pathInArchive.encode().split(ZIP_PATH_SEP)))
+                                 *(self.pathInArchive.split(ZIP_PATH_SEP)))
 
     def __cmp__(self, other):
         if not isinstance(other, ZipPath):
@@ -71,13 +77,13 @@ class ZipPath(AbstractFilePath):
 
     def __repr__(self):
         parts = [os.path.abspath(self.archive.path)]
-        parts.extend(self.pathInArchive.encode().split(ZIP_PATH_SEP))
+        parts.extend(self.pathInArchive.split(ZIP_PATH_SEP))
         path = os.sep.encode().join(parts)
         return "ZipPath(%r)" % (path,)
 
 
     def parent(self):
-        splitup = self.pathInArchive.encode().split(ZIP_PATH_SEP)
+        splitup = self.pathInArchive.split(ZIP_PATH_SEP)
         if len(splitup) == 1:
             return self.archive
         return ZipPath(self.archive, ZIP_PATH_SEP.join(splitup[:-1]))
@@ -95,7 +101,9 @@ class ZipPath(AbstractFilePath):
             it) as this means it may include special names with special
             meaning outside of the context of a zip archive.
         """
-        return ZipPath(self.archive, ZIP_PATH_SEP.join([self.pathInArchive, path]))
+        encodedPath = path.encode(ENCODING)
+        return ZipPath(self.archive,
+                       ZIP_PATH_SEP.join([self.pathInArchive, encodedPath]))
 
 
     def sibling(self, path):
