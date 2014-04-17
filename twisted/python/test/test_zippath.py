@@ -9,6 +9,7 @@ import os, zipfile
 
 from twisted.test.test_paths import AbstractFilePathTestCase
 from twisted.python.zippath import ZipArchive
+import twisted.python.compat as compat
 
 import sys
 
@@ -84,7 +85,10 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         """
         child = self.path.child("'")
         path = self.cmn + (".zip" + os.sep.join(["", "'"])).encode("utf-8")
-        pathRepr = "ZipPath(%s)" % (path,)
+        if compat._PY3:
+            pathRepr = "ZipPath(%s)" % (path,)
+        else:
+            pathRepr = "ZipPath(%r)" % (path,)
         self.assertEqual(repr(child), pathRepr)
 
 
