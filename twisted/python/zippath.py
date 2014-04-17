@@ -36,6 +36,8 @@ from zope.interface import implementer
 ZIP_PATH_SEP = b'/'             # In zipfiles, "/" is universally used as the
                                 # path separator, regardless of platform.
 
+ENCODING = sys.getfilesystemencoding()
+
 
 @implementer(IFilePath)
 class ZipPath(AbstractFilePath):
@@ -204,6 +206,11 @@ class ZipArchive(ZipPath):
 
         @param archivePathname: a str, naming a path in the filesystem.
         """
+
+        # convert to string because python3 ZipFile doesn't take bytes
+        if isinstance(archivePathname, bytes):
+            archivePathname = archivePathname.decode(ENCODING)
+
         if _USE_ZIPFILE:
             self.zipfile = ZipFile(archivePathname)
         else:
