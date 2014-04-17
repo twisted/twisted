@@ -33,7 +33,7 @@ from zope.interface import implementer
 # using FilePath here exclusively rather than os to make sure that we don't do
 # anything OS-path-specific here.
 
-ZIP_PATH_SEP = '/'              # In zipfiles, "/" is universally used as the
+ZIP_PATH_SEP = b'/'             # In zipfiles, "/" is universally used as the
                                 # path separator, regardless of platform.
 
 
@@ -57,7 +57,7 @@ class ZipPath(AbstractFilePath):
         self.pathInArchive = pathInArchive
         # self.path pretends to be os-specific because that's the way the
         # 'zipimport' module does it.
-        self.path = os.path.join(archive.zipfile.filename,
+        self.path = os.path.join(archive.zipfile.filename.encode(),
                                  *(self.pathInArchive.split(ZIP_PATH_SEP)))
 
     def __cmp__(self, other):
@@ -208,17 +208,21 @@ class ZipArchive(ZipPath):
             self.zipfile = ZipFile(archivePathname)
         else:
             self.zipfile = ChunkingZipFile(archivePathname)
-        self.path = archivePathname
-        self.pathInArchive = ''
+        try:
+            self.path = archivePathname.encode("utf-8")
+        except AttributeError:
+            self.path = archivePathname
+
+        self.pathInArchive = b''
         # zipfile is already wasting O(N) memory on cached ZipInfo instances,
         # so there's no sense in trying to do this lazily or intelligently
         self.childmap = {}      # map parent: list of children
 
         for name in self.zipfile.namelist():
-            name = name.split(ZIP_PATH_SEP)
+            name = name.split(ZIP_PATH_SEP.decode())
             for x in range(len(name)):
                 child = name[-x]
-                parent = ZIP_PATH_SEP.join(name[:-x])
+                parent = ZIP_PATH_SEP.decode().join(name[:-x])
                 if parent not in self.childmap:
                     self.childmap[parent] = {}
                 self.childmap[parent][child] = 1
