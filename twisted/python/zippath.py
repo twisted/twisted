@@ -58,7 +58,7 @@ class ZipPath(AbstractFilePath):
         # self.path pretends to be os-specific because that's the way the
         # 'zipimport' module does it.
         self.path = os.path.join(archive.zipfile.filename.encode(),
-                                 *(self.pathInArchive.split(ZIP_PATH_SEP)))
+                                 *(self.pathInArchive.encode().split(ZIP_PATH_SEP)))
 
     def __cmp__(self, other):
         if not isinstance(other, ZipPath):
@@ -69,13 +69,13 @@ class ZipPath(AbstractFilePath):
 
     def __repr__(self):
         parts = [os.path.abspath(self.archive.path)]
-        parts.extend(self.pathInArchive.split(ZIP_PATH_SEP))
+        parts.extend(self.pathInArchive.encode().split(ZIP_PATH_SEP))
         path = os.sep.join(parts)
         return "ZipPath('%s')" % (path,)
 
 
     def parent(self):
-        splitup = self.pathInArchive.split(ZIP_PATH_SEP)
+        splitup = self.pathInArchive.encode.split(ZIP_PATH_SEP)
         if len(splitup) == 1:
             return self.archive
         return ZipPath(self.archive, ZIP_PATH_SEP.join(splitup[:-1]))
