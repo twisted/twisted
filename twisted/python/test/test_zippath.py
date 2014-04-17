@@ -84,7 +84,7 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         """
         child = self.path.child("'")
         path = self.cmn + (".zip" + os.sep.join(["", "'"])).encode("utf-8")
-        pathRepr = "ZipPath('%s')" % (path,)
+        pathRepr = "ZipPath(%s)" % (path,)
         self.assertEqual(repr(child), pathRepr)
 
 
