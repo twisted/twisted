@@ -10,18 +10,22 @@ import os, zipfile
 from twisted.test.test_paths import AbstractFilePathTestCase
 from twisted.python.zippath import ZipArchive
 
+import sys
+
+encoding = sys.getfilesystemencoding()
+
 
 def zipit(dirname, zfname):
     """
     Create a zipfile on zfname, containing the contents of dirname'
     """
-    zf = zipfile.ZipFile(zfname, "w")
+    zf = zipfile.ZipFile(zfname.decode(encoding), "w")
     for root, ignored, files, in os.walk(dirname):
         for fname in files:
             fspath = os.path.join(root, fname)
             arcpath = os.path.join(root, fname)[len(dirname)+1:]
             # print fspath, '=>', arcpath
-            zf.write(fspath, arcpath)
+            zf.write(fspath.decode(encoding), arcpath.decode(encoding))
     zf.close()
 
 
@@ -34,7 +38,7 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
     def setUp(self):
         AbstractFilePathTestCase.setUp(self)
         zipit(self.cmn, self.cmn + b'.zip')
-        self.path = ZipArchive(self.cmn + b'.zip')
+        self.path = ZipArchive((self.cmn + b'.zip').decode(encoding))
         self.root = self.path
         self.all = [x.replace(self.cmn, self.cmn + b'.zip') for x in self.all]
 
