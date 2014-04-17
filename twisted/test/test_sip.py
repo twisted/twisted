@@ -9,7 +9,6 @@ from twisted.trial import unittest, util
 from twisted.protocols import sip
 from twisted.internet import defer, reactor, utils
 
-from twisted import cred
 from twisted.cred import checkers, portal
 
 from zope.interface import implements
