@@ -993,7 +993,7 @@ class _ClientTLSSettings(object):
         elif where & SSL_CB_HANDSHAKE_DONE:
             try:
                 verifyHostname(connection, self._hostnameASCII)
-            except:
+            except VerificationError:
                 f = Failure()
                 transport = connection.get_app_data()
                 transport.failVerification(f)
