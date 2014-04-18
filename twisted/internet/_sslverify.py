@@ -1045,6 +1045,11 @@ def settingsForClientTLS(hostname, trustRoot=None, **kw):
                 arg=kw.popitem()[0]
             )
         )
+    if not isinstance(hostname, unicode):
+        raise TypeError(
+            "settingsForClientTLS requires text for host names, not "
+            + hostname.__class__.__name__
+        )
     certificateOptions = OpenSSLCertificateOptions(
         **extraCertificateOptions
     )
