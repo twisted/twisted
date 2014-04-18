@@ -662,8 +662,8 @@ class _ContextFactoryToConnectionFactory(object):
 
     def serverConnectionForTLS(self, protocol):
         """
-        Construct an SSL server connection from the wrapped old-style context
-        factory.
+        Construct an OpenSSL server connection from the wrapped old-style
+        context factory.
 
         @note: Since old-style context factories don't distinguish between
             clients and servers, this is exactly the same as
@@ -680,8 +680,8 @@ class _ContextFactoryToConnectionFactory(object):
 
     def clientConnectionForTLS(self, protocol):
         """
-        Construct an SSL server connection from the wrapped old-style context
-        factory.
+        Construct an OpenSSL server connection from the wrapped old-style
+        context factory.
 
         @note: Since old-style context factories don't distinguish between
             clients and servers, this is exactly the same as
@@ -705,7 +705,7 @@ class TLSMemoryBIOFactory(WrappingFactory):
         expected to implement.
     @type _creatorInterface: L{zope.interface.Interface}
 
-    @ivar _connectionCreator: a callable which creates an SSL connection
+    @ivar _connectionCreator: a callable which creates an OpenSSL Connection
         object.
     @type _connectionCreator: 1-argument callable taking
         L{TLSMemoryBIOProtocol} and returning L{OpenSSL.SSL.Connection}.
@@ -763,7 +763,7 @@ class TLSMemoryBIOFactory(WrappingFactory):
         @param tlsProtocol: The protocol which is establishing the connection.
         @type tlsProtocol: L{TLSMemoryBIOProtocol}
 
-        @return: an SSL connection object for C{tlsProtocol} to use
+        @return: an OpenSSL connection object for C{tlsProtocol} to use
         @rtype: L{OpenSSL.SSL.Connection}
         """
         connectionCreator = self._connectionCreator
