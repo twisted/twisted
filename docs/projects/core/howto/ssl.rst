@@ -14,12 +14,12 @@ It assumes that you know what TLS is, what some of the major reasons to use it a
 It also assumes that you are comfortable with creating TCP servers and clients as described in the :doc:`server howto <servers>` and :doc:`client howto <clients>` .
 After reading this document you should be able to create servers and clients that can use TLS to encrypt their connections, switch from using an unencrypted channel to an encrypted one mid-connection, and require client authentication.
 
-Using TLS in Twisted requires that you have `pyOpenSSL <http://launchpad.net/pyopenssl>`_ installed. A quick test to verify that you do is to run ``from OpenSSL import SSL`` at a python prompt and not get an error.
+Using TLS in Twisted requires that you have `pyOpenSSL <https://github.com/pyca/pyopenssl>`_ installed. A quick test to verify that you do is to run ``from OpenSSL import SSL`` at a python prompt and not get an error.
 
-Twisted provides SSL support as a transport --- that is, as an alternative to TCP.
-When using SSL, use of the TCP APIs you're already familiar with, ``TCP4ClientEndpoint`` and ``TCP4ServerEndpoint`` --- or ``reactor.listenTCP`` and ``reactor.connectTCP`` --- is replaced by use of parallel SSL APIs.
-To create an SSL server, use :api:`twisted.internet.endpoints.SSL4ServerEndpoint <SSL4ServerEndpoint>` or :api:`twisted.internet.interfaces.IReactorSSL.listenSSL <listenSSL>` .
-To create an SSL client, use :api:`twisted.internet.endpoints.SSL4ClientEndpoint <SSL4ClientEndpoint>` or :api:`twisted.internet.interfaces.IReactorSSL.connectSSL <connectSSL>` .
+Twisted provides TLS support as a transport --- that is, as an alternative to TCP.
+When using TLS, use of the TCP APIs you're already familiar with, ``TCP4ClientEndpoint`` and ``TCP4ServerEndpoint`` --- or ``reactor.listenTCP`` and ``reactor.connectTCP`` --- is replaced by use of parallel TLS APIs (many of which still use the legacy name "SSL" due to age and/or compatibility with older APIs).
+To create a TLS server, use :api:`twisted.internet.endpoints.SSL4ServerEndpoint <SSL4ServerEndpoint>` or :api:`twisted.internet.interfaces.IReactorSSL.listenSSL <listenSSL>` .
+To create a TLS client, use :api:`twisted.internet.endpoints.SSL4ClientEndpoint <SSL4ClientEndpoint>` or :api:`twisted.internet.interfaces.IReactorSSL.connectSSL <connectSSL>` .
 
 TLS provides transport layer security, but it's important to understand what "security" means.
 With respect to TLS it means three things:
@@ -44,7 +44,7 @@ Both *can* provide a certificate to prove their identity, but commonly, TLS *ser
 
 Since these requirements are slightly different, there are different APIs to construct an appropriate ``contextFactory`` value for a client or a server.
 
-For servers, we can use :api:`twisted.internet.ssl.CertificateOptions <twisted.internet.ssl.CertificateOptions>`.
+For servers, we can use :api:`twisted.internet.ssl.CertificateOptions`.
 In order to prove the server's identity, you pass the ``privateKey`` and ``certificate`` arguments to this object.
 :api:`twisted.internet.ssl.PrivateCertificate.options` is a convenient way to create a ``CertificateOptions`` instance configured to use a particular key and certificate.
 
@@ -58,31 +58,31 @@ By default, :api:`twisted.internet.ssl.settingsForClientTLS <settingsForClientTL
    If you've built OpenSSL yourself, you must take care to include these in the appropriate location.
    If you're using the OpenSSL shipped as part of Mac OS X 10.5-10.9, this behavior will also be correct.
    If you're using Debian, or one of its derivatives like Ubuntu, install the `ca-certificates` package to ensure you have trust roots available, and this behavior should also be correct.
-   Work is ongoing to make :api:`twisted.internet.ssl.platformTrust <platformTrust>` - the API that :api:`twisted.internet.ssl.settingsForClientTLS <settingsForClientTLS>` uses by default - more robust.
+   Work is ongoing to make :api:`twisted.internet.ssl.platformTrust <platformTrust>` --- the API that :api:`twisted.internet.ssl.settingsForClientTLS <settingsForClientTLS>` uses by default --- more robust.
    For example, :api:`twisted.internet.ssl.platformTrust <platformTrust>` should fall back to `the "certifi" package <http://pypi.python.org/pypi/certifi>`_ if no platform trust roots are available but it doesn't do that yet.
    When this happens, you shouldn't need to change your code.
 
-SSL echo server and client
+TLS echo server and client
 --------------------------
 
 Now that we've got the theory out of the way, let's try some working examples of how to get started with a TLS server.
 The following examples rely on the files ``server.pem`` (private key and self-signed certificate together) and ``public.pem`` (the server's public certificate by itself).
 
-SSL echo server
+TLS echo server
 ~~~~~~~~~~~~~~~
 
 :download:`echoserv_ssl.py <../examples/echoserv_ssl.py>`
 
 .. literalinclude:: ../examples/echoserv_ssl.py
 
-This server uses :api:`twisted.internet.interfaces.IReactorSSL.listenSSL <listenSSL>` to listen for SSL traffic on port 8000, using the certificate and private key contained in the file ``server.pem``.
-It uses the same echo example server as the TCP echo server - even going so far as to import its protocol class.
-Assuming that you can buy your own SSL certificate from a certificate authority, this is a fairly realistic SSL server.
+This server uses :api:`twisted.internet.interfaces.IReactorSSL.listenSSL <listenSSL>` to listen for TLS traffic on port 8000, using the certificate and private key contained in the file ``server.pem``.
+It uses the same echo example server as the TCP echo server --- even going so far as to import its protocol class.
+Assuming that you can buy your own TLS certificate from a certificate authority, this is a fairly realistic TLS server.
 
-SSL echo client
+TLS echo client
 ~~~~~~~~~~~~~~~
 
-:download:`echoserv_ssl.py <../examples/echoclient_ssl.py>`
+:download:`echoclient_ssl.py <../examples/echoclient_ssl.py>`
 
 .. literalinclude:: ../examples/echoclient_ssl.py
 
@@ -102,7 +102,7 @@ Here is a short example, now using the default trust roots for :api:`twisted.int
 
 .. literalinclude:: listings/ssl/check_server_certificate.py
 
-You can use this tool fairly simply to retrieve certificates from an HTTPS server with a valid SSL certificate, by running it with a host name.
+You can use this tool fairly simply to retrieve certificates from an HTTPS server with a valid TLS certificate, by running it with a host name.
 For example:
 
 .. code-block:: text
@@ -118,13 +118,13 @@ For example:
 
    To *properly* validate your ``hostname`` parameter according to RFC6125, please also install the `"service_identity" <https://pypi.python.org/pypi/service_identity>`_ and `"idna" <https://pypi.python.org/pypi/idna>`_ packages from PyPI.
    Without this package, Twisted will currently make a conservative guess as to the correctness of the server's certificate, but this will reject a large number of potentially valid certificates.
-   `service_identity` implements the standard correctly and it will be a required dependency for SSL in a future release of Twisted.
+   `service_identity` implements the standard correctly and it will be a required dependency for TLS in a future release of Twisted.
 
 Using startTLS
 --------------
 
 If you want to switch from unencrypted to encrypted traffic
-mid-connection, you'll need to turn on SSL with :api:`twisted.internet.interfaces.ITLSTransport.startTLS <startTLS>` on both
+mid-connection, you'll need to turn on TLS with :api:`twisted.internet.interfaces.ITLSTransport.startTLS <startTLS>` on both
 ends of the connection at the same time via some agreed-upon signal like the
 reception of a particular message. You can readily verify the switch to an
 encrypted channel by examining the packet payloads with a tool like
@@ -216,11 +216,10 @@ startTLS client
         reactor.run()
 
 ``startTLS`` is a transport method that gets passed a ``contextFactory``.
-It is invoked at an agreed-upon time in the data reception method of the client
-and server protocols.
-The server uses ``PrivateCertificate.options`` to create a ``contextFactory`` which will use a particular certificate and private key (a common requirement for SSL servers).
+It is invoked at an agreed-upon time in the data reception method of the client and server protocols.
+The server uses ``PrivateCertificate.options`` to create a ``contextFactory`` which will use a particular certificate and private key (a common requirement for TLS servers).
 
-The client creates an uncustomized ``CertificateOptions`` which is all that's necessary for an SSL client to interact with an SSL server.
+The client creates an uncustomized ``CertificateOptions`` which is all that's necessary for a TLS client to interact with a TLS server.
 
 
 Client authentication
@@ -234,11 +233,11 @@ the web so for completeness a sample server and client are provided here.
 TLS server with client authentication via client certificate verification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When one or more certificates are passed to ``PrivateCertificate.options`` , the resulting ``contextFactory`` will use those certificates as trusted authorities and require that the peer present a certificate with a valid chain anchored by one of those authorities.
+When one or more certificates are passed to ``PrivateCertificate.options``, the resulting ``contextFactory`` will use those certificates as trusted authorities and require that the peer present a certificate with a valid chain anchored by one of those authorities.
 
 Here is a server that does just such a thing.
 
-:download:`echoserv_ssl.py <../examples/ssl_clientauth_server.py>`
+:download:`ssl_clientauth_server.py <../examples/ssl_clientauth_server.py>`
 
 .. literalinclude:: ../examples/ssl_clientauth_server.py
 
@@ -252,7 +251,7 @@ The following client then supplies such a certificate, while still validating th
 .. literalinclude:: ../examples/ssl_clientauth_client.py
 
 
-SSL Protocol Options
+TLS Protocol Options
 ~~~~~~~~~~~~~~~~~~~~
 
 For servers, it is desirable to offer Diffie-Hellman based key exchange that provides perfect forward secrecy.
@@ -290,7 +289,7 @@ Related facilities
 
 :api:`twisted.protocols.amp <twisted.protocols.amp>` supports encrypted
 connections and exposes a ``startTLS`` method one can use or
-subclass. :api:`twisted.web <twisted.web>` has built-in SSL support in
+subclass. :api:`twisted.web <twisted.web>` has built-in TLS support in
 its :api:`twisted.web.client <client>` , :api:`twisted.web.http <http>` , and :api:`twisted.web.xmlrpc <xmlrpc>` modules.
 
 
@@ -300,7 +299,7 @@ Conclusion
 After reading through this tutorial, you should be able to:
 
 - Use ``listenSSL`` and ``connectSSL`` to create servers and clients that use
-  SSL
-- Use ``startTLS`` to switch a channel from being unencrypted to using SSL
+  TLS
+- Use ``startTLS`` to switch a channel from being unencrypted to using TLS
   mid-connection
 - Add server and client support for client authentication
