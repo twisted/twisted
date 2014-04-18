@@ -879,7 +879,8 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         """
         return self._listTestHelper(
             "LIST",
-            (u'my resum\xe9', (0, 1, 0777, 0, 0, 'user', 'group')),
+            (u'my resum\xe9', (
+                0, 1, filepath.Permissions(0777), 0, 0, 'user', 'group')),
             'drwxrwxrwx   0 user      group                   '
             '0 Jan 01  1970 my resum\xc3\xa9\r\n')
 
@@ -891,7 +892,8 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         """
         return self._listTestHelper(
             "LIST",
-            ('my resum\xc3\xa9', (0, 1, 0777, 0, 0, 'user', 'group')),
+            ('my resum\xc3\xa9', (
+                0, 1, filepath.Permissions(0777), 0, 0, 'user', 'group')),
             'drwxrwxrwx   0 user      group                   '
             '0 Jan 01  1970 my resum\xc3\xa9\r\n')
 
@@ -987,7 +989,8 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         """
         return self._listTestHelper(
             "NLST",
-            (u'my resum\xe9', (0, 1, 0777, 0, 0, 'user', 'group')),
+            (u'my resum\xe9', (
+                0, 1, filepath.Permissions(0777), 0, 0, 'user', 'group')),
             'my resum\xc3\xa9\r\n')
 
 
@@ -997,7 +1000,8 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         """
         return self._listTestHelper(
             "NLST",
-            ('my resum\xc3\xa9', (0, 1, 0777, 0, 0, 'user', 'group')),
+            ('my resum\xc3\xa9', (
+                0, 1, filepath.Permissions(0777), 0, 0, 'user', 'group')),
             'my resum\xc3\xa9\r\n')
 
 
@@ -3153,6 +3157,52 @@ class IFTPShellTestsMixin:
             self.assertEqual(len(res), 2)
         d.addCallback(cb)
         return d
+
+
+    def test_statHardlinksNotImplemented(self):
+        """
+        If L{twisted.python.filepath.FilePath.getNumberOfHardLinks} is not
+        implemented, the number returned is 0
+        """
+        pathFunc = self.shell._path
+
+        def raiseNotImplemented():
+            raise NotImplementedError
+
+        def notImplementedFilePath(path):
+            f = pathFunc(path)
+            f.getNumberOfHardLinks = raiseNotImplemented
+            return f
+
+        self.shell._path = notImplementedFilePath
+
+        self.createDirectory('ned')
+        d = self.shell.stat(('ned',), ('hardlinks',))
+        self.assertEqual(self.successResultOf(d), [0])
+
+
+    def test_statOwnerGroupNotImplemented(self):
+        """
+        If L{twisted.python.filepath.FilePath.getUserID} or
+        L{twisted.python.filepath.FilePath.getGroupID} are not implemented,
+        the owner returned is "0" and the group is returned as "0"
+        """
+        pathFunc = self.shell._path
+
+        def raiseNotImplemented():
+            raise NotImplementedError
+
+        def notImplementedFilePath(path):
+            f = pathFunc(path)
+            f.getUserID = raiseNotImplemented
+            f.getGroupID = raiseNotImplemented
+            return f
+
+        self.shell._path = notImplementedFilePath
+
+        self.createDirectory('ned')
+        d = self.shell.stat(('ned',), ('owner', 'group'))
+        self.assertEqual(self.successResultOf(d), ["0", '0'])
 
 
     def test_statNotExisting(self):
