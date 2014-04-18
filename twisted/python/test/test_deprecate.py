@@ -671,10 +671,11 @@ class DeprecatedDecoratorMixin(object):
         about the deprecation.
         """
         version = Version('Twisted', 8, 0, 0)
+        originalDummy = self.dummyCallable
         dummy = self.decorator(version)(self.dummyCallable)
 
         _appendToDocstring(
-            self.dummyCallable,
+            originalDummy,
             _getDeprecationDocstring(version, ''))
 
         self.assertEqual(self.dummyCallable.__doc__, dummy.__doc__)

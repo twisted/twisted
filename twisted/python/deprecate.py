@@ -294,6 +294,7 @@ class _DeprecateDescriptor(object):
 
         self.__qualname__ = _fullyQualifiedName(self.deprecatee)
 
+
     def _warn(self, function, args, kwargs, stackoffset=0):
         warningString = getDeprecationWarningString(
             function, self.version, None, self.replacement)
@@ -334,6 +335,9 @@ class _DeprecateDescriptor(object):
         @wraps(self.deprecatee)
         def wrap(_, *args, **kwargs):
             return self._warn(method, args, kwargs, 1)
+
+        wrap.__doc__ = self.__doc__
+        wrap.deprecatedVersion = self.version
 
         return wrap.__get__(instance, _type)
 
