@@ -532,7 +532,7 @@ def callTestFunction():
 
 
 
-def dummyCallable():
+def dummyCallable(*args):
     """
     Do nothing.
 
@@ -541,7 +541,7 @@ def dummyCallable():
 
 
 
-def dummyReplacementMethod():
+def dummyReplacementMethod(*args):
     """
     Do nothing.
 
@@ -551,24 +551,9 @@ def dummyReplacementMethod():
 
 
 def setUpDummyCallables(testCase):
-    testCase.dummyCallable = wraps(dummyCallable)(lambda: None)
+    testCase.dummyCallable = wraps(dummyCallable)(lambda *args: None)
     testCase.dummyReplacementMethod = wraps(
-        dummyReplacementMethod)(lambda: None)
-
-
-# class ClassWithDeprecatedMethods(object):
-#     """
-#     For testing deprecation of instance and class methods
-#     """
-#     @deprecated(Version('Twisted', 8, 0, 0))
-#     @classmethod
-#     def methodOnClass(cls):
-#         pass
-
-
-#     @deprecated(Version('Twisted', 8, 0, 0))
-#     def methodOnInstance(self):
-#         pass
+        dummyReplacementMethod)(lambda *args: None)
 
 
 
@@ -657,7 +642,7 @@ class DeprecatedDecoratorMixin(object):
         Decorating a callable with L{deprecated} emits a warning.
         """
         version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version)(self.dummyCallable)
+        dummy = self.decorator(version)(self.dummyCallable)
         def addStackLevel():
             dummy()
         with catch_warnings(record=True) as caught:
@@ -674,7 +659,7 @@ class DeprecatedDecoratorMixin(object):
         The decorated function has the same name as the original.
         """
         version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version)(self.dummyCallable)
+        dummy = self.decorator(version)(self.dummyCallable)
         self.assertEqual(self.dummyCallable.__name__, dummy.__name__)
         self.assertEqual(fullyQualifiedName(self.dummyCallable),
                          fullyQualifiedName(dummy))
@@ -686,7 +671,7 @@ class DeprecatedDecoratorMixin(object):
         about the deprecation.
         """
         version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version)(self.dummyCallable)
+        dummy = self.decorator(version)(self.dummyCallable)
 
         _appendToDocstring(
             self.dummyCallable,
@@ -701,7 +686,7 @@ class DeprecatedDecoratorMixin(object):
         version of that function.
         """
         version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version)(self.dummyCallable)
+        dummy = self.decorator(version)(self.dummyCallable)
         self.assertEqual(version, dummy.deprecatedVersion)
 
 
@@ -713,7 +698,8 @@ class DeprecatedDecoratorMixin(object):
         into the warning message.
         """
         version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version, "something.foobar")(self.dummyCallable)
+        dummy = self.decorator(version, "something.foobar")(
+            self.dummyCallable)
         self.assertEqual(dummy.__doc__,
             "\n"
             "    Do nothing.\n\n"
@@ -732,7 +718,7 @@ class DeprecatedDecoratorMixin(object):
         be interpolated into the warning message.
         """
         version = Version('Twisted', 8, 0, 0)
-        decorator = deprecated(version,
+        decorator = self.decorator(version,
                                replacement=self.dummyReplacementMethod)
         dummy = decorator(self.dummyCallable)
         self.assertEqual(dummy.__doc__,
@@ -747,7 +733,32 @@ class DeprecatedDecoratorMixin(object):
 
 class TestDecoratedDecoratorOnFunctions(DeprecatedDecoratorMixin,
                                         SynchronousTestCase):
-    setUp = setUpDummyCallables
+    def setUp(self):
+        setUpDummyCallables(self)
+        self.decorator = deprecated
+
+
+
+class TestDecoratedDecoratorOnInstance(DeprecatedDecoratorMixin,
+                                        SynchronousTestCase):
+    def setUp(self):
+        setUpDummyCallables(self)
+
+        class ClassWithDeprecatedMethods(object):
+                pass
+
+        ClassWithDeprecatedMethods.dummyCallable = self.dummyCallable
+
+        def _deprecated(version, replacement=None):
+            def wrapped(function):
+                self.dummyCallable = (
+                    ClassWithDeprecatedMethods().dummyCallable)
+                ClassWithDeprecatedMethods.dummyCallable = (
+                    deprecated(version, replacement)(function))
+                return ClassWithDeprecatedMethods().dummyCallable
+            return wrapped
+
+        self.decorator = _deprecated
 
 
 
