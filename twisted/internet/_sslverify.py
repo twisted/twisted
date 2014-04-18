@@ -1056,6 +1056,11 @@ def settingsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
             "settingsForClientTLS requires text for host names, not "
             + hostname.__class__.__name__
         )
+    if clientCertificate:
+        extraCertificateOptions.update(
+            privateKey=clientCertificate.privateKey.original,
+            certificate=clientCertificate.original
+        )
     certificateOptions = OpenSSLCertificateOptions(
         trustRoot=trustRoot,
         **extraCertificateOptions
