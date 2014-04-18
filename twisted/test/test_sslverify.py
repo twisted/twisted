@@ -1373,7 +1373,7 @@ class ServiceIdentityTests(unittest.TestCase):
         sErr = sProto.wrappedProtocol.lostReason.value
 
         self.assertIsInstance(cErr, SSL.Error)
-        self.assertIsInstance(sErr, ConnectionClosed)
+        self.assertIsInstance(sErr, SSL.Error)
 
 
     def test_hostnameIsIndicated(self):
