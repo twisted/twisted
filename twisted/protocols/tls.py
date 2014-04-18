@@ -620,16 +620,19 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
 
 @implementer(IOpenSSLClientConnectionCreator, IOpenSSLServerConnectionCreator)
-class _ConnectionFactory(object):
+class _ContextFactoryToConnectionFactory(object):
     """
     Adapter wrapping "something" (ideally something like a
-    L{twisted.internet.ssl.ContextFactory}) into an
+    L{twisted.internet.ssl.ContextFactory}; implementations of this interface
+    don't actually typically subclass though, so "something" is more likely
+    just something with a C{getContext} method) into an
     L{IOpenSSLClientConnectionCreator} or L{IOpenSSLServerConnectionCreator}.
     """
 
     def __init__(self, oldStyleContextFactory):
         """
-        Construct a L{_ConnectionFactory} with an old-style context factory.
+        Construct a L{_ContextFactoryToConnectionFactory} with an old-style
+        context factory.
 
         @param oldStyleContextFactory: A factory that can produce contexts.
         @type oldStyleContextFactory: L{twisted.internet.ssl.ContextFactory} or
@@ -660,7 +663,7 @@ class _ConnectionFactory(object):
 
         @note: Since old-style context factories don't distinguish between
             clients and servers, this is exactly the same as
-            L{_ConnectionFactory.clientConnectionForTLS}.
+            L{_ContextFactoryToConnectionFactory.clientConnectionForTLS}.
 
         @param protocol: The protocol initiating a TLS connection.
         @type protocol: L{TLSMemoryBIOProtocol}
@@ -678,7 +681,7 @@ class _ConnectionFactory(object):
 
         @note: Since old-style context factories don't distinguish between
             clients and servers, this is exactly the same as
-            L{_ConnectionFactory.serverConnectionForTLS}.
+            L{_ContextFactoryToConnectionFactory.serverConnectionForTLS}.
 
         @param protocol: The protocol initiating a TLS connection.
         @type protocol: L{TLSMemoryBIOProtocol}
@@ -731,7 +734,7 @@ class TLSMemoryBIOFactory(WrappingFactory):
             creatorInterface = IOpenSSLServerConnectionCreator
         self._creatorInterface = creatorInterface
         if not creatorInterface.providedBy(contextFactory):
-            contextFactory = _ConnectionFactory(contextFactory)
+            contextFactory = _ContextFactoryToConnectionFactory(contextFactory)
         self._connectionCreator = contextFactory
 
 
