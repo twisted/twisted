@@ -1051,6 +1051,7 @@ def settingsForClientTLS(hostname, trustRoot=None, **kw):
             + hostname.__class__.__name__
         )
     certificateOptions = OpenSSLCertificateOptions(
+        trustRoot=trustRoot,
         **extraCertificateOptions
     )
     return _ClientTLSSettings(hostname, certificateOptions.getContext())
