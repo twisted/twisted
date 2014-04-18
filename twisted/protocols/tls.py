@@ -634,6 +634,10 @@ class _ContextFactoryToConnectionFactory(object):
         Construct a L{_ContextFactoryToConnectionFactory} with an old-style
         context factory.
 
+        Immediately call C{getContext} on C{oldStyleContextFactory} in order to
+        force advance parameter checking, since old-style context factories
+        don't actually check that their arguments to L{OpenSSL} are correct.
+
         @param oldStyleContextFactory: A factory that can produce contexts.
         @type oldStyleContextFactory: L{twisted.internet.ssl.ContextFactory} or
             something like it.
