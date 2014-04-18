@@ -267,8 +267,8 @@ def deprecated(version, replacement=None):
 
 class _DeprecateDescriptor(object):
     """
-    A descriptor that handles deprecating class methods and instance methods
-    as well as functions.
+    A descriptor that handles deprecating instance methods as well as
+    functions.
 
     @ivar deprecatee: the function/class method/instance method to deprecate
     @type deprecatee: callable
@@ -295,7 +295,14 @@ class _DeprecateDescriptor(object):
         self.__qualname__ = _fullyQualifiedName(self.deprecatee)
 
 
-    def _warn(self, function, args, kwargs, stackoffset=0):
+    def _warn(self, function, args, kwargs):
+        """
+        Actally issue the warning and call the function
+
+        @param function: the callable to call
+        @param args: C{list} arguments to call the function with
+        @param kwargs: C{dict} keyword arguments to call the function with
+        """
         warningString = getDeprecationWarningString(
             function, self.version, None, self.replacement)
 
@@ -309,8 +316,9 @@ class _DeprecateDescriptor(object):
         C{deprecatee} is deprecated and calls it with the specified arguments
         and keyword arguments
 
-        @param args: the arguments to call C{deprecatee} with
-        @param kwargs: the keyword arguments to call C{deprecatee} with
+        @param args: C{list} the arguments to call C{deprecatee} with
+        @param kwargs: C{dict} the keyword arguments to call C{deprecatee}
+            with
 
         @return: the return value of calling C{deprecatee}
         """
@@ -334,7 +342,7 @@ class _DeprecateDescriptor(object):
 
         @wraps(self.deprecatee)
         def wrap(_, *args, **kwargs):
-            return self._warn(method, args, kwargs, 1)
+            return self._warn(method, args, kwargs)
 
         wrap.__doc__ = self.__doc__
         wrap.deprecatedVersion = self.version

@@ -551,6 +551,13 @@ def dummyReplacementMethod(*args):
 
 
 def setUpDummyCallables(testCase):
+    """
+    This sets up some clean dummyCallables and dummyReplacements for a test
+    case, in case they need to be mutated
+
+    @param testCase: an object onto which attributes can be added - meant to
+        be used for subclasess of L{twisted.trial.unittest.TestCase}
+    """
     testCase.dummyCallable = wraps(dummyCallable)(lambda *args: None)
     testCase.dummyReplacementMethod = wraps(
         dummyReplacementMethod)(lambda *args: None)
@@ -558,6 +565,11 @@ def setUpDummyCallables(testCase):
 
 
 class TestDeprecationWarningStrings(SynchronousTestCase):
+    """
+    Tests for generating deprecation warning strings and deprecation
+    docstrings
+    """
+
     def test_getDeprecationWarningString(self):
         """
         L{getDeprecationWarningString} returns a string that tells us that a
@@ -637,6 +649,20 @@ class TestDeprecationWarningStrings(SynchronousTestCase):
 
 
 class DeprecatedDecoratorMixin(object):
+    """
+    Mixin to test the decorator L{twisted.python.deprecate.deprecated} on
+    various types of callables
+
+    Requires the following 3 attributes be set on the instance:
+
+    @ivar decorator: probably just L{twisted.python.deprecate.deprecated}, or
+        something else with the same API that needs to do some additional
+        work such as adding functions to classes
+    @ivar dummyCallable: a callable to deprecate
+    @ivar dummyReplacementMethod: a callable to deprecate C{dummyCallable} in
+        favor of
+    """
+
     def test_deprecateEmitsWarning(self):
         """
         Decorating a callable with L{deprecated} emits a warning.
@@ -693,10 +719,10 @@ class DeprecatedDecoratorMixin(object):
 
     def test_deprecatedReplacement(self):
         """
-        L{deprecated} takes an additional replacement parameter that can be used
-        to indicate the new, non-deprecated method developers should use.  If
-        the replacement parameter is a string, it will be interpolated directly
-        into the warning message.
+        L{deprecated} takes an additional replacement parameter that can be
+        used to indicate the new, non-deprecated method developers should use.
+        If the replacement parameter is a string, it will be interpolated
+        directly into the warning message.
         """
         version = Version('Twisted', 8, 0, 0)
         dummy = self.decorator(version, "something.foobar")(
@@ -713,10 +739,10 @@ class DeprecatedDecoratorMixin(object):
 
     def test_deprecatedReplacementWithCallable(self):
         """
-        L{deprecated} takes an additional replacement parameter that can be used
-        to indicate the new, non-deprecated method developers should use.  If
-        the replacement parameter is a callable, its fully qualified name will
-        be interpolated into the warning message.
+        L{deprecated} takes an additional replacement parameter that can be
+        used to indicate the new, non-deprecated method developers should use.
+        If the replacement parameter is a callable, its fully qualified name
+        will be interpolated into the warning message.
         """
         version = Version('Twisted', 8, 0, 0)
         decorator = self.decorator(version,
@@ -734,6 +760,9 @@ class DeprecatedDecoratorMixin(object):
 
 class TestDecoratedDecoratorOnFunctions(DeprecatedDecoratorMixin,
                                         SynchronousTestCase):
+    """
+    Tests for L{twisted.python.deprecate.deprecated} on regular functions
+    """
     def setUp(self):
         setUpDummyCallables(self)
         self.decorator = deprecated
@@ -742,6 +771,29 @@ class TestDecoratedDecoratorOnFunctions(DeprecatedDecoratorMixin,
 
 class TestDecoratedDecoratorOnInstance(DeprecatedDecoratorMixin,
                                         SynchronousTestCase):
+    """
+    Tests for L{twisted.python.deprecate.deprecated} on instance methods.
+
+    This is tricky to do because::
+        class A(object):
+            @deprecated(Version("Twisted", 8, 0, 0))
+            def foo(self):
+                pass
+
+    has different behavior than::
+
+        class A(object)
+            def foo(self):
+                pass
+        deprecated(Version("Twisted", 8, 0, 0))(A.foo)
+
+    In the first case, L{twisted.python.deprecate.deprecated} sees C{foo} as
+    a function (it is unbound) - in the second case, it sees C{foo} as a bound
+    method on A.  The fully qualified name is different between the two cases.
+
+    The setup in this test case decorates and sets the function on the class
+    in one go, making it behave like the second case.
+    """
     def setUp(self):
         setUpDummyCallables(self)
 
@@ -760,6 +812,23 @@ class TestDecoratedDecoratorOnInstance(DeprecatedDecoratorMixin,
             return wrapped
 
         self.decorator = _deprecated
+
+
+    def test_asDecoratorForSanity(self):
+        """
+        When L{twisted.python.deprecate.deprecated} is actually used as a
+        decorator, rather than in setting a function on a class, the instance
+        method name contains the class name.  This duplicates coverage, but
+        is here to validate that the setUp indeed replicates actual decorator
+        behavior.
+        """
+        class A(object):
+            @deprecated(Version("Twisted", 8, 0, 0))
+            def foo(self):
+                pass
+
+        self.assertTrue(fullyQualifiedName(A.foo).endswith("A.foo"))
+        self.assertTrue(fullyQualifiedName(A().foo).endswith("A.foo"))
 
 
 
