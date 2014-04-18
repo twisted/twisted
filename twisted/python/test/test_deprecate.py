@@ -798,7 +798,7 @@ class TestDecoratedDecoratorOnInstance(DeprecatedDecoratorMixin,
         setUpDummyCallables(self)
 
         class ClassWithDeprecatedMethods(object):
-                pass
+            pass
 
         ClassWithDeprecatedMethods.dummyCallable = self.dummyCallable
 
@@ -822,13 +822,13 @@ class TestDecoratedDecoratorOnInstance(DeprecatedDecoratorMixin,
         is here to validate that the setUp indeed replicates actual decorator
         behavior.
         """
-        class A(object):
+        class Ack(object):
             @deprecated(Version("Twisted", 8, 0, 0))
             def foo(self):
                 pass
 
-        self.assertTrue(fullyQualifiedName(A.foo).endswith("A.foo"))
-        self.assertTrue(fullyQualifiedName(A().foo).endswith("A.foo"))
+        self.assertTrue(fullyQualifiedName(Ack.foo).endswith("Ack.foo"))
+        self.assertTrue(fullyQualifiedName(Ack().foo).endswith("Ack.foo"))
 
 
 

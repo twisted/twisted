@@ -302,6 +302,9 @@ class _DeprecateDescriptor(object):
         @param function: the callable to call
         @param args: C{list} arguments to call the function with
         @param kwargs: C{dict} keyword arguments to call the function with
+
+        @return: the return value of calling C{function} with C{args} and
+            C{kwargs}
         """
         warningString = getDeprecationWarningString(
             function, self.version, None, self.replacement)
