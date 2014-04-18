@@ -1241,7 +1241,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
                              validCertificate=True,
                              clientPresentsCertificate=False,
                              validClientCertificate=True,
-                             serverVerifies=False):
+                             serverVerifies=False,
+                             buggyInfoCallback=False):
         """
         Connect a server and a client.
 
@@ -1292,6 +1293,17 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             serverCA, otherServer = certificatesForAuthorityAndServer(
                 serverHostname.encode("idna")
             )
+        if buggyInfoCallback:
+            def broken(*a, **k):
+                """
+                Raise an exception.
+                """
+                1 / 0
+            self.patch(
+                sslverify._ClientTLSSettings, "_identityVerifyingInfoCallback",
+                broken,
+            )
+
         clientOpts = sslverify.settingsForClientTLS(clientHostname, serverCA,
                                                     passClientCert)
 
@@ -1515,6 +1527,29 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             sslverify.SimpleVerificationError,
             sslverify.simpleVerifyHostname, conn, u'nonsense'
         )
+
+    def test_surpriseFromInfoCallback(self):
+        """
+        pyOpenSSL isn't always so great about reporting errors.  If one occurs
+        in the verification info callback, it should be logged and the
+        connection should be shut down (if possible, anyway; the app_data could
+        be clobbered but there's no point testing for that).
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"correct-host.example.com",
+            u"correct-host.example.com",
+            buggyInfoCallback=True,
+        )
+        self.assertEqual(cProto.wrappedProtocol.data, b'')
+        self.assertEqual(sProto.wrappedProtocol.data, b'')
+
+        cErr = cProto.wrappedProtocol.lostReason.value
+        sErr = sProto.wrappedProtocol.lostReason.value
+
+        self.assertIsInstance(cErr, ZeroDivisionError)
+        self.assertIsInstance(sErr, ConnectionClosed)
+        errors = self.flushLoggedErrors(ZeroDivisionError)
+        self.assertTrue(errors)
 
 
 

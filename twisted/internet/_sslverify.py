@@ -17,6 +17,7 @@ except ImportError:
     SSL_CB_HANDSHAKE_START = 0x10
     SSL_CB_HANDSHAKE_DONE = 0x20
 
+from twisted.python import log
 
 
 def _cantSetHostnameIndication(connection, hostname):
@@ -935,6 +936,29 @@ def platformTrust():
 
 
 
+def _tolerateErrors(wrapped):
+    """
+    Wrap up an C{info_callback} for pyOpenSSL so that if something goes wrong
+    the error is immediately logged and the connection is dropped if possible.
+
+    @param wrapped: A valid C{info_callback} for pyOpenSSL.
+    @type wrapped: L{callable}
+
+    @return: A valid C{info_callback} for pyOpenSSL that handles any errors in
+        C{wrapped}.
+    @rtype: L{callable}
+    """
+    def infoCallback(connection, where, ret):
+        try:
+            return wrapped(connection, where, ret)
+        except:
+            f = Failure()
+            log.err(f, "Error during info_callback")
+            connection.get_app_data().failVerification(f)
+    return infoCallback
+
+
+
 @implementer(IOpenSSLClientConnectionCreator)
 class _ClientTLSSettings(object):
     """
@@ -948,7 +972,9 @@ class _ClientTLSSettings(object):
         self._hostname = hostname
         self._hostnameBytes = _idnaBytes(hostname)
         self._hostnameASCII = self._hostnameBytes.decode("utf-8")
-        ctx.set_info_callback(self._identityVerifyingInfoCallback)
+        ctx.set_info_callback(
+            _tolerateErrors(self._identityVerifyingInfoCallback)
+        )
 
 
     def clientConnectionForTLS(self, protocol):
