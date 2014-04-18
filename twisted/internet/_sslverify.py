@@ -18,6 +18,36 @@ except ImportError:
     SSL_CB_HANDSHAKE_DONE = 0x20
 
 
+
+def _cantSetHostnameIndication(connection, hostname):
+    """
+    The option to set SNI is not available, so do nothing.
+    """
+
+
+
+def _setHostNameIndication(connection, hostname):
+    """
+    Set the server name indication on the given client connection to the given
+    value.
+
+    @param connection: the connection
+    @type connection: L{OpenSSL.SSL.Connection}
+
+    @param hostname: the server's host name
+    @type: hostname: L{bytes}
+    """
+    connection.set_tlsext_host_name(hostname)
+
+
+
+if getattr(SSL.Connection, "set_tlsext_host_name", None) is None:
+    _maybeSetHostNameIndication = _cantSetHostnameIndication
+else:
+    _maybeSetHostNameIndication = _setHostNameIndication
+
+
+
 class SimpleVerificationError(Exception):
     """
     Not a very useful verification error.
@@ -959,11 +989,7 @@ class _ClientTLSSettings(object):
         @type ret: ignored
         """
         if where & SSL_CB_HANDSHAKE_START:
-            setHostNameIndication = getattr(
-                connection, "set_tlsext_host_name",
-                lambda name: None
-            )
-            setHostNameIndication(self._hostnameBytes)
+            _maybeSetHostNameIndication(connection, self._hostnameBytes)
         elif where & SSL_CB_HANDSHAKE_DONE:
             try:
                 verifyHostname(connection, self._hostnameASCII)
@@ -1014,7 +1040,8 @@ def settingsForClientTLS(hostname, trustRoot=platformTrust(), **kw):
     extraCertificateOptions = kw.pop('extraCertificateOptions', None) or {}
     if kw:
         raise TypeError(
-            "settingsForClientTLS() got an unexpected keyword argument '{arg}'".format(
+            "settingsForClientTLS() got an unexpected keyword argument"
+            " '{arg}'".format(
                 arg=kw.popitem()[0]
             )
         )
