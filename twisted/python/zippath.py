@@ -101,7 +101,11 @@ class ZipPath(AbstractFilePath):
             it) as this means it may include special names with special
             meaning outside of the context of a zip archive.
         """
-        encodedPath = path.encode(ENCODING)
+        try:
+            encodedPath = path.encode(ENCODING)
+        except AttributeError:
+            encodedPath = path
+
         return ZipPath(self.archive,
                        ZIP_PATH_SEP.join([self.pathInArchive, encodedPath]))
 
