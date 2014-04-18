@@ -1238,7 +1238,10 @@ class ServiceIdentityTests(unittest.TestCase):
 
     def serviceIdentitySetup(self, clientHostname, serverHostname,
                              serverContextSetup=lambda ctx: None,
-                             validCertificate=True):
+                             validCertificate=True,
+                             clientPresentsCertificate=False,
+                             validClientCertificate=True,
+                             serverVerifies=False):
         """
         Connect a server and a client.
 
@@ -1263,21 +1266,34 @@ class ServiceIdentityTests(unittest.TestCase):
         @return: see L{connectedServerAndClient}.
         @rtype: see L{connectedServerAndClient}.
         """
-        caCert, serverCert = certificatesForAuthorityAndServer(
+        serverCA, serverCert = certificatesForAuthorityAndServer(
             serverHostname.encode("idna")
         )
+        other = {}
+        passClientCert = None
+        clientCA, clientCert = certificatesForAuthorityAndServer(u'client')
+        if serverVerifies:
+            other.update(trustRoot=clientCA)
+
+        if clientPresentsCertificate:
+            if validClientCertificate:
+                passClientCert = clientCert
+            else:
+                bogusCA, bogus = certificatesForAuthorityAndServer(u'client')
+                passClientCert = bogus
+
         serverOpts = sslverify.OpenSSLCertificateOptions(
             privateKey=serverCert.privateKey.original,
             certificate=serverCert.original,
+            **other
         )
         serverContextSetup(serverOpts.getContext())
-        if validCertificate:
-            clientCA = caCert
-        else:
-            clientCA, otherServer = certificatesForAuthorityAndServer(
+        if not validCertificate:
+            serverCA, otherServer = certificatesForAuthorityAndServer(
                 serverHostname.encode("idna")
             )
-        clientOpts = sslverify.settingsForClientTLS(clientHostname, clientCA)
+        clientOpts = sslverify.settingsForClientTLS(clientHostname, serverCA,
+                                                    passClientCert)
 
         class GreetingServer(protocol.Protocol):
             greeting = b"greetings!"
@@ -1368,6 +1384,55 @@ class ServiceIdentityTests(unittest.TestCase):
 
         self.assertEqual(cProto.wrappedProtocol.data, b'')
         self.assertEqual(sProto.wrappedProtocol.data, b'')
+
+        cErr = cProto.wrappedProtocol.lostReason.value
+        sErr = sProto.wrappedProtocol.lostReason.value
+
+        self.assertIsInstance(cErr, SSL.Error)
+        self.assertIsInstance(sErr, SSL.Error)
+
+
+    def test_clientPresentsCertificate(self):
+        """
+        When the server verifies and the client presents a valid certificate
+        for that verification by passing it to
+        L{sslverify.settingsForClientTLS}, communication proceeds.
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"valid.example.com",
+            u"valid.example.com",
+            validCertificate=True,
+            serverVerifies=True,
+            clientPresentsCertificate=True,
+        )
+
+        self.assertEqual(cProto.wrappedProtocol.data,
+                         b'greetings!')
+
+        cErr = cProto.wrappedProtocol.lostReason
+        sErr = sProto.wrappedProtocol.lostReason
+        self.assertIdentical(cErr, None)
+        self.assertIdentical(sErr, None)
+
+
+    def test_clientPresentsBadCertificate(self):
+        """
+        When the server verifies and the client presents an invalid certificate
+        for that verification by passing it to
+        L{sslverify.settingsForClientTLS}, the connection cannot be established
+        with an SSL error.
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"valid.example.com",
+            u"valid.example.com",
+            validCertificate=True,
+            serverVerifies=True,
+            validClientCertificate=False,
+            clientPresentsCertificate=True,
+        )
+
+        self.assertEqual(cProto.wrappedProtocol.data,
+                         b'')
 
         cErr = cProto.wrappedProtocol.lostReason.value
         sErr = sProto.wrappedProtocol.lostReason.value

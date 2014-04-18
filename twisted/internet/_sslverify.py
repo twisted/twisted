@@ -1000,7 +1000,8 @@ class _ClientTLSSettings(object):
 
 
 
-def settingsForClientTLS(hostname, trustRoot=None, **kw):
+def settingsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
+                         **kw):
     """
     Create a L{client connection creator <IOpenSSLClientConnectionCreator>} for
     use with APIs such as L{SSL4ClientEndpoint
@@ -1022,6 +1023,11 @@ def settingsForClientTLS(hostname, trustRoot=None, **kw):
         is L{platformTrust} and you probably shouldn't adjust it unless you
         really know what you're doing.
     @type trustRoot: L{IOpenSSLTrustRoot}
+
+    @param clientCertificate: The certificate and private key that the client
+        will use to authenticate to the server.  If unspecified, the client
+        will not authenticate.
+    @type clientCertificate: L{PrivateCertificate}
 
     @param extraCertificateOptions: keyword-only argument; this is a dictionary
         of additional keyword arguments to be presented to

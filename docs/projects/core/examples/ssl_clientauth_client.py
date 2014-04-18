@@ -28,10 +28,6 @@ if __name__ == '__main__':
     with open("public.pem") as authCert:
         authority = ssl.Certificate.loadPEM(authCert.read())
     factory = EchoClientFactory()
-    settings = ssl.settingsForClientTLS(
-        u'example.com', clientCert,
-        extraCertificateOptions={"certificate": clientCert.original,
-                                 "privateKey": clientCert.privateKey.original}
-    )
+    settings = ssl.settingsForClientTLS(u'example.com', authority, clientCert)
     reactor.connectSSL('localhost', 8000, factory, settings)
     reactor.run()
