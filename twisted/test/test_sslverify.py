@@ -347,6 +347,30 @@ class FakeContext(object):
 
 
 
+class ClientSettings(unittest.SynchronousTestCase):
+    """
+    Tests for L{sslverify.settingsForClientTLS}.
+    """
+
+    def test_settingsForClientTLSExtraKeywords(self):
+        """
+        When passed a keyword parameter other than C{extraCertificateOptions},
+        L{sslverify.settingsForClientTLS} raises an exception just like a
+        normal Python function would.
+        """
+        error = self.assertRaises(
+            TypeError,
+            sslverify.settingsForClientTLS,
+            hostname=u'alpha', someRandomThing=u'beta',
+        )
+        self.assertEqual(
+            str(error),
+            "settingsForClientTLS() got an unexpected keyword argument "
+            "'someRandomThing'"
+        )
+
+
+
 class OpenSSLOptions(unittest.TestCase):
     if skipSSL:
         skip = skipSSL
@@ -475,24 +499,6 @@ class OpenSSLOptions(unittest.TestCase):
             sslverify.OpenSSLCertificateOptions,
             privateKey=self.sKey, certificate=self.sCert,
             trustRoot=None, requireCertificate=True,
-        )
-
-
-    def test_settingsForClientTLSExtraKeywords(self):
-        """
-        When passed a keyword parameter other than C{extraCertificateOptions},
-        L{sslverify.settingsForClientTLS} raises an exception just like a
-        normal Python function would.
-        """
-        error = self.assertRaises(
-            TypeError,
-            sslverify.settingsForClientTLS,
-            hostname=u'alpha', someRandomThing=u'beta',
-        )
-        self.assertEqual(
-            str(error),
-            "settingsForClientTLS() got an unexpected keyword argument "
-            "'someRandomThing'"
         )
 
 
