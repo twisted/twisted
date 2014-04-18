@@ -1000,7 +1000,7 @@ class _ClientTLSSettings(object):
 
 
 
-def settingsForClientTLS(hostname, trustRoot=platformTrust(), **kw):
+def settingsForClientTLS(hostname, trustRoot=None, **kw):
     """
     Create a L{client connection creator <IOpenSSLClientConnectionCreator>} for
     use with APIs such as L{SSL4ClientEndpoint
