@@ -352,7 +352,7 @@ class ClientSettings(unittest.SynchronousTestCase):
     Tests for L{sslverify.settingsForClientTLS}.
     """
 
-    def test_settingsForClientTLSExtraKeywords(self):
+    def test_extraKeywords(self):
         """
         When passed a keyword parameter other than C{extraCertificateOptions},
         L{sslverify.settingsForClientTLS} raises an exception just like a
@@ -367,6 +367,21 @@ class ClientSettings(unittest.SynchronousTestCase):
             str(error),
             "settingsForClientTLS() got an unexpected keyword argument "
             "'someRandomThing'"
+        )
+
+
+    def test_bytesFailFast(self):
+        """
+        If you pass L{bytes} as the hostname to
+        L{sslverify.settingsForClientTLS} it immediately raises a L{TypeError}.
+        """
+        error = self.assertRaises(
+            TypeError,
+            sslverify.settingsForClientTLS, b'not-actually-a-hostname.com'
+        )
+        self.assertEqual(
+            str(error),
+            "settingsForClientTLS requires text for host names."
         )
 
 
