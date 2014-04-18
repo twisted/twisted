@@ -235,7 +235,7 @@ TLS server with client authentication via client certificate verification
 
 When one or more certificates are passed to ``PrivateCertificate.options``, the resulting ``contextFactory`` will use those certificates as trusted authorities and require that the peer present a certificate with a valid chain anchored by one of those authorities.
 
-Here is a server that does just such a thing.
+A server can use this to verify that a client provides a valid certificate signed by one of those certificate authorities; here is an example of such a certificate.
 
 :download:`ssl_clientauth_server.py <../examples/ssl_clientauth_server.py>`
 
@@ -244,7 +244,7 @@ Here is a server that does just such a thing.
 Client with certificates
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-The following client then supplies such a certificate, while still validating the server's identity.
+The following client then supplies such a certificate as the ``clientCertificate`` argument to :api:`twisted.internet.ssl.settingsForClientTLS <settingsForClientTLS>`, while still validating the server's identity.
 
 :download:`ssl_clientauth_client.py <../examples/ssl_clientauth_client.py>`
 
