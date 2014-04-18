@@ -788,11 +788,11 @@ class TestDecoratedDecoratorOnInstance(DeprecatedDecoratorMixin,
         deprecated(Version("Twisted", 8, 0, 0))(A.foo)
 
     In the first case, L{twisted.python.deprecate.deprecated} sees C{foo} as
-    a function (it is unbound) - in the second case, it sees C{foo} as a bound
-    method on A.  The fully qualified name is different between the two cases.
+    a function - in the second case, it sees C{foo} as an unbound method on A.
+    The fully qualified name is different between the two cases.
 
     The setup in this test case decorates and sets the function on the class
-    in one go, making it behave like the second case.
+    in one go, making it behave like the first case.
     """
     def setUp(self):
         setUpDummyCallables(self)
