@@ -379,10 +379,11 @@ class ClientSettings(unittest.SynchronousTestCase):
             TypeError,
             sslverify.settingsForClientTLS, b'not-actually-a-hostname.com'
         )
-        self.assertEqual(
-            str(error),
-            "settingsForClientTLS requires text for host names."
+        expectedText = (
+            "settingsForClientTLS requires text for host names, not " +
+            bytes.__name__
         )
+        self.assertEqual(str(error), expectedText)
 
 
 
