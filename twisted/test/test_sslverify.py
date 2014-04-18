@@ -351,6 +351,8 @@ class ClientSettings(unittest.SynchronousTestCase):
     """
     Tests for L{sslverify.settingsForClientTLS}.
     """
+    if skipSSL:
+        skip = skipSSL
 
     def test_extraKeywords(self):
         """
