@@ -1237,7 +1237,8 @@ class ServiceIdentityTests(unittest.TestCase):
         skip = skipSSL
 
     def serviceIdentitySetup(self, clientHostname, serverHostname,
-                             serverContextSetup=lambda ctx: None):
+                             serverContextSetup=lambda ctx: None,
+                             validCertificate=True):
         """
         Connect a server and a client.
 
@@ -1255,6 +1256,10 @@ class ServiceIdentityTests(unittest.TestCase):
         @type serverContextSetup: L{callable} taking L{OpenSSL.SSL.Context}
             returning L{NoneType}.
 
+        @param validCertificate: Is the server's certificate valid?  L{True} if
+            so, L{False} otherwise.
+        @type validCertificate: L{bool}
+
         @return: see L{connectedServerAndClient}.
         @rtype: see L{connectedServerAndClient}.
         """
@@ -1266,7 +1271,13 @@ class ServiceIdentityTests(unittest.TestCase):
             certificate=serverCert.original,
         )
         serverContextSetup(serverOpts.getContext())
-        clientOpts = sslverify.settingsForClientTLS(clientHostname, caCert)
+        if validCertificate:
+            clientCA = caCert
+        else:
+            clientCA, otherServer = certificatesForAuthorityAndServer(
+                serverHostname.encode("idna")
+            )
+        clientOpts = sslverify.settingsForClientTLS(clientHostname, clientCA)
 
         class GreetingServer(protocol.Protocol):
             greeting = b"greetings!"
@@ -1342,6 +1353,27 @@ class ServiceIdentityTests(unittest.TestCase):
         sErr = sProto.wrappedProtocol.lostReason
         self.assertIdentical(cErr, None)
         self.assertIdentical(sErr, None)
+
+
+    def test_validHostnameInvalidCertificate(self):
+        """
+        When an invalid certificate containing a perfectly valid hostname is
+        received, the connection is aborted with an OpenSSL error.
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"valid.example.com",
+            u"valid.example.com",
+            validCertificate=False,
+        )
+
+        self.assertEqual(cProto.wrappedProtocol.data, b'')
+        self.assertEqual(sProto.wrappedProtocol.data, b'')
+
+        cErr = cProto.wrappedProtocol.lostReason.value
+        sErr = sProto.wrappedProtocol.lostReason.value
+
+        self.assertIsInstance(cErr, SSL.Error)
+        self.assertIsInstance(sErr, ConnectionClosed)
 
 
     def test_hostnameIsIndicated(self):
