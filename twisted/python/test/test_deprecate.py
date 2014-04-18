@@ -7,6 +7,7 @@ Tests for Twisted's deprecation framework, L{twisted.python.deprecate}.
 
 from __future__ import division, absolute_import
 
+from functools import wraps
 import sys, types, warnings, inspect
 from os.path import normcase
 from warnings import simplefilter, catch_warnings
@@ -530,6 +531,7 @@ def callTestFunction():
             "Unexpected warning string: %r" % (msg,))
 
 
+
 def dummyCallable():
     """
     Do nothing.
@@ -548,7 +550,29 @@ def dummyReplacementMethod():
 
 
 
-class TestDeprecationWarnings(SynchronousTestCase):
+def setUpDummyCallables(testCase):
+    testCase.dummyCallable = wraps(dummyCallable)(lambda: None)
+    testCase.dummyReplacementMethod = wraps(
+        dummyReplacementMethod)(lambda: None)
+
+
+# class ClassWithDeprecatedMethods(object):
+#     """
+#     For testing deprecation of instance and class methods
+#     """
+#     @deprecated(Version('Twisted', 8, 0, 0))
+#     @classmethod
+#     def methodOnClass(cls):
+#         pass
+
+
+#     @deprecated(Version('Twisted', 8, 0, 0))
+#     def methodOnInstance(self):
+#         pass
+
+
+
+class TestDeprecationWarningStrings(SynchronousTestCase):
     def test_getDeprecationWarningString(self):
         """
         L{getDeprecationWarningString} returns a string that tells us that a
@@ -558,7 +582,7 @@ class TestDeprecationWarnings(SynchronousTestCase):
         self.assertEqual(
             getDeprecationWarningString(self.test_getDeprecationWarningString,
                                         version),
-            "%s.TestDeprecationWarnings.test_getDeprecationWarningString "
+            "%s.TestDeprecationWarningStrings.test_getDeprecationWarningString "
             "was deprecated in Twisted 8.0.0" % (__name__,))
 
 
@@ -573,80 +597,8 @@ class TestDeprecationWarnings(SynchronousTestCase):
         self.assertEqual(
             getDeprecationWarningString(self.test_getDeprecationWarningString,
                                         version, format),
-            '%s.TestDeprecationWarnings.test_getDeprecationWarningString was '
+            '%s.TestDeprecationWarningStrings.test_getDeprecationWarningString was '
             'deprecated in Twisted 8.0.0: This is a message' % (__name__,))
-
-
-    def test_deprecateEmitsWarning(self):
-        """
-        Decorating a callable with L{deprecated} emits a warning.
-        """
-        version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version)(dummyCallable)
-        def addStackLevel():
-            dummy()
-        with catch_warnings(record=True) as caught:
-            simplefilter("always")
-            addStackLevel()
-            self.assertEqual(caught[0].category, DeprecationWarning)
-            self.assertEqual(str(caught[0].message), getDeprecationWarningString(dummyCallable, version))
-            # rstrip in case .pyc/.pyo
-            self.assertEqual(caught[0].filename.rstrip('co'), __file__.rstrip('co'))
-
-
-    def test_deprecatedPreservesName(self):
-        """
-        The decorated function has the same name as the original.
-        """
-        version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version)(dummyCallable)
-        self.assertEqual(dummyCallable.__name__, dummy.__name__)
-        self.assertEqual(fullyQualifiedName(dummyCallable),
-                         fullyQualifiedName(dummy))
-
-
-    def test_getDeprecationDocstring(self):
-        """
-        L{_getDeprecationDocstring} returns a note about the deprecation to go
-        into a docstring.
-        """
-        version = Version('Twisted', 8, 0, 0)
-        self.assertEqual(
-            "Deprecated in Twisted 8.0.0.",
-            _getDeprecationDocstring(version, ''))
-
-
-    def test_deprecatedUpdatesDocstring(self):
-        """
-        The docstring of the deprecated function is appended with information
-        about the deprecation.
-        """
-
-        def localDummyCallable():
-            """
-            Do nothing.
-
-            This is used to test the deprecation decorators.
-            """
-
-        version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version)(localDummyCallable)
-
-        _appendToDocstring(
-            localDummyCallable,
-            _getDeprecationDocstring(version, ''))
-
-        self.assertEqual(localDummyCallable.__doc__, dummy.__doc__)
-
-
-    def test_versionMetadata(self):
-        """
-        Deprecating a function adds version information to the decorated
-        version of that function.
-        """
-        version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version)(dummyCallable)
-        self.assertEqual(version, dummy.deprecatedVersion)
 
 
     def test_getDeprecationWarningStringReplacement(self):
@@ -674,16 +626,83 @@ class TestDeprecationWarnings(SynchronousTestCase):
         replacement parameter is a callable, its fully qualified name will be
         interpolated into the result.
         """
+        setUpDummyCallables(self)
         version = Version('Twisted', 8, 0, 0)
         warningString = getDeprecationWarningString(
             self.test_getDeprecationWarningString, version,
-            replacement=dummyReplacementMethod)
+            replacement=self.dummyReplacementMethod)
         self.assertEqual(
             warningString,
             "%s was deprecated in Twisted 8.0.0; please use "
             "%s.dummyReplacementMethod instead" % (
                 fullyQualifiedName(self.test_getDeprecationWarningString),
                 __name__))
+
+
+    def test_getDeprecationDocstring(self):
+        """
+        L{_getDeprecationDocstring} returns a note about the deprecation to go
+        into a docstring.
+        """
+        version = Version('Twisted', 8, 0, 0)
+        self.assertEqual(
+            "Deprecated in Twisted 8.0.0.",
+            _getDeprecationDocstring(version, ''))
+
+
+
+class DeprecatedDecoratorMixin(object):
+    def test_deprecateEmitsWarning(self):
+        """
+        Decorating a callable with L{deprecated} emits a warning.
+        """
+        version = Version('Twisted', 8, 0, 0)
+        dummy = deprecated(version)(self.dummyCallable)
+        def addStackLevel():
+            dummy()
+        with catch_warnings(record=True) as caught:
+            simplefilter("always")
+            addStackLevel()
+            self.assertEqual(caught[0].category, DeprecationWarning)
+            self.assertEqual(str(caught[0].message), getDeprecationWarningString(self.dummyCallable, version))
+            # rstrip in case .pyc/.pyo
+            self.assertEqual(caught[0].filename.rstrip('co'), __file__.rstrip('co'))
+
+
+    def test_deprecatedPreservesName(self):
+        """
+        The decorated function has the same name as the original.
+        """
+        version = Version('Twisted', 8, 0, 0)
+        dummy = deprecated(version)(self.dummyCallable)
+        self.assertEqual(self.dummyCallable.__name__, dummy.__name__)
+        self.assertEqual(fullyQualifiedName(self.dummyCallable),
+                         fullyQualifiedName(dummy))
+
+
+    def test_deprecatedUpdatesDocstring(self):
+        """
+        The docstring of the deprecated function is appended with information
+        about the deprecation.
+        """
+        version = Version('Twisted', 8, 0, 0)
+        dummy = deprecated(version)(self.dummyCallable)
+
+        _appendToDocstring(
+            self.dummyCallable,
+            _getDeprecationDocstring(version, ''))
+
+        self.assertEqual(self.dummyCallable.__doc__, dummy.__doc__)
+
+
+    def test_versionMetadata(self):
+        """
+        Deprecating a function adds version information to the decorated
+        version of that function.
+        """
+        version = Version('Twisted', 8, 0, 0)
+        dummy = deprecated(version)(self.dummyCallable)
+        self.assertEqual(version, dummy.deprecatedVersion)
 
 
     def test_deprecatedReplacement(self):
@@ -694,7 +713,7 @@ class TestDeprecationWarnings(SynchronousTestCase):
         into the warning message.
         """
         version = Version('Twisted', 8, 0, 0)
-        dummy = deprecated(version, "something.foobar")(dummyCallable)
+        dummy = deprecated(version, "something.foobar")(self.dummyCallable)
         self.assertEqual(dummy.__doc__,
             "\n"
             "    Do nothing.\n\n"
@@ -713,8 +732,9 @@ class TestDeprecationWarnings(SynchronousTestCase):
         be interpolated into the warning message.
         """
         version = Version('Twisted', 8, 0, 0)
-        decorator = deprecated(version, replacement=dummyReplacementMethod)
-        dummy = decorator(dummyCallable)
+        decorator = deprecated(version,
+                               replacement=self.dummyReplacementMethod)
+        dummy = decorator(self.dummyCallable)
         self.assertEqual(dummy.__doc__,
             "\n"
             "    Do nothing.\n\n"
@@ -722,6 +742,12 @@ class TestDeprecationWarnings(SynchronousTestCase):
             "    Deprecated in Twisted 8.0.0; please use "
             "%s.dummyReplacementMethod instead.\n"
             "    " % (__name__,))
+
+
+
+class TestDecoratedDecoratorOnFunctions(DeprecatedDecoratorMixin,
+                                        SynchronousTestCase):
+    setUp = setUpDummyCallables
 
 
 
