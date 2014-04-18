@@ -1227,7 +1227,7 @@ class TrustRootTests(unittest.TestCase):
 
 
 
-class ServiceIdentityTests(unittest.TestCase):
+class ServiceIdentityTests(unittest.SynchronousTestCase):
     """
     Tests for the verification of the peer's service's identity via the
     C{hostname} argument to L{sslverify.OpenSSLCertificateOptions}.
