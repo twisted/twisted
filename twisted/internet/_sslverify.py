@@ -1066,8 +1066,8 @@ class ClientTLSOptions(object):
             or you'll break the implementation of various features of this
             class.
 
-        @param protocol: the TLS protocol initiating the connection.
-        @type protocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
+        @param tlsProtocol: the TLS protocol initiating the connection.
+        @type tlsProtocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
 
         @return: the configured client connection.
         @rtype: L{OpenSSL.SSL.Connection}

@@ -1359,6 +1359,10 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             def broken(*a, **k):
                 """
                 Raise an exception.
+
+                @param a: Arguments for an C{info_callback}
+
+                @param k: Keyword arguments for an C{info_callback}
                 """
                 1 / 0
             self.patch(
