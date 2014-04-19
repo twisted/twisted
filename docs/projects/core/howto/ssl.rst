@@ -86,12 +86,13 @@ TLS echo client
 
 .. literalinclude:: ../examples/echoclient_ssl.py
 
-This client uses :api:`twisted.internet.interfaces.IReactorSSL.connectSSL <connectSSL>` to connect to ``echoserv_ssl.py``.
+This client uses :api:`twisted.internet.endpoints.SSL4ClientEndpoint <SSL4ClientEndpoint>` to connect to ``echoserv_ssl.py``.
 It uses specifies that it only wants to talk to a host named ``"example.com"``, and and that it trusts the certificate authority in ``"public.pem"`` to say who ``"example.com"`` is.
 Note that the host you are connecting to --- localhost --- and the host whose identity you are verifying --- example.com --- can differ.
 In this case, our example ``server.pem`` certificate identifies a host named "example.com", but your server is proably running on localhost.
 
-In a realistic server, it's very important that these names match; in a realistic client, they should always be the same.
+In a realistic client, it's very important that you pass the same "hostname"  your connection API (in this case, :api:`twisted.internet.endpoints.SSL4ClientEndpoint <SSL4ClientEndpoint>`) and :api:`twisted.internet.ssl.settingsForClientTLS <settingsForClientTLS>`.
+In this case we're using "``localhost``" as the host to connect to because you're probably running this example on your own computer and "``example.com``" because that's the value hard-coded in the dummy certificate distributed along with Twisted's example code.
 
 Connecting To Public Servers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
