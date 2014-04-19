@@ -1,33 +1,29 @@
-from __future__ import print_function
-from twisted.internet import ssl, reactor
-from twisted.internet.protocol import ClientFactory, Protocol
+#!/usr/bin/env python
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 
-class EchoClient(Protocol):
-    def connectionMade(self):
-        print("hello, world")
-        self.transport.write("hello, world!")
+from twisted.internet import ssl, task, protocol, endpoints, defer
+from twisted.python.modules import getModule
 
-    def dataReceived(self, data):
-        print("Server said:", data)
-        self.transport.loseConnection()
+import echoclient
 
-class EchoClientFactory(ClientFactory):
-    protocol = EchoClient
+@defer.inlineCallbacks
+def main(reactor):
+    factory = protocol.Factory.forProtocol(echoclient.EchoClient)
+    certData = getModule(__name__).filePath.sibling('public.pem').getContent()
+    authData = getModule(__name__).filePath.sibling('server.pem').getContent()
+    clientCertificate = ssl.PrivateCertificate.loadPEM(authData)
+    authority = ssl.Certificate.loadPEM(certData)
+    settings = ssl.settingsForClientTLS(u'example.com', authority,
+                                        clientCertificate)
+    endpoint = endpoints.SSL4ClientEndpoint(reactor, 'localhost', 8000,
+                                            settings)
+    echoClient = yield endpoint.connect(factory)
 
-    def clientConnectionFailed(self, connector, reason):
-        print("Connection failed - goodbye!")
-        reactor.stop()
-
-    def clientConnectionLost(self, connector, reason):
-        print("Connection lost - goodbye!")
-        reactor.stop()
+    done = defer.Deferred()
+    echoClient.connectionLost = lambda reason: done.callback(None)
+    yield done
 
 if __name__ == '__main__':
-    with open("server.pem") as keyAndCert:
-        clientCert = ssl.PrivateCertificate.loadPEM(keyAndCert.read())
-    with open("public.pem") as authCert:
-        authority = ssl.Certificate.loadPEM(authCert.read())
-    factory = EchoClientFactory()
-    settings = ssl.settingsForClientTLS(u'example.com', authority, clientCert)
-    reactor.connectSSL('localhost', 8000, factory, settings)
-    reactor.run()
+    import echoclient_ssl
+    task.react(echoclient_ssl.main)
