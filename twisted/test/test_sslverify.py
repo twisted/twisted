@@ -1363,7 +1363,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
                 """
                 1 / 0
             self.patch(
-                sslverify._ClientTLSSettings, "_identityVerifyingInfoCallback",
+                sslverify.ClientTLSSettings, "_identityVerifyingInfoCallback",
                 broken,
             )
 
