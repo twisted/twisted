@@ -1,22 +1,25 @@
-from twisted.internet import ssl, reactor
-from twisted.internet.protocol import Factory, Protocol
+#!/usr/bin/env python
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 
-class Echo(Protocol):
-    def dataReceived(self, data):
-        self.transport.write(data)
-    def connectionLost(self, reason):
-        print(reason)
+import sys
+
+from twisted.internet import ssl, protocol, task, defer
+from twisted.python import log
+from twisted.python.modules import getModule
+
+import echoserv
+
+def main(reactor):
+    log.startLogging(sys.stdout)
+    certData = getModule(__name__).filePath.sibling('public.pem').getContent()
+    authData = getModule(__name__).filePath.sibling('server.pem').getContent()
+    authority = ssl.Certificate.loadPEM(certData)
+    certificate = ssl.PrivateCertificate.loadPEM(authData)
+    factory = protocol.Factory.forProtocol(echoserv.Echo)
+    reactor.listenSSL(8000, factory, certificate.options(authority))
+    return defer.Deferred()
 
 if __name__ == '__main__':
-    factory = Factory()
-    factory.protocol = Echo
-
-    with open("public.pem") as certAuthCertFile:
-        certAuthCert = ssl.Certificate.loadPEM(certAuthCertFile.read())
-
-    with open("server.pem") as privateFile:
-        serverCert = ssl.PrivateCertificate.loadPEM(privateFile.read())
-
-    contextFactory = serverCert.options(certAuthCert)
-    reactor.listenSSL(8000, factory, contextFactory)
-    reactor.run()
+    import echoserv_ssl
+    task.react(echoserv_ssl.main)
