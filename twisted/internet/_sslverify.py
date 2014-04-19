@@ -1071,7 +1071,7 @@ def settingsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
     """
     extraCertificateOptions = kw.pop('extraCertificateOptions', None) or {}
     if trustRoot is None:
-        trustRoot = KeyPair.generate().selfSignedCert(1)
+        trustRoot = platformTrust()
     if kw:
         raise TypeError(
             "settingsForClientTLS() got an unexpected keyword argument"
