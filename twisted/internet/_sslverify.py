@@ -1074,7 +1074,7 @@ class ClientTLSSettings(object):
         """
         context = self._ctx
         connection = SSL.Connection(context, None)
-        connection.set_app_data(protocol)
+        connection.set_app_data(tlsProtocol)
         return connection
 
 
