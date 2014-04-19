@@ -505,7 +505,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         certificate verification failed.
 
         @param reason: The reason that the verification failed; reported to the
-            application protocol's
+            application protocol's C{connectionLost} method.
         @type reason: L{Failure}
         """
         self._reason = reason
@@ -627,6 +627,9 @@ class _ContextFactoryToConnectionFactory(object):
     don't actually typically subclass though, so "something" is more likely
     just something with a C{getContext} method) into an
     L{IOpenSSLClientConnectionCreator} or L{IOpenSSLServerConnectionCreator}.
+
+    See U{https://twistedmatrix.com/trac/ticket/7215} for work that should make
+    this unnecessary.
     """
 
     def __init__(self, oldStyleContextFactory):
@@ -739,7 +742,10 @@ class TLSMemoryBIOFactory(WrappingFactory):
 
         @type contextFactory: L{IOpenSSLClientConnectionCreator} or
             L{IOpenSSLServerConnectionCreator}, or, for compatibility with
-            older code, L{twisted.internet.ssl.ContextFactory}.
+            older code, L{twisted.internet.ssl.ContextFactory}.  See
+            U{https://twistedmatrix.com/trac/ticket/7215} for information on
+            the upcoming deprecation of passing a
+            L{twisted.internet.ssl.ContextFactory} here.
 
         @param isClient: Is this a factory for TLS client connections; in other
             words, those that will send a C{ClientHello} greeting?  L{True} if
