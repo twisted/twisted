@@ -1009,12 +1009,12 @@ def _tolerateErrors(wrapped):
 
 
 @implementer(IOpenSSLClientConnectionCreator)
-class ClientTLSSettings(object):
+class ClientTLSOptions(object):
     """
     Client creator for TLS.
 
     Private implementation type (not exposed to applications) for public
-    L{settingsForClientTLS} API.
+    L{optionsForClientTLS} API.
 
     @ivar _ctx: The context to use for new connections.
     @type _ctx: L{SSL.Context}
@@ -1039,7 +1039,7 @@ class ClientTLSSettings(object):
 
     def __init__(self, hostname, ctx):
         """
-        Initialize L{ClientTLSSettings}.
+        Initialize L{ClientTLSOptions}.
 
         @param hostname: The hostname to verify as input by a human.
         @type hostname: L{unicode}
@@ -1083,7 +1083,7 @@ class ClientTLSSettings(object):
         U{info_callback
         <http://pythonhosted.org/pyOpenSSL/api/ssl.html#OpenSSL.SSL.Context.set_info_callback>
         } for pyOpenSSL that verifies the hostname in the presented certificate
-        matches the one passed to this L{ClientTLSSettings}.
+        matches the one passed to this L{ClientTLSOptions}.
 
         @param connection: the connection which is handshaking.
         @type connection: L{OpenSSL.SSL.Connection}
@@ -1106,7 +1106,7 @@ class ClientTLSSettings(object):
 
 
 
-def settingsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
+def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
                          **kw):
     """
     Create a L{client connection creator <IOpenSSLClientConnectionCreator>} for
@@ -1158,14 +1158,14 @@ def settingsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
         trustRoot = platformTrust()
     if kw:
         raise TypeError(
-            "settingsForClientTLS() got an unexpected keyword argument"
+            "optionsForClientTLS() got an unexpected keyword argument"
             " '{arg}'".format(
                 arg=kw.popitem()[0]
             )
         )
     if not isinstance(hostname, unicode):
         raise TypeError(
-            "settingsForClientTLS requires text for host names, not "
+            "optionsForClientTLS requires text for host names, not "
             + hostname.__class__.__name__
         )
     if clientCertificate:
@@ -1177,7 +1177,7 @@ def settingsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
         trustRoot=trustRoot,
         **extraCertificateOptions
     )
-    return ClientTLSSettings(hostname, certificateOptions.getContext())
+    return ClientTLSOptions(hostname, certificateOptions.getContext())
 
 
 

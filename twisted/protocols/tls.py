@@ -727,7 +727,7 @@ class TLSMemoryBIOFactory(WrappingFactory):
 
                 1. L{twisted.internet.ssl.CertificateOptions} (if you're
                    writing a server) or the result of
-                   L{twisted.internet.ssl.settingsForClientTLS} (if you're
+                   L{twisted.internet.ssl.optionsForClientTLS} (if you're
                    writing a client).  If you want security you should really
                    use one of these.
 

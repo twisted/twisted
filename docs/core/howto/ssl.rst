@@ -48,9 +48,9 @@ For servers, we can use :api:`twisted.internet.ssl.CertificateOptions`.
 In order to prove the server's identity, you pass the ``privateKey`` and ``certificate`` arguments to this object.
 :api:`twisted.internet.ssl.PrivateCertificate.options` is a convenient way to create a ``CertificateOptions`` instance configured to use a particular key and certificate.
 
-For clients, we can use :api:`twisted.internet.ssl.settingsForClientTLS`.
+For clients, we can use :api:`twisted.internet.ssl.optionsForClientTLS`.
 This takes two arguments, ``hostname`` (which indicates what hostname must be advertised in the server's certificate) and optionally ``trustRoot``.
-By default, :api:`twisted.internet.ssl.settingsForClientTLS <settingsForClientTLS>` tries to obtain the trust roots from your platform, but you can specify your own.
+By default, :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>` tries to obtain the trust roots from your platform, but you can specify your own.
 
 .. note::
 
@@ -58,7 +58,7 @@ By default, :api:`twisted.internet.ssl.settingsForClientTLS <settingsForClientTL
    If you've built OpenSSL yourself, you must take care to include these in the appropriate location.
    If you're using the OpenSSL shipped as part of Mac OS X 10.5-10.9, this behavior will also be correct.
    If you're using Debian, or one of its derivatives like Ubuntu, install the `ca-certificates` package to ensure you have trust roots available, and this behavior should also be correct.
-   Work is ongoing to make :api:`twisted.internet.ssl.platformTrust <platformTrust>` --- the API that :api:`twisted.internet.ssl.settingsForClientTLS <settingsForClientTLS>` uses by default --- more robust.
+   Work is ongoing to make :api:`twisted.internet.ssl.platformTrust <platformTrust>` --- the API that :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>` uses by default --- more robust.
    For example, :api:`twisted.internet.ssl.platformTrust <platformTrust>` should fall back to `the "certifi" package <http://pypi.python.org/pypi/certifi>`_ if no platform trust roots are available but it doesn't do that yet.
    When this happens, you shouldn't need to change your code.
 
@@ -93,13 +93,13 @@ It specifies that it only wants to talk to a host named ``"example.com"``, and a
 Note that the host you are connecting to --- localhost --- and the host whose identity you are verifying --- example.com --- can differ.
 In this case, our example ``server.pem`` certificate identifies a host named "example.com", but your server is proably running on localhost.
 
-In a realistic client, it's very important that you pass the same "hostname"  your connection API (in this case, :api:`twisted.internet.endpoints.SSL4ClientEndpoint <SSL4ClientEndpoint>`) and :api:`twisted.internet.ssl.settingsForClientTLS <settingsForClientTLS>`.
+In a realistic client, it's very important that you pass the same "hostname"  your connection API (in this case, :api:`twisted.internet.endpoints.SSL4ClientEndpoint <SSL4ClientEndpoint>`) and :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>`.
 In this case we're using "``localhost``" as the host to connect to because you're probably running this example on your own computer and "``example.com``" because that's the value hard-coded in the dummy certificate distributed along with Twisted's example code.
 
 Connecting To Public Servers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Here is a short example, now using the default trust roots for :api:`twisted.internet.ssl.settingsForClientTLS <settingsForClientTLS>` from :api:`twisted.internet.ssl.platformTrust <platformTrust>`.
+Here is a short example, now using the default trust roots for :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>` from :api:`twisted.internet.ssl.platformTrust <platformTrust>`.
 
 :download:`check_server_certificate.py <listings/ssl/check_server_certificate.py>`
 
@@ -176,7 +176,7 @@ A server can use this to verify that a client provides a valid certificate signe
 Client with certificates
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-The following client then supplies such a certificate as the ``clientCertificate`` argument to :api:`twisted.internet.ssl.settingsForClientTLS <settingsForClientTLS>`, while still validating the server's identity.
+The following client then supplies such a certificate as the ``clientCertificate`` argument to :api:`twisted.internet.ssl.optionsForClientTLS <optionsForClientTLS>`, while still validating the server's identity.
 
 :download:`ssl_clientauth_client.py <../examples/ssl_clientauth_client.py>`
 

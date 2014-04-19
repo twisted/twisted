@@ -10,7 +10,7 @@ class StartTLSClient(LineReceiver):
     def lineReceived(self, line):
         print("received: " + line)
         if line == "READY":
-            self.transport.startTLS(self.factory.settings)
+            self.transport.startTLS(self.factory.options)
             self.sendLine("secure text")
             self.transport.loseConnection()
 
@@ -18,7 +18,7 @@ class StartTLSClient(LineReceiver):
 def main(reactor):
     factory = protocol.Factory.forProtocol(StartTLSClient)
     certData = getModule(__name__).filePath.sibling('server.pem').getContent()
-    factory.settings = ssl.settingsForClientTLS(
+    factory.options = ssl.optionsForClientTLS(
         u"example.com", ssl.PrivateCertificate.loadPEM(certData)
     )
     endpoint = endpoints.HostnameEndpoint(reactor, 'localhost', 8000)

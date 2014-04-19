@@ -14,10 +14,10 @@ def main(reactor):
     authData = getModule(__name__).filePath.sibling('server.pem').getContent()
     clientCertificate = ssl.PrivateCertificate.loadPEM(authData)
     authority = ssl.Certificate.loadPEM(certData)
-    settings = ssl.settingsForClientTLS(u'example.com', authority,
-                                        clientCertificate)
+    options = ssl.optionsForClientTLS(u'example.com', authority,
+                                      clientCertificate)
     endpoint = endpoints.SSL4ClientEndpoint(reactor, 'localhost', 8000,
-                                            settings)
+                                            options)
     echoClient = yield endpoint.connect(factory)
 
     done = defer.Deferred()

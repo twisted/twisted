@@ -348,9 +348,9 @@ class FakeContext(object):
 
 
 
-class ClientSettings(unittest.SynchronousTestCase):
+class ClientOptions(unittest.SynchronousTestCase):
     """
-    Tests for L{sslverify.settingsForClientTLS}.
+    Tests for L{sslverify.optionsForClientTLS}.
     """
     if skipSSL:
         skip = skipSSL
@@ -358,17 +358,17 @@ class ClientSettings(unittest.SynchronousTestCase):
     def test_extraKeywords(self):
         """
         When passed a keyword parameter other than C{extraCertificateOptions},
-        L{sslverify.settingsForClientTLS} raises an exception just like a
+        L{sslverify.optionsForClientTLS} raises an exception just like a
         normal Python function would.
         """
         error = self.assertRaises(
             TypeError,
-            sslverify.settingsForClientTLS,
+            sslverify.optionsForClientTLS,
             hostname=u'alpha', someRandomThing=u'beta',
         )
         self.assertEqual(
             str(error),
-            "settingsForClientTLS() got an unexpected keyword argument "
+            "optionsForClientTLS() got an unexpected keyword argument "
             "'someRandomThing'"
         )
 
@@ -376,14 +376,14 @@ class ClientSettings(unittest.SynchronousTestCase):
     def test_bytesFailFast(self):
         """
         If you pass L{bytes} as the hostname to
-        L{sslverify.settingsForClientTLS} it immediately raises a L{TypeError}.
+        L{sslverify.optionsForClientTLS} it immediately raises a L{TypeError}.
         """
         error = self.assertRaises(
             TypeError,
-            sslverify.settingsForClientTLS, b'not-actually-a-hostname.com'
+            sslverify.optionsForClientTLS, b'not-actually-a-hostname.com'
         )
         expectedText = (
-            "settingsForClientTLS requires text for host names, not " +
+            "optionsForClientTLS requires text for host names, not " +
             bytes.__name__
         )
         self.assertEqual(str(error), expectedText)
@@ -1324,7 +1324,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         @type fakePlatformTrust: L{bool}
 
         @param useDefaultTrust: Should we avoid passing the C{trustRoot} to
-            L{ssl.settingsForClientTLS}?  Defaults to 'no'.
+            L{ssl.optionsForClientTLS}?  Defaults to 'no'.
         @type useDefaultTrust: L{bool}
 
         @return: see L{connectedServerAndClient}.
@@ -1362,7 +1362,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
                 """
                 1 / 0
             self.patch(
-                sslverify.ClientTLSSettings, "_identityVerifyingInfoCallback",
+                sslverify.ClientTLSOptions, "_identityVerifyingInfoCallback",
                 broken,
             )
 
@@ -1374,7 +1374,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         if fakePlatformTrust:
             self.patch(sslverify, "platformTrust", lambda: serverCA)
 
-        clientOpts = sslverify.settingsForClientTLS(**signature)
+        clientOpts = sslverify.optionsForClientTLS(**signature)
 
         class GreetingServer(protocol.Protocol):
             greeting = b"greetings!"
@@ -1497,7 +1497,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
     def test_butIfTheyDidItWouldWork(self):
         """
-        L{ssl.settingsForClientTLS} should be using L{ssl.platformTrust} by
+        L{ssl.optionsForClientTLS} should be using L{ssl.platformTrust} by
         default, so if we fake that out then it should trust ourselves again.
         """
         cProto, sProto, pump = self.serviceIdentitySetup(
@@ -1519,7 +1519,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         """
         When the server verifies and the client presents a valid certificate
         for that verification by passing it to
-        L{sslverify.settingsForClientTLS}, communication proceeds.
+        L{sslverify.optionsForClientTLS}, communication proceeds.
         """
         cProto, sProto, pump = self.serviceIdentitySetup(
             u"valid.example.com",
@@ -1542,7 +1542,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         """
         When the server verifies and the client presents an invalid certificate
         for that verification by passing it to
-        L{sslverify.settingsForClientTLS}, the connection cannot be established
+        L{sslverify.optionsForClientTLS}, the connection cannot be established
         with an SSL error.
         """
         cProto, sProto, pump = self.serviceIdentitySetup(
