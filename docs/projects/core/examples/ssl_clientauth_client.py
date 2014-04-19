@@ -25,5 +25,5 @@ def main(reactor):
     yield done
 
 if __name__ == '__main__':
-    import echoclient_ssl
-    task.react(echoclient_ssl.main)
+    import ssl_clientauth_client
+    task.react(ssl_clientauth_client.main)

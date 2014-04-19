@@ -21,5 +21,5 @@ def main(reactor):
     return defer.Deferred()
 
 if __name__ == '__main__':
-    import echoserv_ssl
-    task.react(echoserv_ssl.main)
+    import ssl_clientauth_server
+    task.react(ssl_clientauth_server.main)
