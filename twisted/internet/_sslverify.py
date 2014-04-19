@@ -955,6 +955,14 @@ def _tolerateErrors(wrapped):
     Wrap up an C{info_callback} for pyOpenSSL so that if something goes wrong
     the error is immediately logged and the connection is dropped if possible.
 
+    This wrapper exists because some versions of pyOpenSSL don't handle errors
+    from callbacks at I{all}, and those which do write tracebacks directly to
+    stderr rather than to a supplied logging system.  This reports unexpected
+    errors to the Twisted logging system.
+
+    Also, this terminates the connection immediately if possible because if
+    you've got bugs in your verification logic it's much safer to just give up.
+
     @param wrapped: A valid C{info_callback} for pyOpenSSL.
     @type wrapped: L{callable}
 
