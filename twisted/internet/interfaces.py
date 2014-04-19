@@ -2171,7 +2171,7 @@ class IOpenSSLClientConnectionCreator(Interface):
 
     @note: Creating OpenSSL connection objects is subtle, error-prone, and
         security-critical.  Before implementing this interface yourself,
-        consider using L{twisted.internet.ssl.settingsForClientTLS} as your
+        consider using L{twisted.internet.ssl.optionsForClientTLS} as your
         C{contextFactory}.
     """
 
@@ -2203,7 +2203,7 @@ class ITLSTransport(ITCPTransport):
         @param contextFactory: An object which creates appropriately configured
             TLS connections.
 
-            For clients, use L{twisted.internet.ssl.settingsForClientTLS}; for
+            For clients, use L{twisted.internet.ssl.optionsForClientTLS}; for
             servers, use L{twisted.internet.ssl.CertificateOptions}.
 
         @type contextFactory: L{IOpenSSLClientConnectionCreator} or
