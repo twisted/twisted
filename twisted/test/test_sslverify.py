@@ -1244,7 +1244,9 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
                              clientPresentsCertificate=False,
                              validClientCertificate=True,
                              serverVerifies=False,
-                             buggyInfoCallback=False):
+                             buggyInfoCallback=False,
+                             fakePlatformTrust=False,
+                             useDefaultTrust=False):
         """
         Connect a server and a client.
 
@@ -1283,6 +1285,15 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             the C{info_callback} passed to OpenSSL to have a bug and raise an
             exception (L{ZeroDivisionError})?  Defaults to 'no'.
         @type buggyInfoCallback: L{bool}
+
+        @param fakePlatformTrust: Should we fake the platformTrust to be the
+            same as our fake server certificate authority, so that we can test
+            it's being used?  Defaults to 'no' and we just pass platform trust.
+        @type fakePlatformTrust: L{bool}
+
+        @param useDefaultTrust: Should we avoid passing the C{trustRoot} to
+            L{ssl.settingsForClientTLS}?  Defaults to 'no'.
+        @type useDefaultTrust: L{bool}
 
         @return: see L{connectedServerAndClient}.
         @rtype: see L{connectedServerAndClient}.
@@ -1324,8 +1335,15 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
                 broken,
             )
 
-        clientOpts = sslverify.settingsForClientTLS(clientHostname, serverCA,
-                                                    passClientCert)
+        signature = {'hostname': clientHostname}
+        if passClientCert:
+            signature.update(clientCertificate=passClientCert)
+        if not useDefaultTrust:
+            signature.update(trustRoot=serverCA)
+        if fakePlatformTrust:
+            self.patch("sslverify", platformTrust, lambda: serverCA)
+
+        clientOpts = sslverify.settingsForClientTLS(**signature)
 
         class GreetingServer(protocol.Protocol):
             greeting = b"greetings!"
@@ -1412,6 +1430,27 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             u"valid.example.com",
             u"valid.example.com",
             validCertificate=False,
+        )
+
+        self.assertEqual(cProto.wrappedProtocol.data, b'')
+        self.assertEqual(sProto.wrappedProtocol.data, b'')
+
+        cErr = cProto.wrappedProtocol.lostReason.value
+        sErr = sProto.wrappedProtocol.lostReason.value
+
+        self.assertIsInstance(cErr, SSL.Error)
+        self.assertIsInstance(sErr, SSL.Error)
+
+
+    def test_realCAsBetterNotSignOurBogusTestCerts(self):
+        """
+        If we use the default trust, our dinky certificate should really fail.
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"valid.example.com",
+            u"valid.example.com",
+            validCertificate=False,
+            useDefaultTrust=True,
         )
 
         self.assertEqual(cProto.wrappedProtocol.data, b'')
