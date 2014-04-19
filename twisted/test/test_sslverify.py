@@ -1266,6 +1266,24 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
             so, L{False} otherwise.
         @type validCertificate: L{bool}
 
+        @param clientPresentsCertificate: Should the client present a
+            certificate to the server?  Defaults to 'no'.
+        @type clientPresentsCertificate: L{bool}
+
+        @param validClientCertificate: If the client presents a certificate,
+            should it actually be a valid one, i.e. signed by the same CA that
+            the server is checking?  Defaults to 'yes'.
+        @type validClientCertificate: L{bool}
+
+        @param serverVerifies: Should the server verify the client's
+            certificate?  Defaults to 'no'.
+        @type serverVerifies: L{bool}
+
+        @param buggyInfoCallback: Should we patch the implementation so that
+            the C{info_callback} passed to OpenSSL to have a bug and raise an
+            exception (L{ZeroDivisionError})?  Defaults to 'no'.
+        @type buggyInfoCallback: L{bool}
+
         @return: see L{connectedServerAndClient}.
         @rtype: see L{connectedServerAndClient}.
         """
