@@ -1341,7 +1341,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         if not useDefaultTrust:
             signature.update(trustRoot=serverCA)
         if fakePlatformTrust:
-            self.patch("sslverify", platformTrust, lambda: serverCA)
+            self.patch(sslverify, "platformTrust", lambda: serverCA)
 
         clientOpts = sslverify.settingsForClientTLS(**signature)
 
@@ -1444,7 +1444,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
     def test_realCAsBetterNotSignOurBogusTestCerts(self):
         """
-        If we use the default trust, our dinky certificate should really fail.
+        If we use the default trust from the platform, our dinky certificate
+        should I{really} fail.
         """
         cProto, sProto, pump = self.serviceIdentitySetup(
             u"valid.example.com",
@@ -1461,6 +1462,26 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
 
         self.assertIsInstance(cErr, SSL.Error)
         self.assertIsInstance(sErr, SSL.Error)
+
+
+    def test_butIfTheyDidItWouldWork(self):
+        """
+        L{ssl.settingsForClientTLS} should be using L{ssl.platformTrust} by
+        default, so if we fake that out then it should trust ourselves again.
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"valid.example.com",
+            u"valid.example.com",
+            useDefaultTrust=True,
+            fakePlatformTrust=True,
+        )
+        self.assertEqual(cProto.wrappedProtocol.data,
+                         b'greetings!')
+
+        cErr = cProto.wrappedProtocol.lostReason
+        sErr = sProto.wrappedProtocol.lostReason
+        self.assertIdentical(cErr, None)
+        self.assertIdentical(sErr, None)
 
 
     def test_clientPresentsCertificate(self):
