@@ -134,87 +134,16 @@ encrypted channel by examining the packet payloads with a tool like
 startTLS server
 ~~~~~~~~~~~~~~~
 
-.. code-block:: python
+:download:`starttls_server.py <listings/ssl/starttls_server.py>`
 
-    from twisted.internet import reactor, ssl
-    from twisted.internet.protocol import ServerFactory
-    from twisted.protocols.basic import LineReceiver
-
-    class TLSServer(LineReceiver):
-        def lineReceived(self, line):
-            print("received: " + line)
-
-            if line == "STARTTLS":
-                print("-- Switching to TLS")
-                self.sendLine('READY')
-
-                self.transport.startTLS(self.factory.options)
-
-
-    if __name__ == '__main__':
-        with open("keys/server.key") as keyFile:
-            keyPEM = keyFile.read()
-        with open("keys/server.crt") as certFile:
-            certPEM = certFile.read()
-        cert = PrivateCertificate.loadPEM(keyPEM + certPEM)
-
-        factory = Factory.forProtocol(TLSServer)
-        factory.options = cert.options()
-        reactor.listenTCP(8000, factory)
-        reactor.run()
+.. literalinclude:: listings/ssl/starttls_server.py
 
 startTLS client
 ~~~~~~~~~~~~~~~
 
-.. code-block:: python
+:download:`starttls_client.py <listings/ssl/starttls_client.py>`
 
-    from __future__ import print_function
-    from twisted.internet import reactor, ssl
-    from twisted.internet.protocol import ClientFactory
-    from twisted.protocols.basic import LineReceiver
-
-    class TLSClient(LineReceiver):
-        pretext = [
-            "first line",
-            "last thing before TLS starts",
-            "STARTTLS"]
-
-        posttext = [
-            "first thing after TLS started",
-            "last thing ever"]
-
-        def connectionMade(self):
-            for l in self.pretext:
-                self.sendLine(l)
-
-        def lineReceived(self, line):
-            print("received: " + line)
-            if line == "READY":
-                self.transport.startTLS(self.factory.settings)
-                for l in self.posttext:
-                    self.sendLine(l)
-                self.transport.loseConnection()
-
-    class TLSClientFactory(ClientFactory):
-        protocol = TLSClient
-
-        def clientConnectionFailed(self, connector, reason):
-            print("connection failed: ", reason.getErrorMessage())
-            reactor.stop()
-
-        def clientConnectionLost(self, connector, reason):
-            print("connection lost: ", reason.getErrorMessage())
-            reactor.stop()
-
-    if __name__ == "__main__":
-        factory = TLSClientFactory()
-        with open("keys/server.crt") as certFile:
-            certPEM = certFile.read()
-        factory.settings = ssl.settingsForClientTLS(
-            u"example.com", ssl.Certificate.loadPEM(certPEM)
-        )
-        reactor.connectTCP('localhost', 8000, factory)
-        reactor.run()
+.. literalinclude:: listings/ssl/starttls_client.py
 
 ``startTLS`` is a transport method that gets passed a ``contextFactory``.
 It is invoked at an agreed-upon time in the data reception method of the client and server protocols.
@@ -271,9 +200,11 @@ For example,
 Another part of the TLS protocol which ``CertificateOptions`` can control is the version of the TLS or SSL protocol used.
 This is often called the context's "method".
 By default, ``CertificateOptions`` creates contexts that require at least the TLSv1 protocol.
-``CertificateOptions`` also supports the older SSLv3 protocol (which may be required interoperate with an existing service or piece of software), just pass ``OpenSSL.SSL.SSLv3_METHOD`` to its initializer:
+``CertificateOptions`` also supports the older SSLv3 protocol (which may be required interoperate with an existing service or piece of software).
+To allow SSLv3, just pass ``OpenSSL.SSL.SSLv3_METHOD`` to ``CertificateOptions``'s initializer:
 
 .. code-block:: python
+
     from twisted.internet.ssl import CertificateOptions
     from OpenSSL.SSL import SSLv3_METHOD
     options = CertificateOptions(..., method=SSLv3_METHOD)

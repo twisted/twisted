@@ -2168,7 +2168,7 @@ class IOpenSSLClientConnectionCreator(Interface):
 
     @note: Creating OpenSSL connection objects is subtle, error-prone, and
         security-critical.  Before implementing this interface yourself,
-        consider using L{twisted.internet.ssl.CertificateOptions}.
+        consider using L{twisted.internet.ssl.settingsForClientTLS}.
     """
 
     def clientConnectionForTLS(tlsProtocol):

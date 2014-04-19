@@ -716,15 +716,37 @@ class TLSMemoryBIOFactory(WrappingFactory):
 
     def __init__(self, contextFactory, isClient, wrappedFactory):
         """
+        Create a L{TLSMemoryBIOFactory}.
+
         @param contextFactory: Configuration parameters used to create an
-            OpenSSL connection.
+            OpenSSL connection.  In order of preference, what you should pass
+            here should be:
+
+                1. L{twisted.internet.ssl.CertificateOptions} (if you're
+                   writing a server) or the result of
+                   L{twisted.internet.ssl.settingsForClientTLS} (if you're
+                   writing a client).  If you want security you should really
+                   use one of these.
+
+                2. If you really want to implement something yourself, supply a
+                   provider of L{IOpenSSLClientConnectionCreator} or
+                   L{IOpenSSLServerConnectionCreator}.
+
+                3. If you really have to, supply a
+                   L{twisted.internet.ssl.ContextFactory}.  This will likely be
+                   deprecated at some point so please upgrade to the new
+                   interfaces.
+
         @type contextFactory: L{IOpenSSLClientConnectionCreator} or
             L{IOpenSSLServerConnectionCreator}, or, for compatibility with
             older code, L{twisted.internet.ssl.ContextFactory}.
 
         @param isClient: Is this a factory for TLS client connections; in other
             words, those that will send a C{ClientHello} greeting?  L{True} if
-            so, L{False} otherwise.
+            so, L{False} otherwise.  This flag determines what interface is
+            expected of C{contextFactory}.  If L{True}, C{contextFactory}
+            should provide L{IOpenSSLClientConnectionCreator}; otherwise it
+            should provide L{IOpenSSLServerConnectionCreator}.
         @type isClient: L{bool}
 
         @param wrappedFactory: A factory which will create the
