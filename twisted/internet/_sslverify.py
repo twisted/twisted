@@ -1049,7 +1049,9 @@ def settingsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
     @param trustRoot: Specification of trust requirements of peers.  This may
         be a L{Certificate} or the result of L{platformTrust}.  By default it
         is L{platformTrust} and you probably shouldn't adjust it unless you
-        really know what you're doing.
+        really know what you're doing.  Be aware that clients using this
+        interface I{must} verify the server; you cannot explicitly pass C{None}
+        since that just means to use L{platformTrust}.
     @type trustRoot: L{IOpenSSLTrustRoot}
 
     @param clientCertificate: The certificate and private key that the client
