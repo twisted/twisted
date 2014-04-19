@@ -2142,7 +2142,10 @@ class IOpenSSLServerConnectionCreator(Interface):
 
     @note: Creating OpenSSL connection objects is subtle, error-prone, and
         security-critical.  Before implementing this interface yourself,
-        consider using L{twisted.internet.ssl.CertificateOptions}.
+        consider using L{twisted.internet.ssl.CertificateOptions} as your
+        C{contextFactory}.  (For historical reasons, that class does not
+        actually I{implement} this interface; nevertheless it is usable in all
+        Twisted APIs which require a provider of this interface.)
     """
 
     def serverConnectionForTLS(tlsProtocol):
@@ -2168,7 +2171,8 @@ class IOpenSSLClientConnectionCreator(Interface):
 
     @note: Creating OpenSSL connection objects is subtle, error-prone, and
         security-critical.  Before implementing this interface yourself,
-        consider using L{twisted.internet.ssl.settingsForClientTLS}.
+        consider using L{twisted.internet.ssl.settingsForClientTLS} as your
+        C{contextFactory}.
     """
 
     def clientConnectionForTLS(tlsProtocol):
@@ -2197,12 +2201,16 @@ class ITLSTransport(ITCPTransport):
         Initiate TLS negotiation.
 
         @param contextFactory: An object which creates appropriately configured
-            TLS connection.
+            TLS connections.
+
+            For clients, use L{twisted.internet.ssl.settingsForClientTLS}; for
+            servers, use L{twisted.internet.ssl.CertificateOptions}.
+
         @type contextFactory: L{IOpenSSLClientConnectionCreator} or
             L{IOpenSSLServerConnectionCreator}, depending on whether this
             L{ITLSTransport} is a server or not.  If the appropriate interface
-            is not provided, must be an old-style
-            L{twisted.internet.ssl.ContextFactory} or similar.
+            is not provided by the value given for C{contextFactory}, it must
+            be an old-style L{twisted.internet.ssl.ContextFactory} or similar.
         """
 
 
