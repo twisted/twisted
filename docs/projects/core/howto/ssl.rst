@@ -136,16 +136,16 @@ encrypted channel by examining the packet payloads with a tool like
 startTLS server
 ~~~~~~~~~~~~~~~
 
-:download:`starttls_server.py <listings/ssl/starttls_server.py>`
+:download:`starttls_server.py <../examples/starttls_server.py>`
 
-.. literalinclude:: listings/ssl/starttls_server.py
+.. literalinclude:: ../examples/starttls_server.py
 
 startTLS client
 ~~~~~~~~~~~~~~~
 
-:download:`starttls_client.py <listings/ssl/starttls_client.py>`
+:download:`starttls_client.py <../examples/starttls_client.py>`
 
-.. literalinclude:: listings/ssl/starttls_client.py
+.. literalinclude:: ../examples/starttls_client.py
 
 ``startTLS`` is a transport method that gets passed a ``contextFactory``.
 It is invoked at an agreed-upon time in the data reception method of the client and server protocols.
@@ -182,6 +182,8 @@ The following client then supplies such a certificate as the ``clientCertificate
 
 .. literalinclude:: ../examples/ssl_clientauth_client.py
 
+Notice that these two examples are very, very similar to the TLS echo examples above.
+In fact, you can demonstrate a failed authentication by simply running ``echoclient_ssl.py`` against ``ssl_clientauth_server.py``; you'll see no output because the server closed the connection rather than echoing the client's authenticated input.
 
 TLS Protocol Options
 ~~~~~~~~~~~~~~~~~~~~
