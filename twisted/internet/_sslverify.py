@@ -23,6 +23,12 @@ from twisted.python import log
 def _cantSetHostnameIndication(connection, hostname):
     """
     The option to set SNI is not available, so do nothing.
+
+    @param connection: the connection
+    @type connection: L{OpenSSL.SSL.Connection}
+
+    @param hostname: the server's host name
+    @type: hostname: L{bytes}
     """
 
 
@@ -92,7 +98,8 @@ def simpleVerifyHostname(connection, hostname):
     @param hostname: The hostname expected by the user.
     @type hostname: L{unicode}
 
-    @raise VerificationError: if the common name and hostname don't match.
+    @raise twisted.internet.ssl.VerificationError: if the common name and
+        hostname don't match.
     """
     commonName = connection.get_peer_certificate().get_subject().commonName
     if commonName != hostname:
