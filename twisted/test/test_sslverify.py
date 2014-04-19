@@ -1330,9 +1330,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         @return: see L{connectedServerAndClient}.
         @rtype: see L{connectedServerAndClient}.
         """
-        serverCA, serverCert = certificatesForAuthorityAndServer(
-            serverHostname.encode("idna")
-        )
+        serverIDNA = sslverify._idnaBytes(serverHostname)
+        serverCA, serverCert = certificatesForAuthorityAndServer(serverIDNA)
         other = {}
         passClientCert = None
         clientCA, clientCert = certificatesForAuthorityAndServer(u'client')
@@ -1354,7 +1353,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         serverContextSetup(serverOpts.getContext())
         if not validCertificate:
             serverCA, otherServer = certificatesForAuthorityAndServer(
-                serverHostname.encode("idna")
+                serverIDNA
             )
         if buggyInfoCallback:
             def broken(*a, **k):
@@ -1595,7 +1594,8 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         hello = u"h\N{LATIN SMALL LETTER A WITH ACUTE}llo.example.com"
         def setupServerContext(ctx):
             def servername_received(conn):
-                names.append(conn.get_servername().decode("idna"))
+                serverIDNA = sslverify._idnaText(conn.get_servername())
+                names.append(serverIDNA)
             ctx.set_tlsext_servername_callback(servername_received)
         cProto, sProto, pump = self.serviceIdentitySetup(
             hello, hello, setupServerContext

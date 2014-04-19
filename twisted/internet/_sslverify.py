@@ -61,6 +61,7 @@ class SimpleVerificationError(Exception):
     """
 
 
+
 def _idnaBytes(text):
     """
     Convert some text typed by a human into some ASCII bytes.
@@ -82,6 +83,27 @@ def _idnaBytes(text):
         return text.encode("idna")
     else:
         return idna.encode(text).encode("ascii")
+
+
+
+def _idnaText(octets):
+    """
+    Convert some IDNA-encoded octets into some human-readable text.
+
+    Currently only used by the tests.
+
+    @param octets: Some bytes representing a hostname.
+    @type octets: L{bytes}
+
+    @return: A human-readable domain name.
+    @rtype: L{unicode}
+    """
+    try:
+        import idna
+    except ImportError:
+        return octets.decode("idna")
+    else:
+        return idna.decode(octets).encode("ascii")
 
 
 
