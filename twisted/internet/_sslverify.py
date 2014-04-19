@@ -1035,6 +1035,8 @@ def settingsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
     <twisted.internet.interfaces.IReactorSSL.connectSSL>}, and L{startTLS
     <twisted.internet.interfaces.ITLSTransport.startTLS>}.
 
+    @since: 14.0
+
     @param hostname: The expected name of the remote host.  This serves two
         purposes: first, and most importantly, it verifies that the certificate
         received from the server correctly identifies the specified hostname.
