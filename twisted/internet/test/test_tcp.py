@@ -2271,8 +2271,7 @@ class AbortConnectionMixin(object):
         else:
             self.assertIsInstance(client.disconnectReason.value,
                                   clientExpectedExceptions)
-        self.assertIsInstance(server.disconnectReason.value,
-                              serverExpectedExceptions)
+        self.assertIsInstance(server.disconnectReason.value, serverExpectedExceptions)
 
 
     def test_dataReceivedAbort(self):
