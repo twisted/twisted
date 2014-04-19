@@ -1070,6 +1070,8 @@ def settingsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
     @rtype: L{IOpenSSLClientConnectionCreator}
     """
     extraCertificateOptions = kw.pop('extraCertificateOptions', None) or {}
+    if trustRoot is None:
+        trustRoot = KeyPair.generate().selfSignedCert(1)
     if kw:
         raise TypeError(
             "settingsForClientTLS() got an unexpected keyword argument"
