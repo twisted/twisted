@@ -1058,9 +1058,10 @@ class ClientTLSSettings(object):
 
     def _identityVerifyingInfoCallback(self, connection, where, ret):
         """
-        C{info_callback} for a pyOpenSSL that verifies the hostname in the
-        presented certificate matches the one passed to this
-        L{CertificateOptions <twisted.internet.ssl.CertificateOptions>}.
+        U{info_callback
+        <http://pythonhosted.org/pyOpenSSL/api/ssl.html#OpenSSL.SSL.Context.set_info_callback>
+        } for pyOpenSSL that verifies the hostname in the presented certificate
+        matches the one passed to this L{ClientTLSSettings}.
 
         @param connection: the connection which is handshaking.
         @type connection: L{OpenSSL.SSL.Connection}
