@@ -1034,7 +1034,7 @@ class ClientTLSSettings(object):
         )
 
 
-    def clientConnectionForTLS(self, protocol):
+    def clientConnectionForTLS(self, tlsProtocol):
         """
         Create a TLS connection for a client.
 
