@@ -65,6 +65,11 @@ def _idnaBytes(text):
     """
     Convert some text typed by a human into some ASCII bytes.
 
+    This is provided to allow us to use the U{partially-broken IDNA
+    implementation in the standard library <http://bugs.python.org/issue17305>}
+    if the more-correct U{idna <https://pypi.python.org/pypi/idna>} package is
+    not available; C{service_identity} is somewhat stricter about this.
+
     @param text: A domain name, hopefully.
     @type text: L{unicode}
 
@@ -988,13 +993,42 @@ class ClientTLSSettings(object):
 
     Private implementation type (not exposed to applications) for public
     L{settingsForClientTLS} API.
+
+    @ivar _ctx: The context to use for new connections.
+    @type _ctx: L{SSL.Context}
+
+    @ivar _hostname: The hostname to verify, as specified by the application,
+        as some human-readable text.
+    @type _hostname: L{unicode}
+
+    @ivar _hostnameBytes: The hostname to verify, decoded into IDNA-encoded
+        bytes.  This is passed to APIs which think that hostnames are bytes,
+        such as OpenSSL's SNI implementation.
+    @type _hostnameBytes: L{bytes}
+
+    @ivar _hostnameASCII: The hostname, as transcoded into IDNA ASCII-range
+        unicode code points.  This is pre-transcoded because the
+        C{service_identity} package is rather strict about requiring the
+        C{idna} package from PyPI for internationalized domain names, rather
+        than working with Python's built-in (but sometimes broken) IDNA
+        encoding.  ASCII values, however, will always work.
+    @type _hostnameASCII: L{unicode}
     """
 
     def __init__(self, hostname, ctx):
+        """
+        Initialize L{ClientTLSSettings}.
+
+        @param hostname: The hostname to verify as input by a human.
+        @type hostname: L{unicode}
+
+        @param ctx: an L{SSL.Context} to use for new connections.
+        @type ctx: L{SSL.Context}.
+        """
         self._ctx = ctx
         self._hostname = hostname
         self._hostnameBytes = _idnaBytes(hostname)
-        self._hostnameASCII = self._hostnameBytes.decode("utf-8")
+        self._hostnameASCII = self._hostnameBytes.decode("ascii")
         ctx.set_info_callback(
             _tolerateErrors(self._identityVerifyingInfoCallback)
         )
