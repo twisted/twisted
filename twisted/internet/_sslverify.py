@@ -982,11 +982,12 @@ def _tolerateErrors(wrapped):
 
 
 @implementer(IOpenSSLClientConnectionCreator)
-class _ClientTLSSettings(object):
+class ClientTLSSettings(object):
     """
     Client creator for TLS.
 
-    @see: L{settingsForClientTLS}
+    Private implementation type (not exposed to applications) for public
+    L{settingsForClientTLS} API.
     """
 
     def __init__(self, hostname, ctx):
@@ -1119,7 +1120,7 @@ def settingsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
         trustRoot=trustRoot,
         **extraCertificateOptions
     )
-    return _ClientTLSSettings(hostname, certificateOptions.getContext())
+    return ClientTLSSettings(hostname, certificateOptions.getContext())
 
 
 
