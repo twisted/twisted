@@ -2133,6 +2133,62 @@ class IUNIXTransport(ITransport):
 
 
 
+class IOpenSSLServerConnectionCreator(Interface):
+    """
+    A provider of L{IOpenSSLServerConnectionCreator} can create
+    L{OpenSSL.SSL.Connection} objects for TLS servers.
+
+    @see: L{twisted.internet.ssl}
+
+    @note: Creating OpenSSL connection objects is subtle, error-prone, and
+        security-critical.  Before implementing this interface yourself,
+        consider using L{twisted.internet.ssl.CertificateOptions} as your
+        C{contextFactory}.  (For historical reasons, that class does not
+        actually I{implement} this interface; nevertheless it is usable in all
+        Twisted APIs which require a provider of this interface.)
+    """
+
+    def serverConnectionForTLS(tlsProtocol):
+        """
+        Create a connection for the given server protocol.
+
+        @param tlsProtocol: the protocol server making the request.
+        @type tlsProtocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}.
+
+        @return: an OpenSSL connection object configured appropriately for the
+            given Twisted protocol.
+        @rtype: L{OpenSSL.SSL.Connection}
+        """
+
+
+
+class IOpenSSLClientConnectionCreator(Interface):
+    """
+    A provider of L{IOpenSSLClientConnectionCreator} can create
+    L{OpenSSL.SSL.Connection} objects for TLS clients.
+
+    @see: L{twisted.internet.ssl}
+
+    @note: Creating OpenSSL connection objects is subtle, error-prone, and
+        security-critical.  Before implementing this interface yourself,
+        consider using L{twisted.internet.ssl.optionsForClientTLS} as your
+        C{contextFactory}.
+    """
+
+    def clientConnectionForTLS(tlsProtocol):
+        """
+        Create a connection for the given client protocol.
+
+        @param tlsProtocol: the client protocol making the request.
+        @type tlsProtocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}.
+
+        @return: an OpenSSL connection object configured appropriately for the
+            given Twisted protocol.
+        @rtype: L{OpenSSL.SSL.Connection}
+        """
+
+
+
 class ITLSTransport(ITCPTransport):
     """
     A TCP transport that supports switching to TLS midstream.
@@ -2144,8 +2200,17 @@ class ITLSTransport(ITCPTransport):
         """
         Initiate TLS negotiation.
 
-        @param contextFactory: A context factory
-            (see L{ssl.py<twisted.internet.ssl>})
+        @param contextFactory: An object which creates appropriately configured
+            TLS connections.
+
+            For clients, use L{twisted.internet.ssl.optionsForClientTLS}; for
+            servers, use L{twisted.internet.ssl.CertificateOptions}.
+
+        @type contextFactory: L{IOpenSSLClientConnectionCreator} or
+            L{IOpenSSLServerConnectionCreator}, depending on whether this
+            L{ITLSTransport} is a server or not.  If the appropriate interface
+            is not provided by the value given for C{contextFactory}, it must
+            be an old-style L{twisted.internet.ssl.ContextFactory} or similar.
         """
 
 

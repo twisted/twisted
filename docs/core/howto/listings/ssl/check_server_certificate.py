@@ -3,8 +3,7 @@ import sys
 from twisted.internet import defer, endpoints, protocol, ssl, task, error
 
 def main(reactor, host, port=443):
-    contextFactory = ssl.CertificateOptions(trustRoot=ssl.platformTrust(),
-                                            hostname=host.decode('utf-8'))
+    options = ssl.optionsForClientTLS(hostname=host.decode('utf-8'))
     port = int(port)
 
     class ShowCertificate(protocol.Protocol):
@@ -22,8 +21,7 @@ def main(reactor, host, port=443):
             self.done.callback(None)
 
     return endpoints.connectProtocol(
-        endpoints.SSL4ClientEndpoint(reactor, host, port,
-                                     sslContextFactory=contextFactory),
+        endpoints.SSL4ClientEndpoint(reactor, host, port, options),
         ShowCertificate()
     ).addCallback(lambda protocol: protocol.done)
 

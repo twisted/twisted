@@ -348,6 +348,48 @@ class FakeContext(object):
 
 
 
+class ClientOptions(unittest.SynchronousTestCase):
+    """
+    Tests for L{sslverify.optionsForClientTLS}.
+    """
+    if skipSSL:
+        skip = skipSSL
+
+    def test_extraKeywords(self):
+        """
+        When passed a keyword parameter other than C{extraCertificateOptions},
+        L{sslverify.optionsForClientTLS} raises an exception just like a
+        normal Python function would.
+        """
+        error = self.assertRaises(
+            TypeError,
+            sslverify.optionsForClientTLS,
+            hostname=u'alpha', someRandomThing=u'beta',
+        )
+        self.assertEqual(
+            str(error),
+            "optionsForClientTLS() got an unexpected keyword argument "
+            "'someRandomThing'"
+        )
+
+
+    def test_bytesFailFast(self):
+        """
+        If you pass L{bytes} as the hostname to
+        L{sslverify.optionsForClientTLS} it immediately raises a L{TypeError}.
+        """
+        error = self.assertRaises(
+            TypeError,
+            sslverify.optionsForClientTLS, b'not-actually-a-hostname.com'
+        )
+        expectedText = (
+            "optionsForClientTLS requires text for host names, not " +
+            bytes.__name__
+        )
+        self.assertEqual(str(error), expectedText)
+
+
+
 class OpenSSLOptions(unittest.TestCase):
     if skipSSL:
         skip = skipSSL
@@ -1213,14 +1255,13 @@ class TrustRootTests(unittest.TestCase):
             chainedCertFile=pathContainingDumpOf(self, serverCert),
         )
         pump.flush()
-        pump.flush()
         self.assertIs(cProto.wrappedProtocol.lostReason, None)
         self.assertEqual(cProto.wrappedProtocol.data,
                          sProto.wrappedProtocol.greeting)
 
 
 
-class ServiceIdentityTests(unittest.TestCase):
+class ServiceIdentityTests(unittest.SynchronousTestCase):
     """
     Tests for the verification of the peer's service's identity via the
     C{hostname} argument to L{sslverify.OpenSSLCertificateOptions}.
@@ -1230,7 +1271,14 @@ class ServiceIdentityTests(unittest.TestCase):
         skip = skipSSL
 
     def serviceIdentitySetup(self, clientHostname, serverHostname,
-                             serverContextSetup=lambda ctx: None):
+                             serverContextSetup=lambda ctx: None,
+                             validCertificate=True,
+                             clientPresentsCertificate=False,
+                             validClientCertificate=True,
+                             serverVerifies=False,
+                             buggyInfoCallback=False,
+                             fakePlatformTrust=False,
+                             useDefaultTrust=False):
         """
         Connect a server and a client.
 
@@ -1248,21 +1296,89 @@ class ServiceIdentityTests(unittest.TestCase):
         @type serverContextSetup: L{callable} taking L{OpenSSL.SSL.Context}
             returning L{NoneType}.
 
+        @param validCertificate: Is the server's certificate valid?  L{True} if
+            so, L{False} otherwise.
+        @type validCertificate: L{bool}
+
+        @param clientPresentsCertificate: Should the client present a
+            certificate to the server?  Defaults to 'no'.
+        @type clientPresentsCertificate: L{bool}
+
+        @param validClientCertificate: If the client presents a certificate,
+            should it actually be a valid one, i.e. signed by the same CA that
+            the server is checking?  Defaults to 'yes'.
+        @type validClientCertificate: L{bool}
+
+        @param serverVerifies: Should the server verify the client's
+            certificate?  Defaults to 'no'.
+        @type serverVerifies: L{bool}
+
+        @param buggyInfoCallback: Should we patch the implementation so that
+            the C{info_callback} passed to OpenSSL to have a bug and raise an
+            exception (L{ZeroDivisionError})?  Defaults to 'no'.
+        @type buggyInfoCallback: L{bool}
+
+        @param fakePlatformTrust: Should we fake the platformTrust to be the
+            same as our fake server certificate authority, so that we can test
+            it's being used?  Defaults to 'no' and we just pass platform trust.
+        @type fakePlatformTrust: L{bool}
+
+        @param useDefaultTrust: Should we avoid passing the C{trustRoot} to
+            L{ssl.optionsForClientTLS}?  Defaults to 'no'.
+        @type useDefaultTrust: L{bool}
+
         @return: see L{connectedServerAndClient}.
         @rtype: see L{connectedServerAndClient}.
         """
-        caCert, serverCert = certificatesForAuthorityAndServer(
-            serverHostname.encode("idna")
-        )
+        serverIDNA = sslverify._idnaBytes(serverHostname)
+        serverCA, serverCert = certificatesForAuthorityAndServer(serverIDNA)
+        other = {}
+        passClientCert = None
+        clientCA, clientCert = certificatesForAuthorityAndServer(u'client')
+        if serverVerifies:
+            other.update(trustRoot=clientCA)
+
+        if clientPresentsCertificate:
+            if validClientCertificate:
+                passClientCert = clientCert
+            else:
+                bogusCA, bogus = certificatesForAuthorityAndServer(u'client')
+                passClientCert = bogus
+
         serverOpts = sslverify.OpenSSLCertificateOptions(
             privateKey=serverCert.privateKey.original,
             certificate=serverCert.original,
+            **other
         )
         serverContextSetup(serverOpts.getContext())
-        clientOpts = sslverify.OpenSSLCertificateOptions(
-            trustRoot=caCert,
-            hostname=clientHostname,
-        )
+        if not validCertificate:
+            serverCA, otherServer = certificatesForAuthorityAndServer(
+                serverIDNA
+            )
+        if buggyInfoCallback:
+            def broken(*a, **k):
+                """
+                Raise an exception.
+
+                @param a: Arguments for an C{info_callback}
+
+                @param k: Keyword arguments for an C{info_callback}
+                """
+                1 / 0
+            self.patch(
+                sslverify.ClientTLSOptions, "_identityVerifyingInfoCallback",
+                broken,
+            )
+
+        signature = {'hostname': clientHostname}
+        if passClientCert:
+            signature.update(clientCertificate=passClientCert)
+        if not useDefaultTrust:
+            signature.update(trustRoot=serverCA)
+        if fakePlatformTrust:
+            self.patch(sslverify, "platformTrust", lambda: serverCA)
+
+        clientOpts = sslverify.optionsForClientTLS(**signature)
 
         class GreetingServer(protocol.Protocol):
             greeting = b"greetings!"
@@ -1340,6 +1456,118 @@ class ServiceIdentityTests(unittest.TestCase):
         self.assertIdentical(sErr, None)
 
 
+    def test_validHostnameInvalidCertificate(self):
+        """
+        When an invalid certificate containing a perfectly valid hostname is
+        received, the connection is aborted with an OpenSSL error.
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"valid.example.com",
+            u"valid.example.com",
+            validCertificate=False,
+        )
+
+        self.assertEqual(cProto.wrappedProtocol.data, b'')
+        self.assertEqual(sProto.wrappedProtocol.data, b'')
+
+        cErr = cProto.wrappedProtocol.lostReason.value
+        sErr = sProto.wrappedProtocol.lostReason.value
+
+        self.assertIsInstance(cErr, SSL.Error)
+        self.assertIsInstance(sErr, SSL.Error)
+
+
+    def test_realCAsBetterNotSignOurBogusTestCerts(self):
+        """
+        If we use the default trust from the platform, our dinky certificate
+        should I{really} fail.
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"valid.example.com",
+            u"valid.example.com",
+            validCertificate=False,
+            useDefaultTrust=True,
+        )
+
+        self.assertEqual(cProto.wrappedProtocol.data, b'')
+        self.assertEqual(sProto.wrappedProtocol.data, b'')
+
+        cErr = cProto.wrappedProtocol.lostReason.value
+        sErr = sProto.wrappedProtocol.lostReason.value
+
+        self.assertIsInstance(cErr, SSL.Error)
+        self.assertIsInstance(sErr, SSL.Error)
+
+
+    def test_butIfTheyDidItWouldWork(self):
+        """
+        L{ssl.optionsForClientTLS} should be using L{ssl.platformTrust} by
+        default, so if we fake that out then it should trust ourselves again.
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"valid.example.com",
+            u"valid.example.com",
+            useDefaultTrust=True,
+            fakePlatformTrust=True,
+        )
+        self.assertEqual(cProto.wrappedProtocol.data,
+                         b'greetings!')
+
+        cErr = cProto.wrappedProtocol.lostReason
+        sErr = sProto.wrappedProtocol.lostReason
+        self.assertIdentical(cErr, None)
+        self.assertIdentical(sErr, None)
+
+
+    def test_clientPresentsCertificate(self):
+        """
+        When the server verifies and the client presents a valid certificate
+        for that verification by passing it to
+        L{sslverify.optionsForClientTLS}, communication proceeds.
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"valid.example.com",
+            u"valid.example.com",
+            validCertificate=True,
+            serverVerifies=True,
+            clientPresentsCertificate=True,
+        )
+
+        self.assertEqual(cProto.wrappedProtocol.data,
+                         b'greetings!')
+
+        cErr = cProto.wrappedProtocol.lostReason
+        sErr = sProto.wrappedProtocol.lostReason
+        self.assertIdentical(cErr, None)
+        self.assertIdentical(sErr, None)
+
+
+    def test_clientPresentsBadCertificate(self):
+        """
+        When the server verifies and the client presents an invalid certificate
+        for that verification by passing it to
+        L{sslverify.optionsForClientTLS}, the connection cannot be established
+        with an SSL error.
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"valid.example.com",
+            u"valid.example.com",
+            validCertificate=True,
+            serverVerifies=True,
+            validClientCertificate=False,
+            clientPresentsCertificate=True,
+        )
+
+        self.assertEqual(cProto.wrappedProtocol.data,
+                         b'')
+
+        cErr = cProto.wrappedProtocol.lostReason.value
+        sErr = sProto.wrappedProtocol.lostReason.value
+
+        self.assertIsInstance(cErr, SSL.Error)
+        self.assertIsInstance(sErr, SSL.Error)
+
+
     def test_hostnameIsIndicated(self):
         """
         Specifying the C{hostname} argument to L{CertificateOptions} also sets
@@ -1370,7 +1598,8 @@ class ServiceIdentityTests(unittest.TestCase):
         hello = u"h\N{LATIN SMALL LETTER A WITH ACUTE}llo.example.com"
         def setupServerContext(ctx):
             def servername_received(conn):
-                names.append(conn.get_servername().decode("idna"))
+                serverIDNA = sslverify._idnaText(conn.get_servername())
+                names.append(serverIDNA)
             ctx.set_tlsext_servername_callback(servername_received)
         cProto, sProto, pump = self.serviceIdentitySetup(
             hello, hello, setupServerContext
@@ -1414,6 +1643,29 @@ class ServiceIdentityTests(unittest.TestCase):
             sslverify.SimpleVerificationError,
             sslverify.simpleVerifyHostname, conn, u'nonsense'
         )
+
+    def test_surpriseFromInfoCallback(self):
+        """
+        pyOpenSSL isn't always so great about reporting errors.  If one occurs
+        in the verification info callback, it should be logged and the
+        connection should be shut down (if possible, anyway; the app_data could
+        be clobbered but there's no point testing for that).
+        """
+        cProto, sProto, pump = self.serviceIdentitySetup(
+            u"correct-host.example.com",
+            u"correct-host.example.com",
+            buggyInfoCallback=True,
+        )
+        self.assertEqual(cProto.wrappedProtocol.data, b'')
+        self.assertEqual(sProto.wrappedProtocol.data, b'')
+
+        cErr = cProto.wrappedProtocol.lostReason.value
+        sErr = sProto.wrappedProtocol.lostReason.value
+
+        self.assertIsInstance(cErr, ZeroDivisionError)
+        self.assertIsInstance(sErr, ConnectionClosed)
+        errors = self.flushLoggedErrors(ZeroDivisionError)
+        self.assertTrue(errors)
 
 
 

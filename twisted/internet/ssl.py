@@ -19,21 +19,28 @@ APIs:
 
     - L{listenSSL <twisted.internet.interfaces.IReactorSSL.listenSSL>}
 
-These APIs all require C{contextFactory} argument that specifies their security
-properties, such as certificate, private key, certificate authorities to verify
-the peer, allowed TLS protocol versions, cipher suites, and so on.  The
-recommended value for this argument is a L{CertificateOptions} instance; see
-its documentation for an explanation of the available options.
+These APIs all require a C{contextFactory} argument that specifies their
+security properties, such as certificate, private key, certificate authorities
+to verify the peer, allowed TLS protocol versions, cipher suites, and so on.
+The recommended value for this argument is a L{CertificateOptions} instance;
+see its documentation for an explanation of the available options.
 
-In this module you will also find the base classes for implementing your own
-context factories.  However, be warned that implementing your own context
-factory is both difficult and dangerous; the Twisted team has worked hard to
-make L{CertificateOptions}' API comprehensible and unsurprising, and the
-Twisted team is actively maintaining it to ensure that it becomes more secure
-over time.  If you are really absolutely sure that you want to take on the risk
-of implementing your own context factory based on the pyOpenSSL API, server
-context factories may inherit from L{ContextFactory}, and client context
-factories may inherit from L{ClientContextFactory}.
+The C{contextFactory} name is a bit of an anachronism now, as context factories
+have been replaced with "connection creators", but these objects serve the same
+role.
+
+Be warned that implementing your own connection creator (i.e.: value for the
+C{contextFactory}) is both difficult and dangerous; the Twisted team has worked
+hard to make L{CertificateOptions}' API comprehensible and unsurprising, and
+the Twisted team is actively maintaining it to ensure that it becomes more
+secure over time.
+
+If you are really absolutely sure that you want to take on the risk of
+implementing your own connection creator based on the pyOpenSSL API, see the
+L{server connection creator
+<twisted.internet.interfaces.IOpenSSLServerConnectionCreator>} and L{client
+connection creator
+<twisted.internet.interfaces.IOpenSSLServerConnectionCreator>} interfaces.
 
 Developers using Twisted, please ignore the L{Port}, L{Connector}, and
 L{Client} classes defined here, as these are details of certain reactors' TLS
@@ -188,10 +195,6 @@ class Port(tcp.Port):
         tcp.Port.__init__(self, port, factory, backlog, interface, reactor)
         self.ctxFactory = ctxFactory
 
-        # Force some parameter checking in pyOpenSSL.  It's better to fail now
-        # than after we've set up the transport.
-        ctxFactory.getContext()
-
 
     def _getLogPrefix(self, factory):
         """
@@ -217,14 +220,14 @@ class Connector(tcp.Connector):
 
 
 
-from twisted.internet._sslverify import DistinguishedName, DN, Certificate
-from twisted.internet._sslverify import CertificateRequest, PrivateCertificate
-from twisted.internet._sslverify import KeyPair
 from twisted.internet._sslverify import (
+    KeyPair, DistinguishedName, DN, Certificate,
+    CertificateRequest, PrivateCertificate,
     OpenSSLAcceptableCiphers as AcceptableCiphers,
     OpenSSLCertificateOptions as CertificateOptions,
     OpenSSLDiffieHellmanParameters as DiffieHellmanParameters,
-    platformTrust, OpenSSLDefaultPaths, VerificationError
+    platformTrust, OpenSSLDefaultPaths, VerificationError,
+    optionsForClientTLS,
 )
 
 __all__ = [
@@ -236,5 +239,5 @@ __all__ = [
     'AcceptableCiphers', 'CertificateOptions', 'DiffieHellmanParameters',
     'platformTrust', 'OpenSSLDefaultPaths',
 
-    'VerificationError',
+    'VerificationError', 'optionsForClientTLS',
 ]
