@@ -103,7 +103,7 @@ def _idnaText(octets):
     except ImportError:
         return octets.decode("idna")
     else:
-        return idna.decode(octets).encode("ascii")
+        return idna.decode(octets)
 
 
 
