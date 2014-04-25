@@ -1320,7 +1320,7 @@ class DirectoryListerTest(TestCase):
     def test_renderFiltered(self):
         """
         L{static.DirectoryLister} takes a optional C{dirs} argument that
-        filter out the list of of directories and files printed.
+        filter out the list of directories and files printed.
         """
         path = FilePath(self.mktemp())
         path.makedirs()

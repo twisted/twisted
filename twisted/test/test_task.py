@@ -92,7 +92,7 @@ class ClockTestCase(unittest.TestCase):
 
     def testAdvanceCancel(self):
         """
-        Test attemping to cancel the call in a callback.
+        Test attempting to cancel the call in a callback.
 
         AlreadyCalled should be raised, not for example a ValueError from
         removing the call from Clock.calls. This requires call.called to be

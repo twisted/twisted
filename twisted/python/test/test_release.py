@@ -306,7 +306,7 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
     def test_changeAllProjectVersions(self):
         """
         L{changeAllProjectVersions} changes all version numbers in _version.py
-        and README files for all projects as well as in the the top-level
+        and README files for all projects as well as in the top-level
         README file.
         """
         root = FilePath(self.mktemp())
@@ -340,7 +340,7 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
     def test_changeAllProjectVersionsPreRelease(self):
         """
         L{changeAllProjectVersions} changes all version numbers in _version.py
-        and README files for all projects as well as in the the top-level
+        and README files for all projects as well as in the top-level
         README file. If the old version was a pre-release, it will change the
         version in NEWS files as well.
         """

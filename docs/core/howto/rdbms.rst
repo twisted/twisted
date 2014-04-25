@@ -111,7 +111,7 @@ In all cases a database transaction will be committed after your database usage 
 
 Also worth noting is that these examples assumes that dbmodule uses the "qmarks" paramstyle (see the DB-API specification).
 If your dbmodule uses a different paramstyle (e.g. pyformat) then use that.
-Twisted doesn't attempt to offer any sort of magic paramater munging -- ``runQuery(query, params, ...)`` maps directly onto ``cursor.execute(query, params, ...)``.
+Twisted doesn't attempt to offer any sort of magic parameter munging -- ``runQuery(query, params, ...)`` maps directly onto ``cursor.execute(query, params, ...)``.
 
 
 Examples of various database adapters

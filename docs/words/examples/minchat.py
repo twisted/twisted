@@ -23,14 +23,14 @@ accounts = [
         "",                 # passwd
         "irc.freenode.net", # irc server
         6667,               # port
-        "#twisted",         # comma-seperated list of channels
+        "#twisted",         # comma-separated list of channels
     )
 ]
 
 
 class AccountManager (baseaccount.AccountManager):
     """
-    This class is a minimal implementation of the Acccount Manager.
+    This class is a minimal implementation of the Account Manager.
 
     Most implementations will show some screen that lets the user add and
     remove accounts, but we're not quite that sophisticated.

@@ -667,7 +667,7 @@ class TodoTest(unittest.SynchronousTestCase):
     def test_summary(self):
         """
         The reporter's C{printSummary} method should print the number of
-        expected failures that occured.
+        expected failures that occurred.
         """
         self.result.addExpectedFailure(self.test, Failure(Exception()),
                                        makeTodo('some reason'))

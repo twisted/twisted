@@ -68,7 +68,7 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     Base class for GObject event loop reactors.
 
     Notification for I/O events (reads and writes on file descriptors) is done
-    by the the gobject-based event loop. File descriptors are registered with
+    by the gobject-based event loop. File descriptors are registered with
     gobject with the appropriate flags for read/write/disconnect notification.
 
     Time-based events, the results of C{callLater} and C{callFromThread}, are

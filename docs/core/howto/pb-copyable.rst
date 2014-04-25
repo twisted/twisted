@@ -446,7 +446,7 @@ Things To Watch Out For
   and Python's flexible namespace semantics allow you to access the same
   class through a variety of different names. You must match whatever the
   sender does. Having both ends import the class from a separate file, using
-  a canonical module name (no "sibiling imports" ), is a good way to get
+  a canonical module name (no "sibling imports" ), is a good way to get
   this right, especially when both the sending and the receiving classes are
   defined together, with the ``setUnjellyableForClass`` immediately
   following them.
@@ -772,7 +772,7 @@ More Information
        means to serialize an object or data structure into a sequence of bytes (or
        other primitive transmittable/storable representation), while "to unjelly"  means to unserialize the bytestream into a live object in the
        receiver's memory space. "Unjellyable"  is a noun, (*not*  an
-       adjective), referring to the the class that serves as a destination or
+       adjective), referring to the class that serves as a destination or
        recipient of the unjellying process. "A is unjellyable into B"  means
        that a serialized representation A (of some remote object) can be
        unserialized into a local object of type B. It is these objects "B" 

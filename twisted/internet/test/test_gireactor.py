@@ -177,13 +177,13 @@ class GApplicationRegistration(ReactorBuilder, TestCase):
 
 class PygtkCompatibilityTests(TestCase):
     """
-    pygtk imports are either prevented, or a compatiblity layer is used if
+    pygtk imports are either prevented, or a compatibility layer is used if
     possible.
     """
 
     def test_noCompatibilityLayer(self):
         """
-        If no compatiblity layer is present, imports of gobject and friends
+        If no compatibility layer is present, imports of gobject and friends
         are disallowed.
 
         We do this by running a process where we make sure gi.pygtkcompat
@@ -216,7 +216,7 @@ class PygtkCompatibilityTests(TestCase):
 
     def test_compatibilityLayer(self):
         """
-        If compatiblity layer is present, importing gobject uses the gi
+        If compatibility layer is present, importing gobject uses the gi
         compatibility layer.
         """
         if "gi.pygtkcompat" not in sys.modules:

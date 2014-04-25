@@ -19,7 +19,7 @@ The following Rockwell Zodiac messages require implementation::
     None really, the others aren't quite so useful and require bidirectional communication w/ the device
 
 Other desired features::
-    - Compatability with the DeLorme Tripmate and other devices with this chipset (?)
+    - Compatibility with the DeLorme Tripmate and other devices with this chipset (?)
 """
 
 import math
@@ -191,7 +191,7 @@ class Zodiac(protocol.Protocol):
       altitude,
       # (geoid separation according to WGS-84 ellipsoid, units (always 'M' for meters))
       geoid,
-      # None, for compatability w/ NMEA code
+      # None, for compatibility w/ NMEA code
       dgps,
     )
 
@@ -265,7 +265,7 @@ class Zodiac(protocol.Protocol):
     raise NotImplementedError
 
   def decode_serial(self, message):
-    assert len(message) == 30, "Serial Port Communication Paramaters In Use Message should be 21 words total (30 byte message)"
+    assert len(message) == 30, "Serial Port Communication Parameters In Use Message should be 21 words total (30 byte message)"
     raise NotImplementedError
 
   def decode_eepromupdate(self, message):

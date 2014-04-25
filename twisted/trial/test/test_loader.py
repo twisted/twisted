@@ -111,7 +111,7 @@ class FileTest(packages.SysPathManglingTest):
         """
         # "test_sample" isn't actually the name of this module.  However,
         # filenameToModule can't seem to figure that out.  So clean up this
-        # mis-named module.  It would be better if this weren't necessary
+        # misnamed module.  It would be better if this weren't necessary
         # and filenameToModule either didn't exist or added a correctly
         # named module to sys.modules.
         self.addCleanup(sys.modules.pop, 'test_sample', None)

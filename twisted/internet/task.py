@@ -738,7 +738,7 @@ class Clock:
     def seconds(self):
         """
         Pretend to be time.time().  This is used internally when an operation
-        such as L{IDelayedCall.reset} needs to determine a a time value
+        such as L{IDelayedCall.reset} needs to determine a time value
         relative to the current time.
 
         @rtype: C{float}

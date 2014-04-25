@@ -978,7 +978,7 @@ Functions
 
 
     
-Functions should be named similiarly to methods.
+Functions should be named similarly to methods.
 
     
 

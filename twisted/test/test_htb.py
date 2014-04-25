@@ -93,7 +93,7 @@ class ConsumerShaperTest(TestBucketBase):
         self.shaped = htb.ShapedConsumer(self.underlying, self.bucket)
 
     def testRate(self):
-        # Start off with a full bucket, so the burst-size dosen't factor in
+        # Start off with a full bucket, so the burst-size doesn't factor in
         # to the calculations.
         delta_t = 10
         self.bucket.add(100)

@@ -254,7 +254,7 @@ class TestFactory(unittest.TestCase, XMLAssertionMixin):
     def test_mungeAuthors(self):
         """
         If there is a node with a I{class} attribute set to C{"authors"},
-        L{tree.munge} adds anchors as children to it, takeing the necessary
+        L{tree.munge} adds anchors as children to it, taking the necessary
         information from any I{link} nodes in the I{head} with their I{rel}
         attribute set to C{"author"}.
         """

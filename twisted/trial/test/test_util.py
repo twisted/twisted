@@ -74,7 +74,7 @@ class TestMktemp(SynchronousTestCase):
 class TestIntrospection(SynchronousTestCase):
     def test_containers(self):
         """
-        When pased a test case, L{util.getPythonContainers} returns a list
+        When passed a test case, L{util.getPythonContainers} returns a list
         including the test case and the module the test case is defined in.
         """
         parents = util.getPythonContainers(

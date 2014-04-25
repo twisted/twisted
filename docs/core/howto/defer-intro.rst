@@ -146,7 +146,7 @@ Of course, programs generally consist of more than two lines, and we still don't
 Getting it right: The failure cases
 -----------------------------------
 
-In what follows, we are going to take each way of expressing order of operations in normal Python (using lines of code and and ``try``/``except``) and translate them into an equivalent code built with :api:`twisted.internet.defer.Deferred <Deferred>` objects.
+In what follows, we are going to take each way of expressing order of operations in normal Python (using lines of code and ``try``/``except``) and translate them into an equivalent code built with :api:`twisted.internet.defer.Deferred <Deferred>` objects.
 
 This is going to be a bit painstaking, but if you want to really understand how to use :api:`twisted.internet.defer.Deferred <Deferred>`\s and maintain code that uses them, it is worth understanding each example below.
 

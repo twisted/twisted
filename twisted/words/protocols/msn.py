@@ -211,7 +211,7 @@ class PassportNexus(HTTPClient):
     This class is used internally and should
     not be instantiated directly -- that is,
     The passport logging in process is handled
-    transparantly by NotificationClient.
+    transparently by NotificationClient.
     """
 
     def __init__(self, deferred, host):
@@ -368,7 +368,7 @@ class MSNMessage:
 
     def _calcMessageLen(self):
         """
-        used to calculte the number to send
+        used to calculate the number to send
         as the message length when sending a message.
         """
         return reduce(operator.add, [len(x[0]) + len(x[1]) + 4  for x in self.headers.items()]) + len(self.message) + 2
@@ -911,7 +911,7 @@ class NotificationClient(MSNEventBase):
         sofar = self._getStateData('lst_sofar') + 1
         if sofar == self._getStateData('lst_reply'):
             # this is the best place to determine that
-            # a syn realy has finished - msn _may_ send
+            # a syn really has finished - msn _may_ send
             # BPR information for the last contact
             # which is unfortunate because it means
             # that the real end of a syn is non-deterministic.
@@ -943,7 +943,7 @@ class NotificationClient(MSNEventBase):
             elif params[0].lower() == "n":
                 self._getStateData('list').autoAdd = 1
             else:
-                raise MSNProtocolError, "Invalid Paramater for GTC" # debug
+                raise MSNProtocolError, "Invalid Parameter for GTC" # debug
         else:
             id = int(params[0])
             if params[1].lower() == "a":
@@ -951,7 +951,7 @@ class NotificationClient(MSNEventBase):
             elif params[1].lower() == "n":
                 self._fireCallback(id, 1)
             else:
-                raise MSNProtocolError, "Invalid Paramater for GTC" # debug
+                raise MSNProtocolError, "Invalid Parameter for GTC" # debug
 
     def handle_SYN(self, params):
         id = int(params[0])
@@ -1014,7 +1014,7 @@ class NotificationClient(MSNEventBase):
     def handle_ADD(self, params):
         numParams = len(params)
         if numParams < 5 or params[1].upper() not in ('AL','BL','RL','FL'):
-            raise MSNProtocolError, "Invalid Paramaters for ADD" # debug
+            raise MSNProtocolError, "Invalid Parameters for ADD" # debug
         id = int(params[0])
         listType = params[1].lower()
         listVer = int(params[2])
@@ -1030,7 +1030,7 @@ class NotificationClient(MSNEventBase):
     def handle_REM(self, params):
         numParams = len(params)
         if numParams < 4 or params[1].upper() not in ('AL','BL','FL','RL'):
-            raise MSNProtocolError, "Invalid Paramaters for REM" # debug
+            raise MSNProtocolError, "Invalid Parameters for REM" # debug
         id = int(params[0])
         listType = params[1].lower()
         listVer = int(params[2])
@@ -1097,7 +1097,7 @@ class NotificationClient(MSNEventBase):
         @param userHandle: our userHandle
         @param screenName: our screenName
         @param verified: 1 if our passport has been (verified), 0 if not.
-                         (i'm not sure of the significace of this)
+                         (i'm not sure of the significance of this)
         @type verified: int
         """
         self.factory.screenName = screenName

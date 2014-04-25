@@ -560,7 +560,7 @@ def accumulateClassDict(classObj, attr, adict, baseClass=None):
     Assuming all class attributes of this name are dictionaries.
     If any of the dictionaries being accumulated have the same key, the
     one highest in the class heirarchy wins.
-    (XXX: If \"higest\" means \"closest to the starting class\".)
+    (XXX: If \"highest\" means \"closest to the starting class\".)
 
     Ex::
 

@@ -40,7 +40,7 @@ class FakeResolver(ResolverBase):
     def _lookup(self, name, cls, qtype, timeout):
         """
         The getHostByNameTest does a different type of query that requires it
-        return an A record from an ALL_RECORDS lookup, so we accomodate that
+        return an A record from an ALL_RECORDS lookup, so we accommodate that
         here.
         """
         if name == b'getHostByNameTest':

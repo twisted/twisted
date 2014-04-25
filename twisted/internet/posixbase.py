@@ -121,7 +121,7 @@ class _FDWaker(log.Logger, object):
     writing to a pipe being monitored by the reactor.
 
     @ivar o: The file descriptor for the end of the pipe which can be
-        written to to wake up a reactor monitoring this waker.
+        written to wake up a reactor monitoring this waker.
 
     @ivar i: The file descriptor which should be monitored in order to
         be awoken by this waker.

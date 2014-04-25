@@ -261,7 +261,7 @@ class CGI(unittest.TestCase):
                 Set the C{called} flag to C{True} if C{spawnProcess} is called.
 
                 @param args: Positional arguments.
-                @param kwargs: Keyword arguements.
+                @param kwargs: Keyword arguments.
                 """
                 self.called = True
 

@@ -1258,7 +1258,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             a 2-tuple of (0) L{int}, (1) L{int} or fails with
             L{ServerErrorResponse}
         @return: A deferred which fires when the server response is received.
-            On an OK response, the deferred succeds with the number of
+            On an OK response, the deferred succeeds with the number of
             messages in the mailbox and the size of the mailbox in octets.
             On an ERR response, the deferred fails with a server error
             response failure.
