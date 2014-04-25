@@ -70,8 +70,7 @@ class RemoveBlanksTests(unittest.TestCase):
 
     def test_removeLeadingBlankLines(self):
         """
-        L{tree._removeLeadingBlankLines} removes leading blank lines from a
-        a string and returns a list containing the remaining characters.
+        L{tree._removeLeadingBlankLines} removes leading blank lines from a string and returns a list containing the remaining characters.
         """
         result = tree._removeLeadingBlankLines(self.inputString)
         self.assertEqual(result,
