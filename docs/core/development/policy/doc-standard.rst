@@ -242,7 +242,7 @@ figure out which module or class you're referring to.
     
 
 
-You may also use the ``base`` attribute in conjuction
+You may also use the ``base`` attribute in conjunction
 with a class of "API" to indicate the module that should be prepended
 to the module or classname.  This is to help keep the documentation
 clearer and less cluttered by allowing links to API docs that don't

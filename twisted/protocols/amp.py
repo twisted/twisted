@@ -2688,7 +2688,7 @@ class DateTime(Argument):
             sign = '-'
 
         # strftime has no way to format the microseconds, or put a ':' in the
-        # timezone. Suprise!
+        # timezone. Surprise!
 
         return '%04i-%02i-%02iT%02i:%02i:%02i.%06i%s%02i:%02i' % (
             i.year,

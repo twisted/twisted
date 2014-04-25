@@ -334,7 +334,7 @@ class DigestCredentialFactory(object):
         L{DigestedCredentials} from it.
 
         @type response: C{str}
-        @param response: A string of comma seperated key=value pairs
+        @param response: A string of comma separated key=value pairs
 
         @type method: C{str}
         @param method: The action requested to which this response is addressed

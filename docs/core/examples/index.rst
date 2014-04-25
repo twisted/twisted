@@ -183,7 +183,7 @@ Miscellaneous
 - :download:`ptyserv.py` - serve shells in pseudo-terminals over TCP
 - :download:`courier.py` - example of interfacing to Courier's mail filter
   interface
-- :download:`longex.py` - example of doing arbitarily long calculations nicely
+- :download:`longex.py` - example of doing arbitrarily long calculations nicely
   in Twisted
 - :download:`longex2.py` - using generators to do long calculations
 - :download:`stdin.py` - reading a line at a time from standard input

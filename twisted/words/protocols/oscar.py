@@ -463,7 +463,7 @@ class BOSConnection(SNACBased):
 
     def oscar_01_07(self,snac):
         """
-        rate paramaters
+        rate parameters
         """
         self.sendSNACnr(0x01,0x08,"\x00\x01\x00\x02\x00\x03\x00\x04\x00\x05") # ack
         self.initDone()
@@ -906,7 +906,7 @@ class BOSConnection(SNACBased):
 
     #def acceptSendFileRequest(self,
 
-    # methods to be overriden by the client
+    # methods to be overridden by the client
     def initDone(self):
         """
         called when we get the rate information, which means we should do other init. stuff.

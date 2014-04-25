@@ -195,7 +195,7 @@ class ExplorerInstance(Explorer):
     Note these are only the *instance* methods and members --
     if you want the class methods, you'll have to look up the class.
 
-    TODO: Detail levels (me, me & class, me & class ancestory)
+    TODO: Detail levels (me, me & class, me & class ancestry)
 
     @ivar klass: the class this is an instance of.
     """
@@ -425,7 +425,7 @@ class Signature(pb.Copyable):
             arg = self.name.index(arg)
 
         # Wouldn't it be nice if we just returned "None" when there
-        # wasn't a default?  Well, yes, but often times "None" *is*
+        # wasn't a default?  Well, yes, but oftentimes "None" *is*
         # the default, so return a tuple instead.
         if self.flavour[arg] == self._HAS_DEFAULT:
             return (True, self.default[arg])
@@ -616,7 +616,7 @@ class _WatchMonkey:
         if self.oldMethod is None:
             return
 
-        # XXX: This probably doesn't work if multiple monkies are hanging
+        # XXX: This probably doesn't work if multiple monkeys are hanging
         # on a method and they're not removed in order.
         if self.oldMethod[1] is None:
             delattr(self.instance, self.oldMethod[0])

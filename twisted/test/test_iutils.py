@@ -133,7 +133,7 @@ class ProcessUtilsTests(unittest.TestCase):
         """
         If the child process exits because of a signal, the L{Deferred}
         returned by L{getProcessOutputAndValue} fires a L{Failure} of a tuple
-        containing the the child's stdout, stderr, and the signal which caused
+        containing the child's stdout, stderr, and the signal which caused
         it to exit.
         """
         # Use SIGKILL here because it's guaranteed to be delivered. Using

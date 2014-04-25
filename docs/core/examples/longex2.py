@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Example of doing arbitarily long calculations nicely in Twisted.
+Example of doing arbitrarily long calculations nicely in Twisted.
 
 This is also a simple demonstration of twisted.protocols.basic.LineReceiver.
 This example uses generators to do the calculation. It also tries to be
@@ -69,7 +69,7 @@ def multiply(numbers):
 class Numbers(basic.LineReceiver):
     """Protocol for reading lists of numbers and manipulating them.
 
-    It receives a list of numbers (seperated by whitespace) on a line, and
+    It receives a list of numbers (separated by whitespace) on a line, and
     writes back the answer.  The exact algorithm to use depends on the
     factory. It should return an str-able Deferred.
     """

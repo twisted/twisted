@@ -41,7 +41,7 @@ def printResult(address, hostname):
         sys.stdout.write(address + '\n')
     else:
         sys.stderr.write(
-            'ERROR: No IP adresses found for name %r\n' % (hostname,))
+            'ERROR: No IP addresses found for name %r\n' % (hostname,))
 
 
 

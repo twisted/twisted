@@ -1100,7 +1100,7 @@ Combining all the above techniques, here is an example chat server which
 uses a fixed set of identities (say, for the three members of your bridge
 club, who hang out in "#NeedAFourth" hoping that someone will discover
 your server, guess somebody's password, break in, join the group, and also
-be available for a game next saturday afternoon).
+be available for a game next Saturday afternoon).
 
 
 

@@ -70,7 +70,7 @@ Wrap the C sendmsg(2) function for sending \"messages\" on a socket.\n\
 static char sendmsg_recvmsg_doc[] = "\
 Wrap the C recvmsg(2) function for receiving \"messages\" on a socket.\n\
 \n\
-@param fd: The file descriptor of the socket over which to receve a message.\n\
+@param fd: The file descriptor of the socket over which to receive a message.\n\
 @type fd: C{int}\n\
 \n\
 @param flags: Flags to affect how the message is sent.  See the C{MSG_}\n\

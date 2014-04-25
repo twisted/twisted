@@ -80,7 +80,7 @@ class ModuleProxyTests(SynchronousTestCase):
         """
         Getting a normal attribute on a L{twisted.python.deprecate._ModuleProxy}
         retrieves the underlying attribute's value, and raises C{AttributeError}
-        if a non-existant attribute is accessed.
+        if a non-existent attribute is accessed.
         """
         proxy = self._makeProxy(SOME_ATTRIBUTE='hello')
         self.assertIdentical(proxy.SOME_ATTRIBUTE, 'hello')

@@ -523,7 +523,7 @@ class TestRunner(unittest.SynchronousTestCase):
 
     def test_runnerDebuggerWithExplicitlyPassedPdb(self):
         """
-        Trial uses pdb if pdb is passed explicity to the `--debugger` arg.
+        Trial uses pdb if pdb is passed explicitly to the `--debugger` arg.
         """
         self.parseOptions([
             '--reporter', 'capturing',

@@ -65,7 +65,7 @@ __all__ = [
 ]
 
 
-# backwards compatability
+# backwards compatibility
 deprecatedModuleAttribute(
     Version("Twisted", 12, 1, 0),
     "Please use twisted.web.http.datetimeToString instead",

@@ -483,7 +483,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         starting at C{partOffset}.  Each C{partSeparator} includes the
         MIME-style boundary and the part-specific Content-type and
         Content-range headers.  It is convenient to return the separator as a
-        concrete string from this method, becasue this method needs to compute
+        concrete string from this method, because this method needs to compute
         the number of bytes that will make up the response to be able to set
         the Content-Length header of the response accurately.
 

@@ -2327,7 +2327,7 @@ class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
         If unsolicited data is received along with solicited data in the
         response to a I{FETCH} command issued by L{IMAP4Client.fetchSpecific},
         the unsolicited data is passed to the appropriate callback and not
-        included in the result with wihch the L{Deferred} returned by
+        included in the result with which the L{Deferred} returned by
         L{IMAP4Client.fetchSpecific} fires.
         """
         transport = StringTransport()
@@ -3093,7 +3093,7 @@ class IMAP4ClientFetchTests(PreauthIMAP4ClientMixin, unittest.TestCase):
 
     def test_fetchSpecificNumbered(self):
         """
-        L{IMAP4Client.fetchSpecific}, when passed a sequence for for
+        L{IMAP4Client.fetchSpecific}, when passed a sequence for
         C{headerNumber}, sends the I{BODY[N.M]} command.  It returns a
         L{Deferred} which fires with a C{dict} mapping message sequence numbers
         to C{list}s of corresponding message data given by the server's
@@ -4458,7 +4458,7 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         ).addErrback(self._ebGeneral)
 
         def check(ignored):
-            # Ensure no short-circuiting wierdness is going on
+            # Ensure no short-circuiting weirdness is going on
             self.failIf(self.result is self.expected)
 
             self.assertEqual(self.result, self.expected)
@@ -4512,7 +4512,7 @@ class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
         ).addErrback(self._ebGeneral)
 
         def check(ignored):
-            # Ensure no short-circuiting wierdness is going on
+            # Ensure no short-circuiting weirdness is going on
             self.failIf(self.result is self.expected)
 
             self.parts and self.parts.sort()
@@ -5011,7 +5011,7 @@ class IMAP4ServerFetchTestCase(unittest.TestCase):
 
     def test_fetchWithPartialValidArgument(self):
         """
-        If by any chance, extra bytes got appended at the end of of an valid
+        If by any chance, extra bytes got appended at the end of a valid
         FETCH arguments, the client should get a BAD - arguments invalid
         response.
 

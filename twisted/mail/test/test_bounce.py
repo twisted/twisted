@@ -17,10 +17,10 @@ class BounceTestCase(unittest.TestCase):
     def testBounceFormat(self):
         from_, to, s = bounce.generateBounce(cStringIO.StringIO('''\
 From: Moshe Zadka <moshez@example.com>
-To: nonexistant@example.org
+To: nonexistent@example.org
 Subject: test
 
-'''), 'moshez@example.com', 'nonexistant@example.org')
+'''), 'moshez@example.com', 'nonexistent@example.org')
         self.assertEqual(from_, '')
         self.assertEqual(to, 'moshez@example.com')
         mess = rfc822.Message(cStringIO.StringIO(s))

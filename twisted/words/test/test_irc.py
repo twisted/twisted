@@ -634,7 +634,7 @@ class ServerSupportedFeatureTests(unittest.TestCase):
     def test_splitParamArgsProcessor(self):
         """
         L{ServerSupportedFeatures._splitParamArgs} uses the argument processor
-        passed to to convert ISUPPORT argument values to some more suitable
+        passed to convert ISUPPORT argument values to some more suitable
         form.
         """
         res = irc.ServerSupportedFeatures._splitParamArgs(['A:1', 'B:2', 'C'],
@@ -1638,7 +1638,7 @@ class BasicServerFunctionalityTestCase(unittest.TestCase):
     def test_sendMessage(self):
         """
         Passing a command and parameters to L{IRC.sendMessage} results in a
-        query string that consists of the command and parameters, seperated by
+        query string that consists of the command and parameters, separated by
         a space, ending with '\r\n'.
         """
         self.p.sendMessage('CMD', 'param1', 'param2')

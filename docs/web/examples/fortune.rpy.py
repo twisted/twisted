@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-This example demostrates how to render the output of a system process to a
+This example demonstrates how to render the output of a system process to a
 twisted web server.
 
 In order to run this, you need to have fortune installed.  Fortune is a simple
@@ -26,7 +26,7 @@ from twisted.python import util
 
 class FortuneResource(Resource):
     """
-    This resource will only repond to HEAD & GET requests.
+    This resource will only respond to HEAD & GET requests.
     """
     # Link your fortune program to /usr/games or change the path.
     fortune = "/usr/games/fortune"

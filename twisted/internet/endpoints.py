@@ -1470,7 +1470,7 @@ def serverFromString(reactor, description):
     @type description: L{bytes}
 
     @return: A new endpoint which can be used to listen with the parameters
-        given by by C{description}.
+        given by C{description}.
 
     @rtype: L{IStreamServerEndpoint<twisted.internet.interfaces.IStreamServerEndpoint>}
 
@@ -1740,7 +1740,7 @@ def clientFromString(reactor, description):
     @type description: L{bytes}
 
     @return: A new endpoint which can be used to connect with the parameters
-        given by by C{description}.
+        given by C{description}.
     @rtype: L{IStreamClientEndpoint<twisted.internet.interfaces.IStreamClientEndpoint>}
 
     @since: 10.2

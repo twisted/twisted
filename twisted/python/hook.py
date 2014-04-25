@@ -29,7 +29,7 @@ Hooks should typically not throw exceptions, however, no effort will be made by
 this module to prevent them from doing so.  Pre-hooks will always be called,
 but post-hooks will only be called if the pre-hooks do not raise any exceptions
 (they will still be called if the main method raises an exception).  The return
-values and exception status of the main method will be propogated (assuming
+values and exception status of the main method will be propagated (assuming
 none of the hooks raise an exception).  Hooks will be executed in the order in
 which they are added.
 """

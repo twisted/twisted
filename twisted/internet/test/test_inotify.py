@@ -110,7 +110,7 @@ class TestINotify(unittest.TestCase):
 
     def test_attrib(self):
         """
-        Changing the metadata of a a file in a monitored directory
+        Changing the metadata of a file in a monitored directory
         sends an C{inotify.IN_ATTRIB} event to the callback.
         """
         def operation(path):

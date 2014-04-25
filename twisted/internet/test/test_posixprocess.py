@@ -249,7 +249,7 @@ class FDDetectorTests(TestCase):
     def test_resourceFDImplementation(self):
         """
         L{_FDDetector._fallbackFDImplementation} uses the L{resource} module if
-        it is available, returning a range of integers from 0 to the the
+        it is available, returning a range of integers from 0 to the
         minimum of C{1024} and the hard I{NOFILE} limit.
         """
         # When the resource module is here, use its value.

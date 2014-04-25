@@ -1066,7 +1066,7 @@ class MXCalculator:
         @rtype: L{Record_MX <twisted.names.dns.Record_MX>} or L{Failure}
         @return: An MX record for the domain or a failure if the fallback to
             domain option is not in effect and an error, other than not
-            finding an MX record, occured during lookup.
+            finding an MX record, occurred during lookup.
 
         @raise IOError: When no MX record could be found and the fallback to
             domain option is not in effect.

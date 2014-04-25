@@ -322,7 +322,7 @@ if _PY3:
 
     # Ideally we would use memoryview, but it has a number of differences from
     # the Python 2 buffer() that make that impractical
-    # (http://bugs.python.org/issue15945, incompatiblity with pyOpenSSL due to
+    # (http://bugs.python.org/issue15945, incompatibility with pyOpenSSL due to
     # PyArg_ParseTuple differences.)
     def lazyByteSlice(object, offset=0, size=None):
         """

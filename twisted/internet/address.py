@@ -163,11 +163,11 @@ class UNIXAddress(FancyEqMixin, object):
 
 
 
-# These are for buildFactory backwards compatability due to
+# These are for buildFactory backwards compatibility due to
 # stupidity-induced inconsistency.
 
 class _ServerFactoryIPv4Address(IPv4Address):
-    """Backwards compatability hack. Just like IPv4Address in practice."""
+    """Backwards compatibility hack. Just like IPv4Address in practice."""
 
     def __eq__(self, other):
         if isinstance(other, tuple):

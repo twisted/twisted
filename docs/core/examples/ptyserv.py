@@ -36,7 +36,7 @@ class ProcessProtocol(protocol.ProcessProtocol):
         self.pr.transport.write(data)
     
     def processEnded(self, reason):
-        print 'protocol conection lost'
+        print 'protocol connection lost'
         self.pr.transport.loseConnection()
 
 f = protocol.Factory()

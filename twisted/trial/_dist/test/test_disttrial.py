@@ -293,7 +293,7 @@ class DistTrialRunnerTestCase(TestCase):
             localLock = FilesystemLock(workingDirectory + ".lock")
             self.assertTrue(localLock.lock())
             self.assertEqual(1, fakeReactor.stopCount)
-            # We don't wait for the process deferreds here, so nothign is
+            # We don't wait for the process deferreds here, so nothing is
             # returned by the function before shutdown
             self.assertIdentical(None, functions[0]())
 

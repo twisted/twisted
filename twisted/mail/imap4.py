@@ -116,7 +116,7 @@ class MessageSet(object):
             return self._last
 
         doc = '''
-            "Highest" message number, refered to by "*".
+            "Highest" message number, referred to by "*".
             Must be set before attempting to use the MessageSet.
         '''
         return _getLast, _setLast, None, doc
@@ -286,7 +286,7 @@ class LiteralString:
 
     def callback(self, line):
         """
-        Call defered with data and rest of line
+        Call deferred with data and rest of line
         """
         self.defer.callback((''.join(self.data), line))
 
@@ -317,7 +317,7 @@ class LiteralFile:
 
     def callback(self, line):
         """
-        Call defered with data and rest of line
+        Call deferred with data and rest of line
         """
         self.data.seek(0,0)
         self.defer.callback((self.data, line))
@@ -2915,7 +2915,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         See RFC 3501, section 6.3.1.
         """
-        # In the absense of specification, we are free to assume:
+        # In the absence of specification, we are free to assume:
         #   READ-WRITE access
         datum = {'READ-WRITE': rw}
         lines.append(parseNestedParens(tagline))
@@ -3103,7 +3103,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             C{'UNSEEN'}.
 
         @rtype: C{Deferred}
-        @return: A deferred which fires with with the status information if the
+        @return: A deferred which fires with the status information if the
             command is successful and whose errback is invoked otherwise.  The
             status information is in the form of a C{dict}.  Each element of
             C{names} is a key in the dictionary.  The value for each key is the
@@ -3577,7 +3577,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
             with L{parseNestedParens} and extracting just the response data
             (that is, just the part that comes after C{"FETCH"}).  The form
             of this input (and therefore the output of this method) is very
-            disagreable.  A valuable improvement would be to enumerate the
+            disagreeable.  A valuable improvement would be to enumerate the
             possible keys (representing them as structured objects of some
             sort) rather than using strings and tuples of tuples of strings
             and so forth.  This would allow the keys to be documented more
@@ -3840,7 +3840,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a list of the
-        the server's responses (C{[]} if C{silent} is true) or whose
+        server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
         return self._store(str(messages), 'FLAGS', silent, flags, uid)
@@ -3866,7 +3866,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a list of the
-        the server's responses (C{[]} if C{silent} is true) or whose
+        server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
         return self._store(str(messages),'+FLAGS', silent, flags, uid)
@@ -3892,7 +3892,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         @rtype: C{Deferred}
         @return: A deferred whose callback is invoked with a list of the
-        the server's responses (C{[]} if C{silent} is true) or whose
+        server's responses (C{[]} if C{silent} is true) or whose
         errback is invoked if there is an error.
         """
         return self._store(str(messages), '-FLAGS', silent, flags, uid)

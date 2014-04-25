@@ -129,7 +129,7 @@ def benchmark(scale=1):
     does.
 
     @type scale: C{int}
-    @param scale: A multipler to the amount of work to perform
+    @param scale: A multiplier to the amount of work to perform
 
     @return: A Deferred which will fire with a dictionary mapping each of
     the two unicode strings C{u'buffered'} and C{u'unbuffered'} to

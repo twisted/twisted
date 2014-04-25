@@ -129,7 +129,7 @@ class SSHTransportBase(protocol.Protocol):
 
     @ivar isClient: A boolean indicating whether this is a client or server.
 
-    @ivar gotVersion: A boolean indicating whether we have receieved the
+    @ivar gotVersion: A boolean indicating whether we have received the
         version string from the other side.
 
     @ivar buf: Data we've received but hasn't been parsed into a packet.
@@ -614,14 +614,14 @@ class SSHTransportBase(protocol.Protocol):
 
     def ssh_IGNORE(self, packet):
         """
-        Called when we receieve a MSG_IGNORE message.  No payload.
+        Called when we receive a MSG_IGNORE message.  No payload.
         This means nothing; we simply return.
         """
 
 
     def ssh_UNIMPLEMENTED(self, packet):
         """
-        Called when we receieve a MSG_UNIMPLEMENTED message.  Payload::
+        Called when we receive a MSG_UNIMPLEMENTED message.  Payload::
             long packet
 
         This means that the other side did not implement one of our packets.
@@ -632,7 +632,7 @@ class SSHTransportBase(protocol.Protocol):
 
     def ssh_DEBUG(self, packet):
         """
-        Called when we receieve a MSG_DEBUG message.  Payload::
+        Called when we receive a MSG_DEBUG message.  Payload::
             bool alwaysDisplay
             string message
             string language
@@ -1213,7 +1213,7 @@ class SSHClientTransport(SSHTransportBase):
 
     def ssh_KEX_DH_GEX_REPLY(self, packet):
         """
-        Called when we receieve a MSG_KEX_DH_GEX_REPLY message.  Payload::
+        Called when we receive a MSG_KEX_DH_GEX_REPLY message.  Payload::
             string server host key
             integer f (server DH public key)
 
@@ -1278,9 +1278,9 @@ class SSHClientTransport(SSHTransportBase):
 
     def ssh_NEWKEYS(self, packet):
         """
-        Called when we receieve a MSG_NEWKEYS message.  No payload.
+        Called when we receive a MSG_NEWKEYS message.  No payload.
         If we've finished setting up our own keys, start using them.
-        Otherwise, remeber that we've receieved this message.
+        Otherwise, remember that we've received this message.
         """
         if packet != '':
             self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR,
@@ -1295,7 +1295,7 @@ class SSHClientTransport(SSHTransportBase):
 
     def ssh_SERVICE_ACCEPT(self, packet):
         """
-        Called when we receieve a MSG_SERVICE_ACCEPT message.  Payload::
+        Called when we receive a MSG_SERVICE_ACCEPT message.  Payload::
             string service name
 
         Start the service we requested.

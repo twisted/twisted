@@ -2802,7 +2802,7 @@ class ErrnoToFailureTestCase(unittest.TestCase):
 
 class AnonymousFTPShellTestCase(unittest.TestCase):
     """
-    Test anynomous shell properties.
+    Test anonymous shell properties.
     """
 
     def test_anonymousWrite(self):

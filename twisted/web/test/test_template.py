@@ -214,7 +214,7 @@ class XMLFileReprTests(TestCase):
 
 class XMLLoaderTestsMixin(object):
     """
-    @ivar templateString: Simple template to use to excercise the loaders.
+    @ivar templateString: Simple template to use to exercise the loaders.
 
     @ivar deprecatedUse: C{True} if this use of L{XMLFile} is deprecated and
         should emit a C{DeprecationWarning}.

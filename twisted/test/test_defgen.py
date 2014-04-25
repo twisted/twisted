@@ -262,7 +262,7 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
     # Tests unique to inlineCallbacks
 
-    def testYieldNonDeferrred(self):
+    def testYieldNonDeferred(self):
         """
         Ensure that yielding a non-deferred passes it back as the
         result of the yield expression.

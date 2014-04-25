@@ -215,7 +215,7 @@ class IReporter(zi.Interface):
         """
         Deprecated in Twisted 8.0, use L{done} instead.
 
-        Present the errors that have occured during the test run. This method
+        Present the errors that have occurred during the test run. This method
         will be called after all tests have been run.
         """
 
