@@ -1197,7 +1197,7 @@ class Request:
 
         Don't rely on the 'transport' attribute, since Request objects may be
         copied remotely.  For information on this method's return value, see
-        twisted.internet.tcp.Port.
+        L{twisted.internet.tcp.Port}.
         """
         return self.host
 
@@ -2024,7 +2024,7 @@ class HTTPFactory(protocol.ServerFactory):
 
     def _openLogFile(self, path):
         """
-        Override in subclasses, e.g. to use twisted.python.logfile.
+        Override in subclasses, e.g. to use L{twisted.python.logfile}.
         """
         f = open(path, "ab", 1)
         return f
