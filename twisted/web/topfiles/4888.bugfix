@@ -1,0 +1,7 @@
+When requesting an HTTPS URL with twisted.web.client.Agent, the hostname of the
+presented certificate will be checked against the requested hostname;
+mismatches will now result in an error rather than a man-in-the-middle
+opportunity for attackers.  This may break existing code that incorrectly
+depended on insecure behavior, but such code was erroneous and should be
+updated.
+
