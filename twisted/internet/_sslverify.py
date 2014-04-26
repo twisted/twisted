@@ -148,8 +148,8 @@ def _selectVerifyImplementation():
     """
 
     whatsWrong = (
-        "Without the service_identity module and a recent enough pyOpenSSL to"
-        "support it, Twisted can perform only rudimentary TLS client hostname"
+        "Without the service_identity module and a recent enough pyOpenSSL to "
+        "support it, Twisted can perform only rudimentary TLS client hostname "
         "verification.  Many valid certificate/hostname mappings may be "
         "rejected."
     )
@@ -161,9 +161,11 @@ def _selectVerifyImplementation():
             return verify_hostname, VerificationError
         except ImportError:
             warnings.warn(
-                "You do not have the service_identity module installed. "
+                "You do not have a working installation of the "
+                "service_identity module.  "
                 "Please install it from "
-                "<https://pypi.python.org/pypi/service_identity>. "
+                "<https://pypi.python.org/pypi/service_identity> and make sure"
+                " all of its dependencies are satisfied.  "
                 + whatsWrong,
                 UserWarning,
                 stacklevel=2
@@ -172,7 +174,7 @@ def _selectVerifyImplementation():
         warnings.warn(
             "Your version of pyOpenSSL, {0}, is out of date.  "
             "Please upgrade to at least 0.12 and install service_identity "
-            "from <https://pypi.python.org/pypi/service_identity>. "
+            "from <https://pypi.python.org/pypi/service_identity>.  "
             .format(version.__version__) + whatsWrong,
             UserWarning,
             stacklevel=2
