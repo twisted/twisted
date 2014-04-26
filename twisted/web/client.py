@@ -10,6 +10,7 @@ from __future__ import division, absolute_import
 
 import os
 import types
+import warnings
 
 try:
     from urlparse import urlunparse, urljoin, urldefrag
@@ -21,13 +22,20 @@ except ImportError:
     def urlunparse(parts):
         result = _urlunparse(tuple([p.decode("charmap") for p in parts]))
         return result.encode("charmap")
+
 import zlib
+from functools import wraps
 
 from zope.interface import implementer
 
 from twisted.python.compat import _PY3, nativeString, intToBytes
 from twisted.python import log
 from twisted.python.failure import Failure
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.versions import Version
+
+from twisted.web.iweb import IPolicyForHTTPS
+from twisted.python.deprecate import getDeprecationWarningString
 from twisted.web import http
 from twisted.internet import defer, protocol, task, reactor
 from twisted.internet.interfaces import IProtocol
@@ -747,71 +755,207 @@ if not _PY3:
     from twisted.web._newclient import (
         ResponseNeverReceived, PotentialDataLoss, _WrapperException)
 
+
+
 try:
     from OpenSSL import SSL
-
-    from twisted.internet.ssl import CertificateOptions, platformTrust
 except ImportError:
-    class WebClientContextFactory(object):
-        """
-        A web context factory which doesn't work because the necessary SSL
-        support is missing.
-        """
-        def getContext(self, hostname, port):
-            raise NotImplementedError("SSL support unavailable")
+    SSL = None
 else:
-    class WebClientContextFactory(object):
-        """
-        A web context factory which ignores the hostname and port. It performs
-        basic certificate verification, however the lack of validation of
-        service identity (e.g. hostname validation) means it is still
-        vulnerable to MITM attacks (#4888).
-        """
-        def __init__(self):
-            self._contextFactory = CertificateOptions(
-                method=SSL.SSLv23_METHOD,
-                trustRoot=platformTrust(),
-            )
-
-        def getContext(self, hostname, port):
-            """
-            Return an L{OpenSSL.SSL.Context}.
-
-            @param hostname: ignored
-            @param port: ignored
-
-            @return: A new SSL context.
-            @rtype: L{OpenSSL.SSL.Context}
-            """
-            return self._contextFactory.getContext()
+    from twisted.internet.ssl import (CertificateOptions,
+                                      platformTrust,
+                                      optionsForClientTLS)
 
 
-
-class _WebToNormalContextFactory(object):
+def _requireSSL(decoratee):
     """
-    Adapt a web context factory to a normal context factory.
+    The decorated method requires pyOpenSSL to be present, or it raises
+    L{NotImplementedError}.
 
-    @ivar _webContext: A web context factory which accepts a hostname and port
-        number to its C{getContext} method.
+    @param decoratee: A function which requires pyOpenSSL.
+    @type decoratee: L{callable}
 
-    @ivar _hostname: The hostname which will be passed to
-        C{_webContext.getContext}.
-
-    @ivar _port: The port number which will be passed to
-        C{_webContext.getContext}.
+    @return: A function which raises L{NotImplementedError} if pyOpenSSL is not
+        installed; otherwise, if it is installed, simply return C{decoratee}.
+    @rtype: L{callable}
     """
-    def __init__(self, webContext, hostname, port):
-        self._webContext = webContext
-        self._hostname = hostname
-        self._port = port
+    if SSL is None:
+        @wraps(decoratee)
+        def raiseNotImplemented(*a, **kw):
+            """
+            pyOpenSSL is not available.
+
+            @param a: The positional arguments for C{decoratee}.
+
+            @param kw: The keyword arguments for C{decoratee}.
+
+            @raise NotImplementedError: Always.
+            """
+            raise NotImplementedError("SSL support unavailable")
+        return raiseNotImplemented
+    return decoratee
+
+
+
+class WebClientContextFactory(object):
+    """
+    This class is deprecated.  Please simply use L{Agent} as-is, or if you want
+    to customize something, use L{BrowserLikePolicyForHTTPS}.
+
+    A L{WebClientContextFactory} is an HTTPS policy which totally ignores the
+    hostname and port.  It performs basic certificate verification, however the
+    lack of validation of service identity (e.g.  hostname validation) means it
+    is still vulnerable to man-in-the-middle attacks.  Don't use it any more.
+    """
+
+    def _getCertificateOptions(self, hostname, port):
+        """
+        Return a L{CertificateOptions}.
+
+        @param hostname: ignored
+
+        @param port: ignored
+
+        @return: A new CertificateOptions instance.
+        @rtype: L{CertificateOptions}
+        """
+        return CertificateOptions(
+            method=SSL.SSLv23_METHOD,
+            trustRoot=platformTrust()
+        )
+
+
+    @_requireSSL
+    def getContext(self, hostname, port):
+        """
+        Return an L{OpenSSL.SSL.Context}.
+
+        @param hostname: ignored
+        @param port: ignored
+
+        @return: A new SSL context.
+        @rtype: L{OpenSSL.SSL.Context}
+        """
+        return self._getCertificateOptions(hostname, port).getContext()
+
+
+
+@implementer(IPolicyForHTTPS)
+class BrowserLikePolicyForHTTPS(object):
+    """
+    SSL connection creator for web clients.
+    """
+    def __init__(self, trustRoot=None):
+        self._trustRoot = trustRoot
+
+
+    @_requireSSL
+    def creatorForNetloc(self, hostname, port):
+        """
+        Create a L{client connection creator
+        <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>} for a
+        given network location.
+
+        @param tls: The TLS protocol to create a connection for.
+        @type tls: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
+
+        @param hostname: The hostname part of the URI.
+        @type hostname: L{bytes}
+
+        @param port: The port part of the URI.
+        @type port: L{int}
+
+        @return: a connection creator with appropriate verification
+            restrictions set
+        @rtype: L{client connection creator
+            <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>}
+        """
+        return optionsForClientTLS(hostname.decode("ascii"))
+
+
+
+deprecatedModuleAttribute(Version("Twisted", 14, 0, 0),
+                          getDeprecationWarningString(
+                              WebClientContextFactory,
+                              Version("Twisted", 14, 0, 0),
+                              replacement=BrowserLikePolicyForHTTPS)
+                          .split("; ")[1],
+                          WebClientContextFactory.__module__,
+                          WebClientContextFactory.__name__)
+
+
+
+class _ContextFactoryWithContext(object):
+    """
+    A L{_ContextFactoryWithContext} is like a
+    L{twisted.internet.ssl.ContextFactory} with a pre-created context.
+
+    @ivar _context: A Context.
+    @type _context: L{OpenSSL.SSL.Context}
+    """
+
+    def __init__(self, context):
+        """
+        Initialize a L{_ContextFactoryWithContext} with a context.
+
+        @param context: An SSL context.
+        @type context: L{OpenSSL.SSL.Context}
+        """
+        self._context = context
 
 
     def getContext(self):
         """
+        Return the context created by
+        L{_DeprecatedToCurrentPolicyForHTTPS._webContextFactory}.
+
+        @return: An old-style context factory.
+        @rtype: object with C{getContext} method, like
+            L{twisted.internet.ssl.ContextFactory}.
+        """
+        return self._context
+
+
+
+@implementer(IPolicyForHTTPS)
+class _DeprecatedToCurrentPolicyForHTTPS(object):
+    """
+    Adapt a web context factory to a normal context factory.
+
+    @ivar _webContextFactory: An object providing a getContext method with
+        C{hostname} and C{port} arguments.
+    @type _webContextFactory: L{WebClientContextFactory} (or object with a
+        similar C{getContext} method).
+    """
+    def __init__(self, webContextFactory):
+        """
+        Wrap a web context factory in an L{IPolicyForHTTPS}.
+
+        @param webContextFactory: An object providing a getContext method with
+            C{hostname} and C{port} arguments.
+        @type webContextFactory: L{WebClientContextFactory} (or object with a
+            similar C{getContext} method).
+        """
+        self._webContextFactory = webContextFactory
+
+
+    def creatorForNetloc(self, hostname, port):
+        """
         Called the wrapped web context factory's C{getContext} method with a
         hostname and port number and return the resulting context object.
+
+        @param hostname: The hostname part of the URI.
+        @type hostname: L{bytes}
+
+        @param port: The port part of the URI.
+        @type port: L{int}
+
+        @return: An old-style context factory.
+        @rtype: object with C{getContext} method, like
+            L{twisted.internet.ssl.ContextFactory}.
         """
-        return self._webContext.getContext(self._hostname, self._port)
+        context = self._webContextFactory.getContext(hostname, port)
+        return _ContextFactoryWithContext(context)
 
 
 
@@ -972,8 +1116,8 @@ class _RetryingHTTP11ClientProtocol(object):
                                       ResponseNeverReceived)):
             return False
         if isinstance(exception, _WrapperException):
-            for failure in exception.reasons:
-                if failure.check(defer.CancelledError):
+            for aFailure in exception.reasons:
+                if aFailure.check(defer.CancelledError):
                     return False
         if bodyProducer is not None:
             return False
@@ -1216,46 +1360,67 @@ class Agent(_AgentBase):
     L{Agent} is a very basic HTTP client.  It supports I{HTTP} and I{HTTPS}
     scheme URIs (but performs no certificate checking by default).
 
-    @param pool: A L{HTTPConnectionPool} instance, or C{None}, in which case a
-        non-persistent L{HTTPConnectionPool} instance will be created.
+    @ivar _pool: An L{HTTPConnectionPool} instance.
 
-    @ivar _contextFactory: A web context factory which will be used to create
+    @ivar _policyForHTTPS: A web context factory which will be used to create
         SSL context objects for any SSL connections the agent needs to make.
 
-    @ivar _connectTimeout: If not C{None}, the timeout passed to C{connectTCP}
-        or C{connectSSL} for specifying the connection timeout.
+    @ivar _connectTimeout: If not C{None}, the timeout passed to
+        L{TCP4ClientEndpoint} or C{SSL4ClientEndpoint} for specifying the
+        connection timeout.
 
-    @ivar _bindAddress: If not C{None}, the address passed to C{connectTCP} or
-        C{connectSSL} for specifying the local address to bind to.
+    @ivar _bindAddress: If not C{None}, the address passed to
+        L{TCP4ClientEndpoint} or C{SSL4ClientEndpoint} for specifying the local
+        address to bind to.
 
     @since: 9.0
     """
 
-    def __init__(self, reactor, contextFactory=WebClientContextFactory(),
+    def __init__(self, reactor,
+                 contextFactory=BrowserLikePolicyForHTTPS(),
                  connectTimeout=None, bindAddress=None,
                  pool=None):
+        """
+        Create an L{Agent}.
+
+        @param reactor: A provider of
+            L{twisted.internet.interfaces.IReactorTCP} and
+            L{twisted.internet.interfaces.IReactorSSL} for this L{Agent} to
+            place outgoing connections.
+        @type reactor: L{twisted.internet.interfaces.IReactorTCP} and
+            L{twisted.internet.interfaces.IReactorSSL}
+
+        @param contextFactory: A factory for TLS contexts, to control the
+            verification parameters of OpenSSL.  The default is to use a
+            L{BrowserLikePolicyForHTTPS}, so unless you have special
+            requirements you can leave this as-is.
+        @type contextFactory: L{IPolicyForHTTPS}.
+
+        @param connectTimeout: The amount of time that this L{Agent} will wait
+            for the peer to accept a connection.
+        @type connectTimeout: L{float}
+
+        @param bindAddress: The local address for client sockets to bind to.
+        @type bindAddress: L{bytes}
+
+        @param pool: An L{HTTPConnectionPool} instance, or C{None}, in which
+            case a non-persistent L{HTTPConnectionPool} instance will be
+            created.
+        @type pool: L{HTTPConnectionPool}
+        """
         _AgentBase.__init__(self, reactor, pool)
-        self._contextFactory = contextFactory
+        if not IPolicyForHTTPS.providedBy(contextFactory):
+            warnings.warn(
+                repr(contextFactory) +
+                " was passed as the HTTPS policy for an Agent, but it does "
+                "not provide IPolicyForHTTPS.  Since Twisted 14.0, you must "
+                "pass a provider of IPolicyForHTTPS.",
+                stacklevel=2, category=DeprecationWarning
+            )
+            contextFactory = _DeprecatedToCurrentPolicyForHTTPS(contextFactory)
+        self._policyForHTTPS = contextFactory
         self._connectTimeout = connectTimeout
         self._bindAddress = bindAddress
-
-
-    def _wrapContextFactory(self, host, port):
-        """
-        Create and return a normal context factory wrapped around
-        C{self._contextFactory} in such a way that C{self._contextFactory} will
-        have the host and port information passed to it.
-
-        @param host: A C{str} giving the hostname which will be connected to in
-            order to issue a request.
-
-        @param port: An C{int} giving the port number the connection will be
-            on.
-
-        @return: A context factory suitable to be passed to
-            C{reactor.connectSSL}.
-        """
-        return _WebToNormalContextFactory(self._contextFactory, host, port)
 
 
     def _getEndpoint(self, scheme, host, port):
@@ -1282,9 +1447,9 @@ class Agent(_AgentBase):
         if scheme == 'http':
             return TCP4ClientEndpoint(self._reactor, host, port, **kwargs)
         elif scheme == 'https':
+            tlsPolicy = self._policyForHTTPS.creatorForNetloc(host, port)
             return SSL4ClientEndpoint(self._reactor, host, port,
-                                      self._wrapContextFactory(host, port),
-                                      **kwargs)
+                                      tlsPolicy, **kwargs)
         else:
             raise SchemeNotSupported("Unsupported scheme: %r" % (scheme,))
 
