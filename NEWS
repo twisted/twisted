@@ -1,7 +1,7 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 14.0.0pre3 (2014-04-26)
+Twisted Core 14.0.0pre4 (2014-04-26)
 ====================================
 
 Features
@@ -117,10 +117,11 @@ Other
  - #1822, #5929, #6239, #6537, #6565, #6614, #6632, #6690, #6784,
    #6792, #6795, #6821, #6843, #6846, #6854, #6856, #6857, #6872,
    #6892, #6902, #6906, #6922, #6926, #6936, #6941, #6942, #6943,
-   #6944, #6945, #6946, #6948, #6979, #7001, #7049, #7051, #7094
+   #6944, #6945, #6946, #6948, #6979, #7001, #7049, #7051, #7094,
+   #7098
 
 
-Twisted Conch 14.0.0pre3 (2014-04-26)
+Twisted Conch 14.0.0pre4 (2014-04-26)
 =====================================
 
 Improved Documentation
@@ -134,7 +135,7 @@ Other
  - #6696, #6807, #7054
 
 
-Twisted Lore 14.0.0pre3 (2014-04-26)
+Twisted Lore 14.0.0pre4 (2014-04-26)
 ====================================
 
 Deprecations and Removals
@@ -146,7 +147,7 @@ Other
  - #6998
 
 
-Twisted Mail 14.0.0pre3 (2014-04-26)
+Twisted Mail 14.0.0pre4 (2014-04-26)
 ====================================
 
 Improved Documentation
@@ -167,7 +168,7 @@ Other
  - #6696
 
 
-Twisted Names 14.0.0pre3 (2014-04-26)
+Twisted Names 14.0.0pre4 (2014-04-26)
 =====================================
 
 Features
@@ -203,7 +204,7 @@ Other
  - #5675, #6222, #6672, #6696, #6887, #6940, #6975, #6990
 
 
-Twisted News 14.0.0pre3 (2014-04-26)
+Twisted News 14.0.0pre4 (2014-04-26)
 ====================================
 
 No significant changes have been made for this release.
@@ -213,7 +214,7 @@ Other
  - #6991
 
 
-Twisted Pair 14.0.0pre3 (2014-04-26)
+Twisted Pair 14.0.0pre4 (2014-04-26)
 ====================================
 
 Features
@@ -227,7 +228,7 @@ Other
  - #6898, #6931, #6993
 
 
-Twisted Runner 14.0.0pre3 (2014-04-26)
+Twisted Runner 14.0.0pre4 (2014-04-26)
 ======================================
 
 No significant changes have been made for this release.
@@ -237,7 +238,7 @@ Other
  - #6992
 
 
-Twisted Web 14.0.0pre3 (2014-04-26)
+Twisted Web 14.0.0pre4 (2014-04-26)
 ===================================
 
 Features
@@ -273,7 +274,7 @@ Other
  - #5004, #6881, #6956
 
 
-Twisted Words 14.0.0pre3 (2014-04-26)
+Twisted Words 14.0.0pre4 (2014-04-26)
 =====================================
 
 Bugfixes
