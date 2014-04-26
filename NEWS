@@ -6,7 +6,9 @@ Twisted Core 14.0.0pre4 (2014-04-26)
 
 Features
 --------
- - Twisted's UDP implementation now supports broadcasting. (#454)
+ - twisted.internet.interfaces.IUDPTransport - and that interface's
+   implementations in Twisted - now supports enabling broadcasting.
+   (#454)
  - trial's TestCase will now report a test method as an error if that
    test method is a generator function, preventing an issue when a
    user forgets to decorate a test method with defer.inlineCallbacks,
@@ -25,12 +27,11 @@ Features
    twisted.internet.endpoints.clientFromString. (#5069)
  - IReactorUDP.listenUDP, IUDPTransport.write and
    IUDPTransport.connect now accept ipv6 address literals. (#5086)
- - twisted.internet.ssl.CertificateOptions now provides a 'hostname'
-   field, allowing clients to specify and verify the identity of the
-   peer they're communicating with.  When used with the
-   service_identity library from PyPI, this provides support for
-   service identity verification from RFC 6125, as well as server name
-   indication from RFC 6066. (#5190)
+ - A new API, twisted.internet.ssl.optionsForClientTLS, allows clients
+   to specify and verify the identity of the peer they're communicating
+   with.  When used with the service_identity library from PyPI, this
+   provides support for service identity verification from RFC 6125, as
+   well as server name indication from RFC 6066. (#5190)
  - Twisted's TLS support now provides a way to ask for user-configured
    trust roots rather than having to manually configure such
    certificate authority certificates yourself.
