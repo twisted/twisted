@@ -122,7 +122,7 @@ class ZipPath(AbstractFilePath):
         return self.pathInArchive in self.archive.childmap
 
     def isfile(self):
-        return self.pathInArchive in self.archive.zipfile.NameToInfo
+        return self.pathInArchive.decode(ENCODING) in self.archive.zipfile.NameToInfo
 
     def islink(self):
         return False
@@ -130,7 +130,7 @@ class ZipPath(AbstractFilePath):
     def listdir(self):
         if self.exists():
             if self.isdir():
-                return self.archive.childmap[self.pathInArchive].keys()
+                return self.archive.childmap[self.pathInArchive.decode(ENCODING)].keys()
             else:
                 raise OSError(errno.ENOTDIR, "Leaf zip entry listed")
         else:
@@ -157,11 +157,11 @@ class ZipPath(AbstractFilePath):
 
     def open(self, mode="r"):
         if _USE_ZIPFILE:
-            return self.archive.zipfile.open(self.pathInArchive, mode=mode)
+            return self.archive.zipfile.open(self.pathInArchive.decode(ENCODING), mode=mode)
         else:
             # XXX oh man, is this too much hax?
             self.archive.zipfile.mode = mode
-            return self.archive.zipfile.readfile(self.pathInArchive)
+            return self.archive.zipfile.readfile(self.pathInArchive.decode(ENCODING))
 
     def changed(self):
         pass
@@ -173,7 +173,7 @@ class ZipPath(AbstractFilePath):
         @return: file size, in bytes
         """
 
-        pathInArchive = self.pathInArchive.decode("utf-8")
+        pathInArchive = self.pathInArchive.decode(ENCODING)
         return self.archive.zipfile.NameToInfo[pathInArchive].file_size
 
     def getAccessTime(self):
@@ -193,7 +193,7 @@ class ZipPath(AbstractFilePath):
 
         @return: a number of seconds since the epoch.
         """
-        pathInArchive = self.pathInArchive.decode("utf-8")
+        pathInArchive = self.pathInArchive.decode(ENCODING)
         return time.mktime(
             self.archive.zipfile.NameToInfo[pathInArchive].date_time
             + (0, 0, 0))
@@ -230,7 +230,7 @@ class ZipArchive(ZipPath):
         else:
             self.zipfile = ChunkingZipFile(archivePathname)
         try:
-            self.path = archivePathname.encode("utf-8")
+            self.path = archivePathname.encode(ENCODING)
         except AttributeError:
             self.path = archivePathname
 
