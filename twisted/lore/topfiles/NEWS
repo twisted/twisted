@@ -4,6 +4,12 @@ http://twistedmatrix.com/trac/ticket/<number>
 Twisted Lore 14.0.0pre3 (2014-04-26)
 ====================================
 
+No significant changes have been made for this release.
+
+
+Twisted Lore 14.0.0pre3 (2014-04-26)
+====================================
+
 Deprecations and Removals
 -------------------------
  - twisted.lore is now deprecated in favor of Sphinx. (#6907)
