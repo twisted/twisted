@@ -7,8 +7,8 @@ certificate = ssl.Certificate.loadPEM(
 )
 
 def main(reactor, host, port=443):
-    contextFactory = ssl.CertificateOptions(trustRoot=certificate,
-                                            hostname=host.decode("utf-8"))
+    options = ssl.optionsForClientTLS(host.decode("utf-8"),
+                                      trustRoot=certificate)
     port = int(port)
     done = defer.Deferred()
 
@@ -25,8 +25,7 @@ def main(reactor, host, port=443):
             done.callback(None)
 
     endpoints.connectProtocol(
-        endpoints.SSL4ClientEndpoint(reactor, host, port,
-                                     sslContextFactory=contextFactory),
+        endpoints.SSL4ClientEndpoint(reactor, host, port, options),
         ShowCertificate()
     )
     return done

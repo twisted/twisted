@@ -29,10 +29,11 @@ implement SSL and TLS.  Typical usage of this module looks like this::
     reactor.run()
 
 This API offers somewhat more flexibility than
-L{twisted.internet.interfaces.IReactorSSL}; for example, a L{TLSMemoryBIOProtocol}
-instance can use another instance of L{TLSMemoryBIOProtocol} as its transport,
-yielding TLS over TLS - useful to implement onion routing.  It can also be used
-to run TLS over unusual transports, such as UNIX sockets and stdio.
+L{twisted.internet.interfaces.IReactorSSL}; for example, a
+L{TLSMemoryBIOProtocol} instance can use another instance of
+L{TLSMemoryBIOProtocol} as its transport, yielding TLS over TLS - useful to
+implement onion routing.  It can also be used to run TLS over unusual
+transports, such as UNIX sockets and stdio.
 """
 
 from __future__ import division, absolute_import
@@ -53,8 +54,10 @@ from twisted.python.compat import unicode
 from twisted.python.failure import Failure
 from twisted.python import log
 from twisted.python.reflect import safe_str
-from twisted.internet.interfaces import ISystemHandle, ISSLTransport
-from twisted.internet.interfaces import IPushProducer, ILoggingContext
+from twisted.internet.interfaces import (
+    ISystemHandle, ISSLTransport, IPushProducer, ILoggingContext,
+    IOpenSSLServerConnectionCreator, IOpenSSLClientConnectionCreator,
+)
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import cooperate
@@ -296,15 +299,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         Connect this wrapper to the given transport and initialize the
         necessary L{OpenSSL.SSL.Connection} with a memory BIO.
         """
-        tlsContext = self.factory._contextFactory.getContext()
-        self._tlsConnection = Connection(tlsContext, None)
-        from twisted.internet.ssl import CertificateOptions
-        if isinstance(self.factory._contextFactory, CertificateOptions):
-            self._tlsConnection.set_app_data(self)
-        if self.factory._isClient:
-            self._tlsConnection.set_connect_state()
-        else:
-            self._tlsConnection.set_accept_state()
+        self._tlsConnection = self.factory._createConnection(self)
         self._appSendBuffer = []
 
         # Add interfaces provided by the transport we are wrapping:
@@ -504,13 +499,13 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         self.transport.abortConnection()
 
 
-    def _failVerification(self, reason):
+    def failVerification(self, reason):
         """
-        Cheating hook for CertificateOptions to sneak in a more descriptive
-        error about the connection failure.
+        Abort the connection during connection setup, giving a reason that
+        certificate verification failed.
 
         @param reason: The reason that the verification failed; reported to the
-            application protocol's
+            application protocol's C{connectionLost} method.
         @type reason: L{Failure}
         """
         self._reason = reason
@@ -624,28 +619,155 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
 
 
 
+@implementer(IOpenSSLClientConnectionCreator, IOpenSSLServerConnectionCreator)
+class _ContextFactoryToConnectionFactory(object):
+    """
+    Adapter wrapping "something" (ideally something like a
+    L{twisted.internet.ssl.ContextFactory}; implementations of this interface
+    don't actually typically subclass though, so "something" is more likely
+    just something with a C{getContext} method) into an
+    L{IOpenSSLClientConnectionCreator} or L{IOpenSSLServerConnectionCreator}.
+
+    See U{https://twistedmatrix.com/trac/ticket/7215} for work that should make
+    this unnecessary.
+    """
+
+    def __init__(self, oldStyleContextFactory):
+        """
+        Construct a L{_ContextFactoryToConnectionFactory} with an old-style
+        context factory.
+
+        Immediately call C{getContext} on C{oldStyleContextFactory} in order to
+        force advance parameter checking, since old-style context factories
+        don't actually check that their arguments to L{OpenSSL} are correct.
+
+        @param oldStyleContextFactory: A factory that can produce contexts.
+        @type oldStyleContextFactory: L{twisted.internet.ssl.ContextFactory} or
+            something like it.
+        """
+        oldStyleContextFactory.getContext()
+        self._oldStyleContextFactory = oldStyleContextFactory
+
+
+    def _connectionForTLS(self, protocol):
+        """
+        Create an L{OpenSSL.SSL.Connection} object.
+
+        @param protocol: The protocol initiating a TLS connection.
+        @type protocol: L{TLSMemoryBIOProtocol}
+
+        @return: a connection
+        @rtype: L{OpenSSL.SSL.Connection}
+        """
+        context = self._oldStyleContextFactory.getContext()
+        return Connection(context, None)
+
+
+    def serverConnectionForTLS(self, protocol):
+        """
+        Construct an OpenSSL server connection from the wrapped old-style
+        context factory.
+
+        @note: Since old-style context factories don't distinguish between
+            clients and servers, this is exactly the same as
+            L{_ContextFactoryToConnectionFactory.clientConnectionForTLS}.
+
+        @param protocol: The protocol initiating a TLS connection.
+        @type protocol: L{TLSMemoryBIOProtocol}
+
+        @return: a connection
+        @rtype: L{OpenSSL.SSL.Connection}
+        """
+        return self._connectionForTLS(protocol)
+
+
+    def clientConnectionForTLS(self, protocol):
+        """
+        Construct an OpenSSL server connection from the wrapped old-style
+        context factory.
+
+        @note: Since old-style context factories don't distinguish between
+            clients and servers, this is exactly the same as
+            L{_ContextFactoryToConnectionFactory.serverConnectionForTLS}.
+
+        @param protocol: The protocol initiating a TLS connection.
+        @type protocol: L{TLSMemoryBIOProtocol}
+
+        @return: a connection
+        @rtype: L{OpenSSL.SSL.Connection}
+        """
+        return self._connectionForTLS(protocol)
+
+
+
 class TLSMemoryBIOFactory(WrappingFactory):
     """
     L{TLSMemoryBIOFactory} adds TLS to connections.
 
-    @ivar _contextFactory: The TLS context factory which will be used to define
-        certain TLS connection parameters.
+    @ivar _creatorInterface: the interface which L{_connectionCreator} is
+        expected to implement.
+    @type _creatorInterface: L{zope.interface.Interface}
 
-    @ivar _isClient: A flag which is C{True} if this is a client TLS
-        connection, C{False} if it is a server TLS connection.
+    @ivar _connectionCreator: a callable which creates an OpenSSL Connection
+        object.
+    @type _connectionCreator: 1-argument callable taking
+        L{TLSMemoryBIOProtocol} and returning L{OpenSSL.SSL.Connection}.
     """
     protocol = TLSMemoryBIOProtocol
 
     noisy = False  # disable unnecessary logging.
 
     def __init__(self, contextFactory, isClient, wrappedFactory):
-        WrappingFactory.__init__(self, wrappedFactory)
-        self._contextFactory = contextFactory
-        self._isClient = isClient
+        """
+        Create a L{TLSMemoryBIOFactory}.
 
-        # Force some parameter checking in pyOpenSSL.  It's better to fail now
-        # than after we've set up the transport.
-        contextFactory.getContext()
+        @param contextFactory: Configuration parameters used to create an
+            OpenSSL connection.  In order of preference, what you should pass
+            here should be:
+
+                1. L{twisted.internet.ssl.CertificateOptions} (if you're
+                   writing a server) or the result of
+                   L{twisted.internet.ssl.optionsForClientTLS} (if you're
+                   writing a client).  If you want security you should really
+                   use one of these.
+
+                2. If you really want to implement something yourself, supply a
+                   provider of L{IOpenSSLClientConnectionCreator} or
+                   L{IOpenSSLServerConnectionCreator}.
+
+                3. If you really have to, supply a
+                   L{twisted.internet.ssl.ContextFactory}.  This will likely be
+                   deprecated at some point so please upgrade to the new
+                   interfaces.
+
+        @type contextFactory: L{IOpenSSLClientConnectionCreator} or
+            L{IOpenSSLServerConnectionCreator}, or, for compatibility with
+            older code, L{twisted.internet.ssl.ContextFactory}.  See
+            U{https://twistedmatrix.com/trac/ticket/7215} for information on
+            the upcoming deprecation of passing a
+            L{twisted.internet.ssl.ContextFactory} here.
+
+        @param isClient: Is this a factory for TLS client connections; in other
+            words, those that will send a C{ClientHello} greeting?  L{True} if
+            so, L{False} otherwise.  This flag determines what interface is
+            expected of C{contextFactory}.  If L{True}, C{contextFactory}
+            should provide L{IOpenSSLClientConnectionCreator}; otherwise it
+            should provide L{IOpenSSLServerConnectionCreator}.
+        @type isClient: L{bool}
+
+        @param wrappedFactory: A factory which will create the
+            application-level protocol.
+        @type wrappedFactory: L{twisted.internet.interfaces.IProtocolFactory}
+        """
+        WrappingFactory.__init__(self, wrappedFactory)
+        if isClient:
+            creatorInterface = IOpenSSLClientConnectionCreator
+        else:
+            creatorInterface = IOpenSSLServerConnectionCreator
+        self._creatorInterface = creatorInterface
+        if not creatorInterface.providedBy(contextFactory):
+            contextFactory = _ContextFactoryToConnectionFactory(contextFactory)
+        self._connectionCreator = contextFactory
 
 
     def logPrefix(self):
@@ -660,4 +782,25 @@ class TLSMemoryBIOFactory(WrappingFactory):
         else:
             logPrefix = self.wrappedFactory.__class__.__name__
         return "%s (TLS)" % (logPrefix,)
+
+
+    def _createConnection(self, tlsProtocol):
+        """
+        Create an OpenSSL connection and set it up good.
+
+        @param tlsProtocol: The protocol which is establishing the connection.
+        @type tlsProtocol: L{TLSMemoryBIOProtocol}
+
+        @return: an OpenSSL connection object for C{tlsProtocol} to use
+        @rtype: L{OpenSSL.SSL.Connection}
+        """
+        connectionCreator = self._connectionCreator
+        if self._creatorInterface is IOpenSSLClientConnectionCreator:
+            connection = connectionCreator.clientConnectionForTLS(tlsProtocol)
+            connection.set_connect_state()
+        else:
+            connection = connectionCreator.serverConnectionForTLS(tlsProtocol)
+            connection.set_accept_state()
+        return connection
+
 
