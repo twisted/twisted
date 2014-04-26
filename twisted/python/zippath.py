@@ -173,7 +173,8 @@ class ZipPath(AbstractFilePath):
         @return: file size, in bytes
         """
 
-        return self.archive.zipfile.NameToInfo[self.pathInArchive].file_size
+        pathInArchive = self.pathInArchive.decode("utf-8")
+        return self.archive.zipfile.NameToInfo[pathInArchive].file_size
 
     def getAccessTime(self):
         """
@@ -192,8 +193,9 @@ class ZipPath(AbstractFilePath):
 
         @return: a number of seconds since the epoch.
         """
+        pathInArchive = self.pathInArchive.decode("utf-8")
         return time.mktime(
-            self.archive.zipfile.NameToInfo[self.pathInArchive].date_time
+            self.archive.zipfile.NameToInfo[pathInArchive].date_time
             + (0, 0, 0))
 
 
