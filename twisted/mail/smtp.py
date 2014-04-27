@@ -1324,8 +1324,13 @@ class ESMTPClient(SMTPClient):
         self._okresponse = self.esmtpState_serverConfig
         self._failresponse = self.esmtpEHLORequired
 
-        if self.heloFallback and \
-           not self.requireAuthentication and self.requireTransportSecurity:
+        # Check to see if we have TLS.
+        if ISSLTransport.providedBy(self.transport):
+            needTLS = False
+        else:
+            needTLS = self.requireTransportSecurity
+
+        if self.heloFallback and not self.requireAuthentication and not needTLS:
             self._failresponse = self.smtpState_helo
 
         self.sendLine('EHLO ' + self.identity)
