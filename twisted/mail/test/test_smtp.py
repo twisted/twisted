@@ -1562,6 +1562,84 @@ class SenderMixinSentMailTests(unittest.TestCase):
 
 
 
+class ESMTPDowngradeTestCase(unittest.TestCase):
+
+    if sslSkip is not None:
+        skip = sslSkip
+
+    def setUp(self):
+        self.clientProtocol = smtp.ESMTPClient(
+            "testpassword", ClientTLSContext(), "testuser")
+
+    def test_requireHELOFallbackOperates(self):
+        """
+        Double check that HELO fallback works.
+        """
+        transport = StringTransport()
+        self.clientProtocol.requireAuthentication = False
+        self.clientProtocol.requireTransportSecurity = False
+        self.clientProtocol.heloFallback = True
+        self.clientProtocol.makeConnection(transport)
+
+        self.clientProtocol.dataReceived("220 localhost\r\n")
+        transport.clear()
+        self.clientProtocol.dataReceived("500 not a esmtp server\r\n")
+        self.assertEqual("HELO testuser\r\n", transport.value())
+
+
+    def test_requireAuthFailsHELOFallback(self):
+        """
+        If authentication is required, and HELO fallback is on, HELO fallback
+        must not be honoured, as authentication requires EHLO to succeed.
+        """
+        transport = StringTransport()
+        self.clientProtocol.requireAuthentication = True
+        self.clientProtocol.requireTransportSecurity = False
+        self.clientProtocol.heloFallback = True
+        self.clientProtocol.makeConnection(transport)
+
+        self.clientProtocol.dataReceived("220 localhost\r\n")
+        transport.clear()
+        self.clientProtocol.dataReceived("500 not a esmtp server\r\n")
+        self.assertEqual("QUIT\r\n", transport.value())
+
+
+    def test_requireTLSFailsHELOFallback(self):
+        """
+        If TLS is required and the connection is insecure, HELO fallback must
+        not be honoured, as STARTTLS requires EHLO to succeed.
+        """
+        transport = StringTransport()
+        self.clientProtocol.requireAuthentication = False
+        self.clientProtocol.requireTransportSecurity = True
+        self.clientProtocol.heloFallback = True
+        self.clientProtocol.makeConnection(transport)
+
+        self.clientProtocol.dataReceived("220 localhost\r\n")
+        transport.clear()
+        self.clientProtocol.dataReceived("500 not a esmtp server\r\n")
+        self.assertEqual("QUIT\r\n", transport.value())
+
+
+    def test_requireTLSAndHELOFallbackSucceedsIfOverTLS(self):
+        """
+        If TLS is provided at the transport level, we can honour the HELO
+        fallback if we're set to require TLS.
+        """
+        transport = StringTransport()
+        self.clientProtocol.requireAuthentication = False
+        self.clientProtocol.requireTransportSecurity = True
+        self.clientProtocol.heloFallback = True
+        self.clientProtocol.makeConnection(transport)
+        directlyProvides(transport, interfaces.ISSLTransport)
+
+        self.clientProtocol.dataReceived("220 localhost\r\n")
+        transport.clear()
+        self.clientProtocol.dataReceived("500 not a esmtp server\r\n")
+        self.assertEqual("HELO testuser\r\n", transport.value())
+
+
+
 class SSLTestCase(unittest.TestCase):
     """
     Tests for the TLS negotiation done by L{smtp.ESMTPClient}.
