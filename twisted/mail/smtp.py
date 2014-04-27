@@ -1223,7 +1223,10 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
 
 class ESMTPClient(SMTPClient):
-    # Fall back to HELO if the server does not support EHLO
+    # Fall back to HELO if the server does not support EHLO.
+    # This is only honored if both requireAuthentication and
+    # requireTransportSecurity are False, since they are security considerations
+    # and more important than compatibility.
     heloFallback = True
 
     # Refuse to proceed if authentication cannot be performed
@@ -1270,7 +1273,8 @@ class ESMTPClient(SMTPClient):
 
 
     def esmtpEHLORequired(self, code=-1, resp=None):
-        self.sendError(EHLORequiredError(502, "Server does not support ESMTP Authentication", self.log.str()))
+        self.sendError(EHLORequiredError(502, "Server does not support ESMTP "
+                                         "Authentication", self.log.str()))
 
 
     def esmtpAUTHRequired(self, code=-1, resp=None):
@@ -1281,35 +1285,40 @@ class ESMTPClient(SMTPClient):
 
         auth = "[%s]" % ', '.join(tmp)
 
-        self.sendError(AUTHRequiredError(502, "Server does not support Client Authentication schemes %s" % auth,
+        self.sendError(AUTHRequiredError(502, "Server does not support Client "
+                                         "Authentication schemes %s" % auth,
                                          self.log.str()))
 
 
     def esmtpTLSRequired(self, code=-1, resp=None):
-        self.sendError(TLSRequiredError(502, "Server does not support secure communication via TLS / SSL",
+        self.sendError(TLSRequiredError(502, "Server does not support secure "
+                                        "communication via TLS / SSL",
                                         self.log.str()))
 
     def esmtpTLSFailed(self, code=-1, resp=None):
-        self.sendError(TLSError(code, "Could not complete the SSL/TLS handshake", self.log.str()))
+        self.sendError(TLSError(code, "Could not complete the SSL/TLS "
+                                "handshake", self.log.str()))
 
     def esmtpAUTHDeclined(self, code=-1, resp=None):
         self.sendError(AUTHDeclinedError(code, resp, self.log.str()))
 
     def esmtpAUTHMalformedChallenge(self, code=-1, resp=None):
-        str =  "Login failed because the SMTP Server returned a malformed Authentication Challenge"
+        str = "Login failed because the SMTP Server returned a malformed "\
+               "Authentication Challenge"
         self.sendError(AuthenticationError(501, str, self.log.str()))
 
     def esmtpAUTHServerError(self, code=-1, resp=None):
         self.sendError(AuthenticationError(code, resp, self.log.str()))
 
     def registerAuthenticator(self, auth):
-        """Registers an Authenticator with the ESMTPClient. The ESMTPClient
-           will attempt to login to the SMTP Server in the order the
-           Authenticators are registered. The most secure Authentication
-           mechanism should be registered first.
+        """
+        Registers an Authenticator with the ESMTPClient. The ESMTPClient will
+        attempt to login to the SMTP Server in the order the Authenticators are
+        registered. The most secure Authentication mechanism should be
+        registered first.
 
-           @param auth: The Authentication mechanism to register
-           @type auth: class implementing C{IClientAuthentication}
+        @param auth: The Authentication mechanism to register
+        @type auth: class implementing C{IClientAuthentication}
         """
 
         self.authenticators.append(auth)
@@ -1324,7 +1333,7 @@ class ESMTPClient(SMTPClient):
         self._okresponse = self.esmtpState_serverConfig
         self._failresponse = self.esmtpEHLORequired
 
-        # Check to see if we have TLS.
+        # Check to see if we have TLS, and if we need to force ESMTP support
         if ISSLTransport.providedBy(self.transport):
             needTLS = False
         else:
