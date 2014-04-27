@@ -122,7 +122,7 @@ class ZipPath(AbstractFilePath):
         return self.pathInArchive in self.archive.childmap
 
     def isfile(self):
-        return self.pathInArchive.decode(ENCODING) in self.archive.zipfile.NameToInfo
+        return self.pathInArchive in self.archive.zipfile.NameToInfo
 
     def islink(self):
         return False
@@ -130,7 +130,9 @@ class ZipPath(AbstractFilePath):
     def listdir(self):
         if self.exists():
             if self.isdir():
-                return self.archive.childmap[self.pathInArchive.decode(ENCODING)].keys()
+                # py3 changes the return type of dict().keys(),
+                # so a manual conversion is needed to reflect FilePath.listdir()
+                return list(self.archive.childmap[self.pathInArchive])
             else:
                 raise OSError(errno.ENOTDIR, "Leaf zip entry listed")
         else:
@@ -244,6 +246,9 @@ class ZipArchive(ZipPath):
             for x in range(len(name)):
                 child = name[-x]
                 parent = ZIP_PATH_SEP.decode().join(name[:-x])
+                # convert back to bytes to reflect correct file path api
+                parent = parent.encode(ENCODING)
+                child = child.encode(ENCODING)
                 if parent not in self.childmap:
                     self.childmap[parent] = {}
                 self.childmap[parent][child] = 1
