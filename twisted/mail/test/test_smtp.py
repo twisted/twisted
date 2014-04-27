@@ -1758,13 +1758,15 @@ class SendmailTestCase(unittest.TestCase):
         reactor = MemoryReactor()
         transport = AbortableStringTransport()
         d = smtp.sendmail("localhost", "source@address", "recipient@address",
-                          "message", reactor=reactor,
-                          requireTransportSecurity=True,
+                          "message", reactor=reactor, username="foo",
+                          password="bar", requireTransportSecurity=True,
                           requireAuthentication=True)
         factory = reactor.tcpClients[0][2]
 
         self.assertEqual(factory._requireTransportSecurity, True)
         self.assertEqual(factory._requireAuthentication, True)
+        self.assertEqual(factory.username, "foo")
+        self.assertEqual(factory.password, "bar")
 
 
     def test_sendmailDefaults(self):
@@ -1778,6 +1780,8 @@ class SendmailTestCase(unittest.TestCase):
         self.assertEqual(factory._requireTransportSecurity, False)
         self.assertEqual(factory._requireAuthentication, False)
         self.assertEqual(factory._heloFallback, True)
+        self.assertEqual(factory.username, None)
+        self.assertEqual(factory.password, None)
 
 
     def test_cancelBeforeConnectionMade(self):
