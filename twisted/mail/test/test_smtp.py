@@ -1750,8 +1750,7 @@ class SendmailTestCase(unittest.TestCase):
         L{twisted.internet.reactor}.
         """
         args, varArgs, keywords, defaults = inspect.getargspec(smtp.sendmail)
-        index = len(args) - args.index("reactor") + 1
-        self.assertEqual(reactor, defaults[index])
+        self.assertEqual(reactor, defaults[2])
 
 
     def test_cancelBeforeConnectionMade(self):

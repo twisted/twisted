@@ -20,7 +20,6 @@ from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet import reactor
-from twisted.internet import endpoints
 from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.python import log
 from twisted.python import util
@@ -1948,10 +1947,14 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         p.requireTransportSecurity = self._requireTransportSecurity
         p.factory = self
         p.timeout = self.timeout
+
+        self.currentProtocol = p
+        self.result.addBoth(self._removeProtocol)
+
         return p
 
 def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
-             reactor=reactor, username=None, secret=None,
+             reactor=reactor, username=None, password=None,
              requireAuthentication=False, requireTransportSecurity=False):
     """
     Send an email.
@@ -1983,7 +1986,7 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
     @param reactor: The reactor used to make TCP connection.
 
     @param username: The username to use, if wanting to authenticate.
-    @param secret: The secret to use, if wanting to authenticate. If you do not
+    @param password: The secret to use, if wanting to authenticate. If you do not
         specify this, SMTP authentication will not occur.
 
     @param requireAuthentication: Whether or not STARTTLS is required.
@@ -2019,16 +2022,14 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
             connector.disconnect()
 
     d = defer.Deferred(cancel)
-    factory = ESMTPSenderFactory(username, secret, from_addr, to_addrs, msg, d)
-
-    factory.heloFallback = True
-    factory.requireAuthentication = requireAuthentication
-    factory.requireTransportSecurity = requireTransportSecurity
+    factory = ESMTPSenderFactory(username, password, from_addr, to_addrs, msg,
+        d, heloFallback=True, requireAuthentication=requireAuthentication,
+        requireTransportSecurity=requireTransportSecurity)
 
     if senderDomainName is not None:
         factory.domain = senderDomainName
 
-    endpoints.HostnameEndpoint(reactor, smtphost, port).connect(factory)
+    connector = reactor.connectTCP(smtphost, port, factory)
 
     return d
 
