@@ -105,7 +105,12 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         self.assertEqual(repr(self.path), pathRepr)
 
         # Create a path to the file rooted in the current working directory
-        relativeCommon = self.cmn.replace(os.getcwd().encode(encoding) + os.sep.encode(encoding), b"", 1) + b".zip"
+        relativeCommon = self.cmn.replace(
+            os.getcwd().encode(encoding) + os.sep.encode(encoding),
+            b"",
+            1
+        )
+        relativeCommon = relativeCommon + b".zip"
         relpath = ZipArchive(relativeCommon)
 
         # Check using a path without the cwd prepended

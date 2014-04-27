@@ -30,7 +30,7 @@ from twisted.python.filepath import IFilePath, FilePath, AbstractFilePath
 
 from zope.interface import implementer
 
-# using FilePath here exclusively rather than os to make sure that we don't do
+# Using FilePath here exclusively rather than os to make sure that we don't do
 # anything OS-path-specific here.
 
 ZIP_PATH_SEP = b'/'             # In zipfiles, "/" is universally used as the
@@ -57,7 +57,7 @@ class ZipPath(AbstractFilePath):
         """
         self.archive = archive
 
-        # keep pathInArchive as bytes
+        # Keep pathInArchive as bytes
         if isinstance(pathInArchive, bytes):
             self.pathInArchive = pathInArchive
         else:
@@ -130,8 +130,7 @@ class ZipPath(AbstractFilePath):
     def listdir(self):
         if self.exists():
             if self.isdir():
-                # py3 changes the return type of dict().keys(),
-                # so a manual conversion is needed to reflect FilePath.listdir()
+                # py3's dict().keys() is no longer a list
                 return list(self.archive.childmap[self.pathInArchive])
             else:
                 raise OSError(errno.ENOTDIR, "Leaf zip entry listed")
@@ -152,18 +151,22 @@ class ZipPath(AbstractFilePath):
     def basename(self):
         return self.pathInArchive.split(ZIP_PATH_SEP)[-1]
 
+
     def dirname(self):
         # XXX NOTE: This API isn't a very good idea on filepath, but it's even
         # less meaningful here.
         return self.parent().path
 
+
     def open(self, mode="r"):
         if _USE_ZIPFILE:
-            return self.archive.zipfile.open(self.pathInArchive.decode(ENCODING), mode=mode)
+            return self.archive.zipfile.open(
+                self.pathInArchive.decode(ENCODING), mode=mode)
         else:
             # XXX oh man, is this too much hax?
             self.archive.zipfile.mode = mode
-            return self.archive.zipfile.readfile(self.pathInArchive.decode(ENCODING))
+            return self.archive.zipfile.readfile(
+                self.pathInArchive.decode(ENCODING))
 
     def changed(self):
         pass
@@ -213,12 +216,13 @@ class ZipPath(AbstractFilePath):
 
 
 class ZipArchive(ZipPath):
-    """ I am a FilePath-like object which can wrap a zip archive as if it were a
-    directory.
+    """ I am a FilePath-like object which can wrap a zip archive as if it were
+    a directory.
     """
     archive = property(lambda self: self)
     def __init__(self, archivePathname):
-        """Create a ZipArchive, treating the archive at archivePathname as a zip file.
+        """Create a ZipArchive, treating the archive at archivePathname as a
+        zip file.
 
         @param archivePathname: a str, naming a path in the filesystem.
         """
