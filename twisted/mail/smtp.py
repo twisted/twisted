@@ -20,6 +20,7 @@ from twisted.internet import protocol
 from twisted.internet import defer
 from twisted.internet import error
 from twisted.internet import reactor
+from twisted.internet import endpoints
 from twisted.internet.interfaces import ITLSTransport, ISSLTransport
 from twisted.python import log
 from twisted.python import util
@@ -1949,35 +1950,44 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         p.timeout = self.timeout
         return p
 
-def sendmail(smtphost, from_addr, to_addrs, msg,
-             senderDomainName=None, port=25, reactor=reactor):
-    """Send an email
+def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
+             reactor=reactor, username=None, secret=None,
+             requireAuthentication=False, requireTransportSecurity=False):
+    """
+    Send an email.
 
     This interface is intended to be a direct replacement for
-    smtplib.SMTP.sendmail() (with the obvious change that
-    you specify the smtphost as well). Also, ESMTP options
-    are not accepted, as we don't do ESMTP yet. I reserve the
-    right to implement the ESMTP options differently.
+    smtplib.SMTP.sendmail() (with the obvious change that you specify the
+    SMTP host as well). To maintain backwards compatibility, it will fall back
+    to plain SMTP, if ESMTP support is not available. If ESMTP support is
+    available, it will attempt to provide encryption via STARTTLS and
+    authentication if a secret is provided.
 
-    @param smtphost: The host the message should be sent to
+    @param smtphost: The host the message should be sent to.
     @param from_addr: The (envelope) address sending this mail.
     @param to_addrs: A list of addresses to send this mail to.  A string will
-        be treated as a list of one address
+        be treated as a list of one address.
     @param msg: The message, including headers, either as a file or a string.
         File-like objects need to support read() and close(). Lines must be
         delimited by '\\n'. If you pass something that doesn't look like a
-        file, we try to convert it to a string (so you should be able to
-        pass an email.Message directly, but doing the conversion with
-        email.Generator manually will give you more control over the
-        process).
+        file, we try to convert it to a string (so you should be able to pass
+        an email.Message directly, but doing the conversion with
+        email.Generator manually will give you more control over the process).
 
-    @param senderDomainName: Name by which to identify.  If None, try
-    to pick something sane (but this depends on external configuration
-    and may not succeed).
+    @param senderDomainName: Name by which to identify. If None, try to pick
+        something sane (but this depends on external configuration and may not
+        succeed).
 
     @param port: Remote port to which to connect.
 
     @param reactor: The reactor used to make TCP connection.
+
+    @param username: The username to use, if wanting to authenticate.
+    @param secret: The secret to use, if wanting to authenticate. If you do not
+        specify this, SMTP authentication will not occur.
+
+    @param requireAuthentication: Whether or not STARTTLS is required.
+    @param requireAuthentication: Whether or not authentication is required.
 
     @rtype: L{Deferred}
     @returns: A cancellable L{Deferred}, its callback will be called if a
@@ -2007,13 +2017,18 @@ def sendmail(smtphost, from_addr, to_addrs, msg,
         else:
             # Connection hasn't been made yet
             connector.disconnect()
+
     d = defer.Deferred(cancel)
-    factory = SMTPSenderFactory(from_addr, to_addrs, msg, d)
+    factory = ESMTPSenderFactory(username, secret, from_addr, to_addrs, msg, d)
+
+    factory.heloFallback = True
+    factory.requireAuthentication = requireAuthentication
+    factory.requireTransportSecurity = requireTransportSecurity
 
     if senderDomainName is not None:
         factory.domain = senderDomainName
 
-    connector = reactor.connectTCP(smtphost, port, factory)
+    endpoints.HostnameEndpoint(reactor, smtphost, port).connect(factory)
 
     return d
 
