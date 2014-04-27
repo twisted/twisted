@@ -1767,6 +1767,19 @@ class SendmailTestCase(unittest.TestCase):
         self.assertEqual(factory._requireAuthentication, True)
 
 
+    def test_sendmailDefaults(self):
+
+        reactor = MemoryReactor()
+        transport = AbortableStringTransport()
+        d = smtp.sendmail("localhost", "source@address", "recipient@address",
+                          "message", reactor=reactor)
+        factory = reactor.tcpClients[0][2]
+
+        self.assertEqual(factory._requireTransportSecurity, False)
+        self.assertEqual(factory._requireAuthentication, False)
+        self.assertEqual(factory._heloFallback, True)
+
+
     def test_cancelBeforeConnectionMade(self):
         """
         When a user cancels L{twisted.mail.smtp.sendmail} before the connection
