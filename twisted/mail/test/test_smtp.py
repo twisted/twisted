@@ -1569,7 +1569,7 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
 
     def setUp(self):
         self.clientProtocol = smtp.ESMTPClient(
-            "testpassword", ClientTLSContext(), "testuser")
+            b"testpassword", ClientTLSContext(), b"testuser")
 
     def test_requireHELOFallbackOperates(self):
         """
@@ -1581,10 +1581,10 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
         self.clientProtocol.heloFallback = True
         self.clientProtocol.makeConnection(transport)
 
-        self.clientProtocol.dataReceived("220 localhost\r\n")
+        self.clientProtocol.dataReceived(b"220 localhost\r\n")
         transport.clear()
-        self.clientProtocol.dataReceived("500 not a esmtp server\r\n")
-        self.assertEqual("HELO testuser\r\n", transport.value())
+        self.clientProtocol.dataReceived(b"500 not a esmtp server\r\n")
+        self.assertEqual(b"HELO testuser\r\n", transport.value())
 
 
     def test_requireAuthFailsHELOFallback(self):
@@ -1598,9 +1598,9 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
         self.clientProtocol.heloFallback = True
         self.clientProtocol.makeConnection(transport)
 
-        self.clientProtocol.dataReceived("220 localhost\r\n")
+        self.clientProtocol.dataReceived(b"220 localhost\r\n")
         transport.clear()
-        self.clientProtocol.dataReceived("500 not a esmtp server\r\n")
+        self.clientProtocol.dataReceived(b"500 not a esmtp server\r\n")
         self.assertEqual("QUIT\r\n", transport.value())
 
 
@@ -1615,10 +1615,10 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
         self.clientProtocol.heloFallback = True
         self.clientProtocol.makeConnection(transport)
 
-        self.clientProtocol.dataReceived("220 localhost\r\n")
+        self.clientProtocol.dataReceived(b"220 localhost\r\n")
         transport.clear()
-        self.clientProtocol.dataReceived("500 not a esmtp server\r\n")
-        self.assertEqual("QUIT\r\n", transport.value())
+        self.clientProtocol.dataReceived(b"500 not a esmtp server\r\n")
+        self.assertEqual(b"QUIT\r\n", transport.value())
 
 
     def test_requireTLSAndHELOFallbackSucceedsIfOverTLS(self):
@@ -1633,10 +1633,10 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
         self.clientProtocol.heloFallback = True
         self.clientProtocol.makeConnection(transport)
 
-        self.clientProtocol.dataReceived("220 localhost\r\n")
+        self.clientProtocol.dataReceived(b"220 localhost\r\n")
         transport.clear()
-        self.clientProtocol.dataReceived("500 not a esmtp server\r\n")
-        self.assertEqual("HELO testuser\r\n", transport.value())
+        self.clientProtocol.dataReceived(b"500 not a esmtp server\r\n")
+        self.assertEqual(b"HELO testuser\r\n", transport.value())
 
 
 
