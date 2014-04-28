@@ -1255,7 +1255,6 @@ class ESMTPClient(SMTPClient):
         self.authenticators = []
         self.secret = secret
         self.context = contextFactory
-        self._tlsMode = ISSLTransport.providedBy(self.transport)
 
 
     def __getattr__(self, name):
@@ -1366,6 +1365,7 @@ class ESMTPClient(SMTPClient):
         Called when a connection has been made, and triggers sending an C{EHLO}
         to the server.
         """
+        self._tlsMode = ISSLTransport.providedBy(self.transport)
         SMTPClient.connectionMade(self)
         self._okresponse = self.esmtpState_ehlo
 
