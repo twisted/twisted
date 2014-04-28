@@ -29,6 +29,7 @@ else:
 from twisted.python.filepath import IFilePath, FilePath, AbstractFilePath
 
 from zope.interface import implementer
+from twisted.python.compat import comparable, cmp
 
 # Using FilePath here exclusively rather than os to make sure that we don't do
 # anything OS-path-specific here.
@@ -39,6 +40,7 @@ ZIP_PATH_SEP = b'/'             # In zipfiles, "/" is universally used as the
 ENCODING = sys.getfilesystemencoding()
 
 
+@comparable
 @implementer(IFilePath)
 class ZipPath(AbstractFilePath):
     """
