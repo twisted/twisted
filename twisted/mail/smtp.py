@@ -2005,12 +2005,18 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         self._requireTransportSecurity = requireTransportSecurity
 
     def buildProtocol(self, addr):
-        p = self.protocol(self.username, self.password, self._contextFactory, self.domain, self.nEmails*2+2)
+        """
+        Build the protocol.
+        """
+        p = self.protocol(self.username, self.password, self._contextFactory,
+                          self.domain, self.nEmails*2+2)
         p.heloFallback = self._heloFallback
         p.requireAuthentication = self._requireAuthentication
         p.requireTransportSecurity = self._requireTransportSecurity
         p.factory = self
         p.timeout = self.timeout
+        self.currentProtocol = p
+        self.result.addBoth(self._removeProtocol)
         return p
 
 def sendmail(smtphost, from_addr, to_addrs, msg,
