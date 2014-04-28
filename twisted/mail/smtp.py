@@ -1285,6 +1285,14 @@ class ESMTPClient(SMTPClient):
         """
         Fail because authentication is required, but the server does not support
         ESMTP, which is required for authentication.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
         """
         self.sendError(EHLORequiredError(502, b"Server does not support ESMTP "
             b"Authentication", self.log.str()))
@@ -1294,6 +1302,14 @@ class ESMTPClient(SMTPClient):
         """
         Fail because authentication is required, but the server does not support
         any schemes we support.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
         """
         tmp = []
 
@@ -1309,6 +1325,14 @@ class ESMTPClient(SMTPClient):
     def esmtpTLSRequired(self, code=-1, resp=None):
         """
         Fail because TLS is required and the server does not support it.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
         """
         self.sendError(TLSRequiredError(502, b"Server does not support secure "
             b"communication via TLS / SSL", self.log.str()))
@@ -1316,7 +1340,15 @@ class ESMTPClient(SMTPClient):
 
     def esmtpTLSFailed(self, code=-1, resp=None):
         """
-        Fail because the TLS handshake wasn't able to be completed. 
+        Fail because the TLS handshake wasn't able to be completed.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
         """
         self.sendError(TLSError(code, b"Could not complete the SSL/TLS "
             b"handshake", self.log.str()))
@@ -1325,6 +1357,14 @@ class ESMTPClient(SMTPClient):
     def esmtpAUTHDeclined(self, code=-1, resp=None):
         """
         Fail because the authentication was rejected.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
         """
         self.sendError(AUTHDeclinedError(code, resp, self.log.str()))
 
@@ -1332,6 +1372,14 @@ class ESMTPClient(SMTPClient):
     def esmtpAUTHMalformedChallenge(self, code=-1, resp=None):
         """
         Fail because the server sent a malformed authentication challenge.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
         """
         self.sendError(AuthenticationError(501, b"Login failed because the "
             b"SMTP Server returned a malformed Authentication Challenge",
@@ -1341,6 +1389,14 @@ class ESMTPClient(SMTPClient):
     def esmtpAUTHServerError(self, code=-1, resp=None):
         """
         Fail because of some other authentication error.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
         """
         self.sendError(AuthenticationError(code, resp, self.log.str()))
 

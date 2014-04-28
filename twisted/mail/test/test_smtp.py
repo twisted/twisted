@@ -1563,10 +1563,9 @@ class SenderMixinSentMailTests(unittest.TestCase):
 
 
 class ESMTPDowngradeTestCase(unittest.TestCase):
-
-    if sslSkip is not None:
-        skip = sslSkip
-
+    """
+    Tests for the ESMTP -> SMTP downgrade functionality in L{smtp.ESMTPClient}.
+    """
     def setUp(self):
         self.clientProtocol = smtp.ESMTPClient(
             b"testpassword", ClientTLSContext(), b"testuser")
