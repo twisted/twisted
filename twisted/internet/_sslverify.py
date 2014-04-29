@@ -159,13 +159,13 @@ def _selectVerifyImplementation():
             from service_identity import VerificationError
             from service_identity.pyopenssl import verify_hostname
             return verify_hostname, VerificationError
-        except ImportError:
+        except ImportError as e:
             warnings.warn(
                 "You do not have a working installation of the "
-                "service_identity module.  "
+                "service_identity module: '" + str(e) + "'.  "
                 "Please install it from "
-                "<https://pypi.python.org/pypi/service_identity> and make sure"
-                " all of its dependencies are satisfied.  "
+                "<https://pypi.python.org/pypi/service_identity> and make "
+                "sure all of its dependencies are satisfied.  "
                 + whatsWrong,
                 UserWarning,
                 stacklevel=2
