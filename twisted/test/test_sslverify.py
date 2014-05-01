@@ -2301,7 +2301,8 @@ class RealOpenSSLTests(OpenSSLVersionTestsMixin, unittest.SynchronousTestCase):
 
 
 
-class PreTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin, unittest.SynchronousTestCase):
+class PreTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin,
+                                 unittest.SynchronousTestCase):
     """
     Apply the pyOpenSSL version tests to an instance of L{DummyOpenSSL} that
     pretends to be older than 0.12.
@@ -2310,7 +2311,8 @@ class PreTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin, unittest.SynchronousT
 
 
 
-class PostTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin, unittest.SynchronousTestCase):
+class PostTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin,
+                                  unittest.SynchronousTestCase):
     """
     Apply the pyOpenSSL version tests to an instance of L{DummyOpenSSL} that
     pretends to be newer than 0.12.
@@ -2385,7 +2387,8 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
 
             result = sslverify._selectVerifyImplementation(_postTwelveOpenSSL)
             expected = (
-                sslverify.simpleVerifyHostname, sslverify.SimpleVerificationError)
+                sslverify.simpleVerifyHostname,
+                sslverify.SimpleVerificationError)
             self.assertEqual(expected, result)
     test_dependencyMissing.suppress = [
         util.suppress(

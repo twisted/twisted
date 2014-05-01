@@ -136,13 +136,17 @@ def simpleVerifyHostname(connection, hostname):
 
 
 
-def _selectVerifyImplementation(OpenSSL):
+def _selectVerifyImplementation(lib):
     """
     U{service_identity <https://pypi.python.org/pypi/service_identity>}
     requires pyOpenSSL 0.12 or better but our dependency is still back at 0.10.
     Determine if pyOpenSSL has the requisite feature, and whether
     C{service_identity} is installed.  If so, use it.  If not, use simplistic
     and incorrect checking as implemented in L{simpleVerifyHostname}.
+
+    @param lib: The L{OpenSSL} module.  This is necessary to determine whether
+        certain fallback implementation strategies will be necessary.
+    @type lib: L{types.ModuleType}
 
     @return: 2-tuple of (C{verify_hostname}, C{VerificationError})
     @rtype: L{tuple}
@@ -155,7 +159,7 @@ def _selectVerifyImplementation(OpenSSL):
         "rejected."
     )
 
-    major, minor = list(int(part) for part in OpenSSL.__version__.split("."))[:2]
+    major, minor = list(int(part) for part in lib.__version__.split("."))[:2]
 
     if (major, minor) >= (0, 12):
         try:
@@ -177,7 +181,7 @@ def _selectVerifyImplementation(OpenSSL):
             "Your version of pyOpenSSL, {0}, is out of date.  "
             "Please upgrade to at least 0.12 and install service_identity "
             "from <https://pypi.python.org/pypi/service_identity>.  "
-            .format(OpenSSL.__version__) + whatsWrong,
+            .format(lib.__version__) + whatsWrong,
             # Unfortunately the lineno is required.
             category=UserWarning, filename="", lineno=0)
 
