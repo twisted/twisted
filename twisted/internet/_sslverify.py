@@ -155,7 +155,7 @@ def _selectVerifyImplementation(OpenSSL):
         "rejected."
     )
 
-    major, minor = list(int(part) for part in OpenSSL.__version__.split("."))
+    major, minor = list(int(part) for part in OpenSSL.__version__.split("."))[:2]
 
     if (major, minor) >= (0, 12):
         try:

@@ -100,7 +100,7 @@ class DummyOpenSSL(object):
         is emulating.
     @type __version__: L{str}
     """
-    def __init__(self, major, minor):
+    def __init__(self, major, minor, patch=None):
         """
         @param major: The major version number to emulate.  I{X} in the version
             I{X.Y}.
@@ -112,9 +112,11 @@ class DummyOpenSSL(object):
 
         """
         self.__version__ = "%d.%d" % (major, minor)
+        if patch is not None:
+            self.__version__ += ".%d" % (patch,)
 
 _preTwelveOpenSSL = DummyOpenSSL(0, 11)
-_postTwelveOpenSSL = DummyOpenSSL(0, 13)
+_postTwelveOpenSSL = DummyOpenSSL(0, 13, 1)
 
 
 def counter(counter=itertools.count()):
@@ -2265,6 +2267,13 @@ class OpenSSLVersionTestsMixin(object):
         C{OpenSSL.__version__} is a native string.
         """
         self.assertIsInstance(self.OpenSSL.__version__, str)
+
+
+    def test_oneOrTwoDots(self):
+        """
+        C{OpenSSL.__version__} has either two or three version components.
+        """
+        self.assertIn(self.OpenSSL.__version__.count("."), (1, 2))
 
 
     def test_majorDotMinor(self):
