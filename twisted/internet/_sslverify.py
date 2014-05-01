@@ -10,7 +10,8 @@ import warnings
 
 from hashlib import md5
 
-from OpenSSL import SSL, crypto, version
+import OpenSSL
+from OpenSSL import SSL, crypto
 try:
     from OpenSSL.SSL import SSL_CB_HANDSHAKE_DONE, SSL_CB_HANDSHAKE_START
 except ImportError:
@@ -119,7 +120,7 @@ def simpleVerifyHostname(connection, hostname):
     subjectAlternativeName extensions are present, I believe), and lots of
     valid certificates will fail.
 
-    @param connection: the OpenSSL connection to verify.@
+    @param connection: the OpenSSL connection to verify.
     @type connection: L{OpenSSL.SSL.Connection}
 
     @param hostname: The hostname expected by the user.
@@ -135,7 +136,7 @@ def simpleVerifyHostname(connection, hostname):
 
 
 
-def _selectVerifyImplementation():
+def _selectVerifyImplementation(OpenSSL):
     """
     U{service_identity <https://pypi.python.org/pypi/service_identity>}
     requires pyOpenSSL 0.12 or better but our dependency is still back at 0.10.
@@ -154,7 +155,9 @@ def _selectVerifyImplementation():
         "rejected."
     )
 
-    if hasattr(crypto.X509, "get_extension_count"):
+    major, minor = list(int(part) for part in OpenSSL.__version__.split("."))
+
+    if (major, minor) >= (0, 12):
         try:
             from service_identity import VerificationError
             from service_identity.pyopenssl import verify_hostname
@@ -171,19 +174,18 @@ def _selectVerifyImplementation():
                 stacklevel=2
             )
     else:
-        warnings.warn(
+        warnings.warn_explicit(
             "Your version of pyOpenSSL, {0}, is out of date.  "
             "Please upgrade to at least 0.12 and install service_identity "
             "from <https://pypi.python.org/pypi/service_identity>.  "
-            .format(version.__version__) + whatsWrong,
-            UserWarning,
-            stacklevel=2
-        )
+            .format(OpenSSL.__version__) + whatsWrong,
+            # Unfortunately the lineno is required.
+            category=UserWarning, filename="", lineno=0)
 
     return simpleVerifyHostname, SimpleVerificationError
 
 
-verifyHostname, VerificationError = _selectVerifyImplementation()
+verifyHostname, VerificationError = _selectVerifyImplementation(OpenSSL)
 
 
 
