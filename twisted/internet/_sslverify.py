@@ -163,16 +163,15 @@ def _selectVerifyImplementation(OpenSSL):
             from service_identity.pyopenssl import verify_hostname
             return verify_hostname, VerificationError
         except ImportError as e:
-            warnings.warn(
+            warnings.warn_explicit(
                 "You do not have a working installation of the "
                 "service_identity module: '" + str(e) + "'.  "
                 "Please install it from "
                 "<https://pypi.python.org/pypi/service_identity> and make "
                 "sure all of its dependencies are satisfied.  "
                 + whatsWrong,
-                UserWarning,
-                stacklevel=2
-            )
+                # Unfortunately the lineno is required.
+                category=UserWarning, filename="", lineno=0)
     else:
         warnings.warn_explicit(
             "Your version of pyOpenSSL, {0}, is out of date.  "

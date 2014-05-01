@@ -8,6 +8,7 @@ Tests for L{twisted.internet._sslverify}.
 
 from __future__ import division, absolute_import
 
+import sys
 import itertools
 
 from zope.interface import implementer
@@ -26,6 +27,7 @@ else:
     if getattr(SSL.Context, "set_tlsext_servername_callback", None) is None:
         skipSNI = "PyOpenSSL 0.13 or greater required for SNI support."
 
+from twisted.test.test_twisted import SetAsideModule
 from twisted.test.iosim import connectedServerAndClient
 
 from twisted.internet.error import ConnectionClosed
@@ -112,7 +114,7 @@ class DummyOpenSSL(object):
         self.__version__ = "%d.%d" % (major, minor)
 
 _preTwelveOpenSSL = DummyOpenSSL(0, 11)
-
+_postTwelveOpenSSL = DummyOpenSSL(0, 13)
 
 
 def counter(counter=itertools.count()):
@@ -2345,3 +2347,61 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
             # misconfiguration.  So the location information should be blank
             # (or as blank as we can make it).
             (expectedMessage, "", 0))
+
+
+    def test_dependencyMissing(self):
+        """
+        If I{service_identity} cannot be imported then
+        L{_selectVerifyImplementation} returns L{simpleVerifyHostname} and
+        L{SimpleVerificationError}.
+        """
+        with SetAsideModule("service_identity"):
+            sys.modules["service_identity"] = None
+
+            result = sslverify._selectVerifyImplementation(_postTwelveOpenSSL)
+            expected = (
+                sslverify.simpleVerifyHostname, sslverify.SimpleVerificationError)
+            self.assertEqual(expected, result)
+    test_dependencyMissing.suppress = [
+        util.suppress(
+            message=(
+                "You do not have a working installation of the "
+                "service_identity module"),
+            ),
+        ]
+
+
+    def test_dependencyMissingWarning(self):
+        """
+        If I{service_identity} cannot be imported then
+        L{_selectVerifyImplementation} emits a L{UserWarning} advising the user
+        of the exact error.
+        """
+        with SetAsideModule("service_identity"):
+            sys.modules["service_identity"] = None
+
+            sslverify._selectVerifyImplementation(_postTwelveOpenSSL)
+
+            [warning] = list(
+                warning
+                for warning
+                in self.flushWarnings()
+                if warning["category"] == UserWarning)
+
+            expectedMessage = (
+                "You do not have a working installation of the "
+                "service_identity module: "
+                "'No module named service_identity'.  "
+                "Please install it from "
+                "<https://pypi.python.org/pypi/service_identity> "
+                "and make sure all of its dependencies are satisfied.  "
+                "Without the service_identity module and a recent enough "
+                "pyOpenSSL to support it, Twisted can perform only "
+                "rudimentary TLS client hostname verification.  Many valid "
+                "certificate/hostname mappings may be rejected.")
+
+            self.assertEqual(
+                (warning["message"], warning["filename"], warning["lineno"]),
+                # See the comment in test_pyOpenSSLTooOldWarning.
+                (expectedMessage, "", 0))
+
