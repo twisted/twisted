@@ -2301,11 +2301,21 @@ class RealOpenSSLTests(OpenSSLVersionTestsMixin, unittest.SynchronousTestCase):
 
 
 
-class DummyOpenSSLTests(OpenSSLVersionTestsMixin, unittest.SynchronousTestCase):
+class PreTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin, unittest.SynchronousTestCase):
     """
-    Apply the pyOpenSSL version tests to an instance of L{DummyOpenSSL}.
+    Apply the pyOpenSSL version tests to an instance of L{DummyOpenSSL} that
+    pretends to be older than 0.12.
     """
     OpenSSL = _preTwelveOpenSSL
+
+
+
+class PostTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin, unittest.SynchronousTestCase):
+    """
+    Apply the pyOpenSSL version tests to an instance of L{DummyOpenSSL} that
+    pretends to be newer than 0.12.
+    """
+    OpenSSL = _postTwelveOpenSSL
 
 
 
@@ -2313,6 +2323,9 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
     """
     Tests for L{_selectVerifyImplementation}.
     """
+    if skipSSL is not None:
+        skip = skipSSL
+
     def test_pyOpenSSLTooOld(self):
         """
         If the version of I{pyOpenSSL} installed is older than 0.12 then
