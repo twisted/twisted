@@ -2285,7 +2285,10 @@ class RealOpenSSLTests(OpenSSLVersionTestsMixin, unittest.SynchronousTestCase):
     """
     Apply the pyOpenSSL version tests to the real C{OpenSSL} package.
     """
-    OpenSSL = OpenSSL
+    if skipSSL is None:
+        OpenSSL = OpenSSL
+    else:
+        skip = skipSSL
 
 
 
