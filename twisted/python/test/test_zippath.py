@@ -13,20 +13,20 @@ import twisted.python.compat as compat
 
 import sys
 
-encoding = sys.getfilesystemencoding()
+ENCODING = sys.getfilesystemencoding()
 
 
 def zipit(dirname, zfname):
     """
     Create a zipfile on zfname, containing the contents of dirname'
     """
-    zf = zipfile.ZipFile(zfname.decode(encoding), "w")
+    zf = zipfile.ZipFile(zfname.decode(ENCODING), "w")
     for root, ignored, files, in os.walk(dirname):
         for fname in files:
             fspath = os.path.join(root, fname)
             arcpath = os.path.join(root, fname)[len(dirname)+1:]
             # print fspath, '=>', arcpath
-            zf.write(fspath.decode(encoding), arcpath.decode(encoding))
+            zf.write(fspath.decode(ENCODING), arcpath.decode(ENCODING))
     zf.close()
 
 
@@ -39,7 +39,7 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
     def setUp(self):
         AbstractFilePathTestCase.setUp(self)
         zipit(self.cmn, self.cmn + b'.zip')
-        self.path = ZipArchive((self.cmn + b'.zip').decode(encoding))
+        self.path = ZipArchive((self.cmn + b'.zip').decode(ENCODING))
         self.root = self.path
         self.all = [x.replace(self.cmn, self.cmn + b'.zip') for x in self.all]
 
@@ -106,7 +106,7 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
 
         # Create a path to the file rooted in the current working directory
         relativeCommon = self.cmn.replace(
-            os.getcwd().encode(encoding) + os.sep.encode(encoding),
+            os.getcwd().encode(ENCODING) + os.sep.encode(ENCODING),
             b"",
             1
         )
