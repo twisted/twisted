@@ -58,12 +58,7 @@ class ZipPath(AbstractFilePath):
         @param pathInArchive: a ZIP_PATH_SEP-separated string.
         """
         self.archive = archive
-
-        # Keep pathInArchive as bytes
-        if isinstance(pathInArchive, bytes):
-            self.pathInArchive = pathInArchive
-        else:
-            self.pathInArchive = pathInArchive.encode(ENCODING)
+        self.pathInArchive = pathInArchive
 
         # self.path pretends to be os-specific because that's the way the
         # 'zipimport' module does it.

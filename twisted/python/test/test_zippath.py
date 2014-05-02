@@ -49,7 +49,7 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         Make sure that invoking ZipPath's repr prints the correct class name
         and an absolute path to the zip file.
         """
-        child = self.path.child("foo")
+        child = self.path.child(b"foo")
         pathRepr = "ZipPath(%r)" % (
             os.path.abspath(self.cmn + b".zip" + os.sep.encode() + b'foo'),)
 
@@ -58,10 +58,10 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
 
         # Create a path to the file rooted in the current working directory
         relativeCommon = self.cmn.replace(
-            os.getcwd().encode(encoding) + os.sep.encode(encoding), b"", 1)
+            os.getcwd().encode(ENCODING) + os.sep.encode(ENCODING), b"", 1)
         relativeCommon += b".zip"
         relpath = ZipArchive(relativeCommon)
-        child = relpath.child("foo")
+        child = relpath.child(b"foo")
 
         # Check using a path without the cwd prepended
         self.assertEqual(repr(child), pathRepr)
@@ -73,7 +73,7 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         includes the C{".."} rather than applying the usual parent directory
         meaning.
         """
-        child = self.path.child("foo").child("..").child("bar")
+        child = self.path.child(b"foo").child(b"..").child(b"bar")
         pathRepr = "ZipPath(%r)" % (
             self.cmn +
             (".zip" + os.sep.join(["", "foo", "..", "bar"])).encode("utf-8"))
@@ -85,7 +85,7 @@ class ZipFilePathTestCase(AbstractFilePathTestCase):
         Bytes in the ZipPath path which have special meaning in Python
         string literals are escaped in the ZipPath repr.
         """
-        child = self.path.child("'")
+        child = self.path.child(b"'")
         path = self.cmn + (".zip" + os.sep.join(["", "'"])).encode("utf-8")
         if compat._PY3:
             pathRepr = "ZipPath(%s)" % (path,)
