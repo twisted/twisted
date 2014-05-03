@@ -2346,7 +2346,7 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
 
     def test_pyOpenSSLTooOldWarning(self):
         """
-        If the version of I{pyOpenSSL} installed is older than 0,.12 then
+        If the version of I{pyOpenSSL} installed is older than 0.12 then
         L{_selectVerifyImplementation} emits a L{UserWarning} advising the user
         to upgrade.
         """
