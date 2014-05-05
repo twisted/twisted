@@ -330,8 +330,11 @@ class IAuthorizedKeysDB(Interface):
         Gets an iterable of authorized keys that are valid for the given
         C{avatarId}.
 
-        @param avatarId: C{str} the id of the avatar.
-        @return: an iterable of L{twisted.conch.ssh.keys.Key}.
+        @param avatarId: the ID of the avatar
+        @type avatarId: valid return value of
+            L{twisted.cred.checkers.ICredentialsChecker.requestAvatarId}
+
+        @return: an L{iterable} of L{twisted.conch.ssh.keys.Key}
         """
 
 
@@ -342,12 +345,17 @@ def readAuthorizedKeyFile(fileobj, parsekey=keys.Key.fromString):
     be parsed as a key will be ignored, although that particular line will
     be logged.
 
-    @param fileobj: an open file object which can be read from.
+    @param fileobj: something from which to read lines which can be parsed
+        as keys
+    @type fileobj: L{file}-like object
+
     @param parsekey: a callable that takes a string and returns a
         L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
         default is L{twisted.conch.ssh.keys.Key.fromString}.
+    @type parsekey: L{callable}
 
-    @return: an iterable of L{twisted.conch.ssh.keys.Key}.
+    @return: an iterable of L{twisted.conch.ssh.keys.Key}
+    @rtype: L{iterable}
 
     @since: 14.0.0
     """
@@ -367,10 +375,15 @@ def _keysFromFilepaths(filepaths, parsekey):
     keys.  If any file cannot be read, a message is logged but it is
     otherwise ignored.
 
-    @param filepaths: iterator of L{twisted.python.filepath.FilePath}.
+    @param filepaths: iterable of L{twisted.python.filepath.FilePath}.
+    @type filepaths: L{iterable}
+
     @param parsekey: a callable that takes a string and returns a
-        L{twisted.conch.ssh.keys.Key}.
-    @return: generator of L{twisted.conch.ssh.keys.Key}.
+        L{twisted.conch.ssh.keys.Key}
+    @type parsekey: L{callable}
+
+    @return: generator of L{twisted.conch.ssh.keys.Key}
+    @rtype: L{generator}
 
     @since: 14.0.0
     """
@@ -391,8 +404,9 @@ class InMemoryKeyMapping(object):
     Object that provides SSH public keys based on a dictionary of usernames
     mapped to L{twisted.conch.ssh.keys.Key}s.
 
-    @ivar mapping: C{dict} of usernames mapped to iterables of
-        L{twisted.conch.ssh.keys.Key}s.
+    @ivar mapping: mapping of usernames to iterables of
+        L{twisted.conch.ssh.keys.Key}s
+    @type mapping: C{dict}
 
     @since: 14.0.0
     """
@@ -415,11 +429,13 @@ class AuthorizedKeysFilesMapping(object):
     mapped to authorized key files.  If any of the files cannot be read,
     a message is logged but that file is otherwise ignored.
 
-    @ivar mapping: C{dict} of usernames mapped to iterables of authorized key
-        files.
+    @ivar mapping: mapping of usernames to iterables of authorized key files
+    @type mapping: C{dict}
+
     @ivar parsekey: a callable that takes a string and returns a
         L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
         default is L{twisted.conch.ssh.keys.Key.fromString}.
+    @type parsekey: L{callable}
 
     @since: 14.0.0
     """
@@ -446,11 +462,14 @@ class UNIXAuthorizedKeysFiles(object):
     If any of the files cannot be read, a message is logged but that file is
     otherwise ignored.
 
-    @ivar userdb: Access to the Unix user account and password database
-        (default is the Python module L{pwd}).
+    @ivar userdb: access to the Unix user account and password database
+        (default is the Python module L{pwd})
+    @type userdb: L{pwd}-like object
+
     @ivar parsekey: a callable that takes a string and returns a
         L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
-        default is L{twisted.conch.ssh.keys.Key.fromString}.
+        default is L{twisted.conch.ssh.keys.Key.fromString}
+    @type parsekey: L{callable}
 
     @since: 14.0.0
     """
@@ -486,7 +505,8 @@ class SSHPublicKeyChecker(object):
     Initializing this checker with a L{UNIXAuthorizedKeysFiles} should be
     used instead of L{twisted.conch.checkers.SSHPublicKeyDatabase}.
 
-    @ivar keydb: a provider of L{IAuthorizedKeysDB}.
+    @ivar keydb: a provider of L{IAuthorizedKeysDB}
+    @type keydb: L{IAuthorizedKeysDB} provider
 
     @since: 14.0.0
     """
@@ -511,8 +531,8 @@ class SSHPublicKeyChecker(object):
         Checks whether the provided credentials are a valid SSH key with a
         signature (does not actually verify the signature).
 
-        @param credentials: The L{ISSHPrivateKey} provider credentials
-            offered by the user.
+        @param credentials: the credentials offered by the user
+        @type credentials: L{ISSHPrivateKey} provider
 
         @raise ValidPublicKey: the credentials do not include a signature. See
             L{error.ValidPublicKey} for more information.
@@ -520,7 +540,8 @@ class SSHPublicKeyChecker(object):
         @raise BadKeyError: The key included with the credentials is not
             recognized as a key.
 
-        @return: L{twisted.conch.ssh.keys.Key} of the key in the credentials.
+        @return: the key in the credentials
+        @rtype: L{twisted.conch.ssh.keys.Key}
         """
         if not credentials.signature:
             raise error.ValidPublicKey()
@@ -533,17 +554,18 @@ class SSHPublicKeyChecker(object):
         Checks the public key against all authorized keys (if any) for the
         user.
 
-        @param pubKey: L{twisted.conch.ssh.keys.Key} of the key in the
-            credentials (just to prevent it from having to be calculated
-            again).
+        @param pubKey: the key in the credentials (just to prevent it from
+            having to be calculated again)
+        @type pubKey:
 
-        @param credentials: The L{ISSHPrivateKey} provider credentials
-            offered by the user.
+        @param credentials: the credentials offered by the user
+        @type credentials: L{ISSHPrivateKey} provider
 
         @raise UnauthorizedLogin: If the key is not authorized, or if there
             was any error obtaining a list of authorized keys for the user.
 
-        @return: The C{pubKey}, if the key is authorized.
+        @return: C{pubKey} if the key is authorized
+        @rtype: L{twisted.conch.ssh.keys.Key}
         """
         try:
             if any(key == pubKey for key in
@@ -561,17 +583,18 @@ class SSHPublicKeyChecker(object):
         Checks whether the credentials themselves are valid, now that we know
         if the key matches the user.
 
-        @param pubKey: L{twisted.conch.ssh.keys.Key} of the key in the
-            credentials (just to prevent it from having to be calculated
-            again).
+        @param pubKey: the key in the credentials (just to prevent it from
+            having to be calculated again)
+        @type pubKey: L{twisted.conch.ssh.keys.Key}
 
-        @param credentials: The L{ISSHPrivateKey} provider credentials
-            offered by the user.
+        @param credentials: the credentials offered by the user
+        @type credentials: L{ISSHPrivateKey} provider
 
         @raise UnauthorizedLogin: If the key signature is invalid or there
             was any error verifying the signature.
 
-        @return: The user's username, if authentication was successful.
+        @return: The user's username, if authentication was successful
+        @rtype: C{str}
         """
         try:
             if pubKey.verify(credentials.signature, credentials.sigData):
