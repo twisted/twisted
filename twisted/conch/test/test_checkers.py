@@ -804,6 +804,8 @@ class UNIXAuthorizedKeysFilesTestCase(TestCase):
         authorizedKeys = self.sshDir.child('authorized_keys')
         authorizedKeys.setContent('key 1\nkey 2')
 
+        self.expectedKeys = ['key 1', 'key 2']
+
 
     def test_implementsInterface(self):
         """
@@ -835,7 +837,7 @@ class UNIXAuthorizedKeysFilesTestCase(TestCase):
         self.sshDir.child('authorized_keys2').setContent('key 3')
         keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb,
                                                  parsekey=lambda x: x)
-        self.assertEqual(['key 1', 'key 2', 'key 3'],
+        self.assertEqual(self.expectedKeys + ['key 3'],
                          list(keydb.getAuthorizedKeys('alice')))
 
 
@@ -847,7 +849,7 @@ class UNIXAuthorizedKeysFilesTestCase(TestCase):
         """
         keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb,
                                                  parsekey=lambda x: x)
-        self.assertEqual(['key 1', 'key 2'],
+        self.assertEqual(self.expectedKeys,
                          list(keydb.getAuthorizedKeys('alice')))
 
 
@@ -860,7 +862,7 @@ class UNIXAuthorizedKeysFilesTestCase(TestCase):
         self.sshDir.child('authorized_keys2').makedirs()
         keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb,
                                                  parsekey=lambda x: x)
-        self.assertEqual(['key 1', 'key 2'],
+        self.assertEqual(self.expectedKeys,
                          list(keydb.getAuthorizedKeys('alice')))
 
 
