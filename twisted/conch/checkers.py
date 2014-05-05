@@ -404,21 +404,25 @@ class InMemoryKeyMapping(object):
     Object that provides SSH public keys based on a dictionary of usernames
     mapped to L{twisted.conch.ssh.keys.Key}s.
 
-    @ivar mapping: mapping of usernames to iterables of
-        L{twisted.conch.ssh.keys.Key}s
-    @type mapping: C{dict}
-
     @since: 14.0.0
     """
     def __init__(self, mapping):
-        self.mapping = mapping
+        """
+        Initializes a new L{InMemoryKeyMapping}.
+
+        @param mapping: mapping of usernames to iterables of
+            L{twisted.conch.ssh.keys.Key}s
+        @type mapping: C{dict}
+
+        """
+        self._mapping = mapping
 
 
     def getAuthorizedKeys(self, username):
         """
         @see: L{IAuthorizedKeysDB.getAuthorizedKeys}
         """
-        return self.mapping.get(username, [])
+        return self._mapping.get(username, [])
 
 
 
@@ -429,19 +433,23 @@ class AuthorizedKeysFilesMapping(object):
     mapped to authorized key files.  If any of the files cannot be read,
     a message is logged but that file is otherwise ignored.
 
-    @ivar mapping: mapping of usernames to iterables of authorized key files
-    @type mapping: C{dict}
-
-    @ivar parsekey: a callable that takes a string and returns a
-        L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
-        default is L{twisted.conch.ssh.keys.Key.fromString}.
-    @type parsekey: L{callable}
-
     @since: 14.0.0
     """
     def __init__(self, mapping, parsekey=keys.Key.fromString):
-        self.mapping = mapping
-        self.parsekey = parsekey
+        """
+        Initializes a new L{AuthorizedKeysFilesMapping}.
+
+        @param mapping: mapping of usernames to iterables of authorized key
+            files
+        @type mapping: C{dict}
+
+        @param parsekey: a callable that takes a string and returns a
+            L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
+            default is L{twisted.conch.ssh.keys.Key.fromString}.
+        @type parsekey: L{callable}
+        """
+        self._mapping = mapping
+        self._parsekey = parsekey
 
 
     def getAuthorizedKeys(self, username):
@@ -449,8 +457,8 @@ class AuthorizedKeysFilesMapping(object):
         @see: L{IAuthorizedKeysDB.getAuthorizedKeys}
         """
         return _keysFromFilepaths(
-            (FilePath(f) for f in self.mapping.get(username, [])),
-            self.parsekey)
+            (FilePath(f) for f in self._mapping.get(username, [])),
+            self._parsekey)
 
 
 
@@ -462,22 +470,25 @@ class UNIXAuthorizedKeysFiles(object):
     If any of the files cannot be read, a message is logged but that file is
     otherwise ignored.
 
-    @ivar userdb: access to the Unix user account and password database
-        (default is the Python module L{pwd})
-    @type userdb: L{pwd}-like object
-
-    @ivar parsekey: a callable that takes a string and returns a
-        L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
-        default is L{twisted.conch.ssh.keys.Key.fromString}
-    @type parsekey: L{callable}
-
     @since: 14.0.0
     """
     def __init__(self, userdb=None, parsekey=keys.Key.fromString):
-        self.userdb = userdb
-        self.parsekey = parsekey
+        """
+        Initializes a new L{UnixAuthorizedKeysFiles}.
+
+        @param userdb: access to the Unix user account and password database
+            (default is the Python module L{pwd})
+        @type userdb: L{pwd}-like object
+
+        @param parsekey: a callable that takes a string and returns a
+            L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
+            default is L{twisted.conch.ssh.keys.Key.fromString}.
+        @type parsekey: L{callable}
+        """
+        self._userdb = userdb
+        self._parsekey = parsekey
         if userdb is None:
-            self.userdb = pwd
+            self._userdb = pwd
 
 
     def getAuthorizedKeys(self, username):
@@ -485,14 +496,14 @@ class UNIXAuthorizedKeysFiles(object):
         @see: L{IAuthorizedKeysDB.getAuthorizedKeys}
         """
         try:
-            passwd = self.userdb.getpwnam(username)
+            passwd = self._userdb.getpwnam(username)
         except:
             return ()
 
         root = FilePath(passwd.pw_dir).child('.ssh')
         files = ['authorized_keys', 'authorized_keys2']
         return _keysFromFilepaths((root.child(f) for f in files),
-                                  self.parsekey)
+                                  self._parsekey)
 
 
 
@@ -505,15 +516,18 @@ class SSHPublicKeyChecker(object):
     Initializing this checker with a L{UNIXAuthorizedKeysFiles} should be
     used instead of L{twisted.conch.checkers.SSHPublicKeyDatabase}.
 
-    @ivar keydb: a provider of L{IAuthorizedKeysDB}
-    @type keydb: L{IAuthorizedKeysDB} provider
-
     @since: 14.0.0
     """
     credentialInterfaces = (ISSHPrivateKey,)
 
     def __init__(self, keydb):
-        self.keydb = keydb
+        """
+        Initializes a L{SSHPublicKeyChecker}.
+
+        @param keydb: a provider of L{IAuthorizedKeysDB}
+        @type keydb: L{IAuthorizedKeysDB} provider
+        """
+        self._keydb = keydb
 
 
     def requestAvatarId(self, credentials):
@@ -569,7 +583,7 @@ class SSHPublicKeyChecker(object):
         """
         try:
             if any(key == pubKey for key in
-                   self.keydb.getAuthorizedKeys(credentials.username)):
+                   self._keydb.getAuthorizedKeys(credentials.username)):
                 return pubKey
         except:
             log.err()
