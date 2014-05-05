@@ -338,7 +338,9 @@ class IAuthorizedKeysDB(Interface):
 
 def readAuthorizedKeyFile(fileobj, parsekey=keys.Key.fromString):
     """
-    Reads keys from an authorized keys file.
+    Reads keys from an authorized keys file.  Any non-comment line that cannot
+    be parsed as a key will be ignored, although that particular line will
+    be logged.
 
     @param fileobj: an open file object which can be read from.
     @param parsekey: a callable that takes a string and returns a
@@ -355,14 +357,15 @@ def readAuthorizedKeyFile(fileobj, parsekey=keys.Key.fromString):
             try:
                 yield parsekey(line)
             except:
-                pass
+                log.msg('Unable to parse line "{0}" as a key.'.format(line))
 
 
 
 def _keysFromFilepaths(filepaths, parsekey):
     """
     Helper function that turns an iterable of filepaths into a generator of
-    keys.
+    keys.  If any file cannot be read, a message is logged but it is
+    otherwise ignored.
 
     @param filepaths: iterator of L{twisted.python.filepath.FilePath}.
     @param parsekey: a callable that takes a string and returns a
@@ -409,7 +412,8 @@ class InMemoryKeyMapping(object):
 class AuthorizedKeysFilesMapping(object):
     """
     Object that provides SSH public keys based on a dictionary of usernames
-    mapped to authorized key files.
+    mapped to authorized key files.  If any of the files cannot be read,
+    a message is logged but that file is otherwise ignored.
 
     @ivar mapping: C{dict} of usernames mapped to iterables of authorized key
         files.
@@ -439,6 +443,8 @@ class UNIXAuthorizedKeysFiles(object):
     """
     Object that provides SSH public keys based on public keys listed in
     authorized_keys and authorized_keys2 files in UNIX user .ssh/ directories.
+    If any of the files cannot be read, a message is logged but that file is
+    otherwise ignored.
 
     @ivar userdb: Access to the Unix user account and password database
         (default is the Python module L{pwd}).
