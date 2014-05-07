@@ -652,7 +652,7 @@ class AuthorizedKeyFileReaderTestCase(TestCase):
                            # ignore
                            not ignored
                            """)
-        result = checkers.readAuthorizedKeyFile(fileobj, parsekey=lambda x: x)
+        result = checkers.readAuthorizedKeyFile(fileobj, parseKey=lambda x: x)
         self.assertEqual(['not ignored'], list(result))
 
 
@@ -668,7 +668,7 @@ class AuthorizedKeyFileReaderTestCase(TestCase):
 
         fileobj = StringIO('failed key\ngood key')
         result = checkers.readAuthorizedKeyFile(fileobj,
-                                                parsekey=failOnSome)
+                                                parseKey=failOnSome)
         self.assertEqual(['good key'], list(result))
 
 
@@ -823,7 +823,7 @@ class UNIXAuthorizedKeysFilesTestCase(TestCase):
         by L{checkers.UNIXAuthorizedKeysFiles.getAuthorizedKeys}.
         """
         keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb,
-                                                 parsekey=lambda x: x)
+                                                 parseKey=lambda x: x)
         self.assertEqual([], list(keydb.getAuthorizedKeys('bob')))
 
 
@@ -836,7 +836,7 @@ class UNIXAuthorizedKeysFilesTestCase(TestCase):
         """
         self.sshDir.child('authorized_keys2').setContent('key 3')
         keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb,
-                                                 parsekey=lambda x: x)
+                                                 parseKey=lambda x: x)
         self.assertEqual(self.expectedKeys + ['key 3'],
                          list(keydb.getAuthorizedKeys('alice')))
 
@@ -848,7 +848,7 @@ class UNIXAuthorizedKeysFilesTestCase(TestCase):
         if they exist.
         """
         keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb,
-                                                 parsekey=lambda x: x)
+                                                 parseKey=lambda x: x)
         self.assertEqual(self.expectedKeys,
                          list(keydb.getAuthorizedKeys('alice')))
 
@@ -861,7 +861,7 @@ class UNIXAuthorizedKeysFilesTestCase(TestCase):
         """
         self.sshDir.child('authorized_keys2').makedirs()
         keydb = checkers.UNIXAuthorizedKeysFiles(self.userdb,
-                                                 parsekey=lambda x: x)
+                                                 parseKey=lambda x: x)
         self.assertEqual(self.expectedKeys,
                          list(keydb.getAuthorizedKeys('alice')))
 

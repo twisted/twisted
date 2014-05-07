@@ -339,7 +339,7 @@ class IAuthorizedKeysDB(Interface):
 
 
 
-def readAuthorizedKeyFile(fileobj, parsekey=keys.Key.fromString):
+def readAuthorizedKeyFile(fileobj, parseKey=keys.Key.fromString):
     """
     Reads keys from an authorized keys file.  Any non-comment line that cannot
     be parsed as a key will be ignored, although that particular line will
@@ -349,10 +349,10 @@ def readAuthorizedKeyFile(fileobj, parsekey=keys.Key.fromString):
         as keys
     @type fileobj: L{file}-like object
 
-    @param parsekey: a callable that takes a string and returns a
+    @param parseKey: a callable that takes a string and returns a
         L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
         default is L{twisted.conch.ssh.keys.Key.fromString}.
-    @type parsekey: L{callable}
+    @type parseKey: L{callable}
 
     @return: an iterable of L{twisted.conch.ssh.keys.Key}
     @rtype: L{iterable}
@@ -363,13 +363,13 @@ def readAuthorizedKeyFile(fileobj, parsekey=keys.Key.fromString):
         line = line.strip()
         if line and not line.startswith('#'):  # for comments
             try:
-                yield parsekey(line)
+                yield parseKey(line)
             except:
                 log.msg('Unable to parse line "{0}" as a key.'.format(line))
 
 
 
-def _keysFromFilepaths(filepaths, parsekey):
+def _keysFromFilepaths(filepaths, parseKey):
     """
     Helper function that turns an iterable of filepaths into a generator of
     keys.  If any file cannot be read, a message is logged but it is
@@ -378,9 +378,9 @@ def _keysFromFilepaths(filepaths, parsekey):
     @param filepaths: iterable of L{twisted.python.filepath.FilePath}.
     @type filepaths: L{iterable}
 
-    @param parsekey: a callable that takes a string and returns a
+    @param parseKey: a callable that takes a string and returns a
         L{twisted.conch.ssh.keys.Key}
-    @type parsekey: L{callable}
+    @type parseKey: L{callable}
 
     @return: generator of L{twisted.conch.ssh.keys.Key}
     @rtype: L{generator}
@@ -391,7 +391,7 @@ def _keysFromFilepaths(filepaths, parsekey):
         if fp.exists():
             try:
                 with fp.open() as f:
-                    for key in readAuthorizedKeyFile(f, parsekey):
+                    for key in readAuthorizedKeyFile(f, parseKey):
                         yield key
             except:
                 log.msg("Unable to read {0}".format(fp.path))
@@ -435,7 +435,7 @@ class AuthorizedKeysFilesMapping(object):
 
     @since: 14.0.0
     """
-    def __init__(self, mapping, parsekey=keys.Key.fromString):
+    def __init__(self, mapping, parseKey=keys.Key.fromString):
         """
         Initializes a new L{AuthorizedKeysFilesMapping}.
 
@@ -443,13 +443,13 @@ class AuthorizedKeysFilesMapping(object):
             files
         @type mapping: C{dict}
 
-        @param parsekey: a callable that takes a string and returns a
+        @param parseKey: a callable that takes a string and returns a
             L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
             default is L{twisted.conch.ssh.keys.Key.fromString}.
-        @type parsekey: L{callable}
+        @type parseKey: L{callable}
         """
         self._mapping = mapping
-        self._parsekey = parsekey
+        self._parseKey = parseKey
 
 
     def getAuthorizedKeys(self, username):
@@ -458,7 +458,7 @@ class AuthorizedKeysFilesMapping(object):
         """
         return _keysFromFilepaths(
             (FilePath(f) for f in self._mapping.get(username, [])),
-            self._parsekey)
+            self._parseKey)
 
 
 
@@ -472,7 +472,7 @@ class UNIXAuthorizedKeysFiles(object):
 
     @since: 14.0.0
     """
-    def __init__(self, userdb=None, parsekey=keys.Key.fromString):
+    def __init__(self, userdb=None, parseKey=keys.Key.fromString):
         """
         Initializes a new L{UnixAuthorizedKeysFiles}.
 
@@ -480,13 +480,13 @@ class UNIXAuthorizedKeysFiles(object):
             (default is the Python module L{pwd})
         @type userdb: L{pwd}-like object
 
-        @param parsekey: a callable that takes a string and returns a
+        @param parseKey: a callable that takes a string and returns a
             L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
             default is L{twisted.conch.ssh.keys.Key.fromString}.
-        @type parsekey: L{callable}
+        @type parseKey: L{callable}
         """
         self._userdb = userdb
-        self._parsekey = parsekey
+        self._parseKey = parseKey
         if userdb is None:
             self._userdb = pwd
 
@@ -503,7 +503,7 @@ class UNIXAuthorizedKeysFiles(object):
         root = FilePath(passwd.pw_dir).child('.ssh')
         files = ['authorized_keys', 'authorized_keys2']
         return _keysFromFilepaths((root.child(f) for f in files),
-                                  self._parsekey)
+                                  self._parseKey)
 
 
 
