@@ -10,8 +10,7 @@ import warnings
 
 from hashlib import md5
 
-import OpenSSL
-from OpenSSL import SSL, crypto
+from OpenSSL import SSL, crypto, version
 try:
     from OpenSSL.SSL import SSL_CB_HANDSHAKE_DONE, SSL_CB_HANDSHAKE_START
 except ImportError:
@@ -56,7 +55,7 @@ def simpleVerifyHostname(connection, hostname):
     subjectAlternativeName extensions are present, I believe), and lots of
     valid certificates will fail.
 
-    @param connection: the OpenSSL connection to verify.
+    @param connection: the OpenSSL connection to verify.@
     @type connection: L{OpenSSL.SSL.Connection}
 
     @param hostname: The hostname expected by the user.
@@ -71,7 +70,7 @@ def simpleVerifyHostname(connection, hostname):
 
 
 
-def _selectVerifyImplementation(lib):
+def _selectVerifyImplementation():
     """
     U{service_identity <https://pypi.python.org/pypi/service_identity>}
     requires pyOpenSSL 0.12 or better but our dependency is still back at 0.10.
@@ -79,51 +78,45 @@ def _selectVerifyImplementation(lib):
     C{service_identity} is installed.  If so, use it.  If not, use simplistic
     and incorrect checking as implemented in L{simpleVerifyHostname}.
 
-    @param lib: The L{OpenSSL} module.  This is necessary to determine whether
-        certain fallback implementation strategies will be necessary.
-    @type lib: L{types.ModuleType}
-
     @return: 2-tuple of (C{verify_hostname}, C{VerificationError})
     @rtype: L{tuple}
     """
 
     whatsWrong = (
-        "Without the service_identity module and a recent enough pyOpenSSL to "
-        "support it, Twisted can perform only rudimentary TLS client hostname "
+        "Without the service_identity module and a recent enough pyOpenSSL to"
+        "support it, Twisted can perform only rudimentary TLS client hostname"
         "verification.  Many valid certificate/hostname mappings may be "
         "rejected."
     )
 
-    major, minor = list(int(part) for part in lib.__version__.split("."))[:2]
-
-    if (major, minor) >= (0, 12):
+    if hasattr(crypto.X509, "get_extension_count"):
         try:
             from service_identity import VerificationError
             from service_identity.pyopenssl import verify_hostname
             return verify_hostname, VerificationError
-        except ImportError as e:
-            warnings.warn_explicit(
-                "You do not have a working installation of the "
-                "service_identity module: '" + str(e) + "'.  "
+        except ImportError:
+            warnings.warn(
+                "You do not have the service_identity module installed. "
                 "Please install it from "
-                "<https://pypi.python.org/pypi/service_identity> and make "
-                "sure all of its dependencies are satisfied.  "
+                "<https://pypi.python.org/pypi/service_identity>. "
                 + whatsWrong,
-                # Unfortunately the lineno is required.
-                category=UserWarning, filename="", lineno=0)
+                UserWarning,
+                stacklevel=2
+            )
     else:
-        warnings.warn_explicit(
+        warnings.warn(
             "Your version of pyOpenSSL, {0}, is out of date.  "
             "Please upgrade to at least 0.12 and install service_identity "
-            "from <https://pypi.python.org/pypi/service_identity>.  "
-            .format(lib.__version__) + whatsWrong,
-            # Unfortunately the lineno is required.
-            category=UserWarning, filename="", lineno=0)
+            "from <https://pypi.python.org/pypi/service_identity>. "
+            .format(version.__version__) + whatsWrong,
+            UserWarning,
+            stacklevel=2
+        )
 
     return simpleVerifyHostname, SimpleVerificationError
 
 
-verifyHostname, VerificationError = _selectVerifyImplementation(OpenSSL)
+verifyHostname, VerificationError = _selectVerifyImplementation()
 
 
 
