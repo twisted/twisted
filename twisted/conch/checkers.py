@@ -334,7 +334,7 @@ class IAuthorizedKeysDB(Interface):
         @type avatarId: valid return value of
             L{twisted.cred.checkers.ICredentialsChecker.requestAvatarId}
 
-        @return: an L{iterable} of L{twisted.conch.ssh.keys.Key}
+        @return: an iterable of L{twisted.conch.ssh.keys.Key}
         """
 
 
@@ -355,7 +355,7 @@ def readAuthorizedKeyFile(fileobj, parseKey=keys.Key.fromString):
     @type parseKey: L{callable}
 
     @return: an iterable of L{twisted.conch.ssh.keys.Key}
-    @rtype: L{iterable}
+    @rtype: iterable
 
     @since: 14.0.0
     """
@@ -376,14 +376,14 @@ def _keysFromFilepaths(filepaths, parseKey):
     otherwise ignored.
 
     @param filepaths: iterable of L{twisted.python.filepath.FilePath}.
-    @type filepaths: L{iterable}
+    @type filepaths: iterable
 
     @param parseKey: a callable that takes a string and returns a
         L{twisted.conch.ssh.keys.Key}
     @type parseKey: L{callable}
 
     @return: generator of L{twisted.conch.ssh.keys.Key}
-    @rtype: L{generator}
+    @rtype: generator
 
     @since: 14.0.0
     """
@@ -474,7 +474,7 @@ class UNIXAuthorizedKeysFiles(object):
     """
     def __init__(self, userdb=None, parseKey=keys.Key.fromString):
         """
-        Initializes a new L{UnixAuthorizedKeysFiles}.
+        Initializes a new L{UNIXAuthorizedKeysFiles}.
 
         @param userdb: access to the Unix user account and password database
             (default is the Python module L{pwd})
