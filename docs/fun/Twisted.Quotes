@@ -25,3 +25,8 @@
 %
 <exarkun> I think there is probably a fundamental problem relying on TLS PFS to keep a baby announcement secret, anyway.
 %
+<glyph> all possible errors are #defines *somewhere*
+<glyph> #define EYOUWILLNEVERBELOVED 100002
+<glyph> just kidding that would never be what it would be called
+<glyph> WSAEYOUWILLNEVERBELOVED
+%
