@@ -16,7 +16,7 @@ from twisted.python.compat import _PY3
 from twisted.internet import defer, reactor
 from twisted.internet.task import Clock
 from twisted.trial import unittest
-
+from twisted.internet.interfaces import IDelayedCall
 
 
 class GenericError(Exception):
@@ -2359,3 +2359,144 @@ class DeferredFilesystemLockTestCase(unittest.TestCase):
         self.assertFalse(timeoutCall.active())
         self.assertEqual(self.lock._timeoutCall, None)
         self.failureResultOf(deferred, defer.CancelledError)
+
+
+
+class TimeoutTests(unittest.TestCase):
+    """
+    Tests for L{defer.timeoutDeferred}.
+    """
+
+    def test_noTimeoutIfCallback(self):
+        """
+        The timeout set by L{defer.timeoutDeferred} will be cancelled if the
+        L{defer.Deferred}'s C{callback()} is called.
+        """
+        reactor = Clock()
+        cancelled = []
+        d = defer.Deferred(cancelled.append)
+
+        defer.timeoutDeferred(reactor, d, 10)
+        d.callback("success")
+        self.assertEqual(self.successResultOf(d), "success")
+        self.assertEqual(cancelled, [])
+        # Timeout should have been cancelled:
+        self.assertFalse(reactor.getDelayedCalls())
+
+
+    def test_noTimeoutIfErrback(self):
+        """
+        The timeout set by L{defer.timeoutDeferred} will be cancelled if the
+        L{defer.Deferred}'s C{errback()} is called.
+        """
+        reactor = Clock()
+        cancelled = []
+        d = defer.Deferred(cancelled.append)
+
+        defer.timeoutDeferred(reactor, d, 10)
+        f = failure.Failure(RuntimeError())
+        d.errback(f)
+        self.failureResultOf(d, RuntimeError)
+        self.assertEqual(cancelled, [])
+        # Timeout should have been cancelled:
+        self.assertFalse(reactor.getDelayedCalls())
+
+
+    def test_noTimeoutIfCancel(self):
+        """
+        The timeout set by L{defer.timeoutDeferred} will be cancelled if the
+        L{defer.Deferred}'s C{cancel()} method is called.
+        """
+        reactor = Clock()
+        d = defer.Deferred()
+
+        defer.timeoutDeferred(reactor, d, 10)
+        d.cancel()
+        self.failureResultOf(d, defer.CancelledError)
+
+        # Timeout should have been cancelled:
+        self.assertFalse(reactor.getDelayedCalls())
+
+
+    def test_timeout(self):
+        """
+        If the L{defer.Deferred} is not fired in the time given by
+        L{defer.timeoutDeferred}, L{defer.timeoutDeferred} will cancel it.
+        """
+        reactor = Clock()
+        cancelled = []
+        d = defer.Deferred(cancelled.append)
+
+        defer.timeoutDeferred(reactor, d, 10)
+        reactor.advance(9.9)
+        self.assertNoResult(d)
+        reactor.advance(0.11)
+        self.failureResultOf(d, defer.CancelledError)
+        self.assertEqual(cancelled, [d])
+        self.assertFalse(reactor.getDelayedCalls())
+
+
+    def test_callbackStack(self):
+        """
+        L{defer.timeoutDeferred} will not timeout the L{defer.Deferred} if
+        the callbacks that were added before it was called have fired, even if
+        later callbacks mean it's back in a waiting state.
+        """
+        original = defer.Deferred()
+        reactor = Clock()
+
+        # Add the initial timeout:
+        defer.timeoutDeferred(reactor, original, 1)
+
+        # Add another callback, waiting for another Deferred:
+        waiting = defer.Deferred()
+        original.addCallback(lambda ign: waiting)
+
+        # If we fire the original Deferred, this will remove the timeout,
+        # even though the Deferred is now waiting again for a second
+        # Deferred:
+        original.callback(1)
+        reactor.advance(1)
+        self.assertNoResult(original)
+
+
+    def test_multipleTimeouts(self):
+        """
+        L{defer.timeoutDeferred} can be called multiple times on a L{Deferred};
+        even if the first is removed, the others will still be active if
+        there are intervening callbacks waiting.
+        """
+        original = defer.Deferred()
+        reactor = Clock()
+
+        # Add the initial timeout:
+        defer.timeoutDeferred(reactor, original, 1)
+
+        # Add another callback, waiting for another Deferred:
+        waiting = defer.Deferred()
+        original.addCallback(lambda ign: waiting)
+        delayedCall = defer.timeoutDeferred(reactor, waiting, 2)
+
+        # Remove first timeout:
+        original.callback(1)
+
+        # Second timeout is still active:
+        self.assertTrue(delayedCall.active())
+
+
+    def test_cancelReturnedDelayedCall(self):
+        """
+        L{defer.timeoutDeferred} returns the C{IDelayedCall} for the
+        scheduled timeout, allowing the caller to cancel the timeout manually.
+        """
+        reactor = Clock()
+        d = defer.Deferred()
+
+        delayedCall = defer.timeoutDeferred(reactor, d, 10)
+        self.assertTrue(IDelayedCall.providedBy(delayedCall))
+
+        # If we cancel delayedCall, timeout is no longer active:
+        delayedCall.cancel()
+        reactor.advance(11)
+        d.callback(u"success")
+        self.assertEqual(self.successResultOf(d), u"success")
