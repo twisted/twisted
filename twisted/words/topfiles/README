@@ -1,4 +1,4 @@
-Twisted Words 13.2.0
+Twisted Words 14.0.0
 
 Twisted Words depends on Twisted Core and Twisted Web.  The Twisted Web
 dependency is only necessary for MSN support.  MSN support also requires HTTPS,

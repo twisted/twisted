@@ -1,1 +1,0 @@
-Twisted now builds on Solaris. Note that lacking a Buildbot slave (see http://buildbot.twistedmatrix.com/boxes-supported) Solaris is not a supported Twisted platform.

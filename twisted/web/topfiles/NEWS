@@ -1,6 +1,39 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 14.0.0 (2014-05-08)
+===============================
+
+Features
+--------
+ - twisted.web.http.proxiedLogFormatter can now be used with
+   twisted.web.http.HTTPFactory (and subclasses) to record X
+   -Forwarded-For values to the access log when the HTTP server is
+   deployed behind a reverse proxy. (#1468)
+ - twisted.web.client.Agent now uses
+   twisted.internet.ssl.CertificateOptions for SSL/TLS and benefits
+   from its continuous improvements. (#6893)
+
+Bugfixes
+--------
+ - twisted.web.client.Agent now correctly manage flow-control on
+   pooled connections, and therefore requests will no longer hang
+   sometimes when deliverBody is not called synchronously within the
+   callback on Request. (#6751)
+ - twisted.web.client.Agent now verifies that the provided server
+   certificate in a TLS connection is trusted by the platform. (#7042)
+ - When requesting an HTTPS URL with twisted.web.client.Agent, the
+   hostname of the presented certificate will be checked against the
+   requested hostname; mismatches will now result in an error rather
+   than a man-in-the-middle opportunity for attackers.  This may break
+   existing code that incorrectly depended on insecure behavior, but
+   such code was erroneous and should be updated.  (#4888)
+
+Other
+-----
+ - #5004, #6881, #6956
+
+
 Twisted Web 13.2.0 (2013-10-29)
 ===============================
 

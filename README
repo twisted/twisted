@@ -1,12 +1,12 @@
-Twisted 13.2.0
+Twisted 14.0.0
 
 Quote of the Release:
 
 
-  <dash> I wish I was thorough and disciplined but I've been making do with brilliant but erratic
+  <exarkun> no food is sustainable.  once you eat it it is gone.
 
 
-For information on what's new in Twisted 13.2.0, see the NEWS file that comes
+For information on what's new in Twisted 14.0.0, see the NEWS file that comes
 with the distribution.
 
 What is this?
@@ -93,7 +93,7 @@ Documentation and Support
 Copyright
 =========
 
-  All of the code in this distribution is Copyright (c) 2001-2013
+  All of the code in this distribution is Copyright (c) 2001-2014
   Twisted Matrix Laboratories.
 
   Twisted is made available under the MIT license. The included

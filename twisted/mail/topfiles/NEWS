@@ -1,6 +1,27 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Mail 14.0.0 (2014-05-08)
+================================
+
+Improved Documentation
+----------------------
+ - twisted.mail.alias now has full API documentation. (#6637)
+ - twisted.mail.tap now has full API documentation. (#6648)
+ - twisted.mail.maildir now has full API documentation. (#6651)
+ - twisted.mail.pop3client now has full API documentation. (#6653)
+ - twisted.mail.protocols now has full API documentation.  (#6654)
+ - twisted.mail.pop now has full API documentation. (#6666)
+ - twisted.mail.relay and twisted.mail.relaymanager now have full API
+   documentation. (#6739)
+ - twisted.mail.pop3client public classes now appear as part of the
+   twisted.mail.pop3 API. (#6761)
+
+Other
+-----
+ - #6696
+
+
 Twisted Mail 13.2.0 (2013-10-29)
 ================================
 

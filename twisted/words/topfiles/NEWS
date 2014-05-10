@@ -1,6 +1,19 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Words 14.0.0 (2014-05-08)
+=================================
+
+Bugfixes
+--------
+ - twisted.words.protocols.jabber.sasl_mechansisms.DigestMD5 now works
+   with unicode arguments. (#5066)
+
+Other
+-----
+ - #6696
+
+
 Twisted Words 13.2.0 (2013-10-29)
 =================================
 
