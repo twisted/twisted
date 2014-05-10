@@ -4,18 +4,6 @@ http://twistedmatrix.com/trac/ticket/<number>
 Twisted Mail 14.0.0 (2014-05-08)
 ================================
 
-No significant changes have been made for this release.
-
-
-Twisted Mail 14.0.0 (2014-05-08)
-================================
-
-No significant changes have been made for this release.
-
-
-Twisted Mail 14.0.0 (2014-05-08)
-================================
-
 Improved Documentation
 ----------------------
  - twisted.mail.alias now has full API documentation. (#6637)

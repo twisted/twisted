@@ -4,22 +4,6 @@ http://twistedmatrix.com/trac/ticket/<number>
 Twisted Core 14.0.0 (2014-05-08)
 ================================
 
-No significant changes have been made for this release.
-
-Other
------
- - #7098
-
-
-Twisted Core 14.0.0 (2014-05-08)
-================================
-
-No significant changes have been made for this release.
-
-
-Twisted Core 14.0.0 (2014-05-08)
-================================
-
 Features
 --------
  - Twisted's UDP implementation now supports broadcasting. (#454)
@@ -133,7 +117,8 @@ Other
  - #1822, #5929, #6239, #6537, #6565, #6614, #6632, #6690, #6784,
    #6792, #6795, #6821, #6843, #6846, #6854, #6856, #6857, #6872,
    #6892, #6902, #6906, #6922, #6926, #6936, #6941, #6942, #6943,
-   #6944, #6945, #6946, #6948, #6979, #7001, #7049, #7051, #7094
+   #6944, #6945, #6946, #6948, #6979, #7001, #7049, #7051, #7094,
+   #7098
 
 
 Twisted Core 13.2.0 (2013-10-29)

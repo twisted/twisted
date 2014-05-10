@@ -4,18 +4,6 @@ http://twistedmatrix.com/trac/ticket/<number>
 Twisted Words 14.0.0 (2014-05-08)
 =================================
 
-No significant changes have been made for this release.
-
-
-Twisted Words 14.0.0 (2014-05-08)
-=================================
-
-No significant changes have been made for this release.
-
-
-Twisted Words 14.0.0 (2014-05-08)
-=================================
-
 Bugfixes
 --------
  - twisted.words.protocols.jabber.sasl_mechansisms.DigestMD5 now works
