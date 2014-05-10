@@ -21,10 +21,7 @@ Bugfixes
    sometimes when deliverBody is not called synchronously within the
    callback on Request. (#6751)
  - twisted.web.client.Agent now verifies that the provided server
-   certificate in a TLS connection is trusted by the platform. Until
-   #4888 is completed there are still known MITM attack vectors
-   against Agent. Applications which were relying on the absence of
-   certificate checking will now receive an SSL error. (#7042)
+   certificate in a TLS connection is trusted by the platform. (#7042)
  - When requesting an HTTPS URL with twisted.web.client.Agent, the
    hostname of the presented certificate will be checked against the
    requested hostname; mismatches will now result in an error rather

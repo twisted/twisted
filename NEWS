@@ -17,10 +17,6 @@ Features
    has been added. It comes with an implementation of NMEA, the most
    common wire protocol for GPS devices. It will supersede
    twisted.protoocols.gps. (#3926)
- - Twisted now uses the Sphinx documentation generator for its
-   narrative documentation, which means that the source format for
-   narrative documentation has been converted to ReStructuredText.
-   (#4500)
  - The new interface twisted.internet.interfaces.IStreamClientEndpoint
    StringParserWithReactor will supply the reactor to its
    parseStreamClient method, passed along from
@@ -86,6 +82,10 @@ Bugfixes
 
 Improved Documentation
 ----------------------
+ - Twisted now uses the Sphinx documentation generator for its
+   narrative documentation, which means that the source format for
+   narrative documentation has been converted to ReStructuredText.
+   (#4500)
  - The Sphinx documentation is now also configured to allow
    intersphinx links to standard library documentation. (#4582)
  - The docstring for twisted.internet.task.react now better documents
@@ -259,10 +259,7 @@ Bugfixes
    sometimes when deliverBody is not called synchronously within the
    callback on Request. (#6751)
  - twisted.web.client.Agent now verifies that the provided server
-   certificate in a TLS connection is trusted by the platform. Until
-   #4888 is completed there are still known MITM attack vectors
-   against Agent. Applications which were relying on the absence of
-   certificate checking will now receive an SSL error. (#7042)
+   certificate in a TLS connection is trusted by the platform. (#7042)
  - When requesting an HTTPS URL with twisted.web.client.Agent, the
    hostname of the presented certificate will be checked against the
    requested hostname; mismatches will now result in an error rather

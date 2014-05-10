@@ -6,7 +6,9 @@ Twisted Core 14.0.0 (2014-05-08)
 
 Features
 --------
- - Twisted's UDP implementation now supports broadcasting. (#454)
+ - twisted.internet.interfaces.IUDPTransport - and that interface's
+   implementations in Twisted - now supports enabling broadcasting.
+   (#454)
  - trial's TestCase will now report a test method as an error if that
    test method is a generator function, preventing an issue when a
    user forgets to decorate a test method with defer.inlineCallbacks,
@@ -15,22 +17,17 @@ Features
    has been added. It comes with an implementation of NMEA, the most
    common wire protocol for GPS devices. It will supersede
    twisted.protoocols.gps. (#3926)
- - Twisted now uses the Sphinx documentation generator for its
-   narrative documentation, which means that the source format for
-   narrative documentation has been converted to ReStructuredText.
-   (#4500)
  - The new interface twisted.internet.interfaces.IStreamClientEndpoint
    StringParserWithReactor will supply the reactor to its
    parseStreamClient method, passed along from
    twisted.internet.endpoints.clientFromString. (#5069)
  - IReactorUDP.listenUDP, IUDPTransport.write and
    IUDPTransport.connect now accept ipv6 address literals. (#5086)
- - twisted.internet.ssl.CertificateOptions now provides a 'hostname'
-   field, allowing clients to specify and verify the identity of the
-   peer they're communicating with.  When used with the
-   service_identity library from PyPI, this provides support for
-   service identity verification from RFC 6125, as well as server name
-   indication from RFC 6066. (#5190)
+ - A new API, twisted.internet.ssl.optionsForClientTLS, allows clients
+   to specify and verify the identity of the peer they're communicating
+   with.  When used with the service_identity library from PyPI, this
+   provides support for service identity verification from RFC 6125, as
+   well as server name indication from RFC 6066. (#5190)
  - Twisted's TLS support now provides a way to ask for user-configured
    trust roots rather than having to manually configure such
    certificate authority certificates yourself.
@@ -85,6 +82,10 @@ Bugfixes
 
 Improved Documentation
 ----------------------
+ - Twisted now uses the Sphinx documentation generator for its
+   narrative documentation, which means that the source format for
+   narrative documentation has been converted to ReStructuredText.
+   (#4500)
  - The Sphinx documentation is now also configured to allow
    intersphinx links to standard library documentation. (#4582)
  - The docstring for twisted.internet.task.react now better documents
