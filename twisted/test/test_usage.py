@@ -726,7 +726,7 @@ class TestArgparseToOptions(unittest.TestCase):
 
 
 if argparse is None:
-    TestOptionsInterfaces.skip = "argparse is not present"
+    TestArgparseToOptions.skip = "argparse is not present"
 
 
 
