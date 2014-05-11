@@ -23,6 +23,8 @@ import getopt
 from os import path
 import textwrap
 
+from zope.interface import Interface, implementer
+
 # Sibling Imports
 from twisted.python import reflect, util
 
@@ -32,6 +34,29 @@ class UsageError(Exception):
 
 
 error = UsageError
+
+
+class IArgumentParser(Interface):
+    """
+    Interface for command line argument parsers.
+    """
+
+    def __getitem__(self, name):
+        """
+        Retrieve the value that was parsed for the given option name.
+
+        @type name: L{str}
+        @param name: the name of a previously-parsed option.
+        """
+
+    def parseOptions(options=None):
+        """
+        Parse the given set of options, storing the result for later access.
+
+        @type options: a L{list} of L{str}, or L{None}
+        @param options: the arguments to parse. If unprovided, the default
+            should be to parse the options provided in C{sys.argv[1:]}
+        """
 
 
 class CoerceParameter(object):
@@ -63,6 +88,7 @@ class CoerceParameter(object):
         self.options.opts[parameterName] = value
 
 
+@implementer(IArgumentParser)
 class Options(dict):
     """
     An option list parser class

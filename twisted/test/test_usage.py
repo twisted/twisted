@@ -7,6 +7,8 @@ Tests for L{twisted.python.usage}, a command line option parsing library.
 
 from __future__ import division, absolute_import
 
+from zope.interface.verify import verifyObject
+
 from twisted.trial import unittest
 from twisted.python import usage
 
@@ -682,6 +684,18 @@ class FlagFunctionTest(unittest.TestCase):
             usage.flagFunction, self.SomeClass().manyArgs, "flubuduf")
         self.assertEqual("Invalid Option function for flubuduf", str(exc))
 
+
+
+class TestOptionsInterfaces(unittest.TestCase):
+    """
+    L{usage.Options} implements the correct interfaces.
+    """
+
+    def test_implementsIArgumentParser(self):
+        """
+        A L{usage.Options} is a L{usage.IArgumentParser}.
+        """
+        verifyObject(usage.IArgumentParser, usage.Options())
 
 
 class OptionsInternalTest(unittest.TestCase):
