@@ -6,8 +6,12 @@ Tests for L{twisted.python.usage}, a command line option parsing library.
 """
 
 from __future__ import division, absolute_import
+try:
+    import argparse
+except ImportError:
+    argparse = None
 
-from zope.interface.verify import verifyObject
+from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.trial import unittest
 from twisted.python import usage
@@ -693,9 +697,37 @@ class TestOptionsInterfaces(unittest.TestCase):
 
     def test_implementsIArgumentParser(self):
         """
-        A L{usage.Options} is a L{usage.IArgumentParser}.
+        A L{usage.Options} instasnce implements L{usage.IArgumentParser}.
         """
         verifyObject(usage.IArgumentParser, usage.Options())
+
+
+
+class TestArgparseToOptions(unittest.TestCase):
+    """
+    L{usage.argparseToOptions} produces an L{IArgumentParser}
+    out of an L{argparse.ArgumentParser}.
+    """
+
+    def setUp(self):
+        self.parser = argparse.ArgumentParser()
+
+    def test_implementsIArgumentParser(self):
+        """
+        The return value of L{argparseToOptions} is an implementer
+        of L{usage.IArgumentParser}.
+        """
+
+        verifyClass(
+            usage.IArgumentParser,
+            usage.argparseToOptions(self.parser),
+        )
+
+
+
+if argparse is None:
+    TestOptionsInterfaces.skip = "argparse is not present"
+
 
 
 class OptionsInternalTest(unittest.TestCase):

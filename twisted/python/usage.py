@@ -41,7 +41,7 @@ class IArgumentParser(Interface):
     Interface for command line argument parsers.
     """
 
-    def __getitem__(self, name):
+    def __getitem__(name):
         """
         Retrieve the value that was parsed for the given option name.
 
@@ -1013,3 +1013,26 @@ def portCoerce(value):
         raise ValueError("Port number not in range: %s" % (value,))
     return value
 portCoerce.coerceDoc = "Must be an int between 0 and 65535."
+
+
+
+def argparseToOptions(parser):
+    """
+    Construct an L{IArgumentParser} out of an L{argparse.ArgumentParser}.
+
+    @type parser: L{argparse.ArgumentParser}
+    @param parser: an argument parser
+    """
+
+    @implementer(IArgumentParser)
+    class _WrappedParser(object):
+        def __init__(self):
+            self._parsed = {}
+
+        def __getitem__(self, option):
+            return self._parsed[option]
+
+        def parseOptions(self, options=None):
+            self._parsed = vars(parser.parse_args(args=options))
+
+    return _WrappedParser
