@@ -53,7 +53,7 @@ class IArgumentParser(Interface):
         """
         Parse the given set of options, storing the result for later access.
 
-        @type options: a L{list} of L{str}, or L{None}
+        @type options: a L{list} of L{str}, or C{None}
         @param options: the arguments to parse. If unprovided, the default
             should be to parse the options provided in C{sys.argv[1:]}
         """
@@ -1022,6 +1022,7 @@ def argparseToOptions(parser):
 
     @type parser: L{argparse.ArgumentParser}
     @param parser: an argument parser
+    @return: an implementer of L{IArgumentPArser}
     """
 
     @implementer(IArgumentParser)
@@ -1033,6 +1034,12 @@ def argparseToOptions(parser):
             return self._parsed[option]
 
         def parseOptions(self, options=None):
+            """
+            Parse the given options, storing the result.
+
+            @type options: a L{list} of L{str}, or C{None}
+            @param options: the options to parse
+            """
             self._parsed = vars(parser.parse_args(args=options))
 
     return _WrappedParser
