@@ -1,1 +1,0 @@
-A new API, twisted.internet.ssl.optionsForClientTLS, allows clients to specify and verify the identity of the peer they're communicating with.  When used with the service_identity library from PyPI, this provides support for service identity verification from RFC 6125, as well as server name indication from RFC 6066.

@@ -1,6 +1,20 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 14.0.0 (2014-05-08)
+=================================
+
+Improved Documentation
+----------------------
+ - The docstring for twisted.conch.ssh.userauth.SSHUserAuthClient is
+   now clearer on how the preferredOrder instance variable is handled.
+   (#6850)
+
+Other
+-----
+ - #6696, #6807, #7054
+
+
 Twisted Conch 13.2.0 (2013-10-29)
 =================================
 

@@ -1,6 +1,42 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Names 14.0.0 (2014-05-08)
+=================================
+
+Features
+--------
+ - twisted.names.root.Resolver now accepts a resolverFactory argument,
+   which makes it possible to control how root.Resolver performs
+   iterative queries to authoritative nameservers. (#6095)
+ - twisted.names.dns.Message now has a repr method which shows only
+   those instance flags, fields and sections which are set to non-
+   default values. (#6847)
+ - twisted.names.dns.Message now support rich comparison. (#6848)
+
+Bugfixes
+--------
+ - twisted.names.server.DNSServerFactory now responds with messages
+   whose flags and fields are reset to their default values instead of
+   copying these from the request. This means that AD and CD flags,
+   and EDNS OPT records in the request are no longer mirrored back to
+   the client. (#6645)
+
+Improved Documentation
+----------------------
+ - twisted.names now has narrative documentation showing how to create
+   a custom DNS server. (#6864)
+ - twisted.names.server now has full API documentation. (#6886)
+ - twisted.names now has narrative documentation explaining how to use
+   its client APIs. (#6925)
+ - twisted.names now has narrative documentation and examples showing
+   how to perform reverse DNS lookups. (#6969)
+
+Other
+-----
+ - #5675, #6222, #6672, #6696, #6887, #6940, #6975, #6990
+
+
 Twisted Names 13.2.0 (2013-10-29)
 =================================
 

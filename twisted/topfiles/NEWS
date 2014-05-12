@@ -1,6 +1,127 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 14.0.0 (2014-05-08)
+================================
+
+Features
+--------
+ - twisted.internet.interfaces.IUDPTransport - and that interface's
+   implementations in Twisted - now supports enabling broadcasting.
+   (#454)
+ - trial's TestCase will now report a test method as an error if that
+   test method is a generator function, preventing an issue when a
+   user forgets to decorate a test method with defer.inlineCallbacks,
+   causing the test method to not run. (#3917)
+ - twisted.positioning, a new API for positioning systems such as GPS,
+   has been added. It comes with an implementation of NMEA, the most
+   common wire protocol for GPS devices. It will supersede
+   twisted.protoocols.gps. (#3926)
+ - The new interface twisted.internet.interfaces.IStreamClientEndpoint
+   StringParserWithReactor will supply the reactor to its
+   parseStreamClient method, passed along from
+   twisted.internet.endpoints.clientFromString. (#5069)
+ - IReactorUDP.listenUDP, IUDPTransport.write and
+   IUDPTransport.connect now accept ipv6 address literals. (#5086)
+ - A new API, twisted.internet.ssl.optionsForClientTLS, allows clients
+   to specify and verify the identity of the peer they're communicating
+   with.  When used with the service_identity library from PyPI, this
+   provides support for service identity verification from RFC 6125, as
+   well as server name indication from RFC 6066. (#5190)
+ - Twisted's TLS support now provides a way to ask for user-configured
+   trust roots rather than having to manually configure such
+   certificate authority certificates yourself.
+   twisted.internet.ssl.CertificateOptions now accepts a new argument,
+   trustRoot, which combines verification flags and trust sources, as
+   well as a new function that provides a value for that argument,
+   twisted.internet.ssl.platformTrust, which allows using the trusted
+   platform certificate authorities from OpenSSL for certificate
+   verification. (#5446)
+ - Constants are now comparable/orderable based on the order in which
+   they are defined. (#6523)
+ - "setup.py install" and "pip install" now work on Python 3.3,
+   installing the subset of Twisted that has been ported to Python 3.
+   (#6539)
+ - twisted.internet.ssl.CertificateOptions now supports ECDHE for
+   servers by default on pyOpenSSL 0.14 and later, if the underlying
+   versions of cryptography.io and OpenSSL support it. (#6586)
+ - twisted.internet.ssl.CertificateOptions now allows the user to set
+   acceptable ciphers and uses secure ones by default. (#6663)
+ - The Deferred returned by
+   twisted.internet.defer.DeferredFilesystemLock.deferUntilLocked can
+   now be cancelled. (#6720)
+ - twisted.internet.ssl.CertificateOptions now enables TLSv1.1 and
+   TLSv1.2 by default (in addition to TLSv1.0) if the underlying
+   version of OpenSSL supports these protocol versions. (#6772)
+ - twisted.internet.ssl.CertificateOptions now supports Diffie-Hellman
+   key exchange. (#6799)
+ - twisted.internet.ssl.CertificateOptions now disables TLS
+   compression to avoid CRIME attacks and, for servers, uses server
+   preference to choose the cipher. (#6801)
+ - SSL server endpoint string descriptions now support the
+   specification of Diffie-Hellman key exchange parameter files.
+   (#6924)
+ - twisted.python.reflect.requireModule was added to handle
+   conditional imports of python modules and work around pyflakes
+   warnings of unused imports code. (#7014)
+
+Bugfixes
+--------
+ - If a ProcessProtocol.processExited method raised an exception a
+   broken process handler would be left in the global process state
+   leading to errors later on. This has been fixed and now an error
+   will be logged instead. (#5151)
+ - Twisted now builds on Solaris. Note that lacking a Buildbot slave
+   (see http://buildbot.twistedmatrix.com/boxes-supported) Solaris is
+   not a supported Twisted platform. (#5728)
+ - twisted.internet.utils is now correctly installed on Python 3.
+   (#6929)
+ - twisted.python.threadpool.ThreadPool no longer starts new workers
+   when its pool size is changed while the pool is not running.
+   (#7011)
+
+Improved Documentation
+----------------------
+ - Twisted now uses the Sphinx documentation generator for its
+   narrative documentation, which means that the source format for
+   narrative documentation has been converted to ReStructuredText.
+   (#4500)
+ - The Sphinx documentation is now also configured to allow
+   intersphinx links to standard library documentation. (#4582)
+ - The docstring for twisted.internet.task.react now better documents
+   the main parameter (#6071)
+ - The writing standard now explicitly mandates the usage of
+   ungendered pronouns. (#6858)
+
+Deprecations and Removals
+-------------------------
+ - test_import.py was removed as it was redundant. (#2053)
+ - Support for versions of pyOpenSSL older than 0.10 has been removed.
+   Affected users should upgrade pyOpenSSL. (#5014)
+ - twisted.internet.interfaces.IStreamClientEndpointStringParser is
+   now deprecated in favor of twisted.internet.interfaces.IStreamClien
+   tEndpointStringParserWithReactor. (#5069)
+ - unsignedID and setIDFunction, previously part of
+   twisted.python.util and deprecated since 13.0, have now been
+   removed. (#6707)
+ - FTPClient.changeDirectory was deprecated in 8.2 and is now removed.
+   (#6759)
+ - twisted.internet.stdio.StandardIO.closeStdin, an alias for
+   loseWriteConnection only available on POSIX and deprecated since
+   2.1, has been removed. (#6785)
+ - twisted.python.reflect.getcurrent is now deprecated and must not be
+   used. twisted.python.reflect.isinst is now deprecated in favor of
+   the built-in isinstance. (#6859)
+
+Other
+-----
+ - #1822, #5929, #6239, #6537, #6565, #6614, #6632, #6690, #6784,
+   #6792, #6795, #6821, #6843, #6846, #6854, #6856, #6857, #6872,
+   #6892, #6902, #6906, #6922, #6926, #6936, #6941, #6942, #6943,
+   #6944, #6945, #6946, #6948, #6979, #7001, #7049, #7051, #7094,
+   #7098
+
+
 Twisted Core 13.2.0 (2013-10-29)
 ================================
 

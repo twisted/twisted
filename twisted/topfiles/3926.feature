@@ -1,1 +1,0 @@
-twisted.positioning, a new API for positioning systems such as GPS, has been added. It comes with an implementation of NMEA, the most common wire protocol for GPS devices. It will supersede twisted.protoocols.gps.

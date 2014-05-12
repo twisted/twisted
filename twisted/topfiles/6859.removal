@@ -1,2 +1,0 @@
-twisted.python.reflect.getcurrent is now deprecated and must not be used.
-twisted.python.reflect.isinst is now deprecated in favor of the built-in isinstance.

@@ -1,6 +1,18 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Lore 14.0.0 (2014-05-08)
+================================
+
+Deprecations and Removals
+-------------------------
+ - twisted.lore is now deprecated in favor of Sphinx. (#6907)
+
+Other
+-----
+ - #6998
+
+
 Twisted Lore 13.2.0 (2013-10-29)
 ================================
 
