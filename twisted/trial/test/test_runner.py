@@ -13,6 +13,7 @@ from twisted.trial.itrial import IReporter, ITestCase
 from twisted.trial import unittest, runner, reporter, util
 from twisted.python import failure, log, reflect
 from twisted.python.filepath import FilePath
+from twisted.python.reflect import namedAny
 from twisted.scripts import trial
 from twisted.plugins import twisted_trial
 from twisted import plugin
@@ -577,8 +578,7 @@ class TestTrialSuite(unittest.SynchronousTestCase):
 
     def test_imports(self):
         # FIXME, HTF do you test the reactor can be cleaned up ?!!!
-        from twisted.trial.runner import TrialSuite
-
+        namedAny('twisted.trial.runner.TrialSuite')
 
 
 

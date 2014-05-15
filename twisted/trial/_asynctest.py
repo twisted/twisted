@@ -196,10 +196,10 @@ class TestCase(SynchronousTestCase):
 
 
     def _cbDeferRunCleanups(self, cleanupResults, result):
-        for flag, failure in cleanupResults:
+        for flag, testFailure in cleanupResults:
             if flag == defer.FAILURE:
-                result.addError(self, failure)
-                if failure.check(KeyboardInterrupt):
+                result.addError(self, testFailure)
+                if testFailure.check(KeyboardInterrupt):
                     result.stop()
                 self._passed = False
 

@@ -22,7 +22,7 @@ def runTrial(*args):
         stream=output,
         workingDirectory=config['temp-directory'])
     suite = trial._getSuite(config)
-    result = myRunner.run(suite)
+    myRunner.run(suite)
     return output.getvalue()
 
 

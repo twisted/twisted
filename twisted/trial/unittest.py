@@ -36,6 +36,21 @@ from twisted.trial._synctest import (
 
 
 __all__ = [
-    'FailTest', 'SkipTest', 'SynchronousTestCase', 'Todo', 'makeTodo',
-
-    'TestCase', 'TestSuite', 'decorate']
+    '_clearSuite',
+    '_ForceGarbageCollectionDecorator',
+    '_iterateTests',
+    '_collectWarnings',
+    '_logObserver',
+    '_LogObserver',
+    '_setWarningRegistryToNone',
+    'FailTest',
+    'SkipTest',
+    'SynchronousTestCase',
+    'Todo',
+    'makeTodo',
+    'PyUnitResultAdapter',
+    'TestCase',
+    'TestDecorator',
+    'TestSuite',
+    'decorate',
+    ]

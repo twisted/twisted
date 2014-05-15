@@ -14,7 +14,6 @@ from __future__ import division, absolute_import
 
 import warnings
 
-from twisted.python.compat import _PY3
 from twisted.trial import unittest, util
 
 
