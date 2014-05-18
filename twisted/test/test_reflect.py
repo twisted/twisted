@@ -243,7 +243,7 @@ class LookupsTestCase(TestCase):
         L{namedAny} should return the object an attribute of a non-module,
         non-package object is bound to for the name it is passed.
         """
-        # Note - not assertEqual because unbound method lookup creates a new
+        # Note - not assertIs because unbound method lookup creates a new
         # object every time.  This is a foolishness of Python's object
         # implementation, not a bug in Twisted.
         self.assertEqual(
