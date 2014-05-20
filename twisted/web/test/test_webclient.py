@@ -568,7 +568,7 @@ class WebClientTestCase(unittest.TestCase):
 
     def testFactoryInfo(self):
         url = self.getURL('file')
-        uri = client._URI.fromBytes(url)
+        uri = client.URI.fromBytes(url)
         factory = client.HTTPClientFactory(url)
         reactor.connectTCP(nativeString(uri.host), uri.port, factory)
         return factory.deferred.addCallback(self._cbFactoryInfo, factory)
@@ -891,7 +891,7 @@ class WebClientSSLTestCase(WebClientTestCase):
 
     def testFactoryInfo(self):
         url = self.getURL('file')
-        uri = client._URI.fromBytes(url)
+        uri = client.URI.fromBytes(url)
         factory = client.HTTPClientFactory(url)
         reactor.connectSSL(nativeString(uri.host), uri.port, factory,
                            ssl.ClientContextFactory())
@@ -1117,15 +1117,15 @@ if not interfaces.IReactorSSL(reactor, None):
 
 class URITests(unittest.TestCase):
     """
-    Tests for L{twisted.web.client._URI}.
+    Tests for L{twisted.web.client.URI}.
     """
     def assertURIEquals(self, uri, scheme, netloc, host, port, path,
                         params=b'', query=b'', fragment=b''):
         """
-        Assert that all of a L{client._URI}'s components match the expected
+        Assert that all of a L{client.URI}'s components match the expected
         values.
 
-        @param uri: U{client._URI} instance whose attributes will be checked
+        @param uri: U{client.URI} instance whose attributes will be checked
             for equality.
 
         @type scheme: L{bytes}
@@ -1160,26 +1160,26 @@ class URITests(unittest.TestCase):
 
     def test_parseDefaultPort(self):
         """
-        L{client._URI.fromBytes} by default assumes port 80 for the I{http}
+        L{client.URI.fromBytes} by default assumes port 80 for the I{http}
         scheme and 443 for the I{https} scheme.
         """
-        uri = client._URI.fromBytes(b'http://example.com')
+        uri = client.URI.fromBytes(b'http://example.com')
         self.assertEqual(80, uri.port)
         # Weird (but commonly accepted) structure uses default port.
-        uri = client._URI.fromBytes(b'http://example.com:')
+        uri = client.URI.fromBytes(b'http://example.com:')
         self.assertEqual(80, uri.port)
-        uri = client._URI.fromBytes(b'https://example.com')
+        uri = client.URI.fromBytes(b'https://example.com')
         self.assertEqual(443, uri.port)
 
 
     def test_parseCustomDefaultPort(self):
         """
-        L{client._URI.fromBytes} accepts a C{defaultPort} parameter that
+        L{client.URI.fromBytes} accepts a C{defaultPort} parameter that
         overrides the normal default port logic.
         """
-        uri = client._URI.fromBytes(b'http://example.com', defaultPort=5144)
+        uri = client.URI.fromBytes(b'http://example.com', defaultPort=5144)
         self.assertEqual(5144, uri.port)
-        uri = client._URI.fromBytes(b'https://example.com', defaultPort=5144)
+        uri = client.URI.fromBytes(b'https://example.com', defaultPort=5144)
         self.assertEqual(5144, uri.port)
 
 
@@ -1188,13 +1188,13 @@ class URITests(unittest.TestCase):
         Parsing a I{URI} splits the network location component into I{host} and
         I{port}.
         """
-        uri = client._URI.fromBytes(b'http://example.com:5144')
+        uri = client.URI.fromBytes(b'http://example.com:5144')
         self.assertEqual(5144, uri.port)
         self.assertEqual(b'example.com', uri.host)
         self.assertEqual(b'example.com:5144', uri.netloc)
 
         # Spaces in the hostname are trimmed, the default path is /.
-        uri = client._URI.fromBytes(b'http://example.com ')
+        uri = client.URI.fromBytes(b'http://example.com ')
         self.assertEqual(b'example.com', uri.netloc)
 
 
@@ -1203,7 +1203,7 @@ class URITests(unittest.TestCase):
         Parse the path from a I{URI}.
         """
         uri = b'http://example.com/foo/bar'
-        parsed = client._URI.fromBytes(uri)
+        parsed = client.URI.fromBytes(uri)
         self.assertURIEquals(
             parsed,
             scheme=b'http',
@@ -1219,7 +1219,7 @@ class URITests(unittest.TestCase):
         The path of a I{URI} that has no path is the empty string.
         """
         uri = b'http://example.com'
-        parsed = client._URI.fromBytes(uri)
+        parsed = client.URI.fromBytes(uri)
         self.assertURIEquals(
             parsed,
             scheme=b'http',
@@ -1236,7 +1236,7 @@ class URITests(unittest.TestCase):
         """
         uri = b'http://example.com/'
         self.assertURIEquals(
-            client._URI.fromBytes(uri),
+            client.URI.fromBytes(uri),
             scheme=b'http',
             netloc=b'example.com',
             host=b'example.com',
@@ -1249,7 +1249,7 @@ class URITests(unittest.TestCase):
         Parse I{URI} parameters from a I{URI}.
         """
         uri = b'http://example.com/foo/bar;param'
-        parsed = client._URI.fromBytes(uri)
+        parsed = client.URI.fromBytes(uri)
         self.assertURIEquals(
             parsed,
             scheme=b'http',
@@ -1266,7 +1266,7 @@ class URITests(unittest.TestCase):
         Parse the query string from a I{URI}.
         """
         uri = b'http://example.com/foo/bar;param?a=1&b=2'
-        parsed = client._URI.fromBytes(uri)
+        parsed = client.URI.fromBytes(uri)
         self.assertURIEquals(
             parsed,
             scheme=b'http',
@@ -1284,7 +1284,7 @@ class URITests(unittest.TestCase):
         Parse the fragment identifier from a I{URI}.
         """
         uri = b'http://example.com/foo/bar;param?a=1&b=2#frag'
-        parsed = client._URI.fromBytes(uri)
+        parsed = client.URI.fromBytes(uri)
         self.assertURIEquals(
             parsed,
             scheme=b'http',
@@ -1300,51 +1300,51 @@ class URITests(unittest.TestCase):
 
     def test_originForm(self):
         """
-        L{client._URI.originForm} produces an absolute I{URI} path including
+        L{client.URI.originForm} produces an absolute I{URI} path including
         the I{URI} path.
         """
-        uri = client._URI.fromBytes(b'http://example.com/foo')
+        uri = client.URI.fromBytes(b'http://example.com/foo')
         self.assertEqual(b'/foo', uri.originForm)
 
 
     def test_originFormComplex(self):
         """
-        L{client._URI.originForm} produces an absolute I{URI} path including
+        L{client.URI.originForm} produces an absolute I{URI} path including
         the I{URI} path, parameters and query string but excludes the fragment
         identifier.
         """
-        uri = client._URI.fromBytes(b'http://example.com/foo;param?a=1#frag')
+        uri = client.URI.fromBytes(b'http://example.com/foo;param?a=1#frag')
         self.assertEqual(b'/foo;param?a=1', uri.originForm)
 
 
     def test_originFormNoPath(self):
         """
-        L{client._URI.originForm} produces a path of C{b'/'} when the I{URI}
+        L{client.URI.originForm} produces a path of C{b'/'} when the I{URI}
         specifies no path.
         """
-        uri = client._URI.fromBytes(b'http://example.com')
+        uri = client.URI.fromBytes(b'http://example.com')
         self.assertEqual(b'/', uri.originForm)
 
 
     def test_originFormEmptyPath(self):
         """
-        L{client._URI.originForm} produces a path of C{b'/'} when the I{URI}
+        L{client.URI.originForm} produces a path of C{b'/'} when the I{URI}
         specifies an empty path.
         """
-        uri = client._URI.fromBytes(b'http://example.com/')
+        uri = client.URI.fromBytes(b'http://example.com/')
         self.assertEqual(b'/', uri.originForm)
 
 
     def test_externalUnicodeInterference(self):
         """
-        L{client._URI.fromBytes} parses the scheme, host, and path elements
+        L{client.URI.fromBytes} parses the scheme, host, and path elements
         into L{bytes}, even when passed an URL which has previously been passed
         to L{urlparse} as a L{unicode} string.
         """
         goodInput = b'http://example.com/path'
         badInput = goodInput.decode('ascii')
         urlparse(badInput)
-        uri = client._URI.fromBytes(goodInput)
+        uri = client.URI.fromBytes(goodInput)
         self.assertIsInstance(uri.scheme, bytes)
         self.assertIsInstance(uri.host, bytes)
         self.assertIsInstance(uri.path, bytes)

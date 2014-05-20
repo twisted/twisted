@@ -558,7 +558,7 @@ class Request:
     @ivar persistent: See L{__init__}.
 
     @ivar _parsedURI: Parsed I{URI} for the request, or C{None}.
-    @type _parsedURI: L{_URI}
+    @type _parsedURI: L{twisted.web.client.URI} or L{None}
     """
     implements(IClientRequest)
 
