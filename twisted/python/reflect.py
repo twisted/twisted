@@ -443,11 +443,11 @@ def funcinfo(function):
         "[v2.5] Use inspect.getargspec instead of twisted.python.reflect.funcinfo",
         DeprecationWarning,
         stacklevel=2)
-    code=function.func_code
-    name=function.func_name
+    code=function.__code__
+    name=function.__name__
     argc=code.co_argcount
     argv=code.co_varnames[:argc]
-    defaults=function.func_defaults
+    defaults=function.__defaults__
 
     out = []
 
