@@ -328,7 +328,7 @@ class HTTPClientFactory(protocol.ClientFactory):
     port = None
     path = None
 
-    def __init__(self, url, method=b'GET', postdata=None, headers=None,
+    def __init__(self, url, method='GET', postdata=None, headers=None,
                  agent=b"Twisted PageGetter", timeout=0, cookies=None,
                  followRedirect=True, redirectLimit=20,
                  afterFoundGet=False):
@@ -603,6 +603,8 @@ class URI(object):
         @rtype: L{URI}
         @return: Parsed URI instance.
         """
+        if not isinstance(uri, bytes):
+            raise TypeError("uri must be bytes, not a string")
         uri = uri.strip()
         scheme, netloc, path, params, query, fragment = http.urlparse(uri)
 
@@ -620,7 +622,8 @@ class URI(object):
             except ValueError:
                 port = defaultPort
 
-        return cls(scheme, netloc, host, port, path, params, query, fragment)
+        return cls(scheme, netloc, host.decode(), port, path, params, query,
+                   fragment)
 
 
     def toBytes(self):
@@ -751,15 +754,11 @@ def downloadPage(url, file, contextFactory=None, *args, **kwargs):
 # feature equivalent.
 
 from twisted.web.error import SchemeNotSupported
-if not _PY3:
-    from twisted.web._newclient import Request, Response, HTTP11ClientProtocol
-    from twisted.web._newclient import ResponseDone, ResponseFailed
-    from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
-    from twisted.web._newclient import (
-        ResponseNeverReceived, PotentialDataLoss, _WrapperException)
-
-
-
+from twisted.web._newclient import Request, Response, HTTP11ClientProtocol
+from twisted.web._newclient import ResponseDone, ResponseFailed
+from twisted.web._newclient import RequestNotSent, RequestTransmissionFailed
+from twisted.web._newclient import (
+    ResponseNeverReceived, PotentialDataLoss, _WrapperException)
 try:
     from OpenSSL import SSL
 except ImportError:
@@ -1113,7 +1112,7 @@ class _RetryingHTTP11ClientProtocol(object):
         requirement may be relaxed in the future, and PUT added to approved
         method list.
         """
-        if method not in ("GET", "HEAD", "OPTIONS", "DELETE", "TRACE"):
+        if method not in (b"GET", b"HEAD", b"OPTIONS", b"DELETE", b"TRACE"):
             return False
         if not isinstance(exception, (RequestNotSent, RequestTransmissionFailed,
                                       ResponseNeverReceived)):
@@ -1326,9 +1325,13 @@ class _AgentBase(object):
         Compute the string to use for the value of the I{Host} header, based on
         the given scheme, host name, and port number.
         """
-        if (scheme, port) in (('http', 80), ('https', 443)):
+        if _PY3:
+            # make host a bytes object, not str, after playing the trick
+            # with isIPv6Address in endpoint
+            host = host.encode('charmap')
+        if (scheme, port) in ((b'http', 80), (b'https', 443)):
             return host
-        return '%s:%d' % (host, port)
+        return host + b':' + bytes(str(port), 'charmap')
 
 
     def _requestWithEndpoint(self, key, endpoint, method, parsedURI,
@@ -1340,12 +1343,11 @@ class _AgentBase(object):
         # Create minimal headers, if necessary:
         if headers is None:
             headers = Headers()
-        if not headers.hasHeader('host'):
+        if not headers.hasHeader(b'host'):
             headers = headers.copy()
-            headers.addRawHeader(
-                'host', self._computeHostValue(parsedURI.scheme, parsedURI.host,
-                                               parsedURI.port))
-
+            host_value = self._computeHostValue(
+                parsedURI.scheme, parsedURI.host, parsedURI.port)
+            headers.addRawHeader(b'host', host_value)
         d = self._pool.getConnection(key, endpoint)
         def cbConnected(proto):
             return proto.request(
@@ -1975,13 +1977,13 @@ class RedirectAgent(object):
         Handle the response, making another request if it indicates a redirect.
         """
         if response.code in self._redirectResponses:
-            if method not in ('GET', 'HEAD'):
+            if method not in (b'GET', b'HEAD'):
                 err = error.PageRedirect(response.code, location=uri)
                 raise ResponseFailed([failure.Failure(err)], response)
             return self._handleRedirect(response, method, uri, headers,
                                         redirectCount)
         elif response.code in self._seeOtherResponses:
-            return self._handleRedirect(response, 'GET', uri, headers,
+            return self._handleRedirect(response, b'GET', uri, headers,
                                         redirectCount)
         return response
 

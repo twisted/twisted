@@ -28,7 +28,7 @@ Various other classes in this module support this usage:
 
 __metaclass__ = type
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.python import log
 from twisted.python.components import proxyForInterface
@@ -233,11 +233,11 @@ class HTTPParser(LineReceiver):
 
     # Some servers (like http://news.ycombinator.com/) return status lines and
     # HTTP headers delimited by \n instead of \r\n.
-    delimiter = '\n'
+    delimiter = b'\n'
 
     CONNECTION_CONTROL_HEADERS = set([
-            'content-length', 'connection', 'keep-alive', 'te', 'trailers',
-            'transfer-encoding', 'upgrade', 'proxy-connection'])
+            b'content-length', b'connection', b'keep-alive', b'te', b'trailers',
+            b'transfer-encoding', b'upgrade', b'proxy-connection'])
 
     def connectionMade(self):
         self.headers = Headers()
@@ -264,17 +264,17 @@ class HTTPParser(LineReceiver):
         Handle one line from a response.
         """
         # Handle the normal CR LF case.
-        if line[-1:] == '\r':
+        if line[-1:] == b'\r':
             line = line[:-1]
 
         if self.state == STATUS:
             self.statusReceived(line)
             self.state = HEADER
         elif self.state == HEADER:
-            if not line or line[0] not in ' \t':
+            if not line or line[0] not in b' \t':
                 if self._partialHeader is not None:
-                    header = ''.join(self._partialHeader)
-                    name, value = header.split(':', 1)
+                    header = b''.join(self._partialHeader)
+                    name, value = header.split(b':', 1)
                     value = value.strip()
                     self.headerReceived(name, value)
                 if not line:
@@ -389,10 +389,10 @@ class HTTPClientParser(HTTPParser):
         on bad syntax.
         """
         try:
-            proto, strnumber = strversion.split('/')
-            major, minor = strnumber.split('.')
+            proto, strnumber = strversion.split(b'/')
+            major, minor = strnumber.split(b'.')
             major, minor = int(major), int(minor)
-        except ValueError, e:
+        except ValueError as e:
             raise BadResponseVersion(str(e), strversion)
         if major < 0 or minor < 0:
             raise BadResponseVersion("version may not be negative", strversion)
@@ -404,7 +404,7 @@ class HTTPClientParser(HTTPParser):
         Parse the status line into its components and create a response object
         to keep track of this response's state.
         """
-        parts = status.split(' ', 2)
+        parts = status.split(b' ', 2)
         if len(parts) != 3:
             raise ParseError("wrong number of parts", status)
 
@@ -441,7 +441,7 @@ class HTTPClientParser(HTTPParser):
         Content-Length in the response to a HEAD request is an entity header,
         not a connection control header.
         """
-        if self.request.method == 'HEAD' and name == 'content-length':
+        if self.request.method == b'HEAD' and name == b'content-length':
             return False
         return HTTPParser.isConnectionControlHeader(self, name)
 
@@ -452,7 +452,7 @@ class HTTPClientParser(HTTPParser):
         headers and stuff.
         """
         if (self.response.code in self.NO_BODY_CODES
-            or self.request.method == 'HEAD'):
+            or self.request.method == b'HEAD'):
             self.response.length = 0
             # The order of the next two lines might be of interest when adding
             # support for pipelining.
@@ -460,7 +460,7 @@ class HTTPClientParser(HTTPParser):
             self.response._bodyDataFinished()
         else:
             transferEncodingHeaders = self.connHeaders.getRawHeaders(
-                'transfer-encoding')
+                b'transfer-encoding')
             if transferEncodingHeaders:
 
                 # This could be a KeyError.  However, that would mean we do not
@@ -476,7 +476,7 @@ class HTTPClientParser(HTTPParser):
                 # allow the transfer decoder to set the response object's
                 # length attribute.
             else:
-                contentLengthHeaders = self.connHeaders.getRawHeaders('content-length')
+                contentLengthHeaders = self.connHeaders.getRawHeaders(b'content-length')
                 if contentLengthHeaders is None:
                     contentLength = None
                 elif len(contentLengthHeaders) == 1:
@@ -546,6 +546,7 @@ class HTTPClientParser(HTTPParser):
 
 
 
+@implementer(IClientRequest)
 class Request:
     """
     A L{Request} instance describes an HTTP request to be sent to an HTTP
@@ -560,7 +561,6 @@ class Request:
     @ivar _parsedURI: Parsed I{URI} for the request, or C{None}.
     @type _parsedURI: L{twisted.web.client.URI} or L{None}
     """
-    implements(IClientRequest)
 
 
     def __init__(self, method, uri, headers, bodyProducer, persistent=False):
@@ -623,7 +623,7 @@ class Request:
 
 
     def _writeHeaders(self, transport, TEorCL):
-        hosts = self.headers.getRawHeaders('host', ())
+        hosts = self.headers.getRawHeaders(b'host', ())
         if len(hosts) != 1:
             raise BadHeaders("Exactly one Host header required")
 
@@ -631,15 +631,17 @@ class Request:
         # method would probably be good.  It would be nice if this method
         # weren't limited to issueing HTTP/1.1 requests.
         requestLines = []
-        requestLines.append(
-            '%s %s HTTP/1.1\r\n' % (self.method, self.uri))
+        requestLines.append(b' '.join([self.method, self.uri]) +
+                            b' HTTP/1.1\r\n')
+
         if not self.persistent:
-            requestLines.append('Connection: close\r\n')
+            requestLines.append(b'Connection: close\r\n')
         if TEorCL is not None:
             requestLines.append(TEorCL)
         for name, values in self.headers.getAllRawHeaders():
-            requestLines.extend(['%s: %s\r\n' % (name, v) for v in values])
-        requestLines.append('\r\n')
+            requestLines.extend([b': '.join([name, v]) + b'\r\n'
+                                for v in values])
+        requestLines.append(b'\r\n')
         transport.writeSequence(requestLines)
 
 
@@ -648,7 +650,7 @@ class Request:
         Write this request to the given transport using chunked
         transfer-encoding to frame the body.
         """
-        self._writeHeaders(transport, 'Transfer-Encoding: chunked\r\n')
+        self._writeHeaders(transport, b'Transfer-Encoding: chunked\r\n')
         encoder = ChunkedEncoder(transport)
         encoder.registerProducer(self.bodyProducer, True)
         d = self.bodyProducer.startProducing(encoder)
@@ -674,7 +676,8 @@ class Request:
         """
         self._writeHeaders(
             transport,
-            'Content-Length: %d\r\n' % (self.bodyProducer.length,))
+            b'Content-Length: ' +
+            str(self.bodyProducer.length).encode('charmap') + b'\r\n')
 
         # This Deferred is used to signal an error in the data written to the
         # encoder below.  It can only errback and it will only do so before too
@@ -914,6 +917,7 @@ def makeStatefulDispatcher(name, template):
 
 
 
+@implementer(IResponse)
 class Response:
     """
     A L{Response} instance describes an HTTP response received from an HTTP
@@ -957,7 +961,6 @@ class Response:
             more data, the L{Response} moves to this state.  Nothing else
             can happen once the L{Response} is in this state.
     """
-    implements(IResponse)
 
     length = UNKNOWN_LENGTH
 
@@ -1173,12 +1176,12 @@ class Response:
 
 
 
+@implementer(IConsumer)
 class ChunkedEncoder:
     """
     Helper object which exposes L{IConsumer} on top of L{HTTP11ClientProtocol}
     for streaming request bodies to the server.
     """
-    implements(IConsumer)
 
     def __init__(self, transport):
         self.transport = transport
@@ -1221,6 +1224,7 @@ class ChunkedEncoder:
 
 
 
+@implementer(IPushProducer)
 class TransportProxyProducer:
     """
     An L{IPushProducer} implementation which wraps another such thing and
@@ -1229,7 +1233,6 @@ class TransportProxyProducer:
     @ivar _producer: The wrapped L{IPushProducer} provider or C{None} after
         this proxy has been stopped.
     """
-    implements(IPushProducer)
 
     # LineReceiver uses this undocumented attribute of transports to decide
     # when to stop calling lineReceived or rawDataReceived (if it finds it to
@@ -1402,7 +1405,7 @@ class HTTP11ClientProtocol(Protocol):
         self._parser.makeConnection(self._transportProxy)
         self._responseDeferred = self._parser._responseDeferred
 
-        def cbRequestWrotten(ignored):
+        def cbRequestWritten(ignored):
             if self._state == 'TRANSMITTING':
                 self._state = 'WAITING'
                 self._responseDeferred.chainDeferred(self._finishedRequest)
@@ -1417,7 +1420,7 @@ class HTTP11ClientProtocol(Protocol):
                 log.err(err, 'Error writing request, but not in valid state '
                              'to finalize request: %s' % self._state)
 
-        _requestDeferred.addCallbacks(cbRequestWrotten, ebRequestWriting)
+        _requestDeferred.addCallbacks(cbRequestWritten, ebRequestWriting)
 
         return self._finishedRequest
 
