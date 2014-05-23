@@ -31,7 +31,8 @@ from twisted.internet.interfaces import (
     IStreamServerEndpointStringParser, IStreamClientEndpointStringParser,
     IStreamClientEndpointStringParserWithReactor)
 from twisted.python.filepath import FilePath
-from twisted.python.systemd import ListenFDs
+if not _PY3:
+    from twisted.python.systemd import ListenFDs
 from twisted.internet.abstract import isIPv6Address
 from twisted.python.failure import Failure
 from twisted.python import log
@@ -1174,53 +1175,54 @@ class _StandardIOParser(object):
 
 
 
-@implementer(IPlugin, IStreamServerEndpointStringParser)
-class _SystemdParser(object):
-    """
-    Stream server endpoint string parser for the I{systemd} endpoint type.
-
-    @ivar prefix: See L{IStreamClientEndpointStringParser.prefix}.
-
-    @ivar _sddaemon: A L{ListenFDs} instance used to translate an index into an
-        actual file descriptor.
-    """
-    _sddaemon = ListenFDs.fromEnvironment()
-
-    prefix = "systemd"
-
-    def _parseServer(self, reactor, domain, index):
+if not _PY3:
+    @implementer(IPlugin, IStreamServerEndpointStringParser)
+    class _SystemdParser(object):
         """
-        Internal parser function for L{_parseServer} to convert the string
-        arguments for a systemd server endpoint into structured arguments for
-        L{AdoptedStreamServerEndpoint}.
+        Stream server endpoint string parser for the I{systemd} endpoint type.
 
-        @param reactor: An L{IReactorSocket} provider.
+        @ivar prefix: See L{IStreamClientEndpointStringParser.prefix}.
 
-        @param domain: The domain (or address family) of the socket inherited
-            from systemd.  This is a string like C{"INET"} or C{"UNIX"}, ie the
-            name of an address family from the L{socket} module, without the
-            C{"AF_"} prefix.
-        @type domain: C{str}
-
-        @param index: An offset into the list of file descriptors inherited from
-            systemd.
-        @type index: C{str}
-
-        @return: A two-tuple of parsed positional arguments and parsed keyword
-            arguments (a tuple and a dictionary).  These can be used to
-            construct an L{AdoptedStreamServerEndpoint}.
+        @ivar _sddaemon: A L{ListenFDs} instance used to translate an index into an
+            actual file descriptor.
         """
-        index = int(index)
-        fileno = self._sddaemon.inheritedDescriptors()[index]
-        addressFamily = getattr(socket, 'AF_' + domain)
-        return AdoptedStreamServerEndpoint(reactor, fileno, addressFamily)
+        _sddaemon = ListenFDs.fromEnvironment()
+
+        prefix = "systemd"
+
+        def _parseServer(self, reactor, domain, index):
+            """
+            Internal parser function for L{_parseServer} to convert the string
+            arguments for a systemd server endpoint into structured arguments for
+            L{AdoptedStreamServerEndpoint}.
+
+            @param reactor: An L{IReactorSocket} provider.
+
+            @param domain: The domain (or address family) of the socket inherited
+                from systemd.  This is a string like C{"INET"} or C{"UNIX"}, ie the
+                name of an address family from the L{socket} module, without the
+                C{"AF_"} prefix.
+            @type domain: C{str}
+
+            @param index: An offset into the list of file descriptors inherited from
+                systemd.
+            @type index: C{str}
+
+            @return: A two-tuple of parsed positional arguments and parsed keyword
+                arguments (a tuple and a dictionary).  These can be used to
+                construct an L{AdoptedStreamServerEndpoint}.
+            """
+            index = int(index)
+            fileno = self._sddaemon.inheritedDescriptors()[index]
+            addressFamily = getattr(socket, 'AF_' + domain)
+            return AdoptedStreamServerEndpoint(reactor, fileno, addressFamily)
 
 
-    def parseStreamServer(self, reactor, *args, **kwargs):
-        # Delegate to another function with a sane signature.  This function has
-        # an insane signature to trick zope.interface into believing the
-        # interface is correctly implemented.
-        return self._parseServer(reactor, *args, **kwargs)
+        def parseStreamServer(self, reactor, *args, **kwargs):
+            # Delegate to another function with a sane signature.  This function has
+            # an insane signature to trick zope.interface into believing the
+            # interface is correctly implemented.
+            return self._parseServer(reactor, *args, **kwargs)
 
 
 
