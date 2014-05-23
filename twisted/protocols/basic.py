@@ -555,8 +555,10 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
             while self._buffer and not self.paused:
                 if self.line_mode:
                     try:
-                        line, self._buffer = self._buffer.split(
-                            self.delimiter, 1)
+                        splitted = self._buffer.split(self.delimiter, 1)
+                        line = splitted[0]
+                        if len(splitted) > 1:
+                            self._buffer = splitted[1]
                     except ValueError:
                         if len(self._buffer) > self.MAX_LENGTH:
                             line, self._buffer = self._buffer, b''
