@@ -493,6 +493,8 @@ def isIPAddress(addr):
     @return: C{True} if C{addr} represents an IPv4 address, C{False}
     otherwise.
     """
+    if _PY3 and isinstance(addr, bytes):
+        raise TypeError("addr must be a string, not bytes")
     dottedParts = addr.split('.')
     if len(dottedParts) == 4:
         for octet in dottedParts:
@@ -519,6 +521,8 @@ def isIPv6Address(addr):
         otherwise.
     @rtype: C{bool}
     """
+    if _PY3 and isinstance(addr, bytes):
+        raise TypeError("addr must be a string, not bytes")
     if '%' in addr:
         addr = addr.split('%', 1)[0]
     if not addr:
