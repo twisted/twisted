@@ -138,8 +138,6 @@ class FileAuthority(MemoryAuthority):
     """
     An Authority that is loaded from a file.
     """
-    soa = None
-
     def __init__(self, filename):
         MemoryAuthority.__init__(self)
         self.loadFile(filename)
