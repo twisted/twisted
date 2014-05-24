@@ -265,14 +265,19 @@ def getSerial(filename = '/tmp/twisted-names.serial'):
 
 
 
-class FileAuthority(MemoryAuthority):
+class FileAuthority(common.ResolverBase):
     """
     An Authority that is loaded from a file.
     """
     def __init__(self, filename):
-        MemoryAuthority.__init__(self)
+        common.ResolverBase.__init__(self)
         self.loadFile(filename)
         self._cache = {}
+
+
+    @property
+    def _authority(self):
+        return MemoryAuthority(soa=self.soa, records=self.records)
 
 
     def __setstate__(self, state):
@@ -280,11 +285,11 @@ class FileAuthority(MemoryAuthority):
 
 
     def _lookup(self, name, cls, type, timeout=None):
-        return MemoryAuthority._lookup(self, name, cls, type, timeout)
+        return self._authority._lookup(self, name, cls, type, timeout)
 
 
     def lookupZone(self, name, timeout=10):
-        return MemoryAuthority.lookupZone(self, name, timeout)
+        return self._authority.lookupZone(self, name, timeout)
 
 
 
