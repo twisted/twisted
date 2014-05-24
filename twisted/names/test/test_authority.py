@@ -123,26 +123,11 @@ class MemoryAuthorityLookupTests(SynchronousTestCase):
         expected = (2222, 3333)
         actual = (
             MemoryAuthority(
-                soa=(b'example.com', dns.Record_SOA(
-                    mname = 'ns1.example.com',
-                    rname = 'hostmaster.example.com',
-                    serial = 0,
-                    refresh = 0,
-                    minimum = 1111,
-                    expire = 2222,
-                    retry = 0,
-                    ttl=0
-                )))._defaultTTL(),
+                soa=(b'example.com', dns.Record_SOA(minimum=1111, expire=2222))
+            )._defaultTTL(),
             MemoryAuthority(
-                soa=(b'example.com', dns.Record_SOA(
-                    mname = 'ns1.example.com',
-                    rname = 'hostmaster.example.com',
-                    serial = 0,
-                    refresh = 0,
-                    minimum = 3333,
-                    expire = 2222,
-                    retry = 0,
-                    ttl=0)))._defaultTTL()
+                soa=(b'example.com', dns.Record_SOA(minimum=3333, expire=2222))
+            )._defaultTTL()
         )
         self.assertEqual(expected, actual)
 
