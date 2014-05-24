@@ -60,8 +60,8 @@ class MemoryAuthorityTestsMixin(object):
 
     def assertAdditionalRecords(self, expectedRecords, **suppliedArguments):
         """
-        L{MemoryAuthority._additionalRecords} yields the A and AAAA records
-        corresponding to the domain name value of a supplied CNAME record.
+        Assert that L{MemoryAuthority._additionalRecords} yields the expected
+        records for the supplied answers and authority records.
         """
         expectedHeaders = []
         for name, records in expectedRecords.items():
@@ -77,7 +77,9 @@ class MemoryAuthorityTestsMixin(object):
                 **suppliedArguments)
         )
 
-        self.assertEqual(expectedHeaders, actualRecords)
+        sortBy = lambda r: (r.name.name, r.type)
+        self.assertEqual(sorted(expectedHeaders, key=sortBy),
+                         sorted(actualRecords, key=sortBy))
 
 
     def test_additionalRecordsCNAME(self):
@@ -145,6 +147,47 @@ class MemoryAuthorityTestsMixin(object):
                 )
             ],
             authority=[],
+            ttl=0
+        )
+
+
+    def test_additionalRecordsMixed(self):
+        """
+        L{MemoryAuthority._additionalRecords} yields the A and AAAA records
+        corresponding to the domain name values of all the supplied name
+        records.
+        """
+        self.assertAdditionalRecords(
+            expectedRecords={
+                b'example.com': [
+                    dns.Record_A(address="192.0.2.101"),
+                    dns.Record_AAAA(address="::1")
+                ],
+                b'ns1.example.com': [
+                    dns.Record_A(address="192.0.2.102"),
+                    dns.Record_AAAA(address="::2")
+                ],
+                b'mail.example.com': [
+                    dns.Record_A(address="192.0.2.103"),
+                    dns.Record_AAAA(address="::3")
+                ]
+            },
+            answer=[
+                dns.RRHeader(
+                    type=dns.CNAME,
+                    payload=dns.Record_CNAME(name=b'example.com')
+                ),
+                dns.RRHeader(
+                    type=dns.MX,
+                    payload=dns.Record_MX(name=b'mail.example.com')
+                )
+            ],
+            authority=[
+                dns.RRHeader(
+                    type=dns.NS,
+                    payload=dns.Record_NS(name=b'ns1.example.com')
+                )
+            ],
             ttl=0
         )
 
