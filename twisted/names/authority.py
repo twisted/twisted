@@ -34,8 +34,8 @@ class MemoryAuthority(common.ResolverBase, object):
     @ivar _ADDRESS_TYPES: Record types which are useful for inclusion in the
         additional section generated during additional processing.
     """
-    records = None
     _soa = b''
+    records = None
 
     # See https://twistedmatrix.com/trac/ticket/6650
     _ADDITIONAL_PROCESSING_TYPES = (dns.CNAME, dns.MX, dns.NS)

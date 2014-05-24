@@ -13,10 +13,10 @@ from zope.interface.verify import verifyClass
 
 
 
-class MemoryAuthorityTestsMixin(object):
+class AuthorityTestsMixin(object):
     """
-    Common tests for L{twisted.names.authority.MemoryAuthority} and its
-    subclasses.
+    Common tests for L{twisted.names.authority.MemoryAuthority} and other
+    authority classes.
     """
     def test_interface(self):
         """
@@ -24,6 +24,14 @@ class MemoryAuthorityTestsMixin(object):
         """
         self.assertTrue(verifyClass(IResolver, self.factoryClass))
 
+
+
+class MemoryAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
+    """
+    Tests for L{MemoryAuthority}.
+    """
+    factoryClass = MemoryAuthority
+    factory = factoryClass
 
     def test_recordsDefault(self):
         """
@@ -34,6 +42,39 @@ class MemoryAuthorityTestsMixin(object):
             self.factory().records
         )
 
+
+    def test_recordsOverride(self):
+        """
+        L{MemoryAuthority.records} can be set from the initialiser.
+        """
+        expectedRecords = {b'www.example.com': [dns.Record_A()]}
+        self.assertEqual(
+            expectedRecords,
+            self.factory(records=expectedRecords).records
+        )
+
+
+    def test_soaDefault(self):
+        """
+        L{MemoryAuthority._soa} defaults to C{b''}.
+        """
+        self.assertEqual(b'', self.factory()._soa)
+
+
+    def test_soaOverride(self):
+        """
+        L{MemoryAuthority._soa} can be set from the initialiser.
+        """
+        expectedSOA = b'example.com'
+        self.assertEqual(expectedSOA, self.factory(soa=expectedSOA)._soa)
+
+
+
+class MemoryAuthorityAdditionalRecordsTests(SynchronousTestCase):
+    """
+    """
+    factoryClass = MemoryAuthority
+    factory = factoryClass
 
     def test_additionalProcessingTypes(self):
         """
@@ -193,67 +234,58 @@ class MemoryAuthorityTestsMixin(object):
 
 
 
+soaName = b'example.com'
+soaRecord = dns.Record_SOA(
+    mname = 'ns1.example.com',
+    rname = 'hostmaster.example.com',
+    serial = 100,
+    refresh = 1234,
+    minimum = 7654,
+    expire = 19283784,
+    retry = 15,
+    ttl=1
+)
 
-class MemoryAuthorityTests(MemoryAuthorityTestsMixin, SynchronousTestCase):
+
+
+class TestFileAuthority(FileAuthority):
     """
-    Tests for L{MemoryAuthority}.
+    A L{FileAuthority} with a C{loadFile} method that loads some canned records
+    for use in tests.
     """
-    factoryClass = MemoryAuthority
-    factory = factoryClass
-
-
-    def test_recordsOverride(self):
-        """
-        L{MemoryAuthority.records} can be set from the initialiser.
-        """
-        expectedRecords = {b'www.example.com': [dns.Record_A()]}
-        self.assertEqual(
-            expectedRecords,
-            self.factory(records=expectedRecords).records
-        )
-
-
-    def test_soaDefault(self):
-        """
-        L{MemoryAuthority._soa} defaults to C{b''}.
-        """
-        self.assertEqual(b'', self.factory()._soa)
-
-
-    def test_soaOverride(self):
-        """
-        L{MemoryAuthority._soa} can be set from the initialiser.
-        """
-        expectedSOA = b'example.com'
-        self.assertEqual(expectedSOA, self.factory(soa=expectedSOA)._soa)
-
-
-
-class NoFileAuthority(FileAuthority):
-    """
-    A L{FileAuthority} with a noop C{loadFile} method for use in tests.
-    """
-    def __init__(self, records=None):
-        """
-        Initialise L{FileAuthority} with an empty filename and allow records to
-        be passed in.
-        """
-        FileAuthority.__init__(self, filename='')
-        if records is None:
-            records = {}
-        self.records = records
-
-
     def loadFile(self, filename):
-        """
-        Noop loadFile to allow L{FileAuthority.__init__} to run without error.
-        """
+        self.soa = (soaName, soaRecord)
+        self.records = {
+            soaName: [
+                soaRecord,
+            ]
+        }
 
 
 
-class FileAuthorityTests(MemoryAuthorityTestsMixin, SynchronousTestCase):
+class FileAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
     """
     Tests for L{FileAuthority}.
     """
-    factoryClass = NoFileAuthority
+    factoryClass = TestFileAuthority
     factory = factoryClass
+
+    def test_soa(self):
+        """
+        L{FileAuthority.soa} is a 2-tuple of (SOA name, SOA record).
+        """
+        self.assertEqual(
+            (soaName, soaRecord),
+            TestFileAuthority(filename='').soa
+        )
+
+
+    def test_records(self):
+        """
+        L{FileAuthority.records} is a dictionary mapping names to lists of
+        records.
+        """
+        self.assertEqual(
+            {soaName: [soaRecord]},
+            TestFileAuthority(filename='').records
+        )
