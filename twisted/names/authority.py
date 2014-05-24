@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.names.test.test_names -*-
+# -*- test-case-name: twisted.names.test.test_names,twisted.names.test.test_authority -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -15,6 +15,15 @@ from twisted.python import failure
 from twisted.python.compat import execfile
 
 import common
+
+
+
+class MemoryAuthority(object):
+    """
+    An in-memory authoritative resolver.
+    """
+
+
 
 def getSerial(filename = '/tmp/twisted-names.serial'):
     """Return a monotonically increasing (across program runs) integer.
