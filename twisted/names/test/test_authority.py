@@ -213,6 +213,20 @@ class MemoryAuthorityTests(MemoryAuthorityTestsMixin, SynchronousTestCase):
         )
 
 
+    def test_soaDefault(self):
+        """
+        L{MemoryAuthority._soa} defaults to C{b''}.
+        """
+        self.assertEqual(b'', self.factory()._soa)
+
+
+    def test_soaOverride(self):
+        """
+        L{MemoryAuthority._soa} can be set from the initialiser.
+        """
+        expectedSOA = b'example.com'
+        self.assertEqual(expectedSOA, self.factory(soa=expectedSOA)._soa)
+
 
 
 class NoFileAuthority(FileAuthority):

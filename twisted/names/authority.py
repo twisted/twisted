@@ -26,8 +26,8 @@ class MemoryAuthority(common.ResolverBase, object):
     """
     An in-memory authoritative resolver.
 
-    @ivar records: A dictionary of mapping domain names to lists of
-        authoritative records
+    @ivar _soa: See C{soa} of L{__init__}.
+    @ivar records: See C{records} of L{__init__}.
 
     @ivar _ADDITIONAL_PROCESSING_TYPES: Record types for which additional
         processing will be done.
@@ -35,15 +35,23 @@ class MemoryAuthority(common.ResolverBase, object):
         additional section generated during additional processing.
     """
     records = None
+    _soa = b''
 
     # See https://twistedmatrix.com/trac/ticket/6650
     _ADDITIONAL_PROCESSING_TYPES = (dns.CNAME, dns.MX, dns.NS)
     _ADDRESS_TYPES = (dns.A, dns.AAAA)
 
-    def __init__(self, records=None):
+    def __init__(self, soa=None, records=None):
         """
+        @param soa: The domain name of the start of authority.
+        @param records: A dictionary, mapping domain names to lists of authoritative
+            records.
         """
         common.ResolverBase.__init__(self)
+        if soa is None:
+            soa = b''
+        self._soa = soa
+
         if records is None:
             records = {}
         self.records = records
