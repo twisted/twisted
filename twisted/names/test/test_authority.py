@@ -8,7 +8,7 @@ from functools import partial
 
 from twisted.internet.interfaces import IResolver
 from twisted.names.authority import MemoryAuthority, FileAuthority
-from twisted.names import dns
+from twisted.names import dns, error
 from twisted.trial.unittest import SynchronousTestCase
 
 from zope.interface.verify import verifyClass
@@ -83,6 +83,36 @@ class MemoryAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
             expectedRecords,
             self.factory(records=expectedRecords).records
         )
+
+
+
+class MemoryAuthorityLookupTests(SynchronousTestCase):
+    """
+    Tests for L{MemoryAuthority._lookup}.
+    """
+    def test_authoritativeDomainError(self):
+        """
+        L{MemoryAuthority._lookup} returns L{error.AuthoritativeDomainError} if
+        the requested name has no records.
+        """
+        d = MemoryAuthority(
+            soa=(SOA_NAME, SOA_RECORD),
+            records={SOA_NAME: [SOA_RECORD]}
+        )._lookup(name=b'unknown.example.com', cls=dns.IN, type=dns.A)
+        self.failureResultOf(d, error.AuthoritativeDomainError)
+
+
+    def test_nonAuthoritativeDomainError(self):
+        """
+        L{MemoryAuthority._lookup} returns L{error.DomainError} if the requested
+        name is outside of the zone of authority.
+        """
+        # SOA_NAME is example.com so choose a different second level domain.
+        d = MemoryAuthority(
+            soa=(SOA_NAME, SOA_RECORD),
+            records={SOA_NAME: [SOA_RECORD]}
+        )._lookup(name=b'unknown.unknown.com', cls=dns.IN, type=dns.A)
+        self.failureResultOf(d, error.DomainError)
 
 
 

@@ -88,7 +88,7 @@ class MemoryAuthority(common.ResolverBase, object):
                             rec.ttl or ttl, rec, auth=True)
 
 
-    def _lookup(self, name, cls, type, timeout = None):
+    def _lookup(self, name, cls, type, timeout=None):
         """
         Determine a response to a particular DNS query.
 
