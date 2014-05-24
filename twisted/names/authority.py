@@ -88,6 +88,14 @@ class MemoryAuthority(common.ResolverBase, object):
                             rec.ttl or ttl, rec, auth=True)
 
 
+    def _defaultTTL(self):
+        """
+        Return the highest TTL from the SOA record I{minimum} and I{expires} TTL
+        values.
+        """
+        return max(self.soa[1].minimum, self.soa[1].expire)
+
+
     def _lookup(self, name, cls, type, timeout=None):
         """
         Determine a response to a particular DNS query.
@@ -116,7 +124,7 @@ class MemoryAuthority(common.ResolverBase, object):
         results = []
         authority = []
         additional = []
-        default_ttl = max(self.soa[1].minimum, self.soa[1].expire)
+        default_ttl = self._defaultTTL()
 
         domain_records = self.records.get(name.lower())
 
@@ -178,7 +186,7 @@ class MemoryAuthority(common.ResolverBase, object):
     def lookupZone(self, name, timeout = 10):
         if self.soa[0].lower() == name.lower():
             # Wee hee hee hooo yea
-            default_ttl = max(self.soa[1].minimum, self.soa[1].expire)
+            default_ttl = self._defaultTTL()
             if self.soa[1].ttl is not None:
                 soa_ttl = self.soa[1].ttl
             else:

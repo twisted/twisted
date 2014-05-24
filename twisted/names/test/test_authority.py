@@ -115,6 +115,37 @@ class MemoryAuthorityLookupTests(SynchronousTestCase):
         self.failureResultOf(d, error.DomainError)
 
 
+    def test_defaultTTL(self):
+        """
+        L{MemoryAuthority._defaultTTL} finds the highest TTL from the soa
+        minimum and expires TTLs.
+        """
+        expected = (2222, 3333)
+        actual = (
+            MemoryAuthority(
+                soa=(b'example.com', dns.Record_SOA(
+                    mname = 'ns1.example.com',
+                    rname = 'hostmaster.example.com',
+                    serial = 0,
+                    refresh = 0,
+                    minimum = 1111,
+                    expire = 2222,
+                    retry = 0,
+                    ttl=0
+                )))._defaultTTL(),
+            MemoryAuthority(
+                soa=(b'example.com', dns.Record_SOA(
+                    mname = 'ns1.example.com',
+                    rname = 'hostmaster.example.com',
+                    serial = 0,
+                    refresh = 0,
+                    minimum = 3333,
+                    expire = 2222,
+                    retry = 0,
+                    ttl=0)))._defaultTTL()
+        )
+        self.assertEqual(expected, actual)
+
 
 class MemoryAuthorityAdditionalRecordsTests(SynchronousTestCase):
     """
