@@ -21,6 +21,51 @@ from zope.interface import implementer
 
 
 
+def getSerial(filename = '/tmp/twisted-names.serial'):
+    """Return a monotonically increasing (across program runs) integer.
+
+    State is stored in the given file.  If it does not exist, it is
+    created with rw-/---/--- permissions.
+    """
+    serial = time.strftime('%Y%m%d')
+
+    o = os.umask(0177)
+    try:
+        if not os.path.exists(filename):
+            f = file(filename, 'w')
+            f.write(serial + ' 0')
+            f.close()
+    finally:
+        os.umask(o)
+
+    serialFile = file(filename, 'r')
+    lastSerial, ID = serialFile.readline().split()
+    ID = (lastSerial == serial) and (int(ID) + 1) or 0
+    serialFile.close()
+    serialFile = file(filename, 'w')
+    serialFile.write('%s %d' % (serial, ID))
+    serialFile.close()
+    serial = serial + ('%02d' % (ID,))
+    return serial
+
+
+#class LookupCacherMixin(object):
+#    _cache = None
+#
+#    def _lookup(self, name, cls, type, timeout = 10):
+#        if not self._cache:
+#            self._cache = {}
+#            self._meth = super(LookupCacherMixin, self)._lookup
+#
+#        if self._cache.has_key((name, cls, type)):
+#            return self._cache[(name, cls, type)]
+#        else:
+#            r = self._meth(name, cls, type, timeout)
+#            self._cache[(name, cls, type)] = r
+#            return r
+
+
+
 @implementer(IResolver)
 class MemoryAuthority(common.ResolverBase, object):
     """
@@ -217,51 +262,6 @@ class MemoryAuthority(common.ResolverBase, object):
                 auth.extend(res[1][1])
                 add.extend(res[1][2])
         return ans, auth, add
-
-
-
-def getSerial(filename = '/tmp/twisted-names.serial'):
-    """Return a monotonically increasing (across program runs) integer.
-
-    State is stored in the given file.  If it does not exist, it is
-    created with rw-/---/--- permissions.
-    """
-    serial = time.strftime('%Y%m%d')
-
-    o = os.umask(0177)
-    try:
-        if not os.path.exists(filename):
-            f = file(filename, 'w')
-            f.write(serial + ' 0')
-            f.close()
-    finally:
-        os.umask(o)
-
-    serialFile = file(filename, 'r')
-    lastSerial, ID = serialFile.readline().split()
-    ID = (lastSerial == serial) and (int(ID) + 1) or 0
-    serialFile.close()
-    serialFile = file(filename, 'w')
-    serialFile.write('%s %d' % (serial, ID))
-    serialFile.close()
-    serial = serial + ('%02d' % (ID,))
-    return serial
-
-
-#class LookupCacherMixin(object):
-#    _cache = None
-#
-#    def _lookup(self, name, cls, type, timeout = 10):
-#        if not self._cache:
-#            self._cache = {}
-#            self._meth = super(LookupCacherMixin, self)._lookup
-#
-#        if self._cache.has_key((name, cls, type)):
-#            return self._cache[(name, cls, type)]
-#        else:
-#            r = self._meth(name, cls, type, timeout)
-#            self._cache[(name, cls, type)] = r
-#            return r
 
 
 
