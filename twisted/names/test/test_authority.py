@@ -4,15 +4,18 @@
 """
 Test cases for L{twisted.names.authority}.
 """
+from twisted.internet.interfaces import IResolver
 from twisted.names.authority import MemoryAuthority
-from twisted.trial import unittest
+from twisted.trial.unittest import SynchronousTestCase
 
-class MemoryAuthorityTests(unittest.SynchronousTestCase):
+from zope.interface.verify import verifyClass
+
+class MemoryAuthorityTests(SynchronousTestCase):
     """
     Tests for L{twisted.names.authority.MemoryAuthority}.
     """
-    def test_init(self):
+    def test_interface(self):
         """
-        L{MemoryAuthority} ...
+        L{MemoryAuthority} implements L{IResolver}.
         """
-        self.fail('MemoryAuthority')
+        self.assertTrue(verifyClass(IResolver, MemoryAuthority))

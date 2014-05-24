@@ -11,14 +11,18 @@ import time
 
 from twisted.names import dns, error
 from twisted.internet import defer
+from twisted.internet.interfaces import IResolver
 from twisted.python import failure
 from twisted.python.compat import execfile
 
-import common
+from twisted.names import common
+
+from zope.interface import implementer
 
 
 
-class MemoryAuthority(object):
+@implementer(IResolver)
+class MemoryAuthority(common.ResolverBase, object):
     """
     An in-memory authoritative resolver.
     """
