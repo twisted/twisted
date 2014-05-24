@@ -60,14 +60,17 @@ class MemoryAuthorityTestsMixin(object):
 
     def test_additionalRecordsCNAME(self):
         """
-        L{MemoryAuthority._additionalRecords} yields the A records corresponding
-        to the domain name value of a supplied CNAME record.
+        L{MemoryAuthority._additionalRecords} yields the A and AAAA records
+        corresponding to the domain name value of a supplied CNAME record.
         """
-        expectedRecords = [dns.Record_A(address="192.0.2.100")]
-        expectedNames = [b"example.com"]
+        expectedRecords = [
+            dns.Record_A(address="192.0.2.100"),
+            dns.Record_AAAA(address="::1")
+        ]
+        expectedName = b"example.com"
         expectedHeaders = [
-            dns.RRHeader(name=n, type=r.TYPE, payload=r, auth=True)
-            for n, r in zip(expectedNames, expectedRecords)
+            dns.RRHeader(name=expectedName, type=r.TYPE, payload=r, auth=True)
+            for r in expectedRecords
         ]
         actualRecords = list(
             self.factory(
@@ -75,7 +78,7 @@ class MemoryAuthorityTestsMixin(object):
             )._additionalRecords(
                 answer=[
                     dns.RRHeader(type=dns.CNAME,
-                                 payload=dns.Record_CNAME(name=b'example.com'))
+                                 payload=dns.Record_CNAME(name=expectedName))
                 ],
                 authority=[],
                 ttl=0
