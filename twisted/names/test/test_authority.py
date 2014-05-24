@@ -58,6 +58,33 @@ class MemoryAuthorityTestsMixin(object):
         )
 
 
+    def test_additionalRecordsCNAME(self):
+        """
+        L{MemoryAuthority._additionalRecords} yields the A records corresponding
+        to the domain name value of a supplied CNAME record.
+        """
+        expectedRecords = [dns.Record_A(address="192.0.2.100")]
+        expectedNames = [b"example.com"]
+        expectedHeaders = [
+            dns.RRHeader(name=n, type=r.TYPE, payload=r, auth=True)
+            for n, r in zip(expectedNames, expectedRecords)
+        ]
+        actualRecords = list(
+            self.factory(
+                records={b'example.com': expectedRecords}
+            )._additionalRecords(
+                answer=[
+                    dns.RRHeader(type=dns.CNAME,
+                                 payload=dns.Record_CNAME(name=b'example.com'))
+                ],
+                authority=[],
+                ttl=0
+            )
+        )
+
+        self.assertEqual(expectedHeaders, actualRecords)
+
+
 
 class MemoryAuthorityTests(MemoryAuthorityTestsMixin, SynchronousTestCase):
     """
@@ -84,11 +111,15 @@ class NoFileAuthority(FileAuthority):
     """
     A L{FileAuthority} with a noop C{loadFile} method for use in tests.
     """
-    def __init__(self):
+    def __init__(self, records=None):
         """
-        Initialise L{FileAuthority} with an empty filename.
+        Initialise L{FileAuthority} with an empty filename and allow records to
+        be passed in.
         """
         FileAuthority.__init__(self, filename='')
+        if records is None:
+            records = {}
+        self.records = records
 
 
     def loadFile(self, filename):
