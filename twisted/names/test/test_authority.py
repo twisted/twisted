@@ -74,11 +74,13 @@ class MemoryAuthorityTestsMixin(object):
         ]
         actualRecords = list(
             self.factory(
-                records={b'example.com': expectedRecords}
+                records={expectedName: expectedRecords}
             )._additionalRecords(
                 answer=[
-                    dns.RRHeader(type=dns.CNAME,
-                                 payload=dns.Record_CNAME(name=expectedName))
+                    dns.RRHeader(
+                        type=dns.CNAME,
+                        payload=dns.Record_CNAME(name=expectedName)
+                    )
                 ],
                 authority=[],
                 ttl=0
