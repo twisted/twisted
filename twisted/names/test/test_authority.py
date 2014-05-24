@@ -20,11 +20,11 @@ SOA_RECORD = dns.Record_SOA(
     mname = 'ns1.example.com',
     rname = 'hostmaster.example.com',
     serial = 100,
-    refresh = 1234,
-    minimum = 7654,
-    expire = 19283784,
-    retry = 15,
-    ttl=1
+    refresh = 100,
+    minimum = 86400,
+    expire = 86400,
+    retry = 100,
+    ttl=100
 )
 
 
@@ -85,6 +85,34 @@ class MemoryAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
         )
 
 
+    def test_ttlDefault(self):
+        """
+        L{MemoryAuthority._defaultTTL} finds the highest TTL from the soa
+        minimum and expires TTLs.
+        """
+        expected = (2222, 3333)
+        actual = (
+            MemoryAuthority(
+                soa=(b'example.com', dns.Record_SOA(minimum=1111, expire=2222))
+            )._defaultTTL,
+            MemoryAuthority(
+                soa=(b'example.com', dns.Record_SOA(minimum=3333, expire=2222))
+            )._defaultTTL
+        )
+        self.assertEqual(expected, actual)
+
+
+    def test_ttlOverride(self):
+        """
+        L{MemoryAuthority._defaultTTL} can be set from the initialiser.
+        """
+        expectedTTL = 60
+        self.assertEqual(
+            expectedTTL,
+            self.factory(defaultTTL=expectedTTL)._defaultTTL
+        )
+
+
 
 class MemoryAuthorityLookupTests(SynchronousTestCase):
     """
@@ -114,22 +142,6 @@ class MemoryAuthorityLookupTests(SynchronousTestCase):
         )._lookup(name=b'unknown.unknown.com', cls=dns.IN, type=dns.A)
         self.failureResultOf(d, error.DomainError)
 
-
-    def test_defaultTTL(self):
-        """
-        L{MemoryAuthority._defaultTTL} finds the highest TTL from the soa
-        minimum and expires TTLs.
-        """
-        expected = (2222, 3333)
-        actual = (
-            MemoryAuthority(
-                soa=(b'example.com', dns.Record_SOA(minimum=1111, expire=2222))
-            )._defaultTTL(),
-            MemoryAuthority(
-                soa=(b'example.com', dns.Record_SOA(minimum=3333, expire=2222))
-            )._defaultTTL()
-        )
-        self.assertEqual(expected, actual)
 
 
 class MemoryAuthorityAdditionalRecordsTests(SynchronousTestCase):
@@ -173,16 +185,20 @@ class MemoryAuthorityAdditionalRecordsTests(SynchronousTestCase):
                     dns.RRHeader(name=name,
                                  type=record.TYPE,
                                  payload=record,
-                                 auth=True)
+                                 auth=True,
+                                 ttl=86400
+                             )
                 )
-        actualRecords = list(
-            self.factory(records=expectedRecords)._additionalRecords(
-                **suppliedArguments)
+        actualHeaders = list(
+            self.factory(
+                records=expectedRecords,
+                defaultTTL=86400
+            )._additionalRecords(**suppliedArguments)
         )
 
         sortBy = lambda r: (r.name.name, r.type)
         self.assertEqual(sorted(expectedHeaders, key=sortBy),
-                         sorted(actualRecords, key=sortBy))
+                         sorted(actualHeaders, key=sortBy))
 
 
     def test_additionalRecordsCNAME(self):
@@ -204,7 +220,6 @@ class MemoryAuthorityAdditionalRecordsTests(SynchronousTestCase):
                 )
             ],
             authority=[],
-            ttl=0
         )
 
 
@@ -227,7 +242,6 @@ class MemoryAuthorityAdditionalRecordsTests(SynchronousTestCase):
                 )
             ],
             authority=[],
-            ttl=0
         )
 
 
@@ -250,7 +264,6 @@ class MemoryAuthorityAdditionalRecordsTests(SynchronousTestCase):
                 )
             ],
             authority=[],
-            ttl=0
         )
 
 
@@ -291,7 +304,6 @@ class MemoryAuthorityAdditionalRecordsTests(SynchronousTestCase):
                     payload=dns.Record_NS(name=b'ns1.example.com')
                 )
             ],
-            ttl=0
         )
 
 
@@ -520,12 +532,32 @@ class TestFileAuthority(FileAuthority):
     for use in tests.
     """
     def loadFile(self, filename):
-        self.soa = (SOA_NAME, SOA_RECORD)
-        self.records = {
-            SOA_NAME: [
-                SOA_RECORD,
-            ]
-        }
+        """
+        A noop loadfile which allows the initialiser to run without error.
+
+        @param filename: ignored
+        """
+
+
+    @classmethod
+    def fromCannedRecords(cls, soa=None, records=None):
+        """
+        """
+        authority = cls(filename='')
+
+        if soa is None:
+            soa = (SOA_NAME, SOA_RECORD)
+        authority.soa = soa
+
+        if records is None:
+            records = {
+                SOA_NAME: [
+                    SOA_RECORD,
+                ]
+            }
+        authority.records = records
+
+        return authority
 
 
 
@@ -534,7 +566,6 @@ class FileAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
     Tests for L{FileAuthority}.
     """
     factoryClass = TestFileAuthority
-    factory = factoryClass
 
     def test_soa(self):
         """
@@ -542,7 +573,7 @@ class FileAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
         """
         self.assertEqual(
             (SOA_NAME, SOA_RECORD),
-            TestFileAuthority(filename='').soa
+            TestFileAuthority.fromCannedRecords().soa
         )
 
 
@@ -553,5 +584,5 @@ class FileAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
         """
         self.assertEqual(
             {SOA_NAME: [SOA_RECORD]},
-            TestFileAuthority(filename='').records
+            TestFileAuthority.fromCannedRecords().records
         )

@@ -41,7 +41,7 @@ class MemoryAuthority(common.ResolverBase, object):
     _ADDITIONAL_PROCESSING_TYPES = (dns.CNAME, dns.MX, dns.NS)
     _ADDRESS_TYPES = (dns.A, dns.AAAA)
 
-    def __init__(self, soa=None, records=None):
+    def __init__(self, soa=None, records=None, defaultTTL=None):
         """
         @param soa: The domain name of the start of authority.
         @param records: A dictionary, mapping domain names to lists of authoritative
@@ -56,8 +56,26 @@ class MemoryAuthority(common.ResolverBase, object):
             records = {}
         self.records = records
 
+        self._defaultTTLValue = defaultTTL
 
-    def _additionalRecords(self, answer, authority, ttl):
+
+    @property
+    def _defaultTTL(self):
+        """
+        Return either a fixed TTL or the highest TTL from the SOA record
+        I{minimum} and I{expires} TTL values.
+
+        XXX: Falling back to values from the SOA record is wrong, but left here
+        for backwards compatibility. It should instead be a simple instance
+        variable which is set from the constructor. See #6661.
+        """
+        defaultTTL = self._defaultTTLValue
+        if defaultTTL is None:
+            defaultTTL = max(self.soa[1].minimum, self.soa[1].expire)
+        return defaultTTL
+
+
+    def _additionalRecords(self, answer, authority):
         """
         Find locally known information that could be useful to the consumer of
         the response and construct appropriate records to include in the
@@ -71,9 +89,6 @@ class MemoryAuthority(common.ResolverBase, object):
         @param authority: A L{list} of the records which will be included in
             the I{authority} section of the response.
 
-        @param ttl: The default TTL for records for which this is not otherwise
-            specified.
-
         @return: A generator of L{dns.RRHeader} instances for inclusion in the
             I{additional} section.  These instances represent extra information
             about the records in C{answer} and C{authority}.
@@ -85,15 +100,7 @@ class MemoryAuthority(common.ResolverBase, object):
                     if rec.TYPE in self._ADDRESS_TYPES:
                         yield dns.RRHeader(
                             name, rec.TYPE, dns.IN,
-                            rec.ttl or ttl, rec, auth=True)
-
-
-    def _defaultTTL(self):
-        """
-        Return the highest TTL from the SOA record I{minimum} and I{expires} TTL
-        values.
-        """
-        return max(self.soa[1].minimum, self.soa[1].expire)
+                            rec.ttl or self._defaultTTL, rec, auth=True)
 
 
     def _lookup(self, name, cls, type, timeout=None):
@@ -124,7 +131,6 @@ class MemoryAuthority(common.ResolverBase, object):
         results = []
         authority = []
         additional = []
-        default_ttl = self._defaultTTL()
 
         domain_records = self.records.get(name.lower())
 
@@ -133,7 +139,7 @@ class MemoryAuthority(common.ResolverBase, object):
                 if record.ttl is not None:
                     ttl = record.ttl
                 else:
-                    ttl = default_ttl
+                    ttl = self._defaultTTL
 
                 if record.TYPE == dns.NS and name.lower() != self.soa[0].lower():
                     # NS record belong to a child zone: this is a referral.  As
@@ -155,8 +161,7 @@ class MemoryAuthority(common.ResolverBase, object):
 
             # https://tools.ietf.org/html/rfc1034#section-4.3.2 - sort of.
             # See https://twistedmatrix.com/trac/ticket/6732
-            additionalInformation = self._additionalRecords(
-                results, authority, default_ttl)
+            additionalInformation = self._additionalRecords(results, authority)
             if cnames:
                 results.extend(additionalInformation)
             else:
@@ -186,18 +191,17 @@ class MemoryAuthority(common.ResolverBase, object):
     def lookupZone(self, name, timeout = 10):
         if self.soa[0].lower() == name.lower():
             # Wee hee hee hooo yea
-            default_ttl = self._defaultTTL()
             if self.soa[1].ttl is not None:
                 soa_ttl = self.soa[1].ttl
             else:
-                soa_ttl = default_ttl
+                soa_ttl = self._defaultTTL
             results = [dns.RRHeader(self.soa[0], dns.SOA, dns.IN, soa_ttl, self.soa[1], auth=True)]
             for (k, r) in self.records.items():
                 for rec in r:
                     if rec.ttl is not None:
                         ttl = rec.ttl
                     else:
-                        ttl = default_ttl
+                        ttl = self._defaultTTL
                     if rec.TYPE != dns.SOA:
                         results.append(dns.RRHeader(k, rec.TYPE, dns.IN, ttl, rec, auth=True))
             results.append(results[0])
