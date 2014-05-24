@@ -5,7 +5,7 @@
 Test cases for L{twisted.names.authority}.
 """
 from twisted.internet.interfaces import IResolver
-from twisted.names.authority import MemoryAuthority, FileAuthority
+from twisted.names.authority import _MemoryAuthority, FileAuthority
 from twisted.names import dns, error
 from twisted.trial.unittest import SynchronousTestCase
 
@@ -29,12 +29,12 @@ SOA_RECORD = dns.Record_SOA(
 
 class AuthorityTestsMixin(object):
     """
-    Common tests for L{twisted.names.authority.MemoryAuthority} and other
+    Common tests for L{twisted.names.authority._MemoryAuthority} and other
     authority classes.
     """
     def test_interface(self):
         """
-        L{MemoryAuthority} implements L{IResolver}.
+        L{_MemoryAuthority} implements L{IResolver}.
         """
         self.assertTrue(verifyClass(IResolver, self.factoryClass))
 
@@ -42,21 +42,21 @@ class AuthorityTestsMixin(object):
 
 class MemoryAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
     """
-    Tests for L{MemoryAuthority}.
+    Tests for L{_MemoryAuthority}.
     """
-    factoryClass = MemoryAuthority
+    factoryClass = _MemoryAuthority
     factory = factoryClass
 
     def test_soaDefault(self):
         """
-        L{MemoryAuthority.soa} defaults to (C{b''}, None).
+        L{_MemoryAuthority.soa} defaults to (C{b''}, None).
         """
         self.assertEqual((b'', None), self.factory().soa)
 
 
     def test_soaOverride(self):
         """
-        L{MemoryAuthority.soa} can be set from the initialiser.
+        L{_MemoryAuthority.soa} can be set from the initialiser.
         """
         expectedSOA = (SOA_NAME, SOA_RECORD)
         self.assertEqual(expectedSOA, self.factory(soa=expectedSOA).soa)
@@ -64,7 +64,7 @@ class MemoryAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
 
     def test_recordsDefault(self):
         """
-        L{MemoryAuthority.records} is an empty dict by default.
+        L{_MemoryAuthority.records} is an empty dict by default.
         """
         self.assertEqual(
             {},
@@ -74,7 +74,7 @@ class MemoryAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
 
     def test_recordsOverride(self):
         """
-        L{MemoryAuthority.records} can be set from the initialiser.
+        L{_MemoryAuthority.records} can be set from the initialiser.
         """
         expectedRecords = {b'www.example.com': [dns.Record_A()]}
         self.assertEqual(
@@ -85,15 +85,15 @@ class MemoryAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
 
     def test_ttlDefault(self):
         """
-        L{MemoryAuthority._defaultTTL} finds the highest TTL from the soa
+        L{_MemoryAuthority._defaultTTL} finds the highest TTL from the soa
         minimum and expires TTLs.
         """
         expected = (2222, 3333)
         actual = (
-            MemoryAuthority(
+            _MemoryAuthority(
                 soa=(b'example.com', dns.Record_SOA(minimum=1111, expire=2222))
             )._defaultTTL,
-            MemoryAuthority(
+            _MemoryAuthority(
                 soa=(b'example.com', dns.Record_SOA(minimum=3333, expire=2222))
             )._defaultTTL
         )
@@ -102,7 +102,7 @@ class MemoryAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
 
     def test_ttlOverride(self):
         """
-        L{MemoryAuthority._defaultTTL} can be set from the initialiser.
+        L{_MemoryAuthority._defaultTTL} can be set from the initialiser.
         """
         expectedTTL = 60
         self.assertEqual(
@@ -114,14 +114,14 @@ class MemoryAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
 
 class MemoryAuthorityLookupTests(SynchronousTestCase):
     """
-    Tests for L{MemoryAuthority._lookup}.
+    Tests for L{_MemoryAuthority._lookup}.
     """
     def test_authoritativeDomainError(self):
         """
-        L{MemoryAuthority._lookup} returns L{error.AuthoritativeDomainError} if
+        L{_MemoryAuthority._lookup} returns L{error.AuthoritativeDomainError} if
         the requested name has no records.
         """
-        d = MemoryAuthority(
+        d = _MemoryAuthority(
             soa=(SOA_NAME, SOA_RECORD),
             records={SOA_NAME: [SOA_RECORD]}
         )._lookup(name=b'unknown.example.com', cls=dns.IN, type=dns.A)
@@ -130,11 +130,11 @@ class MemoryAuthorityLookupTests(SynchronousTestCase):
 
     def test_nonAuthoritativeDomainError(self):
         """
-        L{MemoryAuthority._lookup} returns L{error.DomainError} if the requested
+        L{_MemoryAuthority._lookup} returns L{error.DomainError} if the requested
         name is outside of the zone of authority.
         """
         # SOA_NAME is example.com so choose a different second level domain.
-        d = MemoryAuthority(
+        d = _MemoryAuthority(
             soa=(SOA_NAME, SOA_RECORD),
             records={SOA_NAME: [SOA_RECORD]}
         )._lookup(name=b'unknown.unknown.com', cls=dns.IN, type=dns.A)

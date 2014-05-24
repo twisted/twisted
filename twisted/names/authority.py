@@ -67,7 +67,7 @@ def getSerial(filename = '/tmp/twisted-names.serial'):
 
 
 @implementer(IResolver)
-class MemoryAuthority(common.ResolverBase, object):
+class _MemoryAuthority(common.ResolverBase, object):
     """
     An in-memory authoritative resolver.
 
@@ -277,7 +277,7 @@ class FileAuthority(common.ResolverBase):
 
     @property
     def _authority(self):
-        return MemoryAuthority(soa=self.soa, records=self.records)
+        return _MemoryAuthority(soa=self.soa, records=self.records)
 
 
     def __setstate__(self, state):

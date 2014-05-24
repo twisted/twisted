@@ -14,7 +14,7 @@ from twisted.trial import unittest
 from twisted.internet import reactor, defer, error
 from twisted.internet.defer import succeed
 from twisted.names import client, server, authority, dns
-from twisted.names.authority import MemoryAuthority
+from twisted.names.authority import _MemoryAuthority
 from twisted.names.dns import Message
 from twisted.names.error import DomainError
 from twisted.names.client import Resolver
@@ -58,7 +58,7 @@ my_soa = dns.Record_SOA(
     retry = 100,
     )
 
-test_domain_com = MemoryAuthority(
+test_domain_com = _MemoryAuthority(
     soa = ('test-domain.com', soa_record),
     records = {
         'test-domain.com': [
@@ -109,7 +109,7 @@ test_domain_com = MemoryAuthority(
     }
 )
 
-reverse_domain = MemoryAuthority(
+reverse_domain = _MemoryAuthority(
     soa = ('93.84.28.in-addr.arpa', reverse_soa),
     records = {
         '123.93.84.28.in-addr.arpa': [
@@ -120,7 +120,7 @@ reverse_domain = MemoryAuthority(
 )
 
 
-my_domain_com = MemoryAuthority(
+my_domain_com = _MemoryAuthority(
     soa = ('my-domain.com', my_soa),
     records = {
         'my-domain.com': [
@@ -538,7 +538,7 @@ class AuthorityTests(unittest.TestCase):
         same name which does not exist, the I{NS} record is not included in the
         authority section of the response.
         """
-        authority = MemoryAuthority(
+        authority = _MemoryAuthority(
             soa=(str(soa_record.mname), soa_record),
             records={
                 str(soa_record.mname): [
@@ -567,7 +567,7 @@ class AuthorityTests(unittest.TestCase):
         """
         subdomain = 'example.' + str(soa_record.mname)
         nameserver = dns.Record_NS('1.2.3.4')
-        authority = MemoryAuthority(
+        authority = _MemoryAuthority(
             soa=(str(soa_record.mname), soa_record),
             records={
                 subdomain: [
@@ -638,7 +638,7 @@ class AdditionalProcessingTests(unittest.TestCase):
         @return: A L{Deferred} that fires with the result of the resolver
             method give by C{method}.
         """
-        authority = MemoryAuthority(
+        authority = _MemoryAuthority(
             soa=(soa.mname.name, soa),
             records={
                 soa.mname.name: [makeRecord(target)],
