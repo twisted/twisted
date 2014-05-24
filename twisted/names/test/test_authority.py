@@ -13,6 +13,20 @@ from zope.interface.verify import verifyClass
 
 
 
+SOA_NAME = b'example.com'
+SOA_RECORD = dns.Record_SOA(
+    mname = 'ns1.example.com',
+    rname = 'hostmaster.example.com',
+    serial = 100,
+    refresh = 1234,
+    minimum = 7654,
+    expire = 19283784,
+    retry = 15,
+    ttl=1
+)
+
+
+
 class AuthorityTestsMixin(object):
     """
     Common tests for L{twisted.names.authority.MemoryAuthority} and other
@@ -33,6 +47,21 @@ class MemoryAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
     factoryClass = MemoryAuthority
     factory = factoryClass
 
+    def test_soaDefault(self):
+        """
+        L{MemoryAuthority.soa} defaults to (C{b''}, None).
+        """
+        self.assertEqual((b'', None), self.factory().soa)
+
+
+    def test_soaOverride(self):
+        """
+        L{MemoryAuthority.soa} can be set from the initialiser.
+        """
+        expectedSOA = (SOA_NAME, SOA_RECORD)
+        self.assertEqual(expectedSOA, self.factory(soa=expectedSOA).soa)
+
+
     def test_recordsDefault(self):
         """
         L{MemoryAuthority.records} is an empty dict by default.
@@ -52,21 +81,6 @@ class MemoryAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
             expectedRecords,
             self.factory(records=expectedRecords).records
         )
-
-
-    def test_soaDefault(self):
-        """
-        L{MemoryAuthority._soa} defaults to C{b''}.
-        """
-        self.assertEqual(b'', self.factory()._soa)
-
-
-    def test_soaOverride(self):
-        """
-        L{MemoryAuthority._soa} can be set from the initialiser.
-        """
-        expectedSOA = b'example.com'
-        self.assertEqual(expectedSOA, self.factory(soa=expectedSOA)._soa)
 
 
 
@@ -234,30 +248,16 @@ class MemoryAuthorityAdditionalRecordsTests(SynchronousTestCase):
 
 
 
-soaName = b'example.com'
-soaRecord = dns.Record_SOA(
-    mname = 'ns1.example.com',
-    rname = 'hostmaster.example.com',
-    serial = 100,
-    refresh = 1234,
-    minimum = 7654,
-    expire = 19283784,
-    retry = 15,
-    ttl=1
-)
-
-
-
 class TestFileAuthority(FileAuthority):
     """
     A L{FileAuthority} with a C{loadFile} method that loads some canned records
     for use in tests.
     """
     def loadFile(self, filename):
-        self.soa = (soaName, soaRecord)
+        self.soa = (SOA_NAME, SOA_RECORD)
         self.records = {
-            soaName: [
-                soaRecord,
+            SOA_NAME: [
+                SOA_RECORD,
             ]
         }
 
@@ -275,7 +275,7 @@ class FileAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
         L{FileAuthority.soa} is a 2-tuple of (SOA name, SOA record).
         """
         self.assertEqual(
-            (soaName, soaRecord),
+            (SOA_NAME, SOA_RECORD),
             TestFileAuthority(filename='').soa
         )
 
@@ -286,6 +286,6 @@ class FileAuthorityTests(AuthorityTestsMixin, SynchronousTestCase):
         records.
         """
         self.assertEqual(
-            {soaName: [soaRecord]},
+            {SOA_NAME: [SOA_RECORD]},
             TestFileAuthority(filename='').records
         )

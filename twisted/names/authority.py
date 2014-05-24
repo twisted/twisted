@@ -26,7 +26,7 @@ class MemoryAuthority(common.ResolverBase, object):
     """
     An in-memory authoritative resolver.
 
-    @ivar _soa: See C{soa} of L{__init__}.
+    @ivar soa: See C{soa} of L{__init__}.
     @ivar records: See C{records} of L{__init__}.
 
     @ivar _ADDITIONAL_PROCESSING_TYPES: Record types for which additional
@@ -34,7 +34,7 @@ class MemoryAuthority(common.ResolverBase, object):
     @ivar _ADDRESS_TYPES: Record types which are useful for inclusion in the
         additional section generated during additional processing.
     """
-    _soa = b''
+    soa = None
     records = None
 
     # See https://twistedmatrix.com/trac/ticket/6650
@@ -49,8 +49,8 @@ class MemoryAuthority(common.ResolverBase, object):
         """
         common.ResolverBase.__init__(self)
         if soa is None:
-            soa = b''
-        self._soa = soa
+            soa = (b'', None)
+        self.soa = soa
 
         if records is None:
             records = {}
