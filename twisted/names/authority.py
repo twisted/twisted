@@ -40,9 +40,13 @@ class MemoryAuthority(common.ResolverBase, object):
     _ADDITIONAL_PROCESSING_TYPES = (dns.CNAME, dns.MX, dns.NS)
     _ADDRESS_TYPES = (dns.A, dns.AAAA)
 
-    def __init__(self):
+    def __init__(self, records=None):
+        """
+        """
         common.ResolverBase.__init__(self)
-        self.records = {}
+        if records is None:
+            records = {}
+        self.records = records
 
 
 

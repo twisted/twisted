@@ -67,6 +67,18 @@ class MemoryAuthorityTests(MemoryAuthorityTestsMixin, SynchronousTestCase):
     factory = factoryClass
 
 
+    def test_recordsOverride(self):
+        """
+        L{MemoryAuthority.records} can be set from the initialiser.
+        """
+        expectedRecords = {b'www.example.com': [dns.Record_A()]}
+        self.assertEqual(
+            expectedRecords,
+            self.factory(records=expectedRecords).records
+        )
+
+
+
 
 class NoFileAuthority(FileAuthority):
     """
