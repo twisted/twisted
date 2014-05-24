@@ -25,7 +25,15 @@ from zope.interface import implementer
 class MemoryAuthority(common.ResolverBase, object):
     """
     An in-memory authoritative resolver.
+
+    @ivar _ADDITIONAL_PROCESSING_TYPES: Record types for which additional
+        processing will be done.
+    @ivar _ADDRESS_TYPES: Record types which are useful for inclusion in the
+        additional section generated during additional processing.
     """
+    # See https://twistedmatrix.com/trac/ticket/6650
+    _ADDITIONAL_PROCESSING_TYPES = (dns.CNAME, dns.MX, dns.NS)
+    _ADDRESS_TYPES = (dns.A, dns.AAAA)
 
 
 
@@ -74,18 +82,10 @@ def getSerial(filename = '/tmp/twisted-names.serial'):
 
 
 
-class FileAuthority(common.ResolverBase):
+class FileAuthority(MemoryAuthority):
     """
     An Authority that is loaded from a file.
-
-    @ivar _ADDITIONAL_PROCESSING_TYPES: Record types for which additional
-        processing will be done.
-    @ivar _ADDRESS_TYPES: Record types which are useful for inclusion in the
-        additional section generated during additional processing.
     """
-    # See https://twistedmatrix.com/trac/ticket/6650
-    _ADDITIONAL_PROCESSING_TYPES = (dns.CNAME, dns.MX, dns.NS)
-    _ADDRESS_TYPES = (dns.A, dns.AAAA)
 
     soa = None
     records = None
