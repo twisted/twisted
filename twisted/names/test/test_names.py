@@ -13,7 +13,8 @@ from twisted.trial import unittest
 
 from twisted.internet import reactor, defer, error
 from twisted.internet.defer import succeed
-from twisted.names import client, server, common, authority, dns
+from twisted.names import client, server, authority, dns
+from twisted.names.authority import MemoryAuthority
 from twisted.names.dns import Message
 from twisted.names.error import DomainError
 from twisted.names.client import Resolver
@@ -24,13 +25,6 @@ from twisted.test.proto_helpers import StringTransport, MemoryReactorClock
 
 def justPayload(results):
     return [r.payload for r in results[0]]
-
-class NoFileAuthority(authority.FileAuthority):
-    def __init__(self, soa, records):
-        # Yes, skip FileAuthority
-        common.ResolverBase.__init__(self)
-        self.soa, self.records = soa, records
-
 
 soa_record = dns.Record_SOA(
                     mname = 'test-domain.com',
@@ -64,7 +58,7 @@ my_soa = dns.Record_SOA(
     retry = 100,
     )
 
-test_domain_com = NoFileAuthority(
+test_domain_com = MemoryAuthority(
     soa = ('test-domain.com', soa_record),
     records = {
         'test-domain.com': [
@@ -115,7 +109,7 @@ test_domain_com = NoFileAuthority(
     }
 )
 
-reverse_domain = NoFileAuthority(
+reverse_domain = MemoryAuthority(
     soa = ('93.84.28.in-addr.arpa', reverse_soa),
     records = {
         '123.93.84.28.in-addr.arpa': [
@@ -126,7 +120,7 @@ reverse_domain = NoFileAuthority(
 )
 
 
-my_domain_com = NoFileAuthority(
+my_domain_com = MemoryAuthority(
     soa = ('my-domain.com', my_soa),
     records = {
         'my-domain.com': [
@@ -544,7 +538,7 @@ class AuthorityTests(unittest.TestCase):
         same name which does not exist, the I{NS} record is not included in the
         authority section of the response.
         """
-        authority = NoFileAuthority(
+        authority = MemoryAuthority(
             soa=(str(soa_record.mname), soa_record),
             records={
                 str(soa_record.mname): [
@@ -573,7 +567,7 @@ class AuthorityTests(unittest.TestCase):
         """
         subdomain = 'example.' + str(soa_record.mname)
         nameserver = dns.Record_NS('1.2.3.4')
-        authority = NoFileAuthority(
+        authority = MemoryAuthority(
             soa=(str(soa_record.mname), soa_record),
             records={
                 subdomain: [
@@ -644,7 +638,7 @@ class AdditionalProcessingTests(unittest.TestCase):
         @return: A L{Deferred} that fires with the result of the resolver
             method give by C{method}.
         """
-        authority = NoFileAuthority(
+        authority = MemoryAuthority(
             soa=(soa.mname.name, soa),
             records={
                 soa.mname.name: [makeRecord(target)],
