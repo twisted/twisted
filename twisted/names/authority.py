@@ -26,14 +26,23 @@ class MemoryAuthority(common.ResolverBase, object):
     """
     An in-memory authoritative resolver.
 
+    @ivar records: A dictionary of mapping domain names to lists of
+        authoritative records
+
     @ivar _ADDITIONAL_PROCESSING_TYPES: Record types for which additional
         processing will be done.
     @ivar _ADDRESS_TYPES: Record types which are useful for inclusion in the
         additional section generated during additional processing.
     """
+    records = None
+
     # See https://twistedmatrix.com/trac/ticket/6650
     _ADDITIONAL_PROCESSING_TYPES = (dns.CNAME, dns.MX, dns.NS)
     _ADDRESS_TYPES = (dns.A, dns.AAAA)
+
+    def __init__(self):
+        common.ResolverBase.__init__(self)
+        self.records = {}
 
 
 
@@ -86,12 +95,10 @@ class FileAuthority(MemoryAuthority):
     """
     An Authority that is loaded from a file.
     """
-
     soa = None
-    records = None
 
     def __init__(self, filename):
-        common.ResolverBase.__init__(self)
+        MemoryAuthority.__init__(self)
         self.loadFile(filename)
         self._cache = {}
 

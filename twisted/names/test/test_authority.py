@@ -13,15 +13,26 @@ from zope.interface.verify import verifyClass
 
 
 
-class MemoryAuthorityTests(SynchronousTestCase):
+class MemoryAuthorityTestsMixin(object):
     """
-    Tests for L{twisted.names.authority.MemoryAuthority}.
+    Common tests for L{twisted.names.authority.MemoryAuthority} and its
+    subclasses.
     """
     def test_interface(self):
         """
         L{MemoryAuthority} implements L{IResolver}.
         """
-        self.assertTrue(verifyClass(IResolver, MemoryAuthority))
+        self.assertTrue(verifyClass(IResolver, self.factoryClass))
+
+
+    def test_recordsDefault(self):
+        """
+        L{MemoryAuthority.records} is an empty dict by default.
+        """
+        self.assertEqual(
+            {},
+            self.factory().records
+        )
 
 
     def test_additionalProcessingTypes(self):
@@ -31,7 +42,7 @@ class MemoryAuthorityTests(SynchronousTestCase):
         """
         self.assertEqual(
             (dns.CNAME, dns.MX, dns.NS),
-            MemoryAuthority._ADDITIONAL_PROCESSING_TYPES
+            self.factoryClass._ADDITIONAL_PROCESSING_TYPES
         )
 
 
@@ -43,25 +54,41 @@ class MemoryAuthorityTests(SynchronousTestCase):
         """
         self.assertEqual(
             (dns.A, dns.AAAA),
-            MemoryAuthority._ADDRESS_TYPES
+            self.factoryClass._ADDRESS_TYPES
         )
 
 
 
-
-class FileAuthorityTests(SynchronousTestCase):
+class MemoryAuthorityTests(MemoryAuthorityTestsMixin, SynchronousTestCase):
     """
-    Tests for L{twisted.names.authority.FileAuthority}.
+    Tests for L{MemoryAuthority}.
     """
-    def test_interface(self):
-        """
-        L{FileAuthority} implements L{IResolver}.
-        """
-        self.assertTrue(verifyClass(IResolver, FileAuthority))
+    factoryClass = MemoryAuthority
+    factory = factoryClass
 
 
-    def test_memoryAuthority(self):
+
+class NoFileAuthority(FileAuthority):
+    """
+    A L{FileAuthority} with a noop C{loadFile} method for use in tests.
+    """
+    def __init__(self):
         """
-        L{FileAuthority} is a L{MemoryAuthority}
+        Initialise L{FileAuthority} with an empty filename.
         """
-        self.assertTrue(issubclass(FileAuthority, MemoryAuthority))
+        FileAuthority.__init__(self, filename='')
+
+
+    def loadFile(self, filename):
+        """
+        Noop loadFile to allow L{FileAuthority.__init__} to run without error.
+        """
+
+
+
+class FileAuthorityTests(MemoryAuthorityTestsMixin, SynchronousTestCase):
+    """
+    Tests for L{FileAuthority}.
+    """
+    factoryClass = NoFileAuthority
+    factory = factoryClass
