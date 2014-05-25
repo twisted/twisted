@@ -5,6 +5,8 @@
 Tests for L{twisted.python.systemd}.
 """
 
+from __future__ import division, absolute_import
+
 import os
 
 from twisted.trial.unittest import TestCase
@@ -104,7 +106,7 @@ class EnvironmentTests(EnvironmentMixin, InheritedDescriptorsMixin, TestCase):
         fakeEnvironment = self.initializeEnvironment(3, os.getpid())
         first = ListenFDs.fromEnvironment(environ=fakeEnvironment)
         second = ListenFDs.fromEnvironment(environ=fakeEnvironment)
-        self.assertEqual(range(3, 6), first.inheritedDescriptors())
+        self.assertEqual(list(range(3, 6)), first.inheritedDescriptors())
         self.assertEqual([], second.inheritedDescriptors())
 
 
@@ -170,4 +172,5 @@ class EnvironmentTests(EnvironmentMixin, InheritedDescriptorsMixin, TestCase):
                 'LISTEN_PID': str(os.getpid()),
                 'LISTEN_FDS': '5'})
         sddaemon = ListenFDs.fromEnvironment()
-        self.assertEqual(range(3, 3 + 5), sddaemon.inheritedDescriptors())
+        self.assertEqual(list(range(3, 3 + 5)),
+            sddaemon.inheritedDescriptors())
