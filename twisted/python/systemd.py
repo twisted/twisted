@@ -9,6 +9,8 @@ Currently only the minimum APIs necessary for using systemd's socket activation
 feature are supported.
 """
 
+from __future__ import division, absolute_import
+
 __all__ = ['ListenFDs']
 
 from os import getpid
