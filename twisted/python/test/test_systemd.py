@@ -172,4 +172,5 @@ class EnvironmentTests(EnvironmentMixin, InheritedDescriptorsMixin, TestCase):
                 'LISTEN_PID': str(os.getpid()),
                 'LISTEN_FDS': '5'})
         sddaemon = ListenFDs.fromEnvironment()
-        self.assertEqual(list(range(3, 3 + 5)), sddaemon.inheritedDescriptors())
+        self.assertEqual(list(range(3, 3 + 5)),
+            sddaemon.inheritedDescriptors())
