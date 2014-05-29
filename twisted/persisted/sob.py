@@ -14,10 +14,8 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
+from io import BytesIO
+
 from hashlib import md5
 from twisted.python import log, runtime
 from twisted.persisted import styles
@@ -92,7 +90,7 @@ class Persistent:
         if passphrase is None:
             dumpFunc(self.original, f)
         else:
-            s = StringIO.StringIO()
+            s = BytesIO()
             dumpFunc(self.original, s)
             f.write(_encrypt(passphrase, s.getvalue()))
         f.close()
@@ -164,8 +162,8 @@ def load(filename, style, passphrase=None):
     else:
         _load, mode = pickle.load, 'rb'
     if passphrase:
-        fp = StringIO.StringIO(_decrypt(passphrase,
-                                        open(filename, 'rb').read()))
+        fp = BytesIO(_decrypt(passphrase,
+                              open(filename, 'rb').read()))
     else:
         fp = open(filename, mode)
     ee = _EverythingEphemeral(sys.modules['__main__'])
@@ -205,9 +203,9 @@ def loadValueFromFile(filename, variable, passphrase=None):
     if passphrase:
         data = fileObj.read()
         data = _decrypt(passphrase, data)
-        exec data in d, d
+        exec(data, d, d)
     else:
-        exec fileObj in d, d
+        exec(fileObj, d, d)
     value = d[variable]
     return value
 
