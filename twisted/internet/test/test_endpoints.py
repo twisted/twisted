@@ -1048,9 +1048,10 @@ class WrappedIProtocolTests(unittest.TestCase):
         self.assertEqual(self.eventLog['executable'], wpp.executable)
         self.assertEqual(self.eventLog['data'], 'stderr1')
         self.assertEqual(self.eventLog['protocol'], wpp.protocol)
-        self.assertIn(
-            'wrote stderr unhandled by',
-            log.textFromEventDict(self.eventLog))
+        self.assertEqual(
+            self.eventLog['format'],
+            'Process %(executable)r wrote stderr unhandled '
+            'by %(protocol)s: %(data)s')
 
 
     def test_stderrSkip(self):
@@ -2458,7 +2459,7 @@ class ServerStringTests(unittest.TestCase):
         test_ssl.skip = test_sslWithDefaults.skip = skipSSL
         test_sslChainLoads.skip = skipSSL
         test_sslChainFileMustContainCert.skip = skipSSL
-        test_sslDHparameters.skip = skipSSL
+        test_sslDHparameters = skipSSL
 
 
     def test_unix(self):

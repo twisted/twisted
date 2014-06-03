@@ -341,7 +341,7 @@ class Reporter(TestResult):
 
     @ivar _publisher: The log publisher which will be observed for warning
         events.
-    @type _publisher: L{twisted.python.log.LogPublisher}
+    @type _publisher: L{LogPublisher} (or another type sufficiently similar)
     """
 
     _separator = '-' * 79

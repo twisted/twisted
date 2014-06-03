@@ -8,121 +8,15 @@ Tests for L{twisted.python.compat}.
 
 from __future__ import division, absolute_import
 
-import socket, sys, traceback, io, codecs
+import socket, sys, traceback
 
 from twisted.trial import unittest
 
-from twisted.python.compat import (
-    reduce, execfile, _PY3, comparable, cmp, nativeString, networkString,
-    unicode as unicodeCompat, lazyByteSlice, reraise, NativeStringIO,
-    iterbytes, intToBytes, ioType
-)
+from twisted.python.compat import reduce, execfile, _PY3
+from twisted.python.compat import comparable, cmp, nativeString, networkString
+from twisted.python.compat import unicode as unicodeCompat, lazyByteSlice
+from twisted.python.compat import reraise, NativeStringIO, iterbytes, intToBytes
 from twisted.python.filepath import FilePath
-
-
-
-class IOTypeTests(unittest.SynchronousTestCase):
-    """
-    Test cases for determining a file-like object's type.
-    """
-
-    def test_3StringIO(self):
-        """
-        An L{io.StringIO} accepts and returns text.
-        """
-        self.assertEquals(ioType(io.StringIO()), unicodeCompat)
-
-
-    def test_3BytesIO(self):
-        """
-        An L{io.BytesIO} accepts and returns bytes.
-        """
-        self.assertEquals(ioType(io.BytesIO()), bytes)
-
-
-    def test_3openTextMode(self):
-        """
-        A file opened via 'io.open' in text mode accepts and returns text.
-        """
-        self.assertEquals(ioType(io.open(self.mktemp(), "w")), unicodeCompat)
-
-
-    def test_3openBinaryMode(self):
-        """
-        A file opened via 'io.open' in binary mode accepts and returns bytes.
-        """
-        self.assertEquals(ioType(io.open(self.mktemp(), "wb")), bytes)
-
-
-    def test_2openTextMode(self):
-        """
-        The special built-in console file in Python 2 which has an 'encoding'
-        attribute should qualify as a special type, since it accepts both bytes
-        and text faithfully.
-        """
-        class VerySpecificLie(file):
-            """
-            In their infinite wisdom, the CPython developers saw fit not to
-            allow us a writable 'encoding' attribute on the built-in 'file'
-            type in Python 2, despite making it writable in C with
-            PyFile_SetEncoding.
-
-            Pretend they did not do that.
-            """
-            encoding = 'utf-8'
-
-        self.assertEquals(ioType(VerySpecificLie(self.mktemp(), "wb")),
-                          basestring)
-
-
-    def test_2StringIO(self):
-        """
-        Python 2's L{StringIO} and L{cStringIO} modules are both binary I/O.
-        """
-        from cStringIO import StringIO as cStringIO
-        from StringIO import StringIO
-        self.assertEquals(ioType(StringIO()), bytes)
-        self.assertEquals(ioType(cStringIO()), bytes)
-
-
-    def test_2openBinaryMode(self):
-        """
-        The normal 'open' builtin in Python 2 will always result in bytes I/O.
-        """
-        self.assertEquals(ioType(open(self.mktemp(), "w")), bytes)
-
-    if _PY3:
-        test_2openTextMode.skip = "The 'file' type is no longer available."
-        test_2openBinaryMode.skip = "'io.open' is now the same as 'open'."
-        test_2StringIO.skip = ("The 'StringIO' and 'cStringIO' modules were "
-                               "subsumed by the 'io' module.")
-
-
-    def test_codecsOpenBytes(self):
-        """
-        The L{codecs} module, oddly, returns a file-like object which returns
-        bytes when not passed an 'encoding' argument.
-        """
-        self.assertEquals(ioType(codecs.open(self.mktemp(), 'wb')),
-                          bytes)
-
-
-    def test_codecsOpenText(self):
-        """
-        When passed an encoding, however, the L{codecs} module returns unicode.
-        """
-        self.assertEquals(ioType(codecs.open(self.mktemp(), 'wb',
-                                             encoding='utf-8')),
-                          unicodeCompat)
-
-
-    def test_defaultToText(self):
-        """
-        When passed an object about which no sensible decision can be made, err
-        on the side of unicode.
-        """
-        self.assertEquals(ioType(object()), unicodeCompat)
-
 
 
 class CompatTestCase(unittest.SynchronousTestCase):
@@ -195,8 +89,7 @@ class IPv6Tests(unittest.SynchronousTestCase):
         self.assertEqual('::1', f('\x00' * 15 + '\x01'))
         self.assertEqual(
             'aef:b01:506:1001:ffff:9997:55:170',
-            f('\x0a\xef\x0b\x01\x05\x06\x10\x01\xff\xff\x99\x97\x00\x55\x01'
-              '\x70'))
+            f('\x0a\xef\x0b\x01\x05\x06\x10\x01\xff\xff\x99\x97\x00\x55\x01\x70'))
 
         self.assertEqual('1.0.1.0', g('\x01\x00\x01\x00'))
         self.assertEqual('170.85.170.85', g('\xaa\x55\xaa\x55'))
@@ -204,7 +97,6 @@ class IPv6Tests(unittest.SynchronousTestCase):
 
         self.assertEqual('100::', f('\x01' + '\x00' * 15))
         self.assertEqual('100::1', f('\x01' + '\x00' * 14 + '\x01'))
-
 
     def testPToN(self):
         from twisted.python.compat import inet_pton
@@ -598,11 +490,10 @@ class NetworkStringTests(unittest.SynchronousTestCase):
         test_bytes.skip = test_bytesOutOfRange.skip = (
             "Bytes behavior of networkString only provided on Python 2.")
 
-
     def test_unicode(self):
         """
-        L{networkString} returns a C{unicode} object passed to it encoded into
-        a C{bytes} instance.
+        L{networkString} returns a C{unicode} object passed to it encoded into a
+        C{bytes} instance.
         """
         self.assertEqual(b"foo", networkString(u"foo"))
 
@@ -706,8 +597,8 @@ class Python3BytesTests(unittest.SynchronousTestCase):
 
     def test_lazyByteSliceNoOffset(self):
         """
-        L{lazyByteSlice} called with some bytes returns a semantically equal
-        version of these bytes.
+        L{lazyByteSlice} called with some bytes returns a semantically equal version
+        of these bytes.
         """
         data = b'123XYZ'
         self.assertEqual(bytes(lazyByteSlice(data)), data)
@@ -715,8 +606,8 @@ class Python3BytesTests(unittest.SynchronousTestCase):
 
     def test_lazyByteSliceOffset(self):
         """
-        L{lazyByteSlice} called with some bytes and an offset returns a
-        semantically equal version of these bytes starting at the given offset.
+        L{lazyByteSlice} called with some bytes and an offset returns a semantically
+        equal version of these bytes starting at the given offset.
         """
         data = b'123XYZ'
         self.assertEqual(bytes(lazyByteSlice(data, 2)), data[2:])
@@ -724,8 +615,8 @@ class Python3BytesTests(unittest.SynchronousTestCase):
 
     def test_lazyByteSliceOffsetAndLength(self):
         """
-        L{lazyByteSlice} called with some bytes, an offset and a length returns
-        a semantically equal version of these bytes starting at the given
+        L{lazyByteSlice} called with some bytes, an offset and a length returns a
+        semantically equal version of these bytes starting at the given
         offset, up to the given length.
         """
         data = b'123XYZ'
