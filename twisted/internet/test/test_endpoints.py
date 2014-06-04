@@ -13,7 +13,7 @@ import socket
 from errno import EPERM
 from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP
 from zope.interface import implementer
-from zope.interface.verify import verifyObject
+from zope.interface.verify import verifyObject, verifyClass
 
 from twisted.python.compat import _PY3
 from twisted.trial import unittest
@@ -757,6 +757,9 @@ class MemoryProcessTransport(object):
 
     def getHost(self):
         return self.host
+
+
+verifyClass(interfaces.IProcessTransport, MemoryProcessTransport)
 
 
 
