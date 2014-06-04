@@ -41,8 +41,7 @@ from twisted.internet.task import LoopingCall
 
 if not _PY3:
     from twisted.plugin import IPlugin, getPlugins
-    from twisted.internet import stdio
-    from twisted.internet.stdio import PipeAddress
+    from twisted.internet.stdio import StandardIO, PipeAddress
     from twisted.python.constants import NamedConstant, Names
 else:
     from zope.interface import Interface
@@ -50,6 +49,7 @@ else:
         pass
     NamedConstant = object
     Names = object
+    StandardIO = None
 
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
@@ -252,7 +252,7 @@ class StandardIOEndpoint(object):
         dependent upon your platform).
     """
 
-    _stdio = stdio.StandardIO
+    _stdio = StandardIO
 
     def __init__(self, reactor):
         """
