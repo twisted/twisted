@@ -34,6 +34,7 @@ from twisted.test.proto_helpers import (MemoryReactorClock as MemoryReactor)
 from twisted.test import __file__ as testInitPath
 from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.test.proto_helpers import StringTransportWithDisconnection
+from twisted.internet.interfaces import ITransport
 
 pemPath = FilePath(testInitPath.encode("utf-8")).sibling(b"server.pem")
 
@@ -734,16 +735,12 @@ class StubApplicationProtocol(protocol.Protocol):
 class MemoryProcessTransport(StringTransportWithDisconnection, object):
     """
     A fake L{IProcessTransport} provider to be used in tests.
-
-    @ivar dataList: A list to which data is appended in writeToChild. Acts as
-        the child's stdin for testing.
     """
 
     def __init__(self, protocol=None):
         super(MemoryProcessTransport, self).__init__(
             hostAddress=_ProcessAddress(),
             peerAddress=_ProcessAddress())
-        self.dataList = []
         self.signals = []
         self.closedChildFDs = set()
         self.protocol = Protocol()
@@ -751,7 +748,7 @@ class MemoryProcessTransport(StringTransportWithDisconnection, object):
 
     def writeToChild(self, childFD, data):
         if childFD == 0:
-            self.dataList.append(data)
+            self.write(data)
 
 
     def closeStdin(self):
@@ -985,6 +982,13 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         verifyObject(IPushProducer, self.endpointTransport)
 
 
+    def test_verifyTransport(self):
+        """
+        L{_ProcessEndpointTransport}s provide L{ITransport}.
+        """
+        verifyObject(ITransport, self.endpointTransport)
+
+
     def test_constructor(self):
         """
         The L{_ProcessEndpointTransport} instance stores the process passed to
@@ -999,7 +1003,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         of string passed to it to the transport's stdin.
         """
         self.endpointTransport.writeSequence(['test1', 'test2', 'test3'])
-        self.assertEqual(self.process.dataList, ['test1', 'test2', 'test3'])
+        self.assertEqual(self.process.io.getvalue(), 'test1test2test3')
 
 
     def test_write(self):
@@ -1008,7 +1012,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         data passed to it to the child process's stdin.
         """
         self.endpointTransport.write('test')
-        self.assertEqual(self.process.dataList.pop(), 'test')
+        self.assertEqual(self.process.io.getvalue(), 'test')
 
 
     def test_loseConnection(self):

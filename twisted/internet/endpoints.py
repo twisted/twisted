@@ -277,36 +277,17 @@ class _IProcessTransportWithConsumerAndProducer(interfaces.IProcessTransport,
 
 
 
-@implementer(interfaces.ITransport)
 class _ProcessEndpointTransport(
         proxyForInterface(_IProcessTransportWithConsumerAndProducer,
                           '_process')):
     """
-    An L{ITransport} provider for the L{IProtocol} instance passed to the
-    process endpoint.
+    An L{ITransport}, L{IProcessTransport}, L{IConsumer}, and L{IPushProducer}
+    provider for the L{IProtocol} instance passed to the process endpoint.
 
     @ivar _process: An active process transport which will be used by write
         methods on this object to write data to a child process.
     @type _process: L{interfaces.IProcessTransport} provider
     """
-
-    def write(self, data):
-        """
-        Write to the child process's standard input.
-
-        @param data: The data to write on stdin.
-        """
-        self._process.writeToChild(0, data)
-
-
-    def writeSequence(self, data):
-        """
-        Write a list of strings to child process's stdin.
-
-        @param data: The list of chunks to write on stdin.
-        """
-        for chunk in data:
-            self._process.writeToChild(0, chunk)
 
 
 
