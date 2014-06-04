@@ -32,7 +32,7 @@ from twisted.protocols import basic
 from twisted.internet.task import Clock
 from twisted.test.proto_helpers import (MemoryReactorClock as MemoryReactor)
 from twisted.test import __file__ as testInitPath
-from twisted.internet.interfaces import IConsumer
+from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.test.proto_helpers import StringTransportWithDisconnection
 
 pemPath = FilePath(testInitPath.encode("utf-8")).sibling(b"server.pem")
@@ -976,6 +976,13 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         L{_ProcessEndpointTransport}s provide L{IConsumer}.
         """
         verifyObject(IConsumer, self.endpointTransport)
+
+
+    def test_verifyProducer(self):
+        """
+        L{_ProcessEndpointTransport}s provide L{IPushProducer}.
+        """
+        verifyObject(IPushProducer, self.endpointTransport)
 
 
     def test_constructor(self):

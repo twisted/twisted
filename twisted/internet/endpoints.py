@@ -266,13 +266,15 @@ class StandardIOEndpoint(object):
 
 
 class _IProcessTransportWithConsumerAndProducer(interfaces.IProcessTransport,
-                                                interfaces.IConsumer):
+                                                interfaces.IConsumer,
+                                                interfaces.IPushProducer):
     """
     An L{_IProcessTransportWithConsumerAndProducer} combines various interfaces
     to work around the issue that L{interfaces.IProcessTransport} is
     incompletely defined and doesn't specify flow-control interfaces, and that
     L{proxyForInterface} doesn't allow for multiple interfaces.
     """
+
 
 
 @implementer(interfaces.ITransport)
