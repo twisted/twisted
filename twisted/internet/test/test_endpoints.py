@@ -35,6 +35,7 @@ from twisted.test import __file__ as testInitPath
 from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.test.proto_helpers import StringTransportWithDisconnection
 from twisted.internet.interfaces import ITransport
+from twisted.internet.protocol import Factory
 
 pemPath = FilePath(testInitPath.encode("utf-8")).sibling(b"server.pem")
 
@@ -963,9 +964,14 @@ class ProcessEndpointTransportTests(unittest.TestCase):
     """
 
     def setUp(self):
-        self.process = MemoryProcessTransport()
-        self.endpointTransport = endpoints._ProcessEndpointTransport(
-            self.process)
+        self.reactor = MemoryProcessReactor()
+        self.endpoint = endpoints.ProcessEndpoint(self.reactor,
+                                                  '/bin/executable')
+        protocol = self.successResultOf(
+            self.endpoint.connect(Factory.forProtocol(Protocol))
+        )
+        self.process = self.reactor.processTransport
+        self.endpointTransport = protocol.transport
 
 
     def test_verifyConsumer(self):
