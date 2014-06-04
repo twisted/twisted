@@ -934,6 +934,13 @@ class ProcessEndpointTransportTests(unittest.TestCase):
             self.process)
 
 
+    def test_verifyConsumer(self):
+        """
+        L{_ProcessEndpointTransport}s provide L{IConsumer}.
+        """
+        verifyObject(IConsumer, self.endpointTransport)
+
+
     def test_constructor(self):
         """
         The L{_ProcessEndpointTransport} instance stores the process passed to
