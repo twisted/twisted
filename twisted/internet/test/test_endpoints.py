@@ -813,7 +813,7 @@ class MemoryProcessReactor(object):
         self.usePTY = usePTY
         self.childFDs = childFDs
 
-        self.processTransport = object()
+        self.processTransport = MemoryProcessTransport()
         self.processProtocol.makeConnection(self.processTransport)
         return self.processTransport
 
