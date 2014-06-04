@@ -246,11 +246,17 @@ class _WrappingFactory(ClientFactory):
 class StandardIOEndpoint(object):
     """
     A Standard Input/Output endpoint
+
+    @ivar _stdio: a callable, like L{stdio.StandardIO}, which takes an
+        L{IProtocol} provider and a C{reactor} keyword argument (interface
+        dependent upon your platform).
     """
+
+    _stdio = stdio.StandardIO
 
     def __init__(self, reactor):
         """
-        @param reactor: The reactor for the endpoint
+        @param reactor: The reactor for the endpoint.
         """
         self._reactor = reactor
 
@@ -259,7 +265,7 @@ class StandardIOEndpoint(object):
         """
         Implement L{IStreamServerEndpoint.listen} to listen on stdin/stdout
         """
-        return defer.execute(stdio.StandardIO,
+        return defer.execute(self._stdio,
                              stdioProtocolFactory.buildProtocol(PipeAddress()),
                              reactor=self._reactor)
 
