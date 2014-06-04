@@ -13,7 +13,7 @@ import socket
 from errno import EPERM
 from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP
 from zope.interface import implementer
-from zope.interface.verify import verifyObject
+from zope.interface.verify import verifyObject, verifyClass
 
 from twisted.python.compat import _PY3
 from twisted.trial import unittest
@@ -744,6 +744,8 @@ class MemoryProcessTransport(StringTransportWithDisconnection, object):
             hostAddress=_ProcessAddress(),
             peerAddress=_ProcessAddress())
         self.dataList = []
+        self.signals = []
+        self.closedChildFDs = set()
         self.protocol = Protocol()
 
 
@@ -752,9 +754,44 @@ class MemoryProcessTransport(StringTransportWithDisconnection, object):
             self.dataList.append(data)
 
 
+    def closeStdin(self):
+        """
+        Close standard input.
+        """
+        self.closeChildFD(0)
+
+
+    def closeStdout(self):
+        """
+        Close standard output.
+        """
+        self.closeChildFD(1)
+
+
+    def closeStderr(self):
+        """
+        Close standard error.
+        """
+        self.closeChildFD(2)
+
+
+    def closeChildFD(self, fd):
+        """
+        Close a child FD.
+        """
+        self.closedChildFDs.add(fd)
+
+
+    def signalProcess(self, signal):
+        """
+        Send a signal.
+        """
+        self.signals.append(signal)
+
+
 
 # verifyClass(interfaces.IConsumer, MemoryProcessTransport)
-# verifyClass(interfaces.IProcessTransport, MemoryProcessTransport)
+verifyClass(interfaces.IProcessTransport, MemoryProcessTransport)
 
 
 
