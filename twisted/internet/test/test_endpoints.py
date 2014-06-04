@@ -1000,7 +1000,19 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         The L{_ProcessEndpointTransport} instance stores the process passed to
         it.
         """
-        self.assertEqual(self.endpointTransport._process, self.process)
+        self.assertIdentical(self.endpointTransport._process, self.process)
+
+
+    def test_extraneousAttributes(self):
+        """
+        L{endpoints._ProcessEndpointTransport} filters out extraneous
+        attributes of its underlying transport, to present a more consistent
+        cross-platform view of subprocesses and prevent accidental
+        dependencies.
+        """
+        self.process.pipes = []
+        self.assertRaises(AttributeError,
+                          getattr, self.endpointTransport, 'pipes')
 
 
     def test_writeSequence(self):
