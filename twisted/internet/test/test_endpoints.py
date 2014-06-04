@@ -753,37 +753,22 @@ class MemoryProcessTransport(StringTransportWithDisconnection, object):
 
 
     def closeStdin(self):
-        """
-        Close standard input.
-        """
         self.closeChildFD(0)
 
 
     def closeStdout(self):
-        """
-        Close standard output.
-        """
         self.closeChildFD(1)
 
 
     def closeStderr(self):
-        """
-        Close standard error.
-        """
         self.closeChildFD(2)
 
 
     def closeChildFD(self, fd):
-        """
-        Close a child FD.
-        """
         self.closedChildFDs.add(fd)
 
 
     def signalProcess(self, signal):
-        """
-        Send a signal.
-        """
         self.signals.append(signal)
 
 
