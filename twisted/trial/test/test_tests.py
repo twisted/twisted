@@ -26,7 +26,9 @@ from __future__ import division, absolute_import
 import gc, sys, weakref
 import unittest as pyunit
 
-from twisted.python.compat import _PY3, NativeStringIO
+from six import StringIO
+
+from twisted.python.compat import _PY3
 from twisted.internet import defer, reactor
 from twisted.trial import unittest, reporter, util
 if not _PY3:
@@ -586,7 +588,7 @@ class TestReactorCleanup(unittest.SynchronousTestCase):
         """
         Setup our test case
         """
-        self.result = reporter.Reporter(NativeStringIO())
+        self.result = reporter.Reporter(StringIO())
         self.loader = runner.TestLoader()
 
     def test_leftoverSockets(self):

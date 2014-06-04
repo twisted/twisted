@@ -8,8 +8,9 @@
 
 from cgi import escape
 
+from six import StringIO
+
 from twisted.python import log
-from twisted.python.compat import NativeStringIO as StringIO
 
 
 def PRE(text):

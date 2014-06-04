@@ -20,7 +20,8 @@ import inspect
 import opcode
 from inspect import getmro
 
-from twisted.python.compat import _PY3, NativeStringIO as StringIO
+from six import StringIO
+from twisted.python.compat import _PY3
 from twisted.python import reflect
 
 count = 0

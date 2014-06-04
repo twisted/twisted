@@ -9,9 +9,10 @@ from __future__ import division, absolute_import
 
 import sys, warnings
 
+from six import StringIO
+
 from unittest import TestResult
 
-from twisted.python.compat import NativeStringIO as StringIO
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import (
     SynchronousTestCase, _collectWarnings, _setWarningRegistryToNone)

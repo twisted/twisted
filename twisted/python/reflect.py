@@ -21,8 +21,9 @@ from collections import deque
 
 RegexType = type(re.compile(""))
 
+from six import StringIO
 
-from twisted.python.compat import reraise, nativeString, NativeStringIO
+from twisted.python.compat import reraise, nativeString
 from twisted.python.compat import _PY3
 from twisted.python.deprecate import deprecated
 from twisted.python import compat
@@ -390,7 +391,7 @@ def _safeFormat(formatter, o):
     try:
         return formatter(o)
     except:
-        io = NativeStringIO()
+        io = StringIO()
         traceback.print_exc(file=io)
         className = _determineClassName(o)
         tbValue = io.getvalue()

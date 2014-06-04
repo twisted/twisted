@@ -10,9 +10,11 @@ from __future__ import division, absolute_import
 
 import os, sys
 
+from six import StringIO
+
 from zope.interface import implementer
 
-from twisted.python.compat import _PY3, NativeStringIO
+from twisted.python.compat import _PY3
 from twisted.python import filepath
 from twisted.internet.interfaces import IProcessTransport
 from twisted.internet import defer
@@ -560,7 +562,7 @@ class RemoveSafelyTests(SynchronousTestCase):
             raise OSError()
 
         # Patch stdout so we can check the print statements in _removeSafely
-        out = NativeStringIO()
+        out = StringIO()
         self.patch(sys, 'stdout', out)
 
         # Set up a trial directory with a _trial_marker
@@ -596,7 +598,7 @@ class RemoveSafelyTests(SynchronousTestCase):
             raise OSError("path movement failed")
 
         # Patch stdout so we can check the print statements in _removeSafely
-        out = NativeStringIO()
+        out = StringIO()
         self.patch(sys, 'stdout', out)
 
         # Set up a trial directory with a _trial_marker

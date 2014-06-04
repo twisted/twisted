@@ -7,9 +7,11 @@ Test code for policies.
 
 from __future__ import division, absolute_import
 
+from six import StringIO
+
 from zope.interface import Interface, implementer, implementedBy
 
-from twisted.python.compat import NativeStringIO, _PY3
+from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.proto_helpers import StringTransportWithDisconnection
@@ -808,7 +810,7 @@ class TestLoggingFactory(policies.TrafficLoggingFactory):
     openFile = None
     def open(self, name):
         assert self.openFile is None, "open() called too many times"
-        self.openFile = NativeStringIO()
+        self.openFile = StringIO()
         return self.openFile
 
 

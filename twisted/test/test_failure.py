@@ -13,7 +13,9 @@ import traceback
 import pdb
 import linecache
 
-from twisted.python.compat import NativeStringIO, _PY3
+from six import StringIO
+
+from twisted.python.compat import _PY3
 from twisted.python import reflect
 from twisted.python import failure
 
@@ -219,7 +221,7 @@ class FailureTestCase(SynchronousTestCase):
             exampleLocalVar = 'xyz'
 
         f = getDivisionFailure(captureVars=captureVars)
-        out = NativeStringIO()
+        out = StringIO()
         if cleanFailure:
             f.cleanFailure()
         f.printDetailedTraceback(out)
@@ -274,7 +276,7 @@ class FailureTestCase(SynchronousTestCase):
             exampleLocalVar = 'abcde'
 
         f = getDivisionFailure()
-        out = NativeStringIO()
+        out = StringIO()
         f.printBriefTraceback(out)
         tb = out.getvalue()
         stack = ''
@@ -321,7 +323,7 @@ class FailureTestCase(SynchronousTestCase):
             exampleLocalVar = 'xyzzy'
 
         f = getDivisionFailure(captureVars=captureVars)
-        out = NativeStringIO()
+        out = StringIO()
         f.printTraceback(out)
         tb = out.getvalue()
         stack = ''
