@@ -13,7 +13,7 @@ import socket
 from errno import EPERM
 from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP
 from zope.interface import implementer
-from zope.interface.verify import verifyObject, verifyClass
+from zope.interface.verify import verifyObject
 
 from twisted.python.compat import _PY3
 from twisted.trial import unittest
@@ -32,6 +32,9 @@ from twisted.protocols import basic
 from twisted.internet.task import Clock
 from twisted.test.proto_helpers import (MemoryReactorClock as MemoryReactor)
 from twisted.test import __file__ as testInitPath
+from twisted.internet.interfaces import IConsumer
+from twisted.test.proto_helpers import StringTransportWithDisconnection
+
 pemPath = FilePath(testInitPath.encode("utf-8")).sibling(b"server.pem")
 
 if not _PY3:
@@ -728,7 +731,7 @@ class StubApplicationProtocol(protocol.Protocol):
 
 
 @implementer(interfaces.IProcessTransport)
-class MemoryProcessTransport(object):
+class MemoryProcessTransport(StringTransportWithDisconnection, object):
     """
     A fake L{IProcessTransport} provider to be used in tests.
 
@@ -736,10 +739,12 @@ class MemoryProcessTransport(object):
         the child's stdin for testing.
     """
 
-    def __init__(self):
+    def __init__(self, protocol=None):
+        super(MemoryProcessTransport, self).__init__(
+            hostAddress=_ProcessAddress(),
+            peerAddress=_ProcessAddress())
         self.dataList = []
-        self.host = _ProcessAddress()
-        self.peer = _ProcessAddress()
+        self.protocol = Protocol()
 
 
     def writeToChild(self, childFD, data):
@@ -747,19 +752,9 @@ class MemoryProcessTransport(object):
             self.dataList.append(data)
 
 
-    def loseConnection(self):
-        self.loseConnectionFlag = True
 
-
-    def getPeer(self):
-        return self.peer
-
-
-    def getHost(self):
-        return self.host
-
-
-verifyClass(interfaces.IProcessTransport, MemoryProcessTransport)
+# verifyClass(interfaces.IConsumer, MemoryProcessTransport)
+# verifyClass(interfaces.IProcessTransport, MemoryProcessTransport)
 
 
 
@@ -971,7 +966,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         instance returns a call to the process transport's loseConnection.
         """
         self.endpointTransport.loseConnection()
-        self.assertEqual(self.process.loseConnectionFlag, True)
+        self.assertEqual(self.process.connected, False)
 
 
     def test_getHost(self):
@@ -981,7 +976,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         """
         host = self.endpointTransport.getHost()
         self.assertIsInstance(host, _ProcessAddress)
-        self.assertIs(host, self.process.host)
+        self.assertIs(host, self.process.getHost())
 
 
     def test_getPeer(self):
@@ -991,7 +986,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         """
         peer = self.endpointTransport.getPeer()
         self.assertIsInstance(peer, _ProcessAddress)
-        self.assertIs(peer, self.process.peer)
+        self.assertIs(peer, self.process.getPeer())
 
 
 
