@@ -1003,6 +1003,56 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         self.assertIdentical(self.endpointTransport._process, self.process)
 
 
+    def test_registerProducer(self):
+        """
+        Registering a producer with the endpoint transport registers it with
+        the underlying process transport.
+        """
+        @implementer(IPushProducer)
+        class AProducer(object):
+            pass
+        aProducer = AProducer()
+        self.endpointTransport.registerProducer(aProducer, False)
+        self.assertIdentical(self.process.producer, aProducer)
+
+
+    def test_pauseProducing(self):
+        """
+        Pausing the endpoint transport pauses the underlying process transport.
+        """
+        self.endpointTransport.pauseProducing()
+        self.assertEqual(self.process.producerState, 'paused')
+
+
+    def test_resumeProducing(self):
+        """
+        Resuming the endpoint transport resumes the underlying process
+        transport.
+        """
+        self.test_pauseProducing()
+        self.endpointTransport.resumeProducing()
+        self.assertEqual(self.process.producerState, 'producing')
+
+
+    def test_stopProducing(self):
+        """
+        Stopping the endpoint transport as a producer stops the underlying
+        process transport.
+        """
+        self.endpointTransport.stopProducing()
+        self.assertEqual(self.process.producerState, 'stopped')
+
+
+    def test_unregisterProducer(self):
+        """
+        Unregistring the endpoint transport's producer unregisters the
+        underlying process transport's producer.
+        """
+        self.test_registerProducer()
+        self.endpointTransport.unregisterProducer()
+        self.assertIdentical(self.process.producer, None)
+
+
     def test_extraneousAttributes(self):
         """
         L{endpoints._ProcessEndpointTransport} filters out extraneous
