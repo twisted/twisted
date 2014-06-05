@@ -3328,4 +3328,5 @@ if _PY3:
          AdoptedStreamServerEndpointTestCase, SystemdEndpointPluginTests,
          TCP6ServerEndpointPluginTests, StandardIOEndpointPluginTests,
          ProcessEndpointsTestCase, WrappedIProtocolTests,
+         ProcessEndpointTransportTests,
          )
