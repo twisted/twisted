@@ -1103,10 +1103,4 @@ So what did you learn in this document?
   doesn't have bad side effects
 - And some small tips you can't live without.
 
-If one of the topics still looks cloudy to you, please give us your feedback!
-You can file tickets to improve this document
-
-`on the Twisted web site <http://twistedmatrix.com/>`_ .
-
-
-
+If one of the topics still looks cloudy to you, please give us your feedback! You can file tickets to improve this document - learn how to contribute `on the Twisted web site <http://twistedmatrix.com/trac/wiki/TwistedDevelopment/>`_ .
