@@ -674,21 +674,6 @@ class NewsBuilder(object):
             replaceInFile(news.path, {oldHeader: newHeader})
 
 
-    def main(self, args):
-        """
-        Build all news files.
-
-        @param args: The command line arguments to process.  This must contain
-            one string, the path to the base of the Twisted checkout for which
-            to build the news.
-        @type args: C{list} of C{str}
-        """
-        if len(args) != 1:
-            sys.exit("Must specify one argument: the path to the "
-                     "Twisted checkout")
-        self.buildAll(FilePath(args[0]))
-
-
 
 class SphinxBuilder(object):
     """
@@ -1156,3 +1141,55 @@ class BuildAPIDocsScript(object):
             sys.exit("Must specify two arguments: "
                      "Twisted checkout and destination path")
         self.buildAPIDocs(FilePath(args[0]), FilePath(args[1]))
+
+
+
+class BuildNewsOptions(Options):
+    """
+    Command line parsing for L{BuildNewsScript}.
+    """
+    synopsis = "build-news [options] REPOSITORY_PATH"
+    longdesc = """
+    REPOSITORY_PATH: The path to the subversion repository containing the 
+    topfiles.
+    """
+
+    def parseArgs(self, repositoryPath):
+        """
+        Parse positional arguments.
+        """
+        self['repositoryPath'] = FilePath(repositoryPath)
+
+
+
+class BuildNewsScript(object):
+    """
+    The entry point for the I{build-news} script.
+    """
+    def __init__(self, newsBuilder=None, stderr=None):
+        """
+        @param newsBuilder: A L{NewsBuilder} instance.
+        @param stderr: A file to which stderr messages will be written.
+        """
+        if newsBuilder is None:
+            newsBuilder = NewsBuilder()
+        self.newsBuilder = newsBuilder
+
+        if stderr is None:
+            stderr = sys.stderr
+        self.stderr = stderr
+
+
+    def main(self, args):
+        """
+        The entry point for the I{build-news} script.
+        """
+        options = BuildNewsOptions()
+        try:
+            options.parseOptions(args)
+        except UsageError as e:
+            message = u'ERROR: {}\n'.format(e.message)
+            self.stderr.write(message.encode('utf-8'))
+            raise SystemExit(1)
+
+        self.newsBuilder.buildAll(options['repositoryPath'])

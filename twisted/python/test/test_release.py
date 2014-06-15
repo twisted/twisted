@@ -10,6 +10,7 @@ only ever performed on Linux.
 
 
 import glob
+import io
 import operator
 import os
 import sys
@@ -33,7 +34,8 @@ from twisted.python._release import (
     changeAllProjectVersions, VERSION_OFFSET, filePathDelta, CommandFailed,
     DistributionBuilder, APIBuilder, BuildAPIDocsScript, buildAllTarballs,
     runCommand, UncleanWorkingDirectory, NotWorkingDirectory,
-    ChangeVersionsScript, BuildTarballsScript, NewsBuilder, SphinxBuilder)
+    ChangeVersionsScript, BuildTarballsScript, NewsBuilder, SphinxBuilder,
+    BuildNewsOptions, BuildNewsScript)
 
 if os.name != 'posix':
     skip = "Release toolchain only supported on POSIX."
@@ -1960,23 +1962,84 @@ class ScriptTests(StructureAssertingMixin, TestCase):
                           ["a", "b", "c", "d"])
 
 
-    def test_badNumberOfArgumentsToBuildNews(self):
+
+class BuildNewsOptionsTests(TestCase):
+    """
+    Tests for L{BuildNewsOptions}.
+    """
+    def test_args(self):
         """
-        L{NewsBuilder.main} raises L{SystemExit} when other than 1 argument is
-        passed to it.
+        L{BuildNewsOptions.parseOptions} accepts a I{repositoryPath} positional
+        argument and stores it as a L{FilePath}.
         """
-        newsBuilder = NewsBuilder()
-        self.assertRaises(SystemExit, newsBuilder.main, [])
-        self.assertRaises(SystemExit, newsBuilder.main, ["hello", "world"])
+        expectedPath = b'/foo/bar/baz'
+        options = BuildNewsOptions()
+        options.parseOptions([expectedPath])
+        self.assertEqual(FilePath(expectedPath), options['repositoryPath'])
 
 
-    def test_buildNews(self):
+
+class BuildNewsScriptTests(TestCase):
+    """
+    Tests for L{BuildNewsScript}.
+    """
+    def test_argsTooFew(self):
         """
-        L{NewsBuilder.main} calls L{NewsBuilder.buildAll} with a L{FilePath}
-        instance constructed from the path passed to it.
+        L{BuildNewsScript.main} raises L{SystemExit} when less than 1 argument
+        is passed to it and writes a message to stderr.
         """
-        builds = []
-        newsBuilder = NewsBuilder()
-        newsBuilder.buildAll = builds.append
-        newsBuilder.main(["/foo/bar/baz"])
-        self.assertEqual(builds, [FilePath("/foo/bar/baz")])
+        stderr = io.BytesIO()
+        script = BuildNewsScript(stderr=stderr)
+        error = self.assertRaises(SystemExit, script.main, [])
+        self.assertEqual(
+            (1, b'ERROR: Wrong number of arguments.\n'),
+            (error.code, stderr.getvalue())
+        )
+
+
+    def test_argsTooMany(self):
+        """
+        L{BuildNewsScript.main} raises L{SystemExit} when more than 1 argument
+        is passed to it and writes a message to stderr.
+        """
+        stderr = io.BytesIO()
+        script = BuildNewsScript(stderr=stderr)
+        error = self.assertRaises(SystemExit, script.main, ["hello", "world"])
+        self.assertEqual(
+            (1, b'ERROR: Wrong number of arguments.\n'),
+            (error.code, stderr.getvalue())
+        )
+
+
+    def test_mainCallsBuildAll(self):
+        """
+        L{BuildNewsScript.main} calls L{NewsBuilder.buildAll} with the supplied
+        repository directory path.
+        """
+        expectedPath = b'/foo/bar/baz'
+        fakeNewsBuilder = FakeNewsBuilder()
+        script = BuildNewsScript(newsBuilder=fakeNewsBuilder)
+        script.main([expectedPath])
+        self.assertEqual(
+            [FilePath(expectedPath)],
+            fakeNewsBuilder.buildAllCalls
+        )
+
+
+
+class FakeNewsBuilder(object):
+    """
+    A fake L{NewsBuilder} which records the arguments passed to its methods.
+    """
+    def __init__(self):
+        """
+        Initialise lists for recording method calls.
+        """
+        self.buildAllCalls = []
+
+
+    def buildAll(self, baseDirectory):
+        """
+        Record calls to L{NewsBuilder.buildAll}.
+        """
+        self.buildAllCalls.append(baseDirectory)
