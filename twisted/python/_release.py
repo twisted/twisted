@@ -12,15 +12,15 @@ Only Linux is supported by this code.  It should not be used by any tools
 which must run on multiple platforms (eg the setup.py script).
 """
 
-import textwrap
 from datetime import date
-import re
 import sys
 import os
 from tempfile import mkdtemp
 import tarfile
 
 from subprocess import PIPE, STDOUT, Popen
+
+from newsbuilder import NewsBuilder
 
 from twisted.python.versions import Version
 from twisted.python.filepath import FilePath
@@ -239,7 +239,6 @@ def findTwistedProjects(baseDirectory):
 
 
 
-
 def generateVersionFileData(version):
     """
     Generate the data to be placed into a _version.py file.
@@ -352,326 +351,6 @@ class APIBuilder(object):
              "--add-package", packagePath.path,
              "--html-output", outputPath.path,
              "--html-write-function-pages", "--quiet", "--make-html"])
-
-
-
-class NewsBuilder(object):
-    """
-    Generate the new section of a NEWS file.
-
-    The C{_FEATURE}, C{_BUGFIX}, C{_DOC}, C{_REMOVAL}, and C{_MISC}
-    attributes of this class are symbolic names for the news entry types
-    which are supported.  Conveniently, they each also take on the value of
-    the file name extension which indicates a news entry of that type.
-
-    @cvar _headings: A C{dict} mapping one of the news entry types to the
-        heading to write out for that type of news entry.
-
-    @cvar _NO_CHANGES: A C{str} giving the text which appears when there are
-        no significant changes in a release.
-
-    @cvar _TICKET_HINT: A C{str} giving the text which appears at the top of
-        each news file and which should be kept at the top, not shifted down
-        with all the other content.  Put another way, this is the text after
-        which the new news text is inserted.
-    """
-
-    _FEATURE = ".feature"
-    _BUGFIX = ".bugfix"
-    _DOC = ".doc"
-    _REMOVAL = ".removal"
-    _MISC = ".misc"
-
-    _headings = {
-        _FEATURE: "Features",
-        _BUGFIX: "Bugfixes",
-        _DOC: "Improved Documentation",
-        _REMOVAL: "Deprecations and Removals",
-        _MISC: "Other"}
-
-    _NO_CHANGES = "No significant changes have been made for this release.\n"
-
-    _TICKET_HINT = (
-        'Ticket numbers in this file can be looked up by visiting\n'
-        'http://twistedmatrix.com/trac/ticket/<number>\n'
-        '\n')
-
-    def _today(self):
-        """
-        Return today's date as a string in YYYY-MM-DD format.
-        """
-        return date.today().strftime('%Y-%m-%d')
-
-
-    def _findChanges(self, path, ticketType):
-        """
-        Load all the feature ticket summaries.
-
-        @param path: A L{FilePath} the direct children of which to search
-            for news entries.
-
-        @param ticketType: The type of news entries to search for.  One of
-            L{NewsBuilder._FEATURE}, L{NewsBuilder._BUGFIX},
-            L{NewsBuilder._REMOVAL}, or L{NewsBuilder._MISC}.
-
-        @return: A C{list} of two-tuples.  The first element is the ticket
-            number as an C{int}.  The second element of each tuple is the
-            description of the feature.
-        """
-        results = []
-        for child in path.children():
-            base, ext = os.path.splitext(child.basename())
-            if ext == ticketType:
-                results.append((
-                    int(base),
-                    ' '.join(child.getContent().splitlines())))
-        results.sort()
-        return results
-
-
-    def _formatHeader(self, header):
-        """
-        Format a header for a NEWS file.
-
-        A header is a title with '=' signs underlining it.
-
-        @param header: The header string to format.
-        @type header: C{str}
-        @return: A C{str} containing C{header}.
-        """
-        return header + '\n' + '=' * len(header) + '\n\n'
-
-
-    def _writeHeader(self, fileObj, header):
-        """
-        Write a version header to the given file.
-
-        @param fileObj: A file-like object to which to write the header.
-        @param header: The header to write to the file.
-        @type header: C{str}
-        """
-        fileObj.write(self._formatHeader(header))
-
-
-    def _writeSection(self, fileObj, header, tickets):
-        """
-        Write out one section (features, bug fixes, etc) to the given file.
-
-        @param fileObj: A file-like object to which to write the news section.
-
-        @param header: The header for the section to write.
-        @type header: C{str}
-
-        @param tickets: A C{list} of ticket information of the sort returned
-            by L{NewsBuilder._findChanges}.
-        """
-        if not tickets:
-            return
-
-        reverse = {}
-        for (ticket, description) in tickets:
-            reverse.setdefault(description, []).append(ticket)
-        for description in reverse:
-            reverse[description].sort()
-        reverse = reverse.items()
-        reverse.sort(key=lambda (descr, tickets): tickets[0])
-
-        fileObj.write(header + '\n' + '-' * len(header) + '\n')
-        for (description, relatedTickets) in reverse:
-            ticketList = ', '.join([
-                '#' + str(ticket) for ticket in relatedTickets])
-            entry = ' - %s (%s)' % (description, ticketList)
-            entry = textwrap.fill(entry, subsequent_indent='   ')
-            fileObj.write(entry + '\n')
-        fileObj.write('\n')
-
-
-    def _writeMisc(self, fileObj, header, tickets):
-        """
-        Write out a miscellaneous-changes section to the given file.
-
-        @param fileObj: A file-like object to which to write the news section.
-
-        @param header: The header for the section to write.
-        @type header: C{str}
-
-        @param tickets: A C{list} of ticket information of the sort returned
-            by L{NewsBuilder._findChanges}.
-        """
-        if not tickets:
-            return
-
-        fileObj.write(header + '\n' + '-' * len(header) + '\n')
-        formattedTickets = []
-        for (ticket, ignored) in tickets:
-            formattedTickets.append('#' + str(ticket))
-        entry = ' - ' + ', '.join(formattedTickets)
-        entry = textwrap.fill(entry, subsequent_indent='   ')
-        fileObj.write(entry + '\n\n')
-
-
-    def build(self, path, output, header):
-        """
-        Load all of the change information from the given directory and write
-        it out to the given output file.
-
-        @param path: A directory (probably a I{topfiles} directory) containing
-            change information in the form of <ticket>.<change type> files.
-        @type path: L{FilePath}
-
-        @param output: The NEWS file to which the results will be prepended.
-        @type output: L{FilePath}
-
-        @param header: The top-level header to use when writing the news.
-        @type header: L{str}
-
-        @raise NotWorkingDirectory: If the C{path} is not an SVN checkout.
-        """
-        changes = []
-        for part in (self._FEATURE, self._BUGFIX, self._DOC, self._REMOVAL):
-            tickets = self._findChanges(path, part)
-            if tickets:
-                changes.append((part, tickets))
-        misc = self._findChanges(path, self._MISC)
-
-        oldNews = output.getContent()
-        newNews = output.sibling('NEWS.new').open('w')
-        if oldNews.startswith(self._TICKET_HINT):
-            newNews.write(self._TICKET_HINT)
-            oldNews = oldNews[len(self._TICKET_HINT):]
-
-        self._writeHeader(newNews, header)
-        if changes:
-            for (part, tickets) in changes:
-                self._writeSection(newNews, self._headings.get(part), tickets)
-        else:
-            newNews.write(self._NO_CHANGES)
-            newNews.write('\n')
-        self._writeMisc(newNews, self._headings.get(self._MISC), misc)
-        newNews.write('\n')
-        newNews.write(oldNews)
-        newNews.close()
-        output.sibling('NEWS.new').moveTo(output)
-
-
-    def _deleteFragments(self, path):
-        """
-        Delete the change information, to clean up the repository  once the
-        NEWS files have been built. It requires C{path} to be in a SVN
-        directory.
-
-        @param path: A directory (probably a I{topfiles} directory) containing
-            change information in the form of <ticket>.<change type> files.
-        @type path: L{FilePath}
-        """
-        ticketTypes = self._headings.keys()
-        for child in path.children():
-            base, ext = os.path.splitext(child.basename())
-            if ext in ticketTypes:
-                runCommand(["svn", "rm", child.path])
-
-
-    def _getNewsName(self, project):
-        """
-        Return the name of C{project} that should appear in NEWS.
-
-        @param project: A L{Project}
-        @return: The name of C{project}.
-        """
-        name = project.directory.basename().title()
-        if name == 'Twisted':
-            name = 'Core'
-        return name
-
-
-    def _iterProjects(self, baseDirectory):
-        """
-        Iterate through the Twisted projects in C{baseDirectory}, yielding
-        everything we need to know to build news for them.
-
-        Yields C{topfiles}, C{name}, C{version}, for each sub-project in
-        reverse-alphabetical order. C{topfile} is the L{FilePath} for the
-        topfiles directory, C{name} is the nice name of the project (as should
-        appear in the NEWS file), C{version} is the current version string for
-        that project.
-
-        @param baseDirectory: A L{FilePath} representing the root directory
-            beneath which to find Twisted projects for which to generate
-            news (see L{findTwistedProjects}).
-        @type baseDirectory: L{FilePath}
-        """
-        # Get all the subprojects to generate news for
-        projects = findTwistedProjects(baseDirectory)
-        # And order them alphabetically for ease of reading
-        projects.sort(key=lambda proj: proj.directory.path)
-        # And generate them backwards since we write news by prepending to
-        # files.
-        projects.reverse()
-
-        for project in projects:
-            topfiles = project.directory.child("topfiles")
-            name = self._getNewsName(project)
-            version = project.getVersion()
-            yield topfiles, name, version
-
-
-    def buildAll(self, baseDirectory):
-        """
-        Find all of the Twisted subprojects beneath C{baseDirectory} and update
-        their news files from the ticket change description files in their
-        I{topfiles} directories and update the news file in C{baseDirectory}
-        with all of the news.
-
-        @param baseDirectory: A L{FilePath} representing the root directory
-            beneath which to find Twisted projects for which to generate
-            news (see L{findTwistedProjects}).
-        """
-        try:
-            runCommand(["svn", "info", baseDirectory.path])
-        except CommandFailed:
-            raise NotWorkingDirectory(
-                "%s does not appear to be an SVN working directory."
-                % (baseDirectory.path,))
-
-        today = self._today()
-        for topfiles, name, version in self._iterProjects(baseDirectory):
-            # We first build for the subproject
-            news = topfiles.child("NEWS")
-            header = "Twisted %s %s (%s)" % (name, version.base(), today)
-            self.build(topfiles, news, header)
-            # Then for the global NEWS file
-            news = baseDirectory.child("NEWS")
-            self.build(topfiles, news, header)
-            # Finally, delete the fragments
-            self._deleteFragments(topfiles)
-
-
-    def _changeNewsVersion(self, news, name, oldVersion, newVersion, today):
-        """
-        Change all references to the current version number in a NEWS file to
-        refer to C{newVersion} instead.
-
-        @param news: The NEWS file to change.
-        @type news: L{FilePath}
-        @param name: The name of the project to change.
-        @type name: C{str}
-        @param oldVersion: The old version of the project.
-        @type oldVersion: L{Version}
-        @param newVersion: The new version of the project.
-        @type newVersion: L{Version}
-        @param today: A YYYY-MM-DD string representing today's date.
-        @type today: C{str}
-        """
-        newHeader = self._formatHeader(
-            "Twisted %s %s (%s)" % (name, newVersion.base(), today))
-        expectedHeaderRegex = re.compile(
-            r"Twisted %s %s \(\d{4}-\d\d-\d\d\)\n=+\n\n" % (
-                re.escape(name), re.escape(oldVersion.base())))
-        oldNews = news.getContent()
-        match = expectedHeaderRegex.search(oldNews)
-        if match:
-            oldHeader = match.group()
-            replaceInFile(news.path, {oldHeader: newHeader})
 
 
 
@@ -1150,7 +829,7 @@ class BuildNewsOptions(Options):
     """
     synopsis = "build-news [options] REPOSITORY_PATH"
     longdesc = """
-    REPOSITORY_PATH: The path to the subversion repository containing the 
+    REPOSITORY_PATH: The path to the subversion repository containing the
     topfiles.
     """
 
