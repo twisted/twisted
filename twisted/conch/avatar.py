@@ -1,13 +1,15 @@
 # -*- test-case-name: twisted.conch.test.test_conch -*-
-from interfaces import IConchUser
-from error import ConchError
-from ssh.connection import OPEN_UNKNOWN_CHANNEL_TYPE
+
+from zope.interface import implementer
+
+from twisted.conch.error import ConchError
+from twisted.conch.interfaces import IConchUser
+from twisted.conch.ssh.connection import OPEN_UNKNOWN_CHANNEL_TYPE
 from twisted.python import log
-from zope import interface
 
+
+@implementer(IConchUser)
 class ConchUser:
-    interface.implements(IConchUser)
-
     def __init__(self):
         self.channelLookup = {}
         self.subsystemLookup = {}
@@ -30,7 +32,7 @@ class ConchUser:
 
     def gotGlobalRequest(self, requestType, data):
         # XXX should this use method dispatch?
-        requestType = requestType.replace('-','_')
+        requestType = requestType.replace('-', '_')
         f = getattr(self, "global_%s" % requestType, None)
         if not f:
             return 0
