@@ -703,83 +703,10 @@ class InMemoryKeyMappingTestCase(TestCase):
         """
         If the user is in the mapping provided to
         L{checkers.InMemoryKeyMapping}, an iterator with all the keys
-        is returned by
-        L{checkers.AuthorizedKeysFilesMapping.getAuthorizedKeys}
+        is returned by L{checkers.InMemoryKeyMapping.getAuthorizedKeys}
         """
         keydb = checkers.InMemoryKeyMapping({'alice': ['a', 'b']})
         self.assertEqual(['a', 'b'], list(keydb.getAuthorizedKeys('alice')))
-
-
-
-class AuthorizedKeysFilesMappingTestCase(TestCase):
-    """
-    Tests for L{checkers.AuthorizedKeysFilesMapping}.
-    """
-    skip = dependencySkip
-
-
-    def setUp(self):
-        self.root = FilePath(self.mktemp())
-        self.root.makedirs()
-
-        authorizedKeys = [self.root.child('key{0}'.format(i))
-                           for i in range(2)]
-        for i, fp in enumerate(authorizedKeys):
-            fp.setContent('file {0} key 1\nfile {0} key 2'.format(i))
-
-        self.authorizedPaths = [fp.path for fp in authorizedKeys]
-
-
-    def test_implementsInterface(self):
-        """
-        L{checkers.AuthorizedKeysFilesMapping} implements
-        L{checkers.IAuthorizedKeysDB}.
-        """
-        keydb = checkers.AuthorizedKeysFilesMapping(
-            {'alice': self.authorizedPaths})
-        verifyObject(checkers.IAuthorizedKeysDB, keydb)
-
-
-    def test_noKeysForUnauthorizedUser(self):
-        """
-        If the user is not in the mapping provided to
-        L{checkers.AuthorizedKeysFilesMapping}, an empty iterator is returned
-        by L{checkers.AuthorizedKeysFilesMapping.getAuthorizedKeys}.
-        """
-        keydb = checkers.AuthorizedKeysFilesMapping(
-            {'alice': self.authorizedPaths}, lambda x: x)
-        self.assertEqual([], list(keydb.getAuthorizedKeys('bob')))
-
-
-    def test_allKeysInAllAuthorizedFilesForAuthorizedUser(self):
-        """
-        If the user is in the mapping provided to
-        L{checkers.AuthorizedKeysFilesMapping}, an iterator with all the keys
-        in all the authorized files is returned by
-        L{checkers.AuthorizedKeysFilesMapping.getAuthorizedKeys}.
-        """
-        keydb = checkers.AuthorizedKeysFilesMapping(
-            {'alice': self.authorizedPaths}, lambda x: x)
-        keys = ['file 0 key 1', 'file 0 key 2',
-                'file 1 key 1', 'file 1 key 2']
-        self.assertEqual(keys, list(keydb.getAuthorizedKeys('alice')))
-
-
-    def test_ignoresNonexistantOrUnreadableFile(self):
-        """
-        L{checkers.AuthorizedKeysFilesMapping.getAuthorizedKeys} returns only
-        the keys in the authorized files named that exist and are readable.
-        """
-        directory = self.root.child('key2')
-        directory.makedirs()
-
-        keydb = checkers.AuthorizedKeysFilesMapping(
-            {'alice': [directory.path,
-                       self.root.child('key3').path,
-                       self.authorizedPaths[0]]},
-            lambda x: x)
-        self.assertEqual(['file 0 key 1', 'file 0 key 2'],
-                         list(keydb.getAuthorizedKeys('alice')))
 
 
 
@@ -843,7 +770,7 @@ class UNIXAuthorizedKeysFilesTestCase(TestCase):
 
     def test_ignoresNonexistantFile(self):
         """
-        L{checkers.AuthorizedKeysFilesMapping.getAuthorizedKeys} returns only
+        L{checkers.UNIXAuthorizedKeysFiles.getAuthorizedKeys} returns only
         the keys in C{~/.ssh/authorized_keys} and C{~/.ssh/authorized_keys2}
         if they exist.
         """
@@ -855,7 +782,7 @@ class UNIXAuthorizedKeysFilesTestCase(TestCase):
 
     def test_ignoresUnreadableFile(self):
         """
-        L{checkers.AuthorizedKeysFilesMapping.getAuthorizedKeys} returns only
+        L{checkers.UNIXAuthorizedKeysFiles.getAuthorizedKeys} returns only
         the keys in C{~/.ssh/authorized_keys} and C{~/.ssh/authorized_keys2}
         if they are readable.
         """

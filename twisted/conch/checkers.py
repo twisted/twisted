@@ -427,42 +427,6 @@ class InMemoryKeyMapping(object):
 
 
 @implementer(IAuthorizedKeysDB)
-class AuthorizedKeysFilesMapping(object):
-    """
-    Object that provides SSH public keys based on a dictionary of usernames
-    mapped to authorized key files.  If any of the files cannot be read,
-    a message is logged but that file is otherwise ignored.
-
-    @since: 14.1.0
-    """
-    def __init__(self, mapping, parseKey=keys.Key.fromString):
-        """
-        Initializes a new L{AuthorizedKeysFilesMapping}.
-
-        @param mapping: mapping of usernames to iterables of authorized key
-            files
-        @type mapping: C{dict}
-
-        @param parseKey: a callable that takes a string and returns a
-            L{twisted.conch.ssh.keys.Key}, mainly to be used for testing.  The
-            default is L{twisted.conch.ssh.keys.Key.fromString}.
-        @type parseKey: L{callable}
-        """
-        self._mapping = mapping
-        self._parseKey = parseKey
-
-
-    def getAuthorizedKeys(self, username):
-        """
-        @see: L{IAuthorizedKeysDB.getAuthorizedKeys}
-        """
-        return _keysFromFilepaths(
-            (FilePath(f) for f in self._mapping.get(username, [])),
-            self._parseKey)
-
-
-
-@implementer(IAuthorizedKeysDB)
 class UNIXAuthorizedKeysFiles(object):
     """
     Object that provides SSH public keys based on public keys listed in
