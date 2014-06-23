@@ -364,8 +364,9 @@ def readAuthorizedKeyFile(fileobj, parseKey=keys.Key.fromString):
         if line and not line.startswith('#'):  # for comments
             try:
                 yield parseKey(line)
-            except:
-                log.msg('Unable to parse line "{0}" as a key.'.format(line))
+            except keys.BadKeyError as e:
+                log.msg('Unable to parse line "{0}" as a key: {1!s}'
+                        .format(line, e))
 
 
 
@@ -393,8 +394,8 @@ def _keysFromFilepaths(filepaths, parseKey):
                 with fp.open() as f:
                     for key in readAuthorizedKeyFile(f, parseKey):
                         yield key
-            except:
-                log.msg("Unable to read {0}".format(fp.path))
+            except (IOError, OSError) as e:
+                log.msg("Unable to read {0}: {1!s}".format(fp.path, e))
 
 
 
@@ -461,7 +462,7 @@ class UNIXAuthorizedKeysFiles(object):
         """
         try:
             passwd = self._userdb.getpwnam(username)
-        except:
+        except KeyError:
             return ()
 
         root = FilePath(passwd.pw_dir).child('.ssh')
@@ -545,13 +546,9 @@ class SSHPublicKeyChecker(object):
         @return: C{pubKey} if the key is authorized
         @rtype: L{twisted.conch.ssh.keys.Key}
         """
-        try:
-            if any(key == pubKey for key in
-                   self._keydb.getAuthorizedKeys(credentials.username)):
-                return pubKey
-        except:
-            log.err()
-            raise UnauthorizedLogin("Unable to get avatar id")
+        if any(key == pubKey for key in
+               self._keydb.getAuthorizedKeys(credentials.username)):
+            return pubKey
 
         raise UnauthorizedLogin("Key not authorized")
 

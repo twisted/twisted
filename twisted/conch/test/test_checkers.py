@@ -14,7 +14,7 @@ else:
 
 import os, base64
 from collections import namedtuple
-from cStringIO import StringIO
+from io import StringIO
 
 from zope.interface.verify import verifyObject
 
@@ -635,10 +635,10 @@ class AuthorizedKeyFileReaderTestCase(TestCase):
         L{checkers.readAuthorizedKeyFile} does not attempt to turn comments
         into keys
         """
-        fileobj = StringIO('# this comment is ignored\n'
-                           'this is not\n'
-                           '# this is again\n'
-                           'and this is not')
+        fileobj = StringIO(u'# this comment is ignored\n'
+                           u'this is not\n'
+                           u'# this is again\n'
+                           u'and this is not')
         result = checkers.readAuthorizedKeyFile(fileobj, lambda x: x)
         self.assertEqual(['this is not', 'and this is not'], list(result))
 
@@ -648,7 +648,7 @@ class AuthorizedKeyFileReaderTestCase(TestCase):
         L{checkers.readAuthorizedKeyFile} ignores leading whitespace in
         lines, as well as empty lines
         """
-        fileobj = StringIO("""
+        fileobj = StringIO(u"""
                            # ignore
                            not ignored
                            """)
@@ -659,14 +659,15 @@ class AuthorizedKeyFileReaderTestCase(TestCase):
     def test_ignoresUnparsableKeys(self):
         """
         L{checkers.readAuthorizedKeyFile} does not raise an exception
-        when a key fails to parse, but rather just keeps going
+        when a key fails to parse (raises a
+        L{twisted.conch.ssh.keys.BadKeyError}), but rather just keeps going
         """
         def failOnSome(line):
             if line.startswith('f'):
-                raise Exception('failed to parse')
+                raise keys.BadKeyError('failed to parse')
             return line
 
-        fileobj = StringIO('failed key\ngood key')
+        fileobj = StringIO(u'failed key\ngood key')
         result = checkers.readAuthorizedKeyFile(fileobj,
                                                 parseKey=failOnSome)
         self.assertEqual(['good key'], list(result))
@@ -840,22 +841,6 @@ class SSHPublicKeyCheckerTestCase(TestCase):
         self.credentials.blob = ''
         self.failureResultOf(self.checker.requestAvatarId(self.credentials),
                              keys.BadKeyError)
-
-
-    def test_failureGettingAuthorizedKeys(self):
-        """
-        If L{checkers.IAuthorizedKeysDB.getAuthorizedKeys} raises an
-        exception, L{checkers.SSHPublicKeyChecker.requestAvatarId} fails with
-        L{UnauthorizedLogin}.
-        """
-        def fail(_):
-            raise _DummyException()
-
-        self.keydb = _KeyDB(fail)
-        self.checker = checkers.SSHPublicKeyChecker(self.keydb)
-        self.failureResultOf(self.checker.requestAvatarId(self.credentials),
-                             UnauthorizedLogin)
-        self.flushLoggedErrors(_DummyException)
 
 
     def test_credentialsNoMatchingKey(self):
