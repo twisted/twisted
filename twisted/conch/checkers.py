@@ -420,9 +420,6 @@ class InMemoryKeyMapping(object):
 
 
     def getAuthorizedKeys(self, username):
-        """
-        @see: L{IAuthorizedKeysDB.getAuthorizedKeys}
-        """
         return self._mapping.get(username, [])
 
 
@@ -457,9 +454,6 @@ class UNIXAuthorizedKeysFiles(object):
 
 
     def getAuthorizedKeys(self, username):
-        """
-        @see: L{IAuthorizedKeysDB.getAuthorizedKeys}
-        """
         try:
             passwd = self._userdb.getpwnam(username)
         except KeyError:
@@ -496,9 +490,6 @@ class SSHPublicKeyChecker(object):
 
 
     def requestAvatarId(self, credentials):
-        """
-        @see L{twisted.cred.checkers.ICredentialsChecker.requestAvatarId}
-        """
         d = defer.maybeDeferred(self._sanityCheckKey, credentials)
         d.addCallback(self._checkKey, credentials)
         d.addCallback(self._verifyKey, credentials)
