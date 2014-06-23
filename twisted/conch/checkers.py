@@ -311,7 +311,7 @@ class SSHProtocolChecker:
 
 
 deprecatedModuleAttribute(
-        Version("Twisted", 14, 0, 0),
+        Version("Twisted", 14, 1, 0),
         ("Please use twisted.conch.checkers.SSHPublicKeyChecker, "
          "initialized with an instance of "
          "twisted.conch.checkers.UNIXAuthorizedKeysFiles instead."),
@@ -323,7 +323,7 @@ class IAuthorizedKeysDB(Interface):
     """
     An object that provides valid authorized ssh keys mapped to usernames.
 
-    @since: 14.0.0
+    @since: 14.1.0
     """
     def getAuthorizedKeys(avatarId):
         """
@@ -357,7 +357,7 @@ def readAuthorizedKeyFile(fileobj, parseKey=keys.Key.fromString):
     @return: an iterable of L{twisted.conch.ssh.keys.Key}
     @rtype: iterable
 
-    @since: 14.0.0
+    @since: 14.1.0
     """
     for line in fileobj:
         line = line.strip()
@@ -385,7 +385,7 @@ def _keysFromFilepaths(filepaths, parseKey):
     @return: generator of L{twisted.conch.ssh.keys.Key}
     @rtype: generator
 
-    @since: 14.0.0
+    @since: 14.1.0
     """
     for fp in filepaths:
         if fp.exists():
@@ -404,7 +404,7 @@ class InMemoryKeyMapping(object):
     Object that provides SSH public keys based on a dictionary of usernames
     mapped to L{twisted.conch.ssh.keys.Key}s.
 
-    @since: 14.0.0
+    @since: 14.1.0
     """
     def __init__(self, mapping):
         """
@@ -433,7 +433,7 @@ class AuthorizedKeysFilesMapping(object):
     mapped to authorized key files.  If any of the files cannot be read,
     a message is logged but that file is otherwise ignored.
 
-    @since: 14.0.0
+    @since: 14.1.0
     """
     def __init__(self, mapping, parseKey=keys.Key.fromString):
         """
@@ -470,7 +470,7 @@ class UNIXAuthorizedKeysFiles(object):
     If any of the files cannot be read, a message is logged but that file is
     otherwise ignored.
 
-    @since: 14.0.0
+    @since: 14.1.0
     """
     def __init__(self, userdb=None, parseKey=keys.Key.fromString):
         """
@@ -516,7 +516,7 @@ class SSHPublicKeyChecker(object):
     Initializing this checker with a L{UNIXAuthorizedKeysFiles} should be
     used instead of L{twisted.conch.checkers.SSHPublicKeyDatabase}.
 
-    @since: 14.0.0
+    @since: 14.1.0
     """
     credentialInterfaces = (ISSHPrivateKey,)
 

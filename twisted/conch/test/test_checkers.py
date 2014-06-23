@@ -201,7 +201,7 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
 
     def test_deprecated(self):
         """
-        L{SSHPublicKeyDatabase} is deprecated as of version 14.0
+        L{SSHPublicKeyDatabase} is deprecated as of version 14.1
         """
         warningsShown = self.flushWarnings(
             offendingFunctions=[self.setUp])
@@ -209,7 +209,7 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         self.assertEqual(
             warningsShown[0]['message'],
             "twisted.conch.checkers.SSHPublicKeyDatabase "
-            "was deprecated in Twisted 14.0.0: Please use "
+            "was deprecated in Twisted 14.1.0: Please use "
             "twisted.conch.checkers.SSHPublicKeyChecker, "
             "initialized with an instance of "
             "twisted.conch.checkers.UNIXAuthorizedKeysFiles instead.")
