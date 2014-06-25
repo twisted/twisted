@@ -306,27 +306,19 @@ class _AssertRaisesContext(object):
             self._expectedName = str(self._expected)
 
 
-    def _handle(self, callable, *args, **kwargs):
+    def _handle(self, obj):
         """
-        If callable is None, assertRaises is being used as a
-        context manager.
+        Call the given object using this object as a context manager.
 
-        If callable is not None, it is used a normal assert
-        method.
-        To keep compatibility with trial, it returns the exception or
-        the callable's return value (if exception was not raised).
+        @param obj: The object to call and which is expected to raise some
+            exception.
+        @type obj: L{object}
 
-        @param callable: Callable which is checked.
-
-        @return: The raised exception instance or context manager.
+        @return: Whatever exception is raised by C{obj()}.
+        @rtype: L{BaseException}
         """
-        # Called as context.
-        if callable is None:
-            return self
-
-        # Called as method.
         with self as context:
-            self._returnValue = callable(*args, **kwargs)
+            self._returnValue = obj()
         return context.exception
 
 
@@ -431,7 +423,10 @@ class _Assertions(pyunit.TestCase, object):
             different type.
         """
         context = _AssertRaisesContext(self, exception)
-        return context._handle(f, *args, **kwargs)
+        if f is None:
+            return context
+
+        return context._handle(lambda: f(*args, **kwargs))
     failUnlessRaises = assertRaises
 
 
