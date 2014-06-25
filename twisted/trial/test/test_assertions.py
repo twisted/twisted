@@ -420,7 +420,7 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
                     "exceptions.TypeError raised instead of ValueError:\n"
                     " Traceback"),
                 "Exception message did not begin with expected information: "
-                "{}".format(message))
+                "{0}".format(message))
         else:
             self.fail(
                 "Mismatched exception type should have caused test failure.")

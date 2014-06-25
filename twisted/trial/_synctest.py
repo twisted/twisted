@@ -338,23 +338,33 @@ class _AssertRaisesContext(object):
         """
         Check exit exception against expected exception.
         """
-        # Store exception so that it can be access from context.
-        self.exception = exceptionValue
-
         # No exception raised.
         if exceptionType is None:
             self._testCase.fail(
-                "{} not raised ({} returned)".format(
+                "{0} not raised ({1} returned)".format(
                     self._expectedName, self._returnValue)
                 )
 
+        if not isinstance(exceptionValue, exceptionType):
+            # Support some Python 2.6 ridiculousness.  Exceptions raised using
+            # the C API appear here as the arguments you might pass to the
+            # exception class to create an exception instance.  So... do that
+            # to turn them into the instances.
+            if isinstance(exceptionValue, tuple):
+                exceptionValue = exceptionType(*exceptionValue)
+            else:
+                exceptionValue = exceptionType(exceptionValue)
+
+        # Store exception so that it can be access from context.
+        self.exception = exceptionValue
+
         # Wrong exception raised.
         if not issubclass(exceptionType, self._expected):
+            reason = failure.Failure(exceptionValue, exceptionType, traceback)
             self._testCase.fail(
-                "{} raised instead of {}:\n {}".format(
-                    fullyQualifiedName(sys.exc_info()[0]),
-                    self._expectedName,
-                    failure.Failure().getTraceback()),
+                "{0} raised instead of {1}:\n {2}".format(
+                    fullyQualifiedName(exceptionType),
+                    self._expectedName, reason.getTraceback()),
                 )
 
         # All good.
