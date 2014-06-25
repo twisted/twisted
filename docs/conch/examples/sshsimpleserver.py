@@ -3,11 +3,13 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from twisted.cred import portal, checkers
-from twisted.conch import error, avatar
-from twisted.conch.checkers import SSHPublicKeyDatabase
+from twisted.cred import portal
+from twisted.conch import avatar
+from twisted.conch.checkers import (
+    InMemoryUsernamePasswordDatabaseDontUse,
+    SSHPublicKeyChecker, InMemoryKeyMapping)
 from twisted.conch.ssh import factory, userauth, connection, keys, session
-from twisted.internet import reactor, protocol, defer
+from twisted.internet import reactor, protocol
 from twisted.python import log
 from zope.interface import implements
 import sys
@@ -58,14 +60,9 @@ EhQ0wahUTCk1gKA4uPD6TMTChavbh4K63OvbKg==
 -----END RSA PRIVATE KEY-----"""
 
 
-class InMemoryPublicKeyChecker(SSHPublicKeyDatabase):
-
-    def checkKey(self, credentials):
-        return credentials.username == 'user' and \
-            keys.Key.fromString(data=publicKey).blob() == credentials.blob
 
 class ExampleSession:
-    
+
     def __init__(self, avatar):
         """
         We don't use it, but the adapter is passed the avatar as its first
@@ -74,7 +71,7 @@ class ExampleSession:
 
     def getPty(self, term, windowSize, attrs):
         pass
-    
+
     def execCommand(self, proto, cmd):
         raise Exception("no executing commands")
 
@@ -103,13 +100,15 @@ class ExampleFactory(factory.SSHFactory):
         'ssh-userauth': userauth.SSHUserAuthServer,
         'ssh-connection': connection.SSHConnection
     }
-    
+
 
 portal = portal.Portal(ExampleRealm())
-passwdDB = checkers.InMemoryUsernamePasswordDatabaseDontUse()
+passwdDB = InMemoryUsernamePasswordDatabaseDontUse()
 passwdDB.addUser('user', 'password')
+sshDB = SSHPublicKeyChecker(InMemoryKeyMapping(
+    {'user': [keys.Key.fromString(data=publicKey)]}))
 portal.registerChecker(passwdDB)
-portal.registerChecker(InMemoryPublicKeyChecker())
+portal.registerChecker(sshDB)
 ExampleFactory.portal = portal
 
 if __name__ == '__main__':

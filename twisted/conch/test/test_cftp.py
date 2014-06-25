@@ -482,7 +482,7 @@ class CFTPClientTestBase(SFTPTestBase):
     def startServer(self):
         realm = FileTransferTestRealm(self.testDir)
         p = portal.Portal(realm)
-        p.registerChecker(test_ssh.ConchTestPublicKeyChecker())
+        p.registerChecker(test_ssh.conchTestPublicKeyChecker())
         fac = test_ssh.ConchTestServerFactory()
         fac.portal = p
         self.server = reactor.listenTCP(0, fac, interface="127.0.0.1")

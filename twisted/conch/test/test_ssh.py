@@ -317,14 +317,6 @@ if Crypto is not None and pyasn1 is not None:
                 self.assertEqual(c(), struct.pack('!H', (i + 1) % (2 ** 16)))
 
 
-    class ConchTestPublicKeyChecker(checkers.SSHPublicKeyDatabase):
-        def checkKey(self, credentials):
-            blob = keys.Key.fromString(publicDSA_openssh).blob()
-            if credentials.username == 'testuser' and credentials.blob == blob:
-                return True
-            return False
-
-
     class ConchTestPasswordChecker:
         credentialInterfaces = checkers.IUsernamePassword,
 
@@ -525,6 +517,18 @@ if Crypto is not None and pyasn1 is not None:
             self.onClose.callback(None)
 
 
+    def conchTestPublicKeyChecker():
+        """
+        Produces a SSHPublicKeyChecker with an in-memory key mapping with
+        a single use: 'testuser'
+
+        @return: L{twisted.conch.checkers.SSHPublicKeyChecker}
+        """
+        conchTestPublicKeyDB = checkers.InMemorySSHKeyDB(
+            {'testuser': [keys.Key.fromString(publicDSA_openssh)]})
+        return checkers.SSHPublicKeyChecker(conchTestPublicKeyDB)
+
+
 
 class SSHProtocolTestCase(unittest.TestCase):
     """
@@ -549,7 +553,7 @@ class SSHProtocolTestCase(unittest.TestCase):
         p = portal.Portal(self.realm)
         sshpc = ConchTestSSHChecker()
         sshpc.registerChecker(ConchTestPasswordChecker())
-        sshpc.registerChecker(ConchTestPublicKeyChecker())
+        sshpc.registerChecker(conchTestPublicKeyChecker())
         p.registerChecker(sshpc)
         fac = ConchTestServerFactory()
         fac.portal = p

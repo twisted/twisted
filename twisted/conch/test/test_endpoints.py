@@ -39,7 +39,7 @@ if requireModule('Crypto.Cipher.AES') and requireModule('pyasn1.type'):
     from twisted.conch.ssh.channel import SSHChannel
     from twisted.conch.ssh.agent import SSHAgentServer
     from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
-    from twisted.conch.checkers import SSHPublicKeyDatabase
+    from twisted.conch.checkers import SSHPublicKeyChecker, InMemorySSHKeyDB
     from twisted.conch.avatar import ConchUser
 
     from twisted.conch.test.keydata import (
@@ -54,10 +54,9 @@ if requireModule('Crypto.Cipher.AES') and requireModule('pyasn1.type'):
 else:
     skip = "can't run w/o PyCrypto and pyasn1"
     SSHFactory = SSHUserAuthServer = SSHConnection = Key = SSHChannel = \
-        SSHAgentServer = KnownHostsFile = SSHPublicKeyDatabase = ConchUser = \
+        SSHAgentServer = KnownHostsFile = SSHPublicKeyChecker = ConchUser = \
         object
 
-from twisted.python.fakepwd import UserDatabase
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.iosim import FakeTransport, connect
 
@@ -258,23 +257,6 @@ class SingleUseMemoryEndpoint(object):
                     self._server, isServer=True),
                 protocol, AbortableFakeTransport(protocol, isServer=False))
             return succeed(protocol)
-
-
-
-class MemorySSHPublicKeyDatabase(SSHPublicKeyDatabase):
-    def __init__(self, users):
-        self._users = users
-        self._userdb = UserDatabase()
-        for i, username in enumerate(self._users):
-            self._userdb.addUser(
-                username, b"garbage", 123 + i, 456, None, None, None)
-
-
-    def getAuthorizedKeysFiles(self, credentials):
-        try:
-            return self._users[credentials.username]
-        except KeyError:
-            return []
 
 
 
@@ -988,13 +970,9 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
             OpenSSH-formatted private keys.
         @type users: C{dict}
         """
-        credentials = {}
-        for username, keyString in users.iteritems():
-            goodKey = Key.fromString(keyString)
-            authorizedKeys = FilePath(self.mktemp())
-            authorizedKeys.setContent(goodKey.public().toString("OPENSSH"))
-            credentials[username] = [authorizedKeys]
-        checker = MemorySSHPublicKeyDatabase(credentials)
+        mapping = dict([(k,[Key.fromString(v).public()])
+                        for k, v in users.iteritems()])
+        checker = SSHPublicKeyChecker(InMemorySSHKeyDB(mapping))
         portal.registerChecker(checker)
 
 
