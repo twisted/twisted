@@ -362,11 +362,12 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
 
 
     def test_failUnlessRaises_noException(self):
+        returnValue = 3
         try:
-            self.failUnlessRaises(ValueError, lambda : None)
+            self.failUnlessRaises(ValueError, lambda : returnValue)
         except self.failureException as e:
             self.assertEqual(str(e),
-                                 'ValueError not raised (None returned)')
+                                 'ValueError not raised (3 returned)')
         else:
             self.fail("Exception not raised. Should have failed")
 
@@ -385,6 +386,89 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
             pass
         else:
             self.fail("Should have raised exception")
+
+
+    def test_assertRaisesContextExpected(self):
+        """
+        If C{assertRaises} is used to create a context manager and an exception
+        is raised from the body of the C{with} statement then the context
+        manager's C{exception} attribute is set to the exception that was
+        raised.
+        """
+        exception = ValueError('marker')
+
+        with self.assertRaises(ValueError) as context:
+            raise exception
+
+        self.assertIs(exception, context.exception)
+
+
+    def test_assertRaisesContextUnexpected(self):
+        """
+        If C{assertRaises} is used to create a context manager and the wrong
+        exception type is raised from the body of the C{with} statement then
+        the C{with} statement raises C{failureException} describing the
+        mismatch.
+        """
+        try:
+            with self.assertRaises(ValueError):
+                raise TypeError('marker')
+        except self.failureException as exception:
+            message = str(exception)
+            self.assertTrue(
+                message.startswith(
+                    "exceptions.TypeError raised instead of ValueError:\n"
+                    " Traceback"),
+                "Exception message did not begin with expected information: "
+                "{0}".format(message))
+        else:
+            self.fail(
+                "Mismatched exception type should have caused test failure.")
+
+
+    def test_assertRaisesContextNoException(self):
+        """
+        If C{assertRaises} is used to create a context manager and no exception
+        is raised from the body of the C{with} statement then the C{with}
+        statement raises C{failureException} describing the lack of exception.
+        """
+        try:
+            with self.assertRaises(ValueError):
+                # No exception is raised.
+                pass
+        except self.failureException as exception:
+            message = str(exception)
+            # `(None returned)` text is here for backward compatibility and should
+            # be ignored for context manager use case.
+            self.assertEqual(message, "ValueError not raised (None returned)")
+        else:
+            self.fail("Non-exception result should have caused test failure.")
+
+
+    def test_brokenName(self):
+        """
+        If the exception type passed to C{assertRaises} does not have a
+        C{__name__} then the context manager still manages to construct a
+        descriptive string for it.
+        """
+        try:
+            with self.assertRaises((ValueError, TypeError)):
+                # Just some other kind of exception
+                raise AttributeError()
+        except self.failureException as exception:
+            message = str(exception)
+            valueError = "ValueError" not in message
+            typeError = "TypeError" not in message
+            errors = []
+            if valueError:
+                errors.append("expected ValueError in exception message")
+            if typeError:
+                errors.append("expected TypeError in exception message")
+            if errors:
+                self.fail("; ".join(errors), "message = {0}".format(message))
+        else:
+            self.fail(
+                "Mismatched exception type should have caused test failure.")
 
 
     def test_failIfEqual_basic(self):

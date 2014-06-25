@@ -16,6 +16,7 @@ from pprint import pformat
 from dis import findlinestarts as _findlinestarts
 
 from twisted.python import failure, log, monkey
+from twisted.python.reflect import fullyQualifiedName
 from twisted.python.util import runWithWarningsSuppressed
 from twisted.python.deprecate import (
     getDeprecationWarningString, warnAboutFunction)
@@ -269,6 +270,100 @@ class PyUnitResultAdapter(object):
 
 
 
+class _AssertRaisesContext(object):
+    """
+    A helper for implementing C{assertRaises}.  This is a context manager and a
+    helper method to support the non-context manager version of
+    C{assertRaises}.
+
+    @ivar _testCase: See C{testCase} parameter of C{__init__}
+
+    @ivar _expected: See C{expected} parameter of C{__init__}
+
+    @ivar _returnValue: The value returned by the callable being tested (only
+        when not being used as a context manager).
+
+    @ivar _expectedName: A short string describing the expected exception
+        (usually the name of the exception class).
+
+    @ivar exception: The exception which was raised by the function being
+        tested (if it raised one).
+    """
+
+    def __init__(self, testCase, expected):
+        """
+        @param testCase: The L{TestCase} instance which is used to raise a
+            test-failing exception when that is necessary.
+
+        @param expected: The exception type expected to be raised.
+        """
+        self._testCase = testCase
+        self._expected = expected
+        self._returnValue = None
+        try:
+            self._expectedName = self._expected.__name__
+        except AttributeError:
+            self._expectedName = str(self._expected)
+
+
+    def _handle(self, obj):
+        """
+        Call the given object using this object as a context manager.
+
+        @param obj: The object to call and which is expected to raise some
+            exception.
+        @type obj: L{object}
+
+        @return: Whatever exception is raised by C{obj()}.
+        @rtype: L{BaseException}
+        """
+        with self as context:
+            self._returnValue = obj()
+        return context.exception
+
+
+    def __enter__(self):
+        return self
+
+
+    def __exit__(self, exceptionType, exceptionValue, traceback):
+        """
+        Check exit exception against expected exception.
+        """
+        # No exception raised.
+        if exceptionType is None:
+            self._testCase.fail(
+                "{0} not raised ({1} returned)".format(
+                    self._expectedName, self._returnValue)
+                )
+
+        if not isinstance(exceptionValue, exceptionType):
+            # Support some Python 2.6 ridiculousness.  Exceptions raised using
+            # the C API appear here as the arguments you might pass to the
+            # exception class to create an exception instance.  So... do that
+            # to turn them into the instances.
+            if isinstance(exceptionValue, tuple):
+                exceptionValue = exceptionType(*exceptionValue)
+            else:
+                exceptionValue = exceptionType(exceptionValue)
+
+        # Store exception so that it can be access from context.
+        self.exception = exceptionValue
+
+        # Wrong exception raised.
+        if not issubclass(exceptionType, self._expected):
+            reason = failure.Failure(exceptionValue, exceptionType, traceback)
+            self._testCase.fail(
+                "{0} raised instead of {1}:\n {2}".format(
+                    fullyQualifiedName(exceptionType),
+                    self._expectedName, reason.getTraceback()),
+                )
+
+        # All good.
+        return True
+
+
+
 class _Assertions(pyunit.TestCase, object):
     """
     Replaces many of the built-in TestCase assertions. In general, these
@@ -310,7 +405,7 @@ class _Assertions(pyunit.TestCase, object):
     assert_ = failUnlessTrue = failUnless = assertTrue
 
 
-    def assertRaises(self, exception, f, *args, **kwargs):
+    def assertRaises(self, exception, f=None, *args, **kwargs):
         """
         Fail the test unless calling the function C{f} with the given
         C{args} and C{kwargs} raises C{exception}. The failure will report
@@ -319,23 +414,19 @@ class _Assertions(pyunit.TestCase, object):
         @param exception: exception type that is to be expected
         @param f: the function to call
 
-        @return: The raised exception instance, if it is of the given type.
+        @return: If C{f} is C{None}, a context manager which will make an
+            assertion about the exception raised from the suite it manages.  If
+            C{f} is not C{None}, the exception raised by C{f}.
+
         @raise self.failureException: Raised if the function call does
             not raise an exception or if it raises an exception of a
             different type.
         """
-        try:
-            result = f(*args, **kwargs)
-        except exception as inst:
-            return inst
-        except:
-            raise self.failureException('%s raised instead of %s:\n %s'
-                                        % (sys.exc_info()[0],
-                                           exception.__name__,
-                                           failure.Failure().getTraceback()))
-        else:
-            raise self.failureException('%s not raised (%r returned)'
-                                        % (exception.__name__, result))
+        context = _AssertRaisesContext(self, exception)
+        if f is None:
+            return context
+
+        return context._handle(lambda: f(*args, **kwargs))
     failUnlessRaises = assertRaises
 
 
