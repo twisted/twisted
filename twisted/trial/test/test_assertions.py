@@ -388,10 +388,12 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
             self.fail("Should have raised exception")
 
 
-    def test_assertRaises_contextExpected(self):
+    def test_assertRaisesContextExpected(self):
         """
-        Test succeeds when called with context for expected exception. Raised
-        exceptions is stored in context's `exception` member.
+        If C{assertRaises} is used to create a context manager and an exception
+        is raised from the body of the C{with} statement then the context
+        manager's C{exception} attribute is set to the exception that was
+        raised.
         """
         exception = ValueError('marker')
 
@@ -401,38 +403,72 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
         self.assertIs(exception, context.exception)
 
 
-    def test_assertRaises_contextUnexpected(self):
+    def test_assertRaisesContextUnexpected(self):
         """
-        Raises failureException when expected exception raised by the code
-        withing the context does not match.
+        If C{assertRaises} is used to create a context manager and the wrong
+        exception type is raised from the body of the C{with} statement then
+        the C{with} statement raises C{failureException} describing the
+        mismatch.
         """
-        with self.assertRaises(self.failureException) as context:
-
+        try:
             with self.assertRaises(ValueError):
                 raise TypeError('marker')
+        except self.failureException as exception:
+            message = exception.message
+            self.assertTrue(
+                message.startswith(
+                    "exceptions.TypeError raised instead of ValueError:\n"
+                    " Traceback"),
+                "Exception message did not begin with expected information: "
+                "{}".format(message))
+        else:
+            self.fail(
+                "Mismatched exception type should have caused test failure.")
 
-        message = context.exception.message
-        self.assertTrue(message.startswith(
-                '<type \'exceptions.TypeError\'> raised instead of '
-                'ValueError:\n Traceback'
-                ))
 
-
-    def test_assertRaises_contextNoException(self):
+    def test_assertRaisesContextNoException(self):
         """
-        Raises failureException when no exception is raised by the code
-        from withing the context.
+        If C{assertRaises} is used to create a context manager and no exception
+        is raised from the body of the C{with} statement then the C{with}
+        statement raises C{failureException} describing the lack of exception.
         """
-        with self.assertRaises(self.failureException) as context:
-
+        try:
             with self.assertRaises(ValueError):
                 # No exception is raised.
                 pass
+        except self.failureException as exception:
+            message = exception.message
+            # `(None returned)` text is here for backward compatibility and should
+            # be ignored for context manager use case.
+            self.assertEqual(message, "ValueError not raised (None returned)")
+        else:
+            self.fail("Non-exception result should have caused test failure.")
 
-        message = context.exception.message
-        # `(None returned)` text is here for backward compatibility and should
-        # be ignored for context manager use case.
-        self.assertEqual(message, 'ValueError not raised (None returned)')
+
+    def test_brokenName(self):
+        """
+        If the exception type passed to C{assertRaises} does not have a
+        C{__name__} then the context manager still manages to construct a
+        descriptive string for it.
+        """
+        try:
+            with self.assertRaises((ValueError, TypeError)):
+                # Just some other kind of exception
+                raise AttributeError()
+        except self.failureException as exception:
+            message = exception.message
+            valueError = "ValueError" not in message
+            typeError = "TypeError" not in message
+            errors = []
+            if valueError:
+                errors.append("expected ValueError in exception message")
+            if typeError:
+                errors.append("expected TypeError in exception message")
+            if errors:
+                self.fail("; ".join(errors), "message = {}".format(message))
+        else:
+            self.fail(
+                "Mismatched exception type should have caused test failure.")
 
 
     def test_failIfEqual_basic(self):

@@ -16,6 +16,7 @@ from pprint import pformat
 from dis import findlinestarts as _findlinestarts
 
 from twisted.python import failure, log, monkey
+from twisted.python.reflect import fullyQualifiedName
 from twisted.python.util import runWithWarningsSuppressed
 from twisted.python.deprecate import (
     getDeprecationWarningString, warnAboutFunction)
@@ -269,6 +270,98 @@ class PyUnitResultAdapter(object):
 
 
 
+class _AssertRaisesContext(object):
+    """
+    A helper for implementing C{assertRaises}.  This is a context manager and a
+    helper method to support the non-context manager version of
+    C{assertRaises}.
+
+    @ivar _testCase: See C{testCase} parameter of C{__init__}
+
+    @ivar _expected: See C{expected} parameter of C{__init__}
+
+    @ivar _returnValue: The value returned by the callable being tested (only
+        when not being used as a context manager).
+
+    @ivar _expectedName: A short string describing the expected exception
+        (usually the name of the exception class).
+
+    @ivar exception: The exception which was raised by the function being
+        tested (if it raised one).
+    """
+
+    def __init__(self, testCase, expected):
+        """
+        @param testCase: The L{TestCase} instance which is used to raise a
+            test-failing exception when that is necessary.
+
+        @param expected: The exception type expected to be raised.
+        """
+        self._testCase = testCase
+        self._expected = expected
+        self._returnValue = None
+        try:
+            self._expectedName = self._expected.__name__
+        except AttributeError:
+            self._expectedName = str(self._expected)
+
+
+    def _handle(self, callable, *args, **kwargs):
+        """
+        If callable is None, assertRaises is being used as a
+        context manager.
+
+        If callable is not None, it is used a normal assert
+        method.
+        To keep compatibility with trial, it returns the exception or
+        the callable's return value (if exception was not raised).
+
+        @param callable: Callable which is checked.
+
+        @return: The raised exception instance or context manager.
+        """
+        # Called as context.
+        if callable is None:
+            return self
+
+        # Called as method.
+        with self as context:
+            self._returnValue = callable(*args, **kwargs)
+        return context.exception
+
+
+    def __enter__(self):
+        return self
+
+
+    def __exit__(self, exceptionType, exceptionValue, traceback):
+        """
+        Check exit exception against expected exception.
+        """
+        # Store exception so that it can be access from context.
+        self.exception = exceptionValue
+
+        # No exception raised.
+        if exceptionType is None:
+            self._testCase.fail(
+                "{} not raised ({} returned)".format(
+                    self._expectedName, self._returnValue)
+                )
+
+        # Wrong exception raised.
+        if not issubclass(exceptionType, self.expected):
+            self._testCase.fail(
+                "{} raised instead of {}:\n {}".format(
+                    fullyQualifiedName(sys.exc_info()[0]),
+                    self._expectedName,
+                    failure.Failure().getTraceback()),
+                )
+
+        # All good.
+        return True
+
+
+
 class _Assertions(pyunit.TestCase, object):
     """
     Replaces many of the built-in TestCase assertions. In general, these
@@ -319,87 +412,17 @@ class _Assertions(pyunit.TestCase, object):
         @param exception: exception type that is to be expected
         @param f: the function to call
 
-        @return: The raised exception instance, if it is of the given type.
-            When C{f} is C{None} it returns a context manager. The exception
-            raised inside the context is stored in context's C{exception}
-            member.
+        @return: If C{f} is C{None}, a context manager which will make an
+            assertion about the exception raised from the suite it manages.  If
+            C{f} is not C{None}, the exception raised by C{f}.
+
         @raise self.failureException: Raised if the function call does
             not raise an exception or if it raises an exception of a
             different type.
         """
-        context = self._AssertRaisesContext(self, exception)
-        return context.handle(f, *args, **kwargs)
+        context = _AssertRaisesContext(self, exception)
+        return context._handle(f, *args, **kwargs)
     failUnlessRaises = assertRaises
-
-
-    class _AssertRaisesContext(object):
-        """
-        Wrapper for turning assertRaises into context manager, while keeping
-        the old non-context call.
-        """
-
-        def __init__(self, testCase, expected):
-            self.expected = expected
-            self.testCase = testCase
-            self._returnValue = None
-            try:
-                self._expectedName = self.expected.__name__
-            except AttributeError:
-                self._expectedName = str(self.expected)
-
-
-        def handle(self, callable, *args, **kwargs):
-            """
-            If callable is None, assertRaises is being used as a
-            context manager.
-
-            If callable is not None, it is used a normal assert
-            method.
-            To keep compatibility with trial, it returns the exception or
-            the callable's return value (if exception was not raised).
-
-            @param callable: Callable which is checked.
-
-            @return: The raised exception instance or context manager.
-            """
-            # Called as context.
-            if callable is None:
-                return self
-
-            # Called as method.
-            with self as context:
-                self._returnValue = callable(*args, **kwargs)
-            return context.exception
-
-
-        def __enter__(self):
-            return self
-
-
-        def __exit__(self, exceptionType, exceptionValue, traceback):
-            """
-            Check exit exception against expected exception.
-            """
-            # Store exception so that it can be access from context.
-            self.exception = exceptionValue
-
-            # No exception raised.
-            if exceptionType is None:
-                raise self.testCase.failureException(
-                    "{} not raised ({} returned)".format(
-                        self._expectedName, self._returnValue))
-
-            # Wrong exception raised.
-            if not issubclass(exceptionType, self.expected):
-                raise self.testCase.failureException(
-                    "{} raised instead of {}:\n {}".format(
-                        sys.exc_info()[0],
-                        self._expectedName,
-                        failure.Failure().getTraceback()),
-                        )
-
-            # All good.
-            return True
 
 
     def assertEqual(self, first, second, msg=''):
