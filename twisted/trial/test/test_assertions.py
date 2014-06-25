@@ -414,7 +414,7 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
             with self.assertRaises(ValueError):
                 raise TypeError('marker')
         except self.failureException as exception:
-            message = exception.message
+            message = str(exception)
             self.assertTrue(
                 message.startswith(
                     "exceptions.TypeError raised instead of ValueError:\n"
@@ -437,7 +437,7 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
                 # No exception is raised.
                 pass
         except self.failureException as exception:
-            message = exception.message
+            message = str(exception)
             # `(None returned)` text is here for backward compatibility and should
             # be ignored for context manager use case.
             self.assertEqual(message, "ValueError not raised (None returned)")
@@ -456,7 +456,7 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
                 # Just some other kind of exception
                 raise AttributeError()
         except self.failureException as exception:
-            message = exception.message
+            message = str(exception)
             valueError = "ValueError" not in message
             typeError = "TypeError" not in message
             errors = []
