@@ -310,7 +310,7 @@ class _Assertions(pyunit.TestCase, object):
     assert_ = failUnlessTrue = failUnless = assertTrue
 
 
-    def assertRaises(self, exception, f, *args, **kwargs):
+    def assertRaises(self, exception, f=None, *args, **kwargs):
         """
         Fail the test unless calling the function C{f} with the given
         C{args} and C{kwargs} raises C{exception}. The failure will report
@@ -320,23 +320,86 @@ class _Assertions(pyunit.TestCase, object):
         @param f: the function to call
 
         @return: The raised exception instance, if it is of the given type.
+            When C{f} is C{None} it returns a context manager. The exception
+            raised inside the context is stored in context's C{exception}
+            member.
         @raise self.failureException: Raised if the function call does
             not raise an exception or if it raises an exception of a
             different type.
         """
-        try:
-            result = f(*args, **kwargs)
-        except exception as inst:
-            return inst
-        except:
-            raise self.failureException('%s raised instead of %s:\n %s'
-                                        % (sys.exc_info()[0],
-                                           exception.__name__,
-                                           failure.Failure().getTraceback()))
-        else:
-            raise self.failureException('%s not raised (%r returned)'
-                                        % (exception.__name__, result))
+        context = self._AssertRaisesContext(self, exception)
+        return context.handle(f, *args, **kwargs)
     failUnlessRaises = assertRaises
+
+
+    class _AssertRaisesContext(object):
+        """
+        Wrapper for turning assertRaises into context manager, while keeping
+        the old non-context call.
+        """
+
+        def __init__(self, testCase, expected):
+            self.expected = expected
+            self.testCase = testCase
+            self._returnValue = None
+            try:
+                self._expectedName = self.expected.__name__
+            except AttributeError:
+                self._expectedName = str(self.expected)
+
+
+        def handle(self, callable, *args, **kwargs):
+            """
+            If callable is None, assertRaises is being used as a
+            context manager.
+
+            If callable is not None, it is used a normal assert
+            method.
+            To keep compatibility with trial, it returns the exception or
+            the callable's return value (if exception was not raised).
+
+            @param callable: Callable which is checked.
+
+            @return: The raised exception instance or context manager.
+            """
+            # Called as context.
+            if callable is None:
+                return self
+
+            # Called as method.
+            with self as context:
+                self._returnValue = callable(*args, **kwargs)
+            return context.exception
+
+
+        def __enter__(self):
+            return self
+
+
+        def __exit__(self, exceptionType, exceptionValue, traceback):
+            """
+            Check exit exception against expected exception.
+            """
+            # Store exception so that it can be access from context.
+            self.exception = exceptionValue
+
+            # No exception raised.
+            if exceptionType is None:
+                raise self.testCase.failureException(
+                    "{} not raised ({} returned)".format(
+                        self._expectedName, self._returnValue))
+
+            # Wrong exception raised.
+            if not issubclass(exceptionType, self.expected):
+                raise self.testCase.failureException(
+                    "{} raised instead of {}:\n {}".format(
+                        sys.exc_info()[0],
+                        self._expectedName,
+                        failure.Failure().getTraceback()),
+                        )
+
+            # All good.
+            return True
 
 
     def assertEqual(self, first, second, msg=''):
