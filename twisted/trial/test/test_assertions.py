@@ -465,7 +465,7 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
             if typeError:
                 errors.append("expected TypeError in exception message")
             if errors:
-                self.fail("; ".join(errors), "message = {}".format(message))
+                self.fail("; ".join(errors), "message = {0}".format(message))
         else:
             self.fail(
                 "Mismatched exception type should have caused test failure.")
