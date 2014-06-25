@@ -349,7 +349,7 @@ class _AssertRaisesContext(object):
                 )
 
         # Wrong exception raised.
-        if not issubclass(exceptionType, self.expected):
+        if not issubclass(exceptionType, self._expected):
             self._testCase.fail(
                 "{} raised instead of {}:\n {}".format(
                     fullyQualifiedName(sys.exc_info()[0]),
