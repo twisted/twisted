@@ -674,39 +674,39 @@ class AuthorizedKeyFileReaderTestCase(TestCase):
 
 
 
-class InMemoryKeyMappingTestCase(TestCase):
+class InMemorySSHKeyDBTestCase(TestCase):
     """
-    Tests for L{checkers.InMemoryKeyMapping}
+    Tests for L{checkers.InMemorySSHKeyDB}
     """
     skip = dependencySkip
 
 
     def test_implementsInterface(self):
         """
-        L{checkers.InMemoryKeyMapping} implements
+        L{checkers.InMemorySSHKeyDB} implements
         L{checkers.IAuthorizedKeysDB}
         """
-        keydb = checkers.InMemoryKeyMapping({'alice': ['key']})
+        keydb = checkers.InMemorySSHKeyDB({'alice': ['key']})
         verifyObject(checkers.IAuthorizedKeysDB, keydb)
 
 
     def test_noKeysForUnauthorizedUser(self):
         """
         If the user is not in the mapping provided to
-        L{checkers.InMemoryKeyMapping}, an empty iterator is returned
-        by L{checkers.InMemoryKeyMapping.getAuthorizedKeys}
+        L{checkers.InMemorySSHKeyDB}, an empty iterator is returned
+        by L{checkers.InMemorySSHKeyDB.getAuthorizedKeys}
         """
-        keydb = checkers.InMemoryKeyMapping({'alice': ['keys']})
+        keydb = checkers.InMemorySSHKeyDB({'alice': ['keys']})
         self.assertEqual([], list(keydb.getAuthorizedKeys('bob')))
 
 
     def test_allKeysForAuthorizedUser(self):
         """
         If the user is in the mapping provided to
-        L{checkers.InMemoryKeyMapping}, an iterator with all the keys
-        is returned by L{checkers.InMemoryKeyMapping.getAuthorizedKeys}
+        L{checkers.InMemorySSHKeyDB}, an iterator with all the keys
+        is returned by L{checkers.InMemorySSHKeyDB.getAuthorizedKeys}
         """
-        keydb = checkers.InMemoryKeyMapping({'alice': ['a', 'b']})
+        keydb = checkers.InMemorySSHKeyDB({'alice': ['a', 'b']})
         self.assertEqual(['a', 'b'], list(keydb.getAuthorizedKeys('alice')))
 
 

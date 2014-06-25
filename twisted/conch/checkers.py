@@ -400,7 +400,7 @@ def _keysFromFilepaths(filepaths, parseKey):
 
 
 @implementer(IAuthorizedKeysDB)
-class InMemoryKeyMapping(object):
+class InMemorySSHKeyDB(object):
     """
     Object that provides SSH public keys based on a dictionary of usernames
     mapped to L{twisted.conch.ssh.keys.Key}s.
@@ -409,7 +409,7 @@ class InMemoryKeyMapping(object):
     """
     def __init__(self, mapping):
         """
-        Initializes a new L{InMemoryKeyMapping}.
+        Initializes a new L{InMemorySSHKeyDB}.
 
         @param mapping: mapping of usernames to iterables of
             L{twisted.conch.ssh.keys.Key}s

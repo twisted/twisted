@@ -524,7 +524,7 @@ if Crypto is not None and pyasn1 is not None:
 
         @return: L{twisted.conch.checkers.SSHPublicKeyChecker}
         """
-        conchTestPublicKeyDB = checkers.InMemoryKeyMapping(
+        conchTestPublicKeyDB = checkers.InMemorySSHKeyDB(
             {'testuser': [keys.Key.fromString(publicDSA_openssh)]})
         return checkers.SSHPublicKeyChecker(conchTestPublicKeyDB)
 
