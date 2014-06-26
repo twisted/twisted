@@ -3,16 +3,16 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import errno
+import struct
 
-import struct, errno
+from zope.interface import implementer
 
+from twisted.conch.interfaces import ISFTPServer, ISFTPFile
+from twisted.conch.ssh.common import NS, getNS
 from twisted.internet import defer, protocol
 from twisted.python import failure, log
 
-from common import NS, getNS
-from twisted.conch.interfaces import ISFTPServer, ISFTPFile
-
-from zope import interface
 
 
 
@@ -769,10 +769,10 @@ class FileTransferClient(FileTransferBase):
         These items are sent by the client to indicate additional features.
         """
 
+
+
+@implementer(ISFTPFile)
 class ClientFile:
-
-    interface.implements(ISFTPFile)
-
     def __init__(self, parent, handle):
         self.parent = parent
         self.handle = NS(handle)
