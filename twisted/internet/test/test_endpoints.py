@@ -773,7 +773,7 @@ class MemoryProcessTransport(StringTransportWithDisconnection, object):
 
 
 
-# verifyClass(interfaces.IConsumer, MemoryProcessTransport)
+verifyClass(interfaces.IConsumer, MemoryProcessTransport)
 verifyClass(interfaces.IProcessTransport, MemoryProcessTransport)
 
 
