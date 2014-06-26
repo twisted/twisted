@@ -26,9 +26,8 @@ from twisted.test.proto_helpers import RaisingMemoryReactor, StringTransport
 from twisted.python.failure import Failure
 from twisted.python.systemd import ListenFDs
 from twisted.python.filepath import FilePath
-from twisted.python.runtime import platform
 from twisted.python import log
-from twisted.protocols import basic
+
 from twisted.internet.task import Clock
 from twisted.test.proto_helpers import (MemoryReactorClock as MemoryReactor)
 from twisted.test import __file__ as testInitPath
@@ -618,8 +617,39 @@ class EndpointTestCaseMixin(ServerEndpointTestCaseMixin,
 
 
 
-class StdioFactory(protocol.Factory):
-    protocol = basic.LineReceiver
+class SpecificFactory(Factory):
+    """
+    An L{IProtocolFactory} whose C{buildProtocol} always returns its
+    C{specificProtocol} and sets C{passedAddress}.
+
+    Raising an exception if C{specificProtocol} has already been used.
+    """
+    def __init__(self, specificProtocol):
+        self.specificProtocol = specificProtocol
+
+
+    def buildProtocol(self, addr):
+        if hasattr(self.specificProtocol, 'passedAddress'):
+            raise ValueError("specificProtocol already used.")
+        self.specificProtocol.passedAddress = addr
+        return self.specificProtocol
+
+
+
+class FakeStdio(object):
+    """
+    A L{stdio.StandardIO} like object that simply captures its constructor
+    arguments.
+    """
+    def __init__(self, protocolInstance, reactor=None):
+        """
+        @param protocolInstance: like the first argument of L{stdio.StandardIO}
+
+        @param reactor: like the reactor keyword argument of
+            L{stdio.StandardIO}
+        """
+        self.protocolInstance = protocolInstance
+        self.reactor = reactor
 
 
 
@@ -627,88 +657,43 @@ class StandardIOEndpointsTestCase(unittest.TestCase):
     """
     Tests for Standard I/O Endpoints
     """
+
     def setUp(self):
-        self.ep = endpoints.StandardIOEndpoint(reactor)
-
-
-    def test_standardIOInstance(self):
         """
-        The endpoint creates an L{endpoints.StandardIO} instance.
+        Construct a L{StandardIOEndpoint} with a dummy reactor and a fake
+        L{stdio.StandardIO} like object.  Listening on it with a
+        L{SpecificFactory}.
         """
-        d = self.ep.listen(StdioFactory())
+        self.reactor = object()
+        endpoint = endpoints.StandardIOEndpoint(self.reactor)
+        self.assertIdentical(endpoint._stdio, stdio.StandardIO)
 
-        def checkInstanceAndLoseConnection(stdioOb):
-            self.assertIsInstance(stdioOb, stdio.StandardIO)
-            stdioOb.loseConnection()
+        endpoint._stdio = FakeStdio
+        self.specificProtocol = Protocol()
 
-        return d.addCallback(checkInstanceAndLoseConnection)
+        self.fakeStdio = self.successResultOf(
+            endpoint.listen(SpecificFactory(self.specificProtocol))
+        )
 
 
-    def test_reactor(self):
+    def test_protocolCreation(self):
         """
-        The reactor passed to the endpoint is set as its _reactor attribute.
+        L{StandardIOEndpoint} returns a L{Deferred} that fires with an instance
+        of a L{stdio.StandardIO} like object that was passed the result of
+        L{SpecificFactory.buildProtocol} which was passed a L{PipeAddress}.
         """
-        self.assertEqual(self.ep._reactor, reactor)
+        self.assertIdentical(self.fakeStdio.protocolInstance,
+                             self.specificProtocol)
+        self.assertIsInstance(self.fakeStdio.protocolInstance.passedAddress,
+                              PipeAddress)
 
 
-    def test_protocol(self):
+    def test_passedReactor(self):
         """
-        The protocol used in the endpoint is a L{basic.LineReceiver} instance.
+        L{StandardIOEndpoint} passes its C{reactor} argument to the constructor
+        of its L{stdio.StandardIO} like object.
         """
-        d = self.ep.listen(StdioFactory())
-
-        def checkProtocol(stdioOb):
-            from twisted.python.runtime import platform
-            if platform.isWindows():
-                self.assertIsInstance(stdioOb.proto, basic.LineReceiver)
-            else:
-                self.assertIsInstance(stdioOb.protocol, basic.LineReceiver)
-            stdioOb.loseConnection()
-
-        return d.addCallback(checkProtocol)
-
-
-    def test_address(self):
-        """
-        The address passed to the factory's buildProtocol in the endpoint
-        is a PipeAddress instance.
-        """
-        class TestAddrFactory(protocol.Factory):
-            protocol = basic.LineReceiver
-            address = None
-
-            def buildProtocol(self, addr):
-                self.address = addr
-                p = self.protocol()
-                p.factory = self
-                return p
-
-        myFactory = TestAddrFactory()
-        d = self.ep.listen(myFactory)
-
-        def checkAddress(stdioOb):
-            self.assertIsInstance(myFactory.address, PipeAddress)
-            stdioOb.loseConnection()
-
-        return d.addCallback(checkAddress)
-
-
-    def test_StdioIOReceivesCorrectReactor(self):
-        """
-        The reactor passed to the endpoint is the one that the readers are
-        added to.
-        """
-        reactor = MemoryReactor()
-        ep = endpoints.StandardIOEndpoint(reactor)
-        d = ep.listen(StdioFactory())
-
-        def checkReaders(stdioOb):
-            if platform.isWindows():
-                self.assertEqual(stdioOb.reactor, reactor)
-            else:
-                self.assertIn(stdioOb._reader, reactor.getReaders())
-
-        return d.addCallback(checkReaders)
+        self.assertIdentical(self.fakeStdio.reactor, self.reactor)
 
 
 
