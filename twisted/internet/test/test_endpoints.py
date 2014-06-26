@@ -13,7 +13,7 @@ import socket
 from errno import EPERM
 from socket import AF_INET, AF_INET6, SOCK_STREAM, IPPROTO_TCP
 from zope.interface import implementer
-from zope.interface.verify import verifyObject
+from zope.interface.verify import verifyObject, verifyClass
 
 from twisted.python.compat import _PY3
 from twisted.trial import unittest
@@ -32,6 +32,11 @@ from twisted.protocols import basic
 from twisted.internet.task import Clock
 from twisted.test.proto_helpers import (MemoryReactorClock as MemoryReactor)
 from twisted.test import __file__ as testInitPath
+from twisted.internet.interfaces import IConsumer, IPushProducer
+from twisted.test.proto_helpers import StringTransportWithDisconnection
+from twisted.internet.interfaces import ITransport
+from twisted.internet.protocol import Factory
+
 pemPath = FilePath(testInitPath.encode("utf-8")).sibling(b"server.pem")
 
 if not _PY3:
@@ -728,35 +733,49 @@ class StubApplicationProtocol(protocol.Protocol):
 
 
 @implementer(interfaces.IProcessTransport)
-class MemoryProcessTransport(object):
+class MemoryProcessTransport(StringTransportWithDisconnection, object):
     """
     A fake L{IProcessTransport} provider to be used in tests.
-
-    @ivar dataList: A list to which data is appended in writeToChild. Acts as
-        the child's stdin for testing.
     """
 
-    def __init__(self):
-        self.dataList = []
-        self.host = _ProcessAddress()
-        self.peer = _ProcessAddress()
+    def __init__(self, protocol=None):
+        super(MemoryProcessTransport, self).__init__(
+            hostAddress=_ProcessAddress(),
+            peerAddress=_ProcessAddress())
+        self.signals = []
+        self.closedChildFDs = set()
+        self.protocol = Protocol()
 
 
     def writeToChild(self, childFD, data):
         if childFD == 0:
-            self.dataList.append(data)
+            self.write(data)
 
 
-    def loseConnection(self):
-        self.loseConnectionFlag = True
+    def closeStdin(self):
+        self.closeChildFD(0)
 
 
-    def getPeer(self):
-        return self.peer
+    def closeStdout(self):
+        self.closeChildFD(1)
 
 
-    def getHost(self):
-        return self.host
+    def closeStderr(self):
+        self.closeChildFD(2)
+
+
+    def closeChildFD(self, fd):
+        self.closedChildFDs.add(fd)
+
+
+    def signalProcess(self, signal):
+        self.signals.append(signal)
+
+
+
+verifyClass(interfaces.IConsumer, MemoryProcessTransport)
+verifyClass(interfaces.IPushProducer, MemoryProcessTransport)
+verifyClass(interfaces.IProcessTransport, MemoryProcessTransport)
 
 
 
@@ -781,7 +800,7 @@ class MemoryProcessReactor(object):
         self.usePTY = usePTY
         self.childFDs = childFDs
 
-        self.processTransport = object()
+        self.processTransport = MemoryProcessTransport()
         self.processProtocol.makeConnection(self.processTransport)
         return self.processTransport
 
@@ -931,9 +950,35 @@ class ProcessEndpointTransportTests(unittest.TestCase):
     """
 
     def setUp(self):
-        self.process = MemoryProcessTransport()
-        self.endpointTransport = endpoints._ProcessEndpointTransport(
-            self.process)
+        self.reactor = MemoryProcessReactor()
+        self.endpoint = endpoints.ProcessEndpoint(self.reactor,
+                                                  '/bin/executable')
+        protocol = self.successResultOf(
+            self.endpoint.connect(Factory.forProtocol(Protocol))
+        )
+        self.process = self.reactor.processTransport
+        self.endpointTransport = protocol.transport
+
+
+    def test_verifyConsumer(self):
+        """
+        L{_ProcessEndpointTransport}s provide L{IConsumer}.
+        """
+        verifyObject(IConsumer, self.endpointTransport)
+
+
+    def test_verifyProducer(self):
+        """
+        L{_ProcessEndpointTransport}s provide L{IPushProducer}.
+        """
+        verifyObject(IPushProducer, self.endpointTransport)
+
+
+    def test_verifyTransport(self):
+        """
+        L{_ProcessEndpointTransport}s provide L{ITransport}.
+        """
+        verifyObject(ITransport, self.endpointTransport)
 
 
     def test_constructor(self):
@@ -941,7 +986,69 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         The L{_ProcessEndpointTransport} instance stores the process passed to
         it.
         """
-        self.assertEqual(self.endpointTransport._process, self.process)
+        self.assertIdentical(self.endpointTransport._process, self.process)
+
+
+    def test_registerProducer(self):
+        """
+        Registering a producer with the endpoint transport registers it with
+        the underlying process transport.
+        """
+        @implementer(IPushProducer)
+        class AProducer(object):
+            pass
+        aProducer = AProducer()
+        self.endpointTransport.registerProducer(aProducer, False)
+        self.assertIdentical(self.process.producer, aProducer)
+
+
+    def test_pauseProducing(self):
+        """
+        Pausing the endpoint transport pauses the underlying process transport.
+        """
+        self.endpointTransport.pauseProducing()
+        self.assertEqual(self.process.producerState, 'paused')
+
+
+    def test_resumeProducing(self):
+        """
+        Resuming the endpoint transport resumes the underlying process
+        transport.
+        """
+        self.test_pauseProducing()
+        self.endpointTransport.resumeProducing()
+        self.assertEqual(self.process.producerState, 'producing')
+
+
+    def test_stopProducing(self):
+        """
+        Stopping the endpoint transport as a producer stops the underlying
+        process transport.
+        """
+        self.endpointTransport.stopProducing()
+        self.assertEqual(self.process.producerState, 'stopped')
+
+
+    def test_unregisterProducer(self):
+        """
+        Unregistring the endpoint transport's producer unregisters the
+        underlying process transport's producer.
+        """
+        self.test_registerProducer()
+        self.endpointTransport.unregisterProducer()
+        self.assertIdentical(self.process.producer, None)
+
+
+    def test_extraneousAttributes(self):
+        """
+        L{endpoints._ProcessEndpointTransport} filters out extraneous
+        attributes of its underlying transport, to present a more consistent
+        cross-platform view of subprocesses and prevent accidental
+        dependencies.
+        """
+        self.process.pipes = []
+        self.assertRaises(AttributeError,
+                          getattr, self.endpointTransport, 'pipes')
 
 
     def test_writeSequence(self):
@@ -950,7 +1057,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         of string passed to it to the transport's stdin.
         """
         self.endpointTransport.writeSequence(['test1', 'test2', 'test3'])
-        self.assertEqual(self.process.dataList, ['test1', 'test2', 'test3'])
+        self.assertEqual(self.process.io.getvalue(), 'test1test2test3')
 
 
     def test_write(self):
@@ -959,7 +1066,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         data passed to it to the child process's stdin.
         """
         self.endpointTransport.write('test')
-        self.assertEqual(self.process.dataList.pop(), 'test')
+        self.assertEqual(self.process.io.getvalue(), 'test')
 
 
     def test_loseConnection(self):
@@ -968,7 +1075,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         instance returns a call to the process transport's loseConnection.
         """
         self.endpointTransport.loseConnection()
-        self.assertEqual(self.process.loseConnectionFlag, True)
+        self.assertEqual(self.process.connected, False)
 
 
     def test_getHost(self):
@@ -978,7 +1085,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         """
         host = self.endpointTransport.getHost()
         self.assertIsInstance(host, _ProcessAddress)
-        self.assertIs(host, self.process.host)
+        self.assertIs(host, self.process.getHost())
 
 
     def test_getPeer(self):
@@ -988,7 +1095,7 @@ class ProcessEndpointTransportTests(unittest.TestCase):
         """
         peer = self.endpointTransport.getPeer()
         self.assertIsInstance(peer, _ProcessAddress)
-        self.assertIs(peer, self.process.peer)
+        self.assertIs(peer, self.process.getPeer())
 
 
 
@@ -3221,4 +3328,5 @@ if _PY3:
          AdoptedStreamServerEndpointTestCase, SystemdEndpointPluginTests,
          TCP6ServerEndpointPluginTests, StandardIOEndpointPluginTests,
          ProcessEndpointsTestCase, WrappedIProtocolTests,
+         ProcessEndpointTransportTests,
          )

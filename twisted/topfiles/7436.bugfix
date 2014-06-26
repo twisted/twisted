@@ -1,0 +1,2 @@
+Allow much more of the code within Twisted to use ProcessEndpoint by adding
+IPushProducer and IConsumer interfaces to its resulting transport.
