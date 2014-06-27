@@ -31,7 +31,7 @@ try:
 except ImportError:
     pamauth = None
 
-from zope.interface import implements, providedBy, implementer, Interface
+from zope.interface import providedBy, implementer, Interface
 
 
 from twisted.conch import error
@@ -85,6 +85,7 @@ def _shadowGetByName(username):
 
 
 
+@implementer(ICredentialsChecker)
 class UNIXPasswordDatabase:
     """
     A checker which validates users out of the UNIX password databases, or
@@ -95,8 +96,6 @@ class UNIXPasswordDatabase:
         database will be tried first, followed by the /etc/shadow database.
     """
     credentialInterfaces = IUsernamePassword,
-    implements(ICredentialsChecker)
-
 
     def __init__(self, getByNameFunctions=None):
         if getByNameFunctions is None:
@@ -122,13 +121,12 @@ class UNIXPasswordDatabase:
 
 
 
+@implementer(ICredentialsChecker)
 class SSHPublicKeyDatabase:
     """
     Checker that authenticates SSH public keys, based on public keys listed in
     authorized_keys and authorized_keys2 files in user .ssh/ directories.
     """
-    implements(ICredentialsChecker)
-
     credentialInterfaces = (ISSHPrivateKey,)
 
     _userdb = pwd
@@ -231,6 +229,8 @@ class SSHPublicKeyDatabase:
         return f
 
 
+
+@implementer(ICredentialsChecker)
 class SSHProtocolChecker:
     """
     SSHProtocolChecker is a checker that requires multiple authentications
@@ -242,8 +242,6 @@ class SSHProtocolChecker:
     use C{SSHProcotolChecker.successfulCredentials[avatarId]}.  If L{areDone}
     returns True, the authentication has succeeded.
     """
-
-    implements(ICredentialsChecker)
 
     def __init__(self):
         self.checkers = {}
