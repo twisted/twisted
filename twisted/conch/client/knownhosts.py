@@ -12,7 +12,7 @@ import hmac
 from binascii import Error as DecodeError, b2a_base64
 from hashlib import sha1
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.python.randbytes import secureRandom
 from twisted.internet import defer
@@ -102,6 +102,7 @@ class _BaseEntry(object):
 
 
 
+@implementer(IKnownHostEntry)
 class PlainEntry(_BaseEntry):
     """
     A L{PlainEntry} is a representation of a plain-text entry in a known_hosts
@@ -110,8 +111,6 @@ class PlainEntry(_BaseEntry):
     @ivar _hostnames: the list of all host-names associated with this entry.
     @type _hostnames: L{list} of L{str}
     """
-
-    implements(IKnownHostEntry)
 
     def __init__(self, hostnames, keyType, publicKey, comment):
         self._hostnames = hostnames
@@ -181,13 +180,12 @@ class PlainEntry(_BaseEntry):
 
 
 
+@implementer(IKnownHostEntry)
 class UnparsedEntry(object):
     """
     L{UnparsedEntry} is an entry in a L{KnownHostsFile} which can't actually be
     parsed; therefore it matches no keys and no hosts.
     """
-
-    implements(IKnownHostEntry)
 
     def __init__(self, string):
         """
@@ -242,6 +240,7 @@ def _hmacedString(key, string):
 
 
 
+@implementer(IKnownHostEntry)
 class HashedEntry(_BaseEntry, FancyEqMixin):
     """
     A L{HashedEntry} is a representation of an entry in a known_hosts file
@@ -254,8 +253,6 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
     @cvar MAGIC: the 'hash magic' string used to identify a hashed line in a
     known_hosts file as opposed to a plaintext one.
     """
-
-    implements(IKnownHostEntry)
 
     MAGIC = '|1|'
 
