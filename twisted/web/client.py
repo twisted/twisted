@@ -1278,11 +1278,11 @@ class HTTPConnectionPool(object):
             dropped.transport.loseConnection()
             self._timeouts[dropped].cancel()
             del self._timeouts[dropped]
-        connections.append(connection)
         cid = self._reactor.callLater(self.cachedConnectionTimeout,
                                       self._removeConnection,
                                       key, connection)
         self._timeouts[connection] = cid
+        connections.append(connection)
 
 
     def closeCachedConnections(self):

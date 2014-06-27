@@ -417,6 +417,33 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         d = self.pool.getConnection(unknownKey, DummyEndpoint())
         return d.addCallback(gotConnection)
 
+    def test_get_connection_race(self):
+        """
+        checks for a race condition between the _putConnection and get getConnection methods.
+        A context switch can occur during the execution of _putConnection (when calling callLater) and if getConnection
+        will execute before the context is switched back, getConnection can fail
+        """
+        class Endpoint:
+            def connect(self, factory):
+                return "NEW CONNECTION"
+        protocol = StubHTTPProtocol()
+        protocol.makeConnection(StringTransport())
+        pool = self.pool
+        connection = None
+        key = ("http", "example.com", 80)
+
+        def mock_callLater(delay, callable, *args, **kw):
+            #simulate context switch. someone calling getConnection
+            #race condition can happen since callLater ends in a system call that releases the GIL
+            connection = pool.getConnection(key, Endpoint())
+            self.assertEquals(connection, 'NEW CONNECTION')
+
+        original_callLater = self.fakeReactor.callLater
+        self.fakeReactor.callLater = mock_callLater
+
+        self.pool._putConnection(key, protocol)
+        self.fakeReactor.callLater = original_callLater
+
 
     def test_putStartsTimeout(self):
         """
