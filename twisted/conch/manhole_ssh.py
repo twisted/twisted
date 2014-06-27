@@ -8,7 +8,7 @@ insults/SSH integration support.
 @author: Jp Calderone
 """
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.conch import avatar, interfaces as iconch, error as econch
 from twisted.conch.ssh import factory, keys, session
@@ -57,9 +57,10 @@ class TerminalSessionTransport:
         # this bit up.
         self.chainedProtocol.terminalProtocol.terminalSize(width, height)
 
-class TerminalSession(components.Adapter):
-    implements(iconch.ISession)
 
+
+@implementer(iconch.ISession)
+class TerminalSession(components.Adapter):
     transportFactory = TerminalSessionTransport
     chainedProtocolFactory = insults.ServerProtocol
 
