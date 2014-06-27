@@ -9,12 +9,15 @@ Maintainer: Paul Swartz
 
 @since: 12.1
 """
-from zope.interface import implements
+
+from zope.interface import implementer
+
 from twisted.internet.interfaces import IAddress
 from twisted.python import util
 
 
 
+@implementer(IAddress)
 class SSHTransportAddress(object, util.FancyEqMixin):
     """
     Object representing an SSH Transport endpoint.
@@ -23,15 +26,15 @@ class SSHTransportAddress(object, util.FancyEqMixin):
         which this transport address is connected.
     """
 
-    implements(IAddress)
-
     compareAttributes = ('address',)
 
     def __init__(self, address):
         self.address = address
 
+
     def __repr__(self):
         return 'SSHTransportAddress(%r)' % (self.address,)
+
 
     def __hash__(self):
         return hash(('SSH', self.address))

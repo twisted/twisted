@@ -10,11 +10,13 @@ are session. direct-tcp, and forwarded-tcp.
 Maintainer: Paul Swartz
 """
 
+from zope.interface import implementer
+
 from twisted.python import log
 from twisted.internet import interfaces
-from zope.interface import implements
 
 
+@implementer(interfaces.ITransport)
 class SSHChannel(log.Logger):
     """
     A class that represents a multiplexed channel over an SSH connection.
@@ -47,8 +49,6 @@ class SSHChannel(log.Logger):
     @ivar remoteClosed: True if the other size isn't accepting more data.
     @type remoteClosed: C{bool}
     """
-
-    implements(interfaces.ITransport)
 
     name = None # only needed for client channels
 
