@@ -6,7 +6,7 @@
 Tests for L{twisted.conch.telnet}.
 """
 
-from zope.interface import implements
+from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.internet import defer
@@ -17,9 +17,9 @@ from twisted.trial import unittest
 from twisted.test import proto_helpers
 
 
-class TestProtocol:
-    implements(telnet.ITelnetProtocol)
 
+@implementer(telnet.ITelnetProtocol)
+class TestProtocol:
     localEnableable = ()
     remoteEnableable = ()
 
