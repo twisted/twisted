@@ -8,9 +8,11 @@ VT102 and VT220 terminal manipulation.
 @author: Jp Calderone
 """
 
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from twisted.internet import protocol, defer, interfaces as iinternet
+
+
 
 class ITerminalProtocol(Interface):
     def makeConnection(transport):
@@ -47,9 +49,10 @@ class ITerminalProtocol(Interface):
         reason is a Failure describing why.
         """
 
-class TerminalProtocol(object):
-    implements(ITerminalProtocol)
 
+
+@implementer(ITerminalProtocol)
+class TerminalProtocol(object):
     def makeConnection(self, terminal):
         # assert ITerminalTransport.providedBy(transport), "TerminalProtocol.makeConnection must be passed an ITerminalTransport implementor"
         self.terminal = terminal
@@ -370,9 +373,10 @@ class _const(object):
 FUNCTION_KEYS = [
     _const(_name) for _name in _KEY_NAMES]
 
-class ServerProtocol(protocol.Protocol):
-    implements(ITerminalTransport)
 
+
+@implementer(ITerminalTransport)
+class ServerProtocol(protocol.Protocol):
     protocolFactory = None
     terminalProtocol = None
 
