@@ -2175,7 +2175,7 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
 
     def test_getClient(self):
         """
-        L{Request.getClient} is deprecated if favor of resolving the hostname
+        L{Request.getClient} is deprecated in favor of resolving the hostname
         in application code.
         """
         request = http.Request(DummyChannel(), True)
