@@ -1,0 +1,1 @@
+twisted.web.iweb.IRequest.getClient is now deprecated.  Its implementation in Twisted, twisted.web.http.Request.getClient, is also deprecated and now always returns `None` instead of performing hostname resolution.

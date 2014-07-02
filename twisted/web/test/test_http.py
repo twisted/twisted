@@ -2173,3 +2173,21 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
                          sub(["category", "message"], warnings[0]))
 
 
+    def test_getClient(self):
+        """
+        L{Request.getClient} is deprecated if favor of resolving the hostname
+        in application code.
+        """
+        request = http.Request(DummyChannel(), True)
+        self.assertIs(None, request.getClient())
+        warnings = self.flushWarnings(
+            offendingFunctions=[self.test_getClient])
+
+        self.assertEqual({
+                "category": DeprecationWarning,
+                "message": (
+                    "twisted.web.http.Request.getClient was deprecated "
+                    "in Twisted 14.1.0; please use Twisted Names to "
+                    "resolve hostnames instead")},
+                         sub(["category", "message"], warnings[0]))
+

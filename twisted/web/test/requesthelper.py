@@ -272,7 +272,7 @@ class DummyRequest(object):
 
     def getClient(self):
         """
-        Stub to get the client doing the HTTP request.
-        This merely just ensures that this method exists here. Feel free to
-        extend it.
+        Always return C{None} because the client hostname is not available
+        synchronously.
         """
+        return None
