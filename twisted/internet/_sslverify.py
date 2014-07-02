@@ -176,6 +176,8 @@ def _selectVerifyImplementation(lib):
                 + whatsWrong,
                 # Unfortunately the lineno is required.
                 category=UserWarning, filename="", lineno=0)
+            
+            return simpleVerifyHostname, SimpleVerificationError
     else:
         warnings.warn_explicit(
             "Your version of pyOpenSSL, {0}, is out of date.  "
