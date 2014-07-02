@@ -1324,8 +1324,8 @@ class Request:
 
     def getClient(self):
         """
-        Always return C{None} because the client hostname is not available
-        synchronously.
+        @return: C{None}, always, because the client hostname is not available
+            synchronously.
         """
         return None
 
