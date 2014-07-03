@@ -1324,10 +1324,13 @@ class Request:
 
     def getClient(self):
         """
-        @return: C{None}, always, because the client hostname is not available
-            synchronously.
+        Get the client's IP address, if it has one.  No attempt is made to
+        resolve the address to a hostname.
+
+        @return: The same value as C{getClientIP}.
+        @rtype: L{bytes}
         """
-        return None
+        return self.getClientIP()
 
 
     def connectionLost(self, reason):

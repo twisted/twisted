@@ -2178,8 +2178,12 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
         L{Request.getClient} is deprecated in favor of resolving the hostname
         in application code.
         """
-        request = http.Request(DummyChannel(), True)
-        self.assertIs(None, request.getClient())
+        channel = DummyChannel()
+        request = http.Request(channel, True)
+        request.gotLength(123)
+        request.requestReceived(b"GET", b"/", b"HTTP/1.1")
+        expected = channel.transport.getPeer().host
+        self.assertEqual(expected, request.getClient())
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_getClient])
 
@@ -2190,4 +2194,3 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
                     "in Twisted 14.1.0; please use Twisted Names to "
                     "resolve hostnames instead")},
                          sub(["category", "message"], warnings[0]))
-

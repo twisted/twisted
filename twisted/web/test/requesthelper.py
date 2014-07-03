@@ -277,7 +277,7 @@ class DummyRequest(object):
         @return: C{None}, always, because the client hostname is not available
             synchronously.
         """
-        return None
+        return self.getClientIP()
 
 DummyRequest.getClient = deprecated(
     Version("Twisted", 14, 1, 0),
