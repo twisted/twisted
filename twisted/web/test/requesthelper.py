@@ -274,8 +274,10 @@ class DummyRequest(object):
 
     def getClient(self):
         """
-        @return: C{None}, always, because the client hostname is not available
-            synchronously.
+        Get the client's IP address, if it has one.
+
+        @return: The same value as C{getClientIP}.
+        @rtype: L{bytes}
         """
         return self.getClientIP()
 
