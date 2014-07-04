@@ -13,6 +13,8 @@ from io import BytesIO
 
 from zope.interface import implementer
 
+from twisted.python.deprecate import deprecated
+from twisted.python.versions import Version
 from twisted.internet.defer import Deferred
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import ISSLTransport
@@ -272,7 +274,13 @@ class DummyRequest(object):
 
     def getClient(self):
         """
-        Stub to get the client doing the HTTP request.
-        This merely just ensures that this method exists here. Feel free to
-        extend it.
+        Get the client's IP address, if it has one.
+
+        @return: The same value as C{getClientIP}.
+        @rtype: L{bytes}
         """
+        return self.getClientIP()
+
+DummyRequest.getClient = deprecated(
+    Version("Twisted", 14, 1, 0),
+    "Twisted Names to resolve hostnames")(DummyRequest.getClient)

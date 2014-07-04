@@ -59,7 +59,6 @@ __all__ = [
 import tempfile
 import base64, binascii
 import cgi
-import socket
 import math
 import time
 import calendar
@@ -90,7 +89,9 @@ from zope.interface import implementer, provider
 # twisted imports
 from twisted.python.compat import (
     _PY3, unicode, intToBytes, networkString, nativeString)
+from twisted.python.deprecate import deprecated
 from twisted.python import log
+from twisted.python.versions import Version
 from twisted.python.components import proxyForInterface
 from twisted.internet import interfaces, reactor, protocol, address
 from twisted.internet.defer import Deferred
@@ -1322,18 +1323,14 @@ class Request:
 
 
     def getClient(self):
-        if self.client.type != 'TCP':
-            return None
-        host = self.client.host
-        try:
-            name, names, addresses = socket.gethostbyaddr(host)
-        except socket.error:
-            return host
-        names.insert(0, name)
-        for name in names:
-            if '.' in name:
-                return name
-        return names[0]
+        """
+        Get the client's IP address, if it has one.  No attempt is made to
+        resolve the address to a hostname.
+
+        @return: The same value as C{getClientIP}.
+        @rtype: L{bytes}
+        """
+        return self.getClientIP()
 
 
     def connectionLost(self, reason):
@@ -1349,6 +1346,9 @@ class Request:
             d.errback(reason)
         self.notifications = []
 
+Request.getClient = deprecated(
+    Version("Twisted", 14, 1, 0),
+    "Twisted Names to resolve hostnames")(Request.getClient)
 
 
 class _DataLoss(Exception):
