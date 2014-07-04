@@ -219,13 +219,16 @@ class _WrappingFactory(ClientFactory):
 
     def buildProtocol(self, addr):
         """
-        Proxy C{buildProtocol} to our C{self._wrappedFactory} or errback
-        the C{self._onConnection} L{Deferred}.
+        Proxy C{buildProtocol} to our C{self._wrappedFactory} or errback the
+        C{self._onConnection} L{Deferred} if the wrapped factory raises an
+        exception or returns C{None}.
 
         @return: An instance of L{_WrappingProtocol} or C{None}
         """
         try:
             proto = self._wrappedFactory.buildProtocol(addr)
+            if proto is None:
+                raise error.NoProtocol()
         except:
             self._onConnection.errback()
         else:

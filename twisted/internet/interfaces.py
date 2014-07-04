@@ -2519,7 +2519,8 @@ class IStreamClientEndpoint(Interface):
 
         @param protocolFactory: A provider of L{IProtocolFactory}
         @return: A L{Deferred} that results in an L{IProtocol} upon successful
-            connection otherwise a L{ConnectError}
+            connection otherwise a L{Failure} wrapping L{ConnectError} or
+            L{NoProtocol <twisted.internet.error.NoProtocol>}.
         """
 
 
