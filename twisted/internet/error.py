@@ -437,6 +437,14 @@ class ConnectingCancelledError(Exception):
 
 
 
+class NoProtocol(Exception):
+    """
+    An C{Exception} that will be raised when the factory given to a
+    L{IStreamClientEndpoint} returns C{None} from C{buildProtocol}.
+    """
+
+
+
 class UnsupportedAddressFamily(Exception):
     """
     An attempt was made to use a socket with an address family (eg I{AF_INET},

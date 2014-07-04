@@ -10,6 +10,7 @@ import socket, operator, errno, struct
 from zope.interface import implements, classImplements
 
 from twisted.internet import interfaces, error, address, main, defer
+from twisted.internet.protocol import Protocol
 from twisted.internet.abstract import _LogOwner, isIPAddress, isIPv6Address
 from twisted.internet.tcp import _SocketCloser, Connector as TCPConnector
 from twisted.internet.tcp import _AbortingMixin, _BaseBaseClient, _BaseTCPClient
@@ -289,8 +290,19 @@ class Client(_BaseBaseClient, _BaseTCPClient, Connection):
             self.connected = True
             logPrefix = self._getLogPrefix(self.protocol)
             self.logstr = logPrefix + ",client"
-            self.protocol.makeConnection(self)
-            self.startReading()
+            if self.protocol is None:
+                # Factory.buildProtocol is allowed to return None.  In that
+                # case, make up a protocol to satisfy the rest of the
+                # implementation; connectionLost is going to be called on
+                # something, for example.  This is easier than adding special
+                # case support for a None protocol throughout the rest of the
+                # transport implementation.
+                self.protocol = Protocol()
+                # But dispose of the connection quickly.
+                self.loseConnection()
+            else:
+                self.protocol.makeConnection(self)
+                self.startReading()
 
 
     def doConnect(self):

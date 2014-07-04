@@ -155,6 +155,15 @@ class TestFactory(ClientFactory):
 
 
 
+class NoneFactory(ClientFactory):
+    """
+    A one off factory whose C{buildProtocol} returns C{None}.
+    """
+    def buildProtocol(self, addr):
+        return None
+
+
+
 class WrappingFactoryTests(unittest.TestCase):
     """
     Test the behaviour of our ugly implementation detail C{_WrappingFactory}.
@@ -205,6 +214,28 @@ class WrappingFactoryTests(unittest.TestCase):
             ("My protocol is poorly defined.",)))
 
         return d
+
+
+    def test_buildNoneProtocol(self):
+        """
+        If the wrapped factory's C{buildProtocol} returns C{None} the
+        C{onConnection} errback fires with L{error.NoProtocol}.
+        """
+        wrappingFactory = endpoints._WrappingFactory(NoneFactory())
+        wrappingFactory.buildProtocol(None)
+        self.failureResultOf(wrappingFactory._onConnection, error.NoProtocol)
+
+
+    def test_buildProtocolReturnsNone(self):
+        """
+        If the wrapped factory's C{buildProtocol} returns C{None} then
+        L{endpoints._WrappingFactory.buildProtocol} returns C{None}.
+        """
+        wrappingFactory = endpoints._WrappingFactory(NoneFactory())
+        # Discard the failure this Deferred will get
+        wrappingFactory._onConnection.addErrback(lambda reason: None)
+
+        self.assertIs(None, wrappingFactory.buildProtocol(None))
 
 
     def test_logPrefixPassthrough(self):

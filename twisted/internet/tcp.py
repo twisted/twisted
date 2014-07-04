@@ -94,6 +94,7 @@ from twisted.python import log, failure, reflect
 from twisted.python.util import untilConcludes
 from twisted.internet.error import CannotListenError
 from twisted.internet import abstract, main, interfaces, error
+from twisted.internet.protocol import Protocol
 
 # Not all platforms have, or support, this flag.
 _AI_NUMERICSERV = getattr(socket, "AI_NUMERICSERV", 0)
@@ -607,8 +608,18 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
         self.connected = 1
         logPrefix = self._getLogPrefix(self.protocol)
         self.logstr = "%s,client" % logPrefix
-        self.startReading()
-        self.protocol.makeConnection(self)
+        if self.protocol is None:
+            # Factory.buildProtocol is allowed to return None.  In that case,
+            # make up a protocol to satisfy the rest of the implementation;
+            # connectionLost is going to be called on something, for example.
+            # This is easier than adding special case support for a None
+            # protocol throughout the rest of the transport implementation.
+            self.protocol = Protocol()
+            # But dispose of the connection quickly.
+            self.loseConnection()
+        else:
+            self.startReading()
+            self.protocol.makeConnection(self)
 
 
 
