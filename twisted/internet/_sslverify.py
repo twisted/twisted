@@ -876,6 +876,12 @@ class IOpenSSLTrustRoot(Interface):
         """
 
 
+    def _beltAndSuspenders(chain):
+        """
+        Is this certificate chain OK?
+        """
+
+
 
 @implementer(IOpenSSLTrustRoot)
 class OpenSSLCertificateAuthorities(object):
@@ -899,6 +905,17 @@ class OpenSSLCertificateAuthorities(object):
             store.add_cert(cert)
 
 
+    def _beltAndSuspenders(self, chain):
+        """
+        Does the certificate check out?
+        """
+        for cert in self._caCerts:
+            for x509 in chain:
+                if x509.get_issuer() == cert:
+                    return True
+        return False
+
+
 
 @implementer(IOpenSSLTrustRoot)
 class OpenSSLDefaultPaths(object):
@@ -910,6 +927,13 @@ class OpenSSLDefaultPaths(object):
 
     def _addCACertsToContext(self, context):
         context.set_default_verify_paths()
+
+
+    def _beltAndSuspenders(self, chain):
+        """
+        Sure, what evs.
+        """
+        return True
 
 
 
@@ -1044,7 +1068,7 @@ class ClientTLSOptions(object):
     @type _hostnameASCII: L{unicode}
     """
 
-    def __init__(self, hostname, ctx):
+    def __init__(self, hostname, ctx, trustRoot):
         """
         Initialize L{ClientTLSOptions}.
 
@@ -1053,11 +1077,14 @@ class ClientTLSOptions(object):
 
         @param ctx: an L{SSL.Context} to use for new connections.
         @type ctx: L{SSL.Context}.
+
+        @param trustroot: etc
         """
         self._ctx = ctx
         self._hostname = hostname
         self._hostnameBytes = _idnaBytes(hostname)
         self._hostnameASCII = self._hostnameBytes.decode("ascii")
+        self._trustRoot = trustRoot
         ctx.set_info_callback(
             _tolerateErrors(self._identityVerifyingInfoCallback)
         )
@@ -1104,12 +1131,18 @@ class ClientTLSOptions(object):
         if where & SSL_CB_HANDSHAKE_START:
             _maybeSetHostNameIndication(connection, self._hostnameBytes)
         elif where & SSL_CB_HANDSHAKE_DONE:
+            def failVerify(f):
+                transport = connection.get_app_data()
+                transport.failVerification(f)
+
+            peerChain = connection.get_peer_cert_chain()
+            if not self._trustRoot._beltAndSuspenders(peerChain):
+                failVerify(Failure(SSL.Error("CVE mitigation")))
             try:
                 verifyHostname(connection, self._hostnameASCII)
             except VerificationError:
                 f = Failure()
-                transport = connection.get_app_data()
-                transport.failVerification(f)
+                failVerify(f)
 
 
 
@@ -1184,7 +1217,8 @@ def optionsForClientTLS(hostname, trustRoot=None, clientCertificate=None,
         trustRoot=trustRoot,
         **extraCertificateOptions
     )
-    return ClientTLSOptions(hostname, certificateOptions.getContext())
+    return ClientTLSOptions(hostname, certificateOptions.getContext(),
+                            certificateOptions.trustRoot)
 
 
 
