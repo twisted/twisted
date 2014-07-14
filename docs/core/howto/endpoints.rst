@@ -43,7 +43,7 @@ There's Not Much To It
 
 Each type of endpoint is just an interface with a single method that
 takes an argument. ``serverEndpoint.listen(factory)`` will start
-listening on that endpoint with your protocol factory, and``clientEndpoint.connect(factory)`` will start a single connection
+listening on that endpoint with your protocol factory, and ``clientEndpoint.connect(factory)`` will start a single connection
 attempt. Each of these APIs returns a value, though, which can be important.
 
 However, if you are not already, you *should* be very familiar with :doc:`Deferreds <defer>`, as they are returned by both ``connect`` and ``listen`` methods, to indicate when the connection has connected or the listening port is up and running.
