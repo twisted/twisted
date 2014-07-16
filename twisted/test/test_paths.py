@@ -1365,8 +1365,61 @@ class FilePathTestCase(AbstractFilePathTestCase):
             self.assertEqual(self.path.child(b"sub1").getPermissions(),
                               filepath.Permissions(mode))
         self.path.child(b"sub1").chmod(0o764) #sanity check
-        self.assertEqual(self.path.child(b"sub1").getPermissions().shorthand(),
-                          "rwxrw-r--")
+        self.assertEqual(
+            self.path.child(b"sub1").getPermissions().shorthand(),
+            "rwxrw-r--")
+
+
+    def test_deprecateStatinfoGetter(self):
+        """
+        Getting L{twisted.python.filepath.FilePath.statinfo} is deprecated.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp.statinfo
+        warningInfo = self.flushWarnings([self.test_deprecateStatinfoGetter])
+        self.assertEquals(len(warningInfo), 1)
+        self.assertEquals(warningInfo[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            warningInfo[0]['message'],
+            "twisted.python.filepath.FilePath.statinfo was deprecated in "
+            "Twisted 14.1.0; please use other FilePath methods such as "
+            "getsize(), isdir(), getModificationTime(), etc. instead")
+
+
+    def test_deprecateStatinfoSetter(self):
+        """
+        Setting L{twisted.python.filepath.FilePath.statinfo} is deprecated.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp.statinfo = None
+        warningInfo = self.flushWarnings([self.test_deprecateStatinfoSetter])
+        self.assertEquals(len(warningInfo), 1)
+        self.assertEquals(warningInfo[0]['category'], DeprecationWarning)
+        self.assertEquals(
+            warningInfo[0]['message'],
+            "twisted.python.filepath.FilePath.statinfo was deprecated in "
+            "Twisted 14.1.0; please use other FilePath methods such as "
+            "getsize(), isdir(), getModificationTime(), etc. instead")
+
+
+    def test_deprecateStatinfoSetterSets(self):
+        """
+        Setting L{twisted.python.filepath.FilePath.statinfo} changes the value
+        of _statinfo such that getting statinfo again returns the new value.
+        """
+        fp = filepath.FilePath(self.mktemp())
+        fp.statinfo = None
+        self.assertEquals(fp.statinfo, None)
+
+
+    def test_filePathNotDeprecated(self):
+        """
+        While accessing L{twisted.python.filepath.FilePath.statinfo} is
+        deprecated, the filepath itself is not.
+        """
+        filepath.FilePath(self.mktemp())
+        warningInfo = self.flushWarnings([self.test_filePathNotDeprecated])
+        self.assertEquals(warningInfo, [])
 
 
     def test_getPermissions_Windows(self):
@@ -1445,11 +1498,11 @@ class FilePathTestCase(AbstractFilePathTestCase):
         # monkey patch in a fake restat method for self.path
         fake = FakeStat()
         def fakeRestat(*args, **kwargs):
-            self.path.statinfo = fake
+            self.path._statinfo = fake
         self.path.restat = fakeRestat
 
         # ensure that restat will need to be called to get values
-        self.path.statinfo = None
+        self.path._statinfo = None
 
         self.assertEqual(self.path.getInodeNumber(), fake.st_ino)
         self.assertEqual(self.path.getDevice(), fake.st_dev)

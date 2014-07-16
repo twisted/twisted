@@ -31,13 +31,16 @@ from zope.interface import Interface, Attribute, implementer
 # modified for inclusion in the standard library.  --glyph
 
 from twisted.python.compat import comparable, cmp
+from twisted.python.deprecate import deprecated
 from twisted.python.runtime import platform
+from twisted.python.versions import Version
 
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
 from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
 from twisted.python.win32 import WindowsError
 
 from twisted.python.util import FancyEqMixin
+
 
 
 _CREATE_FLAGS = (os.O_EXCL |
@@ -582,6 +585,14 @@ class Permissions(FancyEqMixin, object):
             [x.shorthand() for x in (self.user, self.group, self.other)])
 
 
+class _SpecialNoValue(object):
+    """
+    An object that represents 'no value', to be used in deprecating statinfo.
+
+    Please remove once statinfo is removed.
+    """
+    pass
+
 
 @comparable
 @implementer(IFilePath)
@@ -618,7 +629,9 @@ class FilePath(AbstractFilePath):
     @type path: L{bytes}
     @ivar path: The path from which 'downward' traversal is permitted.
 
-    @ivar statinfo: The currently cached status information about the file on
+    @ivar statinfo: (WARNING: statinfo is deprecated as of Twisted 14.1.0 and
+        will become a private attribute)
+        The currently cached status information about the file on
         the filesystem that this L{FilePath} points to.  This attribute is
         C{None} if the file is in an indeterminate state (either this
         L{FilePath} has not yet had cause to call C{stat()} yet or
@@ -632,11 +645,11 @@ class FilePath(AbstractFilePath):
         C{getModificationTime()}, and so on.
     @type statinfo: L{int} or L{types.NoneType} or L{os.stat_result}
     """
-
-    statinfo = None
+    _statinfo = None
     path = None
 
     sep = slash.encode("ascii")
+
 
     def __init__(self, path, alwaysCreate=False):
         """
@@ -646,14 +659,15 @@ class FilePath(AbstractFilePath):
         self.path = abspath(path)
         self.alwaysCreate = alwaysCreate
 
+
     def __getstate__(self):
         """
         Support serialization by discarding cached L{os.stat} results and
         returning everything else.
         """
         d = self.__dict__.copy()
-        if 'statinfo' in d:
-            del d['statinfo']
+        if '_statinfo' in d:
+            del d['_statinfo']
         return d
 
 
@@ -845,9 +859,9 @@ class FilePath(AbstractFilePath):
             while reloading metadata.
         """
         try:
-            self.statinfo = stat(self.path)
+            self._statinfo = stat(self.path)
         except OSError:
-            self.statinfo = 0
+            self._statinfo = 0
             if reraise:
                 raise
 
@@ -858,7 +872,7 @@ class FilePath(AbstractFilePath):
 
         @since: 10.1.0
         """
-        self.statinfo = None
+        self._statinfo = None
 
 
     def chmod(self, mode):
@@ -881,10 +895,10 @@ class FilePath(AbstractFilePath):
         @raise Exception: if the size cannot be obtained.
         @rtype: L{int}
         """
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat()
-            st = self.statinfo
+            st = self._statinfo
         return st.st_size
 
 
@@ -895,10 +909,10 @@ class FilePath(AbstractFilePath):
         @return: a number of seconds from the epoch.
         @rtype: L{float}
         """
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat()
-            st = self.statinfo
+            st = self._statinfo
         return float(st.st_mtime)
 
 
@@ -909,10 +923,10 @@ class FilePath(AbstractFilePath):
         @return: a number of seconds from the epoch.
         @rtype: L{float}
         """
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat()
-            st = self.statinfo
+            st = self._statinfo
         return float(st.st_ctime)
 
 
@@ -923,10 +937,10 @@ class FilePath(AbstractFilePath):
         @return: a number of seconds from the epoch.
         @rtype: L{float}
         """
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat()
-            st = self.statinfo
+            st = self._statinfo
         return float(st.st_atime)
 
 
@@ -944,10 +958,10 @@ class FilePath(AbstractFilePath):
         if platform.isWindows():
             raise NotImplementedError
 
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat()
-            st = self.statinfo
+            st = self._statinfo
         return st.st_ino
 
 
@@ -968,10 +982,10 @@ class FilePath(AbstractFilePath):
         if platform.isWindows():
             raise NotImplementedError
 
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat()
-            st = self.statinfo
+            st = self._statinfo
         return st.st_dev
 
 
@@ -994,10 +1008,10 @@ class FilePath(AbstractFilePath):
         if platform.isWindows():
             raise NotImplementedError
 
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat()
-            st = self.statinfo
+            st = self._statinfo
         return st.st_nlink
 
 
@@ -1014,10 +1028,10 @@ class FilePath(AbstractFilePath):
         if platform.isWindows():
             raise NotImplementedError
 
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat()
-            st = self.statinfo
+            st = self._statinfo
         return st.st_uid
 
 
@@ -1034,10 +1048,10 @@ class FilePath(AbstractFilePath):
         if platform.isWindows():
             raise NotImplementedError
 
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat()
-            st = self.statinfo
+            st = self._statinfo
         return st.st_gid
 
 
@@ -1050,10 +1064,10 @@ class FilePath(AbstractFilePath):
         @rtype: L{Permissions}
         @since: 11.1
         """
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat()
-            st = self.statinfo
+            st = self._statinfo
         return Permissions(S_IMODE(st.st_mode))
 
 
@@ -1065,11 +1079,11 @@ class FilePath(AbstractFilePath):
             C{False} in the other cases.
         @rtype: L{bool}
         """
-        if self.statinfo:
+        if self._statinfo:
             return True
         else:
             self.restat(False)
-            if self.statinfo:
+            if self._statinfo:
                 return True
             else:
                 return False
@@ -1083,10 +1097,10 @@ class FilePath(AbstractFilePath):
             otherwise.
         @rtype: L{bool}
         """
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat(False)
-            st = self.statinfo
+            st = self._statinfo
             if not st:
                 return False
         return S_ISDIR(st.st_mode)
@@ -1100,10 +1114,10 @@ class FilePath(AbstractFilePath):
             directory, socket, named pipe, etc), C{False} otherwise.
         @rtype: L{bool}
         """
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat(False)
-            st = self.statinfo
+            st = self._statinfo
             if not st:
                 return False
         return S_ISREG(st.st_mode)
@@ -1117,10 +1131,10 @@ class FilePath(AbstractFilePath):
         @rtype: L{bool}
         @since: 11.1
         """
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat(False)
-            st = self.statinfo
+            st = self._statinfo
             if not st:
                 return False
         return S_ISBLK(st.st_mode)
@@ -1134,10 +1148,10 @@ class FilePath(AbstractFilePath):
         @rtype: L{bool}
         @since: 11.1
         """
-        st = self.statinfo
+        st = self._statinfo
         if not st:
             self.restat(False)
-            st = self.statinfo
+            st = self._statinfo
             if not st:
                 return False
         return S_ISSOCK(st.st_mode)
@@ -1544,6 +1558,36 @@ class FilePath(AbstractFilePath):
         else:
             self.changed()
             destination.changed()
+
+
+    def statinfo(self, value=_SpecialNoValue):
+        """
+        FilePath.statinfo is deprecated.
+
+        @param value: value to set statinfo to, if setting a value
+        @return: C{_statinfo} if getting, C{None} if setting
+        """
+        # This is a pretty awful hack to use the deprecated decorator to
+        # deprecate a class attribute.  Ideally, there would just be a
+        # statinfo property and a statinfo property setter, but the
+        # 'deprecated' decorator does not produce the correct FQDN on class
+        # methods.  So the property stuff needs to be set outside the class
+        # definition - but the getter and setter both need the same function
+        # in order for the 'deprecated' decorator to produce the right
+        # deprecation string.
+        if value is _SpecialNoValue:
+            return self._statinfo
+        else:
+            self._statinfo = value
+
+
+
+# This is all a terrible hack to get statinfo deprecated
+_tmp = deprecated(
+    Version('Twisted', 14, 1, 0),
+    "other FilePath methods such as getsize(), "
+    "isdir(), getModificationTime(), etc.")(FilePath.statinfo)
+FilePath.statinfo = property(_tmp, _tmp)
 
 
 FilePath.clonePath = FilePath
