@@ -15,19 +15,14 @@ See L{twisted.cred.credentials} and L{twisted.cred._digest} for its new home.
 """
 
 # system imports
-import socket, time, sys, random, warnings
-from hashlib import md5
+import socket, time, warnings
 from zope.interface import implements, Interface
 
 # twisted imports
 from twisted.python import log, util
-from twisted.python.deprecate import deprecated
-from twisted.python.versions import Version
 from twisted.internet import protocol, defer, reactor
 
 from twisted import cred
-import twisted.cred.error
-from twisted.cred.credentials import UsernameHashedPassword, UsernamePassword
 
 
 # sibling imports
@@ -129,71 +124,7 @@ def unq(s):
         return s[1:-1]
     return s
 
-def DigestCalcHA1(
-    pszAlg,
-    pszUserName,
-    pszRealm,
-    pszPassword,
-    pszNonce,
-    pszCNonce,
-):
-    m = md5()
-    m.update(pszUserName)
-    m.update(":")
-    m.update(pszRealm)
-    m.update(":")
-    m.update(pszPassword)
-    HA1 = m.digest()
-    if pszAlg == "md5-sess":
-        m = md5()
-        m.update(HA1)
-        m.update(":")
-        m.update(pszNonce)
-        m.update(":")
-        m.update(pszCNonce)
-        HA1 = m.digest()
-    return HA1.encode('hex')
 
-
-DigestCalcHA1 = deprecated(Version("Twisted", 9, 0, 0))(DigestCalcHA1)
-
-def DigestCalcResponse(
-    HA1,
-    pszNonce,
-    pszNonceCount,
-    pszCNonce,
-    pszQop,
-    pszMethod,
-    pszDigestUri,
-    pszHEntity,
-):
-    m = md5()
-    m.update(pszMethod)
-    m.update(":")
-    m.update(pszDigestUri)
-    if pszQop == "auth-int":
-        m.update(":")
-        m.update(pszHEntity)
-    HA2 = m.digest().encode('hex')
-
-    m = md5()
-    m.update(HA1)
-    m.update(":")
-    m.update(pszNonce)
-    m.update(":")
-    if pszNonceCount and pszCNonce: # pszQop:
-        m.update(pszNonceCount)
-        m.update(":")
-        m.update(pszCNonce)
-        m.update(":")
-        m.update(pszQop)
-        m.update(":")
-    m.update(HA2)
-    hash = m.digest().encode('hex')
-    return hash
-
-
-DigestCalcResponse = deprecated(Version("Twisted", 9, 0, 0))(DigestCalcResponse)
 
 _absent = object()
 
@@ -1018,134 +949,6 @@ class IAuthorizer(Interface):
         @type response: C{str}
         """
 
-class BasicAuthorizer:
-    """Authorizer for insecure Basic (base64-encoded plaintext) authentication.
-
-    This form of authentication is broken and insecure.  Do not use it.
-    """
-
-    implements(IAuthorizer)
-
-    def __init__(self):
-        """
-        This method exists solely to issue a deprecation warning.
-        """
-        warnings.warn(
-            "twisted.protocols.sip.BasicAuthorizer was deprecated "
-            "in Twisted 9.0.0",
-            category=DeprecationWarning,
-            stacklevel=2)
-
-
-    def getChallenge(self, peer):
-        return None
-
-    def decode(self, response):
-        # At least one SIP client improperly pads its Base64 encoded messages
-        for i in range(3):
-            try:
-                creds = (response + ('=' * i)).decode('base64')
-            except:
-                pass
-            else:
-                break
-        else:
-            # Totally bogus
-            raise SIPError(400)
-        p = creds.split(':', 1)
-        if len(p) == 2:
-            return UsernamePassword(*p)
-        raise SIPError(400)
-
-
-
-class DigestedCredentials(UsernameHashedPassword):
-    """Yet Another Simple Digest-MD5 authentication scheme"""
-
-    def __init__(self, username, fields, challenges):
-        warnings.warn(
-            "twisted.protocols.sip.DigestedCredentials was deprecated "
-            "in Twisted 9.0.0",
-            category=DeprecationWarning,
-            stacklevel=2)
-        self.username = username
-        self.fields = fields
-        self.challenges = challenges
-
-    def checkPassword(self, password):
-        method = 'REGISTER'
-        response = self.fields.get('response')
-        uri = self.fields.get('uri')
-        nonce = self.fields.get('nonce')
-        cnonce = self.fields.get('cnonce')
-        nc = self.fields.get('nc')
-        algo = self.fields.get('algorithm', 'MD5')
-        qop = self.fields.get('qop-options', 'auth')
-        opaque = self.fields.get('opaque')
-
-        if opaque not in self.challenges:
-            return False
-        del self.challenges[opaque]
-
-        user, domain = self.username.split('@', 1)
-        if uri is None:
-            uri = 'sip:' + domain
-
-        expected = DigestCalcResponse(
-            DigestCalcHA1(algo, user, domain, password, nonce, cnonce),
-            nonce, nc, cnonce, qop, method, uri, None,
-        )
-
-        return expected == response
-
-class DigestAuthorizer:
-    CHALLENGE_LIFETIME = 15
-
-    implements(IAuthorizer)
-
-    def __init__(self):
-        warnings.warn(
-            "twisted.protocols.sip.DigestAuthorizer was deprecated "
-            "in Twisted 9.0.0",
-            category=DeprecationWarning,
-            stacklevel=2)
-
-        self.outstanding = {}
-
-
-
-    def generateNonce(self):
-        c = tuple([random.randrange(sys.maxint) for _ in range(3)])
-        c = '%d%d%d' % c
-        return c
-
-    def generateOpaque(self):
-        return str(random.randrange(sys.maxint))
-
-    def getChallenge(self, peer):
-        c = self.generateNonce()
-        o = self.generateOpaque()
-        self.outstanding[o] = c
-        return ','.join((
-            'nonce="%s"' % c,
-            'opaque="%s"' % o,
-            'qop-options="auth"',
-            'algorithm="MD5"',
-        ))
-
-    def decode(self, response):
-        response = ' '.join(response.splitlines())
-        parts = response.split(',')
-        auth = dict([(k.strip(), unq(v.strip())) for (k, v) in [p.split('=', 1) for p in parts]])
-        try:
-            username = auth['username']
-        except KeyError:
-            raise SIPError(401)
-        try:
-            return DigestedCredentials(username, auth, self.outstanding)
-        except:
-            raise SIPError(400)
-
 
 class RegisterProxy(Proxy):
     """A proxy that allows registration for a specific domain.
@@ -1162,8 +965,6 @@ class RegisterProxy(Proxy):
     def __init__(self, *args, **kw):
         Proxy.__init__(self, *args, **kw)
         self.liveChallenges = {}
-        if "digest" not in self.authorizers:
-            self.authorizers["digest"] = DigestAuthorizer()
 
     def handle_ACK_request(self, message, (host, port)):
         # XXX

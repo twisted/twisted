@@ -1,0 +1,1 @@
+twisted.protocols.sip.{DigestCalcHA1,DigestCalcResponse,BasicAuthorizer,DigestedCredentials,DigestAuthorizer}, which were deprecated in Twisted 9.0, have been removed.

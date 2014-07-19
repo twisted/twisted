@@ -9,6 +9,9 @@ from __future__ import division, absolute_import
 
 from twisted import __version__ as version, version as longversion
 
+
+__all__ = ['version', 'longversion', 'copyright', 'disclaimer']
+
 longversion = str(longversion)
 
 copyright="""\
