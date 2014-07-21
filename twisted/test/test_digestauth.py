@@ -600,7 +600,7 @@ class DigestAuthTests(TestCase):
     def test_oldNonce(self):
         """
         L{DigestCredentialFactory.decode} raises L{LoginFailed} when the given
-        opaque is older than C{DigestCredentialFactory.CHALLENGE_LIFETIME_SECS}
+        opaque is older than L{DigestCredentialFactory.challengeLifetimeSecs}
         """
         credentialFactory = FakeDigestCredentialFactory(self.algorithm,
                                                         self.realm)

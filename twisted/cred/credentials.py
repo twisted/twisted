@@ -178,9 +178,6 @@ class DigestCredentialFactory(object):
     """
     Support for RFC2617 HTTP Digest Authentication
 
-    @cvar CHALLENGE_LIFETIME_SECS: The number of seconds for which an
-        opaque should be valid.
-
     @type privateKey: C{str}
     @ivar privateKey: A random string used for generating the secure opaque.
 
@@ -192,6 +189,10 @@ class DigestCredentialFactory(object):
     @type authenticationRealm: C{str}
     @param authenticationRealm: case sensitive string that specifies the realm
         portion of the challenge
+    
+    @type challengeLifetimeSecs: C{int}
+    @param challengeLifetimeSecs: The number of seconds for which an opaque
+        should be valid.
     """
 
     _parseparts = re.compile(
@@ -204,14 +205,14 @@ class DigestCredentialFactory(object):
         b')'           # That non-matching group ends
         b',?')         # There might be a comma at the end (none on last pair)
 
-    CHALLENGE_LIFETIME_SECS = 15 * 60    # 15 minutes
-
     scheme = "digest"
 
-    def __init__(self, algorithm, authenticationRealm):
+    def __init__(self, algorithm, authenticationRealm, 
+        challengeLifetimeSecs=15*60):
         self.algorithm = algorithm
         self.authenticationRealm = authenticationRealm
         self.privateKey = secureRandom(12)
+        self.challengeLifetimeSecs = challengeLifetimeSecs
 
 
     def getChallenge(self, address):
@@ -315,7 +316,7 @@ class DigestCredentialFactory(object):
                 'Invalid response, invalid opaque/time values')
 
         if (int(self._getTime()) - when >
-            DigestCredentialFactory.CHALLENGE_LIFETIME_SECS):
+            self.challengeLifetimeSecs):
 
             raise error.LoginFailed(
                 'Invalid response, incompatible opaque/nonce too old')
