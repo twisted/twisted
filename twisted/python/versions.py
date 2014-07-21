@@ -200,7 +200,7 @@ class Version(object):
 
     def _getSVNVersion(self):
         """
-        Figure out the SVN revision number based on the existance of
+        Figure out the SVN revision number based on the existence of
         <package>/.svn/entries, and its contents. This requires discovering the
         format version from the 'format' file and parsing the entries file
         accordingly.

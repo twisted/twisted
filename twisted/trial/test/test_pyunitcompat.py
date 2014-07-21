@@ -198,7 +198,7 @@ class TestPyUnitResult(SynchronousTestCase):
         # machinery inserts a few extra frames on the top and we don't really
         # want to trim them off without an extremely good reason.
         #
-        # So, we just test that the result's stack ends with the the
+        # So, we just test that the result's stack ends with the
         # exception's stack.
 
         expected_stack = ''.join(traceback.format_tb(test.exc_info[2]))

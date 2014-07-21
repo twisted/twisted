@@ -58,9 +58,9 @@ class ISession(Interface):
 
     def getPty(term, windowSize, modes):
         """
-        Get a psuedo-terminal for use by a shell or command.
+        Get a pseudo-terminal for use by a shell or command.
 
-        If a psuedo-terminal is not available, or the request otherwise
+        If a pseudo-terminal is not available, or the request otherwise
         fails, raise an exception.
         """
 

@@ -1561,7 +1561,7 @@ class TCP6EndpointNameResolutionTestCase(ClientEndpointTestCaseMixin,
 
 class RaisingMemoryReactorWithClock(RaisingMemoryReactor, Clock):
     """
-    An extention of L{RaisingMemoryReactor} with L{task.Clock}.
+    An extension of L{RaisingMemoryReactor} with L{task.Clock}.
     """
     def __init__(self, listenException=None, connectException=None):
         Clock.__init__(self)

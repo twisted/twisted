@@ -382,7 +382,7 @@ class NMEASentence(_sentence._BaseSentence):
         but for a position on a plane perpendicular to the geoid. (VDOP)
     @ivar positionDilutionOfPrecision: Euclidian norm of HDOP and VDOP.
     @ivar satellitePRN: The unique identifcation number of a particular
-        satelite. Optionally suffixed with C{_N} if multiple satellites are
+        satellite. Optionally suffixed with C{_N} if multiple satellites are
         referenced in a sentence, where C{N in range(4)}.
     @ivar elevation: The elevation of a satellite in decimal degrees.
         Optionally suffixed with C{_N}, as with C{satellitePRN}.
@@ -391,7 +391,7 @@ class NMEASentence(_sentence._BaseSentence):
     @ivar signalToNoiseRatio: The SNR of a satellite signal, in decibels.
         Optionally suffixed with C{_N}, as with C{satellitePRN}.
     @ivar usedSatellitePRN_N: Where C{int(N) in range(12)}. The PRN
-        of a satelite used in computing the fix.
+        of a satellite used in computing the fix.
     """
     ALLOWED_ATTRIBUTES = NMEAProtocol.getSentenceAttributes()
 
@@ -657,7 +657,7 @@ class NMEAAdapter(object):
         @type unitKey: C{str}
         @param sourceKey: The name of the key/attribute that contains the
             current value to be converted (expressed in units as defined
-            according to the the C{unit} parameter). If unset, will use the
+            according to the C{unit} parameter). If unset, will use the
             same key as the value key.
         @type sourceKey: C{str}
         @param valueKey: The key name in which the data will be stored in the

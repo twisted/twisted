@@ -119,7 +119,7 @@ class DictClient(basic.LineReceiver):
         method(line)
 
     def dictCode_default(self, line):
-        """Unkown message"""
+        """Unknown message"""
         log.msg("DictClient got unexpected message from server -- %s" % line)
         self.protocolError("Unexpected server message")
         self.transport.loseConnection()

@@ -46,7 +46,7 @@ Inputs and Outputs
 Lore works by reading the HTML source of your document, and
 producing whatever output the user specifies on the command line.  If
 the HTML document is well-formed XML that meets a certain minimum
-standard, Lore will be able to to produce some output.  All Lore
+standard, Lore will be able to produce some output.  All Lore
 extensions will be written to redefine the *input* , and most
 will redefine the output in some way.  The name of the default input
 is "lore" .  When you write your extension, you will come up with

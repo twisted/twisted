@@ -192,7 +192,7 @@ class UnsupportedMethod(Exception):
     """
     Raised by a resource when faced with a strange request method.
 
-    RFC 2616 (HTTP 1.1) gives us two choices when faced with this situtation:
+    RFC 2616 (HTTP 1.1) gives us two choices when faced with this situation:
     If the type of request is known to us, but not allowed for the requested
     resource, respond with NOT_ALLOWED.  Otherwise, if the request is something
     we don't know how to deal with in any case, respond with NOT_IMPLEMENTED.

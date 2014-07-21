@@ -92,8 +92,8 @@ class SSHChannel(log.Logger):
 
     def openFailed(self, reason):
         """
-        Called when the the open failed for some reason.
-        reason.desc is a string descrption, reason.code the the SSH error code.
+        Called when the open failed for some reason.
+        reason.desc is a string descrption, reason.code the SSH error code.
 
         @type reason: L{error.ConchError}
         """

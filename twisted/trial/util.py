@@ -363,7 +363,7 @@ def _unusedTestDirectory(base):
     @return: A two-tuple.  The first element is a L{FilePath} representing the
         directory which was found and created.  The second element is a locked
         L{FilesystemLock<twisted.python.lockfile.FilesystemLock>}.  Another
-        call to C{_unusedTestDirectory} will not be able to reused the the
+        call to C{_unusedTestDirectory} will not be able to reused the
         same name until the lock is released, either explicitly or by this
         process exiting.
     """

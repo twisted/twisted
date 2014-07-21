@@ -275,7 +275,7 @@ class ZshTestCase(unittest.TestCase):
         Completion still happens even if a command-line is given
         that would normally throw UsageError.
 
-        The existance of --unknown-option prior to the subcommand
+        The existence of --unknown-option prior to the subcommand
         will break subcommand detection... but we complete anyway
         """
         outputFile = StringIO()

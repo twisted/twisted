@@ -484,7 +484,7 @@ class SSHUserAuthClient(service.SSHService):
             byte partial success
 
         If partial success is C{True}, then the previous method succeeded but is
-        not sufficent for authentication. C{methods} is a comma-separated list
+        not sufficient for authentication. C{methods} is a comma-separated list
         of accepted authentication methods.
 
         We sort the list of methods by their position in C{self.preferredOrder},

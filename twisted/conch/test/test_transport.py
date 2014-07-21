@@ -51,7 +51,7 @@ from twisted.conch.error import ConchError
 class MockTransportBase(transport.SSHTransportBase):
     """
     A base class for the client and server protocols.  Stores the messages
-    it receieves instead of ignoring them.
+    it receives instead of ignoring them.
 
     @ivar errors: a list of tuples: (reasonCode, description)
     @ivar unimplementeds: a list of integers: sequence number
@@ -1355,7 +1355,7 @@ class ServerSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
 
     def test_KEX_DH_GEX_REQUEST_OLD_badKexAlg(self):
         """
-        Test that if the server recieves a KEX_DH_GEX_REQUEST_OLD message
+        Test that if the server receives a KEX_DH_GEX_REQUEST_OLD message
         and the key exchange algorithm is not 'diffie-hellman-group1-sha1' or
         'diffie-hellman-group-exchange-sha1', we raise a ConchError.
         """

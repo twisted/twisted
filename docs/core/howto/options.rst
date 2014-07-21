@@ -32,7 +32,7 @@ Python's reflection facilities to provide an easy to use yet
 flexible interface to the command line. While most command line
 processors either force the application writer to write their own
 loops, or have arbitrary limitations on the command line (the
-most common one being not being able to have more then one
+most common one being not being able to have more than one
 instance of a specific option, thus rendering the idiom
 ``program -v -v -v`` impossible), Twisted allows the
 programmer to decide how much control they want.

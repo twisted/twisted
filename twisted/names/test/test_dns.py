@@ -1385,7 +1385,7 @@ class ReprTests(unittest.TestCase):
     def test_mg(self):
         """
         The repr of a L{dns.Record_MG} instance includes the name of the
-        mail group memeber and the TTL of the record.
+        mail group member and the TTL of the record.
         """
         self.assertEqual(
             repr(dns.Record_MG(b'example.com', 4321)),

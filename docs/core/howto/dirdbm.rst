@@ -65,7 +65,7 @@ can transparently persist
 them. ``Shelf`` works exactly like ``DirDBM`` , except that
 the values (but not the keys) can be arbitrary picklable objects. However,
 notice that mutating an object after it has been stored in the  ``Shelf`` has no effect on the Shelf.
-When mutating objects, it is neccessary to explictly store them back in the ``Shelf`` 
+When mutating objects, it is neccessary to explicitly store them back in the ``Shelf``
 afterwards:
 
 

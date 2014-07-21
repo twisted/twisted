@@ -1,4 +1,4 @@
-"""Simple example of doing arbitarily long calculations nicely in Twisted.
+"""Simple example of doing arbitrarily long calculations nicely in Twisted.
 
 This is also a simple demonstration of twisted.protocols.basic.LineReceiver.
 """
@@ -10,7 +10,7 @@ from twisted.internet.protocol import ServerFactory
 class LongMultiplicationProtocol(basic.LineReceiver):
     """A protocol for doing long multiplications.
 
-    It receives a list of numbers (seperated by whitespace) on a line, and
+    It receives a list of numbers (separated by whitespace) on a line, and
     writes back the answer.  The answer is calculated in chunks, so no one
     calculation should block for long enough to matter.
     """

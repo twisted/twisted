@@ -16,7 +16,7 @@ def stringyString(object, indentation=''):
     elements.  This function also turns these sequence types
     into strings, but uses C{str()} on their elements instead.
 
-    Sequence elements are also displayed on seperate lines, and nested
+    Sequence elements are also displayed on separate lines, and nested
     sequences have nested indentation.
     """
     braces = ''

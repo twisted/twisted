@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-This example demostrates how to get host information from a request object.
+This example demonstrates how to get host information from a request object.
 
 To test the script, rename the file to report.rpy, and move it to any directory,
 let's say /var/www/html/.

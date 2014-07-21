@@ -68,7 +68,7 @@ def _oldGiInit():
 
 
 if not _pygtkcompatPresent:
-    # Older versions of gi don't have compatability layer, so just enforce no
+    # Older versions of gi don't have compatibility layer, so just enforce no
     # imports of pygtk and gi at same time:
     _oldGiInit()
 else:

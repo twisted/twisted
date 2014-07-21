@@ -862,7 +862,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         The mailbox for the authenticated user will be returned only if the
         given interfaces include L{IMailbox <pop3.IMailbox>}.  Requests for
         anonymous access will be met with a mailbox containing a message
-        indicating that an internal error has occured.
+        indicating that an internal error has occurred.
 
         @type avatarId: L{bytes} or C{twisted.cred.checkers.ANONYMOUS}
         @param avatarId: A string which identifies a user or an object which

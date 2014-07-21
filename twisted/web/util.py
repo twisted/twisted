@@ -199,7 +199,7 @@ htmlReprTypes = {types.DictType: htmlDict,
 
 def htmlIndent(snippetLine):
     """
-    Strip trailing whitespace, escape HTML entitities and expand indentation
+    Strip trailing whitespace, escape HTML entities and expand indentation
     whitespace to HTML non-breaking space.
 
     @param snippetLine: The line of input to indent.

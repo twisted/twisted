@@ -803,7 +803,7 @@ class Completions(object):
         option will have either of the strings "one", "two", or "three"
         completed when the user presses Tab.
 
-        "colors" will allow multiple arguments to be completed, seperated by
+        "colors" will allow multiple arguments to be completed, separated by
         commas. The possible arguments are red, green, and blue. Examples::
 
             my_command --foo some-file.foo --colors=red,green

@@ -968,7 +968,7 @@ class InvalidFixTests(FixerTestMixin, TestCase):
     def test_badGSADataMode(self):
         """
         GSA sentence data is not used when there is no GPS fix, but
-        the data mode claims the data is "active". Some GPSes do do
+        the data mode claims the data is "active". Some GPSes do
         this, unfortunately, and that means you shouldn't use the
         data.
         """
@@ -984,7 +984,7 @@ class InvalidFixTests(FixerTestMixin, TestCase):
         """
         GSA sentence data is not used when the fix claims to be valid
         (albeit only 2D), but the data mode says the data is void.
-        Some GPSes do do this, unfortunately, and that means you
+        Some GPSes do this, unfortunately, and that means you
         shouldn't use the data.
         """
         sentenceData = {'type': 'GPGSA',
@@ -1035,7 +1035,7 @@ class NMEAReceiverTest(TestCase):
         self.receiver.clear()
         self.assertNotEqual(self.adapter._state, {})
 
-        # GPHDT contains heading infromation but not position,
+        # GPHDT contains heading information but not position,
         # altitude or anything like that; but that information is
         # still in the state.
         self.protocol.lineReceived(GPHDT)

@@ -660,7 +660,7 @@ class FullyQualifiedNameTests(TestCase):
 
     def test_module(self):
         """
-        L{fullyQualifiedName} returns the name of a module inside a a package.
+        L{fullyQualifiedName} returns the name of a module inside a package.
         """
         import twisted.python.compat
         self._checkFullyQualifiedName(

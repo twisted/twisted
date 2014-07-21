@@ -773,7 +773,7 @@ class ServiceDomainTestCase(unittest.TestCase):
     def testReceivedHeader(self):
          hdr = self.D.receivedHeader(
              ('remotehost', '123.232.101.234'),
-             smtp.Address('<someguy@somplace>'),
+             smtp.Address('<someguy@someplace>'),
              ['user@host.name']
          )
          fp = StringIO.StringIO(hdr)

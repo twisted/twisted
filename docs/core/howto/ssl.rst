@@ -89,7 +89,7 @@ TLS echo client
 This client uses :api:`twisted.internet.endpoints.SSL4ClientEndpoint <SSL4ClientEndpoint>` to connect to ``echoserv_ssl.py``.
 It *also* uses the same echo example client as the TCP echo client.
 Whenever you have a protocol that listens on plain-text TCP it is easy to run it over TLS instead.
-It specifies that it only wants to talk to a host named ``"example.com"``, and and that it trusts the certificate authority in ``"public.pem"`` to say who ``"example.com"`` is.
+It specifies that it only wants to talk to a host named ``"example.com"``, and that it trusts the certificate authority in ``"public.pem"`` to say who ``"example.com"`` is.
 Note that the host you are connecting to --- localhost --- and the host whose identity you are verifying --- example.com --- can differ.
 In this case, our example ``server.pem`` certificate identifies a host named "example.com", but your server is proably running on localhost.
 

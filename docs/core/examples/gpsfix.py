@@ -21,7 +21,7 @@ class GPSFixLogger:
       """
       handle_fix gets called whenever either rockwell.Zodiac or nmea.NMEAReceiver
       receives and decodes fix data.  Generally, GPS receivers will report a
-      fix at 1hz. Implementing only this method is sufficient for most purposes
+      fix at 1Hz. Implementing only this method is sufficient for most purposes
       unless tracking of ground speed, course, utc date, or detailed satellite
       information is necessary.
 

@@ -822,7 +822,7 @@ class KnownHostsDatabaseTests(TestCase):
 
     def test_verifyInvalidKey(self):
         """
-        Verfying an invalid key should return a L{Deferred} which fires with a
+        Verifying an invalid key should return a L{Deferred} which fires with a
         L{HostKeyChanged} failure.
         """
         hostsFile = self.loadSampleHostsFile()

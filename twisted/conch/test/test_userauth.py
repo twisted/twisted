@@ -353,7 +353,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
 
     def test_successfulPrivateKeyAuthentication(self):
         """
-        Test that private key authentication completes sucessfully,
+        Test that private key authentication completes successfully,
         """
         blob = keys.Key.fromString(keydata.publicRSA_openssh).blob()
         obj = keys.Key.fromString(keydata.privateRSA_openssh)

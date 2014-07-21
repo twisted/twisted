@@ -656,7 +656,7 @@ class EqualityTests(unittest.TestCase):
 
     def test_unequality(self):
         """
-        Unequality between instances of a particular L{record} should be
+        Inequality between instances of a particular L{record} should be
         defined as the negation of equality.
         """
         self.assertFalse(Record(1, 2) != Record(1, 2))

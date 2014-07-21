@@ -30,7 +30,7 @@ wxreactor.install()
 from twisted.internet import reactor, defer
 
 
-# set up so that "hello, world" is printed continously
+# set up so that "hello, world" is printed continuously
 dc = None
 def helloWorld():
     global dc

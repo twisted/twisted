@@ -319,7 +319,7 @@ both are real objects instead of remote references.
 
 
 A few other techniques are demonstrated in ``pb2client.py`` . One
-is that the callbacks are are added with ``.addCallback`` instead
+is that the callbacks are added with ``.addCallback`` instead
 of ``.addCallbacks`` . As you can tell from the :doc:`Deferred <defer>` documentation, ``.addCallback`` is a
 simplified form which only adds a success callback. The other is that to
 keep track of state from one callback to the next (the remote reference to

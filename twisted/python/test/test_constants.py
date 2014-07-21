@@ -110,7 +110,7 @@ class _ConstantsTestsMixin(object):
 
         @param container: A L{_ConstantsContainer} subclass which will be
             tested.
-        @param constantName: The name of one of the constants which is an an
+        @param constantName: The name of one of the constants which is an
             attribute of C{container}.
         """
         first = container._enumerants
@@ -127,7 +127,7 @@ class _ConstantsTestsMixin(object):
 class NamesTests(TestCase, _ConstantsTestsMixin):
     """
     Tests for L{twisted.python.constants.Names}, a base class for containers of
-    related constaints.
+    related constraints.
     """
     def setUp(self):
         """
@@ -310,7 +310,7 @@ class NamesTests(TestCase, _ConstantsTestsMixin):
 class ValuesTests(TestCase, _ConstantsTestsMixin):
     """
     Tests for L{twisted.python.constants.Names}, a base class for containers of
-    related constaints with arbitrary values.
+    related constraints with arbitrary values.
     """
     def setUp(self):
         """
