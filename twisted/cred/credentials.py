@@ -179,7 +179,7 @@ class DigestCredentialFactory(object):
     Support for RFC2617 HTTP Digest Authentication
 
     @cvar CHALLENGE_LIFETIME_SECS: The number of seconds for which an
-        opaque should be valid.
+        opaque should be valid. Default is 15 minutes.
 
     @type privateKey: C{str}
     @ivar privateKey: A random string used for generating the secure opaque.
