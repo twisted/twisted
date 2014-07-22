@@ -179,7 +179,8 @@ class DigestCredentialFactory(object):
     Support for RFC2617 HTTP Digest Authentication
 
     @cvar CHALLENGE_LIFETIME_SECS: The number of seconds for which an
-        opaque should be valid.
+        opaque should be valid. Can be overridden by setting
+        C{DigestCredentialFactory.challengeLifetimeSecs} on an instance.
 
     @type privateKey: C{str}
     @ivar privateKey: A random string used for generating the secure opaque.
@@ -192,6 +193,12 @@ class DigestCredentialFactory(object):
     @type authenticationRealm: C{str}
     @param authenticationRealm: case sensitive string that specifies the realm
         portion of the challenge
+
+    @type challengeLifetimeSecs: C{int}
+    @param challengeLifetimeSecs: Override 
+        C{DigestCredentialFactory.CHALLENGE_LIFETIME_SECS} to specify the
+        number of seconds for which an opaque should be valid.
+
     """
 
     _parseparts = re.compile(
@@ -208,11 +215,15 @@ class DigestCredentialFactory(object):
 
     scheme = "digest"
 
-    def __init__(self, algorithm, authenticationRealm):
+    def __init__(self, 
+                 algorithm, 
+                 authenticationRealm, 
+                 challengeLifetimeSecs=None):
         self.algorithm = algorithm
         self.authenticationRealm = authenticationRealm
         self.privateKey = secureRandom(12)
-
+        self.challengeLifetimeSecs = challengeLifetimeSecs
+        
 
     def getChallenge(self, address):
         """
@@ -314,9 +325,12 @@ class DigestCredentialFactory(object):
             raise error.LoginFailed(
                 'Invalid response, invalid opaque/time values')
 
-        if (int(self._getTime()) - when >
-            DigestCredentialFactory.CHALLENGE_LIFETIME_SECS):
-
+        # Verify the timeout
+        challengeLifetimeSecs = self.CHALLENGE_LIFETIME_SECS
+        if self.challengeLifetimeSecs is not None:
+          challengeLifetimeSecs = self.challengeLifetimeSecs
+          
+        if (int(self._getTime()) - when > challengeLifetimeSecs):
             raise error.LoginFailed(
                 'Invalid response, incompatible opaque/nonce too old')
 
