@@ -622,6 +622,35 @@ class DigestAuthTests(TestCase):
             self.clientAddress.host)
 
 
+    def test_oldNonceWithCustomTimeout(self):
+        """
+        L{DigestCredentialFactory.decode} raises L{LoginFailed} when the given
+        opaque is older than C{DigestCredentialFactory.CHALLENGE_LIFETIME_SECS}
+        with overridden value.
+        """
+        credentialFactory =\
+          FakeDigestCredentialFactory(self.algorithm,
+                                      self.realm,
+                                      challengeLifetimeSecs = 1)
+        challenge = credentialFactory.getChallenge(self.clientAddress.host)
+
+        key = '%s,%s,%s' % (challenge['nonce'],
+                            self.clientAddress.host,
+                            '-137876876')
+        digest = md5(key + credentialFactory.privateKey).hexdigest()
+        ekey = b64encode(key)
+
+        oldNonceOpaque = '%s-%s' % (digest, ekey.strip('\n'))
+
+        self.assertEqual(credentialFactory.challengeLifetimeSecs, 1)
+        self.assertRaises(
+            LoginFailed,
+            credentialFactory._verifyOpaque,
+            oldNonceOpaque,
+            challenge['nonce'],
+            self.clientAddress.host)
+
+
     def test_mismatchedOpaqueChecksum(self):
         """
         L{DigestCredentialFactory.decode} raises L{LoginFailed} when the opaque
