@@ -21,12 +21,14 @@ class DigestCredentialFactory(object):
 
     scheme = 'digest'
 
-    def __init__(self, algorithm, authenticationRealm):
+    def __init__(self, algorithm, authenticationRealm, *args, **kwargs):
         """
         Create the digest credential factory that this object wraps.
         """
         self.digest = credentials.DigestCredentialFactory(algorithm,
-                                                          authenticationRealm)
+                                                          authenticationRealm,
+                                                          *args,
+                                                          **kwargs)
 
 
     def getChallenge(self, request):
