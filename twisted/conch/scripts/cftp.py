@@ -6,6 +6,8 @@
 Implementation module for the I{cftp} command.
 """
 
+from __future__ import print_function
+
 import os, sys, getpass, struct, tty, fcntl, stat
 import fnmatch, pwd, glob
 
@@ -57,8 +59,8 @@ def run():
     options = ClientOptions()
     try:
         options.parseOptions(args)
-    except usage.UsageError, u:
-        print 'ERROR: %s' % u
+    except usage.UsageError as u:
+        print('ERROR: %s' % u)
         sys.exit(1)
     if options['log']:
         realout = sys.stdout
@@ -105,11 +107,12 @@ def _ebExit(f):
         s = f.value.value
     else:
         s = str(f)
-    print s
+    print(s)
     #exitStatus = "conch: exiting with error %s" % f
     try:
         reactor.stop()
-    except: pass
+    except:
+        pass
 
 def _ignore(*args): pass
 
@@ -681,11 +684,11 @@ version                         Print the SFTP version.
     def _abbrevSize(self, size):
         # from http://mail.python.org/pipermail/python-list/1999-December/018395.html
         _abbrevs = [
-            (1<<50L, 'PB'),
-            (1<<40L, 'TB'),
-            (1<<30L, 'GB'),
-            (1<<20L, 'MB'),
-            (1<<10L, 'kB'),
+            (1<<50, 'PB'),
+            (1<<40, 'TB'),
+            (1<<30, 'GB'),
+            (1<<20, 'MB'),
+            (1<<10, 'kB'),
             (1, 'B')
             ]
 
@@ -759,12 +762,12 @@ version                         Print the SFTP version.
                     elif c == '\\': # quoted character
                         del line[i]
                         if line[i] not in '\'"\\':
-                            raise IndexError, "bad quote: \\%s" % line[i]
+                            raise IndexError("bad quote: \\%s" % line[i])
                         ret.append(line[i])
                     else:
                         ret.append(line[i])
             except IndexError:
-                raise IndexError, "unterminated quote"
+                raise IndexError("unterminated quote")
         ret = line.split(None, 1)
         if len(ret) == 1:
             return ret[0], ''

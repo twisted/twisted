@@ -206,7 +206,7 @@ class SSHPublicKeyDatabase:
                 continue
             try:
                 lines = filepath.open()
-            except IOError, e:
+            except IOError as e:
                 if e.errno == errno.EACCES:
                     lines = runAsEffectiveUser(ouid, ogid, filepath.open)
                 else:

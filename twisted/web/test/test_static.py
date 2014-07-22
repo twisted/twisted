@@ -137,7 +137,7 @@ class StaticFileTests(TestCase):
         base = FilePath(self.mktemp())
         base.setContent('')
         # Make sure we can delete the file later.
-        self.addCleanup(base.chmod, 0700)
+        self.addCleanup(base.chmod, 0o700)
 
         # Get rid of our own read permission.
         base.chmod(0)

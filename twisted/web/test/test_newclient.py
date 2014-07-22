@@ -1117,7 +1117,8 @@ class HTTP11ClientProtocolTests(TestCase):
             return whenFinished.addCallback(
                 lambda ign: (response, p.data))
         d.addCallback(cbResponse)
-        def cbAllResponse((response, body)):
+        def cbAllResponse(arg):
+            (response, body) = arg
             self.assertEqual(response.version, ('HTTP', 1, 1))
             self.assertEqual(response.code, 200)
             self.assertEqual(response.phrase, 'OK')
@@ -1683,9 +1684,9 @@ class HTTP11ClientProtocolTests(TestCase):
         protocol.makeConnection(transport)
         producer = StringProducer(producerLength)
 
-        nonlocal = {'cancelled': False}
+        cancelled = {'cancelled': False}
         def cancel(ign):
-            nonlocal['cancelled'] = True
+            cancelled['cancelled'] = True
         def startProducing(consumer):
             producer.consumer = consumer
             producer.finished = Deferred(cancel)
@@ -1696,7 +1697,7 @@ class HTTP11ClientProtocolTests(TestCase):
         producer.consumer.write('x' * 5)
         result.cancel()
         self.assertTrue(transport.aborting)
-        self.assertTrue(nonlocal['cancelled'])
+        self.assertTrue(cancelled['cancelled'])
         return assertRequestGenerationFailed(self, result, [CancelledError])
 
 
