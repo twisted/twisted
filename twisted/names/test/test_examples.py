@@ -46,7 +46,7 @@ class ExampleTestBase(object):
         here = (
             FilePath(__file__)
             .parent().parent().parent().parent()
-            .child('docs').child('projects')
+            .child('docs')
         )
 
         # Find the example script within this branch
