@@ -595,6 +595,11 @@ class ReconnectingClientService(service.Service):
         self.retry()
 
 
+    def _clearConnectionAttempt(self, result):
+        self._connectingDeferred = None
+        return result
+
+
     def retry(self, delay=None):
         """
         Have this connector connect again, after a suitable delay.
@@ -610,6 +615,13 @@ class ReconnectingClientService(service.Service):
                 log.msg(format="Abandoning %(endpoint)s after"
                         " %(retries)d retries.",
                         endpoint=self.endpoint, retries=self.retries)
+            return
+
+        if self._connectingDeferred is not None:
+            if self.noisy:
+                log.msg(format="Abandoning retry for %(endpoint)s because"
+                        " another attempt is in progress.",
+                        endpoint=self.endpoint)
             return
 
         self.retries += 1
@@ -629,6 +641,7 @@ class ReconnectingClientService(service.Service):
             proxied_factory = _RestartableProtocolFactoryProxy(
                 self.factory, self)
             self._connectingDeferred = self.endpoint.connect(proxied_factory)
+            self._connectingDeferred.addBoth(self._clearConnectionAttempt)
             self._connectingDeferred.addCallback(self.clientConnected)
             self._connectingDeferred.addErrback(self.clientConnectionFailed)
 

@@ -648,6 +648,34 @@ class ReconnectingClientServiceTestCase(TestCase):
         self.assertSubstring("on explicit request", msg)
 
 
+    def test_retryAbortsWhileConnecting(self):
+        """
+        When retry is called while a connection attempt is in progress, no
+        retry occurs.
+        """
+        service = self.make_reconnector(continueTrying=True)
+        service._connectingDeferred = Deferred()
+        service.retry()
+        self.assertEqual(service.retries, 0)
+
+
+    def test_noisyRetryAbortsWhileConnecting(self):
+        """
+        When retry is called while a connection attempt is in progress, no
+        retry occurs.
+        """
+        service = self.make_reconnector(noisy=True, continueTrying=True)
+        service._connectingDeferred = Deferred()
+        lc = LogCatcher(self)
+        service.retry()
+        self.assertEqual(service.retries, 0)
+        [msg] = lc.messages()
+        self.assertSubstring("Abandoning retry for <twisted.application.test"
+                             ".test_internet.ClientTestEndpoint object at",
+                             msg)
+        self.assertSubstring("because another attempt is in progress", msg)
+
+
     def test_retryAbortsWhenMaxRetriesExceeded(self):
         """
         When retry is called after the maximum number of retries has been
