@@ -465,9 +465,6 @@ class ReconnectingClientService(service.Service):
     """
     Service which auto-reconnects clients with an exponential back-off.
 
-    Note that clients should call my resetDelay method after they have
-    connected successfully.
-
     @ivar endpoint: An L{IStreamClientEndpoint
         <twisted.internet.interfaces.IStreamClientEndpoint>} provider
         which will be used to connect when the service starts.
