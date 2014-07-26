@@ -540,13 +540,17 @@ class ReconnectingClientServiceTestCase(TestCase):
         When the service is stopped while connecting, the connection
         attempt is cancelled.
         """
-        errs = []
         service = self.make_reconnector()
-        service._connectingDeferred = Deferred().addErrback(errs.append)
+        connectingDeferred = service._connectingDeferred = Deferred()
+        lc = LogCatcher(self)
         yield service.stopService()
-        [failure] = errs
-        self.assertTrue(failure.check(CancelledError))
-
+        self.assertEqual(self.successResultOf(connectingDeferred), None)
+        self.assertEqual(service._connectingDeferred, None)
+        [msg] = lc.messages()
+        self.assertSubstring(
+            "Cancelling connection attempt to endpoint <twisted.application"
+            ".test.test_internet.ClientTestEndpoint object",
+            msg)
 
     @inlineCallbacks
     def test_stopServiceWhileConnected(self):

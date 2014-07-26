@@ -538,6 +538,14 @@ class ReconnectingClientService(service.Service):
         self.retry(delay=0.0)
 
 
+    def _trapAndLogCancel(self, f, **kw):
+        """
+        Trap and log a CancelledError.
+        """
+        f.trap(CancelledError)
+        log.msg(**kw)
+
+
     def stopService(self):
         """
         Stop attempting to reconnect and close any existing connections.
@@ -552,6 +560,11 @@ class ReconnectingClientService(service.Service):
 
         if self._connectingDeferred is not None:
             waitFor.append(self._connectingDeferred)
+            self._connectingDeferred.addErrback(
+                self._trapAndLogCancel,
+                format=("Cancelling connection attempt to endpoint"
+                        " %(endpoint)s."),
+                endpoint=self.endpoint)
             self._connectingDeferred.cancel()
             self._connectingDeferred = None
 
