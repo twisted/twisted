@@ -6,19 +6,26 @@ Tests for (new code in) L{twisted.application.internet}.
 """
 
 import pickle
+import random
 
-from zope.interface import implements
+from zope.interface import implements, implementer
 from zope.interface.verify import verifyClass
 
-from twisted.internet.protocol import Factory
+from twisted.internet.protocol import Factory, Protocol
+from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
 from twisted.application import internet
 from twisted.application.internet import (
-        StreamServerEndpointService, TimerService)
+        StreamServerEndpointService, TimerService, ReconnectingClientService)
 from twisted.internet.interfaces import IStreamServerEndpoint, IListeningPort
 from twisted.internet.defer import Deferred, CancelledError
+from twisted.internet.interfaces import (
+        IStreamServerEndpoint, IStreamClientEndpoint, IListeningPort,
+        ITransport)
+from twisted.internet.defer import Deferred, CancelledError, inlineCallbacks
 from twisted.internet import task
 from twisted.python.failure import Failure
+from twisted.python import log
 
 
 def fakeTargetFunction():
@@ -401,3 +408,436 @@ class TestTimerService(TestCase):
         nothing = object()
         value = getattr(loadedTimer, "_loopFinished", nothing)
         self.assertIdentical(nothing, value)
+
+
+
+@implementer(IStreamClientEndpoint)
+class ClientTestEndpoint(object):
+    def __init__(self):
+        self.connect_called = Deferred()
+        self.connected = Deferred()
+
+    def connect(self, factory):
+        self.connect_called.callback(factory)
+        return self.connected
+
+
+
+class MockRecorder(object):
+    def __init__(self, test_case, result=None):
+        self._test_case = test_case
+        self._calls = []
+        self._result = result
+
+    def assertCalledOnce(self, *args, **kw):
+        self._test_case.assertEqual(self._calls, [(args, kw)])
+
+    def assertNotCalled(self):
+        self._test_case.assertEqual(self._calls, [])
+
+    def __call__(self, *args, **kw):
+        self._calls.append((args, kw))
+        return self._result
+
+
+
+class DummyProtocol(Protocol):
+    pass
+
+
+
+@implementer(ITransport)
+class DummyTransport(object):
+
+    def __init__(self):
+        self.lose_connection_called = Deferred()
+
+    def loseConnection(self):
+        self.lose_connection_called.callback(None)
+
+
+class LogCatcher(object):
+    def __init__(self, test_case):
+        self.logs = []
+        self.attach()
+        test_case.addCleanup(self.detach)
+
+    def messages(self):
+        return [msg['format'] % msg for msg in self.logs
+                if not msg["isError"]]
+
+    def _gather_logs(self, event_dict):
+        self.logs.append(event_dict)
+
+    def attach(self):
+        log.theLogPublisher.addObserver(self._gather_logs)
+
+    def detach(self):
+        log.theLogPublisher.removeObserver(self._gather_logs)
+
+
+class ReconnectingClientServiceTestCase(TestCase):
+    def make_reconnector(self, continueTrying=None, **kw):
+        endpoint = ClientTestEndpoint()
+        factory = object()
+        service = ReconnectingClientService(endpoint, factory, **kw)
+        if continueTrying is not None:
+            service.continueTrying = continueTrying
+
+        def stop():
+            service._protocol = None
+            return service.stopService()
+
+        self.addCleanup(stop)
+
+        return service
+
+
+    def patch_reconnector(self, service, method):
+        mock = MockRecorder(self)
+        setattr(service, method, mock)
+        return mock
+
+
+    def test_startService(self):
+        """
+        When the service is started, continueTrying is set to True and retry
+        is called.
+        """
+        service = self.make_reconnector()
+        retry = self.patch_reconnector(service, 'retry')
+        service.startService()
+        self.assertTrue(service.continueTrying)
+        retry.assertCalledOnce(delay=0.0)
+
+
+    @inlineCallbacks
+    def test_stopService(self):
+        """
+        When the service is stopped, continueTrying is set to False.
+        """
+        service = self.make_reconnector(continueTrying=True)
+        yield service.stopService()
+        self.assertEqual(service.continueTrying, False)
+
+
+    @inlineCallbacks
+    def test_stopServiceWhileRetrying(self):
+        """
+        When the service is stopped while retrying, the retry is cancelled.
+        """
+        service = self.make_reconnector()
+        clock = Clock()
+        r = service._delayedRetry = clock.callLater(1.0, lambda: None)
+        yield service.stopService()
+        self.assertTrue(r.cancelled)
+        self.assertIdentical(service._delayedRetry, None)
+
+
+    @inlineCallbacks
+    def test_stopServiceWhileConnecting(self):
+        """
+        When the service is stopped while connecting, the connection
+        attempt is cancelled.
+        """
+        service = self.make_reconnector()
+        connectingDeferred = service._connectingDeferred = Deferred()
+        lc = LogCatcher(self)
+        yield service.stopService()
+        self.assertEqual(self.successResultOf(connectingDeferred), None)
+        self.assertEqual(service._connectingDeferred, None)
+        [msg] = lc.messages()
+        self.assertSubstring(
+            "Cancelling connection attempt to endpoint <twisted.application"
+            ".test.test_internet.ClientTestEndpoint object",
+            msg)
+
+    @inlineCallbacks
+    def test_stopServiceWhileConnected(self):
+        """
+        When the service is stopped while connected, the connections is
+        closed.
+        """
+        service = self.make_reconnector()
+        service._protocol = DummyProtocol()
+        service._protocol.transport = DummyTransport()
+        d = service.stopService()
+        self.assertFalse(d.called)
+        self.assertTrue(
+            service._protocol.transport.lose_connection_called.called)
+        service.clientConnectionLost(Failure(Exception()))
+        yield d
+
+
+    def test_clientConnected(self):
+        """
+        When a client connects, the service keeps a reference to the new
+        protocol and resets the delay.
+        """
+        service = self.make_reconnector()
+        reset = self.patch_reconnector(service, 'resetDelay')
+        protocol = DummyProtocol()
+        protocol.transport = DummyTransport()
+        service.clientConnected(protocol)
+        self.assertIdentical(service._protocol, protocol)
+        reset.assertCalledOnce()
+
+
+    def test_clientConnectionFailed(self):
+        """
+        When a client connection fails, the service removes its reference
+        to the protocol and calls retry.
+        """
+        service = self.make_reconnector()
+        retry = self.patch_reconnector(service, 'retry')
+        service.clientConnectionFailed(Failure(Exception()))
+        self.assertIdentical(service._protocol, None)
+        retry.assertCalledOnce()
+
+
+    def test_clientConnectionLost(self):
+        """
+        When a client connection is lost, the service removes its reference
+        to the protocol and calls retry.
+        """
+        service = self.make_reconnector()
+        retry = self.patch_reconnector(service, 'retry')
+        service.clientConnectionLost(Failure(Exception()))
+        self.assertIdentical(service._protocol, None)
+        retry.assertCalledOnce()
+
+
+    def test_clientConnectionLostWhileStopping(self):
+        """
+        When a client connection is lost while the service is stopping, the
+        protocol stopping deferred is called and the reference to the protocol
+        is removed.
+        """
+        service = self.make_reconnector()
+        retry = self.patch_reconnector(service, 'retry')
+        d = service._protocolStoppingDeferred = Deferred()
+        service.clientConnectionLost(Failure(Exception()))
+        self.assertIdentical(service._protocol, None)
+        self.assertIdentical(service._protocolStoppingDeferred, None)
+        retry.assertCalledOnce()
+        self.assertTrue(d.called)
+
+
+    def test_retryAbortsWhenStopping(self):
+        """
+        When retry is called while stopping the service, no retry occurs.
+        """
+        service = self.make_reconnector(continueTrying=False)
+        service.retry()
+        self.assertEqual(service.retries, 0)
+
+
+    def test_noisyRetryAbortsWhenStopping(self):
+        """
+        When retry is called while stopping the service and the service
+        is noisy, no retry occurs and the lack of retry is logged.
+        """
+        service = self.make_reconnector(noisy=True, continueTrying=False)
+        lc = LogCatcher(self)
+        service.retry()
+        [msg] = lc.messages()
+        self.assertEqual(service.retries, 0)
+        self.assertSubstring("Abandoning <twisted.application.test"
+                             ".test_internet.ClientTestEndpoint object at",
+                             msg)
+        self.assertSubstring("on explicit request", msg)
+
+
+    def test_retryAbortsWhileConnecting(self):
+        """
+        When retry is called while a connection attempt is in progress, no
+        retry occurs.
+        """
+        service = self.make_reconnector(continueTrying=True)
+        service._connectingDeferred = Deferred()
+        service.retry()
+        self.assertEqual(service.retries, 0)
+
+
+    def test_noisyRetryAbortsWhileConnecting(self):
+        """
+        When retry is called while a connection attempt is in progress, no
+        retry occurs.
+        """
+        service = self.make_reconnector(noisy=True, continueTrying=True)
+        service._connectingDeferred = Deferred()
+        lc = LogCatcher(self)
+        service.retry()
+        self.assertEqual(service.retries, 0)
+        [msg] = lc.messages()
+        self.assertSubstring("Abandoning retry for <twisted.application.test"
+                             ".test_internet.ClientTestEndpoint object at",
+                             msg)
+        self.assertSubstring("because another attempt is in progress", msg)
+
+
+    def test_retryAbortsWhenMaxRetriesExceeded(self):
+        """
+        When retry is called after the maximum number of retries has been
+        reached, no retry occours.
+        """
+        service = self.make_reconnector(maxRetries=5, continueTrying=True)
+        service.retries = 5
+        service.retry()
+        self.assertEqual(service.retries, 5)
+
+
+    def test_noisyRetryAbortsWhenMaxRetriesExceeded(self):
+        """
+        When retry is called after the maximum number of retries has been
+        reached and the service is noisy, no retry occours and the lack of
+        retry is logged.
+        """
+        service = self.make_reconnector(noisy=True, maxRetries=5,
+                                        continueTrying=True)
+        service.retries = 5
+        lc = LogCatcher(self)
+        service.retry()
+        [msg] = lc.messages()
+        self.assertEqual(service.retries, 5)
+        self.assertSubstring("Abandoning <twisted.application.test"
+                             ".test_internet.ClientTestEndpoint object at",
+                             msg)
+        self.assertSubstring("after 5 retries", msg)
+
+
+    def test_retryWithExplicitDelay(self):
+        """
+        When retry is called with an explicit delay, the retry is scheduled
+        with the specified delay.
+        """
+        service = self.make_reconnector(continueTrying=True, clock=Clock())
+        service.retry(delay=1.5)
+        [delayed] = service.clock.calls
+        self.assertEqual(delayed.time, 1.5)
+
+
+    def test_noisyRetryWithExplicitDelay(self):
+        """
+        When retry is called with an explicit delay and the service is noisy,
+        the retry is scheduled with the specified delay and the scheduling of
+        the retry is logged.
+        """
+        service = self.make_reconnector(noisy=True, continueTrying=True,
+                                        clock=Clock())
+        lc = LogCatcher(self)
+        service.retry(delay=1.5)
+        [msg] = lc.messages()
+        [delayed] = service.clock.calls
+        self.assertEqual(delayed.time, 1.5)
+        self.assertSubstring("Will retry <twisted.application.test"
+                             ".test_internet.ClientTestEndpoint object at",
+                             msg)
+        self.assertSubstring("in 1.5 seconds", msg)
+
+
+    def test_retryDelayAdvances(self):
+        """
+        When retry is called, the current delay amount is updated.
+        """
+        service = self.make_reconnector(jitter=None, continueTrying=True,
+                                        clock=Clock())
+        service.retry()
+        [delayed] = service.clock.calls
+        self.assertAlmostEqual(delayed.time, service.factor)
+        self.assertAlmostEqual(service.delay, service.factor)
+
+
+    def test_retryDelayIsCappedByMaxDelay(self):
+        """
+        When retry is called after the maximum delay is reached, the
+        current delay amount is capped at the maximum delay.
+        """
+        service = self.make_reconnector(jitter=None, continueTrying=True,
+                                        clock=Clock(), maxDelay=1.5)
+        service.retry()
+        [delayed] = service.clock.calls
+        self.assertAlmostEqual(delayed.time, 1.5)
+        self.assertAlmostEqual(service.delay, 1.5)
+
+
+    def test_retryWithJitter(self):
+        """
+        When retry is called, jitter is applied to the delay.
+        """
+        normal = MockRecorder(self, result=2.0)
+        self.patch(random, 'normalvariate', normal)
+        service = self.make_reconnector(continueTrying=True, clock=Clock())
+        service.retry()
+        [delayed] = service.clock.calls
+        self.assertAlmostEqual(delayed.time, 2.0)
+        self.assertAlmostEqual(service.delay, 2.0)
+        normal.assertCalledOnce(
+            service.factor, service.factor * service.jitter)
+
+
+    @inlineCallbacks
+    def test_retryWhenConnectionSucceeds(self):
+        """
+        When a reconnect attempt succeeds, clientConnected is called.
+        """
+        service = self.make_reconnector(continueTrying=True, clock=Clock())
+        connected = self.patch_reconnector(service, 'clientConnected')
+
+        service.retry(delay=1.0)
+        connected.assertNotCalled()
+
+        service.clock.advance(1.0)
+        wrapped_f = yield service.endpoint.connect_called
+        self.assertEqual(wrapped_f.protocolFactory, service.factory)
+        connected.assertNotCalled()
+
+        p = DummyProtocol()
+        service.endpoint.connected.callback(p)
+        connected.assertCalledOnce(p)
+
+
+    @inlineCallbacks
+    def test_retryWhenConnectionFails(self):
+        """
+        When a reconnect attempt fails, clientConnectionFailed is called.
+        """
+        service = self.make_reconnector(continueTrying=True, clock=Clock())
+        connection_failed = self.patch_reconnector(
+            service, 'clientConnectionFailed')
+
+        service.retry(delay=1.0)
+        connection_failed.assertNotCalled()
+
+        service.clock.advance(1.0)
+        wrapped_f = yield service.endpoint.connect_called
+        self.assertEqual(wrapped_f.protocolFactory, service.factory)
+        connection_failed.assertNotCalled()
+
+        failure = Failure(Exception())
+        service.endpoint.connected.errback(failure)
+        connection_failed.assertCalledOnce(failure)
+
+
+    def test_resetDelay(self):
+        """
+        When resetDelay is called, the delay is reset.
+        """
+        service = self.make_reconnector()
+        initial_delay = 1.0
+        service.delay, service.retries = initial_delay + 1, 5
+        service.resetDelay()
+        self.assertEqual(service.delay, initial_delay)
+        self.assertEqual(service.retries, 0)
+
+
+    def test_parametrizedClock(self):
+        """
+        The clock used by L{ReconnectingClientFactory} can be parametrized, so
+        that one can cleanly test reconnections.
+        """
+        clock = Clock()
+        service = self.make_reconnector()
+        service.clock = clock
+        service.startService()
+        self.assertEqual(len(clock.calls), 1)
