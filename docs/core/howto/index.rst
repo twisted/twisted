@@ -1,4 +1,3 @@
-
 :LastChangedDate: $LastChangedDate$
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
@@ -326,14 +325,8 @@ Developer Guides
 
 
 
-  
+
   - :doc:`Porting to Python 3 <python3>`
   - :doc:`Glossary <glossary>`
   - :doc:`Tips for debugging with emacs <debug-with-emacs>`
   - :doc:`Running on Windows <windows>`
-
-
-
-
-
-
