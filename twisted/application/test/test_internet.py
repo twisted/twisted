@@ -463,7 +463,7 @@ class LogCatcher(object):
         test_case.addCleanup(self.detach)
 
     def messages(self):
-        return [" ".join(msg['message']) % msg for msg in self.logs
+        return [msg['format'] % msg for msg in self.logs
                 if not msg["isError"]]
 
     def _gather_logs(self, event_dict):
