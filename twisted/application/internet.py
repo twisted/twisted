@@ -419,8 +419,8 @@ class _RestartableProtocolProxy(object):
 
 
     def __repr__(self):
-        return '<%s.%s wraps %r>' % (
-            __name__, self.__class__.__name__, self.__protocol)
+        return '<%s wrapping %r>' % (
+            self.__class__.__name__, self.__protocol)
 
 
 
@@ -448,8 +448,8 @@ class _RestartableProtocolFactoryProxy(object):
 
 
     def __repr__(self):
-        return '<%s.%s wraps %r>' % (
-            __name__, self.__class__.__name__, self.protocolFactory)
+        return '<%s wrapping %r>' % (
+            self.__class__.__name__, self.protocolFactory)
 
 
 
