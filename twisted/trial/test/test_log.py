@@ -70,33 +70,41 @@ class TestObserver(unittest.SynchronousTestCase):
     def setUp(self):
         self.result = reporter.TestResult()
         self.observer = unittest._LogObserver()
+        self.timestamp = time.time()
 
 
     def test_msg(self):
         """
-        Test that a standard log message doesn't go anywhere near the result.
+        Test that a standard log message is recorded as an event and not an
+        error.
         """
-        self.observer.gotEvent({'message': ('some message',),
-                                'time': time.time(), 'isError': 0,
-                                'system': '-'})
+        event = {
+            'message': ('some message',),
+            'time': self.timestamp, 'isError': 0,
+            'system': '-',
+        }
+        self.observer.gotEvent(event)
         self.assertEqual(self.observer.getErrors(), [])
+        self.assertEqual(self.observer.getEvents(), [event])
 
 
     def test_error(self):
         """
-        Test that an observed error gets added to the result
+        Test that an observed error is recorded as an error and not an event.
         """
         f = makeFailure()
         self.observer.gotEvent({'message': (),
-                                'time': time.time(), 'isError': 1,
+                                'time': self.timestamp, 'isError': 1,
                                 'system': '-', 'failure': f,
                                 'why': None})
         self.assertEqual(self.observer.getErrors(), [f])
+        self.assertEqual(self.observer.getEvents(), [])
 
 
-    def test_flush(self):
+    def test_flush_errors(self):
         """
-        Check that flushing the observer with no args removes all errors.
+        Check that flushing errors from the observer with no args removes all
+        errors.
         """
         self.test_error()
         flushed = self.observer.flushErrors()
@@ -105,11 +113,26 @@ class TestObserver(unittest.SynchronousTestCase):
         self.assertTrue(flushed[0].check(ZeroDivisionError))
 
 
+    def test_flush_events(self):
+        """
+        Check that flushing events from the observer remove all events.
+        """
+        self.test_msg()
+        flushed = self.observer.flushEvents()
+        self.assertEqual(self.observer.getEvents(), [])
+        self.assertEqual(flushed, [{
+            'isError': 0,
+            'message': ('some message',),
+            'system': '-',
+            'time': self.timestamp,
+        }])
+
+
     def _makeRuntimeFailure(self):
         return failure.Failure(RuntimeError('test error'))
 
 
-    def test_flushByType(self):
+    def test_flush_errors_by_type(self):
         """
         Check that flushing the observer remove all failures of the given type.
         """
