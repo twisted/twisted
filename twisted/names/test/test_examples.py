@@ -9,7 +9,7 @@ import sys
 from StringIO import StringIO
 
 from twisted.python.filepath import FilePath
-from twisted.trial.unittest import TestCase, FailTest
+from twisted.trial.unittest import TestCase
 
 
 
@@ -53,7 +53,7 @@ class ExampleTestBase(object):
         for childName in self.exampleRelativePath.split('/'):
             here = here.child(childName)
             if not here.exists():
-                raise FailTest(
+                self.fail(
                     "Examples (%s) not found - cannot test" % (here.path,))
         self.examplePath = here
 
