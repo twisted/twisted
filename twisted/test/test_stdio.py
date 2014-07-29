@@ -5,7 +5,7 @@
 Tests for L{twisted.internet.stdio}.
 """
 
-import os, sys, itertools
+import errno, os, sys, itertools
 
 from twisted.trial import unittest
 from twisted.python import filepath, log
@@ -326,16 +326,30 @@ class StandardInputOutputTestCase(unittest.TestCase):
         proto = ConnectionLostNotifyingProtocol(onConnLost)
         path = filepath.FilePath(self.mktemp())
         self.normal = normal = path.open('w')
-        self.addCleanup(normal.close)
+        def close_nofail(fp):
+            # Windows throws an error if we try to close an already-closed fd
+            # if we reuse close_nofail_fd below, this screws with python's
+            # internal bookkeeping of fp objects
+            try:
+                fp.close()
+            except IOError:
+                pass
+        self.addCleanup(close_nofail, normal)
 
         kwargs = dict(stdout=normal.fileno())
-        if not platform.isWindows():
-            # Make a fake stdin so that StandardIO doesn't mess with the *real*
-            # stdin.
-            r, w = os.pipe()
-            self.addCleanup(os.close, r)
-            self.addCleanup(os.close, w)
-            kwargs['stdin'] = r
+        # Make a fake stdin so that StandardIO doesn't mess with the *real*
+        # stdin.
+        r, w = os.pipe()
+        def close_nofail_fd(fd):
+            # Windows throws an error if we try to close an already-closed fd
+            try:
+                os.close(fd)
+            except OSError as e:
+                if e.errno != errno.EBADF:
+                    raise
+        self.addCleanup(close_nofail_fd, r)
+        self.addCleanup(os.close, w)
+        kwargs['stdin'] = r
         connection = stdio.StandardIO(proto, **kwargs)
 
         # The reactor needs to spin a bit before it might have incorrectly
@@ -364,8 +378,3 @@ class StandardInputOutputTestCase(unittest.TestCase):
                 ''.join(map(str, range(howMany))))
         onConnLost.addCallback(cbLost)
         return onConnLost
-
-    if platform.isWindows():
-        test_normalFileStandardOut.skip = (
-            "StandardIO does not accept stdout as an argument to Windows.  "
-            "Testing redirection to a file is therefore harder.")

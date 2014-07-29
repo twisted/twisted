@@ -30,23 +30,26 @@ class StandardIO(_pollingfile._PollingTimer):
     disconnecting = False
     disconnected = False
 
-    def __init__(self, proto, reactor=None):
+    def __init__(self, proto, stdin=0, stdout=1, reactor=None):
         """
         Start talking to standard IO with the given protocol.
 
-        Also, put it stdin/stdout/stderr into binary mode.
+        The stdin/stdout params are file descriptors (integers), e.g. as
+        returned by the fileno() method of a Python file object. On windows,
+        they may represent open files or pipes. Both of these will be put
+        into binary mode.
         """
         if reactor is None:
             from twisted.internet import reactor
 
-        for stdfd in range(0, 1, 2):
-            msvcrt.setmode(stdfd, os.O_BINARY)
+        for fd in (stdin, stdout):
+            msvcrt.setmode(fd, os.O_BINARY)
 
         _pollingfile._PollingTimer.__init__(self, reactor)
         self.proto = proto
 
-        hstdin = win32api.GetStdHandle(win32api.STD_INPUT_HANDLE)
-        hstdout = win32api.GetStdHandle(win32api.STD_OUTPUT_HANDLE)
+        hstdin = msvcrt.get_osfhandle(stdin)
+        hstdout = msvcrt.get_osfhandle(stdout)
 
         self.stdin = _pollingfile._PollableReadPipe(
             hstdin, self.dataReceived, self.readConnectionLost)
