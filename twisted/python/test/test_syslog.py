@@ -149,3 +149,22 @@ class SyslogObserverTests(TestCase):
             self.events,
             [(stdsyslog.LOG_INFO, '[-] hello,'),
              (stdsyslog.LOG_INFO, '[-] \tworld')])
+
+    def test_emitWithLoglevel(self):
+        """
+        Emit should map python logging levels to stdsyslog levels, otherwise
+            running twistd --syslog would map WARNING to INFO
+                    
+            DEBUG -> LOG_DEBUG
+            INFO -> LOG_INFO
+            WARNING -> LOG_WARNING
+            ERROR -> LOG_ERROR
+            FATAL -> LOG_CRIT
+        """
+        import logging
+        self.observer.emit({
+                'message': ('hello, world',), 'isError': False, 'system': '-',
+                'logLevel': logging.WARNING})
+        self.assertEqual(
+            self.events,
+            [(stdsyslog.LOG_WARNING, '[-] hello, world')])
