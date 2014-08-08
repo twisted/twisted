@@ -737,7 +737,7 @@ class IPolicyForHTTPS(Interface):
         pair.
 
         @param hostname: The name of the requested remote host.
-        @type hostname: L{unicode}
+        @type hostname: L{bytes}
 
         @param port: The number of the requested remote port.
         @type port: L{int}

@@ -1217,7 +1217,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
         C{creatorForNetloc} method.  The resulting context object will be used
         to establish the SSL connection.
         """
-        expectedHost = 'example.org'
+        expectedHost = b'example.org'
         expectedPort = 20443
         class JustEnoughConnection(object):
             handshakeStarted = False
@@ -1261,7 +1261,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
                 Emulate L{BrowserLikePolicyForHTTPS}.
 
                 @param hostname: The hostname to verify.
-                @type hostname: L{unicode}
+                @type hostname: L{bytes}
 
                 @param port: The port number.
                 @type port: L{int}
