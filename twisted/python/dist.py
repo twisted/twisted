@@ -115,6 +115,9 @@ def get_setup_args(**kw):
             'install_data': install_data_twisted,
             'build_scripts': build_scripts_twisted}
 
+    if list(get_cffi_ext_modules()):
+        kw["setup_requires"] = ["cffi"]
+
     if "conditionalExtensions" in kw:
         extensions = kw["conditionalExtensions"]
         del kw["conditionalExtensions"]
