@@ -38,6 +38,7 @@ from twisted.python import log
 from twisted.internet.address import _ProcessAddress, HostnameAddress
 from twisted.python.components import proxyForInterface
 from twisted.internet.task import LoopingCall
+from twisted.python.util import FancyStrMixin
 
 if not _PY3:
     from twisted.plugin import IPlugin, getPlugins
@@ -381,7 +382,7 @@ class StandardErrorBehavior(Names):
 
 
 @implementer(interfaces.IStreamClientEndpoint)
-class ProcessEndpoint(object):
+class ProcessEndpoint(FancyStrMixin, object):
     """
     An endpoint for child processes
 
@@ -389,6 +390,13 @@ class ProcessEndpoint(object):
 
     @since: 13.1
     """
+    showAttributes = (('_env', 'env', '%r'),
+                      ('_path', 'path', '%r'), ('_uid', 'uid', '%r'),
+                      ('_gid', 'gid', '%r'),
+                      ('_executable', 'executable', '%r'),
+                      ('_args', 'args', '%r'), ('_usePTY', 'usePTY', '%r'),
+                      ('_childFDs', 'childFDs', '%r'))
+
     def __init__(self, reactor, executable, args=(), env={}, path=None,
                  uid=None, gid=None, usePTY=0, childFDs=None,
                  errFlag=StandardErrorBehavior.LOG):
@@ -433,10 +441,13 @@ class ProcessEndpoint(object):
 
 
 @implementer(interfaces.IStreamServerEndpoint)
-class _TCPServerEndpoint(object):
+class _TCPServerEndpoint(FancyStrMixin, object):
     """
     A TCP server endpoint interface
     """
+    showAttributes = (('_port', 'port', '%r'),
+                      ('_backlog', 'backlog', '%r'),
+                      ('_interface', 'interface', '%r'))
 
     def __init__(self, reactor, port, backlog, interface):
         """
@@ -513,10 +524,13 @@ class TCP6ServerEndpoint(_TCPServerEndpoint):
 
 
 @implementer(interfaces.IStreamClientEndpoint)
-class TCP4ClientEndpoint(object):
+class TCP4ClientEndpoint(FancyStrMixin, object):
     """
     TCP client endpoint with an IPv4 configuration.
     """
+    showAttributes = (('_host', 'host', '%r'),
+                      ('_port', 'port', '%r'), ('_timeout', 'timeout', '%r'),
+                      ('_bindAddress', 'bindAddress', '%r'))
 
     def __init__(self, reactor, host, port, timeout=30, bindAddress=None):
         """
@@ -559,7 +573,7 @@ class TCP4ClientEndpoint(object):
 
 
 @implementer(interfaces.IStreamClientEndpoint)
-class TCP6ClientEndpoint(object):
+class TCP6ClientEndpoint(FancyStrMixin, object):
     """
     TCP client endpoint with an IPv6 configuration.
 
@@ -573,6 +587,9 @@ class TCP6ClientEndpoint(object):
     @ivar _GAI_ADDRESS_HOST: Index of the actual host-address in the
         5-tuple L{_GAI_ADDRESS}.
     """
+    showAttributes = (('_host', 'host', '%r'),
+                      ('_port', 'port', '%r'), ('_timeout', 'timeout', '%r'),
+                      ('_bindAddress', 'bindAddress', '%r'))
 
     _getaddrinfo = socket.getaddrinfo
     _deferToThread = staticmethod(threads.deferToThread)
@@ -632,7 +649,7 @@ class TCP6ClientEndpoint(object):
 
 
 @implementer(interfaces.IStreamClientEndpoint)
-class HostnameEndpoint(object):
+class HostnameEndpoint(FancyStrMixin, object):
     """
     A name-based endpoint that connects to the fastest amongst the
     resolved host addresses.
@@ -641,6 +658,10 @@ class HostnameEndpoint(object):
 
     @ivar _deferToThread: A hook used for testing deferToThread.
     """
+    showAttributes = (('_host', 'host', '%r'),
+                      ('_port', 'port', '%r'), ('_timeout', 'timeout', '%r'),
+                      ('_bindAddress', 'bindAddress', '%r'))
+
     _getaddrinfo = socket.getaddrinfo
     _deferToThread = staticmethod(threads.deferToThread)
 
@@ -785,10 +806,13 @@ class HostnameEndpoint(object):
 
 
 @implementer(interfaces.IStreamServerEndpoint)
-class SSL4ServerEndpoint(object):
+class SSL4ServerEndpoint(FancyStrMixin, object):
     """
     SSL secured TCP server endpoint with an IPv4 configuration.
     """
+    showAttributes = (('_port', 'port', '%r'),
+                      ('_backlog', 'backlog', '%r'),
+                      ('_interface', 'interface', '%r'))
 
     def __init__(self, reactor, port, sslContextFactory,
                  backlog=50, interface=''):
@@ -828,10 +852,13 @@ class SSL4ServerEndpoint(object):
 
 
 @implementer(interfaces.IStreamClientEndpoint)
-class SSL4ClientEndpoint(object):
+class SSL4ClientEndpoint(FancyStrMixin, object):
     """
     SSL secured TCP client endpoint with an IPv4 configuration
     """
+    showAttributes = (('_host', 'host', '%r'),
+                      ('_port', 'port', '%r'), ('_timeout', 'timeout', '%r'),
+                      ('_bindAddress', 'bindAddress', '%r'))
 
     def __init__(self, reactor, host, port, sslContextFactory,
                  timeout=30, bindAddress=None):
@@ -880,10 +907,14 @@ class SSL4ClientEndpoint(object):
 
 
 @implementer(interfaces.IStreamServerEndpoint)
-class UNIXServerEndpoint(object):
+class UNIXServerEndpoint(FancyStrMixin, object):
     """
     UnixSocket server endpoint.
     """
+    showAttributes = (('_address', 'address', '%r'),
+                      ('_backlog', 'backlog', '%r'), ('_mode', 'mode', '%o'),
+                      ('_wantPID', 'wantPID', '%r'))
+
     def __init__(self, reactor, address, backlog=50, mode=0o666, wantPID=0):
         """
         @param reactor: An L{IReactorUNIX} provider.
@@ -914,10 +945,13 @@ class UNIXServerEndpoint(object):
 
 
 @implementer(interfaces.IStreamClientEndpoint)
-class UNIXClientEndpoint(object):
+class UNIXClientEndpoint(FancyStrMixin, object):
     """
     UnixSocket client endpoint.
     """
+    showAttributes = (('_path', 'path', '%r'), ('_timeout', 'timeout', '%r'),
+                      ('_checkPID', 'checkPID', '%r'))
+
     def __init__(self, reactor, path, timeout=30, checkPID=0):
         """
         @param reactor: An L{IReactorUNIX} provider.
@@ -957,7 +991,7 @@ class UNIXClientEndpoint(object):
 
 
 @implementer(interfaces.IStreamServerEndpoint)
-class AdoptedStreamServerEndpoint(object):
+class AdoptedStreamServerEndpoint(FancyStrMixin, object):
     """
     An endpoint for listening on a file descriptor initialized outside of
     Twisted.
@@ -965,6 +999,9 @@ class AdoptedStreamServerEndpoint(object):
     @ivar _used: A C{bool} indicating whether this endpoint has been used to
         listen with a factory yet.  C{True} if so.
     """
+    showAttributes = (('fileno', 'fileno', '%r'),
+                      ('addressFamily', 'addressFamily', '%r'),
+                      ('_used', 'used', '%r'),)
     _close = os.close
     _setNonBlocking = staticmethod(fdesc.setNonBlocking)
 
