@@ -27,7 +27,7 @@ Do this by passing ``logPath`` to the initializer:
 
 Or if you want to change the logging behavior of a server you're launching with ``twistd web`` then just pass the ``--logfile`` option:
 
-.. code-block:: shell
+.. code-block:: sh
 
     $ twistd -n web --logfile /tmp/access-logging-demo.log
 
