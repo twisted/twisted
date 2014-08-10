@@ -29,8 +29,11 @@ because they are explicitly expired). Each time after the first that a
 particular session's ``Session`` object is requested, it is
 retrieved from the ``Site`` .
 
+..  note::
+    Session ID is stored in a cookie named by default: `TWISTED_SESSION`.
 
-
+    When used over HTTPS protocol, default :api:`twisted.web.server.Request <Request>`
+    implementation will set the `Secure <https://en.wikipedia.org/wiki/HTTP_cookie#Secure_and_HttpOnly>`_ flag for the session cookie.
 
 With the conceptual underpinnings of the upcoming API in place, here comes
 the example. This will be a very simple :doc:`rpy script <rpy-scripts>` which tells a user what its unique session identifier is and lets it

@@ -393,12 +393,30 @@ class Request(Copyable, http.Request, components.Componentized):
                     pass
             # if it still hasn't been set, fix it up.
             if not self.session:
-                self.session = self.site.makeSession()
-                self.addCookie(cookiename, self.session.uid, path=b'/')
+                self.session = self.createSession(cookiename)
         self.session.touch()
         if sessionInterface:
             return self.session.getComponent(sessionInterface)
         return self.session
+
+    def createSession(self, cookiename):
+        """
+        Create a new session and set session cookie.
+
+        When used over HTTPS it will set I{Secure} cookie flag.
+
+        See: https://en.wikipedia.org/wiki/HTTP_cookie#Secure_and_HttpOnly
+
+        @param cookiename: Name of the cookies used to store session ID.
+        """
+        session = self.site.makeSession()
+        self.addCookie(
+                    cookiename,
+                    session.uid,
+                    path=b'/',
+                    secure=self.isSecure(),
+                    )
+        return session
 
     def _prePathURL(self, prepath):
         port = self.getHost().port
