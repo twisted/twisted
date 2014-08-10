@@ -117,6 +117,7 @@ def get_setup_args(**kw):
 
     if list(get_cffi_ext_modules()):
         kw["setup_requires"] = ["cffi"]
+        kw["install_requires"] = ["cffi"]
 
     if "conditionalExtensions" in kw:
         extensions = kw["conditionalExtensions"]
