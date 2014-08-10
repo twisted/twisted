@@ -8,6 +8,8 @@ except ImportError:
                      "have installed the Twisted core package before "
                      "attempting to install any other Twisted projects.")
 
+cffi_extensions = ["twisted.runner.portmap"]
+
 if __name__ == '__main__':
     setup(
         twisted_subproject="runner",

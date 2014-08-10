@@ -20,7 +20,10 @@ _source = """
 
 _ffi = cffi.FFI()
 _ffi.cdef(_source)
-_lib = _ffi.verify(source="#include <rpc/rpc.h>\n" + _source)
+_lib = _ffi.verify(
+    source="#include <rpc/rpc.h>\n" + _source,
+    ext_package="twisted.runner"
+)
 
 
 def _alias(realFunction):

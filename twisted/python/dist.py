@@ -10,7 +10,9 @@ Don't use this outside of Twisted.
 Maintainer: Christopher Armstrong
 """
 
-from distutils.command import build_scripts, install_data, build_ext
+from distutils.command import (
+    build, build_scripts, build_ext, install, install_data
+)
 from distutils.errors import CompileError
 from distutils import core
 from distutils.core import Extension
@@ -108,6 +110,8 @@ def get_setup_args(**kw):
 
     if 'cmdclass' not in kw:
         kw['cmdclass'] = {
+            'build': build_twisted,
+            'install': install_twisted,
             'install_data': install_data_twisted,
             'build_scripts': build_scripts_twisted}
 
@@ -334,6 +338,39 @@ class build_scripts_twisted(build_scripts.build_scripts):
                 if os.path.exists(pypath):
                     os.unlink(pypath)
                 os.rename(fpath, pypath)
+
+
+
+def get_cffi_ext_modules():
+    import __main__
+    extensions = __main__.cffi_extensions
+    for extensionName in extensions:
+        package, rest = extensionName.split(".", 1)
+        module = __import__(extensionName, fromlist=[rest], level=0)
+        yield module._ffi.verifier.get_extension()
+
+
+
+class build_twisted(build.build):
+    """
+    Generate the necessary information for CFFI extension modules.
+
+    This avoids the need to import modules from the package being installed
+    before calling distutils' C{setup()}.
+    """
+    def finalize_options(self):
+        self.distribution.ext_modules = list(get_cffi_ext_modules())
+        build.build.finalize_options(self)
+
+
+
+class install_twisted(install.install):
+    """
+    Account for the late introduction of extension modules by build_twisted.
+    """
+    def finalize_options(self):
+        self.distribution.ext_modules = list(get_cffi_ext_modules())
+        install.install.finalize_options(self)
 
 
 
