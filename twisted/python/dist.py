@@ -343,7 +343,7 @@ class build_scripts_twisted(build_scripts.build_scripts):
 
 def get_cffi_ext_modules():
     import __main__
-    extensions = __main__.cffi_extensions
+    extensions = getattr(__main__, "cffi_extensions", [])
     for extensionName in extensions:
         package, rest = extensionName.split(".", 1)
         module = __import__(extensionName, fromlist=[rest], level=0)
