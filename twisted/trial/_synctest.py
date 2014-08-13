@@ -819,6 +819,7 @@ class _LogObserver(object):
 
     def __init__(self):
         self._errors = []
+        self._events = []
         self._added = 0
         self._ignored = []
 
@@ -877,6 +878,22 @@ class _LogObserver(object):
         return self._errors
 
 
+    def flushEvents(self):
+        """
+        Flush logged events.
+        """
+        flushed = self._events
+        self._events = []
+        return flushed
+
+
+    def getEvents(self):
+        """
+        Return a list of logged events.
+        """
+        return self._events
+
+
     def gotEvent(self, event):
         """
         The actual observer method. Called whenever a message is logged.
@@ -888,6 +905,8 @@ class _LogObserver(object):
             f = event['failure']
             if len(self._ignored) == 0 or not f.check(*self._ignored):
                 self._errors.append(f)
+        else:
+            self._events.append(event)
 
 
 
@@ -1092,6 +1111,17 @@ class SynchronousTestCase(_Assertions):
         @return: A list of failures that have been removed.
         """
         return self._observer.flushErrors(*errorTypes)
+
+
+    def flushLoggedEvents(self):
+        """
+        Remove stored logging events received from the log.
+
+        C{TestCase} stores each event logged during the run of the test.
+
+        @return: A list of logging events that have been removed.
+        """
+        return self._observer.flushEvents()
 
 
     def flushWarnings(self, offendingFunctions=None):
