@@ -42,6 +42,34 @@ class GeneralOptions(usage.Options):
     compData = usage.Completions(
         optActions={"type": usage.CompleteList(["rsa", "dsa"])})
 
+    _default_filename_fmt = '~/.ssh/id_{}'
+    _raw_input = raw_input
+    
+    def postOptions(self):
+        # all methods of this script need a default filename
+        #  so it should be set *outside* single methods
+        if self['type']:
+            self['create'] = True
+        else:
+            self['create'] = False
+            # for all methods, default option is 'rsa'
+            self['type'] = 'rsa'
+                 
+        # A bit of validation
+        if self['create'] and self['showpub']:
+            raise ValueError("Please select only one option between -t and -y")   
+        # Now that I've divided action and type, I can get 
+        #  the right default filename
+        if self['filename'] is None:
+            default_filename = os.path.expanduser(self._default_filename_fmt.format(self['type']))
+            if self['showpub']:
+                default_filename += ".pub"
+            filename = self._raw_input('Enter filename (Default: %s)' % (default_filename,)).strip()
+            if not filename:
+                filename = default_filename
+            self['filename'] = filename
+
+
 
 
 def run():
@@ -54,13 +82,10 @@ def run():
         sys.exit(1)
     log.discardLogs()
     log.deferr = handleError # HACK
-    if options['type']:
-        if options['type'] == 'rsa':
-            generateRSAkey(options)
-        elif options['type'] == 'dsa':
-            generateDSAkey(options)
-        else:
-            sys.exit('Key type was %s, must be one of: rsa, dsa' % options['type'])
+
+    if options['create']:
+        # The rsa/dsa type is moved to Option.postOptions
+        generateKey(options)
     elif options['fingerprint']:
         printFingerprint(options)
     elif options['changepass']:
@@ -80,29 +105,36 @@ def handleError():
     raise
 
 
-
 def generateRSAkey(options):
-    from Crypto.PublicKey import RSA
-    print 'Generating public/private rsa key pair.'
-    key = RSA.generate(int(options['bits']), randbytes.secureRandom)
+    #from Crypto.PublicKey import RSA
+    #print 'Generating public/private rsa key pair.'
+    #key = RSA.generate(int(options['bits']), randbytes.secureRandom)
+    #_saveKey(key, options)
+    if options['type'] != 'rsa':
+        raise ValueError("Expected rsa, got %r" % options['type'])
+    return generateKey(options)
+
+def generateDSAkey(options):    
+    if options['type'] != 'dsa':
+        raise ValueError("Expected dsa, got %r" % options['type'])
+    return generateKey(options)
+
+def generateKey(options):
+    """Generate an encryption key after options['type']
+    """
+    from Crypto.PublicKey import DSA, RSA
+    kmap = {'rsa':RSA.generate, 'dsa': DSA.generate} # dispatch table
+    allowed_values = kmap.keys()
+    if not options['type'] in allowed_values:
+        sys.exit('Key type was %s, must be one of: %s' % (options['type'], allowed_values))
+        
+    print 'Generating public/private %s key pair.' % options['type']
+    generateKey = kmap[options['type']]
+    key = generateKey(int(options['bits']), randbytes.secureRandom)
     _saveKey(key, options)
-
-
-
-def generateDSAkey(options):
-    from Crypto.PublicKey import DSA
-    print 'Generating public/private dsa key pair.'
-    key = DSA.generate(int(options['bits']), randbytes.secureRandom)
-    _saveKey(key, options)
-
 
 
 def printFingerprint(options):
-    if not options['filename']:
-        filename = os.path.expanduser('~/.ssh/id_rsa')
-        options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
-    if os.path.exists(options['filename']+'.pub'):
-        options['filename'] += '.pub'
     try:
         key = keys.Key.fromFile(options['filename'])
         obj = key.keyObject
@@ -116,10 +148,6 @@ def printFingerprint(options):
 
 
 def changePassPhrase(options):
-    if not options['filename']:
-        filename = os.path.expanduser('~/.ssh/id_rsa')
-        options['filename'] = raw_input(
-            'Enter file in which the key is (%s): ' % filename)
     try:
         key = keys.Key.fromFile(options['filename']).keyObject
     except keys.EncryptedKeyError as e:
@@ -165,10 +193,7 @@ def changePassPhrase(options):
 
 
 
-def displayPublicKey(options):
-    if not options['filename']:
-        filename = os.path.expanduser('~/.ssh/id_rsa')
-        options['filename'] = raw_input('Enter file in which the key is (%s): ' % filename)
+def displayPublicKey(options): 
     try:
         key = keys.Key.fromFile(options['filename']).keyObject
     except keys.EncryptedKeyError:
@@ -181,11 +206,12 @@ def displayPublicKey(options):
 
 
 def _saveKey(key, options):
-    if not options['filename']:
-        kind = keys.objectType(key)
-        kind = {'ssh-rsa':'rsa','ssh-dss':'dsa'}[kind]
-        filename = os.path.expanduser('~/.ssh/id_%s'%kind)
-        options['filename'] = raw_input('Enter file in which to save the key (%s): '%filename).strip() or filename
+    # a bit of thesting
+    kind = keys.objectType(key)
+    kind = {'ssh-rsa':'rsa','ssh-dss':'dsa'}[kind]
+    if not kind == options['type']:
+        raise ValueError("Mismatch between key type (%s) and the passed one (%s)" % (kind, options['type']))
+    
     if os.path.exists(options['filename']):
         print '%s already exists.' % options['filename']
         yn = raw_input('Overwrite (y/n)? ')
