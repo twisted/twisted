@@ -608,7 +608,7 @@ class FilePath(AbstractFilePath):
     The correct way to use me is to instantiate me, and then do ALL filesystem
     access through me.  In other words, do not import the 'os' module; if you
     need to open a file, call my 'open' method.  If you need to list a
-    directory, call my 'path' method.
+    directory, call my 'listdir' method.
 
     Even if you pass me a relative path, I will convert that to an absolute
     path internally.
