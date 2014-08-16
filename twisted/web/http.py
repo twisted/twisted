@@ -1587,8 +1587,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """
     A receiver for HTTP requests.
 
-    Maximum length for initial request line and each header is defined by
-    L{basic.LineReceiver.MAX_LENGTH}.
+    @ivar MAX_LENGTH: Maximum length for initial request line and each line
+        from the header.
 
     @ivar _transferDecoder: C{None} or a decoder instance if the request body
         uses the I{chunked} Transfer-Encoding.
@@ -1669,6 +1669,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._command = command
             self._path = request
             self._version = version
+        # End of headers.
         elif line == b'':
             if self.__header:
                 self.headerReceived(self.__header)
@@ -1678,8 +1679,12 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 self.allContentReceived()
             else:
                 self.setRawMode()
+        # Continuation of a multi line header.
         elif line[0] in b' \t':
             self.__header = self.__header + '\n' + line
+        # Regular header line.
+        # Processing of header line is delayed to allow accumulating multi
+        # line headers.
         else:
             if self.__header:
                 self.headerReceived(self.__header)

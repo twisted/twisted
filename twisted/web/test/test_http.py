@@ -661,8 +661,9 @@ class ParsingTestCase(unittest.TestCase):
 
 
     def runRequest(
-            self, httpRequest, requestFactory=None, channel=None,
-            success=False):
+            self, httpRequest, requestFactory=None, success=True,
+             channel=None,
+             ):
         """
         Execute a web request based on plain text content.
 
@@ -672,11 +673,11 @@ class ParsingTestCase(unittest.TestCase):
         @param requestFactory: Request factory used for the channel.
         @type requestFactory: L{Request}
 
+        @param success: Value to compare against I{self.didRequest}.
+        @type success: C{bool}
+
         @param channel: Channel instance over which the request is processed.
         @type channel: L{HTTPChannel}
-
-        @param success: Value to compare agains I{self.didRequest}.
-        @type success: C{bool}
 
         @return: Returns the channel used for processing the request.
         @rtype: L{HTTPChannel}
@@ -839,7 +840,8 @@ class ParsingTestCase(unittest.TestCase):
         channel.totalHeadersSize = 10
         httpRequest = b'GET /path/longer/than/10 HTTP/1.1\n'
 
-        channel = self.runRequest(httpRequest=httpRequest, channel=channel)
+        channel = self.runRequest(
+            httpRequest=httpRequest, channel=channel, success=False)
 
         self.assertEqual(
             channel.transport.value(),
@@ -859,7 +861,8 @@ class ParsingTestCase(unittest.TestCase):
             b'Some-Header: less-than-40\n'
             )
 
-        channel = self.runRequest(httpRequest=httpRequest, channel=channel)
+        channel = self.runRequest(
+            httpRequest=httpRequest, channel=channel, success=False)
 
         self.assertEqual(
             channel.transport.value(),
@@ -887,7 +890,7 @@ class ParsingTestCase(unittest.TestCase):
             )
 
         channel = self.runRequest(
-            httpRequest=httpRequest, channel=channel)
+            httpRequest=httpRequest, channel=channel, success=False)
 
         self.assertEqual(
             channel.transport.value(),
@@ -922,7 +925,7 @@ Cookie: rabbit="eat carrot"; ninja=secret; spam="hey 1=1!"
                 testcase.didRequest = True
                 self.finish()
 
-        self.runRequest(httpRequest, MyRequest, success=True)
+        self.runRequest(httpRequest, MyRequest)
 
         self.assertEqual(
             cookies, {
@@ -949,7 +952,7 @@ GET /?key=value&multiple=two+words&multiple=more%20words&empty= HTTP/1.0
                 testcase.didRequest = True
                 self.finish()
 
-        self.runRequest(httpRequest, MyRequest, success=True)
+        self.runRequest(httpRequest, MyRequest)
         self.assertEqual(method, [b"GET"])
         self.assertEqual(
             args, [[b"value"], [b""], [b"two words", b"more words"]])
@@ -975,7 +978,7 @@ GET /?key=value&multiple=two+words&multiple=more%20words&empty= HTTP/1.0
                 testcase.didRequest = True
                 self.finish()
 
-        self.runRequest(httpRequest, MyRequest, success=True)
+        self.runRequest(httpRequest, MyRequest)
         self.assertEqual(method, [b'GET'])
         self.assertEqual(path, [b'/foo'])
         self.assertEqual(args, [[b'?'], [b'quux']])
@@ -1011,7 +1014,7 @@ Content-Type: application/x-www-form-urlencoded
                 testcase.didRequest = True
                 self.finish()
 
-        self.runRequest(httpRequest, MyRequest, success=True)
+        self.runRequest(httpRequest, MyRequest)
         self.assertEqual(method, [b"POST"])
         self.assertEqual(
             args, [[b"value"], [b""], [b"two words", b"more words"]])
@@ -1072,7 +1075,7 @@ Hello,
                 testcase.didRequest = True
                 self.finish()
 
-        self.runRequest(httpRequest, MyRequest, success=True)
+        self.runRequest(httpRequest, MyRequest)
         # The tempfile API used to create content returns an
         # instance of a different type depending on what platform
         # we're running on.  The point here is to verify that the
