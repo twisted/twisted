@@ -128,6 +128,7 @@ class IAlias(Interface):
         @rtype: L{IMessage <smtp.IMessage>} provider
         @return: A message receiver.
         """
+        pass
 
 
 
@@ -228,7 +229,7 @@ class AddressAlias(AliasBase):
         @rtype: L{IMessage <smtp.IMessage>} provider
         @return: A message receiver.
         """
-        return self.domain().exists(str(self.alias))
+        return self.domain().exists(smtp.User(self.alias, None, None, None))()
 
 
     def resolve(self, aliasmap, memo=None):

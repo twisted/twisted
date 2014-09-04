@@ -16,7 +16,7 @@ import signal
 from hashlib import md5
 
 from zope.interface.verify import verifyClass
-from zope.interface import Interface, implements
+from zope.interface import Interface, implements, implementer
 
 from twisted.trial import unittest
 from twisted.mail import smtp
@@ -33,6 +33,7 @@ from twisted.internet.error import ProcessDone, ProcessTerminated
 from twisted.internet import address
 from twisted.python import failure
 from twisted.python.filepath import FilePath
+from twisted.python.util import FancyEqMixin
 
 from twisted import mail
 import twisted.mail.mail
@@ -1773,73 +1774,141 @@ class AliasTestCase(unittest.TestCase):
 
 
 
-class DummyDomain(object):
+@implementer(smtp.IMessage)
+class TestMessage(FancyEqMixin):
     """
-    Test domain for L{AddressAliasTests}.
+    Message receiver for use by TestDomain.
+
+    @ivar user: See L{__init__}
     """
-    def __init__(self, address):
-        self.address = address
+    compareAttributes = ('user',)
 
-
-    def exists(self, user, memo=None):
+    def __init__(self, user):
         """
-        @returns: When a C{memo} is passed in this will raise a
-            L{smtp.SMTPBadRcpt} exception, otherwise a boolean
-            indicating if the C{user} and string version of
-            L{self.address} are equal or not.
-        @rtype: C{bool}
+        @type user: L{bytes}
+        @param user: The user for whom the message is destined.
         """
-        if memo:
-            raise mail.smtp.SMTPBadRcpt('ham')
+        self.user = str(smtp.Address(user))
 
-        return lambda: user == str(self.address)
+
+    def __str__(self):
+        """
+        Return a string representation of this L{TestMessage} instance.
+
+        @rtype: L{bytes}
+        @return: A string containing the user.
+        """
+        return "<Message for %s>" % (self.user,)
+
+
+    def lineReceived(self, line):
+        """
+        Receive a line of the message
+
+        @type line: L{bytes}
+        @param line: A received line.
+        """
+        pass
+
+
+    def eomReceived(self):
+        """
+        Receive an end of message.
+
+        @rtype: L{Deferred} which successfully results in L{bytes}
+        @return: A deferred which returns a string related somehow to the
+            message.
+        """
+        pass
+
+
+    def connectionLost(self):
+        """
+        The connection has been lost.
+        """
+        pass
 
 
 
 class AddressAliasTests(unittest.TestCase):
     """
     Tests for L{twisted.mail.alias.AddressAlias}.
-    """
 
+    @type alias1to2: L{mail.alias.AddressAlias}
+    @ivar alias1to2: An alias that translates from C{user1} to C{user2@bar}
+
+    @type alias1to4: L{mail.alias.AddressAlias}
+    @ivar alias1to4: An alias that translates from C{user1} to C{user4@bar}
+
+    @type alias4to2: L{mail.alias.AddressAlias}
+    @ivar alias4to2: An alias that translates from C{user4@bar} to C{user2@bar}
+
+    @type user2: L{mail.smtp.Address}
+    @ivar user2: The address of C{user2@bar}
+    """
     def setUp(self):
         """
-        Setup an L{AddressAlias}.
+        Setup some address aliases.
         """
-        self.address = mail.smtp.Address('foo@bar')
-        domains = {self.address.domain: DummyDomain(self.address)}
-        self.alias = mail.alias.AddressAlias(self.address, domains,
-            self.address)
+        user1 = mail.smtp.Address('user1', '')
+        user4 = mail.smtp.Address('user4@bar')
+
+        self.user2 = mail.smtp.Address('user2@bar')
+        testDomain = TestDomain({}, ['user1', 'user2'])
+        domains = {'': testDomain, 'bar': testDomain}
+
+        self.alias1to2 = mail.alias.AddressAlias(self.user2, domains,
+            user1)
+
+        self.alias1to4 = mail.alias.AddressAlias(user4, domains, user1)
+
+        self.alias4to2 = mail.alias.AddressAlias(self.user2, domains,
+                user4)
 
 
     def test_createMessageReceiver(self):
         """
-        L{createMessageReceiever} calls C{exists()} on the domain object
-        which key matches the C{alias} passed to L{AddressAlias}.
+        L{createMessageReceiver} on an alias from C{user1} to C{user2@bar}
+        should get a L{TestMessage} for C{user2@bar}
         """
-        self.assertTrue(self.alias.createMessageReceiver())
+        messageReceiver = self.alias1to2.createMessageReceiver()
+        self.assertTrue(messageReceiver == TestMessage(str(self.user2)))
 
 
     def test_str(self):
         """
-        The string presentation of L{AddressAlias} includes the alias.
+        The string presentation of L{AddressAlias} should include the target
+        address.
         """
-        self.assertEqual(str(self.alias), '<Address foo@bar>')
+        self.assertEqual(str(self.alias1to2), '<Address %s>' % (self.user2,))
 
 
     def test_resolve(self):
         """
-        L{resolve} will look for additional aliases when an C{aliasmap}
-        dictionary is passed, and returns C{None} if none were found.
+        Resolving an alias from C{user1} to C{user4@bar} should fail because
+        C{user4} is not valid user for domain C{bar} and the C{aliasmap} does
+        not map C{user4} to another address.
         """
-        self.assertEqual(self.alias.resolve({self.address: 'bar'}), None)
+        self.assertEqual(self.alias1to4.resolve({'foo': self.alias4to2}), None)
+
+
+    def test_resolveWithAliasmap(self):
+        """
+        Resolving an alias from C{user1} to C{user4@bar} with an C{aliasmap}
+        that maps C{user4} to C{user2@bar} should return a L{TestMessage} for
+        C{user2@bar}.
+        """
+        messageReceiver = self.alias1to4.resolve({'user4': self.alias4to2})
+        self.assertTrue(messageReceiver == TestMessage(str(self.user2)))
 
 
     def test_resolveWithoutAliasmap(self):
         """
-        L{resolve} returns C{None} when the alias could not be found in the
-        C{aliasmap} and no L{mail.smtp.User} with this alias exists either.
+        Resolving an alias from C{user1} to C{user4@bar} should fail because
+        C{user4} is not valid user for domain C{bar} and no C{aliasmap} is
+        provided.
         """
-        self.assertEqual(self.alias.resolve({}), None)
+        self.assertEqual(self.alias1to4.resolve({}), None)
 
 
 
@@ -2094,7 +2163,7 @@ done""")
         r1 = map(str, res1.objs)
         r1.sort()
         expected = map(str, [
-            mail.alias.AddressAlias('user1', None, None),
+            TestMessage('user1'),
             mail.alias.MessageWrapper(DummyProcess(), 'echo'),
             mail.alias.FileWrapper('/file'),
         ])
@@ -2105,8 +2174,8 @@ done""")
         r2 = map(str, res2.objs)
         r2.sort()
         expected = map(str, [
-            mail.alias.AddressAlias('user2', None, None),
-            mail.alias.AddressAlias('user3', None, None)
+            TestMessage('user2'),
+            TestMessage('user3')
         ])
         expected.sort()
         self.assertEqual(r2, expected)
@@ -2115,7 +2184,7 @@ done""")
         r3 = map(str, res3.objs)
         r3.sort()
         expected = map(str, [
-            mail.alias.AddressAlias('user1', None, None),
+            TestMessage('user1'),
             mail.alias.MessageWrapper(DummyProcess(), 'echo'),
             mail.alias.FileWrapper('/file'),
         ])
@@ -2165,11 +2234,10 @@ class TestDomain:
         self.users = users
 
     def exists(self, user, memo=None):
-        user = user.dest.local
-        if user in self.users:
-            return lambda: mail.alias.AddressAlias(user, None, None)
+        if user.dest.local in self.users:
+            return lambda: TestMessage(user)
         try:
-            a = self.aliases[user]
+            a = self.aliases[user.dest.local]
         except:
             raise smtp.SMTPBadRcpt(user)
         else:

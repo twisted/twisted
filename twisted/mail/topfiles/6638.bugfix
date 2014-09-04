@@ -1,0 +1,2 @@
+twisted.mail.alias.AddressAlias.createMessageReceiver now returns a callable
+which generates an IMessage provider.
