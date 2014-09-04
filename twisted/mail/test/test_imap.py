@@ -3391,6 +3391,32 @@ class FakeyServer(imap4.IMAP4Server):
     def sendServerGreeting(self):
         pass
 
+
+class FakeyMessageNonMIME(object):
+    """
+    Fake message with a non-MIME interface.
+
+    @ivar _body: See L{__init__}
+    """
+    implements(imap4.IMessageFile)
+
+    def __init__(self, body):
+        """
+        @type body: L{bytes}
+        @param body: The message body.
+        """
+        self._body = body
+
+    def open(self):
+        """
+        Return a file-like object containing the body of the message.
+
+        @rtype: file-like object
+        @return: A file-like object containing the body of the message.
+        """
+        return StringIO(self._body)
+
+
 class FakeyMessage(util.FancyStrMixin):
     implements(imap4.IMessage)
 
@@ -4099,6 +4125,283 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
         self.connected.addCallback(
             lambda _: self.function(self.messages, headerNumber=1))
+        self.connected.addCallback(result)
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        d = loopback.loopbackTCP(self.server, self.client, noisy=False)
+        d.addCallback(lambda ign: self.assertEqual(self.result, self.expected))
+        return d
+
+
+    def test_fetchBodyHeaderWithOffset(self):
+        """
+        A subset of header should return when using offset and length.
+        Don't think this is particularly useful, but RFC 2060 allows it.
+
+        See U{RFC 2060<http://tools.ietf.org/html/rfc2060#section-6.4.5>},
+        section 6.4.5, for details.
+
+        @rtype: L{Deferred}
+        @return: Deferred
+        """
+        self.function = self.client.fetchSpecific
+        self.messages = '1'
+        outerBody = 'DA body'
+        headers = util.OrderedDict()
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'text/plain'
+        self.msgObjs = [FakeyMessage(
+            headers, (), None, outerBody, 123, None)]
+        self.expected = {0: [['BODY', ['HEADER'], '<0>', 'From: sender@host']]}
+
+        def result(r):
+            self.result = r
+
+        self.connected.addCallback(
+            lambda _: self.function(self.messages,
+                                    headerType="HEADER",
+                                    offset=0, length=17))
+        self.connected.addCallback(result)
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        d = loopback.loopbackTCP(self.server, self.client, noisy=False)
+        d.addCallback(lambda ign: self.assertEqual(self.result, self.expected))
+        return d
+
+
+    def test_fetchBodyTextWithOffset(self):
+        """
+        A subset of body text should return when using offset and length.
+
+        See U{RFC 2060<http://tools.ietf.org/html/rfc2060#section-6.4.5>},
+        section 6.4.5, for details.
+
+        @rtype: L{Deferred}
+        @return: Deferred
+        """
+        self.function = self.client.fetchSpecific
+        self.messages = '1'
+        outerBody = 'Testing Fetch Body Text!'
+        headers = util.OrderedDict()
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'text/plain'
+        self.msgObjs = [FakeyMessage(
+            headers, (), None, outerBody, 123, None)]
+        self.expected = {0: [['BODY', ['TEXT'], '<8>', 'Fetch Body Text!']]}
+
+        def result(r):
+            self.result = r
+
+        self.connected.addCallback(
+            lambda _: self.function(self.messages,
+                                    headerType="TEXT",
+                                    offset=8, length=17))
+        self.connected.addCallback(result)
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        d = loopback.loopbackTCP(self.server, self.client, noisy=False)
+        d.addCallback(lambda ign: self.assertEqual(self.result, self.expected))
+        return d
+
+
+    def test_fetchBodyMIMEWithOffset(self):
+        """
+        A subset of MIME header should return when using offset and length.
+        Don't think this is particularly useful, but RFC 2060 allows it.
+
+        See U{RFC 2060<http://tools.ietf.org/html/rfc2060#section-6.4.5>},
+        section 6.4.5, for details.
+
+        @rtype: L{Deferred}
+        @return: Deferred
+        """
+        self.function = self.client.fetchSpecific
+        self.messages = '1'
+        outerBody = 'Testing Fetch Body MIME Header!'
+        headers = util.OrderedDict()
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'text/plain'
+        self.msgObjs = [FakeyMessage(
+            headers, (), None, outerBody, 123, None)]
+        self.expected = {0: [['BODY', ['MIME'], '<41>', 'Subject: booga booga boo']]}
+
+        def result(r):
+            self.result = r
+
+        self.connected.addCallback(
+            lambda _: self.function(self.messages,
+                                    headerType="MIME",
+                                    offset=41, length=24))
+        self.connected.addCallback(result)
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        d = loopback.loopbackTCP(self.server, self.client, noisy=False)
+        d.addCallback(lambda ign: self.assertEqual(self.result, self.expected))
+        return d
+
+
+    def test_fetchBodyMultiWithOffset(self):
+        """
+        A subset of body text should return when using offset and length
+        with headerNumber.
+
+        See U{RFC 2060<http://tools.ietf.org/html/rfc2060#section-6.4.5>},
+        section 6.4.5, for details.
+
+        @rtype: L{Deferred}
+        @return: Deferred
+        """
+        self.function = self.client.fetchSpecific
+        self.messages = '1'
+        outerBody = ''
+        innerBody1 = 'Contained body message text.'
+        innerBody2 = 'Secondary <i>message</i> for the test.'
+        headers = util.OrderedDict()
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'multipart/alternative; boundary="xyz"'
+        innerHeaders = util.OrderedDict()
+        innerHeaders['subject'] = 'this is subject text'
+        innerHeaders['content-type'] = 'text/plain'
+        innerHeaders2 = util.OrderedDict()
+        innerHeaders2['subject'] = '<b>this is subject</b>'
+        innerHeaders2['content-type'] = 'text/html'
+        self.msgObjs = [FakeyMessage(
+            headers, (), None, outerBody, 123,
+            [FakeyMessage(innerHeaders, (), None, innerBody1, None, None),
+             FakeyMessage(innerHeaders2, (), None, innerBody2, None, None)])]
+        self.expected = {
+            0: [['BODY', ['2'], '<10>', '<i>message</i> for the test.']]
+        }
+
+        def result(r):
+            self.result = r
+
+        self.connected.addCallback(
+            lambda _: self.function(self.messages, headerNumber=2,
+                                    offset=10, length=200))
+        self.connected.addCallback(result)
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        d = loopback.loopbackTCP(self.server, self.client, noisy=False)
+        d.addCallback(lambda ign: self.assertEqual(self.result, self.expected))
+        return d
+
+
+    def test_fetchBodyFullWithOffset(self):
+        """
+        A subset of full message should return when using offset and length.
+
+        See U{RFC 2060<http://tools.ietf.org/html/rfc2060#section-6.4.5>},
+        section 6.4.5, for details.
+
+        @rtype: L{Deferred}
+        @return: Deferred
+        """
+        self.function = self.client.fetchSpecific
+        self.messages = '1'
+        outerBody = 'Testing Fetch Body!'
+        headers = util.OrderedDict()
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'text/plain'
+        self.msgObjs = [FakeyMessage(
+            headers, (), None, outerBody, 123, None)]
+        self.expected = {0: [['BODY', [], '<41>', 'Subject: booga booga boo']]}
+
+        def result(r):
+            self.result = r
+
+        self.connected.addCallback(
+            lambda _: self.function(self.messages,
+                                    offset=41, length=24))
+        self.connected.addCallback(result)
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        d = loopback.loopbackTCP(self.server, self.client, noisy=False)
+        d.addCallback(lambda ign: self.assertEqual(self.result, self.expected))
+        return d
+
+
+    def test_fetchBodyFullWithOffsetNonMIME(self):
+        """
+        A subset of full message should return when using offset and length
+        on a message with the IMessageFile interface.
+
+        See U{RFC 2060<http://tools.ietf.org/html/rfc2060#section-6.4.5>},
+        section 6.4.5, for details.
+
+        @rtype: L{Deferred}
+        @return: Deferred
+        """
+        self.function = self.client.fetchSpecific
+        self.messages = '1'
+        body = ('From: sender@host\r\n'
+        'To: recipient@domain\r\n'
+        'Subject: booga booga boo\r\n'
+        'Content-Type: text/plain\r\n')
+
+        self.msgObjs = [FakeyMessageNonMIME(body)]
+        self.expected = {0: [['BODY', [], '<41>', 'Subject: booga booga boo']]}
+
+        def result(r):
+            self.result = r
+
+        self.connected.addCallback(
+            lambda _: self.function(self.messages,
+                                    offset=41, length=24))
+        self.connected.addCallback(result)
+        self.connected.addCallback(self._cbStopClient)
+        self.connected.addErrback(self._ebGeneral)
+
+        d = loopback.loopbackTCP(self.server, self.client, noisy=False)
+        d.addCallback(lambda ign: self.assertEqual(self.result, self.expected))
+        return d
+
+
+    def test_fetchBodyWithLargeOffset(self):
+        """
+        When the offset is longer than the length of the return message,
+        an empty string should be returned.
+
+        See U{RFC 2060<http://tools.ietf.org/html/rfc2060#section-6.4.5>},
+        section 6.4.5, for details.
+
+        @rtype: L{Deferred}
+        @return: Deferred
+        """
+        self.function = self.client.fetchSpecific
+        self.messages = '1'
+        outerBody = 'DA body'
+        headers = util.OrderedDict()
+        headers['from'] = 'sender@host'
+        headers['to'] = 'recipient@domain'
+        headers['subject'] = 'booga booga boo'
+        headers['content-type'] = 'text/plain'
+        self.msgObjs = [FakeyMessage(
+            headers, (), None, outerBody, 123, None)]
+        self.expected = {0: [['BODY', ['1'], '<100>', '']]}
+
+        def result(r):
+            self.result = r
+
+        self.connected.addCallback(
+            lambda _: self.function(self.messages, headerNumber=1,
+                                    offset=100, length=5))
         self.connected.addCallback(result)
         self.connected.addCallback(self._cbStopClient)
         self.connected.addErrback(self._ebGeneral)
