@@ -345,6 +345,13 @@ a couple of things are happening here:
 #. we use ``returnValue`` to propagate the final result of our function.
    Because this function is a generator, we cannot use the return statement; that would be a syntax error.
 
+.. note::
+
+    .. versionadded:: 14.1
+
+    On Python 3.3 and above, instead of writing ``returnValue(json.loads(responseBody))`` you can instead write ``return json.loads(responseBody)``.
+    This can be a significant readability advantage, but unfortunately if you need compatibility with Python 2, this isn't an option.
+
 Both versions of ``getUsers`` present exactly the same API to their callers: both return a ``Deferred`` that fires with the parsed JSON body of the request.
 Though the ``inlineCallbacks`` version looks like synchronous code, which blocks while waiting for the request to finish, each ``yield`` statement allows other code to run while waiting for the ``Deferred`` being yielded to fire.
 
