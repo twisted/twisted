@@ -9,13 +9,13 @@ Tests for parts of our release automation system.
 import os
 import sys
 
-from distutils.core import Distribution
+from setuptools.dist import Distribution
 
 from twisted.trial.unittest import TestCase
 
 from twisted.python import dist
 from twisted.python.dist import (get_setup_args, ConditionalExtension,
-    build_scripts_twisted)
+                                 build_scripts_twisted, EXTRAS_REQUIRE)
 from twisted.python.filepath import FilePath
 
 
@@ -57,6 +57,22 @@ class SetupTest(TestCase):
         builder.prepare_extensions()
         self.assertEqual(ext.define_macros, [("whatever", 2), ("WIN32", 1)])
 
+
+class OptionalDependenciesTest(TestCase):
+    """
+    Tests for L{dist.EXTRA_REQUIRES}
+
+    Test whether or not the setuptools generates the correct Distribution
+    object when extra_requires are passed to it. As long as the distribution
+    object looks correct, it *should* generate the correct egg_info.
+    """
+    def test_distributeTakesExtrasRequire(self):
+        """
+        Test that setuptools Distribtution object can use extra_requires.
+        """
+        attrs = dict(extras_require=EXTRAS_REQUIRE)
+        dist = Distribution(attrs)
+        self.assertEqual(dist.extras_require, EXTRAS_REQUIRE)
 
 
 class GetExtensionsTest(TestCase):

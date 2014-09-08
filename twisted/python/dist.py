@@ -50,6 +50,30 @@ twisted_subprojects = ["conch", "lore", "mail", "names",
                        "words"]
 
 
+# extras_require is a dictionary of items that can be passed to setup.py
+# to install optional dependencies. For example, to install the optional
+# dev dependencies one would type `pip install -e . "twisted[dev]"`
+# This has been supported by setuptools since 0.5a4
+EXTRAS_REQUIRE = dict(
+    docs = ['sphinx >= 1.2.2',
+            'pydoctor >= 0.5'],
+    dev = ['twistedchecker >= 0.2.0',
+           'pyflakes >= 0.8.1',
+           'twisted-dev-tools >= 0.0.2'],
+    ssl = ['pyopenssl',
+           'service_identity',
+           'PyCrypto'],
+    conch = ['gmpy', 'pyasn1'],
+    subunit = ['python-subunit'],
+    soap = ['soappy'],
+    windows = ['pywin32'],
+    cocoa = ['pyobjc'],
+    serial = ['pyserial'],
+    gtk = ['PyGTK'],
+    pam = ['pam'],
+    wx = ['wxPython'],
+)
+
 
 class ConditionalExtension(Extension):
     """
