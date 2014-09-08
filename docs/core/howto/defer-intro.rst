@@ -310,6 +310,79 @@ Because if ``f`` raises, ``g`` will be passed a :api:`twisted.python.failure.Fai
 Otherwise, ``g`` will be passed the asynchronous equivalent of the return value of ``f()`` (i.e. ``y``).
 
 
+Inline callbacks - using 'yield'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Twisted features a decorator named ``inlineCallbacks`` which allows you to work with Deferreds without writing callback functions.
+
+This is done by writing your code as generators, which *yield* ``Deferred``\ s instead of attaching callbacks.
+
+Consider the following function written in the traditional ``Deferred`` style:
+
+.. code-block:: python
+
+    def getUsers():
+       d = makeRequest("GET", "/users")
+       d.addCallback(json.loads)
+       return d
+
+using ``inlineCallbacks``, we can write this as:
+
+.. code-block:: python
+
+    from twisted.internet.defer import inlineCallbacks, returnValue
+
+    @inlineCallbacks
+    def getUsers(self):
+        responseBody = yield makeRequest("GET", "/users")
+        returnValue(json.loads(responseBody))
+
+a couple of things are happening here:
+
+#. instead of calling ``addCallback`` on the ``Deferred`` returned by ``makeRequest``, we *yield* it.
+   This causes Twisted to return the ``Deferred``\ 's result to us.
+
+#. we use ``returnValue`` to propagate the final result of our function.
+   Because this function is a generator, we cannot use the return statement; that would be a syntax error.
+
+Both versions of ``getUsers`` present exactly the same API to their callers: both return a ``Deferred`` that fires with the parsed JSON body of the request.
+Though the ``inlineCallbacks`` version looks like synchronous code, which blocks while waiting for the request to finish, each ``yield`` statement allows other code to run while waiting for the ``Deferred`` being yielded to fire.
+
+``inlineCallbacks`` become even more powerful when dealing with complex control flow and error handling.
+For example, what if ``makeRequest`` fails due to a connection error?
+For the sake of this example, let's say we want to log the exception and return an empty list.
+
+.. code-block:: python
+
+    def getUsers():
+       d = makeRequest("GET", "/users")
+
+       def connectionError(failure):
+           failure.trap(ConnectionError)
+           log.failure("makeRequest failed due to connection error",
+                       failure)
+           return []
+
+       d.addCallbacks(json.loads, connectionError)
+       return d
+
+With ``inlineCallbacks``, we can rewrite this as:
+
+.. code-block:: python
+
+    @inlineCallbacks
+    def getUsers(self):
+        try:
+            responseBody = yield makeRequest("GET", "/users")
+        except ConnectionError:
+           log.failure("makeRequest failed due to connection error")
+           returnValue([])
+
+        returnValue(json.loads(responseBody))
+
+Our exception handling is simplified because we can use Python's familiar ``try`` / ``except`` syntax for handling ``ConnectionError``\ s.
+
+
 Conclusion
 ----------
 
@@ -322,6 +395,7 @@ You have been introduced to asynchronous code and have seen how to use :api:`twi
 - Do something after an error has been handled successfully
 - Wrap multiple asynchronous operations with one error handler
 - Do something after an asynchronous operation, regardless of whether it succeeded or failed
+- Write code without callbacks using ``inlineCallbacks``
 
 These are very basic uses of :api:`twisted.internet.defer.Deferred <Deferred>`.
 For detailed information about how they work, how to combine multiple Deferreds, and how to write code that mixes synchronous and asynchronous APIs, see the :doc:`Deferred reference <defer>`.
