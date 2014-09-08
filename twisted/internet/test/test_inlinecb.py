@@ -11,8 +11,44 @@ well.
 
 from __future__ import division, absolute_import
 
+import sys
+
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import Deferred, returnValue, inlineCallbacks
+
+
+class StopIterationReturnTests(TestCase):
+    """
+    On Python 3.3 and newer generator functions may use the C{return} statement
+    with a value, which is attached to the L{StopIteration} exception that is
+    raised.
+
+    L{inlineCallbacks} will use this value when it fires the C{callback}.
+    """
+
+    def test_returnWithValue(self):
+        """
+        If the C{return} statement has a value it is propogated back to the
+        L{Deferred} that the C{inlineCallbacks} function returned.
+        """
+        environ = {"inlineCallbacks": inlineCallbacks}
+        exec("""
+@inlineCallbacks
+def f(d):
+    yield d
+    return 14
+        """, environ)
+        d1 = Deferred()
+        d2 = environ["f"](d1)
+        d1.callback(None)
+        self.assertEqual(self.successResultOf(d2), 14)
+
+
+
+if sys.version_info < (3, 3):
+    StopIterationReturnTests.skip = "Test requires Python 3.3 or greater"
+
+
 
 class NonLocalExitTests(TestCase):
     """

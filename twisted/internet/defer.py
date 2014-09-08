@@ -1112,9 +1112,9 @@ def _inlineCallbacks(result, g, deferred):
                 result = result.throwExceptionIntoGenerator(g)
             else:
                 result = g.send(result)
-        except StopIteration:
+        except StopIteration as e:
             # fell off the end, or "return" statement
-            deferred.callback(None)
+            deferred.callback(getattr(e, "value", None))
             return deferred
         except _DefGen_Return as e:
             # returnValue() was called; time to give a result to the original
@@ -1236,6 +1236,14 @@ def inlineCallbacks(f):
             else:
                 # will trigger an errback
                 raise Exception('DESTROY ALL LIFE')
+
+    If you are using Python 3.3 or later, it is possible to use the C{return}
+    statement instead of L{returnValue}::
+
+        @inlineCallbacks
+        def loadData(url):
+            response = yield makeRequest(url)
+            return json.loads(respoonse)
     """
     @wraps(f)
     def unwindGenerator(*args, **kwargs):
