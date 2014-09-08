@@ -346,6 +346,7 @@ a couple of things are happening here:
    Because this function is a generator, we cannot use the return statement; that would be a syntax error.
 
 Both versions of ``getUsers`` present exactly the same API to their callers: both return a ``Deferred`` that fires with the parsed JSON body of the request.
+Though the ``inlineCallbacks`` version looks like synchronous code, which blocks while waiting for the request to finish, each ``yield`` statement allows other code to run while waiting for the ``Deferred`` being yielded to fire.
 
 ``inlineCallbacks`` become even more powerful when dealing with complex control flow and error handling.
 For example, what if ``makeRequest`` fails due to a connection error?
