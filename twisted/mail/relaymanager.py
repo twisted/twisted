@@ -595,7 +595,7 @@ class _AttemptManager(object):
 
     def notifyDone(self, relay):
         """
-        When the connection is lost or cannot be established, prepare to 
+        When the connection is lost or cannot be established, prepare to
         resend unsent messages and fire all deferred which are waiting for
         the completion of the attempt to relay.
 
