@@ -31,7 +31,7 @@ import random
 import types
 from hashlib import md5
 
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 # Twisted Imports
 from twisted.python import log, failure, reflect
@@ -204,6 +204,7 @@ class IPerspective(Interface):
 
 
 
+@implementer(IPerspective)
 class Avatar:
     """
     A default IPerspective implementor.
@@ -219,8 +220,6 @@ class Avatar:
     information on invoking methods on other objects, see
     L{flavors.ViewPoint}.)
     """
-
-    implements(IPerspective)
 
     def perspectiveMessageReceived(self, broker, message, args, kw):
         """
@@ -258,12 +257,13 @@ class AsReferenceable(Referenceable):
 
 
 
+@implementer(IUnjellyable)
 class RemoteReference(Serializable, styles.Ephemeral):
     """
     A translucent reference to a remote object.
 
     I may be a reference to a L{flavors.ViewPoint}, a
-    L{flavors.Referenceable}, or an L{IPerspective} implementor (e.g.,
+    L{flavors.Referenceable}, or an L{IPerspective} implementer (e.g.,
     pb.Avatar).  From the client's perspective, it is not possible to
     tell which except by convention.
 
@@ -276,8 +276,6 @@ class RemoteReference(Serializable, styles.Ephemeral):
     @ivar broker: The broker I am obtained through.
     @type broker: L{Broker}
     """
-
-    implements(IUnjellyable)
 
     def __init__(self, perspective, broker, luid, doRefCount):
         """(internal) Initialize me with a broker and a locally-unique ID.
@@ -1299,10 +1297,9 @@ class IUsernameMD5Password(ICredentials):
         """
 
 
+@implementer(IPBRoot)
 class _PortalRoot:
     """Root object, used to login to portal."""
-
-    implements(IPBRoot)
 
     def __init__(self, portal):
         self.portal = portal
@@ -1381,12 +1378,11 @@ class _PortalWrapper(Referenceable, _JellyableAvatarMixin):
 
 
 
+@implementer(IUsernameHashedPassword, IUsernameMD5Password)
 class _PortalAuthChallenger(Referenceable, _JellyableAvatarMixin):
     """
     Called with response to password challenge.
     """
-    implements(IUsernameHashedPassword, IUsernameMD5Password)
-
     def __init__(self, portal, broker, username, challenge):
         self.portal = portal
         self.broker = broker

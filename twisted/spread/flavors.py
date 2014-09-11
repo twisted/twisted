@@ -23,7 +23,7 @@ but may have a small impact on users who subclass and override methods.
 
 # system imports
 import sys
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 # twisted imports
 from twisted.python import log, reflect
@@ -127,6 +127,7 @@ class Referenceable(Serializable):
         return ["remote", jellier.invoker.registerReference(self)]
 
 
+@implementer(IPBRoot)
 class Root(Referenceable):
     """I provide a root object to L{pb.Broker}s for a L{pb.BrokerFactory}.
 
@@ -135,8 +136,6 @@ class Root(Referenceable):
     by calling my rootObject method.
     """
 
-    implements(IPBRoot)
-    
     def rootObject(self, broker):
         """A L{pb.BrokerFactory} is requesting to publish me as a root object.
 

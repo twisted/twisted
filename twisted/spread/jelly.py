@@ -95,7 +95,7 @@ finally:
     warnings.filters.pop()
 
 
-from zope.interface import implements
+from zope.interface import implementer
 
 # Twisted Imports
 from twisted.python.reflect import namedObject, qual
@@ -305,12 +305,12 @@ class Unpersistable:
 
 
 
+@implementer(IJellyable)
 class Jellyable:
     """
     Inherit from me to Jelly yourself directly with the `getStateFor'
     convenience method.
     """
-    implements(IJellyable)
 
     def getStateFor(self, jellier):
         return self.__dict__
@@ -328,12 +328,12 @@ class Jellyable:
 
 
 
+@implementer(IUnjellyable)
 class Unjellyable:
     """
     Inherit from me to Unjelly yourself directly with the
     C{setStateFor} convenience method.
     """
-    implements(IUnjellyable)
 
     def setStateFor(self, unjellier, state):
         self.__dict__ = state
