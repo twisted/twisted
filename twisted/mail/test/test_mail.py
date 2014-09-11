@@ -1663,6 +1663,320 @@ class LiveFireExercise(unittest.TestCase):
         return done
 
 
+
+class TestRelayQueue(object):
+    """
+    A relay queue for test purposes which provides predictable and repeatable
+    lists of waiting and relayed messages.
+
+    @ivar directory: See L{__init__}
+
+    @type n: L{int}
+    @ivar n: A number used to form unique filenames.
+
+    @type waiting: L{dict} of L{bytes}
+    @ivar waiting: The base filenames of messages waiting to be relayed.
+
+    @type relayed: L{dict} of L{bytes}
+    @ivar relayed: The base filenames of messages in the process of being
+        relayed.
+
+    @type messages: L{list} of L{bytes}
+    @ivar messages: The base filenames of messages in the queue.
+    """
+    def __init__(self, directory):
+        """
+        @type directory: L{bytes}
+        @param directory: The pathname of the directory holding messages in the
+            queue.
+        """
+        self.directory = directory
+        self.num = 10
+        self.waiting = {}
+        self.relayed = {}
+        self.messages = []
+        self.readDirectory()
+
+
+    def readDirectory(self):
+        """
+        Scan the message directory for new messages.
+        """
+        for message in os.listdir(self.directory):
+            if message[-2:]!='-D':
+                continue
+            self.addMessage(message[:-2])
+
+
+    def getWaiting(self):
+        """
+        Return the base filenames of messages waiting to be relayed.
+
+        The messages appear in the returned list in the same order as they
+        appear in the L{messages} list.
+
+        @rtype: L{list} of L{bytes}
+        @return: The base filename of messages waiting to be relayed.
+        """
+        waiting = []
+        for m in self.messages:
+            if m in self.waiting:
+                waiting.append(m)
+        return waiting
+
+
+    def hasWaiting(self):
+        """
+        Return an indication of whether the queue has messages waiting to be
+        relayed.
+
+        @rtype: L{bool}
+        @return: L{True} if messages are waiting to be relayed.  L{False}
+            otherwise.
+            """
+        return len(self.waiting) > 0
+
+
+    def getRelayed(self):
+        """
+        Return the base filenames of messages in the process of being relayed.
+
+        The messages appear in the returned list in the same order as they
+        appear in the L{messages} list.
+
+        @rtype: L{list} of L{bytes}
+        @return: The base filenames of messages in the process of being
+            relayed.
+        """
+        relayed = []
+        for m in self.messages:
+            if m in self.relayed:
+                relayed.append(m)
+        return relayed
+
+
+    def setRelaying(self, message):
+        """
+        Mark a message as being relayed.
+
+        @type message: L{bytes}
+        @param message: The base filename of a message.
+        """
+        del self.waiting[message]
+        self.relayed[message] = 1
+
+
+    def setWaiting(self, message):
+        """
+        Mark a message as waiting to be relayed.
+
+        @type message: L{bytes}
+        @param message: The base filename of a message.
+        """
+        del self.relayed[message]
+        self.waiting[message] = 1
+
+
+    def addMessage(self, message):
+        """
+        Add a message to the list of messages in the relay queue (unless it is
+        already there) and mark it as waiting to be relayed (unless it is
+        already in the process of being relayed).
+
+        @type message: L{bytes}
+        @param message: The base filename of a message.
+        """
+        if message not in self.messages:
+            self.messages.append(message)
+        if message not in self.relayed:
+            self.waiting[message] = 1
+
+
+    def done(self, message):
+        """
+        Remove a message from the queue.
+
+        @type message: L{bytes}
+        @param message: The base filename of a message.
+        """
+        message = os.path.basename(message)
+        os.remove(self.getPath(message) + '-D')
+        os.remove(self.getPath(message) + '-H')
+        del self.relayed[message]
+        self.messages.remove(message)
+
+
+    def getPath(self, message):
+        """
+        Return the full base pathname of a message in the queue.
+
+        @type message: L{bytes}
+        @param message: The base filename of a message.
+
+        @rtype: L{bytes}
+        @return: The full base pathname of the message.
+        """
+        return os.path.join(self.directory, message)
+
+
+    def getEnvelope(self, message):
+        """
+        Get the envelope for a message.
+
+        @type message: L{bytes}
+        @param message: The base filename of a message.
+
+        @rtype: L{list} of (E{1}) L{bytes}, (E{2}) L{bytes}
+        @return: A list containing the origination and destination addresses
+            for the message.
+        """
+        return pickle.load(self.getEnvelopeFile(message))
+
+
+    def getEnvelopeFile(self, message):
+        """
+        Return the envelope file for a message in the queue.
+
+        @type message: L{byte}
+        @param message: The base filename of a message.
+
+        @rtype: L{file}
+        @return: The envelope file for the message.
+        """
+        return open(os.path.join(self.directory, message+'-H'), 'rb')
+
+
+    def createNewMessage(self):
+        """
+        Create a new message in the queue.
+
+        @rtype: 2-L{tuple} of (E{1}) L{file}, (E{2}) L{FileMessage}
+        @return: The envelope file and a message receiver for a new message in
+            the queue.
+        """
+        fname = "%s_%s" % (self.num, id(self))
+        self.num += 1
+        headerFile = open(os.path.join(self.directory, fname+'-H'), 'wb')
+        tempFilename = os.path.join(self.directory, fname+'-C')
+        finalFilename = os.path.join(self.directory, fname+'-D')
+        messageFile = open(tempFilename, 'wb')
+
+        self.messages.append(fname)
+
+        return headerFile, twisted.mail.mail.FileMessage(messageFile,
+            tempFilename, finalFilename)
+
+
+
+class SmartHostSMTPRelayingManagerTestCase(unittest.TestCase):
+    """
+    Test cases for L{mail.relaymanager.SmartHostSMTPRelayingManager}.
+
+    @type tmpdir: L{bytes}
+    @ivar tmpdir: The path to a temporary directory holding message files for
+        the relay queue.
+
+    @type queue: L{TestRelayQueue}
+    @ivar queue: The relay queue.
+    """
+    def setUp(self):
+        """
+        Create a set of envelope and message files in a relay queue.
+        """
+        self.tmpdir = self.mktemp()
+        os.mkdir(self.tmpdir)
+        self.queue = TestRelayQueue(self.tmpdir)
+
+        domains = ['a','b','c','d','a',
+                   'a','a','a','a','b',
+                   'c','b','c','a','b',
+                   'c','b','b','b','c',
+                   'c', 'c','a','a','a']
+
+        # Reverse the domains because
+        # SmartHostSMTPRelayingManager.getMessagesToRelay looks at them in
+        # reverse order.  This way entry 0 will still be the first domain
+        # considered.
+        domains.reverse()
+
+        for m in range(len(domains)):
+            hdrF, msgF = self.queue.createNewMessage()
+            path, filename = os.path.split(msgF.finalName[:-2])
+            dest = str(m)+'@'+domains[m]
+            pickle.dump([m, dest], hdrF)
+            hdrF.close()
+            msgF.lineReceived('body: %d' % (m,))
+            msgF.eomReceived()
+        self.queue.readDirectory()
+
+
+    def tearDown(self):
+        """
+        Remove the temporary directory.
+        """
+        shutil.rmtree(self.tmpdir)
+
+
+    def test_messageAllocation1(self):
+        """
+        L{mail.relaymanager.SmartHostSMTPRelayingManager.getMessagesToRelay}
+        should properly allocate messages to relay when there are more domains
+        in the queue than connections allowed at a time.
+
+        A queue with a maximum number of connections of two and maximum
+        messages per connection of five should assign as many messages as are
+        available up to 5 to the first two domains that occur in the list of
+        messages.
+        """
+        smarthost = mail.relaymanager.SmartHostSMTPRelayingManager(self.queue,
+            2, 5)
+
+        exchanges = smarthost.getMessagesToRelay()
+        self.assertEqual(len(exchanges['a']), 5)
+        self.assertEqual(len(exchanges['b']), 5)
+        self.assertEqual(len(exchanges), 2)
+
+
+    def test_messageAllocation2(self):
+        """
+        L{mail.relaymanager.SmartHostSMTPRelayingManager.getMessagesToRelay}
+        should properly allocate messages to relay when, for some of the
+        domains, there are fewer than the maximum number of messages per
+        connection in the queue.
+
+        A queue with a maximum number of connections of four and maximum
+        messages per connection of five should assign as many messages as are
+        available up to five to the first four domains that occur in the list
+        of messages.
+        """
+        smarthost = mail.relaymanager.SmartHostSMTPRelayingManager(self.queue,
+            4, 5)
+
+        exchanges = smarthost.getMessagesToRelay()
+        self.assertEqual(len(exchanges['a']), 5)
+        self.assertEqual(len(exchanges['b']), 5)
+        self.assertEqual(len(exchanges['c']), 5)
+        self.assertEqual(len(exchanges['d']), 1)
+        self.assertEqual(len(exchanges), 4)
+
+
+    def test_messageAllocation3(self):
+        """
+        L{mail.relaymanager.SmartHostSMTPRelayingManager.getMessagesToRelay}
+        should properly allocate messages to relay when there are fewer domains
+        represented in the queue than the maximum number of connections allowed.
+        """
+        smarthost = mail.relaymanager.SmartHostSMTPRelayingManager(self.queue,
+            5, 5)
+
+        exchanges = smarthost.getMessagesToRelay()
+        self.assertEqual(len(exchanges['a']), 5)
+        self.assertEqual(len(exchanges['b']), 5)
+        self.assertEqual(len(exchanges['c']), 5)
+        self.assertEqual(len(exchanges['d']), 1)
+        self.assertEqual(len(exchanges), 4)
+
+
 aliasFile = StringIO.StringIO("""\
 # Here's a comment
    # woop another one

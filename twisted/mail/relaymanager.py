@@ -701,13 +701,28 @@ class SmartHostSMTPRelayingManager:
         return self._checkStateMX()
 
 
-    def _checkStateMX(self):
+    def getMessagesToRelay(self):
+        """
+        Choose messages from the queue to relay.
+
+        @rtype: L{dict} of L{bytes} -> L{list} of L{bytes}
+        @return: A mapping of domain to the full path of messages to be relayed
+            to that domain.
+        """
         nextMessages = self.queue.getWaiting()
         nextMessages.reverse()
 
         exchanges = {}
+
+        # Keep track of how many free connections there are that can be used
+        # to contact new domains and how many domains have been assigned the
+        # maximum number of messages per connection so we can stop as soon as
+        # we've maxed out without going through the entire queue.
+        freeConnections = self.maxConnections - len(self.managed)
+        fullExchanges = []
+
         for msg in nextMessages:
-            from_, to = self.queue.getEnvelope(msg)
+            _, to = self.queue.getEnvelope(msg)
             name, addr = rfc822.parseaddr(to)
             parts = addr.split('@', 1)
             if len(parts) != 2:
@@ -715,10 +730,33 @@ class SmartHostSMTPRelayingManager:
                 continue
             domain = parts[1]
 
-            self.queue.setRelaying(msg)
-            exchanges.setdefault(domain, []).append(self.queue.getPath(msg))
-            if len(exchanges) >= (self.maxConnections - len(self.managed)):
-                break
+            if domain in exchanges or freeConnections > 0:
+                if domain not in exchanges:
+                    exchanges[domain] = []
+                    freeConnections -= 1
+
+                if len(exchanges[domain]) < self.maxMessagesPerConnection:
+                    self.queue.setRelaying(msg)
+                    exchanges[domain].append(self.queue.getPath(msg))
+
+                    if len(exchanges[domain]) == self.maxMessagesPerConnection:
+                        fullExchanges.append(domain)
+
+                        if len(fullExchanges) == len(exchanges):
+                            if freeConnections <= 0:
+                                break;
+        return exchanges
+
+
+    def _checkStateMX(self):
+        """
+        Create relay managers to send messages from the relay queue.
+
+        @rtype: L{DeferredList}
+        @return: A deferred list which fires when all the relay managers have
+            completed their attempts to send their messages.
+        """
+        exchanges = self.getMessagesToRelay()
 
         if self.mxcalc is None:
             self.mxcalc = MXCalculator()
