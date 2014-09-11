@@ -636,13 +636,7 @@ class _AttemptManager(object):
 
         def setWaiting(queue, messages):
             map(queue.setWaiting, messages)
-<<<<<<< .working
-
-        from twisted.internet import reactor
-        reactor.callLater(30, setWaiting, self.manager.queue, msgs)
-=======
         self.reactor.callLater(30, setWaiting, self.manager.queue, msgs)
->>>>>>> .merge-right.r43027
         del self.manager.managed[relay]
 
 
