@@ -1780,6 +1780,10 @@ class TestMessage(FancyEqMixin):
     Message receiver for use by TestDomain.
 
     @ivar user: See L{__init__}
+
+    @type message: L{list} of L{bytes}
+    @ivar message: The received message.
+
     """
     compareAttributes = ('user',)
 
@@ -1788,7 +1792,8 @@ class TestMessage(FancyEqMixin):
         @type user: L{bytes}
         @param user: The user for whom the message is destined.
         """
-        self.user = str(smtp.Address(user))
+        self.user = bytes(smtp.Address(user))
+        self.message = []
 
 
     def __str__(self):
@@ -1803,12 +1808,12 @@ class TestMessage(FancyEqMixin):
 
     def lineReceived(self, line):
         """
-        Receive a line of the message
+        Receive a line of the message.
 
         @type line: L{bytes}
         @param line: A received line.
         """
-        pass
+        self.message.append(line)
 
 
     def eomReceived(self):
@@ -1816,17 +1821,40 @@ class TestMessage(FancyEqMixin):
         Receive an end of message.
 
         @rtype: L{Deferred} which successfully results in L{bytes}
-        @return: A deferred which returns a string related somehow to the
-            message.
+        @return: A deferred which returns the received message.
         """
-        pass
+        return defer.succeed(b"\n".join(self.message)+"\n")
 
 
     def connectionLost(self):
         """
         The connection has been lost.
         """
-        pass
+
+
+
+class TestMessageTestCase(unittest.TestCase):
+    """
+    Tests for L{TestMessage}.
+    """
+    def test_interface(self):
+        """
+        L{TestMessage} implements L{smtp.IMessage}.
+        """
+        verifyClass(smtp.IMessage, TestMessage)
+
+
+    def test_receive_message(self):
+        """
+        Test that a message can properly be received using the L{smtp.IMessage}
+        interface.
+        """
+        msg = TestMessage('user1')
+        msg.lineReceived("Line1")
+        msg.lineReceived("Line2")
+        d = msg.eomReceived()
+        d.addCallback(self.assertEqual, "Line1\nLine2\n")
+        return d
 
 
 
@@ -1857,35 +1885,32 @@ class AddressAliasTests(unittest.TestCase):
         testDomain = TestDomain({}, ['user1', 'user2'])
         domains = {'': testDomain, 'bar': testDomain}
 
-        self.alias1to2 = mail.alias.AddressAlias(self.user2, domains,
-            user1)
+        self.alias1to2 = mail.alias.AddressAlias(self.user2, domains, user1)
 
         self.alias1to4 = mail.alias.AddressAlias(user4, domains, user1)
 
-        self.alias4to2 = mail.alias.AddressAlias(self.user2, domains,
-                user4)
+        self.alias4to2 = mail.alias.AddressAlias(self.user2, domains, user4)
 
 
     def test_createMessageReceiver(self):
         """
-        L{createMessageReceiver} on an alias from C{user1} to C{user2@bar}
-        should get a L{TestMessage} for C{user2@bar}
+        L{mail.alias.AddressAlias.createMessageReceiver} on an alias from
+        C{user1} to C{user2@bar} results in a L{TestMessage} for C{user2@bar}.
         """
         messageReceiver = self.alias1to2.createMessageReceiver()
-        self.assertTrue(messageReceiver == TestMessage(str(self.user2)))
+        self.assertEqual(TestMessage(bytes(self.user2)), messageReceiver)
 
 
     def test_str(self):
         """
-        The string presentation of L{AddressAlias} should include the target
-        address.
+        The string presentation of L{AddressAlias} includes the target address.
         """
-        self.assertEqual(str(self.alias1to2), '<Address %s>' % (self.user2,))
+        self.assertEqual(bytes(self.alias1to2), '<Address %s>' % (self.user2,))
 
 
     def test_resolve(self):
         """
-        Resolving an alias from C{user1} to C{user4@bar} should fail because
+        Resolving an alias from C{user1} to C{user4@bar} returns C{None} because
         C{user4} is not valid user for domain C{bar} and the C{aliasmap} does
         not map C{user4} to another address.
         """
@@ -1899,12 +1924,12 @@ class AddressAliasTests(unittest.TestCase):
         C{user2@bar}.
         """
         messageReceiver = self.alias1to4.resolve({'user4': self.alias4to2})
-        self.assertTrue(messageReceiver == TestMessage(str(self.user2)))
+        self.assertEqual(TestMessage(bytes(self.user2)), messageReceiver)
 
 
     def test_resolveWithoutAliasmap(self):
         """
-        Resolving an alias from C{user1} to C{user4@bar} should fail because
+        Resolving an alias from C{user1} to C{user4@bar} returns C{None} because
         C{user4} is not valid user for domain C{bar} and no C{aliasmap} is
         provided.
         """
@@ -2160,9 +2185,9 @@ done""")
         })
 
         res1 = A1.resolve(aliases)
-        r1 = map(str, res1.objs)
+        r1 = map(bytes, res1.objs)
         r1.sort()
-        expected = map(str, [
+        expected = map(bytes, [
             TestMessage('user1'),
             mail.alias.MessageWrapper(DummyProcess(), 'echo'),
             mail.alias.FileWrapper('/file'),
@@ -2171,9 +2196,9 @@ done""")
         self.assertEqual(r1, expected)
 
         res2 = A2.resolve(aliases)
-        r2 = map(str, res2.objs)
+        r2 = map(bytes, res2.objs)
         r2.sort()
-        expected = map(str, [
+        expected = map(bytes, [
             TestMessage('user2'),
             TestMessage('user3')
         ])
@@ -2181,9 +2206,9 @@ done""")
         self.assertEqual(r2, expected)
 
         res3 = A3.resolve(aliases)
-        r3 = map(str, res3.objs)
+        r3 = map(bytes, res3.objs)
         r3.sort()
-        expected = map(str, [
+        expected = map(bytes, [
             TestMessage('user1'),
             mail.alias.MessageWrapper(DummyProcess(), 'echo'),
             mail.alias.FileWrapper('/file'),
@@ -2225,15 +2250,24 @@ done""")
 
 
 
-
-
-
 class TestDomain:
     def __init__(self, aliases, users):
         self.aliases = aliases
         self.users = users
 
     def exists(self, user, memo=None):
+        """
+        Check whether a user exists in this domain.
+
+        @type user: L{User}
+        @param user: A user.
+
+        @rtype: no-argument callable which returns L{TestMessage}
+        @return: A function which takes no arguments and returns a message
+            receiver for the user.
+
+        @raise SMTPBadRcpt: When the given user does not exist in this domain.
+        """
         if user.dest.local in self.users:
             return lambda: TestMessage(user)
         try:

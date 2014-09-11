@@ -128,7 +128,6 @@ class IAlias(Interface):
         @rtype: L{IMessage <smtp.IMessage>} provider
         @return: A message receiver.
         """
-        pass
 
 
 
