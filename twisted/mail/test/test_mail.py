@@ -1671,8 +1671,8 @@ class TestRelayQueue(object):
 
     @ivar directory: See L{__init__}
 
-    @type n: L{int}
-    @ivar n: A number used to form unique filenames.
+    @type num: L{int}
+    @ivar num: A number used to form unique filenames.
 
     @type waiting: L{dict} of L{bytes}
     @ivar waiting: The base filenames of messages waiting to be relayed.
@@ -1703,7 +1703,7 @@ class TestRelayQueue(object):
         Scan the message directory for new messages.
         """
         for message in os.listdir(self.directory):
-            if message[-2:]!='-D':
+            if not message.endswith('-D'):
                 continue
             self.addMessage(message[:-2])
 
@@ -1894,7 +1894,7 @@ class SmartHostSMTPRelayingManagerTestCase(unittest.TestCase):
                    'c', 'c','a','a','a']
 
         # Reverse the domains because
-        # SmartHostSMTPRelayingManager.getMessagesToRelay looks at them in
+        # SmartHostSMTPRelayingManager._getMessagesToRelay looks at them in
         # reverse order.  This way entry 0 will still be the first domain
         # considered.
         domains.reverse()
@@ -1917,9 +1917,9 @@ class SmartHostSMTPRelayingManagerTestCase(unittest.TestCase):
         shutil.rmtree(self.tmpdir)
 
 
-    def test_messageAllocation1(self):
+    def test_messageAllocation1(self): 
         """
-        L{mail.relaymanager.SmartHostSMTPRelayingManager.getMessagesToRelay}
+        L{mail.relaymanager.SmartHostSMTPRelayingManager._getMessagesToRelay}
         should properly allocate messages to relay when there are more domains
         in the queue than connections allowed at a time.
 
@@ -1931,7 +1931,7 @@ class SmartHostSMTPRelayingManagerTestCase(unittest.TestCase):
         smarthost = mail.relaymanager.SmartHostSMTPRelayingManager(self.queue,
             2, 5)
 
-        exchanges = smarthost.getMessagesToRelay()
+        exchanges = smarthost._getMessagesToRelay()
         self.assertEqual(len(exchanges['a']), 5)
         self.assertEqual(len(exchanges['b']), 5)
         self.assertEqual(len(exchanges), 2)
@@ -1939,7 +1939,7 @@ class SmartHostSMTPRelayingManagerTestCase(unittest.TestCase):
 
     def test_messageAllocation2(self):
         """
-        L{mail.relaymanager.SmartHostSMTPRelayingManager.getMessagesToRelay}
+        L{mail.relaymanager.SmartHostSMTPRelayingManager._getMessagesToRelay}
         should properly allocate messages to relay when, for some of the
         domains, there are fewer than the maximum number of messages per
         connection in the queue.
@@ -1952,7 +1952,7 @@ class SmartHostSMTPRelayingManagerTestCase(unittest.TestCase):
         smarthost = mail.relaymanager.SmartHostSMTPRelayingManager(self.queue,
             4, 5)
 
-        exchanges = smarthost.getMessagesToRelay()
+        exchanges = smarthost._getMessagesToRelay()
         self.assertEqual(len(exchanges['a']), 5)
         self.assertEqual(len(exchanges['b']), 5)
         self.assertEqual(len(exchanges['c']), 5)
@@ -1962,14 +1962,14 @@ class SmartHostSMTPRelayingManagerTestCase(unittest.TestCase):
 
     def test_messageAllocation3(self):
         """
-        L{mail.relaymanager.SmartHostSMTPRelayingManager.getMessagesToRelay}
+        L{mail.relaymanager.SmartHostSMTPRelayingManager._getMessagesToRelay}
         should properly allocate messages to relay when there are fewer domains
         represented in the queue than the maximum number of connections allowed.
         """
         smarthost = mail.relaymanager.SmartHostSMTPRelayingManager(self.queue,
             5, 5)
 
-        exchanges = smarthost.getMessagesToRelay()
+        exchanges = smarthost._getMessagesToRelay()
         self.assertEqual(len(exchanges['a']), 5)
         self.assertEqual(len(exchanges['b']), 5)
         self.assertEqual(len(exchanges['c']), 5)

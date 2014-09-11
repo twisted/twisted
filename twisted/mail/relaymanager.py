@@ -701,11 +701,11 @@ class SmartHostSMTPRelayingManager:
         return self._checkStateMX()
 
 
-    def getMessagesToRelay(self):
+    def _getMessagesToRelay(self):
         """
         Choose messages from the queue to relay.
 
-        @rtype: L{dict} of L{bytes} -> L{list} of L{bytes}
+        @rtype: L{dict} mapping L{bytes} to L{list} of L{bytes}
         @return: A mapping of domain to the full path of messages to be relayed
             to that domain.
         """
@@ -744,7 +744,7 @@ class SmartHostSMTPRelayingManager:
 
                         if len(fullExchanges) == len(exchanges):
                             if freeConnections <= 0:
-                                break;
+                                break
         return exchanges
 
 
@@ -756,7 +756,7 @@ class SmartHostSMTPRelayingManager:
         @return: A deferred list which fires when all the relay managers have
             completed their attempts to send their messages.
         """
-        exchanges = self.getMessagesToRelay()
+        exchanges = self._getMessagesToRelay()
 
         if self.mxcalc is None:
             self.mxcalc = MXCalculator()
