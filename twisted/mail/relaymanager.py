@@ -515,8 +515,7 @@ class _AttemptManager(object):
         self.noisy = noisy
 
         if not reactor:
-            from twisted.internet import reactor as globalReactor
-            reactor = globalReactor
+            from twisted.internet import reactor
         self.reactor = reactor
 
 
@@ -550,7 +549,8 @@ class _AttemptManager(object):
 
     def notifySuccess(self, relay, message):
         """
-        Remove a message which has been successfully sent.
+        Remove a message from the relay queue after it has been successfully
+        sent.
 
         @type relay: L{SMTPManagedRelayerFactory}
         @param relay: The factory for the relayer which sent the message.
@@ -595,9 +595,9 @@ class _AttemptManager(object):
 
     def notifyDone(self, relay):
         """
-        Set up to resend unsent messages later and fire a deferred to indicate
-        the attempt to relay is finished when the connection is lost or cannot
-        be established.
+        When the connection is lost or cannot be established, prepare to 
+        resend unsent messages and fire all deferred which are waiting for
+        the completion of the attempt to relay.
 
         @type relay: L{SMTPManagedRelayerFactory}
         @param relay: The factory for the relayer for the connection.
@@ -618,7 +618,7 @@ class _AttemptManager(object):
 
     def notifyNoConnection(self, relay):
         """
-        Set up to resend messages later when a connection to the mail exchange
+        Prepare to resend messages later when a connection to the mail exchange
         server cannot be established.
 
         @type relay: L{SMTPManagedRelayerFactory}
@@ -823,7 +823,7 @@ class SmartHostSMTPRelayingManager:
 
     def _ebExchange(self, failure, factory, domain):
         """
-        Set up to resend messages later.
+        Prepare to resend messages later.
 
         This errback function runs when no mail exchange server for the domain
         can be found.
