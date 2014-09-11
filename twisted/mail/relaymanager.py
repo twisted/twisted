@@ -618,8 +618,8 @@ class _AttemptManager(object):
 
     def notifyNoConnection(self, relay):
         """
-        Prepare to resend messages later when a connection to the mail exchange
-        server cannot be established.
+        When a connection to the mail exchange server cannot be established,
+        prepare to resend messages later.
 
         @type relay: L{SMTPManagedRelayerFactory}
         @param relay: The factory for the relayer meant to use the connection.
