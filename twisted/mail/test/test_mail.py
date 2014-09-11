@@ -1848,6 +1848,9 @@ class TestMessageTestCase(unittest.TestCase):
         """
         Test that a message can properly be received using the L{smtp.IMessage}
         interface.
+
+        @rtype: L{Deferred} which successfully results in L{bytes}
+        @return: A deferred which returns the received message.
         """
         msg = TestMessage('user1')
         msg.lineReceived("Line1")
@@ -2261,6 +2264,10 @@ class TestDomain:
 
         @type user: L{User}
         @param user: A user.
+
+        @type memo: L{NoneType <types.NoneType>} or L{dict} of L{AliasBase}
+        @param memo: A record of the addresses already considered while
+            resolving aliases.
 
         @rtype: no-argument callable which returns L{TestMessage}
         @return: A function which takes no arguments and returns a message
