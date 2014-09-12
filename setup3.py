@@ -41,7 +41,6 @@ def main():
 
     args = STATIC_PACKAGE_METADATA.copy()
     args['install_requires'] = ["zope.interface >= 4.0.2"]
-    args['classifiers'] = ["Programming Language :: Python :: 3.3"]
     args['py_modules'] = modulesToInstall
     args['cmdclass'] = {'sdist': DisabledSdist}
 
