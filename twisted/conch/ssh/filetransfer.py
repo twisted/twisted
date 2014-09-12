@@ -12,6 +12,8 @@ from twisted.conch.interfaces import ISFTPServer, ISFTPFile
 from twisted.conch.ssh.common import NS, getNS
 from twisted.internet import defer, protocol
 from twisted.python import failure, log
+from twisted.python.runtime import platform
+from twisted.python.win32 import WindowsError
 
 
 
@@ -414,11 +416,28 @@ class FileTransferServer(FileTransferBase):
     def _ebStatus(self, reason, requestId, msg = "request failed"):
         code = FX_FAILURE
         message = msg
-        if reason.type in (IOError, OSError):
+        if reason.type is WindowsError:
+            if reason.value.winerror == 2: # no such file
+                code = FX_NO_SUCH_FILE
+                message = reason.value.strerror
+            elif reason.value.winerror == 123: # invalid filename
+                code = FX_NO_SUCH_FILE
+                message = reason.value.strerror
+            elif reason.value.winerror == 267: # invalid directory name
+                code = FX_NOT_A_DIRECTORY
+                message = reason.value.strerror
+            elif reason.value.winerror == 183: # directory already exists
+                code = FX_FILE_ALREADY_EXISTS
+            else:
+                log.err(reason)
+        elif reason.type in (IOError, OSError):
+            if reason.value.errno in (errno.ENOTEMPTY, errno.EINVAL):
+                code = FX_FAILURE
+                message = reason.value.strerror
             if reason.value.errno == errno.ENOENT: # no such file
                 code = FX_NO_SUCH_FILE
                 message = reason.value.strerror
-            elif reason.value.errno == errno.EACCES: # permission denied
+            elif reason.value.errno in (errno.EACCES, errno.EPERM): # permission denied
                 code = FX_PERMISSION_DENIED
                 message = reason.value.strerror
             elif reason.value.errno == errno.EEXIST:
@@ -471,14 +490,14 @@ class FileTransferClient(FileTransferBase):
         to be sent to the server.
         """
         FileTransferBase.__init__(self)
-        self.extData = {}
+        self.extData = extData
         self.counter = 0
         self.openRequests = {} # id -> Deferred
         self.wasAFile = {} # Deferred -> 1 TERRIBLE HACK
 
     def connectionMade(self):
         data = struct.pack('!L', max(self.versions))
-        for k,v in self.extData.itervalues():
+        for k,v in self.extData.iteritems():
             data += NS(k) + NS(v)
         self.sendPacket(FXP_INIT, data)
 

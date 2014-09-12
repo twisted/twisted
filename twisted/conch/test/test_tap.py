@@ -15,12 +15,7 @@ try:
 except ImportError:
     pyasn1 = None
 
-try:
-    from twisted.conch import unix
-except ImportError:
-    unix = None
-
-if Crypto and pyasn1 and unix:
+if Crypto and pyasn1:
     from twisted.conch import tap
     from twisted.conch.openssh_compat.factory import OpenSSHFactory
 
@@ -45,9 +40,6 @@ class MakeServiceTest(TestCase):
 
     if not pyasn1:
         skip = "Cannot run without PyASN1"
-
-    if not unix:
-        skip = "can't run on non-posix computers"
 
     usernamePassword = ('iamuser', 'thisispassword')
 

@@ -4,7 +4,7 @@
 # See LICENSE for details.
 
 #
-# $Id: conch.py,v 1.65 2004/03/11 00:29:14 z3p Exp $
+# $Id: conch.py,v 1.3 2013/04/17 06:05:26 jfp Exp $
 
 #""" Implementation module for the `conch` command.
 #"""
@@ -14,8 +14,10 @@ from twisted.conch.ssh import connection, common
 from twisted.conch.ssh import session, forwarding, channel
 from twisted.internet import reactor, stdio, task
 from twisted.python import log, usage
+from twisted.python.runtime import platform
 
-import os, sys, getpass, struct, tty, fcntl, signal
+import os, sys, getpass, struct, signal
+from twisted.python.win32 import tty, fcntl
 
 class ClientOptions(options.ConchOptions):
 
@@ -36,6 +38,8 @@ class ClientOptions(options.ConchOptions):
                  ['noshell', 'N', 'Do not execute a shell or command.'],
                  ['subsystem', 's', 'Invoke command (mandatory) as SSH2 subsystem.'],
                 ]
+    if platform.isWindows():
+        del optFlags[1]
 
     compData = usage.Completions(
         mutuallyExclusive=[("tty", "notty")],
@@ -139,7 +143,10 @@ def run():
         if oldUSR1:
             signal.signal(signal.SIGUSR1, oldUSR1)
         if (options['command'] and options['tty']) or not options['notty']:
-            signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+            try:
+                signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+            except AttributeError:
+                pass
     if sys.stdout.isatty() and not options['command']:
         print 'Connection to %s closed.' % options['host']
     sys.exit(exitStatus)
@@ -357,25 +364,28 @@ class SSHSession(channel.SSHChannel):
                 common.NS(options['command']))
         elif options['command']:
             if options['tty']:
-                term = os.environ['TERM']
                 winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
                 winSize = struct.unpack('4H', winsz)
+                if platform.isWindows():
+                    term = "dumb"
+                else:
+                    term = os.environ['TERM']
+                    signal.signal(signal.SIGWINCH, self._windowResized)
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
                 self.conn.sendRequest(self, 'pty-req', ptyReqData)
-                signal.signal(signal.SIGWINCH, self._windowResized)
-            self.conn.sendRequest(self, 'exec', \
-                common.NS(options['command']))
+            self.conn.sendRequest(self, 'exec', common.NS(options['command']))
         else:
             if not options['notty']:
-                term = os.environ['TERM']
                 winsz = fcntl.ioctl(fd, tty.TIOCGWINSZ, '12345678')
                 winSize = struct.unpack('4H', winsz)
+                if platform.isWindows():
+                    term = "dumb"
+                else:
+                    term = os.environ['TERM']
+                    signal.signal(signal.SIGWINCH, self._windowResized)
                 ptyReqData = session.packRequest_pty_req(term, winSize, '')
                 self.conn.sendRequest(self, 'pty-req', ptyReqData)
-                signal.signal(signal.SIGWINCH, self._windowResized)
             self.conn.sendRequest(self, 'shell', '')
-            #if hasattr(conn.transport, 'transport'):
-            #    conn.transport.transport.setTcpNoDelay(1)
 
     def handleInput(self, char):
         #log.msg('handling %s' % repr(char))
@@ -451,6 +461,8 @@ class SSHSession(channel.SSHChannel):
         self.stdio.resumeProducing()
 
     def _windowResized(self, *args):
+        if not fcntl:
+            return
         winsz = fcntl.ioctl(0, tty.TIOCGWINSZ, '12345678')
         winSize = struct.unpack('4H', winsz)
         newSize = winSize[1], winSize[0], winSize[2], winSize[3]

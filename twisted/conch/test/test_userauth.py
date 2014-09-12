@@ -274,7 +274,7 @@ class SSHUserAuthServerTestCase(unittest.TestCase):
 
 
     if keys is None:
-        skip = "cannot run w/o PyCrypto"
+        skip = "cannot run without PyCrypto and PyASN1"
 
 
     def setUp(self):
@@ -717,7 +717,7 @@ class SSHUserAuthClientTestCase(unittest.TestCase):
 
 
     if keys is None:
-        skip = "cannot run w/o PyCrypto"
+        skip = "cannot run without PyCrypto and PyASN1"
 
 
     def setUp(self):
@@ -950,7 +950,7 @@ class LoopbackTestCase(unittest.TestCase):
 
 
     if keys is None:
-        skip = "cannot run w/o PyCrypto or PyASN1"
+        skip = "cannot run without PyCrypto and PyASN1"
 
 
     class Factory:
@@ -1017,7 +1017,7 @@ class LoopbackTestCase(unittest.TestCase):
 
 class ModuleInitializationTestCase(unittest.TestCase):
     if keys is None:
-        skip = "cannot run w/o PyCrypto or PyASN1"
+        skip = "cannot run without PyCrypto and PyASN1"
 
 
     def test_messages(self):

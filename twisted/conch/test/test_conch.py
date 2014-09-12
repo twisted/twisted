@@ -537,9 +537,6 @@ class CmdLineClientTestCase(ForwardingMixin, unittest.TestCase):
     """
     Connection forwarding tests run against the Conch command line client.
     """
-    if runtime.platformType == 'win32':
-        skip = "can't run cmdline client on win32"
-
     def execute(self, remoteCommand, process, sshArgs=''):
         """
         As for L{OpenSSHClientTestCase.execute}, except it runs the 'conch'
@@ -561,3 +558,4 @@ class CmdLineClientTestCase(ForwardingMixin, unittest.TestCase):
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
         reactor.spawnProcess(process, sys.executable, cmds, env=env)
         return process.deferred
+

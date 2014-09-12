@@ -48,12 +48,12 @@ class ScriptTests(TestCase, ScriptTestsMixin):
 
     def test_conch(self):
         self.scriptTest("conch/conch")
-    test_conch.skip = ttySkip or skip
+    test_conch.skip = skip
 
 
     def test_cftp(self):
         self.scriptTest("conch/cftp")
-    test_cftp.skip = ttySkip or skip
+    test_cftp.skip = skip
 
 
     def test_ckeygen(self):

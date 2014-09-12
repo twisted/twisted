@@ -9,13 +9,15 @@ Tests for L{twisted.conch.ssh.filetransfer}.
 import os
 import re
 import struct
+import posixpath
 
 from twisted.trial import unittest
-try:
-    from twisted.conch import unix
-    unix # shut up pyflakes
-except ImportError:
-    unix = None
+from twisted.python.runtime import platform
+
+if platform.isWindows():
+    from twisted.conch.windows import SFTPServerForWindowsConchUser as SFTPServerForConchUser
+else:
+    from twisted.conch.unix import SFTPServerForUnixConchUser as SFTPServerForConchUser
 
 from twisted.conch import avatar
 from twisted.conch.ssh import common, connection, filetransfer, session
@@ -43,6 +45,12 @@ class TestAvatar(avatar.ConchUser):
         return r
 
 
+def posixGetCWD():
+    basepath = os.getcwd()
+    path = os.path.splitdrive(basepath)[1]    # remove drive spec.
+    return path.replace('\\','/')
+    
+
 class FileTransferTestAvatar(TestAvatar):
 
     def __init__(self, homeDir):
@@ -50,7 +58,7 @@ class FileTransferTestAvatar(TestAvatar):
         self.homeDir = homeDir
 
     def getHomeDir(self):
-        return os.path.join(os.getcwd(), self.homeDir)
+        return posixpath.join(posixGetCWD(), self.homeDir)
 
 
 class ConchSessionForTestAvatar:
@@ -58,52 +66,43 @@ class ConchSessionForTestAvatar:
     def __init__(self, avatar):
         self.avatar = avatar
 
-if unix:
-    if not hasattr(unix, 'SFTPServerForUnixConchUser'):
-        # unix should either be a fully working module, or None.  I'm not sure
-        # how this happens, but on win32 it does.  Try to cope.  --spiv.
-        import warnings
-        warnings.warn(("twisted.conch.unix imported %r, "
-                       "but doesn't define SFTPServerForUnixConchUser'")
-                      % (unix,))
-        unix = None
-    else:
-        class FileTransferForTestAvatar(unix.SFTPServerForUnixConchUser):
+class FileTransferForTestAvatar(SFTPServerForConchUser):
 
-            def gotVersion(self, version, otherExt):
-                return {'conchTest' : 'ext data'}
+    def gotVersion(self, version, otherExt):
+        return {'conchTest' : 'ext data'}
 
-            def extendedRequest(self, extName, extData):
-                if extName == 'testExtendedRequest':
-                    return 'bar'
-                raise NotImplementedError
+    def extendedRequest(self, extName, extData):
+        if extName == 'testExtendedRequest':
+            return 'bar'
+        raise NotImplementedError
 
-        components.registerAdapter(FileTransferForTestAvatar,
-                                   TestAvatar,
-                                   filetransfer.ISFTPServer)
+components.registerAdapter(FileTransferForTestAvatar,
+                           TestAvatar,
+                           filetransfer.ISFTPServer)
+
 
 class SFTPTestBase(unittest.TestCase):
 
     def setUp(self):
-        self.testDir = self.mktemp()
+        basepath = self.mktemp()
+        path = os.path.splitdrive(basepath)[1]    # remove drive spec.
+        self.testDir = path.replace('\\','/')+"/"
         # Give the testDir another level so we can safely "cd .." from it in
         # tests.
-        self.testDir = os.path.join(self.testDir, 'extra')
-        os.makedirs(os.path.join(self.testDir, 'testDirectory'))
+        self.testDir = posixpath.join(self.testDir, 'extra')
+        os.makedirs(posixpath.join(self.testDir, 'testDirectory'))
 
-        f = file(os.path.join(self.testDir, 'testfile1'),'w')
+        f = file(posixpath.join(self.testDir, 'testfile1'),'wb')
         f.write('a'*10+'b'*10)
-        f.write(file('/dev/urandom').read(1024*64)) # random data
-        os.chmod(os.path.join(self.testDir, 'testfile1'), 0644)
-        file(os.path.join(self.testDir, 'testRemoveFile'), 'w').write('a')
-        file(os.path.join(self.testDir, 'testRenameFile'), 'w').write('a')
-        file(os.path.join(self.testDir, '.testHiddenFile'), 'w').write('a')
+        f.write(os.urandom(1024*64)) # random data
+        if not platform.isWindows():
+            os.chmod(os.path.join(self.testDir, 'testfile1'), 0644)
+        file(posixpath.join(self.testDir, 'testRemoveFile'), 'wb').write('a')
+        file(posixpath.join(self.testDir, 'testRenameFile'), 'wb').write('a')
+        file(posixpath.join(self.testDir, '.testHiddenFile'), 'wb').write('a')
 
 
 class TestOurServerOurClient(SFTPTestBase):
-
-    if not unix:
-        skip = "can't run on non-posix computers"
 
     def setUp(self):
         SFTPTestBase.setUp(self)
@@ -446,17 +445,21 @@ class TestOurServerOurClient(SFTPTestBase):
             d = self.client.readLink('testLink')
             self._emptyBuffers()
             d.addCallback(self.assertEqual,
-                          os.path.join(os.getcwd(), self.testDir, 'testfile1'))
+                          posixpath.join(posixGetCWD(), self.testDir, 'testfile1'))
             return d
         def _realPath(_):
             d = self.client.realPath('testLink')
             self._emptyBuffers()
             d.addCallback(self.assertEqual,
-                          os.path.join(os.getcwd(), self.testDir, 'testfile1'))
+                          posixpath.join(posixGetCWD(), self.testDir, 'testfile1'))
             return d
         d.addCallback(_readLink)
         d.addCallback(_realPath)
         return d
+
+    if platform.isWindows():
+        testLinkSharesAttrs.skip = "Not supported on Windows"
+        testLinkPath.skip = "Not supported on Windows"
 
     def testExtendedRequest(self):
         d = self.client.extendedRequest('testExtendedRequest', 'foo')
@@ -477,9 +480,6 @@ class FakeConn:
 
 
 class TestFileTransferClose(unittest.TestCase):
-
-    if not unix:
-        skip = "can't run on non-posix computers"
 
     def setUp(self):
         self.avatar = TestAvatar()
@@ -768,3 +768,30 @@ class TestRawPacketData(unittest.TestCase):
         """
         self.assertEqual(result[0], 'msg')
         self.assertEqual(result[1], '')
+
+
+class TestFileTransferClientMakeConnection(SFTPTestBase): 
+    """ 
+    Test for L{filetransfer.FileTransferClient} makeConnection(). 
+    """ 
+
+    def setUp(self): 
+        SFTPTestBase.setUp(self) 
+        self.avatar = FileTransferTestAvatar(self.testDir) 
+        self.server = filetransfer.FileTransferServer(avatar=self.avatar) 
+        self.clientTransport = loopback.LoopbackRelay(self.server) 
+        extData = {"test_key":"test_value"} 
+        self.client = filetransfer.FileTransferClient(extData) 
+        self.assertEqual(self.client.extData, extData) 
+        self.serverTransport = loopback.LoopbackRelay(self.client) 
+ 
+    def tearDown(self): 
+        self.serverTransport.loseConnection() 
+        self.clientTransport.loseConnection() 
+        self.serverTransport.clearBuffer() 
+        self.clientTransport.clearBuffer() 
+ 
+    def test_makeConnection(self): 
+        self.client.makeConnection(self.clientTransport) 
+        self.server.makeConnection(self.serverTransport) 
+ 

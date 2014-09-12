@@ -5,8 +5,14 @@
 """
 Support module for making SSH servers with twistd.
 """
+import sys
+from twisted.python.runtime import platform
 
-from twisted.conch import unix
+if platform.isWindows():
+    from twisted.conch.windows import WindowsSSHRealm as SSHRealm
+else:
+    from twisted.conch.unix import UnixSSHRealm as SSHRealm
+
 from twisted.conch import checkers as conch_checkers
 from twisted.conch.openssh_compat import factory
 from twisted.cred import portal, checkers, strcred
@@ -81,7 +87,7 @@ def makeService(config):
 
     t = factory.OpenSSHFactory()
 
-    r = unix.UnixSSHRealm()
+    r = SSHRealm()
     t.portal = portal.Portal(r, config.get('credCheckers', []))
     t.dataRoot = config['data']
     t.moduliRoot = config['moduli'] or config['data']

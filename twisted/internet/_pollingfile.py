@@ -4,10 +4,16 @@
 
 """
 Implements a simple polling interface for file descriptors that don't work with
-select() - this is pretty much only useful on Windows.
+C{select()} - this is pretty much only useful on Windows.
 """
 
+import sys
 from zope.interface import implements
+
+import win32pipe
+import win32file
+import win32api
+import pywintypes
 
 from twisted.internet.interfaces import IConsumer, IPushProducer
 
@@ -16,20 +22,18 @@ MIN_TIMEOUT = 0.000000001
 MAX_TIMEOUT = 0.1
 
 
+class _PollableResource(object):
 
-class _PollableResource:
     active = True
 
     def activate(self):
         self.active = True
 
-
     def deactivate(self):
         self.active = False
 
 
-
-class _PollingTimer:
+class _PollingTimer(object):
     # Everything is private here because it is really an implementation detail.
 
     def __init__(self, reactor):
@@ -98,37 +102,126 @@ class _PollingTimer:
 # If we ever (let's hope not) need the above functionality on UNIX, this could
 # be factored into a different module.
 
-import win32pipe
-import win32file
-import win32api
-import pywintypes
+class Channel(object):
+    def closeRead(self):
+        raise NotImplementedError()
 
-class _PollableReadPipe(_PollableResource):
+    def closeWrite(self):
+        raise NotImplementedError()
+
+    def read(self, size):
+        raise NotImplementedError()
+
+    def write(self, data):
+        raise NotImplementedError()
+
+    def isWriteClosed(self):
+        raise NotImplementedError()
+
+    def setEcho(self, enabled):
+        raise NotImplementedError()
+
+
+class ChannelReadPipe(Channel):
+    def __init__(self, pipe):
+        self.handle = pipe
+
+    def read(self):
+        _, bytesToRead, _ = win32pipe.PeekNamedPipe(self.handle, 1)
+        if not bytesToRead:
+            return ''
+        _, data = win32file.ReadFile(self.handle, bytesToRead, None)
+        return data
+
+    def closeRead(self):
+        try:
+            win32api.CloseHandle(self.handle)
+        except pywintypes.error:
+            pass
+
+
+class ChannelWritePipe(Channel):
+    def __init__(self, pipe):
+        self.handle = pipe
+        try:
+            win32pipe.SetNamedPipeHandleState(self.handle, win32pipe.PIPE_NOWAIT, None, None)
+        except pywintypes.error:
+            # Maybe it's an invalid handle.  Who knows.
+            pass
+
+    def write(self, data):
+        try:
+            _, bytesWritten = win32file.WriteFile(self.handle, data, None)
+        except win32api.error:
+            return None
+        return bytesWritten
+
+    def closeWrite(self):
+        try:
+            win32api.CloseHandle(self.handle)
+        except pywintypes.error:
+            pass
+
+    def isWriteClosed(self):
+        try:
+            win32file.WriteFile(self.handle, '', None)
+            return False
+        except pywintypes.error:
+            return True
+
+
+class ChannelConsole(Channel):
+    def __init__(self):
+        import win32conio
+        self.console = win32conio.Channel()
+
+    def read(self):
+        return self.console.read()
+
+    def write(self, data):
+        try:
+            bytesWritten = self.console.write(data)
+        except (pywintypes.error,), err:
+            if err.winerror == 8:
+                # 'Not enough storage is available to process this command.'
+                raise ValueError(err.strerror)
+            return None
+        return bytesWritten
+
+    def closeRead(self):
+        self.console.closeRead()
+
+    def closeWrite(self):
+        self.console.closeWrite()
+
+    def isWriteClosed(self):
+        return self.console.isWriteClosed()
+
+    def setEcho(self, enabled):
+        self.console.setEcho(enabled)
+
+
+class _PollableReader(_PollableResource):
 
     implements(IPushProducer)
 
-    def __init__(self, pipe, receivedCallback, lostCallback):
-        # security attributes for pipes
-        self.pipe = pipe
+    def __init__(self, channel, receivedCallback, lostCallback):
+        self.channel = channel
         self.receivedCallback = receivedCallback
         self.lostCallback = lostCallback
 
     def checkWork(self):
         finished = 0
         fullDataRead = []
-
         while 1:
             try:
-                buffer, bytesToRead, result = win32pipe.PeekNamedPipe(self.pipe, 1)
-                # finished = (result == -1)
-                if not bytesToRead:
+                data = self.channel.read()
+                if not data:
                     break
-                hr, data = win32file.ReadFile(self.pipe, bytesToRead, None)
                 fullDataRead.append(data)
-            except win32api.error:
+            except pywintypes.error:
                 finished = 1
                 break
-
         dataBuf = ''.join(fullDataRead)
         if dataBuf:
             self.receivedCallback(dataBuf)
@@ -141,11 +234,7 @@ class _PollableReadPipe(_PollableResource):
         self.lostCallback()
 
     def close(self):
-        try:
-            win32api.CloseHandle(self.pipe)
-        except pywintypes.error:
-            # You can't close std handles...?
-            pass
+        self.channel.closeRead()
 
     def stopProducing(self):
         self.close()
@@ -157,31 +246,24 @@ class _PollableReadPipe(_PollableResource):
         self.activate()
 
 
-FULL_BUFFER_SIZE = 64 * 1024
 
-class _PollableWritePipe(_PollableResource):
+class _PollableWriter(_PollableResource):
+    FULL_BUFFER_SIZE = 64 * 1024
 
     implements(IConsumer)
 
-    def __init__(self, writePipe, lostCallback):
+    def __init__(self, channel, lostCallback):
         self.disconnecting = False
         self.producer = None
         self.producerPaused = False
         self.streamingProducer = 0
         self.outQueue = []
-        self.writePipe = writePipe
+        self.channel = channel
         self.lostCallback = lostCallback
-        try:
-            win32pipe.SetNamedPipeHandleState(writePipe,
-                                              win32pipe.PIPE_NOWAIT,
-                                              None,
-                                              None)
-        except pywintypes.error:
-            # Maybe it's an invalid handle.  Who knows.
-            pass
 
     def close(self):
         self.disconnecting = True
+        self.checkWork()
 
     def bufferFull(self):
         if self.producer is not None:
@@ -227,74 +309,78 @@ class _PollableWritePipe(_PollableResource):
 
     def writeConnectionLost(self):
         self.deactivate()
-        try:
-            win32api.CloseHandle(self.writePipe)
-        except pywintypes.error:
-            # OMG what
-            pass
+        self.channel.closeWrite()
         self.lostCallback()
 
-
     def writeSequence(self, seq):
-        """
-        Append a C{list} or C{tuple} of bytes to the output buffer.
-
-        @param seq: C{list} or C{tuple} of C{str} instances to be appended to
-            the output buffer.
-
-        @raise TypeError: If C{seq} contains C{unicode}.
-        """
-        if unicode in map(type, seq):
-            raise TypeError("Unicode not allowed in output buffer.")
+        if self.disconnecting:
+            return
         self.outQueue.extend(seq)
-
+        if sum(map(len, self.outQueue)) > self.FULL_BUFFER_SIZE:
+            self.bufferFull()
+        self.checkWork()
 
     def write(self, data):
-        """
-        Append some bytes to the output buffer.
-
-        @param data: C{str} to be appended to the output buffer.
-        @type data: C{str}.
-
-        @raise TypeError: If C{data} is C{unicode} instead of C{str}.
-        """
-        if isinstance(data, unicode):
-            raise TypeError("Unicode not allowed in output buffer.")
         if self.disconnecting:
             return
         self.outQueue.append(data)
-        if sum(map(len, self.outQueue)) > FULL_BUFFER_SIZE:
+        if sum(map(len, self.outQueue)) > self.FULL_BUFFER_SIZE:
             self.bufferFull()
-
+        self.checkWork()
 
     def checkWork(self):
-        numBytesWritten = 0
         if not self.outQueue:
-            if self.disconnecting:
+            if self.disconnecting or self.channel.isWriteClosed():
                 self.writeConnectionLost()
                 return 0
-            try:
-                win32file.WriteFile(self.writePipe, '', None)
-            except pywintypes.error:
-                self.writeConnectionLost()
-                return numBytesWritten
+        totalBytesWritten = 0
         while self.outQueue:
             data = self.outQueue.pop(0)
-            errCode = 0
+            if isinstance(data, unicode):
+                raise TypeError("unicode not allowed")
+
             try:
-                errCode, nBytesWritten = win32file.WriteFile(self.writePipe,
-                                                             data, None)
-            except win32api.error:
+                bytesWritten = self.channel.write(data)
+            except ValueError:
+                # WriteConsole() has variable buffer length limitations.
+                # Split data into two (roughly), put back into queue and
+                # try again.
+                len2 = len(data)/2
+                d1, d2 = data[:len2], data[len2:]
+                self.outQueue.insert(0, d2)
+                self.outQueue.insert(0, d1)
+                continue
+            if bytesWritten is None:        # error occurred
                 self.writeConnectionLost()
                 break
-            else:
-                # assert not errCode, "wtf an error code???"
-                numBytesWritten += nBytesWritten
-                if len(data) > nBytesWritten:
-                    self.outQueue.insert(0, data[nBytesWritten:])
-                    break
+            totalBytesWritten += bytesWritten
+            if len(data) > bytesWritten:
+                self.outQueue.insert(0, data[bytesWritten:])
+                break
         else:
             resumed = self.bufferEmpty()
             if not resumed and self.disconnecting:
                 self.writeConnectionLost()
-        return numBytesWritten
+        return totalBytesWritten
+
+
+# _pollingfile support
+class _PollableReadConsole(_PollableReader):
+    def __init__(self, channelConsole, receivedCallback, lostCallback):
+        _PollableReader.__init__(self, channelConsole, receivedCallback, lostCallback) 
+
+
+class _PollableReadPipe(_PollableReader):
+    def __init__(self, handle, receivedCallback, lostCallback):
+        _PollableReader.__init__(self, ChannelReadPipe(handle), receivedCallback, lostCallback)
+
+
+class _PollableWriteConsole(_PollableWriter):
+    def __init__(self, channelConsole, lostCallback):
+        _PollableWriter.__init__(self, channelConsole, lostCallback)
+
+
+class _PollableWritePipe(_PollableWriter):
+    def __init__(self, handle, lostCallback):
+        _PollableWriter.__init__(self, ChannelWritePipe(handle), lostCallback)
+

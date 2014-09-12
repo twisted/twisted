@@ -8,7 +8,11 @@ Asynchronous local terminal input handling
 @author: Jp Calderone
 """
 
-import os, tty, sys, termios
+import os, sys
+try:
+    import tty, termios
+except ImportError:
+    tty = termios = None
 
 from twisted.internet import reactor, stdio, protocol, defer
 from twisted.python import failure, reflect, log
@@ -43,7 +47,10 @@ class TerminalProcessProtocol(protocol.ProcessProtocol):
 
     def childConnectionLost(self, childFD):
         if self.proto is not None:
-            self.proto.childConnectionLost(childFD)
+            try:
+                self.proto.childConnectionLost(childFD)
+            except:
+                pass
 
     def processEnded(self, reason):
         if self.proto is not None:
@@ -66,21 +73,23 @@ class ConsoleManhole(ColoredManhole):
 
 
 def runWithProtocol(klass):
-    fd = sys.__stdin__.fileno()
-    oldSettings = termios.tcgetattr(fd)
-    tty.setraw(fd)
+    if termios:
+        fd = sys.__stdin__.fileno()
+        oldSettings = termios.tcgetattr(fd)
+        tty.setraw(fd)
     try:
         p = ServerProtocol(klass)
         stdio.StandardIO(p)
         reactor.run()
     finally:
-        termios.tcsetattr(fd, termios.TCSANOW, oldSettings)
-        os.write(fd, "\r\x1bc\r")
+        if termios:
+            termios.tcsetattr(fd, termios.TCSANOW, oldSettings)
+            os.write(fd, "\r\x1bc\r")
 
 
 
 def main(argv=None):
-    log.startLogging(file('child.log', 'w'))
+    log.startLogging(file('child.log', 'wb'))
 
     if argv is None:
         argv = sys.argv[1:]

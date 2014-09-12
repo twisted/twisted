@@ -13,6 +13,7 @@ interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 
 from twisted.python import log
 from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
 
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import common, keys, userauth
@@ -31,6 +32,27 @@ _KNOWN_HOSTS = "~/.ssh/known_hosts"
 
 # This name is bound so that the unit tests can use 'patch' to override it.
 _open = open
+
+
+class fakePTY(object):
+    def __init__(self, fname, mode):
+        pass
+
+    def close(self):
+        pass
+
+    def read(self):
+        pass
+
+    def readline(self):
+        return raw_input()
+
+    def write(self, data):
+        sys.stdout.write(data)
+
+if platform.isWindows():
+    _open = fakePTY
+
 
 def verifyHostKey(transport, host, pubKey, fingerprint):
     """
@@ -154,10 +176,13 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
     def _getPassword(self, prompt):
         try:
-            oldout, oldin = sys.stdout, sys.stdin
-            sys.stdin = sys.stdout = open('/dev/tty','r+')
-            p=getpass.getpass(prompt)
-            sys.stdout,sys.stdin=oldout,oldin
+            if platform.isWindows():
+                p = getpass.getpass(prompt)
+            else:
+                oldout, oldin = sys.stdout, sys.stdin
+                sys.stdin = sys.stdout = open('/dev/tty','r+')
+                p = getpass.getpass(prompt)
+                sys.stdout, sys.stdin = oldout, oldin
             return p
         except (KeyboardInterrupt, IOError):
             print
@@ -244,8 +269,9 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
     def getGenericAnswers(self, name, instruction, prompts):
         responses = []
         try:
-            oldout, oldin = sys.stdout, sys.stdin
-            sys.stdin = sys.stdout = open('/dev/tty','r+')
+            if not platform.isWindows():
+                oldout, oldin = sys.stdout, sys.stdin
+                sys.stdin = sys.stdout = open('/dev/tty','r+')
             if name:
                 print name
             if instruction:
@@ -256,5 +282,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
                 else:
                     responses.append(getpass.getpass(prompt))
         finally:
-            sys.stdout,sys.stdin=oldout,oldin
+            if not platform.isWindows():
+                sys.stdout,sys.stdin=oldout,oldin
         return defer.succeed(responses)
+

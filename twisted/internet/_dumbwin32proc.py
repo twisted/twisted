@@ -144,23 +144,9 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         StartupInfo.hStdInput  = hStdinR
         StartupInfo.dwFlags = win32process.STARTF_USESTDHANDLES
 
-        # Create new handles whose inheritance property is false
-        currentPid = win32api.GetCurrentProcess()
-
-        tmp = win32api.DuplicateHandle(currentPid, self.hStdoutR, currentPid, 0, 0,
-                                       win32con.DUPLICATE_SAME_ACCESS)
-        win32file.CloseHandle(self.hStdoutR)
-        self.hStdoutR = tmp
-
-        tmp = win32api.DuplicateHandle(currentPid, self.hStderrR, currentPid, 0, 0,
-                                       win32con.DUPLICATE_SAME_ACCESS)
-        win32file.CloseHandle(self.hStderrR)
-        self.hStderrR = tmp
-
-        tmp = win32api.DuplicateHandle(currentPid, self.hStdinW, currentPid, 0, 0,
-                                       win32con.DUPLICATE_SAME_ACCESS)
-        win32file.CloseHandle(self.hStdinW)
-        self.hStdinW = tmp
+        win32api.SetHandleInformation(self.hStdoutR, win32con.HANDLE_FLAG_INHERIT, 0)
+        win32api.SetHandleInformation(self.hStderrR, win32con.HANDLE_FLAG_INHERIT, 0)
+        win32api.SetHandleInformation(self.hStdinW,  win32con.HANDLE_FLAG_INHERIT, 0)
 
         # Add the specified environment to the current environment - this is
         # necessary because certain operations are only supported on Windows

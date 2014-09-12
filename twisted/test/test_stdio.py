@@ -189,10 +189,13 @@ class StandardInputOutputTestCase(unittest.TestCase):
 
         # p.onConnection.addCallback(lambda ign: __import__('time').sleep(5))
 
+        usePTY = True
+        if platform.isWindows():
+            usePTY = False
         try:
             self._spawnProcess(
                 p, 'stdio_test_lastwrite.py', UNIQUE_LAST_WRITE_STRING,
-                usePTY=True)
+                usePTY=usePTY)
         except ValueError, e:
             # Some platforms don't work with usePTY=True
             raise unittest.SkipTest(str(e))

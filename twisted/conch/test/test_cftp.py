@@ -8,14 +8,19 @@ Tests for L{twisted.conch.scripts.cftp}.
 
 import locale
 import time, sys, os, operator, getpass, struct
+import posixpath
 from StringIO import StringIO
 
 from twisted.conch.test.test_ssh import Crypto, pyasn1
+from twisted.python.runtime import platform
 
 _reason = None
 if Crypto and pyasn1:
     try:
-        from twisted.conch import unix
+        if platform.isWindows():
+            from twisted.conch import windows as unix
+        else:
+            from twisted.conch import unix
         from twisted.conch.scripts import cftp
         from twisted.conch.scripts.cftp import SSHSession
         from twisted.conch.test.test_filetransfer import FileTransferForTestAvatar
@@ -234,6 +239,12 @@ class StdioClientTests(TestCase):
         # which uses features not provided by our dumb Connection fake.
         self.client.transport = StringTransport()
 
+        if platform.isWindows():
+            os.getuid = lambda: 0
+
+    def tearDown(self):
+        if platform.isWindows():
+            del os.getuid
 
     def test_exec(self):
         """
@@ -245,7 +256,7 @@ class StdioClientTests(TestCase):
             sys.executable)
 
         d = self.client._dispatchCommand("exec print 1 + 2")
-        d.addCallback(self.assertEqual, "3\n")
+        d.addCallback(self.assertEqual, "3"+os.linesep)
         return d
 
 
@@ -258,7 +269,7 @@ class StdioClientTests(TestCase):
             getpass.getuser(), 'secret', os.getuid(), 1234, 'foo', 'bar', '')
 
         d = self.client._dispatchCommand("exec echo hello")
-        d.addCallback(self.assertEqual, "hello\n")
+        d.addCallback(self.assertEqual, "hello"+os.linesep)
         return d
 
 
@@ -266,12 +277,15 @@ class StdioClientTests(TestCase):
         """
         The I{exec} command is run for lines which start with C{"!"}.
         """
+        if platform.isWindows():
+            shell = os.environ['COMSPEC']
+        else:
+            shell = '/bin/sh'
         self.database.addUser(
-            getpass.getuser(), 'secret', os.getuid(), 1234, 'foo', 'bar',
-            '/bin/sh')
+            getpass.getuser(), 'secret', os.getuid(), 1234, 'foo', 'bar', shell)
 
         d = self.client._dispatchCommand("!echo hello")
-        d.addCallback(self.assertEqual, "hello\n")
+        d.addCallback(self.assertEqual, "hello"+os.linesep)
         return d
 
 
@@ -285,10 +299,13 @@ class StdioClientTests(TestCase):
         @param height: the height in characters
         @type height: C{int}
         """
-        import tty # local import to avoid win32 issues
+        try:
+            from tty import TIOCGWINSZ
+        except ImportError:
+            TIOCGWINSZ = 0x5413
         class FakeFcntl(object):
             def ioctl(self, fd, opt, mutate):
-                if opt != tty.TIOCGWINSZ:
+                if opt != TIOCGWINSZ:
                     self.fail("Only window-size queries supported.")
                 return struct.pack("4H", height, width, 0, 0)
         self.patch(cftp, "fcntl", FakeFcntl())
@@ -422,7 +439,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         """
         self._expectingCommand = defer.Deferred()
         self.clearBuffer()
-        self.transport.write(command + '\n')
+        self.transport.write(command + os.linesep)
         return self._expectingCommand
 
     def runScript(self, commands):
@@ -467,14 +484,15 @@ class SFTPTestProcess(protocol.ProcessProtocol):
 
 class CFTPClientTestBase(SFTPTestBase):
     def setUp(self):
-        f = open('dsa_test.pub','w')
+        f = open('dsa_test.pub','wb')
         f.write(test_ssh.publicDSA_openssh)
         f.close()
-        f = open('dsa_test','w')
+        f = open('dsa_test','wb')
         f.write(test_ssh.privateDSA_openssh)
         f.close()
-        os.chmod('dsa_test', 33152)
-        f = open('kh_test','w')
+        if not platform.isWindows():
+            os.chmod('dsa_test', 33152)
+        f = open('kh_test','wb')
         f.write('127.0.0.1 ' + test_ssh.publicRSA_openssh)
         f.close()
         return SFTPTestBase.setUp(self)
@@ -562,6 +580,13 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         """
         return self.processProtocol.runScript(commands)
 
+    def getCwd(self):
+        cwd = os.getcwd()
+        if platform.isWindows():
+            cwd = os.path.splitdrive(cwd)[1]    # remove drive spec.
+            return cwd.replace('\\', '/')
+        return cwd
+
     def testCdPwd(self):
         """
         Test that 'pwd' reports the current remote directory, that 'lpwd'
@@ -570,7 +595,8 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         remote directory.
         """
         # XXX - not actually a unit test, see docstring.
-        homeDir = os.path.join(os.getcwd(), self.testDir)
+        cwd = self.getCwd()
+        homeDir = posixpath.join(cwd, self.testDir)
         d = self.runScript('pwd', 'lpwd', 'cd testDirectory', 'cd ..', 'pwd')
         d.addCallback(lambda xs: xs[:3] + xs[4:])
         d.addCallback(self.assertEqual,
@@ -584,9 +610,15 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         """
         def _check(results):
             self.flushLoggedErrors()
-            self.assertTrue(results[0].startswith('-rw-r--r--'))
+            if platform.isWindows():
+                self.assertTrue(results[0].startswith('-rw-rw-rw-'))
+            else:
+                self.assertTrue(results[0].startswith('-rw-r--r--'))
             self.assertEqual(results[1], '')
-            self.assertTrue(results[2].startswith('----------'), results[2])
+            if platform.isWindows():
+                self.assertTrue(results[2].startswith('-r--r--r--'), results[2])
+            else:
+                self.assertTrue(results[2].startswith('----------'), results[2])
             self.assertEqual(results[3], '')
 
         d = self.runScript('ls -l testfile1', 'chmod 0 testfile1',
@@ -629,8 +661,8 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         Assert that the files at C{name1} and C{name2} contain exactly the
         same data.
         """
-        f1 = file(name1).read()
-        f2 = file(name2).read()
+        f1 = file(name1, "rb").read()
+        f2 = file(name2, "rb").read()
         self.assertEqual(f1, f2, msg)
 
 
@@ -642,7 +674,7 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         """
         # XXX - not actually a unit test
         expectedOutput = ("Transferred %s/%s/testfile1 to %s/test file2"
-                          % (os.getcwd(), self.testDir, self.testDir))
+                          % (self.getCwd(), self.testDir, self.testDir))
         def _checkGet(result):
             self.assertTrue(result.endswith(expectedOutput))
             self.assertFilesEqual(self.testDir + '/testfile1',
@@ -679,19 +711,26 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         successfully removed. Also check the output of the put command.
         """
         # XXX - not actually a unit test
-        expectedOutput = ('Transferred %s/testfile1 to %s/%s/test"file2'
-                          % (self.testDir, os.getcwd(), self.testDir))
+        if platform.isWindows():
+            testfile2 = 'testfile2'
+            escaped_testfile2 = 'testfile2'
+        else:
+            testfile2 = 'test"file2'
+            escaped_testfile2 = 'test\\"file2'
+
+        expectedOutput = ('Transferred %s/testfile1 to %s/%s/%s'
+                          % (self.testDir, self.getCwd(), self.testDir, testfile2))
         def _checkPut(result):
             self.assertFilesEqual(self.testDir + '/testfile1',
-                                  self.testDir + '/test"file2')
+                                  self.testDir + '/'+testfile2)
             self.assertTrue(result.endswith(expectedOutput))
-            return self.runCommand('rm "test\\"file2"')
+            return self.runCommand('rm "%s"' % escaped_testfile2)
 
-        d = self.runCommand('put %s/testfile1 "test\\"file2"'
-                            % (self.testDir,))
+        d = self.runCommand('put %s/testfile1 "%s"'
+                            % (self.testDir, escaped_testfile2))
         d.addCallback(_checkPut)
         d.addCallback(lambda _: self.assertFalse(
-            os.path.exists(self.testDir + '/test"file2')))
+            os.path.exists(self.testDir + testfile2)))
         return d
 
 
@@ -701,10 +740,10 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         file.
         """
         # XXX - not actually a unit test
-        f = file(os.path.join(self.testDir, 'shorterFile'), 'w')
+        f = file(os.path.join(self.testDir, 'shorterFile'), 'wb')
         f.write("a")
         f.close()
-        f = file(os.path.join(self.testDir, 'longerFile'), 'w')
+        f = file(os.path.join(self.testDir, 'longerFile'), 'wb')
         f.write("bb")
         f.close()
         def _checkPut(result):
@@ -724,10 +763,10 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         """
         # XXX - not actually a unit test
         os.mkdir(os.path.join(self.testDir, 'dir'))
-        f = file(os.path.join(self.testDir, 'dir', 'file'), 'w')
+        f = file(os.path.join(self.testDir, 'dir', 'file'), 'wb')
         f.write("a")
         f.close()
-        f = file(os.path.join(self.testDir, 'file'), 'w')
+        f = file(os.path.join(self.testDir, 'file'), 'wb')
         f.write("bb")
         f.close()
         def _checkPut(result):
@@ -778,6 +817,8 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
         d.addCallback(_check)
         d.addCallback(self.assertEqual, '')
         return d
+    if platform.isWindows():
+        testLink.skip = "Windows sftp server doesn't support symbolic links."
 
 
     def testRemoteDirectory(self):
@@ -799,7 +840,7 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
     def test_existingRemoteDirectory(self):
         """
         Test that a C{mkdir} on an existing directory fails with the
-        appropriate error, and doesn't log an useless error server side.
+        appropriate error, and doesn't log a useless error server side.
         """
         def _check(results):
             self.assertEqual(results[0], '')
@@ -990,3 +1031,4 @@ else:
     from twisted.python.procutils import which
     if not which('sftp'):
         TestOurServerSftpClient.skip = "no sftp command-line client available"
+

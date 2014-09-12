@@ -17,6 +17,7 @@ from twisted.internet import defer, error
 from twisted.trial import unittest
 from twisted.cred import portal
 from twisted.test.proto_helpers import StringTransport
+from twisted.python.runtime import platform
 
 class Arrows(unittest.TestCase):
     def setUp(self):
@@ -566,8 +567,9 @@ class _StdioMixin(_BaseMixin):
         env["PYTHONPATH"] = os.pathsep.join(sys.path)
 
         from twisted.internet import reactor
+        usePTY = not platform.isWindows()
         clientTransport = reactor.spawnProcess(processClient, exe, args,
-                                               env=env, usePTY=True)
+                                               env=env, usePTY=usePTY)
 
         self.recvlineClient = self.testTerminal = testTerminal
         self.processClient = processClient
@@ -588,8 +590,12 @@ class _StdioMixin(_BaseMixin):
             pass
         def trap(failure):
             failure.trap(error.ProcessTerminated)
-            self.assertEqual(failure.value.exitCode, None)
-            self.assertEqual(failure.value.status, 9)
+            if platform.isWindows():
+                self.assertEqual(failure.value.exitCode, 1)
+                self.assertEqual(failure.value.status, None)
+            else:
+                self.assertEqual(failure.value.exitCode, None)
+                self.assertEqual(failure.value.status, 9)
         return self.testTerminal.onDisconnection.addErrback(trap)
 
     def _testwrite(self, bytes):
@@ -704,3 +710,4 @@ class HistoricRecvlineLoopbackSSH(_SSHMixin, unittest.TestCase, HistoricRecvline
 class HistoricRecvlineLoopbackStdio(_StdioMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
     if stdio is None:
         skip = "Terminal requirements missing, can't run historic recvline tests over stdio"
+

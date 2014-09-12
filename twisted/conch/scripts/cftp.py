@@ -6,8 +6,16 @@
 Implementation module for the I{cftp} command.
 """
 
-import os, sys, getpass, struct, tty, fcntl, stat
-import fnmatch, pwd, glob
+import os, sys, getpass, struct, stat
+from twisted.python.win32 import tty, fcntl
+
+try:
+    import pwd
+except ImportError:
+    pwd = None
+
+import fnmatch, glob
+import posixpath
 
 from twisted.conch.client import connect, default, options
 from twisted.conch.ssh import connection, common
@@ -15,6 +23,7 @@ from twisted.conch.ssh import channel, filetransfer
 from twisted.protocols import basic
 from twisted.internet import reactor, stdio, defer, utils
 from twisted.python import log, usage, failure
+from twisted.python.runtime import platform
 
 class ClientOptions(options.ConchOptions):
 
@@ -124,12 +133,13 @@ class FileWrapper:
     def __getattr__(self, attr):
         return getattr(self.f, attr)
 
+
 class StdioClient(basic.LineReceiver):
 
     _pwd = pwd
 
     ps = 'cftp> '
-    delimiter = '\n'
+    from os import linesep as delimiter
 
     reactor = reactor
 
@@ -140,7 +150,12 @@ class StdioClient(basic.LineReceiver):
         self.useProgressBar = (not f and 1) or 0
 
     def connectionMade(self):
-        self.client.realPath('').addCallback(self._cbSetCurDir)
+        d = self.client.realPath('')
+        d.addCallback(self._cbSetCurDir)
+        d.addErrback(self._ebSetCurDir)
+
+    def _ebSetCurDir(self, f):
+        self._printFailure(f)
 
     def _cbSetCurDir(self, path):
         self.currentDirectory = path
@@ -164,7 +179,6 @@ class StdioClient(basic.LineReceiver):
             d.addCallback(self._cbCommand)
             d.addErrback(self._ebCommand)
 
-
     def _dispatchCommand(self, line):
         if ' ' in line:
             command, rest = line.split(' ', 1)
@@ -175,20 +189,20 @@ class StdioClient(basic.LineReceiver):
             f = self.cmd_EXEC
             rest = (command[1:] + ' ' + rest).strip()
         else:
-            command = command.upper()
-            log.msg('looking up cmd %s' % command)
-            f = getattr(self, 'cmd_%s' % command, None)
+            cmd = command.upper()
+            log.msg('looking up cmd %s' % cmd)
+            f = getattr(self, 'cmd_%s' % cmd, None)
         if f is not None:
             return defer.maybeDeferred(f, rest)
         else:
             self._ebCommand(failure.Failure(NotImplementedError(
                 "No command called `%s'" % command)))
-            self._newLine()
 
     def _printFailure(self, f):
         log.msg(f)
         e = f.trap(NotImplementedError, filetransfer.SFTPError, OSError, IOError)
         if e == NotImplementedError:
+            self.transport.write(f.getErrorMessage()+os.linesep)
             self.transport.write(self.cmd_HELP(''))
         elif e == filetransfer.SFTPError:
             self.transport.write("remote error %i: %s\n" %
@@ -227,7 +241,7 @@ class StdioClient(basic.LineReceiver):
         path, rest = self._getFilename(path)
         if not path.endswith('/'):
             path += '/'
-        newPath = path and os.path.join(self.currentDirectory, path) or ''
+        newPath = path and posixpath.join(self.currentDirectory, path) or ''
         d = self.client.openDirectory(newPath)
         d.addCallback(self._cbCd)
         d.addErrback(self._ebCommand)
@@ -283,6 +297,9 @@ class StdioClient(basic.LineReceiver):
                     return "Wildcard get with non-directory target."
             else:
                 local = ''
+            head, tail = os.path.split(remote)
+            if not head:
+                remote = posixpath.join(self.currentDirectory, remote)
             d = self._remoteGlob(remote)
             d.addCallback(self._cbGetMultiple, local)
             return d
@@ -291,8 +308,8 @@ class StdioClient(basic.LineReceiver):
         else:
             local = os.path.split(remote)[1]
         log.msg((remote, local))
-        lf = file(local, 'w', 0)
-        path = os.path.join(self.currentDirectory, remote)
+        lf = file(local, 'wb', 0)
+        path = posixpath.join(self.currentDirectory, remote)
         d = self.client.openFile(path, filetransfer.FXF_READ, {})
         d.addCallback(self._cbGetOpenFile, lf)
         d.addErrback(self._ebCloseLf, lf)
@@ -313,8 +330,8 @@ class StdioClient(basic.LineReceiver):
         if not files:
             return
         f = files.pop(0)[0]
-        lf = file(os.path.join(local, os.path.split(f)[1]), 'w', 0)
-        path = os.path.join(self.currentDirectory, f)
+        lf = file(os.path.join(local, os.path.split(f)[1]), 'wb', 0)
+        path = posixpath.join(self.currentDirectory, f)
         d = self.client.openFile(path, filetransfer.FXF_READ, {})
         d.addCallback(self._cbGetOpenFile, lf)
         d.addErrback(self._ebCloseLf, lf)
@@ -405,7 +422,7 @@ class StdioClient(basic.LineReceiver):
         if '*' in local or '?' in local: # wildcard
             if rest:
                 remote, rest = self._getFilename(rest)
-                path = os.path.join(self.currentDirectory, remote)
+                path = posixpath.join(self.currentDirectory, remote)
                 d = self.client.getAttrs(path)
                 d.addCallback(self._cbPutTargetAttrs, remote, local)
                 return d
@@ -417,8 +434,8 @@ class StdioClient(basic.LineReceiver):
             remote, rest = self._getFilename(rest)
         else:
             remote = os.path.split(local)[1]
-        lf = file(local, 'r')
-        path = os.path.join(self.currentDirectory, remote)
+        lf = file(local, 'rb')
+        path = posixpath.join(self.currentDirectory, remote)
         flags = filetransfer.FXF_WRITE|filetransfer.FXF_CREAT|filetransfer.FXF_TRUNC
         d = self.client.openFile(path, flags, {})
         d.addCallback(self._cbPutOpenFile, lf)
@@ -443,14 +460,14 @@ class StdioClient(basic.LineReceiver):
         while files and not f:
             try:
                 f = files.pop(0)
-                lf = file(f, 'r')
+                lf = file(f, 'rb')
             except:
                 self._printFailure(failure.Failure())
                 f = None
         if not f:
             return
         name = os.path.split(f)[1]
-        remote = os.path.join(self.currentDirectory, path, name)
+        remote = posixpath.join(self.currentDirectory, path, name)
         log.msg((name, remote, path))
         flags = filetransfer.FXF_WRITE|filetransfer.FXF_CREAT|filetransfer.FXF_TRUNC
         d = self.client.openFile(remote, flags, {})
@@ -503,7 +520,7 @@ class StdioClient(basic.LineReceiver):
         linkpath, rest = self._getFilename(rest)
         targetpath, rest = self._getFilename(rest)
         linkpath, targetpath = map(
-                lambda x: os.path.join(self.currentDirectory, x),
+                lambda x: posixpath.join(self.currentDirectory, x),
                 (linkpath, targetpath))
         return self.client.makeLink(linkpath, targetpath).addCallback(_ignore)
 
@@ -527,9 +544,10 @@ class StdioClient(basic.LineReceiver):
         if not path:
             fullPath = self.currentDirectory + '/'
         else:
-            fullPath = os.path.join(self.currentDirectory, path)
+            fullPath = posixpath.join(self.currentDirectory, path)
         d = self._remoteGlob(fullPath)
         d.addCallback(self._cbDisplayFiles, options)
+        d.addErrback(self._ebCommand)
         return d
 
     def _cbDisplayFiles(self, files, options):
@@ -547,20 +565,23 @@ class StdioClient(basic.LineReceiver):
 
     def cmd_MKDIR(self, path):
         path, rest = self._getFilename(path)
-        path = os.path.join(self.currentDirectory, path)
+        path = posixpath.join(self.currentDirectory, path)
         return self.client.makeDirectory(path, {}).addCallback(_ignore)
 
     def cmd_RMDIR(self, path):
         path, rest = self._getFilename(path)
-        path = os.path.join(self.currentDirectory, path)
+        path = posixpath.join(self.currentDirectory, path)
         return self.client.removeDirectory(path).addCallback(_ignore)
 
     def cmd_LMKDIR(self, path):
-        os.system("mkdir %s" % path)
+        if platform.isWindows():
+            os.mkdir(path)
+        else:
+            os.system("mkdir %s" % path)
 
     def cmd_RM(self, path):
         path, rest = self._getFilename(path)
-        path = os.path.join(self.currentDirectory, path)
+        path = posixpath.join(self.currentDirectory, path)
         return self.client.removeFile(path).addCallback(_ignore)
 
     def cmd_LLS(self, rest):
@@ -570,7 +591,7 @@ class StdioClient(basic.LineReceiver):
         oldpath, rest = self._getFilename(rest)
         newpath, rest = self._getFilename(rest)
         oldpath, newpath = map (
-                lambda x: os.path.join(self.currentDirectory, x),
+                lambda x: posixpath.join(self.currentDirectory, x),
                 (oldpath, newpath))
         return self.client.renameFile(oldpath, newpath).addCallback(_ignore)
 
@@ -624,14 +645,31 @@ version                         Print the SFTP version.
         Run C{rest} using the user's shell (or /bin/sh if they do not have
         one).
         """
-        shell = self._pwd.getpwnam(getpass.getuser())[6]
-        if not shell:
-            shell = '/bin/sh'
-        if rest:
-            cmds = ['-c', rest]
-            return utils.getProcessOutput(shell, cmds, errortoo=1)
+        if not platform.isWindows():
+            shell = self._pwd.getpwnam(getpass.getuser())[6]
+            if not shell:
+                shell = '/bin/sh'
+            if rest:
+                cmds = ['-c', rest]
+                return utils.getProcessOutput(shell, cmds, errortoo=1)
         else:
-            os.system(shell)
+            # The tests do a lot of monkey business so this is messier than
+            # it needs to be in real-life. On Linux the '-c' flag works for
+            # bash and python. Sadly 'cmd.exe' only accepts '/c' and 'python.exe'
+            # only accepts '-c'.
+            shell = None
+            if self._pwd:
+                shell = self._pwd.getpwnam(getpass.getuser())[6]
+            if not shell:
+                shell = os.environ['COMSPEC']
+            if rest:
+                if shell == os.environ['COMSPEC']:
+                    opt = '/c'  # for cmd.exe
+                else:
+                    opt = '-c'  # for python.exe
+                cmds = [opt, rest]
+                return utils.getProcessOutput(shell, cmds, errortoo=1)
+        os.system(shell)
 
     # accessory functions
 
@@ -800,7 +838,7 @@ class SSHSession(channel.SSHChannel):
         if self.conn.options['batchfile']:
             fn = self.conn.options['batchfile']
             if fn != '-':
-                f = file(fn)
+                f = file(fn, "rb")
         self.stdio = stdio.StandardIO(StdioClient(self.client, f))
 
     def extReceived(self, t, data):

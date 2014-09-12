@@ -177,7 +177,7 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
     """
     Tests for L{SSHPublicKeyDatabase}.
     """
-    skip = euidSkip or dependencySkip
+    skip = dependencySkip
 
     def setUp(self):
         self.checker = checkers.SSHPublicKeyDatabase()
@@ -272,6 +272,8 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
         self.assertEqual(self.mockos.seteuidCalls, [0, 1, 0, 2345])
         self.assertEqual(self.mockos.setegidCalls, [2, 1234])
 
+    if euidSkip:
+        test_checkKeyAsRoot.skip = "Not supported on Windows"
 
     def test_requestAvatarId(self):
         """

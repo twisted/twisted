@@ -24,9 +24,7 @@ class OpenSSHFactoryTests(TestCase):
     """
     Tests for L{OpenSSHFactory}.
     """
-    if getattr(os, "geteuid", None) is None:
-        skip = "geteuid/seteuid not available"
-    elif OpenSSHFactory is None:
+    if OpenSSHFactory is None:
         skip = "Cannot run without PyCrypto or PyASN1"
 
     def setUp(self):
@@ -48,8 +46,9 @@ class OpenSSHFactoryTests(TestCase):
             keydata.publicRSA_openssh)
 
         self.mockos = MockOS()
-        self.patch(os, "seteuid", self.mockos.seteuid)
-        self.patch(os, "setegid", self.mockos.setegid)
+        if getattr(os, "geteuid", None) is not None:
+            self.patch(os, "seteuid", self.mockos.seteuid)
+            self.patch(os, "setegid", self.mockos.setegid)
 
 
     def test_getPublicKeys(self):
@@ -97,3 +96,7 @@ class OpenSSHFactoryTests(TestCase):
         self.assertEqual(set(keyTypes), set(['ssh-rsa', 'ssh-dss']))
         self.assertEqual(self.mockos.seteuidCalls, [0, os.geteuid()])
         self.assertEqual(self.mockos.setegidCalls, [0, os.getegid()])
+
+    if getattr(os, "geteuid", None) is None:
+        test_getPrivateKeysAsRoot.skip = "Not supported on windows"
+
