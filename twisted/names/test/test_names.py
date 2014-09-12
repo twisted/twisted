@@ -1007,7 +1007,7 @@ class SecondaryAuthorityTests(unittest.TestCase):
             retry=9600,
             ttl=12000,
             )
-        a = Record_A(b'192.168.1.2')
+        a = Record_A(b'192.168.1.2', ttl=0)
         answer = Message(id=query.id, answer=1, auth=1)
         answer.answers.extend([
                 RRHeader(b'example.com', type=SOA, payload=soa),
@@ -1020,4 +1020,5 @@ class SecondaryAuthorityTests(unittest.TestCase):
         proto.dataReceived(pack('!H', len(data)) + data)
 
         result = self.successResultOf(secondary.lookupAddress('example.com'))
-        self.assertEqual(([a], [], []), result)
+        self.assertEqual((
+                [RRHeader(b'example.com', payload=a, auth=True)], [], []), result)
