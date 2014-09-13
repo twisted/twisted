@@ -1014,7 +1014,6 @@ class SecondaryAuthorityTests(unittest.TestCase):
                 RRHeader(b'example.com', type=SOA, payload=soa),
                 ])
 
-
         data = answer.toStr()
         proto.dataReceived(pack('!H', len(data)) + data)
 
