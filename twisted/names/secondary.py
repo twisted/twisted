@@ -76,7 +76,7 @@ class SecondaryAuthorityService(service.Service):
 
 
 
-class SecondaryAuthority(common.ResolverBase):
+class SecondaryAuthority(FileAuthority):
     """
     An Authority that keeps itself updated by performing zone transfers.
 
@@ -98,6 +98,9 @@ class SecondaryAuthority(common.ResolverBase):
     _reactor = None
 
     def __init__(self, primaryIP, domain):
+        # Yep.  Skip over FileAuthority.__init__.  This is a hack until we have
+        # a good composition-based API for the complicated DNS record lookup
+        # logic we want to share.
         common.ResolverBase.__init__(self)
         self.primary = primaryIP
         self.domain = domain
@@ -146,13 +149,8 @@ class SecondaryAuthority(common.ResolverBase):
     def _lookup(self, name, cls, type, timeout=None):
         if not self.soa or not self.records:
             return defer.fail(failure.Failure(dns.DomainError(name)))
+        return FileAuthority._lookup(self, name, cls, type, timeout)
 
-
-        return FileAuthority.__dict__['_lookup'](self, name, cls, type, timeout)
-
-    #shouldn't we just subclass? :P
-
-    lookupZone = FileAuthority.__dict__['lookupZone']
 
     def _cbZone(self, zone):
         ans, _, _ = zone
@@ -163,15 +161,19 @@ class SecondaryAuthority(common.ResolverBase):
             else:
                 r.setdefault(str(rec.name).lower(), []).append(rec.payload)
 
+
     def _ebZone(self, failure):
         log.msg("Updating %s from %s failed during zone transfer" % (self.domain, self.primary))
         log.err(failure)
 
+
     def update(self):
         self.transfer().addCallbacks(self._cbTransferred, self._ebTransferred)
 
+
     def _cbTransferred(self, result):
         self.transferring = False
+
 
     def _ebTransferred(self, failure):
         self.transferred = False

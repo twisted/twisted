@@ -8,13 +8,14 @@ Test cases for twisted.names.
 import socket, operator, copy
 from StringIO import StringIO
 from functools import partial, reduce
+from struct import pack
 
 from twisted.trial import unittest
 
 from twisted.internet import reactor, defer, error
 from twisted.internet.defer import succeed
 from twisted.names import client, server, common, authority, dns
-from twisted.names.dns import Message
+from twisted.names.dns import SOA, Message, RRHeader, Record_A, Record_SOA
 from twisted.names.error import DomainError
 from twisted.names.client import Resolver
 from twisted.names.secondary import (
@@ -972,3 +973,50 @@ class SecondaryAuthorityTests(unittest.TestCase):
 
         self.assertEqual(
             [dns.Query('example.com', dns.AXFR, dns.IN)], msg.queries)
+
+
+    def test_lookupAddress(self):
+        """
+        L{SecondaryAuthority.lookupAddress} returns a L{Deferred} that fires
+        with the I{A} records the authority has cached from the primary.
+        """
+        secondary = SecondaryAuthority.fromServerAddressAndDomain(
+            (b'192.168.1.2', 1234), b'example.com')
+        secondary._reactor = reactor = MemoryReactorClock()
+
+        secondary.transfer()
+
+        host, port, factory, timeout, bindAddress = reactor.tcpClients.pop(0)
+
+        proto = factory.buildProtocol((host, port))
+        transport = StringTransport()
+        proto.makeConnection(transport)
+
+        query = Message(answer=1, auth=1)
+        query.decode(StringIO(transport.value()[2:]))
+
+        # Generate a response with some data we can check.
+        soa = Record_SOA(
+            mname=b'ns1.example.com',
+            rname='admin.example.com',
+            serial=123456,
+            refresh=3600,
+            minimum=4800,
+            expire=7200,
+            retry=9600,
+            ttl=12000,
+            )
+        a = Record_A(b'192.168.1.2', ttl=0)
+        answer = Message(id=query.id, answer=1, auth=1)
+        answer.answers.extend([
+                RRHeader(b'example.com', type=SOA, payload=soa),
+                RRHeader(b'example.com', payload=a),
+                RRHeader(b'example.com', type=SOA, payload=soa),
+                ])
+
+        data = answer.toStr()
+        proto.dataReceived(pack('!H', len(data)) + data)
+
+        result = self.successResultOf(secondary.lookupAddress('example.com'))
+        self.assertEqual((
+                [RRHeader(b'example.com', payload=a, auth=True)], [], []), result)
