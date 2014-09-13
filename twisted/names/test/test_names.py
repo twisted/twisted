@@ -984,7 +984,6 @@ class SecondaryAuthorityTests(unittest.TestCase):
             (b'192.168.1.2', 1234), b'example.com')
         secondary._reactor = reactor = MemoryReactorClock()
 
-
         secondary.transfer()
 
         host, port, factory, timeout, bindAddress = reactor.tcpClients.pop(0)
