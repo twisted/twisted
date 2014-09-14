@@ -140,7 +140,7 @@ For example, many popular internet protocols are line-based, containing text dat
 However, quite a few protocols are mixed - they have line-based sections and then raw data sections.
 Examples include HTTP/1.1 and the Freenet protocol.
 
-For those cases, there is the :api:`twisted.protocols.basic.LineReceiver <LineReceiver>`` protocol.
+For those cases, there is the :api:`twisted.protocols.basic.LineReceiver <LineReceiver>` protocol.
 This protocol dispatches to two different event handlers -- ``lineReceived`` and ``rawDataReceived``.
 By default, only ``lineReceived`` will be called, once for each line.
 However, if ``setRawMode`` is called, the protocol will call ``rawDataReceived`` until ``setLineMode`` is called, which returns it to using ``lineReceived``.
