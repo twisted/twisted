@@ -19,7 +19,8 @@ from pprint import pformat
 import unittest as pyunit
 
 from twisted.python.util import FancyEqMixin
-from twisted.python.reflect import prefixedMethods, accumulateMethods
+from twisted.python.reflect import (
+    prefixedMethods, accumulateMethods, fullyQualifiedName)
 from twisted.python.deprecate import deprecated
 from twisted.python.versions import Version, getVersionString
 from twisted.python.failure import Failure
@@ -415,10 +416,11 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
                 raise TypeError('marker')
         except self.failureException as exception:
             message = str(exception)
+            expected = (
+                "{type} raised instead of ValueError:\n"
+                " Traceback").format(type=fullyQualifiedName(TypeError))
             self.assertTrue(
-                message.startswith(
-                    "exceptions.TypeError raised instead of ValueError:\n"
-                    " Traceback"),
+                message.startswith(expected),
                 "Exception message did not begin with expected information: "
                 "{0}".format(message))
         else:
