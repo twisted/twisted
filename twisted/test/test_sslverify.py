@@ -2417,32 +2417,23 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
             if warning["category"] == UserWarning)
 
         if _PY3:
-            expectedMessage = (
-                "You do not have a working installation of the "
-                "service_identity module: "
-                "'import of 'service_identity' halted; None in sys.modules'.  "
-                "Please install it from "
-                "<https://pypi.python.org/pypi/service_identity> "
-                "and make sure all of its dependencies are satisfied.  "
-                "Without the service_identity module and a recent enough "
-                "pyOpenSSL to support it, Twisted can perform only "
-                "rudimentary TLS client hostname verification.  Many valid "
-                "certificate/hostname mappings may be rejected.")
+            importError = (
+                "'import of 'service_identity' halted; None in sys.modules'")
         else:
-            expectedMessage = (
-                "You do not have a working installation of the "
-                "service_identity module: "
-                "'No module named service_identity'.  "
-                "Please install it from "
-                "<https://pypi.python.org/pypi/service_identity> "
-                "and make sure all of its dependencies are satisfied.  "
-                "Without the service_identity module and a recent enough "
-                "pyOpenSSL to support it, Twisted can perform only "
-                "rudimentary TLS client hostname verification.  Many valid "
-                "certificate/hostname mappings may be rejected.")
+            importError = "'No module named service_identity'"
+
+        expectedMessage = (
+            "You do not have a working installation of the "
+            "service_identity module: {}.  Please install it from "
+            "<https://pypi.python.org/pypi/service_identity> "
+            "and make sure all of its dependencies are satisfied.  "
+            "Without the service_identity module and a recent enough "
+            "pyOpenSSL to support it, Twisted can perform only "
+            "rudimentary TLS client hostname verification.  Many valid "
+            "certificate/hostname mappings may be rejected.").format(
+                importError)
 
         self.assertEqual(
             (warning["message"], warning["filename"], warning["lineno"]),
             # See the comment in test_pyOpenSSLTooOldWarning.
             (expectedMessage, "", 0))
-
