@@ -207,6 +207,29 @@ tests.
     
 
 
+Naming Test Classes
+~~~~~~~~~~~~~~~~~~~
+
+
+
+When writing tests for the Twisted test suite, test classes are named
+``FooTests``, where ``Foo`` is the name of the component being tested.
+Here is an example:
+
+
+
+
+
+.. code-block:: python
+
+
+    class SSHClientTests(unittest.TestCase):
+        def test_sshClient(self):
+            foo() # the actual test
+
+
+
+
 
 Real I/O
 ~~~~~~~~
@@ -284,7 +307,7 @@ inside a conditional which looks for the necessary prerequisites:
 
 .. code-block:: python
 
-    
+
     class SSHClientTests(unittest.TestCase):
         def test_sshClient(self):
             if not ssh_path:
@@ -318,14 +341,14 @@ manipulating the class attributes after they've been defined):
 .. code-block:: python
 
     
-    class MyTestCase(unittest.TestCase):
+    class MyTests(unittest.TestCase):
         def test_one(self):
             ...
         def test_thing(self):
             dotest()
     
     if not haveThing:
-        MyTestCase.test_thing.im_func.skip = "cannot test without Thing"
+        MyTests.test_thing.im_func.skip = "cannot test without Thing"
         # but test_one() will still run
 
 
@@ -343,12 +366,12 @@ be run.
 .. code-block:: python
 
     
-    class TCPTestCase(unittest.TestCase):
+    class TCPTests(unittest.TestCase):
         ...
-    class SSLTestCase(unittest.TestCase):
+    class SSLTests(unittest.TestCase):
         if not haveSSL:
             skip = "cannot test without SSL support"
-        # but TCPTestCase will still run
+        # but TCPTests will still run
         ...
 
 
