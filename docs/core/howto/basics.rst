@@ -37,7 +37,7 @@ However, ``twistd`` supplies many options which are highly useful for program se
 - choosing a reactor (for more on reactors, see :doc:`Choosing a Reactor <choosing-reactor>`),
 - logging configuration (see the :doc:`logging <logging>` documentation for more),
 - daemonizing (forking to the background),
-- and more.
+- and :doc:`more <application>`.
 
 ``twistd`` supports all Applications mentioned above -- and an additional one.
 Sometimes it is convenient to write the code for building a class in straight Python.
