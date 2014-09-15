@@ -121,10 +121,7 @@ not over until the result fires. For example:
 
 
 
-See :doc:`Writing Servers <servers>` for an explanation of``EchoFactory`` and ``listenTCP`` .
-
-
-
+See :doc:`Writing Servers <servers>` for an explanation of ``EchoFactory`` and ``listenTCP``.
 
 
 Using Services and Application
@@ -145,7 +142,7 @@ twistd and tac
 
 
 To handle start-up and configuration of your Twisted application, the
-Twisted Application infrastructure uses ``.tac`` files.``.tac`` are Python files which configure an :api:`twisted.application.service.Application <Application>` object and assign this
+Twisted Application infrastructure uses ``.tac`` files. ``.tac`` are Python files which configure an :api:`twisted.application.service.Application <Application>` object and assign this
 object to the top-level variable "``application``" .
 
 
@@ -162,13 +159,13 @@ The following is a simple example of a ``.tac`` file:
 .. literalinclude:: listings/application/service.tac
 
 
-``twistd`` is a program that runs Twisted applications using a``.tac`` file. In its most simple form, it takes a single argument``-y`` and a tac file name. For example, you can run the above server
+``twistd`` is a program that runs Twisted applications using a ``.tac`` file. In its most simple form, it takes a single argument ``-y`` and a tac file name. For example, you can run the above server
 with the command ``twistd -y service.tac`` .
 
 
 
 
-By default, ``twistd`` daemonizes and logs to a file called``twistd.log`` . More usually, when debugging, you will want your
+By default, ``twistd`` daemonizes and logs to a file called ``twistd.log`` . More usually, when debugging, you will want your
 application to run in the foreground and log to the command line. To run the
 above file like this, use the command ``twistd -noy service.tac`` 
 
@@ -216,7 +213,7 @@ replaced with use of the ``--logfile`` parameter to twistd).
 
 Alternatively, the logging behavior can be customized through an API
 accessible from ``.tac`` files.  The :api:`twisted.python.log.ILogObserver <ILogObserver>` component can be
-set on an Application in order to customize the default log observer that``twistd`` will use.
+set on an Application in order to customize the default log observer that ``twistd`` will use.
 
 
 
