@@ -61,7 +61,6 @@ Installing
 Unit Tests
 ==========
 
-
   See our unit tests run proving that the software is BugFree(TM):
 
    % trial twisted
@@ -76,18 +75,18 @@ Unit Tests
 Documentation and Support
 =========================
 
-  Examples on how to use Twisted APIs are located in doc/core/examples; this
-  might ease the learning curve a little bit, since all these files are kept
-  as short as possible.  The file doc/core/howto/index.xhtml contains an index
-  of all the core HOWTOs: this should be your starting point when looking for
-  documentation.
+  Twisted's documentation is available from the Twisted Matrix website:
 
-  Help is available on the Twisted mailing list:
+    http://twistedmatrix.com/documents/current/
+
+  This documentation contains how-tos, code examples, and an API reference.
+
+  Help is also available on the Twisted mailing list:
 
     http://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python
 
-  There is also a very lively IRC channel, #twisted, on
-  chat.freenode.net.
+  There is also a pair of very lively IRC channels, #twisted (for general
+  Twisted questions) and #twisted.web (for Twisted Web), on chat.freenode.net.
 
 
 Copyright
