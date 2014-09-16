@@ -557,7 +557,7 @@ Here is an example of a basic reverse proxy:
 
 With this reverse proxy running locally, you can
 visit ``http://localhost:8080`` in your web browser, and the reverse
-proxy will proxy your connection to``www.yahoo.com`` .
+proxy will proxy your connection to ``www.yahoo.com``.
 
 
 

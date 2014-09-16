@@ -80,7 +80,7 @@ It returns a ``Deferred`` which fires with the ``IProtocol`` returned from the f
 
 Connection attempts may also take a long time, and your users may become bored and wander off.
 If this happens, and your code decides, for whatever reason, that you've been waiting for the connection too long, you can call :api:`twisted.internet.defer.Deferred.cancel <Deferred.cancel>` on the ``Deferred`` returned from :api:`twisted.internet.interfaces.IStreamClientEndpoint.connect <connect>` or :api:`twisted.internet.endpoints.connectProtocol <connectProtocol>`, and the underlying machinery should give up on the connection.
-This should cause the``Deferred`` to errback, usually with :api:`twisted.internet.defer.CancelledError <CancelledError>`;
+This should cause the ``Deferred`` to errback, usually with :api:`twisted.internet.defer.CancelledError <CancelledError>`;
 although you should consult the documentation for your particular endpoint type to see if it may do something different.
 
 Although some endpoint types may imply a built-in timeout, the

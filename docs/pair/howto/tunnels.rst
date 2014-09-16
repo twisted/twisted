@@ -38,7 +38,7 @@ Otherwise the protocol must provide :api:`twisted.pair.raw.IRawPacketProtocol <t
     tun.startListening()
 
 In the above example two protocols are attached to the network: one to a tap device and the other to a tun device.
-The ``EthernetProtocol`` used in this example is a very simple implementation of ``IEthernetProtocol`` which does nothing more than dispatch to some other protocol based on the protocol found in the header of each ethernet frame it receives.``RawUDPProtocol`` is similar - it dispatches to other protocols based on the UDP port of IP datagrams it received.
+The ``EthernetProtocol`` used in this example is a very simple implementation of ``IEthernetProtocol`` which does nothing more than dispatch to some other protocol based on the protocol found in the header of each ethernet frame it receives. ``RawUDPProtocol`` is similar - it dispatches to other protocols based on the UDP port of IP datagrams it received.
 This example won't do anything since no application protocols have been added to either the ``EthernetProtocol`` or ``RawUDPProtocol`` instances
 (not to mention the reactor isn't being started).
 However, it should give you some idea of how tun/tap functionality fits into a Twisted application.

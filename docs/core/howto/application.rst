@@ -388,7 +388,7 @@ Service Collection
 
 
 
-:api:`twisted.application.service.IServiceCollection <IServiceCollection>` objects contain:api:`twisted.application.service.IService <IService>` objects.
+:api:`twisted.application.service.IServiceCollection <IServiceCollection>` objects contain :api:`twisted.application.service.IService <IService>` objects.
 IService objects can be added to IServiceCollection by calling :api:`twisted.application.service.IService.setServiceParent <setServiceParent>` and detached
 by using :api:`twisted.application.service.IService.disownServiceParent <disownServiceParent>` .
 

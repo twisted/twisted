@@ -719,7 +719,7 @@ reasons:
 
 
 Calling ``cancel()`` will always succeed without an error
-regardless of whether or not cancellation was possible. In cases 1 and 2 the``Deferred`` may well errback with a``twisted.internet.defer.CancelledError`` while the underlying
+regardless of whether or not cancellation was possible. In cases 1 and 2 the ``Deferred`` may well errback with a ``twisted.internet.defer.CancelledError`` while the underlying
 operation continues. ``Deferred`` s that support cancellation should
 document what they do when cancelled, if they are uncancellable in certain edge
 cases, etc..
@@ -727,7 +727,7 @@ cases, etc..
 
 
 
-If the cancelled ``Deferred`` is waiting on another``Deferred`` , the cancellation will be forwarded to the other``Deferred`` .
+If the cancelled ``Deferred`` is waiting on another ``Deferred`` , the cancellation will be forwarded to the other ``Deferred`` .
 
 
 
@@ -764,7 +764,7 @@ Consider this example of a Deferred which is ignorant of cancellation:
 
 
 
-A caller of an API that receives ``operation`` may call``cancel`` on it.  Since ``operation`` does not have a
+A caller of an API that receives ``operation`` may call ``cancel`` on it.  Since ``operation`` does not have a
 cancellation function, one of two things will happen.
 
 
@@ -775,13 +775,13 @@ cancellation function, one of two things will happen.
    completed, nothing much will change.  ``operation`` will still have a
    result, and there are no more callbacks, so there's no observable change in
    behavior.
-#. If ``operationDone`` has *not* yet been invoked, then``operation`` will be immediately errbacked with a``CancelledError`` .
+#. If ``operationDone`` has *not* yet been invoked, then ``operation`` will be immediately errbacked with a ``CancelledError`` .
    
    However, once it's cancelled, there's no way to tell ``operationDone`` 
    not to run; it will eventually call ``operation.callback`` later.  In
    normal operation, issuing ``callback`` on a ``Deferred`` that
    has already called back results in an ``AlreadyCalledError`` , and this
-   would cause an ugly traceback that could not be caught.  Therefore,``.callback`` can be invoked exactly once, causing a no-op, on a``Deferred`` which has been cancelled but has no canceller.  If you
+   would cause an ugly traceback that could not be caught.  Therefore, ``.callback`` can be invoked exactly once, causing a no-op, on a ``Deferred`` which has been cancelled but has no canceller.  If you
    call it multiple times, you will still get an ``AlreadyCalledError`` 
    exception.
 
@@ -1044,7 +1044,7 @@ shortcut:
 
 
 The ``consumeErrors`` argument has the same meaning as it does
-for :ref:`NEEDS A TITLE <core-howto-defer-deferredlist>` : if true, it causes``gatherResults`` to consume any errors in the passed-in Deferreds.
+for :ref:`NEEDS A TITLE <core-howto-defer-deferredlist>` : if true, it causes ``gatherResults`` to consume any errors in the passed-in Deferreds.
 Always use this argument unless you are adding further callbacks or errbacks to
 the passed-in Deferreds, or unless you know that they will not fail.
 Otherwise, a failure will result in an unhandled error being logged by Twisted.
