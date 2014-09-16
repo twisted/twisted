@@ -189,7 +189,7 @@ For example, ``TCPServer`` corresponds to ``reactor.listenTCP`` and ``TCPClient`
 
   - :api:`twisted.internet.interfaces.IReactorUDP.listenUDP <listenUDP>`
 
-  See also the :doc:`UDP documentation <udp>` .
+  See also the :doc:`UDP documentation <udp>`.
 
 
 ``UNIXDatagramServer``
@@ -209,9 +209,11 @@ For example, ``TCPServer`` corresponds to ``reactor.listenTCP`` and ``TCPClient`
   - :api:`twisted.internet.interfaces.IReactorMulticast.listenMulticast <listenMulticast>`
 
 
-:api:`twisted.application.internet.TimerService <TimerService>`
+``TimerService``
 
   A service to periodically call a function.
+
+  - :api:`twisted.application.internet.TimerService <TimerService>`
 
 
 Service Collection
