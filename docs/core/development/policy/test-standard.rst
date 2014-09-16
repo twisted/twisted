@@ -551,7 +551,7 @@ handle this yet.. ``trial --testmodule`` does, though)
 
 The ``test-case-name`` tag will allow ``trial --testmodule twisted/dir/myfile.py`` to determine which test cases need
 to be run to exercise the code in ``myfile.py`` . Several tools (as
-well as http://launchpad.net/twisted-emacs's``twisted-dev.el`` 's F9 command) use this to automatically
+well as http://launchpad.net/twisted-emacs's ``twisted-dev.el`` 's F9 command) use this to automatically
 run the right tests.
 
 

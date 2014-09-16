@@ -1034,9 +1034,9 @@ Dropping into a debugger
 In the course of writing and running your tests, it is often helpful to
 employ the use of a debugger. This can be particularly helpful in tracking down
 where the source of a troublesome bug is in your code. Python's standard library
-includes a debugger in the form of the`pdb <http://docs.python.org/library/pdb.html>`_ module.
+includes a debugger in the form of the `pdb <http://docs.python.org/library/pdb.html>`_ module.
 Running your tests with ``pdb`` is as simple as invoking
-twisted with the ``--debug`` option, which will start``pdb`` at the beginning of the execution of your test
+twisted with the ``--debug`` option, which will start ``pdb`` at the beginning of the execution of your test
 suite.
 
 
@@ -1046,8 +1046,8 @@ Trial also provides a ``--debugger`` option which can
 run your test suite using another debugger instead. To specify a debugger other
 than ``pdb`` , pass in the fully-qualified name of an
 object that provides the same interface as ``pdb`` .
-Most third-party debuggers tend to implement an interface similar to``pdb`` , or at least provide a wrapper object that
-does. For example, invoking trial with the line``trial --debug --debugger pudb`` will open the`PuDB <http://pypi.python.org/pypi/pudb>`_ debugger instead, provided
+Most third-party debuggers tend to implement an interface similar to ``pdb`` , or at least provide a wrapper object that
+does. For example, invoking trial with the line ``trial --debug --debugger pudb`` will open the`PuDB <http://pypi.python.org/pypi/pudb>`_ debugger instead, provided
 it is properly installed.
 
 
