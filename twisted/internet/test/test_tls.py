@@ -11,6 +11,7 @@ __metaclass__ = type
 
 from zope.interface import implementer
 
+from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
@@ -53,7 +54,8 @@ class TLSMixin:
 
 class ContextGeneratingMixin(object):
     import twisted
-    _pem = FilePath(twisted.__file__).sibling(b"test").child(b"server.pem")
+    _pem = FilePath(
+        networkString(twisted.__file__)).sibling(b"test").child(b"server.pem")
     del twisted
 
     def getServerContext(self):
