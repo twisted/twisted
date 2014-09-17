@@ -1,0 +1,1 @@
+BrowserLikePolicyForHTTPS would always ignore the specified trustRoot and use the system trust root instead, which has been rectified.
