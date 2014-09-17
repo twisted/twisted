@@ -18,6 +18,10 @@ div.clearer {
     clear: both;
 }
 
+div#footer {
+    margin-top: 4em;
+}
+
 /* -- relbar ---------------------------------------------------------------- */
 
 div.related {
@@ -454,4 +458,9 @@ div.bodywrapper {
 
 a.api {
     font-family: monospace;
+}
+
+/* Not sure about this one */
+tt.docutils.literal {
+    background-color: #eee;
 }
