@@ -42,6 +42,7 @@ from twisted.web.iweb import IPolicyForHTTPS
 from twisted.python.deprecate import getDeprecationWarningString
 from twisted.python.versions import Version
 from twisted.web.client import BrowserLikePolicyForHTTPS
+from twisted.internet._sslverify import IOpenSSLTrustRoot
 from twisted.web.error import SchemeNotSupported
 
 try:
@@ -1313,6 +1314,27 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
             "policy for an Agent, but it does not provide IPolicyForHTTPS.  "
             "Since Twisted 14.0, you must pass a provider of IPolicyForHTTPS."
         )
+
+
+    def test_alternateTrustRoot(self):
+        """
+        L{BrowserLikePolicyForHTTPS.creatorForNetloc} returns an
+        L{IOpenSSLClientConnectionCreator} provider which will add certificates
+        from the given trust root.
+        """
+        @implementer(IOpenSSLTrustRoot)
+        class CustomOpenSSLTrustRoot(object):
+            called = False
+            context = None
+            def _addCACertsToContext(self, context):
+                self.called = True
+                self.context = context
+        trustRoot = CustomOpenSSLTrustRoot()
+        policy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
+        creator = policy.creatorForNetloc(b"thingy", 4321)
+        self.assertTrue(trustRoot.called)
+        connection = creator.clientConnectionForTLS(None)
+        self.assertIs(trustRoot.context, connection.get_context())
 
 
 
