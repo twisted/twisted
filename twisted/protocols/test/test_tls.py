@@ -403,8 +403,9 @@ class TLSMemoryBIOTests(TestCase):
             cert = sslClientProtocol.getPeerCertificate()
             self.assertIsInstance(cert, X509Type)
             self.assertEqual(
-                cert.digest('md5'),
-                b'9B:A4:AB:43:10:BE:82:AE:94:3E:6B:91:F2:F3:40:E8')
+                cert.digest('sha1'),
+                # openssl x509 -noout -sha1 -fingerprint -in server.pem
+                b'45:DD:FD:E2:BD:BF:8B:D0:00:B7:D2:7A:BB:20:F5:34:05:4B:15:80')
         handshakeDeferred.addCallback(cbHandshook)
         return handshakeDeferred
 
