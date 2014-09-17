@@ -42,7 +42,6 @@ from twisted.web.iweb import IPolicyForHTTPS
 from twisted.python.deprecate import getDeprecationWarningString
 from twisted.python.versions import Version
 from twisted.web.client import BrowserLikePolicyForHTTPS
-from twisted.internet._sslverify import IOpenSSLTrustRoot
 from twisted.web.error import SchemeNotSupported
 
 try:
@@ -1322,6 +1321,8 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
         L{IOpenSSLClientConnectionCreator} provider which will add certificates
         from the given trust root.
         """
+        from twisted.internet._sslverify import IOpenSSLTrustRoot
+
         @implementer(IOpenSSLTrustRoot)
         class CustomOpenSSLTrustRoot(object):
             called = False
