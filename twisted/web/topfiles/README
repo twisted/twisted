@@ -1,4 +1,4 @@
-Twisted Web 14.0.1
+Twisted Web 14.0.2
 
 Twisted Web depends on Twisted Core.  pyOpenSSL
 (<http://launchpad.net/pyopenssl>) is also required for HTTPS.  SOAPpy
