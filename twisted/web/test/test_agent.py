@@ -50,7 +50,7 @@ try:
 except ImportError:
     ssl = None
 else:
-    from twisted.internet._sslverify import ClientTLSOptions
+    from twisted.internet._sslverify import ClientTLSOptions, IOpenSSLTrustRoot
 
 
 
@@ -1321,8 +1321,6 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin):
         L{IOpenSSLClientConnectionCreator} provider which will add certificates
         from the given trust root.
         """
-        from twisted.internet._sslverify import IOpenSSLTrustRoot
-
         @implementer(IOpenSSLTrustRoot)
         class CustomOpenSSLTrustRoot(object):
             called = False
