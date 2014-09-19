@@ -1196,7 +1196,7 @@ def inlineCallbacks(f):
     inlineCallbacks helps you write L{Deferred}-using code that looks like a
     regular sequential function. For example::
 
-        @inlineCallBacks
+        @inlineCallbacks
         def thingummy():
             thing = yield makeSomeRequestResultingInDeferred()
             print(thing)  # the result! hoorj!
