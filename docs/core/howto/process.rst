@@ -114,11 +114,7 @@ environment as a security precaution). The default is to give an empty ``env`` t
 
 
 
-``reactor.spawnProcess`` returns an instance that
-implements:api:`twisted.internet.interfaces.IProcessTransport <IProcessTransport>` .
-
-  
-
+``reactor.spawnProcess`` returns an instance that implements :api:`twisted.internet.interfaces.IProcessTransport <IProcessTransport>`.
 
 
 Writing a ProcessProtocol
