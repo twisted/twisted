@@ -1,4 +1,3 @@
-
 :LastChangedDate: $LastChangedDate$
 :LastChangedRevision: $LastChangedRevision$
 :LastChangedBy: $LastChangedBy$
@@ -237,7 +236,7 @@ It is easier to see how this is done in code than to describe it:
     class IAmericanSocket(Interface):
         def voltage():
           """
-	  Return the voltage produced by this socket object, as an integer.
+          Return the voltage produced by this socket object, as an integer.
           """
 
     @implementer(IAmericanSocket)
