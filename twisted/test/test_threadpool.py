@@ -577,24 +577,6 @@ class RaceConditionTestCase(unittest.SynchronousTestCase):
         del self.threadpool
 
 
-    def test_synchronization(self):
-        """
-        Test a race condition: ensure that actions run in the pool synchronize
-        with actions run in the main thread.
-        """
-        timeout = self.getTimeout()
-        self.threadpool.callInThread(self.event.set)
-        self.event.wait(timeout)
-        self.event.clear()
-        for i in range(3):
-            self.threadpool.callInThread(self.event.wait)
-        self.threadpool.callInThread(self.event.set)
-        self.event.wait(timeout)
-        if not self.event.isSet():
-            self.event.set()
-            self.fail("Actions not synchronized")
-
-
     def test_singleThread(self):
         """
         The submission of a new job to a thread pool in response to the
