@@ -692,13 +692,13 @@ class PrivateCertificate(Certificate):
 class PublicKey:
     def __init__(self, osslpkey):
         self.original = osslpkey
-        req1 = crypto.X509Req()
+        req1 = crypto.X509()
         req1.set_pubkey(osslpkey)
-        self._emptyReq = crypto.dump_certificate_request(crypto.FILETYPE_ASN1, req1)
+        self._emptyX509ASN1Hash = req1.digest("md5").replace(":", "").lower()
 
 
     def matches(self, otherKey):
-        return self._emptyReq == otherKey._emptyReq
+        return self.keyHash() == otherKey.keyHash()
 
 
     # XXX This could be a useful method, but sometimes it triggers a segfault,
@@ -720,7 +720,7 @@ class PublicKey:
         MD5 hex digest of signature on an empty certificate request with this
         key.
         """
-        return md5(self._emptyReq).hexdigest()
+        return self._emptyX509ASN1Hash
 
 
     def inspect(self):
