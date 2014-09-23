@@ -698,7 +698,7 @@ class PublicKey:
     L{PublicKey} objects.
 
     @note: If constructing a L{PublicKey} manually, be sure to pass only a
-        L{PKey} that does not contain a private key!
+        L{crypto.PKey} that does not contain a private key!
 
     @ivar original: The original private key.
     """
@@ -706,7 +706,7 @@ class PublicKey:
     def __init__(self, osslpkey):
         """
         @param osslpkey: The underlying pyOpenSSL key object.
-        @type osslpkey: L{OpenSSL.crypto.PKey}
+        @type osslpkey: L{crypto.PKey}
         """
         self.original = osslpkey
 
