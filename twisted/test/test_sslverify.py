@@ -883,7 +883,7 @@ class OpenSSLOptions(unittest.TestCase):
              "",
              "Serial Number: 12345",
              "Digest: C4:96:11:00:30:C3:EC:EE:A3:55:AA:ED:8C:84:85:18",
-             "Public Key with Hash: ff33994c80812aa95a79cdb85362d054"])
+             "Public Key with Hash: 17df3e1522e9a29a4ba4bafb8b7abaf0"])
 
 
     def test_certificateOptionsSerialization(self):
