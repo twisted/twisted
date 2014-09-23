@@ -714,6 +714,12 @@ class PublicKey:
     def matches(self, otherKey):
         """
         Does this L{PublicKey} contain the same value as another L{PublicKey}?
+
+        @param otherKey: The key to compare C{self} to.
+        @type otherKey: L{PublicKey}
+
+        @return: L{True} if these keys match, L{False} if not.
+        @rtype: L{bool}
         """
         return self.keyHash() == otherKey.keyHash()
 
