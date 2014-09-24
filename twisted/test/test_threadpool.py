@@ -604,9 +604,10 @@ class RaceConditionTestCase(unittest.SynchronousTestCase):
         processing that item, the main thread will start a new worker.
         """
         getwait = threading.Event()
-        def holdYourHorses(*a, **k):
-            getwait.wait()
-            return origState(*a, **k)
+        def holdYourHorses(stateList, thread):
+            if stateList is self.threadpool.working:
+                getwait.wait()
+            return origState(stateList, thread)
 
         callwait = threading.Event()
         origState = self.threadpool._workerState
