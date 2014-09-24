@@ -624,5 +624,6 @@ class RaceConditionTestCase(unittest.SynchronousTestCase):
             callwait.wait()
 
         self.threadpool.callInThread(wait4it)
+        self.threadpool.callInThread(setcall)
         self.assertEqual(self.threadpool.workers, 2)
 
