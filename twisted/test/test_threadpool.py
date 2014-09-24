@@ -600,17 +600,17 @@ class RaceConditionTestCase(unittest.SynchronousTestCase):
     def test_newWorkWhileDequeuing(self):
         """
         If new work is given to L{threadpool.ThreadPool.callInThread} while the
-        worker (in L{_worker}) is waiting for a work queue item, the main
-        thread will start a new worker.
+        worker (in L{_worker}) is between waiting for a work queue item and
+        processing that item, the main thread will start a new worker.
         """
         getwait = threading.Event()
-        class SlowQueue(Queue.Queue, object):
-            def get(self):
-                getwait.wait()
-                return super(SlowQueue, self).get()
+        def holdYourHorses(*a, **k):
+            getwait.wait()
+            return origState(*a, **k)
 
         callwait = threading.Event()
-        self.threadpool.q = SlowQueue()
+        origState = self.threadpool._workerState
+        self.threadpool._workerState = holdYourHorses
 
         def setget():
             getwait.set()
