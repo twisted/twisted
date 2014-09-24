@@ -7,7 +7,7 @@ Tests for L{twisted.python.threadpool}
 
 from __future__ import division, absolute_import
 
-import pickle, time, weakref, gc, threading
+import pickle, time, weakref, gc, threading, Queue
 
 from twisted.python.compat import _PY3
 from twisted.trial import unittest
@@ -558,23 +558,13 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
 
 class RaceConditionTestCase(unittest.SynchronousTestCase):
 
-    def getTimeout(self):
-        """
-        Return number of seconds to wait before giving up.
-        """
-        return 5 # Really should be order of magnitude less
-
-
     def setUp(self):
-        self.event = threading.Event()
         self.threadpool = threadpool.ThreadPool(0, 10)
         self.threadpool.start()
-
-
-    def tearDown(self):
-        del self.event
-        self.threadpool.stop()
-        del self.threadpool
+        def done():
+            self.threadpool.stop()
+            del self.threadpool
+        self.addCleanup(done)
 
 
     def test_singleThread(self):
@@ -605,3 +595,34 @@ class RaceConditionTestCase(unittest.SynchronousTestCase):
             event.clear()
 
         self.assertEqual(self.threadpool.workers, 1)
+
+
+    def test_newWorkWhileDequeuing(self):
+        """
+        If new work is given to L{threadpool.ThreadPool.callInThread} while the
+        worker (in L{_worker}) is waiting for a work queue item, the main
+        thread will start a new worker.
+        """
+        getwait = threading.Event()
+        class SlowQueue(Queue.Queue, object):
+            def get(self):
+                getwait.wait()
+                return super(SlowQueue, self).get()
+
+        callwait = threading.Event()
+        self.threadpool.q = SlowQueue()
+
+        def setget():
+            getwait.set()
+        def setcall():
+            callwait.set()
+
+        self.addCleanup(setcall)
+        self.addCleanup(setget)
+
+        def wait4it():
+            callwait.wait()
+
+        self.threadpool.callInThread(wait4it)
+        self.assertEqual(self.threadpool.workers, 2)
+
