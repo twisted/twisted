@@ -64,10 +64,10 @@ class Team(object):
         
         """
         self._hasQuit.check()
-        self._coordinator.do(lambda: self._doInCoordinator(task))
+        self._coordinator.do(lambda: self._coordinateThisTask(task))
 
 
-    def _doInCoordinator(self, task):
+    def _coordinateThisTask(self, task):
         """
         
         """
@@ -91,7 +91,7 @@ class Team(object):
                 if self._pending:
                     # Re-try the first enqueued thing.
                     # (Explicitly do _not_ honor _hasQuit.)
-                    self._doInCoordinator(self._pending.popleft())
+                    self._coordinateThisTask(self._pending.popleft())
                 elif self._hasQuit:
                     self._quitIdlers()
 
