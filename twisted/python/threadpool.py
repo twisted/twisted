@@ -139,6 +139,25 @@ class WorkerPool(object):
         """
         Retrieve or create a L{WorkerThread}.
         """
+        # If the pool is over capacity then I want to hold on to the work until
+        # a worker is free.  I don't want to give it to an already-busy worker
+        # because there is no telling which worker will free up first.
+
+        # I could just raise OverCapacity if no workers are available, and make
+        # it the caller's responsibility to buffer the work.
+
+        # How would the caller know when to unbuffer, then?  They could wrap
+        # each callable they pass in with a completion notification that does
+        # callInThread back to their own coordinator thread, which could either
+        # be its own WorkerThread object or the reactor (basically anything
+        # with a callInThread).
+
+        # This is where callInThreadWithCallback comes in, I guess?  The
+        # completion callback should be invoked in a context where the thread
+        # is no longer considered "busy", so it should be placed into
+        # _returnChute first, then invoke its completion callback, so the
+        # completion callback can asynchronously schedule more work and have
+        # some reasonable guarantee that capacity will be available.
         self._recycleSomeWorkers()
         if self._idleWorkers:
             worker = self._idleWorkers.pop(0)
