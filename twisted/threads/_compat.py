@@ -18,8 +18,8 @@ class TeamPool(ThreadPool, object):
         
         """
         super(TeamPool, self).__init__(minthreads=minthreads,
-                                         maxthreads=maxthreads,
-                                         name=name)
+                                       maxthreads=maxthreads,
+                                       name=name)
         if createCoordinator is None:
             createCoordinator = ThreadWorker
         def workerCreator(result):
