@@ -15,12 +15,9 @@ try:
     from Queue import Queue
 except ImportError:
     from queue import Queue
-
 import contextlib
 import threading
 import copy
-
-from functools import partial
 
 from twisted.python import log, context, failure
 
@@ -276,6 +273,3 @@ class ThreadPool:
         log.msg('waiters: %s' % self.waiters)
         log.msg('workers: %s' % self.working)
         log.msg('total: %s'   % self.threads)
-
-
-
