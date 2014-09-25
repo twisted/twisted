@@ -25,7 +25,6 @@ from twisted.python import log, context, failure
 WorkerStop = object()
 
 
-
 class ThreadPool:
     """
     This class (hopefully) generalizes the functionality of a pool of
