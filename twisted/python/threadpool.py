@@ -12,17 +12,158 @@ instead of creating a thread pool directly.
 from __future__ import division, absolute_import
 
 try:
-    from Queue import Queue
+    from Queue import Queue, Empty as _Empty
 except ImportError:
-    from queue import Queue
+    from queue import Queue, Empty as _Empty
+
 import contextlib
 import threading
 import copy
 
+from functools import partial
 from twisted.python import log, context, failure
 
 
 WorkerStop = object()
+
+
+
+class ThreadDead(Exception):
+    """
+    This worker thread is dead and cannot execute more instructions.
+    """
+
+
+
+class WorkerThread(object):
+    """
+    An interface to the job queue for a worker thread.
+    """
+
+    def __init__(self, name):
+        """
+        Create a L{WorkerThread} with a thread of the given name.
+        """
+        self._q = Queue.Queue()
+        self._thread = threading.Thread(target=self._run,
+                                        name=name)
+        self._thread.start()
+        self._active = True
+
+
+    def callFromThread(self, f, *a, **kw):
+        """
+        Invoke the given function, arguments, and keyword arguments.
+
+        Call from an aribtrary thread.
+        """
+        if not self._active:
+            raise ThreadDead()
+        self._q.put(partial(f, *a, **kw))
+
+
+    def terminate(self):
+        """
+        Stop this WorkerThread.
+
+        Call from an arbitrary thread.
+        """
+        # Reject all future work.  Set this _before_ enqueueing WorkerStop.
+        self._active = False
+        self._q.put(WorkerStop)
+
+
+    def _run(self):
+        """
+        Run the thing in the thread.
+        """
+        for instruction in self._get_forever():
+            instruction()
+
+
+    def _get_forever(self):
+        """
+        Runs in the thread.
+        """
+        while True:
+            value = self._q.get()
+            if value is WorkerStop:
+                return
+            else:
+                yield value
+
+
+
+class WorkerPool(object):
+    """
+    @ivar _activeWorkers: A list of workers currently performing a task.
+        Manipulated from the thread where L{WorkerPool} was created.
+
+    @ivar _idleWorkers: A list of workers currently performing a task.
+        Manipulated from the thread where L{WorkerPool} was created.
+
+    @ivar _returnChute: A list of workers in _activeWorkers which have
+        completed their tasks and are waiting to be cycled into _idleWorkers.
+        Consumed from the thread where L{WorkerPool} was created.
+    """
+
+    def __init__(self, maximumThreads):
+        """
+        @param maximumThreads: The maximum number of L{WorkerThread} instances
+            to create concurrently.
+        """
+        self._active = True
+        self._activeWorkers = []
+        self._idleWorkers = []
+        self._returnChute = Queue()
+        self._maximumThreads = maximumThreads
+
+
+    def _recycleSomeWorkers(self):
+        """
+        Recycle some worker threads if any are available.
+
+        Called from the thread that created this L{WorkerPool}.
+        """
+        while True:
+            try:
+                worker = self._returnChute.get(False)
+            except _Empty:
+                return
+            else:
+                self._activeWorkers.remove(worker)
+                self._idleWorkers.append(worker)
+
+
+    def _getWorker(self):
+        """
+        Retrieve or create a L{WorkerThread}.
+        """
+        self._recycleSomeWorkers()
+        if self._idleWorkers:
+            worker = self._idleWorkers.pop(0)
+            self._activeWorkers.append(worker)
+            return worker
+
+
+    def callInThread(self, f, *a, **kw):
+        """
+        Call the given function with arguments and kwargs in a thread.
+
+        Call this only from the thread that created this L{WorkerPool}.
+        """
+        if not self._active:
+            raise ThreadDead()
+        self._getWorker()
+
+
+    def stop(self):
+        """
+        Shut it all down.
+        """
+        self._active = False
+
+
 
 
 class ThreadPool:
