@@ -256,8 +256,12 @@
     </p>
 
     <p>
-      If the body of the response isn't going to be consumed incrementally, then <code class="API" base="twisted.web.client">readBody</code> can be used to get the body as a byte-string.
-      This function returns a <code>Deferred</code> that fires with the body after the request has been completed.
+      If the body of the response isn't going to be consumed incrementally,
+      then <code class="API" base="twisted.web.client">readBody</code> can be
+      used to get the body as a byte-string.  This function returns a
+      <code>Deferred</code> that fires with the body after the request has been
+      completed; cancelling this <code>Deferred</code> will close the
+      connection to the HTTP server immediately.
     </p>
 
     <a href="listings/client/responseBody.py" class="py-listing">
