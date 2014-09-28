@@ -1797,6 +1797,7 @@ def readBody(response):
     @type response: L{IResponse} provider
 
     @return: A L{Deferred} which will fire with the body of the response.
+        Cancelling it will close the connection to the server immediately.
     """
     def cancel(deferred):
         """
