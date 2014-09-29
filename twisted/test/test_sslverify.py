@@ -883,7 +883,25 @@ class OpenSSLOptions(unittest.TestCase):
              "",
              "Serial Number: 12345",
              "Digest: C4:96:11:00:30:C3:EC:EE:A3:55:AA:ED:8C:84:85:18",
-             "Public Key with Hash: ff33994c80812aa95a79cdb85362d054"])
+             # Maintenance Note: the algorithm used to compute the following
+             # "public key hash" is highly dubious and might break at some
+             # point in the future.  See the docstring for PublicKey.keyHash
+             # for information on how this might be addressed in the future.
+             "Public Key with Hash: 50d4b8070143375b3330dedf3a8b9e91"])
+
+
+    def test_publicKeyMatching(self):
+        """
+        L{PublicKey.matches} returns L{True} for keys from certificates with
+        the same key, and L{False} for keys from certificates with different
+        keys.
+        """
+        hostA = sslverify.Certificate.loadPEM(A_HOST_CERTIFICATE_PEM)
+        hostB = sslverify.Certificate.loadPEM(A_HOST_CERTIFICATE_PEM)
+        peerA = sslverify.Certificate.loadPEM(A_PEER_CERTIFICATE_PEM)
+
+        self.assertTrue(hostA.getPublicKey().matches(hostB.getPublicKey()))
+        self.assertFalse(peerA.getPublicKey().matches(hostA.getPublicKey()))
 
 
     def test_certificateOptionsSerialization(self):

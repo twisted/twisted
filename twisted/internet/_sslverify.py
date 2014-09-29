@@ -8,6 +8,7 @@ from __future__ import division, absolute_import
 import itertools
 import warnings
 
+from binascii import a2b_base64
 from hashlib import md5
 
 import OpenSSL
@@ -690,15 +691,37 @@ class PrivateCertificate(Certificate):
 
 
 class PublicKey:
+    """
+    A L{PublicKey} is a representation of the public part of a key pair.
+
+    You can't do a whole lot with it aside from comparing it to other
+    L{PublicKey} objects.
+
+    @note: If constructing a L{PublicKey} manually, be sure to pass only a
+        L{crypto.PKey} that does not contain a private key!
+
+    @ivar original: The original private key.
+    """
+
     def __init__(self, osslpkey):
+        """
+        @param osslpkey: The underlying pyOpenSSL key object.
+        @type osslpkey: L{crypto.PKey}
+        """
         self.original = osslpkey
-        req1 = crypto.X509Req()
-        req1.set_pubkey(osslpkey)
-        self._emptyReq = crypto.dump_certificate_request(crypto.FILETYPE_ASN1, req1)
 
 
     def matches(self, otherKey):
-        return self._emptyReq == otherKey._emptyReq
+        """
+        Does this L{PublicKey} contain the same value as another L{PublicKey}?
+
+        @param otherKey: The key to compare C{self} to.
+        @type otherKey: L{PublicKey}
+
+        @return: L{True} if these keys match, L{False} if not.
+        @rtype: L{bool}
+        """
+        return self.keyHash() == otherKey.keyHash()
 
 
     # XXX This could be a useful method, but sometimes it triggers a segfault,
@@ -717,10 +740,33 @@ class PublicKey:
 
     def keyHash(self):
         """
-        MD5 hex digest of signature on an empty certificate request with this
-        key.
+        Compute a hash of the underlying PKey object.
+
+        The purpose of this method is to allow you to determine if two
+        certificates share the same public key; it is not really useful for
+        anything else.
+
+        In versions of Twisted prior to 14.1, C{keyHash} used a technique
+        involving certificate requests for computing the hash that was not
+        stable in the face of changes to the underlying OpenSSL library.
+
+        The technique currently being used - using Netscape SPKI APIs in
+        OpenSSL - is still somewhat dubious, but due to limitations in both
+        pyOpenSSL and OpenSSL APIs, it is not currently possible to compute a
+        reliable hash of the public key in isolation (i.e. not paired with a
+        specific certificate).
+
+        @return: Return a 32-character hexadecimal string uniquely identifying
+            this public key, I{for this version of Twisted}.
+        @rtype: native L{str}
         """
-        return md5(self._emptyReq).hexdigest()
+        nsspki = crypto.NetscapeSPKI()
+        nsspki.set_pubkey(self.original)
+        encoded = nsspki.b64_encode()
+        raw = a2b_base64(encoded)
+        h = md5()
+        h.update(raw)
+        return h.hexdigest()
 
 
     def inspect(self):
