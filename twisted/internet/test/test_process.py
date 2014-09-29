@@ -7,7 +7,7 @@ Tests for implementations of L{IReactorProcess}.
 
 __metaclass__ = type
 
-import os, sys, signal, threading
+import os, io, sys, signal, threading, resource
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
@@ -343,33 +343,50 @@ class ProcessTestsBuilderBase(ReactorBuilder):
             "import sys",
             "sys.path.insert(0, '%s')" % (top.path,),
             "from twisted.internet import process",
-            "sys.stdout.write(str(process._listOpenFDs()))",
+            "sys.stdout.write(repr(process._listOpenFDs()))",
             "sys.stdout.flush()")
 
-        def checkOutput(output):
-            self.assertEqual('[0, 1, 2, 3]', output)
+        r, w = os.pipe()
+        self.addCleanup(os.close, r)
+        self.addCleanup(os.close, w)
+
+        # The operating system and various runtime libraries may open random
+        # file descriptors that we cannot control.  However, we should at least
+        # be able to select a very large file descriptor which is very unlikely
+        # to be opened automatically in the subprocess.  (Apply a fudge factor
+        # to avoid hard-coding something too near a limit condition like the
+        # maximum possible file descriptor, which a library might at least
+        # hypothetically select.)
+
+        fudgeFactor = 17
+        unlikelyFD = (resource.getrlimit(resource.RLIMIT_NOFILE)[0]
+                      - fudgeFactor)
+
+        os.dup2(w, unlikelyFD)
+        self.addCleanup(os.close, unlikelyFD)
+
+        output = io.BytesIO()
+        class GatheringProtocol(ProcessProtocol):
+            outReceived = output.write
+            def processEnded(self, reason):
+                reactor.stop()
 
         reactor = self.buildReactor()
 
-        class Protocol(ProcessProtocol):
-            def __init__(self):
-                self.output = []
-
-            def outReceived(self, data):
-                self.output.append(data)
-
-            def processEnded(self, reason):
-                try:
-                    checkOutput("".join(self.output))
-                finally:
-                    reactor.stop()
-
-        proto = Protocol()
         reactor.callWhenRunning(
-            reactor.spawnProcess, proto, sys.executable,
+            reactor.spawnProcess, GatheringProtocol(), sys.executable,
             [sys.executable, "-Wignore", "-c", "\n".join(source)],
             env=os.environ, usePTY=self.usePTY)
+
         self.runReactor(reactor)
+        reportedChildFDs = set(eval(output.getvalue()))
+
+        stdFDs = [0, 1, 2]
+        self.assertEqual(
+            reportedChildFDs.intersection(set(stdFDs + [unlikelyFD])),
+            set(stdFDs)
+        )
+
 
     if platformType != "posix":
         test_openFileDescriptors.skip = "Test only applies to POSIX platforms"
