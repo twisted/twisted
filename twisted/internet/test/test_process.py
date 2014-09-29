@@ -7,7 +7,7 @@ Tests for implementations of L{IReactorProcess}.
 
 __metaclass__ = type
 
-import os, io, sys, signal, threading
+import os, io, sys, signal, threading, json
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
@@ -343,9 +343,10 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         top = here.parent().parent().parent().parent()
         source = (
             "import sys",
+            "import json",
             "sys.path.insert(0, '%s')" % (top.path,),
             "from twisted.internet import process",
-            "sys.stdout.write(repr(process._listOpenFDs()))",
+            "sys.stdout.write(json.dumps(process._listOpenFDs()))",
             "sys.stdout.flush()")
 
         r, w = os.pipe()
@@ -393,7 +394,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
             env=os.environ, usePTY=self.usePTY)
 
         self.runReactor(reactor)
-        reportedChildFDs = set(eval(output.getvalue()))
+        reportedChildFDs = set(json.loads(output.getvalue()))
 
         stdFDs = [0, 1, 2]
         self.assertEqual(
