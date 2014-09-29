@@ -31,7 +31,7 @@ from twisted.test.test_twisted import SetAsideModule
 from twisted.test.iosim import connectedServerAndClient
 
 from twisted.internet.error import ConnectionClosed
-from twisted.python.compat import nativeString
+from twisted.python.compat import nativeString, _PY3
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.filepath import FilePath
 
@@ -2428,26 +2428,30 @@ class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
 
             sslverify._selectVerifyImplementation(_postTwelveOpenSSL)
 
-            [warning] = list(
-                warning
-                for warning
-                in self.flushWarnings()
-                if warning["category"] == UserWarning)
+        [warning] = list(
+            warning
+            for warning
+            in self.flushWarnings()
+            if warning["category"] == UserWarning)
 
-            expectedMessage = (
-                "You do not have a working installation of the "
-                "service_identity module: "
-                "'No module named service_identity'.  "
-                "Please install it from "
-                "<https://pypi.python.org/pypi/service_identity> "
-                "and make sure all of its dependencies are satisfied.  "
-                "Without the service_identity module and a recent enough "
-                "pyOpenSSL to support it, Twisted can perform only "
-                "rudimentary TLS client hostname verification.  Many valid "
-                "certificate/hostname mappings may be rejected.")
+        if _PY3:
+            importError = (
+                "'import of 'service_identity' halted; None in sys.modules'")
+        else:
+            importError = "'No module named service_identity'"
 
-            self.assertEqual(
-                (warning["message"], warning["filename"], warning["lineno"]),
-                # See the comment in test_pyOpenSSLTooOldWarning.
-                (expectedMessage, "", 0))
+        expectedMessage = (
+            "You do not have a working installation of the "
+            "service_identity module: {message}.  Please install it from "
+            "<https://pypi.python.org/pypi/service_identity> "
+            "and make sure all of its dependencies are satisfied.  "
+            "Without the service_identity module and a recent enough "
+            "pyOpenSSL to support it, Twisted can perform only "
+            "rudimentary TLS client hostname verification.  Many valid "
+            "certificate/hostname mappings may be rejected.").format(
+                message=importError)
 
+        self.assertEqual(
+            (warning["message"], warning["filename"], warning["lineno"]),
+            # See the comment in test_pyOpenSSLTooOldWarning.
+            (expectedMessage, "", 0))
