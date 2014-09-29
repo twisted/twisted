@@ -12,7 +12,7 @@ import os, io, sys, signal, threading
 from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
-from twisted.python.runtime import platform, platformType
+from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
