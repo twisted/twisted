@@ -7,7 +7,7 @@ Tests for implementations of L{IReactorProcess}.
 
 __metaclass__ = type
 
-import os, io, sys, signal, threading, resource
+import os, io, sys, signal, threading
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
@@ -22,9 +22,11 @@ from twisted.internet.error import ProcessDone, ProcessTerminated
 
 _uidgidSkip = None
 if platform.isWindows():
+    resource = None
     process = None
     _uidgidSkip = "Cannot change UID/GID on Windows"
 else:
+    import resource
     from twisted.internet import process
     if os.getuid() != 0:
         _uidgidSkip = "Cannot change UID/GID except as root"
@@ -388,7 +390,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         )
 
 
-    if platformType != "posix":
+    if resource is None:
         test_openFileDescriptors.skip = "Test only applies to POSIX platforms"
 
 
