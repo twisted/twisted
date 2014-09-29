@@ -335,9 +335,9 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
     def test_openFileDescriptors(self):
         """
-        A spawned process has only stdin, stdout and stderr open
-        (file descriptor 3 is also reported as open, because of the call to
-        'os.listdir()').
+        Processes spawned with spawnProcess() close all extraneous file
+        descriptors in the parent.  They do have a stdin, stdout, and stderr
+        open.
         """
         here = FilePath(__file__)
         top = here.parent().parent().parent().parent()
@@ -352,13 +352,25 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self.addCleanup(os.close, r)
         self.addCleanup(os.close, w)
 
-        # The operating system and various runtime libraries may open random
-        # file descriptors that we cannot control.  However, we should at least
-        # be able to select a very large file descriptor which is very unlikely
-        # to be opened automatically in the subprocess.  (Apply a fudge factor
-        # to avoid hard-coding something too near a limit condition like the
-        # maximum possible file descriptor, which a library might at least
-        # hypothetically select.)
+        # The call to "os.listdir()" itself that _listOpenFDs's implementation
+        # uses itself needs to open a file descriptor (with "opendir"), which
+        # shows up in its result.  And speaking of "random" file descriptors,
+        # the code required for _listOpenFDs itself imports logger, which
+        # imports random, which (depending on your Python version) might leave
+        # /dev/urandom open.
+
+        # More generally though, even if we were to use an extremely minimal C
+        # program, the operating system would be within its rights to open file
+        # descriptors we might not know about in the C library's
+        # initialization; things like debuggers, profilers, or nsswitch plugins
+        # might open some and this test should pass in those environments.
+
+        # Although some of these file descriptors aren't predictable, we should
+        # at least be able to select a very large file descriptor which is very
+        # unlikely to be opened automatically in the subprocess.  (Apply a
+        # fudge factor to avoid hard-coding something too near a limit
+        # condition like the maximum possible file descriptor, which a library
+        # might at least hypothetically select.)
 
         fudgeFactor = 17
         unlikelyFD = (resource.getrlimit(resource.RLIMIT_NOFILE)[0]
