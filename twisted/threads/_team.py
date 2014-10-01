@@ -6,6 +6,31 @@ from . import IWorker
 from ._convenience import Quit
 
 
+
+class Statistics(object):
+    """
+    Statistics about a L{Team}'s current activity.
+
+    @ivar idleWorkerCount: The number of idle workers.
+    @type idleWorkerCount: L{int}
+
+    @ivar busyWorkerCount: The number of busy workers.
+    @type busyWorkerCount: L{int}
+
+    @ivar pendingCount: The number of pending tasks.
+    @type pendingCount: L{int}
+    """
+
+    def __init__(self, idleWorkerCount, busyWorkerCount, pendingCount):
+        """
+        Create some statistics.
+        """
+        self.idleWorkerCount = idleWorkerCount
+        self.busyWorkerCount = busyWorkerCount
+        self.pendingCount = pendingCount
+
+
+
 @implementer(IWorker)
 class Team(object):
     """
