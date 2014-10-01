@@ -27,15 +27,60 @@ WorkerStop = object()
 
 class ThreadPool:
     """
-    This class (hopefully) generalizes the functionality of a pool of
-    threads to which work can be dispatched.
+    This class (hopefully) generalizes the functionality of a pool of threads
+    to which work can be dispatched.
 
-    L{callInThread} and L{stop} should only be called from
-    a single thread, unless you make a subclass where L{stop} and
-    L{_startSomeWorkers} are synchronized.
+    L{callInThread} and L{stop} should only be called from a single thread,
+    unless you make a subclass where L{stop} and L{_startSomeWorkers} are
+    synchronized.
+
+    TO DO:
+
+    U{https://twistedmatrix.com/pipermail/twisted-python/2014-September/028797.html}
+
+        - re-implement in terms of twisted.threads
+
+    Core Interface:
+
+        - callInThread
+
+        - callInThreadWithCallback
+
+        - adjustPoolsize
+
+        - start
+
+        - stop
+
+    Base Compatibility Stuff:
+
+        - min
+
+        - max
+
+        - joined
+
+        - started
+
+        - name
+
+        - dumpStats
+
+    U{https://twistedmatrix.com/pipermail/twisted-python/2014-September/028798.html}
+
+        - len()-able C{waiters}
+
+        - len()-able C{working}
+
+        - C{q} attribute with a C{qsize} method
+
+    U{https://twistedmatrix.com/pipermail/twisted-python/2014-September/028814.html}
+
+        - overridable C{threadFactory} hook, as an attribute
 
     @ivar started: Whether or not the thread pool is currently running.
     @type started: L{bool}
+
     @ivar threads: List of workers currently running in this thread pool.
     @type threads: L{list}
     """
