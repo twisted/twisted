@@ -41,7 +41,7 @@ class Team(object):
         """
         
         """
-        self._hasQuit = Quit()
+        self._quit = Quit()
         self._coordinator = createCoordinator()
         self._createWorker = createWorker
         self._logException = logException
@@ -55,7 +55,7 @@ class Team(object):
         """
         
         """
-        self._hasQuit.check()
+        self._quit.check()
         @self._coordinator.do
         def createOneWorker():
             for x in range(n):
@@ -69,7 +69,7 @@ class Team(object):
         """
         
         """
-        self._hasQuit.check()
+        self._quit.check()
         self._coordinator.do(lambda: self._quitIdlers(n))
 
 
@@ -88,7 +88,7 @@ class Team(object):
         """
         
         """
-        self._hasQuit.check()
+        self._quit.check()
         self._coordinator.do(lambda: self._coordinateThisTask(task))
 
 
@@ -115,9 +115,9 @@ class Team(object):
                 self._idle.add(worker)
                 if self._pending:
                     # Re-try the first enqueued thing.
-                    # (Explicitly do _not_ honor _hasQuit.)
+                    # (Explicitly do _not_ honor _quit.)
                     self._coordinateThisTask(self._pending.popleft())
-                elif self._hasQuit:
+                elif self._quit.isSet:
                     self._quitIdlers()
 
 
@@ -125,7 +125,7 @@ class Team(object):
         """
         
         """
-        self._hasQuit.set()
+        self._quit.set()
         # In case all the workers are idle when we do this.
         self._coordinator.do(self._quitIdlers)
 

@@ -1,6 +1,6 @@
 
 from zope.interface import implementer
-from .ithreads import IWorker
+from ._ithreads import IWorker
 from ._convenience import Quit
 
 
