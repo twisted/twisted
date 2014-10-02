@@ -1917,7 +1917,7 @@ class SmartHostSMTPRelayingManagerTestCase(unittest.TestCase):
         shutil.rmtree(self.tmpdir)
 
 
-    def test_messageAllocation1(self): 
+    def test_messageAllocation1(self):
         """
         L{mail.relaymanager.SmartHostSMTPRelayingManager._getMessagesToRelay}
         should properly allocate messages to relay when there are more domains
