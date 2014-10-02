@@ -746,7 +746,7 @@ class SmartHostSMTPRelayingManager:
 
                 if len(fullExchanges) == len(exchanges):
                     if freeConnections <= 0:
-                            break
+                        break
         return exchanges
 
 
