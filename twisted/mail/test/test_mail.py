@@ -573,16 +573,455 @@ class MaildirTestCase(unittest.TestCase):
 
 
 
+class TestMaildirDomain(mail.maildir.AbstractMaildirDomain):
+    """
+    Maildir-backed domain.
+
+    An implementation of L{mail.maildir.AbstractMaildirDomain} for testing
+    purposes.
+    """
+
+    def __init__(self, service, root):
+        """
+        Create the root directory if it doesn't exist.
+
+        @type service: L{MailService}
+        @param service: An email service
+
+        @type root: L{bytes}
+        @param root: The maildir root directory
+
+        @type users: L{list}
+        @ivar users: Users in the domain.
+        """
+        self.users = []
+        mail.maildir.AbstractMaildirDomain.__init__(self, service, root)
+        if not os.path.exists(root):
+            os.makedirs(root)
+
+
+    def userDirectory(self, user):
+        """
+        Return the maildir directory for a user.
+
+        @type name: L{bytes}
+        @param user: A username.
+
+        @rtype: L{bytes} or L{NoneType <types.NoneType>}
+        @return: The user's mail directory or None for an invalid user.
+        """
+        if user not in self.users:
+            return None
+
+        dir = os.path.join(self.root, user)
+        if not os.path.exists(dir):
+            mail.maildir.initializeMaildir(dir)
+        return dir
+
+
+    def addUser(self, user, password):
+        """
+        Add a user to this domain.
+
+        @type user: L{bytes}
+        @param user: A username.
+
+        @type password: L{bytes}
+        @param password: A password.
+        """
+        self.users.append(user)
+        self.userDirectory(user)
+
+
+    def getCredentialsCheckers(self):
+        """
+        Return no credentials checkers.
+
+        @rtype: C{NoneType}
+        @return: None
+        """
+        return None
+
+
+
 class AbstractMaildirDomainTestCase(unittest.TestCase):
     """
-    Tests for L{twisted.mail.maildir.AbstractMaildirDomain}.
+    Tests for L{mail.maildir.AbstractMaildirDomain}.
     """
+
+    def setUp(self):
+        """
+        Create a temporary directory, a mail service and a L{TestMaildirDomain}
+        (an implementation of L{mail.maildir.AbstractMaildirDomain})
+        with a user named 'user'.
+        """
+        self.root = self.mktemp()
+        self.service = mail.mail.MailService()
+        self.domain = TestMaildirDomain(self.service, self.root)
+        self.domain.addUser('user',"")
+
+    def tearDown(self):
+        """
+        Remove the temporary directory.
+        """
+        shutil.rmtree(self.root)
+
+
     def test_interface(self):
         """
-        L{maildir.AbstractMaildirDomain} implements L{mail.IAliasableDomain}.
+        Verify that L{mail.maildir.AbstractMaildirDomain} implements
+        L{mail.mail.IAliasableDomain}.
         """
         verifyClass(mail.mail.IAliasableDomain,
             mail.maildir.AbstractMaildirDomain)
+
+
+    def test_startMessage(self):
+        """
+        Verify that L{mail.maildir.AbstractMaildirDomain.startMessage}
+        returns a L{mail.maildir.MaildirMessage}.
+        """
+        msg = self.domain.startMessage('user@')
+        self.assertTrue(isinstance(msg, mail.maildir.MaildirMessage))
+
+
+    def test_exists(self):
+        """
+        Verify that L{mail.maildir.AbstractMaildirDomain.exists}
+        returns a callable which returns a L{mail.maildir.MaildirMessage}.
+        Also, check that it returns distinct messages when called multiple
+        times.
+        """
+        f = self.domain.exists(mail.smtp.User("user@", None, None, None))
+        self.assertTrue(callable(f))
+        msg1 = f()
+        self.assertTrue(isinstance(msg1, mail.maildir.MaildirMessage))
+        msg2 = f()
+        self.assertTrue(msg1 != msg2)
+        self.assertTrue(msg1.finalName != msg2.finalName)
+
+
+    def test_doesntexist(self):
+        """
+        Verify that L{mail.maildir.AbstractMaildirDomain.exists} raises
+        L{mail.smtp.SMTPBadRcpt} if the user doesn't exist.
+        """
+        self.assertRaises(mail.smtp.SMTPBadRcpt, self.domain.exists,
+                mail.smtp.User("nonexistentuser@", None, None, None))
+
+
+
+class TestRelayRules(mail.relay.AbstractRelayRules):
+    """
+    An implementation of L{mail.maildir.AbstractRelayRules} for testing
+    purposes.
+
+    @ivar relay: See L{__init__}
+    """
+    def __init__(self, relay):
+        """
+        @type relay: L{bool}
+        @param relay: A flag indicating whether the rules should allow
+            relaying or not.
+        """
+        self.relay = relay
+
+
+    def willRelay(self, address, protocol, authorized):
+        """
+        Determine whether a message should be relayed.
+
+        @type address: L{Address}
+        @param address: The destination address.
+
+        @type protocol: L{Protocol}
+        @param protocol: The protocol over which the message was received.
+
+        @type authorized: L{bool}
+        @param authorized: A flag indicating whether the originator has been
+        authorized.
+
+        @rtype: C{bool}
+        @return: An indication of whether a message should be relayed.
+        """
+        return self.relay
+
+
+
+class DomainQueuerTestCase(unittest.TestCase):
+    """
+    Tests for L{mail.relay.DomainQueuer}
+
+    @type root: L{bytes}
+    @ivar root: The maildir root directory
+
+    @type service: L{MailService}
+    @ivar service: An email service
+    """
+
+    def setUp(self):
+        """
+        Create a temporary directory, a mail service and a queue for relayed
+        messages.
+        """
+        self.root = self.mktemp()
+        if not os.path.isdir(self.root):
+            os.mkdir(self.root)
+        self.service = mail.mail.MailService()
+        self.service.setQueue(mail.relaymanager.Queue(self.root))
+
+
+    def tearDown(self):
+        """
+        Remove the temporary directory.
+        """
+        shutil.rmtree(self.root)
+
+
+    def test_startMessage(self):
+        """
+        Verify that L{mail.relay.DomainQueuer.startMessage} returns a
+        L{mail.mail.FileMessage}.
+        """
+        dq = mail.relay.DomainQueuer(self.service, False, TestRelayRules(True))
+        msg = dq.startMessage(mail.smtp.User('userto@localhost', None,
+            None, 'userfrom@localhost'))
+        self.assertTrue(isinstance(msg, mail.mail.FileMessage))
+
+
+    def test_exists(self):
+        """
+        Verify that L{mail.mail.DomainQueuer.exists} returns a callable which
+        returns a L{mail.mail.FileMessage}.  Also, check that it returns
+        distinct messages when called multiple times.
+        """
+        dq = mail.relay.DomainQueuer(self.service, False, TestRelayRules(True))
+        f = dq.exists(mail.smtp.User("user@", None, None, None))
+        self.assertTrue(callable(f))
+        msg1 = f()
+        self.assertTrue(isinstance(msg1, mail.mail.FileMessage))
+        msg2 = f()
+        self.assertTrue(msg1 != msg2)
+        self.assertTrue(msg1.finalName != msg2.finalName)
+
+
+    def test_doesntexist(self):
+        """
+        Verify that L{mail.mail.DomainQueuer.exists} raises
+        L{mail.smtp.SMTPBadRcpt} if the message shouldn't be relayed.
+        """
+        dq = mail.relay.DomainQueuer(self.service, False, TestRelayRules(False))
+        self.assertRaises(mail.smtp.SMTPBadRcpt, dq.exists,
+                mail.smtp.User("user@", None, None, None))
+
+
+    def test_willRelay(self):
+        """
+        Verify that L{mail.relay.DomainQueuer.willRelay} returns C{True} if the
+        relay rules indicate to relay.
+        """
+        dq = mail.relay.DomainQueuer(self.service, False, TestRelayRules(True))
+        self.assertTrue(dq.willRelay(None, None))
+
+
+    def test_wontRelay(self):
+        """
+        Verify that L{mail.relay.DomainQueuer.willRelay} returns C{False} if
+        the relay rules indicate to relay.
+        """
+        dq = mail.relay.DomainQueuer(self.service, False, TestRelayRules(False))
+        self.assertFalse(dq.willRelay(None, None))
+
+
+
+class DummyTransport(object):
+    """
+    A fake transport for testing purposes.
+
+    @ivar peer: See L{__init__}
+    @ivar host: See L{__init__}
+    """
+    implements(twisted.internet.interfaces.ITransport)
+
+    def __init__(self, peer, host=None):
+        """
+        @type peer: L{internet.address._IPAddress} or
+            L{internet.address.UNIXAddress}
+        @param peer: The address to be used as the remote address of the
+            connection.
+
+        @type host: L{inernet.address._IPAddress} or L{NoneType}
+        @param host: The address to be used as the near address of the
+            connection.  If None, a default host address is provided.
+        """
+        self.peer = peer
+        self.host = host
+
+
+    def getPeer(self):
+        """
+        Get the remote address of this connection.
+
+        @rtype: L{internet.interfaces.IAddress}
+        @return: The remote address of this connection.
+        """
+        return self.peer
+
+
+    def write(self, data):
+        """
+        Ignore data.
+
+        @type data: L{bytes}
+        @param data: The data to write.
+        """
+        pass
+
+
+    def writeSequence(self, data):
+        """
+        Ignore data.
+
+        @type data: C{list} of C{str}
+        @param data: The list of data to write.
+        """
+        pass
+
+
+    def loseConnection(self):
+        """
+        Close the connection.
+        """
+        self.peer = None
+
+
+    def getHost(self):
+        """
+        Get an address describing this side of this connection.
+
+        @rtype: L{internet.interfaces.IAddress}
+        @return: An address describing of this side of the connection.
+        """
+        if self.host:
+            return self.host
+
+        if isinstance(self.peer, twisted.internet.address.UNIXAddress):
+            return address.UNIXAddress(None)
+        else:
+            return address.IPv4Address('TCP', '192.168.1.2', 25)
+
+
+
+class DummyProtocol(object):
+    """
+    A fake protocol for testing purposes.
+
+    @ivar transport: See L{__init__}
+    """
+
+    def __init__(self, transport):
+        """
+        @type transport: L{internet.interfaces.ITransport} provider
+        @param transport: A transport
+        """
+        self.transport = transport
+
+
+
+class DomainQueuerRelayRulesTestCase(unittest.TestCase):
+    """
+    Tests for L{mail.relay.DomainQueuerRelayRules}
+
+    @type rules: L{mail.relay.DomainQueuerRelayRules}
+    @ivar rules: Relay rules to be used by L{mail.relay.DomainQueuer}
+    """
+
+    def setUp(self):
+        """
+        Create a set of rules for testing.
+        """
+        self.rules = mail.relay.DomainQueuerRelayRules()
+
+
+    def getTransportWithRemoteTCPPeer(self):
+        """
+        Get a fake transport with a remote TCP peer.
+
+        @rtype: L{Dummy Transport}
+        @return: A fake transport with the peer address of 192.168.1.1:25
+        """
+        address = twisted.internet.address.IPv4Address('TCP', '192.168.1.1', 25)
+        return DummyTransport(address)
+
+
+    def getTransportWithLocalTCPPeer(self):
+        """
+        Get a fake transport with a local TCP peer.
+
+        @rtype: L{Dummy Transport}
+        @return: A fake transport with the peer address of 127.0.0.1:25
+        """
+        address = twisted.internet.address.IPv4Address('TCP', '127.0.0.1', 25)
+        return DummyTransport(address)
+
+
+    def getTransportWithUnixSocketPeer(self):
+        """
+        Get a fake transport with a UNIX socket peer.
+
+        @rtype: L{Dummy Transport}
+        @return: A fake transport with a UNIX socket.
+        """
+        address = twisted.internet.address.UNIXAddress("UnixSocket")
+        return DummyTransport(address)
+
+
+    def test_willRelay_localhost(self):
+        """
+        Verify that the rules say to relay when the message originates from
+        localhost.
+        """
+        protocol = DummyProtocol(self.getTransportWithLocalTCPPeer())
+        self.assertTrue(self.rules.willRelay("user@example.com", protocol,
+            False))
+
+
+    def test_willRelay_remote(self):
+        """
+        Verify that the rules say not to relay when the message originates from
+        localhost.
+        """
+        protocol = DummyProtocol(self.getTransportWithRemoteTCPPeer())
+        self.assertFalse(self.rules.willRelay("user@example.com", protocol,
+            False))
+
+
+    def test_willRelay_unixsocket(self):
+        """
+        Verify that the rules say to relay when the message originates from
+        a UNIX socket.
+        """
+        protocol = DummyProtocol(self.getTransportWithUnixSocketPeer())
+        self.assertTrue(self.rules.willRelay("user@example.com", protocol,
+            False))
+
+
+    def test_willRelay_authorized(self):
+        """
+        Verify that the rules say to relay no matter where the message
+        originates from as long as the originator is authorized.
+        """
+        protocol = DummyProtocol(self.getTransportWithLocalTCPPeer())
+        self.assertTrue(self.rules.willRelay("user@example.com", protocol,
+            True))
+
+        protocol = DummyProtocol(self.getTransportWithRemoteTCPPeer())
+        self.assertTrue(self.rules.willRelay("user@example.com", protocol,
+            True))
+
+        protocol = DummyProtocol(self.getTransportWithUnixSocketPeer())
+        self.assertTrue(self.rules.willRelay("user@example.com", protocol,
+            True))
 
 
 

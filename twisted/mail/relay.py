@@ -19,14 +19,94 @@ except ImportError:
 
 
 
+class AbstractRelayRules(object):
+    """
+    A base class for relay rules which determine whether a message should be
+    relayed.
+    """
+    def willRelay(self, address, protocol, authorized):
+        """
+        Determine whether a message should be relayed.
+
+        @type address: L{Address}
+        @param address: The destination address.
+
+        @type protocol: L{Protocol <twisted.internet.protocol.Protocol>}
+        @param protocol: The protocol over which the message was received.
+
+        @type authorized: L{bool}
+        @param authorized: A flag indicating whether the originator has been
+            authorized.
+
+        @rtype: L{bool}
+        @return: An indication of whether the message should be relayed.
+        """
+        return False
+
+
+
+class DomainQueuerRelayRules(object):
+    """
+    The default relay rules for a L{DomainQueuer}.
+    """
+    def willRelay(self, address, protocol, authorized):
+        """
+        Determine whether a message should be relayed.
+
+        Relay for all messages received over UNIX sockets or from localhost or
+        when the message originator has been authenticated.
+
+        @type address: L{Address}
+        @param address: The destination address.
+
+        @type protocol: L{Protocol <twisted.internet.protocol.Protocol>}
+        @param protocol: The protocol over which the message was received.
+
+        @type authorized: L{bool}
+        @param authorized: A flag indicating whether the originator has been
+            authorized.
+
+        @rtype: L{bool}
+        @return: An indication of whether the message should be relayed.
+        """
+        peer = protocol.transport.getPeer()
+        return (authorized or isinstance(peer, UNIXAddress) or
+            peer.host == '127.0.0.1')
+
+
+
 class DomainQueuer:
     """
-    An SMTP domain which add messages to a queue intended for relaying.
-    """
+    A domain which adds messages to a queue for relaying.
 
-    def __init__(self, service, authenticated=False):
+    @ivar service: See L{__init__}
+
+    @type authed: L{bool}
+    @ivar authed: A flag indicating whether the originator of the message has
+        been authenticated.
+
+    @type relayRules: L{AbstractRelayRules}
+    @ivar relayRules: The rules to determine whether a message should be
+        relayed.
+    """
+    def __init__(self, service, authenticated=False, relayRules=None):
+        """
+        @type service: L{MailService}
+        @param service: An email service.
+
+        @type authenticated: L{bool}
+        @param authenticated: A flag indicating whether the originator of the
+            message has been authenticated.
+
+        @type relayRules: L{NoneType <types.NoneType>} or L{AbstractRelayRules}
+        @param relayRules: The rules to determine whether a message
+            should be relayed.
+        """
         self.service = service
         self.authed = authenticated
+        self.relayRules = relayRules
+        if not self.relayRules:
+            self.relayRules = DomainQueuerRelayRules()
 
 
     def exists(self, user):
@@ -54,14 +134,19 @@ class DomainQueuer:
 
     def willRelay(self, address, protocol):
         """
-        Check whether we agree to relay.
+        Determine whether a message should be relayed according to the relay
+        rules.
 
-        The default is to relay for all connections over UNIX
-        sockets and all connections from localhost.
+        @type address: L{Address}
+        @param address: The destination address.
+
+        @type protocol: L{Protocol <twisted.internet.protocol.Protocol>}
+        @param protocol: The protocol over which the message was received.
+
+        @rtype: L{bool}
+        @return: An indication of whether the message should be relayed.
         """
-        peer = protocol.transport.getPeer()
-        return (self.authed or isinstance(peer, UNIXAddress) or
-            peer.host == '127.0.0.1')
+        return self.relayRules.willRelay(address, protocol, self.authed)
 
 
     def startMessage(self, user):
