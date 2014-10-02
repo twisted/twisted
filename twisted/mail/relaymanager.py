@@ -735,16 +735,18 @@ class SmartHostSMTPRelayingManager:
                     exchanges[domain] = []
                     freeConnections -= 1
 
-                if len(exchanges[domain]) < self.maxMessagesPerConnection:
-                    self.queue.setRelaying(msg)
-                    exchanges[domain].append(self.queue.getPath(msg))
+                if len(exchanges[domain]) >= self.maxMessagesPerConnection:
+                    continue
 
-                    if len(exchanges[domain]) == self.maxMessagesPerConnection:
-                        fullExchanges.append(domain)
+                self.queue.setRelaying(msg)
+                exchanges[domain].append(self.queue.getPath(msg))
 
-                        if len(fullExchanges) == len(exchanges):
-                            if freeConnections <= 0:
-                                break
+                if len(exchanges[domain]) == self.maxMessagesPerConnection:
+                    fullExchanges.append(domain)
+
+                if len(fullExchanges) == len(exchanges):
+                    if freeConnections <= 0:
+                            break
         return exchanges
 
 
