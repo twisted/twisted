@@ -1,3 +1,6 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """
 Tests for L{twisted.threads._threadworker}.
 """
@@ -8,18 +11,18 @@ from .. import ThreadWorker
 
 class FakeThread(object):
     """
-    
+    A fake L{threading.Thread}.
 
-    @ivar target: 
-    @type target: 
+    @ivar target: A target function to run.
+    @type target: L{callable}
+
+    @ivar started: Has this thread been started?
+    @type started: L{bool}
     """
 
     def __init__(self, target):
         """
-        
-
-        @param target: 
-        @type target: 
+        Create a L{FakeThread} with a target.
         """
         self.target = target
         self.started = False
@@ -27,33 +30,41 @@ class FakeThread(object):
 
     def start(self):
         """
-        
+        Set the "started" flag.
         """
         self.started = True
 
 
+
 class FakeQueue(object):
     """
-    
+    A fake L{Queue} implementing.
+
+    @ivar items: Items.
+    @type items: L{list}
     """
 
     def __init__(self):
         """
-        
+        Create a L{FakeQueue}.
         """
         self.items = []
 
 
     def put(self, item):
         """
-        
+        Put an item into the queue for later retrieval by L{FakeQueue.get}.
+
+        @param item: any object
         """
         self.items.append(item)
 
 
     def get(self):
         """
-        
+        Get an item.
+
+        @return: an item previously put by C{put}.
         """
         return self.items.pop(0)
 

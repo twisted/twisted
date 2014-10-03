@@ -1,3 +1,6 @@
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
 """
 Test cases for convenience functionality in L{twisted.threads._convenience}.
 """

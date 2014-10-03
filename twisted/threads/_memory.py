@@ -1,3 +1,6 @@
+# -*- test-case-name: twisted.threads.test.test_memory -*-
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 """
 Implementation of an in-memory worker that defers execution.
@@ -10,11 +13,15 @@ from ._convenience import Quit
 @implementer(IWorker)
 class MemoryWorker(object):
     """
-    
+    An L{IWorker} that queues work for later performance.
+
+    @ivar _quit: a flag indicating
+    @type _quit: L{Quit}
     """
+
     def __init__(self):
         """
-        
+        Create a L{MemoryWorker}.
         """
         self._quit = Quit()
         self._pending = []
@@ -22,7 +29,9 @@ class MemoryWorker(object):
 
     def do(self, work):
         """
-        
+        Queue some work for L{MemoryWorker.perform} to perform later.
+
+        @param work: The work to perform.
         """
         self._quit.check()
         self._pending.append(work)

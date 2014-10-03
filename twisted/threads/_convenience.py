@@ -1,3 +1,10 @@
+# -*- test-case-name: twisted.threads.test.test_convenience -*-
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Common functionality used within the implementation of various workers.
+"""
 
 from ._ithreads import AlreadyQuit
 
@@ -30,6 +37,8 @@ class Quit(object):
 
     def check(self):
         """
+        Check if the flag has been set.
+
         @raise AlreadyQuit: If it has been set.
         """
         if self.isSet:

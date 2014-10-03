@@ -1,3 +1,6 @@
+# -*- test-case-name: twisted.threads.test.test_convenience -*-
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 """
 Since we can't safely use python stdlib L{Queue} or L{RLock}, (see
@@ -32,6 +35,8 @@ class PipeQueue(object):
     def put(self, item):
         """
         Put an item into the queue.
+
+        @param item: The item to append.
         """
         self._data.append(item)
         os.write(self._w, b'0')
