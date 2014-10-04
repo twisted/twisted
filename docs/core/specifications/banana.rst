@@ -15,9 +15,9 @@ Introduction
 ------------
 
 Banana is an efficient, extendable protocol for sending and receiving s-expressions.
-A s-expression in this context is a list composed of strings (Python 2), bytes, integers, large integers, floats and/or s-expressions.
-Unicode strings are not supported, neither are Python 3 strings as they are always unicode.
-Unsupported types will have to be converted into something supported before sending them with Banana.
+A s-expression in this context is a list composed of bytes, integers, large integers, floats and/or s-expressions.
+Unicode is not supported (but can be encoded to and decoded from bytes on the way into and out of Banana).
+Unsupported types must be converted into a supported type before sending them with Banana.
 
 
 Banana Encodings
