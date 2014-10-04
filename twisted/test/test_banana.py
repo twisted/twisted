@@ -47,15 +47,48 @@ class BananaTestCase(unittest.TestCase):
         assert self.result == 'hello'
 
 
-    def test_unsupportedTypes(self):
+    def test_unsupportedUnicode(self):
         """
-        Banana only supports some basic types.
+        Banana does not support unicode.  ``Banana.sendEncoded`` raises
+        ``BananaError`` if called with an instance of ``unicode``.
         """
-        for obj in (type, u'hello', MathTestCase()):
-            exc = self.assertRaises(banana.BananaError,
-                self.enc.sendEncoded, obj)
-            self.assertIn(b'Banana cannot send {} objects'.format(
-                fullyQualifiedName(type(obj))), str(exc))
+        self._unsupportedTypeTest(u"hello", "__builtin__.unicode")
+
+
+    def test_unsupportedBuiltinType(self):
+        """
+        Banana does not support arbitrary builtin types like ``type``.
+        ``Banana.sendEncoded`` raises ``BananaError`` if called with an
+        instance of ``type``.
+        """
+        # type is an instance of type
+        self._unsupportedTypeTest(type, "__builtin__.type")
+
+
+    def test_unsupportedUserType(self):
+        """
+        Banana does not support arbitrary user-defined types (such as those
+        defined with the ``class`` statement).  ``Banana.sendEncoded`` raises
+        ``BananaError`` if called with an instance of such a type.
+        """
+        self._unsupportedTypeTest(MathTestCase(), __name__ + ".MathTestCase")
+
+
+    def _unsupportedTypeTest(self, obj, name):
+        """
+        Assert that ``Banana.sendEncoded`` raises ``BananaError`` if called
+        with the given object.
+
+        :param obj: Some object that Banana does not support.
+        :param name: The name of the type of the object.
+
+        :raise: The failure exception is raised if ``Banana.sendEncoded`` does
+            not raise ``BananaError`` or if the message associated with the
+            exception is not formatted to include the type of the unsupported
+            object.
+        """
+        exc = self.assertRaises(banana.BananaError, self.enc.sendEncoded, obj)
+        self.assertIn("Banana cannot send {} objects".format(name), str(exc))
 
 
     def test_int(self):
