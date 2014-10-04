@@ -8,6 +8,7 @@ import sys
 from twisted.trial import unittest
 from twisted.spread import banana
 from twisted.python import failure
+from twisted.python.reflect import fullyQualifiedName
 from twisted.internet import protocol, main
 
 
@@ -44,6 +45,18 @@ class BananaTestCase(unittest.TestCase):
         l = []
         self.enc.dataReceived(self.io.getvalue())
         assert self.result == 'hello'
+
+
+    def test_unsupportedTypes(self):
+        """
+        Banana only supports some basic types.
+        """
+        for obj in (type, u'hello', MathTestCase()):
+            exc = self.assertRaises(banana.BananaError,
+                self.enc.sendEncoded, obj)
+            self.assertIn(b'Banana cannot send {} objects'.format(
+                fullyQualifiedName(type(obj))), str(exc))
+
 
     def test_int(self):
         """

@@ -17,6 +17,7 @@ import copy, cStringIO, struct
 from twisted.internet import protocol
 from twisted.persisted import styles
 from twisted.python import log
+from twisted.python.reflect import fullyQualifiedName
 
 class BananaError(Exception):
     pass
@@ -329,7 +330,8 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 write(STRING)
                 write(obj)
         else:
-            raise BananaError("could not send object: %r" % (obj,))
+            raise BananaError("Banana cannot send {} objects: {!r}".format(
+                fullyQualifiedName(type(obj)), obj))
 
 
 # For use from the interactive interpreter
