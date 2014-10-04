@@ -8,7 +8,6 @@ import sys
 from twisted.trial import unittest
 from twisted.spread import banana
 from twisted.python import failure
-from twisted.python.reflect import fullyQualifiedName
 from twisted.internet import protocol, main
 
 
