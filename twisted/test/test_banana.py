@@ -56,9 +56,9 @@ class BananaTestCase(unittest.TestCase):
 
     def test_unsupportedBuiltinType(self):
         """
-        Banana does not support arbitrary builtin types like ``type``.
-        ``Banana.sendEncoded`` raises ``BananaError`` if called with an
-        instance of ``type``.
+        Banana does not support arbitrary builtin types like L{type}.
+        L{banana.Banana.sendEncoded} raises L{banana.BananaError} if called
+        with an instance of L{type}.
         """
         # type is an instance of type
         self._unsupportedTypeTest(type, "__builtin__.type")
@@ -75,14 +75,14 @@ class BananaTestCase(unittest.TestCase):
 
     def _unsupportedTypeTest(self, obj, name):
         """
-        Assert that ``Banana.sendEncoded`` raises ``BananaError`` if called
-        with the given object.
+        Assert that L{banana.Banana.sendEncoded} raises L{banana.BananaError}
+        if called with the given object.
 
-        :param obj: Some object that Banana does not support.
-        :param name: The name of the type of the object.
+        @param obj: Some object that Banana does not support.
+        @param name: The name of the type of the object.
 
-        :raise: The failure exception is raised if ``Banana.sendEncoded`` does
-            not raise ``BananaError`` or if the message associated with the
+        @raise: The failure exception is raised if L{Banana.sendEncoded} does
+            not raise L{banana.BananaError} or if the message associated with the
             exception is not formatted to include the type of the unsupported
             object.
         """

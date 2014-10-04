@@ -286,12 +286,12 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         """
         Send the encoded representation of the given object:
 
-        :param obj: An object to encode and send.
+        @param obj: An object to encode and send.
 
-        :raise: ``BananaError`` is raised if the given object is not an
-            instance of one of the types supported by Banana.
+        @raise BananaError: If the given object is not an instance of one of
+            the types supported by Banana.
 
-        :return: ``None``
+        @return: C{None}
         """
         io = cStringIO.StringIO()
         self._encode(obj, io.write)
