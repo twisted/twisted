@@ -340,7 +340,7 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                 write(STRING)
                 write(obj)
         else:
-            raise BananaError("Banana cannot send {} objects: {!r}".format(
+            raise BananaError("Banana cannot send {0} objects: {1!r}".format(
                 fullyQualifiedName(type(obj)), obj))
 
 
