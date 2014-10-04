@@ -283,6 +283,16 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         self.isClient = isClient
 
     def sendEncoded(self, obj):
+        """
+        Send the encoded representation of the given object:
+
+        :param obj: An object to encode and send.
+
+        :raise: ``BananaError`` is raised if the given object is not an
+            instance of one of the types supported by Banana.
+
+        :return: ``None``
+        """
         io = cStringIO.StringIO()
         self._encode(obj, io.write)
         value = io.getvalue()
