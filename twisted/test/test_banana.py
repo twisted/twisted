@@ -324,31 +324,33 @@ class DialectTests(BananaTestBase):
     """
     Tests for Banana's handling of dialects.
     """
-    legalPbItem = chr(banana.Banana.outgoingVocabulary['remote']) + banana.VOCAB
+    vocab = b'remote'
+    legalPbItem = chr(banana.Banana.outgoingVocabulary[vocab]) + banana.VOCAB
     illegalPbItem = chr(122) + banana.VOCAB
 
     def test_dialectNotSet(self):
         """
-        Dialect must be pb when receiving pb vocabulary
+        If no dialect has been selected and a PB VOCAB item is received,
+        L{NotImplementedError} is raised.
         """
-        self.assertRaises(NotImplementedError,
+        self.assertRaises(
+            NotImplementedError,
             self.enc.dataReceived, self.legalPbItem)
 
 
     def test_receivePb(self):
         """
-        if pb dialect is selected, the receiver must accept things
-        in that dialect.
+        If the PB dialect has been selected, a PB VOCAB item is accepted.
         """
         self.enc._selectDialect(b'pb')
         self.enc.dataReceived(self.legalPbItem)
-        self.assertEqual(self.result, b'remote')
+        self.assertEqual(self.result, self.vocab)
 
 
     def test_receiveIllegalPb(self):
         """
-        if pb dialect is selected, the receiver must accept things
-        in that dialect unless they are illegal.
+        If the PB dialect has been selected and an unrecognized PB VOCAB item
+        is received, L{banana.Banana.dataReceived} raises L{KeyError}.
         """
         self.enc._selectDialect(b'pb')
         self.assertRaises(KeyError, self.enc.dataReceived, self.illegalPbItem)
@@ -375,10 +377,10 @@ class GlobalCoderTests(unittest.TestCase):
         Calls to L{banana.decode} are independent of each other.
         """
         # Banana encoding of 2 ** 449
-        undecodable = '\x7f' * 65 + '\x85'
+        undecodable = b'\x7f' * 65 + b'\x85'
         self.assertRaises(banana.BananaError, banana.decode, undecodable)
 
         # Banana encoding of 1.  This should be decodable even though the
         # previous call passed un-decodable data and triggered an exception.
-        decodable = '\x01\x81'
+        decodable = b'\x01\x81'
         self.assertEqual(banana.decode(decodable), 1)
