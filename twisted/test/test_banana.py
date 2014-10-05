@@ -45,7 +45,7 @@ def encode(bananaFactory, obj):
     """
     Banana encode an object using L{banana.Banana.sendEncoded}.
 
-    @param bananaClass: A no-argument callable which will return a new,
+    @param bananaFactory: A no-argument callable which will return a new,
         unconnected protocol instance to use to do the encoding (this should
         most likely be a L{banana.Banana} instance).
 
@@ -292,6 +292,9 @@ class BananaTestCase(BananaTestBase):
     def feed(self, data):
         """
         Feed the data byte per byte to the receiver.
+
+        @param data: The bytes to deliver.
+        @type data: L{bytes}
         """
         for byte in data:
             self.enc.dataReceived(byte)
