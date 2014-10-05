@@ -3,12 +3,14 @@
 
 import StringIO
 import sys
+from functools import partial
 
 # Twisted Imports
 from twisted.trial import unittest
 from twisted.spread import banana
 from twisted.python import failure
 from twisted.internet import protocol, main
+from twisted.test.proto_helpers import StringTransport
 
 
 class MathTestCase(unittest.TestCase):
@@ -39,6 +41,29 @@ def selectDialect(protocol, dialect):
 
 
 
+def encode(bananaFactory, obj):
+    """
+    Banana encode an object using L{banana.Banana.sendEncoded}.
+
+    @param bananaClass: A no-argument callable which will return a new,
+        unconnected protocol instance to use to do the encoding (this should
+        most likely be a L{banana.Banana} instance).
+
+    @param obj: The object to encode.
+    @type obj: Any type supported by Banana.
+
+    @return: A L{bytes} instance giving the encoded form of C{obj}.
+    """
+    transport = StringTransport()
+    banana = bananaFactory()
+    banana.makeConnection(transport)
+    transport.clear()
+
+    banana.sendEncoded(obj)
+    return transport.value()
+
+
+
 class BananaTestBase(unittest.TestCase):
     """
     The base for test classes. It defines commonly used things and sets up a
@@ -52,6 +77,7 @@ class BananaTestBase(unittest.TestCase):
         self.enc.makeConnection(protocol.FileWrapper(self.io))
         selectDialect(self.enc, b"none")
         self.enc.expressionReceived = self.putResult
+        self.encode = partial(encode, self.encClass)
 
 
     def putResult(self, result):
@@ -67,21 +93,6 @@ class BananaTestBase(unittest.TestCase):
     def tearDown(self):
         self.enc.connectionLost(failure.Failure(main.CONNECTION_DONE))
         del self.enc
-
-
-    def _encoded(self, n):
-        """
-        Banana encode an object using L{banana.Banana.sendEncoded}.
-
-        @param n: The object to encode.
-        @type n: Any type supported by Banana.
-
-        @return: A L{bytes} instance giving the encoded form of C{n}.
-        """
-        self.io.seek(0)
-        self.io.truncate()
-        self.enc.sendEncoded(n)
-        return self.io.getvalue()
 
 
 
@@ -165,7 +176,7 @@ class BananaTestCase(BananaTestBase):
             for add in (0, 1):
                 m = 2 ** exp + add
                 for n in (m, -m-1):
-                    self.enc.dataReceived(self._encoded(n))
+                    self.enc.dataReceived(self.encode(n))
                     self.assertEqual(self.result, n)
                     if n > sys.maxint or n < -sys.maxint - 1:
                         self.assertIsInstance(self.result, long)
@@ -337,24 +348,24 @@ class BananaTestCase(BananaTestBase):
         baseNegIn = -2147483648
 
         baseIntOut = '\x7f\x7f\x7f\x07\x81'
-        self.assertEqual(self._encoded(baseIntIn - 2), '\x7d' + baseIntOut)
-        self.assertEqual(self._encoded(baseIntIn - 1), '\x7e' + baseIntOut)
-        self.assertEqual(self._encoded(baseIntIn - 0), '\x7f' + baseIntOut)
+        self.assertEqual(self.encode(baseIntIn - 2), '\x7d' + baseIntOut)
+        self.assertEqual(self.encode(baseIntIn - 1), '\x7e' + baseIntOut)
+        self.assertEqual(self.encode(baseIntIn - 0), '\x7f' + baseIntOut)
 
         baseLongIntOut = '\x00\x00\x00\x08\x85'
-        self.assertEqual(self._encoded(baseIntIn + 1), '\x00' + baseLongIntOut)
-        self.assertEqual(self._encoded(baseIntIn + 2), '\x01' + baseLongIntOut)
-        self.assertEqual(self._encoded(baseIntIn + 3), '\x02' + baseLongIntOut)
+        self.assertEqual(self.encode(baseIntIn + 1), '\x00' + baseLongIntOut)
+        self.assertEqual(self.encode(baseIntIn + 2), '\x01' + baseLongIntOut)
+        self.assertEqual(self.encode(baseIntIn + 3), '\x02' + baseLongIntOut)
 
         baseNegOut = '\x7f\x7f\x7f\x07\x83'
-        self.assertEqual(self._encoded(baseNegIn + 2), '\x7e' + baseNegOut)
-        self.assertEqual(self._encoded(baseNegIn + 1), '\x7f' + baseNegOut)
-        self.assertEqual(self._encoded(baseNegIn + 0), '\x00\x00\x00\x00\x08\x83')
+        self.assertEqual(self.encode(baseNegIn + 2), '\x7e' + baseNegOut)
+        self.assertEqual(self.encode(baseNegIn + 1), '\x7f' + baseNegOut)
+        self.assertEqual(self.encode(baseNegIn + 0), '\x00\x00\x00\x00\x08\x83')
 
         baseLongNegOut = '\x00\x00\x00\x08\x86'
-        self.assertEqual(self._encoded(baseNegIn - 1), '\x01' + baseLongNegOut)
-        self.assertEqual(self._encoded(baseNegIn - 2), '\x02' + baseLongNegOut)
-        self.assertEqual(self._encoded(baseNegIn - 3), '\x03' + baseLongNegOut)
+        self.assertEqual(self.encode(baseNegIn - 1), '\x01' + baseLongNegOut)
+        self.assertEqual(self.encode(baseNegIn - 2), '\x02' + baseLongNegOut)
+        self.assertEqual(self.encode(baseNegIn - 3), '\x03' + baseLongNegOut)
 
 
 class DialectTests(BananaTestBase):
