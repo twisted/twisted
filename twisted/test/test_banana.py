@@ -21,10 +21,12 @@ class MathTestCase(unittest.TestCase):
             y = banana.b1282int(v)
             assert y == i, "y = %s; i = %s" % (y,i)
 
+
+
 class BananaTestBase(unittest.TestCase):
     """
-    The base for test classes. It defines commonly used things
-    and sets up a connection for testing.
+    The base for test classes. It defines commonly used things and sets up a
+    connection for testing.
     """
     encClass = banana.Banana
 
@@ -35,8 +37,10 @@ class BananaTestBase(unittest.TestCase):
         self.enc._selectDialect("none")
         self.enc.expressionReceived = self.putResult
 
+
     def putResult(self, result):
         self.result = result
+
 
     def tearDown(self):
         self.enc.connectionLost(failure.Failure(main.CONNECTION_DONE))
@@ -46,7 +50,7 @@ class BananaTestBase(unittest.TestCase):
 
 class BananaTestCase(BananaTestBase):
     """
-    general banana tests
+    General banana tests.
     """
 
     def testString(self):
@@ -315,9 +319,10 @@ class BananaTestCase(BananaTestBase):
         self.assertEqual(encoded(baseNegIn - 3), '\x03' + baseLongNegOut)
 
 
+
 class DialectTests(BananaTestBase):
     """
-    Tests for handling dialects
+    Tests for Banana's handling of dialects.
     """
     legalPbItem = chr(banana.Banana.outgoingVocabulary['remote']) + banana.VOCAB
     illegalPbItem = chr(122) + banana.VOCAB
@@ -367,12 +372,13 @@ class GlobalCoderTests(unittest.TestCase):
     """
     def test_statelessDecode(self):
         """
-        Test that state doesn't carry over between calls to L{banana.decode}.
+        Calls to L{banana.decode} are independent of each other.
         """
         # Banana encoding of 2 ** 449
         undecodable = '\x7f' * 65 + '\x85'
         self.assertRaises(banana.BananaError, banana.decode, undecodable)
 
-        # Banana encoding of 1
+        # Banana encoding of 1.  This should be decodable even though the
+        # previous call passed un-decodable data and triggered an exception.
         decodable = '\x01\x81'
         self.assertEqual(banana.decode(decodable), 1)
