@@ -225,7 +225,8 @@ class Banana(protocol.Protocol, styles.Ephemeral):
                     # the sender issues VOCAB only for dialect pb
                     gotItem(item)
                 else:
-                    raise NotImplementedError("Invalid item for pb protocol %r" % (item,))
+                    raise NotImplementedError(
+                        "Invalid item for pb protocol {0!r}".format(item))
             elif typebyte == FLOAT:
                 if len(rest) >= 8:
                     buffer = rest[8:]
