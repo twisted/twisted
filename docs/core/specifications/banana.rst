@@ -182,9 +182,7 @@ A profile is specified by a unique string. This specification defines two profil
 profile that should be supported by all Banana implementations.
 Additional profiles may be added in the future.
 
-    
-    
-
+Extensions defined by a profile may only be used if that profile has been selected by client and server.
 
 
 The ``"none"``  Profile

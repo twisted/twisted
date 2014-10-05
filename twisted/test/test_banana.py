@@ -21,23 +21,59 @@ class MathTestCase(unittest.TestCase):
             y = banana.b1282int(v)
             assert y == i, "y = %s; i = %s" % (y,i)
 
-class BananaTestCase(unittest.TestCase):
 
+
+def selectDialect(protocol, dialect):
+    """
+    Dictate a Banana dialect to use.
+
+    @param protocol: A L{banana.Banana} instance which has not yet had a
+        dialect negotiated.
+
+    @param dialect: A L{bytes} instance naming a Banana dialect to select.
+    """
+    # We can't do this the normal way by delivering bytes because other setup
+    # stuff gets in the way (for example, clients and servers have incompatible
+    # negotiations for this step).  So use the private API to make this happen.
+    protocol._selectDialect(dialect)
+
+
+
+class BananaTestBase(unittest.TestCase):
+    """
+    The base for test classes. It defines commonly used things and sets up a
+    connection for testing.
+    """
     encClass = banana.Banana
 
     def setUp(self):
         self.io = StringIO.StringIO()
         self.enc = self.encClass()
         self.enc.makeConnection(protocol.FileWrapper(self.io))
-        self.enc._selectDialect("none")
+        selectDialect(self.enc, b"none")
         self.enc.expressionReceived = self.putResult
 
+
     def putResult(self, result):
+        """
+        Store an expression received by C{self.enc}.
+
+        @param result: The object that was received.
+        @type result: Any type supported by Banana.
+        """
         self.result = result
+
 
     def tearDown(self):
         self.enc.connectionLost(failure.Failure(main.CONNECTION_DONE))
         del self.enc
+
+
+
+class BananaTestCase(BananaTestBase):
+    """
+    General banana tests.
+    """
 
     def testString(self):
         self.enc.sendEncoded("hello")
@@ -306,18 +342,66 @@ class BananaTestCase(unittest.TestCase):
 
 
 
+class DialectTests(BananaTestBase):
+    """
+    Tests for Banana's handling of dialects.
+    """
+    vocab = b'remote'
+    legalPbItem = chr(banana.Banana.outgoingVocabulary[vocab]) + banana.VOCAB
+    illegalPbItem = chr(122) + banana.VOCAB
+
+    def test_dialectNotSet(self):
+        """
+        If no dialect has been selected and a PB VOCAB item is received,
+        L{NotImplementedError} is raised.
+        """
+        self.assertRaises(
+            NotImplementedError,
+            self.enc.dataReceived, self.legalPbItem)
+
+
+    def test_receivePb(self):
+        """
+        If the PB dialect has been selected, a PB VOCAB item is accepted.
+        """
+        selectDialect(self.enc, b'pb')
+        self.enc.dataReceived(self.legalPbItem)
+        self.assertEqual(self.result, self.vocab)
+
+
+    def test_receiveIllegalPb(self):
+        """
+        If the PB dialect has been selected and an unrecognized PB VOCAB item
+        is received, L{banana.Banana.dataReceived} raises L{KeyError}.
+        """
+        selectDialect(self.enc, b'pb')
+        self.assertRaises(KeyError, self.enc.dataReceived, self.illegalPbItem)
+
+
+    def test_sendPb(self):
+        """
+        if pb dialect is selected, the sender must be able to send things in
+        that dialect.
+        """
+        selectDialect(self.enc, b'pb')
+        self.enc.sendEncoded(self.vocab)
+        self.assertEqual(self.legalPbItem, self.io.getvalue())
+
+
+
 class GlobalCoderTests(unittest.TestCase):
     """
     Tests for the free functions L{banana.encode} and L{banana.decode}.
     """
     def test_statelessDecode(self):
         """
-        Test that state doesn't carry over between calls to L{banana.decode}.
+        Calls to L{banana.decode} are independent of each other.
         """
         # Banana encoding of 2 ** 449
-        undecodable = '\x7f' * 65 + '\x85'
+        undecodable = b'\x7f' * 65 + b'\x85'
         self.assertRaises(banana.BananaError, banana.decode, undecodable)
 
-        # Banana encoding of 1
-        decodable = '\x01\x81'
+        # Banana encoding of 1.  This should be decodable even though the
+        # previous call passed un-decodable data and triggered an exception.
+        decodable = b'\x01\x81'
         self.assertEqual(banana.decode(decodable), 1)

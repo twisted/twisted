@@ -87,6 +87,17 @@ setPrefixLimit(64)
 SIZE_LIMIT = 640 * 1024   # 640k is all you'll ever need :-)
 
 class Banana(protocol.Protocol, styles.Ephemeral):
+    """
+    L{Banana} implements the I{Banana} s-expression protocol, client and
+    server.
+
+    @ivar knownDialects: These are the profiles supported by this Banana
+        implementation.
+    @type knownDialects: L{list} of L{bytes}
+    """
+
+    # The specification calls these profiles but this implementation calls them
+    # dialects instead.
     knownDialects = ["pb", "none"]
 
     prefixLimit = None
@@ -212,7 +223,13 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             elif typebyte == VOCAB:
                 buffer = rest
                 num = b1282int(num)
-                gotItem(self.incomingVocabulary[num])
+                item = self.incomingVocabulary[num]
+                if self.currentDialect == b'pb':
+                    # the sender issues VOCAB only for dialect pb
+                    gotItem(item)
+                else:
+                    raise NotImplementedError(
+                        "Invalid item for pb protocol {0!r}".format(item))
             elif typebyte == FLOAT:
                 if len(rest) >= 8:
                     buffer = rest[8:]

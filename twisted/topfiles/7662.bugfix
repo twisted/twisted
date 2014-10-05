@@ -1,0 +1,1 @@
+twisted.spread.banana.Banana now raises NotImplementedError when receiving pb messages without pb being the selected dialect
