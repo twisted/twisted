@@ -68,7 +68,6 @@ import warnings
 import decimal
 from functools import reduce
 from types import StringType
-from types import UnicodeType
 from types import IntType
 from types import TupleType
 from types import ListType
@@ -98,6 +97,7 @@ finally:
 from zope.interface import implementer
 
 # Twisted Imports
+from twisted.python.compat import unicode
 from twisted.python.reflect import namedObject, qual
 from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
 from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
@@ -475,7 +475,7 @@ class _Jellier:
                         self.jelly(obj.im_self),
                         self.jelly(obj.im_class)]
 
-            elif UnicodeType and objType is UnicodeType:
+            elif objType is unicode:
                 return ['unicode', obj.encode('UTF-8')]
             elif objType is NoneType:
                 return ['None']
@@ -679,10 +679,7 @@ class _Unjellier:
 
 
     def _unjelly_unicode(self, exp):
-        if UnicodeType:
-            return unicode(exp[0], "UTF-8")
-        else:
-            return Unpersistable("Could not unpersist unicode: %s" % (exp[0],))
+        return unicode(exp[0], "UTF-8")
 
 
     def _unjelly_decimal(self, exp):
@@ -1013,8 +1010,7 @@ class SecurityOptions:
                              "date": 1,
                              "timedelta": 1,
                              "NoneType": 1}
-        if hasattr(types, 'UnicodeType'):
-            self.allowedTypes['unicode'] = 1
+        self.allowedTypes['unicode'] = 1
         self.allowedTypes['decimal'] = 1
         self.allowedTypes['set'] = 1
         self.allowedTypes['frozenset'] = 1
