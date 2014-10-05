@@ -68,14 +68,21 @@ class BananaTestBase(unittest.TestCase):
         self.enc.connectionLost(failure.Failure(main.CONNECTION_DONE))
         del self.enc
 
+
     def _encoded(self, n):
         """
-        Helper: returns encoded string for n
+        Banana encode an object using L{banana.Banana.sendEncoded}.
+
+        @param n: The object to encode.
+        @type n: Any type supported by Banana.
+
+        @return: A L{bytes} instance giving the encoded form of C{n}.
         """
         self.io.seek(0)
         self.io.truncate()
         self.enc.sendEncoded(n)
         return self.io.getvalue()
+
 
 
 class BananaTestCase(BananaTestBase):
