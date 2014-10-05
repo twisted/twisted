@@ -87,12 +87,15 @@ setPrefixLimit(64)
 SIZE_LIMIT = 640 * 1024   # 640k is all you'll ever need :-)
 
 class Banana(protocol.Protocol, styles.Ephemeral):
+    """
+    @ivar knownDialects: These are the profiles supported by this Banana
+        implementation.
+    @type knownDialects: L{list} of L{bytes}
+    """
+
+    # The specification calls these profiles but this implementation calls them
+    # dialects instead.
     knownDialects = ["pb", "none"]
-    """
-    Those are the profiles Banana supports.
-    While the specification defines profiles, the implementation
-    names them dialects.
-    """
 
     prefixLimit = None
     sizeLimit = SIZE_LIMIT
