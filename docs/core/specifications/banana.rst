@@ -14,16 +14,10 @@ Banana Protocol Specifications
 Introduction
 ------------
 
-
-    
-
 Banana is an efficient, extendable protocol for sending and receiving s-expressions.
-A s-expression in this context is a list composed of byte strings, integers, 
-large integers, floats and/or s-expressions.
-
-
-    
-
+A s-expression in this context is a list composed of bytes, integers, large integers, floats and/or s-expressions.
+Unicode is not supported (but can be encoded to and decoded from bytes on the way into and out of Banana).
+Unsupported types must be converted into a supported type before sending them with Banana.
 
 
 Banana Encodings

@@ -45,6 +45,51 @@ class BananaTestCase(unittest.TestCase):
         self.enc.dataReceived(self.io.getvalue())
         assert self.result == 'hello'
 
+
+    def test_unsupportedUnicode(self):
+        """
+        Banana does not support unicode.  ``Banana.sendEncoded`` raises
+        ``BananaError`` if called with an instance of ``unicode``.
+        """
+        self._unsupportedTypeTest(u"hello", "__builtin__.unicode")
+
+
+    def test_unsupportedBuiltinType(self):
+        """
+        Banana does not support arbitrary builtin types like L{type}.
+        L{banana.Banana.sendEncoded} raises L{banana.BananaError} if called
+        with an instance of L{type}.
+        """
+        # type is an instance of type
+        self._unsupportedTypeTest(type, "__builtin__.type")
+
+
+    def test_unsupportedUserType(self):
+        """
+        Banana does not support arbitrary user-defined types (such as those
+        defined with the ``class`` statement).  ``Banana.sendEncoded`` raises
+        ``BananaError`` if called with an instance of such a type.
+        """
+        self._unsupportedTypeTest(MathTestCase(), __name__ + ".MathTestCase")
+
+
+    def _unsupportedTypeTest(self, obj, name):
+        """
+        Assert that L{banana.Banana.sendEncoded} raises L{banana.BananaError}
+        if called with the given object.
+
+        @param obj: Some object that Banana does not support.
+        @param name: The name of the type of the object.
+
+        @raise: The failure exception is raised if L{Banana.sendEncoded} does
+            not raise L{banana.BananaError} or if the message associated with the
+            exception is not formatted to include the type of the unsupported
+            object.
+        """
+        exc = self.assertRaises(banana.BananaError, self.enc.sendEncoded, obj)
+        self.assertIn("Banana cannot send {0} objects".format(name), str(exc))
+
+
     def test_int(self):
         """
         A positive integer less than 2 ** 32 should round-trip through
