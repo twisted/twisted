@@ -21,8 +21,11 @@ class MathTestCase(unittest.TestCase):
             y = banana.b1282int(v)
             assert y == i, "y = %s; i = %s" % (y,i)
 
-class BananaTestCase(unittest.TestCase):
-
+class BananaTestBase(unittest.TestCase):
+    """
+    The base for test classes. It defines commonly used things
+    and sets up a connection for testing.
+    """
     encClass = banana.Banana
 
     def setUp(self):
@@ -38,6 +41,13 @@ class BananaTestCase(unittest.TestCase):
     def tearDown(self):
         self.enc.connectionLost(failure.Failure(main.CONNECTION_DONE))
         del self.enc
+
+
+
+class BananaTestCase(BananaTestBase):
+    """
+    general banana tests
+    """
 
     def testString(self):
         self.enc.sendEncoded("hello")
@@ -303,6 +313,51 @@ class BananaTestCase(unittest.TestCase):
         self.assertEqual(encoded(baseNegIn - 1), '\x01' + baseLongNegOut)
         self.assertEqual(encoded(baseNegIn - 2), '\x02' + baseLongNegOut)
         self.assertEqual(encoded(baseNegIn - 3), '\x03' + baseLongNegOut)
+
+
+class DialectTests(BananaTestBase):
+    """
+    Tests for handling dialects
+    """
+    legalPbItem = chr(banana.Banana.outgoingVocabulary['remote']) + banana.VOCAB
+    illegalPbItem = chr(122) + banana.VOCAB
+
+    def test_dialectNotSet(self):
+        """
+        Dialect must be pb when receiving pb vocabulary
+        """
+        self.assertRaises(NotImplementedError,
+            self.enc.dataReceived, self.legalPbItem)
+
+
+    def test_receivePb(self):
+        """
+        if pb dialect is selected, the receiver must accept things
+        in that dialect.
+        """
+        self.enc._selectDialect(b'pb')
+        self.enc.dataReceived(self.legalPbItem)
+        self.assertEqual(self.result, b'remote')
+
+
+    def test_receiveIllegalPb(self):
+        """
+        if pb dialect is selected, the receiver must accept things
+        in that dialect unless they are illegal.
+        """
+        self.enc._selectDialect(b'pb')
+        self.assertRaises(KeyError, self.enc.dataReceived, self.illegalPbItem)
+
+
+    def test_sendPb(self):
+        """
+        if pb dialect is selected, the sender must be able
+        to send things in that dialect.
+        """
+        self.enc._selectDialect(b'pb')
+        self.enc.sendEncoded(b'lcache')
+        self.enc.dataReceived(self.io.getvalue())
+        self.assertEqual(self.result, b'lcache')
 
 
 

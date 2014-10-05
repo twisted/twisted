@@ -88,6 +88,11 @@ SIZE_LIMIT = 640 * 1024   # 640k is all you'll ever need :-)
 
 class Banana(protocol.Protocol, styles.Ephemeral):
     knownDialects = ["pb", "none"]
+    """
+    Those are the profiles Banana supports.
+    While the specification defines profiles, the implementation
+    names them dialects.
+    """
 
     prefixLimit = None
     sizeLimit = SIZE_LIMIT
@@ -212,7 +217,12 @@ class Banana(protocol.Protocol, styles.Ephemeral):
             elif typebyte == VOCAB:
                 buffer = rest
                 num = b1282int(num)
-                gotItem(self.incomingVocabulary[num])
+                item = self.incomingVocabulary[num]
+                if self.currentDialect == b'pb':
+                    # the sender issues VOCAB only for dialect pb
+                    gotItem(item)
+                else:
+                    raise NotImplementedError("Invalid item for pb protocol %r" % (item,))
             elif typebyte == FLOAT:
                 if len(rest) >= 8:
                     buffer = rest[8:]
