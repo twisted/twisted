@@ -368,6 +368,7 @@ class BananaTestCase(BananaTestBase):
         self.assertEqual(self.encode(baseNegIn - 3), '\x03' + baseLongNegOut)
 
 
+
 class DialectTests(BananaTestBase):
     """
     Tests for Banana's handling of dialects.
