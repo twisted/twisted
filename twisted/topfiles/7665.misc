@@ -1,1 +1,0 @@
-twisted.test.test_banana: eliminated duplicate code and fixed an assertion message
