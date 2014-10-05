@@ -88,6 +88,9 @@ SIZE_LIMIT = 640 * 1024   # 640k is all you'll ever need :-)
 
 class Banana(protocol.Protocol, styles.Ephemeral):
     """
+    L{Banana} implements the I{Banana} s-expression protocol, client and
+    server.
+
     @ivar knownDialects: These are the profiles supported by this Banana
         implementation.
     @type knownDialects: L{list} of L{bytes}

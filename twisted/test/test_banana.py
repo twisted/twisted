@@ -55,6 +55,12 @@ class BananaTestBase(unittest.TestCase):
 
 
     def putResult(self, result):
+        """
+        Store an expression received by C{self.enc}.
+
+        @param result: The object that was received.
+        @type result: Any type supported by Banana.
+        """
         self.result = result
 
 
