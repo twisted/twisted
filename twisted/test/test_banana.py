@@ -23,6 +23,22 @@ class MathTestCase(unittest.TestCase):
 
 
 
+def selectDialect(protocol, dialect):
+    """
+    Dictate a Banana dialect to use.
+
+    @param protocol: A L{banana.Banana} instance which has not yet had a
+        dialect negotiated.
+
+    @param dialect: A L{bytes} instance naming a Banana dialect to select.
+    """
+    # We can't do this the normal way by delivering bytes because other setup
+    # stuff gets in the way (for example, clients and servers have incompatible
+    # negotiations for this step).  So use the private API to make this happen.
+    protocol._selectDialect(dialect)
+
+
+
 class BananaTestBase(unittest.TestCase):
     """
     The base for test classes. It defines commonly used things and sets up a
@@ -34,7 +50,7 @@ class BananaTestBase(unittest.TestCase):
         self.io = StringIO.StringIO()
         self.enc = self.encClass()
         self.enc.makeConnection(protocol.FileWrapper(self.io))
-        self.enc._selectDialect("none")
+        selectDialect(self.enc, b"none")
         self.enc.expressionReceived = self.putResult
 
 
@@ -342,7 +358,7 @@ class DialectTests(BananaTestBase):
         """
         If the PB dialect has been selected, a PB VOCAB item is accepted.
         """
-        self.enc._selectDialect(b'pb')
+        selectDialect(self.enc, b'pb')
         self.enc.dataReceived(self.legalPbItem)
         self.assertEqual(self.result, self.vocab)
 
@@ -352,7 +368,7 @@ class DialectTests(BananaTestBase):
         If the PB dialect has been selected and an unrecognized PB VOCAB item
         is received, L{banana.Banana.dataReceived} raises L{KeyError}.
         """
-        self.enc._selectDialect(b'pb')
+        selectDialect(self.enc, b'pb')
         self.assertRaises(KeyError, self.enc.dataReceived, self.illegalPbItem)
 
 
@@ -361,7 +377,7 @@ class DialectTests(BananaTestBase):
         if pb dialect is selected, the sender must be able
         to send things in that dialect.
         """
-        self.enc._selectDialect(b'pb')
+        selectDialect(self.enc, b'pb')
         self.enc.sendEncoded(b'lcache')
         self.enc.dataReceived(self.io.getvalue())
         self.assertEqual(self.result, b'lcache')
