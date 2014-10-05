@@ -68,6 +68,14 @@ class BananaTestBase(unittest.TestCase):
         self.enc.connectionLost(failure.Failure(main.CONNECTION_DONE))
         del self.enc
 
+    def _encoded(self, n):
+        """
+        Helper: returns encoded string for n
+        """
+        self.io.seek(0)
+        self.io.truncate()
+        self.enc.sendEncoded(n)
+        return self.io.getvalue()
 
 
 class BananaTestCase(BananaTestBase):
@@ -150,9 +158,7 @@ class BananaTestCase(BananaTestBase):
             for add in (0, 1):
                 m = 2 ** exp + add
                 for n in (m, -m-1):
-                    self.io.truncate(0)
-                    self.enc.sendEncoded(n)
-                    self.enc.dataReceived(self.io.getvalue())
+                    self.enc.dataReceived(self._encoded(n))
                     self.assertEqual(self.result, n)
                     if n > sys.maxint or n < -sys.maxint - 1:
                         self.assertIsInstance(self.result, long)
@@ -249,21 +255,30 @@ class BananaTestCase(BananaTestBase):
         foo = [1, 2, [3, 4], [30.5, 40.2], 5, ["six", "seven", ["eight", 9]], [10], []]
         self.enc.sendEncoded(foo)
         self.enc.dataReceived(self.io.getvalue())
-        assert self.result == foo, "%s!=%s" % (repr(self.result), repr(self.result))
+        assert self.result == foo, "%s!=%s" % (repr(self.result), repr(foo))
 
     def testPartial(self):
+        """
+        Test feeding the data byte per byte to the receiver. Normally
+        data is not split.
+        """
         foo = [1, 2, [3, 4], [30.5, 40.2], 5,
                ["six", "seven", ["eight", 9]], [10],
                # TODO: currently the C implementation's a bit buggy...
                sys.maxint * 3l, sys.maxint * 2l, sys.maxint * -2l]
         self.enc.sendEncoded(foo)
-        for byte in self.io.getvalue():
-            self.enc.dataReceived(byte)
+        self.feed(self.io.getvalue())
         assert self.result == foo, "%s!=%s" % (repr(self.result), repr(foo))
 
+
     def feed(self, data):
+        """
+        Feed the data byte per byte to the receiver.
+        """
         for byte in data:
             self.enc.dataReceived(byte)
+
+
     def testOversizedList(self):
         data = '\x02\x01\x01\x01\x01\x80'
         # list(size=0x0101010102, about 4.3e9)
@@ -311,35 +326,28 @@ class BananaTestCase(BananaTestBase):
         serialized as C{INT} or C{NEG} and that larger integers are
         serialized as C{LONGINT} or C{LONGNEG}.
         """
-        def encoded(n):
-            self.io.seek(0)
-            self.io.truncate()
-            self.enc.sendEncoded(n)
-            return self.io.getvalue()
-
         baseIntIn = +2147483647
         baseNegIn = -2147483648
 
         baseIntOut = '\x7f\x7f\x7f\x07\x81'
-        self.assertEqual(encoded(baseIntIn - 2), '\x7d' + baseIntOut)
-        self.assertEqual(encoded(baseIntIn - 1), '\x7e' + baseIntOut)
-        self.assertEqual(encoded(baseIntIn - 0), '\x7f' + baseIntOut)
+        self.assertEqual(self._encoded(baseIntIn - 2), '\x7d' + baseIntOut)
+        self.assertEqual(self._encoded(baseIntIn - 1), '\x7e' + baseIntOut)
+        self.assertEqual(self._encoded(baseIntIn - 0), '\x7f' + baseIntOut)
 
         baseLongIntOut = '\x00\x00\x00\x08\x85'
-        self.assertEqual(encoded(baseIntIn + 1), '\x00' + baseLongIntOut)
-        self.assertEqual(encoded(baseIntIn + 2), '\x01' + baseLongIntOut)
-        self.assertEqual(encoded(baseIntIn + 3), '\x02' + baseLongIntOut)
+        self.assertEqual(self._encoded(baseIntIn + 1), '\x00' + baseLongIntOut)
+        self.assertEqual(self._encoded(baseIntIn + 2), '\x01' + baseLongIntOut)
+        self.assertEqual(self._encoded(baseIntIn + 3), '\x02' + baseLongIntOut)
 
         baseNegOut = '\x7f\x7f\x7f\x07\x83'
-        self.assertEqual(encoded(baseNegIn + 2), '\x7e' + baseNegOut)
-        self.assertEqual(encoded(baseNegIn + 1), '\x7f' + baseNegOut)
-        self.assertEqual(encoded(baseNegIn + 0), '\x00\x00\x00\x00\x08\x83')
+        self.assertEqual(self._encoded(baseNegIn + 2), '\x7e' + baseNegOut)
+        self.assertEqual(self._encoded(baseNegIn + 1), '\x7f' + baseNegOut)
+        self.assertEqual(self._encoded(baseNegIn + 0), '\x00\x00\x00\x00\x08\x83')
 
         baseLongNegOut = '\x00\x00\x00\x08\x86'
-        self.assertEqual(encoded(baseNegIn - 1), '\x01' + baseLongNegOut)
-        self.assertEqual(encoded(baseNegIn - 2), '\x02' + baseLongNegOut)
-        self.assertEqual(encoded(baseNegIn - 3), '\x03' + baseLongNegOut)
-
+        self.assertEqual(self._encoded(baseNegIn - 1), '\x01' + baseLongNegOut)
+        self.assertEqual(self._encoded(baseNegIn - 2), '\x02' + baseLongNegOut)
+        self.assertEqual(self._encoded(baseNegIn - 3), '\x03' + baseLongNegOut)
 
 
 class DialectTests(BananaTestBase):
