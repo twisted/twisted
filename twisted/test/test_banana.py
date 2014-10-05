@@ -374,13 +374,12 @@ class DialectTests(BananaTestBase):
 
     def test_sendPb(self):
         """
-        if pb dialect is selected, the sender must be able
-        to send things in that dialect.
+        if pb dialect is selected, the sender must be able to send things in
+        that dialect.
         """
         selectDialect(self.enc, b'pb')
-        self.enc.sendEncoded(b'lcache')
-        self.enc.dataReceived(self.io.getvalue())
-        self.assertEqual(self.result, b'lcache')
+        self.enc.sendEncoded(self.vocab)
+        self.assertEqual(self.legalPbItem, self.io.getvalue())
 
 
 
