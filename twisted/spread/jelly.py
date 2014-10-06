@@ -879,7 +879,7 @@ class _Unjellier:
         Called to handle the deprecated I{instance} token.
         """
         warnings.warn_explicit(
-            "Unjellying support for the instance atom is deprecated since "
+            "Unjelly support for the instance atom is deprecated since "
             "Twisted 14.1.0.  Upgrade peer for modern instance support.",
             category=DeprecationWarning, filename="", lineno=0)
 

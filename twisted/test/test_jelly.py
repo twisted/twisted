@@ -608,8 +608,8 @@ class JellyDeprecationTests(unittest.TestCase):
         self.assertEqual(len(warnings), 1)
         self.assertEqual(
             warnings[0]['message'],
-            'Unjellying an instance is deprecated since Twisted 14.1.0'
-            ' and unsupported for Python 3')
+            "Unjelly support for the instance atom is deprecated since "
+            "Twisted 14.1.0.  Upgrade peer for modern instance support.")
         self.assertEqual(
             warnings[0]['category'],
             DeprecationWarning)
