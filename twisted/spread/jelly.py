@@ -878,10 +878,10 @@ class _Unjellier:
 
         Called to handle the deprecated I{instance} token.
         """
-        warnings.warn(
+        warnings.warn_explicit(
             "Unjellying an instance is deprecated since Twisted 14.1.0 "
-            "and unsupported for Python 3",
-            DeprecationWarning)
+            "and unsupported for Python 3", category=DeprecationWarning,
+            filename="", lineno=0)
 
         clz = self.unjelly(rest[0])
         if type(clz) is not types.ClassType:
