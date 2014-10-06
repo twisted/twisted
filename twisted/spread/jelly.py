@@ -875,14 +875,12 @@ class _Unjellier:
     def _unjelly_instance(self, rest):
         """
         (internal) Unjelly an instance.
-        Unused.
-        Never called directly, only by the unjellier.
-        But the jellier never jellies an instance,
-        so the unjellier cannot call this.
-        When removing this, also remove instance_atom
+
+        Called to handle the deprecated I{instance} token.
         """
-        warnings.warn("Unjellying an instance is deprecated since Twisted 14.1.0"
-            " and unsupported for Python 3",
+        warnings.warn(
+            "Unjellying an instance is deprecated since Twisted 14.1.0 "
+            "and unsupported for Python 3",
             DeprecationWarning)
 
         clz = self.unjelly(rest[0])
