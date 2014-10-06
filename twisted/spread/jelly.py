@@ -877,6 +877,10 @@ class _Unjellier:
         (internal) Unjelly an instance.
 
         Called to handle the deprecated I{instance} token.
+
+        @param rest: The s-expression representing the instance.
+
+        @return: The unjellied instance.
         """
         warnings.warn_explicit(
             "Unjelly support for the instance atom is deprecated since "
