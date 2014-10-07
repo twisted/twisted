@@ -105,6 +105,9 @@ from twisted.persisted.crefutil import _Container
 
 from twisted.spread.interfaces import IJellyable, IUnjellyable
 
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.versions import Version
+
 DictTypes = (DictionaryType,)
 
 None_atom = "None"                  # N
@@ -129,6 +132,11 @@ tuple_atom = "tuple"                # t
 instance_atom = 'instance'          # i
 frozenset_atom = 'frozenset'
 
+
+deprecatedModuleAttribute(
+    Version("Twisted", 14, 1, 0),
+    "instance_atom is unused within Twisted.",
+    "twisted.spread.jelly", "instance_atom")
 
 # errors
 unpersistable_atom = "unpersistable"# u
@@ -865,6 +873,20 @@ class _Unjellier:
 
 
     def _unjelly_instance(self, rest):
+        """
+        (internal) Unjelly an instance.
+
+        Called to handle the deprecated I{instance} token.
+
+        @param rest: The s-expression representing the instance.
+
+        @return: The unjellied instance.
+        """
+        warnings.warn_explicit(
+            "Unjelly support for the instance atom is deprecated since "
+            "Twisted 14.1.0.  Upgrade peer for modern instance support.",
+            category=DeprecationWarning, filename="", lineno=0)
+
         clz = self.unjelly(rest[0])
         if type(clz) is not types.ClassType:
             raise InsecureJelly("Instance found with non-class class.")
