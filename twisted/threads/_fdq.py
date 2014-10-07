@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.threads.test.test_convenience -*-
+# -*- test-case-name: twisted.threads.test.test_queue -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -47,4 +47,12 @@ class PipeQueue(object):
         Get an item that was put into the queue with C{put}.
         """
         os.read(self._r, 1)
-        self._data.pop(0)
+        return self._data.pop(0)
+
+
+    def close(self):
+        """
+        Release resources associated with this L{PipeQueue}.
+        """
+        os.close(self._r)
+        os.close(self._w)
