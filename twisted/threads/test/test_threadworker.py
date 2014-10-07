@@ -134,3 +134,4 @@ class ThreadWorkerTests(SynchronousTestCase):
         self.worker.quit()
         self.assertEqual(len(self.fakeThreads), 1)
         self.assertEqual(self.fakeThreads[0].joined, True)
+        self.assertEqual(self.fakeThreads[0].target(), None)
