@@ -7,11 +7,14 @@ Twisted integration with operating system threads.
 """
 
 from ._threadworker import ThreadWorker
-from ._ithreads import IWorker
+from ._ithreads import IWorker, AlreadyQuit
 from ._team import Team
+from ._memory import createMemoryWorker
 
 __all__ = [
     "ThreadWorker",
     "IWorker",
+    "AlreadyQuit",
     "Team",
+    "createMemoryWorker",
 ]
