@@ -21,7 +21,7 @@ class IWorker(Interface):
     A worker that can perform some work concurrently.
     """
 
-    def do(task):
+    def do(task):  # pragma: nocover
         """
         Perform the given task.
 
@@ -31,7 +31,7 @@ class IWorker(Interface):
         @raise AlreadyQuit: if C{quit} has been called.
         """
 
-    def quit():
+    def quit():  # pragma: nocover
         """
         Free any resources associated with this L{IWorker} and cause it to
         reject all future work.
