@@ -44,7 +44,9 @@ class PipeQueue(object):
 
     def get(self):
         """
-        Get an item that was put into the queue with C{put}.
+        Get an item that was put into the queue, or block until one is.
+
+        @return: A value previously put with C{put}.
         """
         os.read(self._r, 1)
         return self._data.pop(0)

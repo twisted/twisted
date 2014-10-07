@@ -8,11 +8,11 @@ Common functionality used within the implementation of various workers.
 
 from ._ithreads import AlreadyQuit
 
+
 class Quit(object):
     """
-    A flag representing whether a worker has been quit.
-
-    Private; not exposed in a public interface anywhere.
+    A flag representing whether a worker has been quit.  Private; not exposed
+    in a public interface anywhere.
 
     @ivar isSet: Whether this flag is set.
     @type isSet: L{bool}

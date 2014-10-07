@@ -15,6 +15,7 @@ class FakeQueueEmpty(Exception):
     """
 
 
+
 class FakeThread(object):
     """
     A fake L{threading.Thread}.
@@ -86,7 +87,6 @@ class FakeQueue(object):
         if not self.items:
             raise FakeQueueEmpty()
         return self.items.pop(0)
-
 
 
 

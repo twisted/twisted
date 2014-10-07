@@ -18,6 +18,8 @@ class QueueTests(SynchronousTestCase):
     def makeQueue(self):
         """
         Create a queue, but clean it up.
+
+        @return: a new L{PipeQueue}
         """
         q = PipeQueue()
         self.addCleanup(q.close)
