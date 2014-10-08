@@ -121,3 +121,13 @@ class TeamTests(SynchronousTestCase):
         self.assertEqual(len(self.team._idle), 2)
 
 
+    def test_initialStatistics(self):
+        """
+        L{Team.statistics} returns an object with idleWorkerCount,
+        busyWorkerCount, and backloggedWorkCount integer attributes.
+        """
+        stats = self.team.statistics()
+        self.assertEqual(stats.idleWorkerCount, 0)
+        self.assertEqual(stats.busyWorkerCount, 0)
+        self.assertEqual(stats.backloggedWorkCount, 0)
+

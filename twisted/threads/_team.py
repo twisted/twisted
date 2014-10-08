@@ -25,17 +25,17 @@ class Statistics(object):
     @ivar busyWorkerCount: The number of busy workers.
     @type busyWorkerCount: L{int}
 
-    @ivar pendingCount: The number of pending tasks.
-    @type pendingCount: L{int}
+    @ivar backloggedWorkCount: The number of work items passed to L{Team.do}
+        which have not yet been sent to a worker to be performed because not
+        enough workers are available.
+    @type backloggedWorkCount: L{int}
     """
 
-    def __init__(self, idleWorkerCount, busyWorkerCount, pendingCount):
-        """
-        Create some statistics.
-        """
+    def __init__(self, idleWorkerCount, busyWorkerCount,
+                 backloggedWorkCount):
         self.idleWorkerCount = idleWorkerCount
         self.busyWorkerCount = busyWorkerCount
-        self.pendingCount = pendingCount
+        self.backloggedWorkCount = backloggedWorkCount
 
 
 
@@ -64,6 +64,15 @@ class Team(object):
         # Don't touch these except from the coordinator.
         self._idle = set()
         self._pending = deque()
+
+
+    def statistics(self):
+        """
+        Gather information on the current status of this L{Team}.
+
+        @return: a L{Statistics} describing the current state of this L{Team}.
+        """
+        return Statistics(0, 0, 0)
 
 
     def grow(self, n):
