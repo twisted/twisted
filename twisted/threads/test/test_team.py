@@ -12,7 +12,7 @@ from twisted.python.components import proxyForInterface
 
 from twisted.python.logger import Logger
 
-from .. import IWorker, Team, createMemoryWorker
+from .. import IWorker, Team, createMemoryWorker, AlreadyQuit
 
 class ContextualWorker(proxyForInterface(IWorker, "_realWorker")):
     """
@@ -52,10 +52,13 @@ class TeamTests(SynchronousTestCase):
         coordinator, self.coordinate = createMemoryWorker()
         self.coordinator = ContextualWorker(coordinator, worker="coordinator")
         self.workerPerformers = []
+        self.allWorkersEver = []
         def createWorker():
             worker, performer = createMemoryWorker()
             self.workerPerformers.append(performer)
-            return ContextualWorker(worker, worker=len(self.workerPerformers))
+            cw = ContextualWorker(worker, worker=len(self.workerPerformers))
+            self.allWorkersEver.append(cw)
+            return cw
         self.team = Team(lambda: coordinator, createWorker, None)
 
 
@@ -65,8 +68,11 @@ class TeamTests(SynchronousTestCase):
         be done.
         """
         self.coordinate()
-        for performer in self.workerPerformers:
-            performer()
+        for performer in self.workerPerformers[:]:
+            try:
+                performer()
+            except AlreadyQuit:
+                self.workerPerformers.remove(performer)
 
 
     def test_doDoesWorkInWorker(self):
@@ -88,3 +94,14 @@ class TeamTests(SynchronousTestCase):
         self.team.grow(5)
         self.performAllOutstandingWork()
         self.assertEqual(len(self.workerPerformers), 5)
+
+
+    def test_shrinkQuitsWorkers(self):
+        """
+        L{Team.shrink} will quit workers.
+        """
+        self.team.grow(5)
+        self.performAllOutstandingWork()
+        self.team.shrink(3)
+        self.performAllOutstandingWork()
+        self.assertEqual(len(self.team._idle), 2)

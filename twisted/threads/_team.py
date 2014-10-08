@@ -102,9 +102,8 @@ class Team(object):
         """
         if n is None:
             n = len(self._idle)
-        toQuit, self._idle = self._idle[:n], self._idle[n:]
-        for idleWorker in toQuit:
-            idleWorker.quit()
+        for x in range(n):
+            self._idle.pop().quit()
 
 
     def do(self, task):
