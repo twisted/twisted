@@ -30,9 +30,10 @@ class ContextualWorker(proxyForInterface(IWorker, "_realWorker")):
     def do(self, work):
         """
         Perform the given work with the context given to __init__.
+
+        @param work: the work to pass on to the real worker.
         """
-        return (super(ContextualWorker, self)
-                .do(lambda: call(self._context, work)))
+        super(ContextualWorker, self).do(lambda: call(self._context, work))
 
 
 
