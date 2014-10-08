@@ -19,7 +19,8 @@ class MemoryWorkerTests(SynchronousTestCase):
     def test_createWorkerAndPerform(self):
         """
         L{createMemoryWorker} creates an L{IWorker} and a callable that can
-        perform work on it.
+        perform work on it.  The performer returns C{True} if it accomplished
+        useful work.
         """
         worker, performer = createMemoryWorker()
         verifyObject(IWorker, worker)
@@ -27,9 +28,9 @@ class MemoryWorkerTests(SynchronousTestCase):
         worker.do(lambda: done.append(3))
         worker.do(lambda: done.append(4))
         self.assertEqual(done, [])
-        performer()
+        self.assertEqual(performer(), True)
         self.assertEqual(done, [3])
-        performer()
+        self.assertEqual(performer(), True)
         self.assertEqual(done, [3, 4])
 
 
@@ -51,3 +52,13 @@ class MemoryWorkerTests(SynchronousTestCase):
         performer()
         self.assertEqual(done, [7])
         self.assertRaises(AlreadyQuit, performer)
+
+
+    def test_performWhenNothingToDoYet(self):
+        """
+        The C{perform} callable returned by L{createMemoryWorker} will return
+        no result when there's no work to do yet.  Since there is no work to
+        do, the performer returns C{False}.
+        """
+        worker, performer = createMemoryWorker()
+        self.assertEqual(performer(), False)

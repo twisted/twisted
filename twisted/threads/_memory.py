@@ -59,8 +59,11 @@ def createMemoryWorker():
     @rtype: 2-L{tuple} of (L{IWorker}, L{callable})
     """
     def perform():
+        if not worker._pending:
+            return False
         if worker._pending[0] is NoMoreWork:
             worker._quit.check()
         worker._pending.pop(0)()
+        return True
     worker = MemoryWorker()
     return (worker, perform)
