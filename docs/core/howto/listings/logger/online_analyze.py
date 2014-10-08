@@ -1,4 +1,4 @@
-from twisted.python.logger import globalLogPublisher
+from twisted.logger import globalLogPublisher
 from analyze import analyze
 from ad_hoc import AdHoc
 

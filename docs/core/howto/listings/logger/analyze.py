@@ -1,4 +1,4 @@
-from twisted.python.logger import extractField
+from twisted.logger import extractField
 
 fmt = (
     "message from {log_source} "

@@ -21,7 +21,7 @@ from twisted.python import context
 from twisted.python import reflect
 from twisted.python import failure
 from twisted.python.threadable import synchronize
-from twisted.python.logger import (
+from twisted.logger import (
     Logger as NewLogger, LogLevel as NewLogLevel,
     textFileLogObserver as newFileLogObserver,
     STDLibLogObserver as NewSTDLibLogObserver,
@@ -30,8 +30,8 @@ from twisted.python.logger import (
     globalLogBeginner as newGlobalLogBeginner,
 )
 
-from twisted.python.logger._global import LogBeginner
-from twisted.python.logger._legacy import publishToNewObserver as _publishNew
+from twisted.logger._global import LogBeginner
+from twisted.logger._legacy import publishToNewObserver as _publishNew
 
 
 
@@ -215,7 +215,7 @@ class LogPublisher:
         """
         Clean-up hook for fixing potentially global state.  Only for testing of
         this module itself.  If you want less global state, use the new
-        warnings system in L{twisted.python.logger}.
+        warnings system in L{twisted.logger}.
         """
         if self._warningsModule.showwarning == self.showwarning:
             self._warningsModule.showwarning = self._oldshowwarning

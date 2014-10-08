@@ -1,4 +1,4 @@
-from twisted.python.logger import Logger
+from twisted.logger import Logger
 
 class AdHoc(object):
     log = Logger(namespace="ad_hoc")

@@ -1,4 +1,4 @@
-from twisted.python.logger import Logger
+from twisted.logger import Logger
 
 class MyObject(object):
     log = Logger()

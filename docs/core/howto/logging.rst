@@ -10,7 +10,7 @@ Logging with twisted.python.log
 Note: New Logging System
 ------------------------
 
-There is now a new logging system in Twisted (:api:`twisted.python.logger <twisted.python.logger>`) which is a replacement for :api:`twisted.python.log <twisted.python.log>`.
+There is now a new logging system in Twisted (:api:`twisted.logger <twisted.logger>`) which is a replacement for :api:`twisted.python.log <twisted.python.log>`.
 
 The old logging API, described here, remains for compatibility, and is now implemented as a client of the new logging system.
 

@@ -20,9 +20,10 @@ from io import IOBase
 from twisted.trial import unittest
 
 from twisted.python import log, failure
-from twisted.python.logger.test.test_stdlib import handlerAndBytesIO
 from twisted.python.log import LogPublisher
-from twisted.python.logger import (
+
+from twisted.logger.test.test_stdlib import handlerAndBytesIO
+from twisted.logger import (
     LoggingFile, LogLevel as NewLogLevel, LogBeginner,
     LogPublisher as NewLogPublisher
 )

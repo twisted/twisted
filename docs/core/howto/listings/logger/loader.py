@@ -1,6 +1,6 @@
 import sys
 import io
-from twisted.python.logger import (
+from twisted.logger import (
     eventsFromJSONLogFile, textFileLogObserver
 )
 
