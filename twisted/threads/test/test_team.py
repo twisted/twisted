@@ -107,7 +107,7 @@ class TeamTests(SynchronousTestCase):
         self.noMoreWorkers = lambda: len(self.allWorkersEver) >= 3
         self.team.grow(5)
         self.performAllOutstandingWork()
-        self.assertEqual(len(self.workerPerformers), 3)
+        self.assertEqual(len(self.allWorkersEver), 3)
 
 
     def test_shrinkQuitsWorkers(self):
@@ -119,3 +119,5 @@ class TeamTests(SynchronousTestCase):
         self.team.shrink(3)
         self.performAllOutstandingWork()
         self.assertEqual(len(self.team._idle), 2)
+
+
