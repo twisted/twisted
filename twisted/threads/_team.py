@@ -80,7 +80,7 @@ class Team(object):
                 worker = self._createWorker()
                 if worker is None:
                     return
-                self._idle.append(worker)
+                self._idle.add(worker)
 
 
     def shrink(self, n):
