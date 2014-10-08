@@ -33,13 +33,13 @@ the case of a class, by using the fully qualified name of the class.
 In the first example above, the namespace would be C{some.module}, and in the
 second example, it would be C{some.module.Foo}.
 
+@type globalLogPublisher: L{LogPublisher}
 @var globalLogPublisher: The L{LogPublisher} that all L{Logger} instances that
     are not otherwise parameterized will point to by default.
-@type globalLogPublisher: L{LogPublisher}
 
+@type globalLogBeginner: L{LogBeginner}
 @var globalLogBeginner: The L{LogBeginner} used to activate the main log
     observer, whether it's a log file, or an observer pointing at stderr.
-@type globalLogBeginner: L{LogBeginner}
 """
 
 __all__ = [

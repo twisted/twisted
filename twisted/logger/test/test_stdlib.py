@@ -23,7 +23,8 @@ from .._stdlib import STDLibLogObserver
 def nextLine():
     """
     Retrive the file name and line number immediately after where this function
-        is called.
+    is called.
+
     @return: the file name and line number
     @rtype: 2-L{tuple} of L{str}, L{int}
     """

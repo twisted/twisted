@@ -180,7 +180,9 @@ def eventAsJSON(event):
         def default(unencodable):
             """
             Serialize an object not otherwise serializable by L{dumps}.
+
             @param unencodable: An unencodable object.
+
             @return: C{unencodable}, serialized
             """
             if isinstance(unencodable, bytes):

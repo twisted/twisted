@@ -38,15 +38,15 @@ def compareEvents(test, actualEvents, expectedEvents):
         test.assertEquals(actualEvents, expectedEvents)
     allMergedKeys = set()
 
-    for event in expectedEvents:
-        allMergedKeys |= set(event.keys())
-
     def simplify(event):
         copy = event.copy()
         for key in event.keys():
             if key not in allMergedKeys:
                 copy.pop(key)
         return copy
+
+    for event in expectedEvents:
+        allMergedKeys |= set(event.keys())
 
     simplifiedActual = [simplify(event) for event in actualEvents]
     test.assertEquals(simplifiedActual, expectedEvents)
