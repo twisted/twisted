@@ -4,8 +4,8 @@
 
 """
 Since we can't safely use python stdlib L{Queue} or L{RLock}, (see
-U{http://bugs.python.org/issue13697}) implement our own in terms of pipes,
-lists, and the GIL.
+U{http://bugs.python.org/issue14976} and U{http://bugs.python.org/issue13697}
+respectively) implement our own in terms of pipes, lists, and the GIL.
 
 I can almost hear you asking, "why aren't you using a deque, isn't that the
 more natural structure for this"?  I'm sticking with lists for the time being
