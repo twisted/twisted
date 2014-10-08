@@ -53,7 +53,10 @@ class TeamTests(SynchronousTestCase):
         self.coordinator = ContextualWorker(coordinator, worker="coordinator")
         self.workerPerformers = []
         self.allWorkersEver = []
+        self.noMoreWorkers = False
         def createWorker():
+            if self.noMoreWorkers:
+                return None
             worker, performer = createMemoryWorker()
             self.workerPerformers.append(performer)
             cw = ContextualWorker(worker, worker=len(self.workerPerformers))
