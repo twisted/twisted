@@ -7,7 +7,7 @@ Tests for integration with L{twisted.internet}.
 
 from twisted.trial.unittest import SynchronousTestCase
 
-from .. import ReactorWorker
+from .. import ReactorWorker, AlreadyQuit
 
 class FakePartialReactorThreads(object):
     """
@@ -19,6 +19,7 @@ class FakePartialReactorThreads(object):
         Calls.
         """
         self._calls = []
+        self.stopped = False
 
 
     def callFromThread(self, f, *a, **kw):
@@ -47,7 +48,7 @@ class FakePartialReactorThreads(object):
         """
         Stop the reactor.
         """
-        self.stopped = False
+        self.stopped = True
 
 
 
@@ -69,3 +70,30 @@ class ReactorWorkerTests(SynchronousTestCase):
         later.append(True)
         reactor.flushCalls()
         self.assertEqual(work.wasLater, True)
+
+
+    def test_quitNormallyDoesntStop(self):
+        """
+        L{ReactorWorker.quit} will stop processing more work itself, but it
+        leaves the reactor itself running by default.
+        """
+        reactor = FakePartialReactorThreads()
+        worker = ReactorWorker(reactor)
+        worker.quit()
+        self.assertEqual(reactor.stopped, False)
+        self.assertRaises(AlreadyQuit, worker.do, None)
+        self.assertRaises(AlreadyQuit, worker.quit)
+
+
+    def test_quitStopsIfToldTo(self):
+        """
+        L{ReactorWorker.quit} will stop processing more work itself, and quits
+        the underlying Reactor if the relevant flag was passed at its
+        construction.
+        """
+        reactor = FakePartialReactorThreads()
+        worker = ReactorWorker(reactor, quitStops=True)
+        worker.quit()
+        self.assertEqual(reactor.stopped, True)
+        self.assertRaises(AlreadyQuit, worker.do, None)
+        self.assertRaises(AlreadyQuit, worker.quit)
