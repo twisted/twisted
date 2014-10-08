@@ -65,7 +65,7 @@ class LogBeginner(object):
 
     @ivar _temporaryObserver: If not C{None}, an L{ILogObserver} that observes
         events on C{_publisher} for this L{LogBeginner}.
-    @type _temporaryObserver: L{ILogObserver} or L{NoneType}
+    @type _temporaryObserver: L{ILogObserver} or L{types.NoneType}
 
     @ivar _stdio: An object with C{stderr} and C{stdout} attributes (like the
         L{sys} module) which will be replaced when redirecting standard I/O.

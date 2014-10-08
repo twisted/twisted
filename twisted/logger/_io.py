@@ -92,7 +92,7 @@ class LoggingFile(object):
         Read-only property.  Types of newlines encountered.
 
         @return: C{None}
-        @rtype: L{NoneType}
+        @rtype: L{types.NoneType}
         """
         return None
 
