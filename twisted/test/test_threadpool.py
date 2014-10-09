@@ -521,40 +521,6 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
         self.assertEqual(len(pool.working), 0)
 
 
-    def test_workerState(self):
-        """
-        Upon entering a _workerState block, the threads unique identifier is
-        added to a stateList and is removed upon exiting the block.
-        """
-        pool = threadpool.ThreadPool()
-        workerThread = object()
-        stateList = []
-        with pool._workerState(stateList, workerThread):
-            self.assertIn(workerThread, stateList)
-        self.assertNotIn(workerThread, stateList)
-
-
-    def test_workerStateExceptionHandling(self):
-        """
-        The _workerState block does not consume L{Exception}s or change the
-        L{Exception} that gets raised.
-        """
-        pool = threadpool.ThreadPool()
-        workerThread = object()
-        stateList = []
-        try:
-            with pool._workerState(stateList, workerThread):
-                self.assertIn(workerThread, stateList)
-                1 / 0
-        except ZeroDivisionError:
-            pass
-        except:
-            self.fail("_workerState shouldn't change raised exceptions")
-        else:
-            self.fail("_workerState shouldn't consume exceptions")
-        self.assertNotIn(workerThread, stateList)
-
-
 
 class RaceConditionTestCase(unittest.SynchronousTestCase):
 
