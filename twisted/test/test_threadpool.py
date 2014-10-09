@@ -563,34 +563,3 @@ class RaceConditionTestCase(unittest.SynchronousTestCase):
         self.assertEqual(self.threadpool.workers, 1)
 
 
-    def test_newWorkWhileDequeuing(self):
-        """
-        If new work is given to L{threadpool.ThreadPool.callInThread} while the
-        worker (in L{_worker}) is between waiting for a work queue item and
-        processing that item, the main thread will start a new worker.
-        """
-        getwait = threading.Event()
-        def holdYourHorses(stateList, thread):
-            if stateList is self.threadpool.working:
-                getwait.wait()
-            return origState(stateList, thread)
-
-        callwait = threading.Event()
-        origState = self.threadpool._workerState
-        self.threadpool._workerState = holdYourHorses
-
-        def setget():
-            getwait.set()
-        def setcall():
-            callwait.set()
-
-        self.addCleanup(setcall)
-        self.addCleanup(setget)
-
-        def wait4it():
-            callwait.wait()
-
-        self.threadpool.callInThread(wait4it)
-        self.threadpool.callInThread(setcall)
-        self.assertEqual(self.threadpool.workers, 2)
-
