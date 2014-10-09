@@ -10,8 +10,7 @@ from twisted.trial.unittest import SynchronousTestCase
 from twisted.python.context import call, get
 from twisted.python.components import proxyForInterface
 
-from twisted.python.logger import Logger
-
+from twisted.python.failure import Failure
 from .. import IWorker, Team, createMemoryWorker, AlreadyQuit
 
 class ContextualWorker(proxyForInterface(IWorker, "_realWorker")):
@@ -42,18 +41,18 @@ class TeamTests(SynchronousTestCase):
     Tests for L{twisted.threads.Team}
     """
 
-    log = Logger()
-
     def setUp(self):
         """
         Set up a L{Team} with inspectable, synchronous workers that can be
         single-stepped.
         """
-        coordinator, self.coordinate = createMemoryWorker()
+        coordinator, self.coordinateOnce = createMemoryWorker()
         self.coordinator = ContextualWorker(coordinator, worker="coordinator")
         self.workerPerformers = []
         self.allWorkersEver = []
+        self.allUnquitWorkers = []
         self.noMoreWorkers = lambda: False
+
         def createWorker():
             if self.noMoreWorkers():
                 return None
@@ -61,8 +60,28 @@ class TeamTests(SynchronousTestCase):
             self.workerPerformers.append(performer)
             cw = ContextualWorker(worker, worker=len(self.workerPerformers))
             self.allWorkersEver.append(cw)
+            self.allUnquitWorkers.append(cw)
+            realQuit = cw.quit
+            def quitAndRemove():
+                realQuit()
+                self.allUnquitWorkers.remove(cw)
+            cw.quit = quitAndRemove
             return cw
-        self.team = Team(lambda: coordinator, createWorker, None)
+
+        self.failures = []
+        def logException():
+            self.failures.append(Failure())
+        self.team = Team(lambda: coordinator, createWorker, logException)
+
+
+    def coordinate(self):
+        """
+        Perform all work currently scheduled in the coordinator.
+        """
+        did = False
+        while self.coordinateOnce():
+            did = True
+        return did
 
 
     def performAllOutstandingWork(self):
@@ -70,12 +89,15 @@ class TeamTests(SynchronousTestCase):
         Perform all work on the coordinator and worker performers that needs to
         be done.
         """
-        self.coordinate()
-        for performer in self.workerPerformers[:]:
-            try:
-                performer()
-            except AlreadyQuit:
-                self.workerPerformers.remove(performer)
+        continuing = True
+        while continuing:
+            continuing = self.coordinate()
+            for performer in self.workerPerformers[:]:
+                try:
+                    performer()
+                except AlreadyQuit:
+                    self.workerPerformers.remove(performer)
+            continuing = continuing or self.coordinate()
 
 
     def test_doDoesWorkInWorker(self):
@@ -86,8 +108,22 @@ class TeamTests(SynchronousTestCase):
         def something():
             something.who = get("worker")
         self.team.do(something)
+        self.coordinate()
+        self.assertEqual(self.team.statistics().busyWorkerCount, 1)
         self.performAllOutstandingWork()
         self.assertEqual(something.who, 1)
+        self.assertEqual(self.team.statistics().busyWorkerCount, 0)
+
+
+    def test_initialStatistics(self):
+        """
+        L{Team.statistics} returns an object with idleWorkerCount,
+        busyWorkerCount, and backloggedWorkCount integer attributes.
+        """
+        stats = self.team.statistics()
+        self.assertEqual(stats.idleWorkerCount, 0)
+        self.assertEqual(stats.busyWorkerCount, 0)
+        self.assertEqual(stats.backloggedWorkCount, 0)
 
 
     def test_growCreatesIdleWorkers(self):
@@ -108,26 +144,66 @@ class TeamTests(SynchronousTestCase):
         self.team.grow(5)
         self.performAllOutstandingWork()
         self.assertEqual(len(self.allWorkersEver), 3)
+        self.assertEqual(self.team.statistics().idleWorkerCount, 3)
 
 
     def test_shrinkQuitsWorkers(self):
         """
-        L{Team.shrink} will quit workers.
+        L{Team.shrink} will quit the given number of workers.
         """
         self.team.grow(5)
         self.performAllOutstandingWork()
         self.team.shrink(3)
         self.performAllOutstandingWork()
-        self.assertEqual(len(self.team._idle), 2)
+        self.assertEqual(len(self.allUnquitWorkers), 2)
 
 
-    def test_initialStatistics(self):
+    def test_shrinkToZero(self):
         """
-        L{Team.statistics} returns an object with idleWorkerCount,
-        busyWorkerCount, and backloggedWorkCount integer attributes.
+        L{Team.shrink} with no arguments will stop all outstanding workers.
         """
-        stats = self.team.statistics()
-        self.assertEqual(stats.idleWorkerCount, 0)
-        self.assertEqual(stats.busyWorkerCount, 0)
-        self.assertEqual(stats.backloggedWorkCount, 0)
+        self.team.grow(10)
+        self.performAllOutstandingWork()
+        self.team.shrink()
+        self.assertEqual(len(self.allUnquitWorkers), 10)
+        self.performAllOutstandingWork()
+        self.assertEqual(len(self.allUnquitWorkers), 0)
 
+
+    def test_moreWorkWhenNoWorkersAvailable(self):
+        """
+        When no additional workers are available, the given work is backlogged,
+        and then performed later when the work was.
+        """
+        self.team.grow(3)
+        self.coordinate()
+        def something():
+            something.times += 1
+        something.times = 0
+        self.assertEqual(self.team.statistics().idleWorkerCount, 3)
+        for i in range(3):
+            self.team.do(something)
+        # Make progress on the coordinator but do _not_ actually complete the
+        # work, yet.
+        self.coordinate()
+        self.assertEqual(self.team.statistics().idleWorkerCount, 0)
+        self.noMoreWorkers = lambda: True
+        self.team.do(something)
+        self.coordinate()
+        self.assertEqual(self.team.statistics().idleWorkerCount, 0)
+        self.assertEqual(self.team.statistics().backloggedWorkCount, 1)
+        self.performAllOutstandingWork()
+        self.assertEqual(self.team.statistics().backloggedWorkCount, 0)
+        self.assertEqual(something.times, 4)
+
+
+    def test_exceptionInTask(self):
+        """
+        When an exception is raised in a task passed to L{Team.do}, the
+        C{logException} given to the L{Team} at construction is invoked in the
+        exception context.
+        """
+        self.team.do(lambda: 1/0)
+        self.performAllOutstandingWork()
+        self.assertEqual(len(self.failures), 1)
+        self.assertEqual(self.failures[0].type, ZeroDivisionError)

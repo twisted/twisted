@@ -63,6 +63,7 @@ class Team(object):
 
         # Don't touch these except from the coordinator.
         self._idle = set()
+        self._busyCount = 0
         self._pending = deque()
 
 
@@ -72,7 +73,7 @@ class Team(object):
 
         @return: a L{Statistics} describing the current state of this L{Team}.
         """
-        return Statistics(0, 0, 0)
+        return Statistics(len(self._idle), self._busyCount, len(self._pending))
 
 
     def grow(self, n):
@@ -92,12 +93,13 @@ class Team(object):
                 self._idle.add(worker)
 
 
-    def shrink(self, n):
+    def shrink(self, n=None):
         """
         Decrease the number of idle workers by C{n}.
 
-        @param n: The number of idle workers to shut down.
-        @type n: L{int}
+        @param n: The number of idle workers to shut down, or C{None} (or
+            unspecified) to shut down all workers.
+        @type n: L{int} or L{types.NoneType}
         """
         self._quit.check()
         self._coordinator.do(lambda: self._quitIdlers(n))
@@ -142,6 +144,7 @@ class Team(object):
             # to create workers.
             self._pending.append(task)
             return
+        self._busyCount += 1
         @worker.do
         def doWork():
             try:
@@ -151,6 +154,7 @@ class Team(object):
 
             @self._coordinator.do
             def idleAndPending():
+                self._busyCount -= 1
                 self._idle.add(worker)
                 if self._pending:
                     # Re-try the first enqueued thing.
@@ -167,6 +171,3 @@ class Team(object):
         self._quit.set()
         # In case all the workers are idle when we do this.
         self._coordinator.do(self._quitIdlers)
-
-
-
