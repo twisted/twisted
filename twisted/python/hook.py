@@ -131,7 +131,7 @@ def _removeHook(klass, name, phase, func):
     if not hasattr(klass, ORIG(klass,name)):
         raise HookError("no hooks present!")
 
-    phaselist = getattr(klass, phase(klass, name))
+    phaselist = getattr(klass, phaselistname)
     try: phaselist.remove(func)
     except ValueError:
         raise HookError("hook %s not found in removal list for %s"%

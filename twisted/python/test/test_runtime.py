@@ -100,7 +100,7 @@ class PlatformTests(SynchronousTestCase):
         L{Platform.isWinNT} is deprecated in favor of L{platform.isWindows}.
         """
         platform = Platform()
-        result = platform.isWinNT()
+        platform.isWinNT()
         warnings = self.flushWarnings([self.test_isWinNTDeprecated])
         self.assertEqual(len(warnings), 1)
         self.assertEqual(
@@ -117,6 +117,7 @@ class PlatformTests(SynchronousTestCase):
         # the current runtime, whatever that happens to be.
         try:
             import threading
+            threading  # Silence the linter.
         except ImportError:
             self.assertFalse(Platform().supportsThreads())
         else:

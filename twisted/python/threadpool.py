@@ -214,7 +214,7 @@ class ThreadPool:
             del ctx, onResult, result
 
             with self._workerState(self.waiters, ct):
-                o = self.q.get()
+                self.q.get()
 
         self.threads.remove(ct)
 

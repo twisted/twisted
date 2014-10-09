@@ -18,6 +18,7 @@ class HashObjectTests(TestCase):
         Ensure the deprecation of L{twisted.python.hashlib} is working.
         """
         from twisted.python import hashlib
+        hashlib  # Silence the linter.
         warnings = self.flushWarnings(
                 offendingFunctions=[self.test_deprecation])
         self.assertIdentical(warnings[0]['category'], DeprecationWarning)

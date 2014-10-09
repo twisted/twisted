@@ -25,6 +25,12 @@ def open(filename):
 
 class Shortcut:
     """A shortcut on Win32.
+    >>> path = 'c:\\some\\path'
+    >>> arguments = ['-a']
+    >>> description = 'Some description'
+    >>> workingdir = 'c:\\temp'
+    >>> iconpath = 'c:\\some.icon'
+    >>> iconidx = 0
     >>> sc=Shortcut(path, arguments, description, workingdir, iconpath, iconidx)
     @param path: Location of the target
     @param arguments: If path points to an executable, optional arguments to
