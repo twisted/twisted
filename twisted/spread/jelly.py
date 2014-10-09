@@ -155,12 +155,19 @@ def _newInstance(cls, state=_NO_STATE):
 
     @return: A new instance of C{cls}.
     """
-    if not isinstance(cls, types.ClassType):
+    if _PY3 or not isinstance(cls, ClassType):
         # new-style
         inst = cls.__new__(cls)
 
         if state is not _NO_STATE:
-            inst.__dict__.update(state) # Copy 'instance' behaviour
+            # we cannot do inst.__dict__.update(state) because the reference
+            # to state must be kept. Otherwise the unjellier will later on
+            # not be able to resolve references. state is what _unjelly_dictionary
+            # returns, see its docstring for further explanation.
+            for k,v in inst.__dict__.items():
+                if k not in state:
+                    state[k] = v
+            inst.__dict__ = state
     else:
         if state is not _NO_STATE:
             inst = InstanceType(cls, state)
@@ -818,6 +825,23 @@ class _Unjellier:
 
 
     def _unjelly_dictionary(self, lst):
+        """
+        *** Warning to users of this method: ***
+        This creates a python-level circular reference
+        between d and kvd: unjellyInto() creates
+        a dependency referencing kvd and puts that
+        into d.
+        As soon as d (the result of this method)
+        is not referenced anymore, the python garbage
+        collector may delete both d and kvd, making
+        a resolution of unresolved jelly references
+        impossible.
+
+        Proof: If this method returns
+        dict(d), both d and kvd are only local
+        variables and will be garbage collected
+        and test_jelly will fail.
+        """
         d = {}
         for k, v in lst:
             kvd = _DictKeyAndValue(d)
@@ -913,7 +937,7 @@ class _Unjellier:
         im_name = rest[0]
         im_self = self.unjelly(rest[1])
         im_class = self.unjelly(rest[2])
-        if type(im_class) is not types.ClassType:
+        if not isinstance(im_class, (type, types.ClassType)):
             raise InsecureJelly("Method found with non-class class.")
         if im_name in im_class.__dict__:
             if im_self is None:

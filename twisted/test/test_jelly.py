@@ -72,6 +72,27 @@ class C:
         """
 
 
+class Anew(object):
+    """
+    Dummy new style class.
+    """
+
+    def amethod(self):
+        """
+        Method to be used in circular referencing tests.
+        """
+
+
+class Bnew(object):
+    """
+    Dummy new style class.
+    """
+
+    def bmethod(self):
+        """
+        Method to be used in circular referencing tests.
+        """
+
 
 class D(object):
     """
@@ -140,13 +161,32 @@ class JellyTestCase(unittest.TestCase):
         self.assertRaises(jelly.InsecureJelly, jelly.unjelly, c, taster)
 
 
-    def test_methodSelfIdentity(self):
+    def test_methodSelfIdentityOldStyle(self):
+        """
+        The class of a method must remain the same class as the one
+        of the instance it is bound to.
+        This test is for old style classes.
+        """
         a = A()
         b = B()
         a.bmethod = b.bmethod
         b.a = a
         im_ = jelly.unjelly(jelly.jelly(b)).a.bmethod
         self.assertEqual(im_.im_class, im_.im_self.__class__)
+
+
+    def test_methodSelfIdentityNewStyle(self):
+        """
+        The class of a method must remain the same class as the one
+        of the instance it is bound to.
+        This test is for new style classes.
+        """
+        a = Anew()
+        b = Bnew()
+        a.bmethod = b.bmethod
+        b.a = a
+        im_ = jelly.unjelly(jelly.jelly(b)).a.bmethod
+        self.assertIs(im_.im_class, im_.im_self.__class__)
 
 
     def test_methodsNotSelfIdentity(self):
@@ -632,6 +672,62 @@ class CircularReferenceTestCase(unittest.TestCase):
     """
     Tests for circular references handling in the jelly/unjelly process.
     """
+
+    def test_dictCircle(self):
+        """
+        All references between dicts must be resolved when unjellying.
+        """
+        a = {}
+        a['bar'] = {}
+        a['bar']['foo'] = a
+        a1 = jelly.unjelly(jelly.jelly(a))
+        self.assertIs(a1['bar']['foo'], a1,
+            "circular reference between two dict not resolved")
+
+    def test_objectCircle(self):
+        """
+        All references between objects must be resolved when unjellying.
+        """
+        a = Anew()
+        b = Bnew()
+        a.b = b
+        a.b.a = a
+        a1 = jelly.unjelly(jelly.jelly(a))
+        self.assertIs(a1.b.a, a1,
+            "Circular reference between two new style objects not resolved")
+
+    def test_objectDictCircle(self):
+        """
+        All references between dict and objects must be resolved when unjellying.
+        """
+        a = Anew()
+        a.dict = {}
+        a.dict['abc'] = a
+        a1 = jelly.unjelly(jelly.jelly(a))
+        self.assertIs(a1.dict['abc'], a1,
+            "Circular reference between dict and object not resolved")
+
+    def test_dictObjectCircle(self):
+        """
+        All references between object and dict must be resolved when unjellying.
+        """
+        a = {}
+        a['abc'] = Anew()
+        a['abc'].dict = a
+        a1 = jelly.unjelly(jelly.jelly(a))
+        self.assertIs(a1['abc'].dict, a1,
+            "Circular reference between dict and object not resolved")
+
+    def test_oldClassCircle(self):
+        """
+        All references between old style object must be resolved when unjellying
+        """
+        a = A()
+        a.b = B()
+        a.b.a = a
+        a1 = jelly.unjelly(jelly.jelly(a))
+        self.assertIs(a1.b.a, a1,
+            "Circular reference between two old style objects not resolved")
 
     def test_simpleCircle(self):
         jelly.setUnjellyableForClass(ClassA, ClassA)
