@@ -352,12 +352,11 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self.addCleanup(os.close, r)
         self.addCleanup(os.close, w)
 
-        # The call to "os.listdir()" itself that _listOpenFDs's implementation
-        # uses itself needs to open a file descriptor (with "opendir"), which
-        # shows up in its result.  And speaking of "random" file descriptors,
-        # the code required for _listOpenFDs itself imports logger, which
-        # imports random, which (depending on your Python version) might leave
-        # /dev/urandom open.
+        # The call to "os.listdir()" (in _listOpenFDs's implementation) opens a
+        # file descriptor (with "opendir"), which shows up in _listOpenFDs's
+        # result.  And speaking of "random" file descriptors, the code required
+        # for _listOpenFDs itself imports logger, which imports random, which
+        # (depending on your Python version) might leave /dev/urandom open.
 
         # More generally though, even if we were to use an extremely minimal C
         # program, the operating system would be within its rights to open file
