@@ -219,3 +219,34 @@ class TeamTests(SynchronousTestCase):
         self.assertRaises(AlreadyQuit, self.team.quit)
         self.assertRaises(AlreadyQuit, self.team.do, list)
 
+
+    def test_quitQuits(self):
+        """
+        L{Team.quit} causes all idle workers, as well as the coordinator
+        worker, to quit.
+        """
+        for x in range(10):
+            self.team.do(list)
+        self.performAllOutstandingWork()
+        self.team.quit()
+        self.performAllOutstandingWork()
+        self.assertEqual(len(self.allUnquitWorkers), 0)
+        self.assertRaises(AlreadyQuit, self.coordinator.quit)
+
+
+    def test_quitQuitsLaterWhenBusy(self):
+        """
+        L{Team.quit} causes all busy workers to be quit once they've finished
+        the work they've been given.
+        """
+        self.team.grow(10)
+        for x in range(5):
+            self.team.do(list)
+        self.coordinate()
+        self.team.quit()
+        self.coordinate()
+        self.assertEqual(len(self.allUnquitWorkers), 5)
+        self.performAllOutstandingWork()
+        self.assertEqual(len(self.allUnquitWorkers), 0)
+        self.assertRaises(AlreadyQuit, self.coordinator.quit)
+
