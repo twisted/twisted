@@ -339,6 +339,11 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         descriptors in the parent.  They do have a stdin, stdout, and stderr
         open.
         """
+
+        # To test this, we are going to open a file descriptor in the parent
+        # that is unlikely to be opened in the child, then verify that it's not
+        # open in the child.
+
         here = FilePath(__file__)
         top = here.parent().parent().parent().parent()
         source = (
@@ -395,6 +400,10 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         reportedChildFDs = set(eval(output.getvalue()))
 
         stdFDs = [0, 1, 2]
+
+        # Unfortunately this assertion is still not *entirely* deterministic,
+        # since hypothetically, any library could open any file descriptor at
+        # any time.  See comment above.
         self.assertEqual(
             reportedChildFDs.intersection(set(stdFDs + [unlikelyFD])),
             set(stdFDs)
