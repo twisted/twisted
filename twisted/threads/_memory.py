@@ -22,12 +22,12 @@ class MemoryWorker(object):
     @type _quit: L{Quit}
     """
 
-    def __init__(self):
+    def __init__(self, pending=list):
         """
         Create a L{MemoryWorker}.
         """
         self._quit = Quit()
-        self._pending = []
+        self._pending = pending()
 
 
     def do(self, work):
