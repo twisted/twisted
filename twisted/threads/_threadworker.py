@@ -56,7 +56,10 @@ class ThreadWorker(object):
         # that no work is ever enqueued _after_ _stop.
         self._hasQuit.set()
         self._q.put(_stop)
-        self._thread.join()
+        try:
+            self._thread.join()
+        except RuntimeError:
+            pass
 
 
 

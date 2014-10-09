@@ -503,10 +503,10 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
 
         def _thread():
             threadWorking.set()
-            threadFinish.wait()
+            threadFinish.wait(10)
 
         pool.callInThread(_thread)
-        threadWorking.wait()
+        threadWorking.wait(10)
         self.assertEqual(pool.workers, 1)
         self.assertEqual(len(pool.waiters), 0)
         self.assertEqual(len(pool.working), 1)
@@ -583,7 +583,7 @@ class RaceConditionTestCase(unittest.SynchronousTestCase):
         for i in range(10):
             self.threadpool.callInThreadWithCallback(
                 onResult, lambda: None)
-            event.wait()
+            event.wait(10)
             event.clear()
 
         self.assertEqual(self.threadpool.workers, 1)

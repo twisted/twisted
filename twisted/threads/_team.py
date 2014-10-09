@@ -105,6 +105,8 @@ class Team(object):
         self._coordinator.do(lambda: self._quitIdlers(n))
 
 
+    _coordinatorQuit = False
+
     def _quitIdlers(self, n=None):
         """
         The implmentation of C{shrink}, performed by the coordinator worker.
@@ -115,7 +117,10 @@ class Team(object):
             n = len(self._idle)
         for x in range(n):
             self._idle.pop().quit()
-        if self._busyCount == 0 and self._quit.isSet:
+        # TODO: the following expression is insufficiently tested.
+        if ((not self._coordinatorQuit) and (self._busyCount == 0) and
+            (len(self._pending) == 0) and (self._quit.isSet)):
+            self._coordinatorQuit = True
             self._coordinator.quit()
 
 
