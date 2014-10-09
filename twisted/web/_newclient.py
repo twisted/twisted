@@ -42,7 +42,7 @@ from twisted.internet.protocol import Protocol
 from twisted.protocols.basic import LineReceiver
 from twisted.web.iweb import UNKNOWN_LENGTH, IResponse, IClientRequest
 from twisted.web.http_headers import Headers
-from twisted.web.http import NO_CONTENT, NOT_MODIFIED
+from twisted.web.http import NO_CONTENT, NOT_MODIFIED, RESPONSES
 from twisted.web.http import _DataLoss, PotentialDataLoss
 from twisted.web.http import _IdentityTransferDecoder, _ChunkedTransferDecoder
 
@@ -405,7 +405,7 @@ class HTTPClientParser(HTTPParser):
         to keep track of this response's state.
         """
         parts = status.split(' ', 2)
-        if len(parts) != 3:
+        if len(parts) < 2:
             raise ParseError("wrong number of parts", status)
 
         try:
@@ -413,13 +413,14 @@ class HTTPClientParser(HTTPParser):
         except ValueError:
             raise ParseError("non-integer status code", status)
 
-        self.response = Response._construct(
+        
+        status_string = parts[2] if len(parts) == 3 else RESPONSES[statusCode]
+        self.response = Response(
             self.parseVersion(parts[0]),
             statusCode,
-            parts[2],
+            status_string,
             self.headers,
-            self.transport,
-            self.request)
+            self.transport)
 
 
     def _finished(self, rest):
