@@ -62,7 +62,7 @@ def createMemoryWorker():
         if not worker._pending:
             return False
         if worker._pending[0] is NoMoreWork:
-            worker._quit.check()
+            return False
         worker._pending.pop(0)()
         return True
     worker = MemoryWorker()

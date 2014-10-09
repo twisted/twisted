@@ -51,7 +51,7 @@ class MemoryWorkerTests(SynchronousTestCase):
         self.assertRaises(AlreadyQuit, worker.quit)
         performer()
         self.assertEqual(done, [7])
-        self.assertRaises(AlreadyQuit, performer)
+        self.assertEqual(performer(), False)
 
 
     def test_performWhenNothingToDoYet(self):
