@@ -7,12 +7,12 @@ Tests for implementations of L{IReactorProcess}.
 
 __metaclass__ = type
 
-import os, sys, signal, threading
+import os, io, sys, signal, threading
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
-from twisted.python.runtime import platform, platformType
+from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
@@ -22,9 +22,11 @@ from twisted.internet.error import ProcessDone, ProcessTerminated
 
 _uidgidSkip = None
 if platform.isWindows():
+    resource = None
     process = None
     _uidgidSkip = "Cannot change UID/GID on Windows"
 else:
+    import resource
     from twisted.internet import process
     if os.getuid() != 0:
         _uidgidSkip = "Cannot change UID/GID except as root"
@@ -333,45 +335,82 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
     def test_openFileDescriptors(self):
         """
-        A spawned process has only stdin, stdout and stderr open
-        (file descriptor 3 is also reported as open, because of the call to
-        'os.listdir()').
+        Processes spawned with spawnProcess() close all extraneous file
+        descriptors in the parent.  They do have a stdin, stdout, and stderr
+        open.
         """
+
+        # To test this, we are going to open a file descriptor in the parent
+        # that is unlikely to be opened in the child, then verify that it's not
+        # open in the child.
+
         here = FilePath(__file__)
         top = here.parent().parent().parent().parent()
         source = (
             "import sys",
             "sys.path.insert(0, '%s')" % (top.path,),
             "from twisted.internet import process",
-            "sys.stdout.write(str(process._listOpenFDs()))",
+            "sys.stdout.write(repr(process._listOpenFDs()))",
             "sys.stdout.flush()")
 
-        def checkOutput(output):
-            self.assertEqual('[0, 1, 2, 3]', output)
+        r, w = os.pipe()
+        self.addCleanup(os.close, r)
+        self.addCleanup(os.close, w)
+
+        # The call to "os.listdir()" (in _listOpenFDs's implementation) opens a
+        # file descriptor (with "opendir"), which shows up in _listOpenFDs's
+        # result.  And speaking of "random" file descriptors, the code required
+        # for _listOpenFDs itself imports logger, which imports random, which
+        # (depending on your Python version) might leave /dev/urandom open.
+
+        # More generally though, even if we were to use an extremely minimal C
+        # program, the operating system would be within its rights to open file
+        # descriptors we might not know about in the C library's
+        # initialization; things like debuggers, profilers, or nsswitch plugins
+        # might open some and this test should pass in those environments.
+
+        # Although some of these file descriptors aren't predictable, we should
+        # at least be able to select a very large file descriptor which is very
+        # unlikely to be opened automatically in the subprocess.  (Apply a
+        # fudge factor to avoid hard-coding something too near a limit
+        # condition like the maximum possible file descriptor, which a library
+        # might at least hypothetically select.)
+
+        fudgeFactor = 17
+        unlikelyFD = (resource.getrlimit(resource.RLIMIT_NOFILE)[0]
+                      - fudgeFactor)
+
+        os.dup2(w, unlikelyFD)
+        self.addCleanup(os.close, unlikelyFD)
+
+        output = io.BytesIO()
+        class GatheringProtocol(ProcessProtocol):
+            outReceived = output.write
+            def processEnded(self, reason):
+                reactor.stop()
 
         reactor = self.buildReactor()
 
-        class Protocol(ProcessProtocol):
-            def __init__(self):
-                self.output = []
-
-            def outReceived(self, data):
-                self.output.append(data)
-
-            def processEnded(self, reason):
-                try:
-                    checkOutput("".join(self.output))
-                finally:
-                    reactor.stop()
-
-        proto = Protocol()
         reactor.callWhenRunning(
-            reactor.spawnProcess, proto, sys.executable,
+            reactor.spawnProcess, GatheringProtocol(), sys.executable,
             [sys.executable, "-Wignore", "-c", "\n".join(source)],
             env=os.environ, usePTY=self.usePTY)
-        self.runReactor(reactor)
 
-    if platformType != "posix":
+        self.runReactor(reactor)
+        reportedChildFDs = set(eval(output.getvalue()))
+
+        stdFDs = [0, 1, 2]
+
+        # Unfortunately this assertion is still not *entirely* deterministic,
+        # since hypothetically, any library could open any file descriptor at
+        # any time.  See comment above.
+        self.assertEqual(
+            reportedChildFDs.intersection(set(stdFDs + [unlikelyFD])),
+            set(stdFDs)
+        )
+
+
+    if resource is None:
         test_openFileDescriptors.skip = "Test only applies to POSIX platforms"
 
 
