@@ -211,12 +211,12 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
 
         del worker
         del unique
-        gc.collect()
 
         # let onResult collect the refs
         onResultWait.set()
         # wait for onResult
         onResultDone.wait(self.getTimeout())
+        gc.collect()
 
         self.assertEqual(uniqueRef(), None)
         self.assertEqual(workerRef(), None)
@@ -526,11 +526,19 @@ class RaceConditionTestCase(unittest.SynchronousTestCase):
 
     def setUp(self):
         self.threadpool = threadpool.ThreadPool(0, 10)
+        self.event = threading.Event()
         self.threadpool.start()
         def done():
             self.threadpool.stop()
             del self.threadpool
         self.addCleanup(done)
+
+
+    def getTimeout(self):
+        """
+        A reasonable number of seconds to time out.
+        """
+        return 5
 
 
     def test_synchronization(self):

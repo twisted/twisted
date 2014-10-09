@@ -15,11 +15,12 @@ try:
     from Queue import Queue
 except ImportError:
     from queue import Queue
-import contextlib
-import threading
-import copy
 
-from twisted.python import log, context, failure
+import threading
+
+from twisted.threads import ThreadWorker, Team
+from twisted.python import log, context
+from twisted.python.failure import Failure
 
 
 WorkerStop = object()
@@ -110,13 +111,57 @@ class ThreadPool:
         """
         assert minthreads >= 0, 'minimum is negative'
         assert minthreads <= maxthreads, 'minimum is greater than maximum'
-        self.q = Queue(0)
+        class NotAQueue(object):
+            def qsize(q):
+                return self._team.statistics().backloggedWorkCount
+        self.q = NotAQueue()
         self.min = minthreads
         self.max = maxthreads
         self.name = name
         self.waiters = []
         self.threads = []
         self.working = []
+
+        def workerCreator(name):
+            def makeAThread(target):
+                thread = self.threadFactory(name=name,
+                                            target=target)
+                self.threads.append(thread)
+                return thread
+            return ThreadWorker(makeAThread, Queue)
+
+        def limitedWorkerCreator():
+            # Called only from the workforce's coordinator.
+            stats = self._team.statistics()
+            if stats.busyWorkerCount + stats.idleWorkerCount >= self.max:
+                return None
+            return workerCreator(self._generateName())
+
+        self._team = Team(createCoordinator=lambda:
+                          ThreadWorker(
+                              lambda target:
+                              self.threadFactory(name="coordinator",
+                                                 target=target),
+                              Queue),
+                          createWorker=limitedWorkerCreator,
+                          logException=log.err)
+
+
+    @property
+    def workers(self):
+        """
+        For compatibility purposes, return a total number of workers.
+        """
+        stats = self._team.statistics()
+        return stats.idleWorkerCount + stats.busyWorkerCount
+
+
+    @property
+    def working(self):
+        """
+        For compatibility purposes, return the number of busy workers.
+        """
+        return [None] * self._team.statistics().busyWorkerCount
 
 
     def start(self):
@@ -214,68 +259,16 @@ class ThreadPool:
         if self.joined:
             return
         ctx = context.theContextTracker.currentContext().contexts[-1]
-        o = (ctx, func, args, kw, onResult)
-        self.q.put(o)
-        if self.started:
-            self._startSomeWorkers()
-
-
-    @contextlib.contextmanager
-    def _workerState(self, stateList, workerThread):
-        """
-        Manages adding and removing this worker from a list of workers
-        in a particular state.
-
-        @param stateList: the list managing workers in this state
-
-        @param workerThread: the thread the worker is running in, used to
-            represent the worker in stateList
-        """
-        stateList.append(workerThread)
-        try:
-            yield
-        finally:
-            stateList.remove(workerThread)
-
-
-    def _worker(self):
-        """
-        Method used as target of the created threads: retrieve a task to run
-        from the threadpool, run it, and proceed to the next task until
-        threadpool is stopped.
-        """
-        ct = self.currentThread()
-        o = self.q.get()
-        while o is not WorkerStop:
-            with self._workerState(self.working, ct):
-                ctx, function, args, kwargs, onResult = o
-                del o
-
-                try:
-                    result = context.call(ctx, function, *args, **kwargs)
-                    success = True
-                except:
-                    success = False
-                    if onResult is None:
-                        context.call(ctx, log.err)
-                        result = None
-                    else:
-                        result = failure.Failure()
-
-                del function, args, kwargs
-
+        @self._team.do
+        def inThread():
+            try:
+                result = context.call(ctx, func, *args, **kw)
+            except:
+                ok, result = False, Failure()
+            else:
+                ok = True
             if onResult is not None:
-                try:
-                    context.call(ctx, onResult, success, result)
-                except:
-                    context.call(ctx, log.err)
-
-            del ctx, onResult, result
-
-            with self._workerState(self.waiters, ct):
-                o = self.q.get()
-
-        self.threads.remove(ct)
+                onResult(ok, result)
 
 
     def stop(self):
@@ -284,15 +277,7 @@ class ThreadPool:
         """
         self.joined = True
         self.started = False
-        threads = copy.copy(self.threads)
-        while self.workers:
-            self.q.put(WorkerStop)
-            self.workers -= 1
-
-        # and let's just make sure
-        # FIXME: threads that have died before calling stop() are not joined.
-        for thread in threads:
-            thread.join()
+        self._team.quit()
 
 
     def adjustPoolsize(self, minthreads=None, maxthreads=None):
@@ -310,72 +295,17 @@ class ThreadPool:
             return
 
         # Kill of some threads if we have too many.
-        while self.workers > self.max:
-            self.stopAWorker()
+        if self.workers > self.max:
+            self._team.shrink(self.workers - self.max)
         # Start some threads if we have too few.
-        while self.workers < self.min:
-            self.startAWorker()
+        if self.workers < self.min:
+            self._team.grow(self.min - self.workers)
         # Start some threads if there is a need.
         self._startSomeWorkers()
 
 
     def dumpStats(self):
-        log.msg('queue: %s'   % self.q.queue)
         log.msg('waiters: %s' % self.waiters)
         log.msg('workers: %s' % self.working)
         log.msg('total: %s'   % self.threads)
 
-
-
-class _ThreadPool2(object):
-    """
-    
-    """
-
-    def __init__(self, minthreads=5, maxthreads=20, name=None,
-                 createCoordinator=None):
-        """
-        
-        """
-        super(TeamPool, self).__init__(minthreads=minthreads,
-                                       maxthreads=maxthreads,
-                                       name=name)
-        if createCoordinator is None:
-            createCoordinator = ThreadWorker
-        def workerCreator(result):
-            # Called only from the workforce's coordinator.
-            self.working += 1
-            if self.working >= self.max:
-                return None
-            return ThreadWorker(
-                lambda *a, **k: self.threadFactory(
-                    *a, name=self._generateName(), **k
-                ),
-                Queue
-            )
-        self._team = Team(
-            createCoordinator=createCoordinator,
-            createWorker=workerCreator,
-            logException=err
-        )
-
-
-    def callInThreadWithCallback(self, onResult, f, *a, **kw):
-        """
-        
-        """
-        def doIt():
-            try:
-                value = f(*a, **kw)
-            except:
-                onResult(Failure())
-            else:
-                onResult(value)
-        self.callInThread(doIt)
-
-
-    def callInThread(self, f, *a, **kw):
-        """
-        
-        """
-        self._workforce.do(lambda: f(*a, **kw))
