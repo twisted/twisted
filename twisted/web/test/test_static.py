@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.web.static}.
 """
+import errno
 import inspect
 import mimetypes
 import os
@@ -151,6 +152,42 @@ class StaticFileTests(TestCase):
         return d
     if platform.isWindows():
         test_forbiddenResource.skip = "Cannot remove read permission on Windows"
+
+
+    def test_forbiddenResource_default(self):
+        """
+        L{File.forbidden} defaults to L{resource.ForbiddenResource}.
+        """
+        self.assertIsInstance(
+            static.File('.').forbidden, resource.ForbiddenResource)
+
+
+    def test_forbiddenResource_customize(self):
+        """
+        The resource rendered for forbidden requests is stored as an instance
+        member so that users can customize it.
+        """
+        base = FilePath(self.mktemp())
+        base.setContent('')
+        marker_resonse = 'custom-forbidden-response'
+
+        def failingOpenForReading():
+            raise IOError(errno.EACCES)
+
+        class CustomForbiddenResource(resource.Resource):
+            def render(self, request):
+                return marker_resonse
+
+        class CustomStaticFile(static.File):
+            forbidden = CustomForbiddenResource()
+
+        file_resource = CustomStaticFile(base.path)
+        file_resource.openForReading = failingOpenForReading
+        request = DummyRequest([''])
+
+        result = file_resource.render(request)
+
+        self.assertEqual(marker_resonse, result)
 
 
     def test_indexNames(self):

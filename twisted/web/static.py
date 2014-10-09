@@ -166,6 +166,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
     return the contents of /tmp/foo/bar.html .
 
     @cvar childNotFound: L{Resource} used to render 404 Not Found error pages.
+    @cvar forbidden: L{Resource} used to render 403 Forbidden error pages.
     """
 
     contentTypes = loadMimeTypes()
@@ -267,6 +268,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         self.ignoredExts.append(ext)
 
     childNotFound = resource.NoResource("File not found.")
+    forbidden = resource.ForbiddenResource()
 
     def directoryListing(self):
         return DirectoryLister(self.path,
@@ -615,7 +617,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         except IOError, e:
             import errno
             if e[0] == errno.EACCES:
-                return resource.ForbiddenResource().render(request)
+                return self.forbidden.render(request)
             else:
                 raise
 
