@@ -51,6 +51,7 @@ class TeamTests(SynchronousTestCase):
         self.workerPerformers = []
         self.allWorkersEver = []
         self.allUnquitWorkers = []
+        self.activePerformers = []
         self.noMoreWorkers = lambda: False
 
         def createWorker():
@@ -58,6 +59,7 @@ class TeamTests(SynchronousTestCase):
                 return None
             worker, performer = createMemoryWorker()
             self.workerPerformers.append(performer)
+            self.activePerformers.append(performer)
             cw = ContextualWorker(worker, worker=len(self.workerPerformers))
             self.allWorkersEver.append(cw)
             self.allUnquitWorkers.append(cw)
@@ -65,6 +67,7 @@ class TeamTests(SynchronousTestCase):
             def quitAndRemove():
                 realQuit()
                 self.allUnquitWorkers.remove(cw)
+                self.activePerformers.remove(performer)
             cw.quit = quitAndRemove
             return cw
 
@@ -92,11 +95,9 @@ class TeamTests(SynchronousTestCase):
         continuing = True
         while continuing:
             continuing = self.coordinate()
-            for performer in self.workerPerformers[:]:
-                try:
+            for performer in self.workerPerformers:
+                if performer in self.activePerformers:
                     performer()
-                except AlreadyQuit:
-                    self.workerPerformers.remove(performer)
             continuing = continuing or self.coordinate()
 
 
