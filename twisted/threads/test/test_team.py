@@ -208,3 +208,14 @@ class TeamTests(SynchronousTestCase):
         self.performAllOutstandingWork()
         self.assertEqual(len(self.failures), 1)
         self.assertEqual(self.failures[0].type, ZeroDivisionError)
+
+
+    def test_quit(self):
+        """
+        L{Team.quit} causes future invocations of L{Team.do} and L{Team.quit}
+        to raise L{AlreadyQuit}.
+        """
+        self.team.quit()
+        self.assertRaises(AlreadyQuit, self.team.quit)
+        self.assertRaises(AlreadyQuit, self.team.do, list)
+
