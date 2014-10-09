@@ -115,6 +115,8 @@ class Team(object):
             n = len(self._idle)
         for x in range(n):
             self._idle.pop().quit()
+        if self._busyCount == 0 and self._quit.isSet:
+            self._coordinator.quit()
 
 
     def do(self, task):
@@ -171,4 +173,3 @@ class Team(object):
         self._quit.set()
         # In case all the workers are idle when we do this.
         self._coordinator.do(self._quitIdlers)
-        self._coordinator.quit()
