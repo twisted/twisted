@@ -7,9 +7,10 @@ Tests for L{twisted.python.threadpool}
 
 from __future__ import division, absolute_import
 
-import pickle, time, weakref, gc, threading, Queue
+import pickle, time, weakref, gc, threading
 
 from twisted.python.compat import _PY3
+
 from twisted.trial import unittest
 from twisted.python import threadpool, threadable, failure, context
 
