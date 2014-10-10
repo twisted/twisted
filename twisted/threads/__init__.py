@@ -17,5 +17,6 @@ __all__ = [
     "IWorker",
     "AlreadyQuit",
     "Team",
+    "ReactorWorker",
     "createMemoryWorker",
 ]
