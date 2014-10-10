@@ -65,6 +65,7 @@ class Team(object):
         self._idle = set()
         self._busyCount = 0
         self._pending = deque()
+        self._coordinatorQuit = False
 
 
     def statistics(self):
@@ -104,8 +105,6 @@ class Team(object):
         self._quit.check()
         self._coordinator.do(lambda: self._quitIdlers(n))
 
-
-    _coordinatorQuit = False
 
     def _quitIdlers(self, n=None):
         """
@@ -170,6 +169,9 @@ class Team(object):
         Called only from coordinator.
 
         Recycle the given worker into the idle pool.
+
+        @param worker: a worker created by C{createWorker} and now idle.
+        @type worker: L{IWorker}
         """
         self._idle.add(worker)
         if self._pending:

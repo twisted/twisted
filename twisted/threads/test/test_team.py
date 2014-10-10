@@ -80,6 +80,11 @@ class TeamTests(SynchronousTestCase):
     def coordinate(self):
         """
         Perform all work currently scheduled in the coordinator.
+
+        @return: whether any coordination work was performed; if the
+            coordinator was idle when this was called, return L{False}
+            (otherwise L{True}).
+        @rtype: L{bool}
         """
         did = False
         while self.coordinateOnce():
