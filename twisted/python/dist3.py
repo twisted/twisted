@@ -126,9 +126,9 @@ modules = [
     "twisted.test.iosim",
     "twisted.test.ssl_helpers",
     "twisted.threads",
-    "twisted.threads._convenience"
-    "twisted.threads._ithreads"
-    "twisted.threads._memory"
+    "twisted.threads._convenience",
+    "twisted.threads._ithreads",
+    "twisted.threads._memory",
     "twisted.threads._reactor",
     "twisted.threads._team",
     "twisted.threads._threadworker",
