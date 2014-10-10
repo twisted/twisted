@@ -160,10 +160,15 @@ def _newInstance(cls, state=_NO_STATE):
         inst = cls.__new__(cls)
 
         if state is not _NO_STATE:
-            # we cannot do inst.__dict__.update(state) because the reference
-            # to state must be kept. Otherwise the unjellier will later on
-            # not be able to resolve references. state is what _unjelly_dictionary
-            # returns, see its docstring for further explanation.
+            # It's important that the exact `state` dictionary object be used
+            # as the instance dictionary.  Later stages of the unjellying
+            # process will mutate `state` to resolve circular references (see
+            # _unjelly_dictionary and twisted.persisted.crefutil).
+            #
+            # To avoid losing whatever the class constructor put into the
+            # object's instance dictionary, though, update state to include
+            # anything we find there.  Only then proceed to replacing the
+            # instance's `__dict__` with `state`.
             for k,v in inst.__dict__.items():
                 if k not in state:
                     state[k] = v
