@@ -25,6 +25,76 @@ from twisted.python.failure import Failure
 
 WorkerStop = object()
 
+class _WorkCtxArgsResult(object):
+    """
+    
+
+    @ivar ctx: 
+    @type ctx: 
+
+    @ivar func: 
+    @type func: 
+
+    @ivar args: 
+    @type args: 
+
+    @ivar kwargs: 
+    @type kwargs: 
+
+    @ivar onResult: 
+    @type onResult: 
+    """
+
+    def __init__(self, ctx, func, args, kwargs, onResult):
+        """
+        
+
+        @param ctx: 
+        @type ctx: 
+
+        @param func: 
+        @type func: 
+
+        @param args: 
+        @type args: 
+
+        @param kwargs: 
+        @type kwargs: 
+
+        @param onResult: 
+        @type onResult: 
+        """
+        self.ctx = ctx
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+        self.onResult = onResult
+
+
+    def __call__(self):
+        """
+        
+        """
+        try:
+            result = context.call(self.ctx, self.func,
+                                  *self.args, **self.kwargs)
+        except:
+            ok, result = False, Failure()
+        else:
+            ok = True
+
+        self.ctx = None
+        self.func = None
+        self.args = None
+        self.kwargs = None
+
+        if self.onResult is not None:
+            self.onResult(ok, result)
+        elif not ok:
+            log.err(result)
+        del self.onResult
+
+
 
 class ThreadPool:
     """
@@ -118,9 +188,7 @@ class ThreadPool:
         self.min = minthreads
         self.max = maxthreads
         self.name = name
-        self.waiters = []
         self.threads = []
-        self.working = []
 
         def workerCreator(name):
             def makeAThread(target):
@@ -137,12 +205,31 @@ class ThreadPool:
                 return None
             return workerCreator(self._generateName())
 
-        self._team = Team(createCoordinator=lambda:
-                          ThreadWorker(
-                              lambda target:
-                              self.threadFactory(name="coordinator",
-                                                 target=target),
-                              Queue),
+        class LockedWorker(object):
+            """
+y            
+            """
+            def __init__(self):
+                """
+                
+                """
+                self._lock = threading.Lock()
+
+            def do(self, work):
+                """
+                
+                """
+                with self._lock:
+                    work()
+
+            def quit(self):
+                """
+                
+                """
+                pass
+
+
+        self._team = Team(LockedWorker,
                           createWorker=limitedWorkerCreator,
                           logException=log.err)
 
@@ -159,9 +246,19 @@ class ThreadPool:
     @property
     def working(self):
         """
-        For compatibility purposes, return the number of busy workers.
+        For compatibility purposes, return the number of busy workers as
+        expressed by a list the length of that number.
         """
         return [None] * self._team.statistics().busyWorkerCount
+
+
+    @property
+    def waiters(self):
+        """
+        For compatibility purposes, return the number of idle workers as
+        expressed by a list the length of that number.
+        """
+        return [None] * self._team.statistics().idleWorkerCount
 
 
     def start(self):
@@ -259,16 +356,7 @@ class ThreadPool:
         if self.joined:
             return
         ctx = context.theContextTracker.currentContext().contexts[-1]
-        @self._team.do
-        def inThread():
-            try:
-                result = context.call(ctx, func, *args, **kw)
-            except:
-                ok, result = False, Failure()
-            else:
-                ok = True
-            if onResult is not None:
-                onResult(ok, result)
+        self._team.do(_WorkCtxArgsResult(ctx, func, args, kw, onResult))
 
 
     def stop(self):
@@ -278,6 +366,8 @@ class ThreadPool:
         self.joined = True
         self.started = False
         self._team.quit()
+        for thread in self.threads:
+            thread.join()
 
 
     def adjustPoolsize(self, minthreads=None, maxthreads=None):
