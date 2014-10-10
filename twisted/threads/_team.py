@@ -66,6 +66,7 @@ class Team(object):
         self._busyCount = 0
         self._pending = deque()
         self._coordinatorQuit = False
+        self._toShrink = 0
 
 
     def statistics(self):
@@ -113,9 +114,12 @@ class Team(object):
         @param n: see L{Team.shrink}
         """
         if n is None:
-            n = len(self._idle)
+            n = len(self._idle) + self._busyCount
         for x in range(n):
-            self._idle.pop().quit()
+            if self._idle:
+                self._idle.pop().quit()
+            else:
+                self._toShrink += 1
         # TODO: the following expression is insufficiently tested.
         if ((not self._coordinatorQuit) and (self._busyCount == 0) and
             (len(self._pending) == 0) and (self._quit.isSet)):
@@ -180,6 +184,10 @@ class Team(object):
             self._coordinateThisTask(self._pending.popleft())
         elif self._quit.isSet:
             self._quitIdlers()
+        elif self._toShrink > 0:
+            self._toShrink -= 1
+            self._idle.remove(worker)
+            worker.quit()
 
 
     def quit(self):

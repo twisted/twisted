@@ -170,6 +170,7 @@ class TeamTests(SynchronousTestCase):
         """
         self.team.grow(10)
         self.performAllOutstandingWork()
+        self.assertEqual(len(self.allUnquitWorkers), 10)
         self.team.shrink()
         self.assertEqual(len(self.allUnquitWorkers), 10)
         self.performAllOutstandingWork()
@@ -255,3 +256,17 @@ class TeamTests(SynchronousTestCase):
         self.assertEqual(len(self.allUnquitWorkers), 0)
         self.assertRaises(AlreadyQuit, self.coordinator.quit)
 
+
+    def test_shrinkWhenBusy(self):
+        """
+        L{Team.shrink} will wait for busy workers to finish being busy and then
+        quit them.
+        """
+        for x in range(10):
+            self.team.do(list)
+        self.coordinate()
+        self.assertEqual(len(self.allUnquitWorkers), 10)
+        # workers all busy now
+        self.team.shrink(7)
+        self.performAllOutstandingWork()
+        self.assertEqual(len(self.allUnquitWorkers), 3)
