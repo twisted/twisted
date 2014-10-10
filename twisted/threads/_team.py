@@ -90,7 +90,7 @@ class Team(object):
                 worker = self._createWorker()
                 if worker is None:
                     return
-                self._idle.add(worker)
+                self._recycleWorker(worker)
 
 
     def shrink(self, n=None):
@@ -162,13 +162,22 @@ class Team(object):
             @self._coordinator.do
             def idleAndPending():
                 self._busyCount -= 1
-                self._idle.add(worker)
-                if self._pending:
-                    # Re-try the first enqueued thing.
-                    # (Explicitly do _not_ honor _quit.)
-                    self._coordinateThisTask(self._pending.popleft())
-                elif self._quit.isSet:
-                    self._quitIdlers()
+                self._recycleWorker(worker)
+
+
+    def _recycleWorker(self, worker):
+        """
+        Called only from coordinator.
+
+        Recycle the given worker into the idle pool.
+        """
+        self._idle.add(worker)
+        if self._pending:
+            # Re-try the first enqueued thing.
+            # (Explicitly do _not_ honor _quit.)
+            self._coordinateThisTask(self._pending.popleft())
+        elif self._quit.isSet:
+            self._quitIdlers()
 
 
     def quit(self):

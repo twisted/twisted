@@ -200,6 +200,8 @@ class ThreadPool:
 
         def limitedWorkerCreator():
             # Called only from the workforce's coordinator.
+            if not self.started:
+                return None
             stats = self._team.statistics()
             if stats.busyWorkerCount + stats.idleWorkerCount >= self.max:
                 return None
@@ -272,11 +274,7 @@ y
 
 
     def startAWorker(self):
-        self.workers += 1
-        newThread = self.threadFactory(target=self._worker,
-                                       name=self._generateName())
-        self.threads.append(newThread)
-        newThread.start()
+        self._team.grow(1)
 
 
     def _generateName(self):
@@ -287,8 +285,7 @@ y
 
 
     def stopAWorker(self):
-        self.q.put(WorkerStop)
-        self.workers -= 1
+        self._team.shrink(1)
 
 
     def __setstate__(self, state):
@@ -304,10 +301,7 @@ y
 
 
     def _startSomeWorkers(self):
-        neededSize = self.q.qsize() + len(self.working)
-        # Create enough, but not too many
-        while self.workers < min(self.max, neededSize):
-            self.startAWorker()
+        self._team.grow(self._team.statistics().backloggedWorkCount)
 
 
     def callInThread(self, func, *args, **kw):
