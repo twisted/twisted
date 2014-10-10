@@ -625,6 +625,23 @@ class _Jellier:
 
 
 class _Unjellier:
+    """
+    An object which can product Python objects from their jellied
+    representations.
+
+    @note: The intermediate representation of all objects which can participate
+        in reference cycles is not the correct final representation for those
+        objects.  Instead, those objects may be represented as placeholders
+        which are replaced by the correct object at a later stage of
+        unjellying.  However, no attempt is currently made to prevent those
+        intermediate objects from escaping C{_Unjellier} and appearing in the
+        final unjellied object.  This may happen if the jelly stream is corrupt
+        in certain ways.  For example, if a dereference atom is followed by a
+        reference identifier which does not correspond to the reference
+        identifier associated with any reference atom in the jelly stream then
+        the intermediate representation of the dereference will appear in the
+        final result.
+    """
 
     def __init__(self, taster, persistentLoad, invoker):
         self.taster = taster
@@ -831,21 +848,7 @@ class _Unjellier:
 
     def _unjelly_dictionary(self, lst):
         """
-        *** Warning to users of this method: ***
-        This creates a python-level circular reference
-        between d and kvd: unjellyInto() creates
-        a dependency referencing kvd and puts that
-        into d.
-        As soon as d (the result of this method)
-        is not referenced anymore, the python garbage
-        collector may delete both d and kvd, making
-        a resolution of unresolved jelly references
-        impossible.
-
-        Proof: If this method returns
-        dict(d), both d and kvd are only local
-        variables and will be garbage collected
-        and test_jelly will fail.
+        Unjelly a dictionary into a C{dict} instance.
         """
         d = {}
         for k, v in lst:
