@@ -266,7 +266,7 @@ class TeamTests(SynchronousTestCase):
             self.team.do(list)
         self.coordinate()
         self.assertEqual(len(self.allUnquitWorkers), 10)
-        # workers all busy now
+        # There should be 10 busy workers at this point.
         self.team.shrink(7)
         self.performAllOutstandingWork()
         self.assertEqual(len(self.allUnquitWorkers), 3)
