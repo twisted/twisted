@@ -567,7 +567,7 @@ class ProcessTestCase(unittest.TestCase):
         protocols = []
         deferreds = []
 
-        for i in xrange(50):
+        for i in xrange(25):
             p = TestManyProcessProtocol()
             protocols.append(p)
             reactor.spawnProcess(p, exe, args, env=None)
