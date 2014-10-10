@@ -23,7 +23,7 @@ class ThreadWorker(object):
         """
         @param createThread: create a L{threading.Thread} to perform work on.
         @type createThread: 1-argument callable taking a 0-argument callablea
-            and returning a L{thrreading.Thread}
+            and returning a L{threading.Thread}
 
         @param createQueue: Create an object like a L{Queue.Queue}, with C{put}
             and C{get} methods.

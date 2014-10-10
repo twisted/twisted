@@ -32,7 +32,7 @@ class MemoryWorker(object):
 
     def do(self, work):
         """
-        Queue some work for L{MemoryWorker.perform} to perform later.
+        Queue some work for to perform later; see L{createMemoryWorker}.
 
         @param work: The work to perform.
         """
