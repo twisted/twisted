@@ -27,43 +27,26 @@ WorkerStop = object()
 
 class _WorkCtxArgsResult(object):
     """
-    
+    A work object that contains information about context, arguments, and
+    callback for a thread pool.
 
-    @ivar ctx: 
-    @type ctx: 
+    @ivar ctx: the context to run the function in.
+    @type ctx: L{dict}
 
-    @ivar func: 
-    @type func: 
+    @ivar func: the function to run.
+    @type func: L{callable}
 
-    @ivar args: 
-    @type args: 
+    @ivar args: arguments for C{func}
+    @type args: L{tuple}
 
-    @ivar kwargs: 
-    @type kwargs: 
+    @ivar kwargs: keyword arguments for C{func}
+    @type kwargs: L{dict}
 
-    @ivar onResult: 
-    @type onResult: 
+    @ivar onResult: callback to run after C{func} is invoked
+    @type onResult: L{callable}
     """
 
     def __init__(self, ctx, func, args, kwargs, onResult):
-        """
-        
-
-        @param ctx: 
-        @type ctx: 
-
-        @param func: 
-        @type func: 
-
-        @param args: 
-        @type args: 
-
-        @param kwargs: 
-        @type kwargs: 
-
-        @param onResult: 
-        @type onResult: 
-        """
         self.ctx = ctx
         self.func = func
         self.args = args
@@ -73,7 +56,7 @@ class _WorkCtxArgsResult(object):
 
     def __call__(self):
         """
-        
+        Call C{self.func} with C{self.args} and C{self.kwargs} in C{self.ctx}.
         """
         try:
             result = context.call(self.ctx, self.func,
@@ -181,10 +164,6 @@ class ThreadPool:
         """
         assert minthreads >= 0, 'minimum is negative'
         assert minthreads <= maxthreads, 'minimum is greater than maximum'
-        class NotAQueue(object):
-            def qsize(q):
-                return self._team.statistics().backloggedWorkCount
-        self.q = NotAQueue()
         self.min = minthreads
         self.max = maxthreads
         self.name = name
@@ -207,30 +186,6 @@ class ThreadPool:
                 return None
             return workerCreator(self._generateName())
 
-        class LockedWorker(object):
-            """
-y            
-            """
-            def __init__(self):
-                """
-                
-                """
-                self._lock = threading.Lock()
-
-            def do(self, work):
-                """
-                
-                """
-                with self._lock:
-                    work()
-
-            def quit(self):
-                """
-                
-                """
-                pass
-
-
         self._team = Team(LockedWorker,
                           createWorker=limitedWorkerCreator,
                           logException=log.err)
@@ -239,7 +194,11 @@ y
     @property
     def workers(self):
         """
-        For compatibility purposes, return a total number of workers.
+        For legacy compatibility purposes, return a total number of workers.
+
+        @return: the current number of workers, both idle and busy (but not
+            those that have been quit by L{ThreadPool.adjustPoolsize})
+        @rtype: L{int}
         """
         stats = self._team.statistics()
         return stats.idleWorkerCount + stats.busyWorkerCount
@@ -248,8 +207,11 @@ y
     @property
     def working(self):
         """
-        For compatibility purposes, return the number of busy workers as
+        For legacy compatibility purposes, return the number of busy workers as
         expressed by a list the length of that number.
+
+        @return: the number of workers currently processing a work item.
+        @rtype: L{list} of L{types.NoneType}
         """
         return [None] * self._team.statistics().busyWorkerCount
 
@@ -257,10 +219,39 @@ y
     @property
     def waiters(self):
         """
-        For compatibility purposes, return the number of idle workers as
+        For legacy compatibility purposes, return the number of idle workers as
         expressed by a list the length of that number.
+
+        @return: the number of workers currently alive (with an allocated
+            thread) but waiting for new work.
+        @rtype: L{list} of L{types.NoneType}
         """
         return [None] * self._team.statistics().idleWorkerCount
+
+
+    @property
+    def _queue(self):
+        """
+        For legacy compatibility purposes, return an object with a C{qsize}
+        method that indicates the amount of work not yet allocated to a worker.
+
+        @return: an object with a C{qsize} method.
+        """
+        class NotAQueue(object):
+            def qsize(q):
+                """
+                Pretend to be a Python threading Queue and return the
+                number of as-yet-unconsumed tasks.
+
+                @return: the amount of backlogged work not yet dispatched to a
+                    worker.
+                @rtype: L{int}
+                """
+                return self._team.statistics().backloggedWorkCount
+        return NotAQueue()
+
+    q = _queue                  # Yes, twistedchecker, I want a single-letter
+                                # attribute name.
 
 
     def start(self):
@@ -274,22 +265,33 @@ y
 
 
     def startAWorker(self):
+        """
+        Increase the number of available workers for the thread pool by 1, up
+        to the maximum allowed by L{ThreadPool.max}.
+        """
         self._team.grow(1)
 
 
     def _generateName(self):
         """
         Generate a name for a new pool thread.
+
+        @return: A distinctive name for the thread.
+        @rtype: native L{str}
         """
         return "PoolThread-%s-%s" % (self.name or id(self), self.workers)
 
 
     def stopAWorker(self):
+        """
+        Decrease the number of available workers by 1, by quitting one as soon
+        as it's idle.
+        """
         self._team.shrink(1)
 
 
     def __setstate__(self, state):
-        self.__dict__ = state
+        setattr(self, "__dict__", state)
         ThreadPool.__init__(self, self.min, self.max)
 
 
@@ -301,6 +303,11 @@ y
 
 
     def _startSomeWorkers(self):
+        """
+        Attempt to increase the number of workers by the amount of backlogged
+        work that there is.  In other words, expand capacity to meet demand,
+        while staying within the restriction of fewer than C{self.max} workers.
+        """
         self._team.grow(self._team.statistics().backloggedWorkCount)
 
 
@@ -310,32 +317,32 @@ y
 
         @param func: callable object to be called in separate thread
 
-        @param *args: positional arguments to be passed to C{func}
+        @param args: positional arguments to be passed to C{func}
 
-        @param **kw: keyword args to be passed to C{func}
+        @param kw: keyword args to be passed to C{func}
         """
         self.callInThreadWithCallback(None, func, *args, **kw)
 
 
     def callInThreadWithCallback(self, onResult, func, *args, **kw):
         """
-        Call a callable object in a separate thread and call C{onResult}
-        with the return value, or a L{twisted.python.failure.Failure}
-        if the callable raises an exception.
+        Call a callable object in a separate thread and call C{onResult} with
+        the return value, or a L{twisted.python.failure.Failure} if the
+        callable raises an exception.
 
-        The callable is allowed to block, but the C{onResult} function
-        must not block and should perform as little work as possible.
+        The callable is allowed to block, but the C{onResult} function must not
+        block and should perform as little work as possible.
 
-        A typical action for C{onResult} for a threadpool used with a
-        Twisted reactor would be to schedule a
-        L{twisted.internet.defer.Deferred} to fire in the main
-        reactor thread using C{.callFromThread}.  Note that C{onResult}
-        is called inside the separate thread, not inside the reactor thread.
+        A typical action for C{onResult} for a threadpool used with a Twisted
+        reactor would be to schedule a L{twisted.internet.defer.Deferred} to
+        fire in the main reactor thread using C{.callFromThread}.  Note that
+        C{onResult} is called inside the separate thread, not inside the
+        reactor thread.
 
         @param onResult: a callable with the signature C{(success, result)}.
             If the callable returns normally, C{onResult} is called with
             C{(True, result)} where C{result} is the return value of the
-            callable. If the callable throws an exception, C{onResult} is
+            callable.  If the callable throws an exception, C{onResult} is
             called with C{(False, failure)}.
 
             Optionally, C{onResult} may be C{None}, in which case it is not
@@ -343,9 +350,9 @@ y
 
         @param func: callable object to be called in separate thread
 
-        @param *args: positional arguments to be passed to C{func}
+        @param args: positional arguments to be passed to C{func}
 
-        @param **kwargs: keyword arguments to be passed to C{func}
+        @param kw: keyword arguments to be passed to C{func}
         """
         if self.joined:
             return
@@ -365,6 +372,14 @@ y
 
 
     def adjustPoolsize(self, minthreads=None, maxthreads=None):
+        """
+        Adjust the number of available threads by setting C{min} and C{max} to
+        new values.
+
+        @param minthreads: The new value for L{ThreadPool.min}.
+
+        @param maxthreads: The new value for L{ThreadPool.max}.
+        """
         if minthreads is None:
             minthreads = self.min
         if maxthreads is None:
@@ -389,7 +404,11 @@ y
 
 
     def dumpStats(self):
-        log.msg('waiters: %s' % self.waiters)
-        log.msg('workers: %s' % self.working)
-        log.msg('total: %s'   % self.threads)
+        """
+        Dump some plain-text informational messages to the log about the state
+        of this L{ThreadPool}.
+        """
+        log.msg('waiters: %s' % (self.waiters,))
+        log.msg('workers: %s' % (self.working,))
+        log.msg('total: %s'   % (self.threads,))
 
