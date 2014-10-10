@@ -15,27 +15,150 @@ try:
     from Queue import Queue
 except ImportError:
     from queue import Queue
-import contextlib
-import threading
-import copy
 
-from twisted.python import log, context, failure
+import threading
+
+from twisted.threads import ThreadWorker, Team
+from twisted.python import log, context
+from twisted.python.failure import Failure
 
 
 WorkerStop = object()
 
+class _WorkCtxArgsResult(object):
+    """
+    
+
+    @ivar ctx: 
+    @type ctx: 
+
+    @ivar func: 
+    @type func: 
+
+    @ivar args: 
+    @type args: 
+
+    @ivar kwargs: 
+    @type kwargs: 
+
+    @ivar onResult: 
+    @type onResult: 
+    """
+
+    def __init__(self, ctx, func, args, kwargs, onResult):
+        """
+        
+
+        @param ctx: 
+        @type ctx: 
+
+        @param func: 
+        @type func: 
+
+        @param args: 
+        @type args: 
+
+        @param kwargs: 
+        @type kwargs: 
+
+        @param onResult: 
+        @type onResult: 
+        """
+        self.ctx = ctx
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+        self.onResult = onResult
+
+
+    def __call__(self):
+        """
+        
+        """
+        try:
+            result = context.call(self.ctx, self.func,
+                                  *self.args, **self.kwargs)
+        except:
+            ok, result = False, Failure()
+        else:
+            ok = True
+
+        self.ctx = None
+        self.func = None
+        self.args = None
+        self.kwargs = None
+
+        if self.onResult is not None:
+            self.onResult(ok, result)
+        elif not ok:
+            log.err(result)
+        del self.onResult
+
+
 
 class ThreadPool:
     """
-    This class (hopefully) generalizes the functionality of a pool of
-    threads to which work can be dispatched.
+    This class (hopefully) generalizes the functionality of a pool of threads
+    to which work can be dispatched.
 
-    L{callInThread} and L{stop} should only be called from
-    a single thread, unless you make a subclass where L{stop} and
-    L{_startSomeWorkers} are synchronized.
+    L{callInThread} and L{stop} should only be called from a single thread,
+    unless you make a subclass where L{stop} and L{_startSomeWorkers} are
+    synchronized.
+
+    TO DO:
+
+    U{https://twistedmatrix.com/pipermail/twisted-python/2014-September/028797.html}
+
+        - re-implement in terms of twisted.threads
+
+    Core Interface:
+
+        - callInThread - implement with Team.do; remember to capture and pass
+          context.
+
+        - callInThreadWithCallback - implement with callInThread.
+
+        - adjustPoolsize - implement with Team.grow / Team.shrink
+
+        - start - don't call Team.grow until this point.  (Note: in
+          reactor-integrated scenario, the coordinator doesn't actually consume
+          resources, since it just wraps the reactor)
+
+        - stop - implement with Team.quit
+
+    Base Compatibility Stuff:
+
+        - min - implement with a call to Team.grow in start
+
+        - max - implement with a createWorker function that returns
+
+        - joined - implement by adding a
+          callback-to-be-called-in-coordinator-when-everybody-is-finished?
+          ThreadWorker.quit already has a call to join() in it.
+
+        - started - implement in start
+
+        - name - just set it, I guess
+
+        - dumpStats - implement with C{Statistics}
+
+    U{https://twistedmatrix.com/pipermail/twisted-python/2014-September/028798.html}
+
+        - len()-able C{waiters} - implement with C{Statistics.idleWorkerCount}
+
+        - len()-able C{working} - implement with C{Statistics.busyWorkerCount}
+
+        - C{q} attribute with a C{qsize} method - implement with
+          C{backloggedWorkCount}
+
+    U{https://twistedmatrix.com/pipermail/twisted-python/2014-September/028814.html}
+
+        - overridable C{threadFactory} hook, as an attribute - just pass this
+          along to Team.__init__
 
     @ivar started: Whether or not the thread pool is currently running.
     @type started: L{bool}
+
     @ivar threads: List of workers currently running in this thread pool.
     @type threads: L{list}
     """
@@ -58,13 +181,86 @@ class ThreadPool:
         """
         assert minthreads >= 0, 'minimum is negative'
         assert minthreads <= maxthreads, 'minimum is greater than maximum'
-        self.q = Queue(0)
+        class NotAQueue(object):
+            def qsize(q):
+                return self._team.statistics().backloggedWorkCount
+        self.q = NotAQueue()
         self.min = minthreads
         self.max = maxthreads
         self.name = name
-        self.waiters = []
         self.threads = []
-        self.working = []
+
+        def workerCreator(name):
+            def makeAThread(target):
+                thread = self.threadFactory(name=name,
+                                            target=target)
+                self.threads.append(thread)
+                return thread
+            return ThreadWorker(makeAThread, Queue)
+
+        def limitedWorkerCreator():
+            # Called only from the workforce's coordinator.
+            if not self.started:
+                return None
+            stats = self._team.statistics()
+            if stats.busyWorkerCount + stats.idleWorkerCount >= self.max:
+                return None
+            return workerCreator(self._generateName())
+
+        class LockedWorker(object):
+            """
+y            
+            """
+            def __init__(self):
+                """
+                
+                """
+                self._lock = threading.Lock()
+
+            def do(self, work):
+                """
+                
+                """
+                with self._lock:
+                    work()
+
+            def quit(self):
+                """
+                
+                """
+                pass
+
+
+        self._team = Team(LockedWorker,
+                          createWorker=limitedWorkerCreator,
+                          logException=log.err)
+
+
+    @property
+    def workers(self):
+        """
+        For compatibility purposes, return a total number of workers.
+        """
+        stats = self._team.statistics()
+        return stats.idleWorkerCount + stats.busyWorkerCount
+
+
+    @property
+    def working(self):
+        """
+        For compatibility purposes, return the number of busy workers as
+        expressed by a list the length of that number.
+        """
+        return [None] * self._team.statistics().busyWorkerCount
+
+
+    @property
+    def waiters(self):
+        """
+        For compatibility purposes, return the number of idle workers as
+        expressed by a list the length of that number.
+        """
+        return [None] * self._team.statistics().idleWorkerCount
 
 
     def start(self):
@@ -78,16 +274,18 @@ class ThreadPool:
 
 
     def startAWorker(self):
-        self.workers += 1
-        name = "PoolThread-%s-%s" % (self.name or id(self), self.workers)
-        newThread = self.threadFactory(target=self._worker, name=name)
-        self.threads.append(newThread)
-        newThread.start()
+        self._team.grow(1)
+
+
+    def _generateName(self):
+        """
+        Generate a name for a new pool thread.
+        """
+        return "PoolThread-%s-%s" % (self.name or id(self), self.workers)
 
 
     def stopAWorker(self):
-        self.q.put(WorkerStop)
-        self.workers -= 1
+        self._team.shrink(1)
 
 
     def __setstate__(self, state):
@@ -103,10 +301,7 @@ class ThreadPool:
 
 
     def _startSomeWorkers(self):
-        neededSize = self.q.qsize() + len(self.working)
-        # Create enough, but not too many
-        while self.workers < min(self.max, neededSize):
-            self.startAWorker()
+        self._team.grow(self._team.statistics().backloggedWorkCount)
 
 
     def callInThread(self, func, *args, **kw):
@@ -155,68 +350,7 @@ class ThreadPool:
         if self.joined:
             return
         ctx = context.theContextTracker.currentContext().contexts[-1]
-        o = (ctx, func, args, kw, onResult)
-        self.q.put(o)
-        if self.started:
-            self._startSomeWorkers()
-
-
-    @contextlib.contextmanager
-    def _workerState(self, stateList, workerThread):
-        """
-        Manages adding and removing this worker from a list of workers
-        in a particular state.
-
-        @param stateList: the list managing workers in this state
-
-        @param workerThread: the thread the worker is running in, used to
-            represent the worker in stateList
-        """
-        stateList.append(workerThread)
-        try:
-            yield
-        finally:
-            stateList.remove(workerThread)
-
-
-    def _worker(self):
-        """
-        Method used as target of the created threads: retrieve a task to run
-        from the threadpool, run it, and proceed to the next task until
-        threadpool is stopped.
-        """
-        ct = self.currentThread()
-        o = self.q.get()
-        while o is not WorkerStop:
-            with self._workerState(self.working, ct):
-                ctx, function, args, kwargs, onResult = o
-                del o
-
-                try:
-                    result = context.call(ctx, function, *args, **kwargs)
-                    success = True
-                except:
-                    success = False
-                    if onResult is None:
-                        context.call(ctx, log.err)
-                        result = None
-                    else:
-                        result = failure.Failure()
-
-                del function, args, kwargs
-
-            if onResult is not None:
-                try:
-                    context.call(ctx, onResult, success, result)
-                except:
-                    context.call(ctx, log.err)
-
-            del ctx, onResult, result
-
-            with self._workerState(self.waiters, ct):
-                o = self.q.get()
-
-        self.threads.remove(ct)
+        self._team.do(_WorkCtxArgsResult(ctx, func, args, kw, onResult))
 
 
     def stop(self):
@@ -225,14 +359,8 @@ class ThreadPool:
         """
         self.joined = True
         self.started = False
-        threads = copy.copy(self.threads)
-        while self.workers:
-            self.q.put(WorkerStop)
-            self.workers -= 1
-
-        # and let's just make sure
-        # FIXME: threads that have died before calling stop() are not joined.
-        for thread in threads:
+        self._team.quit()
+        for thread in self.threads:
             thread.join()
 
 
@@ -251,17 +379,17 @@ class ThreadPool:
             return
 
         # Kill of some threads if we have too many.
-        while self.workers > self.max:
-            self.stopAWorker()
+        if self.workers > self.max:
+            self._team.shrink(self.workers - self.max)
         # Start some threads if we have too few.
-        while self.workers < self.min:
-            self.startAWorker()
+        if self.workers < self.min:
+            self._team.grow(self.min - self.workers)
         # Start some threads if there is a need.
         self._startSomeWorkers()
 
 
     def dumpStats(self):
-        log.msg('queue: %s'   % self.q.queue)
         log.msg('waiters: %s' % self.waiters)
         log.msg('workers: %s' % self.working)
         log.msg('total: %s'   % self.threads)
+

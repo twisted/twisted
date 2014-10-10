@@ -125,6 +125,13 @@ modules = [
     "twisted.test.proto_helpers",
     "twisted.test.iosim",
     "twisted.test.ssl_helpers",
+    "twisted.threads",
+    "twisted.threads._convenience"
+    "twisted.threads._ithreads"
+    "twisted.threads._memory"
+    "twisted.threads._reactor",
+    "twisted.threads._team",
+    "twisted.threads._threadworker",
     "twisted.trial",
     "twisted.trial._asynctest",
     "twisted.trial.itrial",
@@ -236,6 +243,11 @@ testModules = [
     "twisted.test.test_threadpool",
     "twisted.test.test_udp",
     "twisted.test.test_usage",
+    "twisted.threads.test.test_convenience",
+    "twisted.threads.test.test_memory",
+    "twisted.threads.test.test_reactor",
+    "twisted.threads.test.test_team",
+    "twisted.threads.test.test_threadworker",
     "twisted.trial.test.test_assertions",
     "twisted.trial.test.test_asyncassertions",
     "twisted.trial.test.test_deferred",
