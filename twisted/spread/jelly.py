@@ -155,7 +155,7 @@ def _newInstance(cls, state=_NO_STATE):
 
     @return: A new instance of C{cls}.
     """
-    if _PY3 or not isinstance(cls, ClassType):
+    if not isinstance(cls, ClassType):
         # new-style
         inst = cls.__new__(cls)
 
