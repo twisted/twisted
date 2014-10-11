@@ -8,7 +8,7 @@ Tests for various parts of L{twisted.web}.
 import os
 import zlib
 
-from zope.interface import implementer
+from zope.interface import Attribute, implementer, Interface
 from zope.interface.verify import verifyObject
 
 from twisted.python.compat import _PY3, networkString
@@ -19,6 +19,7 @@ from twisted.internet.address import IPv4Address
 from twisted.internet.task import Clock
 from twisted.web import server, resource
 from twisted.web import iweb, http, error
+from twisted.python import components, log
 
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 
@@ -467,6 +468,116 @@ class RequestTests(unittest.TestCase):
         request.requestReceived(b'GET', b'/foo%2Fbar', b'HTTP/1.0')
         self.assertEqual(request.prePathURL(), b'http://example.com/foo%2Fbar')
 
+
+    class DummySession(server.Session):
+        """
+        A session to help with testing.
+        """
+        def __init__(self, site=None, uid=0):
+            server.Session.__init__(
+                self, site=site, uid=uid, reactor=Clock())
+
+        def touch(self):
+            self._reactor.advance(1)
+            return server.Session.touch(self)
+
+
+    def test_getSession(self):
+        """
+        When a session already exists, it will return the same session and
+        update its modification.
+        """
+        channel = DummyChannel()
+        request = server.Request(channel, 1)
+        session = self.DummySession()
+        initial_time = session.lastModified
+        request.session = session
+
+        result = request.getSession()
+
+        self.assertIs(session, result)
+        self.assertGreater(result.lastModified, initial_time)
+
+
+    class ISessionObject(Interface):
+        """
+        A simple interface for testing session components.
+        """
+        value = Attribute("A marker value for this component.")
+
+
+    @implementer(ISessionObject)
+    class SessionObject(object):
+        """
+        A simple component.
+        """
+        def __init__(self, session):
+            self.value = 42
+
+
+    def test_getSessionComponent(self):
+        """
+        When sessionInterface is provided it will return the
+        C{sessionInterface} component associated with this session.
+        """
+        # Register adapter for this test and remove it once test is done.
+        components.registerAdapter(
+            self.SessionObject, server.Session, self.ISessionObject)
+        # Un-registration is done by registering None.
+        self.addCleanup(
+            components.getRegistry().register,
+            [self.ISessionObject], server.Session, '', None)
+        channel = DummyChannel()
+        request = server.Request(channel, 1)
+        session = self.DummySession()
+        request.session = session
+
+        result = request.getSession(sessionInterface=self.ISessionObject)
+
+        self.assertIsInstance(result, self.SessionObject)
+        self.assertEqual(42, result.value)
+
+
+    def test_getSessionNonExistent(self):
+        """
+        When request (or the site associated with this request) has no
+        previous session, a new one is created using the name provided by
+        `getSessionCookieName` as cookie is set to inform the web client
+        about session id.
+        """
+        site = server.Site(resource.Resource())
+        site.sessionFactory = self.DummySession
+        channel = DummyChannel()
+        channel.site = site
+        request = server.Request(channel, 1)
+        request.sitepath = []
+        request.site = site
+
+        result = request.getSession()
+
+        session_raw_cookie = '%s=%s; Path=/' % (
+            request.getSessionCookieName(), result.uid,)
+        self.assertEqual(session_raw_cookie, request.cookies[0])
+
+        # Getting the session again, will return the same object.
+        self.assertIs(result, request.getSession())
+
+
+    def test_getSessionCookieName(self):
+        """
+        Default implementation returns the name based on
+        I{Request.sessionCookieBaseName}.
+        """
+        baseName = b'CUSTOM_NAME'
+        channel = DummyChannel()
+        request = server.Request(channel, 1)
+        request.sitepath = []
+        request.site = channel.site
+        request.sessionCookieBaseName = baseName
+
+        name = request.getSessionCookieName()
+
+        self.assertEqual(name, baseName)
 
 
 class GzipEncoderTests(unittest.TestCase):
