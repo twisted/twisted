@@ -84,60 +84,7 @@ class ThreadPool:
     This class (hopefully) generalizes the functionality of a pool of threads
     to which work can be dispatched.
 
-    L{callInThread} and L{stop} should only be called from a single thread,
-    unless you make a subclass where L{stop} and L{_startSomeWorkers} are
-    synchronized.
-
-    TO DO:
-
-    U{https://twistedmatrix.com/pipermail/twisted-python/2014-September/028797.html}
-
-        - re-implement in terms of twisted.threads
-
-    Core Interface:
-
-        - callInThread - implement with Team.do; remember to capture and pass
-          context.
-
-        - callInThreadWithCallback - implement with callInThread.
-
-        - adjustPoolsize - implement with Team.grow / Team.shrink
-
-        - start - don't call Team.grow until this point.  (Note: in
-          reactor-integrated scenario, the coordinator doesn't actually consume
-          resources, since it just wraps the reactor)
-
-        - stop - implement with Team.quit
-
-    Base Compatibility Stuff:
-
-        - min - implement with a call to Team.grow in start
-
-        - max - implement with a createWorker function that returns
-
-        - joined - implement by adding a
-          callback-to-be-called-in-coordinator-when-everybody-is-finished?
-          ThreadWorker.quit already has a call to join() in it.
-
-        - started - implement in start
-
-        - name - just set it, I guess
-
-        - dumpStats - implement with C{Statistics}
-
-    U{https://twistedmatrix.com/pipermail/twisted-python/2014-September/028798.html}
-
-        - len()-able C{waiters} - implement with C{Statistics.idleWorkerCount}
-
-        - len()-able C{working} - implement with C{Statistics.busyWorkerCount}
-
-        - C{q} attribute with a C{qsize} method - implement with
-          C{backloggedWorkCount}
-
-    U{https://twistedmatrix.com/pipermail/twisted-python/2014-September/028814.html}
-
-        - overridable C{threadFactory} hook, as an attribute - just pass this
-          along to Team.__init__
+    L{callInThread} and L{stop} should only be called from a single thread.
 
     @ivar started: Whether or not the thread pool is currently running.
     @type started: L{bool}
@@ -263,6 +210,8 @@ class ThreadPool:
         self.started = True
         # Start some threads.
         self.adjustPoolsize()
+        if self._team.statistics().backloggedWorkCount:
+            self._team.grow(1)
 
 
     def startAWorker(self):
@@ -301,15 +250,6 @@ class ThreadPool:
         state['min'] = self.min
         state['max'] = self.max
         return state
-
-
-    def _startSomeWorkers(self):
-        """
-        Attempt to increase the number of workers by the amount of backlogged
-        work that there is.  In other words, expand capacity to meet demand,
-        while staying within the restriction of fewer than C{self.max} workers.
-        """
-        self._team.grow(self._team.statistics().backloggedWorkCount)
 
 
     def callInThread(self, func, *args, **kw):
@@ -400,8 +340,6 @@ class ThreadPool:
         # Start some threads if we have too few.
         if self.workers < self.min:
             self._team.grow(self.min - self.workers)
-        # Start some threads if there is a need.
-        self._startSomeWorkers()
 
 
     def dumpStats(self):
