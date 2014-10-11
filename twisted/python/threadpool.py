@@ -18,7 +18,7 @@ except ImportError:
 
 import threading
 
-from twisted.threads import ThreadWorker, Team
+from twisted.threads import ThreadWorker, Team, LockWorker
 from twisted.python import log, context
 from twisted.python.failure import Failure
 
@@ -186,7 +186,8 @@ class ThreadPool:
                 return None
             return workerCreator(self._generateName())
 
-        self._team = Team(LockedWorker,
+        self._team = Team(lambda: LockWorker(threading.Lock(),
+                                             threading.local()),
                           createWorker=limitedWorkerCreator,
                           logException=log.err)
 
