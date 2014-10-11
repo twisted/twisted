@@ -496,7 +496,7 @@ class RequestTests(unittest.TestCase):
         result = request.getSession()
 
         self.assertIs(session, result)
-        self.assertGreater(result.lastModified, initial_time)
+        self.assertTrue(result.lastModified > initial_time)
 
 
     class ISessionObject(Interface):
