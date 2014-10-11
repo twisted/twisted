@@ -88,17 +88,19 @@ class LockWorker(object):
         @param work: the work to do
         """
         self._quit.check()
-        working = getattr(self._local, "working", None)
+        local = self._local
+        working = getattr(local, "working", None)
         if working is None:
-            working = self._local.working = []
+            working = local.working = []
             working.append(work)
-            self._lock.acquire()
+            lock = self._lock
+            lock.acquire()
             try:
                 while working:
                     working.pop(0)()
             finally:
-                self._lock.release()
-                self._local.working = None
+                lock.release()
+                local.working = None
         else:
             working.append(work)
 
@@ -108,4 +110,5 @@ class LockWorker(object):
         Quit this L{LockWorker}.
         """
         self._quit.set()
+        self._lock = None
 
