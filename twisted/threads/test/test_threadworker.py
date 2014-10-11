@@ -25,9 +25,6 @@ class FakeThread(object):
 
     @ivar started: Has this thread been started?
     @type started: L{bool}
-
-    @ivar joined: Has this thread been joined?
-    @type joined: L{bool}
     """
 
     def __init__(self, target):
@@ -36,7 +33,6 @@ class FakeThread(object):
         """
         self.target = target
         self.started = False
-        self.joined = False
 
 
     def start(self):
@@ -44,13 +40,6 @@ class FakeThread(object):
         Set the "started" flag.
         """
         self.started = True
-
-
-    def join(self):
-        """
-        Set the "joined" flag.
-        """
-        self.joined = True
 
 
 
@@ -126,12 +115,14 @@ class ThreadWorkerTests(SynchronousTestCase):
         self.assertEqual(doIt.done, True)
 
 
-    def test_quitJoinsThreads(self):
+    def test_quitPreventsFutureCalls(self):
         """
-        L{ThreadWorker.quit} joins all of its outstanding workers.
+        L{ThreadWorker.quit} causes future calls to L{ThreadWorker.do} and
+        L{ThreadWorker.quit} to raise L{AlreadyQuit}.
         """
-        self.worker.do(lambda: None)
         self.worker.quit()
-        self.assertEqual(len(self.fakeThreads), 1)
-        self.assertEqual(self.fakeThreads[0].joined, True)
-        self.assertEqual(self.fakeThreads[0].target(), None)
+        self.assertRaises(AlreadyQuit, self.worker.quit)
+        self.assertRaises(AlreadyQuit, self.worker.do, list)
+
+
+
