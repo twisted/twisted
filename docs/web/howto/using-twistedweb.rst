@@ -442,13 +442,10 @@ Twisted Web provides an abstraction of this browser-tracking behavior called the
 .. image:: ../img/web-session.png
 
 
-The default session cookie name is ``TWISTED_SESSION``. It can be change by
-overwriting the default implementation of ``sessionCookieBaseName`` or
-``getSessionCookieName`` from :api:`twisted.web.server.Request <Request>`.
-
+The default session cookie name is prefixed with ``TWISTED_SESSION``.
+It can be changed by changing the default value of ``sessionCookieBaseName`` in :api:`twisted.web.server.Request <Request>`.
 
 .. code-block:: python
-
 
     from twisted.web.server import Request, Site
     from twisted.web.resource import Resource
