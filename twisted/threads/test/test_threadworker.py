@@ -28,7 +28,6 @@ class WouldDeadlock(Exception):
 
 
 
-
 class FakeThread(object):
     """
     A fake L{threading.Thread}.
