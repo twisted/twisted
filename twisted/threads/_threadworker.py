@@ -66,13 +66,13 @@ class ThreadWorker(object):
 @implementer(IWorker)
 class LockWorker(object):
     """
-    An L{IWorker} implemented based on a mutual-exclusion context manager.
+    An L{IWorker} implemented based on a mutual-exclusion lock.
     """
 
     def __init__(self, lock, local):
         """
-        @param lock: A mutual-exclusion lock, implemented like a context
-            manager.
+        @param lock: A mutual-exclusion lock, with C{acquire} and C{release}
+            methods.
         @type lock: L{threading.Lock}
 
         @param local: Local storage.
@@ -86,18 +86,22 @@ class LockWorker(object):
     def do(self, work):
         """
         Do the given work on this thread, with the mutex acquired.  If this is
-        called re-entrantly, wait for the outer invocation to do the work.
+        called re-entrantly, return and wait for the outer invocation to do the
+        work.
+
+        @param work: the work to do
         """
         self._quit.check()
         working = getattr(self._local, "working", None)
         if working is None:
             working = self._local.working = []
             working.append(work)
+            self._lock.acquire()
             try:
-                with self._lock:
-                    while working:
-                        working.pop(0)()
+                while working:
+                    working.pop(0)()
             finally:
+                self._lock.release()
                 self._local.working = None
         else:
             working.append(work)
@@ -105,7 +109,7 @@ class LockWorker(object):
 
     def quit(self):
         """
-        
+        Quit this L{LockWorker}.
         """
         self._quit.set()
 
