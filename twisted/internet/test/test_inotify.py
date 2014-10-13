@@ -4,6 +4,7 @@
 """
 Tests for the inotify wrapper in L{twisted.internet.inotify}.
 """
+import os
 
 from twisted.internet import defer, reactor
 from twisted.python import filepath, runtime
@@ -15,6 +16,10 @@ except ImportError:
     inotify = None
 else:
     from twisted.internet import inotify
+
+skipTravisCI = None
+if os.environ.get('TRAVIS') == 'true':
+    skipTravisCI = 'IN_DELETE_SELF is not working on Travis CI workers.'
 
 
 
@@ -219,6 +224,7 @@ class TestINotify(unittest.TestCase):
 
         return self._notificationTest(
             inotify.IN_DELETE_SELF, operation, expectedPath=self.dirname)
+    test_deleteSelf.skip = skipTravisCI
 
 
     def test_moveSelf(self):
@@ -298,6 +304,8 @@ class TestINotify(unittest.TestCase):
         d = defer.Deferred()
         subdir.createDirectory()
         return d
+    # autoAdd depends IN_DELETE_SELF which is not working on Travis.
+    test_simpleDeleteDirectory.skip = skipTravisCI
 
 
     def test_ignoreDirectory(self):
@@ -411,6 +419,7 @@ class TestINotify(unittest.TestCase):
         expectedPath.remove()
 
         return notified
+    test_seriesOfWatchAndIgnore.skip = skipTravisCI
 
 
     def test_ignoreFilePath(self):
@@ -446,6 +455,7 @@ class TestINotify(unittest.TestCase):
         expectedPath2.remove()
 
         return notified
+    test_ignoreFilePath.skip = skipTravisCI
 
 
     def test_ignoreNonWatchedFile(self):
