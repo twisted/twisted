@@ -1,16 +1,15 @@
 #!/usr/bin/env python
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 from twisted.internet.protocol import ClientFactory
+from twisted.internet.defer import Deferred
 from twisted.protocols.basic import LineReceiver
-from twisted.internet import reactor
-import sys
+
 
 class EchoClient(LineReceiver):
-    end="Bye-bye!"
+    end = "Bye-bye!"
+
     def connectionMade(self):
         self.sendLine("Hello, world!")
         self.sendLine("What a fine day it is.")
@@ -18,24 +17,28 @@ class EchoClient(LineReceiver):
 
     def lineReceived(self, line):
         print "receive:", line
-        if line==self.end:
+        if line == self.end:
             self.transport.loseConnection()
 
 class EchoClientFactory(ClientFactory):
     protocol = EchoClient
 
+    def __init__(self):
+        self.done = Deferred()
+
     def clientConnectionFailed(self, connector, reason):
         print 'connection failed:', reason.getErrorMessage()
-        reactor.stop()
+        self.done.errback(reason)
 
     def clientConnectionLost(self, connector, reason):
         print 'connection lost:', reason.getErrorMessage()
-        reactor.stop()
+        self.done.callback(None)
 
-def main():
+def main(reactor):
     factory = EchoClientFactory()
     reactor.connectTCP('localhost', 8000, factory)
-    reactor.run()
+    return factory.done
 
 if __name__ == '__main__':
-    main()
+    from twisted.internet.task import react
+    react(main)
