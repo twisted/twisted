@@ -519,7 +519,7 @@ class DeprecationTests(unittest.TestCase):
     """
     Test deprecation of L{twisted.words.protocols.msn}
     """
-    
+
     def test_deprecation(self):
         """
         Accessing L{twisted.words.protocols.msn} emits a deprecation warning
