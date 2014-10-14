@@ -1955,10 +1955,10 @@ class ContentDecoderAgentTests(TestCase, FakeReactorAndConnectMixin,
         self.assertEqual(len(protocol.requests), 1)
         req, res = protocol.requests.pop()
         self.assertEqual(
-            list(req.headers.getAllRawHeaders()),
-            [('Host', ['example.com']),
+            list(sorted(req.headers.getAllRawHeaders())),
+            [('Accept-Encoding', ['fizz', 'decoder1,decoder2']),
              ('Foo', ['bar']),
-             ('Accept-Encoding', ['fizz', 'decoder1,decoder2'])])
+             ('Host', ['example.com'])])
 
 
     def test_plainEncodingResponse(self):
