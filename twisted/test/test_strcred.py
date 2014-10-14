@@ -15,6 +15,7 @@ from twisted.plugins import cred_file, cred_anonymous
 from twisted.python import usage
 from twisted.python.filepath import FilePath
 from twisted.python.fakepwd import UserDatabase
+from twisted.python.reflect import requireModule
 
 try:
     import crypt
@@ -333,7 +334,7 @@ class TestFileDBChecker(unittest.TestCase):
         oldOutput = cred_file.theFileCheckerFactory.errorOutput
         newOutput = StringIO.StringIO()
         cred_file.theFileCheckerFactory.errorOutput = newOutput
-        checker = strcred.makeChecker('file:' + self._fakeFilename())
+        strcred.makeChecker('file:' + self._fakeFilename())
         cred_file.theFileCheckerFactory.errorOutput = oldOutput
         self.assertIn(cred_file.invalidFileWarning, newOutput.getvalue())
 
@@ -346,11 +347,13 @@ class TestSSHChecker(unittest.TestCase):
     L{twisted.conch.test.test_checkers.SSHPublicKeyCheckerTestCase}.
     """
 
-    try:
-        import Crypto
-        import pyasn1
-    except ImportError:
-        skip = "PyCrypto is not available"
+    skip = None
+
+    if requireModule('Crypto') is None:
+        skip = 'PyCrypto is not available'
+
+    if requireModule('pyasn1') is None:
+        skip = 'pyasn1 is not available'
 
 
     def test_isChecker(self):

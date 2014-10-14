@@ -3,7 +3,7 @@
 
 """Script used by twisted.test.test_process on win32."""
 
-import sys, time, os, msvcrt
+import sys, os, msvcrt
 msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
 msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
 

@@ -11,8 +11,6 @@ from twisted.trial import unittest
 
 from twisted.manhole import explorer
 
-import types
-
 """
 # Tests:
 
@@ -208,12 +206,6 @@ class TestBrowseFunction(unittest.TestCase):
         xplorer = self.pool.getExplorer(function_crazy, 'function_crazy')
 
         signature = xplorer.signature
-
-        expected_signature = [{'name': 'c'},
-                              {'name': 'd',
-                               'default': range(4)},
-                              {'name': 'kw',
-                               'keywords': 1}]
 
         # The name of the first argument seems to be indecipherable,
         # but make sure it has one (and no default).

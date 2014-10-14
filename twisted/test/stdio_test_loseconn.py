@@ -9,6 +9,7 @@ test that ITransport.loseConnection() works for process transports.
 """
 
 import sys, _preamble
+_preamble  # Silence the linter (`_preamble` has import-time side-effect).
 
 from twisted.internet.error import ConnectionDone
 from twisted.internet import stdio, protocol

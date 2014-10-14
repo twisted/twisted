@@ -13,8 +13,6 @@ from twisted.python.versions import Version
 from twisted.test import proto_helpers
 
 from twisted import cred
-import twisted.cred.portal
-import twisted.cred.checkers
 
 from zope.interface import implements
 

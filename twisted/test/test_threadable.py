@@ -129,4 +129,4 @@ class SerializationTestCase(unittest.SynchronousTestCase):
         lockPickle = b'ctwisted.python.threadable\nunpickle_lock\np0\n(tp1\nRp2\n.'
         lock = pickle.loads(lockPickle)
         newPickle = pickle.dumps(lock, 2)
-        newLock = pickle.loads(newPickle)
+        pickle.loads(newPickle)

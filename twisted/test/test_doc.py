@@ -43,7 +43,7 @@ class DocCoverage(unittest.TestCase):
                 continue
             try:
                 package = reflect.namedModule(packageName)
-            except ImportError, e:
+            except ImportError:
                 # This is testing doc coverage, not importability.
                 # (Really, I don't want to deal with the fact that I don't
                 #  have pyserial installed.)
@@ -70,7 +70,7 @@ class DocCoverage(unittest.TestCase):
             try:
                 module = reflect.namedModule('.'.join([packageName,
                                                        moduleName]))
-            except Exception, e:
+            except Exception:
                 # print moduleName, "misbehaved:", e
                 pass
             else:
@@ -87,7 +87,7 @@ class DocCoverage(unittest.TestCase):
         for packageName in self.packageNames:
             try:
                 package = reflect.namedModule(packageName)
-            except Exception, e:
+            except Exception:
                 # This is testing doc coverage, not importability.
                 # (Really, I don't want to deal with the fact that I don't
                 #  have pyserial installed.)

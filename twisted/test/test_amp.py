@@ -16,7 +16,8 @@ from twisted.python import filepath
 from twisted.python.failure import Failure
 from twisted.protocols import amp
 from twisted.trial import unittest
-from twisted.internet import protocol, defer, error, reactor, interfaces
+from twisted.internet import (
+    address, protocol, defer, error, reactor, interfaces)
 from twisted.test import iosim
 from twisted.test.proto_helpers import StringTransport
 
@@ -2973,15 +2974,15 @@ class UNIXStringTransport(object):
 
 
     def loseConnection(self):
-        self._queue.append(('connectionLost', Failure(ConnectionLost())))
+        self._queue.append(('connectionLost', Failure(error.ConnectionLost())))
 
 
     def getHost(self):
-        return UNIXAddress('/tmp/some-path')
+        return address.UNIXAddress('/tmp/some-path')
 
 
     def getPeer(self):
-        return UNIXAddress('/tmp/another-path')
+        return address.UNIXAddress('/tmp/another-path')
 
 # Minimal evidence that we got the signatures right
 verifyClass(interfaces.ITransport, UNIXStringTransport)

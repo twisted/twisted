@@ -217,6 +217,9 @@ class FailureTestCase(SynchronousTestCase):
         """
         if captureVars:
             exampleLocalVar = 'xyz'
+            # Silence the linter as this variable is checked via
+            # the traceback.
+            exampleLocalVar
 
         f = getDivisionFailure(captureVars=captureVars)
         out = NativeStringIO()
@@ -272,6 +275,9 @@ class FailureTestCase(SynchronousTestCase):
         """
         if captureVars:
             exampleLocalVar = 'abcde'
+            # Silence the linter as this variable is checked via
+            # the traceback.
+            exampleLocalVar
 
         f = getDivisionFailure()
         out = NativeStringIO()
@@ -319,6 +325,9 @@ class FailureTestCase(SynchronousTestCase):
         """
         if captureVars:
             exampleLocalVar = 'xyzzy'
+            # Silence the linter as this variable is checked via
+            # the traceback.
+            exampleLocalVar
 
         f = getDivisionFailure(captureVars=captureVars)
         out = NativeStringIO()

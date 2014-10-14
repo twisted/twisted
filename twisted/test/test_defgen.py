@@ -212,7 +212,7 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
         self.assertEqual(x, "hi")
 
         try:
-            ow = yield getOwie()
+            yield getOwie()
         except ZeroDivisionError as e:
             self.assertEqual(str(e), 'OMG')
         returnValue("WOOSH")
@@ -231,7 +231,7 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
     def _genHandledTerminalFailure(self):
         try:
-            x = yield defer.fail(TerminalException("Handled Terminal Failure"))
+            yield defer.fail(TerminalException("Handled Terminal Failure"))
         except TerminalException:
             pass
     _genHandledTerminalFailure = inlineCallbacks(_genHandledTerminalFailure)
@@ -239,7 +239,7 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
     def _genHandledTerminalAsyncFailure(self, d):
         try:
-            x = yield d
+            yield d
         except TerminalException:
             pass
     _genHandledTerminalAsyncFailure = inlineCallbacks(
@@ -249,7 +249,7 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
     def _genStackUsage(self):
         for x in range(5000):
             # Test with yielding a deferred
-            x = yield defer.succeed(1)
+            yield defer.succeed(1)
         returnValue(0)
     _genStackUsage = inlineCallbacks(_genStackUsage)
 
@@ -268,7 +268,7 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
         result of the yield expression.
         """
         def _test():
-            x = yield 5
+            yield 5
             returnValue(5)
         _test = inlineCallbacks(_test)
 

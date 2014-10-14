@@ -10,6 +10,7 @@ L{twisted.internet.stdio.StandardIO} has finished.
 """
 
 import sys, _preamble
+_preamble  # Silence the linter (`_preamble` has import-time side-effect).
 
 from twisted.internet.protocol import Protocol
 from twisted.internet.stdio import StandardIO

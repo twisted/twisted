@@ -10,6 +10,7 @@ transports.
 """
 
 import sys, _preamble
+_preamble  # Silence the linter (`_preamble` has import-time side-effect).
 
 from zope.interface import implements
 

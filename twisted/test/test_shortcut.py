@@ -13,7 +13,6 @@ if os.name == 'nt':
         skipWindowsNopywin32 = ("On windows, twisted.python.shortcut is not "
                                 "available in the absence of win32com.")
     import os.path
-    import sys
 
     class ShortcutTest(unittest.TestCase):
         def testCreate(self):
