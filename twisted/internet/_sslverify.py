@@ -1255,9 +1255,8 @@ class OpenSSLCertificateOptions(object):
     _OP_ALL = getattr(SSL, 'OP_ALL', 0x0000FFFF)
     _OP_NO_TICKET = getattr(SSL, 'OP_NO_TICKET', 0x00004000)
     _OP_NO_COMPRESSION = getattr(SSL, 'OP_NO_COMPRESSION', 0x00020000)
-    _OP_CIPHER_SERVER_PREFERENCE = getattr(SSL, 'OP_CIPHER_SERVER_PREFERENCE ',
-                                           0x00400000)
-    _OP_SINGLE_ECDH_USE = getattr(SSL, 'OP_SINGLE_ECDH_USE ', 0x00080000)
+    _OP_CIPHER_SERVER_PREFERENCE = getattr(SSL, 'OP_CIPHER_SERVER_PREFERENCE', 0x00400000)
+    _OP_SINGLE_ECDH_USE = getattr(SSL, 'OP_SINGLE_ECDH_USE', 0x00080000)
 
 
     @_mutuallyExclusiveArguments([
