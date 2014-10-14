@@ -3,6 +3,15 @@
 
 """
 Test running processes.
+
+@var CONCURRENT_PROCESS_TEST_COUNT: The number of concurrent processes to use
+    to stress-test the spawnProcess API.  This value is tuned to a number of
+    processes which has been determined to stay below various
+    experimentally-determined limitations of our supported platforms.
+    Particularly, Windows XP seems to have some undocumented limitations which
+    cause spurious failures if this value is pushed too high.  U{Please see
+    this ticket for a discussion of how we arrived at its current value.
+    <http://twistedmatrix.com/trac/ticket/3404>}
 """
 
 import gzip
@@ -29,6 +38,8 @@ from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import util, runtime, procutils
 
+
+CONCURRENT_PROCESS_TEST_COUNT = 25
 
 
 class StubProcessProtocol(protocol.ProcessProtocol):
@@ -567,7 +578,7 @@ class ProcessTestCase(unittest.TestCase):
         protocols = []
         deferreds = []
 
-        for i in xrange(50):
+        for i in xrange(CONCURRENT_PROCESS_TEST_COUNT):
             p = TestManyProcessProtocol()
             protocols.append(p)
             reactor.spawnProcess(p, exe, args, env=None)
@@ -2594,4 +2605,3 @@ if (runtime.platform.getType() != 'win32') or (not interfaces.IReactorProcess(re
 if not interfaces.IReactorProcess(reactor, None):
     ProcessTestCase.skip = skipMessage
     ClosingPipes.skip = skipMessage
-
