@@ -235,7 +235,7 @@ Elements and Their Uses
 | ``sub`` , ``sup``   | Subscripts and superscripts.                                                                                         |
 +---------------------+----------------------------------------------------------------------------------------------------------------------+
 | ``link``            | Currently, the only ``link``  elements supported                                                                     |
-|                     | are for indicating authorship. ``<link rel="author" href="author-address@examples.com" title="Author Name" />``  |
+|                     | are for indicating authorship. ``<link rel="author" href="author-address@examples.com" title="Author Name" />``      |
 |                     | should be used to indicate authorship. Multiple instances                                                            |
 |                     | are allowed, and indicate shared authorship.                                                                         |
 +---------------------+----------------------------------------------------------------------------------------------------------------------+
