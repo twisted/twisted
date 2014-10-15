@@ -2776,7 +2776,7 @@ class ReadBodyTests(TestCase):
 
     def test_cancel(self):
         """
-        When cancel a L{Deferred} returned by L{client.readBody}, the
+        When cancelling the L{Deferred} returned by L{client.readBody}, the
         connection to the server will be aborted.
         """
         response = DummyResponse()
