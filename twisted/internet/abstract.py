@@ -40,7 +40,7 @@ class _ConsumerMixin(object):
     Subclasses must provide three attributes which L{_ConsumerMixin} will read
     but not write:
 
-      - connected: A C{bool} which is C{True} as long as the the consumer has
+      - connected: A C{bool} which is C{True} as long as the consumer has
         someplace to send bytes (for example, a TCP connection), and then
         C{False} when it no longer does.
 

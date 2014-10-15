@@ -12,7 +12,7 @@ def which(name, flags=os.X_OK):
     
     On newer versions of MS-Windows, the PATHEXT environment variable will be
     set to the list of file extensions for files considered executable. This
-    will normally include things like ".EXE". This fuction will also find files
+    will normally include things like ".EXE". This function will also find files
     with the given name ending with any of these extensions.
 
     On MS-Windows the only flag that has any meaning is os.F_OK. Any other

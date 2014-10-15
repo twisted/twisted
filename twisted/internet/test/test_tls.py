@@ -118,7 +118,7 @@ class StartTLSClientCreator(EndpointCreator, ContextGeneratingMixin):
     """
     def server(self, reactor):
         """
-        Construct an SSL server endpoint.  This should be be constructing a TCP
+        Construct an SSL server endpoint.  This should be constructing a TCP
         server endpoint which immediately calls C{startTLS} instead, but that
         is hard.
         """

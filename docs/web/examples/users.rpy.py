@@ -15,7 +15,7 @@ For example, if you put this at /var/www/users.rpy and run a server like:
     $ twistd -n web --allow-ignore-ext --path /var/www
 
 Then http://example.com/users/<name>/ and http://example.com/users/<name>.twistd
-will work similarily to how they work on twistedmatrix.com.
+will work similarly to how they work on twistedmatrix.com.
 """
 
 from twisted.web import distrib

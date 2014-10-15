@@ -330,7 +330,7 @@ class BananaTestCase(BananaTestBase):
 
     def testCrashNegativeLong(self):
         # There was a bug in cBanana which relied on negating a negative integer
-        # always giving a postive result, but for the lowest possible number in
+        # always giving a positive result, but for the lowest possible number in
         # 2s-complement arithmetic, that's not true, i.e.
         #     long x = -2147483648;
         #     long y = -x;

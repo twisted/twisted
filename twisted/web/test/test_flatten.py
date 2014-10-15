@@ -153,7 +153,7 @@ class TestSerialization(FlattenTestCase, XMLAssertionMixin):
     def test_serializedAttributeWithTransparentTag(self):
         """
         Attribute values which are supplied via the value of a C{t:transparent}
-        tag have the same subsitution rules to them as values supplied
+        tag have the same substitution rules to them as values supplied
         directly.
         """
         self.checkAttributeSanitization(tags.transparent, passthru)

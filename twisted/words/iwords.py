@@ -42,7 +42,7 @@ class IGroup(Interface):
         """Return the number of participants in this group.
 
         @rtype: L{twisted.internet.defer.Deferred}
-        @return: A Deferred which fires with an C{int} representing the the
+        @return: A Deferred which fires with an C{int} representing the
         number of participants in this group.
         """
 

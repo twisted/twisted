@@ -33,7 +33,7 @@ class Echoer(xmlrpc.XMLRPC):
     """
     An example object to be published.
 
-    Has five methods accessable by XML-RPC, 'echo', 'hello', 'defer',
+    Has five methods accessible by XML-RPC, 'echo', 'hello', 'defer',
     'defer_fail' and 'fail.
     """
 

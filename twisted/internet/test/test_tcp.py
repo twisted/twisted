@@ -225,11 +225,11 @@ class _FakeFDSetReactor(object):
     An in-memory implementation of L{IReactorFDSet}, which records the current
     sets of active L{IReadDescriptor} and L{IWriteDescriptor}s.
 
-    @ivar _readers: The set of of L{IReadDescriptor}s active on this
+    @ivar _readers: The set of L{IReadDescriptor}s active on this
         L{_FakeFDSetReactor}
     @type _readers: L{set}
 
-    @ivar _writers: The set of of L{IWriteDescriptor}s active on this
+    @ivar _writers: The set of L{IWriteDescriptor}s active on this
         L{_FakeFDSetReactor}
     @ivar _writers: L{set}
     """
@@ -597,7 +597,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         """
         A client's transport's C{getHost} and C{getPeer} return L{IPv4Address}
         instances which have the dotted-quad string form of the resolved
-        adddress of the local and remote endpoints of the connection
+        address of the local and remote endpoints of the connection
         respectively as their C{host} attribute, not the hostname originally
         passed in to
         L{connectTCP<twisted.internet.interfaces.IReactorTCP.connectTCP>}, if a

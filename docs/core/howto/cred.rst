@@ -79,7 +79,7 @@ The Portal
 ~~~~~~~~~~
 
 
-This is the the core of login, the point of integration between all the objects
+This is the core of login, the point of integration between all the objects
 in the cred system.  There is one
 concrete implementation of Portal, and no interface - it does a very
 simple task.  A :api:`twisted.cred.portal.Portal <Portal>` 

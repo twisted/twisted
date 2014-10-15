@@ -397,7 +397,7 @@ class IRC(protocol.Protocol):
         Send the topic to a user.
 
         @type user: C{str} or C{unicode}
-        @param user: The user receiving the topic.  Only their nick name, not
+        @param user: The user receiving the topic.  Only their nickname, not
             the full hostmask.
 
         @type channel: C{str} or C{unicode}
@@ -429,7 +429,7 @@ class IRC(protocol.Protocol):
         This sends a 333 reply message, which is not part of the IRC RFC.
 
         @type user: C{str} or C{unicode}
-        @param user: The user receiving the topic.  Only their nick name, not
+        @param user: The user receiving the topic.  Only their nickname, not
             the full hostmask.
 
         @type channel: C{str} or C{unicode}
@@ -452,7 +452,7 @@ class IRC(protocol.Protocol):
         Send the names of a channel's participants to a user.
 
         @type user: C{str} or C{unicode}
-        @param user: The user receiving the name list.  Only their nick name,
+        @param user: The user receiving the name list.  Only their nickname,
             not the full hostmask.
 
         @type channel: C{str} or C{unicode}
@@ -489,7 +489,7 @@ class IRC(protocol.Protocol):
 
         @type user: C{str} or C{unicode}
         @param user: The user receiving this member information.  Only their
-            nick name, not the full hostmask.
+            nickname, not the full hostmask.
 
         @type channel: C{str} or C{unicode}
         @param channel: The channel for which this is the member information.
@@ -517,7 +517,7 @@ class IRC(protocol.Protocol):
         Send information about the state of a particular user.
 
         @type user: C{str} or C{unicode}
-        @param user: The user receiving this information.  Only their nick name,
+        @param user: The user receiving this information.  Only their nickname,
             not the full hostmask.
 
         @type nick: C{str} or C{unicode}
@@ -606,7 +606,7 @@ class IRC(protocol.Protocol):
         Send information about the mode of a channel.
 
         @type user: C{str} or C{unicode}
-        @param user: The user receiving the name list.  Only their nick name,
+        @param user: The user receiving the name list.  Only their nickname,
             not the full hostmask.
 
         @type channel: C{str} or C{unicode}
@@ -691,7 +691,7 @@ class ServerSupportedFeatures(_CommandDispatcherMixin):
         """
         def _unescape():
             parts = value.split('\\x')
-            # The first part can never be preceeded by the escape.
+            # The first part can never be preceded by the escape.
             yield parts.pop(0)
             for s in parts:
                 octet, rest = s[:2], s[2:]
@@ -1225,7 +1225,7 @@ class IRCClient(basic.LineReceiver):
 
     def luserChannels(self, channels):
         """
-        Called with the number of channels existant on the server.
+        Called with the number of channels existent on the server.
 
         @type channels: C{int}
         """
@@ -1321,7 +1321,7 @@ class IRCClient(basic.LineReceiver):
 
     def signedOn(self):
         """
-        Called after sucessfully signing on to the server.
+        Called after successfully signing on to the server.
         """
         pass
 
@@ -1390,7 +1390,7 @@ class IRCClient(basic.LineReceiver):
         """
         I received a message-of-the-day banner from the server.
 
-        motd is a list of strings, where each string was sent as a seperate
+        motd is a list of strings, where each string was sent as a separate
         message from the server. To display, you might want to use::
 
             '\\n'.join(motd)
@@ -1511,12 +1511,12 @@ class IRCClient(basic.LineReceiver):
         @type modes: C{str}
         @param modes: The mode flags to set on the user or channel.
         @type limit: C{int}
-        @param limit: In conjuction with the C{'l'} mode flag, limits the
+        @param limit: In conjunction with the C{'l'} mode flag, limits the
              number of users on the channel.
         @type user: C{str}
         @param user: The user to change the mode on.
         @type mask: C{str}
-        @param mask: In conjuction with the C{'b'} mode flag, sets a mask of
+        @param mask: In conjunction with the C{'b'} mode flag, sets a mask of
             users to be banned from the channel.
         """
         if set:
@@ -1648,10 +1648,10 @@ class IRCClient(basic.LineReceiver):
 
     def whois(self, nickname, server=None):
         """
-        Retrieve user information about the given nick name.
+        Retrieve user information about the given nickname.
 
         @type nickname: C{str}
-        @param nickname: The nick name about which to retrieve information.
+        @param nickname: The nickname about which to retrieve information.
 
         @since: 8.2
         """
@@ -1883,7 +1883,7 @@ class IRCClient(basic.LineReceiver):
         try:
             added, removed = parseModes(modes, args, paramModes)
         except IRCBadModes:
-            log.err(None, 'An error occured while parsing the following '
+            log.err(None, 'An error occurred while parsing the following '
                           'MODE message: MODE %s' % (' '.join(params),))
         else:
             if added:
@@ -2383,7 +2383,7 @@ class IRCClient(basic.LineReceiver):
 
         XXX: If the client makes arbitrary CTCP queries,
         this method should probably show the responses to
-        them instead of treating them as anomolies.
+        them instead of treating them as anomalies.
         """
         log.msg("Unknown CTCP reply from %s: %s %s\n"
                  % (user, tag, data))

@@ -39,7 +39,7 @@ Resource Exhaustion and DoS
 
 
 
-Make sure we never allow users to create arbitarily large
+Make sure we never allow users to create arbitrarily large
 strings or files. Some of the protocols still have issues
 like this. Place a limit which allows reasonable use but
 will cut off huge requests, and allow changing of this limit.

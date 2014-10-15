@@ -471,8 +471,7 @@ Line Coverage Information
 
 
 Trial provides line coverage information, which is very useful to ensure
-old code has decent coverage. Passing the ``--coverage`` option to
-to Trial will generate the coverage information in a file called ``coverage`` which can be found in the ``_trial_temp`` 
+old code has decent coverage. Passing the ``--coverage`` option to Trial will generate the coverage information in a file called ``coverage`` which can be found in the ``_trial_temp`` 
 folder.
 
 

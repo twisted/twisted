@@ -210,7 +210,7 @@ class Tunnel(object):
     @property
     def closeOnExec(self):
         """
-        If the file descriptor for this this tunnel is marked as close-on-exec,
+        If the file descriptor for this tunnel is marked as close-on-exec,
         C{True}.  C{False} otherwise.
         """
         return bool(self.openFlags & self.system.O_CLOEXEC)

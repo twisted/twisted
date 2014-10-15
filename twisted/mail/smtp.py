@@ -195,7 +195,7 @@ class AUTHDeclinedError(ESMTPClientError):
     """
 
 class AuthenticationError(ESMTPClientError):
-    """An error ocurred while authenticating.
+    """An error occurred while authenticating.
 
     Either the server rejected our request for authentication or the
     challenge received was malformed.
@@ -314,7 +314,7 @@ def messageid(uniq=None, N=idGenerator().next):
 
     <datetime.pid.random@host.dom.ain>
 
-    Optional uniq string will be added to strenghten uniqueness if given.
+    Optional uniq string will be added to strengthen uniqueness if given.
     """
     datetime = time.strftime('%Y%m%d%H%M%S', time.gmtime())
     pid = os.getpid()
@@ -1166,7 +1166,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         self.sendLine(line)
 
     ##
-    # these methods should be overriden in subclasses
+    # these methods should be overridden in subclasses
     def getMailFrom(self):
         """Return the email address the mail is from."""
         raise NotImplementedError

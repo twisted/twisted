@@ -111,7 +111,7 @@ else:
 class _SocketCloser(object):
     """
     @ivar _shouldShutdown: Set to C{True} if C{shutdown} should be called
-        before callling C{close} on the underlying socket.
+        before calling C{close} on the underlying socket.
     @type _shouldShutdown: C{bool}
     """
     _shouldShutdown = True
@@ -442,7 +442,7 @@ class _BaseBaseClient(object):
 
     def failIfNotConnected(self, err):
         """
-        Generic method called when the attemps to connect failed. It basically
+        Generic method called when the attempts to connect failed. It basically
         cleans everything it can: call connectionFailed, stop read and write,
         delete socket related members.
         """

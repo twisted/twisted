@@ -622,7 +622,7 @@ class RegistrationTestCase(unittest.TestCase):
 
     def test_basicAuthentication(self):
         """
-        Test that registration with basic authentication suceeds.
+        Test that registration with basic authentication succeeds.
         """
         self.addPortal()
         self.proxy.authorizers = self.proxy.authorizers.copy()

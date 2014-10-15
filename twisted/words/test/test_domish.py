@@ -81,7 +81,7 @@ class DomishTestCase(unittest.TestCase):
     def test_elements(self):
         """
         Calling C{elements} without arguments on a L{domish.Element} returns
-        all child elements, whatever the qualfied name.
+        all child elements, whatever the qualified name.
         """
         e = domish.Element((u"testns", u"foo"))
         c1 = e.addElement(u"name")
@@ -419,7 +419,7 @@ class SerializerTests(unittest.TestCase):
         e.addRawXml("<abc123>")
         # The testcase below should NOT generate valid XML -- that's
         # the whole point of using the raw XML call -- it's the callers
-        # responsiblity to ensure that the data inserted is valid
+        # responsibility to ensure that the data inserted is valid
         self.assertEqual(e.toXml(), "<foo><abc123></foo>")
 
     def testRawXMLWithUnicodeSerialization(self):

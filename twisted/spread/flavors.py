@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-This module represents flavors of remotely acessible objects.
+This module represents flavors of remotely accessible objects.
 
 Currently this is only objects accessible through Perspective Broker, but will
 hopefully encompass all forms of remote access which can emulate subsets of PB
@@ -324,7 +324,7 @@ class Cacheable(Copyable):
         Cacheable instances to keep their RemoteCaches up to date when
         they change, such that no changes can occur between the point
         at which the state is initially copied and the client receives
-        it that are not propogated.
+        it that are not propagated.
         """
 
         return self.getStateToCopyFor(perspective)

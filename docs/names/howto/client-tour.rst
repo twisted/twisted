@@ -57,7 +57,7 @@ These three lists contain answer records, authority records, and additional reco
 
 
 .. note::
-   * :api:`twisted.names.client.getHostByName <getHostByName>` may return an IPv6 address; unlike its stdlib equivelent (:func:`socket.gethostbyname`)
+   * :api:`twisted.names.client.getHostByName <getHostByName>` may return an IPv6 address; unlike its stdlib equivalent (:func:`socket.gethostbyname`)
 
    * :api:`twisted.internet.interfaces.IResolver <IResolver>` contains separate functions for looking up each of the common DNS record types.
 

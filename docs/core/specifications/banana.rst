@@ -27,7 +27,7 @@ Banana Encodings
     
 
 The banana protocol is a stream of data composed of elements. Each element has the
-following general structure - first, the length of element encoded in base-128, least signficant
+following general structure - first, the length of element encoded in base-128, least significant
 bit first. For example length 4674 will be sent as ``0x42 0x24`` . For certain element
 types the length will be omitted (e.g. float) or have a different meaning (it is the actual
 value of integer elements).
@@ -101,7 +101,7 @@ Large Negative Integer -- 0x86
 
 
 
-Large integers are intended for arbitary length integers. Regular integers types (positive and negative) are limited to 32-bit values.
+Large integers are intended for arbitrary length integers. Regular integers types (positive and negative) are limited to 32-bit values.
 
 
     
@@ -169,7 +169,7 @@ Profiles
 
 The Banana protocol is extendable. Therefore, it supports the concept of profiles. Profiles allow
 developers to extend the banana protocol, adding new element types, while still keeping backwards
-compatability with implementations that don't support the extensions. The profile used in each
+compatibility with implementations that don't support the extensions. The profile used in each
 session is determined at the handshake stage (see below.)
 
 

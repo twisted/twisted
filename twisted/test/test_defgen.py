@@ -262,10 +262,13 @@ class InlineCallbacksTests(BaseDefgenTests, unittest.TestCase):
 
     # Tests unique to inlineCallbacks
 
-    def testYieldNonDeferrred(self):
+    def testYieldNonDeferred(self):
         """
         Ensure that yielding a non-deferred passes it back as the
         result of the yield expression.
+
+        @return: A L{twisted.internet.defer.Deferred}
+        @rtype: L{twisted.internet.defer.Deferred}
         """
         def _test():
             x = yield 5

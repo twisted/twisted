@@ -438,7 +438,7 @@ if Crypto is not None and pyasn1 is not None:
     class ConchTestClientAuth(userauth.SSHUserAuthClient):
 
         hasTriedNone = 0 # have we tried the 'none' auth yet?
-        canSucceedPublicKey = 0 # can we succed with this yet?
+        canSucceedPublicKey = 0 # can we succeed with this yet?
         canSucceedPassword = 0
 
         def ssh_USERAUTH_SUCCESS(self, packet):

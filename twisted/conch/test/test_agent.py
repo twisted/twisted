@@ -192,7 +192,7 @@ class TestAgentKeyAddition(AgentTestBase):
         with to the SSH agent server to which it is connected, associating
         it with the comment it is called with.
 
-        This test asserts that ommitting the comment produces an
+        This test asserts that omitting the comment produces an
         empty string for the comment on the server.
         """
         d = self.client.addIdentity(self.rsaPrivate.privateBlob())
@@ -210,7 +210,7 @@ class TestAgentKeyAddition(AgentTestBase):
         with to the SSH agent server to which it is connected, associating
         it with the comment it is called with.
 
-        This test asserts that ommitting the comment produces an
+        This test asserts that omitting the comment produces an
         empty string for the comment on the server.
         """
         d = self.client.addIdentity(self.dsaPrivate.privateBlob())

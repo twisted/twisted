@@ -479,7 +479,7 @@ class HTTPDownloader(HTTPClientFactory):
                 return
             start, end, realLength = http.parseContentRange(contentRange[0])
             if start != self.requestedPartial:
-                # server is acting wierdly
+                # server is acting weirdly
                 self.requestedPartial = 0
 
 
@@ -1129,7 +1129,7 @@ class _RetryingHTTP11ClientProtocol(object):
 
     def request(self, request):
         """
-        Do a request, and retry once (with a new connection) it it fails in
+        Do a request, and retry once (with a new connection) if it fails in
         a retryable manner.
 
         @param request: A L{Request} instance that will be requested using the

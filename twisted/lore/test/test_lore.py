@@ -70,8 +70,7 @@ class RemoveBlanksTests(unittest.TestCase):
 
     def test_removeLeadingBlankLines(self):
         """
-        L{tree._removeLeadingBlankLines} removes leading blank lines from a
-        a string and returns a list containing the remaining characters.
+        L{tree._removeLeadingBlankLines} removes leading blank lines from a string and returns a list containing the remaining characters.
         """
         result = tree._removeLeadingBlankLines(self.inputString)
         self.assertEqual(result,
@@ -254,7 +253,7 @@ class TestFactory(unittest.TestCase, XMLAssertionMixin):
     def test_mungeAuthors(self):
         """
         If there is a node with a I{class} attribute set to C{"authors"},
-        L{tree.munge} adds anchors as children to it, takeing the necessary
+        L{tree.munge} adds anchors as children to it, taking the necessary
         information from any I{link} nodes in the I{head} with their I{rel}
         attribute set to C{"author"}.
         """

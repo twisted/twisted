@@ -132,7 +132,7 @@ CACHED = """Magic constant returned by http.Request methods to set cache
 validation headers when the request is conditional and the value fails
 the condition."""
 
-# backwards compatability
+# backwards compatibility
 responses = RESPONSES
 
 
@@ -815,7 +815,7 @@ class Request:
                 except KeyError as e:
                     if e.args[0] == b'content-disposition':
                         # Parse_multipart can't cope with missing
-                        # content-dispostion headers in multipart/form-data
+                        # content-disposition headers in multipart/form-data
                         # parts, so we catch the exception and tell the client
                         # it was a bad request.
                         self.channel.transport.write(

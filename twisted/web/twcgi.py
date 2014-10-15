@@ -113,13 +113,13 @@ class CGIScript(resource.Resource):
             else:
                 qargs = [urllib.unquote(x) for x in qs.split('+')]
 
-        # Propogate HTTP headers
+        # Propagate HTTP headers
         for title, header in request.getAllHeaders().items():
             envname = title.replace('-', '_').upper()
             if title not in ('content-type', 'content-length'):
                 envname = "HTTP_" + envname
             env[envname] = header
-        # Propogate our environment
+        # Propagate our environment
         for key, value in os.environ.items():
             if key not in env:
                 env[key] = value

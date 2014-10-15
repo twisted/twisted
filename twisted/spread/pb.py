@@ -18,7 +18,7 @@ The protocol is not opaque, because it provides objects which represent the
 remote proxies and require no context (server references, IDs) to operate on.
 
 It is not transparent because it does I{not} attempt to make remote objects
-behave identically, or even similiarly, to local objects.  Method calls are
+behave identically, or even similarly, to local objects.  Method calls are
 invoked asynchronously, and specific rules are applied when serializing
 arguments.
 
@@ -432,7 +432,7 @@ class CopyableFailure(failure.Failure, Copyable):
 class CopiedFailure(RemoteCopy, failure.Failure):
     """
     A L{CopiedFailure} is a L{pb.RemoteCopy} of a L{failure.Failure}
-    transfered via PB.
+    transferred via PB.
 
     @ivar type: The full import path of the exception class which was raised on
         the remote end.

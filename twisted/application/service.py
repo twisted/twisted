@@ -158,7 +158,7 @@ class Service:
     Base class for services.
 
     Most services should inherit from this class. It handles the
-    book-keeping reponsibilities of starting and stopping, as well
+    book-keeping responsibilities of starting and stopping, as well
     as not serializing this book-keeping information.
     """
 

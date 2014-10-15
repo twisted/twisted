@@ -1545,7 +1545,7 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
     @ivar _interval: The retry interval for an L{IReactorTime} based scheduler.
 
     @ivar _tryLockCall: A L{DelayedCall} based on C{_interval} that will manage
-        the next retry for aquiring the lock.
+        the next retry for acquiring the lock.
 
     @ivar _timeoutCall: A L{DelayedCall} based on C{deferUntilLocked}'s timeout
         argument.  This is in charge of timing out our attempt to acquire the
@@ -1621,7 +1621,7 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
             else:
                 if timeout is not None and self._timeoutCall is None:
                     reason = failure.Failure(TimeoutError(
-                        "Timed out aquiring lock: %s after %fs" % (
+                        "Timed out acquiring lock: %s after %fs" % (
                             self.name,
                             timeout)))
                     self._timeoutCall = self._scheduler.callLater(

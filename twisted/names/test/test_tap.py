@@ -51,7 +51,7 @@ class OptionsTests(TestCase):
     def test_secondaryExplicitPort(self):
         """
         An argument of the form C{"ip:port/domain"} can be used to specify an
-        alternate port number for for which to act as a secondary.
+        alternate port number for which to act as a secondary.
         """
         options = Options()
         options.parseOptions(['--secondary', '1.2.3.4:5353/example.com'])

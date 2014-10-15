@@ -228,14 +228,14 @@ Elements and Their Uses
 |                     | element for each rows, and inside it use either ``td``  for a regular                                                |
 |                     | table cell or ``th``  for a table header (column or row).                                                            |
 +---------------------+----------------------------------------------------------------------------------------------------------------------+
-| ``blockquote``      | A long quote which should be properly seperated from the main text.                                                  |
+| ``blockquote``      | A long quote which should be properly separated from the main text.                                                  |
 +---------------------+----------------------------------------------------------------------------------------------------------------------+
 | ``cite``            | Cite a resource.                                                                                                     |
 +---------------------+----------------------------------------------------------------------------------------------------------------------+
 | ``sub`` , ``sup``   | Subscripts and superscripts.                                                                                         |
 +---------------------+----------------------------------------------------------------------------------------------------------------------+
 | ``link``            | Currently, the only ``link``  elements supported                                                                     |
-|                     | are for for indicating authorship. ``<link rel="author" href="author-address@examples.com" title="Author Name" />``  |
+|                     | are for indicating authorship. ``<link rel="author" href="author-address@examples.com" title="Author Name" />``      |
 |                     | should be used to indicate authorship. Multiple instances                                                            |
 |                     | are allowed, and indicate shared authorship.                                                                         |
 +---------------------+----------------------------------------------------------------------------------------------------------------------+

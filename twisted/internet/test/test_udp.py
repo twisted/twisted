@@ -81,7 +81,7 @@ class DatagramTransportTestsMixin(LogObserverMixin):
     def test_stopProtocolScheduling(self):
         """
         L{DatagramProtocol.stopProtocol} is called asynchronously (ie, not
-        re-entrantly) when C{stopListening} is used to stop the the datagram
+        re-entrantly) when C{stopListening} is used to stop the datagram
         transport.
         """
         class DisconnectingProtocol(DatagramProtocol):

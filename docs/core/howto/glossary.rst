@@ -333,7 +333,7 @@ Jelly
 
   
   The serialization layer for :ref:`Twisted Spread <core-howto-glossary-spread>` , although it
-  can be used seperately from Twisted Spread as well.  It is similar in purpose
+  can be used separately from Twisted Spread as well.  It is similar in purpose
   to Python's standard ``pickle`` module, but is more
   network-friendly, and depends on a separate marshaller (:ref:`Banana <core-howto-glossary-banana>` , in most cases).  See :api:`twisted.spread.jelly <twisted.spread.jelly>` .
 
@@ -640,7 +640,7 @@ Woven
 
   *W* eb *O* bject *V* isualization *En* vironment.
   A templating system previously, but no longer, included with Twisted.  Woven
-  has largely been superceded by `Divmod Nevow <http://launchpad.net/nevow>`_ .
+  has largely been superseded by `Divmod Nevow <http://launchpad.net/nevow>`_ .
 
 
 

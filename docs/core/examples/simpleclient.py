@@ -38,7 +38,7 @@ class EchoFactory(protocol.ClientFactory):
         reactor.stop()
 
 
-# this connects the protocol to a server runing on port 8000
+# this connects the protocol to a server running on port 8000
 def main():
     f = EchoFactory()
     reactor.connectTCP("localhost", 8000, f)

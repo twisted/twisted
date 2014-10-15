@@ -249,7 +249,7 @@ class SSHConnection(service.SSHService):
             string  data
 
         Check to make sure the other side hasn't sent too much data (more
-        than what's in the window, or or than the maximum packet size).  If
+        than what's in the window, or than the maximum packet size).  If
         they have, close the channel.  Otherwise, decrease the available
         window and pass the data and type code to the channel's
         extReceived().
@@ -352,7 +352,7 @@ class SSHConnection(service.SSHService):
 
     def ssh_CHANNEL_SUCCESS(self, packet):
         """
-        Our channel request to the other other side succeeded.  Payload::
+        Our channel request to the other side succeeded.  Payload::
             uint32  local channel number
 
         Get the C{Deferred} out of self.deferreds and call it back.

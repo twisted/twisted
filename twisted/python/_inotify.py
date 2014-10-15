@@ -74,8 +74,8 @@ def remove(fd, wd):
 
 def initializeModule(libc):
     """
-    Intialize the module, checking if the expected APIs exist and setting the
-    argtypes and restype for for C{inotify_init}, C{inotify_add_watch}, and
+    Initialize the module, checking if the expected APIs exist and setting the
+    argtypes and restype for C{inotify_init}, C{inotify_add_watch}, and
     C{inotify_rm_watch}.
     """
     for function in ("inotify_add_watch", "inotify_init", "inotify_rm_watch"):

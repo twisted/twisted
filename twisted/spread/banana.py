@@ -61,7 +61,7 @@ FLOAT    = chr(0x84)
 # "optional" -- these might be refused by a low-level implementation.
 LONGINT  = chr(0x85)
 LONGNEG  = chr(0x86)
-# really optional; this is is part of the 'pb' vocabulary
+# really optional; this is part of the 'pb' vocabulary
 VOCAB    = chr(0x87)
 
 HIGH_BIT_SET = chr(0x80)

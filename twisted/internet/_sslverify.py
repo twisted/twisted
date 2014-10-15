@@ -263,7 +263,7 @@ class DistinguishedName(dict):
     keys can be any of the field names above (as a native string), and the
     values are either Unicode text which is encodable to ASCII, or C{bytes}
     limited to the ASCII subset. Any fields passed to the constructor will be
-    set as attributes, accessable using both their extended name and their
+    set as attributes, accessible using both their extended name and their
     shortened acronym. The attribute values will be the ASCII-encoded
     bytes. For example::
 

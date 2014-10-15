@@ -522,7 +522,7 @@ class ReverseProxyRequestTestCase(TestCase):
         """
         L{ReverseProxyRequest.process} should create a connection to its
         factory host/port, using a L{ProxyClientFactory} instantiated with the
-        correct parameters, and particulary set the B{host} header to the
+        correct parameters, and particularly set the B{host} header to the
         factory host.
         """
         transport = StringTransportWithDisconnection()

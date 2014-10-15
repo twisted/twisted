@@ -1015,7 +1015,8 @@ class UsenetClientProtocol(NNTPClient):
     def gotNewNews(self, news):
         self.disregard = 0
         self.count = len(news)
-        log.msg("Transfering " + str(self.count) + " articles from remote host: " + str(self.transport.getPeer()))
+        log.msg("Transferring " + str(self.count) +
+                " articles from remote host: " + str(self.transport.getPeer()))
         for i in news:
             self.storage.articleExistsRequest(i).addCallback(self.articleExists, i)
 

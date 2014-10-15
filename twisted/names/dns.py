@@ -314,7 +314,7 @@ class IEncodable(Interface):
 
         @type compDict: C{dict} or C{None}
         @param compDict: A dictionary of backreference addresses that have
-        have already been written to this stream and that may be used for
+        already been written to this stream and that may be used for
         compression.
         """
 
@@ -677,7 +677,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
         @type compDict: L{dict} or L{None}
         @param compDict: A dictionary of backreference addresses that
-            have have already been written to this stream and that may
+            have already been written to this stream and that may
             be used for DNS name compression.
         """
         b = BytesIO()
@@ -793,7 +793,7 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
         @type compDict: L{dict} or L{None}
         @param compDict: A dictionary of backreference addresses that
-            have have already been written to this stream and that may
+            have already been written to this stream and that may
             be used for DNS name compression.
         """
         strio.write(

@@ -534,9 +534,9 @@ class _Assertions(pyunit.TestCase, object):
 
         @note: decimal places (from zero) is usually not the same
                as significant digits (measured from the most
-               signficant digit).
+               significant digit).
 
-        @note: included for compatiblity with PyUnit test cases
+        @note: included for compatibility with PyUnit test cases
         """
         if round(second-first, places) == 0:
             raise self.failureException(msg or '%r == %r within %r places'
@@ -554,9 +554,9 @@ class _Assertions(pyunit.TestCase, object):
 
         @note: decimal places (from zero) is usually not the same
                as significant digits (measured from the most
-               signficant digit).
+               significant digit).
 
-        @note: included for compatiblity with PyUnit test cases
+        @note: included for compatibility with PyUnit test cases
         """
         if round(second-first, places) != 0:
             raise self.failureException(msg or '%r != %r within %r places'
@@ -732,7 +732,7 @@ class _Assertions(pyunit.TestCase, object):
         @type deferred: L{Deferred<twisted.internet.defer.Deferred>}
 
         @param expectedExceptionTypes: Exception types to expect - if
-            provided, and the the exception wrapped by the failure result is
+            provided, and the exception wrapped by the failure result is
             not one of the types provided, then this test will fail.
 
         @raise SynchronousTestCase.failureException: If the

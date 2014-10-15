@@ -468,7 +468,7 @@ class TestLoader(object):
         Tests are only loaded from modules whose name begins with 'test_'
         (or whatever C{modulePrefix} is set to).
 
-        @param package: a types.ModuleType object (or reasonable facsimilie
+        @param package: a types.ModuleType object (or reasonable facsimile
         obtained by importing) which may contain tests.
 
         @param recurse: A boolean.  If True, inspect modules within packages
