@@ -2721,29 +2721,30 @@ class AbortableStringTransport(StringTransport):
 class DummyResponse(object):
     """
     Fake L{IResponse} for testing readBody that captures the protocol passed to
-    deliverBody and uses it to make a connection with a
-    L{AbortableStringTransport}.
+    deliverBody and uses it to make a connection with a transport.
 
     @ivar protocol: After C{deliverBody} is called, the protocol it was called
         with.
 
-    @ivar transport: An instance of L{AbortableStringTransport} which is used
-        by L{DummyResponse.protocol} to make a connection.
+    @ivar transport: An instance created by calling C{transportFactory} which
+        is used by L{DummyResponse.protocol} to make a connection.
     """
 
     code = 200
     phrase = "OK"
 
-    def __init__(self, headers=None):
+    def __init__(self, headers=None, transportFactory=AbortableStringTransport):
         """
         @param headers: The headers for this response.  If C{None}, an empty
             L{Headers} instance will be used.
         @type headers: L{Headers}
+
+        @param transportFactory: A callable used to construct the transport.
         """
         if headers is None:
             headers = Headers()
         self.headers = headers
-        self.transport = AbortableStringTransport()
+        self.transport = transportFactory()
 
 
     def deliverBody(self, protocol):
@@ -2824,3 +2825,20 @@ class ReadBodyTests(TestCase):
         reason = self.failureResultOf(d)
         reason.trap(ConnectionLost)
         self.assertEqual(reason.value.args, ("mystery problem",))
+
+
+    def test_deprecatedTransport(self):
+        """
+        Calling L{client.readBody} with a transport that does not implement
+        L{twisted.internet.interfaces.ITCPTransport} produces a deprecation
+        warning, but no exception when cancelling.
+        """
+        response = DummyResponse(transportFactory=StringTransport)
+        d = self.assertWarns(
+            DeprecationWarning,
+            'Using readBody with a transport that does not implement '
+            'ITCPTransport',
+            __file__,
+            lambda: client.readBody(response))
+        d.cancel()
+        self.failureResultOf(d, defer.CancelledError)
