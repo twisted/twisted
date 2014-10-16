@@ -318,7 +318,7 @@ application is not interested in the body, it should issue a
 
 
 If the body of the response isn't going to be consumed incrementally, then :api:`twisted.web.client.readBody <readBody>` can be used to get the body as a byte-string.
-This function returns a ``Deferred`` that fires with the body after the request has been completed.
+This function returns a ``Deferred`` that fires with the body after the request has been completed; cancelling this ``Deferred`` will close the connection to the HTTP server immediately.
 
 
     
