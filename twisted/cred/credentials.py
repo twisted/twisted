@@ -8,7 +8,7 @@ authentication credentials to provide, and also includes a number of useful
 implementations of that interface.
 """
 
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 import hmac, time, random, re
 from hashlib import md5
@@ -113,11 +113,11 @@ class IAnonymous(ICredentials):
 
 
 
+@implementer(IUsernameHashedPassword, IUsernameDigestHash)
 class DigestedCredentials(object):
     """
     Yet Another Simple HTTP Digest authentication scheme.
     """
-    implements(IUsernameHashedPassword, IUsernameDigestHash)
 
     def __init__(self, username, method, realm, fields):
         self.username = username
@@ -374,8 +374,8 @@ class DigestCredentialFactory(object):
 
 
 
+@implementer(IUsernameHashedPassword)
 class CramMD5Credentials:
-    implements(IUsernameHashedPassword)
 
     challenge = ''
     response = ''
@@ -408,8 +408,8 @@ class CramMD5Credentials:
         return verify == self.response
 
 
+@implementer(IUsernameHashedPassword)
 class UsernameHashedPassword:
-    implements(IUsernameHashedPassword)
 
     def __init__(self, username, hashed):
         self.username = username
@@ -419,8 +419,8 @@ class UsernameHashedPassword:
         return self.hashed == password
 
 
+@implementer(IUsernamePassword)
 class UsernamePassword:
-    implements(IUsernamePassword)
 
     def __init__(self, username, password):
         self.username = username
@@ -430,8 +430,10 @@ class UsernamePassword:
         return self.password == password
 
 
+
+@implementer(IAnonymous)
 class Anonymous:
-    implements(IAnonymous)
+    pass
 
 
 
@@ -459,8 +461,8 @@ class ISSHPrivateKey(ICredentials):
 
 
 
+@implementer(ISSHPrivateKey)
 class SSHPrivateKey:
-    implements(ISSHPrivateKey)
     def __init__(self, username, algName, blob, sigData, signature):
         self.username = username
         self.algName = algName
@@ -484,8 +486,8 @@ class IPluggableAuthenticationModules(ICredentials):
     currently unused, but is required by the PAM library.
     """
 
+@implementer(IPluggableAuthenticationModules)
 class PluggableAuthenticationModules:
-    implements(IPluggableAuthenticationModules)
 
     def __init__(self, username, pamConversion):
         self.username = username
