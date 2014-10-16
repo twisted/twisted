@@ -1114,8 +1114,6 @@ def _parseSSL(factory, port, privateKey="server.pem", certKey=None,
     kw = {}
     if sslmethod is not None:
         kw['method'] = getattr(ssl.SSL, sslmethod)
-    else:
-        kw['method'] = ssl.SSL.SSLv23_METHOD
     certPEM = FilePath(certKey).getContent()
     keyPEM = FilePath(privateKey).getContent()
     privateCertificate = ssl.PrivateCertificate.loadPEM(certPEM + keyPEM)
