@@ -100,10 +100,14 @@ class FakeDatagramTransport:
 
     def __init__(self):
         self.written = []
+        self._maxPacketSize = 512
 
     def write(self, packet, addr=noAddr):
         self.written.append((packet, addr))
 
+    @property
+    def maxPacketSize(self):
+        return self._maxPacketSize
 
 
 @implementer(ITransport, IConsumer, IPushProducer)

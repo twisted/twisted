@@ -119,6 +119,10 @@ class MemoryDatagramTransport(object):
         """
         pass
 
+    @property
+    def maxPacketSize(self):
+        return self._maxPacketSize
+
 
 verifyClass(IUDPTransport, MemoryDatagramTransport)
 

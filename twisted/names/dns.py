@@ -2738,6 +2738,9 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         m = Message()
         try:
             m.fromStr(data)
+            m.maxSize = self.transport.maxPacketSize
+            if m.trunc:
+                m.trunc = addr # will be used for TCP
         except EOFError:
             log.msg("Truncated packet (%d bytes) from %s" % (len(data), addr))
             return

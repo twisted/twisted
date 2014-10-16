@@ -1059,7 +1059,7 @@ class FilterAnswersTests(unittest.TestCase):
         m = dns.Message(trunc=True)
         m.addQuery(b'example.com')
 
-        def queryTCP(queries):
+        def queryTCP(queries, timeout = 10):
             self.assertEqual(queries, m.queries)
             response = dns.Message()
             response.answers = ['answer']

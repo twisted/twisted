@@ -369,7 +369,24 @@ class Resolver(common.ResolverBase):
         the answers section, the authority section, and the additional section.
         """
         if message.trunc:
-            return self.queryTCP(message.queries).addCallback(self.filterAnswers)
+            timeout = 10
+            if isinstance(message.trunc, tuple):
+                # Truncated message got from UDP server as trunc is an address and not a bool
+                # NOTE: UDP server should be also a TCP server (on the address and port) as required by RFCs
+                addr = message.trunc
+                # Try to reuse a connection already established with the server
+                for connection in self.connections:
+                    if connection.transport.addr == addr:
+                        return connection.query(message.queries, timeout).addCallback(self.filterAnswers)
+                # Build a new connection with the server
+                deferred = defer.Deferred()
+                self._reactor.connectTCP(addr[0], addr[1], self.factory)
+                self.pending.append((deferred, message.queries, timeout))
+                return deferred.addCallback(self.filterAnswers)
+            # Don't use this call as it will establish the connection with nother server,
+            # which is more than likely not able to answer the request.
+            # TODO If here, it is probably a truncated message got from TCP!
+            return self.queryTCP(message.queries, timeout).addCallback(self.filterAnswers)
         if message.rCode != dns.OK:
             return failure.Failure(self.exceptionForCode(message.rCode)(message))
         return (message.answers, message.authority, message.additional)
