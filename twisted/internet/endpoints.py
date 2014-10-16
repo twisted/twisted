@@ -1631,7 +1631,6 @@ def _parseClientSSL(*args, **kwargs):
         verify = False
         caCerts = None
     kwargs['sslContextFactory'] = ssl.CertificateOptions(
-        method=ssl.SSL.SSLv23_METHOD,
         certificate=certx509,
         privateKey=privateKey,
         verify=verify,

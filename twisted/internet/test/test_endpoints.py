@@ -2908,6 +2908,8 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(client._bindAddress, (b"10.0.0.3", 0))
         certOptions = client._sslContextFactory
         self.assertIsInstance(certOptions, CertificateOptions)
+        self.assertEqual(certOptions.method, SSLv23_METHOD)
+        self.assertTrue(certOptions._options & OP_NO_SSLv3)
         ctx = certOptions.getContext()
         self.assertIsInstance(ctx, ContextType)
         self.assertEqual(Certificate(certOptions.certificate), testCertificate)
