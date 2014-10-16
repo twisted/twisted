@@ -430,9 +430,10 @@ class UsernamePassword:
         return self.password == password
 
 
+
 @implementer(IAnonymous)
 class Anonymous:
-        pass
+    pass
 
 
 
