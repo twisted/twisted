@@ -58,7 +58,9 @@ try:
     from twisted.internet.ssl import PrivateCertificate, Certificate
     from twisted.internet.ssl import CertificateOptions, KeyPair
     from twisted.internet.ssl import DiffieHellmanParameters
-    from OpenSSL.SSL import ContextType, SSLv23_METHOD, TLSv1_METHOD
+    from OpenSSL.SSL import (
+        ContextType, SSLv23_METHOD, TLSv1_METHOD, OP_NO_SSLv3
+    )
     testCertificate = Certificate.loadPEM(pemPath.getContent())
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
 
@@ -2505,6 +2507,9 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._backlog, 50)
         self.assertEqual(server._interface, "")
         self.assertEqual(server._sslContextFactory.method, SSLv23_METHOD)
+        self.assertTrue(
+            server._sslContextFactory._options & OP_NO_SSLv3,
+        )
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
 
