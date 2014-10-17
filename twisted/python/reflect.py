@@ -388,7 +388,15 @@ def _safeFormat(formatter, o):
     Helper function for L{safe_repr} and L{safe_str}.
     """
     try:
-        return formatter(o)
+        if _PY3 and formatter is str and isinstance(o, bytes):
+            # for b"a", we do not want 'b"a"'
+            # do that only for legal utf-8 byte strings
+            try:
+                return o.decode('utf-8')
+            except UnicodeDecodeError:
+                return formatter(o)
+        else:
+            return formatter(o)
     except:
         io = NativeStringIO()
         traceback.print_exc(file=io)

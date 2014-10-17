@@ -434,8 +434,8 @@ class SafeRepr(TestCase):
         L{reflect.safe_repr} produces the same output as C{repr} on a working
         object.
         """
-        x = [1, 2, 3]
-        self.assertEqual(reflect.safe_repr(x), repr(x))
+        for x in ([1, 2, 3], b'a'):
+            self.assertEqual(reflect.safe_repr(x), repr(x))
 
 
     def test_brokenRepr(self):
@@ -535,6 +535,45 @@ class SafeStr(TestCase):
         b = Breakable()
         b.breakStr = True
         reflect.safe_str(b)
+
+
+    def test_workingUtf8_2(self):
+        """
+        safe_str for b'utf8-data, Python 2'
+        """
+        x = b'a'
+        self.assertEqual(reflect.safe_str(x), 'a')
+        x = b't\xc3\xbcst'      # legal UTF-8: We want a native string
+        self.assertEqual(reflect.safe_str(x), x)
+
+
+    def test_workingUtf8_3(self):
+        """
+        safe_str for b'utf8-data, Python 3'
+        """
+        x = b'a'
+        self.assertEqual(reflect.safe_str(x), 'a')
+        x = b't\xc3\xbcst'      # legal UTF-8: We want a native string
+        self.assertEqual(reflect.safe_str(x), x.decode('utf-8'))
+
+
+    if _PY3:
+        # TODO: after something like python.compat.nativeUtf8String is
+        # introduced, use that one for assertEqual. Then we can combine
+        # test_workingUtf8_* tests into one without needing _PY3.
+        # nativeUtf8String is needed for Python 3 anyway.
+        test_workingUtf8_2.skip = ("Skip Python 2 specific test for utf-8 str")
+    else:
+        test_workingUtf8_3.skip = ("Skip Python 3 specific test for utf-8 bytes")
+
+
+    def test_brokenUtf8(self):
+        """
+        Use str() for non-utf8 bytes: "b'non-utf8'"
+        """
+        x = b'\xff'
+        xStr = reflect.safe_str(x)
+        self.assertEqual(xStr, str(x))
 
 
     def test_brokenRepr(self):
