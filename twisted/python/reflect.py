@@ -386,24 +386,20 @@ def _determineClassName(x):
 def _safeFormat(formatter, o):
     """
     Helper function for L{safe_repr} and L{safe_str}.
+    Returns a string containing info about o and the lastest exception.
+
+    @param formatter: C{str} or C{repr}.
+    @type formatter: C{type}
+    @param o: Any object.
+
+    @rtype: C{str}
     """
-    try:
-        if _PY3 and formatter is str and isinstance(o, bytes):
-            # for b"a", we do not want 'b"a"'
-            # do that only for legal utf-8 byte strings
-            try:
-                return o.decode('utf-8')
-            except UnicodeDecodeError:
-                return formatter(o)
-        else:
-            return formatter(o)
-    except:
-        io = NativeStringIO()
-        traceback.print_exc(file=io)
-        className = _determineClassName(o)
-        tbValue = io.getvalue()
-        return "<%s instance at 0x%x with %s error:\n %s>" % (
-            className, id(o), formatter.__name__, tbValue)
+    io = NativeStringIO()
+    traceback.print_exc(file=io)
+    className = _determineClassName(o)
+    tbValue = io.getvalue()
+    return "<%s instance at 0x%x with %s error:\n %s>" % (
+        className, id(o), formatter.__name__, tbValue)
 
 
 
@@ -416,7 +412,10 @@ def safe_repr(o):
 
     @rtype: C{str}
     """
-    return _safeFormat(repr, o)
+    try:
+        return repr(o)
+    except:
+        return _safeFormat(repr, o)
 
 
 
@@ -429,7 +428,17 @@ def safe_str(o):
 
     @rtype: C{str}
     """
-    return _safeFormat(str, o)
+    if _PY3 and isinstance(o, bytes):
+        # If o is bytes and seems to holds a utf-8 encoded string,
+        # convert it to str.
+        try:
+            return o.decode('utf-8')
+        except:
+            pass
+    try:
+        return str(o)
+    except:
+        return _safeFormat(str, o)
 
 
 class QueueMethod:

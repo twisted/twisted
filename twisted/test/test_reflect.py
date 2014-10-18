@@ -434,8 +434,8 @@ class SafeRepr(TestCase):
         L{reflect.safe_repr} produces the same output as C{repr} on a working
         object.
         """
-        for x in ([1, 2, 3], b'a'):
-            self.assertEqual(reflect.safe_repr(x), repr(x))
+        working_objects = ([1, 2, 3], b'a')
+        self.assertEqual(map(reflect.safe_repr, working_objects), map(repr, working_objects))
 
 
     def test_brokenRepr(self):
@@ -537,25 +537,31 @@ class SafeStr(TestCase):
         reflect.safe_str(b)
 
 
+    def test_workingAscii(self):
+        """
+        L{safe_str} for C{str} with ascii-only data should return the
+        value unchanged.
+        """
+        x = 'a'
+        self.assertEqual(reflect.safe_str(x), 'a')
+
+
     def test_workingUtf8_2(self):
         """
-        safe_str for b'utf8-data, Python 2'
+        L{safe_str} for C{str} with utf-8 encoded data should return the
+        value unchanged.
         """
-        x = b'a'
-        self.assertEqual(reflect.safe_str(x), 'a')
-        x = b't\xc3\xbcst'      # legal UTF-8: We want a native string
+        x = b't\xc3\xbcst'
         self.assertEqual(reflect.safe_str(x), x)
 
 
     def test_workingUtf8_3(self):
         """
-        safe_str for b'utf8-data, Python 3'
+        L{safe_str} for C{bytes} with utf-8 encoded data should return
+        the value decoded into C{str}.
         """
-        x = b'a'
-        self.assertEqual(reflect.safe_str(x), 'a')
-        x = b't\xc3\xbcst'      # legal UTF-8: We want a native string
+        x = b't\xc3\xbcst'
         self.assertEqual(reflect.safe_str(x), x.decode('utf-8'))
-
 
     if _PY3:
         # TODO: after something like python.compat.nativeUtf8String is
@@ -564,7 +570,8 @@ class SafeStr(TestCase):
         # nativeUtf8String is needed for Python 3 anyway.
         test_workingUtf8_2.skip = ("Skip Python 2 specific test for utf-8 str")
     else:
-        test_workingUtf8_3.skip = ("Skip Python 3 specific test for utf-8 bytes")
+        test_workingUtf8_3.skip = (
+            "Skip Python 3 specific test for utf-8 bytes")
 
 
     def test_brokenUtf8(self):
