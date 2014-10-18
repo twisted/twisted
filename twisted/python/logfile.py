@@ -60,6 +60,17 @@ class BaseLogFile:
     def _openFile(self):
         """
         Open the log file.
+
+        We don't open files in binary mode since:
+        * an encoding would have to be chosen and that would have to be
+          configurable
+        * Twisted doesn't actually support logging non-ASCII messages
+          (see #989)
+        * logging plain ASCII messages is fine with any non-binary mode.
+
+        See
+        https://twistedmatrix.com/pipermail/twisted-python/2013-October/027651.html
+        for more information.
         """
         self.closed = False
         if os.path.exists(self.path):
@@ -306,6 +317,12 @@ class LogReader:
     """Read from a log file."""
 
     def __init__(self, name):
+        """
+        Open the log file for reading.
+
+        The comments about binary-mode for L{BaseLogFile._openFile} also apply
+        here.
+        """
         self._file = open(name, "r")
 
     def readLines(self, lines=10):

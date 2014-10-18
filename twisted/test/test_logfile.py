@@ -1,6 +1,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import division, absolute_import
+
 import datetime
 import errno
 import os
@@ -159,6 +161,19 @@ class LogFileTestCase(unittest.TestCase):
         self.assertEqual(reader.readLines(), [])
         reader.close()
         log.close()
+
+
+    def test_LogReaderReadsZeroLine(self):
+        """
+        L{LogReader.readLines} supports reading no line.
+        """
+        # We don't need any content, just a file path that can be opened.
+        with open(self.path, "w"):
+            pass
+
+        reader = logfile.LogReader(self.path)
+        self.assertEqual([], reader.readLines(0))
+        reader.close()
 
 
     def test_modePreservation(self):
@@ -372,6 +387,20 @@ class LogFileTestCase(unittest.TestCase):
         log.close()
 
 
+    def test_listLogsIgnoresZeroSuffixedFiles(self):
+        """
+        L{LogFile.listLogs} ignores log files which rotated suffix is 0.
+        """
+
+        log = logfile.LogFile(self.name, self.dir)
+
+        for i in range(0, 3):
+            with open("{0}.{1}".format(log.path, i), "w") as fp:
+                fp.write("123")
+
+        self.assertEqual([1, 2], log.listLogs())
+        log.close()
+
 
 class RiggedDailyLogFile(logfile.DailyLogFile):
     _clock = 0.0
@@ -451,6 +480,7 @@ class DailyLogFileTestCase(unittest.TestCase):
         log = RiggedDailyLogFile(self.name, self.dir)
         for d in data:
             log.write(d)
+        log.flush()
 
         # This returns the current log file.
         r = log.getLog(0.0)
@@ -460,8 +490,8 @@ class DailyLogFileTestCase(unittest.TestCase):
         self.assertRaises(ValueError, log.getLog, 86400)
 
         log._clock = 86401 # New day
-        log.rotate()
         r.close()
+        log.rotate()
         r = log.getLog(0) # We get the previous log
         self.assertEqual(data, r.readLines())
         log.close()
