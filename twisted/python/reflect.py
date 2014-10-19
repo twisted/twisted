@@ -384,9 +384,10 @@ def _determineClassName(x):
 
 
 def _safeFormat(formatter, o):
-    """
-    Helper function for L{safe_repr} and L{safe_str}.
-    Returns a string containing info about o and the lastest exception.
+    """Helper function for L{safe_repr} and L{safe_str}.
+
+    Called when C{repr} or C{str} fail. Returns a string containing info about
+    C{o} and the latest exception.
 
     @param formatter: C{str} or C{repr}.
     @type formatter: C{type}
