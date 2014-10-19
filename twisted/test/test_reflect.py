@@ -436,7 +436,8 @@ class SafeRepr(TestCase):
         """
         working_objects = ([1, 2, 3], b'a')
         self.assertEqual(
-            map(reflect.safe_repr, working_objects), map(repr, working_objects))
+            list(map(reflect.safe_repr, working_objects)),
+            list(map(repr, working_objects)))
 
 
     def test_brokenRepr(self):
