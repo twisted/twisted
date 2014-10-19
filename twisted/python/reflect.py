@@ -384,7 +384,8 @@ def _determineClassName(x):
 
 
 def _safeFormat(formatter, o):
-    """Helper function for L{safe_repr} and L{safe_str}.
+    """
+    Helper function for L{safe_repr} and L{safe_str}.
 
     Called when C{repr} or C{str} fail. Returns a string containing info about
     C{o} and the latest exception.
@@ -394,6 +395,8 @@ def _safeFormat(formatter, o):
     @param o: Any object.
 
     @rtype: C{str}
+    @return: A string containing information about C{o} and the raised
+        exception.
     """
     io = NativeStringIO()
     traceback.print_exc(file=io)
