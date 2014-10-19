@@ -434,10 +434,8 @@ class SafeRepr(TestCase):
         L{reflect.safe_repr} produces the same output as C{repr} on a working
         object.
         """
-        working_objects = ([1, 2, 3], b'a')
-        self.assertEqual(
-            list(map(reflect.safe_repr, working_objects)),
-            list(map(repr, working_objects)))
+        xs = ([1, 2, 3], b'a')
+        self.assertEqual(list(map(reflect.safe_repr, xs)), list(map(repr, xs)))
 
 
     def test_brokenRepr(self):
