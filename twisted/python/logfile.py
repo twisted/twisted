@@ -59,7 +59,7 @@ class BaseLogFile:
         """
         Open the log file.
         """
-        openMode = self.defaultMode or 0777
+        openMode = self.defaultMode or 0o777
         self._file = self._file = os.fdopen(os.open(
             self.path, os.O_CREAT|os.O_RDWR, openMode), 'r+', 1)
         self.closed = False
