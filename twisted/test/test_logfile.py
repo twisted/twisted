@@ -250,10 +250,10 @@ class LogFileTestCase(unittest.TestCase):
 
     def test_nonExistentDir(self):
         """
-        Specifying an invalid directory to L{LogFile} raises C{IOError}.
+        Specifying an invalid directory to L{LogFile} raises C{OSError}.
         """
         e = self.assertRaises(
-            IOError, logfile.LogFile, self.name, 'this_dir_does_not_exist')
+            OSError, logfile.LogFile, self.name, 'this_dir_does_not_exist')
         self.assertEqual(e.errno, errno.ENOENT)
 
 

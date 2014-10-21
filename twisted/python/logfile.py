@@ -59,26 +59,20 @@ class BaseLogFile:
         """
         Open the log file.
         """
+        openMode = self.defaultMode or 0777
+        self._file = self._file = os.fdopen(os.open(
+            self.path, os.O_CREAT|os.O_RDWR, openMode), 'r+', 1)
         self.closed = False
-        if os.path.exists(self.path):
-            self._file = file(self.path, "r+", 1)
-            self._file.seek(0, 2)
-        else:
-            if self.defaultMode is not None:
-                # Set the lowest permissions
-                oldUmask = os.umask(0o777)
-                try:
-                    self._file = file(self.path, "w+", 1)
-                finally:
-                    os.umask(oldUmask)
-            else:
-                self._file = file(self.path, "w+", 1)
-        if self.defaultMode is not None:
+        # Try our best to update permissions for files which already exist.
+        if self.defaultMode:
             try:
                 os.chmod(self.path, self.defaultMode)
             except OSError:
-                # Probably /dev/null or something?
                 pass
+        # Seek is needed for uniformity of stream positioning
+        # for read and write between Linux and BSD systems due
+        # to differences in fopen() between operating systems.
+        self._file.seek(0, os.SEEK_END)
 
     def __getstate__(self):
         state = self.__dict__.copy()
