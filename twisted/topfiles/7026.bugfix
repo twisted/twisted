@@ -1,0 +1,1 @@
+twisted.python.log no longer changes system umask when handling files.
