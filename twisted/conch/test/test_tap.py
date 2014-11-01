@@ -26,10 +26,8 @@ if Crypto and pyasn1 and unix:
 
 from twisted.application.internet import StreamServerEndpointService
 from twisted.cred import error
-from twisted.cred.credentials import IPluggableAuthenticationModules
 from twisted.cred.credentials import ISSHPrivateKey
 from twisted.cred.credentials import IUsernamePassword, UsernamePassword
-from twisted.python.reflect import requireModule
 
 from twisted.trial.unittest import TestCase
 
@@ -82,12 +80,6 @@ class MakeServiceTest(TestCase):
         PAM if available
         """
         numCheckers = 2
-
-        if requireModule('twisted.cred.pamauth'):
-            self.assertIn(IPluggableAuthenticationModules,
-                self.options['credInterfaces'],
-                "PAM should be one of the modules")
-            numCheckers += 1
 
         self.assertIn(ISSHPrivateKey, self.options['credInterfaces'],
             "SSH should be one of the default checkers")
@@ -148,32 +140,12 @@ class MakeServiceTest(TestCase):
         return d.addCallback(checkSuccess)
 
 
-    def test_checkersPamAuth(self):
-        """
-        The L{OpenSSHFactory} built by L{tap.makeService} has a portal with
-        L{IPluggableAuthenticationModules}, L{ISSHPrivateKey} and
-        L{IUsernamePassword} interfaces registered as checkers if C{pamauth} is
-        available.
-        """
-        # Fake the presence of pamauth, even if PyPAM is not installed
-        self.patch(tap, "pamauth", object())
-        config = tap.Options()
-        service = tap.makeService(config)
-        portal = service.factory.portal
-        self.assertEqual(
-            set(portal.checkers.keys()),
-            set([IPluggableAuthenticationModules, ISSHPrivateKey,
-                 IUsernamePassword]))
-
-
-    def test_checkersWithoutPamAuth(self):
+    def test_checkers(self):
         """
         The L{OpenSSHFactory} built by L{tap.makeService} has a portal with
         L{ISSHPrivateKey} and L{IUsernamePassword} interfaces registered as
-        checkers if C{pamauth} is not available.
+        checkers.
         """
-        # Fake the absence of pamauth, even if PyPAM is installed
-        self.patch(tap, "pamauth", None)
         config = tap.Options()
         service = tap.makeService(config)
         portal = service.factory.portal
