@@ -3,7 +3,7 @@
 # See LICENSE for details.
 
 """
-Interfaces related to therads.
+Interfaces related to threads.
 """
 
 from zope.interface import Interface
