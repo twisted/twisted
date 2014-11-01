@@ -434,7 +434,7 @@ class PortCoerceTestCase(unittest.TestCase):
 
 class ZshCompleterTestCase(unittest.TestCase):
     """
-    Test the behavior of the various L{twisted.usage.Completer} classes
+    Test the behavior of the various L{twisted.python.usage.Completer} classes
     for producing output usable by zsh tab-completion system.
     """
     def test_completer(self):

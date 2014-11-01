@@ -627,13 +627,15 @@ Completion metadata
 Optionally, a special attribute, ``compData`` , may be defined
 on your ``Options`` subclass in order to provide more information
 to the shell-completion system. The attribute should be an instance of
-I DON'T KNOW WHAT TO DO WITH THIS LINK!
+:api:`twisted.python.usage.Completions <twisted.python.usage.Completions>`. See
+that class for further details.
 
     
 
 
 In addition, ``compData`` may be defined on parent classes in
 your inheritance hiearchy. The information from each
-I DON'T KNOW WHAT TO DO WITH THIS LINK!
+:api:`twisted.python.usage.Completions <twisted.python.usage.Completions>`
+instance will be aggregated when producing the final tab-completion results.
   
 

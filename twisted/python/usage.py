@@ -9,7 +9,7 @@ command line of your program.
 
 For information on how to use it, see
 U{http://twistedmatrix.com/projects/core/documentation/howto/options.html},
-or doc/core/howto/options.xhtml in your Twisted directory.
+or C{doc/core/howto/options.rst} in your Twisted directory.
 """
 
 from __future__ import print_function
@@ -69,64 +69,64 @@ class Options(dict):
 
     C{optFlags} and C{optParameters} are lists of available parameters
     which your program can handle. The difference between the two
-    is the 'flags' have an on(1) or off(0) state (off by default)
-    whereas 'parameters' have an assigned value, with an optional
-    default. (Compare '--verbose' and '--verbosity=2')
+    is the C{flags} have an on(1) or off(0) state (off by default)
+    whereas C{parameters} have an assigned value, with an optional
+    default. (Compare C{--verbose} and C{--verbosity=2})
 
-    optFlags is assigned a list of lists. Each list represents
+    C{optFlags} is assigned a list of lists. Each list represents
     a flag parameter, as so::
 
-    |    optFlags = [['verbose', 'v', 'Makes it tell you what it doing.'],
-    |                ['quiet', 'q', 'Be vewy vewy quiet.']]
+        optFlags = [['verbose', 'v', 'Makes it tell you what it doing.'],
+                    ['quiet', 'q', 'Be vewy vewy quiet.']]
 
     As you can see, the first item is the long option name
-    (prefixed with '--' on the command line), followed by the
-    short option name (prefixed with '-'), and the description.
+    (prefixed with C{--} on the command line), followed by the
+    short option name (prefixed with C{-}), and the description.
     The description is used for the built-in handling of the
-    --help switch, which prints a usage summary.
+    C{--help} switch, which prints a usage summary.
 
     C{optParameters} is much the same, except the list also contains
     a default value::
 
-    | optParameters = [['outfile', 'O', 'outfile.log', 'Description...']]
+        optParameters = [['outfile', 'O', 'outfile.log', 'Description...']]
 
     A coerce function can also be specified as the last element: it will be
     called with the argument and should return the value that will be stored
     for the option. This function can have a C{coerceDoc} attribute which
     will be appended to the documentation of the option.
 
-    subCommands is a list of 4-tuples of (command name, command shortcut,
+    C{subCommands} is a list of 4-tuples of (command name, command shortcut,
     parser class, documentation).  If the first non-option argument found is
     one of the given command names, an instance of the given parser class is
     instantiated and given the remainder of the arguments to parse and
-    self.opts[command] is set to the command name.  For example::
+    C{self.opts[command]} is set to the command name.  For example::
 
-    | subCommands = [
-    |      ['inquisition', 'inquest', InquisitionOptions,
-    |           'Perform an inquisition'],
-    |      ['holyquest', 'quest', HolyQuestOptions,
-    |           'Embark upon a holy quest']
-    |  ]
+        subCommands = [
+             ['inquisition', 'inquest', InquisitionOptions,
+                  'Perform an inquisition'],
+             ['holyquest', 'quest', HolyQuestOptions,
+                  'Embark upon a holy quest']
+        ]
 
-    In this case, C{"<program> holyquest --horseback --for-grail"} will cause
+    In this case, C{"holyquest --horseback --for-grail"} will cause
     C{HolyQuestOptions} to be instantiated and asked to parse
     C{['--horseback', '--for-grail']}.  Currently, only the first sub-command
     is parsed, and all options following it are passed to its parser.  If a
-    subcommand is found, the subCommand attribute is set to its name and the
+    subcommand is found, the C{subCommand} attribute is set to its name and the
     subOptions attribute is set to the Option instance that parses the
-    remaining options. If a subcommand is not given to parseOptions,
-    the subCommand attribute will be None. You can also mark one of
-    the subCommands to be the default.
+    remaining options. If a subcommand is not given to C{parseOptions},
+    the C{subCommand} attribute will be C{None}. You can also mark one of
+    the C{subCommands} to be the default::
 
-    | defaultSubCommand = 'holyquest'
+        defaultSubCommand = 'holyquest'
 
-    In this case, the subCommand attribute will never be None, and
-    the subOptions attribute will always be set.
+    In this case, the C{subCommand} attribute will never be C{None}, and
+    the C{subOptions} attribute will always be set.
 
     If you want to handle your own options, define a method named
     C{opt_paramname} that takes C{(self, option)} as arguments. C{option}
     will be whatever immediately follows the parameter on the
-    command line. Options fully supports the mapping interface, so you
+    command line. L{Options} fully supports the mapping interface, so you
     can do things like C{'self["option"] = val'} in these methods.
 
     Shell tab-completion is supported by this class, for zsh only at present.
@@ -136,10 +136,10 @@ class Options(dict):
     C{twisted/python/twisted-completion.zsh}, and in the Zsh tree at
     C{Completion/Unix/Command/_twisted}.
 
-    Tab-completion is based upon the contents of the optFlags and optParameters
-    lists. And, optionally, additional metadata may be provided by assigning a
-    special attribute, C{compData}, which should be an instance of
-    C{Completions}. See that class for details of what can and should be
+    Tab-completion is based upon the contents of the C{optFlags} and
+    C{optParameters} lists. And, optionally, additional metadata may be provided
+    by assigning a special attribute, C{compData}, which should be an instance
+    of L{Completions}. See that class for details of what can and should be
     included - and see the howto for additional help using these features -
     including how third-parties may take advantage of tab-completion for their
     own commands.
@@ -147,7 +147,7 @@ class Options(dict):
     Advanced functionality is covered in the howto documentation,
     available at
     U{http://twistedmatrix.com/projects/core/documentation/howto/options.html},
-    or doc/core/howto/options.xhtml in your Twisted directory.
+    or C{doc/core/howto/options.rst} in your Twisted directory.
     """
 
     subCommand = None
@@ -294,9 +294,9 @@ class Options(dict):
         interpret them as a list of files to operate on.
 
         Note that if there more arguments on the command line
-        than this method accepts, parseArgs will blow up with
-        a getopt.error.  This means if you don't override me,
-        parseArgs will blow up if I am passed any arguments at
+        than this method accepts, C{parseArgs} will blow up with
+        a C{getopt.error}.  This means if you don't override me,
+        C{parseArgs} will blow up if I am passed any arguments at
         all!
         """
 
@@ -568,9 +568,9 @@ class Completer(object):
 
         @type repeat: C{bool}
         @param repeat: A flag, defaulting to False, indicating whether this
-            C{Completer} should repeat - that is, be used to complete more
+            L{Completer} should repeat - that is, be used to complete more
             than one command-line word. This may ONLY be set to True for
-            actions in the C{extraActions} keyword argument to C{Completions}.
+            actions in the C{extraActions} keyword argument to L{Completions}.
             And ONLY if it is the LAST (or only) action in the C{extraActions}
             list.
         """
@@ -794,7 +794,7 @@ class Completions(object):
              "colors" : CompleteMultiList(["red", "green", "blue"])}
 
         Callables may instead be given for the values in this dict. The
-        callable should accept no arguments, and return a C{Completer}
+        callable should accept no arguments, and return a L{Completer}
         instance used as the action in the same way as the literal actions in
         the example above.
 
@@ -825,8 +825,9 @@ class Completions(object):
     @ivar extraActions: Extra arguments are those arguments typically
         appearing at the end of the command-line, which are not associated
         with any particular named option. That is, the arguments that are
-        given to the parseArgs() method of your usage.Options subclass. For
+        given to the L{parseArgs} method of your L{usage.Options} subclass. For
         example::
+
             [CompleteFiles(descr="file to read from"),
              Completer(descr="book title")]
 
@@ -835,12 +836,12 @@ class Completions(object):
         2nd non-option argument will be described as "book title", but no
         actual completion matches will be produced.
 
-        See the various C{Completer} subclasses for other types of things which
+        See the various L{Completer} subclasses for other types of things which
         may be tab-completed (users, groups, network interfaces, etc).
 
         Also note the C{repeat=True} flag which may be passed to any of the
-        C{Completer} classes. This is set to allow the C{Completer} instance
-        to be re-used for subsequent command-line words. See the C{Completer}
+        L{Completer} classes. This is set to allow the L{Completer} instance
+        to be re-used for subsequent command-line words. See the L{Completer}
         docstring for details.
     """
     def __init__(self, descriptions={}, multiUse=[],
