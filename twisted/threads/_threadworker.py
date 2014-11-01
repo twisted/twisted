@@ -22,7 +22,7 @@ class ThreadWorker(object):
     def __init__(self, createThread, createQueue):
         """
         @param createThread: create a L{threading.Thread} to perform work on.
-        @type createThread: 1-argument callable taking a 0-argument callablea
+        @type createThread: 1-argument callable taking a 0-argument callable
             and returning a L{threading.Thread}
 
         @param createQueue: Create an object like a L{Queue.Queue}, with C{put}
