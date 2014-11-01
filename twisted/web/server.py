@@ -617,18 +617,23 @@ class Site(http.HTTPFactory):
     sessionFactory = Session
     sessionCheckTime = 1800
 
-    def __init__(self, resource, *args, **kwargs):
+    def __init__(self, resource, requestFactory=None, *args, **kwargs):
         """
         @param resource: The root of the resource hierarchy.  All request
             traversal for requests received by this factory will begin at this
             resource.
         @type resource: L{IResource} provider
+        @param requestFactory: A factory which is called with (channel, queued)
+            and creates L{Request} instances.
+        @type requestFactory: C{callable} or C{class}.
 
         @see: L{twisted.web.http.HTTPFactory.__init__}
         """
         http.HTTPFactory.__init__(self, *args, **kwargs)
         self.sessions = {}
         self.resource = resource
+        if requestFactory:
+            self.requestFactory = requestFactory
 
     def _openLogFile(self, path):
         from twisted.python import logfile

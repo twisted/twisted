@@ -69,7 +69,13 @@ class SimpleResource(resource.Resource):
             return b"correct"
 
 
+
 class SiteTest(unittest.TestCase):
+    """
+    Unit tests for L{server.Site}.
+    """
+
+
     def test_simplestSite(self):
         """
         L{Site.getResourceFor} returns the C{b""} child of the root resource it
@@ -82,6 +88,42 @@ class SiteTest(unittest.TestCase):
         self.assertIdentical(
             site.getResourceFor(DummyRequest([b''])),
             sres2, "Got the wrong resource.")
+
+
+    def test_constructorRequestFactory(self):
+        """
+        Can be initialized with a custom requestFactory.
+        """
+        def customFactory(channel, queued):
+            """
+            Custom factory to help with test.
+
+            @param channel: HTTP protocol for the request.
+            @type channel: L{http.HTTPChannel}
+
+            @param queued: Flag if request is queued.
+            @type queued: C{bool}
+            """
+
+        rootResource = SimpleResource()
+
+        site = server.Site(
+            resource=rootResource, requestFactory=customFactory)
+
+        self.assertIs(customFactory, site.requestFactory)
+
+
+    def test_buildProtocol(self):
+        """
+        Set `site` and `requestFactory` members the created protocol based on
+        values from itself.
+        """
+        site = server.Site(SimpleResource())
+
+        channel = site.buildProtocol(None)
+
+        self.assertIs(site, channel.site)
+        self.assertIs(site.requestFactory, channel.requestFactory)
 
 
 
