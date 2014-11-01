@@ -19,11 +19,23 @@ class AlreadyQuit(Exception):
 class IWorker(Interface):
     """
     A worker that can perform some work concurrently.
+
+    All methods on this interface must be thread-safe.
     """
 
     def do(task):  # Pragma: nocover
         """
         Perform the given task.
+
+        As an interface, this method makes no specific claims about concurrent
+        execution.  An L{IWorker}'s C{do} implementation may defer execution
+        for later on the same thread, immediately on a different thread, or
+        some combination of the two.  It is valid for a C{do} method to
+        schedule C{task} in such a way that it may never be executed.
+
+        It is important for some implementations to provide specific properties
+        with respect to where C{task} is executed, of course, and client code
+        may rely on a more specific implementation of C{do} than L{IWorker}.
 
         @param task: a task to call in a thread or other concurrent context.
         @type task: 0-argument callable
