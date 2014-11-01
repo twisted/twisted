@@ -125,7 +125,6 @@ class ThreadPool:
             return ThreadWorker(makeAThread, Queue)
 
         def limitedWorkerCreator():
-            # Called only from the workforce's coordinator.
             if not self.started:
                 return None
             stats = self._team.statistics()
