@@ -9,20 +9,28 @@ Tests for L{twisted.cred}, now with 30% more starch.
 import hmac
 from zope.interface import implements, Interface
 
-from twisted.trial import unittest
+from twisted.trial import unittest, util
 from twisted.cred import portal, checkers, credentials, error
 from twisted.python import components
 from twisted.internet import defer
+from twisted.python.reflect import requireModule
+from twisted.internet.utils import runWithWarningsSuppressed
 
 try:
     from crypt import crypt
 except ImportError:
     crypt = None
 
-try:
-    from twisted.cred import pamauth
-except ImportError:
-    pamauth = None
+
+pamauthWarningFilter = [
+    util.suppress(
+        message='twisted.cred.pamauth was deprecated in Twisted 14.1.0: '
+                'The PAM interaction is insecure '
+                'and the upstream module is unmaintained.',
+        category=DeprecationWarning)]
+
+pamauth = runWithWarningsSuppressed(
+        pamauthWarningFilter, requireModule, 'twisted.cred.pamauth')
 
 
 class ITestable(Interface):
@@ -289,6 +297,8 @@ class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
 
 class PluggableAuthenticationModulesTest(unittest.TestCase):
 
+    suppress = pamauthWarningFilter
+
     def setUp(self):
         """
         Replace L{pamauth.callIntoPAM} with a dummy implementation with
@@ -350,6 +360,26 @@ class PluggableAuthenticationModulesTest(unittest.TestCase):
 
     if not pamauth:
         skip = "Can't run without PyPAM"
+
+
+class PluggableAuthenticationModulesDeprecationTest(unittest.TestCase):
+    """
+    Tests for deprecation of C{PluggableAuthenticationModulesChecker} and
+    L{twisted.cred.pamauth}.
+    """
+
+    def test_pamauthIsDeprecated(self):
+        """
+        L{twisted.cred.pamauth} is deprecated
+        """
+        def doImport():
+            from twisted.cred import pamauth
+            pamauth
+        self.assertWarns(DeprecationWarning,
+            "twisted.cred.pamauth was deprecated in Twisted 14.1.0: "
+            "The PAM interaction is insecure "
+            "and the upstream module is unmaintained.",
+            __file__, doImport)
 
 
 
