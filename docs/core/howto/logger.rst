@@ -6,8 +6,8 @@
 
 Logging with twisted.python.logger
 ==================================
+.. _core-howto-logger-main
 
-.. _core-howto-logger-main:
 
 The Basics
 ----------
@@ -243,10 +243,8 @@ Emitting applications should be cautious about inserting objects into event whic
 While observers are called synchronously, it is possible that an observer will do something like queue up the event for later serialization, in which case the serialized object may be different than intended.
 
 
-.. _core-howto-logger-saving-events-for-later:
-
-Saving events for later
------------------------
+.. _core-howto-logger-saving-events-for-later:      Saving events for later
+---------------------------------------------------------------------------
 
 For compatibility reasons, ``twistd`` will log to a text-based format by default.
 However, it's much better to use a structured log file format which preserves information about the events being logged.
