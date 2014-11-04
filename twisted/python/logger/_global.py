@@ -85,8 +85,7 @@ class LogBeginner(object):
                 FileLogObserver(
                     errorStream, lambda event: formatEvent(event) + "\n"
                 ),
-                [LogLevelFilterPredicate(defaultLogLevel=LogLevel.critical)]
-            )
+                [LogLevelFilterPredicate(defaultLogLevel=LogLevel.critical)])
         )
         publisher.addObserver(self._temporaryObserver)
         self._oldshowwarning = warningsModule.showwarning

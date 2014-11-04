@@ -106,26 +106,12 @@ class LegacyLogger(object):
             _stuff = Failure(_stuff)
 
         if isinstance(_stuff, Failure):
-            if _why:
-                text = safe_str(_why)
-            else:
-                text = "Unhandled Error"
-
-            text = "{why}\n{traceback}".format(
-                why=text,
-                traceback=_stuff.getTraceback(),
-            )
-
-            self.newStyleLogger.emit(
-                LogLevel.critical,
-                text, failure=_stuff, why=_why, isError=1, **kwargs
-            )
+            self.newStyleLogger.emit(LogLevel.error, failure=_stuff, why=_why,
+                                     isError=1, **kwargs)
         else:
             # We got called with an invalid _stuff.
-            self.newStyleLogger.emit(
-                LogLevel.critical,
-                repr(_stuff), why=_why, isError=1, **kwargs
-            )
+            self.newStyleLogger.emit(LogLevel.error, repr(_stuff), why=_why,
+                                     isError=1, **kwargs)
 
 
 
@@ -228,7 +214,7 @@ def publishToNewObserver(observer, eventDict, textFromEventDict):
         if "logLevel" in eventDict:
             level = fromStdlibLogLevelMapping[eventDict["logLevel"]]
         elif eventDict["isError"]:
-            level = LogLevel.critical
+            level = LogLevel.error
         else:
             level = LogLevel.info
 

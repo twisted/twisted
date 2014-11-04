@@ -1,3 +1,0 @@
-Legacy logging now adds a traceback to rendered events to match existing behavior; this was a regression since merging the new logging (as yet unreleased).
-Legacy logging now emits at `LogLevel.critical` if `isError` is set (ie. capturing an unhandled exception) to match new logging.
-Python stdlib logging logs at `CRITICAL` level if `isError` is set (was `ERROR`).
