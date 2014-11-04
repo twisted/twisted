@@ -100,38 +100,6 @@ For example:
 This example will show the string "object with value 7 doing a task" because the ``log_source`` key is automatically set to the ``MyObject`` instance that the ``Logger`` is retrieved from.
 
 
-Capturing Failures
-~~~~~~~~~~~~~~~~~~
-
-:api:`twisted.python.logger.Logger <Logger>` provides a :api:`twisted.python.logger.Logger.failure <failure>` method, which allows one to capture a :api:`twisted.python.failure.Failure <Failure>` object conveniently:
-
-.. code-block:: python
-
-    from twisted.python.logger import Logger
-    log = Logger()
-
-    try:
-        1 / 0
-    except:
-        log.failure("Math is hard!")
-
-The emitted event will have the ``"log_failure"`` key set, which is a :api:`twisted.python.failure.Failure <Failure>` than captures the exception.
-This can be used my observers to obtain a traceback.
-For example, :api:`twisted.python.logger.FileLogObserver <FileLogObserver>` will append the traceback to it's output::
-
-    Math is hard!
-
-    Traceback (most recent call last):
-    --- <exception caught here> ---
-      File "/tmp/test.py", line 8, in <module>
-        1/0
-    exceptions.ZeroDivisionError: integer division or modulo by zero
-
-Note that this API is meant to capture unexpected and unhandled errors (that is: bugs, which is why tracebacks are preserved).
-As such, it defaults to logging that the :api:`twisted.python.logger.LogLevel.critical <critical>` level.
-It is generally more appropriate to instead use `log.error()` when logging an expected error condition that was appropriately handled by the software.
-
-
 Namespaces
 ~~~~~~~~~~
 
@@ -237,9 +205,8 @@ Event keys added by the system
 
 The logging system will add keys to emitted events.
 All event keys that are inserted by the logging system with have a ``log_`` prefix, to avoid namespace collisions with application-provided event keys.
-Applications should therefore not insert event keys using the ``log_`` prefix, as that prefix is reserved for the logging system.
 System-provided event keys include:
-
+        
 ``log_logger`` 
         
   :api:`twisted.python.logger.Logger <Logger>` object that the event was emitted to.
@@ -268,15 +235,11 @@ System-provided event keys include:
   
   The time that the event was emitted, as returned by :api:`time.time <time>` .
 
-``log_failure`` 
-  
-  A :api:`twisted.python.failure.Failure <Failure>` object captured when the event was emitted.
-
 
 Avoid mutable event keys
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Emitting applications should be cautious about inserting objects into event which may be mutated later.
+Emitting applications should be cautious about inserting objects into event which will be mutated later.
 While observers are called synchronously, it is possible that an observer will do something like queue up the event for later serialization, in which case the serialized object may be different than intended.
 
 

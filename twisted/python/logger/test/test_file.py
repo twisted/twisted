@@ -11,7 +11,6 @@ from zope.interface.verify import verifyObject, BrokenMethodImplementation
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python.failure import Failure
 from twisted.python.compat import unicode
 from .._observer import ILogObserver
 from .._file import FileLogObserver
@@ -104,32 +103,6 @@ class FileLogObserverTests(TestCase):
             event = dict(x=1)
             observer(event)
             self.assertEquals(fileHandle.flushes, 1)
-
-        finally:
-            fileHandle.close()
-
-
-    def test_observeFailure(self):
-        """
-        If the C{"log_failure"} key exists in an event, the observer should
-        append the failure's traceback to the output.
-        """
-        try:
-            fileHandle = StringIO()
-            observer = FileLogObserver(fileHandle, lambda e: unicode(e))
-
-            try:
-                1 / 0
-            except ZeroDivisionError:
-                failure = Failure()
-
-            event = dict(log_failure=failure)
-            observer(event)
-            output = fileHandle.getvalue()
-            self.assertTrue(
-                output.startswith("{0}\nTraceback ".format(unicode(event))),
-                "Incorrect output:\n{0}".format(output)
-            )
 
         finally:
             fileHandle.close()

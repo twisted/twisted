@@ -1,2 +1,0 @@
-FileLogObserver now appends a traceback when writing an event that contains the log_event key.
-HOWTO now notes log_failure key and explains the log.failure method.

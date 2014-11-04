@@ -48,19 +48,13 @@ class FileLogObserver(object):
         @type event: L{dict}
         """
         text = self.formatEvent(event)
-
-        if text is None:
-            text = u""
-
-        if "log_failure" in event:
-            text = u"\n".join((text, event["log_failure"].getTraceback()))
-
+        if not text:
+            return
         if self._encoding is not None:
             text = text.encode(self._encoding)
 
-        if text:
-            self._outFile.write(text)
-            self._outFile.flush()
+        self._outFile.write(text)
+        self._outFile.flush()
 
 
 
