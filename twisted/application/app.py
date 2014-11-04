@@ -8,9 +8,9 @@ import sys, os, pdb, getpass, traceback, signal
 from operator import attrgetter
 
 from twisted.python import runtime, log, usage, failure, util, logfile
-
+from twisted.python.versions import Version
 from twisted.python.reflect import qual, namedAny
-
+from twisted.python.deprecate import deprecated
 from twisted.python.log import ILogObserver
 from twisted.persisted import sob
 from twisted.application import service, reactors
@@ -171,15 +171,13 @@ class AppProfiler(object):
             profiler = self.profilers[self.profiler](profileOutput, saveStats)
             self.run = profiler.run
         else:
-            raise SystemExit("Unsupported profiler name: %s" %
-                             (self.profiler,))
+            raise SystemExit("Unsupported profiler name: %s" % (self.profiler,))
 
 
 
 class AppLogger(object):
     """
-    An L{AppLogger} attaches the configured log observer specified on the
-    commandline to a L{ServerOptions} object or the custom L{ILogObserver}.
+    Class managing logging faciliy of the application.
 
     @ivar _logfilename: The name of the file to which to log, if other than the
         default.
@@ -194,26 +192,22 @@ class AppLogger(object):
     _observer = None
 
     def __init__(self, options):
-        """
-        Initialize an L{AppLogger} with a L{ServerOptions}.
-        """
         self._logfilename = options.get("logfile", "")
         self._observerFactory = options.get("logger") or None
 
 
     def start(self, application):
         """
-        Initialize the global logging system for the given application.
+        Initialize the logging system.
 
-        If a custom logger was specified on the command line it will be used.
-        If not, and an L{ILogObserver} component has been set on
+        If a customer logger was specified on the command line it will be
+        used. If not, and an L{ILogObserver} component has been set on
         C{application}, then it will be used as the log observer.  Otherwise a
         log observer will be created based on the command-line options for
-        built-in loggers (e.g.  C{--logfile}).
+        built-in loggers (e.g. C{--logfile}).
 
         @param application: The application on which to check for an
             L{ILogObserver}.
-        @type application: L{twisted.python.components.Componentized}
         """
         if self._observerFactory is not None:
             observer = self._observerFactory()
@@ -232,9 +226,9 @@ class AppLogger(object):
         Print twistd start log message.
         """
         from twisted.internet import reactor
-        log.msg("twistd %s (%s %s) starting up." % (
-            copyright.version, sys.executable, runtime.shortPythonVersion())
-        )
+        log.msg("twistd %s (%s %s) starting up." % (copyright.version,
+                                                   sys.executable,
+                                                   runtime.shortPythonVersion()))
         log.msg('reactor class: %s.' % (qual(reactor.__class__),))
 
 
@@ -252,7 +246,7 @@ class AppLogger(object):
 
     def stop(self):
         """
-        Remove all log observers previously set up by L{AppLogger.start}.
+        Print twistd stop log message.
         """
         log.msg("Server Shut Down.")
         if self._observer is not None:
@@ -284,8 +278,7 @@ def fixPdb():
 
 
 
-def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None,
-                          reactor=None):
+def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None, reactor=None):
     """
     Start the reactor, using profiling if specified by the configuration, and
     log any error happening in the process.
@@ -325,7 +318,7 @@ def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None,
         if config['nodaemon']:
             file = oldstdout
         else:
-            file = open("TWISTD-CRASH.log", 'a')
+            file = open("TWISTD-CRASH.log",'a')
         traceback.print_exc(file=file)
         file.flush()
 
@@ -341,7 +334,7 @@ def getPassphrase(needed):
 
 def getSavePassphrase(needed):
     if needed:
-        util.getPassword("Encryption passphrase: ")
+        passphrase = util.getPassword("Encryption passphrase: ")
     else:
         return None
 
@@ -455,8 +448,8 @@ class ApplicationRunner(object):
 
 def getApplication(config, passphrase):
     s = [(config[t], t)
-         for t in ['python', 'source', 'file'] if config[t]][0]
-    filename, style = s[0], {'file': 'pickle'}.get(s[1], s[1])
+           for t in ['python', 'source', 'file'] if config[t]][0]
+    filename, style = s[0], {'file':'pickle'}.get(s[1],s[1])
     try:
         log.msg("Loading %s..." % filename)
         application = service.loadApplication(filename, style, passphrase)
@@ -481,9 +474,7 @@ Please read the 'Using Application' HOWTO for details.
 
 
 def _reactorAction():
-    return usage.CompleteList([r.shortName for r in
-                               reactors.getReactorTypes()])
-
+    return usage.CompleteList([r.shortName for r in reactors.getReactorTypes()])
 
 
 class ReactorSelectionMixin:
@@ -538,6 +529,7 @@ class ReactorSelectionMixin:
 
 
 
+
 class ServerOptions(usage.Options, ReactorSelectionMixin):
 
     longdesc = ("twistd reads a twisted.application.service.Application out "
@@ -546,30 +538,29 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
     optFlags = [['savestats', None,
                  "save the Stats object rather than the text output of "
                  "the profiler."],
-                ['no_save', 'o',   "do not save state on shutdown"],
+                ['no_save','o',   "do not save state on shutdown"],
                 ['encrypted', 'e',
                  "The specified tap/aos file is encrypted."]]
 
-    optParameters = [['logfile', 'l', None,
+    optParameters = [['logfile','l', None,
                       "log to a specified file, - for stdout"],
                      ['logger', None, None,
-                      "A fully-qualified name to a log observer factory to "
-                      "use for the initial log observer.  Takes precedence "
-                      "over --logfile and --syslog (when available)."],
+                      "A fully-qualified name to a log observer factory to use "
+                      "for the initial log observer.  Takes precedence over "
+                      "--logfile and --syslog (when available)."],
                      ['profile', 'p', None,
-                      "Run in profile mode, dumping results to specified "
-                      "file."],
+                      "Run in profile mode, dumping results to specified file"],
                      ['profiler', None, "hotshot",
                       "Name of the profiler to use (%s)." %
                       ", ".join(AppProfiler.profilers)],
-                     ['file', 'f', 'twistd.tap',
+                     ['file','f','twistd.tap',
                       "read the given .tap file"],
-                     ['python', 'y', None,
+                     ['python','y', None,
                       "read an application from within a Python file "
                       "(implies -o)"],
                      ['source', 's', None,
                       "Read an application from a .tas file (AOT format)."],
-                     ['rundir', 'd', '.',
+                     ['rundir','d','.',
                       'Change to a supplied directory before running']]
 
     compData = usage.Completions(
@@ -578,7 +569,7 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
                     "python": usage.CompleteFiles("*.(tac|py)"),
                     "source": usage.CompleteFiles("*.tas"),
                     "rundir": usage.CompleteDirs()}
-    )
+        )
 
     _getPlugins = staticmethod(plugin.getPlugins)
 
@@ -623,7 +614,7 @@ class ServerOptions(usage.Options, ReactorSelectionMixin):
             try:
                 self['logger'] = namedAny(self['logger'])
             except Exception as e:
-                raise usage.UsageError("Logger '%s' could not be imported: %s"
+                raise usage.UsageError("Logger '%s' could not be imported: %s" 
                                        % (self['logger'], e))
 
 
@@ -669,7 +660,8 @@ def startApplication(application, save):
     from twisted.internet import reactor
     service.IService(application).startService()
     if save:
-        p = sob.IPersistable(application)
-        reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')
+         p = sob.IPersistable(application)
+         reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')
     reactor.addSystemEventTrigger('before', 'shutdown',
                                   service.IService(application).stopService)
+

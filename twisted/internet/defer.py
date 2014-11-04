@@ -26,12 +26,10 @@ from functools import wraps
 
 # Twisted imports
 from twisted.python.compat import cmp, comparable
-from twisted.python import lockfile, failure
-from twisted.python.logger import Logger
+from twisted.python import lockfile, log, failure
 from twisted.python.deprecate import warnAboutFunction, deprecated
 from twisted.python.versions import Version
 
-log = Logger()
 
 
 class AlreadyCalledError(Exception):
@@ -666,11 +664,11 @@ class DebugInfo:
         info = ''
         if hasattr(self, "creator"):
             info += " C: Deferred was created:\n C:"
-            info += "".join(self.creator).rstrip().replace("\n", "\n C:")
+            info += "".join(self.creator).rstrip().replace("\n","\n C:")
             info += "\n"
         if hasattr(self, "invoker"):
             info += " I: First Invoker was:\n I:"
-            info += "".join(self.invoker).rstrip().replace("\n", "\n I:")
+            info += "".join(self.invoker).rstrip().replace("\n","\n I:")
             info += "\n"
         return info
 
@@ -683,14 +681,11 @@ class DebugInfo:
         state, print a traceback (if said errback is a L{Failure}).
         """
         if self.failResult is not None:
-            # Note: this is two separate messages for compatibility with
-            # earlier tests; arguably it should be a single error message.
-            log.critical("Unhandled error in Deferred:",
-                         isError=True)
+            log.msg("Unhandled error in Deferred:", isError=True)
             debugInfo = self._getDebugTracebacks()
             if debugInfo != '':
-                debugInfo = ("(debug: " + debugInfo + ")")
-            log.failure("{debugInfo}", self.failResult, debugInfo=debugInfo)
+                log.msg("(debug: " + debugInfo + ")", isError=True)
+            log.err(self.failResult)
 
 
 
@@ -867,10 +862,8 @@ class DeferredList(Deferred):
                 try:
                     deferred.cancel()
                 except:
-                    log.failure(
-                        "Exception raised from user supplied canceller"
-                    )
-
+                    log.err(
+                        _why="Exception raised from user supplied canceller")
 
 
 def _parseDListResult(l, fireOnOneErrback=False):
