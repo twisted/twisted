@@ -699,7 +699,12 @@ class PythonLoggingObserverTestCase(unittest.SynchronousTestCase):
         """
         f = failure.Failure(ValueError("That is bad."))
         self.lp.msg(failure=f, isError=True)
-        self.assertIn(b"ERROR", self.out.getvalue())
+        prefix = b"CRITICAL:"
+        output = self.out.getvalue()
+        self.assertTrue(
+            output.startswith(prefix),
+            "Does not start with {0!r}: {1!r}".format(prefix, output)
+        )
 
 
     def test_formatString(self):
