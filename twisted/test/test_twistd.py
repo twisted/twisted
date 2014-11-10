@@ -82,6 +82,7 @@ else:
     setuidSkip = None
 
 
+
 def patchUserDatabase(patch, user, uid, group, gid):
     """
     Patch L{pwd.getpwnam} so that it behaves as though only one user exists
@@ -597,19 +598,19 @@ class UnixApplicationRunnerSetupEnvironmentTests(unittest.TestCase):
 
     @ivar root: The root of the filesystem, or C{unset} if none has been
         specified with a call to L{os.chroot} (patched for this TestCase with
-        L{UnixApplicationRunnerSetupEnvironmentTests.chroot ).
+        L{UnixApplicationRunnerSetupEnvironmentTests.chroot}).
 
     @ivar cwd: The current working directory of the process, or C{unset} if
         none has been specified with a call to L{os.chdir} (patched for this
-        TestCase with L{UnixApplicationRunnerSetupEnvironmentTests.chdir).
+        TestCase with L{UnixApplicationRunnerSetupEnvironmentTests.chdir}).
 
     @ivar mask: The current file creation mask of the process, or C{unset} if
         none has been specified with a call to L{os.umask} (patched for this
-        TestCase with L{UnixApplicationRunnerSetupEnvironmentTests.umask).
+        TestCase with L{UnixApplicationRunnerSetupEnvironmentTests.umask}).
 
     @ivar daemon: A boolean indicating whether daemonization has been performed
         by a call to L{_twistd_unix.daemonize} (patched for this TestCase with
-        L{UnixApplicationRunnerSetupEnvironmentTests.
+        L{UnixApplicationRunnerSetupEnvironmentTests}.
     """
     if _twistd_unix is None:
         skip = "twistd unix not available"
@@ -751,6 +752,7 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
     if _twistd_unix is None:
         skip = "twistd unix not available"
 
+
     def test_setupEnvironment(self):
         """
         L{UnixApplicationRunner.startApplication} calls
@@ -769,7 +771,8 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
         self.runner = UnixApplicationRunner(options)
 
         args = []
-        def fakeSetupEnvironment(self, chroot, rundir, nodaemon, umask, pidfile):
+        def fakeSetupEnvironment(self, chroot, rundir, nodaemon, umask,
+                                 pidfile):
             args.extend((chroot, rundir, nodaemon, umask, pidfile))
 
         # Sanity check
@@ -777,8 +780,10 @@ class UnixApplicationRunnerStartApplicationTests(unittest.TestCase):
             inspect.getargspec(self.runner.setupEnvironment),
             inspect.getargspec(fakeSetupEnvironment))
 
-        self.patch(UnixApplicationRunner, 'setupEnvironment', fakeSetupEnvironment)
-        self.patch(UnixApplicationRunner, 'shedPrivileges', lambda *a, **kw: None)
+        self.patch(UnixApplicationRunner, 'setupEnvironment',
+                   fakeSetupEnvironment)
+        self.patch(UnixApplicationRunner, 'shedPrivileges',
+                   lambda *a, **kw: None)
         self.patch(app, 'startApplication', lambda *a, **kw: None)
         self.runner.startApplication(application)
 
@@ -1342,7 +1347,9 @@ class AppLoggerTestCase(unittest.TestCase):
         self.assertEqual(logs, [])
 
     if _twistd_unix is None or syslog is None:
-        test_configuredLogObserverBeatsSyslog.skip = "Not on POSIX, or syslog not available."
+        test_configuredLogObserverBeatsSyslog.skip = (
+            "Not on POSIX, or syslog not available."
+        )
 
 
     def test_configuredLogObserverBeatsLogfile(self):
@@ -1365,13 +1372,13 @@ class AppLoggerTestCase(unittest.TestCase):
         logger = app.AppLogger({"logfile": "-"})
         logFiles = _patchFileLogObserver(self.patch)
 
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 1)
         self.assertIdentical(logFiles[0], sys.stdout)
 
         logger = app.AppLogger({"logfile": ""})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 2)
         self.assertIdentical(logFiles[1], sys.stdout)
@@ -1386,7 +1393,7 @@ class AppLoggerTestCase(unittest.TestCase):
         filename = self.mktemp()
         logger = app.AppLogger({"logfile": filename})
 
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path,
@@ -1426,6 +1433,7 @@ class UnixAppLoggerTestCase(unittest.TestCase):
     if _twistd_unix is None:
         skip = "twistd unix not available"
 
+
     def setUp(self):
         """
         Fake C{signal.signal} for not installing the handlers but saving them
@@ -1448,12 +1456,12 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         logFiles = _patchFileLogObserver(self.patch)
 
         logger = UnixAppLogger({"logfile": "-", "nodaemon": True})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
         self.assertEqual(len(logFiles), 1)
         self.assertIdentical(logFiles[0], sys.stdout)
 
         logger = UnixAppLogger({"logfile": "", "nodaemon": True})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
         self.assertEqual(len(logFiles), 2)
         self.assertIdentical(logFiles[1], sys.stdout)
 
@@ -1477,7 +1485,7 @@ class UnixAppLoggerTestCase(unittest.TestCase):
         logFiles = _patchFileLogObserver(self.patch)
         filename = self.mktemp()
         logger = UnixAppLogger({"logfile": filename})
-        observer = logger._getLogObserver()
+        logger._getLogObserver()
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path, os.path.abspath(filename))
