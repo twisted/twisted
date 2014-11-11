@@ -13,9 +13,21 @@ import sys, os, unittest, tempfile
 twistedPath = os.path.abspath(os.path.dirname(os.path.dirname(sys.argv[0])))
 sys.path.insert(0, twistedPath)
 
-if sys.argv[1:]:
-    testModules = sys.argv[1:]
-else:
+testModules = []
+extraArguments = []
+
+for argument in sys.argv[1:]:
+    if argument.startswith('-'):
+        extraArguments.append(argument)
+    else:
+        testModules.append(argument)
+
+# Add default arguments.
+if not extraArguments:
+    extraArguments = ['-v']
+
+# Add default modules.
+if not testModules:
     modules = {}
     path = os.path.join(twistedPath, "twisted", "python", "dist3.py")
     with open(path) as dist3:
@@ -24,8 +36,9 @@ else:
         exec(code, modules)
     testModules = modules["testModules"]
 
-# Avoid dumping trash all over the place
+# Avoid dumping trash all over the place.
 os.chdir(tempfile.mkdtemp(prefix="tw-py3-"))
 
-# Run the tests
-unittest.main(module=None, argv=["run-python3-tests", "-v"] + testModules)
+# Run the tests.
+testArguments = ["run-python3-tests"] + extraArguments + testModules
+unittest.main(module=None, argv=testArguments)
