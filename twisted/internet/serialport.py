@@ -24,6 +24,8 @@ from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD
 from serial import STOPBITS_ONE, STOPBITS_TWO
 from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
 
+from twisted.python.runtime import platform
+
 
 
 class BaseSerialPort:
@@ -77,11 +79,10 @@ class BaseSerialPort:
     def setRTS(self, on = 1):
         self._serial.setRTS(on)
 
-class SerialPort(BaseSerialPort):
-    pass
 
-# replace SerialPort with appropriate serial port
-if os.name == 'posix':
-    from twisted.internet._posixserialport import SerialPort
-elif sys.platform == 'win32':
+
+# Expert appropriate implementation of SerialPort.
+if platform.isWindows():
     from twisted.internet._win32serialport import SerialPort
+else:
+    from twisted.internet._posixserialport import SerialPort
