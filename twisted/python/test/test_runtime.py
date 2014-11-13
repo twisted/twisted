@@ -9,6 +9,7 @@ from __future__ import division, absolute_import
 
 import sys
 
+from twisted.python.reflect import namedModule
 from twisted.trial.util import suppress as SUPRESS
 from twisted.trial.unittest import SynchronousTestCase
 
@@ -100,7 +101,7 @@ class PlatformTests(SynchronousTestCase):
         L{Platform.isWinNT} is deprecated in favor of L{platform.isWindows}.
         """
         platform = Platform()
-        result = platform.isWinNT()
+        platform.isWinNT()
         warnings = self.flushWarnings([self.test_isWinNTDeprecated])
         self.assertEqual(len(warnings), 1)
         self.assertEqual(
@@ -116,7 +117,7 @@ class PlatformTests(SynchronousTestCase):
         # module.  Perhaps an adequate test is to just test the behavior with
         # the current runtime, whatever that happens to be.
         try:
-            import threading
+            namedModule('threading')
         except ImportError:
             self.assertFalse(Platform().supportsThreads())
         else:

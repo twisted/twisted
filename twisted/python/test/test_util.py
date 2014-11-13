@@ -199,11 +199,12 @@ class SwitchUIDTest(unittest.TestCase):
         util.switchUID(uid, None)
         self.assertEqual(self.initgroupsCalls, [])
         self.assertEqual(self.mockos.actions, [])
-        warnings = self.flushWarnings([util.switchUID])
-        self.assertEqual(len(warnings), 1)
-        self.assertIn('tried to drop privileges and setuid %i' % uid, 
-                      warnings[0]['message'])
-        self.assertIn('but uid is already %i' % uid, warnings[0]['message'])
+        currentWarnings = self.flushWarnings([util.switchUID])
+        self.assertEqual(len(currentWarnings), 1)
+        self.assertIn('tried to drop privileges and setuid %i' % uid,
+                      currentWarnings[0]['message'])
+        self.assertIn(
+            'but uid is already %i' % uid, currentWarnings[0]['message'])
 
 
     def test_currentEUID(self):
@@ -215,11 +216,12 @@ class SwitchUIDTest(unittest.TestCase):
         util.switchUID(euid, None, True)
         self.assertEqual(self.initgroupsCalls, [])
         self.assertEqual(self.mockos.seteuidCalls, [])
-        warnings = self.flushWarnings([util.switchUID])
-        self.assertEqual(len(warnings), 1)
-        self.assertIn('tried to drop privileges and seteuid %i' % euid, 
-                      warnings[0]['message'])
-        self.assertIn('but euid is already %i' % euid, warnings[0]['message'])
+        currentWarnings = self.flushWarnings([util.switchUID])
+        self.assertEqual(len(currentWarnings), 1)
+        self.assertIn('tried to drop privileges and seteuid %i' % euid,
+                      currentWarnings[0]['message'])
+        self.assertIn(
+            'but euid is already %i' % euid, currentWarnings[0]['message'])
 
 
 
@@ -365,8 +367,6 @@ class InsensitiveDictTest(unittest.TestCase):
         self.assertEqual(dct['foo'], dct.get('Foo'))
         self.assertIn(1, dct)
         self.assertIn('foo', dct)
-        # Make eval() work, urrrrgh:
-        InsensitiveDict = util.InsensitiveDict
         self.assertEqual(eval(repr(dct)), dct)
         keys=['Foo', 'fnz', 1]
         for x in keys:
@@ -928,14 +928,14 @@ class DeprecationTests(unittest.TestCase):
         L{util.getPluginDirs} is deprecated.
         """
         util.getPluginDirs()
-        warnings = self.flushWarnings(offendingFunctions=[
+        currentWarnings = self.flushWarnings(offendingFunctions=[
             self.test_getPluginDirs])
         self.assertEqual(
-            warnings[0]['message'],
+            currentWarnings[0]['message'],
             "twisted.python.util.getPluginDirs is deprecated since Twisted "
             "12.2.")
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(len(warnings), 1)
+        self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
+        self.assertEqual(len(currentWarnings), 1)
 
 
     def test_addPluginDir(self):
@@ -943,13 +943,13 @@ class DeprecationTests(unittest.TestCase):
         L{util.addPluginDir} is deprecated.
         """
         util.addPluginDir()
-        warnings = self.flushWarnings(offendingFunctions=[
+        currentWarnings = self.flushWarnings(offendingFunctions=[
             self.test_addPluginDir])
         self.assertEqual(
-            warnings[0]['message'],
+            currentWarnings[0]['message'],
             "twisted.python.util.addPluginDir is deprecated since Twisted "
             "12.2.")
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+        self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
         self.assertEqual(len(warnings), 1)
     test_addPluginDir.suppress = [
             SUPPRESS(category=DeprecationWarning,
