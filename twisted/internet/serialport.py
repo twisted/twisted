@@ -15,9 +15,6 @@ __all__ = ["serial", "PARITY_ODD", "PARITY_EVEN", "PARITY_NONE",
 # Name this module is actually trying to export
            "SerialPort"]
 
-# system imports
-import os, sys
-
 # all of them require pyserial at the moment, so check that first
 import serial
 from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD
