@@ -170,9 +170,9 @@ class LegacyLogObserverWrapper(object):
         if "message" not in event:
             event["message"] = ()
 
-        system = event.get("log_system", None)
-        if system is not None:
-            event["system"] = system
+        event["time"] = event["log_time"]
+
+        event["system"] = event.get("log_system", "-")
 
         # Format new style -> old style
         if event.get("log_format", None) is not None and "format" not in event:
@@ -217,6 +217,9 @@ def publishToNewObserver(observer, eventDict, textFromEventDict):
 
     @return: L{None}
     """
+
+    if "log_time" not in eventDict:
+        eventDict["log_time"] = eventDict["time"]
 
     if "log_format" not in eventDict:
         text = textFromEventDict(eventDict)

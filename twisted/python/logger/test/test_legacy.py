@@ -293,6 +293,10 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
 
         @return: the event as observed by the legacy wrapper
         """
+        # Make sure keys that are expected by the logging system are present
+        event.setdefault("log_time", time())
+        event.setdefault("log_system", "-")
+
         # Send a copy: don't mutate me, bro
         observed = self.observe(dict(event))
 
@@ -311,12 +315,28 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         self.forwardAndVerify(dict(foo=1, bar=2))
 
 
+    def test_time(self):
+        """
+        Translate: C{"log_time"} -> C{"time"}
+        """
+        event = self.forwardAndVerify({})
+        self.assertEqual(event["log_time"], event["time"])
+
+
     def test_system(self):
         """
         Translate: C{"log_system"} -> C{"system"}
         """
         event = self.forwardAndVerify(dict(log_system="foo"))
         self.assertEquals(event["system"], "foo")
+
+
+    def test_systemNone(self):
+        """
+        If C{"log_system"} is C{None}, C{"system"} is C{"-"}.
+        """
+        event = self.forwardAndVerify(dict(log_system="foo"))
+        self.assertEqual(event["system"], "foo")
 
 
     def test_pythonLogLevel(self):
@@ -398,6 +418,17 @@ class PublishToNewObserverTests(unittest.TestCase):
         publishToNewObserver(self.observer, self.legacyEvent(), lambda e: u"")
 
         self.assertEquals(len(self.events), 1)
+
+
+    def test_time(self):
+        """
+        The C{"time"} key should get copied to C{"log_time"}.
+        """
+        publishToNewObserver(self.observer, self.legacyEvent(), lambda e: u"")
+
+        self.assertEquals(
+            self.events[0]["log_time"], self.events[0]["time"]
+        )
 
 
     def test_message(self):

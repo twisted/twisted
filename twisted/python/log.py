@@ -19,11 +19,11 @@ from zope.interface import Interface
 from twisted.python.compat import unicode, _PY3
 from twisted.python import context
 from twisted.python import reflect
+from twisted.python import util
 from twisted.python import failure
 from twisted.python.threadable import synchronize
 from twisted.python.logger import (
     Logger as NewLogger, LogLevel as NewLogLevel,
-    textFileLogObserver as newFileLogObserver,
     STDLibLogObserver as NewSTDLibLogObserver,
     LegacyLogObserverWrapper, LoggingFile, LogPublisher as NewPublisher,
     globalLogPublisher as newGlobalLogPublisher,
@@ -465,7 +465,6 @@ class FileLogObserver(_GlobalStartStopMixIn):
         # Compatibility
         self.write = f.write
         self.flush = f.flush
-        self._newObserver = newFileLogObserver(f)
 
 
     def getTimezoneOffset(self, when):
@@ -522,7 +521,19 @@ class FileLogObserver(_GlobalStartStopMixIn):
         @param eventDict: a log event
         @type eventDict: L{dict} mapping L{str} (native string) to L{object}
         """
-        _publishNew(self._newObserver, eventDict, textFromEventDict)
+        text = textFromEventDict(eventDict)
+        if text is None:
+            return
+
+        timeStr = self.formatTime(eventDict["time"])
+        fmtDict = {
+            "system": eventDict["system"],
+            "text": text.replace("\n", "\n\t")
+        }
+        msgStr = _safeFormat("[%(system)s] %(text)s\n", fmtDict)
+
+        util.untilConcludes(self.write, timeStr + " " + msgStr)
+        util.untilConcludes(self.flush)  # Hoorj!
 
 
 

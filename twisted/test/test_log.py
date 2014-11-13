@@ -502,7 +502,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin,
     def test_brokenSystem__str__(self):
         self.lp.msg('huh', system=EvilStr())
         self.assertEqual(len(self.out), 1)
-        self.assertIn(self.ERROR_UNFORMATTABLE_SYSTEM, self.out[0])
+        self.assertIn(self.ERROR_FORMAT, self.out[0])
 
 
     def test_formattingAnObjectWithBroken__repr__Indirect(self):
@@ -514,7 +514,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin,
     def test_systemWithBroker__repr__Indirect(self):
         self.lp.msg('huh', system=[EvilRepr()])
         self.assertEqual(len(self.out), 1)
-        self.assertIn(self.ERROR_UNFORMATTABLE_SYSTEM, self.out[0])
+        self.assertIn(self.ERROR_UNFORMATTABLE_OBJECT, self.out[0])
 
 
     def test_simpleBrokenFormat(self):
@@ -656,6 +656,59 @@ class FileObserverTestCase(LogPublisherTestCaseMixin,
         warnings.warn("hello!")
         output = fakeFile.getvalue()
         self.assertIn("UserWarning: hello!", output)
+
+
+    def test_emitPrefix(self):
+        """
+        FileLogObserver.emit() will add a timestamp and system prefix to its
+        file output.
+        """
+        output = StringIO()
+        flo = log.FileLogObserver(output)
+        events = []
+
+        def observer(event):
+            # Capture the event for reference and pass it along to flo
+            events.append(event)
+            flo.emit(event)
+
+        publisher = log.LogPublisher()
+        publisher.addObserver(observer)
+
+        publisher.msg("Hello!")
+        self.assertEqual(len(events), 1)
+        event = events[0]
+
+        result = output.getvalue()
+        prefix = "{time} [{system}] ".format(
+            time=flo.formatTime(event["time"]), system=event["system"],
+        )
+
+        self.assertTrue(
+            result.startswith(prefix),
+            "{0!r} does not start with {1!r}".format(result, prefix)
+        )
+
+
+    def test_emitNewline(self):
+        """
+        FileLogObserver.emit() will append a newline to its file output.
+        """
+        output = StringIO()
+        flo = log.FileLogObserver(output)
+
+        publisher = log.LogPublisher()
+        publisher.addObserver(flo.emit)
+
+        publisher.msg("Hello!")
+
+        result = output.getvalue()
+        suffix = "Hello!\n"
+
+        self.assertTrue(
+            result.endswith(suffix),
+            "{0!r} does not end with {1!r}".format(result, suffix)
+        )
 
 
 
