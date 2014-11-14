@@ -116,6 +116,14 @@ class HostnameAddress(FancyEqMixin, object):
 
 
 @implementer(IAddress)
+class SerialAddress(object):
+    """
+    An L{interfaces.IAddress} provider for serial port connections.
+    """
+
+
+
+@implementer(IAddress)
 class UNIXAddress(FancyEqMixin, object):
     """
     Object representing a UNIX socket endpoint.

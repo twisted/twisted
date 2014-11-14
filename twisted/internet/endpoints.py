@@ -35,7 +35,7 @@ from twisted.python.systemd import ListenFDs
 from twisted.internet.abstract import isIPv6Address
 from twisted.python.failure import Failure
 from twisted.python import log
-from twisted.internet.address import _ProcessAddress, HostnameAddress
+from twisted.internet.address import _ProcessAddress, HostnameAddress, SerialAddress
 from twisted.python.components import proxyForInterface
 from twisted.internet.task import LoopingCall
 
@@ -58,6 +58,7 @@ __all__ = ["clientFromString", "serverFromString",
            "SSL4ServerEndpoint", "SSL4ClientEndpoint",
            "AdoptedStreamServerEndpoint", "StandardIOEndpoint",
            "ProcessEndpoint", "HostnameEndpoint",
+           "SerialPortEndpoint",
            "StandardErrorBehavior", "connectProtocol"]
 
 __all3__ = ["TCP4ServerEndpoint", "TCP6ServerEndpoint",
@@ -874,6 +875,65 @@ class SSL4ClientEndpoint(object):
                 self._host, self._port, wf, self._sslContextFactory,
                 timeout=self._timeout, bindAddress=self._bindAddress)
             return wf._onConnection
+        except:
+            return defer.fail()
+
+
+@implementer(interfaces.IStreamClientEndpoint)
+class SerialPortEndpoint(object):
+    """
+    A Serial Port endpoint.
+
+    @ivar _serialport: A hook used for testing availability of serial port
+        support.
+    """
+    try:
+        from twisted.internet.serialport import (
+            EIGHTBITS, PARITY_NONE, STOPBITS_ONE)
+        from twisted.internet import serialport as _serialport
+    except ImportError:
+        _serialport = None
+        EIGHTBITS = None
+        PARITY_NONE = None
+        STOPBITS_ONE = None
+
+
+    def __init__(self, deviceNameOrPortNumber, reactor,
+                 baudrate=9600, bytesize=EIGHTBITS,
+                 parity=PARITY_NONE, stopbits=STOPBITS_ONE,
+                 timeout=0, xonxoff=False, rtscts=False):
+        """
+        @see: L{serialport.SerialPort}
+        """
+        self._deviceNameOrPortNumber = deviceNameOrPortNumber
+        self._reactor = reactor
+        self._baudrate = baudrate
+        self._bytesize = bytesize
+        self._parity = parity
+        self._stopbits = stopbits
+        self._timeout = timeout
+        self._xonxoff = xonxoff
+        self._rtscts = rtscts
+
+
+    def connect(self, serialFactory):
+        """
+        Implement L{IStreamClientEndpoint.connect} to connect to serial ports
+
+        @param serialFactory: The protocol factory which will build protocols
+            for connections to this service.
+        @type serialFactory: L{twisted.internet.interfaces.IProtocolFactory}
+        """
+        try:
+            if self._serialport == None:
+                raise ImportError
+            else:
+                proto = serialFactory.buildProtocol(SerialAddress())
+                self._serialport.SerialPort(proto, self._deviceNameOrPortNumber,
+                        self._reactor, self._baudrate, self._bytesize,
+                        self._parity, self._stopbits, self._timeout,
+                        self._xonxoff, self._rtscts)
+                return defer.succeed(proto)
         except:
             return defer.fail()
 
