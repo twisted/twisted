@@ -7,6 +7,7 @@ This module contains implementations of IFilePath for zip files.
 
 See the constructor for ZipArchive for use.
 """
+from __future__ import print_function, division, absolute_import
 
 __metaclass__ = type
 
@@ -28,14 +29,18 @@ else:
 from twisted.python.filepath import IFilePath, FilePath, AbstractFilePath
 
 from zope.interface import implementer
+from twisted.python.compat import comparable, cmp
 
-# using FilePath here exclusively rather than os to make sure that we don't do
+# Using FilePath here exclusively rather than os to make sure that we don't do
 # anything OS-path-specific here.
 
-ZIP_PATH_SEP = '/'              # In zipfiles, "/" is universally used as the
+ZIP_PATH_SEP = b'/'             # In zipfiles, "/" is universally used as the
                                 # path separator, regardless of platform.
 
+ENCODING = sys.getfilesystemencoding()
 
+
+@comparable
 @implementer(IFilePath)
 class ZipPath(AbstractFilePath):
     """
@@ -53,10 +58,16 @@ class ZipPath(AbstractFilePath):
         @param pathInArchive: a ZIP_PATH_SEP-separated string.
         """
         self.archive = archive
-        self.pathInArchive = pathInArchive
+
+        # Keep pathInArchive as bytes
+        if isinstance(pathInArchive, bytes):
+            self.pathInArchive = pathInArchive
+        else:
+            self.pathInArchive = pathInArchive.encode(ENCODING)
+
         # self.path pretends to be os-specific because that's the way the
         # 'zipimport' module does it.
-        self.path = os.path.join(archive.zipfile.filename,
+        self.path = os.path.join(archive.zipfile.filename.encode(),
                                  *(self.pathInArchive.split(ZIP_PATH_SEP)))
 
     def __cmp__(self, other):
@@ -69,8 +80,8 @@ class ZipPath(AbstractFilePath):
     def __repr__(self):
         parts = [os.path.abspath(self.archive.path)]
         parts.extend(self.pathInArchive.split(ZIP_PATH_SEP))
-        path = os.sep.join(parts)
-        return "ZipPath('%s')" % (path.encode('string-escape'),)
+        path = os.sep.encode().join(parts)
+        return "ZipPath(%r)" % (path,)
 
 
     def parent(self):
@@ -92,7 +103,13 @@ class ZipPath(AbstractFilePath):
             it) as this means it may include special names with special
             meaning outside of the context of a zip archive.
         """
-        return ZipPath(self.archive, ZIP_PATH_SEP.join([self.pathInArchive, path]))
+        try:
+            encodedPath = path.encode(ENCODING)
+        except AttributeError:
+            encodedPath = path
+
+        return ZipPath(self.archive,
+                       ZIP_PATH_SEP.join([self.pathInArchive, encodedPath]))
 
 
     def sibling(self, path):
@@ -115,7 +132,8 @@ class ZipPath(AbstractFilePath):
     def listdir(self):
         if self.exists():
             if self.isdir():
-                return self.archive.childmap[self.pathInArchive].keys()
+                # py3's dict().keys() is no longer a list
+                return list(self.archive.childmap[self.pathInArchive])
             else:
                 raise OSError(errno.ENOTDIR, "Leaf zip entry listed")
         else:
@@ -135,18 +153,22 @@ class ZipPath(AbstractFilePath):
     def basename(self):
         return self.pathInArchive.split(ZIP_PATH_SEP)[-1]
 
+
     def dirname(self):
         # XXX NOTE: This API isn't a very good idea on filepath, but it's even
         # less meaningful here.
         return self.parent().path
 
+
     def open(self, mode="r"):
         if _USE_ZIPFILE:
-            return self.archive.zipfile.open(self.pathInArchive, mode=mode)
+            return self.archive.zipfile.open(
+                self.pathInArchive.decode(ENCODING), mode=mode)
         else:
             # XXX oh man, is this too much hax?
             self.archive.zipfile.mode = mode
-            return self.archive.zipfile.readfile(self.pathInArchive)
+            return self.archive.zipfile.readfile(
+                self.pathInArchive.decode(ENCODING))
 
     def changed(self):
         pass
@@ -158,7 +180,8 @@ class ZipPath(AbstractFilePath):
         @return: file size, in bytes
         """
 
-        return self.archive.zipfile.NameToInfo[self.pathInArchive].file_size
+        pathInArchive = self.pathInArchive.decode(ENCODING)
+        return self.archive.zipfile.NameToInfo[pathInArchive].file_size
 
     def getAccessTime(self):
         """
@@ -177,8 +200,9 @@ class ZipPath(AbstractFilePath):
 
         @return: a number of seconds since the epoch.
         """
+        pathInArchive = self.pathInArchive.decode(ENCODING)
         return time.mktime(
-            self.archive.zipfile.NameToInfo[self.pathInArchive].date_time
+            self.archive.zipfile.NameToInfo[pathInArchive].date_time
             + (0, 0, 0))
 
 
@@ -194,30 +218,43 @@ class ZipPath(AbstractFilePath):
 
 
 class ZipArchive(ZipPath):
-    """ I am a FilePath-like object which can wrap a zip archive as if it were a
-    directory.
+    """ I am a FilePath-like object which can wrap a zip archive as if it were
+    a directory.
     """
     archive = property(lambda self: self)
     def __init__(self, archivePathname):
-        """Create a ZipArchive, treating the archive at archivePathname as a zip file.
+        """Create a ZipArchive, treating the archive at archivePathname as a
+        zip file.
 
         @param archivePathname: a str, naming a path in the filesystem.
         """
+
+        # convert to string because python3 ZipFile doesn't take bytes
+        if isinstance(archivePathname, bytes):
+            archivePathname = archivePathname.decode(ENCODING)
+
         if _USE_ZIPFILE:
             self.zipfile = ZipFile(archivePathname)
         else:
             self.zipfile = ChunkingZipFile(archivePathname)
-        self.path = archivePathname
-        self.pathInArchive = ''
+        try:
+            self.path = archivePathname.encode(ENCODING)
+        except AttributeError:
+            self.path = archivePathname
+
+        self.pathInArchive = b''
         # zipfile is already wasting O(N) memory on cached ZipInfo instances,
         # so there's no sense in trying to do this lazily or intelligently
         self.childmap = {}      # map parent: list of children
 
         for name in self.zipfile.namelist():
-            name = name.split(ZIP_PATH_SEP)
+            name = name.split(ZIP_PATH_SEP.decode())
             for x in range(len(name)):
                 child = name[-x]
-                parent = ZIP_PATH_SEP.join(name[:-x])
+                parent = ZIP_PATH_SEP.decode().join(name[:-x])
+                # convert back to bytes to reflect correct file path api
+                parent = parent.encode(ENCODING)
+                child = child.encode(ENCODING)
                 if parent not in self.childmap:
                     self.childmap[parent] = {}
                 self.childmap[parent][child] = 1
