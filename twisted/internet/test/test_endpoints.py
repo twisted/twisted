@@ -19,6 +19,7 @@ from twisted.python.compat import _PY3
 from twisted.trial import unittest
 from twisted.internet import (
     error, interfaces, defer, endpoints, protocol, reactor, threads)
+from twisted.protocols.basic import LineReceiver
 from twisted.internet.address import (
     IPv4Address, IPv6Address, UNIXAddress, _ProcessAddress, HostnameAddress,
     SerialAddress)
@@ -2222,8 +2223,8 @@ class SSL4EndpointsTestCase(EndpointTestCaseMixin,
 
 
 
-class SerialFactory(StdioFactory):
-    pass
+class SerialFactory(Factory):
+    protocol = LineReceiver
 
 
 
@@ -2305,7 +2306,7 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
         d = argep.connect(SerialFactory())
 
         def checkArgs(proto):
-            self.assertIsInstance(proto, basic.LineReceiver)
+            self.assertIsInstance(proto, LineReceiver)
             self.assertIsInstance(proto.transport, serialport.SerialPort)
             self.assertEqual(expectedArgs, portArgs)
 
@@ -2369,7 +2370,7 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
         endpoint is a SerialAddress instance.
         """
         class TestAddrFactory(protocol.Factory):
-            protocol = basic.LineReceiver
+            protocol = LineReceiver
             _address = None
             def buildProtocol(self, addr):
                 self._address = addr
@@ -2407,7 +2408,6 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
             def __init__(self, *args):
                 raise Exception
 
-        receivedExceptions = []
         self.patch(serialport, 'SerialPort', _DummySerialPortThatFails)
         d = self.ep.connect(SerialFactory())
         self.assertIsInstance(self.failureResultOf(d).value, Exception)
