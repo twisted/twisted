@@ -76,8 +76,8 @@ class Options(dict):
     optFlags is assigned a list of lists. Each list represents
     a flag parameter, as so::
 
-    |    optFlags = [['verbose', 'v', 'Makes it tell you what it doing.'],
-    |                ['quiet', 'q', 'Be vewy vewy quiet.']]
+       optFlags = [['verbose', 'v', 'Makes it tell you what it doing.'],
+                   ['quiet', 'q', 'Be vewy vewy quiet.']]
 
     As you can see, the first item is the long option name
     (prefixed with '--' on the command line), followed by the
@@ -88,7 +88,7 @@ class Options(dict):
     C{optParameters} is much the same, except the list also contains
     a default value::
 
-    | optParameters = [['outfile', 'O', 'outfile.log', 'Description...']]
+       optParameters = [['outfile', 'O', 'outfile.log', 'Description...']]
 
     A coerce function can also be specified as the last element: it will be
     called with the argument and should return the value that will be stored
@@ -101,12 +101,12 @@ class Options(dict):
     instantiated and given the remainder of the arguments to parse and
     self.opts[command] is set to the command name.  For example::
 
-    | subCommands = [
-    |      ['inquisition', 'inquest', InquisitionOptions,
-    |           'Perform an inquisition'],
-    |      ['holyquest', 'quest', HolyQuestOptions,
-    |           'Embark upon a holy quest']
-    |  ]
+       subCommands = [
+            ['inquisition', 'inquest', InquisitionOptions,
+                 'Perform an inquisition'],
+            ['holyquest', 'quest', HolyQuestOptions,
+                 'Embark upon a holy quest']
+        ]
 
     In this case, C{"<program> holyquest --horseback --for-grail"} will cause
     C{HolyQuestOptions} to be instantiated and asked to parse
@@ -116,9 +116,9 @@ class Options(dict):
     subOptions attribute is set to the Option instance that parses the
     remaining options. If a subcommand is not given to parseOptions,
     the subCommand attribute will be None. You can also mark one of
-    the subCommands to be the default.
+    the subCommands to be the default::
 
-    | defaultSubCommand = 'holyquest'
+       defaultSubCommand = 'holyquest'
 
     In this case, the subCommand attribute will never be None, and
     the subOptions attribute will always be set.
