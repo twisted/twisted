@@ -673,7 +673,7 @@ class CircularReferenceTestCase(unittest.TestCase):
 
     def test_dictCircle(self):
         """
-        All references between dicts must be resolved when unjellying.
+        All references between dicts are resolved when unjellying.
         """
         a = {}
         a['bar'] = {}
@@ -686,7 +686,8 @@ class CircularReferenceTestCase(unittest.TestCase):
 
     def test_objectCircle(self):
         """
-        All references between objects must be resolved when unjellying.
+        All references between attributes of new-style objects are resolved
+        when unjellying.
         """
         a = Anew()
         b = Bnew()
@@ -695,12 +696,13 @@ class CircularReferenceTestCase(unittest.TestCase):
         a1 = jelly.unjelly(jelly.jelly(a))
         self.assertIs(
             a1.b.a, a1,
-            "Circular reference between two new style objects not resolved")
+            "Circular reference between two new-style objects not resolved")
 
 
     def test_objectDictCircle(self):
         """
-        All references between dict and objects must be resolved when unjellying.
+        All references between dict and new-style objects are resolved when
+        unjellying.
         """
         a = Anew()
         a.dict = {}
@@ -713,7 +715,8 @@ class CircularReferenceTestCase(unittest.TestCase):
 
     def test_dictObjectCircle(self):
         """
-        All references between object and dict must be resolved when unjellying.
+        All references between attributes of new-style objects and dicts are
+        resolved when unjellying.
         """
         a = {}
         a['abc'] = Anew()
@@ -726,7 +729,7 @@ class CircularReferenceTestCase(unittest.TestCase):
 
     def test_oldClassCircle(self):
         """
-        All references between old style object must be resolved when unjellying
+        All references between class objects are resolved when unjellying
         """
         a = A()
         a.b = B()
