@@ -626,7 +626,7 @@ class _Jellier:
 
 class _Unjellier:
     """
-    An object which can product Python objects from their jellied
+    An object which can produce Python objects from their jellied
     representations.
 
     @note: The intermediate representation of all objects which can participate
