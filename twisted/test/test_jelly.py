@@ -681,8 +681,9 @@ class CircularReferenceTestCase(unittest.TestCase):
         a['bar'] = {}
         a['bar']['foo'] = a
         a1 = jelly.unjelly(jelly.jelly(a))
-        self.assertIs(a1['bar']['foo'], a1,
-            "circular reference between two dict not resolved")
+        self.assertIs(
+            a1['bar']['foo'], a1,
+            "Circular reference between two dict not resolved")
 
     def test_objectCircle(self):
         """
@@ -693,7 +694,8 @@ class CircularReferenceTestCase(unittest.TestCase):
         a.b = b
         a.b.a = a
         a1 = jelly.unjelly(jelly.jelly(a))
-        self.assertIs(a1.b.a, a1,
+        self.assertIs(
+            a1.b.a, a1,
             "Circular reference between two new style objects not resolved")
 
     def test_objectDictCircle(self):
@@ -704,7 +706,8 @@ class CircularReferenceTestCase(unittest.TestCase):
         a.dict = {}
         a.dict['abc'] = a
         a1 = jelly.unjelly(jelly.jelly(a))
-        self.assertIs(a1.dict['abc'], a1,
+        self.assertIs(
+            a1.dict['abc'], a1,
             "Circular reference between dict and object not resolved")
 
     def test_dictObjectCircle(self):
@@ -715,7 +718,8 @@ class CircularReferenceTestCase(unittest.TestCase):
         a['abc'] = Anew()
         a['abc'].dict = a
         a1 = jelly.unjelly(jelly.jelly(a))
-        self.assertIs(a1['abc'].dict, a1,
+        self.assertIs(
+            a1['abc'].dict, a1,
             "Circular reference between dict and object not resolved")
 
     def test_oldClassCircle(self):
@@ -726,14 +730,16 @@ class CircularReferenceTestCase(unittest.TestCase):
         a.b = B()
         a.b.a = a
         a1 = jelly.unjelly(jelly.jelly(a))
-        self.assertIs(a1.b.a, a1,
+        self.assertIs(
+            a1.b.a, a1,
             "Circular reference between two old style objects not resolved")
 
     def test_simpleCircle(self):
         jelly.setUnjellyableForClass(ClassA, ClassA)
         jelly.setUnjellyableForClass(ClassB, ClassB)
         a = jelly.unjelly(jelly.jelly(ClassA()))
-        self.assertIdentical(a.ref.ref, a,
+        self.assertIdentical(
+            a.ref.ref, a,
             "Identity not preserved in circular reference")
 
 
@@ -747,7 +753,8 @@ class CircularReferenceTestCase(unittest.TestCase):
         jelly.setUnjellyableForClass(ClassB, ClassB)
         j = jelly.jelly(a0, invoker=dummyInvoker)
         a1 = jelly.unjelly(j)
-        self.failUnlessIdentical(a1.ref.ref, a1,
+        self.failUnlessIdentical(
+            a1.ref.ref, a1,
             "Identity not preserved in circular reference")
 
 
