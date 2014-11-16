@@ -74,7 +74,7 @@ class Options(dict):
     default. (Compare '--verbose' and '--verbosity=2')
 
     optFlags is assigned a list of lists. Each list represents
-    a flag parameter, as so ::
+    a flag parameter, as so::
 
        optFlags = [['verbose', 'v', 'Makes it tell you what it doing.'],
                    ['quiet', 'q', 'Be vewy vewy quiet.']]
@@ -99,7 +99,7 @@ class Options(dict):
     parser class, documentation).  If the first non-option argument found is
     one of the given command names, an instance of the given parser class is
     instantiated and given the remainder of the arguments to parse and
-    self.opts[command] is set to the command name.  For example:::
+    self.opts[command] is set to the command name.  For example::
 
        subCommands = [
             ['inquisition', 'inquest', InquisitionOptions,
@@ -116,7 +116,7 @@ class Options(dict):
     subOptions attribute is set to the Option instance that parses the
     remaining options. If a subcommand is not given to parseOptions,
     the subCommand attribute will be None. You can also mark one of
-    the subCommands to be the default.::
+    the subCommands to be the default::
 
        defaultSubCommand = 'holyquest'
 
