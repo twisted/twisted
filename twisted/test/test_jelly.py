@@ -163,30 +163,28 @@ class JellyTestCase(unittest.TestCase):
 
     def test_methodSelfIdentityOldStyle(self):
         """
-        The class of a method must remain the same class as the one
-        of the instance it is bound to.
-        This test is for old style classes.
+        The jellied form of a bound method of an instance of a classic class
+        can be unjellied into the same bound method of the same class.
         """
-        a = A()
-        b = B()
-        a.bmethod = b.bmethod
-        b.a = a
-        im_ = jelly.unjelly(jelly.jelly(b)).a.bmethod
-        self.assertEqual(im_.im_class, im_.im_self.__class__)
+        method = A().amethod
+        unjellied = jelly.unjelly(jelly.jelly(method))
+        self.assertEqual(
+            (method.im_func, method.im_class),
+            (unjellied.im_func, unjellied.im_class)
+        )
 
 
     def test_methodSelfIdentityNewStyle(self):
         """
-        The class of a method must remain the same class as the one
-        of the instance it is bound to.
-        This test is for new style classes.
+        The jellied form of a bound method of an instance of a new-style class
+        can be unjellied into the same bound method of the same class.
         """
-        a = Anew()
-        b = Bnew()
-        a.bmethod = b.bmethod
-        b.a = a
-        im_ = jelly.unjelly(jelly.jelly(b)).a.bmethod
-        self.assertIs(im_.im_class, im_.im_self.__class__)
+        method = Anew().amethod
+        unjellied = jelly.unjelly(jelly.jelly(method))
+        self.assertEqual(
+            (method.im_func, method.im_class),
+            (unjellied.im_func, unjellied.im_class)
+        )
 
 
     def test_methodsNotSelfIdentity(self):
