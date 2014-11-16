@@ -738,7 +738,7 @@ class CircularReferenceTestCase(unittest.TestCase):
         jelly.setUnjellyableForClass(ClassA, ClassA)
         jelly.setUnjellyableForClass(ClassB, ClassB)
         a = jelly.unjelly(jelly.jelly(ClassA()))
-        self.assertIdentical(
+        self.assertIs(
             a.ref.ref, a,
             "Identity not preserved in circular reference")
 
@@ -753,7 +753,7 @@ class CircularReferenceTestCase(unittest.TestCase):
         jelly.setUnjellyableForClass(ClassB, ClassB)
         j = jelly.jelly(a0, invoker=dummyInvoker)
         a1 = jelly.unjelly(j)
-        self.failUnlessIdentical(
+        self.assertIs(
             a1.ref.ref, a1,
             "Identity not preserved in circular reference")
 
