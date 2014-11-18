@@ -161,7 +161,7 @@ class JellyTestCase(unittest.TestCase):
         self.assertRaises(jelly.InsecureJelly, jelly.unjelly, c, taster)
 
 
-    def test_methodSelfIdentityOldStyle(self):
+    def test_methodSelfIdentityClassic(self):
         """
         The jellied form of a bound method of an instance of a classic class
         can be unjellied into the same bound method of the same class.
