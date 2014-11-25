@@ -115,6 +115,11 @@ class SSHTransportBase(protocol.Protocol):
     @ivar supportedKeyExchanges: A list of strings representing the
         key exchanges supported, in order from most-preferred to least.
 
+    @ivar dhPrime: Long prime used in Diffie-Hellman key exchange algorithm. Set
+        based on the key exchange algorithm negotiated between server and client.
+
+    @ivar dhGenerator: Long generator used in Diffie-Hellman key exchange algorithm.
+
     @ivar supportedPublicKeys:  A list of strings representing the
         public key types supported, in order from most-preferred to least.
 
@@ -219,7 +224,10 @@ class SSHTransportBase(protocol.Protocol):
     # default.  to enable them, subclass this class and add it, or do:
     #   SSHTransportBase.supportedCiphers.append('none')
     supportedKeyExchanges = ['diffie-hellman-group-exchange-sha1',
-                             'diffie-hellman-group1-sha1']
+                             'diffie-hellman-group1-sha1',
+                             'diffie-hellman-group14-sha1']
+    dhPrime = ''
+    dhGenerator = ''
     supportedPublicKeys = ['ssh-rsa', 'ssh-dss']
     supportedCompressions = ['none', 'zlib']
     supportedLanguages = ()
@@ -594,6 +602,13 @@ class SSHTransportBase(protocol.Protocol):
         else:
             self.sendKexInit()
 
+        if self.kexAlg == 'diffie-hellman-group1-sha1':
+            self.dhPrime = DH_PRIME
+            self.dhGenerator = DH_GENERATOR
+        elif self.kexAlg == 'diffie-hellman-group14-sha1':
+            self.dhPrime = DH_PRIME_14
+            self.dhGenerator = DH_GENERATOR_14
+
         return kexAlgs, keyAlgs, rest # for SSHServerTransport to use
 
 
@@ -904,15 +919,16 @@ class SSHServerTransport(SSHTransportBase):
 
     def _ssh_KEXDH_INIT(self, packet):
         """
-        Called to handle the beginning of a diffie-hellman-group1-sha1 key
-        exchange.
+        Called to handle the beginning of a diffie-hellman-group1-sha1 or
+	diffie-hellman-group14-sha1 key exchange.
 
         Unlike other message types, this is not dispatched automatically.  It
         is called from C{ssh_KEX_DH_GEX_REQUEST_OLD} because an extra check is
         required to determine if this is really a KEXDH_INIT message or if it
         is a KEX_DH_GEX_REQUEST_OLD message.
 
-        The KEXDH_INIT (for diffie-hellman-group1-sha1 exchanges) payload::
+        The KEXDH_INIT (for diffie-hellman-group1-sha1 and
+	diffie-hellman-group14-sha1 exchanges) payload::
 
                 integer e (the client's Diffie-Hellman public key)
 
@@ -920,8 +936,8 @@ class SSHServerTransport(SSHTransportBase):
         """
         clientDHpublicKey, foo = getMP(packet)
         y = _getRandomNumber(randbytes.secureRandom, 512)
-        serverDHpublicKey = _MPpow(DH_GENERATOR, y, DH_PRIME)
-        sharedSecret = _MPpow(clientDHpublicKey, y, DH_PRIME)
+        serverDHpublicKey = _MPpow(self.dhGenerator, y, self.dhPrime)
+        sharedSecret = _MPpow(clientDHpublicKey, y, self.dhPrime)
         h = sha1()
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourVersionString))
@@ -945,7 +961,7 @@ class SSHServerTransport(SSHTransportBase):
         This represents two different key exchange methods that share the same
         integer value.  If the message is determined to be a KEXDH_INIT,
         C{_ssh_KEXDH_INIT} is called to handle it.  Otherwise, for
-        KEX_DH_GEX_REQUEST_OLD (for diffie-hellman-group-exchange-sha1)
+        KEX_DH_GEX_REQUEST_OLD (for diffie-hellman-group-exchange-sha)
         payload::
 
                 integer ideal (ideal size for the Diffie-Hellman prime)
@@ -962,7 +978,7 @@ class SSHServerTransport(SSHTransportBase):
 
         # KEXDH_INIT and KEX_DH_GEX_REQUEST_OLD have the same value, so use
         # another cue to decide what kind of message the peer sent us.
-        if self.kexAlg == 'diffie-hellman-group1-sha1':
+        if self.kexAlg in ['diffie-hellman-group1-sha1', 'diffie-hellman-group14-sha1']:
             return self._ssh_KEXDH_INIT(packet)
         elif self.kexAlg == 'diffie-hellman-group-exchange-sha1':
             self.dhGexRequest = packet
@@ -1108,16 +1124,16 @@ class SSHClientTransport(SSHTransportBase):
         Called when we receive a MSG_KEXINIT message.  For a description
         of the packet, see SSHTransportBase.ssh_KEXINIT().  Additionally,
         this method sends the first key exchange packet.  If the agreed-upon
-        exchange is diffie-hellman-group1-sha1, generate a public key
-        and send it in a MSG_KEXDH_INIT message.  If the exchange is
-        diffie-hellman-group-exchange-sha1, ask for a 2048 bit group with a
-        MSG_KEX_DH_GEX_REQUEST_OLD message.
+        exchange is diffie-hellman-group1-sha1 or diffie-hellman-group14-sha1,
+        generate a public key and send it in a MSG_KEXDH_INIT message.  If the
+        exchange is diffie-hellman-group-exchange-sha1, ask for a 2048 bit group
+        with a MSG_KEX_DH_GEX_REQUEST_OLD message.
         """
         if SSHTransportBase.ssh_KEXINIT(self, packet) is None:
             return # we disconnected
-        if self.kexAlg == 'diffie-hellman-group1-sha1':
+        if self.kexAlg in ['diffie-hellman-group1-sha1','diffie-hellman-group14-sha1']:
             self.x = _generateX(randbytes.secureRandom, 512)
-            self.e = _MPpow(DH_GENERATOR, self.x, DH_PRIME)
+            self.e = _MPpow(self.dhGenerator, self.x, self.dhPrime)
             self.sendPacket(MSG_KEXDH_INIT, self.e)
         elif self.kexAlg == 'diffie-hellman-group-exchange-sha1':
             self.sendPacket(MSG_KEX_DH_GEX_REQUEST_OLD, '\x00\x00\x08\x00')
@@ -1128,13 +1144,13 @@ class SSHClientTransport(SSHTransportBase):
 
     def _ssh_KEXDH_REPLY(self, packet):
         """
-        Called to handle a reply to a diffie-hellman-group1-sha1 key exchange
-        message (KEXDH_INIT).
+        Called to handle a reply to a diffie-hellman-group1-sha1 or
+        diffie-hellman-group14-sha1 key exchange message (KEXDH_INIT).
         
         Like the handler for I{KEXDH_INIT}, this message type has an
         overlapping value.  This method is called from C{ssh_KEX_DH_GEX_GROUP}
-        if that method detects a diffie-hellman-group1-sha1 key exchange is in
-        progress.
+        if that method detects a diffie-hellman-group1-sha1 or 
+        diffie-hellman-group14-sha1 key exchange is in progress.
 
         Payload::
 
@@ -1162,15 +1178,16 @@ class SSHClientTransport(SSHTransportBase):
         """
         This handles two different message which share an integer value.
 
-        If the key exchange is diffie-hellman-group-exchange-sha1, this is
-        MSG_KEX_DH_GEX_GROUP.  Payload::
+        If the key exchange is diffie-hellman-group1-sha1 or
+        diffie-hellman-group14-sha1, this is MSG_KEX_DH_GEX_GROUP.
+        Payload::
             string g (group generator)
             string p (group prime)
 
         We generate a Diffie-Hellman public key and send it in a
         MSG_KEX_DH_GEX_INIT message.
         """
-        if self.kexAlg == 'diffie-hellman-group1-sha1':
+        if self.kexAlg in ['diffie-hellman-group1-sha1', 'diffie-hellman-group14-sha1']:
             return self._ssh_KEXDH_REPLY(packet)
         else:
             self.p, rest = getMP(packet)
@@ -1193,7 +1210,7 @@ class SSHClientTransport(SSHTransportBase):
         @type signature: C{str}
         """
         serverKey = keys.Key.fromString(pubKey)
-        sharedSecret = _MPpow(f, self.x, DH_PRIME)
+        sharedSecret = _MPpow(f, self.x, self.dhPrime)
         h = sha1()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
@@ -1590,6 +1607,17 @@ DH_PRIME = long('17976931348623159077083915679378745319786029604875601170644'
 '7692932019128194467627007L')
 DH_GENERATOR = 2L
 
+# Diffie-Hellman primes from Oakley Group 14 [RFC 3526]
+DH_PRIME_14 = long('32317006071311007300338913926423828248817941241140239112'
+'842009751400741706634354222619689417363569347117901737909704191754605873209'
+'195028853758986185622153212175412514901774520270235796078236248884246189477'
+'587641105928646099411723245426622522193230540919037680524235519125679715870'
+'117001058055877651038861847280257976054903569732561526167081339361799541336'
+'476559160368317896729073178384589680639671900977202194168647225871031411336'
+'429319536193471636533209717077448227988588565369208645296636077250268955505'
+'928362751121174096972998068410554359584866583291642136218231078990999448652'
+'468262416972035911852507045361090559L')
+DH_GENERATOR_14 = 2L
 
 
 MSG_DISCONNECT = 1
