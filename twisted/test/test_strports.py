@@ -67,7 +67,7 @@ class ServiceTestCase(TestCase):
             'tcp:'+str(aGoodPort), aFactory, reactor=reactor)
         self.assertIsInstance(svc, internet.StreamServerEndpointService)
 
-        # See twisted.application.test.test_internet.TestEndpointService.
+        # See twisted.application.test.test_internet.EndpointServiceTests.
         # test_synchronousRaiseRaisesSynchronously
         self.assertEqual(svc._raiseSynchronously, True)
         self.assertIsInstance(svc.endpoint, TCP4ServerEndpoint)
