@@ -19,7 +19,7 @@ IQ_BIND_SET = '/iq[@type="set"]/bind[@xmlns="%s"]' % NS_BIND
 NS_SESSION = 'urn:ietf:params:xml:ns:xmpp-session'
 IQ_SESSION_SET = '/iq[@type="set"]/session[@xmlns="%s"]' % NS_SESSION
 
-class CheckVersionInitializerTest(unittest.TestCase):
+class CheckVersionInitializerTests(unittest.TestCase):
     def setUp(self):
         a = xmlstream.Authenticator()
         xs = xmlstream.XmlStream(a)
@@ -85,13 +85,13 @@ class InitiatingInitializerHarness(object):
 
 
 
-class IQAuthInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
+class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
     """
     Tests for L{client.IQAuthInitializer}.
     """
 
     def setUp(self):
-        super(IQAuthInitializerTest, self).setUp()
+        super(IQAuthInitializerTests, self).setUp()
         self.init = client.IQAuthInitializer(self.xmlstream)
         self.authenticator.jid = jid.JID('user@example.com/resource')
         self.authenticator.password = 'secret'
@@ -289,13 +289,13 @@ class IQAuthInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
 
 
 
-class BindInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
+class BindInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
     """
     Tests for L{client.BindInitializer}.
     """
 
     def setUp(self):
-        super(BindInitializerTest, self).setUp()
+        super(BindInitializerTests, self).setUp()
         self.init = client.BindInitializer(self.xmlstream)
         self.authenticator.jid = jid.JID('user@example.com/resource')
 
@@ -336,13 +336,13 @@ class BindInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
 
 
 
-class SessionInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
+class SessionInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
     """
     Tests for L{client.SessionInitializer}.
     """
 
     def setUp(self):
-        super(SessionInitializerTest, self).setUp()
+        super(SessionInitializerTests, self).setUp()
         self.init = client.SessionInitializer(self.xmlstream)
 
 
@@ -375,7 +375,7 @@ class SessionInitializerTest(InitiatingInitializerHarness, unittest.TestCase):
 
 
 
-class XMPPAuthenticatorTest(unittest.TestCase):
+class XMPPAuthenticatorTests(unittest.TestCase):
     """
     Test for both XMPPAuthenticator and XMPPClientFactory.
     """

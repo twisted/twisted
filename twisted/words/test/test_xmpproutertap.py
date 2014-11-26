@@ -10,7 +10,7 @@ from twisted.trial import unittest
 from twisted.words import xmpproutertap as tap
 from twisted.words.protocols.jabber import component
 
-class XMPPRouterTapTest(unittest.TestCase):
+class XMPPRouterTapTests(unittest.TestCase):
 
     def test_port(self):
         """

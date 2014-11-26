@@ -17,7 +17,7 @@ from twisted.spread import pb
 from twisted.internet.defer import Deferred, DeferredList, maybeDeferred, succeed
 from twisted.internet import address, defer, reactor
 
-class RealmTestCase(unittest.TestCase):
+class RealmTests(unittest.TestCase):
     def _entityCreationTest(self, kind):
         # Kind is "user" or "group"
         realm = service.InMemoryWordsRealm("realmname")
@@ -183,7 +183,7 @@ class TestCaseUserAgg(object):
         self.protocol.dataReceived(stuff)
 
 
-class IRCProtocolTestCase(unittest.TestCase):
+class IRCProtocolTests(unittest.TestCase):
     STATIC_USERS = [
         u'useruser', u'otheruser', u'someguy', u'firstuser', u'username',
         u'userone', u'usertwo', u'userthree', u'someuser']
@@ -780,7 +780,7 @@ class TestMind(service.PBMind):
 pb.setUnjellyableForClass(TestMind, service.PBMindReference)
 
 
-class PBProtocolTestCase(unittest.TestCase):
+class PBProtocolTests(unittest.TestCase):
     def setUp(self):
         self.realm = service.InMemoryWordsRealm("realmname")
         self.checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()

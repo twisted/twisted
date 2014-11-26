@@ -20,7 +20,7 @@ class DummyTransport:
     def write(self, bytes):
         self.list.append(bytes)
 
-class ComponentInitiatingInitializerTest(unittest.TestCase):
+class ComponentInitiatingInitializerTests(unittest.TestCase):
     def setUp(self):
         self.output = []
 
@@ -59,7 +59,7 @@ class ComponentInitiatingInitializerTest(unittest.TestCase):
 
         return d
 
-class ComponentAuthTest(unittest.TestCase):
+class ComponentAuthTests(unittest.TestCase):
     def authPassed(self, stream):
         self.authComplete = True
 
@@ -104,7 +104,7 @@ class JabberServiceHarness(component.Service):
         self.transportConnectedFlag = True
 
 
-class TestJabberServiceManager(unittest.TestCase):
+class JabberServiceManagerTests(unittest.TestCase):
     def testSM(self):
         # Setup service manager and test harnes
         sm = component.ServiceManager("foo", "password")
@@ -139,7 +139,7 @@ class TestJabberServiceManager(unittest.TestCase):
 
 
 
-class RouterTest(unittest.TestCase):
+class RouterTests(unittest.TestCase):
     """
     Tests for L{component.Router}.
     """
@@ -206,7 +206,7 @@ class RouterTest(unittest.TestCase):
 
 
 
-class ListenComponentAuthenticatorTest(unittest.TestCase):
+class ListenComponentAuthenticatorTests(unittest.TestCase):
     """
     Tests for L{component.ListenComponentAuthenticator}.
     """
@@ -352,7 +352,7 @@ class ListenComponentAuthenticatorTest(unittest.TestCase):
 
 
 
-class XMPPComponentServerFactoryTest(unittest.TestCase):
+class XMPPComponentServerFactoryTests(unittest.TestCase):
     """
     Tests for L{component.XMPPComponentServerFactory}.
     """
