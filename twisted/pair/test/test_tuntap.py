@@ -543,13 +543,13 @@ FakeTapDeviceTests.helper = TapHelper(
 
 
 
-class FakeTapDeviceTestsWithPI(FakeDeviceTestsMixin,
+class FakeTapDeviceWithPITests(FakeDeviceTestsMixin,
                                TunnelDeviceTestsMixin, SynchronousTestCase):
     """
     Run various tap-type tunnel unit tests against an in-memory I/O system with
     the PI header enabled.
     """
-FakeTapDeviceTestsWithPI.helper = TapHelper(
+FakeTapDeviceWithPITests.helper = TapHelper(
     FakeTapDeviceTests._TUNNEL_REMOTE, FakeTapDeviceTests._TUNNEL_LOCAL,
     pi=True)
 
