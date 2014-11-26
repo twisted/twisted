@@ -267,6 +267,7 @@ class ChannelTests(unittest.TestCase):
         self.channel.addWindowBytes(8) # send extended data
         self.assertTrue(self.conn.closes.get(self.channel))
 
+
     def connectTransport(self, hostAddress=None, peerAddress=None):
         """
         Connect a SSHTransport which is already connected to a remote peer to
@@ -277,6 +278,7 @@ class ChannelTests(unittest.TestCase):
             hostAddress=hostAddress, peerAddress=peerAddress))
         transport.setService(self.channel.conn)
 
+
     def test_getPeer(self):
         """
         Gets info from connected transport.
@@ -285,6 +287,7 @@ class ChannelTests(unittest.TestCase):
         self.connectTransport(peerAddress=peer)
 
         self.assertEqual(peer, self.channel.getPeer())
+
 
     def test_getHost(self):
         """
