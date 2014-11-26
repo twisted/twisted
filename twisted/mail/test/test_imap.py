@@ -58,7 +58,7 @@ def sortNest(l):
             l[i] = tuple(sortNest(list(l[i])))
     return l
 
-class IMAP4UTF7TestCase(unittest.TestCase):
+class IMAP4UTF7Tests(unittest.TestCase):
     tests = [
         [u'Hello world', 'Hello world'],
         [u'Hello & world', 'Hello &- world'],
@@ -158,7 +158,7 @@ class BufferingConsumer:
     def unregisterProducer(self):
         self.consumer = None
 
-class MessageProducerTestCase(unittest.TestCase):
+class MessageProducerTests(unittest.TestCase):
     def testSinglePart(self):
         body = 'This is body text.  Rar.'
         headers = util.OrderedDict()
@@ -285,7 +285,7 @@ class MessageProducerTestCase(unittest.TestCase):
 
 
 
-class IMAP4HelperTestCase(unittest.TestCase):
+class IMAP4HelperTests(unittest.TestCase):
     """
     Tests for various helper utilities in the IMAP4 module.
     """
@@ -1141,7 +1141,7 @@ class IMAP4HelperMixin:
 
 
 
-class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
+class IMAP4ServerTests(IMAP4HelperMixin, unittest.TestCase):
     def testCapability(self):
         caps = {}
         def getCaps():
@@ -1756,7 +1756,7 @@ class IMAP4ServerTestCase(IMAP4HelperMixin, unittest.TestCase):
 
 
 
-class IMAP4ServerSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
+class IMAP4ServerSearchTests(IMAP4HelperMixin, unittest.TestCase):
     """
     Tests for the behavior of the search_* functions in L{imap4.IMAP4Server}.
     """
@@ -1894,7 +1894,7 @@ class TestChecker:
             return username
         raise UnauthorizedLogin()
 
-class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
+class AuthenticatorTests(IMAP4HelperMixin, unittest.TestCase):
     def setUp(self):
         IMAP4HelperMixin.setUp(self)
 
@@ -2036,7 +2036,7 @@ class AuthenticatorTestCase(IMAP4HelperMixin, unittest.TestCase):
 
 
 
-class SASLPLAINTestCase(unittest.TestCase):
+class SASLPLAINTests(unittest.TestCase):
     """
     Tests for I{SASL PLAIN} authentication, as implemented by
     L{imap4.PLAINAuthenticator} and L{imap4.PLAINCredentials}.
@@ -2088,7 +2088,7 @@ class SASLPLAINTestCase(unittest.TestCase):
 
 
 
-class UnsolicitedResponseTestCase(IMAP4HelperMixin, unittest.TestCase):
+class UnsolicitedResponseTests(IMAP4HelperMixin, unittest.TestCase):
     def testReadWrite(self):
         def login():
             return self.client.login('testuser', 'password-test')
@@ -2276,7 +2276,7 @@ class StillSimplerClient(imap4.IMAP4Client):
 
 
 
-class HandCraftedTestCase(IMAP4HelperMixin, unittest.TestCase):
+class HandCraftedTests(IMAP4HelperMixin, unittest.TestCase):
     def testTrailingLiteral(self):
         transport = StringTransport()
         c = imap4.IMAP4Client()
@@ -3431,7 +3431,7 @@ class FakeyMessage(util.FancyStrMixin):
         self.got_subpart = part
         return self.subpart[part]
 
-class NewStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
+class NewStoreTests(unittest.TestCase, IMAP4HelperMixin):
     result = None
     storeArgs = None
 
@@ -3701,7 +3701,7 @@ class GetBodyStructureTests(unittest.TestCase):
 
 
 
-class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
+class NewFetchTests(unittest.TestCase, IMAP4HelperMixin):
     def setUp(self):
         self.received_messages = self.received_uid = None
         self.result = None
@@ -4227,7 +4227,7 @@ class NewFetchTestCase(unittest.TestCase, IMAP4HelperMixin):
 
 
 
-class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
+class DefaultSearchTests(IMAP4HelperMixin, unittest.TestCase):
     """
     Test the behavior of the server's SEARCH implementation, particularly in
     the face of unhandled search terms.
@@ -4417,7 +4417,7 @@ class DefaultSearchTestCase(IMAP4HelperMixin, unittest.TestCase):
 
 
 
-class FetchSearchStoreTestCase(unittest.TestCase, IMAP4HelperMixin):
+class FetchSearchStoreTests(unittest.TestCase, IMAP4HelperMixin):
     implements(imap4.ISearchableMailbox)
 
     def setUp(self):
@@ -4600,7 +4600,7 @@ class MessageCopierMailbox:
         self.msgs.append(msg)
         return len(self.msgs)
 
-class CopyWorkerTestCase(unittest.TestCase):
+class CopyWorkerTests(unittest.TestCase):
     def testFeaturefulMessage(self):
         s = imap4.IMAP4Server()
 
@@ -4676,7 +4676,7 @@ class CopyWorkerTestCase(unittest.TestCase):
         return d.addCallback(cbCopy)
 
 
-class TLSTestCase(IMAP4HelperMixin, unittest.TestCase):
+class TLSTests(IMAP4HelperMixin, unittest.TestCase):
     serverCTX = ServerTLSContext and ServerTLSContext()
     clientCTX = ClientTLSContext and ClientTLSContext()
 
@@ -4785,7 +4785,7 @@ class SlowMailbox(SimpleMailbox):
         self.fetchDeferred.callback(None)
         return d
 
-class Timeout(IMAP4HelperMixin, unittest.TestCase):
+class TimeoutTests(IMAP4HelperMixin, unittest.TestCase):
 
     def test_serverTimeout(self):
         """
@@ -4879,7 +4879,7 @@ class Timeout(IMAP4HelperMixin, unittest.TestCase):
 
 
 
-class Disconnection(unittest.TestCase):
+class DisconnectionTests(unittest.TestCase):
     def testClientDisconnectFailsDeferreds(self):
         c = imap4.IMAP4Client()
         t = StringTransportWithDisconnection()
@@ -4916,7 +4916,7 @@ class StringTransportConsumer(StringTransport):
 
 
 
-class Pipelining(unittest.TestCase):
+class PipeliningTests(unittest.TestCase):
     """
     Tests for various aspects of the IMAP4 server's pipelining support.
     """
@@ -4988,15 +4988,15 @@ class Pipelining(unittest.TestCase):
 
 
 if ClientTLSContext is None:
-    for case in (TLSTestCase,):
+    for case in (TLSTests,):
         case.skip = "OpenSSL not present"
 elif interfaces.IReactorSSL(reactor, None) is None:
-    for case in (TLSTestCase,):
+    for case in (TLSTests,):
         case.skip = "Reactor doesn't support SSL"
 
 
 
-class IMAP4ServerFetchTestCase(unittest.TestCase):
+class IMAP4ServerFetchTests(unittest.TestCase):
     """
     This test case is for the FETCH tests that require
     a C{StringTransport}.
