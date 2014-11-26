@@ -52,7 +52,7 @@ import twisted.cred.portal
 
 from twisted.test.proto_helpers import LineSendingProtocol
 
-class DomainWithDefaultsTestCase(unittest.TestCase):
+class DomainWithDefaultsTests(unittest.TestCase):
     def testMethods(self):
         d = dict([(x, x + 10) for x in range(10)])
         d = mail.mail.DomainWithDefaultDict(d, 'Default')
@@ -143,7 +143,7 @@ class DomainWithDefaultsTestCase(unittest.TestCase):
 
 
 
-class BounceTestCase(unittest.TestCase):
+class BounceTests(unittest.TestCase):
     def setUp(self):
         self.domain = mail.mail.BounceDomain()
 
@@ -165,7 +165,7 @@ class BounceTestCase(unittest.TestCase):
 
 
 
-class FileMessageTestCase(unittest.TestCase):
+class FileMessageTests(unittest.TestCase):
     def setUp(self):
         self.name = "fileMessage.testFile"
         self.final = "final.fileMessage.testFile"
@@ -209,7 +209,7 @@ class FileMessageTestCase(unittest.TestCase):
         self.failIf(os.path.exists(self.name))
         self.failIf(os.path.exists(self.final))
 
-class MailServiceTestCase(unittest.TestCase):
+class MailServiceTests(unittest.TestCase):
     def setUp(self):
         self.service = mail.mail.MailService()
 
@@ -361,7 +361,7 @@ class _AppendTestMixin(object):
 
 
 
-class MaildirAppendStringTestCase(unittest.TestCase, _AppendTestMixin):
+class MaildirAppendStringTests(unittest.TestCase, _AppendTestMixin):
     """
     Tests for L{MaildirMailbox.appendMessage} when invoked with a C{str}.
     """
@@ -441,7 +441,7 @@ class MaildirAppendStringTestCase(unittest.TestCase, _AppendTestMixin):
 
 
 
-class MaildirAppendFileTestCase(unittest.TestCase, _AppendTestMixin):
+class MaildirAppendFileTests(unittest.TestCase, _AppendTestMixin):
     """
     Tests for L{MaildirMailbox.appendMessage} when invoked with a C{str}.
     """
@@ -482,7 +482,7 @@ class MaildirAppendFileTestCase(unittest.TestCase, _AppendTestMixin):
 
 
 
-class MaildirTestCase(unittest.TestCase):
+class MaildirTests(unittest.TestCase):
     def setUp(self):
         self.d = self.mktemp()
         mail.maildir.initializeMaildir(self.d)
@@ -573,7 +573,7 @@ class MaildirTestCase(unittest.TestCase):
 
 
 
-class AbstractMaildirDomainTestCase(unittest.TestCase):
+class AbstractMaildirDomainTests(unittest.TestCase):
     """
     Tests for L{twisted.mail.maildir.AbstractMaildirDomain}.
     """
@@ -586,7 +586,7 @@ class AbstractMaildirDomainTestCase(unittest.TestCase):
 
 
 
-class MaildirDirdbmDomainTestCase(unittest.TestCase):
+class MaildirDirdbmDomainTests(unittest.TestCase):
     """
     Tests for L{MaildirDirdbmDomain}.
     """
@@ -741,7 +741,7 @@ class StubAliasableDomain(object):
         self.aliasGroup = aliases
 
 
-class ServiceDomainTestCase(unittest.TestCase):
+class ServiceDomainTests(unittest.TestCase):
     def setUp(self):
         self.S = mail.mail.MailService()
         self.D = mail.protocols.DomainDeliveryBase(self.S, None)
@@ -820,7 +820,7 @@ class ServiceDomainTestCase(unittest.TestCase):
             self.D.validateFrom, None, origin
         )
 
-class VirtualPOP3TestCase(unittest.TestCase):
+class VirtualPOP3Tests(unittest.TestCase):
     def setUp(self):
         self.tmpdir = self.mktemp()
         self.S = mail.mail.MailService()
@@ -892,7 +892,7 @@ class empty(smtp.User):
 
 
 
-class RelayTestCase(unittest.TestCase):
+class RelayTests(unittest.TestCase):
     def testExists(self):
         service = mail.mail.MailService()
         domain = mail.relay.DomainQueuer(service)
@@ -929,7 +929,7 @@ class RelayTestCase(unittest.TestCase):
 
 
 
-class RelayerTestCase(unittest.TestCase):
+class RelayerTests(unittest.TestCase):
     def setUp(self):
         self.tmpdir = self.mktemp()
         os.mkdir(self.tmpdir)
@@ -985,7 +985,7 @@ class Manager:
     def notifyDone(self, factory):
         self.done.append(factory)
 
-class ManagedRelayerTestCase(unittest.TestCase):
+class ManagedRelayerTests(unittest.TestCase):
     def setUp(self):
         self.manager = Manager()
         self.messages = range(0, 20, 2)
@@ -1017,7 +1017,7 @@ class ManagedRelayerTestCase(unittest.TestCase):
         self.relay.connectionLost(failure.Failure(Exception()))
         self.assertEqual(self.manager.done, [self.factory])
 
-class DirectoryQueueTestCase(unittest.TestCase):
+class DirectoryQueueTests(unittest.TestCase):
     def setUp(self):
         # This is almost a test case itself.
         self.tmpdir = self.mktemp()
@@ -1132,7 +1132,7 @@ def tearDownDNS(self):
         pass
     return defer.DeferredList(dl)
 
-class MXTestCase(unittest.TestCase):
+class MXTests(unittest.TestCase):
     """
     Tests for L{mail.relaymanager.MXCalculator}.
     """
@@ -1532,7 +1532,7 @@ class MXTestCase(unittest.TestCase):
     def _cbManyRecordsRepeatSpecificResult(self, againMX, nextMX):
         self.assertEqual(str(againMX.name), str(nextMX.name))
 
-class LiveFireExercise(unittest.TestCase):
+class LiveFireExerciseTests(unittest.TestCase):
     if interfaces.IReactorUDP(reactor, None) is None:
         skip = "UDP support is required to determining MX records"
 
@@ -1689,7 +1689,7 @@ class LineBufferMessage:
     def connectionLost(self):
         self.lost = True
 
-class AliasTestCase(unittest.TestCase):
+class AliasTests(unittest.TestCase):
     lines = [
         'First line',
         'Next line',
@@ -1893,7 +1893,7 @@ class StubProcess(object):
 
 
 
-class ProcessAliasTestCase(unittest.TestCase):
+class ProcessAliasTests(unittest.TestCase):
     """
     Tests for alias resolution.
     """
