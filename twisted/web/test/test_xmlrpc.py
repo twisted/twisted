@@ -254,7 +254,7 @@ class TestQueryFactoryCancel(xmlrpc._QueryFactory):
         self.connector = connector
 
 
-class XMLRPCTestCase(unittest.TestCase):
+class XMLRPCTests(unittest.TestCase):
 
     def setUp(self):
         self.p = reactor.listenTCP(0, server.Site(Test()),
@@ -445,7 +445,7 @@ class XMLRPCTestCase(unittest.TestCase):
 
 
 
-class XMLRPCTestCase2(XMLRPCTestCase):
+class XMLRPCProxyWithoutSlashTests(XMLRPCTests):
     """
     Test with proxy that doesn't add a slash.
     """
@@ -460,7 +460,7 @@ class XMLRPCTestCase2(XMLRPCTestCase):
 
 
 
-class XMLRPCTestPublicLookupProcedure(unittest.TestCase):
+class XMLRPCPublicLookupProcedureTests(unittest.TestCase):
     """
     Tests for L{XMLRPC}'s support of subclasses which override
     C{lookupProcedure} and C{listProcedures}.
@@ -566,7 +566,7 @@ class SerializationConfigMixin:
 
 
 
-class XMLRPCAllowNoneTestCase(SerializationConfigMixin, unittest.TestCase):
+class XMLRPCAllowNoneTests(SerializationConfigMixin, unittest.TestCase):
     """
     Tests for passing C{None} when the C{allowNone} flag is set.
     """
@@ -574,7 +574,7 @@ class XMLRPCAllowNoneTestCase(SerializationConfigMixin, unittest.TestCase):
     value = None
 
 
-class XMLRPCUseDateTimeTestCase(SerializationConfigMixin, unittest.TestCase):
+class XMLRPCUseDateTimeTests(SerializationConfigMixin, unittest.TestCase):
     """
     Tests for passing a C{datetime.datetime} instance when the C{useDateTime}
     flag is set.
@@ -583,7 +583,7 @@ class XMLRPCUseDateTimeTestCase(SerializationConfigMixin, unittest.TestCase):
     value = datetime.datetime(2000, 12, 28, 3, 45, 59)
 
 
-class XMLRPCTestAuthenticated(XMLRPCTestCase):
+class XMLRPCAuthenticatedTests(XMLRPCTests):
     """
     Test with authenticated proxy. We run this with the same inout/ouput as
     above.
@@ -636,7 +636,7 @@ class XMLRPCTestAuthenticated(XMLRPCTestCase):
         return d
 
 
-class XMLRPCTestIntrospection(XMLRPCTestCase):
+class XMLRPCIntrospectionTests(XMLRPCTests):
 
     def setUp(self):
         xmlrpc = Test()
@@ -689,7 +689,7 @@ class XMLRPCTestIntrospection(XMLRPCTestCase):
         return defer.DeferredList(dl, fireOnOneErrback=True)
 
 
-class XMLRPCClientErrorHandling(unittest.TestCase):
+class XMLRPCClientErrorHandlingTests(unittest.TestCase):
     """
     Test error handling on the xmlrpc client.
     """
@@ -715,7 +715,7 @@ class XMLRPCClientErrorHandling(unittest.TestCase):
 
 
 
-class TestQueryFactoryParseResponse(unittest.TestCase):
+class QueryFactoryParseResponseTests(unittest.TestCase):
     """
     Test the behaviour of L{_QueryFactory.parseResponse}.
     """
@@ -795,7 +795,7 @@ class TestQueryFactoryParseResponse(unittest.TestCase):
 
 
 
-class XMLRPCTestWithRequest(unittest.TestCase):
+class XMLRPCWithRequestTests(unittest.TestCase):
 
     def setUp(self):
         self.resource = Test()

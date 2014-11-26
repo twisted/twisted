@@ -323,7 +323,7 @@ class _HTTPParserTests(object):
 
 
 
-class HTTPParserTestsRFCComplaintDelimeter(_HTTPParserTests, TestCase):
+class HTTPParserRFCComplaintDelimeterTests(_HTTPParserTests, TestCase):
     """
     L{_HTTPParserTests} using standard CR LF newlines.
     """
@@ -331,7 +331,7 @@ class HTTPParserTestsRFCComplaintDelimeter(_HTTPParserTests, TestCase):
 
 
 
-class HTTPParserTestsNonRFCComplaintDelimeter(_HTTPParserTests, TestCase):
+class HTTPParserNonRFCComplaintDelimeterTests(_HTTPParserTests, TestCase):
     """
     L{_HTTPParserTests} using bare LF newlines.
     """

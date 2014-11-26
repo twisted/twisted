@@ -1212,7 +1212,7 @@ class RangeTests(TestCase):
 
 
 
-class DirectoryListerTest(TestCase):
+class DirectoryListerTests(TestCase):
     """
     Tests for L{static.DirectoryLister}.
     """
