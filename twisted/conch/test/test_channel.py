@@ -9,6 +9,7 @@ from zope.interface.verify import verifyObject
 
 from twisted.conch.ssh import channel
 from twisted.conch.ssh.transport import SSHServerTransport
+from twisted.conch.ssh.service import SSHService
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import ITransport
 from twisted.test.proto_helpers import StringTransport
@@ -16,7 +17,7 @@ from twisted.trial import unittest
 
 
 
-class MockConnection(object):
+class MockConnection(SSHService):
     """
     A mock for twisted.conch.ssh.connection.SSHConnection.  Record the data
     that channels send, and when they try to close the connection.
@@ -274,7 +275,7 @@ class ChannelTests(unittest.TestCase):
         transport = SSHServerTransport()
         transport.makeConnection(StringTransport(
             hostAddress=hostAddress, peerAddress=peerAddress))
-        self.channel.conn.transport = transport
+        transport.setService(self.channel.conn)
 
     def test_getPeer(self):
         """
