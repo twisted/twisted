@@ -53,7 +53,7 @@ class OrderedAttributes(object):
 
 
 
-class TestSerialization(FlattenTestCase, XMLAssertionMixin):
+class SerializationTests(FlattenTestCase, XMLAssertionMixin):
     """
     Tests for flattening various things.
     """

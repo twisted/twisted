@@ -40,7 +40,7 @@ else:
     from twisted.web.static import Data
 
 
-class ResourceTestCase(unittest.TestCase):
+class ResourceTests(unittest.TestCase):
     def testListEntities(self):
         r = resource.Resource()
         self.assertEqual([], r.listEntities())
@@ -69,7 +69,7 @@ class SimpleResource(resource.Resource):
             return b"correct"
 
 
-class SiteTest(unittest.TestCase):
+class SiteTests(unittest.TestCase):
     def test_simplestSite(self):
         """
         L{Site.getResourceFor} returns the C{b""} child of the root resource it
@@ -85,7 +85,7 @@ class SiteTest(unittest.TestCase):
 
 
 
-class SessionTest(unittest.TestCase):
+class SessionTests(unittest.TestCase):
     """
     Tests for L{server.Session}.
     """
@@ -209,7 +209,7 @@ def httpCode(whole):
     l1 = whole.split(b'\r\n', 1)[0]
     return int(l1.split()[1])
 
-class ConditionalTest(unittest.TestCase):
+class ConditionalTests(unittest.TestCase):
     """
     web.server's handling of conditional requests for cache validation.
     """
@@ -604,7 +604,7 @@ class RootResource(resource.Resource):
     def render(self, request):
         return ''
 
-class RememberURLTest(unittest.TestCase):
+class RememberURLTests(unittest.TestCase):
     def createServer(self, r):
         chan = DummyChannel()
         chan.site = server.Site(r)
@@ -667,7 +667,7 @@ class HeadlessResource(object):
 
 
 
-class NewRenderTestCase(unittest.TestCase):
+class NewRenderTests(unittest.TestCase):
     """
     Tests for L{server.Request.render}.
     """
@@ -728,7 +728,7 @@ class NewRenderTestCase(unittest.TestCase):
 
 class GettableResource(resource.Resource):
     """
-    Used by AllowedMethodsTest to simulate an allowed method.
+    Used by AllowedMethodsTests to simulate an allowed method.
     """
     def render_GET(self):
         pass
@@ -742,7 +742,7 @@ class GettableResource(resource.Resource):
 
 
 
-class AllowedMethodsTest(unittest.TestCase):
+class AllowedMethodsTests(unittest.TestCase):
     """
     'C{twisted.web.resource._computeAllowedMethods} is provided by a
     default should the subclass not provide the method.
@@ -1032,7 +1032,7 @@ class ProxiedLogFormatterTests(unittest.TestCase):
 
 
 
-class TestLogEscaping(unittest.TestCase):
+class LogEscapingTests(unittest.TestCase):
     def setUp(self):
         self.logPath = self.mktemp()
         self.site = http.HTTPFactory(self.logPath)
@@ -1135,7 +1135,7 @@ class TestLogEscaping(unittest.TestCase):
 
 
 
-class ServerAttributesTestCase(unittest.TestCase):
+class ServerAttributesTests(unittest.TestCase):
     """
     Tests that deprecated twisted.web.server attributes raise the appropriate
     deprecation warnings when used.

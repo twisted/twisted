@@ -30,7 +30,7 @@ from twisted.web.test.requesthelper import DummyChannel
 
 
 
-class DateTimeTest(unittest.TestCase):
+class DateTimeTests(unittest.TestCase):
     """Test date parsing functions."""
 
     def testRoundtrip(self):
@@ -105,7 +105,7 @@ class ResponseTestMixin(object):
 
 
 
-class HTTP1_0TestCase(unittest.TestCase, ResponseTestMixin):
+class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
     requests = (
         b"GET / HTTP/1.0\r\n"
         b"\r\n"
@@ -159,7 +159,7 @@ class HTTP1_0TestCase(unittest.TestCase, ResponseTestMixin):
 
 
 
-class HTTP1_1TestCase(HTTP1_0TestCase):
+class HTTP1_1Tests(HTTP1_0Tests):
 
     requests = (
         b"GET / HTTP/1.1\r\n"
@@ -202,7 +202,7 @@ class HTTP1_1TestCase(HTTP1_0TestCase):
 
 
 
-class HTTP1_1_close_TestCase(HTTP1_0TestCase):
+class HTTP1_1_close_Tests(HTTP1_0Tests):
 
     requests = (
         b"GET / HTTP/1.1\r\n"
@@ -223,7 +223,7 @@ class HTTP1_1_close_TestCase(HTTP1_0TestCase):
 
 
 
-class HTTP0_9TestCase(HTTP1_0TestCase):
+class HTTP0_9Tests(HTTP1_0Tests):
 
     requests = (
         b"GET /\r\n")
@@ -235,7 +235,7 @@ class HTTP0_9TestCase(HTTP1_0TestCase):
         self.assertEqual(response, expectedResponse)
 
 
-class HTTPLoopbackTestCase(unittest.TestCase):
+class HTTPLoopbackTests(unittest.TestCase):
 
     expectedHeaders = {b'request': b'/foo/bar',
                        b'command': b'GET',
@@ -298,7 +298,7 @@ def _prequest(**headers):
 
 
 
-class PersistenceTestCase(unittest.TestCase):
+class PersistenceTests(unittest.TestCase):
     """
     Tests for persistent HTTP connections.
     """
@@ -626,7 +626,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
 
 
 
-class ChunkingTestCase(unittest.TestCase):
+class ChunkingTests(unittest.TestCase):
 
     strings = [b"abcv", b"", b"fdfsd423", b"Ffasfas\r\n",
                b"523523\n\rfsdf", b"4234"]
@@ -652,7 +652,7 @@ class ChunkingTestCase(unittest.TestCase):
 
 
 
-class ParsingTestCase(unittest.TestCase):
+class ParsingTests(unittest.TestCase):
     """
     Tests for protocol parsing in L{HTTPChannel}.
     """
@@ -1020,7 +1020,7 @@ Hello,
 
 
 
-class QueryArgumentsTestCase(unittest.TestCase):
+class QueryArgumentsTests(unittest.TestCase):
     def testParseqs(self):
         self.assertEqual(
             cgi.parse_qs(b"a=b&d=c;+=f"),
@@ -1124,7 +1124,7 @@ class ClientDriver(http.HTTPClient):
         self.status = status
         self.message = message
 
-class ClientStatusParsing(unittest.TestCase):
+class ClientStatusParsingTests(unittest.TestCase):
     def testBaseline(self):
         c = ClientDriver()
         c.lineReceived(b'HTTP/1.0 201 foo')
@@ -1849,7 +1849,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
 
 
 
-class MultilineHeadersTestCase(unittest.TestCase):
+class MultilineHeadersTests(unittest.TestCase):
     """
     Tests to exercise handling of multiline headers by L{HTTPClient}.  RFCs 1945
     (HTTP 1.0) and 2616 (HTTP 1.1) state that HTTP message header fields can

@@ -301,7 +301,7 @@ class HTTPPageGetterTests(unittest.TestCase):
 
 
 
-class WebClientTestCase(unittest.TestCase):
+class WebClientTests(unittest.TestCase):
     def _listen(self, site):
         return reactor.listenTCP(0, site, interface="127.0.0.1")
 
@@ -878,7 +878,7 @@ class WebClientTestCase(unittest.TestCase):
 
 
 
-class WebClientSSLTestCase(WebClientTestCase):
+class WebClientSSLTests(WebClientTests):
     def _listen(self, site):
         return reactor.listenSSL(
             0, site,
@@ -900,7 +900,7 @@ class WebClientSSLTestCase(WebClientTestCase):
 
 
 
-class WebClientRedirectBetweenSSLandPlainText(unittest.TestCase):
+class WebClientRedirectBetweenSSLandPlainTextTests(unittest.TestCase):
     def getHTTPS(self, path):
         return networkString("https://127.0.0.1:%d/%s" % (self.tlsPortno, path))
 
@@ -941,7 +941,7 @@ class WebClientRedirectBetweenSSLandPlainText(unittest.TestCase):
             )
 
 
-class CookieTestCase(unittest.TestCase):
+class CookieTests(unittest.TestCase):
     def _listen(self, site):
         return reactor.listenTCP(0, site, interface="127.0.0.1")
 
@@ -1013,7 +1013,7 @@ class CookieTestCase(unittest.TestCase):
 
 
 
-class TestHostHeader(unittest.TestCase):
+class HostHeaderTests(unittest.TestCase):
     """
     Test that L{HTTPClientFactory} includes the port in the host header
     if needed.
@@ -1106,11 +1106,11 @@ class TestHostHeader(unittest.TestCase):
 
 
 if ssl is None or not hasattr(ssl, 'DefaultOpenSSLContextFactory'):
-    for case in [WebClientSSLTestCase, WebClientRedirectBetweenSSLandPlainText]:
+    for case in [WebClientSSLTests, WebClientRedirectBetweenSSLandPlainTextTests]:
         case.skip = "OpenSSL not present"
 
 if not interfaces.IReactorSSL(reactor, None):
-    for case in [WebClientSSLTestCase, WebClientRedirectBetweenSSLandPlainText]:
+    for case in [WebClientSSLTests, WebClientRedirectBetweenSSLandPlainTextTests]:
         case.skip = "Reactor doesn't support SSL"
 
 

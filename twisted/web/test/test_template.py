@@ -678,7 +678,7 @@ class FakeSite(object):
 
 
 
-class TestRenderElement(TestCase):
+class RenderElementTests(TestCase):
     """
     Test L{renderElement}
     """

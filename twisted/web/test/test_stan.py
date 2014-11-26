@@ -17,7 +17,7 @@ def proto(*a, **kw):
     return Tag('hello')(*a, **kw)
 
 
-class TestTag(TestCase):
+class TagTests(TestCase):
     """
     Tests for L{Tag}.
     """

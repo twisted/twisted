@@ -45,7 +45,7 @@ class PBServerFactory(pb.PBServerFactory):
 
 
 
-class DistribTest(unittest.TestCase):
+class DistribTests(unittest.TestCase):
     port1 = None
     port2 = None
     sub = None
