@@ -1342,16 +1342,18 @@ class ServerSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         """
         _kexDHInit for diffie-hellman-group1-sha1 key exchange algorithm
         """
-        self._kexDHInit('diffie-hellman-group1-sha1', transport.DH_PRIME,
-                transport.DH_GENERATOR)
+        self._kexDHInit(
+            'diffie-hellman-group1-sha1', transport.DH_PRIME,
+            transport.DH_GENERATOR)
 
 
     def test_KEXDH_INIT_GROUP14(self):
         """
          _kexDHInit for diffie-hellman-group1-sha14 key exchange algorithm
         """
-        self._kexDHInit('diffie-hellman-group14-sha1', transport.DH_PRIME_14,
-                transport.DH_GENERATOR_14)
+        self._kexDHInit(
+            'diffie-hellman-group14-sha1', transport.DH_PRIME_14,
+            transport.DH_GENERATOR_14)
 
 
     def test_KEX_DH_GEX_REQUEST_OLD(self):
@@ -1623,6 +1625,7 @@ class ClientSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         self.assertEqual(self.packets, [(transport.MSG_KEX_DH_GEX_REQUEST_OLD,
                                           '\x00\x00\x08\x00')])
 
+
     def _kexInitDH(self, kexAlgorithm, dhPrime, dhGenerator):
         """
         Test that a KEXINIT packet with a group1 or group14 key exchange
@@ -1652,16 +1655,19 @@ class ClientSSHTransportTestCase(ServerAndClientSSHTransportBaseCase,
         """
         _kexInitDH test for a group14 key exchange.
         """
-        self._kexInitDH('diffie-hellman-group14-sha1', transport.DH_PRIME_14,
-                transport.DH_GENERATOR_14)
+        self._kexInitDH(
+            'diffie-hellman-group14-sha1', transport.DH_PRIME_14,
+            transport.DH_GENERATOR_14)
 
 
     def test_KEXINIT_group1(self):
         """
         _kexInitDH test for a group1 key exchange.
         """
-        self._kexInitDH('diffie-hellman-group1-sha1', transport.DH_PRIME,
-                transport.DH_GENERATOR)
+        self._kexInitDH(
+            'diffie-hellman-group1-sha1', transport.DH_PRIME,
+            transport.DH_GENERATOR)
+
 
     def test_KEXINIT_badKexAlg(self):
         """
