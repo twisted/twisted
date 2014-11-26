@@ -29,7 +29,7 @@ moo
  10:56pm up 4 days, 4:42, 1 user, load average: 0.08, 0.08, 0.12
 """ % (MESSAGE_ID)
 
-class NewsTestCase(unittest.TestCase):
+class NewsTests(unittest.TestCase):
     def setUp(self):
         self.backend = database.NewsShelf(None, 'news2.db')
         self.backend.addGroup('alt.test.nntp', 'y')
