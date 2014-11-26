@@ -100,7 +100,7 @@ class ByteGroupingsMixin(MockMixin):
 
 del _byteGroupingTestTemplate
 
-class ServerArrowKeys(ByteGroupingsMixin, unittest.TestCase):
+class ServerArrowKeysTests(ByteGroupingsMixin, unittest.TestCase):
     protocolFactory = ServerProtocol
 
     # All the arrow keys once
@@ -116,7 +116,7 @@ class ServerArrowKeys(ByteGroupingsMixin, unittest.TestCase):
         self.assertFalse(occurrences(proto))
 
 
-class PrintableCharacters(ByteGroupingsMixin, unittest.TestCase):
+class PrintableCharactersTests(ByteGroupingsMixin, unittest.TestCase):
     protocolFactory = ServerProtocol
 
     # Some letters and digits, first on their own, then capitalized,
@@ -138,7 +138,7 @@ class PrintableCharacters(ByteGroupingsMixin, unittest.TestCase):
         occs = occurrences(proto)
         self.assertFalse(occs, "%r should have been []" % (occs,))
 
-class ServerFunctionKeys(ByteGroupingsMixin, unittest.TestCase):
+class ServerFunctionKeysTests(ByteGroupingsMixin, unittest.TestCase):
     """Test for parsing and dispatching function keys (F1 - F12)
     """
     protocolFactory = ServerProtocol
@@ -159,7 +159,7 @@ class ServerFunctionKeys(ByteGroupingsMixin, unittest.TestCase):
             self.assertEqual(occurrences(result), [])
         self.assertFalse(occurrences(proto))
 
-class ClientCursorMovement(ByteGroupingsMixin, unittest.TestCase):
+class ClientCursorMovementTests(ByteGroupingsMixin, unittest.TestCase):
     protocolFactory = ClientProtocol
 
     d2 = "\x1b[2B"
@@ -179,7 +179,7 @@ class ClientCursorMovement(ByteGroupingsMixin, unittest.TestCase):
             self.assertEqual(occurrences(result), [])
         self.assertFalse(occurrences(proto))
 
-class ClientControlSequences(unittest.TestCase, MockMixin):
+class ClientControlSequencesTests(unittest.TestCase, MockMixin):
     def setUp(self):
         self.transport = StringTransport()
         self.proto = Mock()
@@ -462,7 +462,7 @@ class ServerProtocolOutputTests(unittest.TestCase):
 
 
 
-class Deprecations(unittest.TestCase):
+class DeprecationsTests(unittest.TestCase):
     """
     Tests to ensure deprecation of L{insults.colors} and L{insults.client}
     """

@@ -380,7 +380,7 @@ class SFTPTestProcess(protocol.ProcessProtocol):
         self._linesReceived.extend(lines)
         # XXX - not strictly correct.
         # We really want onOutReceived to fire after the first 'cftp>' prompt
-        # has been received. (See use in TestOurServerCmdLineClient.setUp)
+        # has been received. (See use in OurServerCmdLineClientTests.setUp)
         if self.onOutReceived is not None:
             d, self.onOutReceived = self.onOutReceived, None
             d.callback(data)
@@ -509,7 +509,7 @@ class CFTPClientTestBase(SFTPTestBase):
 
 
 
-class TestOurServerCmdLineClient(CFTPClientTestBase):
+class OurServerCmdLineClientTests(CFTPClientTestBase):
 
     def setUp(self):
         CFTPClientTestBase.setUp(self)
@@ -841,7 +841,7 @@ class TestOurServerCmdLineClient(CFTPClientTestBase):
 
 
 
-class TestOurServerBatchFile(CFTPClientTestBase):
+class OurServerBatchFileTests(CFTPClientTestBase):
     def setUp(self):
         CFTPClientTestBase.setUp(self)
         self.startServer()
@@ -929,7 +929,7 @@ exit
 
 
 
-class TestOurServerSftpClient(CFTPClientTestBase):
+class OurServerSftpClientTests(CFTPClientTestBase):
     """
     Test the sftp server against sftp command line client.
     """
@@ -981,12 +981,12 @@ class TestOurServerSftpClient(CFTPClientTestBase):
 if unix is None or Crypto is None or pyasn1 is None or interfaces.IReactorProcess(reactor, None) is None:
     if _reason is None:
         _reason = "don't run w/o spawnProcess or PyCrypto or pyasn1"
-    TestOurServerCmdLineClient.skip = _reason
-    TestOurServerBatchFile.skip = _reason
-    TestOurServerSftpClient.skip = _reason
+    OurServerCmdLineClientTests.skip = _reason
+    OurServerBatchFileTests.skip = _reason
+    OurServerSftpClientTests.skip = _reason
     StdioClientTests.skip = _reason
     SSHSessionTests.skip = _reason
 else:
     from twisted.python.procutils import which
     if not which('sftp'):
-        TestOurServerSftpClient.skip = "no sftp command-line client available"
+        OurServerSftpClientTests.skip = "no sftp command-line client available"

@@ -119,7 +119,7 @@ class FormattedTextTests(unittest.TestCase):
 
 
 
-class EfficiencyTestCase(unittest.TestCase):
+class EfficiencyTests(unittest.TestCase):
     todo = ("flatten() isn't quite stateful enough to avoid emitting a few extra bytes in "
             "certain circumstances, so these tests fail.  The failures take the form of "
             "additional elements in the ;-delimited character attribute lists.  For example, "
