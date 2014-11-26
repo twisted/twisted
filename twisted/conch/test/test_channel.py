@@ -1,5 +1,5 @@
-# Copyright (C) 2007-2008 Twisted Matrix Laboratories
-# See LICENSE for details
+# Copyright Twisted Matrix Laboratories.
+# See LICENSE for details.
 
 """
 Test ssh/channel.py.
