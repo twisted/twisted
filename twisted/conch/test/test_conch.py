@@ -517,7 +517,7 @@ class OpenSSHClientMixin:
 
 
 
-class OpenSSHClientForwardingTestCase(ForwardingMixin, OpenSSHClientMixin,
+class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin,
                                       unittest.TestCase):
     """
     Connection forwarding tests run against the OpenSSL command line client.
@@ -525,7 +525,7 @@ class OpenSSHClientForwardingTestCase(ForwardingMixin, OpenSSHClientMixin,
 
 
 
-class OpenSSHClientRekeyTestCase(RekeyTestsMixin, OpenSSHClientMixin,
+class OpenSSHClientRekeyTests(RekeyTestsMixin, OpenSSHClientMixin,
                                  unittest.TestCase):
     """
     Rekeying tests run against the OpenSSL command line client.
@@ -533,7 +533,7 @@ class OpenSSHClientRekeyTestCase(RekeyTestsMixin, OpenSSHClientMixin,
 
 
 
-class CmdLineClientTestCase(ForwardingMixin, unittest.TestCase):
+class CmdLineClientTests(ForwardingMixin, unittest.TestCase):
     """
     Connection forwarding tests run against the Conch command line client.
     """

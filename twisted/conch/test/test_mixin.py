@@ -20,7 +20,7 @@ class TestBufferingProto(mixin.BufferingMixin):
 
 
 
-class BufferingTest(unittest.TestCase):
+class BufferingTests(unittest.TestCase):
     def testBuffering(self):
         p = TestBufferingProto()
         t = p.transport = StringTransport()

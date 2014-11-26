@@ -173,7 +173,7 @@ class HelperTests(TestCase):
 
 
 
-class SSHPublicKeyDatabaseTestCase(TestCase):
+class SSHPublicKeyDatabaseTests(TestCase):
     """
     Tests for L{SSHPublicKeyDatabase}.
     """
@@ -353,7 +353,7 @@ class SSHPublicKeyDatabaseTestCase(TestCase):
 
 
 
-class SSHProtocolCheckerTestCase(TestCase):
+class SSHProtocolCheckerTests(TestCase):
     """
     Tests for L{SSHProtocolChecker}.
     """
@@ -623,7 +623,7 @@ class UNIXPasswordDatabaseTests(TestCase):
 
 
 
-class AuthorizedKeyFileReaderTestCase(TestCase):
+class AuthorizedKeyFileReaderTests(TestCase):
     """
     Tests for L{checkers.readAuthorizedKeyFile}
     """
@@ -674,7 +674,7 @@ class AuthorizedKeyFileReaderTestCase(TestCase):
 
 
 
-class InMemorySSHKeyDBTestCase(TestCase):
+class InMemorySSHKeyDBTests(TestCase):
     """
     Tests for L{checkers.InMemorySSHKeyDB}
     """
@@ -711,7 +711,7 @@ class InMemorySSHKeyDBTestCase(TestCase):
 
 
 
-class UNIXAuthorizedKeysFilesTestCase(TestCase):
+class UNIXAuthorizedKeysFilesTests(TestCase):
     """
     Tests for L{checkers.UNIXAuthorizedKeysFiles}.
     """
@@ -807,7 +807,7 @@ class _DummyException(Exception):
 
 
 
-class SSHPublicKeyCheckerTestCase(TestCase):
+class SSHPublicKeyCheckerTests(TestCase):
     """
     Tests for L{checkers.SSHPublicKeyChecker}.
     """

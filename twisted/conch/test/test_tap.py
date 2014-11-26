@@ -35,7 +35,7 @@ from twisted.trial.unittest import TestCase
 
 
 
-class MakeServiceTest(TestCase):
+class MakeServiceTests(TestCase):
     """
     Tests for L{tap.makeService}.
     """

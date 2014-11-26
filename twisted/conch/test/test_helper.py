@@ -13,7 +13,7 @@ from twisted.trial import unittest
 WIDTH = 80
 HEIGHT = 24
 
-class BufferTestCase(unittest.TestCase):
+class BufferTests(unittest.TestCase):
     def setUp(self):
         self.term = helper.TerminalBuffer()
         self.term.connectionMade()
@@ -464,7 +464,7 @@ class FakeScheduler:
         self.calls.append(FakeDelayedCall(self, timeout, f, a, kw))
         return self.calls[-1]
 
-class ExpectTestCase(unittest.TestCase):
+class ExpectTests(unittest.TestCase):
     def setUp(self):
         self.term = helper.ExpectableBuffer()
         self.term.connectionMade()

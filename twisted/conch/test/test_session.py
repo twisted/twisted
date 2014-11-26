@@ -494,7 +494,7 @@ class StubClient(object):
 
 
 
-class SessionInterfaceTestCase(unittest.TestCase):
+class SessionInterfaceTests(unittest.TestCase):
     """
     Tests for the SSHSession class interface.  This interface is not ideal, but
     it is tested in order to maintain backwards compatibility.
@@ -820,7 +820,7 @@ class SessionInterfaceTestCase(unittest.TestCase):
 
 
 
-class SessionWithNoAvatarTestCase(unittest.TestCase):
+class SessionWithNoAvatarTests(unittest.TestCase):
     """
     Test for the SSHSession interface.  Several of the methods (request_shell,
     request_exec, request_pty_req, request_window_change) would create a
@@ -886,7 +886,7 @@ class SessionWithNoAvatarTestCase(unittest.TestCase):
 
 
 
-class WrappersTestCase(unittest.TestCase):
+class WrappersTests(unittest.TestCase):
     """
     A test for the wrapProtocol and wrapProcessProtocol functions.
     """
@@ -928,7 +928,7 @@ class WrappersTestCase(unittest.TestCase):
 
 
 
-class TestHelpers(unittest.TestCase):
+class HelpersTests(unittest.TestCase):
     """
     Tests for the 4 helper functions: parseRequest_* and packRequest_*.
     """
@@ -1003,7 +1003,7 @@ class TestHelpers(unittest.TestCase):
 
 
 
-class SSHSessionProcessProtocolTestCase(unittest.TestCase):
+class SSHSessionProcessProtocolTests(unittest.TestCase):
     """
     Tests for L{SSHSessionProcessProtocol}.
     """
@@ -1233,7 +1233,7 @@ class SSHSessionProcessProtocolTestCase(unittest.TestCase):
 
 
 
-class SSHSessionClientTestCase(unittest.TestCase):
+class SSHSessionClientTests(unittest.TestCase):
     """
     SSHSessionClient is an obsolete class used to connect standard IO to
     an SSHSession.

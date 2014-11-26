@@ -18,7 +18,7 @@ from twisted.trial import unittest
 from twisted.cred import portal
 from twisted.test.proto_helpers import StringTransport
 
-class Arrows(unittest.TestCase):
+class ArrowsTests(unittest.TestCase):
     def setUp(self):
         self.underlyingTransport = StringTransport()
         self.pt = insults.ServerProtocol()
@@ -661,13 +661,13 @@ class RecvlineLoopbackMixin:
              "end line",
              ">>> done"])
 
-class RecvlineLoopbackTelnet(_TelnetMixin, unittest.TestCase, RecvlineLoopbackMixin):
+class RecvlineLoopbackTelnetTests(_TelnetMixin, unittest.TestCase, RecvlineLoopbackMixin):
     pass
 
-class RecvlineLoopbackSSH(_SSHMixin, unittest.TestCase, RecvlineLoopbackMixin):
+class RecvlineLoopbackSSHTests(_SSHMixin, unittest.TestCase, RecvlineLoopbackMixin):
     pass
 
-class RecvlineLoopbackStdio(_StdioMixin, unittest.TestCase, RecvlineLoopbackMixin):
+class RecvlineLoopbackStdioTests(_StdioMixin, unittest.TestCase, RecvlineLoopbackMixin):
     if stdio is None:
         skip = "Terminal requirements missing, can't run recvline tests over stdio"
 
@@ -695,12 +695,12 @@ class HistoricRecvlineLoopbackMixin:
              "second line",
              ">>> done"])
 
-class HistoricRecvlineLoopbackTelnet(_TelnetMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
+class HistoricRecvlineLoopbackTelnetTests(_TelnetMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
     pass
 
-class HistoricRecvlineLoopbackSSH(_SSHMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
+class HistoricRecvlineLoopbackSSHTests(_SSHMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
     pass
 
-class HistoricRecvlineLoopbackStdio(_StdioMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
+class HistoricRecvlineLoopbackStdioTests(_StdioMixin, unittest.TestCase, HistoricRecvlineLoopbackMixin):
     if stdio is None:
         skip = "Terminal requirements missing, can't run historic recvline tests over stdio"
