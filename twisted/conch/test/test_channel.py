@@ -281,7 +281,8 @@ class ChannelTests(unittest.TestCase):
 
     def test_getPeer(self):
         """
-        Gets info from connected transport.
+        L{SSHChannel.getPeer} returns the same object as the underlying
+        transport's C{getPeer} method returns.
         """
         peer = IPv4Address('TCP', '192.168.0.1', 54321)
         self.connectTransport(peerAddress=peer)
@@ -291,7 +292,8 @@ class ChannelTests(unittest.TestCase):
 
     def test_getHost(self):
         """
-        Gets info from connected transport.
+        L{SSHChannel.getHost} returns the same object as the underlying
+        transport's C{getHost} method returns.
         """
         peer = IPv4Address('TCP', '127.0.0.1', 12345)
         self.connectTransport(hostAddress=peer)
