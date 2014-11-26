@@ -117,7 +117,7 @@ verifyClass(IStreamServerEndpoint, FakeServer)
 
 
 
-class TestEndpointService(TestCase):
+class EndpointServiceTests(TestCase):
     """
     Tests for L{twisted.application.internet}.
     """
@@ -163,7 +163,7 @@ class TestEndpointService(TestCase):
         """
         L{StreamServerEndpointService.privilegedStartService} should behave the
         same as C{startService} with respect to
-        L{TestEndpointService.test_synchronousRaiseRaisesSynchronously}.
+        L{EndpointServiceTests.test_synchronousRaiseRaisesSynchronously}.
         """
         self.test_synchronousRaiseRaisesSynchronously(
             self.svc.privilegedStartService)
@@ -265,7 +265,7 @@ class TestEndpointService(TestCase):
 
 
 
-class TestTimerService(TestCase):
+class TimerServiceTests(TestCase):
     """
     Tests for L{twisted.application.internet.TimerService}.
 
@@ -276,7 +276,7 @@ class TestTimerService(TestCase):
     @ivar clock: source of time
 
     @type deferred: L{Deferred}
-    @ivar deferred: deferred returned by L{TestTimerService.call}.
+    @ivar deferred: deferred returned by L{TimerServiceTests.call}.
     """
 
     def setUp(self):
