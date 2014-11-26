@@ -295,7 +295,7 @@ class ChannelTests(unittest.TestCase):
         L{SSHChannel.getHost} returns the same object as the underlying
         transport's C{getHost} method returns.
         """
-        peer = IPv4Address('TCP', '127.0.0.1', 12345)
-        self.connectTransport(hostAddress=peer)
+        host = IPv4Address('TCP', '127.0.0.1', 12345)
+        self.connectTransport(hostAddress=host)
 
-        self.assertEqual(peer, self.channel.getHost())
+        self.assertEqual(host, self.channel.getHost())
