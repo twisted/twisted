@@ -9,7 +9,7 @@ from twisted.trial import unittest
 
 from twisted.words.protocols.jabber import sasl_mechanisms
 
-class PlainTest(unittest.TestCase):
+class PlainTests(unittest.TestCase):
     def test_getInitialResponse(self):
         """
         Test the initial response.
@@ -19,7 +19,7 @@ class PlainTest(unittest.TestCase):
 
 
 
-class AnonymousTest(unittest.TestCase):
+class AnonymousTests(unittest.TestCase):
     """
     Tests for L{twisted.words.protocols.jabber.sasl_mechanisms.Anonymous}.
     """
@@ -32,7 +32,7 @@ class AnonymousTest(unittest.TestCase):
 
 
 
-class DigestMD5Test(unittest.TestCase):
+class DigestMD5Tests(unittest.TestCase):
     def setUp(self):
         self.mechanism = sasl_mechanisms.DigestMD5(
             u'xmpp', u'example.org', None, u'test', u'secret')

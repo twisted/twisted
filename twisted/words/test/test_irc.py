@@ -498,7 +498,7 @@ stringSubjects = [
     ]
 
 
-class QuotingTest(unittest.TestCase):
+class QuotingTests(unittest.TestCase):
     def test_lowquoteSanity(self):
         """
         Testing client-server level quote/dequote.
@@ -1009,7 +1009,7 @@ class IRCClientWithoutLogin(irc.IRCClient):
 
 
 
-class CTCPTest(unittest.TestCase):
+class CTCPTests(unittest.TestCase):
     """
     Tests for L{twisted.words.protocols.irc.IRCClient} CTCP handling.
     """
@@ -1623,7 +1623,7 @@ class ClientImplementationTests(unittest.TestCase):
 
 
 
-class BasicServerFunctionalityTestCase(unittest.TestCase):
+class BasicServerFunctionalityTests(unittest.TestCase):
     def setUp(self):
         self.f = StringIOWithoutClosing()
         self.t = protocol.FileWrapper(self.f)
@@ -2388,7 +2388,7 @@ class DccTests(unittest.TestCase):
 
 
 
-class TestServerToClient(TestCase):
+class ServerToClientTests(TestCase):
     """
     Tests for the C{irc_*} methods sent from the server to the client.
     """
@@ -2497,7 +2497,7 @@ class TestServerToClient(TestCase):
 
 
 
-class TestCTCPQuery(TestCase):
+class CTCPQueryTests(TestCase):
     """
     Tests for the C{ctcpQuery_*} methods.
     """

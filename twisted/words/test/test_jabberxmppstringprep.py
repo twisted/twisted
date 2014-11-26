@@ -8,7 +8,7 @@ from twisted.words.protocols.jabber.xmpp_stringprep import (
 
 
 
-class DeprecationTestCase(unittest.TestCase):
+class DeprecationTests(unittest.TestCase):
     """
     Deprecations in L{twisted.words.protocols.jabber.xmpp_stringprep}.
     """
@@ -29,7 +29,7 @@ class DeprecationTestCase(unittest.TestCase):
 
 
 
-class XMPPStringPrepTest(unittest.TestCase):
+class XMPPStringPrepTests(unittest.TestCase):
     """
     The nodeprep stringprep profile is similar to the resourceprep profile,
     but does an extra mapping of characters (table B.2) and disallows

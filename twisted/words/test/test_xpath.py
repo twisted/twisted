@@ -8,7 +8,7 @@ from twisted.words.xish.domish import Element
 from twisted.words.xish.xpath import XPathQuery
 from twisted.words.xish import xpath
 
-class XPathTest(unittest.TestCase):
+class XPathTests(unittest.TestCase):
     def setUp(self):
         # Build element:
         # <foo xmlns='testns' attrib1='value1' attrib3="user@host/resource">

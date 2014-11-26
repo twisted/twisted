@@ -477,7 +477,7 @@ class MessageHandlingTests(unittest.TestCase):
         if accept and ip == '192.168.0.1' and port == 6891 and aCookie == 4321: self.client.state = 'INFO'
 
 
-class FileTransferTestCase(unittest.TestCase):
+class FileTransferTests(unittest.TestCase):
     """
     test FileSend against FileReceive
     """
@@ -515,7 +515,7 @@ class FileTransferTestCase(unittest.TestCase):
 
 if msn is None:
     for testClass in [DispatchTests, PassportTests, NotificationTests,
-                      MessageHandlingTests, FileTransferTestCase]:
+                      MessageHandlingTests, FileTransferTests]:
         testClass.skip = (
             "MSN requires an HTTP client but none is available, "
             "skipping tests.")
