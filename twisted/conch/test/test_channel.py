@@ -4,6 +4,7 @@
 """
 Test ssh/channel.py.
 """
+
 from zope.interface.verify import verifyObject
 
 from twisted.conch.ssh import channel
@@ -12,6 +13,7 @@ from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import ITransport
 from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
+
 
 
 class MockConnection(object):
@@ -70,6 +72,14 @@ class ChannelTests(unittest.TestCase):
                 remoteMaxPacket=10)
         self.channel.name = 'channel'
 
+
+    def test_interface(self):
+        """
+        L{SSHChannel} instances provide L{ITransport}.
+        """
+        self.assertTrue(verifyObject(ITransport, self.channel))
+
+
     def test_init(self):
         """
         Test that SSHChannel initializes correctly.  localWindowSize defaults
@@ -89,10 +99,6 @@ class ChannelTests(unittest.TestCase):
         self.assertEqual(c.conn, self.conn)
         self.assertEqual(c.data, None)
         self.assertEqual(c.avatar, None)
-
-        # Check interface implementation.
-        self.assertTrue(ITransport.providedBy(c))
-        verifyObject(ITransport, c)
 
         c2 = channel.SSHChannel(1, 2, 3, 4, 5, 6, 7)
         self.assertEqual(c2.localWindowSize, 1)
