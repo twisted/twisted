@@ -1,0 +1,1 @@
+Fix getPeer and getHost in twisted.conch.ssh.channel.SSHChannel.

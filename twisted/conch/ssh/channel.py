@@ -254,19 +254,15 @@ class SSHChannel(log.Logger):
 
     def getPeer(self):
         """
-        Return a tuple describing the other side of the connection.
-
-        @rtype: C{tuple}
+        See: L{ITransport.getPeer}
         """
-        return('SSH', )+self.conn.transport.getPeer()
+        return self.conn.transport.getPeer().address
 
     def getHost(self):
         """
-        Return a tuple describing our side of the connection.
-
-        @rtype: C{tuple}
+        See: L{ITransport.getHost}
         """
-        return('SSH', )+self.conn.transport.getHost()
+        return self.conn.transport.getHost().address
 
     def stopWriting(self):
         """

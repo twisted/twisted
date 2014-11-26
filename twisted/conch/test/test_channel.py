@@ -4,23 +4,14 @@
 """
 Test ssh/channel.py.
 """
+from zope.interface.verify import verifyObject
+
 from twisted.conch.ssh import channel
+from twisted.conch.ssh.transport import SSHServerTransport
+from twisted.internet.address import IPv4Address
+from twisted.internet.interfaces import ITransport
+from twisted.test.proto_helpers import StringTransport
 from twisted.trial import unittest
-
-
-class MockTransport(object):
-    """
-    A mock Transport.  All we use is the getPeer() and getHost() methods.
-    Channels implement the ITransport interface, and their getPeer() and
-    getHost() methods return ('SSH', <transport's getPeer/Host value>) so
-    we need to implement these methods so they have something to draw
-    from.
-    """
-    def getPeer(self):
-        return ('MockPeer',)
-
-    def getHost(self):
-        return ('MockHost',)
 
 
 class MockConnection(object):
@@ -35,7 +26,6 @@ class MockConnection(object):
     @ivar closes: a C{dict} mapping channel id #s to True if that channel sent
         a close message.
     """
-    transport = MockTransport()
 
     def __init__(self):
         self.data = {}
@@ -99,6 +89,10 @@ class ChannelTests(unittest.TestCase):
         self.assertEqual(c.conn, self.conn)
         self.assertEqual(c.data, None)
         self.assertEqual(c.avatar, None)
+
+        # Check interface implementation.
+        self.assertTrue(ITransport.providedBy(c))
+        verifyObject(ITransport, c)
 
         c2 = channel.SSHChannel(1, 2, 3, 4, 5, 6, 7)
         self.assertEqual(c2.localWindowSize, 1)
@@ -266,14 +260,30 @@ class ChannelTests(unittest.TestCase):
         self.channel.addWindowBytes(8) # send extended data
         self.assertTrue(self.conn.closes.get(self.channel))
 
+    def connectTransport(self, hostAddress=None, peerAddress=None):
+        """
+        Connect a SSHTransport which is already connected to a remote peer to
+        the channel under test.
+        """
+        transport = SSHServerTransport()
+        transport.makeConnection(StringTransport(
+            hostAddress=hostAddress, peerAddress=peerAddress))
+        self.channel.conn.transport = transport
+
     def test_getPeer(self):
         """
-        Test that getPeer() returns ('SSH', <connection transport peer>).
+        Gets info from connected transport.
         """
-        self.assertEqual(self.channel.getPeer(), ('SSH', 'MockPeer'))
+        peer = IPv4Address('TCP', '192.168.0.1', 54321)
+        self.connectTransport(peerAddress=peer)
+
+        self.assertEqual(peer, self.channel.getPeer())
 
     def test_getHost(self):
         """
-        Test that getHost() returns ('SSH', <connection transport host>).
+        Gets info from connected transport.
         """
-        self.assertEqual(self.channel.getHost(), ('SSH', 'MockHost'))
+        peer = IPv4Address('TCP', '127.0.0.1', 12345)
+        self.connectTransport(hostAddress=peer)
+
+        self.assertEqual(peer, self.channel.getHost())
