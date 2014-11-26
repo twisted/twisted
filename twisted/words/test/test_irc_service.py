@@ -85,7 +85,7 @@ class IRCUserTests(unittest.TestCase):
         Gets messages out of a response
 
         @param response: The parsed IRC messages of the response, as returned
-        by L{IRCServiceTestCase.response}
+        by L{IRCUserTests.response}
 
         @param messageType: The string type of the desired messages.
 
