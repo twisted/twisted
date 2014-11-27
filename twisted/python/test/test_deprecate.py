@@ -869,6 +869,7 @@ class TestDeprecatedDecoratorInsideClassmethod(DeprecatedDecoratorMixin,
             return function
 
         class ClassWithDeprecatedMethods(object):
+            @_catchOriginal
             @classmethod
             @deprecated(version, replacement)
             @_catchOriginal
@@ -880,6 +881,7 @@ class TestDeprecatedDecoratorInsideClassmethod(DeprecatedDecoratorMixin,
         after = ClassWithDeprecatedMethods.dummy
         ClassWithDeprecatedMethods.dummy = classmethod(originalStore[0])
         before = ClassWithDeprecatedMethods.dummy
+        ClassWithDeprecatedMethods.dummy = originalStore[1]
         return before, after
 
 

@@ -322,19 +322,26 @@ class _DeprecateDescriptor(object):
         self.__qualname__ = _fullyQualifiedName(self._wrapee)
 
 
-    def _warn(self, function, args, kwargs):
+    def _warn(self, function, args, kwargs, qualname=None):
         """
         Actually issue the warning and call the function
 
-        @param function: The callable to call.
-        @param args: The arguments to call the function with.
-        @param kwargs: The keyword arguments to call the function with.
+        @param callable function: The callable to call.
+        @param iterable args: The arguments to call the function with.
+        @param dict kwargs: The keyword arguments to call the function with.
+        @param str qualname: The qualname to use instead of getting the
+            fqdn on the function, for cases where the fqdn on the function
+            would be wrong.
 
         @return: The return value of calling C{function} with C{args} and
             C{kwargs}.
         """
-        warningString = getDeprecationWarningString(
-            function, self.deprecatedVersion, None, self._replacement)
+        if qualname is None:
+            warningString = getDeprecationWarningString(
+                function, self.deprecatedVersion, None, self._replacement)
+        else:
+            warningString = _getDeprecationWarningString(
+                qualname, self.deprecatedVersion, None, self._replacement)
 
         warn(warningString, DeprecationWarning, stacklevel=3)
         return function(*args, **kwargs)
@@ -351,6 +358,18 @@ class _DeprecateDescriptor(object):
 
         @return: The return value of calling C{deprecatee}.
         """
+        # heuristic to tell if we are actually inside a classmethod and
+        # the deprecate decorator was used inside the classmethod decorator
+        # (classmethod was called after deprecated)
+        if args and isinstance(args[0], type):
+            maybeClassmethod = args[0].__dict__.get(self.__name__)
+            if isinstance(maybeClassmethod, classmethod):
+                if maybeClassmethod.__func__ is self:
+                    return self._warn(
+                        self._deprecatee, args, kwargs,
+                        qualname=".".join([_fullyQualifiedName(args[0]),
+                                           self.__name__]))
+
         return self._warn(self._deprecatee, args, kwargs)
 
 
