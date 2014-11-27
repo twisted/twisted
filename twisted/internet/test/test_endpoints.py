@@ -42,6 +42,7 @@ pemPath = FilePath(testInitPath.encode("utf-8")).sibling(b"server.pem")
 
 try:
     from twisted.internet import serialport
+    from serial.serialutil import SerialException
 except ImportError:
     serialport = None
 
@@ -2420,13 +2421,10 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
         In case of failure, L{SerialPortEndpoint.connect} returns a
         Deferred that fails.
         """
-        class _DummySerialPortThatFails(object):
-            def __init__(self, *args):
-                raise Exception
-
-        self.patch(serialport, 'SerialPort', _DummySerialPortThatFails)
-        d = self.ep.connect(SerialFactory())
-        self.assertIsInstance(self.failureResultOf(d).value, Exception)
+        endpoint = endpoints.SerialPortEndpoint(
+            '/dev/tty-doesnotexist-4835c2c2-97db-4de8-b301-8ac63e6e79c1', reactor)
+        d = endpoint.connect(SerialFactory())
+        self.assertIsInstance(self.failureResultOf(d).value, SerialException)
 
 
     def test_buildProtocolFailure(self):
