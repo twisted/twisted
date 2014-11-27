@@ -259,23 +259,98 @@ def deprecated(version, replacement=None):
         """
         Decorator that marks C{function} as deprecated.
         """
-        warningString = getDeprecationWarningString(
-            function, version, None, replacement)
-
-        @wraps(function)
-        def deprecatedFunction(*args, **kwargs):
-            warn(
-                warningString,
-                DeprecationWarning,
-                stacklevel=2)
-            return function(*args, **kwargs)
-
-        _appendToDocstring(deprecatedFunction,
-                           _getDeprecationDocstring(version, replacement))
-        deprecatedFunction.deprecatedVersion = version
-        return deprecatedFunction
+        return _DeprecateDescriptor(function, version, replacement)
 
     return deprecationDecorator
+
+
+
+class _DeprecateDescriptor(object):
+    """
+    A descriptor that handles deprecating instance methods as well as
+    functions.
+
+    @ivar deprecatee: the function/class method/instance method to deprecate
+    @type deprecatee: callable
+
+    @ivar version: the version that the callable was deprecated in.
+    @type version: L{twisted.python.versions.Version}
+
+    @ivar replacement: what should be used in place of the callable. Either
+        pass in a string, which will be inserted into the warning message,
+        or a callable, which will be expanded to its full import path.
+    @type replacement: C{str} or callable
+    """
+    def __init__(self, deprecatee, version, replacement=None):
+        wraps(deprecatee)(self)
+
+        self.deprecatee = deprecatee
+        self.version = version
+        self.replacement = replacement
+
+        _appendToDocstring(self,
+                           _getDeprecationDocstring(version, replacement))
+        self.deprecatedVersion = version
+
+        self.__qualname__ = _fullyQualifiedName(self.deprecatee)
+
+
+    def _warn(self, function, args, kwargs):
+        """
+        Actally issue the warning and call the function
+
+        @param function: the callable to call
+        @param args: C{list} arguments to call the function with
+        @param kwargs: C{dict} keyword arguments to call the function with
+
+        @return: the return value of calling C{function} with C{args} and
+            C{kwargs}
+        """
+        warningString = getDeprecationWarningString(
+            function, self.version, None, self.replacement)
+
+        warn(warningString, DeprecationWarning, stacklevel=3)
+        return function(*args, **kwargs)
+
+
+    def __call__(self, *args, **kwargs):
+        """
+        This gets called if C{deprecatee} is a function.  Warns that
+        C{deprecatee} is deprecated and calls it with the specified arguments
+        and keyword arguments
+
+        @param args: C{list} the arguments to call C{deprecatee} with
+        @param kwargs: C{dict} the keyword arguments to call C{deprecatee}
+            with
+
+        @return: the return value of calling C{deprecatee}
+        """
+        return self._warn(self.deprecatee, args, kwargs)
+
+
+    def __get__(self, instance, _type):
+        """
+        This gets called if C{deprecatee} is a method (either class or
+        instance).  The resulting callable warns that C{deprecatee} is
+        deprecated and calls it with the instance/class and the specified
+        arguments and keyword arguments.
+
+        @param instance: the self argument C{deprecatee} gets called with
+        @param _type: the type of self that C{deprecatee} gets caled with
+
+        @return: a callable that calls C{deprecatee} and returns
+            C{deprecatee}'s return value
+        """
+        method = self.deprecatee.__get__(instance, _type)
+
+        @wraps(self.deprecatee)
+        def wrap(_, *args, **kwargs):
+            return self._warn(method, args, kwargs)
+
+        wrap.__doc__ = self.__doc__
+        wrap.deprecatedVersion = self.version
+
+        return wrap.__get__(instance, _type)
 
 
 

@@ -610,5 +610,5 @@ class CharacterAttributeTests(unittest.TestCase):
         self.assertEqual(warningsShown[0]['category'], DeprecationWarning)
         self.assertEqual(
             warningsShown[0]['message'],
-            'twisted.conch.insults.helper.wantOne was deprecated in '
-            'Twisted 13.1.0')
+            'twisted.conch.insults.helper._FormattingState.wantOne was '
+            'deprecated in Twisted 13.1.0')
