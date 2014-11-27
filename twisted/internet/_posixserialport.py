@@ -6,11 +6,11 @@
 Serial Port Protocol
 """
 
-# system imports
+# System imports
 import os, errno
 
-# dependent on pyserial ( http://pyserial.sf.net/ )
-# only tested w/ 1.18 (5 Dec 2002)
+# Dependent on pyserial ( http://pyserial.sf.net/ )
+# Only tested w/ 1.18 (5 Dec 2002)
 import serial
 from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD
 from serial import STOPBITS_ONE, STOPBITS_TWO
@@ -18,7 +18,7 @@ from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
 
 from serialport import BaseSerialPort
 
-# twisted imports
+# Twisted imports
 from twisted.internet import abstract, fdesc, main
 
 class SerialPort(BaseSerialPort, abstract.FileDescriptor):

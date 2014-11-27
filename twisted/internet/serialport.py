@@ -15,7 +15,7 @@ __all__ = ["serial", "PARITY_ODD", "PARITY_EVEN", "PARITY_NONE",
 # Name this module is actually trying to export
            "SerialPort"]
 
-# all of them require pyserial at the moment, so check that first
+# All of them require pyserial at the moment, so check that first
 import serial
 from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD
 from serial import STOPBITS_ONE, STOPBITS_TWO
@@ -41,39 +41,113 @@ class BaseSerialPort:
 
 
     def setBaudRate(self, baudrate):
+        """
+        Set baud rate on underlying serial device
+
+        @type baudrate: number
+        @param baudrate: Serial port baudrate
+        @return: None
+        """
         if hasattr(self._serial, "setBaudrate"):
             self._serial.setBaudrate(baudrate)
         else:
             self._serial.setBaudRate(baudrate)
 
+
     def inWaiting(self):
+        """
+
+        @return: number of characters currently in the input buffer.
+        """
         return self._serial.inWaiting()
 
+
     def flushInput(self):
+        """
+        Clear input buffer, discarding all that is in the buffer.
+
+        @return: None
+        """
         self._serial.flushInput()
 
+
     def flushOutput(self):
+        """
+        Clear output buffer, aborting the current output and
+        discarding all that is in the buffer.
+
+        @return: None
+        """
         self._serial.flushOutput()
 
-    def sendBreak(self):
-        self._serial.sendBreak()
+
+    def sendBreak(self, duration=0.25):
+        """
+        Send break condition. Timed, returns to idle state
+        after given duration.
+
+        @type duration: number
+        @param duration: Seconds to send break
+        @return: None
+        """
+        self._serial.sendBreak(duration)
+
 
     def getDSR(self):
+        """
+        Read terminal status line: Data Set Ready
+
+        @return: State of DSR
+        """
         return self._serial.getDSR()
 
+
     def getCD(self):
+        """
+        Read terminal status line: Carrier Detect
+
+        @return: State of DCD
+        """
         return self._serial.getCD()
 
+
     def getRI(self):
+        """
+        Read terminal status line: Ring Indicator
+
+        @return: State of RI
+        """
         return self._serial.getRI()
 
+
     def getCTS(self):
+        """
+        Read terminal status line: Clear To Send
+
+        @return: State of CTS
+        """
         return self._serial.getCTS()
 
+
     def setDTR(self, on = 1):
+        """
+        Set terminal status line: Data Terminal Ready
+
+        @type on: number
+        @param on: Value to set DTR to
+        @return: None
+        """
         self._serial.setDTR(on)
 
+
     def setRTS(self, on = 1):
+        """
+        Set terminal status line: Request To Send
+
+        @type on: number
+        @param on: Value to set RTS to
+        @return: None
+        """
         self._serial.setRTS(on)
 
 

@@ -885,8 +885,8 @@ class SerialPortEndpoint(object):
     """
     A Serial Port endpoint.
 
-    @ivar _serialport: A hook used for testing availability of serial port
-        support.
+    @ivar _serialport: L{serialport} A hook used for testing availability
+        of serial port support.
     """
     try:
         from twisted.internet.serialport import (

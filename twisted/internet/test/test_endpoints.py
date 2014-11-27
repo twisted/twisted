@@ -2224,6 +2224,9 @@ class SSL4EndpointsTestCase(EndpointTestCaseMixin,
 
 
 class SerialFactory(Factory):
+    """
+    Basic factory set up for serial endpoint testing
+    """
     protocol = LineReceiver
 
 
@@ -2253,6 +2256,7 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
     else:
         deviceNameOrPortNumber = '/dev/ttyS0'
 
+
     def setUp(self):
         self.ep = endpoints.SerialPortEndpoint(self.deviceNameOrPortNumber,
                                 reactor)
@@ -2278,6 +2282,9 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
         """
         The endpoint creates a L{serialport.SerialPort} instance and
         passes the required arguments to its constructor.
+
+        @return: L{Deferred} of test results
+
         """
         baudrate = 4800
         bytesize = serialport.SEVENBITS
@@ -2286,8 +2293,8 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
         timeout = 3
         xonxoff = True
         rtscts = True
-        expectedArgs = [(self.deviceNameOrPortNumber, baudrate, bytesize, parity,
-            stopbits, timeout, xonxoff, rtscts)]
+        expectedArgs = [(self.deviceNameOrPortNumber, baudrate, bytesize,
+                         parity, stopbits, timeout, xonxoff, rtscts)]
         portArgs = []
         class _DummySerialPort(object):
             def __init__(self, protocol, deviceNameOrPortNumber, reactor,
@@ -2318,6 +2325,9 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
         """
         The value of xonxoff that is stored in the endpoint is passed
         on to the L{SerialPort} instance.
+
+        @return: L{Deferred} of test results
+
         """
         expectedValue = True
         endpoint = endpoints.SerialPortEndpoint(self.deviceNameOrPortNumber,
@@ -2343,6 +2353,9 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
         """
         The value of rtscts stored in the endpoint is passed on to the
         L{SerialPort} instance.
+
+        @return: L{Deferred} of test results
+
         """
         expectedValue = True
         endpoint = endpoints.SerialPortEndpoint(self.deviceNameOrPortNumber,
@@ -2368,6 +2381,9 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
         """
         The address passed to the factory's buildProtocol in the
         endpoint is a SerialAddress instance.
+
+        @return: L{Deferred} of test results
+
         """
         class TestAddrFactory(protocol.Factory):
             protocol = LineReceiver
