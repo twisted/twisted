@@ -873,13 +873,71 @@ class TestDeprecatedDecoratorInsideClassmethod(DeprecatedDecoratorMixin,
             @classmethod
             @deprecated(version, replacement)
             @_catchOriginal
-            def dummy(self):
+            def dummy(cls):
                 """
                 This is a classmethod method that should be deprecated.
                 """
 
         after = ClassWithDeprecatedMethods.dummy
         ClassWithDeprecatedMethods.dummy = classmethod(originalStore[0])
+        before = ClassWithDeprecatedMethods.dummy
+        ClassWithDeprecatedMethods.dummy = originalStore[1]
+        return before, after
+
+
+class TestDeprecatedDecoratorOutsideStaticmethod(DeprecatedDecoratorMixin,
+                                                 SynchronousTestCase):
+    """
+    Tests for L{twisted.python.deprecate.deprecated} on class methods if
+    the L{deprecated} decorator is above the L{staticmethod} decorator.
+    """
+    def doDeprecation(self, version, replacement=None):
+        originalStore = []
+
+        def _catchOriginal(function):
+            originalStore.append(function)
+            return function
+
+        class ClassWithDeprecatedMethods(object):
+            @deprecated(version, replacement)
+            @_catchOriginal
+            @staticmethod
+            def dummy():
+                """
+                This is a staticmethod method that should be deprecated.
+                """
+
+        after = ClassWithDeprecatedMethods.dummy
+        ClassWithDeprecatedMethods.dummy = originalStore[0]
+        before = ClassWithDeprecatedMethods.dummy
+        return before, after
+
+
+class TestDeprecatedDecoratorInsideStaticmethod(DeprecatedDecoratorMixin,
+                                                SynchronousTestCase):
+    """
+    Tests for L{twisted.python.deprecate.deprecated} on class methods if
+    the L{deprecated} decorator is below the L{staticmethod} decorator.
+    """
+    def doDeprecation(self, version, replacement=None):
+        originalStore = []
+
+        def _catchOriginal(function):
+            originalStore.append(function)
+            return function
+
+        class ClassWithDeprecatedMethods(object):
+            @_catchOriginal
+            @staticmethod
+            @deprecated(version, replacement)
+            @_catchOriginal
+            def dummy():
+                """
+                This is a classmethod method that should be deprecated.
+                """
+
+        after = ClassWithDeprecatedMethods.dummy
+        ClassWithDeprecatedMethods.dummy = staticmethod(originalStore[0])
         before = ClassWithDeprecatedMethods.dummy
         ClassWithDeprecatedMethods.dummy = originalStore[1]
         return before, after

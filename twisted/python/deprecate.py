@@ -85,7 +85,7 @@ def _fullyQualifiedName(obj):
         return "%s.%s" % (moduleName, name)
     elif inspect.ismethod(obj):
 
-        # handle classmethods
+        # handle classmethods and staticmethods
         try:
             _self = obj.im_self
         except AttributeError:
@@ -306,8 +306,10 @@ class _DeprecateDescriptor(object):
         @param replacement: see L{_DeprecateDescriptor._replacement}
         """
         self._wrapee = deprecatee
-        if isinstance(deprecatee, classmethod):
-            # because you can't wrap a classmethod instance, only its function
+        if (isinstance(deprecatee, classmethod) or
+                isinstance(deprecatee, staticmethod)):
+            # because you can't wrap a classmethod or staticmethod instance,
+            # only its function
             self._wrapee = deprecatee.__func__
 
         wraps(self._wrapee)(self)
@@ -358,13 +360,20 @@ class _DeprecateDescriptor(object):
 
         @return: The return value of calling C{deprecatee}.
         """
-        # heuristic to tell if we are actually inside a classmethod and
-        # the deprecate decorator was used inside the classmethod decorator
-        # (classmethod was called after deprecated)
+        # heuristic to tell if we are actually inside a
+        # staticmethod/classmethod function and the deprecate decorator was
+        # used inside the staticmethod/classmethod decorator
+        # (staticmethod/classmethod was called after deprecated)
+        #
+        # Note this only handles the case where staticmethod/classmethod is
+        # used immediately above deprecated.  If there is a decorator that
+        # wraps its method in between staticmethod/classmethod and
+        # deprecated, then this will fail.
         if args and isinstance(args[0], type):
-            maybeClassmethod = args[0].__dict__.get(self.__name__)
-            if isinstance(maybeClassmethod, classmethod):
-                if maybeClassmethod.__func__ is self:
+            maybeOther = args[0].__dict__.get(self.__name__)
+            if (isinstance(maybeOther, classmethod) or
+                    isinstance(maybeOther, staticmethod)):
+                if maybeOther.__func__ is self:
                     return self._warn(
                         self._deprecatee, args, kwargs,
                         qualname=".".join([_fullyQualifiedName(args[0]),
@@ -389,15 +398,23 @@ class _DeprecateDescriptor(object):
         """
         method = self._deprecatee.__get__(instance, instanceType)
 
-        @wraps(self._wrapee)
-        def wrap(_, *args, **kwargs):
-            return self._warn(method, args, kwargs)
+        if isinstance(self._deprecatee, staticmethod):
+            @wraps(self._wrapee)
+            def wrap(*args, **kwargs):
+                return self._warn(method, args, kwargs)
+
+        else:
+            @wraps(self._wrapee)
+            def wrap(_, *args, **kwargs):
+                return self._warn(method, args, kwargs)
 
         wrap.__doc__ = self.__doc__
         wrap.deprecatedVersion = self.deprecatedVersion
 
-        if self._wrapee is not self._deprecatee:
+        if isinstance(self._deprecatee, classmethod):
             wrap = classmethod(wrap)
+        elif isinstance(self._deprecatee, staticmethod):
+            wrap = staticmethod(wrap)
 
         return wrap.__get__(instance, instanceType)
 
