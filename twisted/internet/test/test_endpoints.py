@@ -2270,13 +2270,6 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
         """
         endpoint = endpoints.SerialPortEndpoint('/dev/ttyS0', reactor)
         self.assertEqual(endpoint._reactor, reactor)
-        self.assertEqual(endpoint._baudrate, 9600)
-        self.assertEqual(endpoint._bytesize, serialport.EIGHTBITS)
-        self.assertEqual(endpoint._parity, serialport.PARITY_NONE)
-        self.assertEqual(endpoint._stopbits, serialport.STOPBITS_ONE)
-        self.assertEqual(endpoint._timeout, 0)
-        self.assertEqual(endpoint._xonxoff, False)
-        self.assertEqual(endpoint._rtscts, False)
 
 
     def test_serialPortInstanceParameters(self):
@@ -2299,8 +2292,7 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
         portArgs = []
         class _DummySerialPort(object):
             def __init__(self, protocol, deviceNameOrPortNumber, reactor,
-                         baudrate, bytesize, parity, stopbits, timeout,
-                         xonxoff, rtscts):
+                         *args, **kwargs):
                 self.protocol = protocol
                 self.protocol.makeConnection(self)
                 portArgs.append((deviceNameOrPortNumber, baudrate, bytesize,
@@ -2319,62 +2311,6 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
             self.assertEqual(expectedArgs, portArgs)
 
         d.addCallback(checkArgs)
-        return d
-
-
-    def test_xonxoff(self):
-        """
-        The value of xonxoff that is stored in the endpoint is passed
-        on to the L{SerialPort} instance.
-
-        @return: L{Deferred} of test results
-
-        """
-        expectedValue = True
-        endpoint = endpoints.SerialPortEndpoint(self.deviceNameOrPortNumber,
-                                reactor, xonxoff=expectedValue)
-        xonxoffVal = []
-        class _DummySerialPort(object):
-            def __init__(self, protocol, deviceNameOrPortNumber, reactor,
-                         baudrate, bytesize, parity, stopbits, timeout,
-                         xonxoff, rtscts):
-                xonxoffVal.append(xonxoff)
-
-        self.patch(serialport, 'SerialPort', _DummySerialPort)
-        d = endpoint.connect(SerialFactory())
-
-        def checkArg(proto):
-            self.assertEqual(xonxoffVal.pop(), expectedValue)
-
-        d.addCallback(checkArg)
-        return d
-
-
-    def test_rtscts(self):
-        """
-        The value of rtscts stored in the endpoint is passed on to the
-        L{SerialPort} instance.
-
-        @return: L{Deferred} of test results
-
-        """
-        expectedValue = True
-        endpoint = endpoints.SerialPortEndpoint(self.deviceNameOrPortNumber,
-                                reactor, rtscts=expectedValue)
-        rtsctsVal = []
-        class _DummySerialPort(object):
-            def __init__(self, protocol, deviceNameOrPortNumber, reactor,
-                         baudrate, bytesize, parity, stopbits, timeout,
-                         xonxoff, rtscts):
-                rtsctsVal.append(rtscts)
-
-        self.patch(serialport, 'SerialPort', _DummySerialPort)
-        d = endpoint.connect(SerialFactory())
-
-        def checkArg(proto):
-            self.assertEqual(rtsctsVal.pop(), expectedValue)
-
-        d.addCallback(checkArg)
         return d
 
 
@@ -2401,8 +2337,7 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
 
         class _DummySerialPort(object):
             def __init__(self, protocol, deviceNameOrPortNumber, reactor,
-                         baudrate, bytesize, parity, stopbits, timeout,
-                         xonxoff, rtscts):
+                         *args, **kwargs):
                 self.protocol = protocol
                 self.protocol.makeConnection(self)
 

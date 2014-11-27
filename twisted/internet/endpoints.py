@@ -889,32 +889,19 @@ class SerialPortEndpoint(object):
         of serial port support.
     """
     try:
-        from twisted.internet.serialport import (
-            EIGHTBITS, PARITY_NONE, STOPBITS_ONE)
         from twisted.internet import serialport as _serialport
     except ImportError:
         _serialport = None
-        EIGHTBITS = None
-        PARITY_NONE = None
-        STOPBITS_ONE = None
 
 
-    def __init__(self, deviceNameOrPortNumber, reactor,
-                 baudrate=9600, bytesize=EIGHTBITS,
-                 parity=PARITY_NONE, stopbits=STOPBITS_ONE,
-                 timeout=0, xonxoff=False, rtscts=False):
+    def __init__(self, deviceNameOrPortNumber, reactor, *args, **kwargs):
         """
         @see: L{serialport.SerialPort}
         """
         self._deviceNameOrPortNumber = deviceNameOrPortNumber
         self._reactor = reactor
-        self._baudrate = baudrate
-        self._bytesize = bytesize
-        self._parity = parity
-        self._stopbits = stopbits
-        self._timeout = timeout
-        self._xonxoff = xonxoff
-        self._rtscts = rtscts
+        self._args = args
+        self._kwargs = kwargs
 
 
     def connect(self, serialFactory):
@@ -932,9 +919,7 @@ class SerialPortEndpoint(object):
                 proto = serialFactory.buildProtocol(
                            SerialAddress(self._deviceNameOrPortNumber)  )
                 self._serialport.SerialPort(proto, self._deviceNameOrPortNumber,
-                        self._reactor, self._baudrate, self._bytesize,
-                        self._parity, self._stopbits, self._timeout,
-                        self._xonxoff, self._rtscts)
+                        self._reactor, *self._args, **self._kwargs)
                 return defer.succeed(proto)
         except:
             return defer.fail()
