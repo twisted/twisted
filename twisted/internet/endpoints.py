@@ -35,7 +35,8 @@ from twisted.python.systemd import ListenFDs
 from twisted.internet.abstract import isIPv6Address
 from twisted.python.failure import Failure
 from twisted.python import log
-from twisted.internet.address import _ProcessAddress, HostnameAddress, SerialAddress
+from twisted.internet.address import (_ProcessAddress, HostnameAddress,
+                                      SerialAddress)
 from twisted.python.components import proxyForInterface
 from twisted.internet.task import LoopingCall
 
@@ -928,7 +929,8 @@ class SerialPortEndpoint(object):
             if self._serialport == None:
                 raise ImportError
             else:
-                proto = serialFactory.buildProtocol(SerialAddress())
+                proto = serialFactory.buildProtocol(
+                           SerialAddress(self._deviceNameOrPortNumber)  )
                 self._serialport.SerialPort(proto, self._deviceNameOrPortNumber,
                         self._reactor, self._baudrate, self._bytesize,
                         self._parity, self._stopbits, self._timeout,

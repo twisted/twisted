@@ -116,10 +116,26 @@ class HostnameAddress(FancyEqMixin, object):
 
 
 @implementer(IAddress)
-class SerialAddress(object):
+class SerialAddress(FancyEqMixin, object):
     """
     An L{interfaces.IAddress} provider for serial port connections.
+
+    @ivar name: The device name associated with this port
+    @type name: C{str}
     """
+
+    compareAttributes = ('name', )
+
+    def __init__(self, name):
+        self.name = name
+
+
+    def __repr__(self):
+        return 'SerialAddress(%r)' % (self.name,)
+
+
+    def __hash__(self):
+        return hash(self.name)
 
 
 
