@@ -634,6 +634,24 @@ class TestDeprecationWarningStrings(SynchronousTestCase):
                 fullyQualifiedName(self.test_getDeprecationWarningString),
                 __name__))
 
+    def test_getDeprecationWarningStringOnClassMethod(self):
+        """
+        L{getDeprecationWarningString} returns a string that contains the
+        correct fully qualified name of a classmethod.
+        """
+        version = Version('Twisted', 8, 0, 0)
+
+        class ClassWithClassMethod(object):
+            @classmethod
+            def boo(cls):
+                pass
+
+        self.assertEqual(
+            getDeprecationWarningString(ClassWithClassMethod.boo,
+                                        version),
+            "%s.ClassWithClassMethod.boo was deprecated in Twisted 8.0.0" %
+            (__name__,))
+
 
     def test_getDeprecationDocstring(self):
         """
@@ -679,7 +697,8 @@ class DeprecatedDecoratorMixin(object):
             simplefilter("always")
             addStackLevel()
             self.assertEqual(caught[0].category, DeprecationWarning)
-            self.assertEqual(str(caught[0].message), getDeprecationWarningString(before, version))
+            self.assertEqual(getDeprecationWarningString(before, version),
+                             str(caught[0].message))
             # rstrip in case .pyc/.pyo
             self.assertEqual(caught[0].filename.rstrip('co'),
                              __file__.rstrip('co'))
@@ -694,7 +713,6 @@ class DeprecatedDecoratorMixin(object):
         self.assertEqual(before.__name__, after.__name__)
         self.assertEqual(fullyQualifiedName(before),
                          fullyQualifiedName(after))
-
 
     def test_deprecatedUpdatesDocstring(self):
         """

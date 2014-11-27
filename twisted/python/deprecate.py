@@ -84,6 +84,18 @@ def _fullyQualifiedName(obj):
         moduleName = obj.__module__
         return "%s.%s" % (moduleName, name)
     elif inspect.ismethod(obj):
+
+        # handle classmethods
+        try:
+            _self = obj.im_self
+        except AttributeError:
+            # Python 3 renames im_self to __self__
+            _self = obj.__self__
+
+        if isinstance(_self, type):
+            className = _fullyQualifiedName(_self)
+            return "%s.%s" % (className, obj.__name__)
+
         try:
             cls = obj.im_class
         except AttributeError:
@@ -93,6 +105,7 @@ def _fullyQualifiedName(obj):
         else:
             className = _fullyQualifiedName(cls)
             return "%s.%s" % (className, name)
+
     return name
 # Try to keep it looking like something in twisted.python.reflect.
 _fullyQualifiedName.__module__ = 'twisted.python.reflect'
