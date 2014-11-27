@@ -623,11 +623,10 @@ class TestDeprecationWarningStrings(SynchronousTestCase):
         the replacement parameter is a callable, its fully qualified name
         will be interpolated into the result.
         """
-        setUpDummyCallables(self)
         version = Version('Twisted', 8, 0, 0)
         warningString = getDeprecationWarningString(
             self.test_getDeprecationWarningString, version,
-            replacement=self.dummyReplacementMethod)
+            replacement=dummyReplacementMethod)
         self.assertEqual(
             warningString,
             "%s was deprecated in Twisted 8.0.0; please use "
@@ -673,16 +672,17 @@ class DeprecatedDecoratorMixin(object):
         Decorating a callable with L{deprecated} emits a warning.
         """
         version = Version('Twisted', 8, 0, 0)
-        dummy = self.decorator(version)(self.dummyCallable)
+        before, after = self.doDeprecation(version)
         def addStackLevel():
-            dummy()
+            after()
         with catch_warnings(record=True) as caught:
             simplefilter("always")
             addStackLevel()
             self.assertEqual(caught[0].category, DeprecationWarning)
-            self.assertEqual(str(caught[0].message), getDeprecationWarningString(self.dummyCallable, version))
+            self.assertEqual(str(caught[0].message), getDeprecationWarningString(before, version))
             # rstrip in case .pyc/.pyo
-            self.assertEqual(caught[0].filename.rstrip('co'), __file__.rstrip('co'))
+            self.assertEqual(caught[0].filename.rstrip('co'),
+                             __file__.rstrip('co'))
 
 
     def test_deprecatedPreservesName(self):
@@ -690,10 +690,10 @@ class DeprecatedDecoratorMixin(object):
         The decorated function has the same name as the original.
         """
         version = Version('Twisted', 8, 0, 0)
-        dummy = self.decorator(version)(self.dummyCallable)
-        self.assertEqual(self.dummyCallable.__name__, dummy.__name__)
-        self.assertEqual(fullyQualifiedName(self.dummyCallable),
-                         fullyQualifiedName(dummy))
+        before, after = self.doDeprecation(version)
+        self.assertEqual(before.__name__, after.__name__)
+        self.assertEqual(fullyQualifiedName(before),
+                         fullyQualifiedName(after))
 
 
     def test_deprecatedUpdatesDocstring(self):
@@ -702,14 +702,16 @@ class DeprecatedDecoratorMixin(object):
         about the deprecation.
         """
         version = Version('Twisted', 8, 0, 0)
-        originalDummy = self.dummyCallable
-        dummy = self.decorator(version)(self.dummyCallable)
+        before, after = self.doDeprecation(version)
+
+        temp = lambda: None
+        temp.__doc__ = before.__doc__
 
         _appendToDocstring(
-            originalDummy,
+            temp,
             _getDeprecationDocstring(version, ''))
 
-        self.assertEqual(self.dummyCallable.__doc__, dummy.__doc__)
+        self.assertEqual(temp.__doc__, after.__doc__)
 
 
     def test_versionMetadata(self):
@@ -718,11 +720,11 @@ class DeprecatedDecoratorMixin(object):
         version of that function.
         """
         version = Version('Twisted', 8, 0, 0)
-        dummy = self.decorator(version)(self.dummyCallable)
-        self.assertEqual(version, dummy.deprecatedVersion)
+        before, after = self.doDeprecation(version)
+        self.assertEqual(version, after.deprecatedVersion)
 
 
-    def test_deprecatedReplacement(self):
+    def test_deprecatedDocstringWithReplacementString(self):
         """
         L{deprecated} takes an additional replacement parameter that can be
         used to indicate the new, non-deprecated method developers should use.
@@ -730,16 +732,16 @@ class DeprecatedDecoratorMixin(object):
         directly into the warning message.
         """
         version = Version('Twisted', 8, 0, 0)
-        dummy = self.decorator(version, "something.foobar")(
-            self.dummyCallable)
-        self.assertEqual(dummy.__doc__,
-            "\n"
-            "    Do nothing.\n\n"
-            "    This is used to test the deprecation decorators.\n\n"
-            "    Deprecated in Twisted 8.0.0; please use "
-            "something.foobar"
-            " instead.\n"
-            "    ")
+        before, after = self.doDeprecation(version, "something.foobar")
+
+        temp = lambda: None
+        temp.__doc__ = before.__doc__
+
+        _appendToDocstring(
+            temp,
+            _getDeprecationDocstring(version, 'something.foobar'))
+
+        self.assertEqual(temp.__doc__, after.__doc__)
 
 
     def test_deprecatedReplacementWithCallable(self):
@@ -750,16 +752,19 @@ class DeprecatedDecoratorMixin(object):
         will be interpolated into the warning message.
         """
         version = Version('Twisted', 8, 0, 0)
-        decorator = self.decorator(version,
-                               replacement=self.dummyReplacementMethod)
-        dummy = decorator(self.dummyCallable)
-        self.assertEqual(dummy.__doc__,
-            "\n"
-            "    Do nothing.\n\n"
-            "    This is used to test the deprecation decorators.\n\n"
-            "    Deprecated in Twisted 8.0.0; please use "
-            "%s.dummyReplacementMethod instead.\n"
-            "    " % (__name__,))
+        before, after = self.doDeprecation(version,
+                                           replacement=dummyReplacementMethod)
+
+        temp = lambda: None
+        temp.__doc__ = before.__doc__
+
+        _appendToDocstring(
+            temp,
+            _getDeprecationDocstring(
+                version,
+                '{0}.dummyReplacementMethod'.format(__name__)))
+
+        self.assertEqual(temp.__doc__, after.__doc__)
 
 
 
@@ -768,73 +773,96 @@ class TestDecoratedDecoratorOnFunctions(DeprecatedDecoratorMixin,
     """
     Tests for L{twisted.python.deprecate.deprecated} on regular functions
     """
-    def setUp(self):
-        setUpDummyCallables(self)
-        self.decorator = deprecated
+    def doDeprecation(self, version, replacement=None):
+        """
+        Perform deprecation on a regular function.
+        """
+        return dummyCallable, deprecated(version, replacement)(dummyCallable)
 
 
-
-class TestDecoratedDecoratorOnInstance(DeprecatedDecoratorMixin,
+class TestDeprecatedDecoratorOnInstance(DeprecatedDecoratorMixin,
                                         SynchronousTestCase):
     """
     Tests for L{twisted.python.deprecate.deprecated} on instance methods.
-
-    This is tricky to do because::
-        class A(object):
-            @deprecated(Version("Twisted", 8, 0, 0))
-            def foo(self):
-                pass
-
-    has different behavior than::
-
-        class A(object)
-            def foo(self):
-                pass
-        deprecated(Version("Twisted", 8, 0, 0))(A.foo)
-
-    In the first case, L{twisted.python.deprecate.deprecated} sees C{foo} as
-    a function - in the second case, it sees C{foo} as an unbound method on A.
-    The fully qualified name is different between the two cases.
-
-    The setup in this test case decorates and sets the function on the class
-    in one go, making it behave like the first case.
     """
-    def setUp(self):
-        setUpDummyCallables(self)
+    def doDeprecation(self, version, replacement=None):
+        """
+        Perform deprecation on a regular function.
+        """
+        originalStore = []
+
+        def _catchOriginal(function):
+            originalStore.append(function)
+            return function
 
         class ClassWithDeprecatedMethods(object):
-            pass
+            @deprecated(version, replacement)
+            @_catchOriginal
+            def dummy(self):
+                """
+                This is an instance method that should be deprecated.
+                """
 
-        ClassWithDeprecatedMethods.dummyCallable = self.dummyCallable
-
-        def _deprecated(version, replacement=None):
-            def wrapped(function):
-                self.dummyCallable = (
-                    ClassWithDeprecatedMethods().dummyCallable)
-                ClassWithDeprecatedMethods.dummyCallable = (
-                    deprecated(version, replacement)(function))
-                return ClassWithDeprecatedMethods().dummyCallable
-            return wrapped
-
-        self.decorator = _deprecated
+        after = ClassWithDeprecatedMethods().dummy
+        ClassWithDeprecatedMethods.dummy = originalStore[0]
+        before = ClassWithDeprecatedMethods().dummy
+        return before, after
 
 
-    def test_asDecoratorForSanity(self):
-        """
-        When L{twisted.python.deprecate.deprecated} is actually used as a
-        decorator, rather than in setting a function on a class, the instance
-        method name contains the class name.  This duplicates coverage, but
-        is here to validate that the setUp indeed replicates actual decorator
-        behavior.
-        """
-        class Ack(object):
-            @deprecated(Version("Twisted", 8, 0, 0))
-            def foo(self):
-                pass
+class TestDeprecatedDecoratorOutsideClassmethod(DeprecatedDecoratorMixin,
+                                                SynchronousTestCase):
+    """
+    Tests for L{twisted.python.deprecate.deprecated} on class methods if
+    the L{deprecated} decorator is above the L{classmethod} decorator.
+    """
+    def doDeprecation(self, version, replacement=None):
+        originalStore = []
 
-        self.assertTrue(fullyQualifiedName(Ack.foo).endswith("Ack.foo"))
-        self.assertTrue(fullyQualifiedName(Ack().foo).endswith("Ack.foo"))
+        def _catchOriginal(function):
+            originalStore.append(function)
+            return function
 
+        class ClassWithDeprecatedMethods(object):
+            @deprecated(version, replacement)
+            @_catchOriginal
+            @classmethod
+            def dummy(self):
+                """
+                This is a classmethod method that should be deprecated.
+                """
+
+        after = ClassWithDeprecatedMethods.dummy
+        ClassWithDeprecatedMethods.dummy = originalStore[0]
+        before = ClassWithDeprecatedMethods.dummy
+        return before, after
+
+
+class TestDeprecatedDecoratorInsideClassmethod(DeprecatedDecoratorMixin,
+                                               SynchronousTestCase):
+    """
+    Tests for L{twisted.python.deprecate.deprecated} on class methods if
+    the L{deprecated} decorator is below the L{classmethod} decorator.
+    """
+    def doDeprecation(self, version, replacement=None):
+        originalStore = []
+
+        def _catchOriginal(function):
+            originalStore.append(function)
+            return function
+
+        class ClassWithDeprecatedMethods(object):
+            @classmethod
+            @deprecated(version, replacement)
+            @_catchOriginal
+            def dummy(self):
+                """
+                This is a classmethod method that should be deprecated.
+                """
+
+        after = ClassWithDeprecatedMethods.dummy
+        ClassWithDeprecatedMethods.dummy = classmethod(originalStore[0])
+        before = ClassWithDeprecatedMethods.dummy
+        return before, after
 
 
 class TestAppendToDocstring(SynchronousTestCase):
