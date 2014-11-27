@@ -555,8 +555,8 @@ def setUpDummyCallables(testCase):
     This sets up some clean dummyCallables and dummyReplacements for a test
     case, in case they need to be mutated
 
-    @param testCase: an object onto which attributes can be added - meant to
-        be used for subclasess of L{twisted.trial.unittest.TestCase}
+    @param testCase: An object onto which attributes can be added - meant to
+        be used for subclasess of L{twisted.trial.unittest.TestCase}.
     """
     testCase.dummyCallable = wraps(dummyCallable)(lambda *args: None)
     testCase.dummyReplacementMethod = wraps(
@@ -600,10 +600,10 @@ class TestDeprecationWarningStrings(SynchronousTestCase):
 
     def test_getDeprecationWarningStringReplacement(self):
         """
-        L{getDeprecationWarningString} takes an additional replacement parameter
-        that can be used to add information to the deprecation.  If the
-        replacement parameter is a string, it will be interpolated directly into
-        the result.
+        L{getDeprecationWarningString} takes an additional replacement
+        parameter that can be used to add information to the deprecation.  If
+        the replacement parameter is a string, it will be interpolated
+        directly into the result.
         """
         version = Version('Twisted', 8, 0, 0)
         warningString = getDeprecationWarningString(
@@ -618,10 +618,10 @@ class TestDeprecationWarningStrings(SynchronousTestCase):
 
     def test_getDeprecationWarningStringReplacementWithCallable(self):
         """
-        L{getDeprecationWarningString} takes an additional replacement parameter
-        that can be used to add information to the deprecation. If the
-        replacement parameter is a callable, its fully qualified name will be
-        interpolated into the result.
+        L{getDeprecationWarningString} takes an additional replacement
+        parameter that can be used to add information to the deprecation. If
+        the replacement parameter is a callable, its fully qualified name
+        will be interpolated into the result.
         """
         setUpDummyCallables(self)
         version = Version('Twisted', 8, 0, 0)
@@ -655,12 +655,17 @@ class DeprecatedDecoratorMixin(object):
 
     Requires the following 3 attributes be set on the instance:
 
-    @ivar decorator: probably just L{twisted.python.deprecate.deprecated}, or
+    @ivar decorator: Most likely L{twisted.python.deprecate.deprecated}, or
         something else with the same API that needs to do some additional
-        work such as adding functions to classes
-    @ivar dummyCallable: a callable to deprecate
-    @ivar dummyReplacementMethod: a callable to deprecate C{dummyCallable} in
+        work such as adding functions to classes.
+    @type decorator: callable
+
+    @ivar dummyCallable: A callable to deprecate.
+    @type dummyCallable: callable
+
+    @ivar dummyReplacementMethod: A callable to deprecate C{dummyCallable} in
         favor of
+    @type dummyReplacementMethod: callable
     """
 
     def test_deprecateEmitsWarning(self):
