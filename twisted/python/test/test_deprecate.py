@@ -826,7 +826,7 @@ class TestDeprecatedDecoratorOutsideClassmethod(DeprecatedDecoratorMixin,
             @deprecated(version, replacement)
             @_catchOriginal
             @classmethod
-            def dummy(self):
+            def dummy(cls):
                 """
                 This is a classmethod method that should be deprecated.
                 """

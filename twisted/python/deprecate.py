@@ -270,36 +270,43 @@ class _DeprecateDescriptor(object):
     A descriptor that handles deprecating instance methods as well as
     functions.
 
-    @ivar deprecatee: The function/class method/instance method to deprecate.
-    @type deprecatee: callable
+    @ivar deprecatedVersion: The version that the callable was deprecated in.
+    @type deprecatedVersion: L{twisted.python.versions.Version}
 
-    @ivar version: The version that the callable was deprecated in.
-    @type version: L{twisted.python.versions.Version}
+    @ivar _deprecatee: The function/class method/instance method to deprecate.
+    @type _deprecatee: callable
 
-    @ivar replacement: What should be used in place of the callable. Either
+    @ivar _replacement: What should be used in place of the callable. Either
         pass in a string, which will be inserted into the warning message,
         or a callable, which will be expanded to its full import path.
-    @type replacement: C{str} or callable
+    @type _replacement: C{str} or callable
+
+    @ivar _wrapee: The function whose metadata should be copied.
+    @type _wrapee: L{types.FunctionType}
     """
     def __init__(self, deprecatee, version, replacement=None):
         """
         Initializes the descriptor.
 
-        @param deprecatee: see L{_DeprecateDescriptor.deprecatee}
-        @param version: see L{_DeprecateDescriptor.version}
-        @param replacement: see L{_DeprecateDescriptor.replacement}
+        @param deprecatee: see L{_DeprecateDescriptor._deprecatee}
+        @param version: see L{_DeprecateDescriptor.deprecatedVersion}
+        @param replacement: see L{_DeprecateDescriptor._replacement}
         """
-        wraps(deprecatee)(self)
+        self._wrapee = deprecatee
+        if isinstance(deprecatee, classmethod):
+            # because you can't wrap a classmethod instance, only its function
+            self._wrapee = deprecatee.__func__
 
-        self.deprecatee = deprecatee
-        self.version = version
-        self.replacement = replacement
+        wraps(self._wrapee)(self)
+
+        self._deprecatee = deprecatee
+        self._replacement = replacement
 
         _appendToDocstring(self,
                            _getDeprecationDocstring(version, replacement))
         self.deprecatedVersion = version
 
-        self.__qualname__ = _fullyQualifiedName(self.deprecatee)
+        self.__qualname__ = _fullyQualifiedName(self._wrapee)
 
 
     def _warn(self, function, args, kwargs):
@@ -314,7 +321,7 @@ class _DeprecateDescriptor(object):
             C{kwargs}.
         """
         warningString = getDeprecationWarningString(
-            function, self.version, None, self.replacement)
+            function, self.deprecatedVersion, None, self._replacement)
 
         warn(warningString, DeprecationWarning, stacklevel=3)
         return function(*args, **kwargs)
@@ -331,7 +338,7 @@ class _DeprecateDescriptor(object):
 
         @return: The return value of calling C{deprecatee}.
         """
-        return self._warn(self.deprecatee, args, kwargs)
+        return self._warn(self._deprecatee, args, kwargs)
 
 
     def __get__(self, instance, instanceType):
@@ -348,14 +355,17 @@ class _DeprecateDescriptor(object):
         @return: A callable that calls C{deprecatee} and returns
             C{deprecatee}'s return value.
         """
-        method = self.deprecatee.__get__(instance, instanceType)
+        method = self._deprecatee.__get__(instance, instanceType)
 
-        @wraps(self.deprecatee)
+        @wraps(self._wrapee)
         def wrap(_, *args, **kwargs):
             return self._warn(method, args, kwargs)
 
         wrap.__doc__ = self.__doc__
-        wrap.deprecatedVersion = self.version
+        wrap.deprecatedVersion = self.deprecatedVersion
+
+        if self._wrapee is not self._deprecatee:
+            wrap = classmethod(wrap)
 
         return wrap.__get__(instance, instanceType)
 
