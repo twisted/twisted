@@ -282,6 +282,13 @@ class _DeprecateDescriptor(object):
     @type replacement: C{str} or callable
     """
     def __init__(self, deprecatee, version, replacement=None):
+        """
+        Initializes the descriptor.
+
+        @param deprecatee: see L{_DeprecateDescriptor.deprecatee}
+        @param version: see L{_DeprecateDescriptor.version}
+        @param replacement: see L{_DeprecateDescriptor.replacement}
+        """
         wraps(deprecatee)(self)
 
         self.deprecatee = deprecatee
