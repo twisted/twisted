@@ -2422,7 +2422,7 @@ class SerialPortEndpointsTestCase(unittest.TestCase):
         Deferred that fails.
         """
         endpoint = endpoints.SerialPortEndpoint(
-            '/dev/tty-doesnotexist-4835c2c2-97db-4de8-b301-8ac63e6e79c1', reactor)
+            '/dev/tty-doesnotexist-4835c2c2-97db-4de8-b301',reactor)
         d = endpoint.connect(SerialFactory())
         self.assertIsInstance(self.failureResultOf(d).value, SerialException)
 
