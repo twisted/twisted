@@ -33,7 +33,7 @@ from twisted.trial.reporter import _ExitWrapper, UncleanWarningsReporterWrapper
 # These are imported so that they remain in the public API for t.trial.runner
 from twisted.trial.unittest import TestSuite
 
-from zope.interface import implementer
+from zope.interface import implements
 
 pyunit = __import__('unittest')
 
@@ -252,12 +252,13 @@ def isTestCase(obj):
 
 
 
-@implementer(ITestCase)
 class TestHolder(object):
     """
     Placeholder for a L{TestCase} inside a reporter. As far as a L{TestResult}
     is concerned, this looks exactly like a unit test.
     """
+
+    implements(ITestCase)
 
     failureException = None
 

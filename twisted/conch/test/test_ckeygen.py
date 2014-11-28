@@ -9,14 +9,15 @@ import getpass
 import sys
 from StringIO import StringIO
 
-from twisted.python.reflect import requireModule
-
-if requireModule('Crypto') and requireModule('pyasn1'):
+try:
+    import Crypto
+    import pyasn1
+except ImportError:
+    skip = "PyCrypto and pyasn1 required for twisted.conch.scripts.ckeygen."
+else:
     from twisted.conch.ssh.keys import Key, BadKeyError
     from twisted.conch.scripts.ckeygen import (
         changePassPhrase, displayPublicKey, printFingerprint, _saveKey)
-else:
-    skip = "PyCrypto and pyasn1 required for twisted.conch.scripts.ckeygen."
 
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase

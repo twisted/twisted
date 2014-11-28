@@ -109,17 +109,12 @@ class Factory:
         directly.
         """
 
-
     def buildProtocol(self, addr):
-        """
-        Create an instance of a subclass of Protocol.
+        """Create an instance of a subclass of Protocol.
 
         The returned instance will handle input on an incoming server
-        connection, and an attribute "factory" pointing to the creating
+        connection, and an attribute \"factory\" pointing to the creating
         factory.
-
-        Alternatively, C{None} may be returned to immediately close the
-        new connection.
 
         Override this method to alter how Protocol instances get created.
 
@@ -128,7 +123,6 @@ class Factory:
         p = self.protocol()
         p.factory = self
         return p
-
 
 
 class ClientFactory(Factory):

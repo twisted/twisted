@@ -31,16 +31,13 @@ from zope.interface import Interface, Attribute, implementer
 # modified for inclusion in the standard library.  --glyph
 
 from twisted.python.compat import comparable, cmp
-from twisted.python.deprecate import deprecated
 from twisted.python.runtime import platform
-from twisted.python.versions import Version
 
 from twisted.python.win32 import ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
 from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
 from twisted.python.win32 import WindowsError
 
 from twisted.python.util import FancyEqMixin
-
 
 
 _CREATE_FLAGS = (os.O_EXCL |
@@ -80,10 +77,10 @@ class IFilePath(Interface):
     parent (if it has one); a file path can not have two children with the same
     name.  This name is referred to as the file path's "base name".
 
-    A series of such names can be used to locate nested children of a file
-    path; such a series is referred to as the child's "path", relative to the
-    parent.  In this case, each name in the path is referred to as a "path
-    segment"; the child's base name is the segment in the path.
+    A series of such names can be used to locate nested children of a file path;
+    such a series is referred to as the child's "path", relative to the parent.
+    In this case, each name in the path is referred to as a "path segment"; the
+    child's base name is the segment in the path.
 
     When representing a file path as a string, a "path separator" is used to
     delimit the path segments within the string.  For a file system path, that
@@ -91,7 +88,7 @@ class IFilePath(Interface):
 
     Note that the values of child names may be restricted.  For example, a file
     system path will not allow the use of the path separator in a name, and
-    certain names (e.g. C{"."} and C{".."}) may be reserved or have special
+    certain names (eg. C{"."} and C{".."}) may be reserved or have special
     meanings.
 
     @since: 12.1
@@ -206,8 +203,8 @@ class IFilePath(Interface):
         """
         A file path for the directory containing the file at this file path.
 
-        @param name: the name of a sibling of this path.  C{name} must be a
-            direct sibling of this path and may not contain a path separator.
+        @param name: the name of a sibling of this path. C{name} must be a direct
+            sibling of this path and may not contain a path separator.
 
         @return: a sibling file path of this one.
         """
@@ -372,10 +369,10 @@ class AbstractFilePath(object):
         children in turn.
 
         The optional argument C{descend} is a predicate that takes a FilePath,
-        and determines whether or not that FilePath is traversed/descended
-        into.  It will be called with each path for which C{isdir} returns
-        C{True}.  If C{descend} is not specified, all directories will be
-        traversed (including symbolic links which refer to directories).
+        and determines whether or not that FilePath is traversed/descended into.
+        It will be called with each path for which C{isdir} returns C{True}.  If
+        C{descend} is not specified, all directories will be traversed
+        (including symbolic links which refer to directories).
 
         @param descend: A one-argument callable that will return True for
             FilePaths that should be traversed, False otherwise.
@@ -399,8 +396,8 @@ class AbstractFilePath(object):
 
     def sibling(self, path):
         """
-        Return a L{FilePath} with the same directory as this instance but with
-        a basename of C{path}.
+        Return a L{FilePath} with the same directory as this instance but with a
+        basename of C{path}.
 
         @param path: The basename of the L{FilePath} to return.
         @type path: L{str}
@@ -585,14 +582,6 @@ class Permissions(FancyEqMixin, object):
             [x.shorthand() for x in (self.user, self.group, self.other)])
 
 
-class _SpecialNoValue(object):
-    """
-    An object that represents 'no value', to be used in deprecating statinfo.
-
-    Please remove once statinfo is removed.
-    """
-    pass
-
 
 @comparable
 @implementer(IFilePath)
@@ -629,9 +618,7 @@ class FilePath(AbstractFilePath):
     @type path: L{bytes}
     @ivar path: The path from which 'downward' traversal is permitted.
 
-    @ivar statinfo: (WARNING: statinfo is deprecated as of Twisted 14.1.0 and
-        will become a private attribute)
-        The currently cached status information about the file on
+    @ivar statinfo: The currently cached status information about the file on
         the filesystem that this L{FilePath} points to.  This attribute is
         C{None} if the file is in an indeterminate state (either this
         L{FilePath} has not yet had cause to call C{stat()} yet or
@@ -645,11 +632,11 @@ class FilePath(AbstractFilePath):
         C{getModificationTime()}, and so on.
     @type statinfo: L{int} or L{types.NoneType} or L{os.stat_result}
     """
-    _statinfo = None
+
+    statinfo = None
     path = None
 
     sep = slash.encode("ascii")
-
 
     def __init__(self, path, alwaysCreate=False):
         """
@@ -659,15 +646,14 @@ class FilePath(AbstractFilePath):
         self.path = abspath(path)
         self.alwaysCreate = alwaysCreate
 
-
     def __getstate__(self):
         """
         Support serialization by discarding cached L{os.stat} results and
         returning everything else.
         """
         d = self.__dict__.copy()
-        if '_statinfo' in d:
-            del d['_statinfo']
+        if 'statinfo' in d:
+            del d['statinfo']
         return d
 
 
@@ -691,12 +677,10 @@ class FilePath(AbstractFilePath):
             raise InsecurePath("%r contains a colon." % (path,))
         norm = normpath(path)
         if self.sep in norm:
-            raise InsecurePath("%r contains one or more directory separators" %
-                               (path,))
+            raise InsecurePath("%r contains one or more directory separators" % (path,))
         newpath = abspath(joinpath(self.path, norm))
         if not newpath.startswith(self.path):
-            raise InsecurePath("%r is not a child of %s" %
-                               (newpath, self.path))
+            raise InsecurePath("%r is not a child of %s" % (newpath, self.path))
         return self.clonePath(newpath)
 
 
@@ -704,8 +688,8 @@ class FilePath(AbstractFilePath):
         """
         Use me if C{path} might have slashes in it, but you know they're safe.
 
-        @param path: A relative path (ie, a path not starting with C{"/"})
-            which will be interpreted as a child or descendant of this path.
+        @param path: A relative path (ie, a path not starting with C{"/"}) which
+            will be interpreted as a child or descendant of this path.
         @type path: L{bytes}
 
         @return: The child path.
@@ -713,8 +697,7 @@ class FilePath(AbstractFilePath):
         """
         newpath = abspath(joinpath(self.path, normpath(path)))
         if not newpath.startswith(self.path):
-            raise InsecurePath("%s is not a child of %s" %
-                               (newpath, self.path))
+            raise InsecurePath("%s is not a child of %s" % (newpath, self.path))
         return self.clonePath(newpath)
 
 
@@ -848,20 +831,20 @@ class FilePath(AbstractFilePath):
 
     def restat(self, reraise=True):
         """
-        Re-calculate cached effects of 'stat'.  To refresh information on this
-        path after you know the filesystem may have changed, call this method.
+        Re-calculate cached effects of 'stat'.  To refresh information on this path
+        after you know the filesystem may have changed, call this method.
 
         @param reraise: a boolean.  If true, re-raise exceptions from
             L{os.stat}; otherwise, mark this path as not existing, and remove
             any cached stat information.
 
-        @raise Exception: If C{reraise} is C{True} and an exception occurs
-            while reloading metadata.
+        @raise Exception: If C{reraise} is C{True} and an exception occurs while
+            reloading metadata.
         """
         try:
-            self._statinfo = stat(self.path)
+            self.statinfo = stat(self.path)
         except OSError:
-            self._statinfo = 0
+            self.statinfo = 0
             if reraise:
                 raise
 
@@ -872,7 +855,7 @@ class FilePath(AbstractFilePath):
 
         @since: 10.1.0
         """
-        self._statinfo = None
+        self.statinfo = None
 
 
     def chmod(self, mode):
@@ -895,10 +878,10 @@ class FilePath(AbstractFilePath):
         @raise Exception: if the size cannot be obtained.
         @rtype: L{int}
         """
-        st = self._statinfo
+        st = self.statinfo
         if not st:
             self.restat()
-            st = self._statinfo
+            st = self.statinfo
         return st.st_size
 
 
@@ -909,10 +892,10 @@ class FilePath(AbstractFilePath):
         @return: a number of seconds from the epoch.
         @rtype: L{float}
         """
-        st = self._statinfo
+        st = self.statinfo
         if not st:
             self.restat()
-            st = self._statinfo
+            st = self.statinfo
         return float(st.st_mtime)
 
 
@@ -923,10 +906,10 @@ class FilePath(AbstractFilePath):
         @return: a number of seconds from the epoch.
         @rtype: L{float}
         """
-        st = self._statinfo
+        st = self.statinfo
         if not st:
             self.restat()
-            st = self._statinfo
+            st = self.statinfo
         return float(st.st_ctime)
 
 
@@ -937,10 +920,10 @@ class FilePath(AbstractFilePath):
         @return: a number of seconds from the epoch.
         @rtype: L{float}
         """
-        st = self._statinfo
+        st = self.statinfo
         if not st:
             self.restat()
-            st = self._statinfo
+            st = self.statinfo
         return float(st.st_atime)
 
 
@@ -958,10 +941,10 @@ class FilePath(AbstractFilePath):
         if platform.isWindows():
             raise NotImplementedError
 
-        st = self._statinfo
+        st = self.statinfo
         if not st:
             self.restat()
-            st = self._statinfo
+            st = self.statinfo
         return st.st_ino
 
 
@@ -971,21 +954,19 @@ class FilePath(AbstractFilePath):
         number together uniquely identify the file, but the device number is
         not necessarily consistent across reboots or system crashes.
 
-        @raise NotImplementedError: if the platform is Windows, since the
-            device number would be 0 for all partitions on a Windows platform
-
+        @raise NotImplementedError: if the platform is Windows, since the device
+            number would be 0 for all partitions on a Windows platform
         @return: a number representing the device
         @rtype: L{int}
-
         @since: 11.0
         """
         if platform.isWindows():
             raise NotImplementedError
 
-        st = self._statinfo
+        st = self.statinfo
         if not st:
             self.restat()
-            st = self._statinfo
+            st = self.statinfo
         return st.st_dev
 
 
@@ -1008,10 +989,10 @@ class FilePath(AbstractFilePath):
         if platform.isWindows():
             raise NotImplementedError
 
-        st = self._statinfo
+        st = self.statinfo
         if not st:
             self.restat()
-            st = self._statinfo
+            st = self.statinfo
         return st.st_nlink
 
 
@@ -1028,10 +1009,10 @@ class FilePath(AbstractFilePath):
         if platform.isWindows():
             raise NotImplementedError
 
-        st = self._statinfo
+        st = self.statinfo
         if not st:
             self.restat()
-            st = self._statinfo
+            st = self.statinfo
         return st.st_uid
 
 
@@ -1048,10 +1029,10 @@ class FilePath(AbstractFilePath):
         if platform.isWindows():
             raise NotImplementedError
 
-        st = self._statinfo
+        st = self.statinfo
         if not st:
             self.restat()
-            st = self._statinfo
+            st = self.statinfo
         return st.st_gid
 
 
@@ -1064,10 +1045,10 @@ class FilePath(AbstractFilePath):
         @rtype: L{Permissions}
         @since: 11.1
         """
-        st = self._statinfo
+        st = self.statinfo
         if not st:
             self.restat()
-            st = self._statinfo
+            st = self.statinfo
         return Permissions(S_IMODE(st.st_mode))
 
 
@@ -1079,11 +1060,11 @@ class FilePath(AbstractFilePath):
             C{False} in the other cases.
         @rtype: L{bool}
         """
-        if self._statinfo:
+        if self.statinfo:
             return True
         else:
             self.restat(False)
-            if self._statinfo:
+            if self.statinfo:
                 return True
             else:
                 return False
@@ -1097,10 +1078,10 @@ class FilePath(AbstractFilePath):
             otherwise.
         @rtype: L{bool}
         """
-        st = self._statinfo
+        st = self.statinfo
         if not st:
             self.restat(False)
-            st = self._statinfo
+            st = self.statinfo
             if not st:
                 return False
         return S_ISDIR(st.st_mode)
@@ -1114,10 +1095,10 @@ class FilePath(AbstractFilePath):
             directory, socket, named pipe, etc), C{False} otherwise.
         @rtype: L{bool}
         """
-        st = self._statinfo
+        st = self.statinfo
         if not st:
             self.restat(False)
-            st = self._statinfo
+            st = self.statinfo
             if not st:
                 return False
         return S_ISREG(st.st_mode)
@@ -1131,10 +1112,10 @@ class FilePath(AbstractFilePath):
         @rtype: L{bool}
         @since: 11.1
         """
-        st = self._statinfo
+        st = self.statinfo
         if not st:
             self.restat(False)
-            st = self._statinfo
+            st = self.statinfo
             if not st:
                 return False
         return S_ISBLK(st.st_mode)
@@ -1148,10 +1129,10 @@ class FilePath(AbstractFilePath):
         @rtype: L{bool}
         @since: 11.1
         """
-        st = self._statinfo
+        st = self.statinfo
         if not st:
             self.restat(False)
-            st = self._statinfo
+            st = self.statinfo
             if not st:
                 return False
         return S_ISSOCK(st.st_mode)
@@ -1314,10 +1295,10 @@ class FilePath(AbstractFilePath):
         bytes, trying to avoid data-loss in the meanwhile.
 
         On UNIX-like platforms, this method does its best to ensure that by the
-        time this method returns, either the old contents I{or} the new
-        contents of the file will be present at this path for subsequent
-        readers regardless of premature device removal, program crash, or power
-        loss, making the following assumptions:
+        time this method returns, either the old contents I{or} the new contents
+        of the file will be present at this path for subsequent readers
+        regardless of premature device removal, program crash, or power loss,
+        making the following assumptions:
 
             - your filesystem is journaled (i.e. your filesystem will not
               I{itself} lose data due to power loss)
@@ -1325,22 +1306,22 @@ class FilePath(AbstractFilePath):
             - your filesystem's C{rename()} is atomic
 
             - your filesystem will not discard new data while preserving new
-              metadata (see U{http://mjg59.livejournal.com/108257.html} for
-              more detail)
+              metadata (see U{http://mjg59.livejournal.com/108257.html} for more
+              detail)
 
         On most versions of Windows there is no atomic C{rename()} (see
         U{http://bit.ly/win32-overwrite} for more information), so this method
         is slightly less helpful.  There is a small window where the file at
         this path may be deleted before the new file is moved to replace it:
-        however, the new file will be fully written and flushed beforehand so
-        in the unlikely event that there is a crash at that point, it should be
-        possible for the user to manually recover the new version of their
-        data.  In the future, Twisted will support atomic file moves on those
-        versions of Windows which I{do} support them: see U{Twisted ticket
+        however, the new file will be fully written and flushed beforehand so in
+        the unlikely event that there is a crash at that point, it should be
+        possible for the user to manually recover the new version of their data.
+        In the future, Twisted will support atomic file moves on those versions
+        of Windows which I{do} support them: see U{Twisted ticket
         3004<http://twistedmatrix.com/trac/ticket/3004>}.
 
-        This method should be safe for use by multiple concurrent processes,
-        but note that it is not easy to predict which process's contents will
+        This method should be safe for use by multiple concurrent processes, but
+        note that it is not easy to predict which process's contents will
         ultimately end up on disk if they invoke this method at close to the
         same time.
 
@@ -1351,6 +1332,7 @@ class FilePath(AbstractFilePath):
             store the bytes while they are being written.  This can be used to
             make sure that temporary files can be identified by their suffix,
             for cleanup in case of crashes.
+
         @type ext: L{bytes}
         """
         sib = self.temporarySibling(ext)
@@ -1415,16 +1397,18 @@ class FilePath(AbstractFilePath):
 
         The resulting path will be unpredictable, so that other subprocesses
         should neither accidentally attempt to refer to the same path before it
-        is created, nor they should other processes be able to guess its name
-        in advance.
+        is created, nor they should other processes be able to guess its name in
+        advance.
 
         @param extension: A suffix to append to the created filename.  (Note
             that if you want an extension with a '.' you must include the '.'
             yourself.)
+
         @type extension: L{bytes}
 
         @return: a path object with the given extension suffix, C{alwaysCreate}
             set to True.
+
         @rtype: L{FilePath}
         """
         sib = self.sibling(_secureEnoughString() + self.basename() + extension)
@@ -1490,11 +1474,11 @@ class FilePath(AbstractFilePath):
                 readfile = self.open()
                 try:
                     while 1:
-                        # XXX TODO: optionally use os.open, os.read and
-                        # O_DIRECT and use os.fstatvfs to determine chunk sizes
-                        # and make *****sure**** copy is page-atomic; the
-                        # following is good enough for 99.9% of everybody and
-                        # won't take a week to audit though.
+                        # XXX TODO: optionally use os.open, os.read and O_DIRECT
+                        # and use os.fstatvfs to determine chunk sizes and make
+                        # *****sure**** copy is page-atomic; the following is
+                        # good enough for 99.9% of everybody and won't take a
+                        # week to audit though.
                         chunk = readfile.read(self._chunkSize)
                         writefile.write(chunk)
                         if len(chunk) < self._chunkSize:
@@ -1558,36 +1542,6 @@ class FilePath(AbstractFilePath):
         else:
             self.changed()
             destination.changed()
-
-
-    def statinfo(self, value=_SpecialNoValue):
-        """
-        FilePath.statinfo is deprecated.
-
-        @param value: value to set statinfo to, if setting a value
-        @return: C{_statinfo} if getting, C{None} if setting
-        """
-        # This is a pretty awful hack to use the deprecated decorator to
-        # deprecate a class attribute.  Ideally, there would just be a
-        # statinfo property and a statinfo property setter, but the
-        # 'deprecated' decorator does not produce the correct FQDN on class
-        # methods.  So the property stuff needs to be set outside the class
-        # definition - but the getter and setter both need the same function
-        # in order for the 'deprecated' decorator to produce the right
-        # deprecation string.
-        if value is _SpecialNoValue:
-            return self._statinfo
-        else:
-            self._statinfo = value
-
-
-
-# This is all a terrible hack to get statinfo deprecated
-_tmp = deprecated(
-    Version('Twisted', 14, 1, 0),
-    "other FilePath methods such as getsize(), "
-    "isdir(), getModificationTime(), etc.")(FilePath.statinfo)
-FilePath.statinfo = property(_tmp, _tmp)
 
 
 FilePath.clonePath = FilePath

@@ -17,6 +17,7 @@ except ImportError:
     warnings.warn("PyCrypto not installed, but continuing anyways!",
             RuntimeWarning)
 
+from twisted.python import randbytes
 
 
 def NS(t):

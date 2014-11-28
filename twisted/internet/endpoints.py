@@ -41,7 +41,8 @@ from twisted.internet.task import LoopingCall
 
 if not _PY3:
     from twisted.plugin import IPlugin, getPlugins
-    from twisted.internet.stdio import StandardIO, PipeAddress
+    from twisted.internet import stdio
+    from twisted.internet.stdio import PipeAddress
     from twisted.python.constants import NamedConstant, Names
 else:
     from zope.interface import Interface
@@ -49,7 +50,6 @@ else:
         pass
     NamedConstant = object
     Names = object
-    StandardIO = None
 
 __all__ = ["clientFromString", "serverFromString",
            "TCP4ServerEndpoint", "TCP6ServerEndpoint",
@@ -219,16 +219,13 @@ class _WrappingFactory(ClientFactory):
 
     def buildProtocol(self, addr):
         """
-        Proxy C{buildProtocol} to our C{self._wrappedFactory} or errback the
-        C{self._onConnection} L{Deferred} if the wrapped factory raises an
-        exception or returns C{None}.
+        Proxy C{buildProtocol} to our C{self._wrappedFactory} or errback
+        the C{self._onConnection} L{Deferred}.
 
         @return: An instance of L{_WrappingProtocol} or C{None}
         """
         try:
             proto = self._wrappedFactory.buildProtocol(addr)
-            if proto is None:
-                raise error.NoProtocol()
         except:
             self._onConnection.errback()
         else:
@@ -249,17 +246,11 @@ class _WrappingFactory(ClientFactory):
 class StandardIOEndpoint(object):
     """
     A Standard Input/Output endpoint
-
-    @ivar _stdio: a callable, like L{stdio.StandardIO}, which takes an
-        L{IProtocol} provider and a C{reactor} keyword argument (interface
-        dependent upon your platform).
     """
-
-    _stdio = StandardIO
 
     def __init__(self, reactor):
         """
-        @param reactor: The reactor for the endpoint.
+        @param reactor: The reactor for the endpoint
         """
         self._reactor = reactor
 
@@ -268,35 +259,41 @@ class StandardIOEndpoint(object):
         """
         Implement L{IStreamServerEndpoint.listen} to listen on stdin/stdout
         """
-        return defer.execute(self._stdio,
+        return defer.execute(stdio.StandardIO,
                              stdioProtocolFactory.buildProtocol(PipeAddress()),
                              reactor=self._reactor)
 
 
 
-class _IProcessTransportWithConsumerAndProducer(interfaces.IProcessTransport,
-                                                interfaces.IConsumer,
-                                                interfaces.IPushProducer):
+@implementer(interfaces.ITransport)
+class _ProcessEndpointTransport(proxyForInterface(
+                                interfaces.IProcessTransport, '_process')):
     """
-    An L{_IProcessTransportWithConsumerAndProducer} combines various interfaces
-    to work around the issue that L{interfaces.IProcessTransport} is
-    incompletely defined and doesn't specify flow-control interfaces, and that
-    L{proxyForInterface} doesn't allow for multiple interfaces.
-    """
-
-
-
-class _ProcessEndpointTransport(
-        proxyForInterface(_IProcessTransportWithConsumerAndProducer,
-                          '_process')):
-    """
-    An L{ITransport}, L{IProcessTransport}, L{IConsumer}, and L{IPushProducer}
-    provider for the L{IProtocol} instance passed to the process endpoint.
+    An L{ITransport} provider for the L{IProtocol} instance passed to the
+    process endpoint.
 
     @ivar _process: An active process transport which will be used by write
         methods on this object to write data to a child process.
     @type _process: L{interfaces.IProcessTransport} provider
     """
+
+    def write(self, data):
+        """
+        Write to the child process's standard input.
+
+        @param data: The data to write on stdin.
+        """
+        self._process.writeToChild(0, data)
+
+
+    def writeSequence(self, data):
+        """
+        Write a list of strings to child process's stdin.
+
+        @param data: The list of chunks to write on stdin.
+        """
+        for chunk in data:
+            self._process.writeToChild(0, chunk)
 
 
 

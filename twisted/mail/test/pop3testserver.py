@@ -7,7 +7,7 @@
 from twisted.internet.protocol import Factory
 from twisted.protocols import basic
 from twisted.internet import reactor
-import sys
+import sys, time
 
 USER = "test"
 PASS = "twisted"

@@ -112,6 +112,7 @@ def loadAliasFile(domains, filename=None, fp=None):
     if prev:
         handle(result, prev, filename, i)
     for (u, a) in result.items():
+        addr = smtp.Address(u)
         result[u] = AliasGroup(a, domains, u)
     return result
 
@@ -637,7 +638,7 @@ class ProcessAlias(AliasBase):
         """
         p = ProcessAliasProtocol()
         m = MessageWrapper(p, self.program, self.reactor)
-        self.spawnProcess(p, self.program, self.path)
+        fd = self.spawnProcess(p, self.program, self.path)
         return m
 
 

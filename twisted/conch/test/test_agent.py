@@ -7,11 +7,11 @@ Tests for L{twisted.conch.ssh.agent}.
 
 import struct
 
-from twisted.internet import reactor
-from twisted.internet.interfaces import ITLSTransport
 from twisted.trial import unittest
 
-if not ITLSTransport.providedBy(reactor):
+try:
+    import OpenSSL
+except ImportError:
     iosim = None
 else:
     from twisted.test import iosim

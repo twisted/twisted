@@ -13,7 +13,7 @@ a sibling).
 Maintainer: Moshe Zadka
 """
 
-from zope.interface import implementer, Interface, Attribute
+from zope.interface import implements, Interface, Attribute
 
 from twisted.python.reflect import namedAny
 from twisted.python import components
@@ -56,11 +56,12 @@ class IServiceMaker(Interface):
 
 
 
-@implementer(IPlugin, IServiceMaker)
 class ServiceMaker(object):
     """
     Utility class to simplify the definition of L{IServiceMaker} plugins.
     """
+    implements(IPlugin, IServiceMaker)
+
     def __init__(self, name, module, description, tapname):
         self.name = name
         self.module = module
@@ -151,8 +152,6 @@ class IService(Interface):
         """
 
 
-
-@implementer(IService)
 class Service:
     """
     Base class for services.
@@ -161,6 +160,8 @@ class Service:
     book-keeping reponsibilities of starting and stopping, as well
     as not serializing this book-keeping information.
     """
+
+    implements(IService)
 
     running = 0
     name = None
@@ -253,7 +254,6 @@ class IServiceCollection(Interface):
 
 
 
-@implementer(IServiceCollection)
 class MultiService(Service):
     """
     Straightforward Service Container.
@@ -263,6 +263,8 @@ class MultiService(Service):
     will not finish shutting down until all of its child services
     will finish.
     """
+
+    implements(IServiceCollection)
 
     def __init__(self):
         self.services = []
@@ -345,7 +347,6 @@ class IProcess(Interface):
 
 
 
-@implementer(IProcess)
 class Process:
     """
     Process running parameters.
@@ -353,6 +354,7 @@ class Process:
     Sets up uid/gid in the constructor, and has a default
     of C{None} as C{processName}.
     """
+    implements(IProcess)
     processName = None
 
     def __init__(self, uid=None, gid=None):

@@ -8,10 +8,11 @@ insults/SSH integration support.
 @author: Jp Calderone
 """
 
-from zope.interface import implementer
+from zope.interface import implements
 
 from twisted.conch import avatar, interfaces as iconch, error as econch
 from twisted.conch.ssh import factory, keys, session
+from twisted.cred import credentials, checkers, portal
 from twisted.python import components
 
 from twisted.conch.insults import insults
@@ -34,11 +35,11 @@ class TerminalSessionTransport:
         self.avatar = avatar
         self.chainedProtocol = chainedProtocol
 
-        protoSession = self.proto.session
+        session = self.proto.session
 
         self.proto.makeConnection(
             _Glue(write=self.chainedProtocol.dataReceived,
-                  loseConnection=lambda: avatar.conn.sendClose(protoSession),
+                  loseConnection=lambda: avatar.conn.sendClose(session),
                   name="SSH Proto Transport"))
 
         def loseConnection():
@@ -57,10 +58,9 @@ class TerminalSessionTransport:
         # this bit up.
         self.chainedProtocol.terminalProtocol.terminalSize(width, height)
 
-
-
-@implementer(iconch.ISession)
 class TerminalSession(components.Adapter):
+    implements(iconch.ISession)
+
     transportFactory = TerminalSessionTransport
     chainedProtocolFactory = insults.ServerProtocol
 

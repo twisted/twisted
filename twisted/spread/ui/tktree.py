@@ -16,7 +16,7 @@ What I want it to look like:
 """
 
 import os
-from Tkinter import END, Listbox, Tk, Scrollbar, LEFT, BOTH, RIGHT, Y
+from Tkinter import *
 
 class Node:
     def __init__(self):

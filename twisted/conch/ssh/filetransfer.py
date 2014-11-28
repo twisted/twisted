@@ -3,16 +3,16 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-import errno
-import struct
 
-from zope.interface import implementer
+import struct, errno
 
-from twisted.conch.interfaces import ISFTPServer, ISFTPFile
-from twisted.conch.ssh.common import NS, getNS
 from twisted.internet import defer, protocol
 from twisted.python import failure, log
 
+from common import NS, getNS
+from twisted.conch.interfaces import ISFTPServer, ISFTPFile
+
+from zope import interface
 
 
 
@@ -51,10 +51,11 @@ class FileTransferBase(protocol.Protocol):
                 continue
             try:
                 f(data)
-            except Exception:
+            except:
                 log.err()
                 continue
-
+                reqId ,= struct.unpack('!L', data[:4])
+                self._ebStatus(failure.Failure(e), reqId)
 
     def _parseAttributes(self, data):
         flags ,= struct.unpack('!L', data[:4])
@@ -769,10 +770,10 @@ class FileTransferClient(FileTransferBase):
         These items are sent by the client to indicate additional features.
         """
 
-
-
-@implementer(ISFTPFile)
 class ClientFile:
+
+    interface.implements(ISFTPFile)
+
     def __init__(self, parent, handle):
         self.parent = parent
         self.handle = NS(handle)

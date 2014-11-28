@@ -9,7 +9,7 @@ See also RFC 4254.
 
 import os, signal, sys, struct
 
-from zope.interface import implementer
+from zope.interface import implements
 
 from twisted.internet.address import IPv4Address
 from twisted.internet.error import ProcessTerminated, ProcessDone
@@ -59,7 +59,6 @@ class StubAvatar:
 
 
 
-@implementer(session.ISession)
 class StubSessionForStubAvatar(object):
     """
     A stub ISession implementation for our StubAvatar.  The instance
@@ -84,6 +83,11 @@ class StubSessionForStubAvatar(object):
     @ivar gotEOF: if present, an EOF message was received.
     @ivar gotClosed: if present, a closed message was received.
     """
+
+
+    implements(session.ISession)
+
+
     def __init__(self, avatar):
         """
         Store the avatar we're adapting.

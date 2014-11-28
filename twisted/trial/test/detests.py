@@ -9,8 +9,6 @@ from __future__ import division, absolute_import
 
 from twisted.trial import unittest
 from twisted.internet import defer, threads, reactor
-from twisted.trial.util import suppress as SUPPRESS
-from twisted.python.util import runWithWarningsSuppressed
 
 
 class DeferredSetUpOK(unittest.TestCase):
@@ -111,19 +109,7 @@ class DeferredTests(unittest.TestCase):
     def test_passGenerated(self):
         self._touchClass(None)
         yield None
-    test_passGenerated = runWithWarningsSuppressed(
-        [ SUPPRESS(message="twisted.internet.defer.deferredGenerator was "
-                          "deprecated") ],
-        defer.deferredGenerator, test_passGenerated)
-
-
-    @defer.inlineCallbacks
-    def test_passInlineCallbacks(self):
-        """
-        Test case that is decorated with L{defer.inlineCallbacks}.
-        """
-        self._touchClass(None)
-        yield None
+    test_passGenerated = defer.deferredGenerator(test_passGenerated)
 
     def test_fail(self):
         return defer.fail(self.failureException('I fail'))

@@ -1017,7 +1017,6 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
             directory = self.dirs
 
         dirs, files = self._getFilesAndDirectories(directory)
-        dirs.insert(0,{'encoding': '', 'text': '../', 'href': '../', 'type': '[Directory]', 'size': ''})
 
         tableContent = "".join(self._buildTableContent(dirs + files))
 

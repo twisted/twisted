@@ -1746,17 +1746,30 @@ class IRCClient(basic.LineReceiver):
 
 
     def dccSend(self, user, file):
-        """
-        This is supposed to send a user a file directly.  This generally
-        doesn't work on any client, and this method is included only for
-        backwards compatibility and completeness.
+        if type(file) == types.StringType:
+            file = open(file, 'r')
 
-        @param user: C{str} representing the user
-        @param file: an open file (unknown, since this is not implemented)
-        """
-        raise NotImplementedError(
+        size = fileSize(file)
+
+        name = getattr(file, "name", "file@%s" % (id(file),))
+
+        factory = DccSendFactory(file)
+        port = reactor.listenTCP(0, factory, 1)
+
+        raise NotImplementedError,(
             "XXX!!! Help!  I need to bind a socket, have it listen, and tell me its address.  "
             "(and stop accepting once we've made a single connection.)")
+
+        my_address = struct.pack("!I", my_address)
+
+        args = ['SEND', name, my_address, str(port)]
+
+        if not (size is None):
+            args.append(size)
+
+        args = ' '.join(args)
+
+        self.ctcpMakeQuery(user, [('DCC', args)])
 
 
     def dccResume(self, user, fileName, port, resumePos):

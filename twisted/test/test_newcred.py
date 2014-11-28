@@ -13,6 +13,7 @@ from twisted.trial import unittest
 from twisted.cred import portal, checkers, credentials, error
 from twisted.python import components
 from twisted.internet import defer
+from twisted.internet.defer import deferredGenerator as dG, waitForDeferred as wFD
 
 try:
     from crypt import crypt
@@ -351,45 +352,22 @@ class PluggableAuthenticationModulesTest(unittest.TestCase):
     if not pamauth:
         skip = "Can't run without PyPAM"
 
-
-
 class CheckersMixin:
-    """
-    L{unittest.TestCase} mixin for testing that some checkers accept
-    and deny specified credentials.
-
-    Subclasses must provide
-    - C{getCheckers} which returns a sequence of
-      L{checkers.ICredentialChecker}
-    - C{getGoodCredentials} which returns a list of 2-tuples of
-      credential to check and avaterId to expect.
-    - C{getBadCredentials} which returns a list of credentials
-      which are expected to be unauthorized.
-    """
-
-    @defer.inlineCallbacks
-    def test_positive(self):
-        """
-        The given credentials are accepted by all the checkers, and give
-        the expected C{avatarID}s
-        """
+    def testPositive(self):
         for chk in self.getCheckers():
             for (cred, avatarId) in self.getGoodCredentials():
-                r = yield chk.requestAvatarId(cred)
-                self.assertEqual(r, avatarId)
+                r = wFD(chk.requestAvatarId(cred))
+                yield r
+                self.assertEqual(r.getResult(), avatarId)
+    testPositive = dG(testPositive)
 
-
-    @defer.inlineCallbacks
-    def test_negative(self):
-        """
-        The given credentials are rejected by all the checkers.
-        """
+    def testNegative(self):
         for chk in self.getCheckers():
             for cred in self.getBadCredentials():
-                d = chk.requestAvatarId(cred)
-                yield self.assertFailure(d, error.UnauthorizedLogin)
-
-
+                r = wFD(chk.requestAvatarId(cred))
+                yield r
+                self.assertRaises(error.UnauthorizedLogin, r.getResult)
+    testNegative = dG(testNegative)
 
 class HashlessFilePasswordDBMixin:
     credClass = credentials.UsernamePassword

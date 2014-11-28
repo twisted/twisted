@@ -361,28 +361,24 @@ class BasicFTPServerTestCase(FTPServerTestCase):
             s = ','.join(map(str, badValue))
             self.assertRaises(ValueError, ftp.decodeHostPort, s)
 
-
-    def test_PASV(self):
-        """
-        When the client sends the command C{PASV}, the server responds with a
-        host and port, and is listening on that port.
-        """
+    def testPASV(self):
         # Login
-        d = self._anonymousLogin()
-        # Issue a PASV command
-        d.addCallback(lambda _: self.client.queueStringCommand('PASV'))
-        def cb(responseLines):
-            """
-            Extract the host and port from the resonse, and
-            verify the server is listening of the port it claims to be.
-            """
-            host, port = ftp.decodeHostPort(responseLines[-1][4:])
-            self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
-        d.addCallback(cb)
-        # Semi-reasonable way to force cleanup
-        d.addCallback(lambda _: self.serverProtocol.transport.loseConnection())
-        return d
+        wfd = defer.waitForDeferred(self._anonymousLogin())
+        yield wfd
+        wfd.getResult()
 
+        # Issue a PASV command, and extract the host and port from the response
+        pasvCmd = defer.waitForDeferred(self.client.queueStringCommand('PASV'))
+        yield pasvCmd
+        responseLines = pasvCmd.getResult()
+        host, port = ftp.decodeHostPort(responseLines[-1][4:])
+
+        # Make sure the server is listening on the port it claims to be
+        self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
+
+        # Semi-reasonable way to force cleanup
+        self.serverProtocol.transport.loseConnection()
+    testPASV = defer.deferredGenerator(testPASV)
 
     def test_SYST(self):
         """SYST command will always return UNIX Type: L8"""
@@ -879,8 +875,7 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         """
         return self._listTestHelper(
             "LIST",
-            (u'my resum\xe9', (
-                0, 1, filepath.Permissions(0777), 0, 0, 'user', 'group')),
+            (u'my resum\xe9', (0, 1, 0777, 0, 0, 'user', 'group')),
             'drwxrwxrwx   0 user      group                   '
             '0 Jan 01  1970 my resum\xc3\xa9\r\n')
 
@@ -892,8 +887,7 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         """
         return self._listTestHelper(
             "LIST",
-            ('my resum\xc3\xa9', (
-                0, 1, filepath.Permissions(0777), 0, 0, 'user', 'group')),
+            ('my resum\xc3\xa9', (0, 1, 0777, 0, 0, 'user', 'group')),
             'drwxrwxrwx   0 user      group                   '
             '0 Jan 01  1970 my resum\xc3\xa9\r\n')
 
@@ -989,8 +983,7 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         """
         return self._listTestHelper(
             "NLST",
-            (u'my resum\xe9', (
-                0, 1, filepath.Permissions(0777), 0, 0, 'user', 'group')),
+            (u'my resum\xe9', (0, 1, 0777, 0, 0, 'user', 'group')),
             'my resum\xc3\xa9\r\n')
 
 
@@ -1000,8 +993,7 @@ class FTPServerPasvDataConnectionTestCase(FTPServerTestCase):
         """
         return self._listTestHelper(
             "NLST",
-            ('my resum\xc3\xa9', (
-                0, 1, filepath.Permissions(0777), 0, 0, 'user', 'group')),
+            ('my resum\xc3\xa9', (0, 1, 0777, 0, 0, 'user', 'group')),
             'my resum\xc3\xa9\r\n')
 
 
@@ -1164,7 +1156,7 @@ class DTPFactoryTests(unittest.TestCase):
         cancelled by L{ftp.DTPFactory.buildProtocol}.
         """
         self.factory.setTimeout(10)
-        self.factory.buildProtocol(None)
+        protocol = self.factory.buildProtocol(None)
         # Make sure the call is no longer active.
         self.assertFalse(self.reactor.calls)
 
@@ -3157,52 +3149,6 @@ class IFTPShellTestsMixin:
             self.assertEqual(len(res), 2)
         d.addCallback(cb)
         return d
-
-
-    def test_statHardlinksNotImplemented(self):
-        """
-        If L{twisted.python.filepath.FilePath.getNumberOfHardLinks} is not
-        implemented, the number returned is 0
-        """
-        pathFunc = self.shell._path
-
-        def raiseNotImplemented():
-            raise NotImplementedError
-
-        def notImplementedFilePath(path):
-            f = pathFunc(path)
-            f.getNumberOfHardLinks = raiseNotImplemented
-            return f
-
-        self.shell._path = notImplementedFilePath
-
-        self.createDirectory('ned')
-        d = self.shell.stat(('ned',), ('hardlinks',))
-        self.assertEqual(self.successResultOf(d), [0])
-
-
-    def test_statOwnerGroupNotImplemented(self):
-        """
-        If L{twisted.python.filepath.FilePath.getUserID} or
-        L{twisted.python.filepath.FilePath.getGroupID} are not implemented,
-        the owner returned is "0" and the group is returned as "0"
-        """
-        pathFunc = self.shell._path
-
-        def raiseNotImplemented():
-            raise NotImplementedError
-
-        def notImplementedFilePath(path):
-            f = pathFunc(path)
-            f.getUserID = raiseNotImplemented
-            f.getGroupID = raiseNotImplemented
-            return f
-
-        self.shell._path = notImplementedFilePath
-
-        self.createDirectory('ned')
-        d = self.shell.stat(('ned',), ('owner', 'group'))
-        self.assertEqual(self.successResultOf(d), ["0", '0'])
 
 
     def test_statNotExisting(self):

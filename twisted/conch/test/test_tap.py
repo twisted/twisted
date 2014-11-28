@@ -29,7 +29,6 @@ from twisted.cred import error
 from twisted.cred.credentials import IPluggableAuthenticationModules
 from twisted.cred.credentials import ISSHPrivateKey
 from twisted.cred.credentials import IUsernamePassword, UsernamePassword
-from twisted.python.reflect import requireModule
 
 from twisted.trial.unittest import TestCase
 
@@ -82,12 +81,14 @@ class MakeServiceTest(TestCase):
         PAM if available
         """
         numCheckers = 2
-
-        if requireModule('twisted.cred.pamauth'):
+        try:
+            from twisted.cred import pamauth
             self.assertIn(IPluggableAuthenticationModules,
                 self.options['credInterfaces'],
                 "PAM should be one of the modules")
             numCheckers += 1
+        except ImportError:
+            pass
 
         self.assertIn(ISSHPrivateKey, self.options['credInterfaces'],
             "SSH should be one of the default checkers")

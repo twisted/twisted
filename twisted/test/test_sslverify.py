@@ -8,26 +8,23 @@ Tests for L{twisted.internet._sslverify}.
 
 from __future__ import division, absolute_import
 
-import sys
 import itertools
 
 from zope.interface import implementer
 
-skipSSL = None
-skipSNI = None
 try:
-    import OpenSSL
-except ImportError:
-    skipSSL = "OpenSSL is required for SSL tests."
-    skipSNI = skipSSL
-else:
     from OpenSSL import SSL
     from OpenSSL.crypto import PKey, X509
     from OpenSSL.crypto import TYPE_RSA, FILETYPE_PEM
-    if getattr(SSL.Context, "set_tlsext_servername_callback", None) is None:
+    skipSSL = False
+    if hasattr(SSL.Context, "set_tlsext_servername_callback"):
+        skipSNI = False
+    else:
         skipSNI = "PyOpenSSL 0.13 or greater required for SNI support."
+except ImportError:
+    skipSSL = "OpenSSL is required for SSL tests."
+    skipSNI = skipSSL
 
-from twisted.test.test_twisted import SetAsideModule
 from twisted.test.iosim import connectedServerAndClient
 
 from twisted.internet.error import ConnectionClosed
@@ -35,12 +32,11 @@ from twisted.python.compat import nativeString
 from twisted.python.constants import NamedConstant, Names
 from twisted.python.filepath import FilePath
 
-from twisted.trial import unittest, util
+from twisted.trial import unittest
 from twisted.internet import protocol, defer, reactor
 
 from twisted.internet.error import CertificateError, ConnectionLost
 from twisted.internet import interfaces
-from twisted.python.versions import Version
 
 if not skipSSL:
     from twisted.internet.ssl import platformTrust, VerificationError
@@ -90,33 +86,6 @@ A_PEER_CERTIFICATE_PEM = """
 -----END CERTIFICATE-----
 """
 
-
-
-class DummyOpenSSL(object):
-    """
-    A fake of the L{OpenSSL} module.
-
-    @ivar __version__: A string describing I{pyOpenSSL} version number the fake
-        is emulating.
-    @type __version__: L{str}
-    """
-    def __init__(self, major, minor, patch=None):
-        """
-        @param major: The major version number to emulate.  I{X} in the version
-            I{X.Y}.
-        @type major: L{int}
-
-        @param minor: The minor version number to emulate.  I{Y} in the version
-            I{X.Y}.
-        @type minor: L{int}
-
-        """
-        self.__version__ = "%d.%d" % (major, minor)
-        if patch is not None:
-            self.__version__ += ".%d" % (patch,)
-
-_preTwelveOpenSSL = DummyOpenSSL(0, 11)
-_postTwelveOpenSSL = DummyOpenSSL(0, 13, 1)
 
 
 def counter(counter=itertools.count()):
@@ -924,10 +893,6 @@ class OpenSSLOptions(unittest.TestCase):
         self.assertEqual(opts.fixBrokenPeers, True)
         self.assertEqual(opts.enableSessionTickets, True)
 
-    test_certificateOptionsSerialization.suppress = [
-        util.suppress(category = DeprecationWarning,
-            message='twisted\.internet\._sslverify\.*__[gs]etstate__')]
-
 
     def test_certificateOptionsSessionTickets(self):
         """
@@ -1092,33 +1057,6 @@ class OpenSSLOptions(unittest.TestCase):
 
         return onData.addCallback(
                 lambda result: self.assertEqual(result, WritingProtocol.byte))
-
-
-
-class DeprecationTests(unittest.SynchronousTestCase):
-    """
-    Tests for deprecation of L{sslverify.OpenSSLCertificateOptions}'s support
-    of the pickle protocol.
-    """
-    if skipSSL:
-        skip = skipSSL
-
-    def test_getstateDeprecation(self):
-        """
-        L{sslverify.OpenSSLCertificateOptions.__getstate__} is deprecated.
-        """
-        self.callDeprecated(
-            (Version("Twisted", 14, 1, 0), "a real persistence system"),
-            sslverify.OpenSSLCertificateOptions().__getstate__)
-
-
-    def test_setstateDeprecation(self):
-        """
-        L{sslverify.OpenSSLCertificateOptions.__setstate__} is deprecated.
-        """
-        self.callDeprecated(
-            (Version("Twisted", 14, 1, 0), "a real persistence system"),
-            sslverify.OpenSSLCertificateOptions().__setstate__, {})
 
 
 
@@ -1617,8 +1555,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         )
         self.assertEqual(names, [u"valid.example.com"])
 
-    if skipSNI is not None:
-        test_hostnameIsIndicated.skip = skipSNI
+    test_hostnameIsIndicated.skip = skipSNI
 
 
     def test_hostnameEncoding(self):
@@ -1644,8 +1581,7 @@ class ServiceIdentityTests(unittest.SynchronousTestCase):
         self.assertIdentical(cErr, None)
         self.assertIdentical(sErr, None)
 
-    if skipSNI is not None:
-        test_hostnameEncoding.skip = skipSNI
+    test_hostnameEncoding.skip = skipSNI
 
 
     def test_fallback(self):
@@ -2215,221 +2151,3 @@ class TestECCurve(unittest.TestCase):
         ctx._context = None
         curve.addECKeyToContext(ctx)
         self.assertEqual(set(), lib._createdKeys)
-
-
-
-class KeyPair(unittest.TestCase):
-    """
-    Tests for L{sslverify.KeyPair}.
-    """
-    if skipSSL:
-        skip = skipSSL
-
-    def setUp(self):
-        """
-        Create test certificate.
-        """
-        self.sKey = makeCertificate(
-            O=b"Server Test Certificate",
-            CN=b"server")[0]
-
-
-    def test_getstateDeprecation(self):
-        """
-        L{sslverify.KeyPair.__getstate__} is deprecated.
-        """
-        self.callDeprecated(
-            (Version("Twisted", 14, 1, 0), "a real persistence system"),
-            sslverify.KeyPair(self.sKey).__getstate__)
-
-
-    def test_setstateDeprecation(self):
-        """
-        {sslverify.KeyPair.__setstate__} is deprecated.
-        """
-        state = sslverify.KeyPair(self.sKey).dump()
-        self.callDeprecated(
-            (Version("Twisted", 14, 1, 0), "a real persistence system"),
-            sslverify.KeyPair(self.sKey).__setstate__, state)
-
-
-
-class OpenSSLVersionTestsMixin(object):
-    """
-    A mixin defining tests relating to the version declaration interface of
-    I{pyOpenSSL}.
-
-    This is used to verify that the fake I{OpenSSL} module presents its fake
-    version information in the same way as the real L{OpenSSL} module.
-    """
-    def test_string(self):
-        """
-        C{OpenSSL.__version__} is a native string.
-        """
-        self.assertIsInstance(self.OpenSSL.__version__, str)
-
-
-    def test_oneOrTwoDots(self):
-        """
-        C{OpenSSL.__version__} has either two or three version components.
-        """
-        self.assertIn(self.OpenSSL.__version__.count("."), (1, 2))
-
-
-    def test_majorDotMinor(self):
-        """
-        C{OpenSSL.__version__} declares the major and minor versions as
-        non-negative integers separated by C{"."}.
-        """
-        parts = self.OpenSSL.__version__.split(".")
-        major = int(parts[0])
-        minor = int(parts[1])
-        self.assertEqual(
-            (True, True),
-            (major >= 0, minor >= 0))
-
-
-
-class RealOpenSSLTests(OpenSSLVersionTestsMixin, unittest.SynchronousTestCase):
-    """
-    Apply the pyOpenSSL version tests to the real C{OpenSSL} package.
-    """
-    if skipSSL is None:
-        OpenSSL = OpenSSL
-    else:
-        skip = skipSSL
-
-
-
-class PreTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin,
-                                 unittest.SynchronousTestCase):
-    """
-    Apply the pyOpenSSL version tests to an instance of L{DummyOpenSSL} that
-    pretends to be older than 0.12.
-    """
-    OpenSSL = _preTwelveOpenSSL
-
-
-
-class PostTwelveDummyOpenSSLTests(OpenSSLVersionTestsMixin,
-                                  unittest.SynchronousTestCase):
-    """
-    Apply the pyOpenSSL version tests to an instance of L{DummyOpenSSL} that
-    pretends to be newer than 0.12.
-    """
-    OpenSSL = _postTwelveOpenSSL
-
-
-
-class SelectVerifyImplementationTests(unittest.SynchronousTestCase):
-    """
-    Tests for L{_selectVerifyImplementation}.
-    """
-    if skipSSL is not None:
-        skip = skipSSL
-
-    def test_pyOpenSSLTooOld(self):
-        """
-        If the version of I{pyOpenSSL} installed is older than 0.12 then
-        L{_selectVerifyImplementation} returns L{simpleVerifyHostname} and
-        L{SimpleVerificationError}.
-        """
-        result = sslverify._selectVerifyImplementation(_preTwelveOpenSSL)
-        expected = (
-            sslverify.simpleVerifyHostname, sslverify.SimpleVerificationError)
-        self.assertEqual(expected, result)
-    test_pyOpenSSLTooOld.suppress = [
-        util.suppress(
-            message="Your version of pyOpenSSL, 0.11, is out of date."),
-        ]
-
-
-    def test_pyOpenSSLTooOldWarning(self):
-        """
-        If the version of I{pyOpenSSL} installed is older than 0.12 then
-        L{_selectVerifyImplementation} emits a L{UserWarning} advising the user
-        to upgrade.
-        """
-        sslverify._selectVerifyImplementation(_preTwelveOpenSSL)
-        [warning] = list(
-            warning
-            for warning
-            in self.flushWarnings()
-            if warning["category"] == UserWarning)
-
-        expectedMessage = (
-            "Your version of pyOpenSSL, 0.11, is out of date.  Please upgrade "
-            "to at least 0.12 and install service_identity from "
-            "<https://pypi.python.org/pypi/service_identity>.  Without the "
-            "service_identity module and a recent enough pyOpenSSL to support "
-            "it, Twisted can perform only rudimentary TLS client hostname "
-            "verification.  Many valid certificate/hostname mappings may be "
-            "rejected.")
-
-        self.assertEqual(
-            (warning["message"], warning["filename"], warning["lineno"]),
-            # Make sure we're abusing the warning system to a sufficient
-            # degree: there is no filename or line number that makes sense for
-            # this warning to "blame" for the problem.  It is a system
-            # misconfiguration.  So the location information should be blank
-            # (or as blank as we can make it).
-            (expectedMessage, "", 0))
-
-
-    def test_dependencyMissing(self):
-        """
-        If I{service_identity} cannot be imported then
-        L{_selectVerifyImplementation} returns L{simpleVerifyHostname} and
-        L{SimpleVerificationError}.
-        """
-        with SetAsideModule("service_identity"):
-            sys.modules["service_identity"] = None
-
-            result = sslverify._selectVerifyImplementation(_postTwelveOpenSSL)
-            expected = (
-                sslverify.simpleVerifyHostname,
-                sslverify.SimpleVerificationError)
-            self.assertEqual(expected, result)
-    test_dependencyMissing.suppress = [
-        util.suppress(
-            message=(
-                "You do not have a working installation of the "
-                "service_identity module"),
-            ),
-        ]
-
-
-    def test_dependencyMissingWarning(self):
-        """
-        If I{service_identity} cannot be imported then
-        L{_selectVerifyImplementation} emits a L{UserWarning} advising the user
-        of the exact error.
-        """
-        with SetAsideModule("service_identity"):
-            sys.modules["service_identity"] = None
-
-            sslverify._selectVerifyImplementation(_postTwelveOpenSSL)
-
-            [warning] = list(
-                warning
-                for warning
-                in self.flushWarnings()
-                if warning["category"] == UserWarning)
-
-            expectedMessage = (
-                "You do not have a working installation of the "
-                "service_identity module: "
-                "'No module named service_identity'.  "
-                "Please install it from "
-                "<https://pypi.python.org/pypi/service_identity> "
-                "and make sure all of its dependencies are satisfied.  "
-                "Without the service_identity module and a recent enough "
-                "pyOpenSSL to support it, Twisted can perform only "
-                "rudimentary TLS client hostname verification.  Many valid "
-                "certificate/hostname mappings may be rejected.")
-
-            self.assertEqual(
-                (warning["message"], warning["filename"], warning["lineno"]),
-                # See the comment in test_pyOpenSSLTooOldWarning.
-                (expectedMessage, "", 0))
-

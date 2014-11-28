@@ -275,7 +275,7 @@ class SessionInitializer(xmlstream.BaseFeatureInitiatingInitializer):
 
     def start(self):
         iq = xmlstream.IQ(self.xmlstream, 'set')
-        iq.addElement((NS_XMPP_SESSION, 'session'))
+        session = iq.addElement((NS_XMPP_SESSION, 'session'))
         return iq.send()
 
 

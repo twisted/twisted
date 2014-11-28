@@ -86,6 +86,9 @@ class CGIScript(resource.Resource):
                "REQUEST_URI":       request.uri,
         }
 
+        client = request.getClient()
+        if client is not None:
+            env['REMOTE_HOST'] = client
         ip = request.getClientIP()
         if ip is not None:
             env['REMOTE_ADDR'] = ip

@@ -2,8 +2,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from zope.interface import Interface, Attribute
-
+from zope.interface import Interface, Attribute, implements
 
 class IProtocolPlugin(Interface):
     """Interface for plugins providing an interface to a Words service
@@ -263,5 +262,5 @@ class IChatService(Interface):
         """
 
 __all__ = [
-    'IGroup', 'IChatClient', 'IUser', 'IChatService',
+    'IChatInterface', 'IGroup', 'IChatClient', 'IUser', 'IChatService',
     ]

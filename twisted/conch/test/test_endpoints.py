@@ -15,7 +15,6 @@ from zope.interface import implementer
 from twisted.python.log import msg
 from twisted.python.filepath import FilePath
 from twisted.python.failure import Failure
-from twisted.python.reflect import requireModule
 from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.defer import CancelledError, Deferred, succeed, fail
@@ -31,7 +30,15 @@ from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
 from twisted.conch.interfaces import IConchUser
 from twisted.conch.error import ConchError, UserRejectedKey, HostKeyChanged
 
-if requireModule('Crypto.Cipher.AES') and requireModule('pyasn1.type'):
+try:
+    from Crypto.Cipher import AES
+    from pyasn1 import type
+except ImportError as e:
+    skip = "can't run w/o PyCrypto and pyasn1 (%s)" % (e,)
+    SSHFactory = SSHUserAuthServer = SSHConnection = Key = SSHChannel = \
+        SSHAgentServer = KnownHostsFile = SSHPublicKeyDatabase = ConchUser = \
+        object
+else:
     from twisted.conch.ssh.factory import SSHFactory
     from twisted.conch.ssh.userauth import SSHUserAuthServer
     from twisted.conch.ssh.connection import SSHConnection
@@ -39,7 +46,7 @@ if requireModule('Crypto.Cipher.AES') and requireModule('pyasn1.type'):
     from twisted.conch.ssh.channel import SSHChannel
     from twisted.conch.ssh.agent import SSHAgentServer
     from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
-    from twisted.conch.checkers import SSHPublicKeyChecker, InMemorySSHKeyDB
+    from twisted.conch.checkers import SSHPublicKeyDatabase
     from twisted.conch.avatar import ConchUser
 
     from twisted.conch.test.keydata import (
@@ -51,12 +58,8 @@ if requireModule('Crypto.Cipher.AES') and requireModule('pyasn1.type'):
         _ExistingConnectionHelper)
 
     from twisted.conch.ssh.transport import SSHClientTransport
-else:
-    skip = "can't run w/o PyCrypto and pyasn1"
-    SSHFactory = SSHUserAuthServer = SSHConnection = Key = SSHChannel = \
-        SSHAgentServer = KnownHostsFile = SSHPublicKeyChecker = ConchUser = \
-        object
 
+from twisted.python.fakepwd import UserDatabase
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.iosim import FakeTransport, connect
 
@@ -257,6 +260,23 @@ class SingleUseMemoryEndpoint(object):
                     self._server, isServer=True),
                 protocol, AbortableFakeTransport(protocol, isServer=False))
             return succeed(protocol)
+
+
+
+class MemorySSHPublicKeyDatabase(SSHPublicKeyDatabase):
+    def __init__(self, users):
+        self._users = users
+        self._userdb = UserDatabase()
+        for i, username in enumerate(self._users):
+            self._userdb.addUser(
+                username, b"garbage", 123 + i, 456, None, None, None)
+
+
+    def getAuthorizedKeysFiles(self, credentials):
+        try:
+            return self._users[credentials.username]
+        except KeyError:
+            return []
 
 
 
@@ -970,9 +990,13 @@ class NewConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
             OpenSSH-formatted private keys.
         @type users: C{dict}
         """
-        mapping = dict([(k,[Key.fromString(v).public()])
-                        for k, v in users.iteritems()])
-        checker = SSHPublicKeyChecker(InMemorySSHKeyDB(mapping))
+        credentials = {}
+        for username, keyString in users.iteritems():
+            goodKey = Key.fromString(keyString)
+            authorizedKeys = FilePath(self.mktemp())
+            authorizedKeys.setContent(goodKey.public().toString("OPENSSH"))
+            credentials[username] = [authorizedKeys]
+        checker = MemorySSHPublicKeyDatabase(credentials)
         portal.registerChecker(checker)
 
 

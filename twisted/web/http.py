@@ -59,6 +59,7 @@ __all__ = [
 import tempfile
 import base64, binascii
 import cgi
+import socket
 import math
 import time
 import calendar
@@ -89,9 +90,7 @@ from zope.interface import implementer, provider
 # twisted imports
 from twisted.python.compat import (
     _PY3, unicode, intToBytes, networkString, nativeString)
-from twisted.python.deprecate import deprecated
 from twisted.python import log
-from twisted.python.versions import Version
 from twisted.python.components import proxyForInterface
 from twisted.internet import interfaces, reactor, protocol, address
 from twisted.internet.defer import Deferred
@@ -1198,7 +1197,7 @@ class Request:
 
         Don't rely on the 'transport' attribute, since Request objects may be
         copied remotely.  For information on this method's return value, see
-        L{twisted.internet.tcp.Port}.
+        twisted.internet.tcp.Port.
         """
         return self.host
 
@@ -1323,14 +1322,18 @@ class Request:
 
 
     def getClient(self):
-        """
-        Get the client's IP address, if it has one.  No attempt is made to
-        resolve the address to a hostname.
-
-        @return: The same value as C{getClientIP}.
-        @rtype: L{bytes}
-        """
-        return self.getClientIP()
+        if self.client.type != 'TCP':
+            return None
+        host = self.client.host
+        try:
+            name, names, addresses = socket.gethostbyaddr(host)
+        except socket.error:
+            return host
+        names.insert(0, name)
+        for name in names:
+            if '.' in name:
+                return name
+        return names[0]
 
 
     def connectionLost(self, reason):
@@ -1346,9 +1349,6 @@ class Request:
             d.errback(reason)
         self.notifications = []
 
-Request.getClient = deprecated(
-    Version("Twisted", 14, 1, 0),
-    "Twisted Names to resolve hostnames")(Request.getClient)
 
 
 class _DataLoss(Exception):
@@ -2024,7 +2024,7 @@ class HTTPFactory(protocol.ServerFactory):
 
     def _openLogFile(self, path):
         """
-        Override in subclasses, e.g. to use L{twisted.python.logfile}.
+        Override in subclasses, e.g. to use twisted.python.logfile.
         """
         f = open(path, "ab", 1)
         return f

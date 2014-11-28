@@ -414,9 +414,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         probeClient.close()
 
         # A non-blocking recv will return "" if the connection is closed, as
-        # desired.  If the connection has not been closed, because the
-        # duplicate file descriptor is still open, it will fail with EAGAIN
-        # instead.
+        # desired.  If the connection has not been closed, because the duplicate
+        # file descriptor is still open, it will fail with EAGAIN instead.
         probeServer.setblocking(False)
         self.assertEqual("", probeServer.recv(1024))
 

@@ -16,7 +16,7 @@ from twisted.trial._synctest import _logObserver
 
 pyunit = __import__('unittest')
 
-from zope.interface import implementer
+from zope.interface import implements
 
 
 
@@ -38,7 +38,6 @@ class TestSuite(pyunit.TestSuite):
 
 
 
-@implementer(itrial.ITestCase)
 class TestDecorator(components.proxyForInterface(itrial.ITestCase,
                                                  "_originalTest")):
     """
@@ -47,6 +46,9 @@ class TestDecorator(components.proxyForInterface(itrial.ITestCase,
     @param _originalTest: The wrapped instance of test.
     @type _originalTest: A provider of L{itrial.ITestCase}
     """
+
+    implements(itrial.ITestCase)
+
 
     def __call__(self, result):
         """

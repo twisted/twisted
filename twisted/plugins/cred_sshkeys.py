@@ -11,6 +11,7 @@ from zope.interface import implements
 
 from twisted import plugin
 from twisted.cred.strcred import ICheckerFactory
+from twisted.cred.credentials import ISSHPrivateKey
 
 
 sshKeyCheckerFactoryHelp = """
@@ -20,8 +21,7 @@ authorized_keys and authorized_keys2 files in user .ssh/ directories.
 
 
 try:
-    from twisted.conch.checkers import (
-        SSHPublicKeyChecker, UNIXAuthorizedKeysFiles)
+    from twisted.conch.checkers import SSHPublicKeyDatabase
 
     class SSHKeyCheckerFactory(object):
         """
@@ -31,7 +31,7 @@ try:
         authType = 'sshkey'
         authHelp = sshKeyCheckerFactoryHelp
         argStringFormat = 'No argstring required.'
-        credentialInterfaces = SSHPublicKeyChecker.credentialInterfaces
+        credentialInterfaces = SSHPublicKeyDatabase.credentialInterfaces
 
 
         def generateChecker(self, argstring=''):
@@ -40,7 +40,7 @@ try:
             needed to authenticate users is pulled out of the public keys
             listed in user .ssh/ directories.
             """
-            return SSHPublicKeyChecker(UNIXAuthorizedKeysFiles())
+            return SSHPublicKeyDatabase()
 
 
 

@@ -23,7 +23,7 @@ import urlparse
 from urllib import quote as urlquote
 
 from twisted.internet import reactor
-from twisted.internet.protocol import ClientFactory
+from twisted.internet.protocol import ClientFactory, Protocol
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.http import HTTPClient, Request, HTTPChannel
@@ -88,7 +88,36 @@ class ProxyClient(HTTPClient):
             self.father.finish()
             self.transport.loseConnection()
 
+class ProxyClientConnection(Protocol):
 
+    connect_client = None
+
+    def __init__(self, father, factory):
+        self.father = father
+        self.factory = factory
+
+    def connectionMade(self):
+        self.father.channel.connect_obj = self
+        self.father.setResponseCode(200, 'Connection established')
+        self.father.finish()
+
+    def dataRecevied(self, data):
+        if self.connect_client:
+            self.connect_client.transport.write(data)
+        
+
+class ProxyClientConnectionFactory(ClientFactory):
+    protocol = ProxyClientConnection
+
+    def __init__(self, command, rest, version, headers, data, father):
+        self.father = father
+
+    def clientConnectionFailed(self, _, reason):
+        self.father.SetResponseCode(404, "Not Found")
+        self.father.finish()
+
+    def buildProtocol(self, addr):
+        return self.protocol(self.father, self)
 
 class ProxyClientFactory(ClientFactory):
     """
@@ -124,6 +153,7 @@ class ProxyClientFactory(ClientFactory):
 
 
 
+
 class ProxyRequest(Request):
     """
     Used by Proxy to implement a simple web proxy.
@@ -132,8 +162,7 @@ class ProxyRequest(Request):
     @type reactor: object providing L{twisted.internet.interfaces.IReactorTCP}
     """
 
-    protocols = {'http': ProxyClientFactory}
-    ports = {'http': 80}
+    protocols = {'CONNECT': ProxyClientConnectionFactory}
 
     def __init__(self, channel, queued, reactor=reactor):
         Request.__init__(self, channel, queued)
@@ -142,16 +171,20 @@ class ProxyRequest(Request):
 
     def process(self):
         parsed = urlparse.urlparse(self.uri)
-        protocol = parsed[0]
-        host = parsed[1]
-        port = self.ports[protocol]
-        if ':' in host:
+        if self.method == 'CONNECT':
             host, port = host.split(':')
-            port = int(port)
+        else:
+            host = parsed.netloc or parsed.path
+            if ':' in host:
+                host, port = host.split(':')
+            else:
+                port = 80
+        port = int(port)
         rest = urlparse.urlunparse(('', '') + parsed[2:])
         if not rest:
             rest = rest + '/'
-        class_ = self.protocols[protocol]
+        class_ = self.protocols.get(self.method,
+                ProxyClientFactory)
         headers = self.getAllHeaders().copy()
         if 'host' not in headers:
             headers['host'] = host
@@ -179,8 +212,19 @@ class Proxy(HTTPChannel):
     """
 
     requestFactory = ProxyRequest
+    connect_obj = None
 
+    def requestDone(self, request):
+        if request.method == 'CONNECT' and self.connect_obj:
+            self.connect_obj.connect_client = self
+        else:
+            HTTPChannel.requestDone(self, request)
 
+    def dataRecevied(self, data):
+        if self.connect_obj:
+            self.connect_obj.transport.write(data)
+        else:
+            HTTPChannel.dataRecevied(self, data)
 
 class ReverseProxyRequest(Request):
     """

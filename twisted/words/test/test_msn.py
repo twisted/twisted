@@ -5,21 +5,18 @@
 Test cases for L{twisted.words.protocols.msn}.
 """
 
+# System imports
 import StringIO
 from hashlib import md5
 
-from twisted.internet.defer import Deferred
-from twisted.protocols import loopback
-from twisted.python.reflect import requireModule
-from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
-from twisted.trial import unittest
+# Twisted imports
 
 # t.w.p.msn requires an HTTP client
 try:
     # So try to get one - do it directly instead of catching an ImportError
     # from t.w.p.msn so that other problems which cause that module to fail
     # to import don't cause the tests to be skipped.
-    requireModule('twisted.web.client')
+    from twisted.web import client
 except ImportError:
     # If there isn't one, we're going to skip all the tests.
     msn = None
@@ -28,6 +25,10 @@ else:
     from twisted.words.protocols import msn
 
 
+from twisted.protocols import loopback
+from twisted.internet.defer import Deferred
+from twisted.trial import unittest
+from twisted.test.proto_helpers import StringTransport, StringIOWithoutClosing
 
 def printError(f):
     print f

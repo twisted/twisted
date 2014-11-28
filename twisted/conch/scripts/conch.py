@@ -178,6 +178,10 @@ def doConnect():
 
 def _ebExit(f):
     global exitStatus
+    if hasattr(f.value, 'value'):
+        s = f.value.value
+    else:
+        s = str(f)
     exitStatus = "conch: exiting with error %s" % f
     reactor.callLater(0.1, _stopReactor)
 
@@ -465,11 +469,11 @@ def _leaveRawMode():
     if not _inRawMode:
         return
     fd = sys.stdin.fileno()
-    tty.tcsetattr(fd, tty.TCSANOW, _savedRawMode)
+    tty.tcsetattr(fd, tty.TCSANOW, _savedMode)
     _inRawMode = 0
 
 def _enterRawMode():
-    global _inRawMode, _savedRawMode
+    global _inRawMode, _savedMode
     if _inRawMode:
         return
     fd = sys.stdin.fileno()
@@ -498,7 +502,7 @@ def _enterRawMode():
         new[6][tty.VMIN] = 1
         new[6][tty.VTIME] = 0
 
-        _savedRawMode = old
+        _savedMode = old
         tty.tcsetattr(fd, tty.TCSANOW, new)
         #tty.setraw(fd)
         _inRawMode = 1

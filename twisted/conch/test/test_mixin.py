@@ -2,6 +2,10 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import time
+
+from twisted.internet import reactor, protocol
+
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 

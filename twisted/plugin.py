@@ -179,7 +179,7 @@ def getCache(module):
         if needsWrite:
             try:
                 dropinPath.setContent(pickle.dumps(dropinDotCache))
-            except OSError as e:
+            except OSError, e:
                 log.msg(
                     format=(
                         "Unable to write to plugin cache %(path)s: error "
