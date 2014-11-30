@@ -6,6 +6,7 @@ Tests for L{twisted.python.usage}, a command line option parsing library.
 """
 
 from __future__ import division, absolute_import
+import sys
 try:
     import argparse
 except ImportError:
@@ -709,8 +710,38 @@ class TestArgparseToOptions(unittest.TestCase):
     out of an L{argparse.ArgumentParser}.
     """
 
-    def setUp(self):
-        self.parser = argparse.ArgumentParser()
+    def test_parsesArguments(self):
+        """
+        L{argparseToOptions} creates a wrapper that parses arguments via
+        a wrapped L{argparse.ArgumentParser}.
+        """
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--flag")
+        parser.add_argument("positional")
+
+        options = usage.argparseToOptions(parser)()
+        options.parseOptions(["hello"])
+
+        self.assertEqual(
+            (options["flag"], options["positional"]), (None, "hello"),
+        )
+
+    def test_defaultsArgumentsToSysArgv(self):
+        """
+        The L{argparseToOptions} wrapper class uses L{sys.argv} when no
+        argument list is provided.
+        """
+        parser = argparse.ArgumentParser()
+        parser.add_argument("one")
+        parser.add_argument("two")
+        options = usage.argparseToOptions(parser)()
+
+        self.patch(sys, "argv", ["scriptName", "first", "second"])
+        options.parseOptions()
+
+        self.assertEqual(
+            (options["one"], options["two"]), ("first", "second"),
+        )
 
     def test_implementsIArgumentParser(self):
         """
@@ -720,7 +751,7 @@ class TestArgparseToOptions(unittest.TestCase):
 
         verifyClass(
             usage.IArgumentParser,
-            usage.argparseToOptions(self.parser),
+            usage.argparseToOptions(argparse.ArgumentParser()),
         )
 
 
