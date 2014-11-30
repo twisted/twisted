@@ -69,10 +69,13 @@ DEPRECATION_WARNING_FORMAT = '%(fqpn)s was deprecated in %(version)s'
 # instead, and let reflect import it to re-expose to the public.
 def _fullyQualifiedName(obj):
     """
-    Return the fully qualified name of a module, class, method or function.
-    Classes and functions need to be module level ones to be correctly
-    qualified.
+    Get the fully-qualified name for an object present in a Python module.
 
+    @param obj: Something defined within a Python file that has a name.
+    @type obj: a module, class, method, or function.
+
+    @return: the fully qualified name of a module, class, method or function.
+        Classes need to be module level ones to be correctly qualified.
     @rtype: C{str}.
     """
     try:
@@ -85,7 +88,7 @@ def _fullyQualifiedName(obj):
         return "%s.%s" % (moduleName, name)
     elif inspect.ismethod(obj):
 
-        # handle classmethods and staticmethods
+        # Handle classmethods and staticmethods.
         try:
             _self = obj.im_self
         except AttributeError:
@@ -118,6 +121,7 @@ def _getReplacementString(replacement):
     Surround a replacement for a deprecated API with some polite text exhorting
     the user to consider it as an alternative.
 
+    @param replacement: the name of a thing to use instead of something else.
     @type replacement: C{str} or callable
 
     @return: a string like "please use twisted.python.modules.getModule
@@ -161,14 +165,14 @@ def _getDeprecationWarningString(fqpn, version, format=None, replacement=None):
     @param version: Version that C{fqpn} was deprecated in.
     @type version: L{twisted.python.versions.Version}
 
-    @param format: A user-provided format to interpolate warning values into, or
-        L{DEPRECATION_WARNING_FORMAT
+    @param format: A user-provided format to interpolate warning values into,
+        or L{DEPRECATION_WARNING_FORMAT
         <twisted.python.deprecate.DEPRECATION_WARNING_FORMAT>} if C{None} is
         given.
     @type format: C{str}
 
-    @param replacement: what should be used in place of C{fqpn}. Either pass in
-        a string, which will be inserted into the warning message, or a
+    @param replacement: what should be used in place of C{fqpn}.  Either pass
+        in a string, which will be inserted into the warning message, or a
         callable, which will be expanded to its full import path.
     @type replacement: C{str} or callable
 
@@ -210,9 +214,9 @@ def getDeprecationWarningString(callableThing, version, format=None,
     @param version: The L{twisted.python.versions.Version} that the callable
         was deprecated in.
 
-    @param replacement: what should be used in place of the callable. Either
-        pass in a string, which will be inserted into the warning message,
-        or a callable, which will be expanded to its full import path.
+    @param replacement: what should be used in place of the callable.  Either
+        pass in a string, which will be inserted into the warning message, or a
+        callable, which will be expanded to its full import path.
     @type replacement: C{str} or callable
 
     @return: A string describing the deprecation.
@@ -228,8 +232,8 @@ def _appendToDocstring(thingWithDoc, textToAppend):
     Append the given text to the docstring of C{thingWithDoc}.
 
     If C{thingWithDoc} has no docstring, then the text just replaces the
-    docstring. If it has a single-line docstring then it appends a blank line
-    and the message text. If it has a multi-line docstring, then in appends a
+    docstring.  If it has a single-line docstring then it appends a blank line
+    and the message text.  If it has a multi-line docstring, then in appends a
     blank line a the message text, and also does the indentation correctly.
     """
     if thingWithDoc.__doc__:
@@ -252,26 +256,30 @@ def _appendToDocstring(thingWithDoc, textToAppend):
 
 def deprecated(version, replacement=None):
     """
-    Return a decorator that marks callables as deprecated.
+    Mark a function or class as deprecated.
 
+    For example, if we had a callable "foo" that was deprecated in favor of
+    "betterFoo" in Twisted 19.2::
+
+        from twisted.python import versions, deprecate
+        @deprecate.deprecated(versions.Version("Twisted", 19, 2, 0),
+                              "betterFoo")
+        def foo():
+            "..."
+
+    @param version: The version in which the callable will be marked as having
+        been deprecated.  The decorated function will be annotated with this
+        version, having it set as its C{deprecatedVersion} attribute.
     @type version: L{twisted.python.versions.Version}
-    @param version: The version in which the callable will be marked as
-        having been deprecated.  The decorated function will be annotated
-        with this version, having it set as its C{deprecatedVersion}
-        attribute.
 
-    @param version: the version that the callable was deprecated in.
-    @type version: L{twisted.python.versions.Version}
-
-    @param replacement: what should be used in place of the callable. Either
-        pass in a string, which will be inserted into the warning message,
-        or a callable, which will be expanded to its full import path.
+    @param replacement: what should be used in place of the callable.  Either
+        pass in a string, which will be inserted into the warning message, or a
+        callable, which will be expanded to its full import path.
     @type replacement: C{str} or callable
+
+    @return: a decorator that marks callables as deprecated.
     """
     def deprecationDecorator(function):
-        """
-        Decorator that marks C{function} as deprecated.
-        """
         return _DeprecateDescriptor(function, version, replacement)
 
     return deprecationDecorator
@@ -308,8 +316,8 @@ class _DeprecateDescriptor(object):
         self._wrapee = deprecatee
         if (isinstance(deprecatee, classmethod) or
                 isinstance(deprecatee, staticmethod)):
-            # because you can't wrap a classmethod or staticmethod instance,
-            # only its function
+            # You can't wrap a classmethod or staticmethod instance, only its
+            # function.
             self._wrapee = deprecatee.__func__
 
         wraps(self._wrapee)(self)
@@ -360,7 +368,7 @@ class _DeprecateDescriptor(object):
 
         @return: The return value of calling C{deprecatee}.
         """
-        # heuristic to tell if we are actually inside a
+        # Heuristic to tell if we are actually inside a
         # staticmethod/classmethod function and the deprecate decorator was
         # used inside the staticmethod/classmethod decorator
         # (staticmethod/classmethod was called after deprecated)
@@ -646,6 +654,7 @@ def deprecatedModuleAttribute(version, message, moduleName, name):
     _deprecateAttribute(module, name, version, message)
 
 
+
 def warnAboutFunction(offender, warningString):
     """
     Issue a warning string, identifying C{offender} as the responsible code.
@@ -661,8 +670,8 @@ def warnAboutFunction(offender, warningString):
 
     @since: 11.0
     """
-    # inspect.getmodule() is attractive, but somewhat
-    # broken in Python < 2.6.  See Python bug 4845.
+    # `inspect.getmodule()` is attractive, but somewhat broken in Python < 2.6.
+    # See Python bug 4845.
     offenderModule = sys.modules[offender.__module__]
     filename = inspect.getabsfile(offenderModule)
     lineStarts = list(findlinestarts(offender.__code__))
