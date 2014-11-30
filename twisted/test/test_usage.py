@@ -697,7 +697,7 @@ class TestOptionsInterfaces(unittest.TestCase):
 
     def test_implementsIArgumentParser(self):
         """
-        A L{usage.Options} instasnce implements L{usage.IArgumentParser}.
+        A L{usage.Options} instance implements L{usage.IArgumentParser}.
         """
         verifyObject(usage.IArgumentParser, usage.Options())
 
