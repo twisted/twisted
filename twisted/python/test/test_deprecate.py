@@ -552,6 +552,19 @@ def dummyReplacementMethod(*args):
 
 
 
+class ClassWithClassMethod(object):
+    """
+    A class with a class method.
+    """
+
+    @classmethod
+    def aClassMethod(cls):
+        """
+        A class method.
+        """
+
+
+
 def setUpDummyCallables(testCase):
     """
     This sets up some clean dummyCallables and dummyReplacements for a test
@@ -644,16 +657,11 @@ class TestDeprecationWarningStrings(SynchronousTestCase):
         """
         version = Version('Twisted', 8, 0, 0)
 
-        class ClassWithClassMethod(object):
-            @classmethod
-            def boo(cls):
-                pass
-
         self.assertEqual(
-            getDeprecationWarningString(ClassWithClassMethod.boo,
+            getDeprecationWarningString(ClassWithClassMethod.aClassMethod,
                                         version),
-            "%s.ClassWithClassMethod.boo was deprecated in Twisted 8.0.0" %
-            (__name__,))
+            "%s.ClassWithClassMethod.aClassMethod "
+            "was deprecated in Twisted 8.0.0" % (__name__,))
 
 
     def test_getDeprecationDocstring(self):
