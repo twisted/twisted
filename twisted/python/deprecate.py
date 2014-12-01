@@ -310,7 +310,9 @@ class _DeprecateDescriptor(object):
         Initializes the descriptor.
 
         @param deprecatee: see L{_DeprecateDescriptor._deprecatee}
+
         @param version: see L{_DeprecateDescriptor.deprecatedVersion}
+
         @param replacement: see L{_DeprecateDescriptor._replacement}
         """
         self._wrapee = deprecatee
@@ -334,14 +336,22 @@ class _DeprecateDescriptor(object):
 
     def _warn(self, function, args, kwargs, qualname=None):
         """
-        Actually issue the warning and call the function
+        Issue the warning and call the function.
 
-        @param callable function: The callable to call.
-        @param iterable args: The arguments to call the function with.
-        @param dict kwargs: The keyword arguments to call the function with.
-        @param str qualname: The qualname to use instead of getting the
-            fqdn on the function, for cases where the fqdn on the function
-            would be wrong.
+        @param function: The callable to call.
+        @param function: L{types.FunctionType}, L{types.MethodType}, or
+            L{classmethod}
+
+        @param args: The arguments to call the function with.
+        @param args: L{tuple}
+
+        @param kwargs: The keyword arguments to call the function with.
+        @param kwargs: L{dict}
+
+        @param qualname: The qualname to use instead of getting the fqdn from
+            the function via L{_fullyQualifiedName}, for cases where the fqdn
+            on the function would be wrong.
+        @type qualname: L{str} or L{types.NoneType}
 
         @return: The return value of calling C{function} with C{args} and
             C{kwargs}.
@@ -364,6 +374,7 @@ class _DeprecateDescriptor(object):
         and keyword arguments
 
         @param args: The arguments to call C{deprecatee} with.
+
         @param kwargs: The keyword arguments to call C{deprecatee} with.
 
         @return: The return value of calling C{deprecatee}.
@@ -398,6 +409,7 @@ class _DeprecateDescriptor(object):
         arguments and keyword arguments.
 
         @param instance: The self argument C{deprecatee} gets called with.
+
         @param instanceType: The type of the self argument that C{deprecatee}
             gets called with.
 
