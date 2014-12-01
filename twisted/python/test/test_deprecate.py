@@ -537,6 +537,8 @@ def dummyCallable(*args):
     Do nothing.
 
     This is used to test the deprecation decorators.
+
+    @param args: either C{self} or nothing.
     """
 
 
@@ -634,6 +636,7 @@ class TestDeprecationWarningStrings(SynchronousTestCase):
                 fullyQualifiedName(self.test_getDeprecationWarningString),
                 __name__))
 
+
     def test_getDeprecationWarningStringOnClassMethod(self):
         """
         L{getDeprecationWarningString} returns a string that contains the
@@ -684,6 +687,23 @@ class DeprecatedDecoratorMixin(object):
         favor of
     @type dummyReplacementMethod: callable
     """
+
+    def doDeprecation(self, version, replacement=None):
+        """
+        Call L{deprecated}.
+
+        @param version: see L{deprecated}'s C{version} parameter
+
+        @param replacement: see L{deprecated}'s C{replacement} parameter
+
+        @return: a 2-tuple of C{(before, after)} where C{before} is the
+            callable before it was decorated which should have accurate
+            metadata and not emit a warning when called, and C{after} which is
+            the callable after it was decorated.  C{before} and C{after} should
+            both be 0-argument callables.
+        """
+        raise NotImplementedError()
+
 
     def test_deprecateEmitsWarning(self):
         """
@@ -791,11 +811,19 @@ class TestDecoratedDecoratorOnFunctions(DeprecatedDecoratorMixin,
     """
     Tests for L{twisted.python.deprecate.deprecated} on regular functions
     """
+
     def doDeprecation(self, version, replacement=None):
         """
         Perform deprecation on a regular function.
+
+        @param version: see L{DeprecatedDecoratorMixin}
+
+        @param replacement: see L{DeprecatedDecoratorMixin}
+
+        @return: see L{DeprecatedDecoratorMixin}
         """
         return dummyCallable, deprecated(version, replacement)(dummyCallable)
+
 
 
 class TestDeprecatedDecoratorOnInstance(DeprecatedDecoratorMixin,
@@ -803,9 +831,16 @@ class TestDeprecatedDecoratorOnInstance(DeprecatedDecoratorMixin,
     """
     Tests for L{twisted.python.deprecate.deprecated} on instance methods.
     """
+
     def doDeprecation(self, version, replacement=None):
         """
-        Perform deprecation on a regular function.
+        Perform deprecation on an instance method.
+
+        @param version: see L{DeprecatedDecoratorMixin}
+
+        @param replacement: see L{DeprecatedDecoratorMixin}
+
+        @return: see L{DeprecatedDecoratorMixin}
         """
         originalStore = []
 
@@ -827,13 +862,24 @@ class TestDeprecatedDecoratorOnInstance(DeprecatedDecoratorMixin,
         return before, after
 
 
+
 class TestDeprecatedDecoratorOutsideClassmethod(DeprecatedDecoratorMixin,
                                                 SynchronousTestCase):
     """
     Tests for L{twisted.python.deprecate.deprecated} on class methods if
     the L{deprecated} decorator is above the L{classmethod} decorator.
     """
+
     def doDeprecation(self, version, replacement=None):
+        """
+        Perform deprecation on a L{classmethod}.
+
+        @param version: see L{DeprecatedDecoratorMixin}
+
+        @param replacement: see L{DeprecatedDecoratorMixin}
+
+        @return: see L{DeprecatedDecoratorMixin}
+        """
         originalStore = []
 
         def _catchOriginal(function):
@@ -855,13 +901,25 @@ class TestDeprecatedDecoratorOutsideClassmethod(DeprecatedDecoratorMixin,
         return before, after
 
 
+
 class TestDeprecatedDecoratorInsideClassmethod(DeprecatedDecoratorMixin,
                                                SynchronousTestCase):
     """
     Tests for L{twisted.python.deprecate.deprecated} on class methods if
     the L{deprecated} decorator is below the L{classmethod} decorator.
     """
+
     def doDeprecation(self, version, replacement=None):
+        """
+        Perform deprecation on a function which is then decorated by
+        L{classmethod}.
+
+        @param version: see L{DeprecatedDecoratorMixin}
+
+        @param replacement: see L{DeprecatedDecoratorMixin}
+
+        @return: see L{DeprecatedDecoratorMixin}
+        """
         originalStore = []
 
         def _catchOriginal(function):
@@ -885,6 +943,7 @@ class TestDeprecatedDecoratorInsideClassmethod(DeprecatedDecoratorMixin,
         return before, after
 
 
+
 class TestDeprecatedDecoratorOutsideStaticmethod(DeprecatedDecoratorMixin,
                                                  SynchronousTestCase):
     """
@@ -892,6 +951,15 @@ class TestDeprecatedDecoratorOutsideStaticmethod(DeprecatedDecoratorMixin,
     the L{deprecated} decorator is above the L{staticmethod} decorator.
     """
     def doDeprecation(self, version, replacement=None):
+        """
+        Perform deprecation on a L{staticmethod}.
+
+        @param version: see L{DeprecatedDecoratorMixin}
+
+        @param replacement: see L{DeprecatedDecoratorMixin}
+
+        @return: see L{DeprecatedDecoratorMixin}
+        """
         originalStore = []
 
         def _catchOriginal(function):
@@ -920,6 +988,16 @@ class TestDeprecatedDecoratorInsideStaticmethod(DeprecatedDecoratorMixin,
     the L{deprecated} decorator is below the L{staticmethod} decorator.
     """
     def doDeprecation(self, version, replacement=None):
+        """
+        Perform deprecation on a function which is then decorated with
+        L{staticmethod}.
+
+        @param version: see L{DeprecatedDecoratorMixin}
+
+        @param replacement: see L{DeprecatedDecoratorMixin}
+
+        @return: see L{DeprecatedDecoratorMixin}
+        """
         originalStore = []
 
         def _catchOriginal(function):
@@ -941,6 +1019,7 @@ class TestDeprecatedDecoratorInsideStaticmethod(DeprecatedDecoratorMixin,
         before = ClassWithDeprecatedMethods.dummy
         ClassWithDeprecatedMethods.dummy = originalStore[1]
         return before, after
+
 
 
 class TestAppendToDocstring(SynchronousTestCase):
