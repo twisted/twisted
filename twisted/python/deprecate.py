@@ -297,10 +297,11 @@ def _unwrapMethodDescriptor(methodDescriptorObject):
     @return: The callable decorated by C{methodDescriptorObject}
     @rtype: L{callable}
     """
-
-    wrappee = methodDescriptorObject.__get__(type, type)
-    if isinstance(methodDescriptorObject, classmethod):
-        wrappee = wrappee.im_func
+    wrappee = getattr(methodDescriptorObject, "__func__", None)
+    if wrappee is None:
+        wrappee = methodDescriptorObject.__get__(type, type)
+        if isinstance(methodDescriptorObject, classmethod):
+            wrappee = wrappee.im_func
     return wrappee
 
 
