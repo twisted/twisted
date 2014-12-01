@@ -302,8 +302,8 @@ class _DeprecateDescriptor(object):
         or a callable, which will be expanded to its full import path.
     @type _replacement: C{str} or callable
 
-    @ivar _wrapee: The function whose metadata should be copied.
-    @type _wrapee: L{types.FunctionType}
+    @ivar _wrappee: The function whose metadata should be copied.
+    @type _wrappee: L{types.FunctionType}
     """
     def __init__(self, deprecatee, version, replacement=None):
         """
@@ -315,14 +315,17 @@ class _DeprecateDescriptor(object):
 
         @param replacement: see L{_DeprecateDescriptor._replacement}
         """
-        self._wrapee = deprecatee
+        self._wrappee = deprecatee
         if (isinstance(deprecatee, classmethod) or
                 isinstance(deprecatee, staticmethod)):
             # You can't wrap a classmethod or staticmethod instance, only its
             # function.
-            self._wrapee = deprecatee.__func__
+            wrappee = getattr(deprecatee, '__func__', None)
+            if wrappee is None:
+                wrappee = deprecatee.__get__(type, type).im_func
+            self._wrappee = wrappee
 
-        wraps(self._wrapee)(self)
+        wraps(self._wrappee)(self)
 
         self._deprecatee = deprecatee
         self._replacement = replacement
@@ -331,7 +334,7 @@ class _DeprecateDescriptor(object):
                            _getDeprecationDocstring(version, replacement))
         self.deprecatedVersion = version
 
-        self.__qualname__ = _fullyQualifiedName(self._wrapee)
+        self.__qualname__ = _fullyQualifiedName(self._wrappee)
 
 
     def _warn(self, function, args, kwargs, qualname=None):
@@ -419,12 +422,12 @@ class _DeprecateDescriptor(object):
         method = self._deprecatee.__get__(instance, instanceType)
 
         if isinstance(self._deprecatee, staticmethod):
-            @wraps(self._wrapee)
+            @wraps(self._wrappee)
             def wrap(*args, **kwargs):
                 return self._warn(method, args, kwargs)
 
         else:
-            @wraps(self._wrapee)
+            @wraps(self._wrappee)
             def wrap(_, *args, **kwargs):
                 return self._warn(method, args, kwargs)
 
