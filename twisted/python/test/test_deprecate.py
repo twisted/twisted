@@ -7,7 +7,6 @@ Tests for Twisted's deprecation framework, L{twisted.python.deprecate}.
 
 from __future__ import division, absolute_import
 
-from functools import wraps
 import sys, types, warnings, inspect
 from os.path import normcase
 from warnings import simplefilter, catch_warnings
@@ -548,6 +547,8 @@ def dummyReplacementMethod(*args):
     Do nothing.
 
     This is used to test the replacement parameter to L{deprecated}.
+
+    @param args: either C{self} or nothing.
     """
 
 
@@ -562,20 +563,6 @@ class ClassWithClassMethod(object):
         """
         A class method.
         """
-
-
-
-def setUpDummyCallables(testCase):
-    """
-    This sets up some clean dummyCallables and dummyReplacements for a test
-    case, in case they need to be mutated
-
-    @param testCase: An object onto which attributes can be added - meant to
-        be used for subclasess of L{twisted.trial.unittest.TestCase}.
-    """
-    testCase.dummyCallable = wraps(dummyCallable)(lambda *args: None)
-    testCase.dummyReplacementMethod = wraps(
-        dummyReplacementMethod)(lambda *args: None)
 
 
 
@@ -687,13 +674,6 @@ class DeprecatedDecoratorMixin(object):
         something else with the same API that needs to do some additional
         work such as adding functions to classes.
     @type decorator: callable
-
-    @ivar dummyCallable: A callable to deprecate.
-    @type dummyCallable: callable
-
-    @ivar dummyReplacementMethod: A callable to deprecate C{dummyCallable} in
-        favor of
-    @type dummyReplacementMethod: callable
     """
 
     def doDeprecation(self, version, replacement=None):
@@ -741,6 +721,7 @@ class DeprecatedDecoratorMixin(object):
         self.assertEqual(before.__name__, after.__name__)
         self.assertEqual(fullyQualifiedName(before),
                          fullyQualifiedName(after))
+
 
     def test_deprecatedUpdatesDocstring(self):
         """
