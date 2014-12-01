@@ -286,6 +286,25 @@ def deprecated(version, replacement=None):
 
 
 
+def _unwrapMethodDescriptor(methodDescriptorObject):
+    """
+    Convert a L{classmethod} or L{staticmethod} object into the callable that
+    it wraps (in a way which is compatible with python 2.6).
+
+    @param methodDescriptorObject: the descriptor object to unwrap.
+    @type methodDescriptorObject: L{classmethod} or L{staticmethod}
+
+    @return: The callable decorated by C{methodDescriptorObject}
+    @rtype: L{callable}
+    """
+
+    wrappee = methodDescriptorObject.__get__(type, type)
+    if isinstance(methodDescriptorObject, classmethod):
+        wrappee = wrappee.im_func
+    return wrappee
+
+
+
 class _DeprecateDescriptor(object):
     """
     A descriptor that handles deprecating instance methods as well as
@@ -320,10 +339,7 @@ class _DeprecateDescriptor(object):
                 isinstance(deprecatee, staticmethod)):
             # You can't wrap a classmethod or staticmethod instance, only its
             # function.
-            wrappee = getattr(deprecatee, '__func__', None)
-            if wrappee is None:
-                wrappee = deprecatee.__get__(type, type).im_func
-            self._wrappee = wrappee
+            self._wrappee = _unwrapMethodDescriptor(deprecatee)
 
         wraps(self._wrappee)(self)
 
@@ -395,7 +411,7 @@ class _DeprecateDescriptor(object):
             maybeOther = args[0].__dict__.get(self.__name__)
             if (isinstance(maybeOther, classmethod) or
                     isinstance(maybeOther, staticmethod)):
-                if maybeOther.__func__ is self:
+                if _unwrapMethodDescriptor(maybeOther) is self:
                     return self._warn(
                         self._deprecatee, args, kwargs,
                         qualname=".".join([_fullyQualifiedName(args[0]),
