@@ -8,124 +8,12 @@ Integration with L{twisted.python.log}.
 
 from zope.interface import implementer
 
-from twisted.python.reflect import safe_str
-from twisted.python.failure import Failure
-
 from ._levels import LogLevel
 from ._format import formatEvent
-from ._logger import Logger
 from ._observer import ILogObserver
-from ._stdlib import (toStdlibLogLevelMapping, fromStdlibLogLevelMapping,
-                      StringifiableFromEvent)
-
-
-
-class LegacyLogger(object):
-    """
-    A logging object that provides some compatibility with the
-    L{twisted.python.log} module.
-
-    Specifically, it provides compatible C{msg()} and C{err()} which
-    forwards events to a L{Logger}'s C{emit()}, which will in turn
-    produce new-style events.
-
-    This allows existing code to use this module without changes::
-
-        from twisted.python.logger import LegacyLogger
-        log = LegacyLogger()
-
-        log.msg("blah")
-
-        log.msg(warning=message, category=reflect.qual(category),
-                filename=filename, lineno=lineno,
-                format="%(filename)s:%(lineno)s: %(category)s: %(warning)s")
-
-        try:
-            1/0
-        except Exception as e:
-            log.err(e, "Math is hard")
-    """
-
-    def __init__(self, logger=None):
-        """
-        @param logger: A logger.
-        @type logger: L{Logger}
-        """
-        if logger is None:
-            self.newStyleLogger = Logger(Logger._namespaceFromCallingContext())
-        else:
-            self.newStyleLogger = logger
-
-        import twisted.python.log as oldStyleLogger
-        self.oldStyleLogger = oldStyleLogger
-
-
-    def __getattribute__(self, name):
-        try:
-            return super(LegacyLogger, self).__getattribute__(name)
-        except AttributeError:
-            return getattr(self.oldStyleLogger, name)
-
-
-    def msg(self, *message, **kwargs):
-        """
-        This method is API-compatible with L{twisted.python.log.msg} and exists
-        for compatibility with that API.
-
-        @param message: A message.
-        @type message: L{tuple} of L{bytes}
-
-        @param kwargs: Fields in the legacy log message.
-        @type kwargs: L{dict}
-        """
-        if message:
-            message = " ".join(map(safe_str, message))
-        else:
-            message = None
-
-        self.newStyleLogger.emit(LogLevel.info, message, **kwargs)
-
-
-    def err(self, _stuff=None, _why=None, **kwargs):
-        """
-        This method is API-compatible with L{twisted.python.log.err} and exists
-        for compatibility with that API.
-
-        @param _stuff: Something that describes a problem.
-        @type _stuff: L{Failure}, L{str}, or L{Exception}
-
-        @param _why: A string describing what caused the failure.
-        @type _why: L{str}
-
-        @param kwargs: Additional fields.
-        @type kwargs: L{dict}
-        """
-        if _stuff is None:
-            _stuff = Failure()
-        elif isinstance(_stuff, Exception):
-            _stuff = Failure(_stuff)
-
-        if isinstance(_stuff, Failure):
-            if _why:
-                text = safe_str(_why)
-            else:
-                text = "Unhandled Error"
-
-            text = "{why}\n{traceback}".format(
-                why=text,
-                traceback=_stuff.getTraceback(),
-            )
-
-            self.newStyleLogger.emit(
-                LogLevel.critical,
-                text, failure=_stuff, why=_why, isError=1, **kwargs
-            )
-        else:
-            # We got called with an invalid _stuff.
-            self.newStyleLogger.emit(
-                LogLevel.critical,
-                repr(_stuff), why=_why, isError=1, **kwargs
-            )
+from ._stdlib import (
+    toStdlibLogLevelMapping, fromStdlibLogLevelMapping, StringifiableFromEvent
+)
 
 
 

@@ -76,7 +76,7 @@ __all__ = [
     "LoggingFile",
 
     # From ._legacy
-    "LegacyLogger", "LegacyLogObserverWrapper",
+    "LegacyLogObserverWrapper",
 
     # From ._global
     "globalLogPublisher", "globalLogBeginner", "LogBeginner",
@@ -111,9 +111,7 @@ from ._stdlib import STDLibLogObserver
 
 from ._io import LoggingFile
 
-from ._legacy import (
-    LegacyLogger, LegacyLogObserverWrapper
-)
+from ._legacy import LegacyLogObserverWrapper
 
 from ._global import (
     globalLogPublisher, globalLogBeginner, LogBeginner

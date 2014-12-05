@@ -542,52 +542,9 @@ This module provides some facilities to enable the existing :api:`twisted.python
 As such, existing clients of :api:`twisted.python.log <twisted.python.log>` will begin using this module indirectly, with no changes to the older module's API.
 
 
-Incrementally porting emitters
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Applications that wish to switch from the old module to the new module without having to change much code may do so my using the :api:`twisted.python.logger.LegacyLogger <LegacyLogger>` class, which exposes an API that is largely compatible with many uses of the :api:`twisted.python.log <twisted.python.log>` module.
-For example, this code:
-
-.. code-block:: python
-
-    from twisted.python import log
-    
-    log.msg("blah")
-    
-    log.msg(warning=message, category=reflect.qual(category),
-            filename=filename, lineno=lineno,
-            format="%(filename)s:%(lineno)s: %(category)s: %(warning)s")
-    
-    try:
-        1/0
-    except Exception as e:
-        log.err(e, "Math is hard")
-
-…could be modified thusly to stop depending on the older module by simply changing the import line and instantiating a :api:`twisted.python.logger.LegacyLogger <LegacyLogger>` .
-The rest of the code stays the same:
-
-.. code-block:: python
-    
-    from twisted.python.logger import LegacyLogger
-    log = LegacyLogger()
-    
-    log.msg("blah")
-    
-    log.msg(warning=message, category=reflect.qual(category),
-            filename=filename, lineno=lineno,
-            format="%(filename)s:%(lineno)s: %(category)s: %(warning)s")
-    
-    try:
-        1/0
-    except Exception as e:
-        log.err(e, "Math is hard")
-
-Because the older module is forwarding to the new module, this is probably only useful if Twisted were to deprecate the older module one needs to port large application to the new module incrementally.
-
-
 Incrementally porting observers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Observers also have an incremental path for porting to the new module.
+Observers have an incremental path for porting to the new module.
 :api:`twisted.python.logger.LegacyLogObserverWrapper <LegacyLogObserverWrapper>` is an :api:`twisted.python.logger.ILogObserver <ILogObserver>` that wraps a log observer written for the older module.
 This allows an old-style observer to be registered with a new-style logger or log publisher compatibly.
