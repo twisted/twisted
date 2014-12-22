@@ -331,96 +331,45 @@ This function returns a ``Deferred`` that fires with the body after the request 
 
 
 
-HTTP over SSL
+HTTP over TLS
 ~~~~~~~~~~~~~
 
+Everything you've read so far applies whether the scheme of the request URI is *HTTP* or *HTTPS*\ .
+Give the ``request.py`` example a try with an *HTTPS* URI: it should just work.
 
-    
+``Agent``\ 's default behavior for HTTPS URIs is to act roughly like a web browser.
+A set of platform-supplied certificate authorities will be trusted.
+Certificate verification (including hostname checking) is performed required to succeed.
 
-Everything you've read so far applies whether the scheme of the request
-URI is *HTTP* or *HTTPS* .  However, to control the SSL
-negotiation performed when an *HTTPS* URI is requested, there's
-one extra object to pay attention to: the SSL context factory.
+This behavior should be sufficient for most use-cases.
+When it is not, :api:`twisted.web.iweb.IPolicyForHTTPS` defines the way an application can specify some other behavior.
+:api:`twisted.web.client.BrowserLikePolicyForHTTPS` is an implementation of this interface that supports one other common use-case:
+it allows the application to specify an alternate "trust root" (effectively replacing the platform-supplied certificate authorities).
 
+Here's an example demonstrating the use of ``Agent`` and ``BrowserLikePolicyForHTTPS`` to use a single application-supplied certificate as the trust root (instead of the platform-supplied CAs):
 
-    
+:download:`private_ca_request.py <listings/client/private_ca_request.py>`
 
+.. literalinclude:: listings/client/private_ca_request.py
 
+Run this example with two command-line arguments:
 
-``Agent`` 's constructor takes an optional second argument, a
-context factory.  This is an object like the context factory described
-in :doc:`Using SSL in Twisted <../../core/howto/ssl>` but has
-one small difference.  The ``getContext`` method of this factory
-accepts the address from the URL being requested.  This allows it to
-return a context object which verifies that the server's certificate
-matches the URL being requested.
+  #. the path to a PEM-format certificate which will be treated as the trust root
+  #. an HTTPS URI to which to issue a *GET* request
 
+.. note::
 
-    
+  StartCom Certification Authority is used here because it happens to have issued the certificate for the twistedmatrix.com HTTPS server.
+  If you try this example against a different HTTPS server make sure you pick the right certificate authority certificate if you want the request to succeed.
+  Conversely, try using the wrong certificate authority certificate if you want to see a demonstration of the certificate verification feature in action.
 
+.. code-block:: sh
 
+  $ python private_ca_request.py /etc/ssl/certs/StartCom_Certification_Authority.pem https://twistedmatrix.com/
 
-Here's an example which shows how to use ``Agent`` to request
-an *HTTPS* URL with no certificate verification.
-
-
-    
-
-
-
-.. code-block:: python
-
-    
-    from twisted.python.log import err
-    from twisted.web.client import Agent
-    from twisted.internet import reactor
-    from twisted.internet.ssl import ClientContextFactory
-    
-    class WebClientContextFactory(ClientContextFactory):
-        def getContext(self, hostname, port):
-            return ClientContextFactory.getContext(self)
-    
-    def display(response):
-        print "Received response"
-        print response
-    
-    def main():
-        contextFactory = WebClientContextFactory()
-        agent = Agent(reactor, contextFactory)
-        d = agent.request("GET", "https://example.com/")
-        d.addCallbacks(display, err)
-        d.addCallback(lambda ignored: reactor.stop())
-        reactor.run()
-    
-    if __name__ == "__main__":
-        main()
-
-
-
-    
-
-The important point to notice here is that ``getContext`` now
-accepts two arguments, a hostname and a port number.  These two arguments,
-a ``str`` and an ``int`` , give the address to which a
-connection is being established to request an HTTPS URL.  Because an agent
-might make multiple requests over a single connection,
-``getContext`` may not be called once for each request.  A second
-or later request for a URL with the same hostname as a previous request
-may re-use an existing connection, and therefore will re-use the
-previously returned context object.
-
-
-    
-
-
-
-To configure SSL options or enable certificate verification or hostname
-checking, provide a context factory which creates suitably configured
-context objects.
-
-
-    
-
+It's also possible to create implementations of ``IPolicyForHTTPS`` that provide other behaviors.
+Bear in mind that ``IPolicyForHTTPS`` is completely in control of the security properties of any TLS connections established to handle HTTPS URIs.
+If you implement this interface yourself, it is entirely your responsibility to get all of those properties right.
 
 
 HTTP Persistent Connection
