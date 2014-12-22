@@ -847,8 +847,21 @@ class WebClientContextFactory(object):
 class BrowserLikePolicyForHTTPS(object):
     """
     SSL connection creator for web clients.
+
+    @ivar _trustRoot: See L{__init__}
     """
     def __init__(self, trustRoot=None):
+        """
+        @param trustRoot: The entity or entities which are considered
+            legitimate end points for the purposes of certificate signature
+            chain verification.  Certificate signature chains which end with
+            one of these entities will be treated as valid (allowing further
+            verification steps to proceed, such as subject name verification).
+            If a single certificate object is given, it is treated as the only
+            trusted root.  If C{None} is given, the certificate authorities
+            supplied by the platform will automatically be used.
+        @type trustRoot: L{NoneType} or L{twisted.internet.ssl.Certificate}
+        """
         self._trustRoot = trustRoot
 
 
