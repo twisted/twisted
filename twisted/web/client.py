@@ -860,7 +860,7 @@ class BrowserLikePolicyForHTTPS(object):
             If a single certificate object is given, it is treated as the only
             trusted root.  If C{None} is given, the certificate authorities
             supplied by the platform will automatically be used.
-        @type trustRoot: L{NoneType} or L{twisted.internet.ssl.Certificate}
+        @type trustRoot: C{None} or L{twisted.internet.ssl.Certificate}
         """
         self._trustRoot = trustRoot
 
