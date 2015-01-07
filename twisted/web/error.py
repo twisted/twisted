@@ -215,6 +215,9 @@ class UnsupportedMethod(Exception):
                 "First argument must be a sequence of supported methods, "
                 "but my first argument is not a sequence.")
 
+    def __str__(self):
+        return "Expected one of %r" % (self.allowedMethods,)
+
 
 
 class SchemeNotSupported(Exception):

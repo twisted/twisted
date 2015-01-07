@@ -149,3 +149,19 @@ class InfiniteRedirectionTests(unittest.TestCase):
         """
         e = error.InfiniteRedirection("200", "My own message")
         self.assertEqual(e.message, "My own message")
+
+
+
+class UnsupportedMethodTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{UnsupportedMethod}.
+    """
+
+    def test_str(self):
+        """
+        The C{__str__} for L{UnsupportedMethod} makes it clear that what it
+        shows is a list of the supported methods, not the method that was
+        unsupported.
+        """
+        e = error.UnsupportedMethod(["HEAD", "PATCH"])
+        self.assertEqual(str(e), "Expected one of ['HEAD', 'PATCH']")
