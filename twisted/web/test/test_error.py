@@ -156,7 +156,6 @@ class UnsupportedMethodTests(unittest.SynchronousTestCase):
     """
     Tests for L{UnsupportedMethod}.
     """
-
     def test_str(self):
         """
         The C{__str__} for L{UnsupportedMethod} makes it clear that what it
