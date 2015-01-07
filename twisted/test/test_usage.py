@@ -743,6 +743,15 @@ class TestArgparseToOptions(unittest.TestCase):
             (options["one"], options["two"]), ("first", "second"),
         )
 
+    def test_raisesUsageErrorOnFailure(self):
+        """
+        When parsing arguments fails, a L{usage.UsageError} is raised.
+        """
+        parser = argparse.ArgumentParser()
+        options = usage.argparseToOptions(parser)()
+        e = self.assertRaises(usage.UsageError, options.parseOptions, ["foo"])
+        self.assertEqual("Unrecognized arguments: ['foo']", str(e))
+
     def test_implementsIArgumentParser(self):
         """
         The return value of L{argparseToOptions} is an implementer

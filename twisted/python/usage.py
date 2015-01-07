@@ -57,6 +57,8 @@ class IArgumentParser(Interface):
         @type options: a L{list} of L{str}, or C{None}
         @param options: the arguments to parse. If unprovided, the default
             should be to parse the options provided in C{sys.argv[1:]}
+        @raise UsageError: If the options provided were in some way invalid.
+            The error message should further describe in what way.
         @return: C{None}
         """
 
@@ -1042,6 +1044,10 @@ def argparseToOptions(parser):
             @type options: a L{list} of L{str}, or C{None}
             @param options: the options to parse
             """
-            self._parsed = vars(parser.parse_args(args=options))
+            namespace, unknownArgs = parser.parse_known_args(args=options)
+            if unknownArgs:
+                raise UsageError("Unrecognized arguments: %r" % (unknownArgs,))
+            else:
+                self._parsed = vars(namespace)
 
     return _WrappedParser
