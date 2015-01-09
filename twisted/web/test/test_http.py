@@ -2191,6 +2191,6 @@ class DeprecatedRequestAttributesTests(unittest.TestCase):
                 "category": DeprecationWarning,
                 "message": (
                     "twisted.web.http.Request.getClient was deprecated "
-                    "in Twisted 14.1.0; please use Twisted Names to "
+                    "in Twisted 15.0.0; please use Twisted Names to "
                     "resolve hostnames instead")},
                          sub(["category", "message"], warnings[0]))

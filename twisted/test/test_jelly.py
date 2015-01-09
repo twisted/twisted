@@ -582,7 +582,7 @@ class JellyDeprecationTests(unittest.TestCase):
 
     def test_deprecatedInstanceAtom(self):
         """
-        L{jelly.instance_atom} is deprecated since 14.1.0.
+        L{jelly.instance_atom} is deprecated since 15.0.0.
         """
         jelly.instance_atom
         warnings = self.flushWarnings([self.test_deprecatedInstanceAtom])
@@ -590,7 +590,7 @@ class JellyDeprecationTests(unittest.TestCase):
         self.assertEqual(
             warnings[0]['message'],
             'twisted.spread.jelly.instance_atom was deprecated in Twisted '
-            '14.1.0: instance_atom is unused within Twisted.')
+            '15.0.0: instance_atom is unused within Twisted.')
         self.assertEqual(
             warnings[0]['category'],
             DeprecationWarning)
@@ -598,7 +598,7 @@ class JellyDeprecationTests(unittest.TestCase):
 
     def test_deprecatedUnjellyingInstanceAtom(self):
         """
-        Unjellying the instance atom is deprecated with 14.1.0.
+        Unjellying the instance atom is deprecated with 15.0.0.
         """
         jelly.unjelly(
             ["instance",
@@ -609,7 +609,7 @@ class JellyDeprecationTests(unittest.TestCase):
         self.assertEqual(
             warnings[0]['message'],
             "Unjelly support for the instance atom is deprecated since "
-            "Twisted 14.1.0.  Upgrade peer for modern instance support.")
+            "Twisted 15.0.0.  Upgrade peer for modern instance support.")
         self.assertEqual(
             warnings[0]['category'],
             DeprecationWarning)
