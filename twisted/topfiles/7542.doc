@@ -1,1 +1,0 @@
-Fixed a path error in the make.bat file for building Sphinx documentation, so that it is now possible to build the documenation using make.bat on Windows.

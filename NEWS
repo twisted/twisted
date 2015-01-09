@@ -1,6 +1,208 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 15.0.0pre1 (2015-01-09)
+====================================
+
+Features
+--------
+ - twisted.internet.protocol.ClientFactory (and subclasses) may now
+   return None from buildProtocol to immediately close the connection.
+   (#710)
+ - twisted.trial.unittest.SynchronousTestCase.assertRaises can now
+   return a context manager. (#5339)
+ - Implementations of
+   twisted.internet.interfaces.IStreamClientEndpoint included in
+   Twisted itself will now handle None being returned from the client
+   factory's buildProtocol method by immediately closing the
+   connection and firing the waiting Deferred with a Failure. (#6976)
+ - inlineCallbacks now supports using the return statement with a
+   value on Python 3 (#7624)
+ - twisted.spread.banana.Banana.sendEncoded() now raises a more
+   informative error message if the user tries to encode objects of
+   unsupported type. (#7663)
+
+Bugfixes
+--------
+ - twisted.internet.interfaces.IReactorMulticast.listenMultiple works
+   again RHEL 6's python 2.6. (#7159)
+ - Allow much more of the code within Twisted to use ProcessEndpoint
+   by adding IPushProducer and IConsumer interfaces to its resulting
+   transport. (#7436)
+ - twisted.internet.ssl.Certificate(...).getPublicKey().keyHash() now
+   produces a stable value regardless of OpenSSL version.
+   Unfortunately this means that it is different than the value
+   produced by older Twisted versions. (#7651)
+ - twisted.python.reflect.safe_str on Python 3 converts utf-8 encoded
+   bytes to clean str instead of "b'a'" (#7660)
+ - twisted.spread.banana.Banana now raises NotImplementedError when
+   receiving pb messages without pb being the selected dialect (#7662)
+ - The SSL server string endpoint parser
+   (twisted.internet.endpoints.serverFromString) now constructs
+   endpoints which, by default, disable the insecure SSLv3 protocol.
+   (#7684)
+ - The SSL client string endpoint parser
+   (twisted.internet.endpoints.clientFromString) now constructs
+   endpoints which, by default, disable the insecure SSLv3 protocol.
+   (#7686)
+
+Improved Documentation
+----------------------
+ - inlineCallbacks now has introductory documentation. (#1009)
+ - The echoclient example now uses twisted.internet.task.react.
+   (#7083)
+ - Twisted Trial's how-to documentation now has a link to Twisted's
+   contribution guidelines and has been reformatted. (#7475)
+ - Fixed a path error in the make.bat file for building Sphinx
+   documentation, so that it is now possible to build the documenation
+   using make.bat on Windows. (#7542)
+
+Deprecations and Removals
+-------------------------
+ - twisted.python.filepath.FilePath.statinfo was deprecated. (#4450)
+ - twisted.internet.defer.deferredGenerator is now deprecated.
+   twisted.internet.defer.inlineCallbacks should be used instead.
+   (#6044)
+ - Pickling twisted.internet.ssl.OptionSSLCertificationOptions and
+   twisted.internet.ssl.Keypair is no longer supported. __getstate__
+   and __setstate__ methods of these classes have been deprecated.
+   (#6166)
+ - twisted.spread.jelly's support for unjellying "instance" atoms is
+   now deprecated. (#7653)
+
+Other
+-----
+ - #3404, #4711, #5730, #6042, #6626, #6947, #6953, #6989, #7032,
+   #7038, #7039, #7097, #7098, #7142, #7143, #7154, #7155, #7156,
+   #7157, #7158, #7160, #7161, #7162, #7164, #7165, #7176, #7234,
+   #7252, #7329, #7333, #7355, #7369, #7370, #7419, #7529, #7531,
+   #7534, #7537, #7538, #7620, #7621, #7633, #7636, #7637, #7638,
+   #7640, #7641, #7642, #7643, #7665, #7667, #7713, #7719
+
+
+Twisted Conch 15.0.0pre1 (2015-01-09)
+=====================================
+
+Features
+--------
+ - The new APIs: twisted.conch.checkers.IAuthorizedKeysDB,
+   twisted.conch.checkers.InMemorySSHKeyDB,
+   twisted.conch.checkers.UNIXAuthorizedKeyFiles, and
+   twisted.conch.checkers.SSHPublicKeyChecker have been added to
+   provide functionality to check the validity of SSH public keys and
+   specify where authorized keys are to be found. (#7144)
+
+Deprecations and Removals
+-------------------------
+ - twisted.conch.checkers.SSHPublicKeyDatabase is now deprecated in
+   favor of a twisted.conch.checkers.SSHPublicKeyChecker instantiated
+   with a twisted.conch.checkers.UNIXAuthorizedKeyFiles. (#7144)
+
+Other
+-----
+ - #6626, #7002, #7526, #7532, #7698
+
+
+Twisted Lore 15.0.0pre1 (2015-01-09)
+====================================
+
+No significant changes have been made for this release.
+
+
+Twisted Mail 15.0.0pre1 (2015-01-09)
+====================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #6999, #7708
+
+
+Twisted Names 15.0.0pre1 (2015-01-09)
+=====================================
+
+Bugfixes
+--------
+ - twisted.names.secondary.SecondaryAuthority can now answer queries
+   again (broken since 13.2.0). (#7408)
+
+Other
+-----
+ - #7352
+
+
+Twisted News 15.0.0pre1 (2015-01-09)
+====================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #7703
+
+
+Twisted Pair 15.0.0pre1 (2015-01-09)
+====================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #7722
+
+
+Twisted Runner 15.0.0pre1 (2015-01-09)
+======================================
+
+No significant changes have been made for this release.
+
+
+Twisted Web 15.0.0pre1 (2015-01-09)
+===================================
+
+Features
+--------
+ - twisted.web.client.Agent.usingEndpointFactory allows creating an
+   Agent that connects in non-standard ways, e.g. via a proxy or a
+   UNIX socket. (#6634)
+ - The Deferred returned by twisted.web.client.readBody can now be
+   cancelled. (#6686)
+
+Bugfixes
+--------
+ - When requesting an HTTPS URL with twisted.web.client.Agent, the
+   hostname of the presented certificate will be checked against the
+   requested hostname; mismatches will now result in an error rather
+   than a man-in-the-middle opportunity for attackers.  This may break
+   existing code that incorrectly depended on insecure behavior, but
+   such code was erroneous and should be updated.  (#4888)
+ - twisted.web.client.BrowserLikePolicyForHTTPS now uses the trust
+   root that it is given, rather than always using the system's.
+   (#7647)
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.iweb.IRequest.getClient is now deprecated.  Its
+   implementation in Twisted, twisted.web.http.Request.getClient, is
+   also deprecated and will no longer attempt to resolve the client IP
+   address to a hostname. (#2252)
+
+Other
+-----
+ - #7247, #7302, #7680, #7689
+
+
+Twisted Words 15.0.0pre1 (2015-01-09)
+=====================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #6994, #7163, #7622
+
+
 Twisted Core 14.0.0 (2014-05-08)
 ================================
 

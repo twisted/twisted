@@ -1,6 +1,29 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 15.0.0pre1 (2015-01-09)
+=====================================
+
+Features
+--------
+ - The new APIs: twisted.conch.checkers.IAuthorizedKeysDB,
+   twisted.conch.checkers.InMemorySSHKeyDB,
+   twisted.conch.checkers.UNIXAuthorizedKeyFiles, and
+   twisted.conch.checkers.SSHPublicKeyChecker have been added to
+   provide functionality to check the validity of SSH public keys and
+   specify where authorized keys are to be found. (#7144)
+
+Deprecations and Removals
+-------------------------
+ - twisted.conch.checkers.SSHPublicKeyDatabase is now deprecated in
+   favor of a twisted.conch.checkers.SSHPublicKeyChecker instantiated
+   with a twisted.conch.checkers.UNIXAuthorizedKeyFiles. (#7144)
+
+Other
+-----
+ - #6626, #7002, #7526, #7532, #7698
+
+
 Twisted Conch 14.0.0 (2014-05-08)
 =================================
 

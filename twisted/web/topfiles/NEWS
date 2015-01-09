@@ -1,6 +1,41 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 15.0.0pre1 (2015-01-09)
+===================================
+
+Features
+--------
+ - twisted.web.client.Agent.usingEndpointFactory allows creating an
+   Agent that connects in non-standard ways, e.g. via a proxy or a
+   UNIX socket. (#6634)
+ - The Deferred returned by twisted.web.client.readBody can now be
+   cancelled. (#6686)
+
+Bugfixes
+--------
+ - When requesting an HTTPS URL with twisted.web.client.Agent, the
+   hostname of the presented certificate will be checked against the
+   requested hostname; mismatches will now result in an error rather
+   than a man-in-the-middle opportunity for attackers.  This may break
+   existing code that incorrectly depended on insecure behavior, but
+   such code was erroneous and should be updated.  (#4888)
+ - twisted.web.client.BrowserLikePolicyForHTTPS now uses the trust
+   root that it is given, rather than always using the system's.
+   (#7647)
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.iweb.IRequest.getClient is now deprecated.  Its
+   implementation in Twisted, twisted.web.http.Request.getClient, is
+   also deprecated and will no longer attempt to resolve the client IP
+   address to a hostname. (#2252)
+
+Other
+-----
+ - #7247, #7302, #7680, #7689
+
+
 Twisted Web 14.0.0 (2014-05-08)
 ===============================
 
