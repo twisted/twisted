@@ -873,7 +873,8 @@ class BrowserLikePolicyForHTTPS(object):
         @rtype: L{client connection creator
             <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>}
         """
-        return optionsForClientTLS(hostname.decode("ascii"))
+        return optionsForClientTLS(hostname.decode("ascii"),
+                                   trustRoot=self._trustRoot)
 
 
 
