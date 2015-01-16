@@ -1429,7 +1429,7 @@ class _StandardEndpointFactory(object):
 class Agent(_AgentBase):
     """
     L{Agent} is a very basic HTTP client.  It supports I{HTTP} and I{HTTPS}
-    scheme URIs (but performs no certificate checking by default).
+    scheme URIs.
 
     @ivar _pool: An L{HTTPConnectionPool} instance.
 
