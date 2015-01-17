@@ -1243,6 +1243,9 @@ class ESMTPClient(SMTPClient):
 
     @ivar context: The context factory to use for STARTTLS, if desired.
     @type context: L{ssl.ClientContextFactory}
+
+    @ivar _tlsMode: Whether or not the connection is over TLS.
+    @type _tlsMode: L{bool}
     """
     heloFallback = True
     requireAuthentication = False

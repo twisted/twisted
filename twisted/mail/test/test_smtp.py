@@ -1573,7 +1573,7 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
     def test_requireHELOFallbackOperates(self):
         """
         Double check that HELO fallback works if both authentication and
-        transport security are not required.
+        transport security are not required, and it is asked for.
         """
         transport = StringTransport()
         self.clientProtocol.requireAuthentication = False
