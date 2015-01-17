@@ -488,36 +488,92 @@ class Queue:
 
 class _AttemptManager(object):
     """
-    Manage the state of a single attempt to flush the relay queue.
+    A manager for an attempt to relay a set of messages to a mail exchange
+    server.
+
+    @ivar manager: See L{__init__}
+
+    @type _completionDeferreds: L{list} of L{Deferred}
+    @ivar _completionDeferreds: Deferreds which are to be notified when the
+        attempt to relay is finished.
     """
-    def __init__(self, manager):
+    def __init__(self, manager, noisy=True, reactor=None):
+        """
+        @type manager: L{SmartHostSMTPRelayingManager}
+        @param manager: A smart host.
+
+        @type noisy: L{bool}
+        @param noisy: A flag which determines whether informational log
+            messages will be generated (L{True}) or not (L{False}).
+
+        @type reactor: L{IReactorTime
+            <twisted.internet.interfaces.IReactorTime>} provider
+        @param reactor: A reactor which will be used to schedule delayed calls.
+        """
         self.manager = manager
         self._completionDeferreds = []
+        self.noisy = noisy
+
+        if not reactor:
+            from twisted.internet import reactor
+        self.reactor = reactor
 
 
     def getCompletionDeferred(self):
+        """
+        Return a deferred which will fire when the attempt to relay is
+        finished.
+
+        @rtype: L{Deferred}
+        @return: A deferred which will fire when the attempt to relay is
+            finished.
+        """
         self._completionDeferreds.append(Deferred())
         return self._completionDeferreds[-1]
 
 
     def _finish(self, relay, message):
+        """
+        Remove a message from the relay queue and from the smart host's list of
+        messages being relayed.
+
+        @type relay: L{SMTPManagedRelayerFactory}
+        @param relay: The factory for the relayer which sent the message.
+
+        @type message: L{bytes}
+        @param message: The path of the file holding the message.
+        """
         self.manager.managed[relay].remove(os.path.basename(message))
         self.manager.queue.done(message)
 
 
     def notifySuccess(self, relay, message):
-        """a relay sent a message successfully
-
-        Mark it as sent in our lists
         """
-        if self.manager.queue.noisy:
+        Remove a message from the relay queue after it has been successfully
+        sent.
+
+        @type relay: L{SMTPManagedRelayerFactory}
+        @param relay: The factory for the relayer which sent the message.
+
+        @type message: L{bytes}
+        @param message: The path of the file holding the message.
+        """
+        if self.noisy:
             log.msg("success sending %s, removing from queue" % message)
         self._finish(relay, message)
 
 
     def notifyFailure(self, relay, message):
-        """Relaying the message has failed."""
-        if self.manager.queue.noisy:
+        """
+        Generate a bounce message for a message which cannot be relayed.
+
+        @type relay: L{SMTPManagedRelayerFactory}
+        @param relay: The factory for the relayer responsible for the message.
+
+        @type message: L{bytes}
+        @param message: The path of the file holding the message.
+        """
+        if self.noisy:
             log.msg("could not relay " + message)
         # Moshe - Bounce E-mail here
         # Be careful: if it's a bounced bounce, silently
@@ -538,13 +594,16 @@ class _AttemptManager(object):
 
 
     def notifyDone(self, relay):
-        """A relaying SMTP client is disconnected.
+        """
+        When the connection is lost or cannot be established, prepare to
+        resend unsent messages and fire all deferred which are waiting for
+        the completion of the attempt to relay.
 
-        unmark all pending messages under this relay's responsibility
-        as being relayed, and remove the relay.
+        @type relay: L{SMTPManagedRelayerFactory}
+        @param relay: The factory for the relayer for the connection.
         """
         for message in self.manager.managed.get(relay, ()):
-            if self.manager.queue.noisy:
+            if self.noisy:
                 log.msg("Setting " + message + " waiting")
             self.manager.queue.setWaiting(message)
         try:
@@ -558,9 +617,12 @@ class _AttemptManager(object):
 
 
     def notifyNoConnection(self, relay):
-        """Relaying SMTP client couldn't connect.
+        """
+        When a connection to the mail exchange server cannot be established,
+        prepare to resend messages later.
 
-        Useful because it tells us our upstream server is unavailable.
+        @type relay: L{SMTPManagedRelayerFactory}
+        @param relay: The factory for the relayer meant to use the connection.
         """
         # Back off a bit
         try:
@@ -569,14 +631,12 @@ class _AttemptManager(object):
             log.msg("notifyNoConnection passed unknown relay!")
             return
 
-        if self.manager.queue.noisy:
+        if self.noisy:
             log.msg("Backing off on delivery of " + str(msgs))
 
         def setWaiting(queue, messages):
             map(queue.setWaiting, messages)
-
-        from twisted.internet import reactor
-        reactor.callLater(30, setWaiting, self.manager.queue, msgs)
+        self.reactor.callLater(30, setWaiting, self.manager.queue, msgs)
         del self.manager.managed[relay]
 
 
@@ -725,7 +785,7 @@ class SmartHostSMTPRelayingManager:
 
         relays = []
         for (domain, msgs) in exchanges.iteritems():
-            manager = _AttemptManager(self)
+            manager = _AttemptManager(self, self.queue.noisy)
             factory = self.factory(msgs, manager, *self.fArgs, **self.fKwArgs)
             self.managed[factory] = map(os.path.basename, msgs)
             relayAttemptDeferred = manager.getCompletionDeferred()
@@ -763,7 +823,7 @@ class SmartHostSMTPRelayingManager:
 
     def _ebExchange(self, failure, factory, domain):
         """
-        Set up to resend messages later.
+        Prepare to resend messages later.
 
         This errback function runs when no mail exchange server for the domain
         can be found.
