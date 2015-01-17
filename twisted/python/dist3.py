@@ -126,6 +126,7 @@ modules = [
     "twisted._version",
     "twisted.web",
     "twisted.web.http_headers",
+    "twisted.web._newclient",
     "twisted.web.resource",
     "twisted.web._responses",
     "twisted.web.test",
@@ -220,6 +221,7 @@ testModules = [
     "twisted.web.test.test_webclient",
     "twisted.web.test.test_http",
     "twisted.web.test.test_http_headers",
+    "twisted.web.test.test_newclient",
     "twisted.web.test.test_resource",
     "twisted.web.test.test_web",
 ]
