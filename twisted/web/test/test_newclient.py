@@ -1700,7 +1700,8 @@ class HTTP11ClientProtocolTests(TestCase):
             return producer.finished
         producer.startProducing = startProducing
 
-        result = protocol.request(Request(b'POST', b'/bar', _boringHeaders, producer))
+        result = protocol.request(Request(b'POST', b'/bar', _boringHeaders,
+                                          producer))
         producer.consumer.write(b'x' * 5)
         result.cancel()
         self.assertTrue(transport.aborting)
