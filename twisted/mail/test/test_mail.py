@@ -2530,7 +2530,6 @@ class _AttemptManagerTests(unittest.TestCase):
 
 
 
-
 from twisted.python.runtime import platformType
 import types
 if platformType != "posix":
