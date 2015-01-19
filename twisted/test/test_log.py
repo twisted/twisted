@@ -287,7 +287,7 @@ class LogPublisherTestCaseMixin:
         setting, if it was modified by L{setUp}.
         """
         for chunk in self.out:
-            self.failUnless(isinstance(chunk, bytes),
+            self.failUnless(isinstance(chunk, str),
                             "%r was not a string" % (chunk,))
 
         if self._origEncoding is not None:
@@ -323,7 +323,7 @@ class LogPublisherTestCase(LogPublisherTestCaseMixin,
         self.lp.msg(message)
         self.assertEqual(len(self.out), 1)
         if _PY3:
-            self.assertIn(message.encode("utf-8"), self.out[0])
+            self.assertIn(message, self.out[0])
         else:
             self.assertIn('with str error', self.out[0])
             self.assertIn('UnicodeEncodeError', self.out[0])
@@ -335,15 +335,16 @@ class FileObserverTestCase(LogPublisherTestCaseMixin,
     """
     Tests for L{log.FileObserver}.
     """
-    ERROR_INVALID_FORMAT = b'Invalid format string'
-    ERROR_UNFORMATTABLE_OBJECT = b'UNFORMATTABLE OBJECT'
-    ERROR_FORMAT = \
-        b'Invalid format string or unformattable object in log message'
-    ERROR_PATHOLOGICAL = b'PATHOLOGICAL ERROR'
+    ERROR_INVALID_FORMAT = 'Invalid format string'
+    ERROR_UNFORMATTABLE_OBJECT = 'UNFORMATTABLE OBJECT'
+    ERROR_FORMAT = (
+        'Invalid format string or unformattable object in log message'
+    )
+    ERROR_PATHOLOGICAL = 'PATHOLOGICAL ERROR'
 
-    ERROR_NO_FORMAT = b'Unable to format event'
-    ERROR_UNFORMATTABLE_SYSTEM = b'[UNFORMATTABLE]'
-    ERROR_MESSAGE_LOST = b'MESSAGE LOST: unformattable object logged'
+    ERROR_NO_FORMAT = 'Unable to format event'
+    ERROR_UNFORMATTABLE_SYSTEM = '[UNFORMATTABLE]'
+    ERROR_MESSAGE_LOST = 'MESSAGE LOST: unformattable object logged'
 
     def _getTimezoneOffsetTest(self, tzname, daylightOffset, standardOffset):
         """
@@ -502,7 +503,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin,
     def test_brokenSystem__str__(self):
         self.lp.msg('huh', system=EvilStr())
         self.assertEqual(len(self.out), 1)
-        self.assertIn(self.ERROR_UNFORMATTABLE_SYSTEM, self.out[0])
+        self.assertIn(self.ERROR_FORMAT, self.out[0])
 
 
     def test_formattingAnObjectWithBroken__repr__Indirect(self):
@@ -514,7 +515,7 @@ class FileObserverTestCase(LogPublisherTestCaseMixin,
     def test_systemWithBroker__repr__Indirect(self):
         self.lp.msg('huh', system=[EvilRepr()])
         self.assertEqual(len(self.out), 1)
-        self.assertIn(self.ERROR_UNFORMATTABLE_SYSTEM, self.out[0])
+        self.assertIn(self.ERROR_UNFORMATTABLE_OBJECT, self.out[0])
 
 
     def test_simpleBrokenFormat(self):
@@ -656,6 +657,59 @@ class FileObserverTestCase(LogPublisherTestCaseMixin,
         warnings.warn("hello!")
         output = fakeFile.getvalue()
         self.assertIn("UserWarning: hello!", output)
+
+
+    def test_emitPrefix(self):
+        """
+        FileLogObserver.emit() will add a timestamp and system prefix to its
+        file output.
+        """
+        output = StringIO()
+        flo = log.FileLogObserver(output)
+        events = []
+
+        def observer(event):
+            # Capture the event for reference and pass it along to flo
+            events.append(event)
+            flo.emit(event)
+
+        publisher = log.LogPublisher()
+        publisher.addObserver(observer)
+
+        publisher.msg("Hello!")
+        self.assertEqual(len(events), 1)
+        event = events[0]
+
+        result = output.getvalue()
+        prefix = "{time} [{system}] ".format(
+            time=flo.formatTime(event["time"]), system=event["system"],
+        )
+
+        self.assertTrue(
+            result.startswith(prefix),
+            "{0!r} does not start with {1!r}".format(result, prefix)
+        )
+
+
+    def test_emitNewline(self):
+        """
+        FileLogObserver.emit() will append a newline to its file output.
+        """
+        output = StringIO()
+        flo = log.FileLogObserver(output)
+
+        publisher = log.LogPublisher()
+        publisher.addObserver(flo.emit)
+
+        publisher.msg("Hello!")
+
+        result = output.getvalue()
+        suffix = "Hello!\n"
+
+        self.assertTrue(
+            result.endswith(suffix),
+            "{0!r} does not end with {1!r}".format(result, suffix)
+        )
 
 
 

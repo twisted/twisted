@@ -19,11 +19,11 @@ from zope.interface import Interface
 from twisted.python.compat import unicode, _PY3
 from twisted.python import context
 from twisted.python import reflect
+from twisted.python import util
 from twisted.python import failure
 from twisted.python.threadable import synchronize
 from twisted.python.logger import (
     Logger as NewLogger, LogLevel as NewLogLevel,
-    textFileLogObserver as newFileLogObserver,
     STDLibLogObserver as NewSTDLibLogObserver,
     LegacyLogObserverWrapper, LoggingFile, LogPublisher as NewPublisher,
     globalLogPublisher as newGlobalLogPublisher,
@@ -363,8 +363,18 @@ if 'theLogPublisher' not in globals():
 
 def _safeFormat(fmtString, fmtDict):
     """
-    Try to format the string C{fmtString} using C{fmtDict} arguments,
-    swallowing all errors to always return a string.
+    Try to format a string, swallowing all errors to always return a string.
+
+    @note: For backward-compatibility reasons, this function ensures that it
+        returns a native string, meaning C{bytes} in Python 2 and C{unicode} in
+        Python 3.
+
+    @param fmtString: a C{%}-format string
+
+    @param fmtDict: string formatting arguments for C{fmtString}
+
+    @return: A native string, formatted from C{fmtString} and C{fmtDict}.
+    @rtype: L{str}
     """
     # There's a way we could make this if not safer at least more
     # informative: perhaps some sort of str/repr wrapper objects
@@ -387,8 +397,15 @@ def _safeFormat(fmtString, fmtDict):
             except:
                 text = ('PATHOLOGICAL ERROR IN BOTH FORMAT STRING AND '
                         'MESSAGE DETAILS, MESSAGE LOST')
-    if isinstance(text, unicode):
-        text = text.encode("utf-8")
+
+    # Return a native string
+    if _PY3:
+        if isinstance(text, bytes):
+            text = text.decode("utf-8")
+    else:
+        if isinstance(text, unicode):
+            text = text.encode("utf-8")
+
     return text
 
 
@@ -465,7 +482,6 @@ class FileLogObserver(_GlobalStartStopMixIn):
         # Compatibility
         self.write = f.write
         self.flush = f.flush
-        self._newObserver = newFileLogObserver(f)
 
 
     def getTimezoneOffset(self, when):
@@ -522,7 +538,19 @@ class FileLogObserver(_GlobalStartStopMixIn):
         @param eventDict: a log event
         @type eventDict: L{dict} mapping L{str} (native string) to L{object}
         """
-        _publishNew(self._newObserver, eventDict, textFromEventDict)
+        text = textFromEventDict(eventDict)
+        if text is None:
+            return
+
+        timeStr = self.formatTime(eventDict["time"])
+        fmtDict = {
+            "system": eventDict["system"],
+            "text": text.replace("\n", "\n\t")
+        }
+        msgStr = _safeFormat("[%(system)s] %(text)s\n", fmtDict)
+
+        util.untilConcludes(self.write, timeStr + " " + msgStr)
+        util.untilConcludes(self.flush)  # Hoorj!
 
 
 
