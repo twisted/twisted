@@ -1223,20 +1223,35 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
 
 class ESMTPClient(SMTPClient):
-    # Fall back to HELO if the server does not support EHLO
+    """
+    A client for sending emails over ESMTP.
+
+    @ivar heloFallback: Whether or not to fall back to plain SMTP if the C{EHLO}
+        command is not recognised by the server. If L{requireAuthentication} is
+        C{True}, or L{requireTransportSecurity} is C{True} and the connection is
+        not over TLS, this fallback flag will not be honored.
+    @type heloFallback: L{bool}
+
+    @ivar requireAuthentication: If C{True}, refuse to proceed if authentication
+        cannot be performed. Overrides L{heloFallback}.
+    @type requireAuthentication: L{bool}
+
+    @ivar requireTransportSecurity: If C{True}, refuse to proceed if the
+        transport cannot be secured. If the transport layer is not already
+        secured via TLS, this will override L{heloFallback}.
+    @type requireAuthentication: L{bool}
+
+    @ivar context: The context factory to use for STARTTLS, if desired.
+    @type context: L{ssl.ClientContextFactory}
+
+    @ivar _tlsMode: Whether or not the connection is over TLS.
+    @type _tlsMode: L{bool}
+    """
     heloFallback = True
-
-    # Refuse to proceed if authentication cannot be performed
     requireAuthentication = False
-
-    # Refuse to proceed if TLS is not available
     requireTransportSecurity = False
-
-    # Indicate whether or not our transport can be considered secure.
-    _tlsMode = False
-
-    # ClientContextFactory to use for STARTTLS
     context = None
+    _tlsMode = False
 
     def __init__(self, secret, contextFactory=None, *args, **kw):
         SMTPClient.__init__(self, *args, **kw)
@@ -1270,64 +1285,181 @@ class ESMTPClient(SMTPClient):
 
 
     def esmtpEHLORequired(self, code=-1, resp=None):
-        self.sendError(EHLORequiredError(502, "Server does not support ESMTP Authentication", self.log.str()))
+        """
+        Fail because authentication is required, but the server does not support
+        ESMTP, which is required for authentication.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
+        """
+        self.sendError(EHLORequiredError(502, b"Server does not support ESMTP "
+            b"Authentication", self.log.str()))
 
 
     def esmtpAUTHRequired(self, code=-1, resp=None):
+        """
+        Fail because authentication is required, but the server does not support
+        any schemes we support.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
+        """
         tmp = []
 
         for a in self.authenticators:
             tmp.append(a.getName().upper())
 
-        auth = "[%s]" % ', '.join(tmp)
+        auth = b"[%s]" % b", ".join(tmp)
 
-        self.sendError(AUTHRequiredError(502, "Server does not support Client Authentication schemes %s" % auth,
-                                         self.log.str()))
+        self.sendError(AUTHRequiredError(502, b"Server does not support Client "
+            b"Authentication schemes %s" % auth, self.log.str()))
 
 
     def esmtpTLSRequired(self, code=-1, resp=None):
-        self.sendError(TLSRequiredError(502, "Server does not support secure communication via TLS / SSL",
-                                        self.log.str()))
+        """
+        Fail because TLS is required and the server does not support it.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
+        """
+        self.sendError(TLSRequiredError(502, b"Server does not support secure "
+            b"communication via TLS / SSL", self.log.str()))
+
 
     def esmtpTLSFailed(self, code=-1, resp=None):
-        self.sendError(TLSError(code, "Could not complete the SSL/TLS handshake", self.log.str()))
+        """
+        Fail because the TLS handshake wasn't able to be completed.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
+        """
+        self.sendError(TLSError(code, b"Could not complete the SSL/TLS "
+            b"handshake", self.log.str()))
+
 
     def esmtpAUTHDeclined(self, code=-1, resp=None):
+        """
+        Fail because the authentication was rejected.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
+        """
         self.sendError(AUTHDeclinedError(code, resp, self.log.str()))
 
+
     def esmtpAUTHMalformedChallenge(self, code=-1, resp=None):
-        str =  "Login failed because the SMTP Server returned a malformed Authentication Challenge"
-        self.sendError(AuthenticationError(501, str, self.log.str()))
+        """
+        Fail because the server sent a malformed authentication challenge.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
+        """
+        self.sendError(AuthenticationError(501, b"Login failed because the "
+            b"SMTP Server returned a malformed Authentication Challenge",
+            self.log.str()))
+
 
     def esmtpAUTHServerError(self, code=-1, resp=None):
+        """
+        Fail because of some other authentication error.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
+        """
         self.sendError(AuthenticationError(code, resp, self.log.str()))
 
+
     def registerAuthenticator(self, auth):
-        """Registers an Authenticator with the ESMTPClient. The ESMTPClient
-           will attempt to login to the SMTP Server in the order the
-           Authenticators are registered. The most secure Authentication
-           mechanism should be registered first.
-
-           @param auth: The Authentication mechanism to register
-           @type auth: class implementing C{IClientAuthentication}
         """
+        Registers an Authenticator with the ESMTPClient. The ESMTPClient will
+        attempt to login to the SMTP Server in the order the Authenticators are
+        registered. The most secure Authentication mechanism should be
+        registered first.
 
+        @param auth: The Authentication mechanism to register
+        @type auth: L{IClientAuthentication} implementor
+
+        @return C{None}
+        """
         self.authenticators.append(auth)
 
+
     def connectionMade(self):
+        """
+        Called when a connection has been made, and triggers sending an C{EHLO}
+        to the server.
+        """
+        self._tlsMode = ISSLTransport.providedBy(self.transport)
         SMTPClient.connectionMade(self)
         self._okresponse = self.esmtpState_ehlo
 
+
     def esmtpState_ehlo(self, code, resp):
+        """
+        Send an C{EHLO} to the server.
+
+        If L{heloFallback} is C{True}, and there is no requirement for TLS or
+        authentication, the client will fall back to basic SMTP.
+
+        @param code: The server status code from the most recently received
+            server message.
+        @type code: L{int}
+
+        @param resp: The server status response from the most recently received
+            server message.
+        @type resp: L{bytes}
+
+        @return: C{None}
+        """
         self._expected = SUCCESS
 
         self._okresponse = self.esmtpState_serverConfig
         self._failresponse = self.esmtpEHLORequired
 
-        if self.heloFallback:
+        if self._tlsMode:
+            needTLS = False
+        else:
+            needTLS = self.requireTransportSecurity
+
+        if self.heloFallback and not self.requireAuthentication and not needTLS:
             self._failresponse = self.smtpState_helo
 
-        self.sendLine('EHLO ' + self.identity)
+        self.sendLine(b"EHLO " + self.identity)
 
 
     def esmtpState_serverConfig(self, code, resp):
@@ -1373,7 +1505,7 @@ class ESMTPClient(SMTPClient):
         @return: C{None}
         """
 
-        # has ssl        can ssl         must ssl       result
+        # has tls        can tls         must tls       result
         #   t               t               t           authenticate
         #   t               t               f           authenticate
         #   t               f               t           authenticate
@@ -1384,7 +1516,7 @@ class ESMTPClient(SMTPClient):
         #   f               f               t           esmtpTLSRequired
         #   f               f               f           authenticate
 
-        hasTLS = ISSLTransport.providedBy(self.transport)
+        hasTLS = self._tlsMode
         canTLS = self.context and b"STARTTLS" in items
         mustTLS = self.requireTransportSecurity
 
@@ -1394,7 +1526,7 @@ class ESMTPClient(SMTPClient):
             self._expected = [220]
             self._okresponse = self.esmtpState_starttls
             self._failresponse = self.esmtpTLSFailed
-            self.sendLine('STARTTLS')
+            self.sendLine(b"STARTTLS")
         else:
             self.esmtpTLSRequired()
 
@@ -1409,6 +1541,7 @@ class ESMTPClient(SMTPClient):
         """
         try:
             self.transport.startTLS(self.context)
+            self._tlsMode = True
         except:
             log.err()
             self.esmtpTLSFailed(451)
@@ -1434,26 +1567,29 @@ class ESMTPClient(SMTPClient):
                     self._authinfo = a
 
                     # Special condition handled
-                    if auth  == "PLAIN":
+                    if auth == b"PLAIN":
                         self._okresponse = self.smtpState_from
                         self._failresponse = self._esmtpState_plainAuth
                         self._expected = [235]
-                        challenge = encode_base64(self._authinfo.challengeResponse(self.secret, 1), eol="")
-                        self.sendLine('AUTH ' + auth + ' ' + challenge)
+                        challenge = encode_base64(
+                            self._authinfo.challengeResponse(self.secret, 1),
+                            eol=b"")
+                        self.sendLine(b"AUTH %s %s" % (auth, challenge))
                     else:
                         self._expected = [334]
                         self._okresponse = self.esmtpState_challenge
-                        # If some error occurs here, the server declined the AUTH
-                        # before the user / password phase. This would be
+                        # If some error occurs here, the server declined the
+                        # AUTH before the user / password phase. This would be
                         # a very rare case
                         self._failresponse = self.esmtpAUTHServerError
-                        self.sendLine('AUTH ' + auth)
+                        self.sendLine(b'AUTH ' + auth)
                     return
 
         if self.requireAuthentication:
             self.esmtpAUTHRequired()
         else:
             self.smtpState_from(code, resp)
+
 
     def _esmtpState_plainAuth(self, code, resp):
         self._okresponse = self.smtpState_from
@@ -1462,8 +1598,10 @@ class ESMTPClient(SMTPClient):
         challenge = encode_base64(self._authinfo.challengeResponse(self.secret, 2), eol="")
         self.sendLine('AUTH PLAIN ' + challenge)
 
+
     def esmtpState_challenge(self, code, resp):
         self._authResponse(self._authinfo, resp)
+
 
     def _authResponse(self, auth, challenge):
         self._failresponse = self.esmtpAUTHDeclined
@@ -1904,11 +2042,15 @@ class ESMTPSender(SenderMixin, ESMTPClient):
                 return None
 
 
+
 class ESMTPSenderFactory(SMTPSenderFactory):
     """
     Utility factory for sending emails easily.
-    """
 
+    @type currentProtocol: L{ESMTPSender}
+    @ivar currentProtocol: The current running protocol as made by
+        L{buildProtocol}.
+    """
     protocol = ESMTPSender
 
     def __init__(self, username, password, fromEmail, toEmail, file,
@@ -1925,14 +2067,29 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         self._requireAuthentication = requireAuthentication
         self._requireTransportSecurity = requireTransportSecurity
 
+
     def buildProtocol(self, addr):
-        p = self.protocol(self.username, self.password, self._contextFactory, self.domain, self.nEmails*2+2)
+        """
+        Build an L{ESMTPSender} protocol configured with C{heloFallback},
+        C{requireAuthentication}, and C{requireTransportSecurity} as specified
+        in L{__init__}.
+
+        This sets L{currentProtocol} on the factory, as well as returning it.
+
+        @rtype: L{ESMTPSender}
+        """
+        p = self.protocol(self.username, self.password, self._contextFactory,
+                          self.domain, self.nEmails*2+2)
         p.heloFallback = self._heloFallback
         p.requireAuthentication = self._requireAuthentication
         p.requireTransportSecurity = self._requireTransportSecurity
         p.factory = self
         p.timeout = self.timeout
+        self.currentProtocol = p
+        self.result.addBoth(self._removeProtocol)
         return p
+
+
 
 def sendmail(smtphost, from_addr, to_addrs, msg,
              senderDomainName=None, port=25, reactor=reactor):
