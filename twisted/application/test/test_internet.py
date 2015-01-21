@@ -500,6 +500,10 @@ class ReconnectingClientServiceTestCase(TestCase):
 
 
     def test_startService(self):
+        """
+        When the service is started, continueTrying is set to True and retry
+        is called.
+        """
         service = self.make_reconnector()
         retry = self.patch_reconnector(service, 'retry')
         service.startService()
@@ -509,6 +513,9 @@ class ReconnectingClientServiceTestCase(TestCase):
 
     @inlineCallbacks
     def test_stopService(self):
+        """
+        When the service is stopped, continueTrying is set to False.
+        """
         service = self.make_reconnector(continueTrying=True)
         yield service.stopService()
         self.assertEqual(service.continueTrying, False)
@@ -516,6 +523,9 @@ class ReconnectingClientServiceTestCase(TestCase):
 
     @inlineCallbacks
     def test_stopServiceWhileRetrying(self):
+        """
+        When the service is stopped while retrying, the retry is cancelled.
+        """
         service = self.make_reconnector()
         clock = Clock()
         r = service._delayedRetry = clock.callLater(1.0, lambda: None)
@@ -526,6 +536,10 @@ class ReconnectingClientServiceTestCase(TestCase):
 
     @inlineCallbacks
     def test_stopServiceWhileConnecting(self):
+        """
+        When the service is stopped while connecting, the connection
+        attempt is cancelled.
+        """
         errs = []
         service = self.make_reconnector()
         service._connectingDeferred = Deferred().addErrback(errs.append)
@@ -536,6 +550,10 @@ class ReconnectingClientServiceTestCase(TestCase):
 
     @inlineCallbacks
     def test_stopServiceWhileConnected(self):
+        """
+        When the service is stopped while connected, the connections is
+        closed.
+        """
         service = self.make_reconnector()
         service._protocol = DummyProtocol()
         service._protocol.transport = DummyTransport()
@@ -548,6 +566,10 @@ class ReconnectingClientServiceTestCase(TestCase):
 
 
     def test_clientConnected(self):
+        """
+        When a client connects, the service keeps a reference to the new
+        protocol and resets the delay.
+        """
         service = self.make_reconnector()
         reset = self.patch_reconnector(service, 'resetDelay')
         protocol = DummyProtocol()
@@ -558,6 +580,10 @@ class ReconnectingClientServiceTestCase(TestCase):
 
 
     def test_clientConnectionFailed(self):
+        """
+        When a client connection fails, the service removes its reference
+        to the protocol and calls retry.
+        """
         service = self.make_reconnector()
         retry = self.patch_reconnector(service, 'retry')
         service.clientConnectionFailed(Failure(Exception()))
@@ -566,6 +592,10 @@ class ReconnectingClientServiceTestCase(TestCase):
 
 
     def test_clientConnectionLost(self):
+        """
+        When a client connection is lost, the service removes its reference
+        to the protocol and calls retry.
+        """
         service = self.make_reconnector()
         retry = self.patch_reconnector(service, 'retry')
         service.clientConnectionLost(Failure(Exception()))
@@ -574,6 +604,11 @@ class ReconnectingClientServiceTestCase(TestCase):
 
 
     def test_clientConnectionLostWhileStopping(self):
+        """
+        When a client connection is lost while the service is stopping, the
+        protocol stopping deferred is called and the reference to the protocol
+        is removed.
+        """
         service = self.make_reconnector()
         retry = self.patch_reconnector(service, 'retry')
         d = service._protocolStoppingDeferred = Deferred()
@@ -585,12 +620,19 @@ class ReconnectingClientServiceTestCase(TestCase):
 
 
     def test_retryAbortsWhenStopping(self):
+        """
+        When retry is called while stopping the service, no retry occurs.
+        """
         service = self.make_reconnector(continueTrying=False)
         service.retry()
         self.assertEqual(service.retries, 0)
 
 
     def test_noisyRetryAbortsWhenStopping(self):
+        """
+        When retry is called while stopping the service and the service
+        is noisy, no retry occurs and the lack of retry is logged.
+        """
         service = self.make_reconnector(noisy=True, continueTrying=False)
         lc = LogCatcher(self)
         service.retry()
@@ -603,6 +645,10 @@ class ReconnectingClientServiceTestCase(TestCase):
 
 
     def test_retryAbortsWhenMaxRetriesExceeded(self):
+        """
+        When retry is called after the maximum number of retries has been
+        reached, no retry occours.
+        """
         service = self.make_reconnector(maxRetries=5, continueTrying=True)
         service.retries = 5
         service.retry()
@@ -610,6 +656,11 @@ class ReconnectingClientServiceTestCase(TestCase):
 
 
     def test_noisyRetryAbortsWhenMaxRetriesExceeded(self):
+        """
+        When retry is called after the maximum number of retries has been
+        reached and the service is noisy, no retry occours and the lack of
+        retry is logged.
+        """
         service = self.make_reconnector(noisy=True, maxRetries=5,
                                         continueTrying=True)
         service.retries = 5
@@ -624,6 +675,10 @@ class ReconnectingClientServiceTestCase(TestCase):
 
 
     def test_retryWithExplicitDelay(self):
+        """
+        When retry is called with an explicit delay, the retry is scheduled
+        with the specified delay.
+        """
         service = self.make_reconnector(continueTrying=True, clock=Clock())
         service.retry(delay=1.5)
         [delayed] = service.clock.calls
@@ -631,6 +686,11 @@ class ReconnectingClientServiceTestCase(TestCase):
 
 
     def test_noisyRetryWithExplicitDelay(self):
+        """
+        When retry is called with an explicit delay and the service is noisy,
+        the retry is scheduled with the specified delay and the scheduling of
+        the retry is logged.
+        """
         service = self.make_reconnector(noisy=True, continueTrying=True,
                                         clock=Clock())
         lc = LogCatcher(self)
@@ -645,6 +705,9 @@ class ReconnectingClientServiceTestCase(TestCase):
 
 
     def test_retryDelayAdvances(self):
+        """
+        When retry is called, the current delay amount is updated.
+        """
         service = self.make_reconnector(jitter=None, continueTrying=True,
                                         clock=Clock())
         service.retry()
@@ -654,6 +717,10 @@ class ReconnectingClientServiceTestCase(TestCase):
 
 
     def test_retryDelayIsCappedByMaxDelay(self):
+        """
+        When retry is called after the maximum delay is reached, the
+        current delay amount is capped at the maximum delay.
+        """
         service = self.make_reconnector(jitter=None, continueTrying=True,
                                         clock=Clock(), maxDelay=1.5)
         service.retry()
@@ -663,6 +730,9 @@ class ReconnectingClientServiceTestCase(TestCase):
 
 
     def test_retryWithJitter(self):
+        """
+        When retry is called, jitter is applied to the delay.
+        """
         normal = MockRecorder(self, result=2.0)
         self.patch(random, 'normalvariate', normal)
         service = self.make_reconnector(continueTrying=True, clock=Clock())
@@ -676,6 +746,9 @@ class ReconnectingClientServiceTestCase(TestCase):
 
     @inlineCallbacks
     def test_retryWhenConnectionSucceeds(self):
+        """
+        When a reconnect attempt succeeds, clientConnected is called.
+        """
         service = self.make_reconnector(continueTrying=True, clock=Clock())
         connected = self.patch_reconnector(service, 'clientConnected')
 
@@ -694,6 +767,9 @@ class ReconnectingClientServiceTestCase(TestCase):
 
     @inlineCallbacks
     def test_retryWhenConnectionFails(self):
+        """
+        When a reconnect attempt fails, clientConnectionFailed is called.
+        """
         service = self.make_reconnector(continueTrying=True, clock=Clock())
         connection_failed = self.patch_reconnector(
             service, 'clientConnectionFailed')
@@ -712,6 +788,9 @@ class ReconnectingClientServiceTestCase(TestCase):
 
 
     def test_resetDelay(self):
+        """
+        When resetDelay is called, the delay is reset.
+        """
         service = self.make_reconnector()
         initial_delay = 1.0
         service.delay, service.retries = initial_delay + 1, 5
