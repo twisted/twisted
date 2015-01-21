@@ -591,13 +591,14 @@ class ReconnectingClientService(service.Service):
         """
         if not self.continueTrying:
             if self.noisy:
-                log.msg("Abandoning %s on explicit request" % (self.endpoint,))
+                log.msg("Abandoning %(endpoint)s on explicit request",
+                        endpoint=self.endpoint)
             return
 
         if self.maxRetries is not None and (self.retries >= self.maxRetries):
             if self.noisy:
-                log.msg("Abandoning %s after %d retries." %
-                        (self.endpoint, self.retries))
+                log.msg("Abandoning %(endpoint)s after %(retries)d retries.",
+                        endpoint=self.endpoint, retries=self.retries)
             return
 
         self.retries += 1
@@ -610,8 +611,8 @@ class ReconnectingClientService(service.Service):
             delay = self.delay
 
         if self.noisy:
-            log.msg("Will retry %s in %g seconds"
-                    % (self.endpoint, delay))
+            log.msg("Will retry %(endpoint)s in %(delay)g seconds.",
+                    endpoint=self.endpoint, delay=delay)
 
         def reconnector():
             proxied_factory = _RestartableProtocolFactoryProxy(
