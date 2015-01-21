@@ -39,11 +39,14 @@ reactor.listen/connect* methods for more information.
 
 import random
 
+from zope.interface import directlyProvides
+
 from twisted.python import log
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
 from twisted.application import service
 from twisted.internet import task
+from twisted.internet import interfaces
 
 from twisted.internet.defer import CancelledError, gatherResults, Deferred
 
@@ -406,6 +409,11 @@ class _RestartableProtocolProxy(object):
     def __init__(self, protocol, clientService):
         self.__protocol = protocol
         self.__clientService = clientService
+
+        for iface in [interfaces.IHalfCloseableProtocol,
+                      interfaces.IFileDescriptorReceiver]:
+            if iface.providedBy(self.__protocol):
+                directlyProvides(self, iface)
 
 
     def connectionLost(self, reason):
