@@ -1583,7 +1583,7 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
 
         self.clientProtocol.dataReceived(b"220 localhost\r\n")
         transport.clear()
-        self.clientProtocol.dataReceived(b"500 not a esmtp server\r\n")
+        self.clientProtocol.dataReceived(b"500 not an esmtp server\r\n")
         self.assertEqual(b"HELO testuser\r\n", transport.value())
 
 
@@ -1600,7 +1600,7 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
 
         self.clientProtocol.dataReceived(b"220 localhost\r\n")
         transport.clear()
-        self.clientProtocol.dataReceived(b"500 not a esmtp server\r\n")
+        self.clientProtocol.dataReceived(b"500 not an esmtp server\r\n")
         self.assertEqual("QUIT\r\n", transport.value())
 
 
@@ -1617,7 +1617,7 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
 
         self.clientProtocol.dataReceived(b"220 localhost\r\n")
         transport.clear()
-        self.clientProtocol.dataReceived(b"500 not a esmtp server\r\n")
+        self.clientProtocol.dataReceived(b"500 not an esmtp server\r\n")
         self.assertEqual(b"QUIT\r\n", transport.value())
 
 
@@ -1635,7 +1635,7 @@ class ESMTPDowngradeTestCase(unittest.TestCase):
 
         self.clientProtocol.dataReceived(b"220 localhost\r\n")
         transport.clear()
-        self.clientProtocol.dataReceived(b"500 not a esmtp server\r\n")
+        self.clientProtocol.dataReceived(b"500 not an esmtp server\r\n")
         self.assertEqual(b"HELO testuser\r\n", transport.value())
 
 

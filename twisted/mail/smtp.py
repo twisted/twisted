@@ -2042,9 +2042,14 @@ class ESMTPSender(SenderMixin, ESMTPClient):
                 return None
 
 
+
 class ESMTPSenderFactory(SMTPSenderFactory):
     """
     Utility factory for sending emails easily.
+
+    @type currentProtocol: L{ESMTPSender}
+    @ivar currentProtocol: The current running protocol as made by
+        L{buildProtocol}.
     """
 
     protocol = ESMTPSender
@@ -2065,7 +2070,13 @@ class ESMTPSenderFactory(SMTPSenderFactory):
 
     def buildProtocol(self, addr):
         """
-        Build the protocol.
+        Build an L{ESMTPSender} protocol configured with C{heloFallback},
+        C{requireAuthentication}, and C{requireTransportSecurity} as specified
+        in L{__init__}.
+
+        This sets L{currentProtocol} on the factory, as well as returning it.
+
+        @rtype: L{ESMTPSender}
         """
         p = self.protocol(self.username, self.password, self._contextFactory,
                           self.domain, self.nEmails*2+2)
@@ -2077,6 +2088,8 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         self.currentProtocol = p
         self.result.addBoth(self._removeProtocol)
         return p
+
+
 
 def sendmail(smtphost, from_addr, to_addrs, msg,
              senderDomainName=None, port=25, reactor=reactor):
