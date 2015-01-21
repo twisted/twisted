@@ -2051,7 +2051,6 @@ class ESMTPSenderFactory(SMTPSenderFactory):
     @ivar currentProtocol: The current running protocol as made by
         L{buildProtocol}.
     """
-
     protocol = ESMTPSender
 
     def __init__(self, username, password, fromEmail, toEmail, file,
@@ -2067,6 +2066,7 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         self._heloFallback = heloFallback
         self._requireAuthentication = requireAuthentication
         self._requireTransportSecurity = requireTransportSecurity
+
 
     def buildProtocol(self, addr):
         """
