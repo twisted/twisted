@@ -591,13 +591,14 @@ class ReconnectingClientService(service.Service):
         """
         if not self.continueTrying:
             if self.noisy:
-                log.msg("Abandoning %(endpoint)s on explicit request",
+                log.msg(format="Abandoning %(endpoint)s on explicit request",
                         endpoint=self.endpoint)
             return
 
         if self.maxRetries is not None and (self.retries >= self.maxRetries):
             if self.noisy:
-                log.msg("Abandoning %(endpoint)s after %(retries)d retries.",
+                log.msg(format="Abandoning %(endpoint)s after"
+                        " %(retries)d retries.",
                         endpoint=self.endpoint, retries=self.retries)
             return
 
@@ -611,7 +612,7 @@ class ReconnectingClientService(service.Service):
             delay = self.delay
 
         if self.noisy:
-            log.msg("Will retry %(endpoint)s in %(delay)g seconds.",
+            log.msg(format="Will retry %(endpoint)s in %(delay)g seconds.",
                     endpoint=self.endpoint, delay=delay)
 
         def reconnector():
