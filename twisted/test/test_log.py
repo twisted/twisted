@@ -36,6 +36,83 @@ class FakeWarning(Warning):
 
 
 
+class TextFromEventDictTest(unittest.SynchronousTestCase):
+    """
+    Tests for L{textFromEventDict}.
+    """
+
+    def test_message(self):
+        """
+        The C{"message"} value, when specified, is concatenated to generate the
+        message.
+        """
+        eventDict = dict(message=("a", "b", "c"))
+        text = log.textFromEventDict(eventDict)
+        self.assertEquals(text, "a b c")
+
+
+
+    def test_format(self):
+        """
+        The C{"format"} value, when specified, is used to format the message.
+        """
+        eventDict = dict(
+            message=(), isError=0, format="Hello, %(foo)s!", foo="dude"
+        )
+        text = log.textFromEventDict(eventDict)
+        self.assertEquals(text, "Hello, dude!")
+
+
+
+    def test_noMessageNoFormat(self):
+        """
+        If C{"format"} is unspecified and C{"message"} is empty, return
+        C{None}.
+        """
+        eventDict = dict(message=(), isError=0)
+        text = log.textFromEventDict(eventDict)
+        self.assertIdentical(text, None)
+
+
+
+    def test_whySpecified(self):
+        """
+        The C{"why"} value, when specified, is first part of message.
+        """
+        try:
+            raise RuntimeError()
+        except:
+            eventDict = dict(
+                message=(), isError=1, failure=failure.Failure(), why="foo"
+            )
+            text = log.textFromEventDict(eventDict)
+            self.assertTrue(text.startswith("foo\n"))
+
+
+    def test_whyDefault(self):
+        """
+        The C{"why"} value, when unspecified, defaults to C{"Unhandled Error"}.
+        """
+        try:
+            raise RuntimeError()
+        except:
+            eventDict = dict(message=(), isError=1, failure=failure.Failure())
+            text = log.textFromEventDict(eventDict)
+            self.assertTrue(text.startswith("Unhandled Error\n"))
+
+
+    def test_noTracebackForYou(self):
+        """
+        If unable to obtain a traceback due to an exception, catch it and note
+        the error.
+        """
+        # Invalid failure object doesn't implement .getTraceback()
+        eventDict = dict(message=(), isError=1, failure=object())
+        text = log.textFromEventDict(eventDict)
+        self.assertIn("\n(unable to obtain traceback)", text)
+
+
+
 class LogTest(unittest.SynchronousTestCase):
 
     def setUp(self):

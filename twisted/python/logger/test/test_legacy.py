@@ -211,8 +211,9 @@ class PublishToNewObserverTests(unittest.TestCase):
         """
         The observer should get called exactly once.
         """
-        publishToNewObserver(self.observer, self.legacyEvent(), lambda e: u"")
-
+        publishToNewObserver(
+            self.observer, self.legacyEvent(), legacyLog.textFromEventDict
+        )
         self.assertEquals(len(self.events), 1)
 
 
@@ -220,8 +221,9 @@ class PublishToNewObserverTests(unittest.TestCase):
         """
         The C{"time"} key should get copied to C{"log_time"}.
         """
-        publishToNewObserver(self.observer, self.legacyEvent(), lambda e: u"")
-
+        publishToNewObserver(
+            self.observer, self.legacyEvent(), legacyLog.textFromEventDict
+        )
         self.assertEquals(
             self.events[0]["log_time"], self.events[0]["time"]
         )
@@ -239,7 +241,6 @@ class PublishToNewObserverTests(unittest.TestCase):
         text = textFromEventDict(event)
 
         publishToNewObserver(self.observer, event, textFromEventDict)
-
         self.assertEquals(formatEvent(self.events[0]), text)
 
 
@@ -247,8 +248,9 @@ class PublishToNewObserverTests(unittest.TestCase):
         """
         Adapted event should have log level of L{LogLevel.info}.
         """
-        publishToNewObserver(self.observer, self.legacyEvent(), lambda e: u"")
-
+        publishToNewObserver(
+            self.observer, self.legacyEvent(), legacyLog.textFromEventDict
+        )
         self.assertEquals(self.events[0]["log_level"], LogLevel.info)
 
 
@@ -258,9 +260,10 @@ class PublishToNewObserverTests(unittest.TestCase):
         key should get set to L{LogLevel.critical}.
         """
         publishToNewObserver(
-            self.observer, self.legacyEvent(isError=1), lambda e: u""
+            self.observer,
+            self.legacyEvent(isError=1),
+            legacyLog.textFromEventDict
         )
-
         self.assertEquals(self.events[0]["log_level"], LogLevel.critical)
 
 
@@ -273,9 +276,8 @@ class PublishToNewObserverTests(unittest.TestCase):
         publishToNewObserver(
             self.observer,
             self.legacyEvent(logLevel=py_logging.WARNING),
-            lambda e: u""
+            legacyLog.textFromEventDict
         )
-
         self.assertEquals(self.events[0]["log_level"], LogLevel.warn)
 
 
@@ -283,8 +285,9 @@ class PublishToNewObserverTests(unittest.TestCase):
         """
         Adapted event should have a namespace of C{"log_legacy"}.
         """
-        publishToNewObserver(self.observer, self.legacyEvent(), lambda e: u"")
-
+        publishToNewObserver(
+            self.observer, self.legacyEvent(), legacyLog.textFromEventDict
+        )
         self.assertEquals(self.events[0]["log_namespace"], "log_legacy")
 
 
@@ -292,8 +295,9 @@ class PublishToNewObserverTests(unittest.TestCase):
         """
         The C{"system"} key should get copied to C{"log_system"}.
         """
-        publishToNewObserver(self.observer, self.legacyEvent(), lambda e: u"")
-
+        publishToNewObserver(
+            self.observer, self.legacyEvent(), legacyLog.textFromEventDict
+        )
         self.assertEquals(
             self.events[0]["log_system"], self.events[0]["system"]
         )

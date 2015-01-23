@@ -436,7 +436,11 @@ def textFromEventDict(eventDict):
                 why = reflect.safe_str(why)
             else:
                 why = 'Unhandled Error'
-            text = (why + '\n' + eventDict['failure'].getTraceback())
+            try:
+                traceback = eventDict['failure'].getTraceback()
+            except Exception as e:
+                traceback = '(unable to obtain traceback): ' + str(e)
+            text = (why + '\n' + traceback)
         elif 'format' in eventDict:
             text = _safeFormat(eventDict['format'], eventDict)
         else:
