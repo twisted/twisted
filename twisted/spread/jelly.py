@@ -134,7 +134,7 @@ frozenset_atom = 'frozenset'
 
 
 deprecatedModuleAttribute(
-    Version("Twisted", 14, 1, 0),
+    Version("Twisted", 15, 0, 0),
     "instance_atom is unused within Twisted.",
     "twisted.spread.jelly", "instance_atom")
 

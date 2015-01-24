@@ -994,7 +994,7 @@ def _deferGenerator(g, deferred):
 
 
 
-@deprecated(Version('Twisted', 14, 1, 0),
+@deprecated(Version('Twisted', 15, 0, 0),
             "twisted.internet.defer.inlineCallbacks")
 def deferredGenerator(f):
     """

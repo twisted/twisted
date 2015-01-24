@@ -309,7 +309,7 @@ class SSHProtocolChecker:
 
 
 deprecatedModuleAttribute(
-        Version("Twisted", 14, 1, 0),
+        Version("Twisted", 15, 0, 0),
         ("Please use twisted.conch.checkers.SSHPublicKeyChecker, "
          "initialized with an instance of "
          "twisted.conch.checkers.UNIXAuthorizedKeysFiles instead."),

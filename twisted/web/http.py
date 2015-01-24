@@ -1347,7 +1347,7 @@ class Request:
         self.notifications = []
 
 Request.getClient = deprecated(
-    Version("Twisted", 14, 1, 0),
+    Version("Twisted", 15, 0, 0),
     "Twisted Names to resolve hostnames")(Request.getClient)
 
 

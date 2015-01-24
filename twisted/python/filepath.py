@@ -1584,7 +1584,7 @@ class FilePath(AbstractFilePath):
 
 # This is all a terrible hack to get statinfo deprecated
 _tmp = deprecated(
-    Version('Twisted', 14, 1, 0),
+    Version('Twisted', 15, 0, 0),
     "other FilePath methods such as getsize(), "
     "isdir(), getModificationTime(), etc.")(FilePath.statinfo)
 FilePath.statinfo = property(_tmp, _tmp)
