@@ -477,7 +477,7 @@ class MessageHandlingTests(unittest.TestCase):
         if accept and ip == '192.168.0.1' and port == 6891 and aCookie == 4321: self.client.state = 'INFO'
 
 
-class FileTransferTests(unittest.TestCase):
+class FileTransferTestCase(unittest.TestCase):
     """
     test FileSend against FileReceive
     """
@@ -513,32 +513,9 @@ class FileTransferTests(unittest.TestCase):
         d.addCallback(check)
         return d
 
-
-
-class DeprecationTests(unittest.TestCase):
-    """
-    Test deprecation of L{twisted.words.protocols.msn}
-    """
-
-    def test_deprecation(self):
-        """
-        Accessing L{twisted.words.protocols.msn} emits a deprecation warning
-        """
-        from twisted.words.protocols import msn
-        warningsShown = self.flushWarnings([self.test_deprecation])
-        self.assertEqual(len(warningsShown), 1)
-        self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warningsShown[0]['message'],
-            'twisted.words.protocols.msn was deprecated in Twisted 15.1.0: ' +
-            'MSN has shutdown.')
-
-
-
 if msn is None:
     for testClass in [DispatchTests, PassportTests, NotificationTests,
-                      MessageHandlingTests, FileTransferTests,
-                      DeprecationTests]:
+                      MessageHandlingTests, FileTransferTestCase]:
         testClass.skip = (
             "MSN requires an HTTP client but none is available, "
             "skipping tests.")
