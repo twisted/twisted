@@ -548,7 +548,7 @@ def dummyReplacementMethod():
 
 
 
-class TestDeprecationWarnings(SynchronousTestCase):
+class DeprecationWarningsTests(SynchronousTestCase):
     def test_getDeprecationWarningString(self):
         """
         L{getDeprecationWarningString} returns a string that tells us that a
@@ -558,7 +558,7 @@ class TestDeprecationWarnings(SynchronousTestCase):
         self.assertEqual(
             getDeprecationWarningString(self.test_getDeprecationWarningString,
                                         version),
-            "%s.TestDeprecationWarnings.test_getDeprecationWarningString "
+            "%s.DeprecationWarningsTests.test_getDeprecationWarningString "
             "was deprecated in Twisted 8.0.0" % (__name__,))
 
 
@@ -573,7 +573,7 @@ class TestDeprecationWarnings(SynchronousTestCase):
         self.assertEqual(
             getDeprecationWarningString(self.test_getDeprecationWarningString,
                                         version, format),
-            '%s.TestDeprecationWarnings.test_getDeprecationWarningString was '
+            '%s.DeprecationWarningsTests.test_getDeprecationWarningString was '
             'deprecated in Twisted 8.0.0: This is a message' % (__name__,))
 
 
@@ -725,7 +725,7 @@ class TestDeprecationWarnings(SynchronousTestCase):
 
 
 
-class TestAppendToDocstring(SynchronousTestCase):
+class AppendToDocstringTests(SynchronousTestCase):
     """
     Test the _appendToDocstring function.
 

@@ -26,7 +26,7 @@ def zipit(dirname, zfname):
 
 
 
-class ZipFilePathTestCase(AbstractFilePathTestCase):
+class ZipFilePathTests(AbstractFilePathTestCase):
     """
     Test various L{ZipPath} path manipulations as well as reprs for L{ZipPath}
     and L{ZipArchive}.

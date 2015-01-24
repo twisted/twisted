@@ -20,7 +20,7 @@ from twisted.python.filepath import FilePath
 
 
 
-class SetupTest(TestCase):
+class SetupTests(TestCase):
     """
     Tests for L{get_setup_args}.
     """
@@ -59,7 +59,7 @@ class SetupTest(TestCase):
 
 
 
-class GetExtensionsTest(TestCase):
+class GetExtensionsTests(TestCase):
     """
     Tests for L{dist.getExtensions}.
     """
@@ -160,7 +160,7 @@ class GetExtensionsTest(TestCase):
 
 
 
-class GetVersionTest(TestCase):
+class GetVersionTests(TestCase):
     """
     Tests for L{dist.getVersion}.
     """
@@ -198,7 +198,7 @@ version = versions.Version("twisted.blat", 9, 8, 10)
 
 
 
-class GetScriptsTest(TestCase):
+class GetScriptsTests(TestCase):
     """
     Tests for L{dist.getScripts} which returns the scripts which should be
     included in the distribution of a project.
@@ -311,7 +311,7 @@ class DummyCommand:
 
 
 
-class BuildScriptsTest(TestCase):
+class BuildScriptsTests(TestCase):
     """
     Tests for L{dist.build_scripts_twisted}.
     """

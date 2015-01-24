@@ -105,7 +105,7 @@ class RegistryUsingMixin(object):
 
 
 
-class ComponentizedTestCase(unittest.SynchronousTestCase, RegistryUsingMixin):
+class ComponentizedTests(unittest.SynchronousTestCase, RegistryUsingMixin):
     """
     Simple test case for caching in Componentized.
     """
@@ -227,7 +227,7 @@ class ComponentizedTestCase(unittest.SynchronousTestCase, RegistryUsingMixin):
 
 
 
-class AdapterTestCase(unittest.SynchronousTestCase):
+class AdapterTests(unittest.SynchronousTestCase):
     """Test adapters."""
 
     def testAdapterGetComponent(self):
@@ -307,7 +307,7 @@ class DoubleXAdapter:
         return cmp(self.num, other.num)
 
 
-class TestMetaInterface(RegistryUsingMixin, unittest.SynchronousTestCase):
+class MetaInterfaceTests(RegistryUsingMixin, unittest.SynchronousTestCase):
     def testBasic(self):
         components.registerAdapter(MetaAdder, MetaNumber, IMeta)
         n = MetaNumber(1)
@@ -327,7 +327,7 @@ class TestMetaInterface(RegistryUsingMixin, unittest.SynchronousTestCase):
         self.assertEqual(('x!', 'x!'), xx.xx())
 
 
-class RegistrationTestCase(RegistryUsingMixin, unittest.SynchronousTestCase):
+class RegistrationTests(RegistryUsingMixin, unittest.SynchronousTestCase):
     """
     Tests for adapter registration.
     """

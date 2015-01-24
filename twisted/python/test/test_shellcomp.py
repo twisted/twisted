@@ -125,7 +125,7 @@ def test_genZshFunction(self, cmdName, optionsFQPN):
 
 
 
-class ZshTestCase(unittest.TestCase):
+class ZshTests(unittest.TestCase):
     """
     Tests for zsh completion code
     """
@@ -384,7 +384,7 @@ class ZshTestCase(unittest.TestCase):
 
 
 
-class EscapeTestCase(unittest.TestCase):
+class EscapeTests(unittest.TestCase):
     def test_escape(self):
         """
         Verify _shellcomp.escape() function
@@ -399,7 +399,7 @@ class EscapeTestCase(unittest.TestCase):
 
 
 
-class CompleterNotImplementedTestCase(unittest.TestCase):
+class CompleterNotImplementedTests(unittest.TestCase):
     """
     Test that using an unknown shell constant with SubcommandAction
     raises NotImplementedError
