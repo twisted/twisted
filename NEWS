@@ -1,8 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 15.0.0pre1 (2015-01-09)
-====================================
+Twisted Core 15.0.0 (2015-01-24)
+================================
 
 Features
 --------
@@ -80,8 +80,8 @@ Other
    #7640, #7641, #7642, #7643, #7665, #7667, #7713, #7719
 
 
-Twisted Conch 15.0.0pre1 (2015-01-09)
-=====================================
+Twisted Conch 15.0.0 (2015-01-24)
+=================================
 
 Features
 --------
@@ -103,14 +103,14 @@ Other
  - #6626, #7002, #7526, #7532, #7698
 
 
-Twisted Lore 15.0.0pre1 (2015-01-09)
-====================================
+Twisted Lore 15.0.0 (2015-01-24)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Mail 15.0.0pre1 (2015-01-09)
-====================================
+Twisted Mail 15.0.0 (2015-01-24)
+================================
 
 No significant changes have been made for this release.
 
@@ -119,8 +119,8 @@ Other
  - #6999, #7708
 
 
-Twisted Names 15.0.0pre1 (2015-01-09)
-=====================================
+Twisted Names 15.0.0 (2015-01-24)
+=================================
 
 Bugfixes
 --------
@@ -132,8 +132,8 @@ Other
  - #7352
 
 
-Twisted News 15.0.0pre1 (2015-01-09)
-====================================
+Twisted News 15.0.0 (2015-01-24)
+================================
 
 No significant changes have been made for this release.
 
@@ -142,8 +142,8 @@ Other
  - #7703
 
 
-Twisted Pair 15.0.0pre1 (2015-01-09)
-====================================
+Twisted Pair 15.0.0 (2015-01-24)
+================================
 
 No significant changes have been made for this release.
 
@@ -152,14 +152,14 @@ Other
  - #7722
 
 
-Twisted Runner 15.0.0pre1 (2015-01-09)
-======================================
+Twisted Runner 15.0.0 (2015-01-24)
+==================================
 
 No significant changes have been made for this release.
 
 
-Twisted Web 15.0.0pre1 (2015-01-09)
-===================================
+Twisted Web 15.0.0 (2015-01-24)
+===============================
 
 Features
 --------
@@ -187,8 +187,8 @@ Other
  - #7247, #7302, #7680, #7689
 
 
-Twisted Words 15.0.0pre1 (2015-01-09)
-=====================================
+Twisted Words 15.0.0 (2015-01-24)
+=================================
 
 No significant changes have been made for this release.
 
