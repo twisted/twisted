@@ -27,6 +27,6 @@ Developer Guides
 
 
 
-
+  - :doc:`IRC Servers: Communicating With Clients <ircserverclientcomm>`
 
 

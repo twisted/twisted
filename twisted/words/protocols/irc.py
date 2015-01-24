@@ -253,7 +253,7 @@ class IRC(protocol.Protocol):
 
     def sendLine(self, line):
         if self.encoding is not None:
-            if isinstance(line, unicode):
+            if not isinstance(line, bytes):
                 line = line.encode(self.encoding)
         self.transport.write("%s%s%s" % (line, CR, LF))
 
@@ -261,28 +261,149 @@ class IRC(protocol.Protocol):
     def sendMessage(self, command, *parameter_list, **prefix):
         """
         Send a line formatted as an IRC message.
+        This method remains for backward compatibility.
 
-        First argument is the command, all subsequent arguments are parameters
-        to that command.  If a prefix is desired, it may be specified with the
-        keyword argument 'prefix'.
+        @param command: The command or numeric to send.
+        @type command: L{bytes}
+
+        @param parameter_list: The parameters to send with the command.
+        @type parameter_list: L{bytes} parameters
+
+        @param prefix: The prefix to send with the command.  If not
+            given, no prefix is sent.
+        @type prefix: L{bytes}
+
+        @param tags: A dict of message tags.  If not given, no message
+            tags are sent.  The dict key should be the name of the tag
+            to send as a string; the value should be the unescaped value
+            to send with the tag, or either None or "" if no value is to
+            be sent with the tag.
+        @type tags: L{dict} of tags (L{bytes}) => values (L{bytes})
+        @see: U{http://ircv3.org/specification/message-tags-3.2}
+        """
+        if self.encoding is None:
+            encoding = "utf-8" # Default the encoding to UTF-8 (safe for IRC)
+        else:
+            # If the user specified an encoding, we'll assume we're getting
+            # byte strings in that encoding
+            encoding = self.encoding
+        params = []
+        cmdPrefix = prefix['prefix'] if 'prefix' in prefix else None
+        tags = prefix['tags'] if 'tags' in prefix else {}
+        unicodeTags = {}
+
+        if isinstance(command, bytes):
+            command = command.decode(encoding)
+        for param in parameter_list:
+            if isinstance(param, bytes):
+                params.append(param.decode(encoding))
+            else:
+                params.append(param)
+        if cmdPrefix:
+            cmdPrefix = cmdPrefix.decode(encoding)
+        for key, val in tags.items():
+            if isinstance(key, bytes):
+                key = key.decode(encoding)
+            if isinstance(val, bytes):
+                val = val.decode(encoding)
+            unicodeTags[key] = val
+
+        self.sendMsg(command, params, cmdPrefix, unicodeTags)
+
+
+    def sendMsg(self, command, params, prefix = None, tags = {}):
+        """
+        Send a line formatted as an IRC message.
+
+        @param command: The command or numeric to send.
+        @type command: L{unicode}
+
+        @param params: The parameters to send with the command.
+        @type params: A L{tuple} or L{list} of L{unicode} parameters
+
+        @param prefix: The prefix to send with the command.  If not
+            given, no prefix is sent.
+        @type prefix: L{unicode}
+
+        @param tags: A dict of message tags.  If not given, no message
+            tags are sent.  The dict key should be the name of the tag
+            to send as a string; the value should be the unescaped value
+            to send with the tag, or either None or "" if no value is to
+            be sent with the tag.
+        @type tags: L{dict} of tags (L{unicode}) => values (L{unicode})
+        @see: U{http://ircv3.org/specification/message-tags-3.2}
         """
         if not command:
             raise ValueError("IRC message requires a command.")
 
-        if ' ' in command or command[0] == ':':
+        if " " in command or command[0] == ":":
             # Not the ONLY way to screw up, but provides a little
             # sanity checking to catch likely dumb mistakes.
             raise ValueError("Somebody screwed up, 'cuz this doesn't" \
                   " look like a command to me: %s" % command)
 
-        line = ' '.join([command] + list(parameter_list))
-        if 'prefix' in prefix:
-            line = ":%s %s" % (prefix['prefix'], line)
+        line = " ".join([command] + list(params))
+        if prefix:
+            line = ":%s %s" % (prefix, line)
+        if tags:
+            tagStr = self._stringTags(tags)
+            line = "@%s %s" % (tagStr, line)
+        if self.encoding is None:
+            # Either pass bytes to sendLine, or have sendLine do the translation
+            line = line.encode("utf-8")
         self.sendLine(line)
 
-        if len(parameter_list) > 15:
+        if len(params) > 15:
             log.msg("Message has %d parameters (RFC allows 15):\n%s" %
                     (len(parameter_list), line))
+
+
+    def _stringTags(self, tags):
+        """
+        Converts a tag dictionary to a string.
+
+        @param tags: The tag dict passed to sendMsg.
+        """
+        self._validateTags(tags)
+        tagStrings = []
+        for tag, value in tags.items():
+            if value:
+                tagStrings.append("%s=%s" % (tag, self._escapeTagValue(value)))
+            else:
+                tagStrings.append(tag)
+        return ";".join(tagStrings)
+
+
+    def _validateTags(self, tags):
+        """
+        Checks the tag dict for errors and raises L{ValueError} if an
+        error is found.
+
+        @param tags: The tag dict passed to sendMsg.
+        """
+        for tag, value in tags.items():
+            if not tag:
+                raise ValueError("A tag name is required.")
+            for char in tag:
+                if not char.isalnum() and char not in ("-", "/", "."):
+                    raise ValueError("Tag contains invalid characters.")
+
+
+    def _escapeTagValue(self, value):
+        """
+        Escape the given tag value according to escaping rules
+        in IRCv3: http://ircv3.org/specification/message-tags-3.2
+
+        @param value: The string value to escape.
+        @type value: L{str}
+        """
+        return (value.replace("\\", "\\\\")
+            .replace(";", "\\:")
+            .replace(" ", "\\s")
+            .replace("\0", "\\0")
+            .replace("\r", "\\r")
+            .replace("\n", "\\n")
+            )
 
 
     def dataReceived(self, data):

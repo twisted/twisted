@@ -1639,10 +1639,22 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         """
         Passing a command and parameters to L{IRC.sendMessage} results in a
         query string that consists of the command and parameters, separated by
-        a space, ending with '\r\n'.
+        a space, ending with '\r\n'.  The format is described in more detail in
+        RFC 1459 (U{http://tools.ietf.org/html/rfc1459.html#section-2.3}).
         """
         self.p.sendMessage('CMD', 'param1', 'param2')
         self.check('CMD param1 param2\r\n')
+
+
+    def test_sendUnicodeMessage(self):
+        """
+        Passing a command and parameters to L{IRC.sendMsg} results in a query
+        string that consists of the command and parameters, separated by a
+        space, ending with '\r\n'.  The format is described in more detail in
+        RFC 1459 (U{http://tools.ietf.org/html/rfc1459.html#section-2.3}).
+        """
+        self.p.sendMsg(u"CMD", (u"param1", u"param2"))
+        self.check(b"CMD param1 param2\r\n")
 
 
     def test_sendMessageNoCommand(self):
@@ -1655,6 +1667,16 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         self.assertEqual(str(error), "IRC message requires a command.")
 
 
+    def test_sendUnicodeMessageNoCommand(self):
+        """
+        Passing C{None} as the command to L{IRC.sendMsg} raises a
+        C{ValueError}.
+        """
+        error = self.assertRaises(ValueError, self.p.sendMsg, None,
+            (u"param1", u"param2"))
+        self.assertEqual(error.message, "IRC message requires a command.")
+
+
     def test_sendMessageInvalidCommand(self):
         """
         Passing an invalid string command to L{IRC.sendMessage} raises a
@@ -1665,6 +1687,167 @@ class BasicServerFunctionalityTests(unittest.TestCase):
         self.assertEqual(str(error),
             "Somebody screwed up, 'cuz this doesn't look like a command to "
             "me:  ")
+
+
+    def test_sendUnicodeMessageInvalidCommand(self):
+        """
+        Passing an invalid string command to L{IRC.sendMsg} raises a
+        C{ValueError}.
+        """
+        error = self.assertRaises(ValueError, self.p.sendMsg, u" ",
+            (u"param1", u"param2"))
+        self.assertEqual(error.message, "Somebody screwed up, 'cuz this "
+            "doesn't look like a command to me:  ")
+
+
+    def test_sendMessageWithPrefix(self):
+        """
+        Passing a command and parameters with a specified prefix to
+        L{IRC.sendMessage} results in a proper query string including the
+        specified line prefix.
+        """
+        self.p.sendMessage('CMD', 'param1', 'param2', prefix='irc.example.com')
+        self.check(':irc.example.com CMD param1 param2\r\n')
+
+
+    def test_sendUnicodeMessageWithPrefix(self):
+        """
+        Passing a command and parameters with a specified prefix to
+        L{IRC.sendMsg} results in a proper query string including the specified
+        line prefix.
+        """
+        self.p.sendMsg(u"CMD", (u"param1", u"param2"), u"irc.example.com")
+        self.check(b":irc.example.com CMD param1 param2\r\n")
+
+
+    def test_sendMessageWithTags(self):
+        """
+        Passing a command and parameters with a specified prefix and tags
+        to L{IRC.sendMessage} results in a proper query string including
+        the specified line prefix and appropriate tags syntax.
+        The query string should be output as follows:
+        @tags :prefix COMMAND param1 param2\r\n
+        The tags are a string of IRCv3 tags, preceded by '@'.  The rest
+        of the string is as described in test_sendMessage.  For more on
+        the message tag format, see
+        U{http://ircv3.org/specification/message-tags-3.2}.
+        """
+        sendTags = {
+            'aaa': 'bbb',
+            'ccc': None,
+            'example.com/ddd': 'eee'
+        }
+        expectedTags = ('aaa=bbb', 'ccc', 'example.com/ddd=eee')
+        self.p.sendMessage('CMD', 'param1', 'param2', prefix='irc.example.com',
+            tags=sendTags)
+        outMsg = self.f.getvalue()
+        outTagStr, outLine = outMsg.split(' ', 1)
+        outTags = outTagStr[1:].split(';') # Pulling off the leading '@' sign
+        # Make sure the line is sane
+        self.assertEqual(outLine, ":irc.example.com CMD param1 param2\r\n")
+        # Make sure the tags we got are sane
+        self.assertEqual(sorted(expectedTags), sorted(outTags))
+
+
+    def test_sendUnicodeMessageWithTags(self):
+        """
+        Passing a command and parameters with a specified prefix and tags
+        to L{IRC.sendMsg} results in a proper query string including the
+        specified line prefix and appropriate tags syntax.  The query string
+        should be output as follows:
+        @tags :prefix COMMAND param1 param2\r\n
+        The tags are a string of IRCv3 tags, preceded by '@'.  The rest
+        of the string is as described in test_sendMessage.  For more on
+        the message tag format, see
+        U{http://ircv3.org/specification/message-tags-3.2}.
+        """
+        sendTags = {
+            u"aaa": u"bbb",
+            u"ccc": None,
+            u"example.com/ddd": u"eee"
+        }
+        expectedTags = ("aaa=bbb", "ccc", "example.com/ddd=eee")
+        self.p.sendMsg(u"CMD", (u"param1", u"param2"), u"irc.example.com",
+            sendTags)
+        outMsg = self.f.getvalue()
+        outTagStr, outLine = outMsg.split(' ', 1)
+        outTags = outTagStr[1:].split(';') # Pulling off the leading '@' sign
+        # Make sure the line is sane
+        self.assertEqual(outLine, b":irc.example.com CMD param1 param2\r\n")
+        # Make sure the tags we got are sane
+        self.assertEqual(sorted(expectedTags), sorted(outTags))
+
+
+    def test_stringTags(self):
+        """
+        Stringing tags together results in a proper IRC tag string.
+        See U{http://ircv3.org/specification/message-tags-3.2} for more on
+        the message tag format.
+        """
+        sendTags = {
+            'aaa': 'bbb',
+            'ccc': None,
+            'example.com/ddd': 'eee'
+        }
+        expectedResultTags = ('aaa=bbb', 'ccc', 'example.com/ddd=eee')
+        tags = self.p._stringTags(sendTags).split(';')
+        self.assertEquals(sorted(expectedResultTags), sorted(tags))
+
+
+    def test_validateEmptyTags(self):
+        """
+        Passing tags that are empty strings raises a C{ValueError}.
+        """
+        sendTags = {
+            'aaa': 'bbb',
+            'ccc': None,
+            '': ''
+        }
+        error = self.assertRaises(ValueError, self.p._validateTags, sendTags)
+        self.assertEqual(error.message, "A tag name is required.")
+
+
+    def test_validateNoneTags(self):
+        """
+        Passing None as a tag raises a C{ValueError}.
+        """
+        sendTags = {
+            'aaa': 'bbb',
+            'ccc': None,
+            None: 'beep'
+        }
+        error = self.assertRaises(ValueError, self.p._validateTags, sendTags)
+        self.assertEqual(error.message, "A tag name is required.")
+
+
+    def test_errorTagsWithSpaces(self):
+        """
+        Passing tags with spaces in them raises a C{ValueError}.
+        """
+        sendTags = {
+            'aaa bbb': 'ccc'
+        }
+        error = self.assertRaises(ValueError, self.p._validateTags, sendTags)
+        self.assertEqual(error.message, 'Tag contains invalid characters.')
+
+
+    def test_errorTagsWithInvalidChars(self):
+        """
+        Passing tags with invalid characters in them raises a C{ValueError}.
+        """
+        sendTags = {
+            'aaa_b^@': 'ccc'
+        }
+        error = self.assertRaises(ValueError, self.p._validateTags, sendTags)
+        self.assertEqual(error.message, 'Tag contains invalid characters.')
+
+
+    def test_validateTagValueEscaping(self):
+        """
+        Tags with invalid characters should be properly escaped.
+        """
+        self.assertEqual(self.p._escapeTagValue('test\r\n \\;;\0'),
+            'test\\r\\n\\s\\\\\\:\\:\\0')
 
 
     def testPrivmsg(self):
