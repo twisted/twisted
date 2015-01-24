@@ -141,7 +141,7 @@ my_domain_com = NoFileAuthority(
     )
 
 
-class ServerDNSTestCase(unittest.TestCase):
+class ServerDNSTests(unittest.TestCase):
     """
     Test cases for DNS server and client.
     """
@@ -434,7 +434,7 @@ class ServerDNSTestCase(unittest.TestCase):
 
 
 
-class HelperTestCase(unittest.TestCase):
+class HelperTests(unittest.TestCase):
     def testSerialGenerator(self):
         f = self.mktemp()
         a = authority.getSerial(f)
@@ -444,7 +444,7 @@ class HelperTestCase(unittest.TestCase):
             a = b
 
 
-class AXFRTest(unittest.TestCase):
+class AXFRTests(unittest.TestCase):
     def setUp(self):
         self.results = None
         self.d = defer.Deferred()
@@ -501,7 +501,7 @@ class AXFRTest(unittest.TestCase):
 
 
 
-class ResolvConfHandling(unittest.TestCase):
+class ResolvConfHandlingTests(unittest.TestCase):
     def testMissing(self):
         resolvConf = self.mktemp()
         r = client.Resolver(resolv=resolvConf)
@@ -825,7 +825,7 @@ class AdditionalProcessingTests(unittest.TestCase):
 
 
 
-class NoInitialResponseTestCase(unittest.TestCase):
+class NoInitialResponseTests(unittest.TestCase):
 
     def test_no_answer(self):
         """

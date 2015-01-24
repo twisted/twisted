@@ -121,7 +121,7 @@ class SearchHostsFileForAllTests(TestCase, GoodTempPathMixin):
 
 
 
-class HostsTestCase(TestCase, GoodTempPathMixin):
+class HostsTests(TestCase, GoodTempPathMixin):
     """
     Tests for the I{hosts(5)}-based L{twisted.names.hosts.Resolver}.
     """

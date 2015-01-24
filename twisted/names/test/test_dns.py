@@ -293,7 +293,7 @@ class NameTests(unittest.TestCase):
 
 
 
-class RoundtripDNSTestCase(unittest.TestCase):
+class RoundtripDNSTests(unittest.TestCase):
     """
     Encoding and then decoding various objects.
     """
@@ -596,7 +596,7 @@ MESSAGE_CHECKING_DISABLED_BYTES = (
 
 
 
-class MessageTestCase(unittest.SynchronousTestCase):
+class MessageTests(unittest.SynchronousTestCase):
     """
     Tests for L{twisted.names.dns.Message}.
     """
@@ -1116,7 +1116,7 @@ class TestController(object):
 
 
 
-class DatagramProtocolTestCase(unittest.TestCase):
+class DatagramProtocolTests(unittest.TestCase):
     """
     Test various aspects of L{dns.DNSDatagramProtocol}.
     """
@@ -1239,7 +1239,7 @@ class TestTCPController(TestController):
 
 
 
-class DNSProtocolTestCase(unittest.TestCase):
+class DNSProtocolTests(unittest.TestCase):
     """
     Test various aspects of L{dns.DNSProtocol}.
     """
@@ -3727,8 +3727,8 @@ class MessageConstructorTests(ConstructorTestsMixin,
 
 
 
-class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
-                                   unittest.SynchronousTestCase):
+class EDNSMessageSpecificsTests(ConstructorTestsMixin,
+                                unittest.SynchronousTestCase):
     """
     Tests for L{dns._EDNSMessage}.
 

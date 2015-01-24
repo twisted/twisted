@@ -54,7 +54,7 @@ class DummyFactory(protocol.ClientFactory):
 
 
 
-class SRVConnectorTest(unittest.TestCase):
+class SRVConnectorTests(unittest.TestCase):
     """
     Tests for L{srvconnect.SRVConnector}.
     """
