@@ -1027,10 +1027,10 @@ class NMEAReceiverTests(TestCase):
         """
         self.protocol.lineReceived(GPGGA)
 
-        GPGGACallbacks = set(['positionReceived',
+        gpggaCallbacks = set(['positionReceived',
                               'positionErrorReceived',
                               'altitudeReceived'])
-        self.assertEqual(set(self.receiver.called.keys()), GPGGACallbacks)
+        self.assertEqual(set(self.receiver.called.keys()), gpggaCallbacks)
 
         self.receiver.clear()
         self.assertNotEqual(self.adapter._state, {})
@@ -1039,8 +1039,8 @@ class NMEAReceiverTests(TestCase):
         # altitude or anything like that; but that information is
         # still in the state.
         self.protocol.lineReceived(GPHDT)
-        GPHDTCallbacks = set(['headingReceived'])
-        self.assertEqual(set(self.receiver.called.keys()), GPHDTCallbacks)
+        gphdtCallbacks = set(['headingReceived'])
+        self.assertEqual(set(self.receiver.called.keys()), gphdtCallbacks)
 
 
     def _receiverTest(self, sentences, expectedFired=(), extraTest=None):
