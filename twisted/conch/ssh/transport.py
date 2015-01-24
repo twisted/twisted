@@ -88,6 +88,145 @@ class _MACParams(tuple):
     """
 
 
+class KexAlgorithms(object):
+    """
+    Key exchange algorithm helper class containing key exchange algorithm
+    definitions and helper functions.
+
+    @ivar _kex_algo_map: A C{dict} of C{dict} contianing key exchange
+    algorithm attributes::
+
+        preference : C{int}
+           The preference of the algorithm when negotiating key exchange.
+           1 being the most preferred.
+
+        fixedGroup: C{bool}
+           True if the key exchange algorithm prime / generator group
+           is predefined. These are handled differently within transport
+           logic. Key exchange algorithms with a fixed group must define
+           prime and generator numbers.
+
+        prime : C{long}
+           Prime number used in diffie-hellman key exchange if applicable.
+
+        generator : C{long}
+           Generator number used in diffie-hellman key exchange if applicable.
+           Note: note related to python generator functions
+
+        Note that primes are not present for key exchange algorithms that do
+        not have a fixed group (fixedGroup=False). In these cases, a prime /
+        generator group is chosen at run time based on the requested size.
+        See RFC 4419.
+        
+    @type _kex_algo_map: C{dict} of C{dict}
+
+    """
+    _kex_algo_map = {
+
+        'diffie-hellman-group-exchange-sha1': {
+           'preference' : 1,
+           'fixedGroup': False
+        },
+
+        'diffie-hellman-group1-sha1': {
+           'preference' : 2,
+           'fixedGroup': True,
+           # Diffie-Hellman primes from Oakley Group 2 [RFC 2409]
+           'prime' : long('1797693134862315907708391567937874531978602960487560'
+               '117064444236841971802161585193689478337958649255415021805654859'
+               '805036464405481992391000507928770033558166392295531362390765087'
+               '357599148225748625750074253020774477125895509579377784244424266'
+               '173347276292993876687092056060502708108429076929320191281944676'
+               '27007L'),
+           'generator' : 2L
+        },
+
+        'diffie-hellman-group14-sha1': {
+            'preference': 3,
+            'fixedGroup': True,
+            # Diffie-Hellman primes from Oakley Group 14 [RFC 3526]
+            'prime' : long('323170060713110073003389139264238282488179412411402'
+                '39112842009751400741706634354222619689417363569347117901737909'
+                '70419175460587320919502885375898618562215321217541251490177452'
+                '02702357960782362488842461894775876411059286460994117232454266'
+                '22522193230540919037680524235519125679715870117001058055877651'
+                '03886184728025797605490356973256152616708133936179954133647655'
+                '91603683178967290731783845896806396719009772021941686472258710'
+                '31411336429319536193471636533209717077448227988588565369208645'
+                '29663607725026895550592836275112117409697299806841055435958486'
+                '65832916421362182310789909994486524682624169720359118525070453'
+                '61090559L'),
+           'generator' : 2L
+
+        }
+    }
+
+    @classmethod
+    def _getKexAttr(cls, kexAlgo, kexAttr):
+        """
+        Returns the attribute named by kexAttr in the key exchange algorithm kexAlgo
+        defined in _kex_algo_map.
+
+        @type kexAlgo: C{str}
+        @param kexAlgo: The key exchange algorithm in _kex_algo_map
+
+        @type kexAttr: C{str}
+        @param kexAttr: The key exchange algorithm attribute
+
+        @raises ConchError: if the key algorithm is not found in _kex_algo_map or
+            the requested attribute does not exist in the key algorithm's definition
+        """
+
+        if not kexAlgo in cls._kex_algo_map.keys():
+            raise error.ConchError('Unsupported key exchange algorithm: %s' %(kexAlgo,))
+
+        if not kexAttr in cls._kex_algo_map[kexAlgo].keys():
+            raise error.ConchError('The requested attribute "%s" does not exist in the'
+                            ' %s algorithm' % (kexAttr, kexAlgo))
+
+        return cls._kex_algo_map[kexAlgo][kexAttr]
+
+
+    @classmethod
+    def isFixedGroup(cls, kexAlgo):
+        """
+        Uses _getKexAttr to return True if kexAlgo is a has a fixed prime /
+        generator group. Used to determine the correct key exchange logic to perform.
+
+        @type kexAlgo: C{str}
+        @param kexAlgo: The key exchange algorithm in _kex_algo_map
+
+        @rtype: C{bool}
+        """
+        return cls._getKexAttr(kexAlgo, 'fixedGroup')
+
+
+    @classmethod
+    def getDHPrime(cls, kexAlgo):
+        """
+        Uses _getKexAttr to return the prime and generator to use in the key exchange
+        algorithm
+
+        @type kexAlgo: C{str}
+        @param kexAlgo: The key exchange algorithm in _kex_algo_map
+
+        @rtype: C{tuple} containing C{long} generator and C{long} prime
+        """
+        return (cls._getKexAttr(kexAlgo, 'generator'),
+                cls._getKexAttr(kexAlgo, 'prime'))
+
+
+    @classmethod
+    def getSupportedKeyExchanges(cls):
+        """
+        Return a list of supported key exchange algorithm names in order
+        of preference.
+
+        @rtype C{list} of L{str}
+        """
+        return sorted(cls._kex_algo_map,
+            key = lambda kexAlgo: cls._kex_algo_map[kexAlgo]['preference'])
+
 
 class SSHTransportBase(protocol.Protocol):
     """
@@ -114,11 +253,6 @@ class SSHTransportBase(protocol.Protocol):
 
     @ivar supportedKeyExchanges: A list of strings representing the
         key exchanges supported, in order from most-preferred to least.
-
-    @ivar _dhPrime: Long prime used in Diffie-Hellman key exchange algorithm. Set
-        based on the key exchange algorithm negotiated between server and client.
-
-    @ivar _dhGenerator: Long generator used in Diffie-Hellman key exchange algorithm.
 
     @ivar supportedPublicKeys:  A list of strings representing the
         public key types supported, in order from most-preferred to least.
@@ -223,9 +357,7 @@ class SSHTransportBase(protocol.Protocol):
     # both of the above support 'none', but for security are disabled by
     # default.  to enable them, subclass this class and add it, or do:
     #   SSHTransportBase.supportedCiphers.append('none')
-    supportedKeyExchanges = ['diffie-hellman-group-exchange-sha1',
-                             'diffie-hellman-group1-sha1',
-                             'diffie-hellman-group14-sha1']
+    supportedKeyExchanges = KexAlgorithms.getSupportedKeyExchanges()
     supportedPublicKeys = ['ssh-rsa', 'ssh-dss']
     supportedCompressions = ['none', 'zlib']
     supportedLanguages = ()
@@ -239,9 +371,6 @@ class SSHTransportBase(protocol.Protocol):
     incomingCompression = None
     sessionID = None
     service = None
-
-    _dhPrime = ''
-    _dhGenerator = ''
 
     # There is no key exchange activity in progress.
     _KEY_EXCHANGE_NONE = '_KEY_EXCHANGE_NONE'
@@ -603,13 +732,6 @@ class SSHTransportBase(protocol.Protocol):
         else:
             self.sendKexInit()
 
-        if self.kexAlg == 'diffie-hellman-group1-sha1':
-            self._dhPrime = DH_PRIME
-            self._dhGenerator = DH_GENERATOR
-        elif self.kexAlg == 'diffie-hellman-group14-sha1':
-            self._dhPrime = DH_PRIME_14
-            self._dhGenerator = DH_GENERATOR_14
-
         return kexAlgs, keyAlgs, rest # for SSHServerTransport to use
 
 
@@ -920,25 +1042,24 @@ class SSHServerTransport(SSHTransportBase):
 
     def _ssh_KEXDH_INIT(self, packet):
         """
-        Called to handle the beginning of a diffie-hellman-group1-sha1 or
-	diffie-hellman-group14-sha1 key exchange.
+        Called to handle the beginning of a non-group key exchange.
 
         Unlike other message types, this is not dispatched automatically.  It
         is called from C{ssh_KEX_DH_GEX_REQUEST_OLD} because an extra check is
         required to determine if this is really a KEXDH_INIT message or if it
         is a KEX_DH_GEX_REQUEST_OLD message.
 
-        The KEXDH_INIT (for diffie-hellman-group1-sha1 and
-	diffie-hellman-group14-sha1 exchanges) payload::
+        The KEXDH_INIT payload::
 
                 integer e (the client's Diffie-Hellman public key)
 
-            We send the KEXDH_REPLY with our host key and signature.
+        We send the KEXDH_REPLY with our host key and signature.
         """
         clientDHpublicKey, foo = getMP(packet)
         y = _getRandomNumber(randbytes.secureRandom, 512)
-        serverDHpublicKey = _MPpow(self._dhGenerator, y, self._dhPrime)
-        sharedSecret = _MPpow(clientDHpublicKey, y, self._dhPrime)
+        self.g, self.p = KexAlgorithms.getDHPrime(self.kexAlg)
+        serverDHpublicKey = _MPpow(self.g, y, self.p)
+        sharedSecret = _MPpow(clientDHpublicKey, y, self.p)
         h = sha1()
         h.update(NS(self.otherVersionString))
         h.update(NS(self.ourVersionString))
@@ -959,11 +1080,10 @@ class SSHServerTransport(SSHTransportBase):
 
     def ssh_KEX_DH_GEX_REQUEST_OLD(self, packet):
         """
-        This represents two different key exchange methods that share the same
+        This represents different key exchange methods that share the same
         integer value.  If the message is determined to be a KEXDH_INIT,
         C{_ssh_KEXDH_INIT} is called to handle it.  Otherwise, for
-        KEX_DH_GEX_REQUEST_OLD (for diffie-hellman-group-exchange-sha)
-        payload::
+        KEX_DH_GEX_REQUEST_OLD payload::
 
                 integer ideal (ideal size for the Diffie-Hellman prime)
 
@@ -979,15 +1099,13 @@ class SSHServerTransport(SSHTransportBase):
 
         # KEXDH_INIT and KEX_DH_GEX_REQUEST_OLD have the same value, so use
         # another cue to decide what kind of message the peer sent us.
-        if self.kexAlg in ['diffie-hellman-group1-sha1', 'diffie-hellman-group14-sha1']:
+        if KexAlgorithms.isFixedGroup(self.kexAlg):
             return self._ssh_KEXDH_INIT(packet)
-        elif self.kexAlg == 'diffie-hellman-group-exchange-sha1':
+        else:
             self.dhGexRequest = packet
             ideal = struct.unpack('>L', packet)[0]
             self.g, self.p = self.factory.getDHPrime(ideal)
             self.sendPacket(MSG_KEX_DH_GEX_GROUP, MP(self.p) + MP(self.g))
-        else:
-            raise error.ConchError('bad kexalg: %s' % self.kexAlg)
 
 
     def ssh_KEX_DH_GEX_REQUEST(self, packet):
@@ -1125,33 +1243,29 @@ class SSHClientTransport(SSHTransportBase):
         Called when we receive a MSG_KEXINIT message.  For a description
         of the packet, see SSHTransportBase.ssh_KEXINIT().  Additionally,
         this method sends the first key exchange packet.  If the agreed-upon
-        exchange is diffie-hellman-group1-sha1 or diffie-hellman-group14-sha1,
-        generate a public key and send it in a MSG_KEXDH_INIT message.  If the
-        exchange is diffie-hellman-group-exchange-sha1, ask for a 2048 bit group
-        with a MSG_KEX_DH_GEX_REQUEST_OLD message.
+        exchange has a fixed prime/generator group, generate a public key
+        and send it in a MSG_KEXDH_INIT message. Otherwise, ask for a 2048
+        bit group with a MSG_KEX_DH_GEX_REQUEST_OLD message.
         """
         if SSHTransportBase.ssh_KEXINIT(self, packet) is None:
             return # we disconnected
-        if self.kexAlg in ['diffie-hellman-group1-sha1','diffie-hellman-group14-sha1']:
+        if KexAlgorithms.isFixedGroup(self.kexAlg):
             self.x = _generateX(randbytes.secureRandom, 512)
-            self.e = _MPpow(self._dhGenerator, self.x, self._dhPrime)
+            self.g, self.p = KexAlgorithms.getDHPrime(self.kexAlg)
+            self.e = _MPpow(self.g, self.x, self.p)
             self.sendPacket(MSG_KEXDH_INIT, self.e)
-        elif self.kexAlg == 'diffie-hellman-group-exchange-sha1':
-            self.sendPacket(MSG_KEX_DH_GEX_REQUEST_OLD, '\x00\x00\x08\x00')
         else:
-            raise error.ConchError("somehow, the kexAlg has been set "
-                                   "to something we don't support")
+            self.sendPacket(MSG_KEX_DH_GEX_REQUEST_OLD, '\x00\x00\x08\x00')
 
 
     def _ssh_KEXDH_REPLY(self, packet):
         """
-        Called to handle a reply to a diffie-hellman-group1-sha1 or
-        diffie-hellman-group14-sha1 key exchange message (KEXDH_INIT).
+        Called to handle a reply to a non-group key exchange message
+        (KEXDH_INIT).
         
         Like the handler for I{KEXDH_INIT}, this message type has an
         overlapping value.  This method is called from C{ssh_KEX_DH_GEX_GROUP}
-        if that method detects a diffie-hellman-group1-sha1 or 
-        diffie-hellman-group14-sha1 key exchange is in progress.
+        if that method detects a non-group key exchange is in progress.
 
         Payload::
 
@@ -1177,18 +1291,17 @@ class SSHClientTransport(SSHTransportBase):
 
     def ssh_KEX_DH_GEX_GROUP(self, packet):
         """
-        This handles two different message which share an integer value.
+        This handles different messages which share an integer value.
 
-        If the key exchange is diffie-hellman-group1-sha1 or
-        diffie-hellman-group14-sha1, this is MSG_KEX_DH_GEX_GROUP.
+        If the key exchange does not have a fixed prime/generator group,
+        we generate a Diffie-Hellman public key and send it in a
+        MSG_KEX_DH_GEX_INIT message.
+
         Payload::
             string g (group generator)
             string p (group prime)
-
-        We generate a Diffie-Hellman public key and send it in a
-        MSG_KEX_DH_GEX_INIT message.
         """
-        if self.kexAlg in ['diffie-hellman-group1-sha1', 'diffie-hellman-group14-sha1']:
+        if KexAlgorithms.isFixedGroup(self.kexAlg):
             return self._ssh_KEXDH_REPLY(packet)
         else:
             self.p, rest = getMP(packet)
@@ -1211,7 +1324,7 @@ class SSHClientTransport(SSHTransportBase):
         @type signature: C{str}
         """
         serverKey = keys.Key.fromString(pubKey)
-        sharedSecret = _MPpow(f, self.x, self._dhPrime)
+        sharedSecret = _MPpow(f, self.x, self.p)
         h = sha1()
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherVersionString))
@@ -1598,27 +1711,6 @@ class _Counter:
         self.count = array.array('c', '\x00' * self.blockSize)
         return self.count.tostring()
 
-
-
-# Diffie-Hellman primes from Oakley Group 2 [RFC 2409]
-DH_PRIME = long('17976931348623159077083915679378745319786029604875601170644'
-'442368419718021615851936894783379586492554150218056548598050364644054819923'
-'910005079287700335581663922955313623907650873575991482257486257500742530207'
-'744771258955095793777842444242661733472762929938766870920560605027081084290'
-'7692932019128194467627007L')
-DH_GENERATOR = 2L
-
-# Diffie-Hellman primes from Oakley Group 14 [RFC 3526]
-DH_PRIME_14 = long('32317006071311007300338913926423828248817941241140239112'
-'842009751400741706634354222619689417363569347117901737909704191754605873209'
-'195028853758986185622153212175412514901774520270235796078236248884246189477'
-'587641105928646099411723245426622522193230540919037680524235519125679715870'
-'117001058055877651038861847280257976054903569732561526167081339361799541336'
-'476559160368317896729073178384589680639671900977202194168647225871031411336'
-'429319536193471636533209717077448227988588565369208645296636077250268955505'
-'928362751121174096972998068410554359584866583291642136218231078990999448652'
-'468262416972035911852507045361090559L')
-DH_GENERATOR_14 = 2L
 
 
 MSG_DISCONNECT = 1

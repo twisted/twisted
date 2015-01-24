@@ -365,8 +365,15 @@ if Crypto is not None and pyasn1 is not None:
             }
 
         def getPrimes(self):
+            """
+            Return the Diffie-Hellman primes that can be used for the
+            diffie-hellman-group-exchange-sha1 key exchange. Prime values are
+            borrowed from diffie-hellman-group1-sha1 key exchange algorithm
+            otherwise, the test would rely on a moduli file being present. See
+            OpenSSHFactory.getPrimes.
+            """
             return {
-                2048:[(transport.DH_GENERATOR, transport.DH_PRIME)]
+                2048:[transport.KexAlgorithms.getDHPrime('diffie-hellman-group1-sha1')]
             }
 
         def getService(self, trans, name):
