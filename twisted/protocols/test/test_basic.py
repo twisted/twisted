@@ -182,12 +182,12 @@ a'''
         Test buffering for different packet size, checking received matches
         expected data.
         """
-        for packet_size in range(1, 10):
+        for packetSize in range(1, 10):
             t = proto_helpers.StringIOWithoutClosing()
             a = LineTester()
             a.makeConnection(protocol.FileWrapper(t))
-            for i in range(len(self.buffer) // packet_size + 1):
-                s = self.buffer[i * packet_size:(i + 1) * packet_size]
+            for i in range(len(self.buffer) // packetSize + 1):
+                s = self.buffer[i * packetSize:(i + 1) * packetSize]
                 a.dataReceived(s)
             self.assertEqual(self.output, a.received)
 
@@ -203,13 +203,13 @@ a'''
         Test pause inside data receiving. It uses fake clock to see if
         pausing/resuming work.
         """
-        for packet_size in range(1, 10):
+        for packetSize in range(1, 10):
             t = proto_helpers.StringIOWithoutClosing()
             clock = task.Clock()
             a = LineTester(clock)
             a.makeConnection(protocol.FileWrapper(t))
-            for i in range(len(self.pauseBuf) // packet_size + 1):
-                s = self.pauseBuf[i * packet_size:(i + 1) * packet_size]
+            for i in range(len(self.pauseBuf) // packetSize + 1):
+                s = self.pauseBuf[i * packetSize:(i + 1) * packetSize]
                 a.dataReceived(s)
             self.assertEqual(self.pauseOutput1, a.received)
             clock.advance(0)
@@ -226,13 +226,13 @@ a'''
         """
         Test pause inside raw date receiving.
         """
-        for packet_size in range(1, 10):
+        for packetSize in range(1, 10):
             t = proto_helpers.StringIOWithoutClosing()
             clock = task.Clock()
             a = LineTester(clock)
             a.makeConnection(protocol.FileWrapper(t))
-            for i in range(len(self.rawpauseBuf) // packet_size + 1):
-                s = self.rawpauseBuf[i * packet_size:(i + 1) * packet_size]
+            for i in range(len(self.rawpauseBuf) // packetSize + 1):
+                s = self.rawpauseBuf[i * packetSize:(i + 1) * packetSize]
                 a.dataReceived(s)
             self.assertEqual(self.rawpauseOutput1, a.received)
             clock.advance(0)
@@ -247,12 +247,12 @@ a'''
         """
         Test stop inside producing.
         """
-        for packet_size in range(1, 10):
+        for packetSize in range(1, 10):
             t = proto_helpers.StringIOWithoutClosing()
             a = LineTester()
             a.makeConnection(protocol.FileWrapper(t))
-            for i in range(len(self.stop_buf) // packet_size + 1):
-                s = self.stop_buf[i * packet_size:(i + 1) * packet_size]
+            for i in range(len(self.stop_buf) // packetSize + 1):
+                s = self.stop_buf[i * packetSize:(i + 1) * packetSize]
                 a.dataReceived(s)
             self.assertEqual(self.stop_output, a.received)
 
@@ -568,7 +568,7 @@ class NetstringReceiverTests(unittest.SynchronousTestCase, LPTestCaseMixin):
         """
         Strings can be received in chunks of different lengths.
         """
-        for packet_size in range(1, 10):
+        for packetSize in range(1, 10):
             t = proto_helpers.StringTransport()
             a = TestNetstring()
             a.MAX_LENGTH = 699
@@ -576,8 +576,8 @@ class NetstringReceiverTests(unittest.SynchronousTestCase, LPTestCaseMixin):
             for s in self.strings:
                 a.sendString(s)
             out = t.value()
-            for i in range(len(out) // packet_size + 1):
-                s = out[i * packet_size:(i + 1) * packet_size]
+            for i in range(len(out) // packetSize + 1):
+                s = out[i * packetSize:(i + 1) * packetSize]
                 if s:
                     a.dataReceived(s)
             self.assertEqual(a.received, self.strings)
