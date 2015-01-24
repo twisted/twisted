@@ -1,0 +1,499 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+<title>Generalization of Deferred Execution in Python</title>
+</head>
+
+<body>
+<h1>Generalization of Deferred Execution in Python</h1>
+
+<p>Glyph Lefkowitz</p>
+
+<div>
+<div>Twisted Matrix Labs</div>
+<div><a href="mailto:glyph@twistedmatrix.com">glyph@twistedmatrix.com</a></div>
+</div>
+
+<h2>Overview</h2>
+
+<p>A deceptively simple architectural challenge faced by many multi-tasking
+applications is gracefully doing nothing.  Systems that must wait for the
+results of a long-running process, network message, or database query while
+continuing to perform other tasks must establish conventions for the semantics
+of waiting.  The simplest of these is blocking in a thread, but it has
+significant scalability problems.  In asynchronous frameworks, the most common
+approach is for long-running methods to accept a callback that will be executed
+when the command completes.  These callbacks will have different signatures
+depending on the nature of the data being requested, and often, a great deal of
+code is necessary to glue one portion of an asynchronous networking system to
+another.  Matters become even more complicated when a developer wants to wait
+for two different events to complete, requiring the developer to &quot;juggle&quot;
+the callbacks and create a third, mutually incompatible callback type to handle
+the final result. </p>
+
+<p>This paper describes the mechanism used by the Twisted framework for waiting
+for the results of long-running operations.  This mechanism, the <code>Deferred</code>,
+handles the often-neglected problems of error handling, callback juggling,
+inter-system communication and code readability. </p>
+
+<p> In a framework like Twisted, the ability to glue two existing components
+together with a minimum of mediating code is paramount.  Considering that the
+vast majority of the code in Twisted is asynchronous I/O handling, it is
+imperative that the mechanism for relaying the data between the output from one
+system into the input of another be competitive with the simplicity of passing
+the return value of one method to the argument of another.  It was also
+important to use only no new syntax to avoid confusing programmers who already
+have experience with Python, and establish no dependencies on anything which
+would break compatibility with existing Python code or C / Java
+extensions. </p>
+
+<h2>Other Popular Approaches</h2>
+
+<p>There are several traditional approaches to handling concurrency that have
+been taken by application frameworks in the past.  Each has its own
+drawbacks.</p>
+
+<h3>Threads</h3>
+
+<p>The problems with using threads for concurrency in systems that need to
+scale is fairly well-documented.  However, many systems that use asynchronous
+multiplexing for I/O and system-level tasks, but run application code in a
+thread.  Zope's threaded request handling is a good example of this model.</p>
+
+<p>It is optimal, however, to avoid <em>requiring</em> threads for any part of
+a framework.  Threading has a significant cost, especially in Python.  The
+global interpreter lock destroys any performance benefit that threading may
+yield on SMP systems, and introduces significant complexity into both framework
+and application code that needs to be thread-safe.</p>
+
+<p>A full discussion of the pros and cons of threads is beyond the scope of
+this paper, however, using threads merely for blocking operations is clearly
+overkill.  Since each thread represents some allocation of resources, all of
+those resources are literally sitting idle if they are doing nothing but
+waiting for the results from a blocking call.</p>
+
+<p>In a fairly traditional networking situation, where the server is
+asynchronously multiplexed, this waste of resources may be acceptable for
+special-purpose, simple client programs, since only a few will be run at a
+time.  To create a generic system, however, one must anticipate cases when the
+system in question is not only a multi-user server or a single-user client, but
+also a multi-user hybrid client/server.</p>
+
+<p>A good example of this is a high-volume web spider.  A spider may have a
+server for administrative purposes, but must also be able to spawn many
+requests at once and wait for them all to return without allocating undue
+resources for each request.  The non-trivial overhead of threads, in addition
+to sockets, would be a very serious performance problem. </p>
+
+<h3>Callback Conventions</h3>
+
+<p>At some level, any system for handling asynchronous results in Python will
+be based on callback functions.  The typical way to present this to the
+application programmer is to have all asynchronous methods accept a callback as
+one of their arguments.</p>
+
+<p>This approach is usually standardized by giving the callback having a
+standard name (&quot;callback&quot;) or a particular position (first argument, last
+argument).  Even systems which rigorously adhere to such standardization run
+into problems, however.</p>
+
+<p>This approach does work for a variety of events.  It is unwieldy when one is
+attempting to write asynchronous &quot;conversations&quot; that involve multiple
+stages.  The first problem that we notice is the lack of error-handling.  If an
+error occurs in normal Python code, Exception handling provides clean and
+powerful semantics for handling it. </p>
+
+<a href="deferex-listing0.py" class="py-listing">Document Processor Example</a>
+
+<p>In an asynchronous method such as the one given above, traditional
+exceptions fall short.  What if an error occurs retrieving the documents from
+storage?  Do we call the callback with an error rather than a result?</p>
+
+<h3>Language Modifications</h3>
+
+<p>Other languages handle this by associating different semantics with
+threading, or providing different constructs altogether for concurrency.  This
+has the disadvantage that these languages aren't Python.  Even Stackless Python
+is problematic because it lacks integration with the wide variety of libraries
+that Python provides access to. </p>
+
+<p>The design of <code>Deferred</code> draws upon some of these other languages, and this
+section will cover several languages and their impact.</p>
+
+<p>In particular, the following list of languages were influential:</p>
+
+<ul>
+  <li>Erlang</li>
+  <li>Mozart/Oz</li>
+  <li>E</li>
+  <li>Scheme</li>
+  <li>Smalltalk</li>
+</ul>
+
+<p> E, Smalltalk, and Scheme proved particularly influential.  In E's, there is
+a sharp distinction between objects which are synchronously accessible and
+those which are asynchronously accessible.  The original use for
+<code>Deferred</code>s was to represent results from Perspective Broker method
+calls.  E was interesting in that the entire execution environment had
+assumptions about networking built in.  E's &quot;eventually&quot; operator <a
+href="#steigler">[stiegler]</a> is what originally inspired the distinction
+between &quot;a method which returns X&quot; and &quot;a method which returns a
+<code>Deferred</code> that fires X&quot;.  </p>
+
+<p>
+Smalltalk was influential in that its syntax for closures provided some
+precedent for thinking about the continuation of a &quot;conversation&quot; of execution
+as itself an object with methods.  The original thought-experiment that lead to
+<code>Deferred</code>s was an attempt to write some Squeak code that looked like this:
+
+<pre>
+(object callRemote: &quot;fooBar&quot;) andThen: [ result |
+        Transcript show: result.
+    ] orElse: [ failure |
+        failure printTraceback.
+    ]
+</pre>
+
+The hypothetical <code>callRemote</code> method here would return an object
+with the method <code>andThen:orElse:</code> that took 2 code blocks, one for
+handling results and the other for handling errors.
+</p>
+
+<p>It was challenging to write enough Smalltalk code to make anything
+interesting happen with this paradigm, but within the existing framework of
+Twisted, it was easy to convert several request/response idioms to use this
+sort of object.  Now that Twisted has dropped python 1.5.2 compatibility, and
+2.1 is the baseline version, we can use <code>nested_scopes</code> <a
+href="#hylton">[hylton]</a> and anonymous functions to make the code look
+similar to this original model.  </p>
+
+<p> Scheme, of course, provides <code>call-with-current-continuation</code> (or
+<code>call/cc</code>), the mind-bending control structure which has been a
+subject of much debate in language-design circles.  <code>call/cc</code> may
+have provided more a model of things to avoid than a real inspiration, though.
+While it is incredibly powerful, it creates almost as many problems as it
+solves. In particular, the interaction between continuations and
+<code>try:finally:</code> is undefined <a href="#pitman">[pitman]</a>, since it
+is impossible to determine the final time the protected code will be run.  The
+strongest lesson from <code>call/cc</code> was to only take as much state in
+the <code>Deferred</code> as necessary, and to avoid playing tricks with implicit context.
+</p>
+
+<p>The mechanisms that these languages use, however, often rely upon deeper
+abstractions that make their interpreters less amenable than Python's to
+convenient, idiomatic integration with C and UNIX.  Scheme's
+<code>call/cc</code> requires a large amount of work and creativity to
+integrate with &quot;C&quot; language libraries, as C. Tismer's work in
+Stackless Python Python has shown. <a href="#tismer">[tismer]</a> </p>
+
+<h2>Basics of Deferreds</h2>
+
+<p>After several months of working with Twisted's callback-based
+request/response mechanisms, it became apparent that something more was
+necessary.  Often, errors would silently cause a particular process to halt.
+The syntax for a multi-stage asynchronous process looked confusing, because
+multiple different interfaces were being invoked, each of which taking multiple
+callbacks.  The complexity of constructing these stages was constantly being
+exposed to the application developer, when it shouldn't really concern them.
+</p>
+
+<p>In order to make gluing different request/response systems together easy, we
+needed to create a more uniform way of having them communicate than a simple
+convention.  In keeping with that goal, we reduced several conventions into one
+class, <code>Deferred</code>, so that the request system could return a
+<code>Deferred</code> as output and the responder could accept a <code>Deferred</code> as input..
+<code>Deferred</code>s are objects which represent the result of a request that is not yet
+available.  It is suggested that any methods which must perform long-running
+calculations or communication with a remote host return a <code>Deferred</code>.</p>
+
+<p>This is similar to the Promise pattern, or lazy evaluation, except that it
+is a promise that will not be resolved synchronously.  The terminology usually
+used to describe a <code>Deferred</code> is &quot;a <code>Deferred</code> that will fire&quot; a particular
+result.</p>
+
+<p><code>Deferred</code>s have a small interface, which boils down to these five methods,
+plus convenience methods that call them:
+
+<ul>
+  <li><code>addCallbacks(self, callback, errback=None, callbackArgs=None,
+  callbackKeywords=None, errbackArgs=None, errbackKeywords=None)</code></li>
+  <li><code>callback(result)</code></li>
+  <li><code>errback(result)</code></li>
+  <li><code>pause()</code></li>
+  <li><code>unpause()</code></li>
+</ul>
+
+</p>
+
+<p>In general, code that initially returns <code>Deferred</code>s will be framework code,
+such as a web request or a remote method call.  This means that code that uses
+the framework will call <code>addCallbacks</code> on the <code>Deferred</code> that is
+returned by the framework.  When the result is ready, the callback will be
+triggered and the client code can process the result.  Usually the utility
+methods <code>addCallback</code> and <code>addErrback</code> are used.
+</p>
+
+<p>Using <code>addCallbacks</code> has slightly different semantics than using
+<code>addCallback</code> followed by <code>addErrback</code>;
+<code>addCallbacks</code> places the callback and the errback &quot;in
+parallel&quot;, meaning if there is an error in your callback, your errback will
+not be called. Thus using <code>addCallbacks</code> has either/or semantics;
+either the callback or the errback will be called, but not both.</p>
+
+<a href="deferex-listing1.py" class="py-listing">Fictitious Request Example</a>
+
+<p>The example given shows a method which returns a <code>Deferred</code> that will fire a
+formatted string of the result of a given request.  The return value of each
+callback is passed to the first argument of the next.</p>
+
+<h2>Generalized Error Handling</h2>
+
+<p>As described above in the section on using callbacks for asynchronous result
+processing, one of the most common application-level problems in an
+asynchronous framework is an error that causes a certain task to stop
+executing.  For example, if an exception is raised while hashing a user's
+password, the entire log-in sequence might be halted, leaving the connection in
+an inconsistent state.</p>
+
+<p>One way that Twisted remedies this is to have reasonable default behavior in
+circumstances such as this: if an uncaught exception is thrown while in the
+<code>dataReceived</code> callback for a particular connection, the connection
+is terminated.  However, for multi-step asynchronous conversations, this is not
+always adequate.</p>
+
+<p>Python's basic exception handling provides a good example for an
+error-handling mechanisms.  If the programmer fails to account for an error, an
+uncaught exception stops the program and produces information to help track it
+down.  Well-written python code never has to manually detect whether an error
+has occurred or not: code which depends on the previous steps being successful
+will not be run if they are not.  It is easy to provide information about an
+error by using attributes of exception objects.  It is also easy to relay
+contextual information between successful execution and error handlers, because
+they execute in the same scope.</p>
+
+<p><code>Deferred</code> attempts to mimic these properties as much as possible in an
+asynchronous context.</p>
+
+<h3>Reasonable Defaults</h3>  
+
+<p>When something unexpected goes wrong, the program should emit some debugging
+information and terminate the asynchronous chain of processing as gracefully as
+possible.</p>
+
+<p>Python exceptions do this very gracefully, with no effort required on the
+part of the developer at all.</p>
+
+<a href="deferex-simple-raise.py" class="py-listing">Simple Catastrophic Exception</a>
+
+<p><code>Deferred</code>s provide a symmetrical facility, where the developer may register a
+callback but then forego any error processing.</p>
+
+<a href="deferex-simple-failure.py" class="py-listing">Simple Catastrophic Deferred Failure</a>
+
+<p>In this example, the onSuccess callback will never be run, because the
+blowUp callback creates an error condition which is not handled. </p>
+
+<h3>No Ambiguity about Failure</h3>
+
+<p>It is impossible to provide a reasonable default behavior if failure is
+ambiguous.  Code should never have to manually distinguish between success and
+failure.  An error-processing callback has a distinct signature to a
+result-processing callback.</p>
+
+<p>Forcing client code to manually introspect on return values creates a common
+kind of error; when the success of a given long-running operation is assumed,
+it appears to work, and it is easier (and less code) to write a callback that
+only functions properly in a successful case, and creates bizarre errors in a
+failure case.  A simple example:.</p>
+
+<a class="py-listing" href="deferex-bad-adding.py">Common Error Pattern</a>
+
+<p>In this example, when the remote call to add the two numbers succeeds,
+everything looks fine.  However, when it fails, <code>result</code> will be an
+exception and not an integer: therefore the printed traceback will say
+something unhelpful, like:</p>
+
+<pre>TypeError: unsupported operand types for +: 'instance' and 'int'</pre>
+
+<h3>Rich Information about Errors</h3>
+  
+<p>It should be easy for developers to distinguish between fatal and non-fatal
+errors.  With Python exceptions, you can do this by specifying exception
+classes, which is a fairly powerful technique.</p>
+
+<a href="deferex-complex-raise.py" class="py-listing">Complex Python Exception</a>
+
+<p>With <code>Deferred</code>, we planned to have a syntactically simple technique for
+accomplishing something similar.  The resulting code structure is tends to be a
+bit more expansive than the synchronous equivalent, due to the necessity of
+giving explicit names to the functions involved, but it can be just as easy to
+follow.</p>
+
+<a href="deferex-complex-failure.py" class="py-listing">Complex Deferred Failure</a>
+
+<p>In this example, we have a callback chain that begins with the result of a
+remote method call of 3.  We then encounter a <code>MyExc</code> error raised
+in <code>blowUp</code>, which is caught by the errback <code>trapIt</code>.
+The 'trap' method will re-raise the current failure unless its class matches
+the given argument, so the error will continue to propagate if it doesn't
+match, much like an <code>except:</code> clause.</p>
+
+<h3>Easy Propagation of Context</h3>
+
+<p>While it is dangerous to implicitly propagate too much context (leading to
+problems similar to those with threads), we wanted to make sure that it is easy
+to move context from one callback to the next, and to convert information in
+errors into successful results after the errors have been handled. </p>
+
+<p>Both <code>addCallback</code> and <code>addErrback</code> have the signature
+<code>callable, *args, **kw</code>.  The additional arguments are passed
+through to the registered callback when it is invoked.  This allows us to
+easily send information about the current call to the error-handler in the same
+way as the success callback.</p>
+
+<h2>Patterns of Usage</h2>
+
+<p>Since <code>Deferred</code> is designed for a fairly specific class of problems, most
+places it is used tend to employ certain idioms.</p>
+
+<h3>Request-ID Dictionary</h3>
+
+<p>If you are implementing a symmetric, message-oriented protocol, you will
+typically need to juggle an arbitrary number of outstanding requests at once.
+The normal pattern for doing this is to create a dictionary mapping a request
+number to a <code>Deferred</code>, and firing a <code>Deferred</code> when a response with a given
+request-ID associated with it arrives.</p>
+
+<p>A good example of this pattern is the Perspective Broker protocol.  Each
+method call has a request, but it is acceptable for the peer to make calls
+before answering requests.  Few protocols are as extensively permissive about
+execution order as PB, but any full-fledged RPC or RMI protocol will enable
+similar interactions.  The MSN protocol implementation in Twisted also uses
+something similar.</p>
+
+<h3> Sometimes Synchronous Interface </h3>
+
+<p>When writing interfaces that application programmers will be implementing
+frequently, it is often convenient to allow them to either return either a
+<code>Deferred</code> or a synchronous result.  A good example of this is Twisted's Woven, a
+dynamic web content system.
+</p>
+
+<p> The processing of any XML node within a page may be deferred until some
+results are ready, be they results of a database query, a remote method call,
+an authentication request, or a file upload.  Many methods that may return
+Nodes may also return <code>Deferred</code>s, so that in either case the application
+developer need return the appropriate value.  No wrapping is required if it is
+synchronous, and no manual management of the result is required if it is not.
+</p>
+
+<p>This is the best way to assure that an application developer will never need
+to care whether a certain method's results are synchronous or not.  The first
+usage of this was in Perspective Broker, to allow easy transparent forwarding
+of method calls.  If a <code>Deferred</code> is returned from a remotely accessible method,
+the result will not be sent to the caller until the <code>Deferred</code> fires. </p>
+
+<a href="deferex-forwarding.py" class="py-listing">Forwarding Local and Remote
+Interfaces</a>
+
+<h3><code>callRemote</code></h3>
+
+<p>Ideally, all interactions between communicating systems would be modeled as
+asynchronous method calls.  Twisted Words, the Twisted chat server, treats any
+asynchronous operation as a subset of the functionality of Perspective Broker,
+using the same interface.  Eventually, the hope is to make greater use of this
+pattern, and abstract asynchronous conversations up another level, by having
+the actual mechanism of message transport wrapped so that client code is only
+aware of what asynchronous interface is being invoked.</p>
+
+<h2>Advanced Features</h2>
+
+<p>The first &quot;advanced&quot; feature of <code>Deferred</code>s is actually
+used quite frequently.  As discussed previously, each <code>Deferred</code> has
+not one, but a chain of callbacks, each of which is passed the result from the
+previous callback.  However, the mechanism that invokes each callback is itself
+an implementor of the previously-discussed &quot;Sometimes Synchronous
+Interface&quot; pattern - a callback may return either a value or a
+<code>Deferred</code>.</p>
+
+<p>For example, if we have a <code>Deferred</code> A, which has 2 callbacks: X,
+which returns a deferred B, that fires the result to X in 2 seconds, and Y,
+which prints its result, we will see the string &quot;hello&quot; on the screen
+in 2 seconds.  While it may sound complex, this style of coding one
+<code>Deferred</code> which depends on another looks very natural.</p>
+
+<a class="py-listing" href="deferex-chaining.py">Chaining 2
+<code>Deferred</code>s Together</a>
+
+<p>In this way, any asynchronous conversation may pause to wait for an
+additional request, without knowing in advance of running the first request
+what all the requests will be.</p>
+
+<p>The other advanced feature of <code>Deferred</code>s is not terribly common,
+but is still useful on occasion.  We have glossed over the issue of
+&quot;pre-executed&quot;<code>Deferred</code>s so far, e.g. <code>Deferred</code>s
+which have already been called with a callback value before client code adds
+callbacks to them.  The default behavior, which works in almost every
+situation, is simply to call the callback immediately (synchronously) as it is
+added.  However, there are rare circumstances where race conditions can occur
+when this naive approach is taken.</p>
+
+<p>For this reason, <code>Deferred</code> provides <code>pause</code> and
+<code>unpause</code> methods, allowing you to put a <code>Deferred</code> into
+a state where it will stop calling its callbacks as they are added; this will
+allow you to set up a series of communicating <code>Deferred</code>s without
+having anything execute, complete your setup work, and then unpause the
+process.</p>
+
+<p>In this way, you can create centralized choke-points for caring about whether
+a process is synchronous or not, and completely ignore this problem in your
+application code.  For example, in the now-obsolete Twisted Web Widgets system
+(a dynamic web content framework that predates woven), it was necessary to make
+sure that certain <code>Deferred</code>s were always called in order, so the page would
+render from top to bottom.  However, the user's code did not need to concern
+itself with this, because any <code>Deferred</code>s for which synchronous callback
+execution would have been an issue were passed to user code paused.</p>
+
+<h2>Conclusion</h2>
+
+<p><code>Deferred</code>s are a powerful abstraction for dealing with
+asynchronous results.  Having a uniform approach to asynchronous conversations
+allows Twisted APIs to provide a level of familiarity and flexibility for
+network programmers that approaches that of domain-specific languages, but
+still provides access to all of Python's power.</p>
+
+<h2>Acknowledgements</h2>
+
+<p>I would like to thank the entire Twisted team, for making me realize what a
+good idea I had hit upon with <code>Deferred</code>s.</p>
+
+<p>Special thanks go to Andrew Bennetts and Moshe Zadka, for implementing the
+portion of Twisted used to generate this, and other, papers, and to Ying Li and
+Donovan Preston for last-minute editorial assistance..</p>
+
+<h2>References</h2>
+
+<ol>
+
+  <li><a name="stiegler"></a>Marc Stiegler, <a
+  href="http://www.skyhunter.com/marcs/ewalnut.html#SEC19">The E Language in a
+  Walnut</a>, <i>erights.org</i></li>
+  
+  <li><a name="hylton"></a>Jeremy Hylton, <a
+href="http://www.python.org/peps/pep-0227.html" >PEP 227, &quot;Statically
+Nested Scopes&quot;</a></li>
+
+  <li><a name="pitman"></a>Kent Pitman, <a
+href="http://www.nhplace.com/kent/PFAQ/unwind-protect-vs-continuations.html"
+  >UNWIND-PROTECT vs. Continuations</a>, <i>Kent Pitman's Personal FAQ</i></li>
+
+  <li><a name="tismer">Christian Tismer, <a
+  href="http://www.stackless.com/spcpaper.htm">Continuations and Stackless
+  Python</a>, <i>Proceedings of the Sixth International Python Conference</i>
+  </a>
+  </li>
+
+</ol>
+
+</body>
+</html>

@@ -1,0 +1,705 @@
+Ticket numbers in this file can be looked up by visiting
+http://twistedmatrix.com/trac/ticket/<number>
+
+Twisted Web 14.0.0 (2014-05-08)
+===============================
+
+Features
+--------
+ - twisted.web.http.proxiedLogFormatter can now be used with
+   twisted.web.http.HTTPFactory (and subclasses) to record X
+   -Forwarded-For values to the access log when the HTTP server is
+   deployed behind a reverse proxy. (#1468)
+ - twisted.web.client.Agent now uses
+   twisted.internet.ssl.CertificateOptions for SSL/TLS and benefits
+   from its continuous improvements. (#6893)
+
+Bugfixes
+--------
+ - twisted.web.client.Agent now correctly manage flow-control on
+   pooled connections, and therefore requests will no longer hang
+   sometimes when deliverBody is not called synchronously within the
+   callback on Request. (#6751)
+ - twisted.web.client.Agent now verifies that the provided server
+   certificate in a TLS connection is trusted by the platform. (#7042)
+ - When requesting an HTTPS URL with twisted.web.client.Agent, the
+   hostname of the presented certificate will be checked against the
+   requested hostname; mismatches will now result in an error rather
+   than a man-in-the-middle opportunity for attackers.  This may break
+   existing code that incorrectly depended on insecure behavior, but
+   such code was erroneous and should be updated.  (#4888)
+
+Other
+-----
+ - #5004, #6881, #6956
+
+
+Twisted Web 13.2.0 (2013-10-29)
+===============================
+
+Features
+--------
+ - IAgent has been added to twisted.web.iweb to explicitly define the
+   interface implemented by the various "Agent" classes in
+   twisted.web.client. (#6702)
+
+Bugfixes
+--------
+ - twisted.web.client.Response.deliverBody now calls connectionLost on
+   the body protocol for responses with no body (such as 204, 304, and
+   HEAD requests). (#5476)
+ - twisted.web.static.loadMimeTypes now uses all available system MIME
+   types. (#5717)
+
+Deprecations and Removals
+-------------------------
+ - Two attributes of twisted.web.iweb.IRequest, headers and
+   received_headers, are now deprecated. (#6704)
+
+Other
+-----
+ - #5387, #6119, #6121, #6695, #6701, #6734
+
+
+Twisted Web 13.1.0 (2013-06-23)
+===============================
+
+Features
+--------
+ - The deferred returned by twisted.web.client.Agent.request can now
+   be cancelled. (#4330)
+ - twisted.web.client.BrowserLikeRedirectAgent, a new redirect agent,
+   treats HTTP 301 and 302 like HTTP 303 on non-HEAD/GET requests,
+   changing the method to GET before proceeding. (#5434)
+ - The new attribute twisted.web.iweb.IResponse.request is a reference
+   to a provider of the new twisted.web.iweb.IClientRequest interface
+   which, among other things, provides a way to access the request's
+   absolute URI. It is now also possible to inspect redirect history
+   with twisted.web.iweb.IResponse.previousResponse. (#5435)
+ - twisted.web.client.RedirectAgent now supports relative URI
+   references in the Location HTTP header. (#5462)
+ - twisted.web.client now provides readBody to collect the body of a
+   response from Agent into a string. (#6251)
+
+Bugfixes
+--------
+ - twisted.web.xmlrpc.QueryProtocol now generates valid Authorization
+   headers for long user names and passwords. (#2980)
+
+Other
+-----
+ - #6122, #6153, #6342, #6381, #6391, #6503
+
+
+Twisted Web 13.0.0 (2013-03-19)
+===============================
+
+Bugfixes
+--------
+ - twisted.web.template now properly quotes attribute values,
+   including Tag instances serialized within attribute values. (#6275)
+
+Other
+-----
+ - #6167, #6297, #6326
+
+
+Twisted Web 12.3.0 (2012-12-20)
+===============================
+
+Features
+--------
+ - twisted.web.server.Site now supports an encoders argument to encode
+   request content, twisted.web.server.GzipEncoderFactory being the
+   first one provided. (#104)
+
+Bugfixes
+--------
+ - twisted.web.http.HTTPChannel.headerReceived now catches the error
+   if the Content-Length header is not an integer and return a 400 Bad
+   Request response. (#6029)
+ - twisted.web.http.HTTPChannel now drops the connection and issues a
+   400 error upon receipt of a chunk-encoding encoded request with a
+   bad chunk-length field. (#6030)
+
+Improved Documentation
+----------------------
+ - twisted.web.iweb.IRequest now documents its `content` attribute and
+   a new "web in 60 seconds" howto demonstrates its use. (#6181)
+
+Other
+-----
+ - #5882, #5883, #5887, #5920, #6031, #6077, #6078, #6079, #6080,
+   #6110, #6113, #6196, #6205
+
+
+Twisted Web 12.2.0 (2012-08-26)
+===============================
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.static.FileTransfer, deprecated since 9.0, is removed
+   now. Use a subclass of StaticProducer instead. (#5651)
+ - ErrorPage, NoResource and ForbiddenResource in twisted.web.error
+   were deprecated since 9.0 and are removed now. (#5659)
+ - twisted.web.google, deprecated since Twisted 11.1, is removed now.
+   (#5768)
+
+Other
+-----
+ - #5665
+
+
+Twisted Web 12.1.0 (2012-06-02)
+===============================
+
+Features
+--------
+ - twisted.web.client.Agent and ProxyAgent now support persistent
+   connections. (#3420)
+ - Added twisted.web.template.renderElement, a function which renders
+   an Element to a response. (#5395)
+ - twisted.web.client.HTTPConnectionPool now ensures that failed
+   queries on persistent connections are retried, when possible.
+   (#5479)
+ - twisted.web.template.XMLFile now supports FilePath objects. (#5509)
+ - twisted.web.template.renderElement takes a doctype keyword
+   argument, which will be written as the first line of the response,
+   defaulting to the HTML5 doctype. (#5560)
+
+Bugfixes
+--------
+ - twisted.web.util.formatFailure now quotes all data in its output to
+   avoid it being mistakenly interpreted as markup. (#4896)
+ - twisted.web.distrib now lets distributed servers set the response
+   message. (#5525)
+
+Deprecations and Removals
+-------------------------
+ - PHP3Script and PHPScript were removed from twisted.web.twcgi,
+   deprecated since 10.1. Use twcgi.FilteredScript instead. (#5456)
+ - twisted.web.template.XMLFile's support for file objects and
+   filenames is now deprecated.  Use the new support for FilePath
+   objects. (#5509)
+ - twisted.web.server.date_time_string and
+   twisted.web.server.string_date_time are now deprecated in favor of
+   twisted.web.http.datetimeToString and twisted.web.
+   http.stringToDatetime (#5535)
+
+Other
+-----
+ - #4966, #5460, #5490, #5591, #5602, #5609, #5612
+
+
+Twisted Web 12.0.0 (2012-02-10)
+===============================
+
+Features
+--------
+ - twisted.web.util.redirectTo now raises TypeError if the URL passed
+   to it is a unicode string instead of a byte string. (#5236)
+ - The new class twisted.web.template.CharRef provides support for
+   inserting numeric character references in output generated by
+   twisted.web.template. (#5408)
+
+Improved Documentation
+----------------------
+ - The Twisted Web howto now has a section on proxies and reverse
+   proxies. (#399)
+ - The web client howto now covers ContentDecoderAgent and links to an
+   example of its use. (#5415)
+
+Other
+-----
+ - #5404, #5438
+
+
+Twisted Web 11.1.0 (2011-11-15)
+===============================
+
+Features
+--------
+ - twisted.web.client.ProxyAgent is a new HTTP/1.1 web client which
+   adds proxy support. (#1774)
+ - twisted.web.client.Agent now takes optional connectTimeout and
+   bindAddress arguments which are forwarded to the subsequent
+   connectTCP/connectSSL call. (#3450)
+ - The new class twisted.web.client.FileBodyProducer makes it easy to
+   upload data in HTTP requests made using the Agent client APIs.
+   (#4017)
+ - twisted.web.xmlrpc.XMLRPC now allows its lookupProcedure method to
+   be overridden to change how XML-RPC procedures are dispatched.
+   (#4836)
+ - A new HTTP cookie-aware Twisted Web Agent wrapper is included in
+   twisted.web.client.CookieAgent (#4922)
+ - New class twisted.web.template.TagLoader provides an
+   ITemplateLoader implementation which loads already-created
+   twisted.web.iweb.IRenderable providers. (#5040)
+ - The new class twisted.web.client.RedirectAgent adds redirect
+   support to the HTTP 1.1 client stack. (#5157)
+ - twisted.web.template now supports HTML tags from the HTML5
+   standard, including <canvas> and <video>. (#5306)
+
+Bugfixes
+--------
+ - twisted.web.client.getPage and .downloadPage now only fire their
+   result Deferred after the underlying connection they use has been
+   closed. (#3796)
+ - twisted.web.server now omits the default Content-Type header from
+   NOT MODIFIED responses. (#4156)
+ - twisted.web.server now responds correctly to 'Expect: 100-continue'
+   headers, although this is not yet usefully exposed to user code.
+   (#4673)
+ - twisted.web.client.Agent no longer raises an exception if a server
+   responds and closes the connection before the request has been
+   fully transmitted. (#5013)
+ - twisted.web.http_headers.Headers now correctly capitalizes the
+   header names Content-MD5, DNT, ETag, P3P, TE, and X-XSS-Protection.
+   (#5054)
+ - twisted.web.template now escapes more inputs to comments which
+   require escaping in the output. (#5275)
+
+Improved Documentation
+----------------------
+ - The twisted.web.template howto now documents the common idiom of
+   yielding tag clones from a renderer. (#5286)
+ - CookieAgent is now documented in the twisted.web.client how-to.
+   (#5110)
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.google is now deprecated. (#5209)
+
+Other
+-----
+ - #4951, #5057, #5175, #5288, #5316
+
+
+Twisted Web 11.0.0 (2011-04-01)
+===============================
+
+Features
+--------
+ - twisted.web._newclient.HTTPParser (and therefore Agent) now handles
+   HTTP headers delimited by bare LF newlines. (#3833)
+ - twisted.web.client.downloadPage now accepts the `afterFoundGet`
+   parameter, with the same meaning as the `getPage` parameter of the
+   same name. (#4364)
+ - twisted.web.xmlrpc.Proxy constructor now takes additional 'timeout'
+   and 'reactor' arguments. The 'timeout' argument defaults to 30
+   seconds. (#4741)
+ - Twisted Web now has a templating system, twisted.web.template,
+   which is a direct, simplified derivative of Divmod Nevow. (#4939)
+
+Bugfixes
+--------
+ - HTTPPageGetter now adds the port to the host header if it is not
+   the default for that scheme. (#3857)
+ - twisted.web.http.Request.write now raises an exception if it is
+   called after response generation has already finished. (#4317)
+ - twisted.web.client.HTTPPageGetter and twisted.web.client.getPage
+   now no longer make two requests when using afterFoundGet. (#4760)
+ - twisted.web.twcgi no longer adds an extra "content-type" header to
+   CGI responses. (#4786)
+ - twisted.web will now properly specify an encoding (UTF-8) on error,
+   redirect, and directory listing pages, so that IE7 and previous
+   will not improperly guess the 'utf7' encoding in these cases.
+   Please note that Twisted still sets a *default* content-type of
+   'text/html', and you shouldn't rely on that: you should set the
+   encoding appropriately in your application. (#4900)
+ - twisted.web.http.Request.setHost now sets the port in the host
+   header if it is not the default. (#4918)
+ - default NOT_IMPLEMENTED and NOT_ALLOWED pages now quote the request
+   method and URI respectively, to protect against browsers which
+   don't quote those values for us. (#4978)
+
+Improved Documentation
+----------------------
+ - The XML-RPC howto now includes an example demonstrating how to
+   access the HTTP request object in a server-side XML-RPC method.
+   (#4732)
+ - The Twisted Web client howto now uses the correct, public name for
+   twisted.web.client.Response. (#4769)
+ - Some broken links were fixed, descriptions were updated, and new
+   API links were added in the Resource Templating documentation
+   (resource-templates.xhtml) (#4968)
+
+Other
+-----
+ - #2271, #2386, #4162, #4733, #4855, #4911, #4973
+
+
+Twisted Web 10.2.0 (2010-11-29)
+===============================
+
+Features
+--------
+ - twisted.web.xmlrpc.XMLRPC.xmlrpc_* methods can now be decorated
+   using withRequest to cause them to be passed the HTTP request
+   object. (#3073)
+
+Bugfixes
+--------
+ - twisted.web.xmlrpc.QueryProtocol.handleResponse now disconnects
+   from the server, meaning that Twisted XML-RPC clients disconnect
+   from the server as soon as they receive a response, rather than
+   relying on the server to disconnect. (#2518)
+ - twisted.web.twcgi now generates responses containing all
+   occurrences of duplicate headers produced by CGI scripts, not just
+   the last value. (#4742)
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.trp, which has been deprecated since Twisted 9.0, was
+   removed. (#4299)
+
+Other
+-----
+ - #4576, #4577, #4709, #4723
+
+
+Twisted Web 10.1.0 (2010-06-27)
+===============================
+
+Features
+--------
+ - twisted.web.xmlrpc.XMLRPC and twisted.web.xmlrpc.Proxy now expose
+   xmlrpclib's support of datetime.datetime objects if useDateTime is
+   set to True. (#3219)
+ - HTTP11ClientProtocol now has an abort() method for cancelling an
+   outstanding request by closing the connection before receiving the
+   entire response. (#3811)
+ - twisted.web.http_headers.Headers initializer now rejects
+   incorrectly structured dictionaries. (#4022)
+ - twisted.web.client.Agent now supports HTTPS URLs. (#4023)
+ - twisted.web.xmlrpc.Proxy.callRemote now returns a Deferred which
+   can be cancelled to abort the attempted XML-RPC call. (#4377)
+
+Bugfixes
+--------
+ - twisted.web.guard now logs out avatars even if a request completes
+   with an error. (#4411)
+ - twisted.web.xmlrpc.XMLRPC will now no longer trigger a RuntimeError
+   by trying to write responses to closed connections. (#4423)
+
+Improved Documentation
+----------------------
+ - Fix broken links to deliverBody and iweb.UNKNOWN_LENGTH in
+   doc/web/howto/client.xhtml. (#4507)
+
+Deprecations and Removals
+-------------------------
+ - twisted.web.twcgi.PHP3Script and twisted.web.twcgi.PHPScript are
+   now deprecated. (#516)
+
+Other
+-----
+ - #4403, #4452
+
+
+Twisted Web 10.0.0 (2010-03-01)
+===============================
+
+Features
+--------
+ - Twisted Web in 60 Seconds, a series of short tutorials with self-
+   contained examples on a range of common web topics, is now a part
+   of the Twisted Web howto documentation. (#4192)
+
+Bugfixes
+--------
+ - Data and File from twisted.web.static and
+   twisted.web.distrib.UserDirectory will now only generate a 200
+   response for GET or HEAD requests.
+   twisted.web.client.HTTPPageGetter will no longer ignore the case of
+   a request method when considering whether to apply special HEAD
+   processing to a response. (#446)
+
+ - twisted.web.http.HTTPClient now supports multi-line headers.
+   (#2062)
+
+ - Resources served via twisted.web.distrib will no longer encounter a
+   Banana error when writing more than 640kB at once to the request
+   object. (#3212)
+
+ - The Error, PageRedirect, and InfiniteRedirection exception in
+   twisted.web now initialize an empty message parameter by mapping
+   the HTTP status code parameter to a descriptive string. Previously
+   the lookup would always fail, leaving message empty.  (#3806)
+
+ - The 'wsgi.input' WSGI environment object now supports -1 and None
+   as arguments to the read and readlines methods. (#4114)
+
+ - twisted.web.wsgi doesn't unquote QUERY_STRING anymore, thus
+   complying with the WSGI reference implementation. (#4143)
+
+ - The HTTP proxy will no longer pass on keep-alive request headers
+   from the client, preventing pages from loading then "hanging"
+   (leaving the connection open with no hope of termination). (#4179)
+
+Deprecations and Removals
+-------------------------
+ - Remove '--static' option from twistd web, that served as an alias
+   for the '--path' option. (#3907)
+
+Other
+-----
+ - #3784, #4216, #4242
+
+
+Twisted Web 9.0.0 (2009-11-24)
+==============================
+
+Features
+--------
+ - There is now an iweb.IRequest interface which specifies the interface that
+   request objects provide (#3416)
+ - downloadPage now supports the same cookie, redirect, and timeout features
+   that getPage supports (#2971)
+ - A chapter about WSGI has been added to the twisted.web documentation (#3510)
+ - The HTTP auth support in the web server now allows anonymous sessions by
+   logging in with ANONYMOUS credentials when no Authorization header is
+   provided in a request (#3924, #3936)
+ - HTTPClientFactory now accepts a parameter to enable a common deviation from
+   the HTTP 1.1 standard by responding to redirects in a POSTed request with a
+   GET instead of another POST (#3624)
+ - A new basic HTTP/1.1 client API is included in twisted.web.client.Agent
+   (#886, #3987)
+
+Fixes
+-----
+ - Requests for "insecure" children of a static.File (such as paths containing
+   encoded directory separators) will now result in a 404 instead of a 500
+   (#3549, #3469)
+ - When specifying a followRedirect argument to the getPage function, the state
+   of redirect-following for other getPage calls should now be unaffected.  It
+   was previously overwriting a class attribute which would affect outstanding
+   getPage calls (#3192)
+ - Downloading an URL of the form "http://example.com:/" will now work,
+   ignoring the extraneous colon (#2402)
+ - microdom's appendChild method will no longer issue a spurious warning, and
+   microdom's methods in general should now issue more meaningful exceptions
+   when invalid parameters are passed (#3421)
+ - WSGI applications will no longer have spurious Content-Type headers added to
+   their responses by the twisted.web server. In addition, WSGI applications
+   will no longer be able to specify the server-restricted headers Server and
+   Date (#3569)
+ - http_headers.Headers now normalizes the case of raw headers passed directly
+   to it in the same way that it normalizes the headers passed to setRawHeaders
+   (#3557)
+ - The distrib module no longer relies on the deprecated woven package (#3559)
+ - twisted.web.domhelpers now works with both microdom and minidom (#3600)
+ - twisted.web servers will now ignore invalid If-Modified-Since headers instead
+   of returning a 500 error (#3601)
+ - Certain request-bound memory and file resources are cleaned up slightly
+   sooner by the request when the connection is lost (#1621, #3176)
+ - xmlrpclib.DateTime objects should now correctly round-trip over twisted.web's
+   XMLRPC support in all supported versions of Python, and errors during error
+   serialization will no longer hang a twisted.web XMLRPC response (#2446)
+ - request.content should now always be seeked to the beginning when
+   request.process is called, so application code should never need to seek 
+   back manually (#3585)
+ - Fetching a child of static.File with a double-slash in the URL (such as
+   "example//foo.html") should now return a 404 instead of a traceback and
+   500 error (#3631)
+ - downloadPage will now fire a Failure on its returned Deferred instead of
+   indicating success when the connection is prematurely lost (#3645)
+ - static.File will now provide a 404 instead of a 500 error when it was
+   constructed with a non-existent file (#3634)
+ - microdom should now serialize namespaces correctly (#3672)
+ - The HTTP Auth support resource wrapper should no longer corrupt requests and
+   cause them to skip a segment in the request path (#3679)
+ - The twisted.web WSGI support should now include leading slashes in PATH_INFO,
+   and SCRIPT_NAME will be empty if the application is at the root of the
+   resource tree. This means that WSGI applications should no longer generate
+   URLs with double-slashes in them even if they naively concatenate the values
+   (#3721)
+ - WSGI applications should now receive the requesting client's IP in the
+   REMOTE_ADDR environment variable (#3730)
+ - The distrib module should work again. It was unfortunately broken with the
+   refactoring of twisted.web's header support (#3697)
+ - static.File now supports multiple ranges specified in the Range header
+   (#3574)
+ - static.File should now generate a correct Content-Length value when the
+   requested Range value doesn't fit entirely within the file's contents (#3814)
+ - Attempting to call request.finish() after the connection has been lost will
+   now immediately raise a RuntimeError (#4013)
+ - An HTTP-auth resource should now be able to directly render the wrapped
+   avatar, whereas before it would only allow retrieval of child resources
+   (#4014)
+ - twisted.web's wsgi support should no longer attempt to call request.finish
+   twice, which would cause errors in certain cases (#4025)
+ - WSGI applications should now be able to handle requests with large bodies
+   (#4029)
+ - Exceptions raised from WSGI applications should now more reliably be turned
+   into 500 errors on the HTTP level (#4019)
+ - DeferredResource now correctly passes through exceptions raised from the
+   wrapped resource, instead of turning them all into 500 errors (#3932)
+ - Agent.request now generates a Host header when no headers are passed at
+   (#4131)
+
+Deprecations and Removals
+-------------------------
+ - The unmaintained and untested twisted.web.monitor module was removed (#2763)
+ - The twisted.web.woven package has been removed (#1522)
+ - All of the error resources in twisted.web.error are now in
+   twisted.web.resource, and accessing them through twisted.web.error is now
+   deprecated (#3035)
+ - To facilitate a simplification of the timeout logic in server.Session,
+   various things have been deprecated (#3457)
+   - the loopFactory attribute is now ignored
+   - the checkExpired method now does nothing
+   - the lifetime parameter to startCheckingExpiration is now ignored
+ - The twisted.web.trp module is now deprecated (#2030)
+
+Other
+-----
+ - #2763, #3540, #3575, #3610, #3605, #1176, #3539, #3750, #3761, #3779, #2677,
+   #3782, #3904, #3919, #3418, #3990, #1404, #4050
+
+
+Web 8.2.0 (2008-12-16)
+======================
+
+Features
+--------
+ - The web server can now deal with multi-value headers in the new attributes of
+   Request, requestHeaders and responseHeaders (#165)
+ - There is now a resource-wrapper which implements HTTP Basic and Digest auth
+   in terms of twisted.cred (#696)
+ - It's now possible to limit the number of redirects that client.getPage will
+   follow (#2412)
+ - The directory-listing code no longer uses Woven (#3257)
+ - static.File now supports Range headers with a single range (#1493)
+ - twisted.web now has a rudimentary WSGI container (#2753)
+ - The web server now supports chunked encoding in requests (#3385)
+
+Fixes
+-----
+ - The xmlrpc client now raises an error when the server sends an empty
+   response (#3399)
+ - HTTPPageGetter no longer duplicates default headers when they're explicitly
+   overridden in the headers parameter (#1382)
+ - The server will no longer timeout clients which are still sending request
+   data (#1903)
+ - microdom's isEqualToNode now returns False when the nodes aren't equal
+   (#2542)
+
+Deprecations and Removals
+-------------------------
+
+ - Request.headers and Request.received_headers are not quite deprecated, but
+   they are discouraged in favor of requestHeaders and responseHeaders (#165)
+
+Other
+-----
+ - #909, #687, #2938, #1152, #2930, #2025, #2683, #3471
+
+
+8.1.0 (2008-05-18)
+==================
+
+Fixes
+-----
+
+ - Fixed an XMLRPC bug whereby sometimes a callRemote Deferred would
+   accidentally be fired twice when a connection was lost during the handling of
+   a response (#3152)
+ - Fixed a bug in the "Using Twisted Web" document which prevented an example
+   resource from being renderable (#3147)
+ - The deprecated mktap API is no longer used (#3127)
+
+
+8.0.0 (2008-03-17)
+==================
+
+Features
+--------
+ - Add support to twisted.web.client.getPage for the HTTP HEAD method. (#2750)
+
+Fixes
+-----
+ - Set content-type in xmlrpc responses to "text/xml" (#2430)
+ - Add more error checking in the xmlrpc.XMLRPC render method, and enforce
+   POST requests. (#2505)
+ - Reject unicode input to twisted.web.client._parse to reject invalid
+   unicode URLs early. (#2628)
+ - Correctly re-quote URL path segments when generating an URL string to
+   return from Request.prePathURL. (#2934)
+ - Make twisted.web.proxy.ProxyClientFactory close the connection when
+   reporting a 501 error. (#1089)
+ - Fix twisted.web.proxy.ReverseProxyResource to specify the port in the
+   host header if different from 80. (#1117)
+ - Change twisted.web.proxy.ReverseProxyResource so that it correctly encodes
+   the request URI it sends on to the server for which it is a proxy. (#3013)
+ - Make "twistd web --personal" use PBServerFactory (#2681)
+
+Misc
+----
+ - #1996, #2382, #2211, #2633, #2634, #2640, #2752, #238, #2905
+
+
+0.7.0 (2007-01-02)
+==================
+
+Features
+--------
+ - Python 2.5 is now supported (#1867)
+ - twisted.web.xmlrpc now supports the <nil/> xml-rpc extension type
+   in both the server and the client (#469)
+
+Fixes
+-----
+ - Microdom and SUX now manages certain malformed XML more resiliently
+   (#1984, #2225, #2298)
+ - twisted.web.client.getPage can now deal with an URL of the form
+   "http://example.com" (no trailing slash) (#1080)
+ - The HTTP server now allows (invalid) URLs with multiple question
+   marks (#1550)
+ - '=' can now be in the value of a cookie (#1051)
+ - Microdom now correctly handles xmlns="" (#2184)
+
+Deprecations and Removals
+-------------------------
+ - websetroot was removed, because it wasn't working anyway (#945)
+ - woven.guard no longer supports the old twisted.cred API (#1440)
+
+Other
+-----
+The following changes are minor or closely related to other changes.
+
+ - #1636, #1637, #1638, #1936, #1883, #447
+
+
+0.6.0 (2006-05-21)
+==================
+
+Features
+--------
+ - Basic auth support for the XMLRPC client (#1474).
+
+Fixes
+-----
+ - More correct datetime parsing.
+ - Efficiency improvements (#974)
+ - Handle popular non-RFC compliant formats for If-Modified-Since
+   headers (#976).
+ - Improve support for certain buggy CGI scripts.
+ - CONTENT_LENGTH is now available to CGI scripts.
+ - Support for even worse HTML in microdom (#1358).
+ - Trying to view a user's home page when the user doesn't have a
+   ~/public_html no longer displays a traceback (#551).
+ - Misc: #543, #1011, #1005, #1287, #1337, #1383, #1079, #1492, #1189,
+   #737, #872.
+
+
+0.5.0
+=====
+ - Client properly reports timeouts as error
+ - "Socially deprecate" woven
+ - Fix memory leak in _c_urlarg library
+ - Stop using _c_urlarg library
+ - Fix 'gzip' and 'bzip2' content-encodings
+ - Escape log entries so remote user cannot corrupt the log
+ - Commented out range support because it's broken
+ - Fix HEAD responses without content-length

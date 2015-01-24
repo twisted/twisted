@@ -1,0 +1,2253 @@
+Ticket numbers in this file can be looked up by visiting
+http://twistedmatrix.com/trac/ticket/<number>
+
+Twisted Core 14.0.0 (2014-05-08)
+================================
+
+Features
+--------
+ - twisted.internet.interfaces.IUDPTransport - and that interface's
+   implementations in Twisted - now supports enabling broadcasting.
+   (#454)
+ - trial's TestCase will now report a test method as an error if that
+   test method is a generator function, preventing an issue when a
+   user forgets to decorate a test method with defer.inlineCallbacks,
+   causing the test method to not run. (#3917)
+ - twisted.positioning, a new API for positioning systems such as GPS,
+   has been added. It comes with an implementation of NMEA, the most
+   common wire protocol for GPS devices. It will supersede
+   twisted.protoocols.gps. (#3926)
+ - The new interface twisted.internet.interfaces.IStreamClientEndpoint
+   StringParserWithReactor will supply the reactor to its
+   parseStreamClient method, passed along from
+   twisted.internet.endpoints.clientFromString. (#5069)
+ - IReactorUDP.listenUDP, IUDPTransport.write and
+   IUDPTransport.connect now accept ipv6 address literals. (#5086)
+ - A new API, twisted.internet.ssl.optionsForClientTLS, allows clients
+   to specify and verify the identity of the peer they're communicating
+   with.  When used with the service_identity library from PyPI, this
+   provides support for service identity verification from RFC 6125, as
+   well as server name indication from RFC 6066. (#5190)
+ - Twisted's TLS support now provides a way to ask for user-configured
+   trust roots rather than having to manually configure such
+   certificate authority certificates yourself.
+   twisted.internet.ssl.CertificateOptions now accepts a new argument,
+   trustRoot, which combines verification flags and trust sources, as
+   well as a new function that provides a value for that argument,
+   twisted.internet.ssl.platformTrust, which allows using the trusted
+   platform certificate authorities from OpenSSL for certificate
+   verification. (#5446)
+ - Constants are now comparable/orderable based on the order in which
+   they are defined. (#6523)
+ - "setup.py install" and "pip install" now work on Python 3.3,
+   installing the subset of Twisted that has been ported to Python 3.
+   (#6539)
+ - twisted.internet.ssl.CertificateOptions now supports ECDHE for
+   servers by default on pyOpenSSL 0.14 and later, if the underlying
+   versions of cryptography.io and OpenSSL support it. (#6586)
+ - twisted.internet.ssl.CertificateOptions now allows the user to set
+   acceptable ciphers and uses secure ones by default. (#6663)
+ - The Deferred returned by
+   twisted.internet.defer.DeferredFilesystemLock.deferUntilLocked can
+   now be cancelled. (#6720)
+ - twisted.internet.ssl.CertificateOptions now enables TLSv1.1 and
+   TLSv1.2 by default (in addition to TLSv1.0) if the underlying
+   version of OpenSSL supports these protocol versions. (#6772)
+ - twisted.internet.ssl.CertificateOptions now supports Diffie-Hellman
+   key exchange. (#6799)
+ - twisted.internet.ssl.CertificateOptions now disables TLS
+   compression to avoid CRIME attacks and, for servers, uses server
+   preference to choose the cipher. (#6801)
+ - SSL server endpoint string descriptions now support the
+   specification of Diffie-Hellman key exchange parameter files.
+   (#6924)
+ - twisted.python.reflect.requireModule was added to handle
+   conditional imports of python modules and work around pyflakes
+   warnings of unused imports code. (#7014)
+
+Bugfixes
+--------
+ - If a ProcessProtocol.processExited method raised an exception a
+   broken process handler would be left in the global process state
+   leading to errors later on. This has been fixed and now an error
+   will be logged instead. (#5151)
+ - Twisted now builds on Solaris. Note that lacking a Buildbot slave
+   (see http://buildbot.twistedmatrix.com/boxes-supported) Solaris is
+   not a supported Twisted platform. (#5728)
+ - twisted.internet.utils is now correctly installed on Python 3.
+   (#6929)
+ - twisted.python.threadpool.ThreadPool no longer starts new workers
+   when its pool size is changed while the pool is not running.
+   (#7011)
+
+Improved Documentation
+----------------------
+ - Twisted now uses the Sphinx documentation generator for its
+   narrative documentation, which means that the source format for
+   narrative documentation has been converted to ReStructuredText.
+   (#4500)
+ - The Sphinx documentation is now also configured to allow
+   intersphinx links to standard library documentation. (#4582)
+ - The docstring for twisted.internet.task.react now better documents
+   the main parameter (#6071)
+ - The writing standard now explicitly mandates the usage of
+   ungendered pronouns. (#6858)
+
+Deprecations and Removals
+-------------------------
+ - test_import.py was removed as it was redundant. (#2053)
+ - Support for versions of pyOpenSSL older than 0.10 has been removed.
+   Affected users should upgrade pyOpenSSL. (#5014)
+ - twisted.internet.interfaces.IStreamClientEndpointStringParser is
+   now deprecated in favor of twisted.internet.interfaces.IStreamClien
+   tEndpointStringParserWithReactor. (#5069)
+ - unsignedID and setIDFunction, previously part of
+   twisted.python.util and deprecated since 13.0, have now been
+   removed. (#6707)
+ - FTPClient.changeDirectory was deprecated in 8.2 and is now removed.
+   (#6759)
+ - twisted.internet.stdio.StandardIO.closeStdin, an alias for
+   loseWriteConnection only available on POSIX and deprecated since
+   2.1, has been removed. (#6785)
+ - twisted.python.reflect.getcurrent is now deprecated and must not be
+   used. twisted.python.reflect.isinst is now deprecated in favor of
+   the built-in isinstance. (#6859)
+
+Other
+-----
+ - #1822, #5929, #6239, #6537, #6565, #6614, #6632, #6690, #6784,
+   #6792, #6795, #6821, #6843, #6846, #6854, #6856, #6857, #6872,
+   #6892, #6902, #6906, #6922, #6926, #6936, #6941, #6942, #6943,
+   #6944, #6945, #6946, #6948, #6979, #7001, #7049, #7051, #7094,
+   #7098
+
+
+Twisted Core 13.2.0 (2013-10-29)
+================================
+
+Features
+--------
+ - twistd now waits for the application to start successfully before
+   exiting after daemonization. (#823)
+ - twisted.internet.endpoints now provides HostnameEndpoint, a TCP
+   client endpoint that connects to a hostname as quickly as possible.
+   (#4859)
+ - twisted.internet.interfaces.IReactorSocket now has a new
+   adoptDatagramPort method which is implemented by some reactors
+   allowing them to listen on UDP sockets set up by external software
+   (eg systemd or launchd). (#5574)
+ - trial now accepts an --order option that specifies what order to
+   run TestCase methods in. (#5787)
+ - Port twisted.python.lockfile to Python 3, enabling
+   twisted.python.defer.DeferredFilesystemLock and tests. (#5960)
+ - Returning a Deferred from a callback that's directly returned from
+   that Deferred will now produce a DeprecationWarning, to notify
+   users of the buggy behavior. (#6164)
+ - SSL server endpoint string descriptions now support the
+   specification of chain certificates. (#6499)
+ - twisted.application.reactors.installReactor now returns the just-
+   installed reactor. (#6596)
+ - twisted.internet.defer.DeferredList now has a new cancel method.
+   And twisted.internet.defer.gatherResults now returns a cancellable
+   result. (#6639)
+
+Bugfixes
+--------
+ - twisted.protocols.basic.LineReceiver no longer passes incorrect
+   data (a buffer missing a delimiter) to lineLengthExceeded in
+   certain cases. (#6536)
+ - twisted.cred.digest.DigestCredentialFactory now supports decoding
+   challenge responses with field values including ",". (#6609)
+ - twisted.internet.endpoints.TCP6ClientEndpoint now establishes
+   connections when constructed with a hostname. (#6633)
+ - twisted.application.internet.TimerService is now pickleable in all
+   cases. (#6657)
+
+Improved Documentation
+----------------------
+ - The howto document page of Deferred now has documentation about
+   cancellation. (#4320)
+ - Docstrings for twisted.internet.task.Cooperator and cooperate.
+   (#6213)
+
+Deprecations and Removals
+-------------------------
+ - Returning a Deferred from a callback that's directly returned from
+   that Deferred will now produce a DeprecationWarning, to notify
+   users of the buggy behavior. (#6164)
+ - Accessor, AccessorType, OriginalAccessor, PropertyAccessor,
+   Settable and Summer in twisted.python.reflect, deprecated since
+   Twisted 12.1.0, are now removed. (#6689)
+
+Other
+-----
+ - #5001, #5312, #5387, #5442, #5634, #6221, #6393, #6406, #6485,
+   #6570, #6575, #6610, #6674, #6684, #6685, #6715, #6729, #6731,
+   #6736, #6773, #6788, #6793
+
+
+Twisted Core 13.1.0 (2013-06-23)
+================================
+
+Features
+--------
+ - trial now has an --exitfirst flag which stops the test run after
+   the first error or failure. (#1518)
+ - twisted.internet.ssl.CertificateOptions now supports chain
+   certificates. (#2061)
+ - twisted.internet.endpoints now provides ProcessEndpoint, a child
+   process endpoint. (#4696)
+ - Factory now has a forProtocol classmethod that constructs an
+   instance and sets its protocol attribute. (#5016)
+ - twisted.internet.endpoints.connectProtocol allows connecting to a
+   client endpoint using only a protocol instance, rather than
+   requiring a factory. (#5270)
+ - twisted.trial.unittest.SynchronousTestCase.assertNoResult no longer
+   swallows the result, if the assertion succeeds. (#6291)
+ - twisted.python.constants.FlagConstant implements __iter__ so that
+   it can be iterated upon to find the flags that went into a flag
+   set, and implements __nonzero__ to test as false when empty.
+   (#6302)
+ - assertIs and assertIsNot have now been added to
+   twisted.trial.unittest.TestCase. (#6350)
+ - twisted.trial.unittest.TestCase.failureResultOf now takes an
+   optional expected failure type argument. (#6380)
+ - The POSIX implementation of
+   twisted.internet.interfaces.IReactorProcess now does not change the
+   parent process UID or GID in order to run child processes with a
+   different UID or GID. (#6443)
+
+Bugfixes
+--------
+ - self.transport.resumeProducing() will no longer raise an
+   AssertionError if called after self.transport.loseConnection()
+   (#986)
+ - twisted.protocols.ftp.FTP now supports IFTPShell implementations
+   which return non-ASCII filenames as unicode strings. (#5411)
+ - twisted.internet.ssl.CertificateOptions now disables SSLv2 if
+   SSLv23 is selected, allowing only SSLv3 and TLSv1. (#6337)
+ - trial dist support now gets sys.path from an environment variable
+   passed to it. (#6390)
+ - twisted.test.proto_helpers.StringTransportWithDisconnection now
+   correctly passes Failure instead of an exception to
+   connectionLost through loseConnection. (#6521)
+
+Improved Documentation
+----------------------
+ - The Application howto now provides an example of writing a custom
+   Service. (#5586)
+ - The -j flag to trial (introduced in 12.3.0) is now documented.
+   (#5994)
+ - The SSL howto now covers twisted.internet.ssl.CertificateOptions
+   instead of the older context factories it replaces. (#6273)
+ - The Constants HOWTO documents iteration and truth testing of flags,
+   as well as previously undocumented boolean operations. (#6302)
+
+Deprecations and Removals
+-------------------------
+ - twisted.trial.runner.suiteVisit and PyUnitTestCase as well as
+   visitor methods, all deprecated since Twisted 8.0, have been
+   removed. (#3231)
+ - twisted.python._epoll bindings were removed; the epoll reactor now
+   uses the stdlib-provided epoll support. (#5847)
+ - The deprecated LENGTH, DATA, COMMA, and NUMBER NetstringReceiver
+   parser state attributes in t.protocols.basic are removed now.
+   (#6321)
+ - twisted.trial.runner.DryRunVisitor is now deprecated. Trial uses a
+   different method to handle --dry-run now. (#6333)
+ - twisted.python.hashlib is now deprecated in favor of hashlib from
+   stdlib. (#6342)
+ - twisted.web.server's Session.loopFactory, lifetime parameter of
+   Session.startCheckingExpiration and Session.checkExpired attributes,
+   deprecated since Twisted 9.0, have been removed. (#6514)
+
+Other
+-----
+ - #2380, #5197, #5228, #5386, #5459, #5578, #5801, #5952, #5955,
+   #5981, #6051, #6189, #6228, #6240, #6284, #6286, #6299, #6316,
+   #6353, #6354, #6368, #6377, #6378, #6381, #6389, #6400, #6403,
+   #6407, #6416, #6417, #6418, #6419, #6430, #6433, #6438, #6439,
+   #6440, #6441, #6444, #6459, #6465, #6468, #6477, #6480, #6498,
+   #6508, #6510, #6525
+
+
+Twisted Core 13.0.0 (2013-03-19)
+================================
+
+Features
+--------
+ - The twisted.protocols.ftp.FTP server now treats "LIST -La", "LIST
+   -al", and all other combinations of ordering and case of the "-l"
+   and "-a" flags the same: by ignoring them rather than treating them
+   as a pathname. (#1333)
+ - twisted.python.log.FileLogObserver now uses `datetime.strftime` to
+   format timestamps, adding support for microseconds and timezone
+   offsets to the `timeFormat` string. (#3513)
+ - trial now deterministically runs tests in the order in which they
+   were specified on the command line, instead of quasi-randomly
+   according to dictionary key ordering. (#5520)
+ - Cooperator.running can be used to determine the current cooperator
+   status. (#5937)
+ - twisted.python.modules.PythonPath now implements `__contains__` to
+   allow checking, by name, whether a particular module exists within
+   it. (#6198)
+ - twisted.application.internet.TimerService.stopService now waits for
+   any currently running call to finish before firing its deferred.
+   (#6290)
+
+Bugfixes
+--------
+ - twisted.protocols.ftp.FTP now recognizes all glob expressions
+   supported by fnmatch. (#4181)
+ - Constant values defined using twisted.python.constants can now be
+   set as attributes of other classes without triggering an unhandled
+   AttributeError from the constants implementation. (#5797)
+ - Fixed problem where twisted.names.client.Resolver was not closing
+   open file handles which can lead to an out of file descriptor error
+   on PyPy. (#6216)
+ - All reactors included in Twisted itself now gracefully handle a
+   rare case involving delayed calls scheduled very far in the future.
+   (#6259)
+ - twisted.trial.reporter.Reporter._trimFrames correctly removes
+   frames from twisted.internet.utils.runWithWarningsSuppressed again,
+   after being broke in #6009. (#6282)
+
+Improved Documentation
+----------------------
+ - A new "Deploying Twisted with systemd" howto document which
+   demonstrates how to start a Twisted service using systemd socket
+   activation. (#5601)
+ - New "Introduction to Deferreds" howto.  Old howto rebranded as
+   reference documentation. (#6180)
+ - "Components: Interfaces and Adapters" howto now uses
+   zope.interface's decorator-based API. (#6269)
+
+Deprecations and Removals
+-------------------------
+ - twisted.python.util.unsignedID and setIDFunction are deprecated
+   now. (#5544)
+ - twisted.python.zshcomp deprecated since 11.1.0 has now been
+   removed. Shell tab-completion is now handled by
+   twisted.python.usage. (#5767)
+ - python.runtime.Platform.isWinNT is deprecated now. Use
+   Platform.isWindows instead. (#5925)
+ - twisted.trial.util.findObject, deprecated since Twisted 10.1.0, has
+   been removed. (#6260)
+
+Other
+-----
+ - #2915, #4009, #4315, #5909, #5918, #5953, #6026, #6046, #6165,
+   #6201, #6207, #6208, #6211, #6235, #6236, #6247, #6265, #6272,
+   #6288, #6297, #6309, #6322, #6323, #6324, #6327, #6332, #6338,
+   #6349
+
+
+Twisted Core 12.3.0 (2012-12-20)
+================================
+
+Features
+--------
+ - The new -j flag to trial provides a trial runner supporting
+   multiple worker processes on the local machine, for parallel
+   testing. (#1784)
+ - twisted.internet.task.react, a new function, provides a simple API
+   for running the reactor until a single asynchronous function
+   completes. (#3270)
+ - twisted.protocols.ftp.FTP now handles FEAT and OPTS commands.
+   (#4515)
+ - trial now supports specifying a debugger other than pdb with the
+   --debugger command line flag. (#5794)
+ - twisted.python.util.runWithWarningsSuppressed has been added; it
+   runs a function with specified warning filters. (#5950)
+ - trial's skipping feature is now implemented in a way compatible with the
+   standard library unittest's runner. (#6006)
+ - The setup3.py script is now provided to provisionally support
+   building and installing an experimental, incomplete version of
+   Twisted in a Python 3 environment. (#6040)
+ - twisted.python.util.FancyStrMixin now supports arbitrary callables
+   to format attribute values. (#6063)
+ - Several new methods of twisted.trial.unittest.SynchronousTestCase
+   - `successResultOf`, `failureResultOf`, and `assertNoResult` -
+   have been added to make testing `Deferred`-using code easier.
+   (#6105)
+
+Bugfixes
+--------
+ - twisted.protocols.basic.LineReceiver now does not hit the maximum
+   stack recursion depth when the line and data mode is switched many
+   times. (#3050)
+ - twisted.protocols.ftp.FTPFileListProtocol fixed to support files
+   with space characters in their name. (#4986)
+ - gireactor and gtk3reactor no longer prevent gi.pygtkcompat from
+   working, and likewise can load if gi.pygtkcompat has previously
+   been enabled. (#5676)
+ - gtk2reactor now works again on FreeBSD, and perhaps other platforms
+   that were broken by gi interactions. (#5737)
+ - gireactor now works with certain older versions of gi that are
+   missing the threads_init() function. (#5790)
+ - Fixed a bug where twisted.python.sendmsg would sometimes fail with
+   obscure errors including "Message too long" or "Invalid argument"
+   on some 64-bit platforms. (#5867)
+ - twisted.internet.endpoints.TCP6ClientEndpoint now provides
+   twisted.internet.interfaces.IStreamClientEndpoint (#5876)
+ - twisted.internet.endpoints.AdoptedStreamServerEndpoint now provides
+   twisted.internet.interfaces.IStreamServerEndpoint. (#5878)
+ - Spawning subprocesses with PTYs now works on OS X 10.8. (#5880)
+ - twisted.internet.test.test_sigchld no longer incorrectly fails when
+   run after certain other tests. (#6161)
+ - twisted.internet.test.test_gireactor no longer fails when using
+   pygobject 3.4 and gtk 3.6 when X11 is unavailable. (#6170)
+ - twisted/python/sendmsg.c no longer fails to build on OpenBSD.
+   (#5907)
+
+Improved Documentation
+----------------------
+ - The endpoint howto now lists TCP IPv6 server endpoint in the list
+   of endpoints included with Twisted. (#5741)
+
+Deprecations and Removals
+-------------------------
+ - The minimum required version of zope.interface is now 3.6.0.
+   (#5683)
+ - twisted.internet.interfaces.IReactorArbitrary and
+   twisted.application.internet.GenericServer and GenericClient,
+   deprecated since Twisted 10.1, have been removed. (#5943)
+ - twisted.internet.interfaces.IFinishableConsumer, deprecated since
+   Twisted 11.1, has been removed. (#5944)
+ - twisted.python.failure has removed all support for string
+   exceptions. (#5948)
+ - assertTrue, assertEqual, and the other free-functions in
+   twisted.trial.unittest for writing assertions, deprecated since
+   prior to Twisted 2.3, have been removed. (#5963)
+ - Ports, connectors, wakers and other reactor-related types no longer
+   log a nice warning when they are erroneously pickled. Pickling of
+   such objects continues to be unsupported. (#5979)
+ - twisted.python.components.Componentized no longer inherits from
+   Versioned. (#5983)
+ - twisted.protocols.basic.NetstringReceiver.sendString no longer
+   accepts objects other than bytes; the removed behavior was
+   deprecated in Twisted 10.0. (#6025)
+ - The lookupRecord method of twisted.internet.interfaces.IResolver,
+   never implemented or called by Twisted, has been removed. (#6091)
+
+Other
+-----
+ - #4286, #4920, #5627, #5785, #5860, #5865, #5873, #5874, #5877,
+   #5879, #5884, #5885, #5886, #5891, #5896, #5897, #5899, #5900,
+   #5901, #5903, #5906, #5908, #5912, #5913, #5914, #5916, #5917,
+   #5931, #5932, #5933, #5934, #5935, #5939, #5942, #5947, #5956,
+   #5959, #5967, #5969, #5970, #5972, #5973, #5974, #5975, #5980,
+   #5985, #5986, #5990, #5995, #6002, #6003, #6005, #6007, #6009,
+   #6010, #6018, #6019, #6022, #6023, #6033, #6036, #6039, #6041,
+   #6043, #6052, #6053, #6054, #6055, #6060, #6061, #6065, #6067,
+   #6068, #6069, #6084, #6087, #6088, #6097, #6099, #6100, #6103,
+   #6109, #6114, #6139, #6140, #6141, #6142, #6157, #6158, #6159,
+   #6163, #6172, #6182, #6190, #6194, #6204, #6209
+
+
+Twisted Core 12.2.0 (2012-08-26)
+================================
+
+Features
+--------
+ - twisted.protocols.sip.MessageParser now handles multiline headers.
+   (#2198)
+ - twisted.internet.endpoints now provides StandardIOEndpoint, a
+   Standard I/O endpoint. (#4697)
+ - If a FTPCmdError occurs during twisted.protocols.ftp.FTP.ftp_RETR
+   sending the file (i.e. it is raised by the IReadFile.send method it
+   invokes), then it will use that to return an error to the client
+   rather than necessarily sending a 426 CNX_CLOSED_TXFR_ABORTED
+   error. (#4913)
+ - twisted.internet.interfaces.IReactorSocket.adoptStreamConnection is
+   implemented by some reactors as a way to add an existing
+   established connection to them. (#5570)
+ - twisted.internet.endpoints now provides TCP6ServerEndpoint, an IPv6
+   TCP server endpoint. (#5694)
+ - twisted.internet.endpoints now provides TCP6ClientEndpoint, an IPv6
+   TCP client endpoint. (#5695)
+ - twisted.internet.endpoints.serverFromString, the endpoint string
+   description feature, can now be used to create IPv6 TCP servers.
+   (#5699)
+ - twisted.internet.endpoints.serverFromString, the endpoint string
+   description feature, can now be used to create servers that run on
+   Standard I/O. (#5729)
+ - twisted.trial.unittest now offers SynchronousTestCase, a test case
+   base class that provides usability improvements but not reactor-
+   based testing features. (#5853)
+
+Bugfixes
+--------
+ - twisted.internet.Process.signalProcess now catches ESRCH raised by
+   os.kill call and raises ProcessExitedAlready instead. (#2420)
+ - TLSMemoryBIOProtocol (and therefore all SSL transports if pyOpenSSL
+   >= 0.10) now provides the interfaces already provided by the
+   underlying transport. (#5182)
+
+Deprecations and Removals
+-------------------------
+ - Python 2.5 is no longer supported. (#5553)
+ - The --extra option of trial, deprecated since 11.0, is removed now.
+   (#3374)
+ - addPluginDir and getPluginDirs in twisted.python.util are
+   deprecated now. (#4533)
+ - twisted.trial.runner.DocTestCase, deprecated in Twisted 8.0, has
+   been removed. (#5554)
+ - startKeepingErrors, flushErrors, ignoreErrors, and clearIgnores in
+   twisted.python.log (deprecated since Twisted 2.5) are removed now.
+   (#5765)
+ - unzip, unzipIter, and countZipFileEntries in
+   twisted.python.zipstream (deprecated in Twisted 11.0) are removed
+   now. (#5766)
+ - twisted.test.time_helpers, deprecated since Twisted 10.0, has been
+   removed. (#5820)
+
+Other
+-----
+ - #4244, #4532, #4930, #4999, #5129, #5138, #5385, #5521, #5655,
+   #5674, #5679, #5687, #5688, #5689, #5692, #5707, #5734, #5736,
+   #5745, #5746, #5747, #5749, #5784, #5816, #5817, #5818, #5819,
+   #5830, #5857, #5858, #5859, #5869, #5632
+
+
+Twisted Core 12.1.0 (2012-06-02)
+================================
+
+Features
+--------
+ - The kqueue reactor has been revived. (#1918)
+ - twisted.python.filepath now provides IFilePath, an interface for
+   file path objects. (#2176)
+ - New gtk3 and gobject-introspection reactors have been added.
+   (#4558)
+ - gtk and glib reactors now run I/O and scheduled events with lower
+   priority, to ensure the UI stays responsive. (#5067)
+ - IReactorTCP.connectTCP() can now accept IPv6 address literals
+   (although not hostnames) in order to support connecting to IPv6
+   hosts. (#5085)
+ - twisted.internet.interfaces.IReactorSocket, a new interface, is now
+   supported by some reactors to listen on sockets set up by external
+   software (eg systemd or launchd). (#5248)
+ - twisted.internet.endpoints.clientFromString now also supports
+   strings in the form of tcp:example.com:80 and ssl:example.com:4321
+   (#5358)
+ - twisted.python.constants.Flags now provides a way to define
+   collections of flags for bitvector-type uses. (#5384)
+ - The epoll(7)-based reactor is now the default reactor on Linux.
+   (#5478)
+ - twisted.python.runtime.platform.isLinux can be used to check if
+   Twisted is running on Linux. (#5491)
+ - twisted.internet.endpoints.serverFromString now recognizes a
+   "systemd" endpoint type, for listening on a server port inherited
+   from systemd. (#5575)
+ - Connections created using twisted.internet.interfaces.IReactorUNIX
+   now support sending and receiving file descriptors between
+   different processes. (#5615)
+ - twisted.internet.endpoints.clientFromString now supports UNIX
+   client endpoint strings with the path argument specified like
+   "unix:/foo/bar" in addition to the old style, "unix:path=/foo/bar".
+   (#5640)
+ - twisted.protocols.amp.Descriptor is a new AMP argument type which
+   supports passing file descriptors as AMP command arguments over
+   UNIX connections. (#5650)
+
+Bugfixes
+--------
+ - twisted.internet.abstract.FileDescriptor implements
+   twisted.internet.interfaces.IPushProducer instead of
+   twisted.internet.interfaces.IProducer.
+   twisted.internet.iocpreactor.abstract.FileHandle implements
+   twisted.internet.interfaces.IPushProducer instead of
+   twisted.internet.interfaces.IProducer. (#4386)
+ - The epoll reactor now supports reading/writing to regular files on
+   stdin/stdout. (#4429)
+ - Calling .cancel() on any Twisted-provided client endpoint
+   (TCP4ClientEndpoint, UNIXClientEndpoint, SSL4ClientEndpoint) now
+   works as documented, rather than logging an AlreadyCalledError.
+   (#4710)
+ - A leak of OVERLAPPED structures in some IOCP error cases has been
+   fixed. (#5372)
+ - twisted.internet._pollingfile._PollableWritePipe now checks for
+   outgoing unicode data in write() and writeSequence() instead of
+   checkWork(). (#5412)
+
+Improved Documentation
+----------------------
+ - "Working from Twisted's Subversion repository" links to UQDS and
+   Combinator are now updated. (#5545)
+ - Added tkinterdemo.py, an example of Tkinter integration. (#5631)
+
+Deprecations and Removals
+-------------------------
+ - The 'unsigned' flag to twisted.scripts.tap2rpm.MyOptions is now
+   deprecated.  (#4086)
+ - Removed the unreachable _fileUrandom method from
+   twisted.python.randbytes.RandomFactory. (#4530)
+ - twisted.persisted.journal is removed, deprecated since Twisted
+   11.0. (#4805)
+ - Support for pyOpenSSL 0.9 and older is now deprecated.  pyOpenSSL
+   0.10 or newer will soon be required in order to use Twisted's SSL
+   features. (#4974)
+ - backwardsCompatImplements and fixClassImplements are removed from
+   twisted.python.components, deprecated in 2006. (#5034)
+ - twisted.python.reflect.macro was removed, deprecated since Twisted
+   8.2. (#5035)
+ - twisted.python.text.docstringLStrip, deprecated since Twisted
+   10.2.0, has been removed (#5036)
+ - Removed the deprecated dispatch and dispatchWithCallback methods
+   from twisted.python.threadpool.ThreadPool (deprecated since 8.0)
+   (#5037)
+ - twisted.scripts.tapconvert is now deprecated. (#5038)
+ - twisted.python.reflect's Settable, AccessorType, PropertyAccessor,
+   Accessor, OriginalAccessor and Summer are now deprecated.  (#5451)
+ - twisted.python.threadpool.ThreadSafeList (deprecated in 10.1) is
+   removed. (#5473)
+ - twisted.application.app.initialLog, deprecated since Twisted 8.2.0,
+   has been removed. (#5480)
+ - twisted.spread.refpath was deleted, deprecated since Twisted 9.0.
+   (#5482)
+ - twisted.python.otp, deprecated since 9.0, is removed. (#5493)
+ - Removed `dsu`, `moduleMovedForSplit`, and `dict` from
+   twisted.python.util (deprecated since 10.2) (#5516)
+
+Other
+-----
+ - #2723, #3114, #3398, #4388, #4489, #5055, #5116, #5242, #5380,
+   #5392, #5447, #5457, #5484, #5489, #5492, #5494, #5512, #5523,
+   #5558, #5572, #5583, #5593, #5620, #5621, #5623, #5625, #5637,
+   #5652, #5653, #5656, #5657, #5660, #5673
+
+
+Twisted Core 12.0.0 (2012-02-10)
+================================
+
+Features
+--------
+ - The interface argument to IReactorTCP.listenTCP may now be an IPv6
+   address literal, allowing the creation of IPv6 TCP servers. (#5084)
+ - twisted.python.constants.Names now provides a way to define
+   collections of named constants, similar to the "enum type" feature
+   of C or Java. (#5382)
+ - twisted.python.constants.Values now provides a way to define
+   collections of named constants with arbitrary values. (#5383)
+
+Bugfixes
+--------
+ - Fixed an obscure case where connectionLost wasn't called on the
+   protocol when using half-close. (#3037)
+ - UDP ports handle socket errors better on Windows. (#3396)
+ - When idle, the gtk2 and glib2 reactors no longer wake up 10 times a
+   second. (#4376)
+ - Prevent a rare situation involving TLS transports, where a producer
+   may be erroneously left unpaused. (#5347)
+ - twisted.internet.iocpreactor.iocpsupport now has fewer 64-bit
+   compile warnings. (#5373)
+ - The GTK2 reactor is now more responsive on Windows. (#5396)
+ - TLS transports now correctly handle producer registration after the
+   connection has been lost. (#5439)
+ - twisted.protocols.htb.Bucket now empties properly with a non-zero
+   drip rate. (#5448)
+ - IReactorSSL and ITCPTransport.startTLS now synchronously propagate
+   errors from the getContext method of context factories, instead of
+   being capturing them and logging them as unhandled. (#5449)
+
+Improved Documentation
+----------------------
+ - The multicast documentation has been expanded. (#4262)
+ - twisted.internet.defer.Deferred now documents more return values.
+   (#5399)
+ - Show a better starting page at
+   http://twistedmatrix.com/documents/current (#5429)
+
+Deprecations and Removals
+-------------------------
+ - Remove the deprecated module twisted.enterprise.reflector. (#4108)
+ - Removed the deprecated module twisted.enterprise.row. (#4109)
+ - Remove the deprecated module twisted.enterprise.sqlreflector.
+   (#4110)
+ - Removed the deprecated module twisted.enterprise.util, as well as
+   twisted.enterprise.adbapi.safe. (#4111)
+ - Python 2.4 is no longer supported on any platform. (#5060)
+ - Removed printTraceback and noOperation from twisted.spread.pb,
+   deprecated since Twisted 8.2. (#5370)
+
+Other
+-----
+ - #1712, #2725, #5284, #5325, #5331, #5362, #5364, #5371, #5407,
+   #5427, #5430, #5431, #5440, #5441
+
+
+Twisted Core 11.1.0 (2011-11-15)
+================================
+
+Features
+--------
+ - TCP and TLS transports now support abortConnection() which, unlike
+   loseConnection(), always closes the connection immediately. (#78)
+ - Failures received over PB when tracebacks are disabled now display
+   the wrapped exception value when they are printed. (#581)
+ - twistd now has a --logger option, allowing the use of custom log
+   observers. (#638)
+ - The default reactor is now poll(2) on platforms that support it.
+   (#2234)
+ - twisted.internet.defer.inlineCallbacks(f) now raises TypeError when
+   f returns something other than a generator or uses returnValue as a
+   non-generator. (#2501)
+ - twisted.python.usage.Options now supports performing Zsh tab-
+   completion on demand. Tab-completion for Twisted commands is
+   supported out-of-the-box on any recent zsh release. Third-party
+   commands may take advantage of zsh completion by copying the
+   provided stub file. (#3078)
+ - twisted.protocols.portforward now uses flow control between its
+   client and server connections to avoid having to buffer an
+   unbounded amount of data when one connection is slower than the
+   other. (#3350)
+ - On Windows, the select, IOCP, and Gtk2 reactors now implement
+   IReactorWin32Events (most notably adding support for serial ports
+   to these reactors). (#4862)
+ - twisted.python.failure.Failure no longer captures the state of
+   locals and globals of all stack frames by default, because it is
+   expensive to do and rarely used.  You can pass captureVars=True to
+   Failure's constructor if you want to capture this data. (#5011)
+ - twisted.web.client now supports automatic content-decoding via
+   twisted.web.client.ContentDecoderAgent, gzip being supported for
+   now. (#5053)
+ - Protocols may now implement ILoggingContext to customize their
+   logging prefix.  twisted.protocols.policies.ProtocolWrapper and the
+   endpoints wrapper now take advantage of this feature to ensure the
+   application protocol is still reflected in logs. (#5062)
+ - AMP's raw message-parsing performance was increased by
+   approximately 12%. (#5075)
+ - Twisted is now installable on PyPy, because some incompatible C
+   extensions are no longer built. (#5158)
+ - twisted.internet.defer.gatherResults now accepts a consumeErrors
+   parameter, with the same meaning as the corresponding argument for
+   DeferredList. (#5159)
+ - Added RMD (remove directory) support to the FTP client. (#5259)
+ - Server factories may now implement ILoggingContext to customize the
+   name that is logged when the reactor uses one to start listening on
+   a port. (#5292)
+ - The implementations of ITransport.writeSequence will now raise
+   TypeError if passed unicode strings. (#3896)
+ - iocp reactor now operates correctly on 64 bit Python runtimes.
+   (#4669)
+ - twistd ftp now supports the cred plugin. (#4752)
+ - twisted.python.filepath.FilePath now has an API to retrieve the
+   permissions of the underlying file, and two methods to determine
+   whether it is a block device or a socket.  (#4813)
+ - twisted.trial.unittest.TestCase is now compatible with Python 2.7's
+   assertDictEqual method. (#5291)
+
+Bugfixes
+--------
+ - The IOCP reactor now does not try to erroneously pause non-
+   streaming producers. (#745)
+ - Unicode print statements no longer blow up when using Twisted's
+   logging system. (#1990)
+ - Process transports on Windows now support the `writeToChild` method
+   (but only for stdin). (#2838)
+ - Zsh tab-completion of Twisted commands no longer relies on
+   statically generated files, but instead generates results on-the-
+   fly - ensuring accurate tab-completion for the version of Twisted
+   actually in use. (#3078)
+ - LogPublishers don't use the global log publisher for reporting
+   broken observers anymore. (#3307)
+ - trial and twistd now add the current directory to sys.path even
+   when running as root or on Windows. mktap, tapconvert, and
+   pyhtmlizer no longer add the current directory to sys.path. (#3526)
+ - twisted.internet.win32eventreactor now stops immediately if
+   reactor.stop() is called from an IWriteDescriptor.doWrite
+   implementation instead of delaying shutdown for an arbitrary period
+   of time. (#3824)
+ - twisted.python.log now handles RuntimeErrors more gracefully, and
+   always restores log observers after an exception is raised. (#4379)
+ - twisted.spread now supports updating new-style RemoteCache
+   instances. (#4447)
+ - twisted.spread.pb.CopiedFailure will no longer be thrown into a
+   generator as a (deprecated) string exception but as a
+   twisted.spread.pb.RemoteException. (#4520)
+ - trial now gracefully handles the presence of objects in sys.modules
+   which respond to attributes being set on them by modifying
+   sys.modules. (#4748)
+ - twisted.python.deprecate.deprecatedModuleAttribute no longer
+   spuriously warns twice when used to deprecate a module within a
+   package.  This should make it easier to write unit tests for
+   deprecated modules. (#4806)
+ - When pyOpenSSL 0.10 or newer is available, SSL support now uses
+   Twisted for all I/O and only relies on OpenSSL for cryptography,
+   avoiding a number of tricky, potentially broken edge cases. (#4854)
+ - IStreamClientEndpointStringParser.parseStreamClient now correctly
+   describes how it will be called by clientFromString (#4956)
+ - twisted.internet.defer.Deferreds are 10 times faster at handling
+   exceptions raised from callbacks, except when setDebugging(True)
+   has been called. (#5011)
+ - twisted.python.filepath.FilePath.copyTo now raises OSError(ENOENT)
+   if the source path being copied does not exist. (#5017)
+ - twisted.python.modules now supports iterating over namespace
+   packages without yielding duplicates. (#5030)
+ - reactor.spawnProcess now uses the resource module to guess the
+   maximum possible open file descriptor when /dev/fd exists but gives
+   incorrect results. (#5052)
+ - The memory BIO TLS/SSL implementation now supports producers
+   correctly. (#5063)
+ - twisted.spread.pb.Broker no longer creates an uncollectable
+   reference cycle when the logout callback holds a reference to the
+   client mind object. (#5079)
+ - twisted.protocols.tls, and SSL/TLS support in general, now do clean
+   TLS close alerts when disconnecting. (#5118)
+ - twisted.persisted.styles no longer uses the deprecated allYourBase
+   function (#5193)
+ - Stream client endpoints now start (doStart) and stop (doStop) the
+   factory passed to the connect method, instead of a different
+   implementation-detail factory. (#5278)
+ - SSL ports now consistently report themselves as SSL rather than TCP
+   when logging their close message. (#5292)
+ - Serial ports now deliver connectionLost to the protocol when
+   closed. (#3690)
+ - win32eventreactor now behaves better in certain rare cases in which
+   it previously would have failed to deliver connection lost
+   notification to a protocol. (#5233)
+
+Improved Documentation
+----------------------
+ - Test driven development with Twisted and Trial is now documented in
+   a how-to. (#2443)
+ - A new howto-style document covering twisted.protocols.amp has been
+   added. (#3476)
+ - Added sample implementation of a Twisted push producer/consumer
+   system. (#3835)
+ - The "Deferred in Depth" tutorial now includes accurate output for
+   the deferred_ex2.py example. (#3941)
+ - The server howto now covers the Factory.buildProtocol method.
+   (#4761)
+ - The testing standard and the trial tutorial now recommend the
+   `assertEqual` form of assertions rather than the `assertEquals` to
+   coincide with the standard library unittest's preference. (#4989)
+ - twisted.python.filepath.FilePath's methods now have more complete
+   API documentation (docstrings). (#5027)
+ - The Clients howto now uses buildProtocol more explicitly, hopefully
+   making it easier to understand where Protocol instances come from.
+   (#5044)
+
+Deprecations and Removals
+-------------------------
+ - twisted.internet.interfaces.IFinishableConsumer is now deprecated.
+   (#2661)
+ - twisted.python.zshcomp is now deprecated in favor of the tab-
+   completion system in twisted.python.usage (#3078)
+ - The unzip and unzipIter functions in twisted.python.zipstream are
+   now deprecated. (#3666)
+ - Options.optStrings, deprecated for 7 years, has been removed.  Use
+   Options.optParameters instead. (#4552)
+ - Removed the deprecated twisted.python.dispatch module. (#5023)
+ - Removed the twisted.runner.procutils module that was deprecated in
+   Twisted 2.3. (#5049)
+ - Removed twisted.trial.runner.DocTestSuite, deprecated in Twisted
+   8.0. (#5111)
+ - twisted.scripts.tkunzip is now deprecated. (#5140)
+ - Deprecated option --password-file in twistd ftp (#4752)
+ - mktap, deprecated since Twisted 8.0, has been removed. (#5293)
+
+Other
+-----
+ - #1946, #2562, #2674, #3074, #3077, #3776, #4227, #4539, #4587,
+   #4619, #4624, #4629, #4683, #4690, #4702, #4778, #4944, #4945,
+   #4949, #4952, #4957, #4979, #4980, #4987, #4990, #4994, #4995,
+   #4997, #5003, #5008, #5009, #5012, #5019, #5042, #5046, #5051,
+   #5065, #5083, #5088, #5089, #5090, #5101, #5108, #5109, #5112,
+   #5114, #5125, #5128, #5131, #5136, #5139, #5144, #5146, #5147,
+   #5156, #5160, #5165, #5191, #5205, #5215, #5217, #5218, #5223,
+   #5243, #5244, #5250, #5254, #5261, #5266, #5273, #5299, #5301,
+   #5302, #5304, #5308, #5311, #5321, #5322, #5327, #5328, #5332,
+   #5336
+
+
+Twisted Core 11.0.0 (2011-04-01)
+================================
+
+Features
+--------
+ - The reactor is not restartable, but it would previously fail to
+   complain. Now, when you restart an unrestartable reactor, you get
+   an exception. (#2066)
+ - twisted.plugin now only emits a short log message, rather than a
+   full traceback, if there is a problem writing out the dropin cache
+   file. (#2409)
+ - Added a 'replacement' parameter to the
+   'twisted.python.deprecate.deprecated' decorator.  This allows
+   deprecations to unambiguously specify what they have been
+   deprecated in favor of. (#3047)
+ - Added access methods to FilePath for FilePath.statinfo's st_ino,
+   st_dev, st_nlink, st_uid, and st_gid fields.  This is in
+   preparation for the deprecation of FilePath.statinfo. (#4712)
+ - IPv4Address and UNIXAddress now have a __hash__ method. (#4783)
+ - twisted.protocols.ftp.FTP.ftp_STOR now catches `FTPCmdError`s
+   raised by the file writer, and returns the error back to the
+   client. (#4909)
+
+Bugfixes
+--------
+ - twistd will no longer fail if a non-root user passes --uid 'myuid'
+   as a command-line argument. Instead, it will emit an error message.
+   (#3172)
+ - IOCPReactor now sends immediate completions to the main loop
+   (#3233)
+ - trial can now load test methods from multiple classes, even if the
+   methods all happen to be inherited from the same base class.
+   (#3383)
+ - twisted.web.server will now produce a correct Allow header when a
+   particular render_FOO method is missing. (#3678)
+ - HEAD requests made to resources whose HEAD handling defaults to
+   calling render_GET now always receive a response with no body.
+   (#3684)
+ - trial now loads decorated test methods whether or not the decorator
+   preserves the original method name. (#3909)
+ - t.p.amp.AmpBox.serialize will now correctly consistently complain
+   when being fed Unicode. (#3931)
+ - twisted.internet.wxreactor now supports stopping more reliably.
+   (#3948)
+ - reactor.spawnProcess on Windows can now handle ASCII-encodable
+   Unicode strings in the system environment (#3964)
+ - When C-extensions are not complied for twisted, on python2.4, skip
+   a test in twisted.internet.test.test_process that may hang due to a
+   SIGCHLD related problem. Running 'python setup.py build_ext
+   --inplace' will compile the extension and cause the test to both
+   run and pass. (#4331)
+ - twisted.python.logfile.LogFile now raises a descriptive exception
+   when passed a log  directoy which does not exist. (#4701)
+ - Fixed a bug where Inotify will fail to add a filepatch to watchlist
+   after it has been added/ignored previously. (#4708)
+ - IPv4Address and UNIXAddress object comparison operators fixed
+   (#4817)
+ - twisted.internet.task.Clock now sorts the list of pending calls
+   before and after processing each call (#4823)
+ - ConnectionLost is now in twisted.internet.error.__all__ instead of
+   twisted.words.protocols.jabber.xmlstream.__all__. (#4856)
+ - twisted.internet.process now detects the most appropriate mechanism
+   to use for detecting the open file descriptors on a system, getting
+   Twisted working on FreeBSD even when fdescfs is not mounted.
+   (#4881)
+ - twisted.words.services referenced nonexistent
+   twisted.words.protocols.irc.IRC_NOSUCHCHANNEL. This has been fixed.
+   Related code has also received test cases. (#4915)
+
+Improved Documentation
+----------------------
+ - The INSTALL file now lists all of Twisted's dependencies. (#967)
+ - Added the stopService and startService methods to all finger
+   example files. (#3375)
+ - Missing reactor.run() calls were added in the UDP and client howto
+   documents. (#3834)
+ - The maxRetries attribute of
+   twisted.internet.protocols.RetryingClientFactory now has API
+   documentation. (#4618)
+ - Lore docs pointed to a template that no longer existed, this has
+   been fixed. (#4682)
+ - The `servers` argument to `twisted.names.client.createResolver` now
+   has more complete API documentation. (#4713)
+ - Linked to the Twisted endpoints tutorial from the Twisted core
+   howto list.  (#4773)
+ - The Endpoints howto now links to the API documentation. (#4774)
+ - The Quotes howto is now more clear in its PYTHONPATH setup
+   instructions. (#4785)
+ - The API documentation for DeferredList's fireOnOneCallback
+   parameter now gives the correct order of the elements of the result
+   tuple. (#4882)
+
+Deprecations and Removals
+-------------------------
+ - returning a value other than None from IProtocol.dataReceived was
+   deprecated (#2491)
+ - Deprecated the --extra option in trial.  (#3372)
+ - twisted.protocols._c_urlarg has been removed. (#4162)
+ - Remove the --report-profile option for twistd, deprecated since
+   2007. (#4236)
+ - Deprecated twisted.persisted.journal.  This library is no longer
+   maintained.  (#4298)
+ - Removed twisted.protocols.loopback.loopback, which has been
+   deprecated since Twisted 2.5. (#4547)
+ - __getitem__ __getslice__ and __eq__ (tuple comparison, indexing)
+   removed from twisted.internet.address.IPv4Address and
+   twisted.internet.address.UNIXAddress classes UNIXAddress and
+   IPv4Address properties _bwHack are now deprecated in
+   twisted.internet.address (#4817)
+ - twisted.python.reflect.allYourBase is now no longer used, replaced
+   with inspect.getmro (#4928)
+ - allYourBase and accumulateBases are now deprecated in favor of
+   inspect.getmro. (#4946)
+
+Other
+-----
+ - #555, #1982, #2618, #2665, #2666, #4035, #4247, #4567, #4636,
+   #4717, #4733, #4750, #4821, #4842, #4846, #4853, #4857, #4858,
+   #4863, #4864, #4865, #4866, #4867, #4868, #4869, #4870, #4871,
+   #4872, #4873, #4874, #4875, #4876, #4877, #4878, #4879, #4905,
+   #4906, #4908, #4934, #4955, #4960
+
+
+Twisted Core 10.2.0 (2010-11-29)
+================================
+
+Features
+--------
+ - twisted.internet.cfreactor has been significantly improved.  It now
+   runs, and passes, the test suite.  Many, many bugs in it have been
+   fixed, including several segfaults, as it now uses PyObjC and
+   longer requires C code in Twisted. (#1833)
+ - twisted.protocols.ftp.FTPRealm now accepts a parameter to override
+   "/home" as the container for user directories.  The new
+   BaseFTPRealm class in the same module also allows easy
+   implementation of custom user directory schemes. (#2179)
+ - twisted.python.filepath.FilePath and twisted.python.zippath.ZipPath
+   now have a descendant method to simplify code which calls the child
+   method repeatedly. (#3169)
+ - twisted.python.failure._Frame objects now support fake f_locals
+   attribute. (#4045)
+ - twisted.internet.endpoints now has 'serverFromString' and
+   'clientFromString' APIs for constructing endpoints from descriptive
+   strings. (#4473)
+ - The default trial reporter now combines reporting of tests with the
+   same result to shorten its summary output. (#4487)
+ - The new class twisted.protocols.ftp.SystemFTPRealm implements an
+   FTP realm which uses system accounts to select home directories.
+   (#4494)
+ - twisted.internet.reactor.spawnProcess now wastes less time trying
+   to close non-existent file descriptors on POSIX platforms. (#4522)
+ - twisted.internet.win32eventreactor now declares that it implements
+   a new twisted.internet.interfaces.IReactorWin32Events interface.
+   (#4523)
+ - twisted.application.service.IProcess now documents its attributes
+   using zope.interface.Attribute. (#4534)
+ - twisted.application.app.ReactorSelectionMixin now saves the value
+   of the --reactor option in the "reactor" key of the options object.
+   (#4563)
+ - twisted.internet.endpoints.serverFromString and clientFromString,
+   and therefore also twisted.application.strports.service, now
+   support plugins, so third parties may implement their own endpoint
+   types. (#4695)
+
+Bugfixes
+--------
+ - twisted.internet.defer.Deferred now handles chains iteratively
+   instead of recursively, preventing RuntimeError due to excessive
+   recursion when handling long Deferred chains. (#411)
+ - twisted.internet.cfreactor now works with trial. (#2556)
+ - twisted.enterprise.adbapi.ConnectionPool.close may now be called
+   even if the connection pool has not yet been started.  This will
+   prevent the pool from ever starting. (#2680)
+ - twisted.protocols.basic.NetstringReceiver raises
+   NetstringParseErrors for  invalid netstrings now. It handles empty
+   netstrings ("0:,") correctly, and  the performance for receiving
+   netstrings has been improved. (#4378)
+ - reactor.listenUDP now returns an object which declares that it
+   implements IListeningPort. (#4462)
+ - twisted.python.randbytes no longer uses PyCrypto as a secure random
+   number source (since it is not one). (#4468)
+ - twisted.internet.main.installReactor now blocks installation of
+   another reactor when using python -O (#4476)
+ - twisted.python.deprecate.deprecatedModuleAttribute now emits only
+   one warning when used to deprecate a package attribute which is a
+   module. (#4492)
+ - The "brief" mode of twisted.python.failure.Failure.getTraceback now
+   handles exceptions raised by the underlying exception's __str__
+   method. (#4501)
+ - twisted.words.xish.domish now correctly parses XML with namespaces
+   which include whitespace. (#4503)
+ - twisted.names.authority.FileAuthority now generates correct
+   negative caching hints, marks its referral NS RRs as non-
+   authoritative, and correctly generates referrals for ALL_RECORDS
+   requests. (#4513)
+ - twisted.internet.test.reactormixins.ReactorBuilder's attribute
+   `requiredInterface` (which should an interface) is now
+   `requiredInterfaces` (a list of interfaces) as originally described
+   per the documentation. (#4527)
+ - twisted.python.zippath.ZipPath.__repr__ now correctly formats paths
+   with ".." in them (by including it). (#4535)
+ - twisted.names.hosts.searchFileFor has been fixed against
+   refcounting dependency. (#4540)
+ - The POSIX process transports now declare that they implement
+   IProcessTransport. (#4585)
+ - Twisted can now be built with the LLVM clang compiler, with
+   'CC=clang python setup.py build'.  C code that caused errors with
+   this compiler has been removed. (#4652)
+ - trial now puts coverage data in the path specified by --temp-
+   directory, even if that option comes after --coverage on the
+   command line. (#4657)
+ - The unregisterProducer method of connection-oriented transports
+   will now cause the connection to be closed if there was a prior
+   call to loseConnection. (#4719)
+ - Fixed an issue where the new StreamServerEndpointService didn't log
+   listen errors.  (This was a bug not present in any previous
+   releases, as this class is new.) (#4731)
+
+Improved Documentation
+----------------------
+ - The trial man page now documents the meaning of the final line of
+   output of the default reporter. (#1384)
+ - The API documentation for twisted.internet.defer.DeferredList now
+   goes into more depth about the effects each of the __init__ flags
+   that class accepts. (#3595)
+ - There is now narrative documentation for the endpoints APIs, in the
+   'endpoints' core howto, as well as modifications to the 'writing
+   clients' and 'writing servers' core howto documents to indicate
+   that endpoints are now the preferred style of listening and
+   connecting. (#4478)
+ - trial's man page now documents the --disablegc option in more
+   detail. (#4511)
+ - trial's coverage output format is now documented in the trial man
+   page. (#4512)
+ - Broken links and spelling errors in the finger tutorial are now
+   fixed. (#4516)
+ - twisted.internet.threads.blockingCallFromThread's docstring is now
+   explicit about Deferred support. (#4517)
+ - twisted.python.zippath.ZipPath.child now documents its handling of
+   ".." (which is not special, making it different from
+   FilePath.child). (#4535)
+ - The API docs for twisted.internet.defer.Deferred now cover several
+   more of its (less interesting) attributes. (#4538)
+ - LineReceiver, NetstringReceiver, and IntNStringReceiver from
+   twisted.protocols.basic now have improved API documentation for
+   read callbacks and write methods. (#4542)
+ - Tidied up the Twisted Conch documentation for easier conversion.
+   (#4566)
+ - Use correct Twisted version for when cancellation was introduced in
+   the Deferred docstring. (#4614)
+ - The logging howto is now more clear about how the standard library
+   logging module and twisted.python.log can be integrated. (#4642)
+ - The finger tutorial still had references to .tap files. This
+   reference has now been removed. The documentation clarifies
+   "finger.tap" is a module and not a filename. (#4679)
+ - The finger tutorial had a broken link to the
+   twisted.application.service.Service class, which is now fixed.
+   Additionally, a minor typo ('verison') was fixed.  (#4681)
+ - twisted.protocols.policies.TimeoutMixin now has clearer API
+   documentation. (#4684)
+
+Deprecations and Removals
+-------------------------
+ - twisted.internet.defer.Deferred.setTimeout has been removed, after
+   being deprecated since Twisted 2.0. (#1702)
+ - twisted.internet.interfaces.IReactorTime.cancelCallLater
+   (deprecated since  2007) and
+   twisted.internet.interfaces.base.ReactorBase.cancelCallLater
+   (deprecated since 2002) have been removed. (#4076)
+ - Removed twisted.cred.util.py, which has been deprecated since
+   Twisted 8.3. (#4107)
+ - twisted.python.text.docstringLStrip was deprecated. (#4328)
+ - The module attributes `LENGTH`, `DATA`, `COMMA`, and `NUMBER` of
+   twisted.protocols.basic (previously used by `NetstringReceiver`)
+   are now deprecated. (#4541)
+ - twisted.protocols.basic.SafeNetstringReceiver, deprecated since
+   2001 (before Twisted 2.0), was removed. (#4546)
+ - twisted.python.threadable.whenThreaded, deprecated since Twisted
+   2.2.0, has been removed. (#4550)
+ - twisted.python.timeoutqueue, deprecated since Twisted 8.0, has been
+   removed. (#4551)
+ - iocpreactor transports can no longer be pickled. (#4617)
+
+Other
+-----
+ - #4300, #4475, #4477, #4504, #4556, #4562, #4564, #4569, #4608,
+   #4616, #4617, #4626, #4630, #4650, #4705
+
+
+Twisted Core 10.1.0 (2010-06-27)
+================================
+
+Features
+--------
+ - Add linux inotify support, allowing monitoring of file system
+   events. (#972)
+ - Deferreds now support cancellation. (#990)
+ - Added new "endpoint" interfaces in twisted.internet.interfaces,
+   which abstractly describe stream transport endpoints which can be
+   listened on or connected to.  Implementations for TCP and SSL
+   clients and servers are present in twisted.internet.endpoints.
+   Notably, client endpoints' connect() methods return cancellable
+   Deferreds, so code written to use them can bypass the awkward
+   "ClientFactory.clientConnectionFailed" and
+   "Connector.stopConnecting" methods, and handle errbacks from or
+   cancel the returned deferred, respectively. (#1442)
+ - twisted.protocols.amp.Integer's documentation now clarifies that
+   integers of arbitrary size are supported and that the wire format
+   is a base-10 representation. (#2650)
+ - twisted.protocols.amp now includes support for transferring
+   timestamps (amp.DateTime) and decimal values (amp.Decimal). (#2651)
+ - twisted.protocol.ftp.IWriteFile now has a close() method, which can
+   return a Deferred. Previously a STOR command would finish
+   immediately upon the receipt of the last byte of the uploaded file.
+   With close(), the backend can delay the finish until it has
+   performed some other slow action (like storing the data to a
+   virtual filesystem). (#3462)
+ - FilePath now calls os.stat() only when new status information is
+   required, rather than immediately when anything changes.  For some
+   applications this may result in fewer stat() calls.  Additionally,
+   FilePath has a new method, 'changed', which applications may use to
+   indicate that the FilePath may have been changed on disk and
+   therefore the next status information request must  fetch a new
+   stat result.  This is useful if external systems, such as C
+   libraries, may have changed files that Twisted applications are
+   referencing via a FilePath. (#4130)
+ - Documentation improvements are now summarized in the NEWS file.
+   (#4224)
+ - twisted.internet.task.deferLater now returns a cancellable
+   Deferred. (#4318)
+ - The connect methods of twisted.internet.protocol.ClientCreator now
+   return cancellable Deferreds. (#4329)
+ - twisted.spread.pb now has documentation covering some of its
+   limitations. (#4402)
+ - twisted.spread.jelly now supports jellying and unjellying classes
+   defined with slots if they also implement __getstate__ and
+   __setstate__. (#4430)
+ - twisted.protocols.amp.ListOf arguments can now be specified as
+   optional. (#4474)
+
+Bugfixes
+--------
+ - On POSIX platforms, reactors now support child processes in a way
+   which doesn't cause other syscalls to sometimes fail with EINTR (if
+   running on Python 2.6 or if Twisted's extension modules have been
+   built). (#733)
+ - Substrings are escaped before being passed to a regular expression
+   for searching to ensure that they don't get interpreted as part of
+   the expression. (#1893)
+ - twisted.internet.stdio now supports stdout being redirected to a
+   normal file (except when using epollreactor). (#2259)
+ -  (#2367)
+ - The tap2rpm script now works with modern versions of RPM. (#3292)
+ - twisted.python.modules.walkModules will now handle packages
+   explicitly precluded from importing by a None placed in
+   sys.modules. (#3419)
+ - ConnectedDatagramPort now uses stopListening when a connection
+   fails instead of the deprecated loseConnection. (#3425)
+ - twisted.python.filepath.FilePath.setContent is now safe for
+   multiple processes to use concurrently. (#3694)
+ - The mode argument to the methods of
+   twisted.internet.interfaces.IReactorUNIX is no longer deprecated.
+   (#4078)
+ - Do not include blacklisted projects when generating NEWS. (#4190)
+ - When generating NEWS for a project that had no significant changes,
+   include a section for that project and say that there were no
+   interesting changes. (#4191)
+ - Redundant 'b' mode is no longer passed to calls to FilePath.open
+   and FilePath.open itself now corrects the mode when multiple 'b'
+   characters are present, ensuring only one instance of 'b' is
+   provided, as a workaround for http://bugs.python.org/issue7686.
+   (#4207)
+ - HTML tags inside <pre> tags in the code snippets are now escaped.
+   (#4336)
+ - twisted.protocols.amp.CommandLocator now allows subclasses to
+   override responders inherited from base classes. (#4343)
+ - Fix a bunch of small but important defects in the INSTALL, README
+   and so forth. (#4346)
+ - The poll, epoll, glib2, and gtk2 reactors now all support half-
+   close in the twisted.internet.stdio.StandardIO transport. (#4352)
+ - twisted.application.internet no longer generates an extra and
+   invalid entry in its __all__ list for the nonexistent
+   MulticastClient. (#4373)
+ - Choosing a reactor documentation now says that only the select-
+   based reactor is a truly cross-platform reactor. (#4384)
+ - twisted.python.filepath.FilePath now no longer leaves files open,
+   to be closed by the garbage collector, when an exception is raised
+   in the implementation of setContent, getContent, or copyTo. (#4400)
+ - twisted.test.proto_helpers.StringTransport's getHost and getPeer
+   methods now return IPv4Address instances by default. (#4401)
+ - twisted.protocols.amp.BinaryBoxProtocol will no longer deliver an
+   empty string to a switched-to protocol's dataReceived method when
+   the BinaryBoxProtocol's buffer happened to be empty at the time of
+   the protocol switch. (#4405)
+ - IReactorUNIX.listenUNIX implementations now support abstract
+   namespace sockets on Linux. (#4421)
+ - Files opened with FilePath.create() (and therefore also files
+   opened via FilePath.open() on a path with alwaysCreate=True) will
+   now be opened in binary mode as advertised, so that they will
+   behave portably across platforms. (#4453)
+ - The subunit reporter now correctly reports import errors as errors,
+   rather than by crashing with an unrelated error. (#4496)
+
+Improved Documentation
+----------------------
+ - The finger tutorial example which introduces services now avoids
+   double-starting the loop to re-read its users file. (#4420)
+ - twisted.internet.defer.Deferred.callback's docstring now mentions
+   the implicit chaining feature. (#4439)
+ - doc/core/howto/listing/pb/chatclient.py can now actually send a
+   group message. (#4459)
+
+Deprecations and Removals
+-------------------------
+ - twisted.internet.interfaces.IReactorArbitrary,
+   twisted.application.internet.GenericServer, and
+   twisted.application.internet.GenericClient are now deprecated.
+   (#367)
+ - twisted.internet.gtkreactor is now deprecated. (#2833)
+ - twisted.trial.util.findObject has been deprecated. (#3108)
+ - twisted.python.threadpool.ThreadSafeList is deprecated and Jython
+   platform detection in Twisted core removed (#3725)
+ - twisted.internet.interfaces.IUDPConnectedTransport has been removed
+   (deprecated since Twisted 9.0). (#4077)
+ - Removed twisted.application.app.runWithProfiler, which has been
+   deprecated since Twisted 8.0. (#4090)
+ - Removed twisted.application.app.runWithHotshot, which has been
+   deprecated since Twisted 8.0. (#4091)
+ - Removed twisted.application.app.ApplicationRunner.startLogging,
+   which has been deprecated (doesn't say since when), as well as
+   support for the legacy
+   twisted.application.app.ApplicationRunner.getLogObserver method.
+   (#4092)
+ - twisted.application.app.reportProfile has been removed. (#4093)
+ - twisted.application.app.getLogFile has been removed. (#4094)
+ - Removed twisted.cred.util.py, which has been deprecated since
+   Twisted 8.3. (#4107)
+ - twisted.python.util.dsu is now deprecated. (#4339)
+ - In twisted.trial.util: FailureError, DirtyReactorWarning,
+   DirtyReactorError, and PendingTimedCallsError, which have all been
+   deprecated since Twisted 8.0, have been removed. (#4505)
+
+Other
+-----
+ - #1363, #1742, #3170, #3359, #3431, #3738, #4088, #4206, #4221,
+   #4239, #4257, #4272, #4274, #4287, #4291, #4293, #4309, #4316,
+   #4319, #4324, #4332, #4335, #4348, #4358, #4394, #4399, #4409,
+   #4418, #4443, #4449, #4479, #4485, #4486, #4497
+
+
+Twisted Core 10.0.0 (2010-03-01)
+================================
+
+Features
+--------
+ - The twistd man page now has a SIGNALS section. (#689)
+
+ - reactor.spawnProcess now will not emit a PotentialZombieWarning
+   when called before reactor.run, and there will be no potential for
+   zombie processes in this case. (#2078)
+
+ - High-throughput applications based on Perspective Broker should now
+   run noticably faster thanks to the use of a more efficient decoding
+   function in Twisted Spread. (#2310)
+
+ - Documentation for trac-post-commit-hook functionality in svn-dev
+   policy. (#3867)
+
+ - twisted.protocols.socks.SOCKSv4 now supports the SOCKSv4a protocol.
+   (#3886)
+
+ - Trial can now output test results according to the subunit
+   protocol, as long as Subunit is installed (see
+   https://launchpad.net/subunit). (#4004)
+
+ - twisted.protocols.amp now provides a ListOf argument type which can
+   be composed with some other argument types to create a zero or more
+   element sequence of that type. (#4116)
+
+ - If returnValue is invoked outside of a function decorated with
+   @inlineCallbacks, but causes a function thusly decorated to exit, a
+   DeprecationWarning will be emitted explaining this potentially
+   confusing behavior.  In a future release, this will cause an
+   exception. (#4157)
+
+ - twisted.python.logfile.BaseLogFile now has a reopen method allowing
+   you to use an external logrotate mechanism. (#4255)
+
+Bugfixes
+--------
+ - FTP.ftp_NLST now handles requests on invalid paths in a way
+   consistent with RFC 959. (#1342)
+
+ - twisted.python.util.initgroups now calls the low-level C initgroups
+   by default if available: the python version can create lots of I/O
+   with certain authentication setup to retrieve all the necessary
+   information. (#3226)
+
+ - startLogging now does nothing on subsequent invocations, thus
+   fixing a terrible infinite recursion bug that's only on edge case.
+   (#3289)
+
+ - Stringify non-string data to NetstringReceiver.sendString before
+   calculating the length so that the calculated length is equal to
+   the actual length of the transported data. (#3299)
+
+ - twisted.python.win32.cmdLineQuote now correctly quotes empty
+   strings arguments (#3876)
+
+ - Change the behavior of the Gtk2Reactor to register only one source
+   watch for each file descriptor, instead of one for reading and one
+   for writing. In particular, it fixes a bug with Glib under Windows
+   where we failed to notify when a client is connected. (#3925)
+
+ - Twisted Trial no longer crashes if it can't remove an old
+   _trial_temp directory.  (#4020)
+
+ - The optional _c_urlarg extension now handles unquote("") correctly
+   on platforms where malloc(0) returns NULL, such as AIX.  It also
+   compiles with less warnings. (#4142)
+
+ - On POSIX, child processes created with reactor.spawnProcess will no
+   longer automatically ignore the signals which the parent process
+   has set to be ignored. (#4199)
+
+ - All SOCKSv4a tests now use a dummy reactor with a deterministic
+   resolve method. (#4275)
+
+ - Prevent extraneous server, date and content-type headers in proxy
+   responses. (#4277)
+
+Deprecations and Removals
+-------------------------
+ - twisted.internet.error.PotentialZombieWarning is now deprecated.
+   (#2078)
+
+ - twisted.test.time_helpers is now deprecated. (#3719)
+
+ - The deprecated connectUDP method of IReactorUDP has now been
+   removed. (#4075)
+
+ - twisted.trial.unittest.TestCase now ignores the previously
+   deprecated setUpClass and tearDownClass methods. (#4175)
+
+Other
+-----
+ - #917, #2406, #2481, #2608, #2689, #2884, #3056, #3082, #3199,
+   #3480, #3592, #3718, #3935, #4066, #4083, #4154, #4166, #4169,
+   #4176, #4183, #4186, #4188, #4189, #4194, #4201, #4204, #4209,
+   #4222, #4234, #4235, #4238, #4240, #4245, #4251, #4264, #4268,
+   #4269, #4282
+
+
+Twisted Core 9.0.0 (2009-11-24)
+===============================
+
+Features
+--------
+ - LineReceiver.clearLineBuffer now returns the bytes that it cleared (#3573)
+ - twisted.protocols.amp now raises InvalidSignature when bad arguments are
+   passed to Command.makeArguments (#2808)
+ - IArgumentType was added to represent an existing but previously unspecified
+   interface in amp (#3468)
+ - Obscure python tricks have been removed from the finger tutorials (#2110)
+ - The digest auth implementations in twisted.web and twisted.protocolos.sip
+   have been merged together in twisted.cred (#3575)
+ - FilePath and ZipPath now has a parents() method which iterates up all of its
+   parents (#3588)
+ - reactors which support threads now have a getThreadPool method (#3591)
+ - The MemCache client implementation now allows arguments to the "stats"
+   command (#3661)
+ - The MemCache client now has a getMultiple method which allows fetching of
+   multiple values (#3171)
+ - twisted.spread.jelly can now unserialize some new-style classes (#2950)
+ - twisted.protocols.loopback.loopbackAsync now accepts a parameter to control
+   the data passed between client and server (#3820)
+ - The IOCP reactor now supports SSL (#593)
+ - Tasks in a twisted.internet.task.Cooperator can now be paused, resumed, and
+   cancelled (#2712)
+ - AmpList arguments can now be made optional (#3891)
+ - The syslog output observer now supports log levels (#3300)
+ - LoopingCall now supports reporting the number of intervals missed if it
+   isn't able to schedule calls fast enough (#3671)
+
+Fixes
+-----
+ - The deprecated md5 and sha modules are no longer used if the stdlib hashlib
+   module is available (#2763)
+ - An obscure deadlock involving waking up the reactor within signal handlers
+   in particular threads was fixed (#1997)
+ - The passivePortRange attribute of FTPFactory is now honored (#3593)
+ - TestCase.flushWarnings now flushes warnings even if they were produced by a
+   file that was renamed since it was byte compiled (#3598)
+ - Some internal file descriptors are now marked as close-on-exec, so these will
+   no longer be leaked to child processes (#3576)
+ - twisted.python.zipstream now correctly extracts the first file in a directory
+   as a file, and not an empty directory (#3625)
+ - proxyForInterface now returns classes which correctly *implement* interfaces
+   rather than *providing* them (#3646)
+ - SIP Via header parameters should now be correctly generated (#2194)
+ - The Deferred returned by stopListening would sometimes previously never fire
+   if an exception was raised by the underlying file descriptor's connectionLost
+   method. Now the Deferred will fire with a failure (#3654)
+ - The command-line tool "manhole" should now work with newer versions of pygtk
+   (#2464)
+ - When a DefaultOpenSSLContextFactory is instantiated with invalid parameters,
+   it will now raise an exception immediately instead of waiting for the first
+   connection (#3700)
+ - Twisted command line scripts should now work when installed in a virtualenv
+   (#3750)
+ - Trial will no longer delete temp directories which it did not create (#3481)
+ - Processes started on Windows should now be cleaned up properly in more cases
+   (#3893)
+ - Certain misbehaving importers will no longer cause twisted.python.modules
+   (and thus trial) to raise an exception, but rather issue a warning (#3913)
+ - MemCache client protocol methods will now fail when the transport has been
+   disconnected (#3643)
+ - In the AMP method callRemoteString, the requiresAnswer parameter is now
+   honored (#3999)
+ - Spawning a "script" (a file which starts with a #! line) on Windows running
+   Python 2.6 will now work instead of raising an exception about file mode
+   "ru" (#3567)
+ - FilePath's walk method now calls its "descend" parameter even on the first
+   level of children, instead of only on grandchildren. This allows for better
+   symlink cycle detection (#3911)
+ - Attempting to write unicode data to process pipes on Windows will no longer
+   result in arbitrarily encoded messages being written to the pipe, but instead
+   will immediately raise an error (#3930)
+ - The various twisted command line utilities will no longer print
+   ModuleType.__doc__ when Twisted was installed with setuptools (#4030)
+ - A Failure object will now be passed to connectionLost on stdio connections
+   on Windows, instead of an Exception object (#3922)
+
+Deprecations and Removals
+-------------------------
+ - twisted.persisted.marmalade was deleted after a long period of deprecation
+   (#876)
+ - Some remaining references to the long-gone plugins.tml system were removed
+   (#3246)
+ - SSLv2 is now disabled by default, but it can be re-enabled explicitly
+   (#3330)
+ - twisted.python.plugin has been removed (#1911)
+ - reactor.run will now raise a ReactorAlreadyRunning exception when it is
+   called reentrantly instead of warning a DeprecationWarning (#1785)
+ - twisted.spread.refpath is now deprecated because it is unmaintained,
+   untested, and has dubious value (#3723)
+ - The unused --quiet flag has been removed from the twistd command (#3003)
+
+Other
+-----
+ - #3545, #3490, #3544, #3537, #3455, #3315, #2281, #3564, #3570, #3571, #3486,
+   #3241, #3599, #3220, #1522, #3611, #3596, #3606, #3609, #3602, #3637, #3647,
+   #3632, #3675, #3673, #3686, #2217, #3685, #3688, #2456, #506, #3635, #2153,
+   #3581, #3708, #3714, #3717, #3698, #3747, #3704, #3707, #3713, #3720, #3692,
+   #3376, #3652, #3695, #3735, #3786, #3783, #3699, #3340, #3810, #3822, #3817,
+   #3791, #3859, #2459, #3677, #3883, #3894, #3861, #3822, #3852, #3875, #2722,
+   #3768, #3914, #3885, #2719, #3905, #3942, #2820, #3990, #3954, #1627, #2326,
+   #2972, #3253, #3937, #4058, #1200, #3639, #4079, #4063, #4050
+
+
+Core 8.2.0 (2008-12-16)
+=======================
+
+Features
+--------
+ - Reactors are slowly but surely becoming more isolated, thus improving
+   testability (#3198)
+ - FilePath has gained a realpath method, and FilePath.walk no longer infinitely
+   recurses in the case of a symlink causing a self-recursing filesystem tree
+   (#3098)
+ - FilePath's moveTo and copyTo methods now have an option to disable following
+   of symlinks (#3105)
+ - Private APIs are now included in the API documentation (#3268)
+ - hotshot is now the default profiler for the twistd --profile parameter and
+   using cProfile is now documented (#3355, #3356)
+ - Process protocols can now implement a processExited method, which is
+   distinct from processEnded in that it is called immediately when the child
+   has died, instead of waiting for all the file descriptors to be closed
+   (#1291)
+ - twistd now has a --umask option (#966, #3024)
+ - A new deferToThreadPool function exists in twisted.internet.threads (#2845)
+ - There is now an example of writing an FTP server in examples/ftpserver.py
+   (#1579)
+ - A new runAsEffectiveUser function has been added to twisted.python.util
+   (#2607)
+ - twisted.internet.utils.getProcessOutput now offers a mechanism for
+   waiting for the process to actually end, in the event of data received on
+   stderr (#3239)
+ - A fullyQualifiedName function has been added to twisted.python.reflect
+   (#3254)
+ - strports now defaults to managing access to a UNIX socket with a lock;
+   lockfile=0 can be included in the strports specifier to disable this
+   behavior (#2295)
+ - FTPClient now has a 'rename' method (#3335)
+ - FTPClient now has a 'makeDirectory' method (#3500)
+ - FTPClient now has a 'removeFile' method (#3491)
+ - flushWarnings, A new Trial method for testing warnings, has been added
+   (#3487, #3427, #3506)
+ - The log observer can now be configured in .tac files (#3534)
+
+Fixes
+-----
+ - TLS Session Tickets are now disabled by default, allowing connections to
+   certain servers which hang when an empty session ticket is received (like
+   GTalk) (#3463)
+ - twisted.enterprise.adbapi.ConnectionPool's noisy attribute now defaults to
+   False, as documented (#1806)
+ - Error handling and logging in adbapi is now much improved (#3244)
+ - TCP listeners can now be restarted (#2913)
+ - Doctests can now be rerun with trial's --until-failure option (#2713)
+ - Some memory leaks have been fixed in trial's --until-failure
+   implementation (#3119, #3269)
+ - Trial's summary reporter now prints correct runtime information and handles
+   the case of 0 tests (#3184)
+ - Trial and any other user of the 'namedAny' function now has better error
+   reporting in the case of invalid module names (#3259)
+ - Multiple instances of trial can now run in parallel in the same directory
+   by creating _trial_temp directories with an incremental suffix (#2338)
+ - Trial's failUnlessWarns method now works on Python 2.6 (#3223)
+ - twisted.python.log now hooks into the warnings system in a way compatible
+   with Python 2.6 (#3211)
+ - The GTK2 reactor is now better supported on Windows, but still not passing
+   the entire test suite (#3203)
+ - low-level failure handling in spawnProcess has been improved and no longer
+   leaks file descriptors (#2305, #1410)
+ - Perspective Broker avatars now have their logout functions called in more
+   cases (#392)
+ - Log observers which raise exceptions are no longer removed (#1069)
+ - transport.getPeer now always includes an IP address in the Address returned
+   instead of a hostname (#3059)
+ - Functions in twisted.internet.utils which spawn processes now avoid calling
+   chdir in the case where no working directory is passed, to avoid some
+   obscure permission errors (#3159)
+ - twisted.spread.publish.Publishable no longer corrupts line endings on
+   Windows (#2327)
+ - SelectReactor now properly detects when a TLS/TCP connection has been
+   disconnected (#3218)
+ - twisted.python.lockfile no longer raises an EEXIST OSError and is much
+   better supported on Windows (#3367)
+ - When ITLSTransport.startTLS is called while there is data in the write
+   buffer, TLS negotiation will now be delayed instead of the method raising
+   an exception (#686)
+ - The userAnonymous argument to FTPFactory is now honored (#3390)
+ - twisted.python.modules no longer tries to "fix" sys.modules after an import
+   error, which was just causing problems (#3388)
+ - setup.py no longer attempts to build extension modules when run with Jython
+   (#3410)
+ - AMP boxes can now be sent in IBoxReceiver.startReceivingBoxes (#3477)
+ - AMP connections are closed as soon as a key length larger than 255 is
+   received (#3478)
+ - Log events with timezone offsets between -1 and -59 minutes are now
+   correctly reported as negative (#3515)
+
+Deprecations and Removals
+-------------------------
+ - Trial's setUpClass and tearDownClass methods are now deprecated (#2903)
+ - problemsFromTransport has been removed in favor of the argument passed to
+   connectionLost (#2874)
+ - The mode parameter to methods of IReactorUNIX and IReactorUNIXDatagram are
+   deprecated in favor of applications taking other security precautions, since
+   the mode of a Unix socket is often not respected (#1068)
+ - Index access on instances of twisted.internet.defer.FirstError has been
+   removed in favor of the subFailure attribute (#3298)
+ - The 'changeDirectory' method of FTPClient has been deprecated in favor of
+   the 'cwd' method (#3491)
+
+Other
+-----
+
+ - #3202, #2869, #3225, #2955, #3237, #3196, #2355, #2881, #3054, #2374, #2918,
+   #3210, #3052, #3267, #3288, #2985, #3295, #3297, #2512, #3302, #1222, #2631,
+   #3306, #3116, #3215, #1489, #3319, #3320, #3321, #1255, #2169, #3182, #3323,
+   #3301, #3318, #3029, #3338, #3346, #1144, #3173, #3165, #685, #3357, #2582,
+   #3370, #2438, #1253, #637, #1971, #2208, #979, #1790, #1888, #1882, #1793,
+   #754, #1890, #1931, #1246, #1025, #3177, #2496, #2567, #3400, #2213, #2027,
+   #3415, #1262, #3422, #2500, #3414, #3045, #3111, #2974, #2947, #3222, #2878,
+   #3402, #2909, #3423, #1328, #1852, #3382, #3393, #2029, #3489, #1853, #2026,
+   #2375, #3502, #3482, #3504, #3505, #3507, #2605, #3519, #3520, #3121, #3484,
+   #3439, #3216, #3511, #3524, #3521, #3197, #2486, #2449, #2748, #3381, #3236,
+   #671
+
+
+8.1.0 (2008-05-18)
+==================
+
+Features
+--------
+
+ - twisted.internet.error.ConnectionClosed is a new exception which is the
+   superclass of ConnectionLost and ConnectionDone (#3137)
+ - Trial's CPU and memory performance should be better now (#3034)
+ - twisted.python.filepath.FilePath now has a chmod method (#3124)
+
+Fixes
+-----
+
+ - Some reactor re-entrancy regressions were fixed (#3146, #3168)
+ - A regression was fixed whereby constructing a Failure for an exception and
+   traceback raised out of a Pyrex extension would fail (#3132)
+ - CopyableFailures in PB can again be created from CopiedFailures (#3174)
+ - FilePath.remove, when called on a FilePath representing a symlink to a
+   directory, no longer removes the contents of the targeted directory, and
+   instead removes the symlink (#3097)
+ - FilePath now has a linkTo method for creating new symlinks (#3122)
+ - The docstring for Trial's addCleanup method now correctly specifies when
+   cleanup functions are run (#3131)
+ - assertWarns now deals better with multiple identical warnings (#2904)
+ - Various windows installer bugs were fixed (#3115, #3144, #3150, #3151, #3164)
+ - API links in the howto documentation have been corrected (#3130)
+ - The Win32 Process transport object now has a pid attribute (#1836)
+ - A doc bug in the twistd plugin howto which would inevitably lead to
+   confusion was fixed (#3183)
+ - A regression breaking IOCP introduced after the last release was fixed
+   (#3200)
+
+
+Deprecations and Removals
+-------------------------
+
+ - mktap is now fully deprecated, and will emit DeprecationWarnings when used
+   (#3127)
+
+Other
+-----
+ - #3079, #3118, #3120, #3145, #3069, #3149, #3186, #3208, #2762
+
+
+8.0.1 (2008-03-26)
+==================
+
+Fixes
+-----
+ - README no longer refers to obsolete trial command line option
+ - twistd no longer causes a bizarre DeprecationWarning about mktap
+
+
+8.0.0 (2008-03-17)
+==================
+
+Features
+--------
+
+ - The IOCP reactor has had many changes and is now greatly improved
+   (#1760, #3055)
+ - The main Twisted distribution is now easy_installable (#1286, #3110)
+ - twistd can now profile with cProfile (#2469)
+ - twisted.internet.defer contains a DeferredFilesystemLock which gives a
+   Deferred interface to lock file acquisition (#2180)
+ - twisted.python.modules is a new system for representing and manipulating
+   module paths (i.e. sys.path) (#1951)
+ - twisted.internet.fdesc now contains a writeToFD function, along with other
+   minor fixes (#2419)
+ - twisted.python.usage now allows optional type enforcement (#739)
+ - The reactor now has a blockingCallFromThread method for non-reactor threads
+   to use to wait for a reactor-scheduled call to return a result (#1042, #3030)
+ - Exceptions raised inside of inlineCallbacks-using functions now have a
+   better chance of coming with a meaningful traceback (#2639, #2803)
+ - twisted.python.randbytes now contains code for generating secure random
+   bytes (#2685)
+ - The classes in twisted.application.internet now accept a reactor parameter
+   for specifying the reactor to use for underlying calls to allow for better
+   testability (#2937)
+ - LoopingCall now allows you to specify the reactor to use to schedule new
+   calls, allowing much better testing techniques (#2633, #2634)
+ - twisted.internet.task.deferLater is a new API for scheduling calls and
+   getting deferreds which are fired with their results (#1875)
+ - objgrep now knows how to search through deque objects (#2323)
+ - twisted.python.log now contains a Twisted log observer which can forward
+   messages to the Python logging system (#1351)
+ - Log files now include seconds in the timestamps (#867)
+ - It is now possible to limit the number of log files to create during log
+   rotation (#1095)
+ - The interface required by the log context system is now documented as
+   ILoggingContext, and abstract.FileDescriptor now declares that it implements
+   it (#1272)
+ - There is now an example cred checker that uses a database via adbapi (#460)
+ - The epoll reactor is now documented in the choosing-reactors howto (#2539)
+ - There were improvements to the client howto (#222)
+ - Int8Receiver was added (#2315)
+ - Various refactorings to AMP introduced better testability and public
+   interfaces (#2657, #2667, #2656, #2664, #2810)
+ - twisted.protocol.policies.TrafficLoggingFactory now has a resetCounter
+   method (#2757)
+ - The FTP client can be told which port range within which to bind passive
+   transfer ports (#1904)
+ - twisted.protocols.memcache contains a new asynchronous memcache client
+   (#2506, #2957)
+ - PB now supports anonymous login (#439, #2312)
+ - twisted.spread.jelly now supports decimal objects (#2920)
+ - twisted.spread.jelly now supports all forms of sets (#2958)
+ - There is now an interface describing the API that process protocols must
+   provide (#3020)
+ - Trial reporting to core unittest TestResult objects has been improved (#2495)
+ - Trial's TestCase now has an addCleanup method which allows easy setup of
+   tear-down code (#2610, #2899)
+ - Trial's TestCase now has an assertIsInstance method (#2749)
+ - Trial's memory footprint and speed are greatly improved (#2275)
+ - At the end of trial runs, "PASSED" and "FAILED" messages are now colorized
+   (#2856)
+ - Tests which leave global state around in the reactor will now fail in
+   trial. A new option, --unclean-warnings, will convert these errors back into
+   warnings (#2091)
+ - Trial now has a --without-module command line for testing code in an
+   environment that lacks a particular Python module (#1795)
+ - Error reporting of failed assertEquals assertions now has much nicer
+   formatting (#2893)
+ - Trial now has methods for monkey-patching (#2598)
+ - Trial now has an ITestCase (#2898, #1950)
+ - The trial reporter API now has a 'done' method which is called at the end of
+   a test run (#2883)
+ - TestCase now has an assertWarns method which allows testing that functions
+   emit warnings (#2626, #2703)
+ - There are now no string exceptions in the entire Twisted code base (#2063)
+ - There is now a system for specifying credentials checkers with a string
+   (#2570)
+
+Fixes
+-----
+
+ - Some tests which were asserting the value of stderr have been changed
+   because Python uncontrollably writes bytes to stderr (#2405)
+ - Log files handle time zones with DST better (#2404)
+ - Subprocesses using PTYs on OS X that are handled by Twisted will now be able
+   to more reliably write the final bytes before they exit, allowing Twisted
+   code to more reliably receive them (#2371, #2858)
+ - Trial unit test reporting has been improved (#1901)
+ - The kqueue reactor handles connection failures better (#2172)
+ - It's now possible to run "trial foo/bar/" without an exception: trailing
+   slashes no longer cause problems (#2005)
+ - cred portals now better deal with implementations of inherited interfaces
+   (#2523)
+ - FTP error handling has been improved (#1160, 1107)
+ - Trial behaves better with respect to file locking on Windows (#2482)
+ - The FTP server now gives a better error when STOR is attempted during an
+   anonymous session (#1575)
+ - Trial now behaves better with tests that use the reactor's threadpool (#1832)
+ - twisted.python.reload now behaves better with new-style objects (#2297)
+ - LogFile's defaultMode parameter is now better implemented, preventing
+   potential security exploits (#2586)
+ - A minor obscure leak in thread pools was corrected (#1134)
+ - twisted.internet.task.Clock now returns the correct DelayedCall from
+   callLater, instead of returning the one scheduled for the furthest in the
+   future (#2691)
+ - twisted.spread.util.FilePager no longer unnecessarily buffers data in
+   memory (#1843, 2321)
+ - Asking for twistd or trial to use an unavailable reactor no longer prints a
+   traceback (#2457)
+ - System event triggers have fewer obscure bugs (#2509)
+ - Plugin discovery code is much better behaved, allowing multiple
+   installations of a package with plugins (#2339, #2769)
+ - Process and PTYProcess have been merged and some minor bugs have been fixed
+   (#2341)
+ - The reactor has less global state (#2545)
+ - Failure can now correctly represent and format errors caused by string
+   exceptions (#2830)
+ - The epoll reactor now has better error handling which now avoids the bug
+   causing 100% CPU usage in some cases (#2809)
+ - Errors raised during trial setUp or tearDown methods are now handled better
+   (#2837)
+ - A problem when deferred callbacks add new callbacks to the deferred that
+   they are a callback of was fixed (#2849)
+ - Log messages that are emitted during connectionMade now have the protocol
+   prefix correctly set (#2813)
+ - The string representation of a TCP Server connection now contains the actual
+   port that it's bound to when it was configured to listen on port 0 (#2826)
+ - There is better reporting of error codes for TCP failures on Windows (#2425)
+ - Process spawning has been made slightly more robust by disabling garbage
+   collection temporarily immediately after forking so that finalizers cannot
+   be executed in an unexpected environment (#2483)
+ - namedAny now detects import errors better (#698)
+ - Many fixes and improvements to the twisted.python.zipstream module have
+   been made (#2996)
+ - FilePager no longer blows up on empty files (#3023)
+ - twisted.python.util.FancyEqMixin has been improved to cooperate with objects
+   of other types (#2944)
+ - twisted.python.FilePath.exists now restats to prevent incorrect result
+   (#2896)
+ - twisted.python.util.mergeFunctionMetadata now also merges the __module__
+   attribute (#3049)
+ - It is now possible to call transport.pauseProducing within connectionMade on
+   TCP transports without it being ignored (#1780)
+ - twisted.python.versions now understands new SVN metadata format for fetching
+   the SVN revision number (#3058)
+ - It's now possible to use reactor.callWhenRunning(reactor.stop) on gtk2 and
+   glib2 reactors (#3011)
+
+Deprecations and removals
+-------------------------
+ - twisted.python.timeoutqueue is now deprecated (#2536)
+ - twisted.enterprise.row and twisted.enterprise.reflector are now deprecated
+   (#2387)
+ - twisted.enterprise.util is now deprecated (#3022)
+ - The dispatch and dispatchWithCallback methods of ThreadPool are now
+   deprecated (#2684)
+ - Starting the same reactor multiple times is now deprecated (#1785)
+ - The visit method of various test classes in trial has been deprecated (#2897)
+ - The --report-profile option to twistd and twisted.python.dxprofile are
+   deprecated (#2908)
+ - The upDownError method of Trial reporters is deprecated (#2883)
+
+Other
+-----
+
+ - #2396, #2211, #1921, #2378, #2247, #1603, #2463, #2530, #2426, #2356, #2574,
+ - #1844, #2575, #2655, #2640, #2670, #2688, #2543, #2743, #2744, #2745, #2746,
+ - #2742, #2741, #1730, #2831, #2216, #1192, #2848, #2767, #1220, #2727, #2643,
+ - #2669, #2866, #2867, #1879, #2766, #2855, #2547, #2857, #2862, #1264, #2735,
+ - #942, #2885, #2739, #2901, #2928, #2954, #2906, #2925, #2942, #2894, #2793,
+ - #2761, #2977, #2968, #2895, #3000, #2990, #2919, #2969, #2921, #3005, #421,
+ - #3031, #2940, #1181, #2783, #1049, #3053, #2847, #2941, #2876, #2886, #3086,
+ - #3095, #3109
+
+
+2.5.0 (2006-12-29)
+==================
+
+Twisted 2.5.0 is a major feature release, with several interesting new
+developments and a great number of bug fixes. Some of the highlights
+follow.
+
+ * AMP, the Asynchronous Messaging Protocol, was introduced.  AMP is
+   a protocol which provides request/response semantics over a
+   persistent connection in a very simple and extensible manner.
+
+ * An Epoll-based reactor was added, which can be used with twistd or
+   trial by passing "-r epoll" on the command line. This may improve
+   performance of certain high-traffic network applications.
+
+ * The 'twistd' command can now accept sub-commands which name an
+   application to run. For example, 'twistd web --path .' will start a
+   web server serving files out of the current directory. This
+   functionality is meant to replace the old way of doing things with
+   'mktap' and 'twistd -f'.
+
+ * Python 2.5 is now supported. Previous releases of Twisted were
+   broken by changes in the release of Python 2.5.
+
+ * 'inlineCallbacks' was added, which allows taking advantage of the
+   new 'yield' expression syntax in Python 2.5 to avoid writing
+   callbacks for Deferreds.
+
+In addition to these changes, there are many other minor features and
+a large number of bug fixes.
+
+Features
+--------
+ - log.err can now take a second argument for specifying information
+   about an error (#1399)
+ - A time-simulating test helper class, twisted.internet.task.Clock,
+   was added (#1757)
+ - Trial docstring improvements were made (#1604, #2133)
+ - New SSL features were added to twisted.internet.ssl, such as client
+   validation (#302)
+ - Python 2.5 is now supported (#1867)
+ - Trial's assertFailure now provides more information on failure (#1869)
+ - Trial can now be run on tests within a zipfile (#1940)
+ - AMP, a new simple protocol for asynchronous messaging, was added (#1715)
+ - Trial's colorful reporter now works on win32 (#1646)
+ - Trial test modules may now dynamically construct TestSuites (#1638, #2165)
+ - twistd can now make use of plugins to run applications (#1922, #2013)
+ - Twisted now works with the latest (unreleased) zope.interface (#2160)
+ - An epoll-based reactor, epollreactor, was added. It is selectable
+   with the -r options to twistd and trial (#1953)
+ - twistd and trial now use the plugin system to find reactors which
+   can be selected (#719)
+ - twisted.internet.defer.inlineCallbacks was added. It takes
+   advantage of Python 2.5's generators to offer a way to deal with
+   Deferreds without callbacks (#2100)
+
+Fixes
+-----
+ - Traceback formatting in Trial was improved (#1454, #1610)
+ - twisted.python.filepath.FilePath.islink now actually returns True when
+   appropriate (#1773)
+ - twisted.plugin now no longer raises spurious errors (#926)
+ - twisted.pb Cacheables may now be new-style classes (#1324)
+ - FileDescriptor now deals with producers in a more
+   interface-compliant and robust manner (#2286, #811)
+ - "setup.py build" and other setup.py commands which don't actually
+   install the software now work (#1835)
+ - wxreactor has had various fixes (#1235, #1574, #1688)
+
+Deprecations and Removals
+-------------------------
+ - The old twisted.cred API (Perspectives, Identities and such) was
+   removed (#1440)
+ - twisted.spread.newjelly was removed (#1831)
+ - Various deprecated things in twisted.python.components were
+   removed: Interface, MetaInterface, getAdapterClass, and
+   getAdapterClassWithInheritance (#1636)
+ - twisted.enterprise.xmlreflector was removed (#661)
+ - mktap is slowly on its way out, now that twistd supports plugins. It
+   is not yet officially deprecated (#2013)
+ - tkmktap was removed, because it wasn't working anyway (#2020)
+ - reactor.iterate calls made inside of a Trial test case are
+   deprecated (#2090)
+ - twisted.internet.qtreactor was removed: It has been moved to a
+   separate project. See http://twistedmatrix.com/trac/wiki/QTReactor
+   (#2130, #2137)
+ - threadedselectreactor is now not a directly usable reactor; it is
+   only meant to help in writing other reactors (#2126)
+ - twisted.python.reflect.funcinfo is deprecated (#2079)
+ - twisted.spread.sturdy, which was already completely broken, was
+   removed (#2299)
+
+
+Other
+-----
+The following changes are minor or closely related to other changes.
+
+ - #1783, #1786, #1788, #1648, #1734, #1609, #1800, #1818,
+   #1629, #1829, #491, #1816, #1824, #1855, #1797, #1637, #1371,
+   #1892, #1887, #1897, #1563, #1741, #1943, #1952, #1276,
+   #1837, #1726, #1963, #1965, #1973, #1976, #1991, #1936, #1113,
+   #630, #2002, #2040, #2044, #1617, #2045, #2055, #2056, #2022,
+   #2052, #1552, #1999, #1507, #2054, #1970, #1968, #662, #1910,
+   #1694, #1999, #1409, #2150, #2127, #2155, #1983, #2014, #2222,
+   #1067, #2136, #2065, #1430, #2173, #2212, #1871, #2147, #1199,
+   #2273, #428, #992, #815, #2024, #2292, #2125, #2139, #2291, #2174,
+   #2306, #2228, #2309, #2319, #2317, #2313, #2154, #1985, #1201
+
+
+2.4.0 (2006-05-21)
+==================
+
+Features
+--------
+ - twisted.internet.task.Cooperator (Added along with #1701).
+
+Fixes
+-----
+ - Errors in UDP protocols no longer unbind the UDP port (#1695).
+ - Misc: #1717, #1705, #1563, #1719, #1721, #1722, #1728.
+
+
+2.3.0 (2006-05-14)
+==================
+
+Features
+--------
+ - twisted-dev-mode's F9 now uses trial's --testmodule feature, rather than
+   trying to guess what tests to run.  This will break files using the "-x"
+   test-case-name hack (just use a comma separated list instead).
+ - API Documentation improvements.
+ - A new Producer/Consumer guide (#53)
+ - Better-defined error behavior in IReactorMulticast (#1578)
+ - IOCP Multicast support (#1500)
+ - Improved STDIO support on Windows. (#1553)
+ - LoopingCall supports Deferreds such that it will wait until a
+   Deferred has fired before rescheduling the next call (#1487)
+ - Added twisted.python.versions.Version, a structured representation
+   of Version information, including support for SVN revision numbers
+   (#1663)
+
+Fixes
+-----
+
+ - Many trial fixes, as usual
+ - All API documentation is now correctly formatted as epytext (#1545)
+ - twisted.python.filepath.FilePath.__repr__ is safer.
+ - Fix trial's "until-failure" mode. (#1453)
+ - deferredGenerator now no longer causes handled exceptions (or
+   results) to propagate to the resulting Deferred (#1709).
+ - Misc: #1483, #1495, #1503, #1532, #1539, #1559, #1509, #1538,
+   #1571, #1331, #1561, #737, #1562, #1573, #1594, #1607, #1407, #1615,
+   #1645, #1634, #1620, #1664, #1666, #1650, #1670, #1675, #1692, #1710,
+   #1668.
+
+Deprecations
+------------
+
+ - Removal of already-deprecated trial APIs: the assertions module,
+   util.deferredResult, util.deferredError, util.fireWhenDoneFunc,
+   util.spinUntil, util.spinWhile, util.extract_tb,
+   util.format_exception, util.suppress_warnings, unittest.wait,
+   util.wait
+ - The backwards compatibility layer of twisted.python.components
+   (e.g., backwardsCompatImplements, fixClassImplements, etc) has been
+   disabled. The functions still exist, but do nothing as to not break
+   user code outright (#1511)
+ - Deprecate the usage of the 'default' argument as a keyword argument
+   in Interface.__call__. Passing a second positional argument to
+   specify the default return value of the adaptation is still
+   supported.
+
+
+2.2.0 (2006-02-12)
+==================
+
+Features
+--------
+ - Twisted no longer works with Python 2.2
+ - FTP server supports more clients
+ - Process support on Windows
+ - twisted.internet.stdio improved (including Windows support!)
+ - Trial:
+   - Continued Trial refactoring
+   - Default trial reporter is verbose black&white when color isn't supported
+   - Deferreds returned in trial tests that don't fire before the
+     unittest timeout now have their errback fired with a TimeoutError
+   - raising SkipTest in setUp and setUpClass skips tests
+   - Test suites are failed if there are import errors
+
+Fixes
+-----
+ - iocpreactor fixes
+ - Threadpool fixes
+ - Fixed infinite loops in datagramReceived edge cases
+ - Issues resolved: 654, 773, 998, 1005, 1008, 1116, 1123, 1198, 1221,
+   1232, 1233, 1236, 1240, 1244, 1258, 1263, 1265, 1266, 1271, 1275,
+   1293, 1294, 1298, 1308, 1316, 1317, 1321, 1341, 1344, 1353, 1359,
+   1372, 1374, 1377, 1379, 1380, 1385, 1388, 1389, 1413, 1422, 1426,
+   1434, 1435, 1448, 1449, 1456
+
+Deprecations
+------------
+ - Trial:
+   - spinWhile and spinUntil
+   - util.wait
+   - extract_tb and format_exception
+   - util.suppressWarnings
+   - runReactor is gone
+
+
+2.1.0 (2005-11-06)
+==================
+
+Features
+--------
+ - threadedselectreactor, a reactor which potentially makes
+   integration with foreign event loops much simpler.
+ - major improvements to twisted.conch.insults, including many new widgets.
+ - adbapi ConnectionPools now have 'runWithConnection' which is
+   similar to runInteraction but gives you a connection object instead of
+   a transaction. [975]
+ - __file__ is now usable in tac files
+ - twisted.cred.pamauth now contains a PAM checker (moved from twisted.conch)
+ - twisted.protocols.policies.LimitTotalConnectionsFactory now exists,
+   which does as the name suggests
+ - twisted.protocols.ident now uses /proc/net/tcp on Linux [233]
+ - trial now recurses packages by default (a la the old -R parameter)
+ - (PB) Calling a remote method that doesn't exist now raises
+   NoSuchMethod instead of AttributeError.
+
+Fixes
+-----
+ - FTP client and server improvements
+ - Trial improvements: The code is now much simpler, and more stable.
+ - twisted.protocols.basic.FileSender now works with empty files
+ - Twisted should now be much more usable on Pythons without thread support.
+ - minor improvements to process code in win32eventreactor
+ - twistd -y (--python) now implies -o (--nosave). [539]
+ - improved lockfile handling especially with respect to unix sockets.
+ - deferredGenerator now no longer overuses the stack, which sometimes
+   caused stack overflows.
+ - Failure.raiseException now at least always raises the correct Exception.
+ - minor improvements to serialport code
+
+Deprecations
+------------
+ - twisted.python.componts.getAdapter. Use IFoo(o) instead.
+ - Adapter persistence (IFoo(x, persist=True)). Just don't use it.
+ - log.debug. It was equivalent to log.msg(), just use that.
+ - twisted.protocols.telnet. twisted.conch.telnet replaces it.
+ - Setting a trial reporter using a flag to 'trial'. Instead of 'trial
+   --bwverbose', for example, use 'trial --reporter=bwverbose'.
+ - trial --coverage will become a flag in Twisted 2.2.
+ - passing a fully-qualified python name to --reporter is
+   deprecated. Pass only names of Reporter plugins.
+ - trial --psyco.
+ - trial -R (--recurse) is now the default, so passing it is deprecated.
+ - trial --reporter-args. Use the plugin system to do this sort of thing.
+ - trial.assertions.assertionMethod and trial.unittest.assertionMethod
+   are both deprecated. Use instance methods on TestCases instead.
+ - trial's deferredResult, deferredError, and wait functions. Return
+   Deferreds from your test methods instead of using them.
+ - Raising unittest.SkipTest with no arguments. Give a reason for your skip.
+ - The Failure returned from a gatherResults and DeferredList is now
+   of type FirstError instead of a tuple of (Exception, index). It
+   supports a firstError[idx] syntax but that is deprecated. Use
+   firstError.subFailure and firstError.index instead.
+ - whenThreaded now simply calls the passed function synchronously.
+
+2.0.1 (2005-05-09)
+===================
+Minor bug fix release.
+
+SVN rev (file) - [bug number] description
+-----------------------------------------
+13307 (twisted/topfiles/README) - Mention support for python 2.4, too
+13324 (twisted/internet/defer.py) - [947] Fix DeferredQueue backlog/size limit.
+13354 (twisted/plugins/__init__.py) - Correct maintainer address.
+13355 (twisted/test/test_defer.py) - improvements to DeferredQueue test case
+13387 (setup.py) - add news to list of subprojects to install
+13332 (twisted/internet/posixbase.py) - Fix spelling error
+13366 (twisted/internet/qtreactor.py) - [957] [954] reactor.iterate fixes
+13368 (twisted/test/test_internet.py) - Fix DelayedCall test case
+13422 (twisted/internet/posixbase.py) - Remove log from _Win32Waker creation.
+13437 (twisted/plugin.py) - [958] Only write cache if there were changes.
+13666 (twisted/internet/gtkreactor.py,gtk2reactor.py) - Don't run callbacks
+          until the reactor is actually up and running
+13748 (twisted/internet/gtk2reactor.py) - [552] [994] Initialize threading properly.
+
+
+2.0.0 (2005-03-25)
+==================
+
+Major new features
+------------------
+ - Replaced home-grown components system with zope.interface.
+ - Split Twisted into multiple pieces.
+ - Relicensed: Now under the MIT license, rather than LGPL.
+ - Python 2.4 compatibility fixes
+ - Major efficiency improvements in TCP buffering algorithm.
+ - Major efficiency improvements in reactor.callLater/DelayedCall.
+ - Half-close support for TCP/SSL. (loseWriteConnection).
+
+Miscellaneous features/fixes
+----------------------------
+ - New plugin system: twisted.plugin
+ - Better debugging support. Control-C will break you into PDB.
+ - The twistd command has --uid --gid command line arguments.
+ - *Incompatibility: mktap defaults to not change UID/GID, instead of saving
+   the invoking user's UID/GID.
+ - Removed some functions that were deprecated since Twisted 1.0.
+ - ZSH tab-completion for twisted commands.
+
+ - More correct daemonization in twistd.
+ - twisted.python.log: do not close the log because of invalid format string.
+ - Disabled automatic import of cBanana.
+ - Boolean support for twisted.persisted.marmalade.
+ - Refactor of plugin and application HOWTO documentation
+ - Async HOWTO expanded greatly.
+ - twisted.python.usage outputs the actual defaults, not passed in values.
+
+twisted.trial
+-------------
+ - Rewritten, a bunch of bugs fixed, a few more added.
+
+twisted.internet
+----------------
+ - Multi-listen UDP multicast support
+ - protocol.ClientCreator has a connectSSL.
+ - defer.deferredGenerator: allows you to write Deferred code w/o callbacks.
+ - Deferred.setTimeout is now deprecated.
+ - New defer.DeferredLock/DeferredSemaphore/DeferredQueue.
+ - Add utils.getProcessOutputAndValue to get stdout/err/value.
+
+ - Default DNS resolver is now non-blocking.
+ - Increased default TCP accept backlog from 5 to 50.
+ - Make buffering large amounts of TCP data work on Windows.
+ - Fixed SSL disconnect to not wait for remote host. Fixes issue with firefox.
+ - Separate state for Deferred finalization so that GC-loops preventing
+   finalization don't occur.
+ - Many Process bugfixes
+ - Processes spawned on windows can successfully use sockets
+ - gtk2reactor can optionally use glib event loop instead of gtk
+ - gtk2reactor notifies gobject to initialize thread support
+ - Fix registering a streaming producer on a transport.
+ - Close client sockets explicitly after failed connections.
+ - ReconnectingClientFactory now continues attempting to reconnect after all
+   errors, not just those which are not UserErrors.
+
+twisted.protocols
+-----------------
+ - Portforward doesn't start reading from a client until a connection is made.
+ - Bugfixes in twisted.protocols.loopback
+ - Improve speed of twisted.protocols.LineReceiver.
+ - LineReceiver implements IProducer. (stop/pause/resumeProducing)
+ - SOCKSv4 properly closes connections
+
+twisted.enterprise
+------------------
+ - Add "new connection" callback to adbapi.ConnectionPool to allow for
+   custom db connection setup (cp_openfun)
+ - adbapi.ConnectionPool automatic reconnection support
+ - Don't log exceptions extraneously
+
+
+1.3.0 (2004-05-14)
+==================
+
+- Address objects for IPv4 and Unix addresses throughout twisted.internet.
+- Improved connected UDP APIs.
+- Refactored SSH client support.
+- Initial implementation of Windows I/O Completion Ports event loop.
+- Bug fixes and feature enhancements.
+- Nevow support for Lore (so your Lore documents can use Nevow directives).
+- This is the last release before Twisted begins splitting up.

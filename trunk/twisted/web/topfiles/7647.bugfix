@@ -1,0 +1,2 @@
+twisted.web.client.BrowserLikePolicyForHTTPS now uses the trust root that it is given, rather than always using the system's.
+ 

@@ -1,0 +1,1 @@
+The SSL server string endpoint parser (twisted.internet.endpoints.serverFromString) now constructs endpoints which, by default, disable the insecure SSLv3 protocol.

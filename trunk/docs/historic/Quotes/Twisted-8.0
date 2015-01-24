@@ -1,0 +1,105 @@
+<exarkun> glyph: I will tell you what 'V' does in Perl's pack
+<exarkun> glyph: Unsigned long...
+<exarkun> glyph: ...VAX ordering
+<glyph> exarkun: GGgghhaalllgufffffaff
+<exarkun> critical hit!
+%
+<radix> man, it isn't easy to fall off a log
+<radix> first you need to find a log
+<radix> where the heck do I find a log?
+<radix> then you need to climb up on top of it
+<radix> that's heck of hard
+%
+<dash> also "licence" isn't a software term
+<dash> it's the collective noun for a bunch of lice
+%
+[on libel laws]
+<radix> (a) by means of a device utilizing electromagnetic waves of
+        frequencies lower than 3 000 GHz propagated in space
+        without artificial guide, or
+<radix> (b) through a community antenna television system operated by
+        a person licensed under the Broadcasting Act (Canada)
+        to carry on a broadcasting receiving undertaking,
+<exarkun> I'm hella gonna start calling people names with a 4 GHz laser
+%
+<radix> you are lying exarkun
+<radix> why do you lie
+<exarkun> it's healthy
+<exarkun> I just gained 3 hp
+%
+<radix> I think all of our HOWTOs should be moved into docstrings :-)
+<Brend> radix: Right! That way people can look at the source files,
+    and follow the usual chain of mystification -> hope -> rejoicing ->
+    source code -> confusion -> panic -> roped-into-maintaining-package
+    without even having to switch windows
+%
+<radix> penguinofdoom is not an optimal destination for resources
+* PenguinOfDoom opens mouth.
+<PenguinOfDoom> <----put cheezburger hear
+%
+<det> so how is married life?
+<dash> det: excessively awesome
+<det> When can we expect dots?
+<glyph> det: You've been waiting for years to say that, haven't you.
+%
+<glyph> while 1: pass
+<glyph> that's pretty CPU intensive
+<dracflamloc> yup
+<dracflamloc> you'd be better off doing that in a compiled language
+%
+[Mr Stebbing explaining his name]
+<tjs> PenguinOfDoom: no we chose a new vowel after the 'incident' 
+<tjs> we dont talk about that anymore..
+<tjs> poor old Aunty Anne, in the kitchen, with the bread knife 
+%
+<glyph> ***** You have declared an explicit schema in a dynamic language *****
+<glyph> Would you like to RESTART, RESTORE, or IMPLEMENT ORTHOGONAL PERSISTENCE?
+%
+<exarkun> I'm happy all the time.  No matter what.
+%
+<synx> Right, that's fine.
+<synx> OH WAIT
+<synx> ...no
+<synx> no wait, yes.
+%
+<radix> exarkun: it is cool, whenever I don't want to do any work I write wiki pages
+%
+<glyph> I kind of agree with that.
+<exarkun> There's nothing to agree with -- it's true.
+%
+<therve> hey! google is not a dictionary!
+<exarkun> since when
+<therve> since internet is full of people like me who don't speak 3 words of english!
+<exarkun> it's a living language man, you gotta keep evolving it!
+<therve> yay! evolvulation!
+%
+<MFen> wtf python ignores -Wignore on its own warnings
+<glyph> MFen: you think that's air you're breathing?
+<glyph> MFen: I mean, are you sure that python is emitting warnings, and not just writing to stderr in C?
+<MFen> glyph: how can you warn when you cannot.. speak? 2> /dev/null
+%
+<radix> WHITE MENS BRIEF SIZE L
+<radix> 365 @ $2.99 = $1091.35
+<jml> :(
+<jml> that is not a plan
+<jml> radix: you might think it is a plan, but it is not
+%
+<PenguinOfDoom> It's not AMP, it's C
+<PenguinOfDoom> You need to be either Immune To Confusion or Soulless.
+<PenguinOfDoom> or take frequent short breaks
+<indigo> i may be both
+<PenguinOfDoom> In that case, Cisco has a job for you
+%
+<exarkun> btw, do test driven development :/
+<Torn|zz> yeah that's on my todo list
+%
+<PenguinOfDoom> itamar: Doing fun stuff while breaking tests is a bit like pissing into the wind :(
+<PenguinOfDoom> Sure, you get sweet, sweet relief
+<PenguinOfDoom> also a faceful of piss
+%
+<dreid> Software sucks.
+<PenguinOfDoom> I love software! Software enables my life.
+%
+<some guy> Are you the Twisted guys?
+<glyph> Yeah, but this guy is bazaar.
+%

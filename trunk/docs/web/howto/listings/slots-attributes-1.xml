@@ -1,0 +1,6 @@
+<div xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1"
+    t:render="person_profile"
+    class="profile">
+<img><t:attr name="src"><t:slot name="profile_image_url" /></t:attr></img> 
+<p><t:slot name="person_name" /></p>
+</div>

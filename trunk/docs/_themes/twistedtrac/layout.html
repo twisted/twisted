@@ -1,0 +1,300 @@
+{%- block doctype -%}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+{%- endblock %}
+
+{%- set reldelim1 = reldelim1 is not defined and ' &raquo;' or reldelim1 %}
+{%- set reldelim2 = reldelim2 is not defined and ' |' or reldelim2 %}
+
+{%- macro relbar() %}
+    <div id="mainnav" class="related">
+      <h3>{{ _('Navigation') }}</h3>
+      <ul>
+        {%- for rellink in rellinks %}
+        <li class="right" {% if loop.first %}style="margin-right: 10px"{% endif %}>
+          <a href="{{ pathto(rellink[0]) }}" title="{{ rellink[1]|striptags }}"
+             {{ accesskey(rellink[2]) }}>{{ rellink[3] }}</a>
+          {%- if not loop.first %}{{ reldelim2 }}{% endif %}</li>
+        {%- endfor %}
+        {%- block rootrellink %}
+        <li><a href="{{ pathto(master_doc) }}">{{ shorttitle|e }}</a>{{ reldelim1 }}</li>
+        {%- endblock %}
+        {%- for parent in parents %}
+          <li><a href="{{ parent.link|e }}" {% if loop.last %}{{ accesskey("U") }}{% endif %}>{{ parent.title }}</a>{{ reldelim1 }}</li>
+        {%- endfor %}
+        {%- block relbaritems %} {% endblock %}
+      </ul>
+    </div>
+{%- endmacro %}
+
+{%- macro sidebar() %}
+      {%- if not embedded %}{% if not theme_nosidebar|tobool %}
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+          {%- block sidebarlogo %}
+          {%- if logo %}
+            <p class="logo"><a href="{{ pathto(master_doc) }}">
+              <img class="logo" src="{{ pathto('_static/' + logo, 1) }}" alt="Logo"/>
+            </a></p>
+          {%- endif %}
+          {%- endblock %}
+          {%- block sidebartoc %}
+          {%- if display_toc %}
+            <h3><a href="{{ pathto(master_doc) }}">{{ _('Table Of Contents') }}</a></h3>
+            {{ toc }}
+          {%- endif %}
+          {%- endblock %}
+          {%- block sidebarrel %}
+          {%- if prev %}
+            <h4>{{ _('Previous topic') }}</h4>
+            <p class="topless"><a href="{{ prev.link|e }}"
+                                  title="{{ _('previous chapter') }}">{{ prev.title }}</a></p>
+          {%- endif %}
+          {%- if next %}
+            <h4>{{ _('Next topic') }}</h4>
+            <p class="topless"><a href="{{ next.link|e }}"
+                                  title="{{ _('next chapter') }}">{{ next.title }}</a></p>
+          {%- endif %}
+          {%- endblock %}
+          {%- block sidebarsourcelink %}
+          {%- if show_source and has_source and sourcename %}
+            <h3>{{ _('This Page') }}</h3>
+            <ul class="this-page-menu">
+              <li><a href="{{ pathto('_sources/' + sourcename, true)|e }}"
+                     rel="nofollow">{{ _('Show Source') }}</a></li>
+            </ul>
+          {%- endif %}
+          {%- endblock %}
+          {%- if customsidebar %}
+          {% include customsidebar %}
+          {%- endif %}
+          {%- block sidebarsearch %}
+          {%- if pagename != "search" %}
+          <div id="searchbox" style="display: none">
+            <h3>{{ _('Quick search') }}</h3>
+              <form class="search" action="{{ pathto('search') }}" method="get">
+                <p>
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="{{ _('Go') }}" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+                </p>
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              {{ _('Enter search terms or a module, class or function name.') }}
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+          {%- endif %}
+          {%- endblock %}
+        </div>
+      </div>
+      {%- endif %}{% endif %}
+{%- endmacro %}
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+  <head>
+    <meta name="Description" content="An event-driven networking engine written in Python and MIT licensed." />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    {{ metatags }}
+    {%- if not embedded and docstitle %}
+      {%- set titlesuffix = " &mdash; "|safe + docstitle|e %}
+    {%- else %}
+      {%- set titlesuffix = "" %}
+    {%- endif %}
+    <title>{{ title|striptags }}{{ titlesuffix }}</title>
+    <link rel="stylesheet" href="{{ pathto('_static/' + style, 1) }}" type="text/css" />
+    <link rel="stylesheet" href="{{ pathto('_static/pygments.css', 1) }}" type="text/css" />
+    {%- if not embedded %}
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '{{ pathto("", 1) }}',
+        VERSION:     '{{ release|e }}',
+        COLLAPSE_MODINDEX: false,
+        FILE_SUFFIX: '{{ file_suffix }}',
+        HAS_SOURCE:  {{ has_source|lower }}
+      };
+    </script>
+    {%- for scriptfile in script_files %}
+    <script type="text/javascript" src="{{ pathto(scriptfile, 1) }}"></script>
+    {%- endfor %}
+    {%- if use_opensearch %}
+    <link rel="search" type="application/opensearchdescription+xml"
+          title="{% trans docstitle=docstitle|e %}Search within {{ docstitle }}{% endtrans %}"
+          href="{{ pathto('_static/opensearch.xml', 1) }}"/>
+    {%- endif %}
+    {%- if favicon %}
+    <link rel="shortcut icon" href="{{ pathto('_static/' + favicon, 1) }}"/>
+    {%- endif %}
+    {%- endif %}
+{%- block linktags %}
+    {%- if hasdoc('about') %}
+    <link rel="author" title="{{ _('About these documents') }}" href="{{ pathto('about') }}" />
+    {%- endif %}
+    {%- if hasdoc('genindex') %}
+    <link rel="index" title="{{ _('Index') }}" href="{{ pathto('genindex') }}" />
+    {%- endif %}
+    {%- if hasdoc('search') %}
+    <link rel="search" title="{{ _('Search') }}" href="{{ pathto('search') }}" />
+    {%- endif %}
+    {%- if hasdoc('copyright') %}
+    <link rel="copyright" title="{{ _('Copyright') }}" href="{{ pathto('copyright') }}" />
+    {%- endif %}
+    <link rel="top" title="{{ docstitle|e }}" href="{{ pathto('index') }}" />
+    {%- if parents %}
+    <link rel="up" title="{{ parents[-1].title|striptags }}" href="{{ parents[-1].link|e }}" />
+    {%- endif %}
+    {%- if next %}
+    <link rel="next" title="{{ next.title|striptags }}" href="{{ next.link|e }}" />
+    {%- endif %}
+    {%- if prev %}
+    <link rel="prev" title="{{ prev.title|striptags }}" href="{{ prev.link|e }}" />
+    {%- endif %}
+{%- endblock %}
+{%- block extrahead %} {% endblock %}
+    
+<!-- Can stuff between these comments go? -->
+        <link rel="search" href="/trac/search" />
+        <link rel="help" href="/trac/wiki/TracGuide" />
+        <link rel="alternate" href="/trac/wiki/Documentation?format=txt" type="text/x-trac-wiki" title="Plain Text" />
+        <link rel="start" href="/trac/wiki" />
+
+        
+    <script type="text/javascript" src="/trac/chrome/common/js/jquery.js"></script><script type="text/javascript" src="/trac/chrome/common/js/trac.js"></script><script type="text/javascript" src="/trac/chrome/common/js/search.js"></script>
+    
+    <!-- the following script tag is a holdover frome Trac, which shouldn't be needed in Sphinx
+    <script type="text/javascript">
+      $(document).ready(function() {
+        $("#content").find("h1,h2,h3,h4,h5,h6").addAnchor("Link to this section");
+      });
+    </script>
+    -->
+<!-- Can stuff between these comments go? -->
+
+  </head>
+  
+  
+<body>
+
+<div id="banner">
+<div id="top_grad">
+         
+</div>
+<div id="tab">
+        <a href="http://twistedmatrix.com/trac/wiki">HOME</a>
+    <a href="http://twistedmatrix.com/trac/wiki/FrequentlyAskedQuestions">FAQ</a>
+    <a href="/">DOCS</a>
+    <a href="http://twistedmatrix.com/trac/wiki/Downloads">DOWNLOAD</a>
+
+</div>
+      <div id="header">
+        <a id="logo" href="http://twistedmatrix.com/trac/"><img src="{{ pathto('_static/trac_banner.png', 1) }}" alt="Twisted" /></a>
+      </div>
+      <!-- taking this out for now, but might use 
+           the space for something else later 
+      -->
+      <!--
+      <form id="topsearch" action="/trac/search" method="get"><div>
+        <label for="proj-search">Search:</label>
+        <input type="text" id="proj-search" name="q" size="10" value="" />
+        <input type="submit" value="Search" />
+        <input type="hidden" name="wiki" value="on" />
+
+        <input type="hidden" name="changeset" value="on" />
+        <input type="hidden" name="ticket" value="on" />
+      </div></form>
+      -->
+      <div id="metanav" class="nav">
+    <ul>
+      <li> </li>
+      <!-- taking this out for now, but might use 
+           the space for something else later 
+      -->
+      <!--
+      <li class="first">logged in as khorn</li><li class=""><a href="/trac/logout">Logout</a></li><li class=""><a href="/trac/wiki/TracGuide">Help/Guide</a></li><li class=""><a href="/trac/about">About Trac</a></li><li class="last"><a href="/trac/account">My Account</a></li>
+      -->
+    </ul>
+  </div>
+    </div>
+
+<!-- mainnav -->
+{%- block relbar1 %}{{ relbar() }}{% endblock %}
+
+    <div id="main">
+    <div id="ctxtnav" class="nav">
+      <h2>Wiki Navigation</h2>
+      <ul>
+        <li>
+        
+        </li>
+        <!-- taking this out for now, but might use 
+             the space for something else later 
+        -->
+        <!--
+        <li><a href="/trac/wiki/WikiStart">Start Page</a></li>
+        <li><a href="/trac/wiki/TitleIndex">Index by Title</a></li>
+
+        <li><a href="/trac/wiki/RecentChanges">Index by Date</a></li>
+        <li class="last">
+          <a href="/trac/wiki/Documentation?action=diff&amp;version=15">Last Change</a>
+        </li>
+        -->
+      </ul>
+      <hr />
+    </div>
+    
+
+{%- block sidebar1 %} {# possible location for sidebar #} {% endblock %}
+
+    <div class="document">
+{%- block document %}
+      <div class="documentwrapper">
+      {%- if not embedded %}{% if not theme_nosidebar|tobool %}
+        <div class="bodywrapper">
+      {%- endif %}{% endif %}
+          <div id="current-docs-container" style="display: none">
+            <em>
+              <a id="current-docs-link">
+                Go to the latest version of this document.
+              </a>
+            </em>
+          </div>
+          <div class="body">
+            {% block body %} {% endblock %}
+          </div>
+      {%- if not embedded %}{% if not theme_nosidebar|tobool %}
+        </div>
+      {%- endif %}{% endif %}
+      </div>
+{%- endblock %}
+
+{%- block sidebar2 %}{{ sidebar() }}{% endblock %}
+      <div class="clearer"></div>
+    </div>
+
+    </div>
+    <div id="footer"><hr />
+      <div>
+
+</div>
+      <p class="left2">
+        Site design<br />
+        By <a href="http://huw.ugbox.net/">huw.wilkins.</a>
+
+      </p>
+      <p class="right"></p>
+    </div>
+    <script type="text/javascript">
+      if (window.location.pathname.indexOf('/current/') == -1) {
+          <!-- Give the user a link to this page, but in the current version of the docs. -->
+          var link = document.getElementById('current-docs-link');
+          link.href = window.location.pathname.replace(/\/\d+\.\d+\.\d+/, '/current');
+          <!-- And make it visible -->
+          var container = document.getElementById('current-docs-container');
+          container.style.display = '';
+          delete link;
+          delete container;
+      }
+    </script>
+  </body>
+</html>

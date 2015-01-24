@@ -1,0 +1,1 @@
+twisted.python.reflect.safe_str on Python 3 converts utf-8 encoded bytes to clean str instead of "b'a'"

@@ -1,0 +1,55 @@
+.TH TAP2DEB "1" "July 2001" "" ""
+.SH NAME
+tap2deb \- create Debian packages which wrap .tap files
+.SH SYNOPSIS
+.B tap2deb
+[options]
+.SH DESCRIPTION
+Create a ready to upload Debian package in ".build"
+.TP
+\fB\-u\fR, \fB\--unsigned\fR 
+do not sign the Debian package
+.TP
+\fB\-t\fR, \fB\--tapfile\fR \fI<tapfile>\fR
+Build the application around the given .tap (default twistd.tap)
+.TP
+\fB\-y\fR, \fB\--type\fR \fI<type>\fR
+The configuration has the given type . Allowable types are
+\fBtap\fR, \fBsource\fR, \fBxml\fR and \fBpython\fR.
+The first three types are \fBmktap\fR output formats,
+while the last one is a manual building of application 
+(see \fBtwistd(1)\fR, the \fB\-y\fR option).
+.TP
+\fB\-p\fR, \fB\--protocol\fR \fI<protocol>\fR
+The name of the protocol this will be used to serve. This is intended
+as a part of the description. Default is the name of the tapfile, minus
+any extensions.
+.TP
+\fB\-d\fR, \fB\--debfile\fR \fI<debfile>\fR
+The name of the debian package. Default is 'twisted-'+protocol.
+.TP
+\fB\-V\fR, \fB\--set-version\fR \fI<version>\fR
+The version of the Debian package. The default is 1.0
+.TP
+\fB\-e\fR, \fB\--description\fR \fI<description>\fR
+The one-line description. Default is uninteresting.
+.TP
+\fB\-l\fR, \fB\--long_description\fR \fI<long_description>\fR
+A multi-line description. Default is explanation about
+this being an automatic package created from tap2deb.
+.TP
+\fB\-m\fR, \fB\--maintainer\fR \fI<maintainer>\fR
+The maintainer, as "Name Lastname <email address>". This will
+go in the meta-files, as well as be used as the id to sign the package.
+.TP
+\fB\--version\fR
+Output version information and exit.
+.SH AUTHOR
+Written by Moshe Zadka, based on twistd's help messages
+.SH "REPORTING BUGS"
+To report a bug, visit \fIhttp://twistedmatrix.com/bugs/\fR
+.SH COPYRIGHT
+Copyright \(co 2000-2008 Twisted Matrix Laboratories.
+.br
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

@@ -1,0 +1,506 @@
+Ticket numbers in this file can be looked up by visiting
+http://twistedmatrix.com/trac/ticket/<number>
+
+Twisted Conch 14.0.0 (2014-05-08)
+=================================
+
+Improved Documentation
+----------------------
+ - The docstring for twisted.conch.ssh.userauth.SSHUserAuthClient is
+   now clearer on how the preferredOrder instance variable is handled.
+   (#6850)
+
+Other
+-----
+ - #6696, #6807, #7054
+
+
+Twisted Conch 13.2.0 (2013-10-29)
+=================================
+
+Features
+--------
+ - ckeygen now accepts --no-passphrase to generate unprotected keys.
+   (#5998)
+ - twisted.conch.endpoints.SSHCommandClientEndpoint.newConnection now
+   supplies a convenient default for the `ui` parameter if a value is
+   not passed in for it. (#6550)
+
+Bugfixes
+--------
+ - ckeygen --changepass now doesn't delete unencrypted keys or raise
+   an exception on encrypted ones. (#5894)
+ - twisted.conch.endpoints.SSHCommandClientEndpoint now doesn't try
+   password authentication if there is no password specified. (#6553)
+ - twisted.conch.endpoints.SSHCommandClientEndpoint now uses the
+   standard SSH port if no port is specified. (#6631)
+
+Other
+-----
+ - #5387, #6220
+
+
+Twisted Conch 13.1.0 (2013-06-23)
+=================================
+
+Features
+--------
+ - twisted.conch.endpoints.SSHCommandClientEndpoint is a new
+   IStreamClientEndpoint which supports connecting a protocol to the
+   stdio of a command running on a remote host via an SSH connection.
+   (#4698)
+ - twisted.conch.client.knownhosts.KnownHostsFile now has a public
+   `savePath` attribute giving the filesystem path where the known
+   hosts data is saved to and loaded from. (#6255)
+ - twisted.conch.endpoints.SSHCommandClientEndpoint.connect() returns
+   a cancellable Deferred when using new connections. (#6532)
+
+Other
+-----
+ - #5386, #6342, #6386, #6405, #6541
+
+
+Twisted Conch 13.0.0 (2013-03-19)
+=================================
+
+Features
+--------
+ - twisted.conch.client.knownhosts.KnownHostsFile now takes care not
+   to overwrite changes to its save file made behind its back, making
+   it safer to use with the same known_hosts file as is being used by
+   other software. (#6256)
+
+Other
+-----
+ - #5864, #6257, #6297
+
+
+Twisted Conch 12.3.0 (2012-12-20)
+=================================
+
+Bugfixes
+--------
+ - Passing multiple --auth arguments to conch now correctly adds all
+   the specified checkers to the conch server (#5881)
+ - ckeygen --showpub now uses OPENSSH as default display, instead of
+   breaking because no display type was passed. (#5889)
+ - ckeygen --showpub catches EncryptedKeyError instead of BadKeyError
+   to detect that a key needs to be decrypted with a passphrase.
+   (#5890)
+
+Other
+-----
+ - #5923
+
+
+Twisted Conch 12.2.0 (2012-08-26)
+=================================
+
+Features
+--------
+ - twisted.conch.ssh.transport.SSHTransport now returns an
+   SSHTransportAddress from the getPeer() and getHost() methods.
+   (#2997)
+
+Bugfixes
+--------
+ - twisted.conch now supports commercial SSH implementations which
+   don't comply with the IETF standard (#1902)
+ - twisted.conch.ssh.userauth now works correctly with hash
+   randomization enabled. (#5776)
+ - twisted.conch no longer relies on __builtins__ being a dict, which
+   is a purely CPython implementation detail (#5779)
+
+Other
+-----
+ - #5496, #5617, #5700, #5748, #5777
+
+
+Twisted Conch 12.1.0 (2012-06-02)
+=================================
+
+Features
+--------
+ - twisted.conch.tap now supports cred plugins (#4753)
+
+Bugfixes
+--------
+ - twisted.conch.client.knownhosts now handles errors encountered
+   parsing hashed entries in a known hosts file. (#5616)
+
+Improved Documentation
+----------------------
+ - Conch examples window.tac and telnet_echo.tac now have better
+   explanations. (#5590)
+
+Other
+-----
+ - #5580
+
+
+Twisted Conch 12.0.0 (2012-02-10)
+=================================
+
+Features
+--------
+ - use Python shadow module for authentication if it's available
+   (#3242)
+
+Bugfixes
+--------
+ - twisted.conch.ssh.transport.messages no longer ends with with old
+   message IDs on platforms with differing dict() orderings (#5352)
+
+Other
+-----
+ - #5225
+
+
+Twisted Conch 11.1.0 (2011-11-15)
+=================================
+
+Features
+--------
+ - twisted.conch.ssh.filetransfer.FileTransferClient now handles short
+   status messages, not strictly allowed by the RFC, but sent by some
+   SSH implementations. (#3009)
+ - twisted.conch.manhole now supports CTRL-A and CTRL-E to trigger
+   HOME and END functions respectively. (#5252)
+
+Bugfixes
+--------
+ - When run from an unpacked source tarball or a VCS checkout, the
+   bin/conch/ scripts will now use the version of Twisted they are
+   part of. (#3526)
+ - twisted.conch.insults.window.ScrolledArea now passes no extra
+   arguments to object.__init__ (which works on more versions of
+   Python). (#4197)
+ - twisted.conch.telnet.ITelnetProtocol now has the correct signature
+   for its unhandledSubnegotiation() method. (#4751)
+ - twisted.conch.ssh.userauth.SSHUserAuthClient now more closely
+   follows the RFC 4251 definition of boolean values when negotiating
+   for key-based authentication, allowing better interoperability with
+   other SSH implementations. (#5241)
+ - twisted.conch.recvline.RecvLine now ignores certain function keys
+   in its keystrokeReceived method instead of raising an exception.
+   (#5246)
+
+Deprecations and Removals
+-------------------------
+ - The --user option to `twistd manhole' has been removed as it was
+   dead code with no functionality associated with it. (#5283)
+
+Other
+-----
+ - #5107, #5256, #5349
+
+
+Twisted Conch 11.0.0 (2011-04-01)
+=================================
+
+Bugfixes
+--------
+ - The transport for subsystem protocols now declares that it
+   implements ITransport and implements the getHost and getPeer
+   methods. (#2453)
+ - twisted.conch.ssh.transport.SSHTransportBase now responds to key
+   exchange messages at any time during a connection (instead of only
+   at connection setup).  It also queues non-key exchange messages
+   sent during key exchange to avoid corrupting the connection state.
+   (#4395)
+ - Importing twisted.conch.ssh.common no longer breaks pow(base, exp[,
+   modulus]) when the gmpy package is installed and base is not an
+   integer. (#4803)
+ - twisted.conch.ls.lsLine now returns a time string which does not
+   consider the locale. (#4937)
+
+Improved Documentation
+----------------------
+ - Changed the man page for ckeygen to accurately reflect what it
+   does, and corrected its synposis so that a second "ckeygen" is not
+   a required part of the ckeygen command line.  (#4738)
+
+Other
+-----
+ - #2112
+
+
+Twisted Conch 10.2.0 (2010-11-29)
+=================================
+
+Bugfixes
+--------
+ - twisted.conch.ssh.factory.SSHFactory no longer disables coredumps.
+   (#2715)
+ - The Deferred returned by twisted.conch.telnet.TelnetTransport.will
+   now fires with an OptionRefused failure if the peer responds with a
+   refusal for the option negotiation. (#4231)
+ - SSHServerTransport and SSHClientTransport in
+   twisted.conch.ssh.transport no longer use PyCrypto to generate
+   random numbers for DH KEX.  They also now generate values from the
+   full valid range, rather than only half of it. (#4469)
+ - twisted.conch.ssh.connection.SSHConnection now errbacks leftover
+   request deferreds on connection shutdown. (#4483)
+
+Other
+-----
+ - #4677
+
+
+Twisted Conch 10.1.0 (2010-06-27)
+=================================
+
+Features
+--------
+ - twisted.conch.ssh.transport.SSHTransportBase now allows supported
+   ssh protocol versions to be overriden. (#4428)
+
+Bugfixes
+--------
+ - SSHSessionProcessProtocol now doesn't close the session when stdin
+   is closed, but instead when both stdout and stderr are. (#4350)
+ - The 'cftp' command-line tool will no longer encounter an
+   intermittent error, crashing at startup with a ZeroDivisionError
+   while trying to report progress. (#4463)
+ - twisted.conch.ssh.connection.SSHConnection now replies to requests
+   to open an unknown channel with a OPEN_UNKNOWN_CHANNEL_TYPE message
+   instead of closing the connection. (#4490)
+
+Deprecations and Removals
+-------------------------
+ - twisted.conch.insults.client was deprecated. (#4095)
+ - twisted.conch.insults.colors has been deprecated.  Please use
+   twisted.conch.insults.helper instead. (#4096)
+ - Removed twisted.conch.ssh.asn1, which has been deprecated since
+   Twisted 9.0. (#4097)
+ - Removed twisted.conch.ssh.common.Entropy, as Entropy.get_bytes has
+   been  deprecated since 2007 and Entropy.get_bytes was the only
+   attribute of Entropy. (#4098)
+ - Removed twisted.conch.ssh.keys.getPublicKeyString, which has been
+   deprecated since 2007.  Also updated the conch examples
+   sshsimpleserver.py and sshsimpleclient.py to reflect this removal.
+   (#4099)
+ - Removed twisted.conch.ssh.keys.makePublicKeyString, which has been
+   deprecated since 2007. (#4100)
+ - Removed twisted.conch.ssh.keys.getPublicKeyObject, which has been
+   deprecated since 2007. (#4101)
+ - Removed twisted.conch.ssh.keys.getPrivateKeyObject, which has been
+   deprecated since 2007.  Also updated the conch examples to reflect
+   this removal. (#4102)
+ - Removed twisted.conch.ssh.keys.makePrivateKeyString, which has been
+   deprecated since 2007. (#4103)
+ - Removed twisted.conch.ssh.keys.makePublicKeyBlob, which has been
+   deprecated since 2007. (#4104)
+ - Removed twisted.conch.ssh.keys.signData,
+   twisted.conch.ssh.keys.verifySignature, and
+   twisted.conch.ssh.keys.printKey, which have been deprecated since
+   2007.   (#4105)
+
+Other
+-----
+ - #3849, #4408, #4454
+
+
+Twisted Conch 10.0.0 (2010-03-01)
+=================================
+
+Bugfixes
+--------
+ - twisted.conch.checkers.SSHPublicKeyDatabase now looks in the
+   correct user directory for authorized_keys files. (#3984)
+
+ - twisted.conch.ssh.SSHUserAuthClient now honors preferredOrder when
+   authenticating. (#4266)
+
+Other
+-----
+ - #2391, #4203, #4265
+
+
+Twisted Conch 9.0.0 (2009-11-24)
+================================
+
+Fixes
+-----
+ - The SSH key parser has been removed and conch now uses pyASN1 to parse keys.
+   This should fix a number of cases where parsing a key would fail, but it now
+   requires users to have pyASN1 installed (#3391)
+ - The time field on SFTP file listings should now be correct (#3503)
+ - The day field on SFTP file listings should now be correct on Windows (#3503)
+ - The "cftp" sftp client now truncates files it is uploading over (#2519)
+ - The telnet server protocol can now properly respond to subnegotiation
+   requests (#3655)
+ - Tests and factoring of the SSHv2 server implementation are now much better
+   (#2682)
+ - The SSHv2 server now sends "exit-signal" messages to the client, instead of
+   raising an exception, when a process dies due to a signal (#2687)
+ - cftp's client-side "exec" command now uses /bin/sh if the current user has
+   no shell (#3914)
+
+Deprecations and Removals
+-------------------------
+ - The buggy SSH connection sharing feature of the SSHv2 client was removed
+   (#3498)
+ - Use of strings and PyCrypto objects to represent keys is deprecated in favor
+   of using Conch Key objects (#2682)
+
+Other
+-----
+ - #3548, #3537, #3551, #3220, #3568, #3689, #3709, #3809, #2763, #3540, #3750,
+   #3897, #3813, #3871, #3916, #4047, #3940, #4050
+
+
+Conch 8.2.0 (2008-12-16)
+========================
+
+Features
+--------
+ - The type of the protocols instantiated by SSHFactory is now parameterized
+   (#3443)
+
+Fixes
+-----
+ - A file descriptor leak has been fixed (#3213, #1789)
+ - "File Already Exists" errors are now handled more correctly (#3033)
+ - Handling of CR IAC in TelnetClient is now improved (#3305)
+ - SSHAgent is no longer completely unusable (#3332)
+ - The performance of insults.ClientProtocol is now greatly increased by
+   delivering more than one byte at a time to application code (#3386)
+ - Manhole and the conch server no longer need to be run as root when not
+   necessary (#2607)
+ - The value of FILEXFER_ATTR_ACMODTIME has been corrected (#2902)
+ - The management of known_hosts and host key verification has been overhauled
+   (#1376, #1301, #3494, #3496, #1292, #3499)
+
+Other
+-----
+ - #3193, #1633
+
+
+8.1.0 (2008-05-18)
+==================
+
+Fixes
+-----
+ - A regression was fixed whereby the publicKeys and privateKeys attributes of
+   SSHFactory would not be interpreted as strings (#3141)
+ - The sshsimpleserver.py example had a minor bug fix (#3135)
+ - The deprecated mktap API is no longer used (#3127)
+ - An infelicity was fixed whereby a NameError would be raised in certain
+   circumstances during authentication when a ConchError should have been
+   (#3154)
+ - A workaround was added to conch.insults for a bug in gnome-terminal whereby
+   it would not scroll correctly (#3189)
+
+
+8.0.0 (2008-03-17)
+==================
+
+Features
+--------
+ - Add DEC private mode manipulation methods to ITerminalTransport. (#2403)
+
+Fixes
+-----
+ - Parameterize the scheduler function used by the insults TopWindow widget.
+   This change breaks backwards compatibility in the TopWindow initializer.
+   (#2413)
+ - Notify subsystems, like SFTP, of connection close. (#2421)
+ - Change the process file descriptor "connection lost" code to reverse the
+   setNonBlocking operation done during initialization. (#2371)
+ - Change ConsoleManhole to wait for connectionLost notification before
+   stopping the reactor. (#2123, #2371)
+ - Make SSHUserAuthServer.ssh_USERAUTH_REQUEST return a Deferred. (#2528)
+ - Manhole's initializer calls its parent class's initializer with its
+   namespace argument. (#2587)
+ - Handle ^C during input line continuation in manhole by updating the prompt
+   and line buffer correctly. (#2663)
+ - Make twisted.conch.telnet.Telnet by default reject all attempts to enable
+   options. (#1967)
+ - Reduce the number of calls into application code to deliver application-level
+   data in twisted.conch.telnet.Telnet.dataReceived (#2107)
+ - Fix definition and management of extended attributes in conch file transfer.
+   (#3010)
+ - Fix parsing of OpenSSH-generated RSA keys with differing ASN.1 packing style.
+   (#3008)
+ - Fix handling of missing $HOME in twisted.conch.client.unix. (#3061)
+
+Misc
+----
+ - #2267, #2378, #2604, #2707, #2341, #2685, #2679, #2912, #2977, #2678, #2709
+   #2063, #2847
+
+
+0.8.0 (2007-01-06)
+==================
+
+Features
+--------
+ - Manhole now supports Ctrl-l to emulate the same behavior in the
+   Python interactive interpreter (#1565)
+ - Python 2.5 is now supported (#1867)
+
+Misc
+----
+ - #1673, #1636, #1892, #1943, #2057, #1180, #1185, #2148, #2159, #2291, 
+
+Deprecations and Removals
+-------------------------
+
+ - The old twisted.cred API (Identities, Authorizers, etc) is no
+   longer supported (#1440)
+
+
+0.7.0 (2006-05-21)
+==================
+
+Features
+--------
+  - Timeout support for ExpectableBuffer.expect()
+
+Fixes
+-----
+  - ~5x speedup for bulk data transfer (#1325)
+  - Misc: #1428
+
+0.6.0:
+
+ Bugfixes and improvements in SSH support and Insults:
+  - PAM authenticator support factored out into twisted.cred
+  - Poorly supported next-line terminal operation replaced with simple \r\n
+
+ New functionality:
+  - An ITerminalTransport implementation with expect-like features
+  - Support for the "none" SSH cipher
+  - Insults support for handling more keystrokes and more methods for
+    terminal manipulation
+  - New, simple insults-based widget library added
+
+ Better test coverage:
+  - Dependence on `localhost' name removed
+  - Some timing-sensitive tests changed to be more reliable
+  - Process spawning tests initialize environment more robustly
+
+0.5.0:
+
+ Many improvements to SSH support. Here's some in particular:
+  - Add --reconnect option to conch binary
+  - utmp/wtmp logging
+  - Unix login improvements, PAM support
+  - Add "cftp" -- Conch SFTP.
+  - Deferred retrieval of public keys is supported
+  - PAM support for client and server
+  - Bugfixes: 
+	- fix conch failing to exit, and hangs.
+	- Remote->Local forwarding
+	- Channel closing
+	- Invalid known_host writing
+	- Many others
+
+ New functionality:
+  - twisted.conch.telnet: new, much improved telnet implementation.
+  - twisted.conch.insults: Basic curses-like terminal support (server-side).
+  - twisted.conch.manhole: new interactive python interactive interpreter,
+    can be used with conch's telnet, ssh, or on the console.
+	- Main features: Syntax coloring, line editing, and useful interactive
+       handling of Deferreds.

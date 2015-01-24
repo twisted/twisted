@@ -1,0 +1,3 @@
+twisted.internet.ssl.Certificate(...).getPublicKey().keyHash() now produces a
+stable value regardless of OpenSSL version.  Unfortunately this means that it
+is different than the value produced by older Twisted versions.
