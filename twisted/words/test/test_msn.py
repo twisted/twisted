@@ -524,7 +524,7 @@ class DeprecationTests(unittest.TestCase):
         """
         Accessing L{twisted.words.protocols.msn} emits a deprecation warning
         """
-        requireModule('twisted.words.protocols.msn')
+        requireModule('twisted.words.protocols').msn
         warningsShown = self.flushWarnings([self.test_deprecation])
         self.assertEqual(len(warningsShown), 1)
         self.assertIdentical(warningsShown[0]['category'], DeprecationWarning)
