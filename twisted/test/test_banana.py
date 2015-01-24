@@ -14,7 +14,7 @@ from twisted.test.proto_helpers import StringTransport
 
 
 class MathTestCase(unittest.TestCase):
-    def testInt2b128(self):
+    def test_int2b128(self):
         funkylist = range(0,100) + range(1000,1100) + range(1000000,1000100) + [1024 **10l]
         for i in funkylist:
             x = StringIO.StringIO()
@@ -101,7 +101,7 @@ class BananaTestCase(BananaTestBase):
     General banana tests.
     """
 
-    def testString(self):
+    def test_string(self):
         self.enc.sendEncoded("hello")
         l = []
         self.enc.dataReceived(self.io.getvalue())
@@ -249,33 +249,38 @@ class BananaTestCase(BananaTestBase):
         self.assertRaises(banana.BananaError, self.enc.dataReceived, encoded)
 
 
-    def testNegativeLong(self):
+    def test_negativeLong(self):
         self.enc.sendEncoded(-1015l)
         self.enc.dataReceived(self.io.getvalue())
         assert self.result == -1015l, "should be -1015l, got %s" % self.result
 
-    def testInteger(self):
+
+    def test_integer(self):
         self.enc.sendEncoded(1015)
         self.enc.dataReceived(self.io.getvalue())
         assert self.result == 1015, "should be 1015, got %s" % self.result
 
-    def testNegative(self):
+
+    def test_negative(self):
         self.enc.sendEncoded(-1015)
         self.enc.dataReceived(self.io.getvalue())
         assert self.result == -1015, "should be -1015, got %s" % self.result
 
-    def testFloat(self):
+
+    def test_float(self):
         self.enc.sendEncoded(1015.)
         self.enc.dataReceived(self.io.getvalue())
         assert self.result == 1015.
 
-    def testList(self):
+
+    def test_list(self):
         foo = [1, 2, [3, 4], [30.5, 40.2], 5, ["six", "seven", ["eight", 9]], [10], []]
         self.enc.sendEncoded(foo)
         self.enc.dataReceived(self.io.getvalue())
         assert self.result == foo, "%s!=%s" % (repr(self.result), repr(foo))
 
-    def testPartial(self):
+
+    def test_partial(self):
         """
         Test feeding the data byte per byte to the receiver. Normally
         data is not split.
@@ -300,16 +305,19 @@ class BananaTestCase(BananaTestBase):
             self.enc.dataReceived(byte)
 
 
-    def testOversizedList(self):
+    def test_oversizedList(self):
         data = '\x02\x01\x01\x01\x01\x80'
         # list(size=0x0101010102, about 4.3e9)
         self.failUnlessRaises(banana.BananaError, self.feed, data)
-    def testOversizedString(self):
+
+
+    def test_oversizedString(self):
         data = '\x02\x01\x01\x01\x01\x82'
         # string(size=0x0101010102, about 4.3e9)
         self.failUnlessRaises(banana.BananaError, self.feed, data)
 
-    def testCrashString(self):
+
+    def test_crashString(self):
         crashString = '\x00\x00\x00\x00\x04\x80'
         # string(size=0x0400000000, about 17.2e9)
 
@@ -328,7 +336,7 @@ class BananaTestCase(BananaTestBase):
         except banana.BananaError:
             pass
 
-    def testCrashNegativeLong(self):
+    def test_crashNegativeLong(self):
         # There was a bug in cBanana which relied on negating a negative integer
         # always giving a positive result, but for the lowest possible number in
         # 2s-complement arithmetic, that's not true, i.e.
