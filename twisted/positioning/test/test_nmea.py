@@ -125,7 +125,7 @@ class BrokenSentenceCallbackTests(TestCase):
 
 
 
-class SplitTest(TestCase):
+class SplitTests(TestCase):
     """
     Checks splitting of NMEA sentences.
     """
@@ -1008,7 +1008,7 @@ class InvalidFixTests(FixerTestMixin, TestCase):
 
 
 
-class NMEAReceiverTest(TestCase):
+class NMEAReceiverTests(TestCase):
     """
     Tests for the NMEA receiver.
     """
