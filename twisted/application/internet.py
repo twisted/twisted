@@ -38,8 +38,6 @@ reactor.listen/connect* methods for more information.
 """
 
 from twisted.python import log
-from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
 from twisted.application import service
 from twisted.internet import task
 
@@ -209,20 +207,13 @@ for tran in 'TCP UNIX SSL UDP UNIXDatagram Multicast'.split():
     for side in 'Server Client'.split():
         if tran == "Multicast" and side == "Client":
             continue
+        if tran == "UDP" and side == "Client":
+            continue
         base = globals()['_Abstract'+side]
         doc = _doc[side] % vars()
         klass = types.ClassType(tran+side, (base,),
                                 {'method': tran, '__doc__': doc})
         globals()[tran+side] = klass
-
-
-
-deprecatedModuleAttribute(
-        Version("Twisted", 13, 1, 0),
-        "It relies upon IReactorUDP.connectUDP "
-        "which was removed in Twisted 10. "
-        "Use twisted.application.internet.UDPServer instead.",
-        "twisted.application.internet", "UDPClient")
 
 
 
@@ -399,7 +390,7 @@ class StreamServerEndpointService(service.Service, object):
 
 
 __all__ = (['TimerService', 'CooperatorService', 'MulticastServer',
-            'StreamServerEndpointService'] +
+            'StreamServerEndpointService', 'UDPServer'] +
            [tran+side
-            for tran in 'TCP UNIX SSL UDP UNIXDatagram'.split()
+            for tran in 'TCP UNIX SSL UNIXDatagram'.split()
             for side in 'Server Client'.split()])

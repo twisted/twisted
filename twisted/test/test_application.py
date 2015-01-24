@@ -358,21 +358,6 @@ class TestInternet2(unittest.TestCase):
         return defer.maybeDeferred(t.stopService).addCallback(onStop)
 
 
-    def test_deprecatedUDPClient(self):
-        """
-        L{internet.UDPClient} is deprecated since Twisted-13.1.
-        """
-        internet.UDPClient
-        warningsShown = self.flushWarnings([self.test_deprecatedUDPClient])
-        self.assertEqual(1, len(warningsShown))
-        self.assertEqual(
-                "twisted.application.internet.UDPClient was deprecated in "
-                "Twisted 13.1.0: It relies upon IReactorUDP.connectUDP "
-                "which was removed in Twisted 10. "
-                "Use twisted.application.internet.UDPServer instead.",
-                warningsShown[0]['message'])
-
-
     def testPrivileged(self):
         factory = protocol.ServerFactory()
         factory.protocol = TestEcho
@@ -519,6 +504,8 @@ class TestInternet2(unittest.TestCase):
         for tran in trans:
             for side in 'Server Client'.split():
                 if tran == "Multicast" and side == "Client":
+                    continue
+                if tran == "UDP" and side == "Client":
                     continue
                 self.assertTrue(hasattr(internet, tran + side))
                 method = getattr(internet, tran + side).method
