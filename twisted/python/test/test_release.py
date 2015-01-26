@@ -163,7 +163,7 @@ class StructureAssertingMixin(object):
 
 
 
-class ChangeVersionTest(TestCase, StructureAssertingMixin):
+class ChangeVersionTests(TestCase, StructureAssertingMixin):
     """
     Twisted has the ability to change versions.
     """
@@ -391,7 +391,7 @@ class ChangeVersionTest(TestCase, StructureAssertingMixin):
 
 
 
-class ProjectTest(TestCase):
+class ProjectTests(TestCase):
     """
     There is a first-class representation of a project.
     """
@@ -496,7 +496,7 @@ class ProjectTest(TestCase):
 
 
 
-class UtilityTest(TestCase):
+class UtilityTests(TestCase):
     """
     Tests for various utility functions for releasing.
     """
@@ -542,7 +542,7 @@ class UtilityTest(TestCase):
 
 
 
-class VersionWritingTest(TestCase):
+class VersionWritingTests(TestCase):
     """
     Tests for L{replaceProjectVersion}.
     """
@@ -574,7 +574,7 @@ class VersionWritingTest(TestCase):
 
 
 
-class APIBuilderTestCase(TestCase):
+class APIBuilderTests(TestCase):
     """
     Tests for L{APIBuilder}.
     """
@@ -714,7 +714,7 @@ class APIBuilderTestCase(TestCase):
 
 
 
-class FilePathDeltaTest(TestCase):
+class FilePathDeltaTests(TestCase):
     """
     Tests for L{filePathDelta}.
     """
@@ -1450,7 +1450,7 @@ class DistributionBuilderTestBase(StructureAssertingMixin, TestCase):
 
 
 
-class DistributionBuilderTest(DistributionBuilderTestBase):
+class DistributionBuilderTests(DistributionBuilderTestBase):
 
     def test_twistedDistribution(self):
         """
@@ -1673,7 +1673,7 @@ class DistributionBuilderTest(DistributionBuilderTestBase):
 
 
 
-class BuildAllTarballsTest(DistributionBuilderTestBase):
+class BuildAllTarballsTests(DistributionBuilderTestBase):
     """
     Tests for L{DistributionBuilder.buildAllTarballs}.
     """

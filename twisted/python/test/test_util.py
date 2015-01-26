@@ -34,7 +34,7 @@ else:
 
 
 
-class UtilTestCase(unittest.TestCase):
+class UtilTests(unittest.TestCase):
 
     def testUniq(self):
         l = ["a", 1, "ab", "a", 3, 4, 1, 2, 2, 4, 6]
@@ -147,7 +147,7 @@ class UntilConcludesTests(unittest.TestCase):
 
 
 
-class SwitchUIDTest(unittest.TestCase):
+class SwitchUIDTests(unittest.TestCase):
     """
     Tests for L{util.switchUID}.
     """
@@ -223,7 +223,7 @@ class SwitchUIDTest(unittest.TestCase):
 
 
 
-class TestMergeFunctionMetadata(unittest.TestCase):
+class MergeFunctionMetadataTests(unittest.TestCase):
     """
     Tests for L{mergeFunctionMetadata}.
     """
@@ -320,7 +320,7 @@ class TestMergeFunctionMetadata(unittest.TestCase):
 
 
 
-class OrderedDictTest(unittest.TestCase):
+class OrderedDictTests(unittest.TestCase):
     def testOrderedDict(self):
         d = util.OrderedDict()
         d['a'] = 'b'
@@ -348,7 +348,7 @@ class OrderedDictTest(unittest.TestCase):
 
 
 
-class InsensitiveDictTest(unittest.TestCase):
+class InsensitiveDictTests(unittest.TestCase):
     """
     Tests for L{util.InsensitiveDict}.
     """
@@ -431,7 +431,7 @@ class PasswordTestingProcessProtocol(ProcessProtocol):
         self.finished.callback((reason, self.output))
 
 
-class GetPasswordTest(unittest.TestCase):
+class GetPasswordTests(unittest.TestCase):
     if not IReactorProcess.providedBy(reactor):
         skip = "Process support required to test getPassword"
 
@@ -464,7 +464,7 @@ class GetPasswordTest(unittest.TestCase):
 
 
 
-class SearchUpwardsTest(unittest.TestCase):
+class SearchUpwardsTests(unittest.TestCase):
     def testSearchupwards(self):
         os.makedirs('searchupwards/a/b/c')
         file('searchupwards/foo.txt', 'w').close()
@@ -488,7 +488,7 @@ class SearchUpwardsTest(unittest.TestCase):
 
 
 
-class IntervalDifferentialTestCase(unittest.TestCase):
+class IntervalDifferentialTests(unittest.TestCase):
     def testDefault(self):
         d = iter(util.IntervalDifferential([], 10))
         for i in range(100):
@@ -1079,7 +1079,7 @@ class FancyStrMixinTests(unittest.TestCase):
 
 
 
-class PadToTest(unittest.TestCase):
+class PadToTests(unittest.TestCase):
     """
     Tests for L{util.padTo}.
     """
@@ -1149,8 +1149,8 @@ class PadToTest(unittest.TestCase):
 
 
 if _PY3:
-    del (SwitchUIDTest, SearchUpwardsTest, RunAsEffectiveUserTests,
-         OrderedDictTest, IntervalDifferentialTestCase, UtilTestCase,
-         TestMergeFunctionMetadata, DeprecationTests, InitGroupsTests,
-         GetPasswordTest,
+    del (SwitchUIDTests, SearchUpwardsTests, RunAsEffectiveUserTests,
+         OrderedDictTests, IntervalDifferentialTests, UtilTests,
+         MergeFunctionMetadataTests, DeprecationTests, InitGroupsTests,
+         GetPasswordTests,
          )

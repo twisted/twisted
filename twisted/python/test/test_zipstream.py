@@ -120,7 +120,7 @@ class FileEntryMixin:
 
 
 
-class DeflatedZipFileEntryTest(FileEntryMixin, unittest.TestCase):
+class DeflatedZipFileEntryTests(FileEntryMixin, unittest.TestCase):
     """
     DeflatedZipFileEntry should be file-like
     """
@@ -128,7 +128,7 @@ class DeflatedZipFileEntryTest(FileEntryMixin, unittest.TestCase):
 
 
 
-class ZipFileEntryTest(FileEntryMixin, unittest.TestCase):
+class ZipFileEntryTests(FileEntryMixin, unittest.TestCase):
    """
    ZipFileEntry should be file-like
    """
@@ -136,7 +136,7 @@ class ZipFileEntryTest(FileEntryMixin, unittest.TestCase):
 
 
 
-class ZipstreamTest(unittest.TestCase):
+class ZipstreamTests(unittest.TestCase):
     """
     Tests for twisted.python.zipstream
     """

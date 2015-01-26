@@ -9,7 +9,7 @@ from twisted.trial import unittest
 from twisted.python import urlpath
 
 
-class URLPathTestCase(unittest.TestCase):
+class URLPathTests(unittest.TestCase):
     def setUp(self):
         self.path = urlpath.URLPath.fromString("http://example.com/foo/bar?yes=no&no=yes#footer")
 
