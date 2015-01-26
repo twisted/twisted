@@ -150,7 +150,7 @@ class LineOnlyTester(basic.LineOnlyReceiver):
 
 
 
-class LineReceiverTestCase(unittest.SynchronousTestCase):
+class LineReceiverTests(unittest.SynchronousTestCase):
     """
     Test L{twisted.protocols.basic.LineReceiver}, using the C{LineTester}
     wrapper.
@@ -446,7 +446,7 @@ class LineReceiverLineLengthExceededTests(unittest.SynchronousTestCase):
 
 
 
-class LineOnlyReceiverTestCase(unittest.SynchronousTestCase):
+class LineOnlyReceiverTests(unittest.SynchronousTestCase):
     """
     Tests for L{twisted.protocols.basic.LineOnlyReceiver}.
     """
@@ -545,7 +545,7 @@ class LPTestCaseMixin:
 
 
 
-class NetstringReceiverTestCase(unittest.SynchronousTestCase, LPTestCaseMixin):
+class NetstringReceiverTests(unittest.SynchronousTestCase, LPTestCaseMixin):
     """
     Tests for L{twisted.protocols.basic.NetstringReceiver}.
     """
@@ -970,8 +970,8 @@ class TestInt32(TestMixin, basic.Int32StringReceiver):
 
 
 
-class Int32TestCase(unittest.SynchronousTestCase, IntNTestCaseMixin,
-                    RecvdAttributeMixin):
+class Int32Tests(unittest.SynchronousTestCase, IntNTestCaseMixin,
+                 RecvdAttributeMixin):
     """
     Test case for int32-prefixed protocol
     """
@@ -1001,8 +1001,8 @@ class TestInt16(TestMixin, basic.Int16StringReceiver):
 
 
 
-class Int16TestCase(unittest.SynchronousTestCase, IntNTestCaseMixin,
-                    RecvdAttributeMixin):
+class Int16Tests(unittest.SynchronousTestCase, IntNTestCaseMixin,
+                 RecvdAttributeMixin):
     """
     Test case for int16-prefixed protocol
     """
@@ -1039,7 +1039,7 @@ class NewStyleTestInt16(TestInt16, object):
 
 
 
-class NewStyleInt16TestCase(Int16TestCase):
+class NewStyleInt16Tests(Int16Tests):
     """
     This test case verifies that IntNStringReceiver still works when inherited
     by a new-style class.
@@ -1060,8 +1060,8 @@ class TestInt8(TestMixin, basic.Int8StringReceiver):
 
 
 
-class Int8TestCase(unittest.SynchronousTestCase, IntNTestCaseMixin,
-                   RecvdAttributeMixin):
+class Int8Tests(unittest.SynchronousTestCase, IntNTestCaseMixin,
+                RecvdAttributeMixin):
     """
     Test case for int8-prefixed protocol
     """
@@ -1129,7 +1129,7 @@ class ConsumingProtocol(basic.LineReceiver):
 
 
 
-class ProducerTestCase(unittest.SynchronousTestCase):
+class ProducerTests(unittest.SynchronousTestCase):
     """
     Tests for L{basic._PausableMixin} and L{basic.LineReceiver.paused}.
     """
@@ -1205,7 +1205,7 @@ class ProducerTestCase(unittest.SynchronousTestCase):
 
 
 
-class FileSenderTestCase(unittest.TestCase):
+class FileSenderTests(unittest.TestCase):
     """
     Tests for L{basic.FileSender}.
     """
