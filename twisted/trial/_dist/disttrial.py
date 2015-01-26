@@ -11,11 +11,12 @@ responsible for coordinating all of trial's behavior at the highest level.
 
 import os
 import sys
+import time
 
 from twisted.python.filepath import FilePath
 from twisted.python.modules import theSystemPath
 from twisted.internet.defer import DeferredList
-from twisted.internet.task import cooperate
+from twisted.internet.task import Cooperator
 
 from twisted.trial.util import _unusedTestDirectory
 from twisted.trial.unittest import _iterateTests
@@ -23,7 +24,6 @@ from twisted.trial._dist.worker import LocalWorker, LocalWorkerAMP
 from twisted.trial._dist.distreporter import DistReporter
 from twisted.trial.reporter import UncleanWarningsReporterWrapper
 from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
-
 
 
 class DistTrialRunner(object):
@@ -39,6 +39,7 @@ class DistTrialRunner(object):
     @ivar _reporterFactory: the reporter class to be used.
     """
     _distReporterFactory = DistReporter
+    _timeout = 0.1
 
     def _makeResult(self):
         """
@@ -73,7 +74,18 @@ class DistTrialRunner(object):
         self._logFileObserver = None
         self._logFileObject = None
         self._logWarnings = False
+        self._cooperator = Cooperator(
+            terminationPredicateFactory=self._timeoutFactory)
 
+    class _Timer(object):
+        def __init__(self, timeout):
+            self.end = time.time() + timeout
+
+        def __call__(self):
+            return time.time() >= self.end
+
+    def _timeoutFactory(self):
+        return self._Timer(timeout=self._timeout)
 
     def writeResults(self, result):
         """
@@ -128,7 +140,7 @@ class DistTrialRunner(object):
                     env=environ)
 
 
-    def _driveWorker(self, worker, result, testCases, cooperate):
+    def _driveWorker(self, worker, result, testCases):
         """
         Drive a L{LocalWorkerAMP} instance, iterating the tests and calling
         C{run} for every one of them.
@@ -138,10 +150,6 @@ class DistTrialRunner(object):
         @param result: The global L{DistReporter} instance.
 
         @param testCases: The global list of tests to iterate.
-
-        @param cooperate: The cooperate function to use, to be customized in
-            tests.
-        @type cooperate: C{function}
 
         @return: A C{Deferred} firing when all the tests are finished.
         """
@@ -155,11 +163,11 @@ class DistTrialRunner(object):
             d.addErrback(resultErrback, case)
             return d
 
-        return cooperate(task(case) for case in testCases).whenDone()
+        return self._cooperator.cooperate(
+            task(case) for case in testCases).whenDone()
 
 
-    def run(self, suite, reactor=None, cooperate=cooperate,
-            untilFailure=False):
+    def run(self, suite, reactor=None, untilFailure=False):
         """
         Spawn local worker processes and load tests. After that, run them.
 
@@ -168,10 +176,6 @@ class DistTrialRunner(object):
         @param reactor: The reactor to use, to be customized in tests.
         @type reactor: A provider of
             L{twisted.internet.interfaces.IReactorProcess}
-
-        @param cooperate: The cooperate function to use, to be customized in
-            tests.
-        @type cooperate: C{function}
 
         @param untilFailure: If C{True}, continue to run the tests until they
             fail.
@@ -207,8 +211,7 @@ class DistTrialRunner(object):
             workerDeferreds = []
             for worker in ampWorkers:
                 workerDeferreds.append(
-                    self._driveWorker(worker, result, testCases,
-                                      cooperate=cooperate))
+                    self._driveWorker(worker, result, testCases))
             return DeferredList(workerDeferreds, consumeErrors=True,
                                 fireOnOneErrback=True)
 

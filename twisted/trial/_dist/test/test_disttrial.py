@@ -79,8 +79,19 @@ class DistTrialRunnerTestCase(TestCase):
         """
         self.runner = DistTrialRunner(TreeReporter, 4, [],
                                       workingDirectory=self.mktemp())
+        # Slave builders might be slow, so we allow 1 second for each test.
+        self.runner._timeout = 1
         self.runner._stream = StringIO()
 
+
+    def injectFakeScheduler(self):
+        scheduler = FakeScheduler()
+        cooperator = Cooperator(scheduler=scheduler)
+        self.runner._cooperator = Cooperator(
+            scheduler=scheduler,
+            terminationPredicateFactory=self.runner._timeoutFactory,
+            )
+        return scheduler
 
     def test_writeResults(self):
         """
@@ -250,12 +261,10 @@ class DistTrialRunnerTestCase(TestCase):
             def failingRun(self, case, result):
                 return fail(RuntimeError("oops"))
 
-        scheduler = FakeScheduler()
-        cooperator = Cooperator(scheduler=scheduler)
+        scheduler = self.injectFakeScheduler()
 
         fakeReactor = FakeReactorWithFail()
-        result = self.runner.run(TestCase(), fakeReactor,
-                                 cooperator.cooperate)
+        result = self.runner.run(TestCase(), fakeReactor)
         self.assertEqual(fakeReactor.runCount, 1)
         self.assertEqual(fakeReactor.spawnCount, 1)
         scheduler.pump()
@@ -361,12 +370,9 @@ class DistTrialRunnerTestCase(TestCase):
 
         fakeReactor = FakeReactorWithSuccess()
 
-        scheduler = FakeScheduler()
-        cooperator = Cooperator(scheduler=scheduler)
+        scheduler = self.injectFakeScheduler()
 
-        result = self.runner.run(
-            TestCase(), fakeReactor, cooperate=cooperator.cooperate,
-            untilFailure=True)
+        result = self.runner.run(TestCase(), fakeReactor, untilFailure=True)
         scheduler.pump()
         self.assertEqual(5, len(called))
         self.assertFalse(result.wasSuccessful())
