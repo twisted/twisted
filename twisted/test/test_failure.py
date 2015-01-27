@@ -410,7 +410,7 @@ class FailureTestCase(SynchronousTestCase):
             detail='noisia')
 
 
-    def testExplictPass(self):
+    def test_ExplictPass(self):
         e = RuntimeError()
         f = failure.Failure(e)
         f.trap(RuntimeError)
@@ -428,21 +428,21 @@ class FailureTestCase(SynchronousTestCase):
                 "f.raiseException() didn't raise ZeroDivisionError!?")
 
 
-    def testRaiseExceptionWithTB(self):
+    def test_RaiseExceptionWithTB(self):
         f = getDivisionFailure()
         innerline = self._getInnermostFrameLine(f)
         self.assertEqual(innerline, '1/0')
 
 
-    def testLackOfTB(self):
+    def test_LackOfTB(self):
         f = getDivisionFailure()
         f.cleanFailure()
         innerline = self._getInnermostFrameLine(f)
         self.assertEqual(innerline, '1/0')
 
-    testLackOfTB.todo = "the traceback is not preserved, exarkun said he'll try to fix this! god knows how"
+    test_LackOfTB.todo = "the traceback is not preserved, exarkun said he'll try to fix this! god knows how"
     if _PY3:
-        del testLackOfTB # fix in ticket #6008
+        del test_LackOfTB # fix in ticket #6008
 
 
     def test_stringExceptionConstruction(self):
@@ -454,7 +454,7 @@ class FailureTestCase(SynchronousTestCase):
         self.assertIn("Strings are not supported by Failure", str(exc))
 
 
-    def testConstructionFails(self):
+    def test_ConstructionFails(self):
         """
         Creating a Failure with no arguments causes it to try to discover the
         current interpreter exception state.  If no such state exists, creating
