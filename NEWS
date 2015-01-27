@@ -169,12 +169,6 @@ Features
  - The Deferred returned by twisted.web.client.readBody can now be
    cancelled. (#6686)
 
-Bugfixes
---------
- - twisted.web.client.BrowserLikePolicyForHTTPS now uses the trust
-   root that it is given, rather than always using the system's.
-   (#7647)
-
 Deprecations and Removals
 -------------------------
  - twisted.web.iweb.IRequest.getClient is now deprecated.  Its
@@ -195,6 +189,130 @@ No significant changes have been made for this release.
 Other
 -----
  - #6994, #7163, #7622
+
+
+Twisted Core 14.0.2 (2014-09-18)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Conch 14.0.2 (2014-09-18)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Lore 14.0.2 (2014-09-18)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Mail 14.0.2 (2014-09-18)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Names 14.0.2 (2014-09-18)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted News 14.0.2 (2014-09-18)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Pair 14.0.2 (2014-09-18)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 14.0.2 (2014-09-18)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Web 14.0.2 (2014-09-18)
+===============================
+
+No significant changes have been made for this release.
+
+
+Twisted Words 14.0.2 (2014-09-18)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Core 14.0.1 (2014-09-17)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Conch 14.0.1 (2014-09-17)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Lore 14.0.1 (2014-09-17)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Mail 14.0.1 (2014-09-17)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Names 14.0.1 (2014-09-17)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted News 14.0.1 (2014-09-17)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Pair 14.0.1 (2014-09-17)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted Runner 14.0.1 (2014-09-17)
+==================================
+
+No significant changes have been made for this release.
+
+
+Twisted Web 14.0.1 (2014-09-17)
+===============================
+
+Bugfixes
+--------
+ - BrowserLikePolicyForHTTPS would always ignore the specified
+   trustRoot and use the system trust root instead, which has been
+   rectified. (#7647)
+
+
+Twisted Words 14.0.1 (2014-09-17)
+=================================
+
+No significant changes have been made for this release.
 
 
 Twisted Core 14.0.0 (2014-05-08)
@@ -4656,4 +4774,3 @@ Fixes
 Misc
 ----
  - #2685, #2936, #2581, #2847
-

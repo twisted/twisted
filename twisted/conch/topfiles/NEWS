@@ -24,6 +24,18 @@ Other
  - #6626, #7002, #7526, #7532, #7698
 
 
+Twisted Conch 14.0.2 (2014-09-18)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Conch 14.0.1 (2014-09-17)
+=================================
+
+No significant changes have been made for this release.
+
+
 Twisted Conch 14.0.0 (2014-05-08)
 =================================
 
@@ -465,7 +477,7 @@ Features
 
 Misc
 ----
- - #1673, #1636, #1892, #1943, #2057, #1180, #1185, #2148, #2159, #2291, 
+ - #1673, #1636, #1892, #1943, #2057, #1180, #1185, #2148, #2159, #2291,
 
 Deprecations and Removals
 -------------------------
@@ -513,7 +525,7 @@ Fixes
   - Add "cftp" -- Conch SFTP.
   - Deferred retrieval of public keys is supported
   - PAM support for client and server
-  - Bugfixes: 
+  - Bugfixes:
 	- fix conch failing to exit, and hangs.
 	- Remote->Local forwarding
 	- Channel closing

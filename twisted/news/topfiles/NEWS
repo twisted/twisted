@@ -11,6 +11,18 @@ Other
  - #7703
 
 
+Twisted News 14.0.2 (2014-09-18)
+================================
+
+No significant changes have been made for this release.
+
+
+Twisted News 14.0.1 (2014-09-17)
+================================
+
+No significant changes have been made for this release.
+
+
 Twisted News 14.0.0 (2014-05-08)
 ================================
 
@@ -157,4 +169,3 @@ Fixes
 
 Fixes:
  - Fixed a critical bug in moderation support.
-

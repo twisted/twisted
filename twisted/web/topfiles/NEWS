@@ -12,12 +12,6 @@ Features
  - The Deferred returned by twisted.web.client.readBody can now be
    cancelled. (#6686)
 
-Bugfixes
---------
- - twisted.web.client.BrowserLikePolicyForHTTPS now uses the trust
-   root that it is given, rather than always using the system's.
-   (#7647)
-
 Deprecations and Removals
 -------------------------
  - twisted.web.iweb.IRequest.getClient is now deprecated.  Its
@@ -28,6 +22,22 @@ Deprecations and Removals
 Other
 -----
  - #7247, #7302, #7680, #7689
+
+
+Twisted Web 14.0.2 (2014-09-18)
+===============================
+
+No significant changes have been made for this release.
+
+
+Twisted Web 14.0.1 (2014-09-17)
+===============================
+
+Bugfixes
+--------
+ - BrowserLikePolicyForHTTPS would always ignore the specified
+   trustRoot and use the system trust root instead, which has been
+   rectified. (#7647)
 
 
 Twisted Web 14.0.0 (2014-05-08)
@@ -526,7 +536,7 @@ Fixes
    XMLRPC support in all supported versions of Python, and errors during error
    serialization will no longer hang a twisted.web XMLRPC response (#2446)
  - request.content should now always be seeked to the beginning when
-   request.process is called, so application code should never need to seek 
+   request.process is called, so application code should never need to seek
    back manually (#3585)
  - Fetching a child of static.File with a double-slash in the URL (such as
    "example//foo.html") should now return a 404 instead of a traceback and
