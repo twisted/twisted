@@ -11,10 +11,10 @@ from zope.interface import implements, classImplements
 
 from twisted.internet import interfaces, error, address, main, defer
 from twisted.internet.protocol import Protocol
-from twisted.internet.abstract import _LogOwner, isIPAddress, isIPv6Address
+from twisted.internet.abstract import _LogOwner, isIPv6Address
 from twisted.internet.tcp import _SocketCloser, Connector as TCPConnector
 from twisted.internet.tcp import _AbortingMixin, _BaseBaseClient, _BaseTCPClient
-from twisted.python import log, failure, reflect, util
+from twisted.python import log, failure, reflect
 
 from twisted.internet.iocpreactor import iocpsupport as _iocp, abstract
 from twisted.internet.iocpreactor.interfaces import IReadWriteHandle

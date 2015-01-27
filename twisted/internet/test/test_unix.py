@@ -21,6 +21,7 @@ from zope.interface import implements
 
 from twisted.python.log import addObserver, removeObserver, err
 from twisted.python.failure import Failure
+from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
 from twisted.internet.interfaces import IFileDescriptorReceiver, IReactorUNIX
 from twisted.internet.error import ConnectionClosed, FileDescriptorOverrun
@@ -38,13 +39,12 @@ from twisted.internet.test.connectionmixins import (
     ConnectionTestsMixin, StreamClientTestsMixin)
 from twisted.internet.test.reactormixins import ReactorBuilder
 
-try:
-    from twisted.python import sendmsg
-except ImportError:
+if requireModule('twisted.python.sendmsg') is None:
     sendmsgSkip = (
         "sendmsg extension unavailable, extended UNIX features disabled")
 else:
     sendmsgSkip = None
+
 
 
 class UNIXFamilyMixin:
@@ -302,8 +302,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         d.addBoth(lambda ignored: server.transport.loseConnection())
 
         runProtocolsWithReactor(self, server, client, self.endpoints)
-    if sendmsgSkip is not None:
-        test_sendFileDescriptor.skip = sendmsgSkip
+    test_sendFileDescriptor.skip = sendmsgSkip
 
 
     def test_sendFileDescriptorTriggersPauseProducing(self):
@@ -351,8 +350,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
         self.assertTrue(
             server.paused, "sendFileDescriptor producer was not paused")
-    if sendmsgSkip is not None:
-        test_sendFileDescriptorTriggersPauseProducing.skip = sendmsgSkip
+    test_sendFileDescriptorTriggersPauseProducing.skip = sendmsgSkip
 
 
     def test_fileDescriptorOverrun(self):
@@ -377,8 +375,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         self.assertIsInstance(result[0], Failure)
         result[0].trap(ConnectionClosed)
         self.assertIsInstance(server.reason.value, FileDescriptorOverrun)
-    if sendmsgSkip is not None:
-        test_fileDescriptorOverrun.skip = sendmsgSkip
+    test_fileDescriptorOverrun.skip = sendmsgSkip
 
 
     def test_avoidLeakingFileDescriptors(self):
@@ -445,8 +442,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             self.fail(
                 "Expected event (%s) not found in logged events (%s)" % (
                     expectedEvent, pformat(events,)))
-    if sendmsgSkip is not None:
-        test_avoidLeakingFileDescriptors.skip = sendmsgSkip
+    test_avoidLeakingFileDescriptors.skip = sendmsgSkip
 
 
     def test_descriptorDeliveredBeforeBytes(self):
@@ -475,8 +471,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         runProtocolsWithReactor(self, server, client, self.endpoints)
 
         self.assertEqual([int, "j", "u", "n", "k"], client.events)
-    if sendmsgSkip is not None:
-        test_descriptorDeliveredBeforeBytes.skip = sendmsgSkip
+    test_descriptorDeliveredBeforeBytes.skip = sendmsgSkip
 
 
 

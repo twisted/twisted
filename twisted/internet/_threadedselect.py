@@ -52,18 +52,14 @@ with wxPython, or the PyObjCTools.AppHelper.stopEventLoop function.
 
 from threading import Thread
 from Queue import Queue, Empty
-from time import sleep
 import sys
 
 from zope.interface import implements
 
 from twisted.internet.interfaces import IReactorFDSet
-from twisted.internet import error
 from twisted.internet import posixbase
 from twisted.internet.posixbase import _NO_FILENO, _NO_FILEDESC
 from twisted.python import log, failure, threadable
-from twisted.persisted import styles
-from twisted.python.runtime import platformType
 
 import select
 from errno import EINTR, EBADF
@@ -157,11 +153,11 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                                         writes.keys(),
                                         [], timeout)
                 break
-            except ValueError, ve:
+            except ValueError:
                 # Possibly a file descriptor has gone negative?
                 log.err()
                 self._preenDescriptorsInThread()
-            except TypeError, te:
+            except TypeError:
                 # Something *totally* invalid (object w/o fileno, non-integral
                 # result) was passed
                 log.err()

@@ -8,10 +8,9 @@ Requires PySerial and pywin32.
 """
 
 # system imports
-import serial
-from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD
-from serial import STOPBITS_ONE, STOPBITS_TWO
-from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
+from serial import PARITY_NONE
+from serial import STOPBITS_ONE
+from serial import EIGHTBITS
 import win32file, win32event
 
 # twisted imports

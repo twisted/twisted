@@ -220,7 +220,7 @@ class PortableGtkReactor(selectreactor.SelectReactor):
 
 
 
-def install():
+def posixInstall():
     """Configure the twisted mainloop to be run inside the gtk mainloop.
     """
     reactor = GtkReactor()
@@ -244,7 +244,9 @@ deprecate.deprecatedModuleAttribute(deprecatedSince, deprecationMessage,
                                     __name__, "portableInstall")
 
 
-if runtime.platform.getType() != 'posix':
+if runtime.platform.getType() == 'posix':
+    install = posixInstall
+else:
     install = portableInstall
 
 __all__ = ['install']
