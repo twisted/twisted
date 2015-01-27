@@ -66,6 +66,30 @@ class LogFileTestCase(unittest.TestCase):
 
         self.assertEqual(log.listLogs(), [1, 2, 3])
 
+    def testRotationWithoutWritePermissionsOnFile(self):
+        log = logfile.LogFile(self.name, self.dir)
+        os.chmod(log.directory, 0777)  # user can write in directory
+        os.chmod(log.path, 0555)       # but not in the logfile
+
+        log.rotate()
+        self.assert_(os.path.exists("%s.1" % log.path))
+
+    def testRemovalOfOldFilesFailsSilently(self):
+        log = logfile.LogFile(self.name, self.dir, maxRotatedFiles=1)
+        log.rotate()
+        os.chmod(self.dir, 0555)
+
+        log.rotate()  # removing the old logfile will raise an OSError,
+                      # which should be caught
+
+    def testRotationOfOldFilesFailsSilently(self):
+        log = logfile.LogFile(self.name, self.dir)
+        log.rotate()
+        os.chmod(self.dir, 0555)
+
+        log.rotate()  # renaming the old logfile will raise an OSError,
+                      # which should be caught
+
     def testAppend(self):
         log = logfile.LogFile(self.name, self.dir)
         log.write("0123456789")
@@ -257,7 +281,6 @@ class LogFileTestCase(unittest.TestCase):
         self.assertEqual(e.errno, errno.ENOENT)
 
 
-
 class RiggedDailyLogFile(logfile.DailyLogFile):
     _clock = 0.0
 
@@ -271,9 +294,10 @@ class RiggedDailyLogFile(logfile.DailyLogFile):
             return time.gmtime(*args)[:3]
         return time.gmtime(self._clock)[:3]
 
+
 class DailyLogFileTestCase(unittest.TestCase):
     """
-    Test rotating log file.
+    Test rotating daily log files.
     """
 
     def setUp(self):
@@ -318,3 +342,20 @@ class DailyLogFileTestCase(unittest.TestCase):
         log.write("3")
         self.assert_(not os.path.exists(days[2]))
 
+    def testRotationWithoutWritePermissionsOnFile(self):
+        log = RiggedDailyLogFile(self.name, self.dir)
+        os.chmod(log.directory, 0777)   # user can write in directory
+        os.chmod(log.path, 0555)        # but not in the logfile
+
+        log.rotate()
+        self.assert_(os.path.exists("%s.1970_1_1" % log.path))
+
+    def testRotationFailsSilentlyWhenRenamingFails(self):
+        log = RiggedDailyLogFile(self.name, self.dir)
+        os.mkdir("%s.1970_1_1" % log.path)
+
+        log.rotate()  # renaming the logfile will raise an OSError
+                      # because there is already a directory with the target
+                      # name
+        self.assert_(os.path.isdir("%s.1970_1_1" % log.path))
+        self.assert_(os.path.exists("%s" % log.path))
