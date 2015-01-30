@@ -1,12 +1,14 @@
-Twisted 14.0.0
+Twisted 15.0.0
 
 Quote of the Release:
 
 
-  <exarkun> no food is sustainable.  once you eat it it is gone.
+  <exarkun> is there some way to stack vcs three deep yet?  Where is the voltron of version control?
+  <exarkun> Who will form the head?
+  <glyph> exarkun: ITYM "who will form the HEAD?"
 
 
-For information on what's new in Twisted 14.0.0, see the NEWS file that comes
+For information on what's new in Twisted 15.0.0, see the NEWS file that comes
 with the distribution.
 
 What is this?
@@ -92,7 +94,7 @@ Documentation and Support
 Copyright
 =========
 
-  All of the code in this distribution is Copyright (c) 2001-2014
+  All of the code in this distribution is Copyright (c) 2001-2015
   Twisted Matrix Laboratories.
 
   Twisted is made available under the MIT license. The included

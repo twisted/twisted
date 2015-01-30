@@ -1,6 +1,41 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Conch 15.0.0 (2015-01-24)
+=================================
+
+Features
+--------
+ - The new APIs: twisted.conch.checkers.IAuthorizedKeysDB,
+   twisted.conch.checkers.InMemorySSHKeyDB,
+   twisted.conch.checkers.UNIXAuthorizedKeyFiles, and
+   twisted.conch.checkers.SSHPublicKeyChecker have been added to
+   provide functionality to check the validity of SSH public keys and
+   specify where authorized keys are to be found. (#7144)
+
+Deprecations and Removals
+-------------------------
+ - twisted.conch.checkers.SSHPublicKeyDatabase is now deprecated in
+   favor of a twisted.conch.checkers.SSHPublicKeyChecker instantiated
+   with a twisted.conch.checkers.UNIXAuthorizedKeyFiles. (#7144)
+
+Other
+-----
+ - #6626, #7002, #7526, #7532, #7698
+
+
+Twisted Conch 14.0.2 (2014-09-18)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Conch 14.0.1 (2014-09-17)
+=================================
+
+No significant changes have been made for this release.
+
+
 Twisted Conch 14.0.0 (2014-05-08)
 =================================
 
@@ -442,7 +477,7 @@ Features
 
 Misc
 ----
- - #1673, #1636, #1892, #1943, #2057, #1180, #1185, #2148, #2159, #2291, 
+ - #1673, #1636, #1892, #1943, #2057, #1180, #1185, #2148, #2159, #2291,
 
 Deprecations and Removals
 -------------------------
@@ -490,7 +525,7 @@ Fixes
   - Add "cftp" -- Conch SFTP.
   - Deferred retrieval of public keys is supported
   - PAM support for client and server
-  - Bugfixes: 
+  - Bugfixes:
 	- fix conch failing to exit, and hangs.
 	- Remote->Local forwarding
 	- Channel closing

@@ -894,9 +894,9 @@ class KeyPair(PublicKey):
             self.signRequestObject(dn, self.requestObject(dn), serialNumber),
             self)
 
-KeyPair.__getstate__ = deprecated(Version("Twisted", 14, 1, 0),
+KeyPair.__getstate__ = deprecated(Version("Twisted", 15, 0, 0),
     "a real persistence system")(KeyPair.__getstate__)
-KeyPair.__setstate__ = deprecated(Version("Twisted", 14, 1, 0),
+KeyPair.__setstate__ = deprecated(Version("Twisted", 15, 0, 0),
     "a real persistence system")(KeyPair.__setstate__)
 
 
@@ -1541,10 +1541,10 @@ class OpenSSLCertificateOptions(object):
 
 
 OpenSSLCertificateOptions.__getstate__ = deprecated(
-        Version("Twisted", 14, 1, 0),
+        Version("Twisted", 15, 0, 0),
         "a real persistence system")(OpenSSLCertificateOptions.__getstate__)
 OpenSSLCertificateOptions.__setstate__ = deprecated(
-        Version("Twisted", 14, 1, 0),
+        Version("Twisted", 15, 0, 0),
         "a real persistence system")(OpenSSLCertificateOptions.__setstate__)
 
 

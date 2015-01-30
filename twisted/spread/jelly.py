@@ -134,7 +134,7 @@ frozenset_atom = 'frozenset'
 
 
 deprecatedModuleAttribute(
-    Version("Twisted", 14, 1, 0),
+    Version("Twisted", 15, 0, 0),
     "instance_atom is unused within Twisted.",
     "twisted.spread.jelly", "instance_atom")
 
@@ -884,7 +884,7 @@ class _Unjellier:
         """
         warnings.warn_explicit(
             "Unjelly support for the instance atom is deprecated since "
-            "Twisted 14.1.0.  Upgrade peer for modern instance support.",
+            "Twisted 15.0.0.  Upgrade peer for modern instance support.",
             category=DeprecationWarning, filename="", lineno=0)
 
         clz = self.unjelly(rest[0])

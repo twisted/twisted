@@ -1382,7 +1382,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.assertEquals(
             warningInfo[0]['message'],
             "twisted.python.filepath.FilePath.statinfo was deprecated in "
-            "Twisted 14.1.0; please use other FilePath methods such as "
+            "Twisted 15.0.0; please use other FilePath methods such as "
             "getsize(), isdir(), getModificationTime(), etc. instead")
 
 
@@ -1398,7 +1398,7 @@ class FilePathTestCase(AbstractFilePathTestCase):
         self.assertEquals(
             warningInfo[0]['message'],
             "twisted.python.filepath.FilePath.statinfo was deprecated in "
-            "Twisted 14.1.0; please use other FilePath methods such as "
+            "Twisted 15.0.0; please use other FilePath methods such as "
             "getsize(), isdir(), getModificationTime(), etc. instead")
 
 
