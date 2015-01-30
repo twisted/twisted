@@ -49,6 +49,53 @@ twisted_subprojects = ["conch", "lore", "mail", "names",
                        "news", "pair", "runner", "web",
                        "words"]
 
+# These are the actual package names and versions that will
+# be used by extras_require. This is not passed to setup
+# directly so that combinations of the packages can be created
+# without the need to copy package names multiple times.
+EXTRA_OPTIONS = dict(
+    dev=['twistedchecker >= 0.2.0',
+         'pyflakes >= 0.8.1',
+         'twisted-dev-tools >= 0.0.2',
+         'python-subunit',
+         'sphinx >= 1.2.2',
+         'pydoctor >= 0.5'],
+    tls=['pyopenssl >= 0.11',
+         'service_identity'],
+    conch=['gmpy',
+           'pyasn1',
+           'pycrypto'],
+    soap=['soappy'],
+    serial=['pyserial'],
+    osx=['pyobjc'],
+    windows=['pypiwin32']
+)
+
+PLATFORM_INDEPENDENT = (
+    EXTRA_OPTIONS['tls'] +
+    EXTRA_OPTIONS['conch'] +
+    EXTRA_OPTIONS['soap'] +
+    EXTRA_OPTIONS['serial']
+)
+
+# Extras_require is a dictionary of items that can be passed to setup.py
+# to install optional dependencies. For example, to install the optional
+# dev dependencies one would type `pip install -e ".[dev]"`
+# This has been supported by setuptools since 0.5a4
+EXTRAS_REQUIRE = {
+    'dev': EXTRA_OPTIONS['dev'],
+    'tls': EXTRA_OPTIONS['tls'],
+    'conch': EXTRA_OPTIONS['conch'],
+    'soap': EXTRA_OPTIONS['soap'],
+    'serial': EXTRA_OPTIONS['serial'],
+    'all_non_platform': PLATFORM_INDEPENDENT,
+    'osx_platform': (
+        EXTRA_OPTIONS['osx'] + PLATFORM_INDEPENDENT
+    ),
+    'windows_platform': (
+        EXTRA_OPTIONS['windows'] + PLATFORM_INDEPENDENT
+    ),
+}
 
 
 class ConditionalExtension(Extension):
