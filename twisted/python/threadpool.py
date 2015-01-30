@@ -296,7 +296,7 @@ class ThreadPool(object):
         """
         Dump some statistics about the current queue, workers and threads.
         """
-        log.msg('queue: %s'   % (self.q.queue,))
+        log.msg('queue: %s' % (self.q.queue,))
         log.msg('waiters: %s' % (self.waiters,))
         log.msg('workers: %s' % (self.working,))
-        log.msg('total: %s'   % (self.threads,))
+        log.msg('total: %s' % (self.threads,))
