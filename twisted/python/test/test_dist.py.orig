@@ -9,14 +9,13 @@ Tests for parts of our release automation system.
 import os
 import sys
 
-
-from setuptools.dist import Distribution
+from distutils.core import Distribution
 
 from twisted.trial.unittest import TestCase
 
 from twisted.python import dist
 from twisted.python.dist import (get_setup_args, ConditionalExtension,
-                                 build_scripts_twisted, EXTRAS_REQUIRE)
+    build_scripts_twisted)
 from twisted.python.filepath import FilePath
 
 
@@ -58,143 +57,6 @@ class SetupTests(TestCase):
         builder.prepare_extensions()
         self.assertEqual(ext.define_macros, [("whatever", 2), ("WIN32", 1)])
 
-
-
-class OptionalDependenciesTests(TestCase):
-    """
-    Tests for L{dist.EXTRA_REQUIRES}
-    """
-
-    def test_distributeTakesExtrasRequire(self):
-        """
-        Setuptools' Distribution object can use extra_requires.
-        """
-        extras = dict(im_an_extra_dependency="thing")
-        attrs = dict(extras_require=extras)
-        distribution = Distribution(attrs)
-        self.assertEqual(
-            extras,
-            distribution.extras_require
-        )
-
-
-    def test_extrasRequireDictContainsKeys(self):
-        """
-        L{dist.EXTRA_REQUIRES} C{dev} option contains a valid
-        list with correct dependecies.
-        """
-        self.assertIn('dev', EXTRAS_REQUIRE)
-        self.assertIn('tls', EXTRAS_REQUIRE)
-        self.assertIn('conch', EXTRAS_REQUIRE)
-        self.assertIn('soap', EXTRAS_REQUIRE)
-        self.assertIn('serial', EXTRAS_REQUIRE)
-        self.assertIn('all_non_platform', EXTRAS_REQUIRE)
-        self.assertIn('osx_platform', EXTRAS_REQUIRE)
-        self.assertIn('windows_platform', EXTRAS_REQUIRE)
-
-
-    def test_extrasRequiresDevDepsAreValid(self):
-        """
-        L{dist.EXTRA_REQUIRES} C{dev} option contains the correct
-        dependencies.
-        """
-        deps = EXTRAS_REQUIRE['dev']
-        self.assertIn('twistedchecker >= 0.2.0', deps)
-        self.assertIn('pyflakes >= 0.8.1', deps)
-        self.assertIn('twisted-dev-tools >= 0.0.2', deps)
-        self.assertIn('python-subunit', deps)
-        self.assertIn('sphinx >= 1.2.2', deps)
-        self.assertIn('pydoctor >= 0.5', deps)
-
-
-    def test_extrasRequiresTlsDepsAreValid(self):
-        """
-        L{dist.EXTRA_REQUIRES} C{tls} option contains the correct
-        dependencies.
-        """
-        deps = EXTRAS_REQUIRE['tls']
-        self.assertIn('pyopenssl >= 0.11', deps)
-        self.assertIn('service_identity', deps)
-
-
-    def test_extrasRequiresConchDepsAreValid(self):
-        """
-        L{dist.EXTRA_REQUIRES} C{conch} option contains the correct
-        dependencies.
-        """
-        deps = EXTRAS_REQUIRE['conch']
-        self.assertIn('gmpy', deps)
-        self.assertIn('pyasn1', deps)
-        self.assertIn('pycrypto', deps)
-
-
-    def test_extrasRequiresSoapDepsAreValid(self):
-        """
-        L{dist.EXTRA_REQUIRES} C{soap} option contains the correct
-        dependecies.
-        """
-        self.assertIn(
-            'soappy',
-            EXTRAS_REQUIRE['soap']
-        )
-
-
-    def test_extrasRequiresSerialDepsAreValid(self):
-        """
-        L{dist.EXTRA_REQUIRES} C{serial} option contains the correct
-        dependencies.
-        """
-        self.assertIn(
-            'pyserial',
-            EXTRAS_REQUIRE['serial']
-        )
-
-
-    def test_extrasRequiresAllNonPlatformDepsAreValid(self):
-        """
-        L{dist.EXTRA_REQUIRES} C{all_non_platform} option contains the
-        correct dependencies.
-        """
-        deps = EXTRAS_REQUIRE['all_non_platform']
-        self.assertIn('pyopenssl >= 0.11', deps)
-        self.assertIn('service_identity', deps)
-        self.assertIn('gmpy', deps)
-        self.assertIn('pyasn1', deps)
-        self.assertIn('pycrypto', deps)
-        self.assertIn('soappy', deps)
-        self.assertIn('pyserial', deps)
-
-
-    def test_extrasRequiresOsxPlatformDepsAreValid(self):
-        """
-        L{dist.EXTRA_REQUIRES} C{osx_platform} option contains the correct
-        dependecies.
-        """
-        deps = EXTRAS_REQUIRE['osx_platform']
-        self.assertIn('pyopenssl >= 0.11', deps)
-        self.assertIn('service_identity', deps)
-        self.assertIn('gmpy', deps)
-        self.assertIn('pyasn1', deps)
-        self.assertIn('pycrypto', deps)
-        self.assertIn('soappy', deps)
-        self.assertIn('pyserial', deps)
-        self.assertIn('pyobjc', deps)
-
-
-    def test_extrasRequiresWindowsPlatformDepsAreValid(self):
-        """
-        L{dist.EXTRA_REQUIRES} C{windows_platform} option contains the correct
-        dependecies.
-        """
-        deps = EXTRAS_REQUIRE['windows_platform']
-        self.assertIn('pyopenssl >= 0.11', deps)
-        self.assertIn('service_identity', deps)
-        self.assertIn('gmpy', deps)
-        self.assertIn('pyasn1', deps)
-        self.assertIn('pycrypto', deps)
-        self.assertIn('soappy', deps)
-        self.assertIn('pyserial', deps)
-        self.assertIn('pypiwin32', deps)
 
 
 class GetExtensionsTests(TestCase):
