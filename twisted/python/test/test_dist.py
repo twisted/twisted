@@ -16,7 +16,7 @@ from twisted.trial.unittest import TestCase
 
 from twisted.python import dist
 from twisted.python.dist import (get_setup_args, ConditionalExtension,
-                                 build_scripts_twisted, EXTRAS_REQUIRE)
+                                 build_scripts_twisted, _EXTRAS_REQUIRE)
 from twisted.python.filepath import FilePath
 
 
@@ -62,12 +62,13 @@ class SetupTests(TestCase):
 
 class OptionalDependenciesTests(TestCase):
     """
-    Tests for L{dist.EXTRA_REQUIRES}
+    Tests for L{_EXTRAS_REQUIRE}
     """
 
     def test_distributeTakesExtrasRequire(self):
         """
-        Setuptools' Distribution object can use extra_requires.
+        Setuptools' Distribution object parses and stores its C{extras_require}
+        argument as an attribute.
         """
         extras = dict(im_an_extra_dependency="thing")
         attrs = dict(extras_require=extras)
@@ -80,25 +81,26 @@ class OptionalDependenciesTests(TestCase):
 
     def test_extrasRequireDictContainsKeys(self):
         """
-        L{dist.EXTRA_REQUIRES} C{dev} option contains a valid
-        list with correct dependecies.
+        L{_EXTRAS_REQUIRE} contains options for all documented extras: C{dev},
+        C{tls}, C{conch}, C{soap}, C{serial}, C{all_non_platform},
+        C{osx_platform}, and C{windows_platform}.
         """
-        self.assertIn('dev', EXTRAS_REQUIRE)
-        self.assertIn('tls', EXTRAS_REQUIRE)
-        self.assertIn('conch', EXTRAS_REQUIRE)
-        self.assertIn('soap', EXTRAS_REQUIRE)
-        self.assertIn('serial', EXTRAS_REQUIRE)
-        self.assertIn('all_non_platform', EXTRAS_REQUIRE)
-        self.assertIn('osx_platform', EXTRAS_REQUIRE)
-        self.assertIn('windows_platform', EXTRAS_REQUIRE)
+        self.assertIn('dev', _EXTRAS_REQUIRE)
+        self.assertIn('tls', _EXTRAS_REQUIRE)
+        self.assertIn('conch', _EXTRAS_REQUIRE)
+        self.assertIn('soap', _EXTRAS_REQUIRE)
+        self.assertIn('serial', _EXTRAS_REQUIRE)
+        self.assertIn('all_non_platform', _EXTRAS_REQUIRE)
+        self.assertIn('osx_platform', _EXTRAS_REQUIRE)
+        self.assertIn('windows_platform', _EXTRAS_REQUIRE)
 
 
-    def test_extrasRequiresDevDepsAreValid(self):
+    def test_extrasRequiresDevDeps(self):
         """
-        L{dist.EXTRA_REQUIRES} C{dev} option contains the correct
-        dependencies.
+        L{_EXTRAS_REQUIRE}'s C{dev} extra contains setuptools requirements for
+        the tools required for Twisted development.
         """
-        deps = EXTRAS_REQUIRE['dev']
+        deps = _EXTRAS_REQUIRE['dev']
         self.assertIn('twistedchecker >= 0.2.0', deps)
         self.assertIn('pyflakes >= 0.8.1', deps)
         self.assertIn('twisted-dev-tools >= 0.0.2', deps)
@@ -107,55 +109,58 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pydoctor >= 0.5', deps)
 
 
-    def test_extrasRequiresTlsDepsAreValid(self):
+    def test_extrasRequiresTlsDeps(self):
         """
-        L{dist.EXTRA_REQUIRES} C{tls} option contains the correct
-        dependencies.
+        L{_EXTRAS_REQUIRE}'s C{tls} extra contains setuptools requirements for
+        the packages required to make Twisted's transport layer security fully
+        work for both clients and servers.
         """
-        deps = EXTRAS_REQUIRE['tls']
+        deps = _EXTRAS_REQUIRE['tls']
         self.assertIn('pyopenssl >= 0.11', deps)
         self.assertIn('service_identity', deps)
 
 
-    def test_extrasRequiresConchDepsAreValid(self):
+    def test_extrasRequiresConchDeps(self):
         """
-        L{dist.EXTRA_REQUIRES} C{conch} option contains the correct
-        dependencies.
+        L{_EXTRAS_REQUIRE}'s C{conch} extra contains setuptools requirements
+        for the packages required to make Twisted Conch's secure shell server
+        work.
         """
-        deps = EXTRAS_REQUIRE['conch']
+        deps = _EXTRAS_REQUIRE['conch']
         self.assertIn('gmpy', deps)
         self.assertIn('pyasn1', deps)
         self.assertIn('pycrypto', deps)
 
 
-    def test_extrasRequiresSoapDepsAreValid(self):
+    def test_extrasRequiresSoapDeps(self):
         """
-        L{dist.EXTRA_REQUIRES} C{soap} option contains the correct
-        dependecies.
+        L{_EXTRAS_REQUIRE}' C{soap} extra contains setuptools requirements for
+        the packages required to make the C{twisted.web.soap} module function.
         """
         self.assertIn(
             'soappy',
-            EXTRAS_REQUIRE['soap']
+            _EXTRAS_REQUIRE['soap']
         )
 
 
-    def test_extrasRequiresSerialDepsAreValid(self):
+    def test_extrasRequiresSerialDeps(self):
         """
-        L{dist.EXTRA_REQUIRES} C{serial} option contains the correct
-        dependencies.
+        L{_EXTRAS_REQUIRE}'s C{serial} extra contains setuptools requirements
+        for the packages required to make Twisted's serial support work.
         """
         self.assertIn(
             'pyserial',
-            EXTRAS_REQUIRE['serial']
+            _EXTRAS_REQUIRE['serial']
         )
 
 
-    def test_extrasRequiresAllNonPlatformDepsAreValid(self):
+    def test_extrasRequiresAllNonPlatformDeps(self):
         """
-        L{dist.EXTRA_REQUIRES} C{all_non_platform} option contains the
-        correct dependencies.
+        L{_EXTRAS_REQUIRE}'s C{all_non_platform} extra contains setuptools
+        requirements for all of Twisted's optional dependencies which work on
+        all supported operating systems.
         """
-        deps = EXTRAS_REQUIRE['all_non_platform']
+        deps = _EXTRAS_REQUIRE['all_non_platform']
         self.assertIn('pyopenssl >= 0.11', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('gmpy', deps)
@@ -165,12 +170,13 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pyserial', deps)
 
 
-    def test_extrasRequiresOsxPlatformDepsAreValid(self):
+    def test_extrasRequiresOsxPlatformDeps(self):
         """
-        L{dist.EXTRA_REQUIRES} C{osx_platform} option contains the correct
-        dependecies.
+        L{_EXTRAS_REQUIRE}'s C{osx_platform} extra contains setuptools
+        requirements for all of Twisted's optional dependencies usable on the
+        Mac OS X platform.
         """
-        deps = EXTRAS_REQUIRE['osx_platform']
+        deps = _EXTRAS_REQUIRE['osx_platform']
         self.assertIn('pyopenssl >= 0.11', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('gmpy', deps)
@@ -181,12 +187,13 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pyobjc', deps)
 
 
-    def test_extrasRequiresWindowsPlatformDepsAreValid(self):
+    def test_extrasRequiresWindowsPlatformDeps(self):
         """
-        L{dist.EXTRA_REQUIRES} C{windows_platform} option contains the correct
-        dependecies.
+        L{_EXTRAS_REQUIRE}'s C{windows_platform} extra contains setuptools
+        requirements for all of Twisted's optional dependencies usable on the
+        Microsoft Windows platform.
         """
-        deps = EXTRAS_REQUIRE['windows_platform']
+        deps = _EXTRAS_REQUIRE['windows_platform']
         self.assertIn('pyopenssl >= 0.11', deps)
         self.assertIn('service_identity', deps)
         self.assertIn('gmpy', deps)
