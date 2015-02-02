@@ -1236,7 +1236,7 @@ def inlineCallbacks(f):
         @inlineCallbacks
         def loadData(url):
             response = yield makeRequest(url)
-            return json.loads(respoonse)
+            return json.loads(response)
     """
     @wraps(f)
     def unwindGenerator(*args, **kwargs):
