@@ -197,6 +197,7 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('pypiwin32', deps)
 
 
+
 class GetExtensionsTests(TestCase):
     """
     Tests for L{dist.getExtensions}.
