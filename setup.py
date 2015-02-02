@@ -54,7 +54,7 @@ dependency resolution is disabled.
 
     from twisted.python.dist import (
         STATIC_PACKAGE_METADATA, getDataFiles, getExtensions, getAllScripts,
-        getPackages, setup, EXTRAS_REQUIRE)
+        getPackages, setup, _EXTRAS_REQUIRE)
 
     scripts = getAllScripts()
 
@@ -62,7 +62,7 @@ dependency resolution is disabled.
         packages=getPackages('twisted'),
         conditionalExtensions=getExtensions(),
         scripts=scripts,
-        extras_require=EXTRAS_REQUIRE,
+        extras_require=_EXTRAS_REQUIRE,
         data_files=getDataFiles('twisted'),
         **STATIC_PACKAGE_METADATA))
 
