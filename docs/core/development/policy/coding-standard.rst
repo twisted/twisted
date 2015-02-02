@@ -599,15 +599,9 @@ associated ticket.
 Versioning
 ----------
 
-
-    
 The API documentation should be marked up with version information.
-When a new API is added the class should be marked with the epytext
-``@since:`` field including the version number when
-the change was introduced, eg. ``@since: 8.1`` .
-
-    
-
+When a new API is added the class should be marked with the epytext ``@since:`` field including the version number when the change was introduced.
+This version number should be in the form ``x.y.z`` (for example, ``@since: 15.1.0``).
 
 
 Scripts
