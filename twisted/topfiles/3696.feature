@@ -1,0 +1,1 @@
+Optional dependencies can be installed using the extra_requires facility provided by setuptools.
