@@ -7,9 +7,11 @@ Tests for L{twisted.conch.scripts.ckeygen}.
 
 import getpass
 import sys
+import os
 from StringIO import StringIO
 
 from twisted.python.reflect import requireModule
+from twisted.conch.scripts.ckeygen import GeneralOptions
 
 if requireModule('Crypto') and requireModule('pyasn1'):
     from twisted.conch.ssh.keys import Key, BadKeyError
@@ -40,6 +42,73 @@ def makeGetpass(*passphrases):
 
     return fakeGetpass
 
+
+class CKeyGenOptions(TestCase):
+    """
+    Tests for parsng functions used to implement the I{ckeygen} script.
+    """
+    def harn_parseOpt(self, cases):
+        for a, expected in cases:
+            args = a.split()
+            opts = GeneralOptions()
+            opts._raw_input = lambda x: "" # Mock a raw_input
+            opts.parseOptions(args)
+            for k in expected:
+                assert opts[k] == expected[k], "Expected value from cmdline: %s on key %s. Got %s" %(
+                                                                                                       a, k, opts[k])
+    def harn_parseOptExcept(self, cases):
+        for a, ExpectedException in cases:
+            args = a.split()
+            opts = GeneralOptions()
+            opts._raw_input = lambda x: "" # Mock a raw_input
+            try:
+                opts.parseOptions(args)
+                assert False, "Bad command line %s didn't raise an exception %s" % (a, ExpectedException)
+            except ExpectedException as e:
+                pass
+        
+    def test_parseDefaultKey(self):
+        """L{parseDefaultKey} checks if the passed command-line generates
+            the correct private-key reading options dict to be passed to ckeygen functions
+            """
+        cases = [ 
+                 # command-line, optvalues
+                 ("", {'filename': os.path.expanduser('~/.ssh/id_rsa'), 'type': 'rsa', 'create': False}),
+                 ]
+        self.harn_parseOpt(cases)
+
+    def test_parseDefaultFileKeyCreation(self):
+        """L{parseDefaultKey} checks if the passed command-line generates
+            the correct private-key creation options dict to be passed to ckeygen functions
+            """
+        cases = [ 
+                 # command-line, optvalues
+                 ("-b 768 -t rsa", {'filename': os.path.expanduser('~/.ssh/id_rsa'), 'bits': '768', 'type': 'rsa', 'create': True}),
+                 ("-t dsa", {'filename': os.path.expanduser('~/.ssh/id_dsa'), 'type': 'dsa', 'create': True})
+                 ]
+        self.harn_parseOpt(cases)
+
+        
+    def test_parseDefaultPubKey(self):
+        """L{parseDefaultPubKey} checks if the passed command-line generates
+            the correct public-key option dict to be passed to ckeygen functions
+            """
+        cases = [
+                 # command-line, optvalues
+                 ("-y", {'filename': os.path.expanduser('~/.ssh/id_rsa.pub'), 'type': 'rsa', 'create': False}),
+                 ("--showpub", {'filename': os.path.expanduser('~/.ssh/id_rsa.pub'), 'type': 'rsa', 'create': False}),
+                 ]
+        self.harn_parseOpt(cases)
+
+    def test_expectExceptionFromBadCommands(self):
+        """L{parseDefaultPubKey} checks if the passed command-line generates
+            the correct public-key option dict to be passed to ckeygen functions
+            """
+        cases = [
+                 # command-line, optvalues
+                     ("--showpub -t dsa", ValueError)
+                 ]
+        self.harn_parseOptExcept(cases)        
 
 
 class KeyGenTests(TestCase):
@@ -80,7 +149,7 @@ class KeyGenTests(TestCase):
         key = Key.fromString(privateRSA_openssh)
         _saveKey(
             key.keyObject,
-            {'filename': filename, 'pass': 'passphrase'})
+            {'filename': filename, 'pass': 'passphrase', 'type': 'rsa'})
         self.assertEqual(
             self.stdout.getvalue(),
             "Your identification has been saved in %s\n"
@@ -109,7 +178,7 @@ class KeyGenTests(TestCase):
         key = Key.fromString(privateRSA_openssh)
         _saveKey(
             key.keyObject,
-            {'filename': filename, 'no-passphrase': True})
+            {'filename': filename, 'no-passphrase': True, 'type': 'rsa'})
         self.assertEqual(
             key.fromString(
                 base.child('id_rsa').getContent(), None, b''),
