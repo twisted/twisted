@@ -347,7 +347,7 @@ a couple of things are happening here:
 
 .. note::
 
-    .. versionadded:: 14.1
+    .. versionadded:: 15.0
 
     On Python 3.3 and above, instead of writing ``returnValue(json.loads(responseBody))`` you can instead write ``return json.loads(responseBody)``.
     This can be a significant readability advantage, but unfortunately if you need compatibility with Python 2, this isn't an option.
