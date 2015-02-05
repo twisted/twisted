@@ -1837,11 +1837,10 @@ class SendmailTests(unittest.TestCase):
         with the ESMTP arguments.
         """
         reactor = MemoryReactor()
-        transport = AbortableStringTransport()
-        d = smtp.sendmail("localhost", "source@address", "recipient@address",
-                          "message", reactor=reactor, username="foo",
-                          password="bar", requireTransportSecurity=True,
-                          requireAuthentication=True)
+        smtp.sendmail("localhost", "source@address", "recipient@address",
+                      "message", reactor=reactor, username="foo",
+                      password="bar", requireTransportSecurity=True,
+                      requireAuthentication=True)
         factory = reactor.tcpClients[0][2]
         self.assertEqual(factory._requireTransportSecurity, True)
         self.assertEqual(factory._requireAuthentication, True)
