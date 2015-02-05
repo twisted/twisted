@@ -1828,8 +1828,25 @@ class SendmailTests(unittest.TestCase):
         L{twisted.internet.reactor}.
         """
         args, varArgs, keywords, defaults = inspect.getargspec(smtp.sendmail)
-        index = len(args) - args.index("reactor") + 1
-        self.assertEqual(reactor, defaults[index])
+        self.assertEqual(reactor, defaults[2])
+
+
+    def test_honorsESMTPArguments(self):
+        """
+        Test that L{twisted.mail.smtp.sendmail} passes creates the ESMTP factory
+        with the ESMTP arguments.
+        """
+        reactor = MemoryReactor()
+        transport = AbortableStringTransport()
+        d = smtp.sendmail("localhost", "source@address", "recipient@address",
+                          "message", reactor=reactor, username="foo",
+                          password="bar", requireTransportSecurity=True,
+                          requireAuthentication=True)
+        factory = reactor.tcpClients[0][2]
+        self.assertEqual(factory._requireTransportSecurity, True)
+        self.assertEqual(factory._requireAuthentication, True)
+        self.assertEqual(factory.username, "foo")
+        self.assertEqual(factory.password, "bar")
 
 
     def test_cancelBeforeConnectionMade(self):
