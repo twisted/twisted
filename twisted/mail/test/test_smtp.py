@@ -1848,6 +1848,46 @@ class SendmailTests(unittest.TestCase):
         self.assertEqual(factory.password, "bar")
 
 
+    def test_messageFilePassthrough(self):
+        """
+        Test that L{twisted.mail.smtp.sendmail} will pass through the message
+        untouched if it is a file-like object.
+        """
+        reactor = MemoryReactor()
+        messageFile = StringIO(b"File!")
+
+        smtp.sendmail("localhost", "source@address", "recipient@address",
+                      messageFile, reactor=reactor)
+        factory = reactor.tcpClients[0][2]
+        self.assertIdentical(factory.file, messageFile)
+
+
+    def test_messageStringMadeFile(self):
+        """
+        Test that L{twisted.mail.smtp.sendmail} will turn non-file-like objects
+        (eg. strings) into file-like objects before sending.
+        """
+        reactor = MemoryReactor()
+        smtp.sendmail("localhost", "source@address", "recipient@address",
+                      "message", reactor=reactor)
+        factory = reactor.tcpClients[0][2]
+        messageFile = factory.file
+        messageFile.seek(0)
+        self.assertEqual(messageFile.read(), "message")
+
+
+    def test_senderDomainName(self):
+        """
+        Test that L{twisted.mail.smtp.sendmail} passes through the sender domain
+        name, if provided.
+        """
+        reactor = MemoryReactor()
+        smtp.sendmail("localhost", "source@address", "recipient@address",
+                      "message", reactor=reactor, senderDomainName="foo")
+        factory = reactor.tcpClients[0][2]
+        self.assertEqual(factory.domain, "foo")
+
+
     def test_cancelBeforeConnectionMade(self):
         """
         When a user cancels L{twisted.mail.smtp.sendmail} before the connection
