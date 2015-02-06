@@ -80,6 +80,14 @@ def run(args=None):
     directory = debFile + '-' + version
     pythonVersion = '%s.%s' % sys.version_info[:2]
     buildDir = FilePath('.build').child(directory)
+    # Silence the linter with fake usage for variables as it can not
+    # detect their usage via vars().
+    maintainer
+    description
+    longDescription
+    twistdOption
+    date
+    pythonVersion
 
     if buildDir.exists():
         buildDir.remove()
