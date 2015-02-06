@@ -2484,6 +2484,7 @@ class IRCClient(basic.LineReceiver):
         When I get a message that's so broken I can't use it.
 
         @param line: The indecipherable message.
+        @type line: L{bytes}
 
         @param excType: The exception type of the exception
             raised by the message.
@@ -2622,23 +2623,25 @@ class DccFileReceiveBasic(protocol.Protocol, styles.Ephemeral):
     This does enough to keep the other guy talking, but you'll want to
     extend my dataReceived method to *do* something with the data I get.
 
-    @ivar bytesReceived: See L{bytesReceived} parameter of L{__init__}
+    @ivar bytesReceived: An integer representing the number of bytes
+            of data received.
+    @type bytesReceived: L{int}
     """
 
     bytesReceived = 0
 
     def __init__(self, resumeOffset=0):
         """
-        @param bytesReceived: An integer representing the number of bytes
-            of data received.
-        @type bytesReceived: L{int}
+        @param resumeOffset: An integer representing the amount of bytes
+            from where the transfer of data should be resumed.
+        @type resumeOffset: L{int}
         """
         self.bytesReceived = resumeOffset
         self.resume = (resumeOffset != 0)
 
     def dataReceived(self, data):
         """
-        Called when data is received.
+        See: L{protocol.Protocol.dataReceived}
 
         Warning: This just acknowledges to the remote host that the
         data has been received; it doesn't *do* anything with the
