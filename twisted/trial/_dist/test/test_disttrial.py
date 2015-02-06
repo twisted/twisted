@@ -68,6 +68,19 @@ class FakeReactor(object):
 
 
 
+class EternalTerminationPredicateFactory(object):
+    """
+    A rigged terminationPredicateFactory for which time never pass.
+    """
+
+    def __call__(self):
+        """
+        See: L{task._Timer}
+        """
+        return False
+
+
+
 class DistTrialRunnerTestCase(TestCase):
     """
     Tests for L{DistTrialRunner}.
@@ -79,19 +92,24 @@ class DistTrialRunnerTestCase(TestCase):
         """
         self.runner = DistTrialRunner(TreeReporter, 4, [],
                                       workingDirectory=self.mktemp())
-        # Slave builders might be slow, so we allow 1 second for each test.
-        self.runner._timeout = 1
         self.runner._stream = StringIO()
 
 
-    def injectFakeScheduler(self):
+    def getFakeSchedulerAndEternalCooperator(self):
+        """
+        Helper to create fake scheduler and cooperator in tests.
+
+        The cooperator has a termination timer which will never inform
+        the scheduler that the task needs to be terminated.
+
+        @return: L{tuple} of (scheduler, cooperator)
+        """
         scheduler = FakeScheduler()
-        cooperator = Cooperator(scheduler=scheduler)
-        self.runner._cooperator = Cooperator(
+        cooperator = Cooperator(
             scheduler=scheduler,
-            terminationPredicateFactory=self.runner._timeoutFactory,
+            terminationPredicateFactory=EternalTerminationPredicateFactory,
             )
-        return scheduler
+        return scheduler, cooperator
 
     def test_writeResults(self):
         """
@@ -261,10 +279,11 @@ class DistTrialRunnerTestCase(TestCase):
             def failingRun(self, case, result):
                 return fail(RuntimeError("oops"))
 
-        scheduler = self.injectFakeScheduler()
+        scheduler, cooperator = self.getFakeSchedulerAndEternalCooperator()
 
         fakeReactor = FakeReactorWithFail()
-        result = self.runner.run(TestCase(), fakeReactor)
+        result = self.runner.run(TestCase(), fakeReactor,
+                                 cooperator.cooperate)
         self.assertEqual(fakeReactor.runCount, 1)
         self.assertEqual(fakeReactor.spawnCount, 1)
         scheduler.pump()
@@ -370,9 +389,11 @@ class DistTrialRunnerTestCase(TestCase):
 
         fakeReactor = FakeReactorWithSuccess()
 
-        scheduler = self.injectFakeScheduler()
+        scheduler, cooperator = self.getFakeSchedulerAndEternalCooperator()
 
-        result = self.runner.run(TestCase(), fakeReactor, untilFailure=True)
+        result = self.runner.run(
+            TestCase(), fakeReactor, cooperate=cooperator.cooperate,
+            untilFailure=True)
         scheduler.pump()
         self.assertEqual(5, len(called))
         self.assertFalse(result.wasSuccessful())
