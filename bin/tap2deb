@@ -8,8 +8,7 @@ tap2deb
 import sys
 
 try:
-    import _preamble
-    _preamble  # Silence the linter.
+    __import__('_preamble')
 except ImportError:
     sys.exc_clear()
 

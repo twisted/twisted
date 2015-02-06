@@ -13,9 +13,8 @@ from sys import executable
 from subprocess import PIPE, Popen
 
 from twisted.trial.unittest import SkipTest, TestCase
-from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
-from twisted.python.reflect import nameModule
+from twisted.python.filepath import FilePath
 from twisted.python.test.test_shellcomp import ZshScriptTestMixin
 
 
@@ -160,7 +159,7 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         The entire L{twisted.scripts.tkunzip} module, part of the old Windows
         installer tool chain, is deprecated.
         """
-        namedModule('twisted.scripts.tkunzip')
+        from twisted.scripts import tkunzip
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_deprecatedTkunzip])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
@@ -175,7 +174,7 @@ class ScriptTests(TestCase, ScriptTestsMixin):
         """
         The entire L{twisted.scripts.tapconvert} module is deprecated.
         """
-        nameModule('twisted.scripts.tapconvert')
+        from twisted.scripts import tapconvert
         warnings = self.flushWarnings(
             offendingFunctions=[self.test_deprecatedTapconvert])
         self.assertEqual(DeprecationWarning, warnings[0]['category'])
