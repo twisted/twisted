@@ -111,6 +111,7 @@ class DistTrialRunnerTestCase(TestCase):
             )
         return scheduler, cooperator
 
+
     def test_writeResults(self):
         """
         L{DistTrialRunner.writeResults} writes to the stream specified in the
