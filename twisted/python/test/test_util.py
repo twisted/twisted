@@ -367,7 +367,13 @@ class InsensitiveDictTest(unittest.TestCase):
         self.assertEqual(dct['foo'], dct.get('Foo'))
         self.assertIn(1, dct)
         self.assertIn('foo', dct)
-        self.assertEqual(eval(repr(dct)), dct)
+
+        result = eval(repr(dct), {
+            'dct': dct,
+            'InsensitiveDict': util.InsensitiveDict,
+            })
+        self.assertEqual(result, dct)
+
         keys=['Foo', 'fnz', 1]
         for x in keys:
             self.assertIn(x, dct.keys())
@@ -950,7 +956,7 @@ class DeprecationTests(unittest.TestCase):
             "twisted.python.util.addPluginDir is deprecated since Twisted "
             "12.2.")
         self.assertEqual(currentWarnings[0]['category'], DeprecationWarning)
-        self.assertEqual(len(warnings), 1)
+        self.assertEqual(len(currentWarnings), 1)
     test_addPluginDir.suppress = [
             SUPPRESS(category=DeprecationWarning,
                      message="twisted.python.util.getPluginDirs is deprecated")

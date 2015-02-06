@@ -4,7 +4,6 @@
 """
 Tests for L{twisted.python.hashlib}
 """
-from twisted.python.reflect import namedModule
 from twisted.trial.unittest import TestCase
 from twisted.trial import util
 
@@ -18,7 +17,7 @@ class HashObjectTests(TestCase):
         """
         Ensure the deprecation of L{twisted.python.hashlib} is working.
         """
-        namedModule('twisted.python.hashlib')
+        __import__('twisted.python.hashlib')
         warnings = self.flushWarnings(
                 offendingFunctions=[self.test_deprecation])
         self.assertIdentical(warnings[0]['category'], DeprecationWarning)
