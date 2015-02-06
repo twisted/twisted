@@ -4,7 +4,7 @@
 import sys
 
 from twisted.trial import unittest
-from twisted.python.refrect import namedModule
+from twisted.python.reflect import namedModule
 
 
 
