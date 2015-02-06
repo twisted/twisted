@@ -66,7 +66,7 @@ except ImportError:
         return set([FD_READ])
 
 from win32event import CreateEvent, MsgWaitForMultipleObjects
-from win32event import WAIT_OBJECT_0, WAIT_TIMEOUT, QS_ALLINPUT, QS_ALLEVENTS
+from win32event import WAIT_OBJECT_0, WAIT_TIMEOUT, QS_ALLINPUT
 
 import win32gui
 

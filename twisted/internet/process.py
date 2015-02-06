@@ -87,20 +87,22 @@ def detectLinuxBrokenPipeBehavior():
 
     See L{ProcessWriter.doRead} for a more detailed explanation.
     """
-    global brokenLinuxPipeBehavior
     r, w = os.pipe()
     os.write(w, 'a')
     reads, writes, exes = select.select([w], [], [], 0)
     if reads:
         # Linux < 2.6.11 says a write-only pipe is readable.
-        brokenLinuxPipeBehavior = True
+        brokenPipeBehavior = True
     else:
-        brokenLinuxPipeBehavior = False
+        brokenPipeBehavior = False
     os.close(r)
     os.close(w)
+    return brokenPipeBehavior
 
-# Call at import time
-detectLinuxBrokenPipeBehavior()
+
+
+brokenLinuxPipeBehavior = detectLinuxBrokenPipeBehavior()
+
 
 
 class ProcessWriter(abstract.FileDescriptor):
@@ -944,10 +946,9 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         _BaseProcess.__init__(self, proto)
 
         if isinstance(usePTY, (tuple, list)):
-            masterfd, slavefd, ttyname = usePTY
+            masterfd, slavefd, ignore = usePTY
         else:
             masterfd, slavefd = pty.openpty()
-            ttyname = os.ttyname(slavefd)
 
         try:
             self._fork(path, uid, gid, executable, args, environment,

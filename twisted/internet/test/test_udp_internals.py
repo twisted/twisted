@@ -16,10 +16,8 @@ from twisted.python.runtime import platformType
 
 if platformType == 'win32':
     from errno import WSAEWOULDBLOCK as EWOULDBLOCK
-    from errno import WSAECONNREFUSED as ECONNREFUSED
 else:
     from errno import EWOULDBLOCK
-    from errno import ECONNREFUSED
 
 
 
