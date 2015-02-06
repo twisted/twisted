@@ -29,11 +29,12 @@ import unittest as pyunit
 from twisted.python.compat import _PY3, NativeStringIO
 from twisted.python.reflect import namedAny
 from twisted.internet import defer, reactor
-from twisted.trial import unittest, reporter, util
+from twisted.trial import _api, unittest, reporter, util
 if not _PY3:
     from twisted.trial import runner
 from twisted.trial.test import erroneous
 from twisted.trial.test.test_suppression import SuppressionMixin
+from twisted.trial._asyncrunner import _clearSuite
 
 
 # Skip messages that are used in multiple places:
@@ -787,7 +788,7 @@ class TestGarbageCollection(GCMixin, unittest.SynchronousTestCase):
         test gc.collect is called before and after each test.
         """
         test = TestGarbageCollection.BasicTest('test_foo')
-        test = unittest._ForceGarbageCollectionDecorator(test)
+        test = _api._ForceGarbageCollectionDecorator(test)
         result = reporter.TestResult()
         test.run(result)
         self.assertEqual(
@@ -811,7 +812,7 @@ class TestUnhandledDeferred(unittest.SynchronousTestCase):
         from twisted.trial.test import weird
         # test_unhandledDeferred creates a cycle. we need explicit control of gc
         gc.disable()
-        self.test1 = unittest._ForceGarbageCollectionDecorator(
+        self.test1 = _api._ForceGarbageCollectionDecorator(
             weird.TestBleeding('test_unhandledDeferred'))
 
     def test_isReported(self):
@@ -984,20 +985,20 @@ class SuiteClearingMixin(object):
 
     def test_clearSuite(self):
         """
-        Calling L{unittest._clearSuite} on a populated L{TestSuite} removes
+        Calling L{_clearSuite} on a populated L{TestSuite} removes
         all tests.
         """
         suite = unittest.TestSuite()
         suite.addTest(self.TestCase())
         # Double check that the test suite actually has something in it.
         self.assertEqual(1, suite.countTestCases())
-        unittest._clearSuite(suite)
+        _clearSuite(suite)
         self.assertEqual(0, suite.countTestCases())
 
 
     def test_clearPyunitSuite(self):
         """
-        Calling L{unittest._clearSuite} on a populated standard library
+        Calling L{_clearSuite} on a populated standard library
         L{TestSuite} removes all tests.
 
         This test is important since C{_clearSuite} operates by mutating
@@ -1008,7 +1009,7 @@ class SuiteClearingMixin(object):
         suite.addTest(self.TestCase())
         # Double check that the test suite actually has something in it.
         self.assertEqual(1, suite.countTestCases())
-        unittest._clearSuite(suite)
+        _clearSuite(suite)
         self.assertEqual(0, suite.countTestCases())
 
 
@@ -1299,7 +1300,7 @@ class IterateTestsMixin(object):
         test case.
         """
         test = self.TestCase()
-        self.assertEqual([test], list(unittest._iterateTests(test)))
+        self.assertEqual([test], list(_api._iterateTests(test)))
 
 
     def test_iterateSingletonTestSuite(self):
@@ -1309,7 +1310,7 @@ class IterateTestsMixin(object):
         """
         test = self.TestCase()
         suite = runner.TestSuite([test])
-        self.assertEqual([test], list(unittest._iterateTests(suite)))
+        self.assertEqual([test], list(_api._iterateTests(suite)))
 
 
     def test_iterateNestedTestSuite(self):
@@ -1318,7 +1319,7 @@ class IterateTestsMixin(object):
         """
         test = self.TestCase()
         suite = runner.TestSuite([runner.TestSuite([test])])
-        self.assertEqual([test], list(unittest._iterateTests(suite)))
+        self.assertEqual([test], list(_api._iterateTests(suite)))
 
 
     def test_iterateIsLeftToRightDepthFirst(self):
@@ -1327,7 +1328,7 @@ class IterateTestsMixin(object):
         """
         test = self.TestCase()
         suite = runner.TestSuite([runner.TestSuite([test]), self])
-        self.assertEqual([test, self], list(unittest._iterateTests(suite)))
+        self.assertEqual([test, self], list(_api._iterateTests(suite)))
 
 
 class SynchronousIterateTestsTests(IterateTestsMixin, unittest.SynchronousTestCase):

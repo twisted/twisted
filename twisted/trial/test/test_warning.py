@@ -13,8 +13,9 @@ from unittest import TestResult
 
 from twisted.python.compat import NativeStringIO as StringIO
 from twisted.python.filepath import FilePath
-from twisted.trial.unittest import (
-    SynchronousTestCase, _collectWarnings, _setWarningRegistryToNone)
+from twisted.trial.unittest import SynchronousTestCase
+from twisted.trial._synctest import _collectWarnings, _setWarningRegistryToNone
+
 
 class Mask(object):
     """

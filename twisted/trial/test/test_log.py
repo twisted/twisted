@@ -10,7 +10,7 @@ import time
 
 from twisted.internet import reactor, task
 from twisted.python import failure, log
-from twisted.trial import unittest, reporter
+from twisted.trial import _api, unittest, reporter
 
 
 def makeFailure():
@@ -64,12 +64,12 @@ class Mask(object):
 
 class TestObserver(unittest.SynchronousTestCase):
     """
-    Tests for L{unittest._LogObserver}, a helper for the implementation of
+    Tests for L{_api._LogObserver}, a helper for the implementation of
     L{SynchronousTestCase.flushLoggedErrors}.
     """
     def setUp(self):
         self.result = reporter.TestResult()
-        self.observer = unittest._LogObserver()
+        self.observer = _api._LogObserver()
 
 
     def test_msg(self):

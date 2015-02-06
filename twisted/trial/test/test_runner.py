@@ -10,7 +10,7 @@ from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.trial.itrial import IReporter, ITestCase
-from twisted.trial import unittest, runner, reporter, util
+from twisted.trial import _api, unittest, runner, reporter, util
 from twisted.python import failure, log, reflect
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
@@ -653,7 +653,7 @@ class TestUntilFailure(unittest.SynchronousTestCase):
         self.assertEqual(len(decorated), 2)
         self.assertEqual(decorated,
             [(self.test, ITestCase),
-             (self.test, unittest._ForceGarbageCollectionDecorator)])
+             (self.test, _api._ForceGarbageCollectionDecorator)])
 
 
 
