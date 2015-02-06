@@ -201,7 +201,7 @@ class SSHPublicKeyDatabaseTests(TestCase):
 
     def test_deprecated(self):
         """
-        L{SSHPublicKeyDatabase} is deprecated as of version 14.1
+        L{SSHPublicKeyDatabase} is deprecated as of version 15.0
         """
         warningsShown = self.flushWarnings(
             offendingFunctions=[self.setUp])
