@@ -8,8 +8,8 @@ L{twisted.test.test_stdio.StandardInputOutputTestCase.test_loseConnection} to
 test that ITransport.loseConnection() works for process transports.
 """
 
-import sys, _preamble
-_preamble  # Silence the linter (`_preamble` has import-time side-effect).
+__import__('_preamble')
+import sys
 
 from twisted.internet.error import ConnectionDone
 from twisted.internet import stdio, protocol

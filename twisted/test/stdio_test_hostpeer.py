@@ -8,8 +8,8 @@ L{twisted.test.test_stdio.StandardInputOutputTestCase.test_hostAndPeer} to test
 that ITransport.getHost() and ITransport.getPeer() work for process transports.
 """
 
-import sys, _preamble
-_preamble  # Silence the linter (`_preamble` has import-time side-effect).
+__import__('_preamble')
+import sys
 
 from twisted.internet import stdio, protocol
 from twisted.python import reflect

@@ -9,8 +9,8 @@ to test that L{os.write} can be reliably used after
 L{twisted.internet.stdio.StandardIO} has finished.
 """
 
-import sys, _preamble
-_preamble  # Silence the linter (`_preamble` has import-time side-effect).
+__import__('_preamble')
+import sys
 
 from twisted.internet.protocol import Protocol
 from twisted.internet.stdio import StandardIO
