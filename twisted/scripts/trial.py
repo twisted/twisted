@@ -524,7 +524,7 @@ def _wrappedPdb():
 
     dbg = pdb.Pdb()
     try:
-       	namedModule('readline')
+        namedModule('readline')
     except ImportError:
         print("readline module not available")
         sys.exc_clear()
