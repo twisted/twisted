@@ -27,6 +27,7 @@ import gc, sys, weakref
 import unittest as pyunit
 
 from twisted.python.compat import _PY3, NativeStringIO
+from twisted.python.reflect import namedAny
 from twisted.internet import defer, reactor
 from twisted.trial import unittest, reporter, util
 if not _PY3:
@@ -219,10 +220,11 @@ class SynchronousSkipMethodTests(SkipMethodsMixin, unittest.SynchronousTestCase)
 
     See: L{twisted.trial.test.test_tests.SkipMethodsMixin}
     """
-    from twisted.trial.test.skipping import (
-        SynchronousSkipping as Skipping,
-        SynchronousSkippingSetUp as SkippingSetUp,
-        SynchronousDeprecatedReasonlessSkip as DeprecatedReasonlessSkip)
+    Skipping = namedAny('twisted.trial.test.skipping.SynchronousSkipping')
+    SkippingSetUp = namedAny(
+        'twisted.trial.test.skipping.SynchronousSkippingSetUp')
+    DeprecatedReasonlessSkip = namedAny(
+        'twisted.trial.test.skipping.SynchronousDeprecatedReasonlessSkip')
 
 
 class AsynchronousSkipMethodTests(SkipMethodsMixin, unittest.TestCase):
@@ -231,10 +233,11 @@ class AsynchronousSkipMethodTests(SkipMethodsMixin, unittest.TestCase):
 
     See: L{twisted.trial.test.test_tests.SkipMethodsMixin}
     """
-    from twisted.trial.test.skipping import (
-        AsynchronousSkipping as Skipping,
-        AsynchronousSkippingSetUp as SkippingSetUp,
-        AsynchronousDeprecatedReasonlessSkip as DeprecatedReasonlessSkip)
+    Skipping = namedAny('twisted.trial.test.skipping.AsynchronousSkipping')
+    SkippingSetUp = namedAny(
+        'twisted.trial.test.skipping.AsynchronousSkippingSetUp')
+    DeprecatedReasonlessSkip = namedAny(
+        'twisted.trial.test.skipping.AsynchronousDeprecatedReasonlessSkip')
 
 
 class SkipClassesMixin(ResultsTestMixin):
@@ -287,14 +290,16 @@ class SkipClassesMixin(ResultsTestMixin):
         self.assertEqual(expectedReasons, reasonsGiven)
 
 
+
 class SynchronousSkipClassTests(SkipClassesMixin, unittest.SynchronousTestCase):
     """
     Test the class skipping features in the synchronous case.
 
     See: L{twisted.trial.test.test_tests.SkipClassesMixin}
     """
-    from twisted.trial.test.skipping import (
-        SynchronousSkippedClass as SkippedClass)
+    SkippedClass = namedAny(
+        'twisted.trial.test.skipping.SynchronousSkippedClass')
+
 
 
 class AsynchronousSkipClassTests(SkipClassesMixin, unittest.TestCase):
@@ -303,8 +308,9 @@ class AsynchronousSkipClassTests(SkipClassesMixin, unittest.TestCase):
 
     See: L{twisted.trial.test.test_tests.SkipClassesMixin}
     """
-    from twisted.trial.test.skipping import (
-        AsynchronousSkippedClass as SkippedClass)
+    SkippedClass = namedAny(
+        'twisted.trial.test.skipping.AsynchronousSkippedClass')
+
 
 
 class TodoMixin(ResultsTestMixin):
@@ -396,16 +402,18 @@ class TodoMixin(ResultsTestMixin):
         self.assertEqual(self.reporter.successes, 0)
 
 
+
 class SynchronousTodoTests(TodoMixin, unittest.SynchronousTestCase):
     """
     Test the class skipping features in the synchronous case.
 
     See: L{twisted.trial.test.test_tests.TodoMixin}
     """
-    from twisted.trial.test.skipping import (
-        SynchronousTodo as Todo,
-        SynchronousSetUpTodo as SetUpTodo,
-        SynchronousTearDownTodo as TearDownTodo)
+    Todo = namedAny('twisted.trial.test.skipping.SynchronousTodo')
+    SetUpTodo = namedAny('twisted.trial.test.skipping.SynchronousSetUpTodo')
+    TearDownTodo = namedAny(
+        'twisted.trial.test.skipping.SynchronousTearDownTodo')
+
 
 
 class AsynchronousTodoTests(TodoMixin, unittest.TestCase):
@@ -414,10 +422,11 @@ class AsynchronousTodoTests(TodoMixin, unittest.TestCase):
 
     See: L{twisted.trial.test.test_tests.TodoMixin}
     """
-    from twisted.trial.test.skipping import (
-        AsynchronousTodo as Todo,
-        AsynchronousSetUpTodo as SetUpTodo,
-        AsynchronousTearDownTodo as TearDownTodo)
+    Todo = namedAny('twisted.trial.test.skipping.AsynchronousTodo')
+    SetUpTodo = namedAny('twisted.trial.test.skipping.AsynchronousSetUpTodo')
+    TearDownTodo = namedAny(
+        'twisted.trial.test.skipping.AsynchronousTearDownTodo')
+
 
 
 class ClassTodoMixin(ResultsTestMixin):
@@ -476,14 +485,15 @@ class ClassTodoMixin(ResultsTestMixin):
         self.assertEqual(expectedReasons, reasonsGiven)
 
 
+
 class SynchronousClassTodoTests(ClassTodoMixin, unittest.SynchronousTestCase):
     """
     Tests for the class-wide I{expected failure} features in the synchronous case.
 
     See: L{twisted.trial.test.test_tests.ClassTodoMixin}
     """
-    from twisted.trial.test.skipping import (
-        SynchronousTodoClass as TodoClass)
+    TodoClass = namedAny('twisted.trial.test.skipping.SynchronousTodoClass')
+
 
 
 class AsynchronousClassTodoTests(ClassTodoMixin, unittest.TestCase):
@@ -492,8 +502,8 @@ class AsynchronousClassTodoTests(ClassTodoMixin, unittest.TestCase):
 
     See: L{twisted.trial.test.test_tests.ClassTodoMixin}
     """
-    from twisted.trial.test.skipping import (
-        AsynchronousTodoClass as TodoClass)
+    TodoClass = namedAny('twisted.trial.test.skipping.AsynchronousTodoClass')
+
 
 
 class StrictTodoMixin(ResultsTestMixin):
@@ -550,6 +560,7 @@ class StrictTodoMixin(ResultsTestMixin):
         self.assertEqual(expectedReasons, reasonsGotten)
 
 
+
 class SynchronousStrictTodoTests(StrictTodoMixin, unittest.SynchronousTestCase):
     """
     Tests for the expected failure case when the exact failure that is expected
@@ -557,8 +568,7 @@ class SynchronousStrictTodoTests(StrictTodoMixin, unittest.SynchronousTestCase):
 
     See: L{twisted.trial.test.test_tests.StrictTodoMixin}
     """
-    from twisted.trial.test.skipping import (
-        SynchronousStrictTodo as StrictTodo)
+    StrictTodo = namedAny('twisted.trial.test.skipping.SynchronousStrictTodo')
 
 
 
@@ -569,8 +579,7 @@ class AsynchronousStrictTodoTests(StrictTodoMixin, unittest.TestCase):
 
     See: L{twisted.trial.test.test_tests.StrictTodoMixin}
     """
-    from twisted.trial.test.skipping import (
-        AsynchronousStrictTodo as StrictTodo)
+    StrictTodo = namedAny('twisted.trial.test.skipping.AsynchronousStrictTodo')
 
 
 
@@ -652,15 +661,18 @@ class FixtureMixin(object):
         self.assertEqual(0, self.reporter.successes)
 
 
+
 class SynchronousFixtureTest(FixtureMixin, unittest.SynchronousTestCase):
     """
     Tests for broken fixture helper methods in the synchronous case
 
     See: L{twisted.trial.test.test_tests.FixtureMixin}
     """
-    from twisted.trial.test.erroneous import (
-        SynchronousTestFailureInSetUp as TestFailureInSetUp,
-        SynchronousTestFailureInTearDown as TestFailureInTearDown)
+    TestFailureInSetUp = namedAny(
+        'twisted.trial.test.erroneous.SynchronousTestFailureInSetUp')
+    TestFailureInTearDown = namedAny(
+        'twisted.trial.test.erroneous.SynchronousTestFailureInTearDown')
+
 
 
 class AsynchronousFixtureTest(FixtureMixin, unittest.TestCase):
@@ -669,9 +681,11 @@ class AsynchronousFixtureTest(FixtureMixin, unittest.TestCase):
 
     See: L{twisted.trial.test.test_tests.FixtureMixin}
     """
-    from twisted.trial.test.erroneous import (
-        AsynchronousTestFailureInSetUp as TestFailureInSetUp,
-        AsynchronousTestFailureInTearDown as TestFailureInTearDown)
+    TestFailureInSetUp = namedAny(
+        'twisted.trial.test.erroneous.AsynchronousTestFailureInSetUp')
+    TestFailureInTearDown = namedAny(
+        'twisted.trial.test.erroneous.AsynchronousTestFailureInTearDown')
+
 
 
 class AsynchronousSuppressionTest(SuppressionMixin, unittest.TestCase):
@@ -681,11 +695,15 @@ class AsynchronousSuppressionTest(SuppressionMixin, unittest.TestCase):
 
     See L{twisted.trial.test.test_suppression.SuppressionMixin}
     """
-    from twisted.trial.test.suppression import (
-        AsynchronousTestSetUpSuppression as TestSetUpSuppression,
-        AsynchronousTestTearDownSuppression as TestTearDownSuppression,
-        AsynchronousTestSuppression as TestSuppression,
-        AsynchronousTestSuppression2 as TestSuppression2)
+    TestSetUpSuppression = namedAny(
+        'twisted.trial.test.suppression.AsynchronousTestSetUpSuppression')
+    TestTearDownSuppression = namedAny(
+        'twisted.trial.test.suppression.AsynchronousTestTearDownSuppression')
+    TestSuppression = namedAny(
+        'twisted.trial.test.suppression.AsynchronousTestSuppression')
+    TestSuppression2 = namedAny(
+        'twisted.trial.test.suppression.AsynchronousTestSuppression2')
+
 
 
 class GCMixin:
@@ -921,13 +939,15 @@ class AddCleanupMixin(object):
         self.assertEqual(error2.getErrorMessage(), 'foo')
 
 
+
 class SynchronousAddCleanupTests(AddCleanupMixin, unittest.SynchronousTestCase):
     """
     Test the addCleanup method of TestCase in the synchronous case
 
     See: L{twisted.trial.test.test_tests.AddCleanupMixin}
     """
-    from twisted.trial.test.skipping import SynchronousAddCleanup as AddCleanup
+    AddCleanup = namedAny('twisted.trial.test.skipping.SynchronousAddCleanup')
+
 
 
 class AsynchronousAddCleanupTests(AddCleanupMixin, unittest.TestCase):
@@ -936,7 +956,7 @@ class AsynchronousAddCleanupTests(AddCleanupMixin, unittest.TestCase):
 
     See: L{twisted.trial.test.test_tests.AddCleanupMixin}
     """
-    from twisted.trial.test.skipping import AsynchronousAddCleanup as AddCleanup
+    AddCleanup = namedAny('twisted.trial.test.skipping.AsynchronousAddCleanup')
 
     def test_addCleanupWaitsForDeferreds(self):
         """
@@ -1126,7 +1146,7 @@ class TestDecoratorMixin(object):
         test = self.TestCase()
         suite = unittest.TestSuite([test])
         count1 = getrefcount(test)
-        decoratedTest = unittest.decorate(suite, unittest.TestDecorator)
+        unittest.decorate(suite, unittest.TestDecorator)
         count2 = getrefcount(test)
         self.assertEqual(count1, count2)
 
