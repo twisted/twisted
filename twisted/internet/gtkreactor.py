@@ -221,7 +221,11 @@ class PortableGtkReactor(selectreactor.SelectReactor):
 
 
 def posixInstall():
-    """Configure the twisted mainloop to be run inside the gtk mainloop.
+    """
+    Configure the twisted mainloop to be run inside the gtk mainloop.
+
+    @return: The new GTK reactor.
+    @rtype: L{IReactorFDSet}
     """
     reactor = GtkReactor()
     from twisted.internet.main import installReactor
