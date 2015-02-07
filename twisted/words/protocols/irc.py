@@ -74,7 +74,8 @@ class IRCBadModes(ValueError):
 
 def parsemsg(s):
     """
-    Breaks a message from an IRC server into its prefix, command, and arguments.
+    Breaks a message from an IRC server into its prefix, command, and
+    arguments.
 
     @param s: The message to break.
     @type s: L{bytes}
@@ -325,7 +326,8 @@ class IRC(protocol.Protocol):
         @param command: The IRC command to determine the function for.
         @type command: L{bytes}
 
-        @param prefix: The prefix of the IRC message (as returned by L{parsemsg}).
+        @param prefix: The prefix of the IRC message (as returned by
+            L{parsemsg}).
         @type prefix: L{bytes}
 
         @param params: A list of parameters to call the function with.
@@ -2334,9 +2336,8 @@ class IRCClient(basic.LineReceiver):
         @param fileName: The name of the file to be transferred.
         @type fileName: L{bytes}
 
-        @param size: The size of the file to be transferred, which may be
-            C{-1} if the size of the file was not specified in the DCC
-            SEND request.
+        @param size: The size of the file to be transferred, which may be C{-1}
+            if the size of the file was not specified in the DCC SEND request.
         @type size: L{int}
 
         @param data: A 3-list of [fileName, address, port].
@@ -2352,12 +2353,11 @@ class IRCClient(basic.LineReceiver):
 
     def dccDoResume(self, user, file, port, resumePos):
         """
-        Called when a client is trying to resume an offered file
-        via DCC send.  It should be either replied to with a DCC
-        ACCEPT or ignored (default).
+        Called when a client is trying to resume an offered file via DCC send.
+        It should be either replied to with a DCC ACCEPT or ignored (default).
 
-        @param user: The hostmask of the user who wants to resume
-            the transfer of a file previously offered via DCC send.
+        @param user: The hostmask of the user who wants to resume the transfer
+            of a file previously offered via DCC send.
         @type user: L{bytes}
 
         @param file: The name of the file to resume the transfer of.
@@ -2366,8 +2366,8 @@ class IRCClient(basic.LineReceiver):
         @param port: An integer representing the port of the requesting user.
         @type port: L{int}
 
-        @param resumePos: The position in the file from where the
-            transfer should resume.
+        @param resumePos: The position in the file from where the transfer
+            should resume.
         @type resumePos: L{int}
         """
         pass
@@ -2375,11 +2375,11 @@ class IRCClient(basic.LineReceiver):
 
     def dccDoAcceptResume(self, user, file, port, resumePos):
         """
-        Called when a client has verified and accepted a DCC resume
-        request made by us.  By default it will do nothing.
+        Called when a client has verified and accepted a DCC resume request
+        made by us.  By default it will do nothing.
 
-        @param user: The hostmask of the user who has accepted
-            the DCC resume request.
+        @param user: The hostmask of the user who has accepted the DCC resume
+            request.
         @type user: L{bytes}
 
         @param file: The name of the file to resume the transfer of.
@@ -2388,8 +2388,8 @@ class IRCClient(basic.LineReceiver):
         @param port: An integer representing the port of the accepting user.
         @type port: L{int}
 
-        @param resumePos: The position in the file from where the
-            transfer should resume.
+        @param resumePos: The position in the file from where the transfer
+            should resume.
         @type resumePos: L{int}
         """
         pass
@@ -2462,8 +2462,7 @@ class IRCClient(basic.LineReceiver):
         @param channel: The name of the IRC channel.
         @type channel: L{bytes}
 
-        @param tag: The CTCP request tag for which no
-            fitting method is found.
+        @param tag: The CTCP request tag for which no fitting method is found.
         @type tag: L{bytes}
 
         @param data: The CTCP message.
@@ -2486,12 +2485,12 @@ class IRCClient(basic.LineReceiver):
         @param line: The indecipherable message.
         @type line: L{bytes}
 
-        @param excType: The exception type of the exception
-            raised by the message.
+        @param excType: The exception type of the exception raised by the
+            message.
         @type excType: L{type}
 
-        @param excValue: The exception parameter of excType or its
-            associated value(the second argument to C{raise}).
+        @param excValue: The exception parameter of excType or its associated
+            value(the second argument to C{raise}).
         @type excValue: L{BaseException}
 
         @param tb: The Traceback as a traceback object.
@@ -2503,8 +2502,8 @@ class IRCClient(basic.LineReceiver):
 
     def quirkyMessage(self, s):
         """
-        This is called when I receive a message which is peculiar,
-        but not wholly indecipherable.
+        This is called when I receive a message which is peculiar, but not
+        wholly indecipherable.
 
         @param s: The peculiar message.
         @type s: L{bytes}
@@ -2567,13 +2566,14 @@ class IRCClient(basic.LineReceiver):
 
     def handleCommand(self, command, prefix, params):
         """
-        Determine the function to call for the given command and call
-        it with the given arguments.
+        Determine the function to call for the given command and call it with
+        the given arguments.
 
         @param command: The IRC command to determine the function for.
         @type command: L{bytes}
 
-        @param prefix: The prefix of the IRC message (as returned by L{parsemsg}).
+        @param prefix: The prefix of the IRC message (as returned by
+            L{parsemsg}).
         @type prefix: L{bytes}
 
         @param params: A list of parameters to call the function with.
@@ -2620,11 +2620,11 @@ class DccFileReceiveBasic(protocol.Protocol, styles.Ephemeral):
     """
     Bare protocol to receive a Direct Client Connection SEND stream.
 
-    This does enough to keep the other guy talking, but you'll want to
-    extend my dataReceived method to *do* something with the data I get.
+    This does enough to keep the other guy talking, but you'll want to extend
+    my dataReceived method to *do* something with the data I get.
 
-    @ivar bytesReceived: An integer representing the number of bytes
-            of data received.
+    @ivar bytesReceived: An integer representing the number of bytes of data
+        received.
     @type bytesReceived: L{int}
     """
 
@@ -2632,8 +2632,8 @@ class DccFileReceiveBasic(protocol.Protocol, styles.Ephemeral):
 
     def __init__(self, resumeOffset=0):
         """
-        @param resumeOffset: An integer representing the amount of bytes
-            from where the transfer of data should be resumed.
+        @param resumeOffset: An integer representing the amount of bytes from
+            where the transfer of data should be resumed.
         @type resumeOffset: L{int}
         """
         self.bytesReceived = resumeOffset
@@ -2643,9 +2643,9 @@ class DccFileReceiveBasic(protocol.Protocol, styles.Ephemeral):
         """
         See: L{protocol.Protocol.dataReceived}
 
-        Warning: This just acknowledges to the remote host that the
-        data has been received; it doesn't *do* anything with the
-        data, so you'll want to override this.
+        Warning: This just acknowledges to the remote host that the data has
+        been received; it doesn't I{do} anything with the data, so you'll want
+        to override this.
         """
         self.bytesReceived = self.bytesReceived + len(data)
         self.transport.write(struct.pack('!i', self.bytesReceived))
@@ -2655,24 +2655,23 @@ class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
     """
     Protocol for an outgoing Direct Client Connection SEND.
 
-    @ivar blocksize: An integer representing the size of an
-        individual block of data.
+    @ivar blocksize: An integer representing the size of an individual block of
+        data.
     @type blocksize: L{int}
 
-    @ivar file: The file to be sent. This can be either a
-        file object or simply the name of the file.
+    @ivar file: The file to be sent.  This can be either a file object or
+        simply the name of the file.
     @type file: L{file} or L{bytes}
 
-    @ivar bytesSent: An integer representing the number of
-        bytes sent.
+    @ivar bytesSent: An integer representing the number of bytes sent.
     @type bytesSent: L{int}
 
-    @ivar completed: An integer representing whether the
-        transfer has been completed or not.
+    @ivar completed: An integer representing whether the transfer has been
+        completed or not.
     @type completed: L{int}
 
-    @ivar connected: An integer representing whether the
-        connection has been established or not.
+    @ivar connected: An integer representing whether the connection has been
+        established or not.
     @type connected: L{int}
     """
 
@@ -2744,8 +2743,8 @@ def fileSize(file):
     @type file: L{file}
 
     @rtype: L{int} or L{None}
-    @return: The size of the file object as an integer if it can
-        be determined, otherwise return L{None}.
+    @return: The size of the file object as an integer if it can be determined,
+        otherwise return L{None}.
     """
     size = None
     if hasattr(file, "fileno"):
@@ -2917,10 +2916,10 @@ class DccFileReceive(DccFileReceiveBasic):
     """
     Higher-level coverage for getting a file from DCC SEND.
 
-    I allow you to change the file's name and destination directory.
-    I won't overwrite an existing file unless I've been told it's okay
-    to do so. If passed the resumeOffset keyword argument I will attempt to
-    resume the file from that amount of bytes.
+    I allow you to change the file's name and destination directory.  I won't
+    overwrite an existing file unless I've been told it's okay to do so.  If
+    passed the resumeOffset keyword argument I will attempt to resume the file
+    from that amount of bytes.
 
     XXX: I need to let the client know when I am finished.
     XXX: I need to decide how to keep a progress indicator updated.
@@ -2930,17 +2929,17 @@ class DccFileReceive(DccFileReceiveBasic):
     @ivar filename: The name of the file to get.
     @type filename: L{bytes}
 
-    @ivar fileSize: The size of the file to get, which has a default
-        value of C{-1} if the size of the file was not specified in the
-        DCC SEND request.
+    @ivar fileSize: The size of the file to get, which has a default value of
+        C{-1} if the size of the file was not specified in the DCC SEND
+        request.
     @type fileSize: L{int}
 
     @ivar destDir: The destination directory for the file to be received.
     @type destDir: L{bytes}
 
-    @ivar overwrite: An integer representing whether an existing file
-        should be overwritten or not. This initially is an L{int} but
-        can be modified to be a L{bool} using the L{set_overwrite} method.
+    @ivar overwrite: An integer representing whether an existing file should be
+        overwritten or not.  This initially is an L{int} but can be modified to
+        be a L{bool} using the L{set_overwrite} method.
     @type overwrite: L{int} or L{bool}
 
     @ivar queryData: queryData is a 3-tuple of (user, channel, data).
@@ -2975,8 +2974,8 @@ class DccFileReceive(DccFileReceiveBasic):
 
         May raise OSError if the supplied directory path is not suitable.
 
-        @param directory: The directory where the file to be received
-            will be placed.
+        @param directory: The directory where the file to be received will be
+            placed.
         @type directory: L{bytes}
         """
         if not path.exists(directory):
@@ -3007,8 +3006,8 @@ class DccFileReceive(DccFileReceiveBasic):
         """
         May I overwrite existing files?
 
-        @param boolean: A boolean value representing whether existing
-            files should be overwritten or not.
+        @param boolean: A boolean value representing whether existing files
+            should be overwritten or not.
         @type boolean: L{bool}
         """
         self.overwrite = boolean
