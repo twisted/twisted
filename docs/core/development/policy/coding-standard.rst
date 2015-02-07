@@ -582,18 +582,29 @@ For example,
 
 
 
-    
+
 
 Comments
 --------
 
+Start by reading the `PEP8 Comments section
+<http://www.python.org/dev/peps/pep-0008/#comments>`_.
+Ignore `Documentation Strings` section from PEP8 as Twisted uses a different
+docstring standard.
 
-    
-Comments marked with XXX or TODO must contain a reference to the
-associated ticket.
+`FIXME/TODO` comments must have an associated ticket and contain a
+reference to it in the form of a full URL to the ticket.
+A brief text should provide info about the why the FIXME was added.
+It does not has to be the full ticket description but just enough to help
+readers decide if their next step should be reading the ticket or continue
+reading the code.
 
-    
+.. code-block:: python
 
+    # FIXME: https://twistedmatrix.com/trac/ticket/1235
+    # Threads that have died before calling stop() are not joined.
+    for thread in threads:
+        thread.join()
 
 
 Versioning
