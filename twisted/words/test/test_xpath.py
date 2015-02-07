@@ -130,16 +130,6 @@ class XPathTests(unittest.TestCase):
         self.assertEqual(xp.matches(self.e), True)
         self.assertEqual(xp.queryForNodes(self.e), [self.bar2])
 
-    def test_position(self):
-        """
-        Test finding element at position.
-        """
-        xp = XPathQuery("/foo/bar[2]")
-        self.assertEqual(xp.matches(self.e), 1)
-        self.assertEqual(xp.queryForNodes(self.e), [self.bar1])
-
-    test_position.todo = "XPath queries with position are not working."
-
     def test_namespaceFound(self):
         """
         Test matching node with namespace.

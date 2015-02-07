@@ -612,7 +612,9 @@ class MulticastTestCase(unittest.TestCase):
             self.client.transport.joinGroup("127.0.0.1"),
             error.MulticastJoinError)
     if runtime.platform.isWindows() and not runtime.platform.isVista():
-        test_joinFailure.todo = "Windows' multicast is wonky"
+        # FIXME: https://twistedmatrix.com/trac/ticket/7780
+        test_joinFailure.skip = (
+            "Windows' UDP multicast is not yet fully supported.")
 
 
     def test_multicast(self):
@@ -697,14 +699,3 @@ if not interfaces.IReactorUDP(reactor, None):
     ReactorShutdownInteraction.skip = "This reactor does not support UDP"
 if not interfaces.IReactorMulticast(reactor, None):
     MulticastTestCase.skip = "This reactor does not support multicast"
-
-def checkForLinux22():
-    import os
-    if os.path.exists("/proc/version"):
-        s = open("/proc/version").read()
-        if s.startswith("Linux version"):
-            s = s.split()[2]
-            if s.split(".")[:2] == ["2", "2"]:
-                f = MulticastTestCase.testInterface.im_func
-                f.todo = "figure out why this fails in linux 2.2"
-checkForLinux22()

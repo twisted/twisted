@@ -486,21 +486,6 @@ alert("I hate you");
         actual = d.documentElement.toxml()
         self.assertEqual(expected, actual)
 
-    def testLaterCloserTable(self):
-        s = ("<table>"
-             "<tr><th>name<th>value<th>comment"
-             "<tr><th>this<td>tag<td>soup"
-             "<tr><th>must<td>be<td>handled"
-             "</table>")
-        expected = ("<table>"
-                    "<tr><th>name</th><th>value</th><th>comment</th></tr>"
-                    "<tr><th>this</th><td>tag</td><td>soup</td></tr>"
-                    "<tr><th>must</th><td>be</td><td>handled</td></tr>"
-                    "</table>")
-        d = microdom.parseString(s, beExtremelyLenient=1)
-        actual = d.documentElement.toxml()
-        self.assertEqual(expected, actual)
-    testLaterCloserTable.todo = "Table parsing needs to be fixed."
 
     def testLaterCloserDL(self):
         s = ("<dl>"
@@ -515,20 +500,6 @@ alert("I hate you");
         actual = d.documentElement.toxml()
         self.assertEqual(expected, actual)
 
-    def testLaterCloserDL2(self):
-        s = ("<dl>"
-             "<dt>word<dd>definition<p>more definition"
-             "<dt>word"
-             "</dl>")
-        expected = ("<dl>"
-                    "<dt>word</dt><dd>definition<p>more definition</p></dd>"
-                    "<dt>word</dt>"
-                    "</dl>")
-        d = microdom.parseString(s, beExtremelyLenient=1)
-        actual = d.documentElement.toxml()
-        self.assertEqual(expected, actual)
-
-    testLaterCloserDL2.todo = "unclosed <p> messes it up."
 
     def testUnicodeTolerance(self):
         import struct
