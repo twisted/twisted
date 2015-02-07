@@ -62,8 +62,29 @@ class SupportTests(unittest.TestCase):
         buff = array('c', '\0' * 256)
         self.assertEqual(
             0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
-        server.setsockopt(
-            SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, pack('P', server.fileno()))
+
+        for _ in range(2):
+            # setsockopt after _iocp.accept might fail for both IPv4 and IPV6
+            # with [Errno 10057] A request to send or receive ... so we retry
+            # once.
+            try:
+                server.setsockopt(
+                    SOL_SOCKET,
+                    SO_UPDATE_ACCEPT_CONTEXT,
+                    pack('P', server.fileno()))
+                break
+            except error, socket_error:
+                if socket_error.errno == 10057:
+                    # Ignore expected error and retry.
+                    pass
+                else:
+                    # Not the excepted error so we raise the error without
+                    # retying.
+                    raise
+        else:
+            # Second try also failed with the expected error.
+            raise
+
         self.assertEqual(
             (family, client.getpeername()[:2], client.getsockname()[:2]),
             _iocp.get_accept_addrs(server.fileno(), buff))
