@@ -23,8 +23,7 @@ except ImportError:
 if ssl and not ssl.supported:
     ssl = None
 
-from twisted.internet.defer import Deferred, maybeDeferred
-from twisted.python import runtime
+from twisted.internet.defer import Deferred
 if not _PY3:
     from twisted.python import util
 
