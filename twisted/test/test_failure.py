@@ -938,10 +938,6 @@ class ExtendedGeneratorTests(SynchronousTestCase):
             "Python 3 support to be fixed in #5949")
         test_failureConstructionFindsOriginalFailure.skip = (
             "Python 3 support to be fixed in #5949")
-        # FIXME: https://twistedmatrix.com/trac/ticket/6008
-        # Remove these two lines in #6008 (unittest todo support):
-        del test_findFailureInGenerator
-        del test_failureConstructionFindsOriginalFailure
 
 
     def test_ambiguousFailureInGenerator(self):
