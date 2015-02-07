@@ -64,17 +64,17 @@ class SupportTests(unittest.TestCase):
             0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
 
         for _ in range(2):
-            # setsockopt after _iocp.accept might fail for both IPv4 and IPV6
-            # with [Errno 10057] A request to send or receive ... so we retry
-            # once.
+            # Calling setsockopt after _iocp.accept might fail for both IPv4
+            # and IPV6 with [Errno 10057] A request to send or receive ...
+            # so we retry once.
             try:
                 server.setsockopt(
                     SOL_SOCKET,
                     SO_UPDATE_ACCEPT_CONTEXT,
                     pack('P', server.fileno()))
                 break
-            except error, socket_error:
-                if socket_error.errno == 10057:
+            except error as socketError:
+                if socketError.errno == 10057:
                     # Ignore expected error and retry.
                     pass
                 else:
