@@ -6,6 +6,7 @@
 from __future__ import division, absolute_import
 
 import itertools
+import sys
 import warnings
 
 from binascii import a2b_base64
@@ -18,6 +19,25 @@ try:
 except ImportError:
     SSL_CB_HANDSHAKE_START = 0x10
     SSL_CB_HANDSHAKE_DONE = 0x20
+
+wincertstore = None
+if "win32" == sys.platform:
+    try:
+        import wincertstore
+    except ImportError as e:
+        whatsWrong = (
+            "Without the wincertstore module Twisted can not automatically verify "
+            " SSL/TLS certificates on Windows"
+        )
+
+        warnings.warn_explicit("You do not have a working installation of the "
+                               "wincertstore module: '" + str(e) + "'.  "
+                               "Please install it from "
+                               "<https://pypi.python.org/pypi/wincertstore> and make "
+                               "sure all of its dependencies are satisfied.  "
+                               + whatsWrong,
+                               # Unfortunately the lineno is required.
+                               category = UserWarning, filename = "", lineno = 0)
 
 from twisted.python import log
 
@@ -958,6 +978,20 @@ class OpenSSLDefaultPaths(object):
         context.set_default_verify_paths()
 
 
+@implementer(IOpenSSLTrustRoot)
+class OpenSSLWindowsCertificateAuthorities(object):
+    """
+    Use wincertstore package to interface with the Windows CA certificates.
+    """
+    def _addCACertsToContext(self, context):
+        # Get all certificates and store them in a set to remove duplicates.
+        win_store = wincertstore.CertSystemStore("ROOT")
+        encoded = {cert.get_encoded() for cert in win_store.itercerts()}
+
+        for cert in encoded:
+           store = context.get_cert_store()
+           store.add_cert(Certificate.load(cert).original)
+
 
 def platformTrust():
     """
@@ -1026,6 +1060,8 @@ def platformTrust():
     @raise NotImplementedError: if this platform is not yet supported by
         Twisted.  At present, only OpenSSL is supported.
     """
+    if wincertstore:
+        return OpenSSLWindowsCertificateAuthorities()
     return OpenSSLDefaultPaths()
 
 

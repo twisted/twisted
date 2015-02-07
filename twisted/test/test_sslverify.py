@@ -27,6 +27,12 @@ else:
     if getattr(SSL.Context, "set_tlsext_servername_callback", None) is None:
         skipSNI = "PyOpenSSL 0.13 or greater required for SNI support."
 
+skipWincertstore = False
+try:
+   import wincertstore
+except ImportError:
+   skipWincertstore = True
+
 from twisted.test.test_twisted import SetAsideModule
 from twisted.test.iosim import connectedServerAndClient
 
@@ -289,6 +295,11 @@ class WritingProtocol(protocol.Protocol):
         self.factory.onLost.errback(reason)
 
 
+class FakeCertStore(object):
+    def __init__(self):
+        self._certs = []
+    def add_cert(self, cert):
+        self._certs.append(cert)
 
 class FakeContext(object):
     """
@@ -328,6 +339,7 @@ class FakeContext(object):
         self._method = method
         self._extraCertChain = []
         self._defaultVerifyPathsSet = False
+        self._store = FakeCertStore()
 
 
     def set_options(self, options):
@@ -375,6 +387,9 @@ class FakeContext(object):
         Set the default paths for the platform.
         """
         self._defaultVerifyPathsSet = True
+
+    def get_cert_store(self):
+        return self._store
 
 
 
@@ -1257,6 +1272,20 @@ class TrustRootTests(unittest.TestCase):
         opts.getContext()
         self.assertTrue(fc._defaultVerifyPathsSet)
 
+    def test_caCertsWindows(self):
+        """
+        Specifying a C{trustRoot} of L{sslverify.OpenSSLDefaultPaths} when
+        initializing L{sslverify.OpenSSLCertificateOptions} loads the
+        platform-provided trusted certificates via C{set_default_verify_paths}.
+        """
+        opts = sslverify.OpenSSLCertificateOptions(
+            trustRoot=platformTrust()
+        )
+        fc = FakeContext(SSL.TLSv1_METHOD)
+        opts._contextFactory = lambda method: fc
+        opts.getContext()
+        self.assertTrue(len(fc._store._certs) > 0)
+    test_caCertsWindows.skip = skipWincertstore
 
     def test_trustRootPlatformRejectsUntrustedCA(self):
         """
