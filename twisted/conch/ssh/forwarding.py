@@ -13,6 +13,7 @@ Maintainer: Paul Swartz
 import struct
 
 from twisted.internet import protocol, reactor
+from twisted.internet.endpoints import HostnameEndpoint, connectProtocol
 from twisted.python import log
 
 import common, channel
@@ -73,9 +74,10 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
         self.clientBuf = ''
 
     def channelOpen(self, specificData):
-        cc = protocol.ClientCreator(reactor, SSHForwardingClient, self)
         log.msg("connecting to %s:%i" % self.hostport)
-        cc.connectTCP(*self.hostport).addCallbacks(self._setClient, self._close)
+        ep = HostnameEndpoint(reactor, self.hostport[0], self.hostport[1])
+        d = connectProtocol(ep, SSHForwardingClient(self))
+        d.addCallbacks(self._setClient, self._close)
 
     def _setClient(self, client):
         self.client = client
