@@ -532,7 +532,7 @@ class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin,
         localPort = self._getFreePort()
         process = ConchTestForwardingProcess(localPort, 'test\n')
         d = self.execute('', process,
-                         sshArgs='-N -L%i:ip6-localhost.us.to:%i'
+                         sshArgs='-N -L%i:[::1]:%i'
                          % (localPort, self.echoPortV6))
         d.addCallback(self.assertEqual, 'test\n')
         return d
