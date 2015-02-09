@@ -6,7 +6,6 @@
 Twisted Words
 =============
 
-
 .. toctree::
    :hidden:
 
@@ -14,14 +13,5 @@ Twisted Words
    examples/index
 
 
-
-
-
-- :doc:`Developer guides <howto/index>` : documentation on using
-  Twisted Words to develop your own applications
-- :doc:`Examples <examples/index>` : short code examples using
-  Twisted Words
-
-
-
-
+- :doc:`Developer guides <howto/index>`: documentation on using Twisted Words to develop your own applications
+- :doc:`Examples <examples/index>`: short code examples using Twisted Words
