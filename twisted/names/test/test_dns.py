@@ -293,14 +293,14 @@ class NameTests(unittest.TestCase):
 
 
 
-class RoundtripDNSTestCase(unittest.TestCase):
+class RoundtripDNSTests(unittest.TestCase):
     """
     Encoding and then decoding various objects.
     """
 
     names = [b"example.org", b"go-away.fish.tv", b"23strikesback.net"]
 
-    def testName(self):
+    def test_name(self):
         for n in self.names:
             # encode the name
             f = BytesIO()
@@ -596,7 +596,7 @@ MESSAGE_CHECKING_DISABLED_BYTES = (
 
 
 
-class MessageTestCase(unittest.SynchronousTestCase):
+class MessageTests(unittest.SynchronousTestCase):
     """
     Tests for L{twisted.names.dns.Message}.
     """
@@ -742,7 +742,7 @@ class MessageTestCase(unittest.SynchronousTestCase):
         )
 
 
-    def testEmptyMessage(self):
+    def test_emptyMessage(self):
         """
         Test that a message which has been truncated causes an EOFError to
         be raised when it is parsed.
@@ -1116,7 +1116,7 @@ class TestController(object):
 
 
 
-class DatagramProtocolTestCase(unittest.TestCase):
+class DatagramProtocolTests(unittest.TestCase):
     """
     Test various aspects of L{dns.DNSDatagramProtocol}.
     """
@@ -1239,7 +1239,7 @@ class TestTCPController(TestController):
 
 
 
-class DNSProtocolTestCase(unittest.TestCase):
+class DNSProtocolTests(unittest.TestCase):
     """
     Test various aspects of L{dns.DNSProtocol}.
     """
@@ -3727,8 +3727,8 @@ class MessageConstructorTests(ConstructorTestsMixin,
 
 
 
-class EDNSMessageSpecificsTestCase(ConstructorTestsMixin,
-                                   unittest.SynchronousTestCase):
+class EDNSMessageSpecificsTests(ConstructorTestsMixin,
+                                unittest.SynchronousTestCase):
     """
     Tests for L{dns._EDNSMessage}.
 

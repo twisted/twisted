@@ -121,7 +121,7 @@ class SearchHostsFileForAllTests(TestCase, GoodTempPathMixin):
 
 
 
-class HostsTestCase(TestCase, GoodTempPathMixin):
+class HostsTests(TestCase, GoodTempPathMixin):
     """
     Tests for the I{hosts(5)}-based L{twisted.names.hosts.Resolver}.
     """
@@ -217,12 +217,12 @@ class HostsTestCase(TestCase, GoodTempPathMixin):
         return d
 
 
-    def testNotImplemented(self):
+    def test_notImplemented(self):
         return self.assertFailure(self.resolver.lookupMailExchange(b'EXAMPLE'),
                                   NotImplementedError)
 
 
-    def testQuery(self):
+    def test_query(self):
         d = self.resolver.query(Query(b'EXAMPLE'))
         d.addCallback(lambda x: self.assertEqual(x[0][0].payload.dottedQuad(),
                                                  '1.1.1.1'))

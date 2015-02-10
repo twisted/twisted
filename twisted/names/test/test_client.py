@@ -796,7 +796,7 @@ class ResolverTests(unittest.TestCase):
 
 
 
-class ClientTestCase(unittest.TestCase):
+class ClientTests(unittest.TestCase):
 
     def setUp(self):
         """
@@ -1139,7 +1139,7 @@ class FakeDNSDatagramProtocol(object):
 
 
 
-class RetryLogic(unittest.TestCase):
+class RetryLogicTests(unittest.TestCase):
     """
     Tests for query retrying implemented by L{client.Resolver}.
     """
