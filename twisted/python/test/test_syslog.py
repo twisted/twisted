@@ -4,6 +4,7 @@
 from twisted.trial.unittest import TestCase
 from twisted.python.failure import Failure
 
+import logging
 try:
     import syslog as stdsyslog
 except ImportError:
@@ -149,3 +150,96 @@ class SyslogObserverTests(TestCase):
             self.events,
             [(stdsyslog.LOG_INFO, '[-] hello,'),
              (stdsyslog.LOG_INFO, '[-] \tworld')])
+
+
+    def assertPriorityMapping(self, expected, event):
+        """
+        Check that when emitted, C{event} is translated into C{expected} syslog priority
+
+        @param expected: a L{syslog} priority
+        @type expected: C{int}
+        @param event: an event
+        @type event: C{dict}
+
+        """
+        m = {
+            'message': ('hello,\nworld\n\n',),
+            'isError': False,
+            'system': '-',
+        }
+        m.update(event)
+        self.observer.emit(m)
+        self.assertEqual(
+            self.events,
+            [(expected, '[-] hello,'),
+             (expected, '[-] \tworld')])
+
+
+    def test_emitLevelMissingLevelUseDefault(self):
+        """
+        On missing logLevel defaults to stdsyslog.LOG_INFO
+        """
+        expected, event = stdsyslog.LOG_INFO, {}
+        self.assertPriorityMapping(expected, event)
+
+
+    def test_emitLevelInvalidLevelUseDefault(self):
+        """
+        On invalid logLevel defaults to stdsyslog.LOG_INFO
+        """
+        expected, event = stdsyslog.LOG_INFO, {'logLevel': 'INVALID'}
+        self.assertPriorityMapping(expected, event)
+
+
+    def test_emitLevelWARN(self):
+        """
+        Logging levels are nicely mapped to syslog priorities
+        https://twistedmatrix.com/documents/14.0.0/core/howto/logging.html
+         """
+        expected, event = stdsyslog.LOG_WARNING, {'logLevel': logging.WARN}
+        self.assertPriorityMapping(expected, event)
+
+
+    def test_emitLevelERR(self):
+        """
+        Logging levels are nicely mapped to syslog priorities
+        https://twistedmatrix.com/documents/14.0.0/core/howto/logging.html
+         """
+        expected, event = stdsyslog.LOG_ERR, {'logLevel': logging.ERROR}
+        self.assertPriorityMapping(expected, event)
+
+
+    def test_emitLevelDEBUG(self):
+        """
+        Logging levels are nicely mapped to syslog priorities
+        https://twistedmatrix.com/documents/14.0.0/core/howto/logging.html
+         """
+        expected, event = stdsyslog.LOG_DEBUG, {'logLevel': logging.DEBUG}
+        self.assertPriorityMapping(expected, event)
+
+
+    def test_emitLevelIsError(self):
+        """
+        Messages with isError=True are mapped to LOG_ALERT
+        """
+        expected, event = stdsyslog.LOG_ALERT, {'isError': True}
+        self.assertPriorityMapping(expected, event)
+
+
+    def test_emitLevelOvverrideIsError(self):
+        """
+        Using logLevel ovverrides isError
+        """
+        expected, event = stdsyslog.LOG_INFO, {'isError': True,
+                                                'logLevel': logging.INFO}
+        self.assertPriorityMapping(expected, event)
+
+
+    def test_emitLevelPriorityOverridesLogLevel(self):
+        """
+        Using syslogPriority overrides logLevel
+        """
+        expected, event = stdsyslog.LOG_ALERT, {'isError': False,
+                                                 'logLevel': logging.INFO,
+                                                 'syslogPriority': stdsyslog.LOG_ALERT}
+        self.assertPriorityMapping(expected, event)
