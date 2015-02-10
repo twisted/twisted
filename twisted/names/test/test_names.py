@@ -827,7 +827,7 @@ class AdditionalProcessingTests(unittest.TestCase):
 
 class NoInitialResponseTests(unittest.TestCase):
 
-    def test_no_answer(self):
+    def test_noAnswer(self):
         """
         If a request returns a L{dns.NS} response, but we can't connect to the
         given server, the request fails with the error returned at connection.
