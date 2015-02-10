@@ -217,12 +217,12 @@ class HostsTests(TestCase, GoodTempPathMixin):
         return d
 
 
-    def testNotImplemented(self):
+    def test_notImplemented(self):
         return self.assertFailure(self.resolver.lookupMailExchange(b'EXAMPLE'),
                                   NotImplementedError)
 
 
-    def testQuery(self):
+    def test_query(self):
         d = self.resolver.query(Query(b'EXAMPLE'))
         d.addCallback(lambda x: self.assertEqual(x[0][0].payload.dottedQuad(),
                                                  '1.1.1.1'))

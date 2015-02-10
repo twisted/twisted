@@ -300,7 +300,7 @@ class RoundtripDNSTests(unittest.TestCase):
 
     names = [b"example.org", b"go-away.fish.tv", b"23strikesback.net"]
 
-    def testName(self):
+    def test_name(self):
         for n in self.names:
             # encode the name
             f = BytesIO()
@@ -742,7 +742,7 @@ class MessageTests(unittest.SynchronousTestCase):
         )
 
 
-    def testEmptyMessage(self):
+    def test_emptyMessage(self):
         """
         Test that a message which has been truncated causes an EOFError to
         be raised when it is parsed.
