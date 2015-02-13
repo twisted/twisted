@@ -169,25 +169,25 @@ class StaticFileTests(TestCase):
         """
         base = FilePath(self.mktemp())
         base.setContent('')
-        marker_resonse = 'custom-forbidden-response'
+        markerResponse = 'custom-forbidden-response'
 
         def failingOpenForReading():
             raise IOError(errno.EACCES)
 
         class CustomForbiddenResource(resource.Resource):
             def render(self, request):
-                return marker_resonse
+                return markerResponse
 
         class CustomStaticFile(static.File):
             forbidden = CustomForbiddenResource()
 
-        file_resource = CustomStaticFile(base.path)
-        file_resource.openForReading = failingOpenForReading
+        fileResource = CustomStaticFile(base.path)
+        fileResource.openForReading = failingOpenForReading
         request = DummyRequest([''])
 
-        result = file_resource.render(request)
+        result = fileResource.render(request)
 
-        self.assertEqual(marker_resonse, result)
+        self.assertEqual(markerResponse, result)
 
 
     def test_indexNames(self):
