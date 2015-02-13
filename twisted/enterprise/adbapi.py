@@ -10,9 +10,6 @@ import sys
 
 from twisted.internet import threads
 from twisted.python import reflect, log
-from twisted.python.deprecate import deprecated
-from twisted.python.versions import Version
-
 
 
 class ConnectionLost(Exception):

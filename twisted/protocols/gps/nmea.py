@@ -90,7 +90,7 @@ class NMEAReceiver(basic.LineReceiver):
         # return handler(*decoder(*message))
         try:
             decoded = decoder(*message)
-        except Exception, e:
+        except Exception:
             raise InvalidSentence("%r is not a valid %s (%s) sentence" % (
                 line, sentencetype, dispatch))
         return handler(*decoded)
