@@ -46,8 +46,8 @@ class PollReactorTests(SynchronousTestCase):
         L{_getInstallFunction} chooses the poll reactor on arbitrary Unix
         platforms, falling back to select(2) if it is unavailable.
         """
-        install = _getInstallFunction(unix)
-        self.assertIsPoll(install)
+        install_function = _getInstallFunction(unix)
+        self.assertIsPoll(install_function)
 
 
     def test_linux(self):
