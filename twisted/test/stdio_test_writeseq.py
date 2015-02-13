@@ -8,7 +8,8 @@ L{twisted.test.test_stdio.StandardInputOutputTestCase.test_writeSequence} to tes
 ITransport.writeSequence() works for process transports.
 """
 
-import sys, _preamble
+__import__('_preamble')
+import sys
 
 from twisted.internet import stdio, protocol
 from twisted.python import reflect

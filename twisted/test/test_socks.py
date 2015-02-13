@@ -10,7 +10,7 @@ import struct, socket
 
 from twisted.trial import unittest
 from twisted.test import proto_helpers
-from twisted.internet import defer, address, reactor
+from twisted.internet import defer, address
 from twisted.internet.error import DNSLookupError
 from twisted.protocols import socks
 
@@ -221,7 +221,6 @@ class Connect(unittest.TestCase):
             + socket.inet_aton('1.2.3.4')
             + 'fooBAR'
             + '\0')
-        sent = self.sock.transport.value()
         self.sock.transport.clear()
 
         # pass some data through
@@ -240,7 +239,6 @@ class Connect(unittest.TestCase):
             + socket.inet_aton('1.2.3.4')
             + 'fooBAR'
             + '\0')
-        sent = self.sock.transport.value()
         self.sock.transport.clear()
 
         # pass some data through

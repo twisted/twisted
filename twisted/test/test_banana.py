@@ -103,7 +103,6 @@ class BananaTestCase(BananaTestBase):
 
     def test_string(self):
         self.enc.sendEncoded("hello")
-        l = []
         self.enc.dataReceived(self.io.getvalue())
         assert self.result == 'hello'
 

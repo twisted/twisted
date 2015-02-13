@@ -5,7 +5,6 @@
 
 __version__ = '$Revision: 1.5 $'[11:-2]
 
-from StringIO import StringIO
 from twisted.trial import unittest
 from twisted.protocols import pcp
 

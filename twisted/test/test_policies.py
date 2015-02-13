@@ -9,7 +9,7 @@ from __future__ import division, absolute_import
 
 from zope.interface import Interface, implementer, implementedBy
 
-from twisted.python.compat import NativeStringIO, _PY3
+from twisted.python.compat import NativeStringIO
 from twisted.trial import unittest
 from twisted.test.proto_helpers import StringTransport
 from twisted.test.proto_helpers import StringTransportWithDisconnection

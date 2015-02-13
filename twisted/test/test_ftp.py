@@ -1442,7 +1442,6 @@ class FTPClientTests(unittest.TestCase):
                      '550 Failed to open file.']
         f.buildProtocol = lambda addr: PrintLines(responses)
 
-        client = ftp.FTPClient(passive=1)
         cc = protocol.ClientCreator(reactor, ftp.FTPClient, passive=1)
         d = cc.connectTCP('127.0.0.1', portNum)
         def gotClient(client):
