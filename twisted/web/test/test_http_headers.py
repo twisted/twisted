@@ -7,8 +7,6 @@ Tests for L{twisted.web.http_headers}.
 
 from __future__ import division, absolute_import
 
-import sys
-
 from twisted.python.compat import _PY3
 from twisted.trial.unittest import TestCase
 from twisted.web.http_headers import _DictHeaders, Headers

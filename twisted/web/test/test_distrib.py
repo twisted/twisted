@@ -14,12 +14,12 @@ except ImportError:
 
 from zope.interface.verify import verifyObject
 
-from twisted.python import log, filepath
+from twisted.python import filepath
 from twisted.internet import reactor, defer
 from twisted.trial import unittest
 from twisted.spread import pb
 from twisted.spread.banana import SIZE_LIMIT
-from twisted.web import http, distrib, client, resource, static, server
+from twisted.web import distrib, client, resource, static, server
 from twisted.web.test.test_web import DummyRequest
 from twisted.web.test._util import _render
 from twisted.test import proto_helpers

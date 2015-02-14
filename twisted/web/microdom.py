@@ -22,8 +22,6 @@ Microdom mainly focuses on working with HTML and XHTML.
 import re
 from cStringIO import StringIO
 
-# create NodeList class
-from types import ListType as NodeList
 from types import StringTypes, UnicodeType
 
 # Twisted Imports

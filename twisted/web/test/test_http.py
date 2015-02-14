@@ -8,11 +8,9 @@ Test HTTP support.
 import random, cgi, base64
 
 try:
-    from urlparse import (
-        ParseResult as ParseResultBytes, urlparse, urlunsplit, clear_cache)
+    from urlparse import urlparse, urlunsplit, clear_cache
 except ImportError:
-    from urllib.parse import (
-        ParseResultBytes, urlparse, urlunsplit, clear_cache)
+    from urllib.parse import urlparse, urlunsplit, clear_cache
 
 from twisted.python.compat import _PY3, iterbytes, networkString, unicode, intToBytes
 from twisted.python.failure import Failure

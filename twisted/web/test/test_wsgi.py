@@ -911,7 +911,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
                     'HTTP/1.1 107 Strange message'))
         d.addCallback(cbRendered)
 
-        request = self.lowLevelRender(
+        self.lowLevelRender(
             requestFactory, applicationFactory,
             lambda: channel, 'GET', '1.1', [], [''], None, [])
 
@@ -951,7 +951,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
 
         d.addCallback(cbRendered)
 
-        request = self.lowLevelRender(
+        self.lowLevelRender(
             requestFactory, applicationFactory,
             lambda: channel, 'GET', '1.1', [], [''], None, [])
         return d
@@ -1015,7 +1015,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
             self.assertEqual(intermediateValues, [''])
         d.addCallback(cbRendered)
 
-        request = self.lowLevelRender(
+        self.lowLevelRender(
             requestFactory, applicationFactory,
             lambda: channel, 'GET', '1.1', [], [''], None, [])
 
@@ -1050,7 +1050,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
             self.assertTrue(intermediateValues[1])
         d.addCallback(cbRendered)
 
-        request = self.lowLevelRender(
+        self.lowLevelRender(
             requestFactory, applicationFactory,
             lambda: channel, 'GET', '1.1', [], [''], None, [])
 
@@ -1087,7 +1087,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
                 'foobar')
         d.addCallback(cbRendered)
 
-        request = self.lowLevelRender(
+        self.lowLevelRender(
             requestFactory, applicationFactory,
             lambda: channel, 'GET', '1.1', [], [''], None, [])
 
@@ -1116,7 +1116,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
                     'HTTP/1.1 200 Bar\r\n'))
         d.addCallback(cbRendered)
 
-        request = self.lowLevelRender(
+        self.lowLevelRender(
             requestFactory, applicationFactory,
             lambda: channel, 'GET', '1.1', [], [''], None, [])
 
@@ -1144,7 +1144,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
                     'HTTP/1.1 100 Foo\r\n'))
         d.addCallback(cbRendered)
 
-        request = self.lowLevelRender(
+        self.lowLevelRender(
             requestFactory, applicationFactory,
             lambda: channel, 'GET', '1.1', [], [''], None, [])
 
@@ -1191,7 +1191,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
 
         d.addCallback(cbRendered)
 
-        request = self.lowLevelRender(
+        self.lowLevelRender(
             requestFactory, applicationFactory,
             lambda: channel, 'GET', '1.1', [], [''], None, [])
 
@@ -1229,7 +1229,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
                 'foobar')
         d.addCallback(cbRendered)
 
-        request = self.lowLevelRender(
+        self.lowLevelRender(
             requestFactory, applicationFactory,
             lambda: channel, 'GET', '1.1', [], [''], None, [])
 
@@ -1469,7 +1469,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
                     'HTTP/1.1 500 Internal Server Error'))
         d.addCallback(cbRendered)
 
-        request = self.lowLevelRender(
+        self.lowLevelRender(
             requestFactory, applicationFactory,
             lambda: channel, 'GET', '1.1', [], [''], None, [])
 
@@ -1522,7 +1522,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             self.assertIn(responseContent, response)
         d.addErrback(ebRendered)
 
-        request = self.lowLevelRender(
+        self.lowLevelRender(
             requestFactoryWrapper, applicationFactory,
             lambda: channel, 'GET', '1.1', [], [''], None, [])
 

@@ -620,9 +620,14 @@ alert("I hate you");
         s = '<p>foo<b a="c"><foo z="foo"></foo><foo></foo><bar c="y"></bar></b></p>'
         self.assertEqual(s, n.toxml())
 
+
     def testDict(self):
+        """
+        Returns a dictionary which is hashable.
+        """
         n = microdom.Element("p")
-        d = {n : 1} # will fail if Element is unhashable
+        hash(n)
+
 
     def testEscaping(self):
         # issue 590

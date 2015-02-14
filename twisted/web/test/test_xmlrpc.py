@@ -18,10 +18,11 @@ from twisted.web import server, static, client, error, http
 from twisted.internet import reactor, defer
 from twisted.internet.error import ConnectionDone
 from twisted.python import failure
+from twisted.python.reflect import namedModule
 from twisted.test.proto_helpers import MemoryReactor
 from twisted.web.test.test_web import DummyRequest
 try:
-    import twisted.internet.ssl
+    namedModule('twisted.internet.ssl')
 except ImportError:
     sslSkip = "OpenSSL not present"
 else:
