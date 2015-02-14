@@ -215,7 +215,7 @@ class ThreadPool:
 
             with self._workerState(self.waiters, ct):
                 o = self.q.get()
-                o  # Fake usage to fool pyflakes.
+
         self.threads.remove(ct)
 
 
