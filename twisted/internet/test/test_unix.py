@@ -302,7 +302,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         d.addBoth(lambda ignored: server.transport.loseConnection())
 
         runProtocolsWithReactor(self, server, client, self.endpoints)
-    test_sendFileDescriptor.skip = sendmsgSkip
+    if sendmsgSkip is not None:
+        test_sendFileDescriptor.skip = sendmsgSkip
 
 
     def test_sendFileDescriptorTriggersPauseProducing(self):
@@ -350,7 +351,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
 
         self.assertTrue(
             server.paused, "sendFileDescriptor producer was not paused")
-    test_sendFileDescriptorTriggersPauseProducing.skip = sendmsgSkip
+    if sendmsgSkip is not None:
+        test_sendFileDescriptorTriggersPauseProducing.skip = sendmsgSkip
 
 
     def test_fileDescriptorOverrun(self):
@@ -375,7 +377,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         self.assertIsInstance(result[0], Failure)
         result[0].trap(ConnectionClosed)
         self.assertIsInstance(server.reason.value, FileDescriptorOverrun)
-    test_fileDescriptorOverrun.skip = sendmsgSkip
+    if sendmsgSkip is not None:
+        test_fileDescriptorOverrun.skip = sendmsgSkip
 
 
     def test_avoidLeakingFileDescriptors(self):
@@ -442,7 +445,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
             self.fail(
                 "Expected event (%s) not found in logged events (%s)" % (
                     expectedEvent, pformat(events,)))
-    test_avoidLeakingFileDescriptors.skip = sendmsgSkip
+    if sendmsgSkip is not None:
+        test_avoidLeakingFileDescriptors.skip = sendmsgSkip
 
 
     def test_descriptorDeliveredBeforeBytes(self):
@@ -471,7 +475,8 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         runProtocolsWithReactor(self, server, client, self.endpoints)
 
         self.assertEqual([int, "j", "u", "n", "k"], client.events)
-    test_descriptorDeliveredBeforeBytes.skip = sendmsgSkip
+    if sendmsgSkip is not None:
+        test_descriptorDeliveredBeforeBytes.skip = sendmsgSkip
 
 
 

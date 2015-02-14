@@ -95,9 +95,6 @@ def install(useGtk=True):
 
     @param useGtk: should glib rather than GTK+ event loop be
         used (this will be slightly faster but does not support GUI).
-
-    @return: The new GTK2 reactor.
-    @rtype: L{IReactorFDSet}
     """
     reactor = Gtk2Reactor(useGtk)
     from twisted.internet.main import installReactor

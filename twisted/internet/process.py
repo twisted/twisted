@@ -949,9 +949,10 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         _BaseProcess.__init__(self, proto)
 
         if isinstance(usePTY, (tuple, list)):
-            masterfd, slavefd, ignore = usePTY
+            masterfd, slavefd, ttyname = usePTY
         else:
             masterfd, slavefd = pty.openpty()
+            ttyname = os.ttyname(slavefd)
 
         try:
             self._fork(path, uid, gid, executable, args, environment,

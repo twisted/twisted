@@ -10,7 +10,7 @@ from twisted.python import filepath, runtime
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
 
-if requireModule('twisted.python._inotify'):
+if requireModule('twisted.python._inotify') is not None:
     from twisted.internet import inotify
 else:
     inotify = None
