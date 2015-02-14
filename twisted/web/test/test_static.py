@@ -164,7 +164,7 @@ class StaticFileTests(TestCase):
 
     def test_forbiddenResource_customize(self):
         """
-        The resource rendered for forbidden requests is stored as an instance
+        The resource rendered for forbidden requests is stored as a class
         member so that users can customize it.
         """
         base = FilePath(self.mktemp())
@@ -265,6 +265,31 @@ class StaticFileTests(TestCase):
             return d
         d2.addCallback(cbRendered2)
         return d2
+
+
+    def test_getChildChildNotFound_customize(self):
+        """
+        The resource rendered for child not found requests can be customize
+        using a class member.
+        """
+        base = FilePath(self.mktemp())
+        base.setContent('')
+        markerResponse = 'custom-child-not-found-response'
+
+        class CustomChildNotFoundResource(resource.Resource):
+            def render(self, request):
+                return markerResponse
+
+        class CustomStaticFile(static.File):
+            childNotFound = CustomChildNotFoundResource()
+
+        fileResource = CustomStaticFile(base.path)
+        request = DummyRequest(['no-child.txt'])
+
+        child = fileResource.getChild('no-child.txt', request)
+        result = child.render(request)
+
+        self.assertEqual(markerResponse, result)
 
 
     def test_headRequest(self):
