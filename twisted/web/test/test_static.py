@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.web.static}.
 """
+import errno
 import inspect
 import mimetypes
 import os
@@ -153,6 +154,42 @@ class StaticFileTests(TestCase):
         test_forbiddenResource.skip = "Cannot remove read permission on Windows"
 
 
+    def test_forbiddenResource_default(self):
+        """
+        L{File.forbidden} defaults to L{resource.ForbiddenResource}.
+        """
+        self.assertIsInstance(
+            static.File('.').forbidden, resource.ForbiddenResource)
+
+
+    def test_forbiddenResource_customize(self):
+        """
+        The resource rendered for forbidden requests is stored as a class
+        member so that users can customize it.
+        """
+        base = FilePath(self.mktemp())
+        base.setContent('')
+        markerResponse = 'custom-forbidden-response'
+
+        def failingOpenForReading():
+            raise IOError(errno.EACCES)
+
+        class CustomForbiddenResource(resource.Resource):
+            def render(self, request):
+                return markerResponse
+
+        class CustomStaticFile(static.File):
+            forbidden = CustomForbiddenResource()
+
+        fileResource = CustomStaticFile(base.path)
+        fileResource.openForReading = failingOpenForReading
+        request = DummyRequest([''])
+
+        result = fileResource.render(request)
+
+        self.assertEqual(markerResponse, result)
+
+
     def test_indexNames(self):
         """
         If a request is made which encounters a L{File} before a final empty
@@ -228,6 +265,31 @@ class StaticFileTests(TestCase):
             return d
         d2.addCallback(cbRendered2)
         return d2
+
+
+    def test_getChildChildNotFound_customize(self):
+        """
+        The resource rendered for child not found requests can be customize
+        using a class member.
+        """
+        base = FilePath(self.mktemp())
+        base.setContent('')
+        markerResponse = 'custom-child-not-found-response'
+
+        class CustomChildNotFoundResource(resource.Resource):
+            def render(self, request):
+                return markerResponse
+
+        class CustomStaticFile(static.File):
+            childNotFound = CustomChildNotFoundResource()
+
+        fileResource = CustomStaticFile(base.path)
+        request = DummyRequest(['no-child.txt'])
+
+        child = fileResource.getChild('no-child.txt', request)
+        result = child.render(request)
+
+        self.assertEqual(markerResponse, result)
 
 
     def test_headRequest(self):
