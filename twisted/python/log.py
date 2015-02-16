@@ -174,6 +174,7 @@ class LogPublisher:
         Unicode on Python 3. For compatibility with both use the native string
         syntax, for example::
 
+        >>> from twisted.python import log
         >>> log.msg('Hello, world.')
 
         You MUST avoid passing in Unicode on Python 2, and the form::
@@ -440,6 +441,7 @@ class PythonLoggingObserver(object):
         By default the logging level used is info; log.err produces error
         level, and you can customize the level by using the C{logLevel} key::
 
+        >>> from twisted.python import log
         >>> log.msg('debugging', logLevel=logging.DEBUG)
 
         """

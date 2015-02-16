@@ -124,7 +124,9 @@ def registerAsIOThread():
 
 ioThread = None
 threaded = False
-
+# Define these globals which might be overwritten in init().
+_synchLockCreator = None
+XLock = None
 
 
 try:

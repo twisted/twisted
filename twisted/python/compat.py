@@ -92,6 +92,7 @@ def inet_ntop(af, addr):
                 curLen += 1
             else:
                 if curBase is not None:
+                    bestLen = None
                     if bestBase is None or curLen > bestLen:
                         bestBase = curBase
                         bestLen = curLen

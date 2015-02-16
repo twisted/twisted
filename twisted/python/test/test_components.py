@@ -143,7 +143,6 @@ class ComponentizedTests(unittest.SynchronousTestCase, RegistryUsingMixin):
     def testMultiAdapter(self):
         c = CComp()
         co1 = c.getComponent(ITest)
-        co2 = c.getComponent(ITest2)
         co3 = c.getComponent(ITest3)
         co4 = c.getComponent(ITest4)
         self.assertIdentical(None, co4)
