@@ -268,7 +268,7 @@ class DistinguishedName(dict):
     bytes. For example::
 
         >>> dn = DistinguishedName(commonName=b'www.example.com',
-                                   C='US')
+        ...                        C='US')
         >>> dn.C
         b'US'
         >>> dn.countryName

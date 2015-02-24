@@ -10,6 +10,7 @@ from __future__ import division, absolute_import
 import select, sys
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.python.runtime import Platform
+from twisted.python.reflect import requireModule
 from twisted.internet import default
 from twisted.internet.default import _getInstallFunction, install
 from twisted.internet.test.test_main import NoReactor
@@ -55,9 +56,7 @@ class PollReactorTests(SynchronousTestCase):
         epoll is unavailable.
         """
         install = _getInstallFunction(linux)
-        try:
-            from twisted.internet import epollreactor
-        except ImportError:
+        if requireModule('twisted.internet.epollreactor') is None:
             self.assertIsPoll(install)
         else:
             self.assertEqual(

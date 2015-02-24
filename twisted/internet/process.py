@@ -86,21 +86,26 @@ def detectLinuxBrokenPipeBehavior():
     function is here to check if this bug is present or not.
 
     See L{ProcessWriter.doRead} for a more detailed explanation.
+
+    @return: C{True} if Linux pipe behaviour is broken.
+    @rtype : L{bool}
     """
-    global brokenLinuxPipeBehavior
     r, w = os.pipe()
     os.write(w, 'a')
     reads, writes, exes = select.select([w], [], [], 0)
     if reads:
         # Linux < 2.6.11 says a write-only pipe is readable.
-        brokenLinuxPipeBehavior = True
+        brokenPipeBehavior = True
     else:
-        brokenLinuxPipeBehavior = False
+        brokenPipeBehavior = False
     os.close(r)
     os.close(w)
+    return brokenPipeBehavior
 
-# Call at import time
-detectLinuxBrokenPipeBehavior()
+
+
+brokenLinuxPipeBehavior = detectLinuxBrokenPipeBehavior()
+
 
 
 class ProcessWriter(abstract.FileDescriptor):

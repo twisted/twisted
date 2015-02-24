@@ -112,7 +112,9 @@ def portableInstall(useGtk=True):
     return reactor
 
 
-if runtime.platform.getType() != 'posix':
+if runtime.platform.getType() == 'posix':
+    install = install
+else:
     install = portableInstall
 
 

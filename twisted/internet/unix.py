@@ -182,12 +182,21 @@ class _SendmsgMixin(object):
 
         return self._dataReceived(data)
 
-if sendmsg is None:
-    class _SendmsgMixin(object):
-        """
-        Behaviorless placeholder used when L{twisted.python.sendmsg} is not
-        available, preventing L{IUNIXTransport} from being supported.
-        """
+
+
+class _UnsuportedSendmsgMixin(object):
+    """
+    Behaviorless placeholder used when L{twisted.python.sendmsg} is not
+    available, preventing L{IUNIXTransport} from being supported.
+    """
+
+
+
+
+if sendmsg:
+    _SendmsgMixin = _SendmsgMixin
+else:
+    _SendmsgMixin = _UnsuportedSendmsgMixin
 
 
 
