@@ -712,6 +712,40 @@ class TCP4ClientTestsBuilder(TCPClientTestsBase):
     endpoints = TCPCreator()
 
 
+    def test_connectOverflowPort(self):
+        """
+        When trying to connect using a port outside of the 0-65535 range the
+        error is raised as an errback.
+        """
+        reactor = self.buildReactor()
+        results = []
+
+        # Connect with invalid port number.
+        class ObjectWithDict: pass
+        fakeServerAddress = ObjectWithDict()
+        fakeServerAddress.port = 123456
+        endpoint = self.endpoints.client(reactor, fakeServerAddress)
+
+        clientFactory = ClientFactory()
+        clientFactory.protocol = Protocol
+        connectDeferred = endpoint.connect(clientFactory)
+
+        def whenRun():
+            """
+            Accumulate errors and stop reactor.
+            """
+            connectDeferred.addErrback(lambda failure: results.append(failure))
+            connectDeferred.addBoth(lambda ign: reactor.stop())
+        needsRunningReactor(reactor, whenRun)
+
+        self.runReactor(reactor, timeout=0.5)
+
+        errors = [
+            (failure.value.osError,failure.value.message)
+            for failure in results]
+        self.assertEqual(
+            [(errno.EOPNOTSUPP, 'Operation not supported')], errors)
+
 
 class TCP6ClientTestsBuilder(TCPClientTestsBase):
     """
