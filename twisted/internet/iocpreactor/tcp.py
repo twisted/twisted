@@ -314,7 +314,10 @@ class Client(_BaseBaseClient, _BaseTCPClient, Connection):
         self.reactor.addActiveHandle(self)
         evt = _iocp.Event(self.cbConnect, self)
 
-        rc = _iocp.connect(self.socket.fileno(), self.realAddress, evt)
+        try:
+            rc = _iocp.connect(self.socket.fileno(), self.realAddress, evt)
+        except OverflowError:
+            rc = errno.ECONNREFUSED
         if rc and rc != ERROR_IO_PENDING:
             self.cbConnect(rc, 0, evt)
 

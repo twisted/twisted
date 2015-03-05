@@ -43,8 +43,7 @@ except ImportError:
     class _TLSServerMixin(object):
         pass
 
-
-from errno import EOPNOTSUPP
+from errno import ECONNREFUSED
 if platformType == 'win32':
     # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
     EPERM = object()
@@ -565,8 +564,8 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
         except socket.error as se:
             connectResult = se.args[0]
         except OverflowError:
-            # Port overflow errors are converted into Operation not supported.
-            connectResult = EOPNOTSUPP
+            # Port overflow errors are converted into Connection refused.
+            connectResult = ECONNREFUSED
 
         if connectResult:
             if connectResult == EISCONN:

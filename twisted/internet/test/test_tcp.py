@@ -699,19 +699,6 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         self.assertEqual(BrokenContextFactory.message, str(results[0]))
 
 
-
-class TCP4ClientTestsBuilder(TCPClientTestsBase):
-    """
-    Builder configured with IPv4 parameters for tests related to
-    L{IReactorTCP.connectTCP}.
-    """
-    fakeDomainName = 'some-fake.domain.example.com'
-    family = socket.AF_INET
-    addressClass = IPv4Address
-
-    endpoints = TCPCreator()
-
-
     def test_connectOverflowPort(self):
         """
         When trying to connect using a port outside of the 0-65535 range the
@@ -740,11 +727,22 @@ class TCP4ClientTestsBuilder(TCPClientTestsBase):
 
         self.runReactor(reactor, timeout=0.5)
 
-        errors = [
-            (failure.value.osError,failure.value.message)
-            for failure in results]
-        self.assertEqual(
-            [(errno.EOPNOTSUPP, 'Operation not supported')], errors)
+        errors = [failure.value.osError for failure in results]
+        self.assertEqual([errno.ECONNREFUSED], errors)
+
+
+
+class TCP4ClientTestsBuilder(TCPClientTestsBase):
+    """
+    Builder configured with IPv4 parameters for tests related to
+    L{IReactorTCP.connectTCP}.
+    """
+    fakeDomainName = 'some-fake.domain.example.com'
+    family = socket.AF_INET
+    addressClass = IPv4Address
+
+    endpoints = TCPCreator()
+
 
 
 class TCP6ClientTestsBuilder(TCPClientTestsBase):
