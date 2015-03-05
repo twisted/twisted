@@ -44,6 +44,7 @@ except ImportError:
         pass
 
 
+from errno import EOPNOTSUPP
 if platformType == 'win32':
     # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
     EPERM = object()
@@ -563,6 +564,10 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
             connectResult = self.socket.connect_ex(self.realAddress)
         except socket.error as se:
             connectResult = se.args[0]
+        except OverflowError:
+            # Port overflow errors are converted into Operation not supported.
+            connectResult = EOPNOTSUPP
+
         if connectResult:
             if connectResult == EISCONN:
                 pass
