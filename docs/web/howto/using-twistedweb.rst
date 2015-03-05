@@ -442,6 +442,26 @@ Twisted Web provides an abstraction of this browser-tracking behavior called the
 .. image:: ../img/web-session.png
 
 
+The default session cookie name is ``TWISTED_SESSION``. A custom name can be used
+by assigning a differet value to the ``sessionCookieBaseName`` variable or overwriting
+``getSessionCookieName`` from :api:`twisted.web.server.Request <Request>`.
+
+
+.. code-block:: python
+
+    from twisted.web.server import Request, Site
+    from twisted.web.resource import Resource
+
+    class CustomCookieRequest(Request):
+        sessionCookieBaseName = b'SOME_CUSTOM_NAME'
+
+    class Simple(Resource):
+        isLeaf = True
+        def render_GET(self, request):
+            return b'<html>Hello, world!</html>'
+
+    site = Site(Simple())
+    site.requestFactory = CustomCookieRequest
 
 
 

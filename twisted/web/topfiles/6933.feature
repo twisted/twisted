@@ -1,0 +1,1 @@
+twisted.web.server.Request now allows specifying a custom name for the session cookie.
