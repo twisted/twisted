@@ -2559,7 +2559,7 @@ class SimpleUtilityTestCase(TestCase):
         self.assertEqual(result[:2], ("::1", 2))
 
 
-    def test_resolveIPv6_overflow_port(self):
+    def test_resolveIPv6OverflowPort(self):
         """
         L{_resolveIPv6} preserve the requested port number, event when it is
         not valid.
