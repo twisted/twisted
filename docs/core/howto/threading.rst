@@ -133,3 +133,21 @@ The default size of the thread pool depends on the reactor being used; the defau
 The reactor thread pool is implemented by :api:`twisted.python.threadpool.ThreadPool <ThreadPool>`.
 To access methods on this object for more advanced tuning and monitoring (see the API documentation for details) you can get the thread pool with :api:`twisted.internet.interfaces.IReactorThreads.getThreadPool <getThreadPool>`.
 
+Advanced Coordination
+---------------------
+
+callFromThread and callInThread are useful for simple blocking APIs which can be executed independently, don't require complicated access to shared state, and always eventually complete.
+This describes a lot of use-cases for threading within Twisted, but sometimes you need more.
+For example, if you have a blocking API which gives you a long-lived connection, you may need to ensure that all the blocking calls to that API are made on that connection object in order.
+You can do this with callInThread and a lock, but if you have 30 requests to make, that will tie up the whole reactor thread pool waiting on that lock, making it impossible to resolve hostnames (so making client connections will be stuck) even though you know you can really only make one request at a time.
+
+To facilitate such cases of coordinating parallel resources, Twisted introduced a new package in 15.2, :api:`twisted.threads`.
+
+The core of this package is a small interface, ``IWorker``, which has only 2 methods:
+
+``do(work)`` takes a 0-argument callable and executes it in this worker's execution context, and may raise ``AlreadyQuit`` if the worker has quit.
+
+``quit()`` causes all future calls to ``do`` to fail, and cleans up any resources associated with this worker.
+
+The semantics of ``IWorker.do`` are highly dependent on the specific concrete type of worker you are using.
+
