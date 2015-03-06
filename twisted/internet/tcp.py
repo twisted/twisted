@@ -43,7 +43,6 @@ except ImportError:
     class _TLSServerMixin(object):
         pass
 
-from errno import ECONNREFUSED
 if platformType == 'win32':
     # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
     EPERM = object()
@@ -82,7 +81,7 @@ else:
 from errno import errorcode
 
 # Twisted Imports
-from twisted.internet import base, address, fdesc
+from twisted.internet import address, base, defer, fdesc
 from twisted.internet.task import deferLater
 from twisted.python import log, failure, reflect
 from twisted.python.util import untilConcludes
@@ -414,9 +413,11 @@ class _BaseBaseClient(object):
         if self._requiresResolution:
             d = self.reactor.resolve(self.addr[0])
             d.addCallback(lambda n: (n,) + self.addr[1:])
-            d.addCallbacks(self._setRealAddress, self.failIfNotConnected)
         else:
-            self._setRealAddress(self.addr)
+            d = defer.succeed(self.addr)
+
+        d.addCallback(self._setRealAddress)
+        d.addErrback(self.failIfNotConnected)
 
 
     def _setRealAddress(self, address):
@@ -430,6 +431,10 @@ class _BaseBaseClient(object):
             and the 'host' portion will always be an IP address, not a DNS
             name.
         """
+        port = address[1]
+        if not 0 < port <= 65535:
+            raise error.ConnectError(string='Invalid port number.')
+
         self.realAddress = address
         self.doConnect()
 
@@ -641,8 +646,12 @@ def _resolveIPv6(ip, port):
     @raise socket.gaierror: if either the IP or port is not numeric as it
         should be.
     """
-    return socket.getaddrinfo(ip, port, 0, 0, 0, _NUMERIC_ONLY)[0][4]
-
+    result = socket.getaddrinfo(ip, port, 0, 0, 0, _NUMERIC_ONLY)[0][4]
+    # getaddrinfo will also `resolve` invalid port numbers into a valid one
+    # ex 123456 is resolved as 57920, but we want to preserver the
+    # initial port number.
+    result = (result[0], port, result[2], result[3])
+    return result
 
 
 class _BaseTCPClient(object):
