@@ -705,7 +705,8 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         When trying to connect using a port outside of the 1-65535 range the
         error is raised as an errback.
         """
-        self.assertConnectPortError(-1, u'Invalid port number.')
+        self.assertConnectPortError(
+            -1, 'getsockaddrarg: port must be 0-65535.')
 
 
     def test_connectPortOverflow(self):
@@ -713,7 +714,8 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         When trying to connect using a port outside of the 1-65535 range the
         error is raised as an errback.
         """
-        self.assertConnectPortError(65536, u'Invalid port number.')
+        self.assertConnectPortError(
+            65536, 'getsockaddrarg: port must be 0-65535.')
 
 
     def test_connectPortZero(self):
@@ -721,7 +723,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         An error is raised as callback when trying to listed on the
         reserved port C{0}.
         """
-        self.assertConnectPortError(0, u'Invalid port number.')
+        self.assertConnectPortError(0, 'Connection refused')
 
 
     def test_connectPortNotNumeric(self):

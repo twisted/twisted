@@ -432,10 +432,6 @@ class _BaseBaseClient(object):
             and the 'host' portion will always be an IP address, not a DNS
             name.
         """
-        port = address[1]
-        if not 0 < port <= 65535:
-            raise error.ConnectError(string='Invalid port number.')
-
         self.realAddress = address
         self.doConnect()
 
