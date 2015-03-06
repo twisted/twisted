@@ -73,28 +73,8 @@ This means that depending on what other work has been submitted to the pool, you
 You should be careful to avoid submitting work to callInThread which blocks and waits for other work submitted to callInThread to be completed; since more work won't be taken on until the existing work has completed, that can lead to deadlocks.
 
 
-Utility Methods
+Getting Results
 ---------------
-
-The utility methods are not part of the :api:`twisted.internet.reactor <reactor>` APIs, but are implemented in :api:`twisted.internet.threads <threads>`.
-
-If we have multiple methods to run sequentially within a thread, we can do::
-
-    from twisted.internet import reactor, threads
-
-    def aSillyBlockingMethodOne(x):
-        import time
-        time.sleep(2)
-        print x
-
-    def aSillyBlockingMethodTwo(x):
-        print x
-
-    # run both methods sequentially in a thread
-    commands = [(aSillyBlockingMethodOne, ["Calling First"], {})]
-    commands.append((aSillyBlockingMethodTwo, ["And the second"], {}))
-    threads.callMultipleInThread(commands)
-    reactor.run()
 
 For functions whose results we wish to get, we can have the result returned as a Deferred::
 
