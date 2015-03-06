@@ -19,7 +19,7 @@ from twisted.internet.address import IPv4Address
 from twisted.internet.task import Clock
 from twisted.web import server, resource
 from twisted.web import iweb, http, error
-from twisted.python import components, log
+from twisted.python import components
 
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 
@@ -497,7 +497,7 @@ class RequestTests(unittest.TestCase):
         result = request.getSession()
 
         self.assertIs(session, result)
-        self.assertGreater(result.lastModified, initialTime)
+        self.assertTrue(result.lastModified > initialTime)
 
 
     class ISessionObject(Interface):
@@ -543,7 +543,7 @@ class RequestTests(unittest.TestCase):
         """
         When request (or the site associated with this request) has no
         previous session, a new one is created using the name provided by
-        `getSessionCookieName` as cookie is set to inform the web client
+        `_sessionCookieName` as cookie is set to inform the web client
         about session id.
         """
         site = server.Site(resource.Resource())
@@ -557,27 +557,23 @@ class RequestTests(unittest.TestCase):
         result = request.getSession()
 
         sessionRawCookie = '%s=%s; Path=/' % (
-            request.getSessionCookieName(), result.uid,)
+            request._sessionCookieName, result.uid,)
         self.assertEqual(sessionRawCookie, request.cookies[0])
 
         # Getting the session again, will return the same object.
         self.assertIs(result, request.getSession())
 
 
-    def test_getSessionCookieName(self):
+    def test_sessionCookieNameDefaultValue(self):
         """
-        It returns a name based on I{Request.sessionCookieBaseName}.
+        It has a default value which is based on C{sitepath} value.
         """
-        baseName = b'CUSTOM_NAME'
         channel = DummyChannel()
         request = server.Request(channel, 1)
-        request.sitepath = []
-        request.site = channel.site
-        request.sessionCookieBaseName = baseName
+        request.sitepath = ['apps', 'aoe']
 
-        name = request.getSessionCookieName()
-
-        self.assertEqual(name, baseName)
+        self.assertEqual(
+            b'TWISTED_SESSION_apps_aoe', request._sessionCookieName)
 
 
 class GzipEncoderTests(unittest.TestCase):
