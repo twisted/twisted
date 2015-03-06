@@ -10,6 +10,7 @@ from __future__ import division, absolute_import
 import pickle, time, weakref, gc, threading
 
 from twisted.python.compat import _PY3
+
 from twisted.trial import unittest
 from twisted.python import threadpool, threadable, failure, context
 
@@ -211,12 +212,12 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
 
         del worker
         del unique
-        gc.collect()
 
         # let onResult collect the refs
         onResultWait.set()
         # wait for onResult
         onResultDone.wait(self.getTimeout())
+        gc.collect()
 
         self.assertEqual(uniqueRef(), None)
         self.assertEqual(workerRef(), None)
@@ -503,10 +504,10 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
 
         def _thread():
             threadWorking.set()
-            threadFinish.wait()
+            threadFinish.wait(10)
 
         pool.callInThread(_thread)
-        threadWorking.wait()
+        threadWorking.wait(10)
         self.assertEqual(pool.workers, 1)
         self.assertEqual(len(pool.waiters), 0)
         self.assertEqual(len(pool.working), 1)
@@ -521,66 +522,42 @@ class ThreadPoolTestCase(unittest.SynchronousTestCase):
         self.assertEqual(len(pool.working), 0)
 
 
-    def test_workerState(self):
-        """
-        Upon entering a _workerState block, the threads unique identifier is
-        added to a stateList and is removed upon exiting the block.
-        """
-        pool = threadpool.ThreadPool()
-        workerThread = object()
-        stateList = []
-        with pool._workerState(stateList, workerThread):
-            self.assertIn(workerThread, stateList)
-        self.assertNotIn(workerThread, stateList)
-
-
-    def test_workerStateExceptionHandling(self):
-        """
-        The _workerState block does not consume L{Exception}s or change the
-        L{Exception} that gets raised.
-        """
-        pool = threadpool.ThreadPool()
-        workerThread = object()
-        stateList = []
-        try:
-            with pool._workerState(stateList, workerThread):
-                self.assertIn(workerThread, stateList)
-                1 / 0
-        except ZeroDivisionError:
-            pass
-        except:
-            self.fail("_workerState shouldn't change raised exceptions")
-        else:
-            self.fail("_workerState shouldn't consume exceptions")
-        self.assertNotIn(workerThread, stateList)
-
-
 
 class RaceConditionTestCase(unittest.SynchronousTestCase):
 
+    def setUp(self):
+        self.threadpool = threadpool.ThreadPool(0, 10)
+        self.event = threading.Event()
+        self.threadpool.start()
+        def done():
+            self.threadpool.stop()
+            del self.threadpool
+        self.addCleanup(done)
+
+
     def getTimeout(self):
         """
-        Return number of seconds to wait before giving up.
+        A reasonable number of seconds to time out.
         """
-        return 5 # Really should be order of magnitude less
-
-
-    def setUp(self):
-        self.event = threading.Event()
-        self.threadpool = threadpool.ThreadPool(0, 10)
-        self.threadpool.start()
-
-
-    def tearDown(self):
-        del self.event
-        self.threadpool.stop()
-        del self.threadpool
+        return 5
 
 
     def test_synchronization(self):
         """
-        Test a race condition: ensure that actions run in the pool synchronize
-        with actions run in the main thread.
+        If multiple threads are waiting on an event (via blocking on something
+        in a callable passed to L{threadpool.ThreadPool.callInThread}), and
+        there is spare capacity in the threadpool, sending another callable
+        which will cause those to un-block to
+        L{threadpool.ThreadPool.callInThread} will reliably run that callable
+        and un-block the blocked threads promptly.
+
+        @note: This is not really a unit test, it is a stress-test.  You may
+            need to run it with C{trial -u} to fail reliably if there is a
+            problem.  It is very hard to regression-test for this particular
+            bug - one where the thread pool may consider itself as having
+            "enough capacity" when it really needs to spin up a new thread if
+            it possibly can - in a deterministic way, since the bug can only be
+            provoked by subtle race conditions.
         """
         timeout = self.getTimeout()
         self.threadpool.callInThread(self.event.set)
@@ -592,7 +569,9 @@ class RaceConditionTestCase(unittest.SynchronousTestCase):
         self.event.wait(timeout)
         if not self.event.isSet():
             self.event.set()
-            self.fail("Actions not synchronized")
+            self.fail(
+                "'set' did not run in thread; timed out waiting on 'wait'."
+            )
 
 
     def test_singleThread(self):
@@ -619,7 +598,9 @@ class RaceConditionTestCase(unittest.SynchronousTestCase):
         for i in range(10):
             self.threadpool.callInThreadWithCallback(
                 onResult, lambda: None)
-            event.wait()
+            event.wait(10)
             event.clear()
 
         self.assertEqual(self.threadpool.workers, 1)
+
+
