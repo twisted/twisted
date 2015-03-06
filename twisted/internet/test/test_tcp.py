@@ -25,7 +25,7 @@ from twisted.python import log
 from twisted.trial.unittest import SkipTest, TestCase
 from twisted.internet.error import (
     ConnectionLost, UserError, ConnectionRefusedError, ConnectionDone,
-    ConnectionAborted, DNSLookupError, NoProtocol)
+    ConnectionAborted, DNSLookupError, NoProtocol, ServiceNameUnknownError)
 from twisted.internet.test.connectionmixins import (
     LogObserverMixin, ConnectionTestsMixin, StreamClientTestsMixin,
     findFreePort, ConnectableProtocol, EndpointCreator,
@@ -700,27 +700,40 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         self.assertEqual(BrokenContextFactory.message, str(results[0]))
 
 
-    def test_connectOverflowPort(self):
+    def test_connectPortOverflow(self):
         """
         When trying to connect using a port outside of the 1-65535 range the
         error is raised as an errback.
         """
-        self.assertConnectOverflowPort(0)
-        self.assertConnectOverflowPort(65536)
+        self.assertConnectPortError(0, u'Invalid port number.')
+        self.assertConnectPortError(65536, u'Invalid port number.')
 
 
-    def assertConnectOverflowPort(self, port):
+    def test_connectPortNotNumeric(self):
+        """
+        When trying to connect with an endpoint using a port which can not be
+        resolved to a service an errback is raised.
+        """
+        self.assertConnectPortError(
+            'invalid', "service/proto not found ('invalid')")
+
+
+    def assertConnectPortError(self, port, message):
         """
         Check that trying to connect to C{port} will raise an errback.
 
         @param port: Port number for which to try a client connection.
         @type  port: C{int}
+
+
+        @param port: Port number for which to try a client connection.
+        @type  port: C{str}
         """
         reactor = self.buildReactor()
         results = []
 
         # Connect with invalid port number.
-        fakeServerAddress = self.addressClass("TCP", self.interface, 123456)
+        fakeServerAddress = self.addressClass("TCP", self.interface, port)
         endpoint = self.endpoints.client(reactor, fakeServerAddress)
         connectDeferred = endpoint.connect(Factory.forProtocol(Protocol))
 
@@ -735,7 +748,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         self.runReactor(reactor)
 
         errors = [failure.value.args[0] for failure in results]
-        self.assertEqual(['Invalid port number.'], errors)
+        self.assertEqual([message], errors)
 
 
 
@@ -889,6 +902,25 @@ class TCPConnectorTestsBuilder(ReactorBuilder):
 
         clientFactory.reason.trap(ConnectionRefusedError)
         self.assertEqual(protocolMadeAndClosed, [(1, 1)])
+
+
+    def test_invalidServiceName(self):
+        """
+        When connection is done with an invalid service name as port
+        L{ServiceNameUnknownError} is raised.
+        """
+        reactor = self.buildReactor()
+
+        error = self.assertRaises(
+            ServiceNameUnknownError,
+            reactor.connectTCP,
+                self.interface, 'invalid-port', MyClientFactory(),
+            )
+
+        self.assertEqual(
+            u"Service name given as port is unknown: "
+            "service/proto not found ('invalid-port').",
+            unicode(error))
 
 
 
