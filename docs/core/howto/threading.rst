@@ -76,7 +76,11 @@ You should be careful to avoid submitting work to callInThread which blocks and 
 Getting Results
 ---------------
 
-For functions whose results we wish to get, we can have the result returned as a Deferred::
+callInThread and callFromThread allow you to move the execution of your code out of and into the reactor thread, respectively, but that isn't always enough.
+
+When we run some code, we often want to know what its result was.  For this, Twisted provides two methods: :api:`twisted.internet.threads.deferToThread <deferToThread>` and :api:`twisted.internet.threads.blockingCallFromThread <blockingCallFromThread>`, defined in the ``twisted.internet.threads`` module.
+
+To get a result from some blocking code back into the reactor thread, we can use :api:`twisted.internet.threads.deferToThread <deferToThread>` to execute it instead of callFromThread.
 
     from twisted.internet import reactor, threads
 
@@ -85,14 +89,14 @@ For functions whose results we wish to get, we can have the result returned as a
         return 3
 
     def printResult(x):
-        print x
+        print(x)
 
     # run method in thread and get result as defer.Deferred
     d = threads.deferToThread(doLongCalculation)
     d.addCallback(printResult)
     reactor.run()
 
-If you wish to call a method in the reactor thread and get its result, you can use :api:`twisted.internet.threads.blockingCallFromThread <blockingCallFromThread>`::
+Similarly, you want some code running in a non-reactor thread wants to invoke some code in the reactor thread and get its result, you can use :api:`twisted.internet.threads.blockingCallFromThread <blockingCallFromThread>`::
 
     from twisted.internet import threads, reactor, defer
     from twisted.web.client import getPage
@@ -114,18 +118,18 @@ If you wish to call a method in the reactor thread and get its result, you can u
 ``blockingCallFromThread`` will return the object or raise the exception returned or raised by the function passed to it.
 If the function passed to it returns a Deferred, it will return the value the Deferred is called back with or raise the exception it is errbacked with.
 
-
-Managing the Thread Pool
-------------------------
-
-The thread pool is implemented by :api:`twisted.python.threadpool.ThreadPool <ThreadPool>`.
+Managing the Reactor Thread Pool
+--------------------------------
 
 We may want to modify the size of the thread pool, increasing or decreasing the number of threads in use.
-We can do this do this quite easily::
+We can do this do this ::
 
     from twisted.internet import reactor
 
     reactor.suggestThreadPoolSize(30)
 
 The default size of the thread pool depends on the reactor being used; the default reactor uses a minimum size of 5 and a maximum size of 10.
-Be careful that you understand threads and their resource usage before drastically altering the thread pool sizes.
+
+The reactor thread pool is implemented by :api:`twisted.python.threadpool.ThreadPool <ThreadPool>`.
+To access methods on this object for more advanced tuning and monitoring (see the API documentation for details) you can get the thread pool with :api:`twisted.internet.interfaces.IReactorThreads.getThreadPool <getThreadPool>`.
+
