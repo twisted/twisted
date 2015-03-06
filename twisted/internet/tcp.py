@@ -646,12 +646,15 @@ def _resolveIPv6(ip, port):
     @raise socket.gaierror: if either the IP or port is not numeric as it
         should be.
     """
-    result = socket.getaddrinfo(ip, port, 0, 0, 0, _NUMERIC_ONLY)[0][4]
-    # getaddrinfo will also `resolve` invalid port numbers into a valid one
-    # ex 123456 is resolved as 57920, but we want to preserver the
+    # On OS X `getaddrinfo` will reject invalid port numbers while other
+    # systems accept it. We pass a port which is later overwritten.
+    result = socket.getaddrinfo(ip, 1, 0, 0, 0, _NUMERIC_ONLY)[0][4]
+    # On non OS X `getaddrinfo` will also `resolve` invalid port numbers into a
+    # valid one. ex 123456 is resolved as 57920, but we want to preserver the
     # initial port number.
     result = (result[0], port, result[2], result[3])
     return result
+
 
 
 class _BaseTCPClient(object):
