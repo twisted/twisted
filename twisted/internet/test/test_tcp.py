@@ -745,8 +745,8 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         @type  port: C{int}
 
 
-        @param port: Port number for which to try a client connection.
-        @type  port: C{str}
+        @param message: String representation of the expected error.
+        @type  message: C{str}
         """
         reactor = self.buildReactor()
         results = []
