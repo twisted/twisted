@@ -49,27 +49,28 @@ In this example, ``callFromWhateverThreadYouWant`` is thread-safe and can be inv
     However, you should be sure that these objects do not share any state, especially not with the reactor.
     One good rule of thumb is that any object whose methods return ``Deferred``\ s is almost certainly touching the reactor at some point, and should never be accessed from a non-reactor thread.
 
-Running code in threads
+Running Code In Threads
 -----------------------
 
-Sometimes we may want to run methods in threads.
-For example, in order to access blocking APIs.
-Twisted provides methods for doing so using the :api:`twisted.internet.interfaces.IReactorThreads <IReactorThreads>` API.
-Additional utility functions are provided in :api:`twisted.internet.threads <twisted.internet.threads>`.
-Basically, these methods allow us to queue methods to be run by a thread pool.
+Sometimes we may want to run code in a non-reactor thread, to avoid blocking the reactor.
+Twisted provides an API for doing so, the :api:`twisted.internet.interfaces.IReactorThreads.callInThread <callInThread>` method on the reactor.
 
-For example, to run a method in a thread we can do::
+For example, to run a method in a non-reactor thread we can do::
 
     from twisted.internet import reactor
 
     def aSillyBlockingMethod(x):
         import time
         time.sleep(2)
-        print x
+        print(x)
 
-    # run method in thread
     reactor.callInThread(aSillyBlockingMethod, "2 seconds have passed")
     reactor.run()
+
+``callInThread`` will put your code into a queue, to be run by the next available thread in the reactor's thread pool.
+This means that depending on what other work has been submitted to the pool, your method may not run immediately.
+
+You should be careful to avoid submitting work to callInThread which blocks and waits for other work submitted to callInThread to be completed; since more work won't be taken on until the existing work has completed, that can lead to deadlocks.
 
 
 Utility Methods
