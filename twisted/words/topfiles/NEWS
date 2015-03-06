@@ -1,6 +1,18 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Words 15.1.0pre1 (2015-03-06)
+=====================================
+
+Deprecations and Removals
+-------------------------
+ - twisted.words.protocols.msn is now deprecated (#6395)
+
+Other
+-----
+ - #6494
+
+
 Twisted Words 15.0.0 (2015-01-24)
 =================================
 
