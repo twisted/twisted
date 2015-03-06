@@ -734,7 +734,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
 
         self.runReactor(reactor)
 
-        errors = [failure.value.message for failure in results]
+        errors = [failure.value.args[0] for failure in results]
         self.assertEqual(['Invalid port number.'], errors)
 
 
