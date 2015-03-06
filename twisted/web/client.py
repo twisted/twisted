@@ -2081,7 +2081,7 @@ def readBody(response):
 
         @param deferred: The cancelled L{defer.Deferred}.
         """
-        if protocol.transport is None:
+        if not protocol.transport is None:
             getattr(protocol.transport, 'abortConnection', lambda: None)()
 
     d = defer.Deferred(cancel)
