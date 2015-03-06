@@ -39,7 +39,8 @@ from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import (
     Deferred, DeferredList, maybeDeferred, gatherResults, succeed, fail)
 from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
-from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
+from twisted.internet.protocol import (
+    ClientFactory, Factory, Protocol, ServerFactory)
 from twisted.internet.interfaces import (
     IPushProducer, IPullProducer, IHalfCloseableProtocol)
 from twisted.internet.tcp import Connection, Server, _resolveIPv6
@@ -701,21 +702,27 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
 
     def test_connectOverflowPort(self):
         """
-        When trying to connect using a port outside of the 0-65535 range the
+        When trying to connect using a port outside of the 1-65535 range the
         error is raised as an errback.
+        """
+        self.assertConnectOverflowPort(0)
+        self.assertConnectOverflowPort(65536)
+
+
+    def assertConnectOverflowPort(self, port):
+        """
+        Check that trying to connect to C{port} will raise an errback.
+
+        @param port: Port number for which to try a client connection.
+        @type  port: C{int}
         """
         reactor = self.buildReactor()
         results = []
 
         # Connect with invalid port number.
-        class ObjectWithDict: pass
-        fakeServerAddress = ObjectWithDict()
-        fakeServerAddress.port = 123456
+        fakeServerAddress = self.addressClass("TCP", self.interface, 123456)
         endpoint = self.endpoints.client(reactor, fakeServerAddress)
-
-        clientFactory = ClientFactory()
-        clientFactory.protocol = Protocol
-        connectDeferred = endpoint.connect(clientFactory)
+        connectDeferred = endpoint.connect(Factory.forProtocol(Protocol))
 
         def whenRun():
             """
@@ -725,10 +732,10 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             connectDeferred.addBoth(lambda ign: reactor.stop())
         needsRunningReactor(reactor, whenRun)
 
-        self.runReactor(reactor, timeout=0.5)
+        self.runReactor(reactor)
 
-        errors = [failure.value.osError for failure in results]
-        self.assertEqual([errno.ECONNREFUSED], errors)
+        errors = [failure.value.message for failure in results]
+        self.assertEqual(['Invalid port number.'], errors)
 
 
 
@@ -2550,3 +2557,12 @@ class SimpleUtilityTestCase(TestCase):
         # but, luckily, IP presentation format and what it means to be a port
         # number are a little better specified.
         self.assertEqual(result[:2], ("::1", 2))
+
+
+    def test_resolveIPv6_overflow_port(self):
+        """
+        L{_resolveIPv6} preserve the requested port number, event when it is
+        not valid.
+        """
+        result = _resolveIPv6("::1", 123456)
+        self.assertEqual(result[:2], ("::1", 123456))
