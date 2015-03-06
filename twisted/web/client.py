@@ -2081,7 +2081,7 @@ def readBody(response):
 
         @param deferred: The cancelled L{defer.Deferred}.
         """
-        if protocol.transport:
+        if protocol.transport is None:
             getattr(protocol.transport, 'abortConnection', lambda: None)()
 
     d = defer.Deferred(cancel)
@@ -2091,8 +2091,8 @@ def readBody(response):
     protocolIsAbortable = getattr(protocol.transport, 'abortConnection', None)
     if protocol.transport and protocolIsAbortable is None:
         warnings.warn(
-            'Using readBody with a transport that does not implement '
-            'ITCPTransport',
+            'Using readBody with a transport that does not have an '
+            'abortConnection method',
             category=DeprecationWarning,
             stacklevel=2)
 
