@@ -2778,6 +2778,20 @@ class DummyResponse(object):
 
 
 
+class AlreadyCompletedDummyResponse(DummyResponse):
+    """
+    A dummy response that has already had its transport closed.
+    """
+    def deliverBody(self, protocol):
+        """
+        Make the connection, then remove the transport.
+        """
+        self.protocol = protocol
+        self.protocol.makeConnection(self.transport)
+        self.protocol.transport = None
+
+
+
 class ReadBodyTests(TestCase):
     """
     Tests for L{client.readBody}
@@ -2857,9 +2871,22 @@ class ReadBodyTests(TestCase):
         response = DummyResponse(transportFactory=StringTransport)
         d = self.assertWarns(
             DeprecationWarning,
-            'Using readBody with a transport that does not implement '
-            'ITCPTransport',
+            'Using readBody with a transport that does not have an '
+            'abortConnection method',
             __file__,
             lambda: client.readBody(response))
         d.cancel()
         self.failureResultOf(d, defer.CancelledError)
+
+
+    def test_deprecatedTransportNoWarning(self):
+        """
+        Calling L{client.readBody} with a response that has already had its
+        transport closed (eg. for a very small request) will not trigger a
+        deprecation warning.
+        """
+        response = AlreadyCompletedDummyResponse()
+        client.readBody(response)
+
+        warnings = self.flushWarnings()
+        self.assertEqual(len(warnings), 0)

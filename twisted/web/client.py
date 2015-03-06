@@ -2076,20 +2076,25 @@ def readBody(response):
     def cancel(deferred):
         """
         Cancel a L{readBody} call, close the connection to the HTTP server
-        immediately.
+        immediately, if it is still open.
 
         @param deferred: The cancelled L{defer.Deferred}.
         """
-        getattr(protocol.transport, 'abortConnection', lambda: None)()
+        if not protocol.transport is None:
+            getattr(protocol.transport, 'abortConnection', lambda: None)()
+
     d = defer.Deferred(cancel)
     protocol = _ReadBodyProtocol(response.code, response.phrase, d)
     response.deliverBody(protocol)
-    if getattr(protocol.transport, 'abortConnection', None) is None:
+
+    protocolIsAbortable = getattr(protocol.transport, 'abortConnection', None)
+    if protocol.transport and protocolIsAbortable is None:
         warnings.warn(
-            'Using readBody with a transport that does not implement '
-            'ITCPTransport',
+            'Using readBody with a transport that does not have an '
+            'abortConnection method',
             category=DeprecationWarning,
             stacklevel=2)
+
     return d
 
 
