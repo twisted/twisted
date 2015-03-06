@@ -700,13 +700,28 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         self.assertEqual(BrokenContextFactory.message, str(results[0]))
 
 
+    def test_connectPortUnderflow(self):
+        """
+        When trying to connect using a port outside of the 1-65535 range the
+        error is raised as an errback.
+        """
+        self.assertConnectPortError(-1, u'Invalid port number.')
+
+
     def test_connectPortOverflow(self):
         """
         When trying to connect using a port outside of the 1-65535 range the
         error is raised as an errback.
         """
-        self.assertConnectPortError(0, u'Invalid port number.')
         self.assertConnectPortError(65536, u'Invalid port number.')
+
+
+    def test_connectPortZero(self):
+        """
+        An error is raised as callback when trying to listed on the
+        reserved port C{0}.
+        """
+        self.assertConnectPortError(0, u'Invalid port number.')
 
 
     def test_connectPortNotNumeric(self):
@@ -721,6 +736,8 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
     def assertConnectPortError(self, port, message):
         """
         Check that trying to connect to C{port} will raise an errback.
+
+        WARNING: Don't call this method multiple time from the same test.
 
         @param port: Port number for which to try a client connection.
         @type  port: C{int}
