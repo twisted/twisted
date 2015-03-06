@@ -2871,8 +2871,8 @@ class ReadBodyTests(TestCase):
         response = DummyResponse(transportFactory=StringTransport)
         d = self.assertWarns(
             DeprecationWarning,
-            'Using readBody with a transport that does not implement '
-            'ITCPTransport',
+            'Using readBody with a transport that does not have an '
+            'abortConnection method',
             __file__,
             lambda: client.readBody(response))
         d.cancel()
