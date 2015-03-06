@@ -563,9 +563,6 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
             connectResult = self.socket.connect_ex(self.realAddress)
         except socket.error as se:
             connectResult = se.args[0]
-        except OverflowError:
-            # Port overflow errors are converted into Connection refused.
-            connectResult = ECONNREFUSED
 
         if connectResult:
             if connectResult == EISCONN:
