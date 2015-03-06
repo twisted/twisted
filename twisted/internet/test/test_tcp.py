@@ -939,7 +939,7 @@ class TCPConnectorTestsBuilder(ReactorBuilder):
         self.assertEqual(
             u"Service name given as port is unknown: "
             "service/proto not found ('invalid-port').",
-            unicode(error))
+            str(error))
 
 
 
