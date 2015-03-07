@@ -59,12 +59,53 @@ class ZipPath(AbstractFilePath):
         self.path = os.path.join(archive.zipfile.filename,
                                  *(self.pathInArchive.split(ZIP_PATH_SEP)))
 
+
+    def __eq__(self, other):
+        if not isinstance(other, ZipPath):
+            return NotImplemented
+        return (
+            (self.archive, self.pathInArchive) ==
+            (other.archive, other.pathInArchive))
+
+
+    def __ne__(self, other):
+        if not isinstance(other, ZipPath):
+            return NotImplemented
+        return (
+            (self.archive, self.pathInArchive) !=
+            (other.archive, other.pathInArchive))
+
+
     def __lt__(self, other):
         if not isinstance(other, ZipPath):
             return NotImplemented
         return (
             (self.archive, self.pathInArchive) <
             (other.archive, other.pathInArchive))
+
+    def __le__(self, other):
+        if not isinstance(other, ZipPath):
+            return NotImplemented
+        return (
+            (self.archive, self.pathInArchive) <=
+            (other.archive, other.pathInArchive))
+
+
+    def __gt__(self, other):
+        if not isinstance(other, ZipPath):
+            return NotImplemented
+        return (
+            (self.archive, self.pathInArchive) >
+            (other.archive, other.pathInArchive))
+
+
+    def __ge__(self, other):
+        if not isinstance(other, ZipPath):
+            return NotImplemented
+        return (
+            (self.archive, self.pathInArchive) >=
+            (other.archive, other.pathInArchive))
+
 
     def __repr__(self):
         parts = [os.path.abspath(self.archive.path)]
