@@ -379,15 +379,15 @@ def Application(name, uid=None, gid=None):
     one of the interfaces.
     """
     ret = components.Componentized()
-    available_components = [MultiService(), Process(uid, gid)]
+    availableComponents = [MultiService(), Process(uid, gid)]
     if not _PY3:
        # TODO https://twistedmatrix.com/trac/ticket/6910
-       # twisted.persisted.sob is not yet ported to Python3 so we import it only
-       # is the code really needs it.
+       # twisted.persisted.sob is not yet ported to Python3 so we import it
+       # only is the code really needs it.
        from twisted.persisted import sob
-       available_components.append(sob.Persistent(ret, name))
+       availableComponents.append(sob.Persistent(ret, name))
 
-    for comp in available_components:
+    for comp in availableComponents:
         ret.addComponent(comp, ignoreClass=1)
     IService(ret).setName(name)
     return ret
