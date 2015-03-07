@@ -17,6 +17,7 @@ from zope.interface import implementer, Interface, Attribute
 
 from twisted.python.reflect import namedAny
 from twisted.python import components
+from twisted.python.compat import _PY3
 from twisted.internet import defer
 from twisted.plugin import IPlugin
 
