@@ -127,11 +127,10 @@ class _ModuleIteratorHelper:
 
         for placeToLook in self._packagePaths():
             try:
-                children = placeToLook.children()
+                children = sorted(placeToLook.children())
             except UnlistableError:
                 continue
 
-            children.sort()
             for potentialTopLevel in children:
                 ext = potentialTopLevel.splitext()[1]
                 potentialBasename = potentialTopLevel.basename()[:-len(ext)]

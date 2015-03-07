@@ -426,6 +426,14 @@ except ImportError:
     FileType = IOBase
 
 
+try:
+    _advanceIterator = next
+except NameError:
+    def _advanceIterator(it):
+        return it.next()
+next = _advanceIterator
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -437,6 +445,7 @@ __all__ = [
     "nativeString",
     "NativeStringIO",
     "networkString",
+    "next",
     "unicode",
     "iterbytes",
     "intToBytes",

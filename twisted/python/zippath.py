@@ -59,12 +59,12 @@ class ZipPath(AbstractFilePath):
         self.path = os.path.join(archive.zipfile.filename,
                                  *(self.pathInArchive.split(ZIP_PATH_SEP)))
 
-    def __cmp__(self, other):
+    def __lt__(self, other):
         if not isinstance(other, ZipPath):
             return NotImplemented
-        return cmp((self.archive, self.pathInArchive),
-                   (other.archive, other.pathInArchive))
-
+        return (
+            (self.archive, self.pathInArchive) <
+            (other.archive, other.pathInArchive))
 
     def __repr__(self):
         parts = [os.path.abspath(self.archive.path)]

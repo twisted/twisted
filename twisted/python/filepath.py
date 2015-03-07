@@ -30,7 +30,7 @@ from zope.interface import Interface, Attribute, implementer
 # things import this module, and it would be good if it could easily be
 # modified for inclusion in the standard library.  --glyph
 
-from twisted.python.compat import comparable, cmp
+from twisted.python.compat import comparable, cmp, nativeString
 from twisted.python.deprecate import deprecated
 from twisted.python.runtime import platform
 from twisted.python.versions import Version
@@ -648,7 +648,7 @@ class FilePath(AbstractFilePath):
     _statinfo = None
     path = None
 
-    sep = slash.encode("ascii")
+    sep = nativeString(slash)
 
 
     def __init__(self, path, alwaysCreate=False):
@@ -656,7 +656,7 @@ class FilePath(AbstractFilePath):
         Convert a path string to an absolute path if necessary and initialize
         the L{FilePath} with the result.
         """
-        self.path = abspath(path)
+        self.path = abspath(nativeString(path))
         self.alwaysCreate = alwaysCreate
 
 
@@ -689,7 +689,8 @@ class FilePath(AbstractFilePath):
         if platform.isWindows() and path.count(b":"):
             # Catch paths like C:blah that don't have a slash
             raise InsecurePath("%r contains a colon." % (path,))
-        norm = normpath(path)
+        norm = normpath(nativeString(path))
+
         if self.sep in norm:
             raise InsecurePath("%r contains one or more directory separators" %
                                (path,))
@@ -1427,7 +1428,11 @@ class FilePath(AbstractFilePath):
             set to True.
         @rtype: L{FilePath}
         """
-        sib = self.sibling(_secureEnoughString() + self.basename() + extension)
+        sib = self.sibling(
+            nativeString(_secureEnoughString()) +
+            self.basename() +
+            nativeString(extension),
+            )
         sib.requireCreate()
         return sib
 
