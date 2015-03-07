@@ -203,38 +203,46 @@ license header at the top of the file:
 When you update existing files, if there is no copyright header, add
 one.
 
+    
 
-Indentation and line break
---------------------------
 
+
+Whitespace
+----------
+
+
+    
 Indentation is 4 spaces per indent.
 Tabs are not allowed.
 It is preferred that every block appears on a new line, so that control structure indentation is always visible.
 
-Lines are flowed at 79 columns, with the exception of narrative documentation.
+    
 
-They must not have trailing whitespace. Long lines must be wrapped using implied line continuation inside parentheses; backslashes aren't allowed.
 
-To handle long import lines, please repeat the import like this:
+Lines are flowed at 79 columns. They must not have trailing
+whitespace. Long lines must be wrapped using implied line continuation
+inside parentheses; backslashes aren't allowed. To handle long import
+lines, please repeat the import like this:
+
+
+
+
 
 .. code-block:: python
 
+    
     from very.long.package import foo, bar, baz
     from very.long.package import qux, quux, quuux
 
-Top-level classes and functions must be separated with 3 blank lines, and class-level functions with 2 blank lines. The control-L (i.e. ^L) form feed character must not be used.
 
-For narrative documentation use semantic newlines.
-Make lines short, and break lines at natural places, such as after commas and semicolons, rather than after the 79th column.
 
-..  code-block:: text
-    :linenos:
+    
+Top-level classes and functions must be separated with 3 blank lines,
+and class-level functions with 2 blank lines. The control-L (i.e. ^L) form
+feed character must not be used.
 
-    Sometimes when editing a narrative documentation file, I wrap the lines semantically.
-    Instead of inserting a newline at 70 columns (or whatever),
-    or making paragraphs one long line,
-    I put in newlines at a point that seems logical to me.
-    Modern code-oriented text editor are very good at wrapping and arranging long lines.
+    
+
 
 
 Modules
