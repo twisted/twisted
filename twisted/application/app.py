@@ -10,7 +10,6 @@ from operator import attrgetter
 from twisted.python import runtime, log, usage, failure, util, logfile
 from twisted.python.reflect import qual, namedAny
 from twisted.python.log import ILogObserver
-from twisted.persisted import sob
 from twisted.application import service, reactors
 from twisted.internet import defer
 from twisted import copyright, plugin
@@ -644,6 +643,12 @@ def run(runApp, ServerOptions):
 
 
 def convertStyle(filein, typein, passphrase, fileout, typeout, encrypt):
+    # TODO https://twistedmatrix.com/trac/ticket/3843
+    # TODO https://twistedmatrix.com/trac/ticket/6910
+    # twisted.persited is proposed for deprecations and is not yet ported to
+    # to Python3 so we only import it if some code really needs to use the
+    # twisted.persisted.sob
+    from twisted.persisted import sob
     application = service.loadApplication(filein, typein, passphrase)
     sob.IPersistable(application).setStyle(typeout)
     passphrase = getSavePassphrase(encrypt)
@@ -657,8 +662,14 @@ def startApplication(application, save):
     from twisted.internet import reactor
     service.IService(application).startService()
     if save:
-         p = sob.IPersistable(application)
-         reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')
+        # TODO https://twistedmatrix.com/trac/ticket/3843
+        # TODO https://twistedmatrix.com/trac/ticket/6910
+        # twisted.persited is proposed for deprecations and is not yet ported to
+        # to Python3 so we only import it if some code really needs to use the
+        # twisted.persisted.sob
+        from twisted.persisted import sob
+        p = sob.IPersistable(application)
+        reactor.addSystemEventTrigger('after', 'shutdown', p.save, 'shutdown')
     reactor.addSystemEventTrigger('before', 'shutdown',
                                   service.IService(application).stopService)
 
