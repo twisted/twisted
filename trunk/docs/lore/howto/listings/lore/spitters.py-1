@@ -1,0 +1,18 @@
+from twisted.lore import latex
+from twisted.lore.latex import processFile
+import os.path
+
+class MyLatexSpitter(latex.LatexSpitter):
+    def visitNode_span_productname(self, node):
+        # start an underline section in LaTeX
+        self.writer('\\underline{')
+        # process the node and its children
+        self.visitNodeDefault(node) 
+        # end the underline block
+        self.writer('}')
+
+    def visitNode_span_marketinglie(self, node):
+        # this example turns on more than one LaTeX effect at once
+        self.writer('\\begin{bf}\\begin{Large}')
+        self.visitNodeDefault(node)
+        self.writer('\\end{Large}\\end{bf}')

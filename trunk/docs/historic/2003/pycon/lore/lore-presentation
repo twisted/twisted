@@ -1,0 +1,108 @@
+#!/usr/bin/python2.2
+# Moshe -- current content is estimated at about 15 minutes
+from slides import NumSlide, Slide, Bullet, SubBullet, PRE, URL
+from twslides import Lecture
+
+
+lecture = Lecture(
+    "Lore: A Document Generation System",
+    Slide("Introduction",
+          Bullet("Document generation system"),
+          Bullet("Input a strict subset of XHTML"),
+          Bullet("Output -- nicely formatted HTML and LaTeX"),
+          Bullet("Used to generate >200 pages of Twisted documentation"),
+    ),
+    Slide("History",
+          Bullet("Twisted needed documentation -- and a format"),
+          Bullet("Reluctance to add dependence on a big system"),
+          Bullet("Wanted something quick and easy -- subset of HTML!"),
+          Bullet("Needs matured: table of contents, printed version"),
+          Bullet("Enter Lore"),
+    ),
+    Slide("Goals",
+          Bullet("Easy to use for authors"),
+          Bullet("Easy to install"),
+          Bullet("(Uncommon) Source format should be readable"),
+    ),
+    Slide("Contents",
+          Bullet("twisted.lore Python package"),
+          Bullet("'lore' command-line program"),
+          Bullet("Comes with every Twisted installation"),
+          Bullet("In particular -- works on Linux, Win32, Mac"),
+          Bullet("In particular -- supports Python 2.1, 2.2, 2.3 alpha"),
+    ),
+    Slide("Alternatives - HTML",
+          Bullet("Too flexible"),
+          Bullet("No support for needed idioms", SubBullet(
+                 Bullet("Special-purpose Python markup"),
+                 Bullet("Tables of contents"),
+                 Bullet("Inlining")),
+          ),
+          Bullet("Renders badly to dead trees with current tools"),
+    ),
+    Slide("Alternatives - LaTeX",
+          Bullet("Very good at printed results"),
+          Bullet("Model makes alternative parsers near-impossible"),
+          Bullet("Renderers to HTML are buggy and fragile"),
+    ),
+    Slide("Alternatives - Docbook",
+          Bullet("Using correctly requires too much work", SubBullet(
+                 Bullet("Write a DTD with special elements"),
+                 Bullet("Write Jade stylesheets"))),
+          Bullet("Lore is probably smaller than docbook specialization"),
+    ),
+    Slide("Alternatives - Texinfo",
+          Bullet("Next slide, please"),
+    ),
+    Slide("Lore goodies",
+          Bullet("Special tag to mark classes/modules/functions", SubBullet(
+                 Bullet("Can be made to point to auto-generated docs")),
+          ),
+          Bullet("Inline code-examples", SubBullet(
+                 Bullet("No need to escape all those <, > and &")),
+          ),
+          Bullet("Syntax-highlight Python code"),
+    ),
+    Slide("hlint - A lint-like program",
+          Bullet("Checks for many common errors"),
+          Bullet("Unhandled elements"),
+          Bullet("Misspelled (or miscased) class names"),
+          Bullet("Checks Python code for syntax errors"),
+    ),
+    Slide("Extending Lore",
+           Bullet("Easily done with some Python code"),
+           Bullet("Input-enhancements decide which output formats to handle"),
+           Bullet("Example: math-lore, Lore with LaTeX formulae"),
+    ),
+    Slide("HTML Output",
+          Bullet("HTML is a flexible output format"),
+          Bullet("Documents often have to integrate with a site"),
+          Bullet("Lore produces HTML documents based on a template"),
+          Bullet("Lore uses only HTML 'class' attributes, never 'font'",
+                 SubBullet(Bullet("Plays nice with CSS")),
+          ),
+    ),
+    Slide("Man Pages",
+          Bullet("Lore has a program to convert man pages to Lore documents"),
+          Bullet("Man pages are written anyway"),
+          Bullet("No man output: the format is too limited"),
+    ),
+    Slide("Small Example",
+          PRE("""\
+<html>
+<head>
+<title>Example</title>
+</head>
+<body>
+<h1>Example</h1>
+<p>Simple paragraph<span class="footnote">footnote</span></p>
+</body>
+</html>
+""")),
+    Slide("Future Directions",
+          Bullet("More output formats"),
+          Bullet("Some more classes - abstract, bibliography"),
+     ),
+)
+
+lecture.renderHTML(".", "lore-%d.html", css="main.css")

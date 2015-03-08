@@ -1,0 +1,44 @@
+#!/usr/bin/env python3.3
+
+"""
+This program is intended to run Twisted's test suite under Python 3. As such,
+it should go away once Twisted has been fully ported to Python 3. It is only
+intended to be used from a Twisted checkout, and implementation can and will
+change at any time.
+"""
+
+import sys, os, unittest, tempfile
+
+# Make sure checkout's code is used:
+twistedPath = os.path.abspath(os.path.dirname(os.path.dirname(sys.argv[0])))
+sys.path.insert(0, twistedPath)
+
+testModules = []
+extraArguments = []
+
+for argument in sys.argv[1:]:
+    if argument.startswith('-'):
+        extraArguments.append(argument)
+    else:
+        testModules.append(argument)
+
+# Add default arguments.
+if not extraArguments:
+    extraArguments = ['-v']
+
+# Add default modules.
+if not testModules:
+    modules = {}
+    path = os.path.join(twistedPath, "twisted", "python", "dist3.py")
+    with open(path) as dist3:
+        data = dist3.read()
+        code = compile(data, "dist3.py", "exec")
+        exec(code, modules)
+    testModules = modules["testModules"]
+
+# Avoid dumping trash all over the place.
+os.chdir(tempfile.mkdtemp(prefix="tw-py3-"))
+
+# Run the tests.
+testArguments = ["run-python3-tests"] + extraArguments + testModules
+unittest.main(module=None, argv=testArguments)

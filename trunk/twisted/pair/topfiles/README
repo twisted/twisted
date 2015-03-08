@@ -1,0 +1,12 @@
+Twisted Pair 15.0.0: Very low-level networking functionality
+
+Twisted Pair includes parsers for several datagram formats, including ethernet,
+IP, and UDP.  It also offers low-level networking integration on Linux via tun
+and tap devices.
+
+Twisted Pair depends on Twisted Core.
+
+To be able to run the Twisted Pair test suite as an unprivileged user, you need
+to create a tunnel device owned by that user.  Likewise, to use Twisted Pair's
+tuntap support as an unprivileged user, you must do the same.  See the
+configuration howto for details.

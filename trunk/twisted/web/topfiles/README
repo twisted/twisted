@@ -1,0 +1,6 @@
+Twisted Web 15.0.0
+
+Twisted Web depends on Twisted Core.  pyOpenSSL
+(<https://github.com/pyca/pyopenssl>) is also required for HTTPS.  SOAPpy
+(<http://pywebsvcs.sourceforge.net/>) is required for SOAP support.  For Quixote
+resource templates, Quixote (<http://www.quixote.ca/>) is required.

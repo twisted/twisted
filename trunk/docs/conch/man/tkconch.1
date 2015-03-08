@@ -1,0 +1,72 @@
+.TH CONCH "1" "October 2002" "" ""
+.SH NAME
+tkconch \- connect to SSH servers graphically
+.SH SYNOPSIS
+.B conch [-l \fIuser\fR] [-i \fIidentity\fR [ -i \fIidentity\fR ... ]] [-c \fIcipher\fR] [-m \fIMAC\fR] [-p \fIport\fR] [-n] [-t] [-T] [-V] [-C] [-N] [-s] [arg [...]]
+.PP
+.B conch --help
+.SH DESCRIPTION
+.PP
+The \fB\--help\fR prints out a usage message to standard output.
+.TP
+\fB-l\fR, \fB--user\fR <user>
+Log in using this user name.
+.TP
+\fB-e\fR, \fB--escape\fR <escape character>
+Set escape character; 'none' = disable (default: ~)
+.TP
+\fB-i\fR, \fB--identity\fR <identity>
+Add an identity file for public key authentication (default: ~/.ssh/identity)
+.TP
+\fB-c\fR, \fB--cipher\fR <cipher>
+Cipher algorithm to use.
+.TP
+\fB-m\fR, \fB--macs\fR <mac>
+Specify MAC algorithms for protocol version 2.
+.TP
+\fB-p\fR, \fB--port\fR <port>
+Port to connect to.
+.TP
+\fB-L\fR, \fB--localforward\fR <listen-port:host:port>
+Forward local port to remote address.
+.TP
+\fB-R\fR, \fB--remoteforward\fR <listen-port:host:port>
+Forward remote port to local address.
+.TP
+\fB-t\fR, \fB--tty\fR
+Allocate a tty even if command is given.
+.TP
+\fB-n\fR, \fB--notty\fR
+Do not allocate a tty.
+.TP
+\fB-V\fR, \fB--version\fR
+Display version number only.
+.TP
+\fB-C\fR, \fB--compress\fR
+Enable compression.
+.TP
+\fB-a\fR, \fB--ansilog\fR
+Print the received data to stdout.
+.TP
+\fB-N\fR, \fB--noshell\fR
+Do not execute a shell or command.
+.TP
+\fB-s\fR, \fB--subsystem\fR
+Invoke command (mandatory) as SSH2 subsystem.
+.TP
+\fB--log\fR
+Print the receieved data to stderr.
+.SH DESCRIPTION
+Open an SSH connection to specified server, and either run the command
+given there or open a remote interactive shell.
+.SH AUTHOR
+Written by Moshe Zadka, based on conch's help messages
+.SH "REPORTING BUGS"
+To report a bug, visit \fIhttp://twistedmatrix.com/bugs/\fR
+.SH COPYRIGHT
+Copyright \(co 2002-2008 Twisted Matrix Laboratories.
+.br
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.SH "SEE ALSO"
+ssh(1)
