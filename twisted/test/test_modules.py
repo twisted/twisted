@@ -15,7 +15,6 @@ import twisted
 from twisted.trial.unittest import TestCase
 
 from twisted.python import modules
-from twisted.python.compat import next
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
 
@@ -78,22 +77,22 @@ class BasicTests(TwistedModulesTestCase):
         # "module2"
 
         entry = self.pathEntryWithOnePackage()
-        testPackagePath = entry.child('test_package')
-        testPackagePath.child('__init__.py').setContent(namespaceBoilerplate)
+        testPackagePath = entry.child(b'test_package')
+        testPackagePath.child(b'__init__.py').setContent(namespaceBoilerplate)
 
-        nestedEntry = testPackagePath.child('nested_package')
+        nestedEntry = testPackagePath.child(b'nested_package')
         nestedEntry.makedirs()
-        nestedEntry.child('__init__.py').setContent(namespaceBoilerplate)
-        nestedEntry.child('module.py').setContent(b'')
+        nestedEntry.child(b'__init__.py').setContent(namespaceBoilerplate)
+        nestedEntry.child(b'module.py').setContent(b'')
 
         anotherEntry = self.pathEntryWithOnePackage()
-        anotherPackagePath = anotherEntry.child('test_package')
-        anotherPackagePath.child('__init__.py').setContent(namespaceBoilerplate)
+        anotherPackagePath = anotherEntry.child(b'test_package')
+        anotherPackagePath.child(b'__init__.py').setContent(namespaceBoilerplate)
 
-        anotherNestedEntry = anotherPackagePath.child('nested_package')
+        anotherNestedEntry = anotherPackagePath.child(b'nested_package')
         anotherNestedEntry.makedirs()
-        anotherNestedEntry.child('__init__.py').setContent(namespaceBoilerplate)
-        anotherNestedEntry.child('module2.py').setContent(b'')
+        anotherNestedEntry.child(b'__init__.py').setContent(namespaceBoilerplate)
+        anotherNestedEntry.child(b'module2.py').setContent(b'')
 
         self.replaceSysPath([entry.path, anotherEntry.path])
 
@@ -161,7 +160,7 @@ class BasicTests(TwistedModulesTestCase):
         """
         existentPath = self.pathEntryWithOnePackage()
 
-        nonexistentPath = FilePath(self.mktemp())
+        nonexistentPath = FilePath(self.mktemp().encode('utf-8'))
         self.failIf(nonexistentPath.exists())
 
         self.replaceSysPath([existentPath.path])
@@ -183,7 +182,7 @@ class BasicTests(TwistedModulesTestCase):
         """
         existentPath = self.pathEntryWithOnePackage()
 
-        nonDirectoryPath = FilePath(self.mktemp())
+        nonDirectoryPath = FilePath(self.mktemp().encode('utf-8'))
         self.failIf(nonDirectoryPath.exists())
         nonDirectoryPath.setContent(b"zip file or whatever\n")
 
@@ -266,7 +265,7 @@ class BasicTests(TwistedModulesTestCase):
         Verify that .py files will always be preferred to .pyc files, regardless of
         directory listing order.
         """
-        mypath = FilePath(self.mktemp())
+        mypath = FilePath(self.mktemp().encode('utf-8'))
         mypath.createDirectory()
         pp = modules.PythonPath(sysPath=[mypath.path])
         originalSmartPath = pp._smartPath
@@ -281,13 +280,13 @@ class BasicTests(TwistedModulesTestCase):
                 return x
             o.children = evilChildren
             return o
-        mypath.child("abcd.py").setContent(b'\n')
+        mypath.child(b"abcd.py").setContent(b'\n')
         compileall.compile_dir(mypath.path, quiet=True)
         # sanity check
         self.assertEqual(len(list(mypath.children())), 2)
         pp._smartPath = _evilSmartPath
         self.assertEqual(pp['abcd'].filePath,
-                          mypath.child('abcd.py'))
+                          mypath.child(b'abcd.py'))
 
 
     def test_packageMissingPath(self):
@@ -295,12 +294,12 @@ class BasicTests(TwistedModulesTestCase):
         A package can delete its __path__ for some reasons,
         C{modules.PythonPath} should be able to deal with it.
         """
-        mypath = FilePath(self.mktemp())
+        mypath = FilePath(self.mktemp().encode('utf-8'))
         mypath.createDirectory()
         pp = modules.PythonPath(sysPath=[mypath.path])
-        subpath = mypath.child("abcd")
+        subpath = mypath.child(b"abcd")
         subpath.createDirectory()
-        subpath.child("__init__.py").setContent(b'del __path__\n')
+        subpath.child(b"__init__.py").setContent(b'del __path__\n')
         sys.path.append(mypath.path)
         __import__("abcd")
         try:
@@ -324,15 +323,16 @@ class PathModificationTest(TwistedModulesTestCase):
 
     def setUp(self):
         self.pathExtensionName = self.mktemp()
-        self.pathExtension = FilePath(self.pathExtensionName)
+        self.pathExtension = FilePath(self.pathExtensionName.encode('utf-8'))
         self.pathExtension.createDirectory()
         self.packageName = "pyspacetests%d" % (next(self._serialnum),)
-        self.packagePath = self.pathExtension.child(self.packageName)
+        self.packagePath = self.pathExtension.child(
+            self.packageName.encode('utf-8'))
         self.packagePath.createDirectory()
-        self.packagePath.child("__init__.py").setContent(b"")
-        self.packagePath.child("a.py").setContent(b"")
-        self.packagePath.child("b.py").setContent(b"")
-        self.packagePath.child("c__init__.py").setContent(b"")
+        self.packagePath.child(b"__init__.py").setContent(b"")
+        self.packagePath.child(b"a.py").setContent(b"")
+        self.packagePath.child(b"b.py").setContent(b"")
+        self.packagePath.child(b"c__init__.py").setContent(b"")
         self.pathSetUp = False
 
 
@@ -344,11 +344,11 @@ class PathModificationTest(TwistedModulesTestCase):
 
     def _underUnderPathTest(self, doImport=True):
         moddir2 = self.mktemp()
-        fpmd = FilePath(moddir2)
+        fpmd = FilePath(moddir2.encode('utf-8'))
         fpmd.createDirectory()
-        fpmd.child("foozle.py").setContent(b"x = 123\n")
+        fpmd.child(b"foozle.py").setContent(b"x = 123\n")
         content = "__path__.append(%r)\n" % (moddir2,)
-        self.packagePath.child("__init__.py").setContent(
+        self.packagePath.child(b"__init__.py").setContent(
             content.encode('utf-8'))
         # Cut here
         self._setupSysPath()

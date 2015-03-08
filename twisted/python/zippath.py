@@ -25,6 +25,7 @@ else:
     _USE_ZIPFILE = False
     from twisted.python.zipstream import ChunkingZipFile
 
+from twisted.python.compat import nativeString
 from twisted.python.filepath import IFilePath, FilePath, AbstractFilePath
 
 from zope.interface import implementer
@@ -53,11 +54,11 @@ class ZipPath(AbstractFilePath):
         @param pathInArchive: a ZIP_PATH_SEP-separated string.
         """
         self.archive = archive
-        self.pathInArchive = pathInArchive
+        self.pathInArchive = nativeString(pathInArchive)
         # self.path pretends to be os-specific because that's the way the
         # 'zipimport' module does it.
         self.path = os.path.join(archive.zipfile.filename,
-                                 *(self.pathInArchive.split(ZIP_PATH_SEP)))
+                                 *(self.pathInArchive.split(ZIP_PATH_SEP))).encode('utf-8')
 
 
     def __eq__(self, other):
@@ -133,7 +134,9 @@ class ZipPath(AbstractFilePath):
             it) as this means it may include special names with special
             meaning outside of the context of a zip archive.
         """
-        return ZipPath(self.archive, ZIP_PATH_SEP.join([self.pathInArchive, path]))
+        child_path = ZIP_PATH_SEP.join([
+            self.pathInArchive, nativeString(path)])
+        return ZipPath(self.archive, child_path)
 
 
     def sibling(self, path):
@@ -174,7 +177,7 @@ class ZipPath(AbstractFilePath):
 
 
     def basename(self):
-        return self.pathInArchive.split(ZIP_PATH_SEP)[-1]
+        return self.pathInArchive.split(ZIP_PATH_SEP)[-1].encode('utf-8')
 
     def dirname(self):
         # XXX NOTE: This API isn't a very good idea on filepath, but it's even
@@ -245,7 +248,7 @@ class ZipArchive(ZipPath):
         @param archivePathname: a str, naming a path in the filesystem.
         """
         if _USE_ZIPFILE:
-            self.zipfile = ZipFile(archivePathname)
+            self.zipfile = ZipFile(nativeString(archivePathname))
         else:
             self.zipfile = ChunkingZipFile(archivePathname)
         self.path = archivePathname
@@ -302,7 +305,8 @@ class ZipArchive(ZipPath):
 
 
     def __repr__(self):
-        return 'ZipArchive(%r)' % (os.path.abspath(self.path),)
+        return 'ZipArchive(%r)' % (os.path.abspath(
+            nativeString(self.path)),)
 
 
 __all__ = ['ZipArchive', 'ZipPath']

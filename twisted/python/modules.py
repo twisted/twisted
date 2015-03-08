@@ -64,6 +64,7 @@ import inspect
 import warnings
 from zope.interface import Interface, implementer
 
+from twisted.python.compat import nativeString
 from twisted.python.components import registerAdapter
 from twisted.python.filepath import FilePath, UnlistableError
 from twisted.python.zippath import ZipArchive
@@ -95,7 +96,7 @@ def _isPythonIdentifier(string):
 def _isPackagePath(fpath):
     # Determine if a FilePath-like object is a Python package.  TODO: deal with
     # __init__module.(so|dll|pyd)?
-    extless = fpath.splitext()[0]
+    extless = fpath.splitext()[0].decode('utf-8')
     basend = splitpath(extless)[1]
     return basend == "__init__"
 
@@ -132,8 +133,12 @@ class _ModuleIteratorHelper:
                 continue
 
             for potentialTopLevel in children:
-                ext = potentialTopLevel.splitext()[1]
-                potentialBasename = potentialTopLevel.basename()[:-len(ext)]
+                try:
+                    ext = potentialTopLevel.splitext()[1].decode('utf-8')
+                except:
+                    import pdb; import sys; sys.stdout = sys.__stdout__; pdb.set_trace()
+                potentialBasename = potentialTopLevel.basename().decode('utf-8')
+                potentialBasename = potentialBasename[:-len(ext)]
                 if ext in PYTHON_EXTENSIONS:
                     # TODO: this should be a little choosier about which path entry
                     # it selects first, and it should do all the .so checking and
@@ -156,7 +161,8 @@ class _ModuleIteratorHelper:
                         continue
                     modname = self._subModuleName(potentialTopLevel.basename())
                     for ext in PYTHON_EXTENSIONS:
-                        initpy = potentialTopLevel.child("__init__"+ext)
+                        child_name = "__init__" + ext
+                        initpy = potentialTopLevel.child(child_name.encode('utf-8'))
                         if initpy.exists() and modname not in yielded:
                             yielded[modname] = True
                             pm = PythonModule(modname, initpy, self._getEntry())
@@ -181,7 +187,7 @@ class _ModuleIteratorHelper:
         This is a hook to provide packages with the ability to specify their names
         as a prefix to submodules here.
         """
-        return mn
+        return nativeString(mn)
 
     def _packagePaths(self):
         """
@@ -309,7 +315,10 @@ class PythonModule(_ModuleIteratorHelper):
         @param filePath: see ivar
         @param pathEntry: see ivar
         """
-        assert not name.endswith(".__init__")
+        try:
+            assert not name.endswith(".__init__")
+        except:
+            import pdb; import sys; sys.stdout = sys.__stdout__; pdb.set_trace()
         self.name = name
         self.filePath = filePath
         self.parentPath = filePath.parent()
@@ -410,7 +419,7 @@ class PythonModule(_ModuleIteratorHelper):
         """
         submodules of this module are prefixed with our name.
         """
-        return self.name + '.' + mn
+        return self.name + '.' +  nativeString(mn)
 
     def _packagePaths(self):
         """
@@ -481,7 +490,7 @@ class IPathImportMapper(Interface):
 class _DefaultMapImpl:
     """ Wrapper for the default importer, i.e. None.  """
     def mapPath(self, fsPathString):
-        return FilePath(fsPathString)
+        return FilePath(fsPathString.encode('utf-8'))
 _theDefaultMapper = _DefaultMapImpl()
 
 
@@ -500,9 +509,9 @@ class _ZipMapImpl:
 
         @return: a L{zippath.ZipPath} or L{zippath.ZipArchive} instance.
         """
-        za = ZipArchive(self.importer.archive)
-        myPath = FilePath(self.importer.archive)
-        itsPath = FilePath(fsPathString)
+        za = ZipArchive(self.importer.archive.encode('utf-8'))
+        myPath = FilePath(self.importer.archive.encode('utf-8'))
+        itsPath = FilePath(fsPathString.encode('utf-8'))
         if myPath == itsPath:
             return za
         # This is NOT a general-purpose rule for sys.path or __file__:
@@ -621,7 +630,7 @@ class PythonPath:
         while '.' in topPackageObj.__name__:
             topPackageObj = self.moduleDict['.'.join(
                     topPackageObj.__name__.split('.')[:-1])]
-        if _isPackagePath(FilePath(topPackageObj.__file__)):
+        if _isPackagePath(FilePath(topPackageObj.__file__.encode('utf-8'))):
             # if package 'foo' is on sys.path at /a/b/foo, package 'foo's
             # __file__ will be /a/b/foo/__init__.py, and we are looking for
             # /a/b here, the path-entry; so go up two steps.
@@ -671,6 +680,7 @@ class PythonPath:
         @return: a generator yielding PathEntry objects
         """
         for pathName in self.sysPath:
+            pathName = nativeString(pathName)
             fp = self._smartPath(pathName)
             yield PathEntry(fp, self)
 
