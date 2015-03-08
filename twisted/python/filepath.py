@@ -283,6 +283,10 @@ class AbstractFilePath(object):
     L{IFilePath} implementations, just a useful starting point.
     """
 
+    @property
+    def _sepString(self):
+        return nativeString(self.sep)
+
     def getContent(self):
         """
         Retrieve the file-like object for this file path.
@@ -648,7 +652,7 @@ class FilePath(AbstractFilePath):
     _statinfo = None
     path = None
 
-    sep = nativeString(slash)
+    sep = slash.encode("ascii")
 
 
     def __init__(self, path, alwaysCreate=False):
@@ -656,7 +660,7 @@ class FilePath(AbstractFilePath):
         Convert a path string to an absolute path if necessary and initialize
         the L{FilePath} with the result.
         """
-        self.path = abspath(nativeString(path))
+        self.path = abspath(path)
         self.alwaysCreate = alwaysCreate
 
 
@@ -689,9 +693,9 @@ class FilePath(AbstractFilePath):
         if platform.isWindows() and path.count(b":"):
             # Catch paths like C:blah that don't have a slash
             raise InsecurePath("%r contains a colon." % (path,))
-        norm = normpath(nativeString(path))
+        norm = normpath(path)
 
-        if self.sep in norm:
+        if norm.find(self.sep) != -1:
             raise InsecurePath("%r contains one or more directory separators" %
                                (path,))
         newpath = abspath(joinpath(self.path, norm))
@@ -1429,9 +1433,9 @@ class FilePath(AbstractFilePath):
         @rtype: L{FilePath}
         """
         sib = self.sibling(
-            nativeString(_secureEnoughString()) +
+            _secureEnoughString() +
             self.basename() +
-            nativeString(extension),
+            extension,
             )
         sib.requireCreate()
         return sib
