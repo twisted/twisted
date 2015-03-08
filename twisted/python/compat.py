@@ -426,20 +426,6 @@ except ImportError:
     FileType = IOBase
 
 
-try:
-    _advanceIterator = next
-except NameError:
-    def _advanceIterator(it):
-        """
-        Implementation for Python 2 of next as a function.
-
-        @param it: Iterator to advance.
-        @type  it: C{iterator}
-        """
-        return it.next()
-next = _advanceIterator
-
-
 __all__ = [
     "reraise",
     "execfile",
@@ -451,7 +437,6 @@ __all__ = [
     "nativeString",
     "NativeStringIO",
     "networkString",
-    "next",
     "unicode",
     "iterbytes",
     "intToBytes",

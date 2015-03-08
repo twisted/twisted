@@ -283,10 +283,6 @@ class AbstractFilePath(object):
     L{IFilePath} implementations, just a useful starting point.
     """
 
-    @property
-    def _sepString(self):
-        return nativeString(self.sep)
-
     def getContent(self):
         """
         Retrieve the file-like object for this file path.
@@ -695,7 +691,7 @@ class FilePath(AbstractFilePath):
             raise InsecurePath("%r contains a colon." % (path,))
         norm = normpath(path)
 
-        if norm.find(self.sep) != -1:
+        if self.sep in norm:
             raise InsecurePath("%r contains one or more directory separators" %
                                (path,))
         newpath = abspath(joinpath(self.path, norm))
@@ -1432,11 +1428,7 @@ class FilePath(AbstractFilePath):
             set to True.
         @rtype: L{FilePath}
         """
-        sib = self.sibling(
-            _secureEnoughString() +
-            self.basename() +
-            extension,
-            )
+        sib = self.sibling(_secureEnoughString() + self.basename() + extension)
         sib.requireCreate()
         return sib
 
