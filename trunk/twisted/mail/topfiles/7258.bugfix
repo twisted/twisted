@@ -1,0 +1,1 @@
+twisted.mail.smtp.ESMTPClient now does not fall back to plain SMTP if authentication or TLS is required and not able to occur.

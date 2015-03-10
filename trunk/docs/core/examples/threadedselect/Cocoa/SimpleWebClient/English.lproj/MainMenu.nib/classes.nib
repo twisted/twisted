@@ -1,0 +1,13 @@
+{
+    IBClasses = (
+        {CLASS = FirstResponder; LANGUAGE = ObjC; SUPERCLASS = NSObject; }, 
+        {
+            ACTIONS = {doTwistzillaFetch = id; }; 
+            CLASS = MyAppDelegate; 
+            LANGUAGE = ObjC; 
+            OUTLETS = {messageTextField = id; progressIndicator = id; resultTextField = id; }; 
+            SUPERCLASS = NSObject; 
+        }
+    ); 
+    IBVersion = 1; 
+}

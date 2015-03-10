@@ -1,0 +1,184 @@
+#!/usr/bin/python
+# Requires CVS Slides
+
+from slides import Lecture, Slide, TitleSlide, Image, Bullet, PRE, URL, SubBullet, NumSlide, toHTML
+
+PERL_PROCESSOR = """\
+from twisted.web import static, twcgi
+
+class PerlScript(twcgi.FilteredScript):
+    filter = '/usr/bin/perl' # Points to the perl parser
+"""
+
+RPY_EXAMPLE = """\
+from twisted.web import resource
+
+class MyGreatResource(resource.Resource):
+    def render(self, request):
+        return "<html>foo</html>"
+
+resource = MyGreatResource()
+"""
+
+lecture = Lecture(
+    "A Twisted Web Tutorial",
+
+    TitleSlide("Twisted Web -- A tutorial",
+          Image("twistedlogo.png"),
+    ),
+
+    Slide("Twisted Web -- Where does it fit?",
+          Image("twisted-overview.png"),
+    ),
+    
+    Slide("Setup and Configuration Utilities",
+          Bullet("mktap"),
+          Bullet("twistd"),
+          Bullet("websetroot"),
+    ),
+
+    Slide("mktap",
+          Bullet("TAP Model"),
+          Bullet("General usage"),
+          Bullet("Flexibility and Power"),
+    ),
+
+    Slide("mktap web : Common Useful Options",
+          Bullet("--path"),
+          Bullet("--port"),
+          Bullet("--user"),
+          Bullet("--logfile"),
+          Bullet("--processor"),
+    ),
+
+    Slide("Sample mktap command lines",
+          Bullet(PRE("mktap web")),
+          Bullet(PRE("mktap web --path=/var/www --logfile=/var/log/twistedweb.log")),
+          Bullet(PRE("mktap web --port=80 --path=/var/www --user --mime-type=text/plain")),
+          Bullet(PRE("mktap web --path=/home/nafai/public_html --processor=.pl=PerlProcessor.PerlProcessor --index=index.pl")),
+    ),
+
+    Slide("twistd : An overview",
+          Bullet("Start a Twisted Application"),
+          Bullet("Loads and instance of twisted.internet.app.Application from a file"),
+          Bullet("Daemonizes, binds to appropriate ports, and starts the Twisted mainloop"),
+    ),
+
+    Slide("Sample twistd command lines",
+          Bullet(PRE("twistd -f web.tap -l /var/log/twisted.log")),
+          Bullet(PRE("twistd -f web.tap --pidfile /var/run/web.pid")),
+    ),
+
+    Slide("Shutting down twistd",
+          Bullet("On Unix (in general): "),
+          SubBullet(
+                    Bullet(PRE("kill -9 `cat twistd.pid`"))),
+          Bullet("On Windows: "),
+          SubBullet(
+                    Bullet("Cannot daemonize on Windows, so just run twistd in a command prompt"),
+                    Bullet("Switch to the command prompt, and press Control-C"),
+          ),
+    ),
+
+    Slide("Shutdown TAPs",
+          Bullet("Since TAPs store persistent data for an application,\
+          a 'shutdown' TAP is created on twistd shutdown"),
+          Bullet("You'll often want to start your Twisted application\
+          on subsequent runs with the shutdown TAP"),
+    ),
+
+    Slide("twistd and security",
+          Bullet("When twistd is run as root, it will shed root privileges\
+                  for the uid and gid of either the user that created the TAP or those\
+                  specified on the mktap commandline."),
+    ),
+    
+    # Try this out!
+    Slide("websetroot",
+          Bullet("Used to change what the root of the server points to"),
+          Bullet("Set it to a Resource contained either in a Python source file or a Pickle file"),
+    ),       
+
+    Slide("Sample websetroot command lines",
+          Bullet(PRE("websetroot -p 80 -f web.tap --script rootResource.py")),
+          Bullet(PRE("websetroot -p 8080 -f web.tap --pickle rootPickle")),
+    ),
+    
+    # Resource example
+    # Use the perl example from the docs
+    Slide("What's a Resource?",
+          Bullet("Everything in twisted in represented as twisted.web.resource.Resource object"),
+          Bullet("In general, two calls are made on a resource:"),
+          SubBullet(
+                    Bullet(PRE("getChild()")),
+                    Bullet(PRE("render()")),
+          ),
+    ),
+
+    Slide("Resource call examples:",
+          Bullet("/foo/bar/baz gets converted to:"
+          ),
+          SubBullet(
+                    Bullet(PRE("site.getChild('foo', request).getChild('bar', request).getChild('baz', request).render(request)")),
+          ),
+          Bullet("/foo/bar/baz/ gets converted to:"
+          ),
+          SubBullet(
+                    Bullet(PRE("site.getChild('foo', request).getChild('bar', request).getChild('baz', request).getChild('', request).render(request)")),
+          ),
+    ),
+
+    Slide("What do Resources handle?",
+           Bullet("Out of the box, Twisted supports files of all types"),
+           Bullet("HTML, text, etc."),
+           Bullet("Default MIME type can be specified"),
+    ),
+
+    Slide("What about web development?",
+           Bullet("Twisted Web has what are called processors, which are instances\
+           of classes inherited from resource.Resource"),
+           Bullet("By default, Twisted supports the following file types:"),
+           SubBullet(
+                     Bullet(".php"),
+                     Bullet(".php3"),
+                     Bullet(".cgi"),
+                     Bullet(".epy"),
+                     Bullet(".rpy"),
+                     Bullet(".trp"),
+           ),
+          Bullet("You can also write your own"),
+    ),
+
+    Slide("Custom Processor: More than One Evil Way to Do It",
+           Bullet("A custom processor to handle Perl CGIs:"),
+           PRE(PERL_PROCESSOR),
+           Bullet("An example of how to use:"),
+           SubBullet(Bullet(PRE("mktap web --path=/home/nafai/public_html --processor=.pl=PerlScript.PerlScript")),
+           ),
+    ),
+
+    Slide("What about making my own resources?",
+           Bullet("Define a class that inherits from resource.Resource"),
+           Bullet("Define the render() method on that class"),
+           Bullet("For long requests, render() can return NOT_DONE_YET"),
+           Bullet("Then Create a .rpy file that sets resource = to an instance of the class"),
+    ),
+
+    Slide(".rpy example",
+           PRE(RPY_EXAMPLE),
+    ),
+           
+   Slide("More Stuff",
+          Bullet("In other words, the slides I didn't get to write..."),
+          SubBullet(
+             Bullet("Distributed Servers"),
+             Bullet("Virtual Hosts"),
+             Bullet("Rewrite Rules"),
+             Bullet("Debian configuration"),
+             Bullet("twistedmatrix.com configuration"),
+          ),
+    ),
+)
+
+if __name__ == '__main__':
+    lecture.renderHTML(".", "tw_deploy-%02d.html", css="main.css")

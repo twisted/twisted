@@ -1,0 +1,495 @@
+<html><head><title>Twisted: A Tutorial</title></head><body>
+
+<h1>Twisted: A Tutorial</h1>
+
+<h2>Thanks</h2>
+
+<p>I am grateful to IBM for inviting me to talk here, and to Muli Ben-Yehuda for arranging everything.</p> 
+
+<h2>Administrative Notes</h2>
+
+<p>After reading Peter Norvig's infamous <q>The Gettysburg Powerpoint Presentation</q>, I was traumatized enough to forgoe the usual bullets and slides style, which originally was developed for physical slide projectors. Therefore, these notes are presented as one long HTML file, and I will use a new invention I call the <q>scrollbar</q> to show just one thing at a time. Enjoy living on the bleeding edge of presentation technology!</p>
+
+<h2>What Is Twisted?</h2>
+
+<p>Twisted is an <em>event-based networkings framework for Python</em>. It includes not only the basics of networking but also high-level protocol implementations, scheduling and more. It uses Python's high-level nature to enable few dependencies between different parts of the code. Twisted allows you to write network applications, clients and servers, without using threads and without running into icky concurrency issues.</p>
+
+<blockquote>
+A computer is a state machine.
+Threads are for people who can't program state machines. 
+</blockquote>
+
+<p>Alan Cox in a discussion about the threads and the Linux scheduler</p>
+<p>http://www.bitmover.com/lm/quotes.html</p>
+
+<h2>An Extremely Short Introduction to Python</h2>
+
+<p>Python is a high-level dyanmically strongly typed language. All values are references to objects, and all arguments passed are objects references. Assignment changes the reference a variable points to, not the reference itself. Data types include integers (machine sized and big nums) like <code>1</code> and <code>1L</code>, strings and unicode strings like <code>"moshe"</code> and <code>u"\u05DE\u05E9\u05D4 -- moshe"</code>, lists (variably typed arrays, really) like <code>[1,2,3, "lalala", 10L, [1,2]]</code>, tuples (immutable arrays) like <code>("1", 2, 3)</code>, dictionaries <code>{"moshe": "person", "table": "thing"}</code> and user-defined objects.</p>
+
+<p>Every Python object has a type, which is itself a Python object. Some types aare defined in native C code (such as the types above) and some are defined in Python using the class keyword.</p>
+
+<p>Structure is indicated through indentation.</p>
+
+<p>Functions are defined using</p>
+
+<pre class="py-listing">
+def function(param1, param2, optionalParam="default value", *restParams,
+             **keywordParams):
+    pass
+</pre>
+
+<p>And are called using <code>function("value for param1", param2=42,
+optionalParam=[1,2], "these", "params", "will", "be", "restParams",
+keyword="arguments", arePut="in dictionary keywordParams")</code>.</p>
+
+<p>Functions can be defined inside classes:</p>
+
+<pre class="py-listing">
+class Example:
+    # constructor
+    def __init__(self, a=1):
+        self.b = a
+    def echo(self):
+        print self.b
+e = Example(5)
+e.echo()
+</pre>
+
+<p>All methods magically receive the self argument, but must treat it
+explicitly.</p>
+
+<p>Functions defined inside functions enjoy lexical scoping. All variables
+are outer-scope unless they are assigned to in which case they are inner-most
+scope.</p>
+
+<h2>How To Use Twisted</h2>
+
+<p>Those of you used to other event-based frameworks (notably, GUIs) will recognize the familiar pattern -- you call the framework's <code>mainloop</code> function, and it calls registered event handlers. Event handlers must finish quickly, to enable the framework to call other handlers without forcing the client (be it a GUI user or a network client) to wait. Twisted uses the <code>reactor</code> module for the main interaction with the network, and the main loop function is called <code>reactor.run</code>. The following code is the basic skeleton of a Twisted application.</p>
+
+<pre class="py-listing">
+from twisted.internet import reactor
+reactor.run()
+</pre>
+
+<p>This runs the reactor. This takes no CPU on UNIX-like systems, and little CPU on Windows (some APIs must be busy-polled), runs forever and does not quit unless delivered a signal.</p>
+
+<h2>How To Use Twisted to Do Nothing</h2>
+
+<p>Our first task using Twisted is to build a server to the well-known <q>finger</q> protocol -- or rather a simpler variant of it. The first step is accepting, and hanging, connections. This example will run forever, and will allow clients to connect to port 1079. It will promptly ignore everything they have to say...</p>
+
+
+<pre class="py-listing">
+from twisted.internet import protocol, reactor
+class FingerProtocol(protocol.Protocol):
+    pass
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+reactor.listenTCP(1079, FingerFactory())
+reactor.run()
+</pre>
+
+<p>The protocol class is empty -- the default network event handlers simply throw away the events. Notice that the <code>protocol</code> attribute in <code>FingerFactory</code> is the <code>FingerProtocol</code> class itself, not an instance of it. Protocol logic properly belongs in the <code>Protocol</code> subclass, and the next few slides will show it developing.</p>
+
+
+<h2>How To Use Twisted to Do Nothing (But Work Hard)</h2>
+
+<p>The previous example used the fact that the default event handlers in the protocol exist and do nothing. The following example shows how to code the event handlers explicitly to do nothing. While being no more useful than the previous version, this shows the available events.</p>
+<pre class="py-listing">
+from twisted.internet import protocol, reactor
+class FingerProtocol(protocol.Protocol):
+    def connectionMade(self):
+        pass
+    def connectionLost(self):
+        pass
+    def dataReceived(self, data):
+        pass
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+reactor.listenTCP(1079, FingerFactory())
+reactor.run()
+</pre>
+
+<p>This example is much easier to work with for the copy'n'paste style of programming...it has everything a good network application has: a low-level protocol implementation, a high-level class to handle persistent configuration data (the factory) and enough glue code to connect it to the network.</p>
+
+<h2>How To Use Twisted to Be Rude</h2>
+
+<p>The simplest event to respond to is the connection event. It is the first event a connection receives. We will use this opportunity to slam the door shut -- anyone who connects to us will be disconnected immediately.</p>
+
+<pre class="py-listing">
+class FingerProtocol(protocol.Protocol):
+    def connectionMade(self):
+        self.transport.loseConnection()
+</pre>
+
+<p>The <code>transport</code> attribute is the protocol's link to the other side. It uses it to send data, to disconnect, to access meta-data about the connection and so on. Seperating the transport from the protocol enables easier work with other kinds of connections (unix domain sockets, SSL, files and even pre-written for strings, for testing purposes). It conforms to the <code>ITransport</code> interface, which is defined in <code>twisted.internet.interfaces</code>.</p>
+
+<h2>How To Use Twisted To Be Rude (In a Smart Way)</h2>
+
+<p>The previous version closed the connection as soon as the client connected, not even appearing as though it was a problem with the input. Since finger is a line-oriented protocol, if we read a line and then terminate the connection, the client will be forever sure it was his fault.</p>
+
+<pre class="py-listing">
+from twisted.protocols import basic
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.transport.loseConnection()
+</pre>
+
+<p>We now inherit from <code>LineReceiver</code>, and not directly from <code>Protocol</code>. <code>LineReceiver</code> allows us to respond to network data line-by-line rather than as they come from the TCP driver. We finish reading the line, and only then we disconnect the client. Important note for people used to various <code>fgets</code>, <code>fin.readline()</code> or Perl's <code>&lt;&gt;</code> operator: the line does <em>not</em> end in a newline, and so an empty line is <em>not</em> an indicator of end-of-file, but rather an indication of an empty line. End-of-file, in network context, is known as <q>closed connection</q> and is signaled by another event altogether (namely, <code>connectionLost</code>.</p>
+
+<h2>How To Use Twisted to Output Errors</h2>
+
+<p>The limit case of a useful finger server is a one with no users. This server will always reply that such a user does not exist. It can be installed while a system is upgraded or the old finger server has a security hole.</p>
+
+<pre class="py-listing">
+from twisted.protocols import basic
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.transport.write("No such user\r\n")
+        self.transport.loseConnection()
+</pre>
+
+<p>Notice how we did not have to explicitly flush, or worry about the write being successful. Twisted will not close the socket until it has written all data to it, and will buffer it internally. While there are ways for interacting with the buffering mechanism (for example, when sending large amounts of data), for simple protocols this proves to be convenient.</p>
+
+<h2>How to Use Twisted to Do Useful Things</h2>
+
+<p>Note how we remarked earlier that <em>protocol logic</em> belongs in the
+protocol class. This is necessary and sufficient -- we do not want non-protocol
+logic in the protocol class. User management is clearly not part of the protocol logic, and so should not be in the protocol. This is exactly why we have the factory in the first place. The factory allows us to delegate non-protocol logic
+to a seperate class. It is often not completely trivial what does and does not belong in the factory, of course.</p>
+
+<pre class="py-listing">
+from twisted.protocols import basic
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        self.transport.write(self.factory.getUser(user)+"\r\n")
+        self.transport.loseConnection()
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+    def getUser(self, user):
+        return "No such user"
+</pre>
+
+<p>Notice how we did not change the observable behaviour, but we did make the factory know about which users exist and do not exist. With this kind of setup, we will not need to modify our protocol class when we change user management schemes...hopefully.</p>
+
+<h2>Using Twisted to Do Useful Things (For Real)</h2>
+
+<p>The last heading did not live up to its name -- the server kept spouting off that it did not know who we are talking about, they never lived here and could we please go away. It did, however, prepare the way for doing actually useful things which we do here.</p>
+
+<pre class="py-listing">
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+    def __init__(self, **kwargs):
+        self.users = kwargs
+    def getUser(self, user):
+        return self.users.get(user, "No such user")
+reactor.listenTCP(1079, FingerFactory(moshez='Happy and well'))
+</pre>
+
+<p>This server actually has valid use cases. With such code, we could easily disseminate office/phone/real name information across an organization, if people had finger clients.</p>
+
+<h2>Using Twisted to Do Useful Things, Correctly</h2>
+
+<p>The version above works just fine. However, the interface between the protocol class and its factory is synchronous. This might be a problem. After all, <code>lineReceived</code> is an event, and should be handled quickly. If the user's status needs to be fetched by a slow process, this is impossible to achieve using the current interface. Following our method earlier, we modify this API glitch without changing anything in the outward-facing behaviour.</p>
+
+
+<pre class="py-listing">
+from twisted.internet import defer
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        d = defer.maybeDeferred(self.factory.getUser, user)
+        def e(_):
+            return "Internal error in server"
+        d.addErrback(e)
+        def _(m):
+            self.transport.write(m+"\r\n")
+            self.transport.loseConnection()
+        d.addCallback(_)
+</pre>
+
+<p>The value of using <code>maybeDeferred</code> is that it seamlessly
+works with the old factory too. If we would allow changing the factory,
+we could make the code a little cleaner, as the following example shows.</p> 
+
+<pre class="py-listing">
+from twisted.internet import defer
+class FingerProtocol(basic.LineReceiver):
+    def lineReceived(self, user):
+        d = self.factory.getUser( user)
+        def e(_):
+            return "Internal error in server"
+        d.addErrback(e)
+        def _(m):
+            self.transport.write(m+"\r\n")
+            self.transport.loseConnection()
+        d.addCallback(_)
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+    def __init__(self, **kwargs):
+        self.users = kwargs
+    def getUser(self, user):
+        return defer.succeed(self.users.get(user, "No such user"))
+</pre>
+
+<p>Note how this example had to change the factory too. <code>defer.succeed</code> is a way to returning a deferred results which is already triggered successfully. It is useful in exactly these kinds of cases: an API had to be asynchronous to support other use-cases, but in a simple enough use-case, the result is availble immediately.</p>
+
+<p>Deferreds are abstractions of callbacks. In this instance, the deferred
+had a value immediately, so the callback was called as soon as it was
+added. We will soon show an example where it will not be available immediately.
+The errback is called if there are problems, and is equivalent to exception handling. If it returns a value, the exception is considered handled, and further callbacks will be called with its return value.</p>
+
+<h2>Using Twisted to Do The Standard Thing</h2>
+
+<p>The standard finger daemon is equivalent to running the <code>finger</code>
+command on the remote machine. Twisted can treat processes as event sources too, and enables high-level abstractions to allow us to get process output easily.</p>
+
+<pre class="py-listing">
+from twisted.internet import utils
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+    def getUser(self, user):
+        return utils.getProcessOutput("finger", [user])
+</pre>
+
+<p>The real value of using deferreds in Twisted is shown here in full. Because there is a standard way to abstract callbacks, especially a way that does not require sending down the call-sequence a callback, all functions in Twisted itself whose result might take a long time return a deferred. This enables us in many cases to return the value that a function returns, without caring that it is deferred at all.</p>
+
+<p>If the command exits with an error code, or sends data to stderr, the
+errback will be triggered and the user will be faced with a half-way useful
+error message. Since we did not whitewash the argument at all, it is quite
+likely that this contains a security hole. This is, of course, another
+standard feature of finger daemons...</p>
+
+<p>However, it is easy to whitewash the output. Suppose, for example, we do not want the explicit name <q>Microsoft</q> in the output, because of the risk of offending religious feelings. It is easy to change the deferred into one which is completely safe.</p>
+
+<pre class="py-listing">
+from twisted.internet import utils
+class FingerFactory(protocol.ServerFactory):
+    protocol = FingerProtocol
+    def getUser(self, user):
+        d = utils.getProcessOutput("finger", [user])
+        def _(s):
+            return s.replace('Microsoft', 'It which cannot be named')
+        d.addCallback(_)
+        return d
+</pre>
+
+<p>The good news is that the protocol class will need to change no more,
+up until the end of the talk. That class abstracts the protocol well
+enough that we only have to modify factories when we need to support
+other user-management schemes.</p>
+
+<h2>Use The Correct Port</h2>
+
+<p>So far we used port 1097, because with UNIX low ports can only be bound by root. Certainly we do not want to run the whole finger server as root. The usual solution would be to use privilege shedding: something like <code>reactor.listenTCP</code>, followed by appropriate <code>os.setuid</code> and then <code>reactor.run</code>. This kind of code, however, brings the option of making subtle bugs in the exact place they are most harmful. Fortunately, Twisted can help us do privilege shedding in an easy, portable and safe manner.</p>
+
+<p>For that, we will not write <code>.py</code> main programs which run the application. Rather, we will write <code>.tac</code> (Twisted Application Configuration) files which contain the configuration. While Twisted supports several configuration formats, the easiest one to edit by hand, and the most popular one is...Python. A <code>.tac</code> is just a plain Python file which defines a variable named <code>application</code>. That variable should subscribe to various interfaces, and the usual way is to instantiate <code>twisted.service.Application</code>. Note that unlike many popular frameworks, in Twisted it is not recommended to <em>inherit</em> from <code>Application</code>.</p>
+
+<pre class="py-listing">
+from twisted.application import service
+application = service.Application('finger', uid=1, gid=1)
+factory = FingerFactory(moshez='Happy and well')
+internet.TCPServer(79, factory).setServiceParent(application)
+</pre>
+
+<p>This is a minimalist <code>.tac</code> file. The application class itelf is resopnsible for the uid/gid, and various services we configure as its children are responsible for specific tasks. The service tree really is a tree, by the way...</p>
+
+<h2>Running TAC Files</h2>
+
+<p>TAC files are run with <code>twistd</code> (TWISTed Daemonizer). It supports various options, but the usual testing way is:</p>
+
+<pre class="shell">
+root% twistd -noy finger.tac
+</pre>
+
+<p>With long options:</p>
+
+<pre class="shell">
+root% twistd --nodaemon --no_save --python finger.tac
+</pre>
+
+<p>Stopping <code>twistd</code> from daemonizing is convenient because then it is possible to kill it with CTRL-C. Stopping it from saving program state is good because recovering from saved states is uncommon and problematic and it leaves too many <code>-shutdown.tap</code> files around. <code>--python finger.tac</code> lets <code>twistd</code> know what type of configuration to read from which file. Other options include <code>--file .tap</code> (a pickle), <code>--xml .tax</code> (an XML configuration format) and <code>--source .tas</code> (a specialized Python-source format which is more regular, more verbose and hard to edit).</p>
+
+<h2>Integrating Several Services</h2>
+
+<p>Before we can integrate several services, we need to write another service. The service we will implement here will allow users to change their status on the finger server. We will not implement any access control. First, the protocol class:</p>
+
+<pre class="py-listing">
+class FingerSetterProtocol(basic.LineReceiver):
+    def connectionMade(self):
+        self.lines = []
+    def lineReceived(self, line):
+        self.lines.append(line)
+    def connectionLost(self, reason):
+        self.factory.setUser(self.line[0], self.line[1])
+</pre>
+
+<p>And then, the factory:</p>
+
+<pre class="py-listing">
+class FingerSetterFactory(protocol.ServerFactory):
+    protocol = FingerSetterProtocol
+    def __init__(self, fingerFactory):
+        self.fingerFactory = fingerFactory
+    def setUser(self, user, status):
+        self.fingerFactory.users[user] = status
+</pre>
+
+<p>And finally, the <code>.tac</code>:</p>
+
+<pre class="py-listing">
+ff = FingerFactory(moshez="Happy and well")
+fsf = FingerSetterFactory(ff)
+application = service.Application('finger', uid=1, gid=1)
+internet.TCPServer(79,ff).setServiceParent(application)
+internet.TCPServer(1079,fsf,interface='127.0.0.1').setServiceParent(application)
+</pre>
+
+<p>Now users can use programs like <code>telnet</code> or <code>nc</code> to change their status, or maybe even write specialized programs to set their options:</p>
+
+<pre class="py-listing">
+import socket
+s = socket.socket()
+s.connect(('localhost', 1097))
+s.send('%s\r\n%s\r\n' % (sys.argv[1], sys.argv[2]))
+</pre>
+
+<p>(Later, we will learn on how to write network clients with Twisted, which fix the bugs in this example.)</p>
+
+<p>Note how, as a naive version of access control, we bound the setter service to the local machine, not to the default interface (<code>0.0.0.0</code). Thus, only users with shell access to the machine will be able to change settings. It is possible to do more access control, such as listening on UNIX domain sockets and accessing various unportable APIs to query users. There will be no examples of such techniques in this talk, however.</p>
+
+<h2>Integrating Several Services: The Smart Way</h2>
+
+<p>The last example exposed a historical asymmetry. Because the finger setter was developed later, it poked into the finger factory in an unseemly manner. Note that now, we will only be changing factories and configuration -- the protocol classes, apparently, are perfect.</p>
+
+<pre class="py-listing">
+class FingerService(service.Service):
+    def __init__(self, **kwargs):
+        self.users = kwargs
+    def getUser(self, user):
+        return defer.succeed(self.users.get(user, "No such user"))
+    def getFingerFactory(self):
+        f = protocol.ServerFactory()
+        f.protocol, f.getUser = FingerProtocol, self.getUser
+        return f
+    def getFingerSetterFactory(self):
+        f = protocol.ServerFactory()
+        f.protocol, f.setUser = FingerSetterProtocol, self.users.__setitem__
+        return f
+application = service.Application('finger', uid=1, gid=1)
+f = FingerService(moshez='Happy and well')
+ff = f.getFingerFactory()
+fsf = f.getFingerSetterFactory()
+internet.TCPServer(79,ff).setServiceParent(application)
+internet.TCPServer(1079,fsf).setServiceParent(application)
+</pre>
+
+<p>Note how it is perfectly fine to use <code>ServerFactory</code> rather than subclassing it, as long as we explicitly set the <code>protocol</code> attribute -- and anything that the protocols use. This is common in the case where the factory only glues together the protocol and the configuration, rather than actually serving as the repository for the configuration information.</p>
+
+<h2>Periodic Tasks</h2>
+
+<p>In this example, we periodicially read a global configuration file to decide which users do what. First, the code.</p>
+
+<pre class="py-listing">
+class FingerService(service.Service):
+    def __init__(self, filename):
+        self.filename = filename
+        self.update()
+    def update(self):
+        self.users = {}
+        for line in file(self.filename):
+            user, status = line[:-1].split(':', 1)
+            self.users[user] = status
+    def getUser(self, user):
+        return defer.succeed(self.users.get(user, "No such user"))
+    def getFingerFactory(self):
+        f = protocol.ServerFactory()
+        f.protocol, f.getUser = FingerProtocol, self.getUser
+        return f
+</pre>
+
+<p>The TAC file:</p>
+
+<pre class="py-listing">
+application = service.Application('finger', uid=1, gid=1)
+finger = FingerService('/etc/users')
+server = internet.TCPServer(79, f.getFingerFactory())
+periodic = internet.TimerService(30, f.update)
+finger.setServiceParent(application)
+server.setServiceParent(application)
+periodic.setServiceParent(application)
+</pre>
+
+<p>Note how the actual periodic refreshing is a feature of the configuration, not the code. This is useful in the case we want to have other timers control refreshing, or perhaps even only refresh explicitly as depending on user action (another protocol, perhaps?).</p>
+
+<h2>Writing Clients: A Finger Proxy</h2>
+
+<p>It could be the case that our finger server needs to query another finger server, perhaps because of strange network configuration or maybe we just want to mask some users. Here is an example for a finger client, and a use case as a finger proxy. Note that in this example, we do not need custom services and so we do not develop them.</p>
+
+<pre class="py-listing">
+from twisted.internet import protocol, defer, reactor
+class FingerClient(protocol.Protocol):
+    buffer = ''
+    def connectionMade(self):
+        self.transport.write(self.factory.user+'\r\n')
+    def dataReceived(self, data):
+        self.buffer += data
+    def connectionLost(self, reason):
+        self.factory.gotResult(self.buffer)
+
+class FingerClientFactory(protocol.ClientFactory):
+    protocol = FingerClient
+    def __init__(self, user):
+        self.user = user 
+        self.result = defer.Deferred()
+    def gotResult(self, result):
+        self.result.callback(result)
+    def clientConnectionFailed(self, _, reason):
+        self.result.errback(reason)
+
+def query(host, port, user):
+    f = FingerClientFactory(user)
+    reactor.connectTCP(host, port, f)
+    return f.result
+
+class FingerProxyServer(protocol.ServerFactory):
+    protocol = FingerProtocol
+    def __init__(self, host, port=79):
+        self.host, self.port = host, port
+    def getUser(self, user):
+        return query(self.host, self.port, user)
+</pre>
+
+<p>With a TAC that looks like:</p>
+
+<pre class="py-listing">
+application = service.Application('finger', uid=1, gid=1)
+server = internet.TCPServer(79, FingerProxyFactory('internal.ibm.com'))
+server.setServiceParent(application)
+</pre>
+
+<h2>What I Did Not Cover</h2>
+
+<p>Twisted is large. Really large. Really really large. I could not hope to cover it all in thrice the time. What didn't I cover?</p>
+
+<ul>
+<li>Integration with GUI toolkits.</li>
+<li>Nevow, a web-framework.</li>
+<li>Twisted's internal remote call protocol, Perspective Broker.</li>
+<li>Trial, a unit testing framework optimized for testing Twisted-based
+    code.</li>
+<li>cred, the user management framework.</li>
+<li>Advanced deferred usage.</li>
+<li>Threads abstraction.</li>
+<li>Consumers/providers</li>
+</ul>
+
+<p>There is good documentation on the Twisted website, among which the tutorial which was based on an old HAIFUX talk and was, in turn, the basis for this talk, and specific HOWTOs for doing many useful and fun things.</p>
+
+<h2>Notes on Non-Blocking</h2>
+
+<p>In UNIX non-blocking has a very specific meaning -- some operations might block, others won't. Unfortunately, this meaning is almost completely useless in real life. Reading from a socket connected to a responsive server on a UNIX domain socket is blocking, while reading a megabyte string from a busy hard-drive is not. A more useful meaning for actual decisions while writing non-blocking code is <q>takes more than 0.05 seconds on my target platform</q>. With this kind of handlers, typical network usage will allow for the magical <q>one million hits a day</q> website, or a GUI application which appears to a human being as infinitely responsive. Various techniques, not limited but including threads, can be used to modify code to be responsive at those levels.</li>
+
+<h2>Conclusion</h2>
+
+<p>Twisted supports high-level abstractions for almost all levels of writing network code. Moreover, when using Twisted correctly it is possible to add more absractions, so that actual network applications do not have to fiddle with low-level protocol details. Developing network applications using Twisted and Python can lead to quick prototypes which can then be either optimized or rewritten on other platforms -- and often can just serve as-is.</p>
+
+</body></html>

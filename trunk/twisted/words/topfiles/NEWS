@@ -1,0 +1,461 @@
+Ticket numbers in this file can be looked up by visiting
+http://twistedmatrix.com/trac/ticket/<number>
+
+Twisted Words 15.0.0 (2015-01-24)
+=================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #6994, #7163, #7622
+
+
+Twisted Words 14.0.2 (2014-09-18)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Words 14.0.1 (2014-09-17)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Words 14.0.0 (2014-05-08)
+=================================
+
+Bugfixes
+--------
+ - twisted.words.protocols.jabber.sasl_mechansisms.DigestMD5 now works
+   with unicode arguments. (#5066)
+
+Other
+-----
+ - #6696
+
+
+Twisted Words 13.2.0 (2013-10-29)
+=================================
+
+Bugfixes
+--------
+ - twisted.words.service.IRCUser now properly reports an error, in
+   response to NICK commands with non-UTF8 and non-ASCII symbols.
+   (#5780)
+
+Other
+-----
+ - #5329, #5387, #6544
+
+
+Twisted Words 13.1.0 (2013-06-23)
+=================================
+
+Features
+--------
+ - twisted.words.protocols.irc.assembleFormattedText flattens a
+   formatting structure into mIRC-formatted markup; conversely
+   twisted.words.protocols.irc.stripFormatting removes all mIRC
+   formatting from text. (#3844)
+
+Deprecations and Removals
+-------------------------
+ - The `crippled` attribute in
+   twisted.words.protocols.jabber.xmpp_stringprep is deprecated now.
+   (#5386)
+
+Other
+-----
+ - #6315, #6342, #6392, #6402, #6479, #6481, #6482
+
+
+Twisted Words 13.0.0 (2013-03-19)
+=================================
+
+Bugfixes
+--------
+ - twisted.words.im.ircsupport no longer logs a failure whenever
+   receiving ISUPPORT messages from an IRC server. (#6263)
+
+Other
+-----
+ - #6297
+
+
+Twisted Words 12.3.0 (2012-12-20)
+=================================
+
+Improved Documentation
+----------------------
+ - The Twisted Words code examples now documents inside each example
+   description on how to run it. (#5589)
+
+
+Twisted Words 12.2.0 (2012-08-26)
+=================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #5752, #5753
+
+
+Twisted Words 12.1.0 (2012-06-02)
+=================================
+
+Bugfixes
+--------
+ - twisted.words.protocols.irc.DccChatFactory.buildProtocol now
+   returns the protocol object that it creates (#3179)
+ - twisted.words.im no longer offers an empty threat of a rewrite on
+   import. (#5598)
+
+Other
+-----
+ - #5555, #5595
+
+
+Twisted Words 12.0.0 (2012-02-10)
+=================================
+
+Improved Documentation
+----------------------
+ - twisted.words.im.basechat now has improved API documentation.
+   (#2458)
+
+Other
+-----
+ - #5401
+
+
+Twisted Words 11.1.0 (2011-11-15)
+=================================
+
+Features
+--------
+ - twisted.words.protocols.irc.IRCClient now uses a PING heartbeat as
+   a keepalive to avoid losing an IRC connection without being aware
+   of it. (#5047)
+
+Bugfixes
+--------
+ - twisted.words.protocols.irc.IRCClient now replies only once to
+   known CTCP queries per message and not at all to unknown CTCP
+   queries. (#5029)
+ - IRCClient.msg now determines a safe maximum command length,
+   drastically reducing the chance of relayed text being truncated on
+   the server side. (#5176)
+
+Deprecations and Removals
+-------------------------
+ - twisted.words.protocols.irc.IRCClient.me was deprecated in Twisted
+   9.0 and has been removed. Use IRCClient.describe instead. (#5059)
+
+Other
+-----
+ - #5025, #5330
+
+
+Twisted Words 11.0.0 (2011-04-01)
+=================================
+
+Features
+--------
+ - twisted.words.protocols.irc.IRCClient now has an invite method.
+   (#4820)
+
+Bugfixes
+--------
+ - twisted.words.protocols.irc.IRCClient.say is once again able to
+   send messages when using the default value for the length limit
+   argument. (#4758)
+ - twisted.words.protocols.jabber.jstrports is once again able to
+   parse jstrport description strings. (#4771)
+ - twisted.words.protocols.msn.NotificationClient now calls the
+   loginFailure callback when it is unable to connect to the Passport
+   server due to missing SSL dependencies. (#4801)
+ - twisted.words.protocols.jabber.xmpp_stringprep now always uses
+   Unicode version 3.2 for stringprep normalization. (#4850)
+
+Improved Documentation
+----------------------
+ - Removed the non-working AIM bot example, depending on the obsolete
+   twisted.words.protocols.toc functionality. (#4007)
+ - Outdated GUI-related information was removed from the IM howto.
+   (#4054)
+
+Deprecations and Removals
+-------------------------
+ - Remove twisted.words.protocols.toc, that was largely non-working
+   and useless since AOL disabled TOC on their AIM network. (#4363)
+
+Other
+-----
+ - #4733, #4902
+
+
+Twisted Words 10.2.0 (2010-11-29)
+=================================
+
+Features
+--------
+ - twisted.words.protocols.irc.IRCClient.msg now enforces a maximum
+   length for messages, splitting up messages that are too long.
+   (#4416)
+
+Bugfixes
+--------
+ - twisted.words.protocols.irc.IRCClient no longer invokes privmsg()
+   in the default noticed() implementation. (#4419)
+ - twisted.words.im.ircsupport.IRCProto now sends the correct name in
+   the USER command. (#4641)
+
+Deprecations and Removals
+-------------------------
+ - Remove twisted.words.im.proxyui and twisted.words.im.tap. (#1823)
+
+
+Twisted Words 10.1.0 (2010-06-27)
+=================================
+
+Bugfixes
+--------
+ - twisted.words.im.basechat.ChatUI now has a functional
+   contactChangedNick with unit tests. (#229)
+ - twisted.words.protocols.jabber.error.StanzaError now correctly sets
+   a default error type and code for the remote-server-timeout
+   condition (#4311)
+ - twisted.words.protocols.jabber.xmlstream.ListenAuthenticator now
+   uses unicode objects for session identifiers (#4345)
+
+
+Twisted Words 10.0.0 (2010-03-01)
+=================================
+
+Features
+--------
+ - twisted.words.protocols.irc.IRCClient.irc_MODE now takes ISUPPORT
+   parameters into account when parsing mode messages with arguments
+   that take parameters (#3296)
+
+Bugfixes
+--------
+ - When twisted.words.protocols.irc.IRCClient's versionNum and
+   versionEnv attributes are set to None, they will no longer be
+   included in the client's response to CTCP VERSION queries. (#3660)
+
+ - twisted.words.protocols.jabber.xmlstream.hashPassword now only
+   accepts unicode as input (#3741, #3742, #3847)
+
+Other
+-----
+ - #2503, #4066, #4261
+
+
+Twisted Words 9.0.0 (2009-11-24)
+================================
+
+Features
+--------
+ - IRCClient.describe is a new method meant to replace IRCClient.me to send
+   CTCP ACTION messages with less confusing behavior (#3910)
+ - The XMPP client protocol implementation now supports ANONYMOUS SASL
+   authentication (#4067)
+ - The IRC client protocol implementation now has better support for the
+   ISUPPORT server->client message, storing the data in a new
+   ServerSupportedFeatures object accessible via IRCClient.supported (#3285)
+
+Fixes
+-----
+ - The twisted.words IRC server now always sends an MOTD, which at least makes
+   Pidgin able to successfully connect to a twisted.words IRC server (#2385)
+ - The IRC client will now dispatch "RPL MOTD" messages received before a
+   "RPL MOTD START" instead of raising an exception (#3676)
+ - The IRC client protocol implementation no longer updates its 'nickname'
+   attribute directly; instead, that attribute will be updated when the server
+   acknowledges the change (#3377)
+ - The IRC client protocol implementation now supports falling back to another
+   nickname when a nick change request fails (#3377, #4010)
+
+Deprecations and Removals
+-------------------------
+ - The TOC protocol implementation is now deprecated, since the protocol itself
+   has been deprecated and obselete for quite a long time (#3580)
+ - The gui "im" application has been removed, since it relied on GTK1, which is
+   hard to find these days (#3699, #3340)
+
+Other
+-----
+ - #2763, #3540, #3647, #3750, #3895, #3968, #4050
+
+Words 8.2.0 (2008-12-16)
+========================
+
+Feature
+-------
+ - There is now a standalone XMPP router included in twisted.words: it can be
+   used with the 'twistd xmpp-router' command line (#3407)
+ - A server factory for Jabber XML Streams has been added (#3435)
+ - Domish now allows for iterating child elements with specific qualified names
+   (#2429)
+ - IRCClient now has a 'back' method which removes the away status (#3366)
+ - IRCClient now has a 'whois' method (#3133)
+
+Fixes
+-----
+ - The IRC Client implementation can now deal with compound mode changes (#3230)
+ - The MSN protocol implementation no longer requires the CVR0 protocol to
+   be included in the VER command (#3394)
+ - In the IRC server implementation, topic messages will no longer be sent for
+   a group which has no topic (#2204)
+ - An infinite loop (which caused infinite memory usage) in irc.split has been
+   fixed.  This was triggered any time a message that starts with a delimiter
+   was sent (#3446)
+ - Jabber's toResponse now generates a valid stanza even when stanzaType is not
+   specified (#3467)
+ - The lifetime of authenticator instances in XmlStreamServerFactory is no
+   longer artificially extended (#3464)
+
+Other
+-----
+ - #3365
+
+
+8.1.0 (2008-05-18)
+==================
+
+Features
+--------
+ - JID objects now have a nice __repr__ (#3156)
+ - Extending XMPP protocols is now easier (#2178)
+
+Fixes
+-----
+ - The deprecated mktap API is no longer used (#3127)
+ - A bug whereby one-time XMPP observers would be enabled permanently was fixed
+   (#3066)
+
+
+8.0.0 (2008-03-17)
+==================
+
+Features
+--------
+ - Provide function for creating XMPP response stanzas. (#2614, #2614)
+ - Log exceptions raised in Xish observers. (#2616)
+ - Add 'and' and 'or' operators for Xish XPath expressions. (#2502)
+ - Make JIDs hashable. (#2770)
+
+Fixes
+-----
+ - Respect the hostname and servername parameters to IRCClient.register. (#1649)
+ - Make EventDispatcher remove empty callback lists. (#1652)
+ - Use legacy base64 API to support Python 2.3 (#2461)
+ - Fix support of DIGEST-MD5 challenge parsing with multi-valued directives.
+   (#2606)
+ - Fix reuse of dict of prefixes in domish.Element.toXml (#2609)
+ - Properly process XMPP stream headers (#2615)
+ - Use proper namespace for XMPP stream errors. (#2630)
+ - Properly parse XMPP stream errors. (#2771)
+ - Fix toResponse for XMPP stanzas without an id attribute. (#2773)
+ - Move XMPP stream header procesing to authenticators. (#2772)
+
+Misc
+----
+ - #2617, #2640, #2741, #2063, #2570, #2847
+
+
+0.5.0 (2007-01-06)
+==================
+
+Features
+--------
+ - (Jabber) IQ.send now optionally has a 'timeout' parameter which
+   specifies a time at which to errback the Deferred with a
+   TimeoutError (#2218)
+ - (Jabber) SASL authentication, resource binding and session
+   establishment were added. (#1046) The following were done in
+   support of this change:
+   - Rework ConnectAuthenticator to work with initializer objects that
+     provide a stream initialization step.
+   - Reimplement iq:auth as an initializer.
+   - Reimplement TLS negotiation as an initializer.
+   - Add XMPPAuthenticator as a XMPP 1.0 client authenticator (only), along
+     with XMPPClientFactory.
+   - Add support for working with pre-XMPP-1.0 error stanzas.
+   - Remove hasFeature() from XmlStream as you can test (uri, name) in
+     xs.features.
+   - Add sendFooter() and sendStreamError() to XmlStream
+
+Fixes
+-----
+ - (Jabber) Deferreds from queries which were never resolved before
+   a lost connection are now errbacked (#2006)
+ - (Jabber) servers which didn't send a 'realm' directive in
+   authentication challenges no longer cause the Jabber client to
+   choke (#2098)
+ - (MSN) error responses are now properly turned into errbacks (#2019)
+ - (IRC) A trivial bug in IRCClient which would cause whois(oper=True)
+   to always raise an exception was fixed (#2089)
+ - (IM) Bugs in the error handling and already-connecting cases of
+   AbstractAccount.logOn were fixed (#2086)
+
+Misc
+----
+ - #1734, #1735, #1636, #1936, #1883, #1995, #2171, #2165, #2177
+
+
+0.4.0 (2006-05-21)
+==================
+
+Features
+--------
+ - Jabber:
+   - Add support for stream and stanza level errors
+   - Create new IQ stanza helper that works with deferreds
+   - Add TLS support for initiating entities to XmlStream
+   - Fix account registration
+ - Xish:
+   - Fix various namespace issues
+   - Add IElement
+   - Store namespace declarations in parsed XML for later serialization
+ - Fix user name/group collision in server service (#1655).
+ - Correctly recognize MSN capability messages (#861).
+
+Fixes
+-----
+ - Misc: #1283, #1296, #1302, #1424
+ - Fix unicode/str confusion in IRC server service.
+
+
+0.3.0:
+ - Jabber:
+
+   - Fix digest authentication in Jabber
+   - Add Jabber xmlstream module that contains the Jabber specific bits that
+     got factored out of Twisted Xish's xmlstream, and make it suitable for
+     implementing full XMPP support.
+ - Xish:
+   - Fixed serialization in _ListSerializer
+   - Removed unneeded extra whitespace generated in serialization
+   - Removed _Serializer in favour of _ListSerializer
+   - Use unicode objects for representing serialized XML, instead of utf-8
+     encoded str objects.
+   - Properly catch XML parser errors
+   - Rework and fix element stream test cases
+   - Strip xmlstream from all Jabber specifics that moved to Twisted Words
+   - Added exhaustive docstrings to xmlstream.
+ - Words Service:
+   - Complete rewrite
+   - Not backwards compatible
+
+0.1.0:
+ - Fix some miscellaneous bugs in OSCAR
+ - Add QUIT notification for IRC
+ - Fix message wrapping
+ - Misc Jabber fixes
+ - Add stringprep support for Jabber IDs
+   This only works properly on 2.3.2 or higher

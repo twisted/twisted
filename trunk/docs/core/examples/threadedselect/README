@@ -1,0 +1,15 @@
+The examples in this directory import a private module from the
+twisted.internet package.  The _threadedselect module provides an object
+which is similar to a Twisted reactor in many ways, but which is not
+actually intended to be used in the same way as a Twisted reactor (it has a
+method named interleave which is intended to be the main entrypoint).  This
+functionality should be considered highly experimental and the API subject
+to change at any time.
+
+Possibly the best way to make use of this functionality is to use it to
+implement an object which actually presents the Twisted reactor interface
+(specifically, an object with a run method).  That object can then be used
+by application-code in the usual way.
+
+Another course of action is to avoid _threadedselect entirely until the
+issues surrounding it have been resolved.

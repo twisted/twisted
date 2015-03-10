@@ -1,0 +1,390 @@
+Ticket numbers in this file can be looked up by visiting
+http://twistedmatrix.com/trac/ticket/<number>
+
+Twisted Names 15.0.0 (2015-01-24)
+=================================
+
+Bugfixes
+--------
+ - twisted.names.secondary.SecondaryAuthority can now answer queries
+   again (broken since 13.2.0). (#7408)
+
+Other
+-----
+ - #7352
+
+
+Twisted Names 14.0.2 (2014-09-18)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Names 14.0.1 (2014-09-17)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Names 14.0.0 (2014-05-08)
+=================================
+
+Features
+--------
+ - twisted.names.root.Resolver now accepts a resolverFactory argument,
+   which makes it possible to control how root.Resolver performs
+   iterative queries to authoritative nameservers. (#6095)
+ - twisted.names.dns.Message now has a repr method which shows only
+   those instance flags, fields and sections which are set to non-
+   default values. (#6847)
+ - twisted.names.dns.Message now support rich comparison. (#6848)
+
+Bugfixes
+--------
+ - twisted.names.server.DNSServerFactory now responds with messages
+   whose flags and fields are reset to their default values instead of
+   copying these from the request. This means that AD and CD flags,
+   and EDNS OPT records in the request are no longer mirrored back to
+   the client. (#6645)
+
+Improved Documentation
+----------------------
+ - twisted.names now has narrative documentation showing how to create
+   a custom DNS server. (#6864)
+ - twisted.names.server now has full API documentation. (#6886)
+ - twisted.names now has narrative documentation explaining how to use
+   its client APIs. (#6925)
+ - twisted.names now has narrative documentation and examples showing
+   how to perform reverse DNS lookups. (#6969)
+
+Other
+-----
+ - #5675, #6222, #6672, #6696, #6887, #6940, #6975, #6990
+
+
+Twisted Names 13.2.0 (2013-10-29)
+=================================
+
+Features
+--------
+ - twisted.names.authority.FileAuthority now considers any AAAA it
+   knows about for inclusion in the additional section of a response
+   (following the same logic previously used for including A records
+   there). (#6642)
+ - twisted.names.dns.Message now allows encoding and decoding of the
+   Authentic Data (AD) and Checking Disabled (CD) flags described in
+   RFC2535. (#6680)
+
+Bugfixes
+--------
+ - twisted.names.resolve.ResolverChain now returns a
+   twisted.names.error.DomainError failure if its resolvers list is
+   empty. (#5992)
+ - twisted.names.authority.FileAuthority now only returns
+   AuthoritativeDomainError (NXDOMAIN) for names which are subdomains.
+   (#6475)
+ - The Deferred returned by twisted.names.client.Resolver.queryTCP now
+   fires with an error if the TCP connection attempt fails. (#6658)
+
+Improved Documentation
+----------------------
+ - Use zope.interface.moduleProvides to allow pydoctor to properly
+   document the twisted.names.client.lookup* functions. (#6328)
+
+Other
+-----
+ - #5387, #5668, #6563, #6655
+
+
+Twisted Names 13.1.0 (2013-06-23)
+=================================
+
+No significant changes have been made for this release.
+
+Other
+-----
+ - #3908, #6381
+
+
+Twisted Names 13.0.0 (2013-03-19)
+=================================
+
+Features
+--------
+ - twisted.names.dns.Name and twisted.names.srvconnect.SRVConnector
+   now support unicode domain names, automatically converting using
+   the idna encoding. (#6245)
+
+Improved Documentation
+----------------------
+ - The API documentation for IResolver and its implementations has
+   been updated and consolidated in
+   twisted.internet.interfaces.IResolver. (#4685)
+
+Deprecations and Removals
+-------------------------
+ - The retry, Resolver.discoveredAuthority, lookupNameservers,
+   lookupAddress, extractAuthority, and discoverAuthority APIs in
+   twisted.names.root have been deprecated since 10.0 and have been
+   removed.  (#5564)
+
+Other
+-----
+ - #5596, #6246, #6297
+
+
+Twisted Names 12.3.0 (2012-12-20)
+=================================
+
+Deprecations and Removals
+-------------------------
+ - The `protocol` attribute of twisted.names.client.Resolver,
+   deprecated since Twisted 8.2, has been removed. (#6045)
+ - twisted.names.hosts.Resolver is no longer a
+   `twisted.persisted.styles.Versioned` subclass. (#6092)
+
+Other
+-----
+ - #5594, #6056, #6057, #6058, #6059, #6093
+
+
+Twisted Names 12.2.0 (2012-08-26)
+=================================
+
+Features
+--------
+ - twisted.names.srvconnect.SRVConnector now takes a default port to
+   use when SRV lookup fails. (#3456)
+
+Other
+-----
+ - #5647
+
+
+Twisted Names 12.1.0 (2012-06-02)
+=================================
+
+Features
+--------
+ - "twistd dns" secondary server functionality and
+   twisted.names.secondary now support retrieving zone information
+   from a master running on a non-standard DNS port. (#5468)
+
+Bugfixes
+--------
+ - twisted.names.dns.DNSProtocol instances no longer throw an
+   exception when disconnecting. (#5471)
+ - twisted.names.tap.makeService (thus also "twistd dns") now makes a
+   DNS server which gives precedence to the hosts file from its
+   configuration over the remote DNS servers from its configuration.
+   (#5524)
+ - twisted.name.cache.CacheResolver now makes sure TTLs on returned
+   results are never negative. (#5579)
+ - twisted.names.cache.CacheResolver entries added via the initializer
+   are now timed out correctly. (#5638)
+
+Improved Documentation
+----------------------
+ - The examples now contain instructions on how to run them and
+   descriptions in the examples index. (#5588)
+
+Deprecations and Removals
+-------------------------
+ - The deprecated twisted.names.dns.Record_mx.exchange attribute was
+   removed. (#4549)
+
+
+Twisted Names 12.0.0 (2012-02-10)
+=================================
+
+Bugfixes
+--------
+ - twisted.names.dns.Message now sets the `auth` flag on RRHeader
+   instances it creates to reflect the authority of the message
+   itself. (#5421)
+
+
+Twisted Names 11.1.0 (2011-11-15)
+=================================
+
+Features
+--------
+ - twisted.names.dns.Message now parses records of unknown type into
+   instances of a new `UnknownType` class. (#4603)
+
+Bugfixes
+--------
+ - twisted.names.dns.Name now detects loops in names it is decoding
+   and raises an exception.  Previously it would follow the loop
+   forever, allowing a remote denial of service attack against any
+   twisted.names client or server. (#5064)
+ - twisted.names.hosts.Resolver now supports IPv6 addresses; its
+   lookupAddress method now filters them out and its lookupIPV6Address
+   method is now implemented. (#5098)
+
+
+Twisted Names 11.0.0 (2011-04-01)
+=================================
+
+No significant changes have been made for this release.
+
+
+Twisted Names 10.2.0 (2010-11-29)
+=================================
+
+Features
+--------
+ - twisted.names.server can now serve SPF resource records using
+   twisted.names.dns.Record_SPF.  twisted.names.client can query for
+   them using lookupSenderPolicy.   (#3928)
+
+Bugfixes
+--------
+ - twisted.names.common.extractRecords doesn't try to close the
+   transport anymore in case of recursion, as it's done by the
+   Resolver itself now. (#3998)
+
+Improved Documentation
+----------------------
+ - Tidied up the Twisted Names documentation for easier conversion.
+   (#4573)
+
+
+Twisted Names 10.1.0 (2010-06-27)
+=================================
+
+Features
+--------
+ - twisted.names.dns.Message now uses a specially constructed
+   dictionary for looking up record types.  This yields a significant
+   performance improvement on PyPy. (#4283)
+
+
+Twisted Names 10.0.0 (2010-03-01)
+=================================
+
+Bugfixes
+--------
+ - twisted.names.root.Resolver no longer leaks UDP sockets while
+   resolving names. (#970)
+
+Deprecations and Removals
+-------------------------
+ - Several top-level functions in twisted.names.root are now
+   deprecated. (#970)
+
+Other
+-----
+ - #4066
+
+
+Twisted Names 9.0.0 (2009-11-24)
+================================
+
+Deprecations and Removals
+-------------------------
+ - client.ThreadedResolver is deprecated in favor of
+   twisted.internet.base.ThreadedResolver (#3710)
+
+Other
+-----
+ - #3540, #3560, #3712, #3750, #3990
+
+
+Names 8.2.0 (2008-12-16)
+========================
+
+Features
+--------
+ - The NAPTR record type is now supported (#2276)
+
+Fixes
+-----
+ - Make client.Resolver less vulnerable to the Birthday Paradox attack by
+   avoiding sending duplicate queries when it's not necessary (#3347)
+ - client.Resolver now uses a random source port for each DNS request (#3342)
+ - client.Resolver now uses a full 16 bits of randomness for message IDs,
+   instead of 10 which it previously used (#3342)
+ - All record types now have value-based equality and a string representation
+   (#2935)
+
+Other
+-----
+ - #1622, #3424
+
+
+8.1.0 (2008-05-18)
+==================
+
+Fixes
+-----
+ - The deprecated mktap API is no longer used (#3127)
+
+
+8.0.0 (2008-03-17)
+==================
+
+Fixes
+-----
+
+ - Refactor DNSDatagramProtocol and DNSProtocol to use same base class (#2414)
+ - Change Resolver to query specified nameservers in specified order, instead
+   of reverse order. (#2290)
+ - Make SRVConnector work with bad results and NXDOMAIN responses.
+   (#1908, #2777)
+ - Handle write errors happening in dns queries, to have correct deferred
+   failures. (#2492)
+ - Fix the value of OP_NOTIFY and add a definition for OP_UPDATE. (#2945)
+
+Misc
+----
+ - #2685, #2936, #2581, #2847
+
+
+0.4.0 (2007-01-06)
+==================
+
+Features
+--------
+
+ - In the twisted.names client, DNS responses which represent errors
+   are now translated to informative exception objects, rather than
+   empty lists. This means that client requests which fail will now
+   errback their Deferreds (#2248)
+
+Fixes
+-----
+ - A major DoS vulnerability in the UDP DNS server was fixed (#1708)
+
+Misc
+----
+ - #1799, #1636, #2149, #2181
+
+
+0.3.0 (2006-05-21)
+==================
+
+Features
+--------
+ - Some docstring improvements
+
+Fixes
+-----
+ - Fix a problem where the response for the first query with a
+   newly-created Resolver object would be dropped.(#1447)
+ - Misc: #1581, #1583
+
+
+0.2.0
+=====
+ - Fix occassional TCP connection leak in gethostbyname()
+ - Fix TCP connection leak in recursive lookups
+ - Remove deprecated use of Deferred.setTimeout
+ - Improved test coverage for zone transfers
+
+0.1.0
+=====
+ - Fix TCP connection leak in zone transfers
+ - Handle empty or missing resolv.conf as if 127.0.0.1 was specified
+ - Don't use blocking kernel entropy sources
+ - Retry logic now properly tries all specified servers.
