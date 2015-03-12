@@ -6,7 +6,6 @@ Tests for L{twisted.internet.iocpreactor}.
 """
 
 import errno
-import time
 from array import array
 from struct import pack
 from socket import AF_INET6, AF_INET, SOCK_STREAM, SOL_SOCKET, error, socket
@@ -61,15 +60,15 @@ class SupportTests(unittest.TestCase):
         server = socket(family, SOCK_STREAM)
         self.addCleanup(server.close)
         buff = array('c', '\0' * 256)
-        self.assertEqual(
-            0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
 
-        time.sleep(0.1)
         for _ in range(2):
             # Calling setsockopt after _iocp.accept might fail for both IPv4
             # and IPV6 with [Errno 10057] A request to send or receive ...
             # so we retry once.
             try:
+                self.assertEqual(
+                    0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
+
                 server.setsockopt(
                     SOL_SOCKET,
                     SO_UPDATE_ACCEPT_CONTEXT,
@@ -77,11 +76,6 @@ class SupportTests(unittest.TestCase):
                 break
             except error as socketError:
                 if socketError.errno == 10057:
-                    # Ignore expected error and retry, after a sleep
-                    # which should allow other threads to execute.
-                    # 0.0001 is not enough.
-                    time.sleep(0.01)
-                    pass
                 else:
                     # Not the excepted error so we raise the error without
                     # retying.
