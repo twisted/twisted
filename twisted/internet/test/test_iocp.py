@@ -116,7 +116,9 @@ class SupportTests(unittest.TestCase):
           - the third element is the same type giving the host address of the
             connection
         """
-        self._acceptAddressTest(AF_INET6, '::1')
+        for _ in range(1000):
+            # Run test a lot of times to see it fails
+            self._acceptAddressTest(AF_INET6, '::1')
     if ipv6Skip is not None:
         test_ipv6AcceptAddress.skip = ipv6Skip
 
