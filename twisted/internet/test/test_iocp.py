@@ -67,7 +67,6 @@ class SupportTests(unittest.TestCase):
         for _ in range(2):
             # Calling setsockopt after _iocp.accept might fail for both IPv4
             # and IPV6 with [Errno 10057] A request to send or receive ...
-            # so we retry twice as retrying once is not enough.
             try:
                 server.setsockopt(
                     SOL_SOCKET,
@@ -118,7 +117,7 @@ class SupportTests(unittest.TestCase):
           - the third element is the same type giving the host address of the
             connection
         """
-        for _ in range(1000):
+        for _ in range(10000):
             # Run test a lot of times to see it fails
             self._acceptAddressTest(AF_INET6, '::1')
     if ipv6Skip is not None:
