@@ -78,7 +78,7 @@ class SupportTests(unittest.TestCase):
                 if socketError.errno == 10057:
                     # Without a sleep here even retrying 20 times will fail.
                     # This should allow other threads to execute.
-                    time.sleep(1)
+                    time.sleep(0.01)
                     pass
                 else:
                     # Not the excepted error so we raise the error without
