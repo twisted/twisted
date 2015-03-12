@@ -127,7 +127,7 @@ class SupportTests(unittest.TestCase):
             except:
                 failures += 1
         if failures:
-            raise ('%s failures' % (failures,))
+            raise AssertionError('%s failures' % (failures,))
 
     if ipv6Skip is not None:
         test_ipv6AcceptAddress.skip = ipv6Skip
