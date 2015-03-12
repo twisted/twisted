@@ -6,6 +6,7 @@ Tests for L{twisted.internet.iocpreactor}.
 """
 
 import errno
+import time
 from array import array
 from struct import pack
 from socket import AF_INET6, AF_INET, SOCK_STREAM, SOL_SOCKET, error, socket
@@ -75,9 +76,9 @@ class SupportTests(unittest.TestCase):
                 break
             except error as socketError:
                 if socketError.errno == 10057:
-                    # Ignore expected error and retry.
-                    import time
-                    time.sleep(0.001)
+                    # Ignore expected error and retry, after a sleep
+                    # which should allow other threads to execute.
+                    time.sleep(0.0001)
                     pass
                 else:
                     # Not the excepted error so we raise the error without
