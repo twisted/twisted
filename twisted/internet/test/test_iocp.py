@@ -118,10 +118,10 @@ class SupportTests(unittest.TestCase):
           - the third element is the same type giving the host address of the
             connection
         """
+        failures = 0
         for _ in range(10000):
             # Run test a lot of times to see it fails
             # and count the failures counter.
-            failures = 0
             try:
                 self._acceptAddressTest(AF_INET6, '::1')
             except:
