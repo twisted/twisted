@@ -74,7 +74,6 @@ class SupportTests(unittest.TestCase):
                     pack('P', server.fileno()))
                 break
             except error as socketError:
-                raise AssertionError(socketError.errno)
                 if socketError.errno == 10057:
                     # Ignore expected error and retry.
                     pass
