@@ -76,6 +76,8 @@ class SupportTests(unittest.TestCase):
             except error as socketError:
                 if socketError.errno == 10057:
                     # Ignore expected error and retry.
+                    import time
+                    time.sleep(0.001)
                     pass
                 else:
                     # Not the excepted error so we raise the error without
