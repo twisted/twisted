@@ -80,10 +80,10 @@ class SupportTests(unittest.TestCase):
                 else:
                     # Not the excepted error so we raise the error without
                     # retying.
-                    raise
+                    raise error
         else:
             # Second try also failed with the expected error.
-            raise
+            raise error
 
         self.assertEqual(
             (family, client.getpeername()[:2], client.getsockname()[:2]),
