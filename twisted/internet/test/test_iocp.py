@@ -63,7 +63,7 @@ class SupportTests(unittest.TestCase):
         self.assertEqual(
             0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
 
-        for _ in range(10):
+        for _ in range(20):
             # Calling setsockopt after _iocp.accept might fail for both IPv4
             # and IPV6 with [Errno 10057] A request to send or receive ...
             # so we retry once.
@@ -76,7 +76,7 @@ class SupportTests(unittest.TestCase):
             except error as socketError:
                 if socketError.errno == 10057:
                     # Ignore expected error and retry.
-                    raise error
+                    pass
                 else:
                     # Not the excepted error so we raise the error without
                     # retying.
