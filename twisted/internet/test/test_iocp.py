@@ -64,7 +64,7 @@ class SupportTests(unittest.TestCase):
         self.assertEqual(
             0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
 
-        for _ in range(1):
+        for _ in range(2):
             # Calling setsockopt after _iocp.accept might fail for both IPv4
             # and IPV6 with [Errno 10057] A request to send or receive ...
             # so we retry twice as retrying once is not enough.
@@ -119,7 +119,7 @@ class SupportTests(unittest.TestCase):
             connection
         """
         failures = 0
-        for _ in range(10000):
+        for _ in range(1000):
             # Run test a lot of times to see it fails
             # and count the failures counter.
             try:
