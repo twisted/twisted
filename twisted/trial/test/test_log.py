@@ -10,8 +10,7 @@ import time
 
 from twisted.internet import reactor, task
 from twisted.python import failure, log
-from twisted.trial import _api, unittest, reporter
-from twisted.trial._synctest import _LogObserver
+from twisted.trial import unittest, reporter, _synctest
 
 
 def makeFailure():
@@ -65,12 +64,12 @@ class Mask(object):
 
 class TestObserver(unittest.SynchronousTestCase):
     """
-    Tests for L{_LogObserver}, a helper for the implementation of
+    Tests for L{_synctest._LogObserver}, a helper for the implementation of
     L{SynchronousTestCase.flushLoggedErrors}.
     """
     def setUp(self):
         self.result = reporter.TestResult()
-        self.observer = _LogObserver()
+        self.observer = _synctest._LogObserver()
 
 
     def test_msg(self):
@@ -207,8 +206,8 @@ class LogErrorsMixin(object):
         There are no extra log observers after a test runs.
         """
         # XXX trial is *all about* global log state.  It should really be fixed.
-        observer = _LogObserver()
-        self.patch(_api, '_logObserver', observer)
+        observer = _synctest._LogObserver()
+        self.patch(_synctest, '_logObserver', observer)
         observers = log.theLogPublisher.observers[:]
         test = self.MockTest()
         test(self.result)

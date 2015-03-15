@@ -29,13 +29,16 @@ import unittest as pyunit
 from twisted.python.compat import _PY3, NativeStringIO
 from twisted.python.reflect import namedAny
 from twisted.internet import defer, reactor
-from twisted.trial import _api, unittest, reporter, util
+from twisted.trial import unittest, reporter, util
 if not _PY3:
     from twisted.trial import runner
 from twisted.trial.test import erroneous
 from twisted.trial.test.test_suppression import SuppressionMixin
-from twisted.trial._asyncrunner import _clearSuite
-
+from twisted.trial._asyncrunner import (
+    _clearSuite,
+    _ForceGarbageCollectionDecorator,
+    _iterateTests,
+    )
 
 # Skip messages that are used in multiple places:
 _PY3PORTNEEDED = "Requires runner and/or reporter to be ported (#5964, #5965)"
@@ -788,7 +791,7 @@ class TestGarbageCollection(GCMixin, unittest.SynchronousTestCase):
         test gc.collect is called before and after each test.
         """
         test = TestGarbageCollection.BasicTest('test_foo')
-        test = _api._ForceGarbageCollectionDecorator(test)
+        test = _ForceGarbageCollectionDecorator(test)
         result = reporter.TestResult()
         test.run(result)
         self.assertEqual(
@@ -812,7 +815,7 @@ class TestUnhandledDeferred(unittest.SynchronousTestCase):
         from twisted.trial.test import weird
         # test_unhandledDeferred creates a cycle. we need explicit control of gc
         gc.disable()
-        self.test1 = _api._ForceGarbageCollectionDecorator(
+        self.test1 = _ForceGarbageCollectionDecorator(
             weird.TestBleeding('test_unhandledDeferred'))
 
     def test_isReported(self):
@@ -1300,7 +1303,7 @@ class IterateTestsMixin(object):
         test case.
         """
         test = self.TestCase()
-        self.assertEqual([test], list(_api._iterateTests(test)))
+        self.assertEqual([test], list(_iterateTests(test)))
 
 
     def test_iterateSingletonTestSuite(self):
@@ -1310,7 +1313,7 @@ class IterateTestsMixin(object):
         """
         test = self.TestCase()
         suite = runner.TestSuite([test])
-        self.assertEqual([test], list(_api._iterateTests(suite)))
+        self.assertEqual([test], list(_iterateTests(suite)))
 
 
     def test_iterateNestedTestSuite(self):
@@ -1319,7 +1322,7 @@ class IterateTestsMixin(object):
         """
         test = self.TestCase()
         suite = runner.TestSuite([runner.TestSuite([test])])
-        self.assertEqual([test], list(_api._iterateTests(suite)))
+        self.assertEqual([test], list(_iterateTests(suite)))
 
 
     def test_iterateIsLeftToRightDepthFirst(self):
@@ -1328,7 +1331,7 @@ class IterateTestsMixin(object):
         """
         test = self.TestCase()
         suite = runner.TestSuite([runner.TestSuite([test]), self])
-        self.assertEqual([test, self], list(_api._iterateTests(suite)))
+        self.assertEqual([test, self], list(_iterateTests(suite)))
 
 
 class SynchronousIterateTestsTests(IterateTestsMixin, unittest.SynchronousTestCase):
