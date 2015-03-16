@@ -375,13 +375,8 @@ be run.
         ...
 
 
-
-
-
-.todo and Testing New Functionality
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
+Testing New Functionality
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Two good practices which arise from the "XP" development process are
 sometimes at odds with each other:
@@ -440,10 +435,6 @@ team.
 
 The life cycle of a test is thus:
 
-
-
-
-
 #. Test is created, marked ``.todo`` . Test fails: "expected failure" .
 #. Code is written, test starts to pass. "unexpected success" .
 #. ``.todo`` tag is removed. Test passes. "success" .
@@ -451,18 +442,11 @@ The life cycle of a test is thus:
    into action.
 #. Code is fixed, test passes once more. "success" .
 
+``.todo`` may be of use while you are developing a feature, but by the time you are ready to commit anything all the tests you have written should be passing.
+In other words **never** commit to trunk test marked as ``.todo``.
+For unfinished test you should create a follow up ticket and add the test to ticket's description.
 
-
-Any test which remains marked with ``.todo`` for too long should
-be examined. Either it represents functionality which nobody is working on,
-or the test is broken in some fashion and needs to be fixed.  Generally,``.todo`` may be of use while you are developing a feature, but
-by the time you are ready to commit anything, all the tests you have written
-should be passing.  In other words, you should rarely, if ever, feel the need
-to add a test marked todo to trunk.  When you do, consider whether a ticket
-in the issue tracker would be more useful.
-
-
-
+You can also ignore the ``.todo`` marker and just make sure you write test first to them failing before starting to work on the fix.
 
 
 Line Coverage Information
