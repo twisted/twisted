@@ -276,14 +276,8 @@ so they can be applied to all of the reactor implementations automatically.
 In no case should new unit tests use the global reactor.
 
 
-
-
-
-
-Skipping tests, TODO items
---------------------------
-
-
+Skipping Tests
+--------------
 
 Trial, the Twisted unit test framework, has some extensions which are
 designed to encourage developers to add new tests. One common situation is
@@ -376,7 +370,7 @@ be run.
 
 
 Testing New Functionality
-~~~~~~~~~~~~~~~~~~~~~~~~~
+-------------------------
 
 Two good practices which arise from the "XP" development process are
 sometimes at odds with each other:
@@ -450,9 +444,7 @@ You can also ignore the ``.todo`` marker and just make sure you write test first
 
 
 Line Coverage Information
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
+-------------------------
 
 Trial provides line coverage information, which is very useful to ensure
 old code has decent coverage. Passing the ``--coverage`` option to Trial will generate the coverage information in a file called ``coverage`` which can be found in the ``_trial_temp`` 
