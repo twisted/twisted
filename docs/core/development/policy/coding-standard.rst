@@ -593,7 +593,7 @@ docstring standard.
 
 `FIXME/TODO` comments must have an associated ticket and contain a reference to it in the form of a full URL to the ticket.
 A brief text should provide info about the why the FIXME was added.
-It does not has to be the full ticket description but just enough to help readers decide if their next step should be reading the ticket or continue reading the code.
+It does not have to be the full ticket description but just enough to help readers decide if their next step should be reading the ticket or continue reading the code.
 
 .. code-block:: python
 

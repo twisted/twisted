@@ -47,17 +47,18 @@ unnecessarily difficult, particularly for non-native speakers.
 
 When referring to a hypothetical person, (such as "a user of a website written with twisted.web"), gender neutral pronouns (they/their/them) should be used.
 
-For narrative documentation use semantic newlines.
-Make lines short, and break lines at natural places, such as after commas and semicolons, rather than after the 79th column.
+For reStructuredText documents which are handled by the Sphinx documentation generator make lines short, and break lines at natural places, such as after commas and semicolons, rather than after the 79th column.
+We call this *semantic newlines*.
+This rule **does not** apply to docstrings.
 
 ..  code-block:: text
     :linenos:
 
     Sometimes when editing a narrative documentation file, I wrap the lines semantically.
-    Instead of inserting a newline at 70 columns (or whatever),
+    Instead of inserting a newline at 79 columns (or whatever),
     or making paragraphs one long line,
     I put in newlines at a point that seems logical to me.
-    Modern code-oriented text editor are very good at wrapping and arranging long lines.
+    Modern code-oriented text editors are very good at wrapping and arranging long lines.
 
 
 Evangelism and usage documents
