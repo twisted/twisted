@@ -382,11 +382,11 @@ def Application(name, uid=None, gid=None):
     ret = components.Componentized()
     availableComponents = [MultiService(), Process(uid, gid)]
     if not _PY3:
-       # TODO https://twistedmatrix.com/trac/ticket/6910
-       # twisted.persisted is proposed for deprecation and is not yet ported to
-       # to Python3 so we only import it if some code really needs to use it
-       from twisted.persisted import sob
-       availableComponents.append(sob.Persistent(ret, name))
+        # TODO https://twistedmatrix.com/trac/ticket/6910
+        # twisted.persisted is proposed for deprecation and is not yet ported to
+        # to Python3 so we only import it if some code really needs to use it
+        from twisted.persisted import sob
+        availableComponents.append(sob.Persistent(ret, name))
 
     for comp in availableComponents:
         ret.addComponent(comp, ignoreClass=1)
