@@ -440,7 +440,7 @@ The life cycle of a test is thus:
 In other words **never** commit to trunk test marked as ``.todo``.
 For unfinished test you should create a follow up ticket and add the test to ticket's description.
 
-You can also ignore the ``.todo`` marker and just make sure you write test first to them failing before starting to work on the fix.
+You can also ignore the ``.todo`` marker and just make sure you write test first to see them failing before starting to work on the fix.
 
 
 Line Coverage Information
