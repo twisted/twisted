@@ -1,3 +1,4 @@
+# -*- test-case-name: twisted.application.test.test_service -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
