@@ -552,6 +552,8 @@ class Port(_SocketCloser, _LogOwner):
                     (errno.errorcode.get(rc, 'unknown error'), rc))
             return False
         else:
+            # Inherit properties from the listening port socket as documented.
+            # https://msdn.microsoft.com/en-us/library/ms737524(v=VS.85).aspx
             evt.newskt.setsockopt(
                 socket.SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
                 struct.pack('P', self.socket.fileno()))
