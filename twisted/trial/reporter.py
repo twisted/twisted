@@ -174,26 +174,6 @@ class TestResult(pyunit.TestResult, object):
         """
         self.successes += 1
 
-    def upDownError(self, method, error, warn, printStatus):
-        warnings.warn("upDownError is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=3)
-
-    def cleanupErrors(self, errs):
-        """Report an error that occurred during the cleanup between tests.
-        """
-        warnings.warn("Cleanup errors are actual errors. Use addError. "
-                      "Deprecated in Twisted 8.0",
-                      category=DeprecationWarning, stacklevel=2)
-
-    def startSuite(self, name):
-        warnings.warn("startSuite deprecated in Twisted 8.0",
-                      category=DeprecationWarning, stacklevel=2)
-
-    def endSuite(self, name):
-        warnings.warn("endSuite deprecated in Twisted 8.0",
-                      category=DeprecationWarning, stacklevel=2)
-
-
     def done(self):
         """
         The test suite has finished running.
@@ -382,20 +362,6 @@ class Reporter(TestResult):
                 self._stream.write('%s:%s: %s: %s\n' % key)
 
 
-    def stream(self):
-        warnings.warn("stream is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=2)
-        return self._stream
-    stream = property(stream)
-
-
-    def separator(self):
-        warnings.warn("separator is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=2)
-        return self._separator
-    separator = property(separator)
-
-
     def startTest(self, test):
         """
         Called when a test begins to run. Records the time when it was first
@@ -438,12 +404,6 @@ class Reporter(TestResult):
             self._write(self._formatFailureTraceback(error))
 
 
-    def write(self, format, *args):
-        warnings.warn("write is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=2)
-        self._write(format, *args)
-
-
     def _write(self, format, *args):
         """
         Safely write to the reporter's stream.
@@ -458,12 +418,6 @@ class Reporter(TestResult):
         else:
             self._stream.write(s)
         untilConcludes(self._stream.flush)
-
-
-    def writeln(self, format, *args):
-        warnings.warn("writeln is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=2)
-        self._writeln(format, *args)
 
 
     def _writeln(self, format, *args):
@@ -639,15 +593,6 @@ class Reporter(TestResult):
         return ret
 
 
-    def printErrors(self):
-        """
-        Print all of the non-success results in full to the stream.
-        """
-        warnings.warn("printErrors is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=2)
-        self._printErrors()
-
-
     def _printErrors(self):
         """
         Print all of the non-success results to the stream in full.
@@ -678,15 +623,6 @@ class Reporter(TestResult):
             summaries.append('successes=%d' % (self.successes,))
         summary = (summaries and ' (' + ', '.join(summaries) + ')') or ''
         return summary
-
-
-    def printSummary(self):
-        """
-        Print a line summarising the test results to the stream.
-        """
-        warnings.warn("printSummary is deprecated in Twisted 8.0.",
-                      category=DeprecationWarning, stacklevel=2)
-        self._printSummary()
 
 
     def _printSummary(self):
