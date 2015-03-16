@@ -37,13 +37,12 @@ def main():
         sys.path.insert(0, '.')
 
     from twisted.python.dist3 import modulesToInstall
-    from twisted.python.dist import STATIC_PACKAGE_METADATA, getAllScripts
+    from twisted.python.dist import STATIC_PACKAGE_METADATA
 
     args = STATIC_PACKAGE_METADATA.copy()
     args['install_requires'] = ["zope.interface >= 4.0.2"]
     args['py_modules'] = modulesToInstall
     args['cmdclass'] = {'sdist': DisabledSdist}
-    args['scripts'] = getAllScripts()
 
     setup(**args)
 
