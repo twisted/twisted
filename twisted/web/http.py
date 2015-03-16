@@ -817,9 +817,8 @@ class Request:
                         # content-disposition headers in multipart/form-data
                         # parts, so we catch the exception and tell the client
                         # it was a bad request.
-                        self.channel.transport.write(
-                                b"HTTP/1.1 400 Bad Request\r\n\r\n")
-                        self.channel.transport.loseConnection()
+                        _respondToBadRequestAndDisconnect(
+                            self.channel.transport)
                         return
                     raise
             self.content.seek(0, 0)
@@ -1588,12 +1587,26 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """
     A receiver for HTTP requests.
 
-    @ivar _transferDecoder: C{None} or an instance of
-        L{_ChunkedTransferDecoder} if the request body uses the I{chunked}
-        Transfer-Encoding.
+    @ivar MAX_LENGTH: Maximum length for initial request line and each line
+        from the header.
+
+    @ivar _transferDecoder: C{None} or a decoder instance if the request body
+        uses the I{chunked} Transfer-Encoding.
+    @type _transferDecoder: L{_ChunkedTransferDecoder}
+
+    @ivar maxHeaders: Maximum number of headers allowed per request.
+    @type maxHeaders: C{int}
+
+    @ivar totalHeadersSize: Maximum bytes for request line plus all headers
+        from the request.
+    @type totalHeadersSize: C{int}
+
+    @ivar _receivedHeaderSize: Bytes received so far for the header.
+    @type _receivedHeaderSize: C{int}
     """
 
-    maxHeaders = 500 # max number of headers allowed per request
+    maxHeaders = 500
+    totalHeadersSize = 16384
 
     length = 0
     persistent = 1
@@ -1606,6 +1619,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     _savedTimeOut = None
     _receivedHeaderCount = 0
+    _receivedHeaderSize = 0
 
     def __init__(self):
         # the request queue
@@ -1616,8 +1630,18 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     def connectionMade(self):
         self.setTimeout(self.timeOut)
 
+
     def lineReceived(self, line):
+        """
+        Called for each line from request until the end of headers when
+        it enters binary mode.
+        """
         self.resetTimeout()
+
+        self._receivedHeaderSize += len(line)
+        if (self._receivedHeaderSize > self.totalHeadersSize):
+            _respondToBadRequestAndDisconnect(self.transport)
+            return
 
         if self.__first_line:
             # if this connection is not persistent, drop any data which
@@ -1639,14 +1663,14 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self.__first_line = 0
             parts = line.split()
             if len(parts) != 3:
-                self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
-                self.transport.loseConnection()
+                _respondToBadRequestAndDisconnect(self.transport)
                 return
             command, request, version = parts
             self._command = command
             self._path = request
             self._version = version
         elif line == b'':
+            # End of headers.
             if self.__header:
                 self.headerReceived(self.__header)
             self.__header = ''
@@ -1656,7 +1680,11 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             else:
                 self.setRawMode()
         elif line[0] in b' \t':
+            # Continuation of a multi line header.
             self.__header = self.__header + '\n' + line
+        # Regular header line.
+        # Processing of header line is delayed to allow accumulating multi
+        # line headers.
         else:
             if self.__header:
                 self.headerReceived(self.__header)
@@ -1684,9 +1712,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             try:
                 self.length = int(data)
             except ValueError:
-                self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
+                _respondToBadRequestAndDisconnect(self.transport)
                 self.length = None
-                self.transport.loseConnection()
                 return
             self._transferDecoder = _IdentityTransferDecoder(
                 self.length, self.requests[-1].handleContentChunk, self._finishRequestBody)
@@ -1705,8 +1732,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         self._receivedHeaderCount += 1
         if self._receivedHeaderCount > self.maxHeaders:
-            self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
-            self.transport.loseConnection()
+            _respondToBadRequestAndDisconnect(self.transport)
+            return
 
 
     def allContentReceived(self):
@@ -1717,6 +1744,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         # reset ALL state variables, so we don't interfere with next request
         self.length = 0
         self._receivedHeaderCount = 0
+        self._receivedHeaderSize = 0
         self.__first_line = 1
         self._transferDecoder = None
         del self._command, self._path, self._version
@@ -1735,8 +1763,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         try:
             self._transferDecoder.dataReceived(data)
         except _MalformedChunkedDataError:
-            self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
-            self.transport.loseConnection()
+            _respondToBadRequestAndDisconnect(self.transport)
 
 
     def allHeadersReceived(self):
@@ -1821,6 +1848,22 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self.setTimeout(None)
         for request in self.requests:
             request.connectionLost(reason)
+
+
+
+def _respondToBadRequestAndDisconnect(transport):
+    """
+    This is a quick and dirty way of responding to bad requests.
+
+    As described by HTTP standard we should be patient and accept the
+    whole request from the client before sending a polite bad request
+    response, even in the case when clients send tons of data.
+
+    @param transport: Transport handling connection to the client.
+    @type transport: L{interfaces.ITransport}
+    """
+    transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
+    transport.loseConnection()
 
 
 
