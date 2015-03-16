@@ -692,7 +692,7 @@ class TrialRunner(object):
         self.rterrors = realTimeErrors
         self.uncleanWarnings = uncleanWarnings
         self._result = None
-        self.workingDirectory = workingDirectory or '_trial_temp'
+        self.workingDirectory = workingDirectory or b'_trial_temp'
         self._logFileObserver = None
         self._logFileObject = None
         self._forceGarbageCollection = forceGarbageCollection
@@ -714,7 +714,7 @@ class TrialRunner(object):
         if self.logfile == '-':
             logFile = sys.stdout
         else:
-            logFile = file(self.logfile, 'a')
+            logFile = open(self.logfile, 'a')
         self._logFileObject = logFile
         self._logFileObserver = log.FileLogObserver(logFile)
         log.startLoggingWithObserver(self._logFileObserver.emit, 0)
@@ -782,7 +782,7 @@ class TrialRunner(object):
         count = 0
         while True:
             count += 1
-            self.stream.write("Test Pass %d\n" % (count,))
+            self.stream.write(u"Test Pass {}\n".format(count).encode("utf8"))
             if count == 1:
                 result = self.run(test)
             else:

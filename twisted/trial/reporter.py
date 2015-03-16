@@ -19,6 +19,7 @@ import unittest as pyunit
 from zope.interface import implementer
 
 from twisted.python import reflect, log
+from twisted.python.compat import _PY3
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
@@ -453,10 +454,16 @@ class Reporter(TestResult):
         """
         s = str(format)
         assert isinstance(s, type(''))
+
         if args:
-            self._stream.write(s % args)
-        else:
-            self._stream.write(s)
+            s = s % args
+
+        if _PY3:
+            # On Python 3, we ACTUALLY want this to be bytes
+            s = bytes(format, "utf8")
+
+        self._stream.write(s)
+
         untilConcludes(self._stream.flush)
 
 

@@ -5,19 +5,26 @@
 # Author: Robert Collins
 
 
-import StringIO, os, pdb, sys
+import os, pdb, sys
+
+from io import BytesIO as StringIO
+
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
 from twisted.trial.itrial import IReporter, ITestCase
 from twisted.trial import unittest, runner, reporter, util
 from twisted.python import failure, log, reflect
+from twisted.python.compat import _PY3
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
-from twisted.scripts import trial
-from twisted.plugins import twisted_trial
 from twisted import plugin
 from twisted.internet import defer
+
+if not _PY3:
+    from twisted.scripts import trial
+    from twisted.plugins import twisted_trial
+
 
 
 pyunit = __import__('unittest')
@@ -160,7 +167,7 @@ class TestTrialRunner(TrialRunnerTestsMixin, unittest.SynchronousTestCase):
     into warnings disabled.
     """
     def setUp(self):
-        self.stream = StringIO.StringIO()
+        self.stream = StringIO()
         self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream)
         self.test = TestTrialRunner('test_empty')
 
@@ -183,7 +190,7 @@ class TrialRunnerWithUncleanWarningsReporter(TrialRunnerTestsMixin,
     """
 
     def setUp(self):
-        self.stream = StringIO.StringIO()
+        self.stream = StringIO()
         self.runner = runner.TrialRunner(CapturingReporter, stream=self.stream,
                                          uncleanWarnings=True)
         self.test = TestTrialRunner('test_empty')
@@ -198,7 +205,7 @@ class DryRunMixin(object):
 
     def setUp(self):
         self.log = []
-        self.stream = StringIO.StringIO()
+        self.stream = StringIO()
         self.runner = runner.TrialRunner(CapturingReporter,
                                          runner.TrialRunner.DRY_RUN,
                                          stream=self.stream)
@@ -279,6 +286,10 @@ class PyUnitDryRunTest(DryRunMixin, unittest.SynchronousTestCase):
 
 
 class TestRunner(unittest.SynchronousTestCase):
+
+    if _PY3:
+        skip = "Requires twisted.scripts.trial to be ported"
+
     def setUp(self):
         self.config = trial.Options()
         # whitebox hack a reporter in, because plugins are CACHED and will
@@ -327,7 +338,7 @@ class TestRunner(unittest.SynchronousTestCase):
 
     def getRunner(self):
         r = trial._makeRunner(self.config)
-        r.stream = StringIO.StringIO()
+        r.stream = StringIO()
         # XXX The runner should always take care of cleaning this up itself.
         # It's not clear why this is necessary.  The runner always tears down
         # its log file.
@@ -597,7 +608,7 @@ class TestUntilFailure(unittest.SynchronousTestCase):
     def setUp(self):
         TestUntilFailure.FailAfter.count = []
         self.test = TestUntilFailure.FailAfter('test_foo')
-        self.stream = StringIO.StringIO()
+        self.stream = StringIO()
         self.runner = runner.TrialRunner(reporter.Reporter, stream=self.stream)
 
 
@@ -895,7 +906,7 @@ class TestMalformedMethod(unittest.SynchronousTestCase):
         """
         Wrapper for one of the test method of L{ContainMalformed}.
         """
-        stream = StringIO.StringIO()
+        stream = StringIO()
         trialRunner = runner.TrialRunner(reporter.Reporter, stream=stream)
         test = TestMalformedMethod.ContainMalformed(method)
         result = trialRunner.run(test)

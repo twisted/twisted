@@ -370,11 +370,12 @@ def _unusedTestDirectory(base):
     counter = 0
     while True:
         if counter:
-            testdir = base.sibling('%s-%d' % (base.basename(), counter))
+            testdir = base.sibling(
+                ('%s-%d' % (base.basename(),counter)).encode("utf8"))
         else:
             testdir = base
 
-        testDirLock = FilesystemLock(testdir.path + '.lock')
+        testDirLock = FilesystemLock(testdir.path + b'.lock')
         if testDirLock.lock():
             # It is not in use
             if testdir.exists():
@@ -384,11 +385,11 @@ def _unusedTestDirectory(base):
             # Create it anew and mark it as ours so the next _removeSafely on it
             # succeeds.
             testdir.makedirs()
-            testdir.child('_trial_marker').setContent('')
+            testdir.child(b'_trial_marker').setContent(b'')
             return testdir, testDirLock
         else:
             # It is in use
-            if base.basename() == '_trial_temp':
+            if base.basename() == b'_trial_temp':
                 counter += 1
             else:
                 raise _WorkingDirectoryBusy()
