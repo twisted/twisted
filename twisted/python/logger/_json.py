@@ -13,10 +13,13 @@ from uuid import UUID
 from ._flatten import flattenEvent
 from ._file import FileLogObserver
 from ._levels import LogLevel
+from ._logger import Logger
 from twisted.python.constants import NamedConstant
 
 from twisted.python.compat import unicode
 from twisted.python.failure import Failure
+
+log = Logger()
 
 
 
@@ -164,7 +167,7 @@ def eventAsJSON(event):
     structure as possible.
 
     Not all structure from the log event will be preserved when it is
-    serialized
+    serialized.
 
     @param event: A log event dictionary.
     @type event: L{dict} with arbitrary keys and values
@@ -213,32 +216,133 @@ def eventFromJSON(eventText):
 
 
 
-def jsonFileLogObserver(outFile):
+def jsonFileLogObserver(outFile, recordSeparator=u"\x1e"):
     """
-    Create a L{FileLogObserver} that emits JSON lines to a specified (writable)
-    file-like object.
+    Create a L{FileLogObserver} that emits JSON-serialized events to a
+    specified (writable) file-like object.
+
+    Events are written in the following form::
+
+        RS + JSON + NL
+
+    C{JSON} is the serialized event, which is JSON text.  C{NL} is a newline
+    (C{u"\n"}).  C{RS} is a record separator.  By default, this is a single
+    RS character (C{u"\x1e"}), which makes the default output conform to the
+    IETF draft document "draft-ietf-json-text-sequence-13".
 
     @param outFile: A file-like object.  Ideally one should be passed which
         accepts L{unicode} data.  Otherwise, UTF-8 L{bytes} will be used.
     @type outFile: L{io.IOBase}
 
+    @param recordSeparator: The record separator to use.
+    @type recordSeparator: L{unicode}
+
     @return: A file log observer.
     @rtype: L{FileLogObserver}
     """
-    return FileLogObserver(outFile, lambda event: eventAsJSON(event) + u"\n")
+    return FileLogObserver(
+        outFile,
+        lambda event: u"{0}{1}\n".format(recordSeparator, eventAsJSON(event))
+    )
 
 
 
-def eventsFromJSONLogFile(inFile):
+def eventsFromJSONLogFile(inFile, recordSeparator=None, bufferSize=4096):
     """
     Load events from a file previously saved with L{jsonFileLogObserver}.
+    Event records that are truncated or otherwise unreadable are ignored.
 
     @param inFile: A (readable) file-like object.  Data read from C{inFile}
         should be L{unicode} or UTF-8 L{bytes}.
     @type inFile: iterable of lines
 
+    @param recordSeparator: The expected record separator.
+        If C{None}, attempt to automatically detect the record separator from
+        one of C{u"\xe1"} or C{u""}.
+    @type recordSeparator: L{unicode}
+
+    @param bufferSize: The size of the read buffer used while reading from
+        C{inFile}.
+    @type bufferSize: integer
+
     @return: Log events as read from C{inFile}.
     @rtype: iterable of L{dict}
     """
-    for line in inFile:
-        yield eventFromJSON(line)
+    def asBytes(s):
+        if type(s) is bytes:
+            return s
+        else:
+            return s.encode("utf-8")
+
+    def eventFromBytearray(record):
+        try:
+            text = bytes(record).decode("utf-8")
+        except UnicodeDecodeError:
+            log.error(
+                u"Unable to decode UTF-8 for JSON record: {record!r}",
+                record=bytes(record)
+            )
+            return None
+
+        try:
+            return eventFromJSON(text)
+        except ValueError:
+            log.error(
+                u"Unable to read JSON record: {record!r}",
+                record=bytes(record)
+            )
+            return None
+
+    if recordSeparator is None:
+        first = asBytes(inFile.read(1))
+
+        if first == b"\x1e":
+            # This looks json-text-sequence compliant.
+            recordSeparator = first
+        else:
+            # Default to simpler newline-separated stream, which does not use
+            # a record separator.
+            recordSeparator = b""
+
+    else:
+        recordSeparator = asBytes(recordSeparator)
+        first = b""
+
+    if recordSeparator == b"":
+        recordSeparator = b"\n"  # Split on newlines below
+
+        eventFromRecord = eventFromBytearray
+
+    else:
+        def eventFromRecord(record):
+            if record[-1] == ord("\n"):
+                return eventFromBytearray(record)
+            else:
+                log.error(
+                    u"Unable to read truncated JSON record: {record!r}",
+                    record=bytes(record)
+                )
+            return None
+
+    buffer = bytearray(first)
+
+    while True:
+        newData = inFile.read(bufferSize)
+
+        if not newData:
+            if len(buffer) > 0:
+                event = eventFromRecord(buffer)
+                if event is not None:
+                    yield event
+            break
+
+        buffer += asBytes(newData)
+        records = buffer.split(recordSeparator)
+
+        for record in records[:-1]:
+            if len(record) > 0:
+                event = eventFromRecord(record)
+                if event is not None:
+                    yield event
+
+        buffer = records[-1]
