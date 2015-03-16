@@ -64,7 +64,7 @@ class SupportTests(unittest.TestCase):
         self.assertEqual(
             0, _iocp.accept(port.fileno(), server.fileno(), buff, None))
 
-        for _ in range(2):
+        for _ in range(3):
             # Calling setsockopt after _iocp.accept might fail for both IPv4
             # and IPV6 with [Errno 10057] A request to send or receive ...
             # so we retry twice as retrying once is not enough.
@@ -78,14 +78,14 @@ class SupportTests(unittest.TestCase):
                 if socketError.errno == 10057:
                     # Without a sleep here even retrying 20 times will fail.
                     # This should allow other threads to execute.
-                    time.sleep(0.01)
+                    time.sleep(0.1)
                     pass
                 else:
-                    # Not the excepted error so we raise the error without
+                    # Not the excepted error so we re-raise the error without
                     # retying.
                     raise
         else:
-            # Second try also failed with the expected error.
+            # Second try also failed so we just re-raise the error.
             raise
 
         self.assertEqual(
@@ -118,16 +118,7 @@ class SupportTests(unittest.TestCase):
           - the third element is the same type giving the host address of the
             connection
         """
-        failures = 0
-        for _ in range(1000):
-            # Run test a lot of times to see it fails
-            # and count the failures counter.
-            try:
-                self._acceptAddressTest(AF_INET6, '::1')
-            except:
-                failures += 1
-        if failures:
-            raise AssertionError('%s failures' % (failures,))
+        self._acceptAddressTest(AF_INET6, '::1')
 
     if ipv6Skip is not None:
         test_ipv6AcceptAddress.skip = ipv6Skip
