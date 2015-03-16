@@ -366,17 +366,6 @@ class PathModificationTest(TwistedModulesTestCase):
         self._underUnderPathTest()
 
 
-    def test_underUnderPathNotAlreadyImported(self):
-        """
-        Verify that iterModules will honor the __path__ of already-loaded packages.
-        """
-        self._underUnderPathTest(False)
-
-
-    test_underUnderPathNotAlreadyImported.todo = (
-        "This may be impossible but it sure would be nice.")
-
-
     def _listModules(self):
         pkginfo = modules.getModule(self.packageName)
         nfni = [modinfo.name.split(".")[-1] for modinfo in

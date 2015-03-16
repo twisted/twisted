@@ -861,22 +861,6 @@ class WebClientTests(unittest.TestCase):
             (f.url, f.scheme, f.host, f.port, f.path))
 
 
-    def test_setURLRelativeScheme(self):
-        """
-        L{client.HTTPClientFactory.setURL} alters the host and port in
-        a scheme-relative URL.
-        """
-        f = client.HTTPClientFactory(b'http://example.com')
-        url = b'//foo.com:81/bar'
-        f.setURL(url)
-        self.assertEqual(
-            (url, b'http', b'foo.com', 80, b'/bar'),
-            (f.url, f.scheme, f.host, f.port, f.path))
-
-    test_setURLRelativeScheme.todo = \
-        'HTTPClientFactory.setURL does not support scheme-relative URLs.'
-
-
 
 class WebClientSSLTests(WebClientTests):
     def _listen(self, site):

@@ -23,8 +23,7 @@ except ImportError:
 if ssl and not ssl.supported:
     ssl = None
 
-from twisted.internet.defer import Deferred, maybeDeferred
-from twisted.python import runtime
+from twisted.internet.defer import Deferred
 if not _PY3:
     from twisted.python import util
 
@@ -791,52 +790,6 @@ class TimeTestCase(unittest.TestCase):
         finally:
             d.cancel()
 
-    def testCallLaterOrder(self):
-        l = []
-        l2 = []
-        def f(x):
-            l.append(x)
-        def f2(x):
-            l2.append(x)
-        def done():
-            self.assertEqual(l, range(20))
-        def done2():
-            self.assertEqual(l2, range(10))
-
-        for n in range(10):
-            reactor.callLater(0, f, n)
-        for n in range(10):
-            reactor.callLater(0, f, n+10)
-            reactor.callLater(0.1, f2, n)
-
-        reactor.callLater(0, done)
-        reactor.callLater(0.1, done2)
-        d = Deferred()
-        reactor.callLater(0.2, d.callback, None)
-        return d
-
-    testCallLaterOrder.todo = "See bug 1396"
-    testCallLaterOrder.skip = "Trial bug, todo doesn't work! See bug 1397"
-    def testCallLaterOrder2(self):
-        # This time destroy the clock resolution so that it fails reliably
-        # even on systems that don't have a crappy clock resolution.
-
-        def seconds():
-            return int(time.time())
-
-        base_original = base.seconds
-        runtime_original = runtime.seconds
-        base.seconds = seconds
-        runtime.seconds = seconds
-
-        def cleanup(x):
-            runtime.seconds = runtime_original
-            base.seconds = base_original
-            return x
-        return maybeDeferred(self.testCallLaterOrder).addBoth(cleanup)
-
-    testCallLaterOrder2.todo = "See bug 1396"
-    testCallLaterOrder2.skip = "Trial bug, todo doesn't work! See bug 1397"
 
     def testDelayedCallStringification(self):
         # Mostly just make sure str() isn't going to raise anything for

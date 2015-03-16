@@ -443,17 +443,6 @@ class FailureTestCase(SynchronousTestCase):
         self.assertEqual(innerline, '1/0')
 
 
-    def test_LackOfTB(self):
-        f = getDivisionFailure()
-        f.cleanFailure()
-        innerline = self._getInnermostFrameLine(f)
-        self.assertEqual(innerline, '1/0')
-
-    test_LackOfTB.todo = "the traceback is not preserved, exarkun said he'll try to fix this! god knows how"
-    if _PY3:
-        del test_LackOfTB # fix in ticket #6008
-
-
     def test_stringExceptionConstruction(self):
         """
         Constructing a C{Failure} with a string as its exception value raises
@@ -953,13 +942,11 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         self.assertEqual(newFailures[0].getTraceback(), f.getTraceback())
 
     if _PY3:
-        test_findFailureInGenerator.todo = (
+        # FIXME: https://twistedmatrix.com/trac/ticket/5949
+        test_findFailureInGenerator.skip = (
             "Python 3 support to be fixed in #5949")
-        test_failureConstructionFindsOriginalFailure.todo = (
+        test_failureConstructionFindsOriginalFailure.skip = (
             "Python 3 support to be fixed in #5949")
-        # Remove these two lines in #6008 (unittest todo support):
-        del test_findFailureInGenerator
-        del test_failureConstructionFindsOriginalFailure
 
 
     def test_ambiguousFailureInGenerator(self):

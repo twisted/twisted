@@ -216,18 +216,6 @@ class ParseErrorTests(unittest.TestCase):
         self.assertEqual('en_US', result['textLang'])
 
 
-    def test_textLangInherited(self):
-        """
-        Test parsing of an error element with a text with inherited language.
-        """
-        text = self.error.addElement(('errorns', 'text'))
-        self.error[NS_XML, 'lang'] = 'en_US'
-        text.addContent('test')
-        result = error._parseError(self.error, 'errorns')
-        self.assertEqual('en_US', result['textLang'])
-    test_textLangInherited.todo = "xml:lang inheritance not implemented"
-
-
     def test_appCondition(self):
         """
         Test parsing of an error element with an app specific condition.

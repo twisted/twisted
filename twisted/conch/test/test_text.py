@@ -4,7 +4,7 @@
 
 from twisted.trial import unittest
 
-from twisted.conch.insults import helper, text
+from twisted.conch.insults import text
 from twisted.conch.insults.text import attributes as A
 
 
@@ -119,43 +119,3 @@ class FormattedTextTests(unittest.TestCase):
 
 
 
-class EfficiencyTests(unittest.TestCase):
-    todo = ("flatten() isn't quite stateful enough to avoid emitting a few extra bytes in "
-            "certain circumstances, so these tests fail.  The failures take the form of "
-            "additional elements in the ;-delimited character attribute lists.  For example, "
-            "\\x1b[0;31;46m might be emitted instead of \\x[46m, even if 31 has already been "
-            "activated and no conflicting attributes are set which need to be cleared.")
-
-    def setUp(self):
-        self.attrs = helper._FormattingState()
-
-    def testComplexStructure(self):
-        output = A.normal[
-            A.bold[
-                A.bg.cyan[
-                    A.fg.red[
-                        "Foreground Red, Background Cyan, Bold",
-                        A.blink[
-                            "Blinking"],
-                        -A.bold[
-                            "Foreground Red, Background Cyan, normal"]],
-                    A.fg.green[
-                        "Foreground Green, Background Cyan, Bold"]]]]
-
-        self.assertEqual(
-            text.flatten(output, self.attrs),
-            "\x1b[1;31;46mForeground Red, Background Cyan, Bold"
-            "\x1b[5mBlinking"
-            "\x1b[0;31;46mForeground Red, Background Cyan, normal"
-            "\x1b[1;32;46mForeground Green, Background Cyan, Bold")
-
-    def testNesting(self):
-        self.assertEqual(
-            text.flatten(A.bold['Hello, ', A.underline['world.']], self.attrs),
-            '\x1b[1mHello, \x1b[4mworld.')
-
-        self.assertEqual(
-            text.flatten(
-                A.bold[A.reverseVideo['Hello, ', A.normal['world'], '.']],
-                self.attrs),
-            '\x1b[1;7mHello, \x1b[0mworld\x1b[1;7m.')

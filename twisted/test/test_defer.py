@@ -1370,10 +1370,9 @@ class DeferredTestCase(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
 
     if _PY3:
-        test_inlineCallbacksTracebacks.todo = (
+        # FIXME: https://twistedmatrix.com/trac/ticket/5949
+        test_inlineCallbacksTracebacks.skip = (
             "Python 3 support to be fixed in #5949")
-        # Remove this line in #6008 (unittest todo support):
-        del test_inlineCallbacksTracebacks
 
 
 
