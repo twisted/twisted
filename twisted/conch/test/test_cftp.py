@@ -525,8 +525,9 @@ class StdioClientTests(TestCase):
                 line = line.strip().rsplit(' ', 2)[0]
                 # NAME can be followed by a lot of spaces so we need to
                 # reduce them to single space.
-                line = line.split(' ', 1)
-                actualTransfer.append('%s %s' % (line[0], line[1].strip()))
+                # line = line.strip().split(' ', 1)
+                # actualTransfer.append('%s %s' % (line[0], line[1].strip()))
+                actualTransfer.append(line)
             actualTransfer.append(actual[-1])
             actualOutput.append(actualTransfer)
 
