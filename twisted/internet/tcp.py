@@ -644,14 +644,14 @@ def _resolveIPv6(ip, port):
     """
     usedPort = port
     if isinstance(port, int):
-        # On OS X `getaddrinfo` will reject invalid port numbers while other
-        # systems accept it as long as is an int.
+        # On OS X `getaddrinfo` will reject invalid port number while other
+        # systems accept it as long as it is an int.
         # We pass a valid port which is later overwritten.
         usedPort = 1
 
     result = socket.getaddrinfo(ip, usedPort, 0, 0, 0, _NUMERIC_ONLY)[0][4]
     # On non OS X `getaddrinfo` will also `resolve` invalid port numbers into a
-    # valid one. ex 123456 is resolved as 57920, but we want to preserver the
+    # valid one. Example 123456 is resolved as 57920, but we want to preserve the
     # initial port number.
     result = (result[0], port, result[2], result[3])
     return result
