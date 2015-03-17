@@ -735,11 +735,14 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             'invalid', "service/proto not found ('invalid')")
 
 
+    # This is used to count the number of calls in a single test run.
+    # It is defined as a class member but used as an instance member.
+    assertConnectPortErrorCalls = 0
+
+
     def assertConnectPortError(self, port, message):
         """
         Check that trying to connect to C{port} will raise an errback.
-
-        WARNING: Don't call this method multiple time from the same test.
 
         @param port: Port number for which to try a client connection.
         @type  port: C{int}
@@ -747,7 +750,18 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
 
         @param message: String representation of the expected error.
         @type  message: C{str}
+
+        @raise AssertionError: when called multiple time from the same test.
         """
+        def reset_call_count():
+            self.assertConnectPortErrorCalls = 0
+
+        if self.assertConnectPortErrorCalls != 0:
+            raise AssertionError(
+                'This assertion can only be called once per test.')
+        else:
+            self.assertConnectPortErrorCalls = 1
+
         reactor = self.buildReactor()
         results = []
 
