@@ -11,6 +11,7 @@ from __future__ import division, absolute_import
 __metaclass__ = type
 
 import errno
+import os
 import socket
 import sys
 
@@ -713,8 +714,17 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             # On Python 2.6 we get this generic error.
             test('Connection refused')
         elif platform.isWindows():
-            # Windows IOCP
-            test("can't convert negative value to unsigned short")
+            try:
+                from twisted.internet.iocpreactor.reactor import IOCPReactor
+            except ImportError:
+                IOCPReactor = None
+
+            if self.reactorFactory is IOCPReactor:
+                # Windows IOCP reactor.
+                test("can't convert negative value to unsigned short")
+            else:
+                # Windows select reactor.
+                test('getsockaddrarg: port must be 0-65535.')
         else:
             test('getsockaddrarg: port must be 0-65535.')
 
@@ -734,8 +744,17 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             else:
                 test('Connection refused')
         elif platform.isWindows():
-            # Windows IOCP
-            test('value too large to convert to unsigned short')
+            try:
+                from twisted.internet.iocpreactor.reactor import IOCPReactor
+            except ImportError:
+                IOCPReactor = None
+
+            if self.reactorFactory is IOCPReactor:
+                # Windows IOCP reactor.
+                test('value too large to convert to unsigned short')
+            else:
+                # Windows select reactor.
+                test('getsockaddrarg: port must be 0-65535.')
         else:
             test('getsockaddrarg: port must be 0-65535.')
 
@@ -754,9 +773,13 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             # Windows select
             test('The requested address is not valid in its context.')
             # Windows IOCP
-            # 'Unknown error'
+            # 'Unknown error'  'WSAEADDRNOTAVAIL'
         else:
-            test('Connection refused')
+            if os.getenv('LANG', None) == 'fr_FR.UTF-8':
+                # coverage builder executed with French locale.
+                test('Connexion refus\xc3\xa9e')
+            else:
+                test('Connection refused')
 
 
     def test_connectPortNotNumeric(self):
@@ -786,7 +809,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
 
         @raise AssertionError: when called multiple time from the same test.
         """
-        def reset_call_count():
+        def resetCallCount():
             self.assertConnectPortErrorCalls = 0
 
         if self.assertConnectPortErrorCalls != 0:
@@ -794,6 +817,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
                 'This assertion can only be called once per test.')
         else:
             self.assertConnectPortErrorCalls = 1
+        self.addCleanup(resetCallCount)
 
         reactor = self.buildReactor()
         results = []
