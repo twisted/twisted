@@ -5,7 +5,7 @@
 """
 Implementation module for the I{cftp} command.
 """
-
+from __future__ import division
 import os, sys, getpass, struct, tty, fcntl, stat
 import fnmatch, pwd, glob
 
@@ -406,13 +406,13 @@ class StdioClient(basic.LineReceiver):
         Do an upload request for a single local file or a globing expression.
 
         @param rest: Requested command line for the PUT command.
-        @type  rest: C{str}
+        @type rest: C{str}
 
         @return: A deferred which fires when transfer is done.
         """
         local, rest = self._getFilename(rest)
 
-        # FIXME:7241:
+        # FIXME:https://twistedmatrix.com/trac/ticket/7241
         # Use a better check for globbing expression.
         if '*' in local or '?' in local:
             if rest:
@@ -437,11 +437,11 @@ class StdioClient(basic.LineReceiver):
         Perform an upload for a single file.
 
         @param local: Path to local file.
-        @type  local: C{str}.
+        @type local: C{str}.
 
         @param remote: Remote path for the request relative to current working
             directory.
-        @type  remote: C{str}
+        @type remote: C{str}
 
         @return: A deferred which fires when transfer is done.
         """
@@ -453,11 +453,11 @@ class StdioClient(basic.LineReceiver):
         Perform an upload for a list of local files.
 
         @param files: List of local files.
-        @type  files: C{list} of C{str}.
+        @type files: C{list} of C{str}.
 
         @param remote: Remote path for the request relative to current working
             directory.
-        @type  remote: C{str}
+        @type remote: C{str}
 
         @return: A deferred which fires when transfer is done.
         """
@@ -470,18 +470,18 @@ class StdioClient(basic.LineReceiver):
         Perform an upload for the next file in the list of local files.
 
         @param previousResult: Result form previous file form the list.
-        @type  previousResult: C{str}
+        @type previousResult: C{str}
 
         @param files: List of local files.
-        @type  files: C{list} of C{str}
+        @type files: C{list} of C{str}
 
         @param remotePath: Remote path for the request relative to current
             working directory.
-        @type  remotePath: C{str}
+        @type remotePath: C{str}
 
         @param single: A flag which signals if this is a transfer for a single
             file in which case we use the exact remote path
-        @type  single: C{bool}
+        @type single: C{bool}
 
         @return: A deferred which fires when transfer is done.
         """
@@ -522,11 +522,11 @@ class StdioClient(basic.LineReceiver):
         Do an upload request.
 
         @param localStream: Local stream from where data is read.
-        @type  localStream: File like object.
+        @type localStream: File like object.
 
         @param remotePath: Remote path for the request relative to current
             working directory.
-        @type  remotePath: C{str}
+        @type remotePath: C{str}
 
         @return: A deferred which fires when transfer is done.
         """
@@ -611,7 +611,7 @@ class StdioClient(basic.LineReceiver):
             fullPath = self.currentDirectory + '/'
         else:
             fullPath = os.path.join(self.currentDirectory, path)
-        d = selsf._remoteGlob(fullPath)
+        d = self._remoteGlob(fullPath)
         d.addCallback(self._cbDisplayFiles, options)
         return d
 
@@ -839,8 +839,7 @@ version                         Print the SFTP version.
         @param line: Arguments received from command line input.
         @type line: C{str}
 
-        @return: Tupple with filename and rest. Return empty values when no
-            path was not found.
+        @return: Tupple with filename and rest. Return empty values when no path was not found.
         @rtype: C{tupple}
         """
         line = line.strip()

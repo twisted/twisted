@@ -362,10 +362,10 @@ class StdioClientTests(TestCase):
 
     def test_printProgressBarReporting(self):
         """
-        It prints a progress description, including percent done, amount
-        transferred, transfer rate, and time remaining, all based the given
-        start time, the given L{FileWrapper}'s progress information and the
-        reactor's current time.
+        L{StdioClient._printProgressBar} prints a progress description,
+        including percent done, amount transferred, transfer rate, and time
+        remaining, all based the given start time, the given L{FileWrapper}'s
+        progress information and the reactor's current time.
         """
         # Use a short, known console width because this simple test doesn't
         # need to test the console padding.
@@ -387,8 +387,8 @@ class StdioClientTests(TestCase):
 
     def test_printProgressBarNoProgress(self):
         """
-        It prints a progress description that indicates that 0 bytes have
-        been transferred if no bytes have been transferred and no
+        L{StdioClient._printProgressBar} prints a progress description that
+        indicates 0 bytes transferred if no bytes have been transferred and no
         time has passed.
         """
         self.setKnownConsoleSize(10, 34)
@@ -498,12 +498,11 @@ class StdioClientTests(TestCase):
         actualOutput = []
 
         for local, remote, expected in transfers:
-
             # For each transfer we have a list of reported progress which
             # ends with the final message informing that file was transferred.
             expectedTransfer = []
             for line in expected:
-                expectedTransfer.append('%s%s' % (local, line))
+                expectedTransfer.append('%s %s' % (local, line))
             expectedTransfer.append('Transferred %s to %s' % (local, remote))
             expectedOutput.append(expectedTransfer)
 
@@ -514,8 +513,20 @@ class StdioClientTests(TestCase):
             actual.extend(last)
 
             actualTransfer = []
+            # Each transferred file is on a line with summary on the last
+            # line. Summary is copying at the end.
             for line in actual[:-1]:
-                actualTransfer.append(line.rsplit(' ', 3)[0])
+                # Output line is in the format
+                # NAME PROGRESS_PERCENTAGE PROGRESS_BYTES SPEED ETA.
+                # For testing we only care about the
+                # PROGRESS_PERCENTAGE and PROGRESS values.
+
+                # Ignore SPPED and ETA.
+                line = line.strip().rsplit(' ', 2)[0]
+                # NAME can be followed by a lot of spaces so we need to
+                # reduce them to single space.
+                line = line.split(' ', 1)
+                actualTransfer.append('%s %s' % (line[0], line[1].strip()))
             actualTransfer.append(actual[-1])
             actualOutput.append(actualTransfer)
 
@@ -556,7 +567,7 @@ class StdioClientTests(TestCase):
         self.assertTrue(remoteFile.closed)
         self.checkPutMessage(
             [(localPath, remoteName,
-                [' 76% 10.0B', '100% 13.0B', '100% 13.0B'])])
+                ['76% 10.0B', '100% 13.0B', '100% 13.0B'])])
 
 
     def test_cmd_PUTSingleRemotePath(self):
