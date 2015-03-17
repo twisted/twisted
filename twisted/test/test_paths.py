@@ -1623,7 +1623,7 @@ class UnicodeFilePathTests(TestCase):
         L{FilePath} instantiated with a text path will return a text-mode
         FilePath.
         """
-        fp = filepath.FilePath(u"/")
+        fp = filepath.FilePath(u"./")
         self.assertEqual(type(fp.path), unicode)
 
 
@@ -1632,7 +1632,7 @@ class UnicodeFilePathTests(TestCase):
         Calling L{FilePath.child} on a text-mode L{FilePath} with a L{bytes}
         subpath will return a bytes-mode FilePath.
         """
-        fp = filepath.FilePath(u"/")
+        fp = filepath.FilePath(u"./")
         child = fp.child(b"tmp")
         self.assertEqual(type(child.path), bytes)
 
@@ -1642,7 +1642,7 @@ class UnicodeFilePathTests(TestCase):
         Calling L{FilePath.child} on a text-mode L{FilePath} with a text
         subpath will return a text-mode FilePath.
         """
-        fp = filepath.FilePath(u"/")
+        fp = filepath.FilePath(u"./")
         child = fp.child(u"tmp")
         self.assertEqual(type(child.path), unicode)
 
@@ -1652,7 +1652,7 @@ class UnicodeFilePathTests(TestCase):
         Calling L{FilePath.preauthChild} on a text-mode L{FilePath} with a text
         subpath will return a text-mode FilePath.
         """
-        fp = filepath.FilePath(u"/")
+        fp = filepath.FilePath(u"./")
         child = fp.preauthChild(u"tmp")
         self.assertEqual(type(child.path), unicode)
 
@@ -1662,7 +1662,7 @@ class UnicodeFilePathTests(TestCase):
         Calling L{FilePath.preauthChild} on a text-mode L{FilePath} with a bytes
         subpath will return a bytes-mode FilePath.
         """
-        fp = filepath.FilePath(u"/")
+        fp = filepath.FilePath(u"./")
         child = fp.preauthChild(b"tmp")
         self.assertEqual(type(child.path), bytes)
 
@@ -1672,7 +1672,7 @@ class UnicodeFilePathTests(TestCase):
         L{FilePath} instantiated with a L{bytes} path will return a bytes-mode
         FilePath.
         """
-        fp = filepath.FilePath(b"/")
+        fp = filepath.FilePath(b"./")
         self.assertEqual(type(fp.path), bytes)
 
 
@@ -1681,7 +1681,7 @@ class UnicodeFilePathTests(TestCase):
         Calling L{FilePath.child} on a bytes-mode L{FilePath} with a bytes
         subpath will return a bytes-mode FilePath.
         """
-        fp = filepath.FilePath(b"/")
+        fp = filepath.FilePath(b"./")
         child = fp.child(b"tmp")
         self.assertEqual(type(child.path), bytes)
 
@@ -1691,7 +1691,7 @@ class UnicodeFilePathTests(TestCase):
         Calling L{FilePath.child} on a bytes-mode L{FilePath} with a text
         subpath will return a text-mode FilePath.
         """
-        fp = filepath.FilePath(b"/")
+        fp = filepath.FilePath(b"./")
         child = fp.child(u"tmp")
         self.assertEqual(type(child.path), unicode)
 
@@ -1701,7 +1701,7 @@ class UnicodeFilePathTests(TestCase):
         Calling L{FilePath.preauthChild} on a bytes-mode L{FilePath} with a
         bytes subpath will return a bytes-mode FilePath.
         """
-        fp = filepath.FilePath(b"/")
+        fp = filepath.FilePath(b"./")
         child = fp.preauthChild(b"tmp")
         self.assertEqual(type(child.path), bytes)
 
@@ -1711,7 +1711,7 @@ class UnicodeFilePathTests(TestCase):
         Calling L{FilePath.preauthChild} on a bytes-mode L{FilePath} with a text
         subpath will return a text-mode FilePath.
         """
-        fp = filepath.FilePath(b"/")
+        fp = filepath.FilePath(b"./")
         child = fp.preauthChild(u"tmp")
         self.assertEqual(type(child.path), unicode)
 
@@ -1738,3 +1738,35 @@ class UnicodeFilePathTests(TestCase):
             self.assertEqual("FilePath(b'/')", reprOutput)
         else:
             self.assertEqual("FilePath('/')", reprOutput)
+
+
+    def test_unicodereprWindows(self):
+        """
+        The repr of a L{unicode} L{FilePath} shouldn't burst into flames.
+        """
+        fp = filepath.FilePath(u"C:\\")
+        reprOutput = repr(fp)
+        if _PY3:
+            self.assertEqual("FilePath('C:\\')", reprOutput)
+        else:
+            self.assertEqual("FilePath(u'C:\\')", reprOutput)
+
+
+    def test_bytesreprWindows(self):
+        """
+        The repr of a L{bytes} L{FilePath} shouldn't burst into flames.
+        """
+        fp = filepath.FilePath(b"C:\\")
+        reprOutput = repr(fp)
+        if _PY3:
+            self.assertEqual("FilePath(b'C:\\')", reprOutput)
+        else:
+            self.assertEqual("FilePath('C:\\')", reprOutput)
+
+
+    if platform.isWindows():
+        test_unicoderepr.skip = "Test will not work on Windows"
+        test_bytesrepr.skip = "Test will not work on Windows"
+    else:
+        test_unicodereprWindows.skip = "Test only works on Windows"
+        test_bytesreprWindows.skip = "Test only works on Windows"
