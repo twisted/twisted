@@ -1614,8 +1614,8 @@ class SetContentTests(BytesTestCase):
 
 class UnicodeFilePathTests(TestCase):
     """
-    L{FilePath} instances instantiated with text (L{unicode}) should have an
-    internal text representation.
+    L{FilePath} instances should have the same internal representation as they
+    were instantiated with.
     """
 
     def test_UnicodeInstantiation(self):
