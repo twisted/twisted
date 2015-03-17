@@ -681,12 +681,13 @@ class FilePath(AbstractFilePath):
         """
         Return the path of this L{FilePath} as bytes.
 
-        @returns: L{bytes}
+        @return: L{bytes}
+        @since: 15.2
         """
         if encoding is None:
             encoding = getfilesystemencoding()
 
-        if type(self.path) == type(u''):
+        if type(self.path) == unicode:
             return self.path.encode(encoding)
         else:
             return self.path
@@ -696,9 +697,10 @@ class FilePath(AbstractFilePath):
         """
         Return the path of this L{FilePath} as text.
 
-        @returns: L{unicode}
+        @return: L{unicode}
+        @since: 15.2
         """
-        if type(self.path) == type(u''):
+        if type(self.path) == unicode:
             return self.path
         else:
             return self.path.decode()
@@ -720,7 +722,7 @@ class FilePath(AbstractFilePath):
         @rtype: L{FilePath} with an internal representation equal to the type of
             C{path}.
         """
-        if type(path) == type(u''):
+        if type(path) == unicode:
             colon = u":"
             ourPath = self.asTextPath()
         else:
@@ -1626,12 +1628,15 @@ class FilePath(AbstractFilePath):
 
 def _getSep(path):
     """
-    Get the separator for L{path}.
+    Get the separator for C{path}.
+
+    @param path: The path which the separator should be for.
+    @return: A slash separator that is the same type as C{path}
     """
-    if type(path) == type(b''):
-        return slash.encode("ascii")
-    else:
+    if type(path) == unicode:
         return slash
+    else:
+        return slash.encode("ascii")
 
 # This is all a terrible hack to get statinfo deprecated
 _tmp = deprecated(
