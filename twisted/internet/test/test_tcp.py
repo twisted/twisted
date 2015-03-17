@@ -70,6 +70,12 @@ else:
 if platform.isWindows():
     from twisted.internet.test import _win32ifaces
     getLinkLocalIPv6Addresses = _win32ifaces.win32GetLinkLocalIPv6Addresses
+
+    try:
+        from twisted.internet.iocpreactor.reactor import IOCPReactor
+    except ImportError:
+        IOCPReactor = None
+
 else:
     try:
         from twisted.internet.test import _posixifaces
@@ -77,6 +83,9 @@ else:
         getLinkLocalIPv6Addresses = lambda: []
     else:
         getLinkLocalIPv6Addresses = _posixifaces.posixGetLinkLocalIPv6Addresses
+
+    # Outside of Windows we don't have an IOCP reactor.
+    IOCPReactor = None
 
 
 
@@ -714,10 +723,6 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             # On Python 2.6 we get this generic error.
             test('Connection refused')
         elif platform.isWindows():
-            try:
-                from twisted.internet.iocpreactor.reactor import IOCPReactor
-            except ImportError:
-                IOCPReactor = None
 
             if self.reactorFactory is IOCPReactor:
                 # Windows IOCP reactor.
@@ -744,11 +749,6 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             else:
                 test('Connection refused')
         elif platform.isWindows():
-            try:
-                from twisted.internet.iocpreactor.reactor import IOCPReactor
-            except ImportError:
-                IOCPReactor = None
-
             if self.reactorFactory is IOCPReactor:
                 # Windows IOCP reactor.
                 test('value too large to convert to unsigned short')
@@ -770,13 +770,15 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         if platform.isMacOSX():
             test("Can't assign requested address")
         elif platform.isWindows():
-            # Windows select
-            test('The requested address is not valid in its context.')
-            # Windows IOCP
-            # 'Unknown error'  'WSAEADDRNOTAVAIL'
+            if self.reactorFactory is IOCPReactor:
+                # Windows IOCP reactor.
+                test('WSAEADDRNOTAVAIL')
+            else:
+                # Windows select reactor.
+                test('The requested address is not valid in its context.')
         else:
             if os.getenv('LANG', None) == 'fr_FR.UTF-8':
-                # coverage builder executed with French locale.
+                # Coverage builder is executed with French locale.
                 test('Connexion refus\xc3\xa9e')
             else:
                 test('Connection refused')
