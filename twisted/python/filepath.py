@@ -756,10 +756,15 @@ class FilePath(AbstractFilePath):
         @return: The child path.
         @rtype: L{FilePath}
         """
-        newpath = abspath(joinpath(self.path, normpath(path)))
-        if not newpath.startswith(self.path):
+        if type(path) == unicode:
+            ourPath = self.asTextPath()
+        else:
+            ourPath = self.asBytesPath()
+
+        newpath = abspath(joinpath(ourPath, normpath(path)))
+        if not newpath.startswith(ourPath):
             raise InsecurePath("%s is not a child of %s" %
-                               (newpath, self.path))
+                               (newpath, ourPath))
         return self.clonePath(newpath)
 
 
