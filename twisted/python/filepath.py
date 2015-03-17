@@ -674,12 +674,21 @@ class FilePath(AbstractFilePath):
 
     @property
     def sep(self):
+        """
+        Return a filesystem separator.
+
+        @return: The native filesystem separator.
+        @returntype: The same type as L{self.path}.
+        """
         return _getSep(self.path)
 
 
     def asBytesPath(self, encoding=None):
         """
         Return the path of this L{FilePath} as bytes.
+
+        @param encoding: The encoding to use if coercing to L{bytes}. If none is
+            given, L{getfilesystemencoding} is used.
 
         @return: L{bytes}
         @since: 15.2
