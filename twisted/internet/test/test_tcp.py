@@ -772,7 +772,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         elif platform.isWindows():
             if self.reactorFactory is IOCPReactor:
                 # Windows IOCP reactor.
-                test('WSAEADDRNOTAVAIL')
+                test('Unknown error')
             else:
                 # Windows select reactor.
                 test('The requested address is not valid in its context.')
