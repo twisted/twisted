@@ -531,7 +531,7 @@ class StdioClientTests(TestCase):
             actualOutput.append(actualTransfer)
 
         if randomOrder:
-            self.assertItemsEqual(expectedOutput, actualOutput)
+            self.assertEqual(set(expectedOutput), set(actualOutput))
         else:
             self.assertEqual(expectedOutput, actualOutput)
 
@@ -661,7 +661,8 @@ class StdioClientTests(TestCase):
         self.client.client.openFileSideEffects[(secondRemotePath, flags)] = (
             defer.succeed(secondRemoteFile))
 
-        deferred = self.client.cmd_PUT('%s remote' % (os.path.join(parent, '*')))
+        deferred = self.client.cmd_PUT(
+            '%s remote' % (os.path.join(parent, '*'),))
         self.successResultOf(deferred)
 
         self.assertTrue(firstRemoteFile.closed)
