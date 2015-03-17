@@ -751,10 +751,11 @@ class FilePath(AbstractFilePath):
 
         @param path: A relative path (ie, a path not starting with C{"/"})
             which will be interpreted as a child or descendant of this path.
-        @type path: L{bytes}
+        @type path: L{bytes} or L{unicode}
 
         @return: The child path.
-        @rtype: L{FilePath}
+        @rtype: L{FilePath} with an internal representation equal to the type of
+            C{path}.
         """
         if type(path) == unicode:
             ourPath = self.asTextPath()
