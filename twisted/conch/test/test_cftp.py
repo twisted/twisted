@@ -531,7 +531,7 @@ class StdioClientTests(TestCase):
             actualOutput.append(actualTransfer)
 
         if randomOrder:
-            self.assertEqual(set(expectedOutput), set(actualOutput))
+            self.assertEqual(sorted(expectedOutput), sorted(actualOutput))
         else:
             self.assertEqual(expectedOutput, actualOutput)
 
