@@ -1647,6 +1647,26 @@ class UnicodeFilePathTests(TestCase):
         self.assertEqual(type(child.path), unicode)
 
 
+    def test_UnicodeInstantiationUnicodePreauthChild(self):
+        """
+        Calling L{FilePath.preauthChild} on a text-mode L{FilePath} with a text
+        subpath will return a text-mode FilePath.
+        """
+        fp = filepath.FilePath(u"/")
+        child = fp.preauthChild(u"tmp")
+        self.assertEqual(type(child.path), unicode)
+
+
+    def test_UnicodeInstantiationBytesPreauthChild(self):
+        """
+        Calling L{FilePath.preauthChild} on a text-mode L{FilePath} with a bytes
+        subpath will return a bytes-mode FilePath.
+        """
+        fp = filepath.FilePath(u"/")
+        child = fp.preauthChild(b"tmp")
+        self.assertEqual(type(child.path), bytes)
+
+
     def test_BytesInstantiation(self):
         """
         L{FilePath} instantiated with a L{bytes} path will return a bytes-mode
@@ -1673,4 +1693,24 @@ class UnicodeFilePathTests(TestCase):
         """
         fp = filepath.FilePath(b"/")
         child = fp.child(u"tmp")
+        self.assertEqual(type(child.path), unicode)
+
+
+    def test_BytesInstantiationBytesPreauthChild(self):
+        """
+        Calling L{FilePath.preauthChild} on a bytes-mode L{FilePath} with a
+        bytes subpath will return a bytes-mode FilePath.
+        """
+        fp = filepath.FilePath(b"/")
+        child = fp.preauthChild(b"tmp")
+        self.assertEqual(type(child.path), bytes)
+
+
+    def test_BytesInstantiationUnicodePreauthChild(self):
+        """
+        Calling L{FilePath.preauthChild} on a bytes-mode L{FilePath} with a text
+        subpath will return a text-mode FilePath.
+        """
+        fp = filepath.FilePath(b"/")
+        child = fp.preauthChild(u"tmp")
         self.assertEqual(type(child.path), unicode)
