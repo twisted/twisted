@@ -11,7 +11,7 @@ import os, time, pickle, errno, stat
 import contextlib
 from pprint import pformat
 
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, unicode
 from twisted.python.win32 import WindowsError, ERROR_DIRECTORY
 from twisted.python import filepath
 from twisted.python.runtime import platform
@@ -1609,3 +1609,47 @@ class SetContentTests(BytesTestCase):
         fp = TrackingFilePath(self.mktemp())
         fp.setContent(b"goodbye", b"-something-else")
         self._assertOneOpened(fp, b"-something-else")
+
+
+
+class UnicodeFilePathTests(TestCase):
+    """
+    L{FilePath} instances instantiated with text (L{unicode}) should have an
+    internal text representation.
+    """
+
+    def test_UnicodeInstantiation(self):
+
+        fp = filepath.FilePath(u"/")
+        self.assertEqual(type(fp.path), unicode)
+
+    def test_UnicodeInstantiationBytesChild(self):
+
+        fp = filepath.FilePath(u"/")
+        child = fp.child(b"tmp")
+        self.assertEqual(type(child.path), bytes)
+
+    def test_UnicodeInstantiationUnicodeChild(self):
+
+        fp = filepath.FilePath(u"/")
+        child = fp.child(u"tmp")
+        self.assertEqual(type(child.path), unicode)
+
+    def test_BytesInstantiation(self):
+
+        fp = filepath.FilePath(b"/")
+        self.assertEqual(type(fp.path), bytes)
+
+
+    def test_BytesInstantiationBytesChild(self):
+
+        fp = filepath.FilePath(b"/")
+        child = fp.child(b"tmp")
+        self.assertEqual(type(child.path), bytes)
+
+
+    def test_BytesInstantiationUnicodeChild(self):
+
+        fp = filepath.FilePath(b"/")
+        child = fp.child(u"tmp")
+        self.assertEqual(type(child.path), bytes)
