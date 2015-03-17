@@ -1619,37 +1619,58 @@ class UnicodeFilePathTests(TestCase):
     """
 
     def test_UnicodeInstantiation(self):
-
+        """
+        L{FilePath} instantiated with a text path will return a text-mode
+        FilePath.
+        """
         fp = filepath.FilePath(u"/")
         self.assertEqual(type(fp.path), unicode)
 
-    def test_UnicodeInstantiationBytesChild(self):
 
+    def test_UnicodeInstantiationBytesChild(self):
+        """
+        Calling L{FilePath.child} on a text-mode L{FilePath} with a L{bytes}
+        subpath will return a bytes-mode FilePath.
+        """
         fp = filepath.FilePath(u"/")
         child = fp.child(b"tmp")
         self.assertEqual(type(child.path), bytes)
 
-    def test_UnicodeInstantiationUnicodeChild(self):
 
+    def test_UnicodeInstantiationUnicodeChild(self):
+        """
+        Calling L{FilePath.child} on a text-mode L{FilePath} with a text
+        subpath will return a text-mode FilePath.
+        """
         fp = filepath.FilePath(u"/")
         child = fp.child(u"tmp")
         self.assertEqual(type(child.path), unicode)
 
-    def test_BytesInstantiation(self):
 
+    def test_BytesInstantiation(self):
+        """
+        L{FilePath} instantiated with a L{bytes} path will return a bytes-mode
+        FilePath.
+        """
         fp = filepath.FilePath(b"/")
         self.assertEqual(type(fp.path), bytes)
 
 
     def test_BytesInstantiationBytesChild(self):
-
+        """
+        Calling L{FilePath.child} on a bytes-mode L{FilePath} with a bytes
+        subpath will return a bytes-mode FilePath.
+        """
         fp = filepath.FilePath(b"/")
         child = fp.child(b"tmp")
         self.assertEqual(type(child.path), bytes)
 
 
     def test_BytesInstantiationUnicodeChild(self):
-
+        """
+        Calling L{FilePath.child} on a bytes-mode L{FilePath} with a text
+        subpath will return a text-mode FilePath.
+        """
         fp = filepath.FilePath(b"/")
         child = fp.child(u"tmp")
-        self.assertEqual(type(child.path), bytes)
+        self.assertEqual(type(child.path), unicode)
