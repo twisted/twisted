@@ -7,12 +7,17 @@ Test ssh/channel.py.
 
 from zope.interface.verify import verifyObject
 
-from twisted.conch.ssh import channel
-from twisted.conch.ssh.transport import SSHServerTransport
-from twisted.conch.ssh.service import SSHService
-from twisted.internet.address import IPv4Address
-from twisted.internet.interfaces import ITransport
-from twisted.test.proto_helpers import StringTransport
+try:
+    from twisted.conch.ssh import channel
+    from twisted.conch.ssh.transport import SSHServerTransport
+    from twisted.conch.ssh.service import SSHService
+    from twisted.internet.address import IPv4Address
+    from twisted.internet.interfaces import ITransport
+    from twisted.test.proto_helpers import StringTransport
+    skipTest = None
+except ImportError:
+    skipTest = 'Conch SSH not supported.'
+    SSHService = object
 from twisted.trial import unittest
 
 
@@ -60,7 +65,13 @@ class MockConnection(SSHService):
         self.closes[channel] = True
 
 
+
 class ChannelTests(unittest.TestCase):
+    """
+    Tests for L{SSHChannel}.
+    """
+
+    skip = skipTest
 
     def setUp(self):
         """
