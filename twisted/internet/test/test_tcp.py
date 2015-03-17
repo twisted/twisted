@@ -12,6 +12,7 @@ __metaclass__ = type
 
 import errno
 import socket
+import sys
 
 from functools import wraps
 
@@ -705,8 +706,17 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         When trying to connect using a port outside of the 1-65535 range the
         error is raised as an errback.
         """
-        self.assertConnectPortError(
-            -1, 'getsockaddrarg: port must be 0-65535.')
+        def test(message):
+            self.assertConnectPortError(-1, message)
+
+        if sys.version_info[:2] == (2, 6):
+            # On Python 2.6 we get this generic error.
+            test('Connection refused')
+        elif platform.isWindows():
+            # Windows IOCP
+            test("can't convert negative value to unsigned short")
+        else:
+            test('getsockaddrarg: port must be 0-65535.')
 
 
     def test_connectPortOverflow(self):
@@ -714,8 +724,20 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         When trying to connect using a port outside of the 1-65535 range the
         error is raised as an errback.
         """
-        self.assertConnectPortError(
-            65536, 'getsockaddrarg: port must be 0-65535.')
+        def test(message):
+            self.assertConnectPortError(65536, message)
+
+        if sys.version_info[:2] == (2, 6):
+            # On Python 2.6 we get generic errors.
+            if platform.isMacOSX():
+                test("Can't assign requested address")
+            else:
+                test('Connection refused')
+        elif platform.isWindows():
+            # Windows IOCP
+            test('value too large to convert to unsigned short')
+        else:
+            test('getsockaddrarg: port must be 0-65535.')
 
 
     def test_connectPortZero(self):
@@ -723,7 +745,18 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
         An error is raised as callback when trying to listed on the
         reserved port C{0}.
         """
-        self.assertConnectPortError(0, 'Connection refused')
+        def test(message):
+            self.assertConnectPortError(0, message)
+
+        if platform.isMacOSX():
+            test("Can't assign requested address")
+        elif platform.isWindows():
+            # Windows select
+            test('The requested address is not valid in its context.')
+            # Windows IOCP
+            # 'Unknown error'
+        else:
+            test('Connection refused')
 
 
     def test_connectPortNotNumeric(self):
