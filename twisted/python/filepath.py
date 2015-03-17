@@ -13,6 +13,8 @@ import errno
 import base64
 from hashlib import sha1
 
+from sys import getfilesystemencoding
+
 from os.path import isabs, exists, normpath, abspath, splitext
 from os.path import basename, dirname
 from os.path import join as joinpath
@@ -30,7 +32,7 @@ from zope.interface import Interface, Attribute, implementer
 # things import this module, and it would be good if it could easily be
 # modified for inclusion in the standard library.  --glyph
 
-from twisted.python.compat import comparable, cmp
+from twisted.python.compat import comparable, cmp, unicode
 from twisted.python.deprecate import deprecated
 from twisted.python.runtime import platform
 from twisted.python.versions import Version
@@ -620,13 +622,14 @@ class FilePath(AbstractFilePath):
     Greater-than-second precision is only available in Windows on Python2.5 and
     later.
 
-    On both Python 2 and Python 3, paths can only be bytes.
+    If instantiated with a L{bytes} type, it will return a L{FilePath} which has
+    an internal representation of L{bytes}, and vice versa for L{unicode}.
 
     @type alwaysCreate: L{bool}
     @ivar alwaysCreate: When opening this file, only succeed if the file does
         not already exist.
 
-    @type path: L{bytes}
+    @type path: L{bytes} or L{unicode}
     @ivar path: The path from which 'downward' traversal is permitted.
 
     @ivar statinfo: (WARNING: statinfo is deprecated as of Twisted 15.0.0 and
@@ -647,8 +650,6 @@ class FilePath(AbstractFilePath):
     """
     _statinfo = None
     path = None
-
-    sep = slash.encode("ascii")
 
 
     def __init__(self, path, alwaysCreate=False):
@@ -671,6 +672,38 @@ class FilePath(AbstractFilePath):
         return d
 
 
+    @property
+    def sep(self):
+        return _getSep(self.path)
+
+
+    def asBytesPath(self, encoding=None):
+        """
+        Return the path of this L{FilePath} as bytes.
+
+        @returns: L{bytes}
+        """
+        if encoding is None:
+            encoding = getfilesystemencoding()
+
+        if type(self.path) == type(u''):
+            return self.path.encode(encoding)
+        else:
+            return self.path
+
+
+    def asTextPath(self):
+        """
+        Return the path of this L{FilePath} as text.
+
+        @returns: L{unicode}
+        """
+        if type(self.path) == type(u''):
+            return self.path
+        else:
+            return self.path.decode()
+
+
     def child(self, path):
         """
         Create and return a new L{FilePath} representing a path contained by
@@ -678,25 +711,35 @@ class FilePath(AbstractFilePath):
 
         @param path: The base name of the new L{FilePath}.  If this contains
             directory separators or parent references it will be rejected.
-        @type path: L{bytes}
+        @type path: L{bytes} or L{unicode}
 
         @raise InsecurePath: If the result of combining this path with C{path}
             would result in a path which is not a direct child of this path.
 
         @return: The child path.
-        @rtype: L{FilePath}
+        @rtype: L{FilePath} with an internal representation equal to the type of
+            C{path}.
         """
-        if platform.isWindows() and path.count(b":"):
+        if type(path) == type(u''):
+            colon = u":"
+            ourPath = self.asTextPath()
+        else:
+            colon = b":"
+            ourPath = self.asBytesPath()
+
+        if platform.isWindows() and path.count(colon):
             # Catch paths like C:blah that don't have a slash
             raise InsecurePath("%r contains a colon." % (path,))
+
         norm = normpath(path)
-        if self.sep in norm:
+        if _getSep(path) in norm:
             raise InsecurePath("%r contains one or more directory separators" %
                                (path,))
-        newpath = abspath(joinpath(self.path, norm))
-        if not newpath.startswith(self.path):
+
+        newpath = abspath(joinpath(ourPath, norm))
+        if not newpath.startswith(ourPath):
             raise InsecurePath("%r is not a child of %s" %
-                               (newpath, self.path))
+                               (newpath, ourPath))
         return self.clonePath(newpath)
 
 
@@ -1581,6 +1624,14 @@ class FilePath(AbstractFilePath):
             self._statinfo = value
 
 
+def _getSep(path):
+    """
+    Get the separator for L{path}.
+    """
+    if type(path) == type(b''):
+        return slash.encode("ascii")
+    else:
+        return slash
 
 # This is all a terrible hack to get statinfo deprecated
 _tmp = deprecated(
