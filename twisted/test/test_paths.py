@@ -1714,3 +1714,27 @@ class UnicodeFilePathTests(TestCase):
         fp = filepath.FilePath(b"/")
         child = fp.preauthChild(u"tmp")
         self.assertEqual(type(child.path), unicode)
+
+
+    def test_unicoderepr(self):
+        """
+        The repr of a L{unicode} L{FilePath} shouldn't burst into flames.
+        """
+        fp = filepath.FilePath(u"/")
+        reprOutput = repr(fp)
+        if _PY3:
+            self.assertEqual("FilePath('/')", reprOutput)
+        else:
+            self.assertEqual("FilePath(u'/')", reprOutput)
+
+
+    def test_bytesrepr(self):
+        """
+        The repr of a L{bytes} L{FilePath} shouldn't burst into flames.
+        """
+        fp = filepath.FilePath(b"/")
+        reprOutput = repr(fp)
+        if _PY3:
+            self.assertEqual("FilePath(b'/')", reprOutput)
+        else:
+            self.assertEqual("FilePath('/')", reprOutput)
