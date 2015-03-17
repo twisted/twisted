@@ -524,8 +524,7 @@ class StdioClient(basic.LineReceiver):
         @param localStream: Local stream from where data is read.
         @type localStream: File like object.
 
-        @param remotePath: Remote path for the request relative to current
-            working directory.
+        @param remotePath: Remote path for the request relative to current working directory.
         @type remotePath: C{str}
 
         @return: A deferred which fires when transfer is done.

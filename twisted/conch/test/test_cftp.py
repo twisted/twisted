@@ -295,7 +295,11 @@ class StdioClientTests(TestCase):
         self.client = cftp.StdioClient(sftpClient)
         self.client.currentDirectory = '/'
         self.database = self.client._pwd = UserDatabase()
-
+        # Use a fixed width for all tests so that we get the same results when
+        # running these tests from different terminals.
+        # Run tests in a wide console so that all items are delimited by at
+        # least one space character.
+        self.setKnownConsoleSize(500, 24)
         # Intentionally bypassing makeConnection - that triggers some code
         # which uses features not provided by our dumb Connection fake.
         self.client.transport = self.client.client.transport
@@ -525,9 +529,8 @@ class StdioClientTests(TestCase):
                 line = line.strip().rsplit(' ', 2)[0]
                 # NAME can be followed by a lot of spaces so we need to
                 # reduce them to single space.
-                # line = line.strip().split(' ', 1)
-                # actualTransfer.append('%s %s' % (line[0], line[1].strip()))
-                actualTransfer.append(line)
+                line = line.strip().split(' ', 1)
+                actualTransfer.append('%s %s' % (line[0], line[1].strip()))
             actualTransfer.append(actual[-1])
             actualOutput.append(actualTransfer)
 
