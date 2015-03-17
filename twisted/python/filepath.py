@@ -678,7 +678,7 @@ class FilePath(AbstractFilePath):
         Return a filesystem separator.
 
         @return: The native filesystem separator.
-        @returntype: The same type as L{self.path}.
+        @returntype: The same type as C{self.path}.
         """
         return _getSep(self.path)
 
