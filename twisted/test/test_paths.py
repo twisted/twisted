@@ -1747,9 +1747,9 @@ class UnicodeFilePathTests(TestCase):
         fp = filepath.FilePath(u"C:\\")
         reprOutput = repr(fp)
         if _PY3:
-            self.assertEqual("FilePath('C:\\')", reprOutput)
+            self.assertEqual("FilePath('C:\\\\')", reprOutput)
         else:
-            self.assertEqual("FilePath(u'C:\\')", reprOutput)
+            self.assertEqual("FilePath(u'C:\\\\')", reprOutput)
 
 
     def test_bytesreprWindows(self):
@@ -1759,9 +1759,9 @@ class UnicodeFilePathTests(TestCase):
         fp = filepath.FilePath(b"C:\\")
         reprOutput = repr(fp)
         if _PY3:
-            self.assertEqual("FilePath(b'C:\\')", reprOutput)
+            self.assertEqual("FilePath(b'C:\\\\')", reprOutput)
         else:
-            self.assertEqual("FilePath('C:\\')", reprOutput)
+            self.assertEqual("FilePath('C:\\\\')", reprOutput)
 
 
     if platform.isWindows():
