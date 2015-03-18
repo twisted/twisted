@@ -9,6 +9,7 @@ from zope.interface.verify import verifyObject
 
 try:
     from twisted.conch.ssh import channel
+    from twisted.conch.ssh.address import SSHTransportAddress
     from twisted.conch.ssh.transport import SSHServerTransport
     from twisted.conch.ssh.service import SSHService
     from twisted.internet.address import IPv4Address
@@ -298,7 +299,7 @@ class ChannelTests(unittest.TestCase):
         peer = IPv4Address('TCP', '192.168.0.1', 54321)
         self.connectTransport(peerAddress=peer)
 
-        self.assertEqual(peer, self.channel.getPeer())
+        self.assertEqual(SSHTransportAddress(peer), self.channel.getPeer())
 
 
     def test_getHost(self):
@@ -309,4 +310,4 @@ class ChannelTests(unittest.TestCase):
         host = IPv4Address('TCP', '127.0.0.1', 12345)
         self.connectTransport(hostAddress=host)
 
-        self.assertEqual(host, self.channel.getHost())
+        self.assertEqual(SSHTransportAddress(host), self.channel.getHost())

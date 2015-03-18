@@ -256,13 +256,13 @@ class SSHChannel(log.Logger):
         """
         See: L{ITransport.getPeer}
         """
-        return self.conn.transport.getPeer().address
+        return self.conn.transport.getPeer()
 
     def getHost(self):
         """
         See: L{ITransport.getHost}
         """
-        return self.conn.transport.getHost().address
+        return self.conn.transport.getHost()
 
     def stopWriting(self):
         """
