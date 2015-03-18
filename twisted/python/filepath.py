@@ -742,7 +742,7 @@ class FilePath(AbstractFilePath):
         if type(path) == unicode:
             ourPath = self.asTextPath()
         else:
-            colon = colon.decode("ascii")
+            colon = colon.encode("ascii")
             ourPath = self.asBytesPath()
 
         if platform.isWindows() and path.count(colon):
@@ -1255,9 +1255,9 @@ class FilePath(AbstractFilePath):
         """
         List the base names of the direct children of this L{FilePath}.
 
-        @return: A L{list} of L{bytes} giving the names of the contents of the
-            directory this L{FilePath} refers to.  These names are relative to
-            this L{FilePath}.
+        @return: A L{list} of L{bytes}/L{unicode} giving the names of the
+            contents of the directory this L{FilePath} refers to. These names
+            are relative to this L{FilePath}.
         @rtype: L{list}
 
         @raise: Anything the platform L{os.listdir} implementation might raise
@@ -1329,11 +1329,14 @@ class FilePath(AbstractFilePath):
         representing my children that match the given pattern.
 
         @param pattern: A glob pattern to use to match child paths.
-        @type pattern: L{bytes}
+        @type pattern: equal to the type of C{self.path}
 
         @return: A L{list} of matching children.
         @rtype: L{list}
         """
+        if not type(pattern) == type(self.path):
+            raise TypeError("The pattern given is not {}".format(type(self.path)))
+
         import glob
         path = self.path[-1] == b'/' and self.path + pattern or self.sep.join(
             [self.path, pattern])
@@ -1359,7 +1362,7 @@ class FilePath(AbstractFilePath):
 
         @return: All of the components of the L{FilePath}'s path except the
             last one (everything up to the final path separator).
-        @rtype: L{bytes}
+        @rtype: L{bytes} or L{unicode}, depending on the internal representation
         """
         return dirname(self.path)
 

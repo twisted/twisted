@@ -1770,3 +1770,13 @@ class UnicodeFilePathTests(TestCase):
     else:
         test_unicodereprWindows.skip = "Test only works on Windows"
         test_bytesreprWindows.skip = "Test only works on Windows"
+
+
+    def test_mixedTypeGlobChildren(self):
+        """
+        globChildren allows only the same type as self.path for the pattern
+        argument.
+        """
+        fp = filepath.FilePath(u"/")
+        with self.assertRaises(TypeError):
+            fp.globChildren(b"*")
