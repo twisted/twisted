@@ -1813,7 +1813,7 @@ class UnicodeFilePathTests(TestCase):
         """
         fp = filepath.FilePath(u"./")
         parent = fp.parent()
-        self.assertIsInstance(fp.path, unicode)
+        self.assertIsInstance(parent.path, unicode)
 
 
     def test_mixedTypeTemporarySibling(self):
@@ -1822,16 +1822,6 @@ class UnicodeFilePathTests(TestCase):
         L{FilePath} is returned.
         """
         fp = filepath.FilePath(u"./")
-        tempSibling = fp.temporarySibling(b".txt")
-        self.assertIsInstance(tempSibling.path, bytes)
-
-
-    def test_mixedTypeTemporarySibling(self):
-        """
-        A L{bytes} extension to C{temporarySibling} will mean a L{bytes} mode
-        L{FilePath} is returned.
-        """
-        fp = filepath.FilePath(b"./")
         tempSibling = fp.temporarySibling(b".txt")
         self.assertIsInstance(tempSibling.path, bytes)
 
@@ -1916,7 +1906,7 @@ class UnicodeFilePathTests(TestCase):
         self.assertIsInstance(newPath.path, bytes)
 
 
-    def test_mixedTypeChildSearchPreauth(self):
+    def test_unicodeChildSearchPreauth(self):
         """
         C{childSearchPreauth} called with L{unicode} on a L{unicode}-mode
         L{FilePath} will return a L{unicode}-mode L{FilePath}.
