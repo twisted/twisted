@@ -21,6 +21,8 @@ Note, that you should use Python 2.6.5 or higher, since previous implementations
 of select.kqueue had U{http://bugs.python.org/issue5910} not yet fixed.
 """
 
+from __future__ import division, absolute_import
+
 import errno
 
 from zope.interface import implementer
