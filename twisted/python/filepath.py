@@ -622,8 +622,15 @@ class FilePath(AbstractFilePath):
     Greater-than-second precision is only available in Windows on Python2.5 and
     later.
 
-    If instantiated with a L{bytes} type, it will return a L{FilePath} which has
-    an internal representation of L{bytes}, and vice versa for L{unicode}.
+    The type of C{path} when instantiating decides the internal representation
+    of the L{FilePath}. That is, C{FilePath(b"/")} will return a L{bytes} mode
+    L{FilePath}, and C{FilePath(u"/")} will return a L{unicode} mode
+    L{FilePath}. C{FilePath("/")} will return a L{bytes} mode L{FilePath} on
+    Python 2, and a L{unicode} mode L{FilePath} on Python 3.
+
+    Methods that return a new L{FilePath} use the type of the given subpath to
+    decide its internal representation. For example,
+    C{FilePath(b"/").child(u"tmp")} will return a L{unicode} L{FilePath}.
 
     @type alwaysCreate: L{bool}
     @ivar alwaysCreate: When opening this file, only succeed if the file does
@@ -693,13 +700,12 @@ class FilePath(AbstractFilePath):
         @return: L{bytes}
         @since: 15.2
         """
-        if encoding is None:
-            encoding = getfilesystemencoding()
-
-        if type(self.path) == unicode:
-            return self.path.encode(encoding)
-        else:
+        if type(self.path) == bytes:
             return self.path
+        else:
+            if encoding is None:
+                encoding = getfilesystemencoding()
+            return self.path.encode(encoding)
 
 
     def asTextPath(self):
@@ -731,11 +737,12 @@ class FilePath(AbstractFilePath):
         @rtype: L{FilePath} with an internal representation equal to the type of
             C{path}.
         """
+        colon = u":"
+
         if type(path) == unicode:
-            colon = u":"
             ourPath = self.asTextPath()
         else:
-            colon = b":"
+            colon = colon.decode("ascii")
             ourPath = self.asBytesPath()
 
         if platform.isWindows() and path.count(colon):
