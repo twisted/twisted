@@ -1844,3 +1844,87 @@ class UnicodeFilePathTests(TestCase):
         fp = filepath.FilePath(u"/tmp/")
         tempSibling = fp.temporarySibling(u".txt")
         self.assertIsInstance(tempSibling.path, unicode)
+
+
+    def test_mixedTypeSiblingExtensionSearch(self):
+        """
+        C{siblingExtensionSearch} called with L{bytes} on a L{unicode}-mode
+        L{FilePath} will return a L{list} of L{bytes}-mode L{FilePath}s.
+        """
+        fp = filepath.FilePath(u"./")
+        sibling = filepath.FilePath(fp.asTextPath() + u".txt")
+        sibling.touch()
+        newPath = fp.siblingExtensionSearch(b".txt")
+
+        self.assertIsInstance(newPath, filepath.FilePath)
+        self.assertIsInstance(newPath.path, bytes)
+
+
+    def test_unicodeSiblingExtensionSearch(self):
+        """
+        C{siblingExtensionSearch} called with L{unicode} on a L{unicode}-mode
+        L{FilePath} will return a L{list} of L{unicode}-mode L{FilePath}s.
+        """
+        fp = filepath.FilePath(u"./")
+        sibling = filepath.FilePath(fp.asTextPath() + u".txt")
+        sibling.touch()
+        newPath = fp.siblingExtensionSearch(u".txt")
+
+        self.assertIsInstance(newPath, filepath.FilePath)
+        self.assertIsInstance(newPath.path, unicode)
+
+
+    def test_mixedTypeSiblingExtension(self):
+        """
+        C{siblingExtension} called with L{bytes} on a L{unicode}-mode
+        L{FilePath} will return a L{bytes}-mode L{FilePath}.
+        """
+        fp = filepath.FilePath(u"./")
+        sibling = filepath.FilePath(fp.asTextPath() + u".txt")
+        sibling.touch()
+        newPath = fp.siblingExtension(b".txt")
+
+        self.assertIsInstance(newPath, filepath.FilePath)
+        self.assertIsInstance(newPath.path, bytes)
+
+
+    def test_unicodeSiblingExtension(self):
+        """
+        C{siblingExtension} called with L{unicode} on a L{unicode}-mode
+        L{FilePath} will return a L{unicode}-mode L{FilePath}.
+        """
+        fp = filepath.FilePath(u"./")
+        sibling = filepath.FilePath(fp.asTextPath() + u".txt")
+        sibling.touch()
+        newPath = fp.siblingExtension(u".txt")
+
+        self.assertIsInstance(newPath, filepath.FilePath)
+        self.assertIsInstance(newPath.path, unicode)
+
+
+    def test_mixedTypeChildSearchPreauth(self):
+        """
+        C{childSearchPreauth} called with L{bytes} on a L{unicode}-mode
+        L{FilePath} will return a L{bytes}-mode L{FilePath}.
+        """
+        fp = filepath.FilePath(u"./")
+        child = fp.child("text.txt")
+        child.touch()
+        newPath = fp.childSearchPreauth(b"text.txt")
+
+        self.assertIsInstance(newPath, filepath.FilePath)
+        self.assertIsInstance(newPath.path, bytes)
+
+
+    def test_mixedTypeChildSearchPreauth(self):
+        """
+        C{childSearchPreauth} called with L{unicode} on a L{unicode}-mode
+        L{FilePath} will return a L{unicode}-mode L{FilePath}.
+        """
+        fp = filepath.FilePath(u"./")
+        child = fp.child("text.txt")
+        child.touch()
+        newPath = fp.childSearchPreauth(u"text.txt")
+
+        self.assertIsInstance(newPath, filepath.FilePath)
+        self.assertIsInstance(newPath.path, unicode)

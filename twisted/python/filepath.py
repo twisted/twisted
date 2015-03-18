@@ -720,6 +720,9 @@ class FilePath(AbstractFilePath):
         """
         Return the path of this L{FilePath} as text.
 
+        @param encoding: The encoding to use if coercing to L{unicode}. If none
+            is given, L{getfilesystemencoding} is used.
+
         @return: L{unicode}
         @since: 15.2
         """
@@ -808,8 +811,12 @@ class FilePath(AbstractFilePath):
         @return: C{None} or the child path.
         @rtype: L{types.NoneType} or L{FilePath}
         """
-        p = self.path
         for child in paths:
+            if type(child) == bytes:
+                p = self.asBytesPath()
+            else:
+                p = self.asTextPath()
+
             jp = joinpath(p, child)
             if exists(jp):
                 return self.clonePath(jp)
@@ -828,12 +835,21 @@ class FilePath(AbstractFilePath):
         The extension '*' has a magic meaning, which means "any path that
         begins with C{self.path + '.'} is acceptable".
         """
-        p = self.path
         for ext in exts:
             if not ext and self.exists():
                 return self
-            if ext == b'*':
-                basedot = basename(p) + b'.'
+
+            if type(ext) == bytes:
+                p = self.asBytesPath()
+                star = b"*"
+                dot = b"."
+            else:
+                p = self.asTextPath()
+                star = u"*"
+                dot = u"."
+
+            if ext == star:
+                basedot = basename(p) + dot
                 for fn in listdir(dirname(p)):
                     if fn.startswith(basedot):
                         return self.clonePath(joinpath(dirname(p), fn))
@@ -873,12 +889,18 @@ class FilePath(AbstractFilePath):
         Attempt to return a path with my name, given the extension at C{ext}.
 
         @param ext: File-extension to search for.
-        @type ext: L{str}
+        @type ext: L{bytes} or L{unicode}
 
         @return: The sibling path.
-        @rtype: L{FilePath}
+        @rtype: L{FilePath} with the same internal representation as the type of
+            C{ext}
         """
-        return self.clonePath(self.path + ext)
+        if type(ext) == bytes:
+            ourPath = self.asBytesPath()
+        else:
+            ourPath = self.asTextPath()
+
+        return self.clonePath(ourPath + ext)
 
 
     def linkTo(self, linkFilePath):
