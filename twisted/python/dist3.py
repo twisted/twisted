@@ -47,6 +47,7 @@ modules = [
     "twisted.internet.gireactor",
     "twisted.internet._glibbase",
     "twisted.internet.gtk3reactor",
+    "twisted.internet.kqreactor",
     "twisted.internet.main",
     "twisted.internet._newtls",
     "twisted.internet.posixbase",
