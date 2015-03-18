@@ -1774,9 +1774,73 @@ class UnicodeFilePathTests(TestCase):
 
     def test_mixedTypeGlobChildren(self):
         """
-        globChildren allows only the same type as self.path for the pattern
-        argument.
+        C{globChildren} will return the same type as the pattern argument.
         """
         fp = filepath.FilePath(u"/")
-        with self.assertRaises(TypeError):
-            fp.globChildren(b"*")
+        children = fp.globChildren(b"*")
+        self.assertIsInstance(children[0].path, bytes)
+
+
+    def test_unicodeGlobChildren(self):
+        """
+        C{globChildren} works with L{unicode}.
+        """
+        fp = filepath.FilePath(u"/")
+        children = fp.globChildren(u"*")
+        self.assertIsInstance(children[0].path, unicode)
+
+
+    def test_unicodeBasename(self):
+        """
+        Calling C{basename} on an text- L{FilePath} returns L{unicode}.
+        """
+        fp = filepath.FilePath(u"./")
+        self.assertIsInstance(fp.basename(), unicode)
+
+
+    def test_unicodeDirname(self):
+        """
+        Calling C{dirname} on a text-mode L{FilePath} returns L{unicode}.
+        """
+        fp = filepath.FilePath(u"./")
+        self.assertIsInstance(fp.dirname(), unicode)
+
+
+    def test_unicodeParent(self):
+        """
+        Calling C{parent} on a text-mode L{FilePath} will return a text-mode
+        L{FilePath}.
+        """
+        fp = filepath.FilePath(u"./")
+        parent = fp.parent()
+        self.assertIsInstance(fp.path, unicode)
+
+
+    def test_mixedTypeTemporarySibling(self):
+        """
+        A L{bytes} extension to C{temporarySibling} will mean a L{bytes} mode
+        L{FilePath} is returned.
+        """
+        fp = filepath.FilePath(u"./")
+        tempSibling = fp.temporarySibling(b".txt")
+        self.assertIsInstance(tempSibling.path, bytes)
+
+
+    def test_mixedTypeTemporarySibling(self):
+        """
+        A L{bytes} extension to C{temporarySibling} will mean a L{bytes} mode
+        L{FilePath} is returned.
+        """
+        fp = filepath.FilePath(b"./")
+        tempSibling = fp.temporarySibling(b".txt")
+        self.assertIsInstance(tempSibling.path, bytes)
+
+
+    def test_unicodeTemporarySibling(self):
+        """
+        A L{unicode} extension to C{temporarySibling} will mean a L{unicode}
+        mode L{FilePath} is returned.
+        """
+        fp = filepath.FilePath(u"/tmp/")
+        tempSibling = fp.temporarySibling(u".txt")
+        self.assertIsInstance(tempSibling.path, unicode)

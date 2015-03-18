@@ -264,14 +264,22 @@ class _WindowsUnlistableError(UnlistableError, WindowsError):
 
 
 
-def _secureEnoughString():
+def _secureEnoughString(path):
     """
     Compute a string usable as a new, temporary filename.
 
+    @param path: The path that the new temporary filename should be able to be
+        concatenated with.
+
     @return: A pseudorandom, 16 byte string for use in secure filenames.
-    @rtype: C{bytes}
+    @rtype: the type of C{path}
     """
-    return armor(sha1(randomBytes(64)).digest())[:16]
+    secureishString = armor(sha1(randomBytes(64)).digest())[:16]
+
+    if type(path) == unicode:
+        secureishString = secureishString.decode(getfilesystemencoding())
+
+    return secureishString
 
 
 
@@ -708,7 +716,7 @@ class FilePath(AbstractFilePath):
             return self.path.encode(encoding)
 
 
-    def asTextPath(self):
+    def asTextPath(self, encoding=None):
         """
         Return the path of this L{FilePath} as text.
 
@@ -718,7 +726,9 @@ class FilePath(AbstractFilePath):
         if type(self.path) == unicode:
             return self.path
         else:
-            return self.path.decode()
+            if encoding is None:
+                encoding = getfilesystemencoding()
+            return self.path.decode(encoding)
 
 
     def child(self, path):
@@ -1329,18 +1339,21 @@ class FilePath(AbstractFilePath):
         representing my children that match the given pattern.
 
         @param pattern: A glob pattern to use to match child paths.
-        @type pattern: equal to the type of C{self.path}
+        @type pattern: L{unicode} or L{bytes}
 
         @return: A L{list} of matching children.
-        @rtype: L{list}
+        @rtype: L{list} of L{FilePath}, with an internal representation of
+            C{pattern}'s type
         """
-        if not type(pattern) == type(self.path):
-            raise TypeError("The pattern given is not {}".format(type(self.path)))
+        if type(pattern) == bytes:
+            ourPath = self.asBytesPath()
+        else:
+            ourPath = self.asTextPath()
 
         import glob
-        path = self.path[-1] == b'/' and self.path + pattern or self.sep.join(
-            [self.path, pattern])
-        return map(self.clonePath, glob.glob(path))
+        path = ourPath[-1] == _getSep(ourPath) and ourPath + pattern \
+               or _getSep(ourPath).join([ourPath, pattern])
+        return list(map(self.clonePath, glob.glob(path)))
 
 
     def basename(self):
@@ -1350,7 +1363,7 @@ class FilePath(AbstractFilePath):
 
         @return: The final component of the L{FilePath}'s path (Everything
             after the final path separator).
-        @rtype: L{bytes}
+        @rtype: the same type as this L{FilePath}'s C{path} attribute
         """
         return basename(self.path)
 
@@ -1362,7 +1375,7 @@ class FilePath(AbstractFilePath):
 
         @return: All of the components of the L{FilePath}'s path except the
             last one (everything up to the final path separator).
-        @rtype: L{bytes} or L{unicode}, depending on the internal representation
+        @rtype: the same type as this L{FilePath}'s C{path} attribute
         """
         return dirname(self.path)
 
@@ -1491,13 +1504,23 @@ class FilePath(AbstractFilePath):
         @param extension: A suffix to append to the created filename.  (Note
             that if you want an extension with a '.' you must include the '.'
             yourself.)
-        @type extension: L{bytes}
+        @type extension: L{bytes} or L{unicode}
 
         @return: a path object with the given extension suffix, C{alwaysCreate}
             set to True.
-        @rtype: L{FilePath}
+        @rtype: L{FilePath} with the internal representation equal to the type
+            of C{extension}
         """
-        sib = self.sibling(_secureEnoughString() + self.basename() + extension)
+        if not type(extension) == type(self.path):
+            if type(extension) == bytes:
+                ourPath = self.asBytesPath()
+            else:
+                ourPath = self.asTextPath()
+        else:
+            ourPath = self.path
+
+        sib = self.sibling(_secureEnoughString(ourPath) +
+                           self.clonePath(ourPath).basename() + extension)
         sib.requireCreate()
         return sib
 
