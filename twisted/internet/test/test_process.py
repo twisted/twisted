@@ -704,7 +704,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         path to it.
         """
         script = self.mktemp()
-        scriptFile = file(script, 'wt')
+        scriptFile = open(script, 'wt')
         scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
         scriptFile.close()
         return os.path.abspath(script)
@@ -769,7 +769,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         args = ['hello', '"', ' \t|<>^&', r'"\\"hello\\"', r'"foo\ bar baz\""']
         # Ensure that all non-NUL characters can be passed too.
-        args.append(''.join(map(chr, xrange(1, 256))))
+        args.append(''.join(map(chr, range(1, 256))))
 
         reactor = self.buildReactor()
 
