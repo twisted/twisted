@@ -2,11 +2,11 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-
 """
 Different styles of persisted objects.
 """
+
+from __future__ import division, absolute_import
 
 # System Imports
 import types
@@ -22,8 +22,8 @@ except ImportError:
 from io import BytesIO as StringIO
 
 # Twisted Imports
-from twisted.python import log
-from twisted.python import reflect
+from twisted.python import log, reflect
+from twisted.python.compat import _PY3
 
 oldModules = {}
 
@@ -261,3 +261,17 @@ class Versioned:
                     method(self)
                 else:
                     log.msg( 'Warning: cannot upgrade %s to version %s' % (base, persistVers) )
+
+__all__ = ["pickleMethod", "unpickleMethod", "pickleModule", "unpickleModule",
+           "pickleStringO", "unpickleStringO", "pickleStringI", "Versioned",
+           "unpickleStringI", "Ephemeral", "doUpgrade", "requireUpgrade"]
+
+
+if _PY3:
+    __all3__ = ["Ephemeral"]
+
+    for name in __all__[:]:
+        if name not in __all3__:
+            __all__.remove(name)
+            del globals()[name]
+    del name, __all3__
