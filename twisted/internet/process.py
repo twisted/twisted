@@ -417,7 +417,7 @@ class _BaseProcess(BaseProcess, object):
                     # XXXX: however even libc assumes write(2, err) is a useful
                     #       thing to attempt
                     try:
-                        stderr = os.fdopen(2, 'w')
+                        stderr = os.fdopen(2, 'wb')
                         msg = ("Upon execvpe {} {} in environment id {}"
                                "\n:").format(executable, str(args),
                                              id(environment))
@@ -431,8 +431,8 @@ class _BaseProcess(BaseProcess, object):
                         else:
                             stderr.write(msg)
                             stderr.write(tb)
-
                         stderr.flush()
+
                         for fd in range(3):
                             os.close(fd)
                     except:
@@ -694,7 +694,7 @@ class Process(_BaseProcess):
 
             self._fork(path, uid, gid, executable, args, environment, fdmap=fdmap)
         except:
-            map(os.close, _openedPipes)
+            list(map(os.close, _openedPipes))
             raise
 
         # we are the parent process:
@@ -760,7 +760,7 @@ class Process(_BaseProcess):
         debug = self.debug_child
         if debug:
             errfd = sys.stderr
-            errfd.write("starting _setupChild\n")
+            errfd.write(b"starting _setupChild\n")
 
         destList = list(fdmap.values())
         for fd in list(_listOpenFDs()):
@@ -796,7 +796,7 @@ class Process(_BaseProcess):
                     if debug: print >>errfd, "os.dup(%d) -> %d" % (child,
                                                                    newtarget)
                     os.close(child) # close the original
-                    for c, p in fdmap.items():
+                    for c, p in list(fdmap.items()):
                         if p == child:
                             fdmap[c] = newtarget # update all pointers
                 # now it should be available
@@ -812,9 +812,9 @@ class Process(_BaseProcess):
         # need to remove duplicates first.
 
         old = []
-        for fd in fdmap.values():
+        for fd in list(fdmap.values()):
             if not fd in old:
-                if not fd in fdmap.keys():
+                if not fd in list(fdmap.keys()):
                     old.append(fd)
         if debug: print >>errfd, "old", old
         for fd in old:

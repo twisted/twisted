@@ -1160,7 +1160,7 @@ class PosixProcessBase(object):
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
         def buggyexecvpe(command, args, environment):
-            raise RuntimeError(b"Ouch")
+            raise RuntimeError("Ouch")
         oldexecvpe = os.execvpe
         os.execvpe = buggyexecvpe
         try:
