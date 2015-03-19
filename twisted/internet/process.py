@@ -418,7 +418,7 @@ class _BaseProcess(BaseProcess, object):
                     #       thing to attempt
                     try:
                         stderr = os.fdopen(2, 'wb')
-                        msg = ("Upon execvpe {} {} in environment id {}"
+                        msg = ("Upon execvpe {0} {1} in environment id {2}"
                                "\n:").format(executable, str(args),
                                              id(environment))
                         tb = NativeStringIO()
