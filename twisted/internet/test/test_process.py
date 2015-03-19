@@ -129,7 +129,6 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         ended.addCallback(lambda ignored: reactor.stop())
 
         self.runReactor(reactor)
-        print(protocol.received)
         self.assertEqual(bytesToSend, b"".join(protocol.received[1]))
 
 
@@ -455,8 +454,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         @param which: Either C{b"uid"} or C{b"gid"}.
         """
         program = [
-            b"import os",
-            b"raise SystemExit(os.get%s() != 1)" % (which,)]
+            "import os",
+            "raise SystemExit(os.get%s() != 1)" % (which,)]
 
         container = []
         class CaptureExitStatus(ProcessProtocol):
@@ -470,7 +469,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         protocol = CaptureExitStatus()
         reactor.callWhenRunning(
             reactor.spawnProcess, protocol, sys.executable,
-            [sys.executable, b"-c", b"\n".join(program)],
+            [sys.executable, "-c", "\n".join(program)],
             **{which: 1})
 
         self.runReactor(reactor)
@@ -483,7 +482,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         If a value is passed for L{IReactorProcess.spawnProcess}'s C{uid}, the
         child process is run with that UID.
         """
-        self._changeIDTest(b"uid")
+        self._changeIDTest("uid")
     if _uidgidSkip is not None:
         test_changeUID.skip = _uidgidSkip
 
@@ -493,7 +492,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         If a value is passed for L{IReactorProcess.spawnProcess}'s C{gid}, the
         child process is run with that GID.
         """
-        self._changeIDTest(b"gid")
+        self._changeIDTest("gid")
     if _uidgidSkip is not None:
         test_changeGID.skip = _uidgidSkip
 
@@ -755,7 +754,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         args = [b'hello', b'"', b' \t|<>^&', br'"\\"hello\\"', br'"foo\ bar baz\""']
         # Ensure that all non-NUL characters can be passed too.
         if _PY3:
-            args.append(bytes(bytearray(range(1,255))))
+            args.append("".join(map(chr, range(1,255))).encode("utf8"))
         else:
             args.append("".join(list(map(chr, range(1,255)))))
 
