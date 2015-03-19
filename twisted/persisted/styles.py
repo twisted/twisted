@@ -14,16 +14,19 @@ import copy
 import inspect
 import sys
 
-try:
-    import copy_reg
-except ImportError:
-    import copyreg as copy_reg
-
-from io import BytesIO as StringIO
-
 # Twisted Imports
 from twisted.python import log, reflect
 from twisted.python.compat import _PY3
+
+
+if _PY3:
+    import copyreg as copy_reg
+else:
+    import copy_reg
+    try:
+        import cStringIO as StringIO
+    except ImportError:
+        import StringIO
 
 oldModules = {}
 
@@ -80,34 +83,37 @@ copy_reg.pickle(types.ModuleType,
                 pickleModule,
                 unpickleModule)
 
-def pickleStringO(stringo):
-    'support function for copy_reg to pickle StringIO.OutputTypes'
-    return unpickleStringO, (stringo.getvalue(), stringo.tell())
 
-def unpickleStringO(val, sek):
-    x = StringIO.StringIO()
-    x.write(val)
-    x.seek(sek)
-    return x
+if not _PY3:
 
-if hasattr(StringIO, 'OutputType'):
-    copy_reg.pickle(StringIO.OutputType,
-                    pickleStringO,
-                    unpickleStringO)
+    def pickleStringO(stringo):
+        'support function for copy_reg to pickle StringIO.OutputTypes'
+        return unpickleStringO, (stringo.getvalue(), stringo.tell())
 
-def pickleStringI(stringi):
-    return unpickleStringI, (stringi.getvalue(), stringi.tell())
+    def unpickleStringO(val, sek):
+        x = StringIO.StringIO()
+        x.write(val)
+        x.seek(sek)
+        return x
 
-def unpickleStringI(val, sek):
-    x = StringIO.StringIO(val)
-    x.seek(sek)
-    return x
+    if hasattr(StringIO, 'OutputType'):
+        copy_reg.pickle(StringIO.OutputType,
+                        pickleStringO,
+                        unpickleStringO)
+
+    def pickleStringI(stringi):
+        return unpickleStringI, (stringi.getvalue(), stringi.tell())
+
+    def unpickleStringI(val, sek):
+        x = StringIO.StringIO(val)
+        x.seek(sek)
+        return x
 
 
-if hasattr(StringIO, 'InputType'):
-    copy_reg.pickle(StringIO.InputType,
-                pickleStringI,
-                unpickleStringI)
+    if hasattr(StringIO, 'InputType'):
+        copy_reg.pickle(StringIO.InputType,
+                    pickleStringI,
+                    unpickleStringI)
 
 class Ephemeral:
     """
@@ -262,9 +268,8 @@ class Versioned:
                 else:
                     log.msg( 'Warning: cannot upgrade %s to version %s' % (base, persistVers) )
 
-__all__ = ["pickleMethod", "unpickleMethod", "pickleModule", "unpickleModule",
-           "pickleStringO", "unpickleStringO", "pickleStringI", "Versioned",
-           "unpickleStringI", "Ephemeral", "doUpgrade", "requireUpgrade"]
+__all__= ["pickleMethod", "unpickleMethod", "pickleModule", "unpickleModule",
+           "Versioned", "Ephemeral", "doUpgrade", "requireUpgrade"]
 
 
 if _PY3:
@@ -275,3 +280,7 @@ if _PY3:
             __all__.remove(name)
             del globals()[name]
     del name, __all3__
+
+else:
+    __all__ = __all__ + ["pickleStringO", "unpickleStringO", "pickleStringI",
+                         "unpickleStringI"]

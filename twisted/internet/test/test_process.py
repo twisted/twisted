@@ -680,7 +680,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
              self.keepStdioOpenArg],
             usePTY=self.usePTY)
 
-        def cbEnded(args):
+        def cbExited(args):
             failure, = args
             failure.trap(ProcessDone)
             msg('cbExited; lost = %s' % (lost,))
