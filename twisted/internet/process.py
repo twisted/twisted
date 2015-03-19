@@ -10,7 +10,7 @@ Do NOT use this module directly - use reactor.spawnProcess() instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 # System Imports
 import gc, os, sys, stat, traceback, select, signal, errno
@@ -816,7 +816,7 @@ class Process(_BaseProcess):
             if not fd in old:
                 if not fd in list(fdmap.keys()):
                     old.append(fd)
-        if debug: print("old", old, file=stderr))
+        if debug: print("old", old, file=stderr)
         for fd in old:
             os.close(fd)
 
