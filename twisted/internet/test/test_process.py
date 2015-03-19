@@ -5,6 +5,8 @@
 Tests for implementations of L{IReactorProcess}.
 """
 
+from __future__ import division, absolute_import
+
 __metaclass__ = type
 
 import os, io, sys, signal, threading
@@ -276,7 +278,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
             reactor.spawnProcess, Exiter(), sys.executable,
             [sys.executable, "-c", source], usePTY=self.usePTY)
 
-        def cbExited((failure,)):
+        def cbExited(args):
+            failure, = args
             # Trapping implicitly verifies that it's a Failure (rather than
             # an exception) and explicitly makes sure it's the right type.
             failure.trap(ProcessTerminated)
@@ -456,7 +459,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         container = []
         class CaptureExitStatus(ProcessProtocol):
             def childDataReceived(self, fd, bytes):
-                print fd, bytes
+                print(fd, bytes)
             def processEnded(self, reason):
                 container.append(reason)
                 reactor.stop()
@@ -629,7 +632,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
              self.keepStdioOpenArg],
             usePTY=self.usePTY)
 
-        def cbEnded((failure,)):
+        def cbEnded(args):
+            failure, = args
             failure.trap(ProcessDone)
             self.assertEqual(set(lost), set([0, 1, 2]))
         ended.addCallback(cbEnded)
@@ -676,7 +680,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
              self.keepStdioOpenArg],
             usePTY=self.usePTY)
 
-        def cbExited((failure,)):
+        def cbEnded(args):
+            failure, = args
             failure.trap(ProcessDone)
             msg('cbExited; lost = %s' % (lost,))
             self.assertEqual(lost, [])
@@ -718,11 +723,12 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
                 "import sys",
                 "sys.stdout.write('%s')" % (SHEBANG_OUTPUT,),
                 "sys.stdout.flush()"])
-        os.chmod(scriptFile, 0700)
+        os.chmod(scriptFile, 0o700)
 
         reactor = self.buildReactor()
 
-        def cbProcessExited((out, err, code)):
+        def cbProcessExited(args):
+            out, err, code = args
             msg("cbProcessExited((%r, %r, %d))" % (out, err, code))
             self.assertEqual(out, SHEBANG_OUTPUT)
             self.assertEqual(err, "")

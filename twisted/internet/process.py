@@ -10,6 +10,8 @@ Do NOT use this module directly - use reactor.spawnProcess() instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
+from __future__ import division, absolute_import
+
 # System Imports
 import gc, os, sys, stat, traceback, select, signal, errno
 
@@ -23,7 +25,7 @@ try:
 except ImportError:
     fcntl = None
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.python import log, failure
 from twisted.python.util import switchUID
@@ -91,7 +93,7 @@ def detectLinuxBrokenPipeBehavior():
     @rtype : L{bool}
     """
     r, w = os.pipe()
-    os.write(w, 'a')
+    os.write(w, b'a')
     reads, writes, exes = select.select([w], [], [], 0)
     if reads:
         # Linux < 2.6.11 says a write-only pipe is readable.
@@ -303,7 +305,7 @@ class _BaseProcess(BaseProcess, object):
         try:
             try:
                 pid, status = os.waitpid(self.pid, os.WNOHANG)
-            except OSError, e:
+            except OSError as e:
                 if e.errno == errno.ECHILD:
                     # no child process
                     pid = None
@@ -344,7 +346,7 @@ class _BaseProcess(BaseProcess, object):
             raise ProcessExitedAlready()
         try:
             os.kill(self.pid, signalID)
-        except OSError, e:
+        except OSError as e:
             if e.errno == errno.ESRCH:
                 raise ProcessExitedAlready()
             else:
@@ -588,6 +590,7 @@ def _listOpenFDs():
     return detector._listOpenFDs()
 
 
+@implementer(IProcessTransport)
 class Process(_BaseProcess):
     """
     An operating-system Process.
@@ -601,7 +604,6 @@ class Process(_BaseProcess):
     code is not cross-platform. (also, windows can only select
     on sockets...)
     """
-    implements(IProcessTransport)
 
     debug = False
     debug_child = False
@@ -647,7 +649,7 @@ class Process(_BaseProcess):
                         }
 
         debug = self.debug
-        if debug: print "childFDs", childFDs
+        if debug: print("childFDs", childFDs)
 
         _openedPipes = []
         def pipe():
@@ -659,24 +661,24 @@ class Process(_BaseProcess):
         fdmap = {} # maps childFD to parentFD
         try:
             for childFD, target in childFDs.items():
-                if debug: print "[%d]" % childFD, target
+                if debug: print("[%d]" % childFD, target)
                 if target == "r":
                     # we need a pipe that the parent can read from
                     readFD, writeFD = pipe()
-                    if debug: print "readFD=%d, writeFD=%d" % (readFD, writeFD)
+                    if debug: print("readFD=%d, writeFD=%d" % (readFD, writeFD))
                     fdmap[childFD] = writeFD     # child writes to this
                     helpers[childFD] = readFD    # parent reads from this
                 elif target == "w":
                     # we need a pipe that the parent can write to
                     readFD, writeFD = pipe()
-                    if debug: print "readFD=%d, writeFD=%d" % (readFD, writeFD)
+                    if debug: print("readFD=%d, writeFD=%d" % (readFD, writeFD))
                     fdmap[childFD] = readFD      # child reads from this
                     helpers[childFD] = writeFD   # parent writes to this
                 else:
                     assert type(target) == int, '%r should be an int' % (target,)
                     fdmap[childFD] = target      # parent ignores this
-            if debug: print "fdmap", fdmap
-            if debug: print "helpers", helpers
+            if debug: print("fdmap", fdmap)
+            if debug: print("helpers", helpers)
             # the child only cares about fdmap.values()
 
             self._fork(path, uid, gid, executable, args, environment, fdmap=fdmap)
@@ -918,11 +920,11 @@ class Process(_BaseProcess):
 
 
 
+@implementer(IProcessTransport)
 class PTYProcess(abstract.FileDescriptor, _BaseProcess):
     """
     An operating-system Process that uses PTY support.
     """
-    implements(IProcessTransport)
 
     status = -1
     pid = None
