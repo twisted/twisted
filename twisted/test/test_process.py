@@ -874,7 +874,7 @@ class TestTwoProcessesPosix(TestTwoProcessesBase, unittest.TestCase):
 
 class FDChecker(protocol.ProcessProtocol):
     state = 0
-    data = ""
+    data = b""
     failed = None
 
     def __init__(self, d):
@@ -901,7 +901,7 @@ class FDChecker(protocol.ProcessProtocol):
                     self.fail("got '%s' on fd1, expected 'righto'" \
                               % self.data)
                     return
-                self.data = ""
+                self.data = b""
                 self.state = 2
                 #print "state2", self.state
                 self.transport.writeToChild(3, b"efgh")
@@ -981,7 +981,7 @@ class FDTest(unittest.TestCase):
                              )
         def processEnded(ign):
             self.assertEqual(p.outF.getvalue(),
-                                 "here is some text\ngoodbye\n")
+                             b"here is some text\ngoodbye\n")
         return d.addCallback(processEnded)
 
 
@@ -1015,7 +1015,7 @@ class Accumulator(protocol.ProcessProtocol):
             d.callback(None)
 
 
-class PosixProcessBase:
+class PosixProcessBase(object):
     """
     Test running processes.
     """
@@ -1161,7 +1161,7 @@ class PosixProcessBase:
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
         def buggyexecvpe(command, args, environment):
-            raise RuntimeError("Ouch")
+            raise RuntimeError(b"Ouch")
         oldexecvpe = os.execvpe
         os.execvpe = buggyexecvpe
         try:
@@ -1169,9 +1169,9 @@ class PosixProcessBase:
                                  usePTY=self.usePTY)
 
             def check(ignored):
-                errData = "".join(p.errData + p.outData)
-                self.assertIn("Upon execvpe", errData)
-                self.assertIn("Ouch", errData)
+                errData = b"".join(p.errData + p.outData)
+                self.assertIn(b"Upon execvpe", errData)
+                self.assertIn(b"Ouch", errData)
             d.addCallback(check)
         finally:
             os.execvpe = oldexecvpe
@@ -1321,7 +1321,7 @@ class MockOS(object):
     egid = 0
     path = None
     raiseKill = None
-    readData = ""
+    readData = b""
 
     def __init__(self):
         """
@@ -1911,7 +1911,7 @@ class MockProcessTestCase(unittest.TestCase):
             self.assertIn(1, self.mockos.closed)
             self.assertIn(2, self.mockos.closed)
             # Check content of traceback
-            self.assertIn("RuntimeError: Bar", self.mockos.fdio.getvalue())
+            self.assertIn(b"RuntimeError: Bar", self.mockos.fdio.getvalue())
         else:
             self.fail("Should not be here")
 
@@ -2143,13 +2143,13 @@ class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
                              usePTY=self.usePTY)
 
         def processEnded(ign):
-            self.assertEqual(value, p.errF.getvalue())
+            self.assertEqual(b"42", p.errF.getvalue())
         return d.addCallback(processEnded)
 
 
     def testProcess(self):
         cmd = self.getCommand('gzip')
-        s = "there's no place like home!\n" * 3
+        s = b"there's no place like home!\n" * 3
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(p, cmd, [cmd, "-c"], env=None, path="/tmp",
@@ -2180,10 +2180,10 @@ class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
 
     def testOpeningTTY(self):
         exe = sys.executable
-        scriptPath = util.sibpath(__file__, b"process_tty.py")
+        scriptPath = FilePath(__file__).sibling(b"process_tty.py")
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None,
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath.path], env=None,
                             path=None, usePTY=self.usePTY)
         p.transport.write(b"hello world!\n")
 
@@ -2193,7 +2193,7 @@ class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
             self.assertEqual(
                 p.outF.getvalue(),
                 b"hello world!\r\nhello world!\r\n",
-                b"Error message from process_tty follows:\n\n%s\n\n" % p.outF.getvalue())
+                "Error message from process_tty follows:\n\n%s\n\n" % p.outF.getvalue())
         return d.addCallback(processEnded)
 
 
@@ -2507,8 +2507,8 @@ class UtilTestCase(unittest.TestCase):
 
 
 class ClosingPipesProcessProtocol(protocol.ProcessProtocol):
-    output = ''
-    errput = ''
+    output = b''
+    errput = b''
 
     def __init__(self, outOrErr):
         self.deferred = defer.Deferred()
@@ -2540,14 +2540,16 @@ class ClosingPipes(unittest.TestCase):
         reactor.spawnProcess(
             p, sys.executable, [
                 sys.executable, '-u', '-c',
-                'raw_input()\n'
+                'try: input = raw_input\n'
+                'except NameError: pass\n'
+                'input()\n'
                 'import sys, os, time\n'
                 # Give the system a bit of time to notice the closed
                 # descriptor.  Another option would be to poll() for HUP
                 # instead of relying on an os.write to fail with SIGPIPE.
                 # However, that wouldn't work on OS X (or Windows?).
                 'for i in range(1000):\n'
-                '    os.write(%d, "foo\\n")\n'
+                '    os.write(%d, b"foo\\n")\n'
                 '    time.sleep(0.01)\n'
                 'sys.exit(42)\n' % (fd,)
                 ],
@@ -2576,7 +2578,7 @@ class ClosingPipes(unittest.TestCase):
         # child must not get past that write without raising
         self.assertNotEquals(
             reason.exitCode, 42, 'process reason was %r' % reason)
-        self.assertEqual(p.output, '')
+        self.assertEqual(p.output, b'')
         return p.errput
 
 
@@ -2586,9 +2588,12 @@ class ClosingPipes(unittest.TestCase):
         """
         d = self.doit(1)
         def _check(errput):
-            self.assertIn('OSError', errput)
+            if _PY3:
+                self.assertIn(b'BrokenPipeError', errput)
+            else:
+                self.assertIn(b'OSError', errput)
             if runtime.platform.getType() != 'win32':
-                self.assertIn('Broken pipe', errput)
+                self.assertIn(b'Broken pipe', errput)
         d.addCallback(_check)
         return d
 
@@ -2601,7 +2606,7 @@ class ClosingPipes(unittest.TestCase):
         def _check(errput):
             # there should be no stderr open, so nothing for it to
             # write the error to.]
-            self.assertEqual(errput, '')
+            self.assertEqual(errput, b'')
         d.addCallback(_check)
         return d
 
