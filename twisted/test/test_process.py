@@ -520,7 +520,6 @@ class ProcessTestCase(unittest.TestCase):
         p.transport.closeStdin()
 
         def processEnded(ign):
-            print(p.errF.getvalue())
             self.assertEqual(p.outF.getvalue(), b"hello, worldabc123",
                               "Output follows:\n"
                               "%s\n"
@@ -2199,7 +2198,6 @@ class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
 
     def testBadArgs(self):
         pyExe = sys.executable
-        print(pyExe)
         pyArgs = [pyExe, b"-u", b"-c", b"print('hello')"]
         p = Accumulator()
         self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs,

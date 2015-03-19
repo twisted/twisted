@@ -29,6 +29,7 @@ from zope.interface import implementer
 
 from twisted.python import log, failure
 from twisted.python.util import switchUID
+from twisted.python.compat import NativeStringIO, _PY3
 from twisted.internet import fdesc, abstract, error
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess
@@ -417,10 +418,20 @@ class _BaseProcess(BaseProcess, object):
                     #       thing to attempt
                     try:
                         stderr = os.fdopen(2, 'w')
-                        stderr.write("Upon execvpe %s %s in environment %s\n:" %
-                                     (executable, str(args),
-                                      "id %s" % id(environment)))
-                        traceback.print_exc(file=stderr)
+                        msg = ("Upon execvpe {} {} in environment id {}"
+                               "\n:").format(executable, str(args),
+                                             id(environment))
+                        tb = NativeStringIO()
+                        traceback.print_exc(file=tb)
+                        tb = tb.getvalue()
+
+                        if _PY3:
+                            stderr.write(msg.encode("ascii"))
+                            stderr.write(tb.encode("ascii"))
+                        else:
+                            stderr.write(msg)
+                            stderr.write(tb)
+
                         stderr.flush()
                         for fd in range(3):
                             os.close(fd)
