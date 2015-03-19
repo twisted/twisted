@@ -7,7 +7,7 @@ import os, sys
 
 debug = 0
 
-if debug: stderr = os.fdopen(2, "w")
+if debug: stderr = os.fdopen(2, "wb")
 
 if debug: print >>stderr, "this is stderr"
 
@@ -18,7 +18,7 @@ if abcd != "abcd":
 
 if debug: print >>stderr, "os.write(1, righto)"
 
-os.write(1, "righto")
+os.write(1, b"righto")
 
 efgh = os.read(3, 4)
 if debug: print >>stderr, "read(3):", efgh
@@ -34,7 +34,7 @@ if eof != "":
     sys.exit(3)
 
 if debug: print >>stderr, "os.write(1, closed)"
-os.write(1, "closed")
+os.write(1, b"closed")
 
 if debug: print >>stderr, "sys.exit(0)"
 sys.exit(0)

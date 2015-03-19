@@ -44,7 +44,7 @@ def reapAllProcesses():
     """
     Reap all registered processes.
     """
-    for process in reapProcessHandlers.values():
+    for process in list(reapProcessHandlers.values()):
         process.reapProcess()
 
 
@@ -660,7 +660,7 @@ class Process(_BaseProcess):
         # fdmap.keys() are filenos of pipes that are used by the child.
         fdmap = {} # maps childFD to parentFD
         try:
-            for childFD, target in childFDs.items():
+            for childFD, target in list(childFDs.items()):
                 if debug: print("[%d]" % childFD, target)
                 if target == "r":
                     # we need a pipe that the parent can read from
@@ -690,9 +690,8 @@ class Process(_BaseProcess):
         self.proto = proto
 
         # arrange for the parent-side pipes to be read and written
-        for childFD, parentFD in helpers.items():
+        for childFD, parentFD in list(helpers.items()):
             os.close(fdmap[childFD])
-
             if childFDs[childFD] == "r":
                 reader = self.processReaderFactory(reactor, self, childFD,
                                         parentFD)
@@ -747,14 +746,13 @@ class Process(_BaseProcess):
                    Use os.dup2() to move it to the right place, then close the
                    original.
         """
-
         debug = self.debug_child
         if debug:
             errfd = sys.stderr
             errfd.write("starting _setupChild\n")
 
-        destList = fdmap.values()
-        for fd in _listOpenFDs():
+        destList = list(fdmap.values())
+        for fd in list(_listOpenFDs()):
             if fd in destList:
                 continue
             if debug and fd == errfd.fileno():
@@ -768,8 +766,8 @@ class Process(_BaseProcess):
         # be moved to their appropriate positions in the child (the targets
         # of fdmap, i.e. fdmap.values() )
 
-        if debug: print >>errfd, "fdmap", fdmap
-        childlist = fdmap.keys()
+        if debug: print(errfd, "fdmap", fdmap)
+        childlist = list(fdmap.keys())
         childlist.sort()
 
         for child in childlist:

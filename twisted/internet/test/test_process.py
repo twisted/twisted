@@ -16,6 +16,7 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
+from twisted.python.compat import unicode, _PY3
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, succeed
@@ -109,7 +110,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         ended = Deferred()
         protocol = _ShutdownCallbackProcessProtocol(ended)
 
-        bytes = "hello, world" + os.linesep
+        bytesToSend = b"hello, world\n"
         program = (
             "import sys\n"
             "sys.stdout.write(sys.stdin.readline())\n"
@@ -119,7 +120,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
             transport = reactor.spawnProcess(
                 protocol, sys.executable, [sys.executable, "-c", program])
             try:
-                write(transport, bytes)
+                write(transport, bytesToSend)
             except:
                 err(None, "Unhandled exception while writing")
                 transport.signalProcess('KILL')
@@ -128,16 +129,17 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         ended.addCallback(lambda ignored: reactor.stop())
 
         self.runReactor(reactor)
-        self.assertEqual(bytes, "".join(protocol.received[1]))
+        print(protocol.received)
+        self.assertEqual(bytesToSend, b"".join(protocol.received[1]))
 
 
     def test_write(self):
         """
-        L{IProcessTransport.write} writes the specified C{str} to the standard
+        L{IProcessTransport.write} writes the specified C{bytes} to the standard
         input of the child process.
         """
-        def write(transport, bytes):
-            transport.write(bytes)
+        def write(transport, bytesToSend):
+            transport.write(bytesToSend)
         self._writeTest(write)
 
 
@@ -146,8 +148,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         L{IProcessTransport.writeSequence} writes the specified C{list} of
         C{str} to the standard input of the child process.
         """
-        def write(transport, bytes):
-            transport.writeSequence(list(bytes))
+        def write(transport, bytesToSend):
+            transport.writeSequence([bytesToSend])
         self._writeTest(write)
 
 
@@ -156,8 +158,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         L{IProcessTransport.writeToChild} writes the specified C{str} to the
         specified file descriptor of the child process.
         """
-        def write(transport, bytes):
-            transport.writeToChild(0, bytes)
+        def write(transport, bytesToSend):
+            transport.writeToChild(0, bytesToSend)
         self._writeTest(write)
 
 
@@ -166,12 +168,12 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         L{IProcessTransport.writeToChild} raises L{KeyError} if passed a file
         descriptor which is was not set up by L{IReactorProcess.spawnProcess}.
         """
-        def write(transport, bytes):
+        def write(transport, bytesToSend):
             try:
-                self.assertRaises(KeyError, transport.writeToChild, 13, bytes)
+                self.assertRaises(KeyError, transport.writeToChild, 13, bytesToSend)
             finally:
                 # Just get the process to exit so the test can complete
-                transport.write(bytes)
+                transport.write(bytesToSend)
         self._writeTest(write)
 
 
@@ -322,7 +324,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
             try:
                 os.popen('%s -c "import time; time.sleep(0.1)"' %
                     (sys.executable,))
-                f2 = os.popen('%s -c "import time; time.sleep(0.5); print \'Foo\'"' %
+                f2 = os.popen('%s -c "import time; time.sleep(0.5); print(\'Foo\')"' %
                     (sys.executable,))
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
@@ -564,31 +566,25 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
             def childConnectionLost(self, childFD):
                 lost[childFD].callback(None)
 
-        source = (
-            "import os, sys\n"
-            "while 1:\n"
-            "    line = sys.stdin.readline().strip()\n"
-            "    if not line:\n"
-            "        break\n"
-            "    os.close(int(line))\n")
+        target = FilePath(__file__).sibling(b"process_loseconnection.py")
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
             reactor.spawnProcess, Closer(), sys.executable,
-            [sys.executable, "-c", source], usePTY=self.usePTY)
+            [sys.executable, target.path], usePTY=self.usePTY)
 
         def cbConnected(transport):
-            transport.write('2\n')
+            transport.write(b'2\n')
             return lost[2].addCallback(lambda ign: transport)
         connected.addCallback(cbConnected)
 
         def lostSecond(transport):
-            transport.write('1\n')
+            transport.write(b'1\n')
             return lost[1].addCallback(lambda ign: transport)
         connected.addCallback(lostSecond)
 
         def lostFirst(transport):
-            transport.write('\n')
+            transport.write(b'\n')
         connected.addCallback(lostFirst)
         connected.addErrback(err)
 
@@ -716,12 +712,12 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         with an interpreter definition line (#!) uses that interpreter to
         evaluate the script.
         """
-        SHEBANG_OUTPUT = 'this is the shebang output'
+        SHEBANG_OUTPUT = b'this is the shebang output'
 
         scriptFile = self.makeSourceFile([
                 "#!%s" % (sys.executable,),
                 "import sys",
-                "sys.stdout.write('%s')" % (SHEBANG_OUTPUT,),
+                "sys.stdout.write('%s')" % (SHEBANG_OUTPUT.decode(),),
                 "sys.stdout.flush()"])
         os.chmod(scriptFile, 0o700)
 
@@ -729,9 +725,10 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         def cbProcessExited(args):
             out, err, code = args
+
             msg("cbProcessExited((%r, %r, %d))" % (out, err, code))
             self.assertEqual(out, SHEBANG_OUTPUT)
-            self.assertEqual(err, "")
+            self.assertEqual(err, b"")
             self.assertEqual(code, 0)
 
         def shutdown(passthrough):
@@ -753,28 +750,21 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         Arguments given to spawnProcess are passed to the child process as
         originally intended.
         """
-        source = (
-            # On Windows, stdout is not opened in binary mode by default,
-            # so newline characters are munged on writing, interfering with
-            # the tests.
-            'import sys, os\n'
-            'try:\n'
-            '  import msvcrt\n'
-            '  msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)\n'
-            'except ImportError:\n'
-            '  pass\n'
-            'for arg in sys.argv[1:]:\n'
-            '  sys.stdout.write(arg + chr(0))\n'
-            '  sys.stdout.flush()')
+        us = FilePath(__file__).sibling(b"process_cli.py")
 
-        args = ['hello', '"', ' \t|<>^&', r'"\\"hello\\"', r'"foo\ bar baz\""']
+        args = [b'hello', b'"', b' \t|<>^&', br'"\\"hello\\"', br'"foo\ bar baz\""']
         # Ensure that all non-NUL characters can be passed too.
-        args.append(''.join(map(chr, range(1, 256))))
+        if _PY3:
+            args.append(bytes(bytearray(range(1,255))))
+        else:
+            args.append("".join(list(map(chr, range(1,255)))))
 
         reactor = self.buildReactor()
 
-        def processFinished(output):
-            output = output.split('\0')
+        def processFinished(finishedArgs):
+            output, err, code = finishedArgs
+            print(err)
+            output = output.split(b'\0')
             # Drop the trailing \0.
             output.pop()
             self.assertEqual(args, output)
@@ -785,8 +775,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         def spawnChild():
             d = succeed(None)
-            d.addCallback(lambda dummy: utils.getProcessOutput(
-                sys.executable, ['-c', source] + args, reactor=reactor))
+            d.addCallback(lambda dummy: utils.getProcessOutputAndValue(
+                sys.executable, [us.path] + args, reactor=reactor))
             d.addCallback(processFinished)
             d.addBoth(shutdown)
 

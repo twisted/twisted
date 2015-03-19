@@ -34,10 +34,6 @@ from twisted.python.failure import Failure
 # Access private APIs.
 if platform.isWindows():
     process = None
-elif _PY3:
-    # Enable this on Python 3 when twisted.internet.process is ported.
-    # See #5968.
-    process = None
 else:
     from twisted.internet import process
 
