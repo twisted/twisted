@@ -785,7 +785,7 @@ class Process(_BaseProcess):
             target = fdmap[child]
             if target == child:
                 # fd is already in place
-                if debug: print >>errfd, "%d already in place" % target
+                if debug: print("%d already in place" % target, file=stderr)
                 fdesc._unsetCloseOnExec(child)
             else:
                 if child in fdmap.values():
@@ -793,14 +793,14 @@ class Process(_BaseProcess):
                     # still needs the fd it wants to target. We must preserve
                     # that old fd by duping it to a new home.
                     newtarget = os.dup(child) # give it a safe home
-                    if debug: print >>errfd, "os.dup(%d) -> %d" % (child,
-                                                                   newtarget)
+                    if debug: print("os.dup(%d) -> %d" % (child, newtarget),
+                                    file=stderr)
                     os.close(child) # close the original
                     for c, p in list(fdmap.items()):
                         if p == child:
                             fdmap[c] = newtarget # update all pointers
                 # now it should be available
-                if debug: print >>errfd, "os.dup2(%d,%d)" % (target, child)
+                if debug: print("os.dup2(%d,%d)" % (target, child), file=stderr)
                 os.dup2(target, child)
 
         # At this point, the child has everything it needs. We want to close
@@ -816,7 +816,7 @@ class Process(_BaseProcess):
             if not fd in old:
                 if not fd in list(fdmap.keys()):
                     old.append(fd)
-        if debug: print >>errfd, "old", old
+        if debug: print("old", old, file=stderr))
         for fd in old:
             os.close(fd)
 
