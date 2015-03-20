@@ -16,7 +16,7 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
-from twisted.python.compat import unicode, _PY3
+from twisted.python.compat import unicode, networkString, _PY3
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, succeed
@@ -110,7 +110,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         ended = Deferred()
         protocol = _ShutdownCallbackProcessProtocol(ended)
 
-        bytesToSend = b"hello, world\n"
+        bytesToSend = b"hello, world" + networkString(os.linesep)
         program = (
             "import sys\n"
             "sys.stdout.write(sys.stdin.readline())\n"

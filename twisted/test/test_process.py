@@ -25,9 +25,13 @@ import gc
 import stat
 import operator
 
-import fcntl
-from twisted.internet import process
 
+try:
+    import fcntl
+except ImportError:
+    fcntl = process = None
+else:
+    from twisted.internet import process
 
 from zope.interface.verify import verifyObject
 
