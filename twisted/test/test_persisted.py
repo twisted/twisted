@@ -220,7 +220,7 @@ class Pickleable(object):
 
 
 
-class A(object):
+class A:
     """
     dummy class
     """
@@ -229,7 +229,7 @@ class A(object):
 
 
 
-class B(object):
+class B:
     """
     dummy class
     """
@@ -280,7 +280,7 @@ class PicklingTestCase(unittest.TestCase):
 
 
 
-class EvilSourceror(object):
+class EvilSourceror:
     def __init__(self, x):
         self.a = self
         self.a.b = self
@@ -288,7 +288,7 @@ class EvilSourceror(object):
 
 
 
-class NonDictState(object):
+class NonDictState:
     def __getstate__(self):
         return self.state
 
