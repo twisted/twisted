@@ -795,7 +795,7 @@ class Process(_BaseProcess):
                     # that old fd by duping it to a new home.
                     newtarget = os.dup(child) # give it a safe home
                     if debug: print("os.dup(%d) -> %d" % (child, newtarget),
-                                    file=stderr)
+                                    file=errfd)
                     os.close(child) # close the original
                     for c, p in list(fdmap.items()):
                         if p == child:
