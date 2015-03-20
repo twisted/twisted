@@ -23,7 +23,7 @@ for arg in sys.argv[1:]:
     res = arg + chr(0)
 
     if _PY3:
-        stdout.write(res.encode("utf8"))
+        stdout.write(res.encode("utf8", "surrogateescape"))
     else:
         stdout.write(res)
 
