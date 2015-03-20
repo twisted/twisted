@@ -957,6 +957,7 @@ class DelayedTestCase(unittest.TestCase):
 
 
 resolve_helper = """
+from __future__ import print_function
 import %(reactor)s
 %(reactor)s.install()
 from twisted.internet import reactor
