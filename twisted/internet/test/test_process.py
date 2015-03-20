@@ -16,7 +16,7 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
-from twisted.python.compat import unicode, networkString, _PY3
+from twisted.python.compat import networkString, _PY3
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, succeed
@@ -762,7 +762,6 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         def processFinished(finishedArgs):
             output, err, code = finishedArgs
-            print(err)
             output = output.split(b'\0')
             # Drop the trailing \0.
             output.pop()

@@ -13,9 +13,11 @@ from functools import wraps
 
 from twisted.internet import protocol, defer
 from twisted.python import failure
-from twisted.python.compat import _PY3, reraise
+from twisted.python.compat import reraise
 
 from io import BytesIO as StringIO
+
+
 
 def _callProtocolWithDeferred(protocol, executable, args, env, path, reactor=None):
     if reactor is None:

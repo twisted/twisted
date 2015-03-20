@@ -20,7 +20,6 @@ __all__ = ['TestTimeoutError', 'ReactorBuilder', 'needsRunningReactor']
 
 import os, signal, time
 
-from twisted.python.compat import _PY3
 from twisted.trial.unittest import SynchronousTestCase, SkipTest
 from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
 from twisted.python.runtime import platform
