@@ -21,9 +21,11 @@ Note, that you should use Python 2.6.5 or higher, since previous implementations
 of select.kqueue had U{http://bugs.python.org/issue5910} not yet fixed.
 """
 
+from __future__ import division, absolute_import
+
 import errno
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from select import kqueue, kevent
 from select import KQ_FILTER_READ, KQ_FILTER_WRITE
@@ -35,6 +37,7 @@ from twisted.python import log, failure
 from twisted.internet import main, posixbase
 
 
+@implementer(IReactorFDSet, IReactorDaemonize)
 class KQueueReactor(posixbase.PosixReactorBase):
     """
     A reactor that uses kqueue(2)/kevent(2) and relies on Python 2.6 or higher
@@ -58,8 +61,6 @@ class KQueueReactor(posixbase.PosixReactorBase):
         which will be dispatched to the corresponding L{FileDescriptor}
         instances in C{_selectables}.
     """
-    implements(IReactorFDSet, IReactorDaemonize)
-
 
     def __init__(self):
         """
@@ -235,7 +236,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
 
         try:
             l = self._kq.control([], len(self._selectables), timeout)
-        except OSError, e:
+        except OSError as e:
             if e[0] == errno.EINTR:
                 return
             else:
