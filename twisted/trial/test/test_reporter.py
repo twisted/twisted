@@ -774,39 +774,6 @@ class TestTreeReporter(unittest.SynchronousTestCase):
             f = Failure()
         return f
 
-    def test_cleanupError(self):
-        """
-        Run cleanupErrors and check that the output is correct, and colored
-        correctly.
-        """
-        f = self.makeError()
-        self.result.cleanupErrors(f)
-        color, text = self.log[0]
-        self.assertEqual(color.strip(), self.result.ERROR)
-        self.assertEqual(text.strip(), 'cleanup errors')
-        color, text = self.log[1]
-        self.assertEqual(color.strip(), self.result.ERROR)
-        self.assertEqual(text.strip(), '[ERROR]')
-    test_cleanupError = suppressWarnings(
-        test_cleanupError,
-        util.suppress(category=reporter.BrokenTestCaseWarning),
-        util.suppress(category=DeprecationWarning))
-
-
-    def test_upDownError(self):
-        """
-        Run upDownError and check that the output is correct and colored
-        correctly.
-        """
-        self.result.upDownError("method", None, None, False)
-        color, text = self.log[0]
-        self.assertEqual(color.strip(), self.result.ERROR)
-        self.assertEqual(text.strip(), 'method')
-    test_upDownError = suppressWarnings(
-        test_upDownError,
-        util.suppress(category=DeprecationWarning,
-                      message="upDownError is deprecated in Twisted 8.0."))
-
 
     def test_summaryColoredSuccess(self):
         """
@@ -1017,83 +984,6 @@ class TestReporter(TestReporterInterface):
         self.stream.truncate(0)
         result._writeln("Hello %s!", 'World')
         self.assertEqual(self.stream.getvalue(), 'Hello World!\n')
-
-
-    def test_printErrorsDeprecated(self):
-        """
-        L{IReporter.printErrors} was deprecated in Twisted 8.0.
-        """
-        def f():
-            self.result.printErrors()
-        self.assertWarns(
-            DeprecationWarning, "printErrors is deprecated in Twisted 8.0.",
-            __file__, f)
-
-
-    def test_printSummaryDeprecated(self):
-        """
-        L{IReporter.printSummary} was deprecated in Twisted 8.0.
-        """
-        def f():
-            self.result.printSummary()
-        self.assertWarns(
-            DeprecationWarning, "printSummary is deprecated in Twisted 8.0.",
-            __file__, f)
-
-
-    def test_writeDeprecated(self):
-        """
-        L{IReporter.write} was deprecated in Twisted 8.0.
-        """
-        def f():
-            self.result.write("")
-        self.assertWarns(
-            DeprecationWarning, "write is deprecated in Twisted 8.0.",
-            __file__, f)
-
-
-    def test_writelnDeprecated(self):
-        """
-        L{IReporter.writeln} was deprecated in Twisted 8.0.
-        """
-        def f():
-            self.result.writeln("")
-        self.assertWarns(
-            DeprecationWarning, "writeln is deprecated in Twisted 8.0.",
-            __file__, f)
-
-
-    def test_separatorDeprecated(self):
-        """
-        L{IReporter.separator} was deprecated in Twisted 8.0.
-        """
-        def f():
-            return self.result.separator
-        self.assertWarns(
-            DeprecationWarning, "separator is deprecated in Twisted 8.0.",
-            __file__, f)
-
-
-    def test_streamDeprecated(self):
-        """
-        L{IReporter.stream} was deprecated in Twisted 8.0.
-        """
-        def f():
-            return self.result.stream
-        self.assertWarns(
-            DeprecationWarning, "stream is deprecated in Twisted 8.0.",
-            __file__, f)
-
-
-    def test_upDownErrorDeprecated(self):
-        """
-        L{IReporter.upDownError} was deprecated in Twisted 8.0.
-        """
-        def f():
-            self.result.upDownError(None, None, None, None)
-        self.assertWarns(
-            DeprecationWarning, "upDownError is deprecated in Twisted 8.0.",
-            __file__, f)
 
 
     def test_warning(self):
