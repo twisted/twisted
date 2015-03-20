@@ -31,6 +31,8 @@ else:
 
 oldModules = {}
 
+
+
 ## First, let's register support for some stuff that really ought to
 ## be registerable...
 
@@ -84,6 +86,8 @@ copy_reg.pickle(types.MethodType,
                 pickleMethod,
                 unpickleMethod)
 
+
+
 def pickleModule(module):
     'support function for copy_reg to pickle module refs'
     return unpickleModule, (module.__name__,)
@@ -96,10 +100,10 @@ def unpickleModule(name):
         log.msg(name)
     return __import__(name, {}, {}, 'x')
 
-
 copy_reg.pickle(types.ModuleType,
                 pickleModule,
                 unpickleModule)
+
 
 
 def pickleStringO(stringo):
@@ -117,6 +121,8 @@ if hasattr(StringIO, 'OutputType'):
                     pickleStringO,
                     unpickleStringO)
 
+
+
 def pickleStringI(stringi):
     return unpickleStringI, (stringi.getvalue(), stringi.tell())
 
@@ -125,11 +131,12 @@ def unpickleStringI(val, sek):
     x.seek(sek)
     return x
 
-
 if hasattr(StringIO, 'InputType'):
     copy_reg.pickle(StringIO.InputType,
                     pickleStringI,
                     unpickleStringI)
+
+
 
 class Ephemeral(object):
     """
@@ -166,6 +173,8 @@ def doUpgrade():
     versionedsToUpgrade = {}
     upgraded = {}
 
+
+
 def requireUpgrade(obj):
     """Require that a Versioned instance be upgraded completely first.
     """
@@ -174,6 +183,8 @@ def requireUpgrade(obj):
         upgraded[objID] = 1
         obj.versionUpgrade()
         return obj
+
+
 
 def _aybabtu(c):
     """
@@ -194,6 +205,8 @@ def _aybabtu(c):
             l.append(b)
     # return all except the unwanted classes
     return l[2:]
+
+
 
 class Versioned:
     """
@@ -290,7 +303,9 @@ class Versioned:
                     log.msg( 'Warning: cannot upgrade %s to version %s' % (base, persistVers) )
 
 __all__= ["pickleMethod", "unpickleMethod", "pickleModule", "unpickleModule",
-           "Versioned", "Ephemeral", "doUpgrade", "requireUpgrade"]
+          "Versioned", "Ephemeral", "doUpgrade", "requireUpgrade",
+          "pickleStringO", "unpickleStringO", "pickleStringI",
+          "unpickleStringI"]
 
 
 if _PY3:
@@ -302,7 +317,3 @@ if _PY3:
             __all__.remove(name)
             del globals()[name]
     del name, __all3__
-
-else:
-    __all__ = __all__ + ["pickleStringO", "unpickleStringO", "pickleStringI",
-                         "unpickleStringI"]
