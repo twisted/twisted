@@ -78,7 +78,8 @@ def unpickleMethod(im_name,
         if _PY3:
             bound = types.MethodType(unbound, im_self)
         else:
-            bound = types.MethodType(unbound.__func__, im_self, im_self.__class__)
+            bound = types.MethodType(unbound.__func__, im_self,
+                                     im_self.__class__)
 
         return bound
 
