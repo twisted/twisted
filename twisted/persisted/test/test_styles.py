@@ -5,6 +5,8 @@
 Tests for L{twisted.persisted.styles}.
 """
 
+from __future__ import division, absolute_import
+
 from twisted.trial import unittest
 from twisted.persisted.styles import unpickleMethod
 
