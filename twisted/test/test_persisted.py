@@ -1,7 +1,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import division, absolute_import
+from __future__ import division, absolute_import, print_function
 
 # System Imports
 import sys
@@ -24,10 +24,12 @@ else:
     aot, crefutil = None, None
 
 
+
 class VersionTestCase(unittest.TestCase):
 
     if _PY3:
         skip = "Versioned is not ported to Python 3"
+
 
     def test_nullVersionUpgrade(self):
         global NullVersioned
@@ -41,6 +43,7 @@ class VersionTestCase(unittest.TestCase):
         mnv = pickle.loads(pkcl)
         styles.doUpgrade()
         assert mnv.ok, "initial upgrade not run!"
+
 
     def test_versionUpgrade(self):
         global MyVersioned
@@ -73,6 +76,7 @@ class VersionTestCase(unittest.TestCase):
         assert obj.v3 == 1, "upgraded unnecessarily"
         assert obj.v4 == 1, "upgraded unnecessarily"
 
+
     def test_nonIdentityHash(self):
         global ClassWithCustomHash
         class ClassWithCustomHash(styles.Versioned):
@@ -95,6 +99,7 @@ class VersionTestCase(unittest.TestCase):
         self.assertEqual(v2.unique, 'v2')
         self.failUnless(v1.upgraded)
         self.failUnless(v2.upgraded)
+
 
     def test_upgradeDeserializesObjectsRequiringUpgrade(self):
         global ToyClassA, ToyClassB
@@ -125,15 +130,12 @@ if not _PY3:
         pass
 
 
-
     class SecondVersionedSubClass(styles.Versioned):
         pass
 
 
-
     class VersionedSubSubClass(VersionedSubClass):
         pass
-
 
 
     class VersionedDiamondSubClass(VersionedSubSubClass, SecondVersionedSubClass):
@@ -149,6 +151,7 @@ class AybabtuTests(unittest.TestCase):
 
     if _PY3:
         skip = "Not yet ported to Python 3."
+
 
     def test_aybabtuStrictEmpty(self):
         """
@@ -191,6 +194,7 @@ class MyEphemeral(styles.Ephemeral):
         self.x = x
 
 
+
 class EphemeralTestCase(unittest.TestCase):
 
     def test_ephemeral(self):
@@ -199,12 +203,10 @@ class EphemeralTestCase(unittest.TestCase):
         self.assertEqual(o.x, 3)
 
         pickl = pickle.dumps(o)
-        print(pickl)
         o = pickle.loads(pickl)
-
-
         self.assert_(not hasattr(o, 'x'))
         self.assertEqual(o.__class__, styles.Ephemeral)
+
 
 
 class Pickleable(object):
@@ -212,25 +214,34 @@ class Pickleable(object):
     def __init__(self, x):
         self.x = x
 
+
     def getX(self):
         return self.x
 
-class A:
+
+
+class A(object):
     """
     dummy class
     """
     def amethod(self):
         pass
 
-class B:
+
+
+class B(object):
     """
     dummy class
     """
     def bmethod(self):
         pass
 
+
+
 def funktion():
     pass
+
+
 
 class PicklingTestCase(unittest.TestCase):
     """Test pickling of extra object types."""
@@ -240,10 +251,12 @@ class PicklingTestCase(unittest.TestCase):
         o = pickle.loads(pickl)
         self.assertEqual(o, styles)
 
+
     def test_classMethod(self):
         pickl = pickle.dumps(Pickleable.getX)
         o = pickle.loads(pickl)
         self.assertEqual(o, Pickleable.getX)
+
 
     def test_instanceMethod(self):
         obj = Pickleable(4)
@@ -251,6 +264,7 @@ class PicklingTestCase(unittest.TestCase):
         o = pickle.loads(pickl)
         self.assertEqual(o(), 4)
         self.assertEqual(type(o), type(obj.getX))
+
 
     def test_stringIO(self):
         f = StringIO()
@@ -265,27 +279,36 @@ class PicklingTestCase(unittest.TestCase):
         test_classMethod.skip = "Doesn't work in Python 3."
 
 
-class EvilSourceror:
+
+class EvilSourceror(object):
     def __init__(self, x):
         self.a = self
         self.a.b = self
         self.a.b.c = x
 
-class NonDictState:
+
+
+class NonDictState(object):
     def __getstate__(self):
         return self.state
+
+
     def __setstate__(self, state):
         self.state = state
+
+
 
 class AOTTestCase(unittest.TestCase):
 
     if _PY3:
         skip = "AOT is not yet ported to Python 3."
 
+
     def test_simpleTypes(self):
         obj = (1, 2.0, 3j, True, slice(1, 2, 3), 'hello', u'world', sys.maxint + 1, None, Ellipsis)
         rtObj = aot.unjellyFromSource(aot.jellyToSource(obj))
         self.assertEqual(obj, rtObj)
+
 
     def test_methodSelfIdentity(self):
         a = A()
@@ -348,6 +371,7 @@ class AOTTestCase(unittest.TestCase):
         a.state = "meringue!"
         assert aot.unjellyFromSource(aot.jellyToSource(a)).state == a.state
 
+
     def test_copyReg(self):
         s = "foo_bar"
         sio = StringIO()
@@ -355,6 +379,7 @@ class AOTTestCase(unittest.TestCase):
         uj = aot.unjellyFromSource(aot.jellyToSource(sio))
         # print repr(uj.__dict__)
         assert uj.getvalue() == s
+
 
     def test_funkyReferences(self):
         o = EvilSourceror(EvilSourceror([]))
@@ -366,12 +391,14 @@ class AOTTestCase(unittest.TestCase):
         assert oj.c is not oj.c.c
 
 
+
 class CrefUtilTestCase(unittest.TestCase):
     """
     Tests for L{crefutil}.
     """
     if _PY3:
         skip = "Not yet ported to Python 3."
+
 
     def test_dictUnknownKey(self):
         """
