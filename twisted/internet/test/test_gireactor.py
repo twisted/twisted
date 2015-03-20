@@ -252,7 +252,10 @@ class Gtk3ReactorTests(TestCase):
 
 
 if _PY3:
-    nonRunnableTests = ["PygtkCompatibilityTests"]
+    nonRunnableTests = [
+        # Requires twisted.python.modules
+        "PygtkCompatibilityTests",
+    ]
     for name in nonRunnableTests:
         del globals()[name]
     del name
