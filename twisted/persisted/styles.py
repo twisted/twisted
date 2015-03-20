@@ -60,21 +60,24 @@ def unpickleMethod(im_name,
         else:
             bound = types.MethodType(unbound.__func__, im_self)
         return bound
-    except AttributeError as e:
-        log.msg("Method",im_name,"not on class",im_class)
+    except AttributeError:
+        log.msg("Method", im_name, "not on class", im_class)
 
-        assert im_self is not None,"No recourse: no instance to guess from."
+        assert im_self is not None, "No recourse: no instance to guess from."
         # Attempt a common fix before bailing -- if classes have
         # changed around since we pickled this method, we may still be
         # able to get it by looking on the instance's current class.
         unbound = getattr(im_self.__class__, im_name)
         log.msg("Attempting fixup with", unbound)
+
         if im_self is None:
             return unbound
+
         if _PY3:
             bound = types.MethodType(unbound, im_self)
         else:
             bound = types.MethodType(unbound.__func__, im_self, im_self.__class__)
+
         return bound
 
 copy_reg.pickle(types.MethodType,
@@ -91,7 +94,7 @@ def unpickleModule(name):
         log.msg("Module has moved: %s" % name)
         name = oldModules[name]
         log.msg(name)
-    return __import__(name,{},{},'x')
+    return __import__(name, {}, {}, 'x')
 
 
 copy_reg.pickle(types.ModuleType,
