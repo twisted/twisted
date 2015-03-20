@@ -2,27 +2,32 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
-
 """
 Different styles of persisted objects.
 """
 
+from __future__ import division, absolute_import
+
 # System Imports
 import types
-import copy_reg
 import copy
 import inspect
 import sys
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
-
 # Twisted Imports
-from twisted.python import log
-from twisted.python import reflect
+from twisted.python import log, reflect
+from twisted.python.compat import _PY3
+
+
+if _PY3:
+    import copyreg as copy_reg
+    from io import BytesIO as StringIO
+else:
+    import copy_reg
+    try:
+        import cStringIO as StringIO
+    except ImportError:
+        import StringIO
 
 oldModules = {}
 
@@ -31,31 +36,45 @@ oldModules = {}
 
 def pickleMethod(method):
     'support function for copy_reg to pickle method refs'
-    return unpickleMethod, (method.im_func.__name__,
-                             method.im_self,
-                             method.im_class)
+    if _PY3:
+        return unpickleMethod, (method.__func__.__name__,
+                                method.__self__,
+                                method.__self__.__class__)
+    else:
+        return unpickleMethod, (method.im_func.__name__,
+                                method.im_self,
+                                method.im_class)
 
 def unpickleMethod(im_name,
                     im_self,
                     im_class):
-    'support function for copy_reg to unpickle method refs'
+    """
+    Support function for copy_reg to unpickle method refs.
+    """
     try:
-        unbound = getattr(im_class,im_name)
+        unbound = getattr(im_class, im_name)
         if im_self is None:
             return unbound
-        bound = types.MethodType(unbound.im_func, im_self, im_class)
+        if _PY3:
+            bound = types.MethodType(unbound, im_self)
+        else:
+            bound = types.MethodType(unbound.__func__, im_self)
         return bound
-    except AttributeError:
+    except AttributeError as e:
         log.msg("Method",im_name,"not on class",im_class)
+
         assert im_self is not None,"No recourse: no instance to guess from."
         # Attempt a common fix before bailing -- if classes have
         # changed around since we pickled this method, we may still be
         # able to get it by looking on the instance's current class.
-        unbound = getattr(im_self.__class__,im_name)
-        log.msg("Attempting fixup with",unbound)
+        unbound = getattr(im_self.__class__, im_name)
+        log.msg("Attempting fixup with", unbound)
         if im_self is None:
             return unbound
-        bound = types.MethodType(unbound.im_func, im_self, im_self.__class__)
+        if _PY3:
+            bound = types.MethodType(unbound, im_self)
+        else:
+            bound = types.MethodType(unbound.__func__, im_self, im_self.__class__)
         return bound
 
 copy_reg.pickle(types.MethodType,
@@ -78,6 +97,7 @@ def unpickleModule(name):
 copy_reg.pickle(types.ModuleType,
                 pickleModule,
                 unpickleModule)
+
 
 def pickleStringO(stringo):
     'support function for copy_reg to pickle StringIO.OutputTypes'
@@ -105,26 +125,31 @@ def unpickleStringI(val, sek):
 
 if hasattr(StringIO, 'InputType'):
     copy_reg.pickle(StringIO.InputType,
-                pickleStringI,
-                unpickleStringI)
+                    pickleStringI,
+                    unpickleStringI)
 
-class Ephemeral:
+class Ephemeral(object):
     """
     This type of object is never persisted; if possible, even references to it
     are eliminated.
     """
 
     def __getstate__(self):
-        log.msg( "WARNING: serializing ephemeral %s" % self )
-        import gc
+        log.msg("WARNING: serializing ephemeral %s" % self)
         if '__pypy__' not in sys.builtin_module_names:
+            import gc
             if getattr(gc, 'get_referrers', None):
                 for r in gc.get_referrers(self):
-                    log.msg( " referred to by %s" % (r,))
-        return None
+                    log.msg(" referred to by %s" % (r,))
+        # In new-style classes and Python 3, only classes with state will have
+        # __setstate__ called. As such, if we want to set our state of nothing
+        # at all, we need to return a value that is not none, but will be
+        # disregarded upon loading anyway.
+        # It might as well be a pop culture reference. - hawkie
+        return "42"
 
     def __setstate__(self, state):
-        log.msg( "WARNING: unserializing ephemeral %s" % self.__class__ )
+        log.msg("WARNING: unserializing ephemeral %s" % self.__class__)
         self.__class__ = Ephemeral
 
 
@@ -260,3 +285,21 @@ class Versioned:
                     method(self)
                 else:
                     log.msg( 'Warning: cannot upgrade %s to version %s' % (base, persistVers) )
+
+__all__= ["pickleMethod", "unpickleMethod", "pickleModule", "unpickleModule",
+           "Versioned", "Ephemeral", "doUpgrade", "requireUpgrade"]
+
+
+if _PY3:
+    __all3__ = ["Ephemeral", "pickleMethod", "unpickleMethod", "pickleModule",
+                "unpickleModule"]
+
+    for name in __all__[:]:
+        if name not in __all3__:
+            __all__.remove(name)
+            del globals()[name]
+    del name, __all3__
+
+else:
+    __all__ = __all__ + ["pickleStringO", "unpickleStringO", "pickleStringI",
+                         "unpickleStringI"]

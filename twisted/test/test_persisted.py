@@ -7,22 +7,28 @@
 import sys
 
 from twisted.trial import unittest
+from twisted.python.compat import _PY3
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
-
 # Twisted Imports
-from twisted.persisted import styles, aot, crefutil
+from twisted.persisted import styles
+
+if not _PY3:
+    from twisted.persisted import aot, crefutil
+    from StringIO import StringIO
+else:
+    aot, crefutil = None, None
 
 
 class VersionTestCase(unittest.TestCase):
+
+    if _PY3:
+        skip = "Versioned is not ported to Python 3"
+
     def test_nullVersionUpgrade(self):
         global NullVersioned
         class NullVersioned:
@@ -66,7 +72,7 @@ class VersionTestCase(unittest.TestCase):
         styles.doUpgrade()
         assert obj.v3 == 1, "upgraded unnecessarily"
         assert obj.v4 == 1, "upgraded unnecessarily"
-    
+
     def test_nonIdentityHash(self):
         global ClassWithCustomHash
         class ClassWithCustomHash(styles.Versioned):
@@ -75,7 +81,7 @@ class VersionTestCase(unittest.TestCase):
                 self.hash = hash
             def __hash__(self):
                 return self.hash
-        
+
         v1 = ClassWithCustomHash('v1', 0)
         v2 = ClassWithCustomHash('v2', 0)
 
@@ -89,7 +95,7 @@ class VersionTestCase(unittest.TestCase):
         self.assertEqual(v2.unique, 'v2')
         self.failUnless(v1.upgraded)
         self.failUnless(v2.upgraded)
-    
+
     def test_upgradeDeserializesObjectsRequiringUpgrade(self):
         global ToyClassA, ToyClassB
         class ToyClassA(styles.Versioned):
@@ -113,24 +119,25 @@ class VersionTestCase(unittest.TestCase):
         self.failUnless(x.y.upgraded)
 
 
+if not _PY3:
 
-class VersionedSubClass(styles.Versioned):
-    pass
-
-
-
-class SecondVersionedSubClass(styles.Versioned):
-    pass
+    class VersionedSubClass(styles.Versioned):
+        pass
 
 
 
-class VersionedSubSubClass(VersionedSubClass):
-    pass
+    class SecondVersionedSubClass(styles.Versioned):
+        pass
 
 
 
-class VersionedDiamondSubClass(VersionedSubSubClass, SecondVersionedSubClass):
-    pass
+    class VersionedSubSubClass(VersionedSubClass):
+        pass
+
+
+
+    class VersionedDiamondSubClass(VersionedSubSubClass, SecondVersionedSubClass):
+        pass
 
 
 
@@ -139,6 +146,9 @@ class AybabtuTests(unittest.TestCase):
     L{styles._aybabtu} gets all of classes in the inheritance hierarchy of its
     argument that are strictly between L{Versioned} and the class itself.
     """
+
+    if _PY3:
+        skip = "Not yet ported to Python 3."
 
     def test_aybabtuStrictEmpty(self):
         """
@@ -187,19 +197,21 @@ class EphemeralTestCase(unittest.TestCase):
         o = MyEphemeral(3)
         self.assertEqual(o.__class__, MyEphemeral)
         self.assertEqual(o.x, 3)
-        
+
         pickl = pickle.dumps(o)
+        print(pickl)
         o = pickle.loads(pickl)
-        
-        self.assertEqual(o.__class__, styles.Ephemeral)
+
+
         self.assert_(not hasattr(o, 'x'))
+        self.assertEqual(o.__class__, styles.Ephemeral)
 
 
-class Pickleable:
+class Pickleable(object):
 
     def __init__(self, x):
         self.x = x
-    
+
     def getX(self):
         return self.x
 
@@ -222,31 +234,35 @@ def funktion():
 
 class PicklingTestCase(unittest.TestCase):
     """Test pickling of extra object types."""
-    
+
     def test_module(self):
         pickl = pickle.dumps(styles)
         o = pickle.loads(pickl)
         self.assertEqual(o, styles)
-    
+
     def test_classMethod(self):
         pickl = pickle.dumps(Pickleable.getX)
         o = pickle.loads(pickl)
         self.assertEqual(o, Pickleable.getX)
-    
+
     def test_instanceMethod(self):
         obj = Pickleable(4)
         pickl = pickle.dumps(obj.getX)
         o = pickle.loads(pickl)
         self.assertEqual(o(), 4)
         self.assertEqual(type(o), type(obj.getX))
-    
+
     def test_stringIO(self):
-        f = StringIO.StringIO()
-        f.write("abc")
+        f = StringIO()
+        f.write(b"abc")
         pickl = pickle.dumps(f)
         o = pickle.loads(pickl)
         self.assertEqual(type(o), type(f))
-        self.assertEqual(f.getvalue(), "abc")
+        self.assertEqual(f.getvalue(), b"abc")
+
+    if _PY3:
+        test_stringIO.skip = "Doesn't work in Python 3."
+        test_classMethod.skip = "Doesn't work in Python 3."
 
 
 class EvilSourceror:
@@ -262,6 +278,10 @@ class NonDictState:
         self.state = state
 
 class AOTTestCase(unittest.TestCase):
+
+    if _PY3:
+        skip = "AOT is not yet ported to Python 3."
+
     def test_simpleTypes(self):
         obj = (1, 2.0, 3j, True, slice(1, 2, 3), 'hello', u'world', sys.maxint + 1, None, Ellipsis)
         rtObj = aot.unjellyFromSource(aot.jellyToSource(obj))
@@ -300,10 +320,6 @@ class AOTTestCase(unittest.TestCase):
         L{aot.jellyToSource} should raise a C{TypeError} when trying to jelly
         an unknown type.
         """
-        try:
-            set
-        except:
-            from sets import Set as set
         self.assertRaises(TypeError, aot.jellyToSource, set())
 
 
@@ -315,7 +331,7 @@ class AOTTestCase(unittest.TestCase):
         l = [1, 2, 3,
              "he\tllo\n\n\"x world!",
              u"goodbye \n\t\u1010 world!",
-             1, 1.0, 100 ** 100l, unittest, aot.AOTJellier, d,
+             1, 1.0, 100 ** 100, unittest, aot.AOTJellier, d,
              funktion
              ]
         t = tuple(l)
@@ -334,7 +350,7 @@ class AOTTestCase(unittest.TestCase):
 
     def test_copyReg(self):
         s = "foo_bar"
-        sio = StringIO.StringIO()
+        sio = StringIO()
         sio.write(s)
         uj = aot.unjellyFromSource(aot.jellyToSource(sio))
         # print repr(uj.__dict__)
@@ -354,6 +370,8 @@ class CrefUtilTestCase(unittest.TestCase):
     """
     Tests for L{crefutil}.
     """
+    if _PY3:
+        skip = "Not yet ported to Python 3."
 
     def test_dictUnknownKey(self):
         """
@@ -374,4 +392,3 @@ class CrefUtilTestCase(unittest.TestCase):
 
 
 testCases = [VersionTestCase, EphemeralTestCase, PicklingTestCase]
-

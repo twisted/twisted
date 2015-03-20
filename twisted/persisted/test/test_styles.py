@@ -9,7 +9,7 @@ from twisted.trial import unittest
 from twisted.persisted.styles import unpickleMethod
 
 
-class Foo:
+class Foo(object):
     """
     Helper class.
     """
