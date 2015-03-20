@@ -73,7 +73,10 @@ def unpickleMethod(im_name,
         if im_self is None:
             return unbound
 
-        bound = types.MethodType(unbound, im_self)
+        if _PY3:
+            bound = types.MethodType(unbound, im_self)
+        else:
+            bound = types.MethodType(unbound.__func__, im_self)
         return bound
 
 copy_reg.pickle(types.MethodType,
