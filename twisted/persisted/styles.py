@@ -57,10 +57,7 @@ def unpickleMethod(im_name,
         unbound = getattr(im_class, im_name)
         if im_self is None:
             return unbound
-        if _PY3:
-            bound = types.MethodType(unbound, im_self)
-        else:
-            bound = types.MethodType(unbound.__func__, im_self)
+        bound = types.MethodType(unbound.__func__, im_self)
         return bound
     except AttributeError:
         log.msg("Method", im_name, "not on class", im_class)
@@ -75,12 +72,7 @@ def unpickleMethod(im_name,
         if im_self is None:
             return unbound
 
-        if _PY3:
-            bound = types.MethodType(unbound, im_self)
-        else:
-            bound = types.MethodType(unbound.__func__, im_self,
-                                     im_self.__class__)
-
+        bound = types.MethodType(unbound, im_self)
         return bound
 
 copy_reg.pickle(types.MethodType,
