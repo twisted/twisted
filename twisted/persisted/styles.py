@@ -21,9 +21,10 @@ from twisted.python.compat import _PY3
 
 if _PY3:
     import copyreg as copy_reg
-    from io import BytesIO as StringIO
 else:
     import copy_reg
+    # We need the old StringIO here because existing code uses it, and not the
+    # BytesIO it should be using.
     try:
         import cStringIO as StringIO
     except ImportError:
@@ -99,6 +100,11 @@ copy_reg.pickle(types.ModuleType,
 
 
 
+# The following functions work on InputType and OutputType, which are a part of
+# cStringIO on Python 2. As Python 3 has removed cStringIO, these functions are
+# no longer required, and will not work on Python 3's io.BytesIO (which is its
+# replacement). - hawkie
+
 def pickleStringO(stringo):
     'support function for copy_reg to pickle StringIO.OutputTypes'
     return unpickleStringO, (stringo.getvalue(), stringo.tell())
@@ -109,7 +115,7 @@ def unpickleStringO(val, sek):
     x.seek(sek)
     return x
 
-if hasattr(StringIO, 'OutputType'):
+if not _PY3 and hasattr(StringIO, 'OutputType'):
     copy_reg.pickle(StringIO.OutputType,
                     pickleStringO,
                     unpickleStringO)
@@ -124,7 +130,7 @@ def unpickleStringI(val, sek):
     x.seek(sek)
     return x
 
-if hasattr(StringIO, 'InputType'):
+if not _PY3 and hasattr(StringIO, 'InputType'):
     copy_reg.pickle(StringIO.InputType,
                     pickleStringI,
                     unpickleStringI)

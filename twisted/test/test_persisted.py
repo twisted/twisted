@@ -17,11 +17,11 @@ except ImportError:
 # Twisted Imports
 from twisted.persisted import styles
 
-if not _PY3:
+if _PY3:
+    aot, crefutil = None, None
+else:
     from twisted.persisted import aot, crefutil
     from StringIO import StringIO
-else:
-    aot, crefutil = None, None
 
 
 
@@ -275,8 +275,8 @@ class PicklingTestCase(unittest.TestCase):
         self.assertEqual(f.getvalue(), b"abc")
 
     if _PY3:
-        test_stringIO.skip = "Doesn't work in Python 3."
-        test_classMethod.skip = "Doesn't work in Python 3."
+        test_stringIO.skip = "cStringIO does not exist on Python 3"
+        test_classMethod.skip = "Not supported on Python 3."
 
 
 
