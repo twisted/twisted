@@ -694,7 +694,8 @@ class Process(_BaseProcess):
 
             self._fork(path, uid, gid, executable, args, environment, fdmap=fdmap)
         except:
-            list(map(os.close, _openedPipes))
+            for pipe in _openedPipes:
+                os.close(pipe)
             raise
 
         # we are the parent process:
