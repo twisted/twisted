@@ -603,6 +603,62 @@ class _SpecialNoValue(object):
     pass
 
 
+def asFilesystemBytes(path, encoding=None):
+    """
+    Return C{path} as a string of L{bytes} (probably) suitable for use on this
+    system's filesystem.
+
+    @param path: The path to be made suitable.
+    @type path: L{bytes} or L{unicode}
+    @param encoding: The encoding to use if coercing to L{bytes}. If none is
+        given, L{sys.getfilesystemencoding} is used.
+
+    @return: L{bytes}
+    @since: 15.2
+    """
+    if type(path) == bytes:
+            return path
+    else:
+        if encoding is None:
+            encoding = sys.getfilesystemencoding()
+        return path.encode(encoding)
+
+
+
+def asFilesystemText(path, encoding=None):
+    """
+    Return C{path} as a string of L{unicode} (probably) suitable for use on this
+    system's filesystem.
+
+    @param path: The path to be made suitable.
+    @type path: L{bytes} or L{unicode}
+
+    @param encoding: The encoding to use if coercing to L{unicode}. If none
+        is given, L{sys.getfilesystemencoding} is used.
+
+    @return: L{unicode}
+    @since: 15.2
+    """
+    if type(path) == unicode:
+        return path
+    else:
+        if encoding is None:
+            encoding = sys.getfilesystemencoding()
+        return path.decode(encoding)
+
+
+
+def _coerceToFilesystemEncoding(path, newpath, encoding=None):
+    """
+    Return a C{newpath} that is suitable for joining to C{path}.
+    """
+    if type(path) == bytes:
+        return asFilesystemBytes(newpath, encoding=encoding)
+    else:
+        return asFilesystemText(newpath, encoding=encoding)
+
+
+
 @comparable
 @implementer(IFilePath)
 class FilePath(AbstractFilePath):
@@ -707,12 +763,7 @@ class FilePath(AbstractFilePath):
         @return: L{bytes}
         @since: 15.2
         """
-        if type(self.path) == bytes:
-            return self.path
-        else:
-            if encoding is None:
-                encoding = sys.getfilesystemencoding()
-            return self.path.encode(encoding)
+        return asFilesystemBytes(self.path, encoding=encoding)
 
 
     def asTextPath(self, encoding=None):
@@ -725,12 +776,18 @@ class FilePath(AbstractFilePath):
         @return: L{unicode}
         @since: 15.2
         """
-        if type(self.path) == unicode:
-            return self.path
+        return asFilesystemText(self.path, encoding=encoding)
+
+
+    def _getPathAsSameTypeAs(self, pattern):
+        """
+        If C{pattern} is C{bytes}, return L{FilePath.path} as L{bytes}.
+        Otherwise, return L{FilePath.path} as L{unicode}.
+        """
+        if type(pattern) == bytes:
+            return self.asBytesPath()
         else:
-            if encoding is None:
-                encoding = sys.getfilesystemencoding()
-            return self.path.decode(encoding)
+            return self.asTextPath()
 
 
     def child(self, path):
@@ -749,13 +806,8 @@ class FilePath(AbstractFilePath):
         @rtype: L{FilePath} with an internal representation equal to the type of
             C{path}.
         """
-        colon = u":"
-
-        if type(path) == unicode:
-            ourPath = self.asTextPath()
-        else:
-            colon = colon.encode("ascii")
-            ourPath = self.asBytesPath()
+        colon = _coerceToFilesystemEncoding(path, ":")
+        ourPath = self._getPathAsSameTypeAs(path)
 
         if platform.isWindows() and path.count(colon):
             # Catch paths like C:blah that don't have a slash
@@ -785,10 +837,7 @@ class FilePath(AbstractFilePath):
         @rtype: L{FilePath} with an internal representation equal to the type of
             C{path}.
         """
-        if type(path) == unicode:
-            ourPath = self.asTextPath()
-        else:
-            ourPath = self.asBytesPath()
+        ourPath = self._getPathAsSameTypeAs(path)
 
         newpath = abspath(joinpath(ourPath, normpath(path)))
         if not newpath.startswith(ourPath):
@@ -811,11 +860,7 @@ class FilePath(AbstractFilePath):
         @rtype: L{types.NoneType} or L{FilePath}
         """
         for child in paths:
-            if type(child) == bytes:
-                p = self.asBytesPath()
-            else:
-                p = self.asTextPath()
-
+            p = self._getPathAsSameTypeAs(child)
             jp = joinpath(p, child)
             if exists(jp):
                 return self.clonePath(jp)
@@ -838,14 +883,9 @@ class FilePath(AbstractFilePath):
             if not ext and self.exists():
                 return self
 
-            if type(ext) == bytes:
-                p = self.asBytesPath()
-                star = b"*"
-                dot = b"."
-            else:
-                p = self.asTextPath()
-                star = u"*"
-                dot = u"."
+            p = self._getPathAsSameTypeAs(ext)
+            star = _coerceToFilesystemEncoding(ext, "*")
+            dot = _coerceToFilesystemEncoding(ext, ".")
 
             if ext == star:
                 basedot = basename(p) + dot
@@ -894,11 +934,7 @@ class FilePath(AbstractFilePath):
         @rtype: L{FilePath} with the same internal representation as the type of
             C{ext}
         """
-        if type(ext) == bytes:
-            ourPath = self.asBytesPath()
-        else:
-            ourPath = self.asTextPath()
-
+        ourPath = self._getPathAsSameTypeAs(ext)
         return self.clonePath(ourPath + ext)
 
 
@@ -1532,14 +1568,7 @@ class FilePath(AbstractFilePath):
         @rtype: L{FilePath} with the internal representation equal to the type
             of C{extension}
         """
-        if not type(extension) == type(self.path):
-            if type(extension) == bytes:
-                ourPath = self.asBytesPath()
-            else:
-                ourPath = self.asTextPath()
-        else:
-            ourPath = self.path
-
+        ourPath = self._getPathAsSameTypeAs(extension)
         sib = self.sibling(_secureEnoughString(ourPath) +
                            self.clonePath(ourPath).basename() + extension)
         sib.requireCreate()
