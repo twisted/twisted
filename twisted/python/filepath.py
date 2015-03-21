@@ -616,7 +616,7 @@ def asFilesystemBytes(path, encoding=None):
     @since: 15.2
     """
     if type(path) == bytes:
-            return path
+        return path
     else:
         if encoding is None:
             encoding = sys.getfilesystemencoding()
@@ -650,6 +650,10 @@ def asFilesystemText(path, encoding=None):
 def _coerceToFilesystemEncoding(path, newpath, encoding=None):
     """
     Return a C{newpath} that is suitable for joining to C{path}.
+
+    @param path: The path that it should be suitable for joining to.
+    @param newpath: The new portion of the path to be coerced if needed.
+    @param encoding: If coerced, the encoding that will be used.
     """
     if type(path) == bytes:
         return asFilesystemBytes(newpath, encoding=encoding)
@@ -782,6 +786,9 @@ class FilePath(AbstractFilePath):
         """
         If C{pattern} is C{bytes}, return L{FilePath.path} as L{bytes}.
         Otherwise, return L{FilePath.path} as L{unicode}.
+
+        @param pattern: The new element of the path that L{FilePath.path} may
+            need to be coerced to match..
         """
         if type(pattern) == bytes:
             return self.asBytesPath()
