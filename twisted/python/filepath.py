@@ -9,11 +9,10 @@ Object-oriented filesystem path representation.
 from __future__ import division, absolute_import
 
 import os
+import sys
 import errno
 import base64
 from hashlib import sha1
-
-from sys import getfilesystemencoding
 
 from os.path import isabs, exists, normpath, abspath, splitext
 from os.path import basename, dirname
@@ -277,7 +276,7 @@ def _secureEnoughString(path):
     secureishString = armor(sha1(randomBytes(64)).digest())[:16]
 
     if type(path) == unicode:
-        secureishString = secureishString.decode(getfilesystemencoding())
+        secureishString = secureishString.decode(sys.getfilesystemencoding())
 
     return secureishString
 
@@ -703,7 +702,7 @@ class FilePath(AbstractFilePath):
         Return the path of this L{FilePath} as bytes.
 
         @param encoding: The encoding to use if coercing to L{bytes}. If none is
-            given, L{getfilesystemencoding} is used.
+            given, L{sys.getfilesystemencoding} is used.
 
         @return: L{bytes}
         @since: 15.2
@@ -712,7 +711,7 @@ class FilePath(AbstractFilePath):
             return self.path
         else:
             if encoding is None:
-                encoding = getfilesystemencoding()
+                encoding = sys.getfilesystemencoding()
             return self.path.encode(encoding)
 
 
@@ -721,7 +720,7 @@ class FilePath(AbstractFilePath):
         Return the path of this L{FilePath} as text.
 
         @param encoding: The encoding to use if coercing to L{unicode}. If none
-            is given, L{getfilesystemencoding} is used.
+            is given, L{sys.getfilesystemencoding} is used.
 
         @return: L{unicode}
         @since: 15.2
@@ -730,7 +729,7 @@ class FilePath(AbstractFilePath):
             return self.path
         else:
             if encoding is None:
-                encoding = getfilesystemencoding()
+                encoding = sys.getfilesystemencoding()
             return self.path.decode(encoding)
 
 

@@ -1720,24 +1720,24 @@ class UnicodeFilePathTests(TestCase):
         """
         The repr of a L{unicode} L{FilePath} shouldn't burst into flames.
         """
-        fp = filepath.FilePath(u"/")
+        fp = filepath.FilePath(u"/tmp")
         reprOutput = repr(fp)
         if _PY3:
-            self.assertEqual("FilePath('/')", reprOutput)
+            self.assertEqual("FilePath('/tmp')", reprOutput)
         else:
-            self.assertEqual("FilePath(u'/')", reprOutput)
+            self.assertEqual("FilePath(u'/tmp')", reprOutput)
 
 
     def test_bytesrepr(self):
         """
         The repr of a L{bytes} L{FilePath} shouldn't burst into flames.
         """
-        fp = filepath.FilePath(b"/")
+        fp = filepath.FilePath(b"/tmp")
         reprOutput = repr(fp)
         if _PY3:
-            self.assertEqual("FilePath(b'/')", reprOutput)
+            self.assertEqual("FilePath(b'/tmp')", reprOutput)
         else:
-            self.assertEqual("FilePath('/')", reprOutput)
+            self.assertEqual("FilePath('/tmp')", reprOutput)
 
 
     def test_unicodereprWindows(self):
