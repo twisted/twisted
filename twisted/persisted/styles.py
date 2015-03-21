@@ -19,9 +19,7 @@ from twisted.python import log, reflect
 from twisted.python.compat import _PY3
 
 
-if _PY3:
-    import copyreg as copy_reg
-else:
+if not _PY3:
     import copy_reg
     # We need the old StringIO here because existing code uses it, and not the
     # BytesIO it should be using.
@@ -33,55 +31,42 @@ else:
 oldModules = {}
 
 
-
 ## First, let's register support for some stuff that really ought to
 ## be registerable...
 
 def pickleMethod(method):
     'support function for copy_reg to pickle method refs'
-    if _PY3:
-        return unpickleMethod, (method.__func__.__name__,
-                                method.__self__,
-                                method.__self__.__class__)
-    else:
-        return unpickleMethod, (method.im_func.__name__,
-                                method.im_self,
-                                method.im_class)
+    return unpickleMethod, (method.im_func.__name__,
+                             method.im_self,
+                             method.im_class)
 
 def unpickleMethod(im_name,
                     im_self,
                     im_class):
-    """
-    Support function for copy_reg to unpickle method refs.
-    """
+    'support function for copy_reg to unpickle method refs'
     try:
-        unbound = getattr(im_class, im_name)
+        unbound = getattr(im_class,im_name)
         if im_self is None:
             return unbound
-        bound = types.MethodType(unbound.__func__, im_self)
+        bound = types.MethodType(unbound.im_func, im_self, im_class)
         return bound
     except AttributeError:
-        log.msg("Method", im_name, "not on class", im_class)
-
-        assert im_self is not None, "No recourse: no instance to guess from."
+        log.msg("Method",im_name,"not on class",im_class)
+        assert im_self is not None,"No recourse: no instance to guess from."
         # Attempt a common fix before bailing -- if classes have
         # changed around since we pickled this method, we may still be
         # able to get it by looking on the instance's current class.
-        unbound = getattr(im_self.__class__, im_name)
-        log.msg("Attempting fixup with", unbound)
-
+        unbound = getattr(im_self.__class__,im_name)
+        log.msg("Attempting fixup with",unbound)
         if im_self is None:
             return unbound
-
-        if _PY3:
-            bound = types.MethodType(unbound, im_self)
-        else:
-            bound = types.MethodType(unbound.__func__, im_self)
+        bound = types.MethodType(unbound.im_func, im_self, im_self.__class__)
         return bound
 
-copy_reg.pickle(types.MethodType,
-                pickleMethod,
-                unpickleMethod)
+if not _PY3:
+    copy_reg.pickle(types.MethodType,
+                    pickleMethod,
+                    unpickleMethod)
 
 
 
@@ -95,11 +80,13 @@ def unpickleModule(name):
         log.msg("Module has moved: %s" % name)
         name = oldModules[name]
         log.msg(name)
-    return __import__(name, {}, {}, 'x')
+    return __import__(name,{},{},'x')
 
-copy_reg.pickle(types.ModuleType,
-                pickleModule,
-                unpickleModule)
+
+if not _PY3:
+    copy_reg.pickle(types.ModuleType,
+                    pickleModule,
+                    unpickleModule)
 
 
 
@@ -163,6 +150,7 @@ class Ephemeral(object):
     def __setstate__(self, state):
         log.msg("WARNING: unserializing ephemeral %s" % self.__class__)
         self.__class__ = Ephemeral
+
 
 
 versionedsToUpgrade = {}
@@ -311,8 +299,7 @@ __all__= ["pickleMethod", "unpickleMethod", "pickleModule", "unpickleModule",
 
 
 if _PY3:
-    __all3__ = ["Ephemeral", "pickleMethod", "unpickleMethod", "pickleModule",
-                "unpickleModule"]
+    __all3__ = ["Ephemeral"]
 
     for name in __all__[:]:
         if name not in __all3__:

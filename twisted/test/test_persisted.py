@@ -27,10 +27,6 @@ else:
 
 class VersionTestCase(unittest.TestCase):
 
-    if _PY3:
-        skip = "Versioned is not ported to Python 3"
-
-
     def test_nullVersionUpgrade(self):
         global NullVersioned
         class NullVersioned:
@@ -148,10 +144,6 @@ class AybabtuTests(unittest.TestCase):
     L{styles._aybabtu} gets all of classes in the inheritance hierarchy of its
     argument that are strictly between L{Versioned} and the class itself.
     """
-
-    if _PY3:
-        skip = "Not yet ported to Python 3."
-
 
     def test_aybabtuStrictEmpty(self):
         """
@@ -274,10 +266,6 @@ class PicklingTestCase(unittest.TestCase):
         self.assertEqual(type(o), type(f))
         self.assertEqual(f.getvalue(), b"abc")
 
-    if _PY3:
-        test_stringIO.skip = "cStringIO does not exist on Python 3"
-        test_classMethod.skip = "Not supported on Python 3."
-
 
 
 class EvilSourceror:
@@ -299,10 +287,6 @@ class NonDictState:
 
 
 class AOTTestCase(unittest.TestCase):
-
-    if _PY3:
-        skip = "AOT is not yet ported to Python 3."
-
 
     def test_simpleTypes(self):
         obj = (1, 2.0, 3j, True, slice(1, 2, 3), 'hello', u'world', sys.maxint + 1, None, Ellipsis)
@@ -396,9 +380,6 @@ class CrefUtilTestCase(unittest.TestCase):
     """
     Tests for L{crefutil}.
     """
-    if _PY3:
-        skip = "Not yet ported to Python 3."
-
 
     def test_dictUnknownKey(self):
         """
@@ -418,4 +399,15 @@ class CrefUtilTestCase(unittest.TestCase):
 
 
 
-testCases = [VersionTestCase, EphemeralTestCase, PicklingTestCase]
+__all__ = ["VersionTestCase", "EphemeralTestCase", "PicklingTestCase",
+           "AybabtuTests", "AOTTestCase", "CrefUtilTestCase"]
+
+
+if _PY3:
+    __all3__ = ["EphemeralTestCase"]
+
+    for name in __all__[:]:
+        if name not in __all3__:
+            __all__.remove(name)
+            del globals()[name]
+    del name, __all3__

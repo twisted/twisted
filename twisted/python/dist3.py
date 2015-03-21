@@ -167,7 +167,6 @@ testModules = [
     "twisted.names.test.test_dns",
     "twisted.names.test.test_hosts",
     "twisted.names.test.test_rfc1982",
-    "twisted.persisted.test.test_styles",
     "twisted.protocols.test.test_basic",
     "twisted.protocols.test.test_tls",
     "twisted.python.test.test_components",
