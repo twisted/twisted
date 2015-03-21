@@ -437,8 +437,8 @@ The life cycle of a test is thus:
 #. Code is fixed, test passes once more. "success" .
 
 ``.todo`` may be of use while you are developing a feature, but by the time you are ready to commit anything all the tests you have written should be passing.
-In other words **never** commit to trunk test marked as ``.todo``.
-For unfinished test you should create a follow up ticket and add the test to ticket's description.
+In other words **never** commit to trunk tests marked as ``.todo``.
+For unfinished tests you should create a follow up ticket and add the tests to the ticket's description.
 
 You can also ignore the ``.todo`` marker and just make sure you write test first to see them failing before starting to work on the fix.
 
