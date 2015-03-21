@@ -18,7 +18,7 @@ from twisted.internet.defer import DeferredList
 from twisted.internet.task import cooperate
 
 from twisted.trial.util import _unusedTestDirectory
-from twisted.trial.unittest import _iterateTests
+from twisted.trial._asyncrunner import _iterateTests
 from twisted.trial._dist.worker import LocalWorker, LocalWorkerAMP
 from twisted.trial._dist.distreporter import DistReporter
 from twisted.trial.reporter import UncleanWarningsReporterWrapper

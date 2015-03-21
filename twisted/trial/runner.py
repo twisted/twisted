@@ -29,6 +29,8 @@ from twisted.internet import defer
 from twisted.trial import util, unittest
 from twisted.trial.itrial import ITestCase
 from twisted.trial.reporter import _ExitWrapper, UncleanWarningsReporterWrapper
+from twisted.trial._asyncrunner import _ForceGarbageCollectionDecorator, _iterateTests
+from twisted.trial._synctest import _logObserver
 
 # These are imported so that they remain in the public API for t.trial.runner
 from twisted.trial.unittest import TestSuite
@@ -173,7 +175,7 @@ class LoggedSuite(TestSuite):
 
         @param result: A L{TestResult} object.
         """
-        observer = unittest._logObserver
+        observer = _logObserver
         observer._add()
         super(LoggedSuite, self).run(result)
         observer._remove()
@@ -195,7 +197,7 @@ class TrialSuite(TestSuite):
             newTests = []
             for test in tests:
                 test = unittest.decorate(
-                    test, unittest._ForceGarbageCollectionDecorator)
+                    test, _ForceGarbageCollectionDecorator)
                 newTests.append(test)
             tests = newTests
         suite = LoggedSuite(tests)
@@ -739,7 +741,7 @@ class TrialRunner(object):
         suite = TrialSuite([test], forceGarbageCollection)
         startTime = time.time()
         if self.mode == self.DRY_RUN:
-            for single in unittest._iterateTests(suite):
+            for single in _iterateTests(suite):
                 result.startTest(single)
                 result.addSuccess(single)
                 result.stopTest(single)

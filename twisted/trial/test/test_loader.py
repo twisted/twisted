@@ -15,6 +15,7 @@ from twisted.python import util, filepath
 from twisted.trial.test import packages
 from twisted.trial import runner, reporter, unittest
 from twisted.trial.itrial import ITestCase
+from twisted.trial._asyncrunner import _iterateTests
 
 from twisted.python.modules import getModule
 
@@ -25,7 +26,7 @@ def testNames(tests):
     Return the id of each test within the given test suite or case.
     """
     names = []
-    for test in unittest._iterateTests(tests):
+    for test in _iterateTests(tests):
         names.append(test.id())
     return names
 
@@ -629,7 +630,7 @@ class PackageOrderingTest(packages.SysPathManglingTest):
         # XXX: Work around strange, unexplained Zope crap.
         # jml, 2007-11-15.
         suite = unittest.decorate(suite, ITestCase)
-        resultingTests = list(unittest._iterateTests(suite))
+        resultingTests = list(_iterateTests(suite))
         manifest = list(self._trialSortAlgorithm(sorter))
         for number, (manifestTest, actualTest) in enumerate(
             zip(manifest, resultingTests)):
