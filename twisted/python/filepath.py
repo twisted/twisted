@@ -17,7 +17,6 @@ from hashlib import sha1
 from os.path import isabs, exists, normpath, abspath, splitext
 from os.path import basename, dirname
 from os.path import join as joinpath
-from os import sep as slash
 from os import listdir, utime, stat
 
 from stat import S_ISREG, S_ISDIR, S_IMODE, S_ISBLK, S_ISSOCK
@@ -750,7 +749,7 @@ class FilePath(AbstractFilePath):
         @return: The native filesystem separator.
         @returntype: The same type as C{self.path}.
         """
-        return _getSep(self.path)
+        return _coerceToFilesystemEncoding(self.path, os.sep)
 
 
     def asBytesPath(self, encoding=None):
@@ -807,6 +806,7 @@ class FilePath(AbstractFilePath):
             C{path}.
         """
         colon = _coerceToFilesystemEncoding(path, ":")
+        sep =  _coerceToFilesystemEncoding(path, os.sep)
         ourPath = self._getPathAsSameTypeAs(path)
 
         if platform.isWindows() and path.count(colon):
@@ -814,7 +814,7 @@ class FilePath(AbstractFilePath):
             raise InsecurePath("%r contains a colon." % (path,))
 
         norm = normpath(path)
-        if _getSep(path) in norm:
+        if sep in norm:
             raise InsecurePath("%r contains one or more directory separators" %
                                (path,))
 
@@ -1402,14 +1402,12 @@ class FilePath(AbstractFilePath):
         @rtype: L{list} of L{FilePath}, with an internal representation of
             C{pattern}'s type
         """
-        if type(pattern) == bytes:
-            ourPath = self.asBytesPath()
-        else:
-            ourPath = self.asTextPath()
+        sep = _coerceToFilesystemEncoding(pattern, os.sep)
+        ourPath = self._getPathAsSameTypeAs(pattern)
 
         import glob
-        path = ourPath[-1] == _getSep(ourPath) and ourPath + pattern \
-               or _getSep(ourPath).join([ourPath, pattern])
+        path = ourPath[-1] == sep and ourPath + pattern \
+               or sep.join([ourPath, pattern])
         return list(map(self.clonePath, glob.glob(path)))
 
 
@@ -1723,18 +1721,6 @@ class FilePath(AbstractFilePath):
         else:
             self._statinfo = value
 
-
-def _getSep(path):
-    """
-    Get the separator for C{path}.
-
-    @param path: The path which the separator should be for.
-    @return: A slash separator that is the same type as C{path}
-    """
-    if type(path) == unicode:
-        return slash
-    else:
-        return slash.encode("ascii")
 
 # This is all a terrible hack to get statinfo deprecated
 _tmp = deprecated(
