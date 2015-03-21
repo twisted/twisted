@@ -6,30 +6,12 @@
 Twisted Writing Standard
 ========================
 
-
-
-
-
 The Twisted writing standard describes the documentation writing
 styles we prefer in our documentation. This standard applies particularly
 to howtos and other descriptive documentation.
 
-    
-
-
-This document should be read with the :doc:`documentation standard <doc-standard>` , which describes
-markup style for the documentation.
-
-    
-
-
 This document is meant to help Twisted documentation authors produce
 documentation that does not have the following problems:
-
-    
-
-
-
 
 - misleads users about what is good Twisted style;
 - misleads users into thinking that an advanced howto is an introduction
@@ -39,24 +21,15 @@ documentation that does not have the following problems:
   write SQL queries.
 
 
-    
-
-
-
 General style
 -------------
 
-
-    
 Documents should aim to be clear and concise, allowing the API
 documentation and the example code to tell as much of the story as they
 can. Demonstrations and where necessary supported arguments should always
 preferred to simple statements ("here is how you would simplify this
 code with Deferreds" rather than "Deferreds make code
 simpler").
-
-    
-
 
 Documents should be clearly delineated into sections and subsections.
 Each of these sections, like the overall document, should have a single
@@ -67,21 +40,25 @@ fairly obvious ways to split a document. The two most common are task
 based sectioning and sectioning which follows module and class
 separations.
 
-    
-
-
 Documentation must use American English spelling, and where possible
 avoid any local variants of either vocabulary or grammar. Grammatically
 complex sentences should ideally be avoided: these make reading
 unnecessarily difficult, particularly for non-native speakers.
 
-    
-
-
 When referring to a hypothetical person, (such as "a user of a website written with twisted.web"), gender neutral pronouns (they/their/them) should be used.
 
-    
+For reStructuredText documents which are handled by the Sphinx documentation generator make lines short, and break lines at natural places, such as after commas and semicolons, rather than after the 79th column.
+We call this *semantic newlines*.
+This rule **does not** apply to docstrings.
 
+..  code-block:: text
+    :linenos:
+
+    Sometimes when editing a narrative documentation file, I wrap the lines semantically.
+    Instead of inserting a newline at 79 columns (or whatever),
+    or making paragraphs one long line,
+    I put in newlines at a point that seems logical to me.
+    Modern code-oriented text editors are very good at wrapping and arranging long lines.
 
 
 Evangelism and usage documents
