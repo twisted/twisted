@@ -251,6 +251,7 @@ class Gtk3ReactorTests(TestCase):
         test_requiresDISPLAY.skip = "This test is only relevant when using X11"
 
 
+
 if _PY3:
     nonRunnableTests = [
         # Requires twisted.python.modules

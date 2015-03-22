@@ -148,7 +148,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         C{str} to the standard input of the child process.
         """
         def write(transport, bytesToSend):
-            transport.writeSequence([bytesToSend])
+            transport.writeSequence(list(bytesToSend))
         self._writeTest(write)
 
 
