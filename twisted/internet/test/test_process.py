@@ -145,16 +145,16 @@ class ProcessTestsBuilderBase(ReactorBuilder):
     def test_writeSequence(self):
         """
         L{IProcessTransport.writeSequence} writes the specified C{list} of
-        C{str} to the standard input of the child process.
+        C{bytes} to the standard input of the child process.
         """
         def write(transport, bytesToSend):
-            transport.writeSequence(list(bytesToSend))
+            transport.writeSequence([bytesToSend])
         self._writeTest(write)
 
 
     def test_writeToChild(self):
         """
-        L{IProcessTransport.writeToChild} writes the specified C{str} to the
+        L{IProcessTransport.writeToChild} writes the specified C{bytes} to the
         specified file descriptor of the child process.
         """
         def write(transport, bytesToSend):
@@ -459,8 +459,6 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         container = []
         class CaptureExitStatus(ProcessProtocol):
-            def childDataReceived(self, fd, bytes):
-                print(fd, bytes)
             def processEnded(self, reason):
                 container.append(reason)
                 reactor.stop()
@@ -762,7 +760,6 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         def processFinished(finishedArgs):
             output, err, code = finishedArgs
-            print(err)
             output = output.split(b'\0')
             # Drop the trailing \0.
             output.pop()
