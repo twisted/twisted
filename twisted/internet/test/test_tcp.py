@@ -723,7 +723,6 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
             # On Python 2.6 we get this generic error.
             test('Connection refused')
         elif platform.isWindows():
-
             if self.reactorFactory is IOCPReactor:
                 # Windows IOCP reactor.
                 test("can't convert negative value to unsigned short")
@@ -761,7 +760,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
 
     def test_connectPortZero(self):
         """
-        An error is raised as callback when trying to listed on the
+        An error is raised as errback when trying to listed on the
         reserved port C{0}.
         """
         def test(message):
@@ -804,7 +803,6 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin,
 
         @param port: Port number for which to try a client connection.
         @type  port: C{int}
-
 
         @param message: String representation of the expected error.
         @type  message: C{str}
@@ -1010,7 +1008,7 @@ class TCPConnectorTestsBuilder(ReactorBuilder):
             )
 
         self.assertEqual(
-            u"Service name given as port is unknown: "
+            "Service name given as port is unknown: "
             "service/proto not found ('invalid-port').",
             str(error))
 
