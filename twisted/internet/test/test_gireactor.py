@@ -254,6 +254,7 @@ class Gtk3ReactorTests(TestCase):
 if _PY3:
     nonRunnableTests = [
         # Requires twisted.python.modules
+        # See: #7804
         "PygtkCompatibilityTests",
     ]
     for name in nonRunnableTests:
