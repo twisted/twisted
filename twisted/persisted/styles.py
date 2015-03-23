@@ -115,30 +115,34 @@ def pickleStringO(stringo):
     'support function for copy_reg to pickle StringIO.OutputTypes'
     return unpickleStringO, (stringo.getvalue(), stringo.tell())
 
+_ioTypeMap = {
+    unicode: io.StringIO,
+    bytes: io.BytesIO,
+}
+
 def unpickleStringO(val, sek):
-    x = StringIO.StringIO()
+    x = _ioTypeMap[type(val)]()
     x.write(val)
     x.seek(sek)
     return x
 
-if hasattr(StringIO, 'OutputType'):
-    copy_reg.pickle(StringIO.OutputType,
-                    pickleStringO,
-                    unpickleStringO)
 
 def pickleStringI(stringi):
     return unpickleStringI, (stringi.getvalue(), stringi.tell())
 
 def unpickleStringI(val, sek):
-    x = StringIO.StringIO(val)
+    x = _ioTypeMap[type(val)](val)
     x.seek(sek)
     return x
 
-
-if hasattr(StringIO, 'InputType'):
-    copy_reg.pickle(StringIO.InputType,
-                pickleStringI,
-                unpickleStringI)
+try:
+    import cStringIO
+except ImportError:
+    pass
+else:
+    _ioTypeMap[bytes] = cStringIO.StringIO
+    copy_reg.pickle(cStringIO.OutputType, pickleStringO, unpickleStringO)
+    copy_reg.pickle(cStringIO.InputType, pickleStringI, unpickleStringI)
 
 class Ephemeral:
     """
