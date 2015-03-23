@@ -25,10 +25,11 @@ from twisted.persisted import styles, aot, crefutil
 class VersionTestCase(unittest.TestCase):
     def test_nullVersionUpgrade(self):
         global NullVersioned
-        class NullVersioned:
-            ok = 0
+        class NullVersioned(object):
+            def __init__(self):
+                self.ok = 0
         pkcl = pickle.dumps(NullVersioned())
-        class NullVersioned(styles.Versioned):
+        class NullVersioned(styles.Versioned, object):
             persistenceVersion = 1
             def upgradeToVersion1(self):
                 self.ok = 1
