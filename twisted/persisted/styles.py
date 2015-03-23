@@ -32,36 +32,67 @@ oldModules = {}
 
 def pickleMethod(method):
     'support function for copy_reg to pickle method refs'
-    return unpickleMethod, (method.im_func.__name__,
-                             method.im_self,
-                             method.im_class)
+    if _PY3:
+        return (unpickleMethod, (method.__name__,
+                                 method.__self__,
+                                 method.__self__.__class__))
+    else:
+        return (unpickleMethod, (method.im_func.__name__,
+                                 method.im_self,
+                                 method.im_class))
 
-def unpickleMethod(im_name,
-                    im_self,
-                    im_class):
+
+
+def _methodFunction(classObject, methodName):
+    """
+    Retrieve the function object implementing a method name given the class
+    it's on and a method name.
+    """
+    methodObject = getattr(classObject, methodName)
+    if _PY3:
+        return methodObject
+    return methodObject.im_func
+
+
+
+def unpickleMethod(im_name, im_self, im_class):
     'support function for copy_reg to unpickle method refs'
     try:
-        unbound = getattr(im_class,im_name)
         if im_self is None:
-            return unbound
-        bound = types.MethodType(unbound.im_func, im_self, im_class)
+            return getattr(im_class, im_name)
+        methodFunction = _methodFunction(im_class, im_name)
+        if _PY3:
+            maybeClass = ()
+        else:
+            maybeClass = tuple([im_class])
+        bound = types.MethodType(methodFunction, im_self, *maybeClass)
         return bound
     except AttributeError:
-        log.msg("Method",im_name,"not on class",im_class)
-        assert im_self is not None,"No recourse: no instance to guess from."
-        # Attempt a common fix before bailing -- if classes have
-        # changed around since we pickled this method, we may still be
-        # able to get it by looking on the instance's current class.
-        unbound = getattr(im_self.__class__,im_name)
-        log.msg("Attempting fixup with",unbound)
-        if im_self is None:
-            return unbound
-        bound = types.MethodType(unbound.im_func, im_self, im_self.__class__)
-        return bound
+        log.msg("Method", im_name, "not on class", im_class)
+        assert im_self is not None, "No recourse: no instance to guess from."
+        if im_self.__class__ is im_class:
+            raise
+        return unpickleMethod(im_name, im_self, im_self.__class__)
 
-copy_reg.pickle(types.MethodType,
-                pickleMethod,
-                unpickleMethod)
+copy_reg.pickle(types.MethodType, pickleMethod, unpickleMethod)
+
+
+def _pickleFunction(f):
+    """
+    
+    """
+    return (_unpickleFunction, tuple([".".join([f.__module__, f.__qualname__])]))
+
+
+def _unpickleFunction(fullyQualifiedName):
+    """
+    
+    """
+    from twisted.python.reflect import namedAny
+    return namedAny(fullyQualifiedName)
+
+
+copy_reg.pickle(types.FunctionType, _pickleFunction, _unpickleFunction)
 
 def pickleModule(module):
     'support function for copy_reg to pickle module refs'
