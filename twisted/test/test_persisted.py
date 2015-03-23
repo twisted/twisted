@@ -14,9 +14,9 @@ except ImportError:
     import pickle
 
 try:
-    import cStringIO as StringIO
+    from cStringIO import StringIO
 except ImportError:
-    import StringIO
+    from io import StringIO
 
 # Twisted Imports
 from twisted.persisted import styles, aot, crefutil
@@ -241,7 +241,7 @@ class PicklingTestCase(unittest.TestCase):
         self.assertEqual(type(o), type(obj.getX))
     
     def test_stringIO(self):
-        f = StringIO.StringIO()
+        f = StringIO()
         f.write("abc")
         pickl = pickle.dumps(f)
         o = pickle.loads(pickl)
@@ -334,7 +334,7 @@ class AOTTestCase(unittest.TestCase):
 
     def test_copyReg(self):
         s = "foo_bar"
-        sio = StringIO.StringIO()
+        sio = StringIO()
         sio.write(s)
         uj = aot.unjellyFromSource(aot.jellyToSource(sio))
         # print repr(uj.__dict__)
