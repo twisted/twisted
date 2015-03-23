@@ -24,6 +24,7 @@ from twisted.python.test.modules_helpers import TwistedModulesMixin
 
 if not _PY3:
     # Zipfile support isn't ported yet.
+    # See #6917
     import zipfile
     from twisted.python.test.test_zippath import zipit
 

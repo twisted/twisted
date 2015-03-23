@@ -71,6 +71,8 @@ from twisted.python.filepath import FilePath, UnlistableError
 from twisted.python.reflect import namedAny
 
 if not _PY3:
+    # Zippath isn't ported yet.
+    # See #6917.
     from twisted.python.zippath import ZipArchive
     import zipimport
 
@@ -88,7 +90,7 @@ def _isPythonIdentifier(string):
     """
     cheezy fake test for proper identifier-ness.
 
-    @param string: a L{str{ which might or might not be a valid python
+    @param string: a L{str} which might or might not be a valid python
         identifier.
     @return: True or False
     """
