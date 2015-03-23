@@ -317,7 +317,7 @@ class AOTTestCase(unittest.TestCase):
         l = [1, 2, 3,
              "he\tllo\n\n\"x world!",
              u"goodbye \n\t\u1010 world!",
-             1, 1.0, 100 ** 100l, unittest, aot.AOTJellier, d,
+             1, 1.0, 100 ** 100, unittest, aot.AOTJellier, d,
              funktion
              ]
         t = tuple(l)
