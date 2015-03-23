@@ -8,18 +8,22 @@ objects.
 
 import sys
 import itertools
-import zipfile
 import compileall
 
 import twisted
 from twisted.trial.unittest import TestCase
 
 from twisted.python import modules
+from twisted.python.compat import _PY3
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
 
 from twisted.python.test.modules_helpers import TwistedModulesMixin
-from twisted.python.test.test_zippath import zipit
+
+if not _PY3:
+    # Zipfile support isn't ported yet.
+    import zipfile
+    from twisted.python.test.test_zippath import zipit
 
 
 class TwistedModulesTestCase(TwistedModulesMixin, TestCase):
@@ -501,3 +505,16 @@ class PythonPathTestCase(TestCase):
         """
         thePath = modules.PythonPath()
         self.assertNotIn('bogusModule', thePath)
+
+
+__all__ = ["BasicTests", "PathModificationTest", "RebindingTest",
+           "ZipPathModificationTest", "PythonPathTestCase"]
+
+if _PY3:
+    __all3__ = ["BasicTests", "PathModificationTest", "RebindingTest",
+                "PythonPathTestCase"]
+    for name in __all__[:]:
+        if name not in __all3__:
+            __all__.remove(name)
+            del globals()[name]
+    del name, __all3__

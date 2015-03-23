@@ -59,16 +59,19 @@ __metaclass__ = type
 from os.path import dirname, split as splitpath
 
 import sys
-import zipimport
 import inspect
 import warnings
 from zope.interface import Interface, implementer
 
-from twisted.python.compat import nativeString
+from twisted.python.compat import nativeString, _PY3
 from twisted.python.components import registerAdapter
 from twisted.python.filepath import FilePath, UnlistableError
-from twisted.python.zippath import ZipArchive
 from twisted.python.reflect import namedAny
+
+if not _PY3:
+    from twisted.python.zippath import ZipArchive
+    import zipimport
+
 
 _nothing = object()
 
@@ -130,7 +133,7 @@ class _ModuleIteratorHelper:
 
         for placeToLook in self._packagePaths():
             try:
-                children = placeToLook.children()
+                children = sorted(placeToLook.children())
             except UnlistableError:
                 continue
 
@@ -489,37 +492,37 @@ class _DefaultMapImpl:
 _theDefaultMapper = _DefaultMapImpl()
 
 
+if not _PY3:
+    @implementer(IPathImportMapper)
+    class _ZipMapImpl:
+        """ IPathImportMapper implementation for zipimport.ZipImporter.  """
+        def __init__(self, importer):
+            self.importer = importer
 
-@implementer(IPathImportMapper)
-class _ZipMapImpl:
-    """ IPathImportMapper implementation for zipimport.ZipImporter.  """
-    def __init__(self, importer):
-        self.importer = importer
+        def mapPath(self, fsPathString):
+            """
+            Map the given FS path to a ZipPath, by looking at the ZipImporter's
+            "archive" attribute and using it as our ZipArchive root, then walking
+            down into the archive from there.
 
-    def mapPath(self, fsPathString):
-        """
-        Map the given FS path to a ZipPath, by looking at the ZipImporter's
-        "archive" attribute and using it as our ZipArchive root, then walking
-        down into the archive from there.
+            @return: a L{zippath.ZipPath} or L{zippath.ZipArchive} instance.
+            """
+            za = ZipArchive(self.importer.archive)
+            myPath = FilePath(self.importer.archive)
+            itsPath = FilePath(fsPathString)
+            if myPath == itsPath:
+                return za
+            # This is NOT a general-purpose rule for sys.path or __file__:
+            # zipimport specifically uses regular OS path syntax in its pathnames,
+            # even though zip files specify that slashes are always the separator,
+            # regardless of platform.
+            segs = itsPath.segmentsFrom(myPath)
+            zp = za
+            for seg in segs:
+                zp = zp.child(seg)
+            return zp
 
-        @return: a L{zippath.ZipPath} or L{zippath.ZipArchive} instance.
-        """
-        za = ZipArchive(self.importer.archive)
-        myPath = FilePath(self.importer.archive)
-        itsPath = FilePath(fsPathString)
-        if myPath == itsPath:
-            return za
-        # This is NOT a general-purpose rule for sys.path or __file__:
-        # zipimport specifically uses regular OS path syntax in its pathnames,
-        # even though zip files specify that slashes are always the separator,
-        # regardless of platform.
-        segs = itsPath.segmentsFrom(myPath)
-        zp = za
-        for seg in segs:
-            zp = zp.child(seg)
-        return zp
-
-registerAdapter(_ZipMapImpl, zipimport.zipimporter, IPathImportMapper)
+    registerAdapter(_ZipMapImpl, zipimport.zipimporter, IPathImportMapper)
 
 def _defaultSysPathFactory():
     """
