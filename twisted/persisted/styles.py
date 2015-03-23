@@ -150,6 +150,13 @@ class Ephemeral:
     are eliminated.
     """
 
+    def __reduce__(self):
+        """
+        Serialize any subclass of L{Ephemeral} in a way which replaces it with
+        L{Ephemeral} itself.
+        """
+        return (Ephemeral, ())
+
     def __getstate__(self):
         log.msg( "WARNING: serializing ephemeral %s" % self )
         import gc
