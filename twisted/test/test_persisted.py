@@ -263,7 +263,8 @@ class NonDictState:
 
 class AOTTestCase(unittest.TestCase):
     def test_simpleTypes(self):
-        obj = (1, 2.0, 3j, True, slice(1, 2, 3), 'hello', u'world', sys.maxint + 1, None, Ellipsis)
+        obj = (1, 2.0, 3j, True, slice(1, 2, 3), 'hello', u'world',
+               sys.maxsize + 1, None, Ellipsis)
         rtObj = aot.unjellyFromSource(aot.jellyToSource(obj))
         self.assertEqual(obj, rtObj)
 
