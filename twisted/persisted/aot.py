@@ -267,9 +267,11 @@ def unjellyFromSource(stringOrFile):
           }
 
     if hasattr(stringOrFile, "read"):
-        exec stringOrFile.read() in ns
+        source = stringOrFile.read()
     else:
-        exec stringOrFile in ns
+        source = stringOrFile
+    code = compile(source, "<source>", "exec")
+    eval(code, ns, ns)
 
     if 'app' in ns:
         return unjellyFromAOT(ns['app'])
