@@ -331,7 +331,33 @@ class AOTUnjellier:
         """
         self.stack.append(ao)
         t = type(ao)
-        if t is types.InstanceType:
+        if t in _SIMPLE_BUILTINS:
+            return ao
+
+        elif t is list:
+            l = []
+            for x in ao:
+                l.append(None)
+                self.unjellyInto(l, len(l)-1, x)
+            return l
+
+        elif t is tuple:
+            l = []
+            tuple_ = tuple
+            for x in ao:
+                l.append(None)
+                if isinstance(self.unjellyInto(l, len(l)-1, x), crefutil.NotKnown):
+                    tuple_ = crefutil._Tuple
+            return tuple_(l)
+
+        elif t is dict:
+            d = {}
+            for k,v in ao.items():
+                kvd = crefutil._DictKeyAndValue(d)
+                self.unjellyInto(kvd, 0, k)
+                self.unjellyInto(kvd, 1, v)
+            return d
+        else:
             #Abstract Objects
             c = ao.__class__
             if c is Module:
@@ -350,20 +376,23 @@ class AOTUnjellier:
                     elif isinstance(im_self, crefutil.NotKnown):
                         return crefutil._InstanceMethod(im_name, im_self, im_class)
                     else:
-                        return types.MethodType(im_class.__dict__[im_name],
-                                                im_self,
-                                                im_class)
+                        return types.MethodType(
+                            im_class.__dict__[im_name], im_self,
+                            *([im_class]*(bytes is str)))
                 else:
                     raise TypeError("instance method changed")
 
             elif c is Instance:
                 klass = reflect.namedObject(ao.klass)
                 state = self.unjellyAO(ao.state)
+                if hasattr(klass, "__new__"):
+                    inst = klass.__new__(klass)
+                else:
+                    inst = _OldStyleInstance(klass)
                 if hasattr(klass, "__setstate__"):
-                    inst = types.InstanceType(klass, {})
                     self.callAfter(inst.__setstate__, state)
                 else:
-                    inst = types.InstanceType(klass, state)
+                    inst.__dict__ = state
                 return inst
 
             elif c is Ref:
@@ -396,38 +425,8 @@ class AOTUnjellier:
                 d = self.unjellyLater(ao.state).addCallback(
                     lambda result, _l: _l(*result), loadfunc)
                 return d
-
-        #Types
-
-        elif t in _SIMPLE_BUILTINS:
-            return ao
-
-        elif t is types.ListType:
-            l = []
-            for x in ao:
-                l.append(None)
-                self.unjellyInto(l, len(l)-1, x)
-            return l
-
-        elif t is types.TupleType:
-            l = []
-            tuple_ = tuple
-            for x in ao:
-                l.append(None)
-                if isinstance(self.unjellyInto(l, len(l)-1, x), crefutil.NotKnown):
-                    tuple_ = crefutil._Tuple
-            return tuple_(l)
-
-        elif t is types.DictType:
-            d = {}
-            for k,v in ao.items():
-                kvd = crefutil._DictKeyAndValue(d)
-                self.unjellyInto(kvd, 0, k)
-                self.unjellyInto(kvd, 1, v)
-            return d
-
-        else:
-            raise TypeError("Unsupported AOT type: %s" % t)
+            else:
+                raise TypeError("Unsupported AOT type: %s" % t)
 
         del self.stack[-1]
 
@@ -548,13 +547,14 @@ class AOTJellier:
             # TODO: make methods 'prefer' not to jelly the object internally,
             # so that the object will show up where it's referenced first NOT
             # by a method.
-            retval = InstanceMethod(obj.im_func.__name__, reflect.qual(obj.im_class),
-                                    self.jellyToAO(obj.im_self))
+            retval = InstanceMethod(_funcOfMethod(obj).__name__,
+                                    reflect.qual(_classOfMethod(obj)),
+                                    self.jellyToAO(_selfOfMethod(obj)))
 
         elif objType is types.ModuleType:
             retval = Module(obj.__name__)
 
-        elif objType is types.ClassType:
+        elif objType is _OldStyleClass:
             retval = Class(reflect.qual(obj))
 
         elif issubclass(objType, type):
@@ -587,26 +587,22 @@ class AOTJellier:
                 return Deref(key)
 
             retval = Ref()
+            def _stateFrom(state):
+                retval.setObj(Instance(reflect.qual(obj.__class__),
+                                       self.jellyToAO(state)))
             self.prepareForRef(retval, obj)
 
-            if objType is types.ListType:
-                retval.setObj(map(self.jellyToAO, obj)) #hah!
+            if objType is list:
+                retval.setObj([self.jellyToAO(o) for o in obj]) #hah!
 
-            elif objType is types.TupleType:
+            elif objType is tuple:
                 retval.setObj(tuple(map(self.jellyToAO, obj)))
 
-            elif objType is types.DictionaryType:
+            elif objType is dict:
                 d = {}
                 for k,v in obj.items():
                     d[self.jellyToAO(k)] = self.jellyToAO(v)
                 retval.setObj(d)
-
-            elif objType is types.InstanceType:
-                if hasattr(obj, "__getstate__"):
-                    state = self.jellyToAO(obj.__getstate__())
-                else:
-                    state = self.jellyToAO(obj.__dict__)
-                retval.setObj(Instance(reflect.qual(obj.__class__), state))
 
             elif objType in copy_reg.dispatch_table:
                 unpickleFunc, state = copy_reg.dispatch_table[objType](obj)
@@ -614,6 +610,10 @@ class AOTJellier:
                 retval.setObj(Copyreg( reflect.fullFuncName(unpickleFunc),
                                        self.jellyToAO(state)))
 
+            elif hasattr(obj, "__getstate__"):
+                _stateFrom(obj.__getstate__())
+            elif hasattr(obj, "__dict__"):
+                _stateFrom(obj.__dict__)
             else:
                 raise TypeError("Unsupported type: %s" % objType.__name__)
 
