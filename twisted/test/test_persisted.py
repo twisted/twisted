@@ -300,13 +300,14 @@ class AOTTestCase(unittest.TestCase):
     def test_unsupportedType(self):
         """
         L{aot.jellyToSource} should raise a C{TypeError} when trying to jelly
-        an unknown type.
+        an unknown type without a C{__dict__} property or C{__getstate__}
+        method.
         """
-        try:
-            set
-        except:
-            from sets import Set as set
-        self.assertRaises(TypeError, aot.jellyToSource, set())
+        class UnknownType(object):
+            @property
+            def __dict__(self):
+                raise AttributeError()
+        self.assertRaises(TypeError, aot.jellyToSource, UnknownType())
 
 
     def test_basicIdentity(self):
