@@ -64,6 +64,7 @@ import inspect
 import warnings
 from zope.interface import Interface, implementer
 
+from twisted.python.compat import nativeString
 from twisted.python.components import registerAdapter
 from twisted.python.filepath import FilePath, UnlistableError
 from twisted.python.zippath import ZipArchive
@@ -86,9 +87,11 @@ def _isPythonIdentifier(string):
 
     @return: True or False
     """
-    return (' ' not in string and
-            '.' not in string and
-            '-' not in string)
+    textString = nativeString(string)
+
+    return (' ' not in textString and
+            '.' not in textString and
+            '-' not in textString)
 
 
 
@@ -131,7 +134,6 @@ class _ModuleIteratorHelper:
             except UnlistableError:
                 continue
 
-            children.sort()
             for potentialTopLevel in children:
                 ext = potentialTopLevel.splitext()[1]
                 potentialBasename = potentialTopLevel.basename()[:-len(ext)]
@@ -310,8 +312,9 @@ class PythonModule(_ModuleIteratorHelper):
         @param filePath: see ivar
         @param pathEntry: see ivar
         """
-        assert not name.endswith(".__init__")
-        self.name = name
+        _name = nativeString(name)
+        assert not _name.endswith(".__init__")
+        self.name = _name
         self.filePath = filePath
         self.parentPath = filePath.parent()
         self.pathEntry = pathEntry

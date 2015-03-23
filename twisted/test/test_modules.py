@@ -52,8 +52,8 @@ class BasicTests(TwistedModulesTestCase):
         __import__('pkgutil')
 
         namespaceBoilerplate = (
-            'import pkgutil; '
-            '__path__ = pkgutil.extend_path(__path__, __name__)')
+            b'import pkgutil; '
+            b'__path__ = pkgutil.extend_path(__path__, __name__)')
 
         # Create two temporary directories with packages:
         #
@@ -83,7 +83,7 @@ class BasicTests(TwistedModulesTestCase):
         nestedEntry = testPackagePath.child('nested_package')
         nestedEntry.makedirs()
         nestedEntry.child('__init__.py').setContent(namespaceBoilerplate)
-        nestedEntry.child('module.py').setContent('')
+        nestedEntry.child('module.py').setContent(b'')
 
         anotherEntry = self.pathEntryWithOnePackage()
         anotherPackagePath = anotherEntry.child('test_package')
@@ -92,7 +92,7 @@ class BasicTests(TwistedModulesTestCase):
         anotherNestedEntry = anotherPackagePath.child('nested_package')
         anotherNestedEntry.makedirs()
         anotherNestedEntry.child('__init__.py').setContent(namespaceBoilerplate)
-        anotherNestedEntry.child('module2.py').setContent('')
+        anotherNestedEntry.child('module2.py').setContent(b'')
 
         self.replaceSysPath([entry.path, anotherEntry.path])
 
@@ -105,7 +105,7 @@ class BasicTests(TwistedModulesTestCase):
             walkedNames = [
                 mod.name for mod in module.walkModules(importPackages=True)]
         finally:
-            for module in sys.modules.keys():
+            for module in list(sys.modules.keys()):
                 if module.startswith('test_package'):
                     del sys.modules[module]
 
@@ -184,7 +184,7 @@ class BasicTests(TwistedModulesTestCase):
 
         nonDirectoryPath = FilePath(self.mktemp())
         self.failIf(nonDirectoryPath.exists())
-        nonDirectoryPath.setContent("zip file or whatever\n")
+        nonDirectoryPath.setContent(b"zip file or whatever\n")
 
         self.replaceSysPath([existentPath.path])
 
@@ -275,16 +275,16 @@ class BasicTests(TwistedModulesTestCase):
             def evilChildren():
                 # normally this order is random; let's make sure it always
                 # comes up .pyc-first.
-                x = originalChildren()
+                x = list(originalChildren())
                 x.sort()
                 x.reverse()
                 return x
             o.children = evilChildren
             return o
-        mypath.child("abcd.py").setContent('\n')
+        mypath.child("abcd.py").setContent(b'\n')
         compileall.compile_dir(mypath.path, quiet=True)
         # sanity check
-        self.assertEqual(len(mypath.children()), 2)
+        self.assertEqual(len(list(mypath.children())), 2)
         pp._smartPath = _evilSmartPath
         self.assertEqual(pp['abcd'].filePath,
                           mypath.child('abcd.py'))
@@ -300,7 +300,7 @@ class BasicTests(TwistedModulesTestCase):
         pp = modules.PythonPath(sysPath=[mypath.path])
         subpath = mypath.child("abcd")
         subpath.createDirectory()
-        subpath.child("__init__.py").setContent('del __path__\n')
+        subpath.child("__init__.py").setContent(b'del __path__\n')
         sys.path.append(mypath.path)
         __import__("abcd")
         try:
@@ -319,20 +319,20 @@ class PathModificationTest(TwistedModulesTestCase):
     stuffing some code in it.
     """
 
-    _serialnum = itertools.count().next # used to generate serial numbers for
-                                        # package names.
+    _serialnum = itertools.count() # used to generate serial numbers for
+                                   # package names.
 
     def setUp(self):
         self.pathExtensionName = self.mktemp()
         self.pathExtension = FilePath(self.pathExtensionName)
         self.pathExtension.createDirectory()
-        self.packageName = "pyspacetests%d" % (self._serialnum(),)
+        self.packageName = "pyspacetests%d" % (next(self._serialnum),)
         self.packagePath = self.pathExtension.child(self.packageName)
         self.packagePath.createDirectory()
-        self.packagePath.child("__init__.py").setContent("")
-        self.packagePath.child("a.py").setContent("")
-        self.packagePath.child("b.py").setContent("")
-        self.packagePath.child("c__init__.py").setContent("")
+        self.packagePath.child("__init__.py").setContent(b"")
+        self.packagePath.child("a.py").setContent(b"")
+        self.packagePath.child("b.py").setContent(b"")
+        self.packagePath.child("c__init__.py").setContent(b"")
         self.pathSetUp = False
 
 
@@ -346,9 +346,9 @@ class PathModificationTest(TwistedModulesTestCase):
         moddir2 = self.mktemp()
         fpmd = FilePath(moddir2)
         fpmd.createDirectory()
-        fpmd.child("foozle.py").setContent("x = 123\n")
+        fpmd.child("foozle.py").setContent(b"x = 123\n")
         self.packagePath.child("__init__.py").setContent(
-            "__path__.append(%r)\n" % (moddir2,))
+            u"__path__.append({0})\n".format(repr(moddir2)).encode("utf8"))
         # Cut here
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName)
