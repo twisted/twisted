@@ -28,7 +28,7 @@ def _encrypt(passphrase, data):
     from Crypto.Cipher import AES as cipher
     leftover = len(data) % cipher.block_size
     if leftover:
-        data += ' '*(cipher.block_size - leftover)
+        data += b' ' * (cipher.block_size - leftover)
     return cipher.new(md5(passphrase).digest()[:16]).encrypt(data)
 
 def _decrypt(passphrase, data):
