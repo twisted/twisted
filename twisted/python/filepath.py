@@ -12,11 +12,12 @@ import os
 import sys
 import errno
 import base64
+
 from hashlib import sha1
+from warnings import warn
 
 from os.path import isabs, exists, normpath, abspath, splitext
-from os.path import basename, dirname
-from os.path import join as joinpath
+from os.path import basename, dirname, join as joinpath
 from os import listdir, utime, stat
 
 from stat import S_ISREG, S_ISDIR, S_IMODE, S_ISBLK, S_ISSOCK
@@ -40,6 +41,7 @@ from twisted.python.win32 import ERROR_INVALID_NAME, ERROR_DIRECTORY, O_BINARY
 from twisted.python.win32 import WindowsError
 
 from twisted.python.util import FancyEqMixin
+
 
 
 
@@ -732,6 +734,12 @@ class FilePath(AbstractFilePath):
         """
         self.path = abspath(path)
         self.alwaysCreate = alwaysCreate
+
+        if type(self.path) != path:
+            warn("os.path.abspath is broken on Python versions below 2.6.5 and "
+                 "coerces Unicode paths to bytes. Please update your Python.",
+                 DeprecationWarning)
+            self.path = self._getPathAsSameTypeAs(path)
 
 
     def __getstate__(self):

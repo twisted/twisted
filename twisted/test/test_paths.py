@@ -1729,6 +1729,20 @@ class UnicodeFilePathTests(TestCase):
             self.assertEqual("FilePath(u'/mon\\u20acy')", reprOutput)
 
 
+    def test_unicodereprOnBrokenPy26(self):
+        """
+        The repr of a L{unicode} L{FilePath} shouldn't burst into flames. This
+        test case is for Pythons prior to 2.6.5 which has a broken abspath which
+        coerces some Unicode paths to bytes.
+        """
+        fp = filepath.FilePath(u"/")
+        reprOutput = repr(fp)
+        if _PY3:
+            self.assertEqual("FilePath('/')", reprOutput)
+        else:
+            self.assertEqual("FilePath(u'/')", reprOutput)
+
+
     def test_bytesrepr(self):
         """
         The repr of a L{bytes} L{FilePath} shouldn't burst into flames.
@@ -1769,6 +1783,7 @@ class UnicodeFilePathTests(TestCase):
 
     if platform.isWindows():
         test_unicoderepr.skip = "Test will not work on Windows"
+        test_unicodereprOnBrokenPy26.skip = "Test will not work on Windows"
         test_bytesrepr.skip = "Test will not work on Windows"
     else:
         test_unicodereprWindows.skip = "Test only works on Windows"
