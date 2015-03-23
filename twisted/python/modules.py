@@ -88,12 +88,11 @@ def _isPythonIdentifier(string):
     """
     cheezy fake test for proper identifier-ness.
 
-    @param string: a str which might or might not be a valid python identifier.
-
+    @param string: a L{str{ which might or might not be a valid python
+        identifier.
     @return: True or False
     """
     textString = nativeString(string)
-
     return (' ' not in textString and
             '.' not in textString and
             '-' not in textString)
