@@ -735,7 +735,7 @@ class FilePath(AbstractFilePath):
         self.path = abspath(path)
         self.alwaysCreate = alwaysCreate
 
-        if type(self.path) != path:
+        if type(self.path) != type(path):
             warn("os.path.abspath is broken on Python versions below 2.6.5 and "
                  "coerces Unicode paths to bytes. Please update your Python.",
                  DeprecationWarning)
