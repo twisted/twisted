@@ -110,7 +110,7 @@ class _InstanceMethod(NotKnown):
         assert n == 0, "only zero index allowed"
         if not isinstance(obj, NotKnown):
             method = types.MethodType(self.my_class.__dict__[self.name],
-                                      obj, self.my_class)
+                                      obj, *([self.my_class]*(bytes is str)))
             self.resolveDependants(method)
 
 class _DictKeyAndValue:
