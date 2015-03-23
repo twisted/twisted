@@ -453,6 +453,63 @@ def jellyToSource(obj, file=None):
         return getSource(aot)
 
 
+try:
+    from types import (ClassType as _OldStyleClass,
+                       InstanceType as _OldStyleInstance)
+except ImportError:
+    _OldStyleClass = None
+    _OldStyleInstance = None
+
+
+
+def _classOfMethod(methodObject):
+    """
+    Get the associated class of the given method object.
+
+    @param methodObject: a bound method
+    @type methodObject: L{types.MethodType}
+
+    @return: a class
+    @rtype: L{types.ClassType} or L{type}
+    """
+    if _PY3:
+        return methodObject.__self__.__class__
+    return methodObject.im_class
+
+
+
+def _funcOfMethod(methodObject):
+    """
+    Get the associated function of the given method object.
+
+    @param methodObject: a bound method
+    @type methodObject: L{types.MethodType}
+
+    @return: the function implementing C{methodObject}
+    @rtype: L{types.FunctionType}
+    """
+    if _PY3:
+        return methodObject.__func__
+    return methodObject.im_func
+
+
+
+def _selfOfMethod(methodObject):
+    """
+    Get the object that a bound method is bound to.
+
+    @param methodObject: a bound method
+    @type methodObject: L{types.MethodType}
+
+    @return: the C{self} passed to C{methodObject}
+    @rtype: L{object}
+    """
+    if _PY3:
+        return methodObject.__self__
+    return methodObject.im_self
+
+
+
 class AOTJellier:
     def __init__(self):
         # dict of {id(obj): (obj, node)}
