@@ -11,10 +11,22 @@ The source-code-marshallin'est abstract-object-serializin'est persister
 this side of Marmalade!
 """
 
-import types, copy_reg, tokenize, re
+import types, re
+
+try:
+    from tokenize import generate_tokens as tokenize
+except ImportError:
+    from tokenize import tokenize
+
+
+try:
+    import copy_reg
+except:
+    import copyreg as copy_reg
 
 from twisted.python import reflect, log
 from twisted.persisted import crefutil
+from twisted.python.compat import unicode, _PY3
 
 ###########################
 # Abstract Object Classes #
@@ -209,7 +221,8 @@ def prettify(obj):
 def indentify(s):
     out = []
     stack = []
-    def eater(type, val, r, c, l, out=out, stack=stack):
+    l = ['', s]
+    for (type, val, r, c, IGNORED) in tokenize(l.pop):
         #import sys
         #sys.stdout.write(val)
         if val in ['[', '(', '{']:
@@ -220,8 +233,6 @@ def indentify(s):
             out.append('  '*len(stack))
         else:
             out.append(val)
-    l = ['', s]
-    tokenize.tokenize(l.pop, eater)
     return ''.join(out)
 
 
