@@ -53,6 +53,8 @@ the modules outside the standard library's python-files directory::
                 modinfo.name, modinfo.filePath.path)
 """
 
+from __future__ import division, absolute_import
+
 __metaclass__ = type
 
 # let's try to keep path imports to a minimum...

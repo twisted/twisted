@@ -6,6 +6,8 @@ Tests for twisted.python.modules, abstract access to imported or importable
 objects.
 """
 
+from __future__ import division, absolute_import
+
 import sys
 import itertools
 import compileall
@@ -352,7 +354,7 @@ class PathModificationTest(TwistedModulesTestCase):
         fpmd.createDirectory()
         fpmd.child("foozle.py").setContent(b"x = 123\n")
         self.packagePath.child("__init__.py").setContent(
-            u"__path__.append({0})\n".format(repr(moddir2)).encode("utf8"))
+            u"__path__.append({0})\n".format(repr(moddir2)).encode("ascii"))
         # Cut here
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName)
