@@ -275,7 +275,7 @@ class AOTTestCase(unittest.TestCase):
         a.bmethod = b.bmethod
         b.a = a
         im_ = aot.unjellyFromSource(aot.jellyToSource(b)).a.bmethod
-        self.assertEqual(im_.im_class, im_.im_self.__class__)
+        self.assertEqual(aot._selfOfMethod(im_).__class__, aot._classOfMethod(im_))
 
 
     def test_methodNotSelfIdentity(self):
