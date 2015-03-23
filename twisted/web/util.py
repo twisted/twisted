@@ -6,16 +6,12 @@
 An assortment of web server-related utilities.
 """
 
-from cStringIO import StringIO
 import linecache
-import types
 
 from twisted.python.reflect import fullyQualifiedName
-from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
 from twisted.python.modules import getModule
 
-from twisted.web import html, resource
+from twisted.web import resource
 from twisted.web.template import (
     TagLoader, XMLFile, Element, renderer, flattenString)
 
