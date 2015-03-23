@@ -113,7 +113,7 @@ class PersistTestCase(unittest.TestCase):
 
         filename = os.path.join(dirname, 'persisttest.ee_getattr')
 
-        f = file(filename, 'w')
+        f = open(filename, 'w')
         f.write('import __main__\n')
         f.write('if __main__.testMainModGetattr != 1: raise AssertionError\n')
         f.write('app = None\n')
@@ -131,7 +131,7 @@ class PersistTestCase(unittest.TestCase):
         os.mkdir(dirname)
 
         filename = os.path.join(dirname, 'persisttest.ee_setattr')
-        f = file(filename, 'w')
+        f = open(filename, 'w')
         f.write('import __main__\n')
         f.write('__main__.testMainModSetattr = 2\n')
         f.write('app = None\n')
@@ -149,7 +149,7 @@ class PersistTestCase(unittest.TestCase):
         os.mkdir(dirname)
         filename = os.path.join(dirname, 'persisttest.ee_exception')
 
-        f = file(filename, 'w')
+        f = open(filename, 'w')
         f.write('raise ValueError\n')
         f.close()
 

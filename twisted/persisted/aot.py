@@ -460,7 +460,7 @@ def jellyToSource(obj, file=None):
 
     aot = jellyToAOT(obj)
     if file:
-        file.write(getSource(aot))
+        file.write(getSource(aot).encode("utf-8"))
     else:
         return getSource(aot)
 
