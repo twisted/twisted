@@ -57,18 +57,18 @@ class _NoStateObj:
 NoStateObj = _NoStateObj()
 
 _SIMPLE_BUILTINS = [
-    types.StringType, types.UnicodeType, types.IntType, types.FloatType,
-    types.ComplexType, types.LongType, types.NoneType, types.SliceType,
-    types.EllipsisType]
+    bool, bytes, unicode, int, float, complex, type(None),
+    slice, type(Ellipsis)
+]
 
 try:
-    _SIMPLE_BUILTINS.append(types.BooleanType)
-except AttributeError:
+    _SIMPLE_BUILTINS.append(long)
+except NameError:
     pass
 
 class Instance:
     def __init__(self, className, __stateObj__=NoStateObj, **state):
-        if not isinstance(className, types.StringType):
+        if not isinstance(className, str):
             raise TypeError("%s isn't a string!" % className)
         self.klass = className
         if __stateObj__ is not NoStateObj:
@@ -82,7 +82,7 @@ class Instance:
         #XXX make state be foo=bar instead of a dict.
         if self.stateIsDict:
             stateDict = self.state
-        elif isinstance(self.state, Ref) and isinstance(self.state.obj, types.DictType):
+        elif isinstance(self.state, Ref) and isinstance(self.state.obj, dict):
             stateDict = self.state.obj
         else:
             stateDict = None
@@ -160,10 +160,10 @@ r = re.compile('[a-zA-Z_][a-zA-Z0-9_]*$')
 
 def dictToKW(d):
     out = []
-    items = d.items()
+    items = list(d.items())
     items.sort()
-    for k,v in items:
-        if not isinstance(k, types.StringType):
+    for k, v in items:
+        if not isinstance(k, str):
             raise NonFormattableDict("%r ain't a string" % k)
         if not r.match(k):
             raise NonFormattableDict("%r ain't an identifier" % k)
@@ -183,21 +183,21 @@ def prettify(obj):
         if t in _SIMPLE_BUILTINS:
             return repr(obj)
 
-        elif t is types.DictType:
+        elif t is dict:
             out = ['{']
             for k,v in obj.items():
                 out.append('\n\0%s: %s,' % (prettify(k), prettify(v)))
             out.append(len(obj) and '\n\0}' or '}')
             return ''.join(out)
 
-        elif t is types.ListType:
+        elif t is list:
             out = ["["]
             for x in obj:
                 out.append('\n\0%s,' % prettify(x))
             out.append(len(obj) and '\n\0]' or ']')
             return ''.join(out)
 
-        elif t is types.TupleType:
+        elif t is tuple:
             out = ["("]
             for x in obj:
                 out.append('\n\0%s,' % prettify(x))
