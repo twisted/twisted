@@ -61,10 +61,10 @@ class PersistTestCase(unittest.TestCase):
                 p.save(tag)
                 o1 = sob.load('object-'+tag+'.ta'+style[0], style)
                 self.assertEqual(o, o1)
-      
+
     def testEncryptedStyles(self):
         for o in objects:
-            phrase='once I was the king of spain'
+            phrase = b'once I was the king of spain'
             p = sob.Persistent(o, '')
             for style in 'source pickle'.split():
                 p.setStyle(style)
@@ -82,10 +82,9 @@ class PersistTestCase(unittest.TestCase):
         self.assertEqual(o, [1,2,3])
 
     def testEncryptedPython(self):
-        phrase='once I was the king of spain'
-        f = open("epersisttest.python", 'w')
-        f.write(
-            sob._encrypt(phrase, 'foo=[1,2,3]'))
+        phrase = b'once I was the king of spain'
+        f = open("epersisttest.python", 'wb')
+        f.write(sob._encrypt(phrase, b'foo=[1,2,3]'))
         f.close()
         o = sob.loadValueFromFile('epersisttest.python', 'foo', phrase)
         self.assertEqual(o, [1,2,3])
