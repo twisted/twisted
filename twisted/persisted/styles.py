@@ -10,15 +10,16 @@ Different styles of persisted objects.
 
 # System Imports
 import types
-import copy_reg
+try:
+    import copy_reg
+except ImportError:
+    import copyreg as copy_reg
 import copy
 import inspect
 import sys
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
+import io
+from twisted.python.compat import _PY3, unicode
 
 # Twisted Imports
 from twisted.python import log
