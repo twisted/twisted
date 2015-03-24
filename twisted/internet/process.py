@@ -10,6 +10,8 @@ Do NOT use this module directly - use reactor.spawnProcess() instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
+from __future__ import division, absolute_import, print_function
+
 # System Imports
 import gc, os, sys, stat, traceback, select, signal, errno
 
@@ -23,10 +25,11 @@ try:
 except ImportError:
     fcntl = None
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.python import log, failure
 from twisted.python.util import switchUID
+from twisted.python.compat import NativeStringIO, _PY3
 from twisted.internet import fdesc, abstract, error
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess
@@ -42,7 +45,7 @@ def reapAllProcesses():
     """
     Reap all registered processes.
     """
-    for process in reapProcessHandlers.values():
+    for process in list(reapProcessHandlers.values()):
         process.reapProcess()
 
 
@@ -91,7 +94,7 @@ def detectLinuxBrokenPipeBehavior():
     @rtype : L{bool}
     """
     r, w = os.pipe()
-    os.write(w, 'a')
+    os.write(w, b'a')
     reads, writes, exes = select.select([w], [], [], 0)
     if reads:
         # Linux < 2.6.11 says a write-only pipe is readable.
@@ -303,7 +306,7 @@ class _BaseProcess(BaseProcess, object):
         try:
             try:
                 pid, status = os.waitpid(self.pid, os.WNOHANG)
-            except OSError, e:
+            except OSError as e:
                 if e.errno == errno.ECHILD:
                     # no child process
                     pid = None
@@ -344,7 +347,7 @@ class _BaseProcess(BaseProcess, object):
             raise ProcessExitedAlready()
         try:
             os.kill(self.pid, signalID)
-        except OSError, e:
+        except OSError as e:
             if e.errno == errno.ESRCH:
                 raise ProcessExitedAlready()
             else:
@@ -414,12 +417,22 @@ class _BaseProcess(BaseProcess, object):
                     # XXXX: however even libc assumes write(2, err) is a useful
                     #       thing to attempt
                     try:
-                        stderr = os.fdopen(2, 'w')
-                        stderr.write("Upon execvpe %s %s in environment %s\n:" %
-                                     (executable, str(args),
-                                      "id %s" % id(environment)))
-                        traceback.print_exc(file=stderr)
+                        stderr = os.fdopen(2, 'wb')
+                        msg = ("Upon execvpe {0} {1} in environment id {2}"
+                               "\n:").format(executable, str(args),
+                                             id(environment))
+                        tb = NativeStringIO()
+                        traceback.print_exc(file=tb)
+                        tb = tb.getvalue()
+
+                        if _PY3:
+                            stderr.write(msg.encode("ascii"))
+                            stderr.write(tb.encode("ascii"))
+                        else:
+                            stderr.write(msg)
+                            stderr.write(tb)
                         stderr.flush()
+
                         for fd in range(3):
                             os.close(fd)
                     except:
@@ -588,6 +601,7 @@ def _listOpenFDs():
     return detector._listOpenFDs()
 
 
+@implementer(IProcessTransport)
 class Process(_BaseProcess):
     """
     An operating-system Process.
@@ -601,7 +615,6 @@ class Process(_BaseProcess):
     code is not cross-platform. (also, windows can only select
     on sockets...)
     """
-    implements(IProcessTransport)
 
     debug = False
     debug_child = False
@@ -647,7 +660,7 @@ class Process(_BaseProcess):
                         }
 
         debug = self.debug
-        if debug: print "childFDs", childFDs
+        if debug: print("childFDs", childFDs)
 
         _openedPipes = []
         def pipe():
@@ -658,39 +671,39 @@ class Process(_BaseProcess):
         # fdmap.keys() are filenos of pipes that are used by the child.
         fdmap = {} # maps childFD to parentFD
         try:
-            for childFD, target in childFDs.items():
-                if debug: print "[%d]" % childFD, target
+            for childFD, target in list(childFDs.items()):
+                if debug: print("[%d]" % childFD, target)
                 if target == "r":
                     # we need a pipe that the parent can read from
                     readFD, writeFD = pipe()
-                    if debug: print "readFD=%d, writeFD=%d" % (readFD, writeFD)
+                    if debug: print("readFD=%d, writeFD=%d" % (readFD, writeFD))
                     fdmap[childFD] = writeFD     # child writes to this
                     helpers[childFD] = readFD    # parent reads from this
                 elif target == "w":
                     # we need a pipe that the parent can write to
                     readFD, writeFD = pipe()
-                    if debug: print "readFD=%d, writeFD=%d" % (readFD, writeFD)
+                    if debug: print("readFD=%d, writeFD=%d" % (readFD, writeFD))
                     fdmap[childFD] = readFD      # child reads from this
                     helpers[childFD] = writeFD   # parent writes to this
                 else:
                     assert type(target) == int, '%r should be an int' % (target,)
                     fdmap[childFD] = target      # parent ignores this
-            if debug: print "fdmap", fdmap
-            if debug: print "helpers", helpers
+            if debug: print("fdmap", fdmap)
+            if debug: print("helpers", helpers)
             # the child only cares about fdmap.values()
 
             self._fork(path, uid, gid, executable, args, environment, fdmap=fdmap)
         except:
-            map(os.close, _openedPipes)
+            for pipe in _openedPipes:
+                os.close(pipe)
             raise
 
         # we are the parent process:
         self.proto = proto
 
         # arrange for the parent-side pipes to be read and written
-        for childFD, parentFD in helpers.items():
+        for childFD, parentFD in list(helpers.items()):
             os.close(fdmap[childFD])
-
             if childFDs[childFD] == "r":
                 reader = self.processReaderFactory(reactor, self, childFD,
                                         parentFD)
@@ -745,14 +758,13 @@ class Process(_BaseProcess):
                    Use os.dup2() to move it to the right place, then close the
                    original.
         """
-
         debug = self.debug_child
         if debug:
             errfd = sys.stderr
-            errfd.write("starting _setupChild\n")
+            errfd.write(b"starting _setupChild\n")
 
-        destList = fdmap.values()
-        for fd in _listOpenFDs():
+        destList = list(fdmap.values())
+        for fd in list(_listOpenFDs()):
             if fd in destList:
                 continue
             if debug and fd == errfd.fileno():
@@ -766,15 +778,15 @@ class Process(_BaseProcess):
         # be moved to their appropriate positions in the child (the targets
         # of fdmap, i.e. fdmap.values() )
 
-        if debug: print >>errfd, "fdmap", fdmap
-        childlist = fdmap.keys()
+        if debug: print("fdmap", fdmap, file=errfd)
+        childlist = list(fdmap.keys())
         childlist.sort()
 
         for child in childlist:
             target = fdmap[child]
             if target == child:
                 # fd is already in place
-                if debug: print >>errfd, "%d already in place" % target
+                if debug: print("%d already in place" % target, file=errfd)
                 fdesc._unsetCloseOnExec(child)
             else:
                 if child in fdmap.values():
@@ -782,14 +794,14 @@ class Process(_BaseProcess):
                     # still needs the fd it wants to target. We must preserve
                     # that old fd by duping it to a new home.
                     newtarget = os.dup(child) # give it a safe home
-                    if debug: print >>errfd, "os.dup(%d) -> %d" % (child,
-                                                                   newtarget)
+                    if debug: print("os.dup(%d) -> %d" % (child, newtarget),
+                                    file=errfd)
                     os.close(child) # close the original
-                    for c, p in fdmap.items():
+                    for c, p in list(fdmap.items()):
                         if p == child:
                             fdmap[c] = newtarget # update all pointers
                 # now it should be available
-                if debug: print >>errfd, "os.dup2(%d,%d)" % (target, child)
+                if debug: print("os.dup2(%d,%d)" % (target, child), file=errfd)
                 os.dup2(target, child)
 
         # At this point, the child has everything it needs. We want to close
@@ -801,11 +813,11 @@ class Process(_BaseProcess):
         # need to remove duplicates first.
 
         old = []
-        for fd in fdmap.values():
+        for fd in list(fdmap.values()):
             if not fd in old:
-                if not fd in fdmap.keys():
+                if not fd in list(fdmap.keys()):
                     old.append(fd)
-        if debug: print >>errfd, "old", old
+        if debug: print("old", old, file=errfd)
         for fd in old:
             os.close(fd)
 
@@ -918,11 +930,11 @@ class Process(_BaseProcess):
 
 
 
+@implementer(IProcessTransport)
 class PTYProcess(abstract.FileDescriptor, _BaseProcess):
     """
     An operating-system Process that uses PTY support.
     """
-    implements(IProcessTransport)
 
     status = -1
     pid = None

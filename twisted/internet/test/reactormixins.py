@@ -20,7 +20,6 @@ __all__ = ['TestTimeoutError', 'ReactorBuilder', 'needsRunningReactor']
 
 import os, signal, time
 
-from twisted.python.compat import _PY3
 from twisted.trial.unittest import SynchronousTestCase, SkipTest
 from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
 from twisted.python.runtime import platform
@@ -33,10 +32,6 @@ from twisted.python.failure import Failure
 
 # Access private APIs.
 if platform.isWindows():
-    process = None
-elif _PY3:
-    # Enable this on Python 3 when twisted.internet.process is ported.
-    # See #5968.
     process = None
 else:
     from twisted.internet import process

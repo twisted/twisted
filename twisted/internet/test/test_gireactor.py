@@ -26,6 +26,7 @@ else:
 
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
+from twisted.python.compat import _PY3
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ReactorAlreadyRunning
 from twisted.internet.protocol import ProcessProtocol
@@ -206,8 +207,7 @@ class PygtkCompatibilityTests(TestCase):
             def processExited(self, reason):
                 result.callback(self.data)
 
-        path = FilePath(__file__.encode("utf-8")).sibling(
-            b"process_gireactornocompat.py").path
+        path = FilePath(__file__).sibling(b"process_gireactornocompat.py").path
         reactor.spawnProcess(Stdout(), sys.executable, [sys.executable, path],
                              env=os.environ)
         result.addCallback(self.assertEqual, b"success")
@@ -249,3 +249,15 @@ class Gtk3ReactorTests(TestCase):
 
     if platform.getType() != "posix" or platform.isMacOSX():
         test_requiresDISPLAY.skip = "This test is only relevant when using X11"
+
+
+
+if _PY3:
+    nonRunnableTests = [
+        # Requires twisted.python.modules
+        # See: #7804
+        "PygtkCompatibilityTests",
+    ]
+    for name in nonRunnableTests:
+        del globals()[name]
+    del name

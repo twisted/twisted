@@ -22,6 +22,7 @@ from twisted.internet.interfaces import IResolverSimple, IReactorPluggableResolv
 from twisted.internet.interfaces import IConnector, IDelayedCall
 from twisted.internet import fdesc, main, error, abstract, defer, threads
 from twisted.python import log, failure, reflect
+from twisted.python.compat import unicode
 from twisted.python.runtime import seconds as runtimeSeconds, platform
 from twisted.internet.defer import Deferred, DeferredList
 
@@ -90,7 +91,7 @@ class DelayedCall:
             self.canceller(self)
             self.cancelled = 1
             if self.debug:
-                self._str = str(self)
+                self._str = bytes(self)
             del self.func, self.args, self.kw
 
     def reset(self, secondsFromNow):
@@ -895,8 +896,9 @@ class ReactorBase(object):
                     "reactor.spawnProcess should be str, not unicode.",
                     category=DeprecationWarning,
                     stacklevel=4)
-            if isinstance(arg, str) and '\0' not in arg:
+            if isinstance(arg, bytes) and b'\0' not in arg:
                 return arg
+
             return None
 
         # Make a few tests to check input validity
@@ -914,7 +916,7 @@ class ReactorBase(object):
         outputEnv = None
         if env is not None:
             outputEnv = {}
-            for key, val in env.iteritems():
+            for key, val in env.items():
                 key = argChecker(key)
                 if key is None:
                     raise TypeError("Environment contains a non-string key")

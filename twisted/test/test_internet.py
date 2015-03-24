@@ -957,6 +957,7 @@ class DelayedTestCase(unittest.TestCase):
 
 
 resolve_helper = """
+from __future__ import print_function
 import %(reactor)s
 %(reactor)s.install()
 from twisted.internet import reactor
@@ -968,10 +969,10 @@ class Foo:
     def start(self):
         reactor.resolve('localhost').addBoth(self.done)
     def done(self, res):
-        print 'done', res
+        print('done', res)
         reactor.stop()
     def failed(self):
-        print 'failed'
+        print('failed')
         self.timer = None
         reactor.stop()
 f = Foo()
@@ -1023,13 +1024,13 @@ class Resolve(unittest.TestCase):
             (reason, output, error) = result
             # If the output is "done 127.0.0.1\n" we don't really care what
             # else happened.
-            output = ''.join(output)
-            if output != 'done 127.0.0.1\n':
+            output = b''.join(output)
+            if output != b'done 127.0.0.1\n':
                 self.fail((
                     "The child process failed to produce the desired results:\n"
                     "   Reason for termination was: %r\n"
                     "   Output stream was: %r\n"
-                    "   Error stream was: %r\n") % (reason.getErrorMessage(), output, ''.join(error)))
+                    "   Error stream was: %r\n") % (reason.getErrorMessage(), output, b''.join(error)))
 
         helperDeferred.addCallback(cbFinished)
         return helperDeferred
