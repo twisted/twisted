@@ -58,7 +58,7 @@ else:
         return buffer(bObj, offset) + b"".join(bArray)
 
 
-exe = FilePath(sys.executable).asBytesPath()
+exe = FilePath(sys.executable)._asBytesPath()
 CONCURRENT_PROCESS_TEST_COUNT = 25
 
 
@@ -1023,9 +1023,9 @@ class PosixProcessBase(object):
         usrbinLoc = FilePath('/usr/bin').child(commandName)
 
         if binLoc.exists():
-            return binLoc.asBytesPath()
+            return binLoc._asBytesPath()
         elif usrbinLoc.exists():
-            return usrbinLoc.asBytesPath()
+            return usrbinLoc._asBytesPath()
         else:
             raise RuntimeError(
                 "%s not found in /bin or /usr/bin" % (commandName,))
@@ -2126,8 +2126,8 @@ class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
 
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, cmd,
-                             [cmd, b"-c",
+        reactor.spawnProcess(p, exe,
+                             [exe, b"-c",
                               networkString("import sys; sys.stderr.write('{0}')".format(value))],
                              env=None, path="/tmp",
                              usePTY=self.usePTY)
@@ -2187,7 +2187,7 @@ class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
 
 
     def testBadArgs(self):
-        pyArgs = [pyExe, b"-u", b"-c", b"print('hello')"]
+        pyArgs = [exe, b"-u", b"-c", b"print('hello')"]
         p = Accumulator()
         self.assertRaises(ValueError, reactor.spawnProcess, p, exe, pyArgs,
             usePTY=1, childFDs={1:b'r'})

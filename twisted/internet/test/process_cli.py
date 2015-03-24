@@ -13,10 +13,10 @@ for arg in sys.argv[1:]:
     res = arg + chr(0)
 
     if sys.version_info < (3, 0):
+        stdout = sys.stdout
+    else:
         res = res.encode("utf8", "surrogateescape")
         stdout = sys.stdout.buffer
-    else:
-        stdout = sys.stdout
 
     stdout.write(res)
     stdout.flush()

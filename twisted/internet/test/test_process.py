@@ -15,13 +15,15 @@ from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
-from twisted.python.filepath import FilePath
+from twisted.python.filepath import FilePath, _asFilesystemBytes
 from twisted.python.compat import networkString, _PY3
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, ProcessTerminated
+
+exe = FilePath(sys.executable)._asBytesPath()
 
 _uidgidSkip = None
 if platform.isWindows():
@@ -33,6 +35,18 @@ else:
     from twisted.internet import process
     if os.getuid() != 0:
         _uidgidSkip = "Cannot change UID/GID except as root"
+
+
+
+def _bytesEnviron():
+
+    if _PY3:
+        new = {}
+        for key, val in os.environ.items():
+            new[networkString(key)] = networkString(val)
+        return new
+
+    return os.environ
 
 
 class _ShutdownCallbackProcessProtocol(ProcessProtocol):
@@ -78,7 +92,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         reactor = self.buildReactor()
         transport = reactor.spawnProcess(
-            protocol, sys.executable, [sys.executable, "-c", ""],
+            protocol, exe, [exe, b"-c", b""],
             usePTY=self.usePTY)
 
         # The transport is available synchronously, so we can check it right
@@ -112,13 +126,13 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         bytesToSend = b"hello, world" + networkString(os.linesep)
         program = (
-            "import sys\n"
-            "sys.stdout.write(sys.stdin.readline())\n"
+            b"import sys\n"
+            b"sys.stdout.write(sys.stdin.readline())\n"
             )
 
         def startup():
             transport = reactor.spawnProcess(
-                protocol, sys.executable, [sys.executable, "-c", program])
+                protocol, exe, [exe, b"-c", program])
             try:
                 write(transport, bytesToSend)
             except:
@@ -202,8 +216,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         # Start a process - before starting the reactor!
         ended = Deferred()
         reactor.spawnProcess(
-            _ShutdownCallbackProcessProtocol(ended), sys.executable,
-            [sys.executable, "-c", ""], usePTY=self.usePTY, childFDs=childFDs)
+            _ShutdownCallbackProcessProtocol(ended), exe,
+            [exe, b"-c", b""], usePTY=self.usePTY, childFDs=childFDs)
 
         # Wait for the SIGCHLD (which might have been delivered before we got
         # here, but that's okay because the signal handler was installed above,
@@ -244,15 +258,15 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         sigNum = getattr(signal, 'SIG' + sigName)
         exited = Deferred()
         source = (
-            "import sys\n"
+            b"import sys\n"
             # Talk so the parent process knows the process is running.  This is
             # necessary because ProcessProtocol.makeConnection may be called
             # before this process is exec'd.  It would be unfortunate if we
             # SIGTERM'd the Twisted process while it was on its way to doing
             # the exec.
-            "sys.stdout.write('x')\n"
-            "sys.stdout.flush()\n"
-            "sys.stdin.read()\n")
+            b"sys.stdout.write('x')\n"
+            b"sys.stdout.flush()\n"
+            b"sys.stdin.read()\n")
 
         class Exiter(ProcessProtocol):
             def childDataReceived(self, fd, data):
@@ -276,8 +290,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
-            reactor.spawnProcess, Exiter(), sys.executable,
-            [sys.executable, "-c", source], usePTY=self.usePTY)
+            reactor.spawnProcess, Exiter(), exe,
+            [exe, b"-c", source], usePTY=self.usePTY)
 
         def cbExited(args):
             failure, = args
@@ -322,9 +336,9 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         def f():
             try:
                 os.popen('%s -c "import time; time.sleep(0.1)"' %
-                    (sys.executable,))
+                    (exe.decode(),))
                 f2 = os.popen('%s -c "import time; time.sleep(0.5); print(\'Foo\')"' %
-                    (sys.executable,))
+                    (exe.decode(),))
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
                 # SIGCHLD handler without SA_RESTART.  (which we used to do)
@@ -350,12 +364,12 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         here = FilePath(__file__)
         top = here.parent().parent().parent().parent()
-        source = (
-            "import sys",
-            "sys.path.insert(0, '%s')" % (top.path,),
-            "from twisted.internet import process",
-            "sys.stdout.write(repr(process._listOpenFDs()))",
-            "sys.stdout.flush()")
+        source = networkString("""
+import sys
+sys.path.insert(0, '{0}')
+from twisted.internet import process
+sys.stdout.write(repr(process._listOpenFDs()))
+sys.stdout.flush()""".format(top.path))
 
         r, w = os.pipe()
         self.addCleanup(os.close, r)
@@ -396,9 +410,9 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         reactor = self.buildReactor()
 
         reactor.callWhenRunning(
-            reactor.spawnProcess, GatheringProtocol(), sys.executable,
-            [sys.executable, "-Wignore", "-c", "\n".join(source)],
-            env=os.environ, usePTY=self.usePTY)
+            reactor.spawnProcess, GatheringProtocol(), exe,
+            [exe, b"-Wignore", b"-c", source],
+            env=_bytesEnviron(), usePTY=self.usePTY)
 
         self.runReactor(reactor)
         reportedChildFDs = set(eval(output.getvalue()))
@@ -435,8 +449,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         protocol = ExitingProtocol()
         reactor.callWhenRunning(
-            reactor.spawnProcess, protocol, sys.executable,
-            [sys.executable, "-c", "raise SystemExit(0)"],
+            reactor.spawnProcess, protocol, exe,
+            [exe, b"-c", b"raise SystemExit(0)"],
             usePTY=self.usePTY)
 
         # This will timeout if processExited isn't called:
@@ -466,8 +480,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         reactor = self.buildReactor()
         protocol = CaptureExitStatus()
         reactor.callWhenRunning(
-            reactor.spawnProcess, protocol, sys.executable,
-            [sys.executable, "-c", "\n".join(program)],
+            reactor.spawnProcess, protocol, exe,
+            [exe, "-c", "\n".join(program)],
             **{which: 1})
 
         self.runReactor(reactor)
@@ -513,7 +527,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
 
         protocol = Protocol()
         transport = reactor.spawnProcess(
-               protocol, sys.executable, [sys.executable, "-c", ""],
+               protocol, exe, [exe, b"-c", b""],
                usePTY=self.usePTY)
         self.runReactor(reactor)
 
@@ -539,12 +553,12 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
     """
     usePTY = False
 
-    keepStdioOpenProgram = FilePath(__file__).sibling('process_helper.py').path
+    keepStdioOpenProgram = FilePath(__file__).sibling(b'process_helper.py').path
     if platform.isWindows():
-        keepStdioOpenArg = "windows"
+        keepStdioOpenArg = b"windows"
     else:
         # Just a value that doesn't equal "windows"
-        keepStdioOpenArg = ""
+        keepStdioOpenArg = b""
 
     # Define this test here because PTY-using processes only have stdin and
     # stdout and the test would need to be different for that to work.
@@ -567,8 +581,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
-            reactor.spawnProcess, Closer(), sys.executable,
-            [sys.executable, target.path], usePTY=self.usePTY)
+            reactor.spawnProcess, Closer(), exe,
+            [exe, target.path], usePTY=self.usePTY)
 
         def cbConnected(transport):
             transport.write(b'2\n')
@@ -620,8 +634,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
-            reactor.spawnProcess, Ender(), sys.executable,
-            [sys.executable, self.keepStdioOpenProgram, "child",
+            reactor.spawnProcess, Ender(), exe,
+            [exe, self.keepStdioOpenProgram, b"child",
              self.keepStdioOpenArg],
             usePTY=self.usePTY)
 
@@ -668,8 +682,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         reactor = self.buildReactor()
         reactor.callWhenRunning(
-            reactor.spawnProcess, Waiter(), sys.executable,
-            [sys.executable, self.keepStdioOpenProgram, "child",
+            reactor.spawnProcess, Waiter(), exe,
+            [exe, self.keepStdioOpenProgram, b"child",
              self.keepStdioOpenArg],
             usePTY=self.usePTY)
 
@@ -696,7 +710,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         Write the given list of lines to a text file and return the absolute
         path to it.
         """
-        script = self.mktemp()
+        script = _asFilesystemBytes(self.mktemp())
         scriptFile = open(script, 'wt')
         scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
         scriptFile.close()
@@ -712,7 +726,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         SHEBANG_OUTPUT = b'this is the shebang output'
 
         scriptFile = self.makeSourceFile([
-                "#!%s" % (sys.executable,),
+                "#!%s" % (exe.decode(),),
                 "import sys",
                 "sys.stdout.write('%s')" % (SHEBANG_OUTPUT.decode(),),
                 "sys.stdout.flush()"])
@@ -722,7 +736,6 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         def cbProcessExited(args):
             out, err, code = args
-
             msg("cbProcessExited((%r, %r, %d))" % (out, err, code))
             self.assertEqual(out, SHEBANG_OUTPUT)
             self.assertEqual(err, b"")
@@ -772,7 +785,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         def spawnChild():
             d = succeed(None)
             d.addCallback(lambda dummy: utils.getProcessOutputAndValue(
-                sys.executable, [us.path] + args, reactor=reactor))
+                exe, [us.path] + args, reactor=reactor))
             d.addCallback(processFinished)
             d.addBoth(shutdown)
 
