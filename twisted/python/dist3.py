@@ -51,6 +51,7 @@ modules = [
     "twisted.internet.main",
     "twisted.internet._newtls",
     "twisted.internet.posixbase",
+    "twisted.internet._posixstdio",
     "twisted.internet.protocol",
     "twisted.internet.pollreactor",
     "twisted.internet.process",
