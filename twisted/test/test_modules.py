@@ -13,13 +13,13 @@ import itertools
 import compileall
 
 import twisted
-from twisted.trial.unittest import TestCase
 
 from twisted.python import modules
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, networkString
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
 
+from twisted.trial.unittest import TestCase
 from twisted.python.test.modules_helpers import TwistedModulesMixin
 
 if not _PY3:
@@ -27,6 +27,7 @@ if not _PY3:
     # See #6917
     import zipfile
     from twisted.python.test.test_zippath import zipit
+
 
 
 class TwistedModulesTestCase(TwistedModulesMixin, TestCase):
@@ -355,7 +356,7 @@ class PathModificationTest(TwistedModulesTestCase):
         fpmd.createDirectory()
         fpmd.child("foozle.py").setContent(b"x = 123\n")
         self.packagePath.child("__init__.py").setContent(
-            u"__path__.append({0})\n".format(repr(moddir2)).encode("ascii"))
+            networkString("__path__.append({0})\n".format(repr(moddir2))))
         # Cut here
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName)
