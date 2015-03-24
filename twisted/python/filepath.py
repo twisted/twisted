@@ -273,11 +273,7 @@ def _secureEnoughString(path):
     @rtype: the type of C{path}
     """
     secureishString = armor(sha1(randomBytes(64)).digest())[:16]
-
-    if type(path) == unicode:
-        secureishString = secureishString.decode(sys.getfilesystemencoding())
-
-    return secureishString
+    return _coerceToFilesystemEncoding(path, secureishString)
 
 
 
