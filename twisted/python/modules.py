@@ -516,9 +516,9 @@ if not _PY3:
             if myPath == itsPath:
                 return za
             # This is NOT a general-purpose rule for sys.path or __file__:
-            # zipimport specifically uses regular OS path syntax in its pathnames,
-            # even though zip files specify that slashes are always the separator,
-            # regardless of platform.
+            # zipimport specifically uses regular OS path syntax in its
+            # pathnames, even though zip files specify that slashes are always
+            # the separator, regardless of platform.
             segs = itsPath.segmentsFrom(myPath)
             zp = za
             for seg in segs:
@@ -526,6 +526,8 @@ if not _PY3:
             return zp
 
     registerAdapter(_ZipMapImpl, zipimport.zipimporter, IPathImportMapper)
+
+
 
 def _defaultSysPathFactory():
     """
