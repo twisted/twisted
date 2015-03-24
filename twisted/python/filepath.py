@@ -9,14 +9,15 @@ Object-oriented filesystem path representation.
 from __future__ import division, absolute_import
 
 import os
+import sys
 import errno
 import base64
+
 from hashlib import sha1
+from warnings import warn
 
 from os.path import isabs, exists, normpath, abspath, splitext
-from os.path import basename, dirname
-from os.path import join as joinpath
-from os import sep as slash
+from os.path import basename, dirname, join as joinpath
 from os import listdir, utime, stat
 
 from stat import S_ISREG, S_ISDIR, S_IMODE, S_ISBLK, S_ISSOCK
@@ -30,7 +31,7 @@ from zope.interface import Interface, Attribute, implementer
 # things import this module, and it would be good if it could easily be
 # modified for inclusion in the standard library.  --glyph
 
-from twisted.python.compat import comparable, cmp
+from twisted.python.compat import comparable, cmp, unicode
 from twisted.python.deprecate import deprecated
 from twisted.python.runtime import platform
 from twisted.python.versions import Version
@@ -41,12 +42,11 @@ from twisted.python.win32 import WindowsError
 
 from twisted.python.util import FancyEqMixin
 
-
-
 _CREATE_FLAGS = (os.O_EXCL |
                  os.O_CREAT |
                  os.O_RDWR |
                  O_BINARY)
+
 
 
 def _stub_islink(path):
@@ -262,14 +262,18 @@ class _WindowsUnlistableError(UnlistableError, WindowsError):
 
 
 
-def _secureEnoughString():
+def _secureEnoughString(path):
     """
     Compute a string usable as a new, temporary filename.
 
+    @param path: The path that the new temporary filename should be able to be
+        concatenated with.
+
     @return: A pseudorandom, 16 byte string for use in secure filenames.
-    @rtype: C{bytes}
+    @rtype: the type of C{path}
     """
-    return armor(sha1(randomBytes(64)).digest())[:16]
+    secureishString = armor(sha1(randomBytes(64)).digest())[:16]
+    return _coerceToFilesystemEncoding(path, secureishString)
 
 
 
@@ -594,6 +598,65 @@ class _SpecialNoValue(object):
     pass
 
 
+
+def _asFilesystemBytes(path, encoding=None):
+    """
+    Return C{path} as a string of L{bytes} suitable for use on this system's
+    filesystem.
+
+    @param path: The path to be made suitable.
+    @type path: L{bytes} or L{unicode}
+    @param encoding: The encoding to use if coercing to L{bytes}. If none is
+        given, L{sys.getfilesystemencoding} is used.
+
+    @return: L{bytes}
+    """
+    if type(path) == bytes:
+        return path
+    else:
+        if encoding is None:
+            encoding = sys.getfilesystemencoding()
+        return path.encode(encoding)
+
+
+
+def _asFilesystemText(path, encoding=None):
+    """
+    Return C{path} as a string of L{unicode} suitable for use on this system's
+    filesystem.
+
+    @param path: The path to be made suitable.
+    @type path: L{bytes} or L{unicode}
+
+    @param encoding: The encoding to use if coercing to L{unicode}. If none
+        is given, L{sys.getfilesystemencoding} is used.
+
+    @return: L{unicode}
+    """
+    if type(path) == unicode:
+        return path
+    else:
+        if encoding is None:
+            encoding = sys.getfilesystemencoding()
+        return path.decode(encoding)
+
+
+
+def _coerceToFilesystemEncoding(path, newpath, encoding=None):
+    """
+    Return a C{newpath} that is suitable for joining to C{path}.
+
+    @param path: The path that it should be suitable for joining to.
+    @param newpath: The new portion of the path to be coerced if needed.
+    @param encoding: If coerced, the encoding that will be used.
+    """
+    if type(path) == bytes:
+        return _asFilesystemBytes(newpath, encoding=encoding)
+    else:
+        return _asFilesystemText(newpath, encoding=encoding)
+
+
+
 @comparable
 @implementer(IFilePath)
 class FilePath(AbstractFilePath):
@@ -620,13 +683,21 @@ class FilePath(AbstractFilePath):
     Greater-than-second precision is only available in Windows on Python2.5 and
     later.
 
-    On both Python 2 and Python 3, paths can only be bytes.
+    The type of C{path} when instantiating decides the mode of the L{FilePath}.
+    That is, C{FilePath(b"/")} will return a L{bytes} mode L{FilePath}, and
+    C{FilePath(u"/")} will return a L{unicode} mode L{FilePath}.
+    C{FilePath("/")} will return a L{bytes} mode L{FilePath} on Python 2, and a
+    L{unicode} mode L{FilePath} on Python 3.
+
+    Methods that return a new L{FilePath} use the type of the given subpath to
+    decide its mode. For example, C{FilePath(b"/").child(u"tmp")} will return a
+    L{unicode} mode L{FilePath}.
 
     @type alwaysCreate: L{bool}
     @ivar alwaysCreate: When opening this file, only succeed if the file does
         not already exist.
 
-    @type path: L{bytes}
+    @type path: L{bytes} or L{unicode}
     @ivar path: The path from which 'downward' traversal is permitted.
 
     @ivar statinfo: (WARNING: statinfo is deprecated as of Twisted 15.0.0 and
@@ -648,8 +719,6 @@ class FilePath(AbstractFilePath):
     _statinfo = None
     path = None
 
-    sep = slash.encode("ascii")
-
 
     def __init__(self, path, alwaysCreate=False):
         """
@@ -658,6 +727,12 @@ class FilePath(AbstractFilePath):
         """
         self.path = abspath(path)
         self.alwaysCreate = alwaysCreate
+
+        if type(self.path) != type(path):
+            warn("os.path.abspath is broken on Python versions below 2.6.5 and"
+                 " coerces Unicode paths to bytes. Please update your Python.",
+                 DeprecationWarning)
+            self.path = self._getPathAsSameTypeAs(path)
 
 
     def __getstate__(self):
@@ -671,6 +746,55 @@ class FilePath(AbstractFilePath):
         return d
 
 
+    @property
+    def sep(self):
+        """
+        Return a filesystem separator.
+
+        @return: The native filesystem separator.
+        @returntype: The same type as C{self.path}.
+        """
+        return _coerceToFilesystemEncoding(self.path, os.sep)
+
+
+    def _asBytesPath(self, encoding=None):
+        """
+        Return the path of this L{FilePath} as bytes.
+
+        @param encoding: The encoding to use if coercing to L{bytes}. If none is
+            given, L{sys.getfilesystemencoding} is used.
+
+        @return: L{bytes}
+        """
+        return _asFilesystemBytes(self.path, encoding=encoding)
+
+
+    def _asTextPath(self, encoding=None):
+        """
+        Return the path of this L{FilePath} as text.
+
+        @param encoding: The encoding to use if coercing to L{unicode}. If none
+            is given, L{sys.getfilesystemencoding} is used.
+
+        @return: L{unicode}
+        """
+        return _asFilesystemText(self.path, encoding=encoding)
+
+
+    def _getPathAsSameTypeAs(self, pattern):
+        """
+        If C{pattern} is C{bytes}, return L{FilePath.path} as L{bytes}.
+        Otherwise, return L{FilePath.path} as L{unicode}.
+
+        @param pattern: The new element of the path that L{FilePath.path} may
+            need to be coerced to match.
+        """
+        if type(pattern) == bytes:
+            return self._asBytesPath()
+        else:
+            return self._asTextPath()
+
+
     def child(self, path):
         """
         Create and return a new L{FilePath} representing a path contained by
@@ -678,25 +802,31 @@ class FilePath(AbstractFilePath):
 
         @param path: The base name of the new L{FilePath}.  If this contains
             directory separators or parent references it will be rejected.
-        @type path: L{bytes}
+        @type path: L{bytes} or L{unicode}
 
         @raise InsecurePath: If the result of combining this path with C{path}
             would result in a path which is not a direct child of this path.
 
         @return: The child path.
-        @rtype: L{FilePath}
+        @rtype: L{FilePath} with a mode equal to the type of C{path}.
         """
-        if platform.isWindows() and path.count(b":"):
+        colon = _coerceToFilesystemEncoding(path, ":")
+        sep =  _coerceToFilesystemEncoding(path, os.sep)
+        ourPath = self._getPathAsSameTypeAs(path)
+
+        if platform.isWindows() and path.count(colon):
             # Catch paths like C:blah that don't have a slash
             raise InsecurePath("%r contains a colon." % (path,))
+
         norm = normpath(path)
-        if self.sep in norm:
+        if sep in norm:
             raise InsecurePath("%r contains one or more directory separators" %
                                (path,))
-        newpath = abspath(joinpath(self.path, norm))
-        if not newpath.startswith(self.path):
+
+        newpath = abspath(joinpath(ourPath, norm))
+        if not newpath.startswith(ourPath):
             raise InsecurePath("%r is not a child of %s" %
-                               (newpath, self.path))
+                               (newpath, ourPath))
         return self.clonePath(newpath)
 
 
@@ -706,15 +836,17 @@ class FilePath(AbstractFilePath):
 
         @param path: A relative path (ie, a path not starting with C{"/"})
             which will be interpreted as a child or descendant of this path.
-        @type path: L{bytes}
+        @type path: L{bytes} or L{unicode}
 
         @return: The child path.
-        @rtype: L{FilePath}
+        @rtype: L{FilePath} with a mode equal to the type of C{path}.
         """
-        newpath = abspath(joinpath(self.path, normpath(path)))
-        if not newpath.startswith(self.path):
+        ourPath = self._getPathAsSameTypeAs(path)
+
+        newpath = abspath(joinpath(ourPath, normpath(path)))
+        if not newpath.startswith(ourPath):
             raise InsecurePath("%s is not a child of %s" %
-                               (newpath, self.path))
+                               (newpath, ourPath))
         return self.clonePath(newpath)
 
 
@@ -731,8 +863,8 @@ class FilePath(AbstractFilePath):
         @return: C{None} or the child path.
         @rtype: L{types.NoneType} or L{FilePath}
         """
-        p = self.path
         for child in paths:
+            p = self._getPathAsSameTypeAs(child)
             jp = joinpath(p, child)
             if exists(jp):
                 return self.clonePath(jp)
@@ -751,12 +883,16 @@ class FilePath(AbstractFilePath):
         The extension '*' has a magic meaning, which means "any path that
         begins with C{self.path + '.'} is acceptable".
         """
-        p = self.path
         for ext in exts:
             if not ext and self.exists():
                 return self
-            if ext == b'*':
-                basedot = basename(p) + b'.'
+
+            p = self._getPathAsSameTypeAs(ext)
+            star = _coerceToFilesystemEncoding(ext, "*")
+            dot = _coerceToFilesystemEncoding(ext, ".")
+
+            if ext == star:
+                basedot = basename(p) + dot
                 for fn in listdir(dirname(p)):
                     if fn.startswith(basedot):
                         return self.clonePath(joinpath(dirname(p), fn))
@@ -796,12 +932,13 @@ class FilePath(AbstractFilePath):
         Attempt to return a path with my name, given the extension at C{ext}.
 
         @param ext: File-extension to search for.
-        @type ext: L{str}
+        @type ext: L{bytes} or L{unicode}
 
         @return: The sibling path.
-        @rtype: L{FilePath}
+        @rtype: L{FilePath} with the same mode as the type of C{ext}.
         """
-        return self.clonePath(self.path + ext)
+        ourPath = self._getPathAsSameTypeAs(ext)
+        return self.clonePath(ourPath + ext)
 
 
     def linkTo(self, linkFilePath):
@@ -1188,9 +1325,9 @@ class FilePath(AbstractFilePath):
         """
         List the base names of the direct children of this L{FilePath}.
 
-        @return: A L{list} of L{bytes} giving the names of the contents of the
-            directory this L{FilePath} refers to.  These names are relative to
-            this L{FilePath}.
+        @return: A L{list} of L{bytes}/L{unicode} giving the names of the
+            contents of the directory this L{FilePath} refers to. These names
+            are relative to this L{FilePath}.
         @rtype: L{list}
 
         @raise: Anything the platform L{os.listdir} implementation might raise
@@ -1262,15 +1399,18 @@ class FilePath(AbstractFilePath):
         representing my children that match the given pattern.
 
         @param pattern: A glob pattern to use to match child paths.
-        @type pattern: L{bytes}
+        @type pattern: L{unicode} or L{bytes}
 
         @return: A L{list} of matching children.
-        @rtype: L{list}
+        @rtype: L{list} of L{FilePath}, with the mode of C{pattern}'s type
         """
+        sep = _coerceToFilesystemEncoding(pattern, os.sep)
+        ourPath = self._getPathAsSameTypeAs(pattern)
+
         import glob
-        path = self.path[-1] == b'/' and self.path + pattern or self.sep.join(
-            [self.path, pattern])
-        return map(self.clonePath, glob.glob(path))
+        path = ourPath[-1] == sep and ourPath + pattern \
+               or sep.join([ourPath, pattern])
+        return list(map(self.clonePath, glob.glob(path)))
 
 
     def basename(self):
@@ -1280,7 +1420,7 @@ class FilePath(AbstractFilePath):
 
         @return: The final component of the L{FilePath}'s path (Everything
             after the final path separator).
-        @rtype: L{bytes}
+        @rtype: the same type as this L{FilePath}'s C{path} attribute
         """
         return basename(self.path)
 
@@ -1292,7 +1432,7 @@ class FilePath(AbstractFilePath):
 
         @return: All of the components of the L{FilePath}'s path except the
             last one (everything up to the final path separator).
-        @rtype: L{bytes}
+        @rtype: the same type as this L{FilePath}'s C{path} attribute
         """
         return dirname(self.path)
 
@@ -1421,13 +1561,15 @@ class FilePath(AbstractFilePath):
         @param extension: A suffix to append to the created filename.  (Note
             that if you want an extension with a '.' you must include the '.'
             yourself.)
-        @type extension: L{bytes}
+        @type extension: L{bytes} or L{unicode}
 
         @return: a path object with the given extension suffix, C{alwaysCreate}
             set to True.
-        @rtype: L{FilePath}
+        @rtype: L{FilePath} with a mode equal to the type of C{extension}
         """
-        sib = self.sibling(_secureEnoughString() + self.basename() + extension)
+        ourPath = self._getPathAsSameTypeAs(extension)
+        sib = self.sibling(_secureEnoughString(ourPath) +
+                           self.clonePath(ourPath).basename() + extension)
         sib.requireCreate()
         return sib
 
@@ -1579,7 +1721,6 @@ class FilePath(AbstractFilePath):
             return self._statinfo
         else:
             self._statinfo = value
-
 
 
 # This is all a terrible hack to get statinfo deprecated
