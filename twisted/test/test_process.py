@@ -58,6 +58,7 @@ else:
         return buffer(bObj, offset) + b"".join(bArray)
 
 
+exe = FilePath(sys.executable).asBytesPath()
 CONCURRENT_PROCESS_TEST_COUNT = 25
 
 
@@ -107,10 +108,10 @@ class ProcessProtocolTests(unittest.TestCase):
             def outReceived(self, data):
                 received.append(data)
 
-        bytes = "bytes"
+        bytesToSend = "bytes"
         p = OutProtocol()
-        p.childDataReceived(1, bytes)
-        self.assertEqual(received, [bytes])
+        p.childDataReceived(1, bytesToSend)
+        self.assertEqual(received, [bytesToSend])
 
 
     def test_errReceived(self):
@@ -122,10 +123,10 @@ class ProcessProtocolTests(unittest.TestCase):
             def errReceived(self, data):
                 received.append(data)
 
-        bytes = "bytes"
+        bytesToSend = "bytes"
         p = ErrProtocol()
-        p.childDataReceived(2, bytes)
-        self.assertEqual(received, [bytes])
+        p.childDataReceived(2, bytesToSend)
+        self.assertEqual(received, [bytesToSend])
 
 
     def test_inConnectionLost(self):
@@ -389,7 +390,6 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
         execute, in addition to anything specified by C{argv}.  C{env} is
         the complete environment.
         """
-        exe = sys.executable
         self = cls()
         reactor.spawnProcess(
             self, exe, [exe, "-c", self.program] + argv, env=env)
@@ -511,7 +511,6 @@ class ProcessTestCase(unittest.TestCase):
 
     def testStdio(self):
         """twisted.internet.stdio test."""
-        exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_twisted.py")
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
@@ -539,7 +538,6 @@ class ProcessTestCase(unittest.TestCase):
         """
         finished = defer.Deferred()
         p = TrivialProcessProtocol(finished)
-        exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_echoer.py")
         procTrans = reactor.spawnProcess(p, exe,
                                     [exe, scriptPath], env=None)
@@ -557,7 +555,6 @@ class ProcessTestCase(unittest.TestCase):
         Test running a process: check its output, it exitCode, some property of
         signalProcess.
         """
-        exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_tester.py")
         d = defer.Deferred()
         p = TestProcessProtocol()
@@ -591,7 +588,6 @@ class ProcessTestCase(unittest.TestCase):
                 f.trap(error.ProcessTerminated)
                 self.assertEqual(f.value.exitCode, 23)
 
-        exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_tester.py")
         args = [exe, b"-u", scriptPath]
         protocols = []
@@ -617,7 +613,6 @@ class ProcessTestCase(unittest.TestCase):
         finished = defer.Deferred()
         p = EchoProtocol(finished)
 
-        exe = sys.executable
         scriptPath = FilePath(__file__).sibling(b"process_echoer.py").path
         reactor.spawnProcess(p, exe, [exe, scriptPath], env=None)
 
@@ -635,11 +630,10 @@ class ProcessTestCase(unittest.TestCase):
 
     def testCommandLine(self):
         args = [br'a\"b ', br'a\b ', br' a\\"b', br' a\\b', br'"foo bar" "', b'\tab', b'"\\', b'a"b', b"a'b"]
-        pyExe = sys.executable
         scriptPath = util.sibpath(__file__, "process_cmdline.py")
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, pyExe, [pyExe, b"-u", scriptPath]+args, env=None,
+        reactor.spawnProcess(p, exe, [exe, b"-u", scriptPath]+args, env=None,
                              path=None)
 
         def processEnded(ign):
@@ -654,7 +648,6 @@ class ProcessTestCase(unittest.TestCase):
         Test invalid arguments to spawnProcess: arguments and environment
         must only contains string or unicode, and not null bytes.
         """
-        exe = sys.executable
         p = protocol.ProcessProtocol()
 
         badEnvs = [
@@ -803,7 +796,6 @@ class TestTwoProcessesBase:
         self.verbose = 0
 
     def createProcesses(self, usePTY=0):
-        exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_reader.py")
         for num in (0,1):
             self.pp[num] = TwoProcessProtocol()
@@ -959,7 +951,6 @@ class FDChecker(protocol.ProcessProtocol):
 class FDTest(unittest.TestCase):
 
     def testFD(self):
-        exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_fds.py")
         d = defer.Deferred()
         p = FDChecker(d)
@@ -974,7 +965,6 @@ class FDTest(unittest.TestCase):
         # See what happens when all the pipes close before the process
         # actually stops. This test *requires* SIGCHLD catching to work,
         # as there is no other way to find out the process is done.
-        exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_linger.py")
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
@@ -1059,8 +1049,6 @@ class PosixProcessBase(object):
         C{processEnded} is called with a L{error.ProcessTerminated} error,
         the C{exitCode} attribute reflecting the system exit code.
         """
-        exe = sys.executable
-
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
         reactor.spawnProcess(p, exe, [exe, '-c', 'import sys; sys.exit(1)'],
@@ -1075,7 +1063,6 @@ class PosixProcessBase(object):
 
 
     def _testSignal(self, sig):
-        exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_signal.py")
         d = defer.Deferred()
         p = SignalProtocol(d, sig)
@@ -1191,7 +1178,6 @@ class PosixProcessBase(object):
         ended = defer.Deferred()
 
         # This script runs until we disconnect its transport.
-        pythonExecutable = sys.executable
         scriptPath = util.sibpath(__file__, "process_echoer.py")
 
         class ErrorInProcessEnded(protocol.ProcessProtocol):
@@ -1207,8 +1193,8 @@ class PosixProcessBase(object):
 
         # Launch the process.
         reactor.spawnProcess(
-            ErrorInProcessEnded(), pythonExecutable,
-            [pythonExecutable, scriptPath],
+            ErrorInProcessEnded(), exe,
+            [exe, scriptPath],
             env=None, path=None)
 
         pid = []
@@ -2133,8 +2119,6 @@ class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
         C{errReceived} callback on the C{ProcessProtocol} passed to
         C{spawnProcess}.
         """
-        cmd = sys.executable
-
         value = "42"
 
         p = Accumulator()
@@ -2182,7 +2166,6 @@ class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
     #  might be solveable: TODO: add test if so
 
     def testOpeningTTY(self):
-        exe = sys.executable
         scriptPath = FilePath(__file__).sibling(b"process_tty.py")
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
@@ -2201,10 +2184,9 @@ class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
 
 
     def testBadArgs(self):
-        pyExe = sys.executable
         pyArgs = [pyExe, b"-u", b"-c", b"print('hello')"]
         p = Accumulator()
-        self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs,
+        self.assertRaises(ValueError, reactor.spawnProcess, p, exe, pyArgs,
             usePTY=1, childFDs={1:b'r'})
 
 
@@ -2238,11 +2220,10 @@ class Win32ProcessTestCase(unittest.TestCase):
     """
 
     def testStdinReader(self):
-        pyExe = sys.executable
         scriptPath = util.sibpath(__file__, "process_stdinreader.py")
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, pyExe, [pyExe, "-u", scriptPath], env=None,
+        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None,
                              path=None)
         p.transport.write(b"hello, world")
         p.transport.closeStdin()
@@ -2254,21 +2235,19 @@ class Win32ProcessTestCase(unittest.TestCase):
 
 
     def testBadArgs(self):
-        pyExe = sys.executable
         pyArgs = [pyExe, "-u", "-c", "print('hello')"]
         p = Accumulator()
         self.assertRaises(ValueError,
-            reactor.spawnProcess, p, pyExe, pyArgs, uid=1)
+            reactor.spawnProcess, p, exe, pyArgs, uid=1)
         self.assertRaises(ValueError,
-            reactor.spawnProcess, p, pyExe, pyArgs, gid=1)
+            reactor.spawnProcess, p, exe, pyArgs, gid=1)
         self.assertRaises(ValueError,
-            reactor.spawnProcess, p, pyExe, pyArgs, usePTY=1)
+            reactor.spawnProcess, p, exe, pyArgs, usePTY=1)
         self.assertRaises(ValueError,
-            reactor.spawnProcess, p, pyExe, pyArgs, childFDs={1:'r'})
+            reactor.spawnProcess, p, exe, pyArgs, childFDs={1:'r'})
 
 
     def _testSignal(self, sig):
-        exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_signal.py")
         d = defer.Deferred()
         p = Win32SignalProtocol(d, sig)
@@ -2323,10 +2302,8 @@ class Win32ProcessTestCase(unittest.TestCase):
                 ended.callback(None)
 
         p = SimpleProtocol()
-
-        pyExe = sys.executable
-        pyArgs = [pyExe, "-u", "-c", "print('hello')"]
-        proc = reactor.spawnProcess(p, pyExe, pyArgs)
+        pyArgs = [exe, "-u", "-c", "print('hello')"]
+        proc = reactor.spawnProcess(p, exe, pyArgs)
 
         def cbConnected(transport):
             self.assertIdentical(transport, proc)
@@ -2393,7 +2370,6 @@ class Dumbwin32procPidTest(unittest.TestCase):
         from twisted.internet import _dumbwin32proc
         from twisted.test import mock_win32process
         self.patch(_dumbwin32proc, "win32process", mock_win32process)
-        exe = sys.executable
         scriptPath = util.sibpath(__file__, "process_cmdline.py")
 
         d = defer.Deferred()
@@ -2540,8 +2516,8 @@ class ClosingPipes(unittest.TestCase):
         self.assertFailure(p.deferred, error.ProcessTerminated)
         p.deferred.addCallback(self._endProcess, p)
         reactor.spawnProcess(
-            p, sys.executable, [
-                sys.executable, '-u', '-c',
+            p, exe, [
+                exe, '-u', '-c',
                 'try: input = raw_input\n'
                 'except NameError: pass\n'
                 'input()\n'
