@@ -48,8 +48,6 @@ class TwistedModulesMixin:
         Generate a L{FilePath} with one package, named C{pkgname}, on it, and
         return the L{FilePath} of the path entry.
         """
-        # Remove utf-8 encode and bytes for path segments when Filepath
-        # supports Unicode paths on Python 3 (#2366, #4736, #5203).
         entry = FilePath(self.mktemp())
         pkg = entry.child("test_package")
         pkg.makedirs()
