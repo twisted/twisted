@@ -6,20 +6,27 @@ Tests for twisted.python.modules, abstract access to imported or importable
 objects.
 """
 
+from __future__ import division, absolute_import
+
 import sys
 import itertools
-import zipfile
 import compileall
 
 import twisted
 from twisted.trial.unittest import TestCase
 
 from twisted.python import modules
+from twisted.python.compat import _PY3
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
 
 from twisted.python.test.modules_helpers import TwistedModulesMixin
-from twisted.python.test.test_zippath import zipit
+
+if not _PY3:
+    # Zipfile support isn't ported yet.
+    # See #6917
+    import zipfile
+    from twisted.python.test.test_zippath import zipit
 
 
 class TwistedModulesTestCase(TwistedModulesMixin, TestCase):
@@ -52,8 +59,8 @@ class BasicTests(TwistedModulesTestCase):
         __import__('pkgutil')
 
         namespaceBoilerplate = (
-            'import pkgutil; '
-            '__path__ = pkgutil.extend_path(__path__, __name__)')
+            b'import pkgutil; '
+            b'__path__ = pkgutil.extend_path(__path__, __name__)')
 
         # Create two temporary directories with packages:
         #
@@ -83,7 +90,7 @@ class BasicTests(TwistedModulesTestCase):
         nestedEntry = testPackagePath.child('nested_package')
         nestedEntry.makedirs()
         nestedEntry.child('__init__.py').setContent(namespaceBoilerplate)
-        nestedEntry.child('module.py').setContent('')
+        nestedEntry.child('module.py').setContent(b'')
 
         anotherEntry = self.pathEntryWithOnePackage()
         anotherPackagePath = anotherEntry.child('test_package')
@@ -92,7 +99,7 @@ class BasicTests(TwistedModulesTestCase):
         anotherNestedEntry = anotherPackagePath.child('nested_package')
         anotherNestedEntry.makedirs()
         anotherNestedEntry.child('__init__.py').setContent(namespaceBoilerplate)
-        anotherNestedEntry.child('module2.py').setContent('')
+        anotherNestedEntry.child('module2.py').setContent(b'')
 
         self.replaceSysPath([entry.path, anotherEntry.path])
 
@@ -105,7 +112,7 @@ class BasicTests(TwistedModulesTestCase):
             walkedNames = [
                 mod.name for mod in module.walkModules(importPackages=True)]
         finally:
-            for module in sys.modules.keys():
+            for module in list(sys.modules.keys()):
                 if module.startswith('test_package'):
                     del sys.modules[module]
 
@@ -184,7 +191,7 @@ class BasicTests(TwistedModulesTestCase):
 
         nonDirectoryPath = FilePath(self.mktemp())
         self.failIf(nonDirectoryPath.exists())
-        nonDirectoryPath.setContent("zip file or whatever\n")
+        nonDirectoryPath.setContent(b"zip file or whatever\n")
 
         self.replaceSysPath([existentPath.path])
 
@@ -275,16 +282,16 @@ class BasicTests(TwistedModulesTestCase):
             def evilChildren():
                 # normally this order is random; let's make sure it always
                 # comes up .pyc-first.
-                x = originalChildren()
+                x = list(originalChildren())
                 x.sort()
                 x.reverse()
                 return x
             o.children = evilChildren
             return o
-        mypath.child("abcd.py").setContent('\n')
+        mypath.child("abcd.py").setContent(b'\n')
         compileall.compile_dir(mypath.path, quiet=True)
         # sanity check
-        self.assertEqual(len(mypath.children()), 2)
+        self.assertEqual(len(list(mypath.children())), 2)
         pp._smartPath = _evilSmartPath
         self.assertEqual(pp['abcd'].filePath,
                           mypath.child('abcd.py'))
@@ -300,7 +307,7 @@ class BasicTests(TwistedModulesTestCase):
         pp = modules.PythonPath(sysPath=[mypath.path])
         subpath = mypath.child("abcd")
         subpath.createDirectory()
-        subpath.child("__init__.py").setContent('del __path__\n')
+        subpath.child("__init__.py").setContent(b'del __path__\n')
         sys.path.append(mypath.path)
         __import__("abcd")
         try:
@@ -319,20 +326,20 @@ class PathModificationTest(TwistedModulesTestCase):
     stuffing some code in it.
     """
 
-    _serialnum = itertools.count().next # used to generate serial numbers for
-                                        # package names.
+    _serialnum = itertools.count() # used to generate serial numbers for
+                                   # package names.
 
     def setUp(self):
         self.pathExtensionName = self.mktemp()
         self.pathExtension = FilePath(self.pathExtensionName)
         self.pathExtension.createDirectory()
-        self.packageName = "pyspacetests%d" % (self._serialnum(),)
+        self.packageName = "pyspacetests%d" % (next(self._serialnum),)
         self.packagePath = self.pathExtension.child(self.packageName)
         self.packagePath.createDirectory()
-        self.packagePath.child("__init__.py").setContent("")
-        self.packagePath.child("a.py").setContent("")
-        self.packagePath.child("b.py").setContent("")
-        self.packagePath.child("c__init__.py").setContent("")
+        self.packagePath.child("__init__.py").setContent(b"")
+        self.packagePath.child("a.py").setContent(b"")
+        self.packagePath.child("b.py").setContent(b"")
+        self.packagePath.child("c__init__.py").setContent(b"")
         self.pathSetUp = False
 
 
@@ -346,9 +353,9 @@ class PathModificationTest(TwistedModulesTestCase):
         moddir2 = self.mktemp()
         fpmd = FilePath(moddir2)
         fpmd.createDirectory()
-        fpmd.child("foozle.py").setContent("x = 123\n")
+        fpmd.child("foozle.py").setContent(b"x = 123\n")
         self.packagePath.child("__init__.py").setContent(
-            "__path__.append(%r)\n" % (moddir2,))
+            u"__path__.append({0})\n".format(repr(moddir2)).encode("ascii"))
         # Cut here
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName)
@@ -501,3 +508,16 @@ class PythonPathTestCase(TestCase):
         """
         thePath = modules.PythonPath()
         self.assertNotIn('bogusModule', thePath)
+
+
+__all__ = ["BasicTests", "PathModificationTest", "RebindingTest",
+           "ZipPathModificationTest", "PythonPathTestCase"]
+
+if _PY3:
+    __all3__ = ["BasicTests", "PathModificationTest", "RebindingTest",
+                "PythonPathTestCase"]
+    for name in __all__[:]:
+        if name not in __all3__:
+            __all__.remove(name)
+            del globals()[name]
+    del name, __all3__
