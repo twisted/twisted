@@ -2223,7 +2223,7 @@ class Win32ProcessTestCase(unittest.TestCase):
     """
 
     def testStdinReader(self):
-        scriptPath = FilePath(__file__).sibling(b"process_stdinreader.py")
+        scriptPath = FilePath(__file__).sibling(b"process_stdinreader.py").path
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(p, exe, [exe, b"-u", scriptPath], env=None,
