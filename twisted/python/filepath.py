@@ -42,13 +42,11 @@ from twisted.python.win32 import WindowsError
 
 from twisted.python.util import FancyEqMixin
 
-
-
-
 _CREATE_FLAGS = (os.O_EXCL |
                  os.O_CREAT |
                  os.O_RDWR |
                  O_BINARY)
+
 
 
 def _stub_islink(path):
@@ -602,6 +600,7 @@ class _SpecialNoValue(object):
     Please remove once statinfo is removed.
     """
     pass
+
 
 
 def asFilesystemBytes(path, encoding=None):
