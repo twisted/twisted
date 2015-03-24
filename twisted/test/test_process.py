@@ -41,7 +41,7 @@ from twisted.python.log import msg
 from twisted.internet import reactor, protocol, error, interfaces, defer
 from twisted.trial import unittest
 from twisted.python import util, runtime, procutils
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, networkString
 from twisted.python.filepath import FilePath
 
 if _PY3:
@@ -108,7 +108,7 @@ class ProcessProtocolTests(unittest.TestCase):
             def outReceived(self, data):
                 received.append(data)
 
-        bytesToSend = "bytes"
+        bytesToSend = b"bytes"
         p = OutProtocol()
         p.childDataReceived(1, bytesToSend)
         self.assertEqual(received, [bytesToSend])
@@ -123,7 +123,7 @@ class ProcessProtocolTests(unittest.TestCase):
             def errReceived(self, data):
                 received.append(data)
 
-        bytesToSend = "bytes"
+        bytesToSend = b"bytes"
         p = ErrProtocol()
         p.childDataReceived(2, bytesToSend)
         self.assertEqual(received, [bytesToSend])
@@ -381,6 +381,7 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
     """
     program = None
 
+    @classmethod
     def run(cls, reactor, argv, env):
         """
         Run a Python process connected to a new instance of this protocol
@@ -392,9 +393,8 @@ class UtilityProcessProtocol(protocol.ProcessProtocol):
         """
         self = cls()
         reactor.spawnProcess(
-            self, exe, [exe, "-c", self.program] + argv, env=env)
+            self, exe, [exe, b"-c", self.program] + argv, env=env)
         return self
-    run = classmethod(run)
 
 
     def __init__(self):
@@ -452,7 +452,7 @@ class GetArgumentVector(UtilityProcessProtocol):
     Protocol which will read a serialized argv from a process and
     expose it to interested parties.
     """
-    program = (
+    program = networkString(
         "from sys import stdout, argv\n"
         "stdout.write(chr(0).join(argv))\n"
         "stdout.flush()\n")
@@ -473,7 +473,7 @@ class GetEnvironmentDictionary(UtilityProcessProtocol):
     Protocol which will read a serialized environment dict from a process
     and expose it to interested parties.
     """
-    program = (
+    program = networkString(
         "from sys import stdout\n"
         "from os import environ\n"
         "items = environ.items()\n"
@@ -511,11 +511,11 @@ class ProcessTestCase(unittest.TestCase):
 
     def testStdio(self):
         """twisted.internet.stdio test."""
-        scriptPath = util.sibpath(__file__, "process_twisted.py")
+        scriptPath = FilePath(__file__).sibling(b"process_twisted.py").path
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
         env = {b"PYTHONPATH": os.pathsep.join(sys.path)}
-        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=env,
+        reactor.spawnProcess(p, exe, [exe, b"-u", scriptPath], env=env,
                              path=None, usePTY=self.usePTY)
         p.transport.write(b"hello, world")
         p.transport.write(b"abc")
@@ -538,7 +538,7 @@ class ProcessTestCase(unittest.TestCase):
         """
         finished = defer.Deferred()
         p = TrivialProcessProtocol(finished)
-        scriptPath = util.sibpath(__file__, "process_echoer.py")
+        scriptPath = FilePath(__file__).sibling(b"process_echoer.py").path
         procTrans = reactor.spawnProcess(p, exe,
                                     [exe, scriptPath], env=None)
         self.failUnless(procTrans.pid)
@@ -555,11 +555,11 @@ class ProcessTestCase(unittest.TestCase):
         Test running a process: check its output, it exitCode, some property of
         signalProcess.
         """
-        scriptPath = util.sibpath(__file__, "process_tester.py")
+        scriptPath = FilePath(__file__).sibling(b"process_tester.py").path
         d = defer.Deferred()
         p = TestProcessProtocol()
         p.deferred = d
-        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None)
+        reactor.spawnProcess(p, exe, [exe, b"-u", scriptPath], env=None)
         def check(ignored):
             self.assertEqual(p.stages, [1, 2, 3, 4, 5])
             f = p.reason
@@ -588,7 +588,7 @@ class ProcessTestCase(unittest.TestCase):
                 f.trap(error.ProcessTerminated)
                 self.assertEqual(f.value.exitCode, 23)
 
-        scriptPath = util.sibpath(__file__, "process_tester.py")
+        scriptPath = FilePath(__file__).sibling(b"process_tester.py").path
         args = [exe, b"-u", scriptPath]
         protocols = []
         deferreds = []
@@ -1019,14 +1019,17 @@ class PosixProcessBase(object):
         Return the path of the shell command named C{commandName}, looking at
         common locations.
         """
-        if os.path.exists('/bin/%s' % (commandName,)):
-            cmd = '/bin/%s' % (commandName,)
-        elif os.path.exists('/usr/bin/%s' % (commandName,)):
-            cmd = '/usr/bin/%s' % (commandName,)
+        binLoc = FilePath('/bin').child(commandName)
+        usrbinLoc = FilePath('/usr/bin').child(commandName)
+
+        if binLoc.exists():
+            return binLoc.asBytesPath()
+        elif usrbinLoc.exists():
+            return usrbinLoc.asBytesPath()
         else:
             raise RuntimeError(
                 "%s not found in /bin or /usr/bin" % (commandName,))
-        return cmd
+
 
     def testNormalTermination(self):
         cmd = self.getCommand('true')
@@ -1712,7 +1715,7 @@ class MockProcessTestCase(unittest.TestCase):
         """
         gc.enable()
 
-        cmd = '/mock/ouch'
+        cmd = b'/mock/ouch'
 
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
@@ -1737,7 +1740,7 @@ class MockProcessTestCase(unittest.TestCase):
         the child process, and calls waitpid.
         """
         self.mockos.child = False
-        cmd = '/mock/ouch'
+        cmd = b'/mock/ouch'
 
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
@@ -1777,7 +1780,7 @@ class MockProcessTestCase(unittest.TestCase):
         Test a TTY spawnProcess: check the path of the client code:
         fork, exec, exit.
         """
-        cmd = '/mock/ouch'
+        cmd = b'/mock/ouch'
 
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
@@ -1883,7 +1886,7 @@ class MockProcessTestCase(unittest.TestCase):
         path: C{os.execvpe} raises an error. It should close all the standard
         fds, try to print the error encountered, and exit cleanly.
         """
-        cmd = '/mock/ouch'
+        cmd = b'/mock/ouch'
 
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
@@ -1910,7 +1913,7 @@ class MockProcessTestCase(unittest.TestCase):
         Try creating a process with setting its uid: it's almost the same path
         as the standard path, but with a C{switchUID} call before the exec.
         """
-        cmd = '/mock/ouch'
+        cmd = b'/mock/ouch'
 
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
@@ -1933,7 +1936,7 @@ class MockProcessTestCase(unittest.TestCase):
         current process, the current process does not have its UID changed.
         """
         self.mockos.child = False
-        cmd = '/mock/ouch'
+        cmd = b'/mock/ouch'
 
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
@@ -1948,7 +1951,7 @@ class MockProcessTestCase(unittest.TestCase):
         path as the standard path, but with a C{switchUID} call before the
         exec.
         """
-        cmd = '/mock/ouch'
+        cmd = b'/mock/ouch'
 
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
@@ -1972,7 +1975,7 @@ class MockProcessTestCase(unittest.TestCase):
         changed.
         """
         self.mockos.child = False
-        cmd = '/mock/ouch'
+        cmd = b'/mock/ouch'
 
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
@@ -1991,7 +1994,7 @@ class MockProcessTestCase(unittest.TestCase):
         Test that reapProcess logs errors raised.
         """
         self.mockos.child = False
-        cmd = '/mock/ouch'
+        cmd = b'/mock/ouch'
         self.mockos.waitChild = (0, 0)
 
         d = defer.Deferred()
@@ -2013,7 +2016,7 @@ class MockProcessTestCase(unittest.TestCase):
         C{OSError} with errno C{ECHILD}.
         """
         self.mockos.child = False
-        cmd = '/mock/ouch'
+        cmd = b'/mock/ouch'
         self.mockos.waitChild = (0, 0)
 
         d = defer.Deferred()
@@ -2053,7 +2056,7 @@ class MockProcessTestCase(unittest.TestCase):
         """
         self.mockos.child = False
         self.mockos.waitChild = (0, 0)
-        cmd = '/mock/ouch'
+        cmd = b'/mock/ouch'
         p = TrivialProcessProtocol(None)
         proc = reactor.spawnProcess(p, cmd, ['ouch'], env=None, usePTY=False)
         proc.signalProcess("KILL")
@@ -2067,7 +2070,7 @@ class MockProcessTestCase(unittest.TestCase):
         if the process has exited.
         """
         self.mockos.child = False
-        cmd = '/mock/ouch'
+        cmd = b'/mock/ouch'
         p = TrivialProcessProtocol(None)
         proc = reactor.spawnProcess(p, cmd, ['ouch'], env=None, usePTY=False)
         # We didn't specify a waitpid value, so the waitpid call in
@@ -2085,7 +2088,7 @@ class MockProcessTestCase(unittest.TestCase):
         """
         self.mockos.child = False
         self.mockos.waitChild = (0, 0)
-        cmd = '/mock/ouch'
+        cmd = b'/mock/ouch'
         p = TrivialProcessProtocol(None)
         proc = reactor.spawnProcess(p, cmd, ['ouch'], env=None, usePTY=False)
         self.mockos.raiseKill = OSError(errno.ESRCH, "Not found")
@@ -2100,7 +2103,7 @@ class MockProcessTestCase(unittest.TestCase):
         """
         self.mockos.child = False
         self.mockos.waitChild = (0, 0)
-        cmd = '/mock/ouch'
+        cmd = b'/mock/ouch'
         p = TrivialProcessProtocol(None)
         proc = reactor.spawnProcess(p, cmd, ['ouch'], env=None, usePTY=False)
         self.mockos.raiseKill = OSError(errno.EINVAL, "Invalid signal")
@@ -2124,8 +2127,8 @@ class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(p, cmd,
-                             [cmd, "-c",
-                              "import sys; sys.stderr.write('%s')" % (value,)],
+                             [cmd, b"-c",
+                              networkString("import sys; sys.stderr.write('{0}')".format(value))],
                              env=None, path="/tmp",
                              usePTY=self.usePTY)
 
@@ -2139,7 +2142,7 @@ class PosixProcessTestCase(unittest.TestCase, PosixProcessBase):
         s = b"there's no place like home!\n" * 3
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, cmd, [cmd, "-c"], env=None, path="/tmp",
+        reactor.spawnProcess(p, cmd, [cmd, b"-c"], env=None, path="/tmp",
                              usePTY=self.usePTY)
         p.transport.write(s)
         p.transport.closeStdin()
@@ -2169,7 +2172,7 @@ class PosixProcessTestCasePTY(unittest.TestCase, PosixProcessBase):
         scriptPath = FilePath(__file__).sibling(b"process_tty.py")
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath.path], env=None,
+        reactor.spawnProcess(p, exe, [exe, b"-u", scriptPath.path], env=None,
                             path=None, usePTY=self.usePTY)
         p.transport.write(b"hello world!\n")
 
@@ -2220,7 +2223,7 @@ class Win32ProcessTestCase(unittest.TestCase):
     """
 
     def testStdinReader(self):
-        scriptPath = util.sibpath(__file__, "process_stdinreader.py")
+        scriptPath = FilePath(__file__).sibling(b"process_stdinreader.py")
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None,
@@ -2235,7 +2238,7 @@ class Win32ProcessTestCase(unittest.TestCase):
 
 
     def testBadArgs(self):
-        pyArgs = [pyExe, "-u", "-c", "print('hello')"]
+        pyArgs = [pyExe, b"-u", b"-c", b"print('hello')"]
         p = Accumulator()
         self.assertRaises(ValueError,
             reactor.spawnProcess, p, exe, pyArgs, uid=1)
@@ -2302,7 +2305,7 @@ class Win32ProcessTestCase(unittest.TestCase):
                 ended.callback(None)
 
         p = SimpleProtocol()
-        pyArgs = [exe, "-u", "-c", "print('hello')"]
+        pyArgs = [exe, b"-u", b"-c", b"print('hello')"]
         proc = reactor.spawnProcess(p, exe, pyArgs)
 
         def cbConnected(transport):
@@ -2374,8 +2377,8 @@ class Dumbwin32procPidTest(unittest.TestCase):
 
         d = defer.Deferred()
         processProto = TrivialProcessProtocol(d)
-        comspec = str(os.environ["COMSPEC"])
-        cmd = [comspec, "/c", exe, scriptPath]
+        comspec = bytes(os.environ["COMSPEC"])
+        cmd = [comspec, b"/c", exe, scriptPath]
 
         p = _dumbwin32proc.Process(reactor,
                                   processProto,
@@ -2517,7 +2520,7 @@ class ClosingPipes(unittest.TestCase):
         p.deferred.addCallback(self._endProcess, p)
         reactor.spawnProcess(
             p, exe, [
-                exe, '-u', '-c',
+                exe, b'-u', b'-c',
                 'try: input = raw_input\n'
                 'except NameError: pass\n'
                 'input()\n'
