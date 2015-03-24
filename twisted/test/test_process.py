@@ -2226,7 +2226,7 @@ class Win32ProcessTestCase(unittest.TestCase):
         scriptPath = FilePath(__file__).sibling(b"process_stdinreader.py")
         p = Accumulator()
         d = p.endedDeferred = defer.Deferred()
-        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None,
+        reactor.spawnProcess(p, exe, [exe, b"-u", scriptPath], env=None,
                              path=None)
         p.transport.write(b"hello, world")
         p.transport.closeStdin()
@@ -2238,7 +2238,7 @@ class Win32ProcessTestCase(unittest.TestCase):
 
 
     def testBadArgs(self):
-        pyArgs = [pyExe, b"-u", b"-c", b"print('hello')"]
+        pyArgs = [exe, b"-u", b"-c", b"print('hello')"]
         p = Accumulator()
         self.assertRaises(ValueError,
             reactor.spawnProcess, p, exe, pyArgs, uid=1)
@@ -2251,10 +2251,10 @@ class Win32ProcessTestCase(unittest.TestCase):
 
 
     def _testSignal(self, sig):
-        scriptPath = util.sibpath(__file__, "process_signal.py")
+        scriptPath = FilePath(__file__).child(b"process_signal.py").path
         d = defer.Deferred()
         p = Win32SignalProtocol(d, sig)
-        reactor.spawnProcess(p, exe, [exe, "-u", scriptPath], env=None)
+        reactor.spawnProcess(p, exe, [exe, b"-u", scriptPath], env=None)
         return d
 
 
