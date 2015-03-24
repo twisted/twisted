@@ -599,10 +599,10 @@ class _SpecialNoValue(object):
 
 
 
-def asFilesystemBytes(path, encoding=None):
+def _asFilesystemBytes(path, encoding=None):
     """
-    Return C{path} as a string of L{bytes} (probably) suitable for use on this
-    system's filesystem.
+    Return C{path} as a string of L{bytes} suitable for use on this system's
+    filesystem.
 
     @param path: The path to be made suitable.
     @type path: L{bytes} or L{unicode}
@@ -610,7 +610,6 @@ def asFilesystemBytes(path, encoding=None):
         given, L{sys.getfilesystemencoding} is used.
 
     @return: L{bytes}
-    @since: 15.2
     """
     if type(path) == bytes:
         return path
@@ -621,10 +620,10 @@ def asFilesystemBytes(path, encoding=None):
 
 
 
-def asFilesystemText(path, encoding=None):
+def _asFilesystemText(path, encoding=None):
     """
-    Return C{path} as a string of L{unicode} (probably) suitable for use on this
-    system's filesystem.
+    Return C{path} as a string of L{unicode} suitable for use on this system's
+    filesystem.
 
     @param path: The path to be made suitable.
     @type path: L{bytes} or L{unicode}
@@ -633,7 +632,6 @@ def asFilesystemText(path, encoding=None):
         is given, L{sys.getfilesystemencoding} is used.
 
     @return: L{unicode}
-    @since: 15.2
     """
     if type(path) == unicode:
         return path
@@ -653,9 +651,9 @@ def _coerceToFilesystemEncoding(path, newpath, encoding=None):
     @param encoding: If coerced, the encoding that will be used.
     """
     if type(path) == bytes:
-        return asFilesystemBytes(newpath, encoding=encoding)
+        return _asFilesystemBytes(newpath, encoding=encoding)
     else:
-        return asFilesystemText(newpath, encoding=encoding)
+        return _asFilesystemText(newpath, encoding=encoding)
 
 
 
@@ -685,15 +683,15 @@ class FilePath(AbstractFilePath):
     Greater-than-second precision is only available in Windows on Python2.5 and
     later.
 
-    The type of C{path} when instantiating decides the internal representation
-    of the L{FilePath}. That is, C{FilePath(b"/")} will return a L{bytes} mode
-    L{FilePath}, and C{FilePath(u"/")} will return a L{unicode} mode
-    L{FilePath}. C{FilePath("/")} will return a L{bytes} mode L{FilePath} on
-    Python 2, and a L{unicode} mode L{FilePath} on Python 3.
+    The type of C{path} when instantiating decides the mode of the L{FilePath}.
+    That is, C{FilePath(b"/")} will return a L{bytes} mode L{FilePath}, and
+    C{FilePath(u"/")} will return a L{unicode} mode L{FilePath}.
+    C{FilePath("/")} will return a L{bytes} mode L{FilePath} on Python 2, and a
+    L{unicode} mode L{FilePath} on Python 3.
 
     Methods that return a new L{FilePath} use the type of the given subpath to
-    decide its internal representation. For example,
-    C{FilePath(b"/").child(u"tmp")} will return a L{unicode} L{FilePath}.
+    decide its mode. For example, C{FilePath(b"/").child(u"tmp")} will return a
+    L{unicode} mode L{FilePath}.
 
     @type alwaysCreate: L{bool}
     @ivar alwaysCreate: When opening this file, only succeed if the file does
@@ -759,7 +757,7 @@ class FilePath(AbstractFilePath):
         return _coerceToFilesystemEncoding(self.path, os.sep)
 
 
-    def asBytesPath(self, encoding=None):
+    def _asBytesPath(self, encoding=None):
         """
         Return the path of this L{FilePath} as bytes.
 
@@ -767,12 +765,11 @@ class FilePath(AbstractFilePath):
             given, L{sys.getfilesystemencoding} is used.
 
         @return: L{bytes}
-        @since: 15.2
         """
-        return asFilesystemBytes(self.path, encoding=encoding)
+        return _asFilesystemBytes(self.path, encoding=encoding)
 
 
-    def asTextPath(self, encoding=None):
+    def _asTextPath(self, encoding=None):
         """
         Return the path of this L{FilePath} as text.
 
@@ -780,9 +777,8 @@ class FilePath(AbstractFilePath):
             is given, L{sys.getfilesystemencoding} is used.
 
         @return: L{unicode}
-        @since: 15.2
         """
-        return asFilesystemText(self.path, encoding=encoding)
+        return _asFilesystemText(self.path, encoding=encoding)
 
 
     def _getPathAsSameTypeAs(self, pattern):
@@ -791,12 +787,12 @@ class FilePath(AbstractFilePath):
         Otherwise, return L{FilePath.path} as L{unicode}.
 
         @param pattern: The new element of the path that L{FilePath.path} may
-            need to be coerced to match..
+            need to be coerced to match.
         """
         if type(pattern) == bytes:
-            return self.asBytesPath()
+            return self._asBytesPath()
         else:
-            return self.asTextPath()
+            return self._asTextPath()
 
 
     def child(self, path):
@@ -812,8 +808,7 @@ class FilePath(AbstractFilePath):
             would result in a path which is not a direct child of this path.
 
         @return: The child path.
-        @rtype: L{FilePath} with an internal representation equal to the type of
-            C{path}.
+        @rtype: L{FilePath} with a mode equal to the type of C{path}.
         """
         colon = _coerceToFilesystemEncoding(path, ":")
         sep =  _coerceToFilesystemEncoding(path, os.sep)
@@ -844,8 +839,7 @@ class FilePath(AbstractFilePath):
         @type path: L{bytes} or L{unicode}
 
         @return: The child path.
-        @rtype: L{FilePath} with an internal representation equal to the type of
-            C{path}.
+        @rtype: L{FilePath} with a mode equal to the type of C{path}.
         """
         ourPath = self._getPathAsSameTypeAs(path)
 
@@ -941,8 +935,7 @@ class FilePath(AbstractFilePath):
         @type ext: L{bytes} or L{unicode}
 
         @return: The sibling path.
-        @rtype: L{FilePath} with the same internal representation as the type of
-            C{ext}
+        @rtype: L{FilePath} with the same mode as the type of C{ext}.
         """
         ourPath = self._getPathAsSameTypeAs(ext)
         return self.clonePath(ourPath + ext)
@@ -1409,8 +1402,7 @@ class FilePath(AbstractFilePath):
         @type pattern: L{unicode} or L{bytes}
 
         @return: A L{list} of matching children.
-        @rtype: L{list} of L{FilePath}, with an internal representation of
-            C{pattern}'s type
+        @rtype: L{list} of L{FilePath}, with the mode of C{pattern}'s type
         """
         sep = _coerceToFilesystemEncoding(pattern, os.sep)
         ourPath = self._getPathAsSameTypeAs(pattern)
@@ -1573,8 +1565,7 @@ class FilePath(AbstractFilePath):
 
         @return: a path object with the given extension suffix, C{alwaysCreate}
             set to True.
-        @rtype: L{FilePath} with the internal representation equal to the type
-            of C{extension}
+        @rtype: L{FilePath} with a mode equal to the type of C{extension}
         """
         ourPath = self._getPathAsSameTypeAs(extension)
         sib = self.sibling(_secureEnoughString(ourPath) +

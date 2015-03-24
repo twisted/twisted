@@ -1,1 +1,1 @@
-twisted.python.filepath.FilePath now supports text paths. Like the os module, instantiating it with a text path will return a text-mode FilePath, instantiating with a bytes path will return a bytes-mode FilePath.
+twisted.python.filepath.FilePath now supports Unicode (text) paths. Like the os module, instantiating it with a Unicode path will return a Unicode-mode FilePath, instantiating with a bytes path will return a bytes-mode FilePath.
