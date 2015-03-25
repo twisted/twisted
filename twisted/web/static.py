@@ -23,7 +23,7 @@ from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
 
-from twisted.python.compat import networkString, intToBytes
+from twisted.python.compat import networkString, intToBytes, nativeString
 
 from twisted.python import components, filepath, log
 from twisted.internet import abstract, interfaces
@@ -519,7 +519,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
                 "--%s\r\n"
                 "Content-type: %s\r\n"
                 "Content-range: %s\r\n"
-                "\r\n") % (boundary, contentType, partContentRange))
+                "\r\n") % (nativeString(boundary), nativeString(contentType), nativeString(partContentRange)))
             contentLength += len(partSeparator)
             rangeInfo.append((partSeparator, partOffset, partSize))
         if not matchingRangeFound:
@@ -533,7 +533,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         rangeInfo.append((finalBoundary, 0, 0))
         request.setResponseCode(http.PARTIAL_CONTENT)
         request.setHeader(
-            b'content-type', 'multipart/byteranges; boundary="%s"' % (boundary,))
+            b'content-type', networkString('multipart/byteranges; boundary="%s"' % (nativeString(boundary),)))
         request.setHeader(
             b'content-length', intToBytes(contentLength + len(finalBoundary)))
         return rangeInfo
@@ -578,7 +578,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         try:
             parsedRanges = self._parseRangeHeader(byteRange)
         except ValueError:
-            log.msg("Ignoring malformed Range header %r" % (byteRange,))
+            log.msg("Ignoring malformed Range header %r" % (byteRange.decode(),))
             self._setContentHeaders(request)
             request.setResponseCode(http.OK)
             return NoRangeStaticProducer(request, fileForReading)
@@ -799,7 +799,7 @@ class MultipleRangeStaticProducer(StaticProducer):
 
 
     def _nextRange(self):
-        self.partBoundary, partOffset, self._partSize = self.rangeIter.next()
+        self.partBoundary, partOffset, self._partSize = next(self.rangeIter)
         self._partBytesWritten = 0
         self.fileObject.seek(partOffset)
 

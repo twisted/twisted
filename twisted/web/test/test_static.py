@@ -19,7 +19,7 @@ from twisted.internet import abstract, interfaces
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python import log
-from twisted.python.compat import iteritems, intToBytes
+from twisted.python.compat import iteritems, intToBytes, networkString
 from twisted.trial.unittest import TestCase
 from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
@@ -719,13 +719,13 @@ class NoRangeStaticProducerTests(TestCase):
         resource to the request.
         """
         request = DummyRequest([])
-        content = 'abcdef'
+        content = b'abcdef'
         producer = static.NoRangeStaticProducer(
             request, StringIO(content))
         # start calls registerProducer on the DummyRequest, which pulls all
         # output from the producer and so we just need this one call.
         producer.start()
-        self.assertEqual(content, ''.join(request.written))
+        self.assertEqual(content, b''.join(request.written))
 
 
     def test_resumeProducingBuffersOutput(self):
@@ -736,7 +736,7 @@ class NoRangeStaticProducerTests(TestCase):
         """
         request = DummyRequest([])
         bufferSize = abstract.FileDescriptor.bufferSize
-        content = 'a' * (2*bufferSize + 1)
+        content = b'a' * (2*bufferSize + 1)
         producer = static.NoRangeStaticProducer(
             request, StringIO(content))
         # start calls registerProducer on the DummyRequest, which pulls all
@@ -760,7 +760,7 @@ class NoRangeStaticProducerTests(TestCase):
         callbackList = []
         finishDeferred.addCallback(callbackList.append)
         producer = static.NoRangeStaticProducer(
-            request, StringIO('abcdef'))
+            request, StringIO(b'abcdef'))
         # start calls registerProducer on the DummyRequest, which pulls all
         # output from the producer and so we just need this one call.
         producer.start()
@@ -789,13 +789,13 @@ class SingleRangeStaticProducerTests(TestCase):
         request.
         """
         request = DummyRequest([])
-        content = 'abcdef'
+        content = b'abcdef'
         producer = static.SingleRangeStaticProducer(
             request, StringIO(content), 1, 3)
         # DummyRequest.registerProducer pulls all output from the producer, so
         # we just need to call start.
         producer.start()
-        self.assertEqual(content[1:4], ''.join(request.written))
+        self.assertEqual(content[1:4], b''.join(request.written))
 
 
     def test_resumeProducingBuffersOutput(self):
@@ -806,7 +806,7 @@ class SingleRangeStaticProducerTests(TestCase):
         """
         request = DummyRequest([])
         bufferSize = abstract.FileDescriptor.bufferSize
-        content = 'abc' * bufferSize
+        content = b'abc' * bufferSize
         producer = static.SingleRangeStaticProducer(
             request, StringIO(content), 1, bufferSize+10)
         # DummyRequest.registerProducer pulls all output from the producer, so
@@ -829,7 +829,7 @@ class SingleRangeStaticProducerTests(TestCase):
         callbackList = []
         finishDeferred.addCallback(callbackList.append)
         producer = static.SingleRangeStaticProducer(
-            request, StringIO('abcdef'), 1, 1)
+            request, StringIO(b'abcdef'), 1, 1)
         # start calls registerProducer on the DummyRequest, which pulls all
         # output from the producer and so we just need this one call.
         producer.start()
@@ -858,13 +858,13 @@ class MultipleRangeStaticProducerTests(TestCase):
         boundaries in between each chunk.
         """
         request = DummyRequest([])
-        content = 'abcdef'
+        content = b'abcdef'
         producer = static.MultipleRangeStaticProducer(
-            request, StringIO.StringIO(content), [('1', 1, 3), ('2', 5, 1)])
+            request, StringIO(content), [(b'1', 1, 3), (b'2', 5, 1)])
         # DummyRequest.registerProducer pulls all output from the producer, so
         # we just need to call start.
         producer.start()
-        self.assertEqual('1bcd2f', ''.join(request.written))
+        self.assertEqual(b'1bcd2f', b''.join(request.written))
 
 
     def test_resumeProducingBuffersOutput(self):
@@ -882,17 +882,17 @@ class MultipleRangeStaticProducerTests(TestCase):
         call to request.write.
         """
         request = DummyRequest([])
-        content = '0123456789' * 2
+        content = b'0123456789' * 2
         producer = static.MultipleRangeStaticProducer(
-            request, StringIO.StringIO(content),
-            [('a', 0, 2), ('b', 5, 10), ('c', 0, 0)])
+            request, StringIO(content),
+            [(b'a', 0, 2), (b'b', 5, 10), (b'c', 0, 0)])
         producer.bufferSize = 10
         # DummyRequest.registerProducer pulls all output from the producer, so
         # we just need to call start.
         producer.start()
         expected = [
-            'a' + content[0:2] + 'b' + content[5:11],
-            content[11:15] + 'c',
+            b'a' + content[0:2] + b'b' + content[5:11],
+            content[11:15] + b'c',
             ]
         self.assertEqual(expected, request.written)
 
@@ -907,7 +907,7 @@ class MultipleRangeStaticProducerTests(TestCase):
         callbackList = []
         finishDeferred.addCallback(callbackList.append)
         producer = static.MultipleRangeStaticProducer(
-            request, StringIO.StringIO('abcdef'), [('', 1, 2)])
+            request, StringIO(b'abcdef'), [(b'', 1, 2)])
         # start calls registerProducer on the DummyRequest, which pulls all
         # output from the producer and so we just need this one call.
         producer.start()
@@ -944,15 +944,15 @@ class RangeTests(TestCase):
         # accidentally seeing the right result by having a byte sequence
         # repeated at different locations or by having byte values which are
         # somehow correlated with their position in the string.
-        self.payload = ('\xf8u\xf3E\x8c7\xce\x00\x9e\xb6a0y0S\xf0\xef\xac\xb7'
-                        '\xbe\xb5\x17M\x1e\x136k{\x1e\xbe\x0c\x07\x07\t\xd0'
-                        '\xbckY\xf5I\x0b\xb8\x88oZ\x1d\x85b\x1a\xcdk\xf2\x1d'
-                        '&\xfd%\xdd\x82q/A\x10Y\x8b')
+        self.payload = (b'\xf8u\xf3E\x8c7\xce\x00\x9e\xb6a0y0S\xf0\xef\xac\xb7'
+                        b'\xbe\xb5\x17M\x1e\x136k{\x1e\xbe\x0c\x07\x07\t\xd0'
+                        b'\xbckY\xf5I\x0b\xb8\x88oZ\x1d\x85b\x1a\xcdk\xf2\x1d'
+                        b'&\xfd%\xdd\x82q/A\x10Y\x8b')
         path.setContent(self.payload)
         self.file = path.open()
         self.resource = static.File(self.file.name)
         self.resource.isLeaf = 1
-        self.request = DummyRequest([''])
+        self.request = DummyRequest([b''])
         self.request.uri = self.file.name
         self.catcher = []
         log.addObserver(self.catcher.append)
@@ -984,25 +984,25 @@ class RangeTests(TestCase):
         f = self.resource._parseRangeHeader
 
         # there's no =
-        self.assertRaises(ValueError, f, 'bytes')
+        self.assertRaises(ValueError, f, b'bytes')
 
         # unknown isn't a valid Bytes-Unit
-        self.assertRaises(ValueError, f, 'unknown=1-2')
+        self.assertRaises(ValueError, f, b'unknown=1-2')
 
         # there's no - in =stuff
-        self.assertRaises(ValueError, f, 'bytes=3')
+        self.assertRaises(ValueError, f, b'bytes=3')
 
         # both start and end are empty
-        self.assertRaises(ValueError, f, 'bytes=-')
+        self.assertRaises(ValueError, f, b'bytes=-')
 
         # start isn't an integer
-        self.assertRaises(ValueError, f, 'bytes=foo-')
+        self.assertRaises(ValueError, f, b'bytes=foo-')
 
         # end isn't an integer
-        self.assertRaises(ValueError, f, 'bytes=-foo')
+        self.assertRaises(ValueError, f, b'bytes=-foo')
 
         # end isn't equal to or greater than start
-        self.assertRaises(ValueError, f, 'bytes=5-4')
+        self.assertRaises(ValueError, f, b'bytes=5-4')
 
 
     def test_rangeMissingStop(self):
@@ -1011,7 +1011,7 @@ class RangeTests(TestCase):
         two-tuple giving the start position and C{None}.
         """
         self.assertEqual(
-            self.resource._parseRangeHeader('bytes=0-'), [(0, None)])
+            self.resource._parseRangeHeader(b'bytes=0-'), [(0, None)])
 
 
     def test_rangeMissingStart(self):
@@ -1020,7 +1020,7 @@ class RangeTests(TestCase):
         a two-tuple of C{None} and the end position.
         """
         self.assertEqual(
-            self.resource._parseRangeHeader('bytes=-3'), [(None, 3)])
+            self.resource._parseRangeHeader(b'bytes=-3'), [(None, 3)])
 
 
     def test_range(self):
@@ -1029,7 +1029,7 @@ class RangeTests(TestCase):
         into a two-tuple of those positions.
         """
         self.assertEqual(
-            self.resource._parseRangeHeader('bytes=2-5'), [(2, 5)])
+            self.resource._parseRangeHeader(b'bytes=2-5'), [(2, 5)])
 
 
     def test_rangeWithSpace(self):
@@ -1038,17 +1038,17 @@ class RangeTests(TestCase):
         the same way as it would be without the whitespace.
         """
         self.assertEqual(
-            self.resource._parseRangeHeader(' bytes=1-2 '), [(1, 2)])
+            self.resource._parseRangeHeader(b' bytes=1-2 '), [(1, 2)])
         self.assertEqual(
-            self.resource._parseRangeHeader('bytes =1-2 '), [(1, 2)])
+            self.resource._parseRangeHeader(b'bytes =1-2 '), [(1, 2)])
         self.assertEqual(
-            self.resource._parseRangeHeader('bytes= 1-2'), [(1, 2)])
+            self.resource._parseRangeHeader(b'bytes= 1-2'), [(1, 2)])
         self.assertEqual(
-            self.resource._parseRangeHeader('bytes=1 -2'), [(1, 2)])
+            self.resource._parseRangeHeader(b'bytes=1 -2'), [(1, 2)])
         self.assertEqual(
-            self.resource._parseRangeHeader('bytes=1- 2'), [(1, 2)])
+            self.resource._parseRangeHeader(b'bytes=1- 2'), [(1, 2)])
         self.assertEqual(
-            self.resource._parseRangeHeader('bytes=1-2 '), [(1, 2)])
+            self.resource._parseRangeHeader(b'bytes=1-2 '), [(1, 2)])
 
 
     def test_nullRangeElements(self):
@@ -1057,7 +1057,7 @@ class RangeTests(TestCase):
         non-null range is parsed and its start and stop returned.
         """
         self.assertEqual(
-            self.resource._parseRangeHeader('bytes=1-2,\r\n, ,\t'), [(1, 2)])
+            self.resource._parseRangeHeader(b'bytes=1-2,\r\n, ,\t'), [(1, 2)])
 
 
     def test_multipleRanges(self):
@@ -1066,7 +1066,7 @@ class RangeTests(TestCase):
         returned.
         """
         self.assertEqual(
-            self.resource._parseRangeHeader('bytes=1-2,3-4'),
+            self.resource._parseRangeHeader(b'bytes=1-2,3-4'),
             [(1, 2), (3, 4)])
 
 
@@ -1075,9 +1075,9 @@ class RangeTests(TestCase):
         A correct response to a range request is as long as the length of the
         requested range.
         """
-        self.request.headers['range'] = 'bytes=0-43'
+        self.request.headers[b'range'] = b'bytes=0-43'
         self.resource.render(self.request)
-        self.assertEqual(len(''.join(self.request.written)), 44)
+        self.assertEqual(len(b''.join(self.request.written)), 44)
 
 
     def test_invalidRangeRequest(self):
@@ -1087,15 +1087,15 @@ class RangeTests(TestCase):
         Only 'bytes' is defined) results in the range header value being logged
         and a normal 200 response being sent.
         """
-        self.request.headers['range'] = range = 'foobar=0-43'
+        self.request.headers[b'range'] = range = b'foobar=0-43'
         self.resource.render(self.request)
-        expected = "Ignoring malformed Range header %r" % (range,)
+        expected = "Ignoring malformed Range header %r" % (range.decode(),)
         self._assertLogged(expected)
-        self.assertEqual(''.join(self.request.written), self.payload)
+        self.assertEqual(b''.join(self.request.written), self.payload)
         self.assertEqual(self.request.responseCode, http.OK)
         self.assertEqual(
-            self.request.outgoingHeaders['content-length'],
-            str(len(self.payload)))
+            self.request.outgoingHeaders[b'content-length'],
+            intToBytes(len(self.payload)))
 
 
     def parseMultipartBody(self, body, boundary):
@@ -1105,25 +1105,25 @@ class RangeTests(TestCase):
         Note that this with fail the calling test on certain syntactic
         problems.
         """
-        sep = "\r\n--" + boundary
-        parts = ''.join(body).split(sep)
-        self.assertEqual('', parts[0])
-        self.assertEqual('--\r\n', parts[-1])
+        sep = b"\r\n--" + boundary
+        parts = body.split(sep)
+        self.assertEqual(b'', parts[0])
+        self.assertEqual(b'--\r\n', parts[-1])
         parsed_parts = []
         for part in parts[1:-1]:
-            before, header1, header2, blank, partBody = part.split('\r\n', 4)
-            headers = header1 + '\n' + header2
-            self.assertEqual('', before)
-            self.assertEqual('', blank)
+            before, header1, header2, blank, partBody = part.split(b'\r\n', 4)
+            headers = header1 + b'\n' + header2
+            self.assertEqual(b'', before)
+            self.assertEqual(b'', blank)
             partContentTypeValue = re.search(
-                '^content-type: (.*)$', headers, re.I|re.M).group(1)
+                b'^content-type: (.*)$', headers, re.I|re.M).group(1)
             start, end, size = re.search(
-                '^content-range: bytes ([0-9]+)-([0-9]+)/([0-9]+)$',
+                b'^content-range: bytes ([0-9]+)-([0-9]+)/([0-9]+)$',
                 headers, re.I|re.M).groups()
             parsed_parts.append(
-                {'contentType': partContentTypeValue,
-                 'contentRange': (start, end, size),
-                 'body': partBody})
+                {b'contentType': partContentTypeValue,
+                 b'contentRange': (start, end, size),
+                 b'body': partBody})
         return parsed_parts
 
 
@@ -1133,22 +1133,22 @@ class RangeTests(TestCase):
         multipart response.
         """
         startEnds = [(0, 2), (20, 30), (40, 50)]
-        rangeHeaderValue = ','.join(["%s-%s"%(s,e) for (s, e) in startEnds])
-        self.request.headers['range'] = 'bytes=' + rangeHeaderValue
+        rangeHeaderValue = b','.join([networkString("%s-%s" % (s,e)) for (s, e) in startEnds])
+        self.request.headers[b'range'] = b'bytes=' + rangeHeaderValue
         self.resource.render(self.request)
         self.assertEqual(self.request.responseCode, http.PARTIAL_CONTENT)
         boundary = re.match(
-            '^multipart/byteranges; boundary="(.*)"$',
-            self.request.outgoingHeaders['content-type']).group(1)
-        parts = self.parseMultipartBody(''.join(self.request.written), boundary)
+            b'^multipart/byteranges; boundary="(.*)"$',
+            self.request.outgoingHeaders[b'content-type']).group(1)
+        parts = self.parseMultipartBody(b''.join(self.request.written), boundary)
         self.assertEqual(len(startEnds), len(parts))
         for part, (s, e) in zip(parts, startEnds):
-            self.assertEqual(self.resource.type, part['contentType'])
-            start, end, size = part['contentRange']
+            self.assertEqual(self.resource.type, part[b'contentType'])
+            start, end, size = part[b'contentRange']
             self.assertEqual(int(start), s)
             self.assertEqual(int(end), e)
             self.assertEqual(int(size), self.resource.getFileSize())
-            self.assertEqual(self.payload[s:e+1], part['body'])
+            self.assertEqual(self.payload[s:e+1], part[b'body'])
 
 
     def test_multipleRangeRequestWithRangeOverlappingEnd(self):
@@ -1158,22 +1158,22 @@ class RangeTests(TestCase):
         the resource.
         """
         startEnds = [(0, 2), (40, len(self.payload) + 10)]
-        rangeHeaderValue = ','.join(["%s-%s"%(s,e) for (s, e) in startEnds])
-        self.request.headers['range'] = 'bytes=' + rangeHeaderValue
+        rangeHeaderValue = b','.join([networkString("%s-%s" % (s,e)) for (s, e) in startEnds])
+        self.request.headers[b'range'] = b'bytes=' + rangeHeaderValue
         self.resource.render(self.request)
         self.assertEqual(self.request.responseCode, http.PARTIAL_CONTENT)
         boundary = re.match(
-            '^multipart/byteranges; boundary="(.*)"$',
-            self.request.outgoingHeaders['content-type']).group(1)
-        parts = self.parseMultipartBody(''.join(self.request.written), boundary)
+            b'^multipart/byteranges; boundary="(.*)"$',
+            self.request.outgoingHeaders[b'content-type']).group(1)
+        parts = self.parseMultipartBody(b''.join(self.request.written), boundary)
         self.assertEqual(len(startEnds), len(parts))
         for part, (s, e) in zip(parts, startEnds):
-            self.assertEqual(self.resource.type, part['contentType'])
-            start, end, size = part['contentRange']
+            self.assertEqual(self.resource.type, part[b'contentType'])
+            start, end, size = part[b'contentRange']
             self.assertEqual(int(start), s)
             self.assertEqual(int(end), min(e, self.resource.getFileSize()-1))
             self.assertEqual(int(size), self.resource.getFileSize())
-            self.assertEqual(self.payload[s:e+1], part['body'])
+            self.assertEqual(self.payload[s:e+1], part[b'body'])
 
 
     def test_implicitEnd(self):
@@ -1181,14 +1181,14 @@ class RangeTests(TestCase):
         If the end byte position is omitted, then it is treated as if the
         length of the resource was specified by the end byte position.
         """
-        self.request.headers['range'] = 'bytes=23-'
+        self.request.headers[b'range'] = b'bytes=23-'
         self.resource.render(self.request)
-        self.assertEqual(''.join(self.request.written), self.payload[23:])
-        self.assertEqual(len(''.join(self.request.written)), 41)
+        self.assertEqual(b''.join(self.request.written), self.payload[23:])
+        self.assertEqual(len(b''.join(self.request.written)), 41)
         self.assertEqual(self.request.responseCode, http.PARTIAL_CONTENT)
         self.assertEqual(
-            self.request.outgoingHeaders['content-range'], 'bytes 23-63/64')
-        self.assertEqual(self.request.outgoingHeaders['content-length'], '41')
+            self.request.outgoingHeaders[b'content-range'], b'bytes 23-63/64')
+        self.assertEqual(self.request.outgoingHeaders[b'content-length'], b'41')
 
 
     def test_implicitStart(self):
@@ -1197,14 +1197,14 @@ class RangeTests(TestCase):
         supplied, then the range is treated as requesting the last -N bytes of
         the resource, where N is the end byte position.
         """
-        self.request.headers['range'] = 'bytes=-17'
+        self.request.headers[b'range'] = b'bytes=-17'
         self.resource.render(self.request)
-        self.assertEqual(''.join(self.request.written), self.payload[-17:])
-        self.assertEqual(len(''.join(self.request.written)), 17)
+        self.assertEqual(b''.join(self.request.written), self.payload[-17:])
+        self.assertEqual(len(b''.join(self.request.written)), 17)
         self.assertEqual(self.request.responseCode, http.PARTIAL_CONTENT)
         self.assertEqual(
-            self.request.outgoingHeaders['content-range'], 'bytes 47-63/64')
-        self.assertEqual(self.request.outgoingHeaders['content-length'], '17')
+            self.request.outgoingHeaders[b'content-range'], b'bytes 47-63/64')
+        self.assertEqual(self.request.outgoingHeaders[b'content-length'], b'17')
 
 
     def test_explicitRange(self):
@@ -1213,15 +1213,15 @@ class RangeTests(TestCase):
         with the A'th byte and ends with (including) the B'th byte. The first
         byte of a page is numbered with 0.
         """
-        self.request.headers['range'] = 'bytes=3-43'
+        self.request.headers[b'range'] = b'bytes=3-43'
         self.resource.render(self.request)
-        written = ''.join(self.request.written)
+        written = b''.join(self.request.written)
         self.assertEqual(written, self.payload[3:44])
         self.assertEqual(self.request.responseCode, http.PARTIAL_CONTENT)
         self.assertEqual(
-            self.request.outgoingHeaders['content-range'], 'bytes 3-43/64')
+            self.request.outgoingHeaders[b'content-range'], b'bytes 3-43/64')
         self.assertEqual(
-            str(len(written)), self.request.outgoingHeaders['content-length'])
+            intToBytes(len(written)), self.request.outgoingHeaders[b'content-length'])
 
 
     def test_explicitRangeOverlappingEnd(self):
@@ -1231,15 +1231,15 @@ class RangeTests(TestCase):
         with the last byte of the resource. The first byte of a page is
         numbered with 0.
         """
-        self.request.headers['range'] = 'bytes=40-100'
+        self.request.headers[b'range'] = b'bytes=40-100'
         self.resource.render(self.request)
-        written = ''.join(self.request.written)
+        written = b''.join(self.request.written)
         self.assertEqual(written, self.payload[40:])
         self.assertEqual(self.request.responseCode, http.PARTIAL_CONTENT)
         self.assertEqual(
-            self.request.outgoingHeaders['content-range'], 'bytes 40-63/64')
+            self.request.outgoingHeaders[b'content-range'], b'bytes 40-63/64')
         self.assertEqual(
-            str(len(written)), self.request.outgoingHeaders['content-length'])
+            intToBytes(len(written)), self.request.outgoingHeaders[b'content-length'])
 
 
     def test_statusCodeRequestedRangeNotSatisfiable(self):
@@ -1248,13 +1248,13 @@ class RangeTests(TestCase):
         the end, the range header is ignored (the request is responded to as if
         it were not present).
         """
-        self.request.headers['range'] = 'bytes=20-13'
+        self.request.headers[b'range'] = b'bytes=20-13'
         self.resource.render(self.request)
         self.assertEqual(self.request.responseCode, http.OK)
-        self.assertEqual(''.join(self.request.written), self.payload)
+        self.assertEqual(b''.join(self.request.written), self.payload)
         self.assertEqual(
-            self.request.outgoingHeaders['content-length'],
-            str(len(self.payload)))
+            self.request.outgoingHeaders[b'content-length'],
+            intToBytes(len(self.payload)))
 
 
     def test_invalidStartBytePos(self):
@@ -1264,16 +1264,16 @@ class RangeTests(TestCase):
         satisfiable) and no data is written to the response body (RFC 2616,
         section 14.35.1).
         """
-        self.request.headers['range'] = 'bytes=67-108'
+        self.request.headers[b'range'] = b'bytes=67-108'
         self.resource.render(self.request)
         self.assertEqual(
             self.request.responseCode, http.REQUESTED_RANGE_NOT_SATISFIABLE)
-        self.assertEqual(''.join(self.request.written), '')
-        self.assertEqual(self.request.outgoingHeaders['content-length'], '0')
+        self.assertEqual(b''.join(self.request.written), b'')
+        self.assertEqual(self.request.outgoingHeaders[b'content-length'], b'0')
         # Sections 10.4.17 and 14.16
         self.assertEqual(
-            self.request.outgoingHeaders['content-range'],
-            'bytes */%d' % (len(self.payload),))
+            self.request.outgoingHeaders[b'content-range'],
+            networkString('bytes */%d' % (len(self.payload),)))
 
 
 
