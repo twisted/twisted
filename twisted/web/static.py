@@ -439,7 +439,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
             offset, offset + size - 1, self.getFileSize())
 
 
-    def _doSingleRangeRequest(self, request, (start, end)):
+    def _doSingleRangeRequest(self, request, startAndEnd):
         """
         Set up the response for Range headers that specify a single range.
 
@@ -448,12 +448,13 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         indicates which part of the resource to return.
 
         @param request: The Request object.
-        @param start: The start of the byte range as specified by the header.
-        @param end: The end of the byte range as specified by the header.  At
-            most one of C{start} and C{end} may be C{None}.
+        @param startAndEnd: A 2-tuple of start of the byte range as specified by
+            the header and the end of the byte range as specified by the header.
+            At most one of the start and end may be C{None}.
         @return: A 2-tuple of the offset and size of the range to return.
             offset == size == 0 indicates that the request is not satisfiable.
         """
+        start, end = startAndEnd
         offset, size  = self._rangeToOffsetAndSize(start, end)
         if offset == size == 0:
             # This range doesn't overlap with any of this resource, so the
@@ -614,7 +615,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 
         try:
             fileForReading = self.openForReading()
-        except IOError, e:
+        except IOError as e:
             import errno
             if e[0] == errno.EACCES:
                 return self.forbidden.render(request)
