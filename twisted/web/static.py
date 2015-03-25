@@ -10,9 +10,7 @@ from __future__ import division, absolute_import
 
 import os
 import warnings
-import urllib
 import itertools
-import cgi
 import time
 import mimetypes
 
@@ -23,13 +21,20 @@ from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
 
-from twisted.python.compat import networkString, intToBytes, nativeString
+from twisted.python.compat import networkString, intToBytes, nativeString, _PY3
 
 from twisted.python import components, filepath, log
 from twisted.internet import abstract, interfaces
 from twisted.persisted import styles
 from twisted.python.util import InsensitiveDict
 from twisted.python.runtime import platformType
+
+if _PY3:
+    from urllib.parse import quote, unquote
+    from html import escape
+else:
+    from urllib import quote, unquote
+    from cgi import escape
 
 
 dangerousPathError = resource.NoResource("Invalid request URL.")
@@ -951,7 +956,7 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
     def __init__(self, pathname, dirs=None,
                  contentTypes=File.contentTypes,
                  contentEncodings=File.contentEncodings,
-                 defaultType='text/html'):
+                 defaultType=b'text/html'):
         resource.Resource.__init__(self)
         self.contentTypes = contentTypes
         self.contentEncodings = contentEncodings
@@ -973,8 +978,8 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
         files = []
         dirs = []
         for path in directory:
-            url = urllib.quote(path, "/")
-            escapedPath = cgi.escape(path)
+            url = quote(path, "/")
+            escapedPath = escape(path)
             if os.path.isdir(os.path.join(self.path, path)):
                 url = url + '/'
                 dirs.append({'text': escapedPath + "/", 'href': url,
@@ -990,8 +995,8 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
                     continue
                 files.append({
                     'text': escapedPath, "href": url,
-                    'type': '[%s]' % mimetype,
-                    'encoding': (encoding and '[%s]' % encoding or ''),
+                    'type': '[%s]' % nativeString(mimetype),
+                    'encoding': (encoding and '[%s]' % nativeString(encoding )or ''),
                     'size': formatFileSize(size)})
         return dirs, files
 
@@ -1025,9 +1030,13 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
         tableContent = "".join(self._buildTableContent(dirs + files))
 
         header = "Directory listing for %s" % (
-            cgi.escape(urllib.unquote(request.uri)),)
+            escape(unquote(nativeString(request.uri))),)
 
-        return self.template % {"header": header, "tableContent": tableContent}
+        done = self.template % {"header": header, "tableContent": tableContent}
+        if _PY3:
+            done = done.encode("utf8")
+
+        return done
 
 
     def __repr__(self):

@@ -387,7 +387,7 @@ class StaticMakeProducerTests(TestCase):
         """
         Make a L{static.File} resource that has C{content} for its content.
 
-        @param content: The bytes to use as the contents of the resource.
+        @param content: The L{bytes} to use as the contents of the resource.
         @param type: Optional value for the content type of the resource.
         """
         fileName = self.mktemp()
@@ -606,7 +606,7 @@ class StaticMakeProducerTests(TestCase):
         contentType = contentHeaders[b'content-type']
         self.assertNotIdentical(
             None, re.match(
-                'multipart/byteranges; boundary="[^"]*"\Z', contentType))
+                b'multipart/byteranges; boundary="[^"]*"\Z', contentType))
         # Content-encoding is not set in the response to a multiple range
         # response, which is a bit wussy but works well enough with the way
         # static.File does content-encodings...
@@ -1282,7 +1282,7 @@ class DirectoryListerTests(TestCase):
     Tests for L{static.DirectoryLister}.
     """
     def _request(self, uri):
-        request = DummyRequest([''])
+        request = DummyRequest([b''])
         request.uri = uri
         return request
 
@@ -1296,9 +1296,9 @@ class DirectoryListerTests(TestCase):
         path.makedirs()
 
         lister = static.DirectoryLister(path.path)
-        data = lister.render(self._request('foo'))
-        self.assertIn("<h1>Directory listing for foo</h1>", data)
-        self.assertIn("<title>Directory listing for foo</title>", data)
+        data = lister.render(self._request(b'foo'))
+        self.assertIn(b"<h1>Directory listing for foo</h1>", data)
+        self.assertIn(b"<title>Directory listing for foo</title>", data)
 
 
     def test_renderUnquoteHeader(self):
@@ -1309,9 +1309,9 @@ class DirectoryListerTests(TestCase):
         path.makedirs()
 
         lister = static.DirectoryLister(path.path)
-        data = lister.render(self._request('foo%20bar'))
-        self.assertIn("<h1>Directory listing for foo bar</h1>", data)
-        self.assertIn("<title>Directory listing for foo bar</title>", data)
+        data = lister.render(self._request(b'foo%20bar'))
+        self.assertIn(b"<h1>Directory listing for foo bar</h1>", data)
+        self.assertIn(b"<title>Directory listing for foo bar</title>", data)
 
 
     def test_escapeHeader(self):
@@ -1323,9 +1323,9 @@ class DirectoryListerTests(TestCase):
         path.makedirs()
 
         lister = static.DirectoryLister(path.path)
-        data = lister.render(self._request('foo%26bar'))
-        self.assertIn("<h1>Directory listing for foo&amp;bar</h1>", data)
-        self.assertIn("<title>Directory listing for foo&amp;bar</title>", data)
+        data = lister.render(self._request(b'foo%26bar'))
+        self.assertIn(b"<h1>Directory listing for foo&amp;bar</h1>", data)
+        self.assertIn(b"<title>Directory listing for foo&amp;bar</title>", data)
 
 
     def test_renderFiles(self):
@@ -1335,12 +1335,12 @@ class DirectoryListerTests(TestCase):
         """
         path = FilePath(self.mktemp())
         path.makedirs()
-        path.child('file1').setContent("content1")
-        path.child('file2').setContent("content2" * 1000)
+        path.child('file1').setContent(b"content1")
+        path.child('file2').setContent(b"content2" * 1000)
 
         lister = static.DirectoryLister(path.path)
-        data = lister.render(self._request('foo'))
-        body = """<tr class="odd">
+        data = lister.render(self._request(b'foo'))
+        body = b"""<tr class="odd">
     <td><a href="file1">file1</a></td>
     <td>8B</td>
     <td>[text/html]</td>
@@ -1366,8 +1366,8 @@ class DirectoryListerTests(TestCase):
         path.child('dir2 & 3').makedirs()
 
         lister = static.DirectoryLister(path.path)
-        data = lister.render(self._request('foo'))
-        body = """<tr class="odd">
+        data = lister.render(self._request(b'foo'))
+        body = b"""<tr class="odd">
     <td><a href="dir1/">dir1/</a></td>
     <td></td>
     <td>[Directory]</td>
@@ -1393,8 +1393,8 @@ class DirectoryListerTests(TestCase):
         path.child('dir2').makedirs()
         path.child('dir3').makedirs()
         lister = static.DirectoryLister(path.path, dirs=["dir1", "dir3"])
-        data = lister.render(self._request('foo'))
-        body = """<tr class="odd">
+        data = lister.render(self._request(b'foo'))
+        body = b"""<tr class="odd">
     <td><a href="dir1/">dir1/</a></td>
     <td></td>
     <td>[Directory]</td>
@@ -1416,7 +1416,7 @@ class DirectoryListerTests(TestCase):
         """
         lister = static.DirectoryLister(None)
         elements = [{"href": "", "text": "", "size": "", "type": "",
-                     "encoding": ""}  for i in xrange(5)]
+                     "encoding": ""}  for i in range(5)]
         content = lister._buildTableContent(elements)
 
         self.assertEqual(len(content), 5)
@@ -1435,10 +1435,10 @@ class DirectoryListerTests(TestCase):
         path = FilePath(self.mktemp())
         path.makedirs()
         lister = static.DirectoryLister(path.path)
-        req = self._request('')
+        req = self._request(b'')
         lister.render(req)
-        self.assertEqual(req.outgoingHeaders['content-type'],
-                          "text/html; charset=utf-8")
+        self.assertEqual(req.outgoingHeaders[b'content-type'],
+                          b"text/html; charset=utf-8")
 
 
     def test_mimeTypeAndEncodings(self):
@@ -1448,10 +1448,10 @@ class DirectoryListerTests(TestCase):
         """
         path = FilePath(self.mktemp())
         path.makedirs()
-        path.child('file1.txt').setContent("file1")
-        path.child('file2.py').setContent("python")
-        path.child('file3.conf.gz').setContent("conf compressed")
-        path.child('file4.diff.bz2').setContent("diff compressed")
+        path.child('file1.txt').setContent(b"file1")
+        path.child('file2.py').setContent(b"python")
+        path.child('file3.conf.gz').setContent(b"conf compressed")
+        path.child('file4.diff.bz2').setContent(b"diff compressed")
         directory = os.listdir(path.path)
         directory.sort()
 
@@ -1496,7 +1496,7 @@ class DirectoryListerTests(TestCase):
         path = FilePath(self.mktemp())
         path.makedirs()
         file1 = path.child('file1')
-        file1.setContent("file1")
+        file1.setContent(b"file1")
         file1.linkTo(path.child("file2"))
         file1.remove()
 
@@ -1519,7 +1519,7 @@ class DirectoryListerTests(TestCase):
         path = FilePath(self.mktemp())
         path.makedirs()
         lister = static.DirectoryLister(path.path)
-        request = self._request('')
+        request = self._request(b'')
         child = resource.getChildForRequest(lister, request)
         result = _render(child, request)
         def cbRendered(ignored):
