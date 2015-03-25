@@ -2212,8 +2212,6 @@ class Win32SignalProtocol(SignalProtocol):
         v = reason.value
         if v.exitCode != 1:
             return self.deferred.errback(
-                ValueError(v))
-            return self.deferred.errback(
                 ValueError("Wrong exit code: %s" % (v.exitCode,)))
         self.deferred.callback(None)
 
@@ -2253,7 +2251,7 @@ class Win32ProcessTestCase(unittest.TestCase):
 
 
     def _testSignal(self, sig):
-        scriptPath = FilePath(__file__).child(b"process_signal.py").path
+        scriptPath = FilePath(__file__).sibling(b"process_signal.py").path
         d = defer.Deferred()
         p = Win32SignalProtocol(d, sig)
         reactor.spawnProcess(p, exe, [exe, b"-u", scriptPath], env=None)
