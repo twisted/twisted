@@ -71,8 +71,8 @@ from twisted.python.filepath import FilePath, UnlistableError
 from twisted.python.reflect import namedAny
 
 if not _PY3:
-    # Zippath isn't ported yet.
-    # See #6917.
+    # TODO: Zippath isn't ported yet.
+    # See https://tm.tl/#6917.
     from twisted.python.zippath import ZipArchive
     import zipimport
 
