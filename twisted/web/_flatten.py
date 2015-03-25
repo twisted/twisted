@@ -7,8 +7,7 @@ Context-free flattener/serializer for rendering Python objects, possibly
 complex or arbitrarily nested, as strings.
 """
 
-from io import BytesIO as StringIO
-
+from cStringIO import StringIO
 from sys import exc_info
 from types import GeneratorType
 from traceback import extract_tb
@@ -318,7 +317,7 @@ def _flattenTree(request, root):
             element = stack[-1].next()
         except StopIteration:
             stack.pop()
-        except Exception as e:
+        except Exception, e:
             stack.pop()
             roots = []
             for generator in stack:
@@ -329,8 +328,7 @@ def _flattenTree(request, root):
             if type(element) is str:
                 yield element
             elif isinstance(element, Deferred):
-                def cbx(args):
-                    original, toFlatten = args
+                def cbx((original, toFlatten)):
                     stack.append(toFlatten)
                     return original
                 yield element.addCallback(cbx)
