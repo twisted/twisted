@@ -35,12 +35,12 @@ class StaticDataTests(TestCase):
         """
         L{Data.render} returns an empty response body for a I{HEAD} request.
         """
-        data = static.Data("foo", "bar")
+        data = static.Data(b"foo", b"bar")
         request = DummyRequest([''])
-        request.method = 'HEAD'
+        request.method = b'HEAD'
         d = _render(data, request)
         def cbRendered(ignored):
-            self.assertEqual(''.join(request.written), "")
+            self.assertEqual(b''.join(request.written), b"")
         d.addCallback(cbRendered)
         return d
 
@@ -50,9 +50,9 @@ class StaticDataTests(TestCase):
         L{Data.render} raises L{UnsupportedMethod} in response to a non-I{GET},
         non-I{HEAD} request.
         """
-        data = static.Data("foo", "bar")
-        request = DummyRequest([''])
-        request.method = 'POST'
+        data = static.Data(b"foo", b"bar")
+        request = DummyRequest([b''])
+        request.method = b'POST'
         self.assertRaises(UnsupportedMethod, data.render, request)
 
 
@@ -70,10 +70,10 @@ class StaticFileTests(TestCase):
         L{File.render} raises L{UnsupportedMethod} in response to a non-I{GET},
         non-I{HEAD} request.
         """
-        request = DummyRequest([''])
-        request.method = 'POST'
+        request = DummyRequest([b''])
+        request.method = b'POST'
         path = FilePath(self.mktemp())
-        path.setContent("foo")
+        path.setContent(b"foo")
         file = static.File(path.path)
         self.assertRaises(UnsupportedMethod, file.render, request)
 
@@ -88,7 +88,7 @@ class StaticFileTests(TestCase):
         base.makedirs()
         file = static.File(base.path)
 
-        request = DummyRequest(['foobar'])
+        request = DummyRequest([b'foobar'])
         child = resource.getChildForRequest(file, request)
 
         d = self._render(child, request)
@@ -107,7 +107,7 @@ class StaticFileTests(TestCase):
         base.makedirs()
         file = static.File(base.path)
 
-        request = DummyRequest([''])
+        request = DummyRequest([b''])
         child = resource.getChildForRequest(file, request)
         self.assertIsInstance(child, static.DirectoryLister)
         self.assertEqual(child.path, base.path)
@@ -123,7 +123,7 @@ class StaticFileTests(TestCase):
         base.makedirs()
         file = static.File(base.path)
 
-        request = DummyRequest(['..'])
+        request = DummyRequest([b'..'])
         child = resource.getChildForRequest(file, request)
 
         d = self._render(child, request)
@@ -139,7 +139,7 @@ class StaticFileTests(TestCase):
         read, L{File.render} sets the HTTP response code to I{FORBIDDEN}.
         """
         base = FilePath(self.mktemp())
-        base.setContent('')
+        base.setContent(b'')
         # Make sure we can delete the file later.
         self.addCleanup(base.chmod, 0o700)
 
@@ -147,7 +147,7 @@ class StaticFileTests(TestCase):
         base.chmod(0)
 
         file = static.File(base.path)
-        request = DummyRequest([''])
+        request = DummyRequest([b''])
         d = self._render(file, request)
         def cbRendered(ignored):
             self.assertEqual(request.responseCode, 403)
@@ -162,7 +162,7 @@ class StaticFileTests(TestCase):
         L{File.forbidden} defaults to L{resource.ForbiddenResource}.
         """
         self.assertIsInstance(
-            static.File('.').forbidden, resource.ForbiddenResource)
+            static.File(b'.').forbidden, resource.ForbiddenResource)
 
 
     def test_forbiddenResource_customize(self):
@@ -171,11 +171,11 @@ class StaticFileTests(TestCase):
         member so that users can customize it.
         """
         base = FilePath(self.mktemp())
-        base.setContent('')
-        markerResponse = 'custom-forbidden-response'
+        base.setContent(b'')
+        markerResponse = b'custom-forbidden-response'
 
         def failingOpenForReading():
-            raise IOError(errno.EACCES)
+            raise IOError(errno.EACCES, "")
 
         class CustomForbiddenResource(resource.Resource):
             def render(self, request):
@@ -186,7 +186,7 @@ class StaticFileTests(TestCase):
 
         fileResource = CustomStaticFile(base.path)
         fileResource.openForReading = failingOpenForReading
-        request = DummyRequest([''])
+        request = DummyRequest([b''])
 
         result = fileResource.render(request)
 
@@ -202,17 +202,17 @@ class StaticFileTests(TestCase):
         """
         base = FilePath(self.mktemp())
         base.makedirs()
-        base.child("foo.bar").setContent("baz")
+        base.child("foo.bar").setContent(b"baz")
         file = static.File(base.path)
-        file.indexNames = ['foo.bar']
+        file.indexNames = [b'foo.bar']
 
-        request = DummyRequest([''])
+        request = DummyRequest([b''])
         child = resource.getChildForRequest(file, request)
 
         d = self._render(child, request)
         def cbRendered(ignored):
-            self.assertEqual(''.join(request.written), 'baz')
-            self.assertEqual(request.outgoingHeaders['content-length'], '3')
+            self.assertEqual(b''.join(request.written), b'baz')
+            self.assertEqual(request.outgoingHeaders[b'content-length'], b'3')
         d.addCallback(cbRendered)
         return d
 
@@ -225,16 +225,16 @@ class StaticFileTests(TestCase):
         """
         base = FilePath(self.mktemp())
         base.makedirs()
-        base.child("foo.bar").setContent("baz")
+        base.child("foo.bar").setContent(b"baz")
         file = static.File(base.path)
 
-        request = DummyRequest(['foo.bar'])
+        request = DummyRequest([b'foo.bar'])
         child = resource.getChildForRequest(file, request)
 
         d = self._render(child, request)
         def cbRendered(ignored):
-            self.assertEqual(''.join(request.written), 'baz')
-            self.assertEqual(request.outgoingHeaders['content-length'], '3')
+            self.assertEqual(b''.join(request.written), b'baz')
+            self.assertEqual(request.outgoingHeaders[b'content-length'], b'3')
         d.addCallback(cbRendered)
         return d
 
@@ -245,7 +245,7 @@ class StaticFileTests(TestCase):
         return childNotFound from L{static.File.getChild}.
         """
         staticFile = static.File(self.mktemp())
-        request = DummyRequest(['foo.bar'])
+        request = DummyRequest([b'foo.bar'])
         child = staticFile.getChild("foo.bar", request)
         self.assertEqual(child, staticFile.childNotFound)
 
@@ -256,14 +256,14 @@ class StaticFileTests(TestCase):
         its C{childNotFound} page.
         """
         staticFile = static.File(self.mktemp())
-        request = DummyRequest(['foo.bar'])
-        request2 = DummyRequest(['foo.bar'])
+        request = DummyRequest([b'foo.bar'])
+        request2 = DummyRequest([b'foo.bar'])
         d = self._render(staticFile, request)
         d2 = self._render(staticFile.childNotFound, request2)
         def cbRendered2(ignored):
             def cbRendered(ignored):
-                self.assertEqual(''.join(request.written),
-                                  ''.join(request2.written))
+                self.assertEqual(b''.join(request.written),
+                                 b''.join(request2.written))
             d.addCallback(cbRendered)
             return d
         d2.addCallback(cbRendered2)
@@ -276,8 +276,8 @@ class StaticFileTests(TestCase):
         using a class member.
         """
         base = FilePath(self.mktemp())
-        base.setContent('')
-        markerResponse = 'custom-child-not-found-response'
+        base.setContent(b'')
+        markerResponse = b'custom-child-not-found-response'
 
         class CustomChildNotFoundResource(resource.Resource):
             def render(self, request):
@@ -287,9 +287,9 @@ class StaticFileTests(TestCase):
             childNotFound = CustomChildNotFoundResource()
 
         fileResource = CustomStaticFile(base.path)
-        request = DummyRequest(['no-child.txt'])
+        request = DummyRequest([b'no-child.txt'])
 
-        child = fileResource.getChild('no-child.txt', request)
+        child = fileResource.getChild(b'no-child.txt', request)
         result = child.render(request)
 
         self.assertEqual(markerResponse, result)
@@ -301,13 +301,13 @@ class StaticFileTests(TestCase):
         requests.
         """
         path = FilePath(self.mktemp())
-        path.setContent("foo")
+        path.setContent(b"foo")
         file = static.File(path.path)
-        request = DummyRequest([''])
-        request.method = 'HEAD'
+        request = DummyRequest([b''])
+        request.method = b'HEAD'
         d = _render(file, request)
         def cbRendered(ignored):
-            self.assertEqual("".join(request.written), "")
+            self.assertEqual(b"".join(request.written), b"")
         d.addCallback(cbRendered)
         return d
 
@@ -322,18 +322,18 @@ class StaticFileTests(TestCase):
         base = FilePath(self.mktemp())
         base.makedirs()
         base.child("foo.bar").setContent(
-            "from twisted.web.static import Data\n"
-            "resource = Data('dynamic world','text/plain')\n")
+            b"from twisted.web.static import Data\n"
+            b"resource = Data(b'dynamic world', b'text/plain')\n")
 
         file = static.File(base.path)
-        file.processors = {'.bar': script.ResourceScript}
-        request = DummyRequest(["foo.bar"])
+        file.processors = {b'.bar': script.ResourceScript}
+        request = DummyRequest([b"foo.bar"])
         child = resource.getChildForRequest(file, request)
 
         d = self._render(child, request)
         def cbRendered(ignored):
-            self.assertEqual(''.join(request.written), 'dynamic world')
-            self.assertEqual(request.outgoingHeaders['content-length'], '13')
+            self.assertEqual(b''.join(request.written), b'dynamic world')
+            self.assertEqual(request.outgoingHeaders[b'content-length'], b'13')
         d.addCallback(cbRendered)
         return d
 
@@ -343,14 +343,14 @@ class StaticFileTests(TestCase):
         The list of ignored extensions can be set by passing a value to
         L{File.__init__} or by calling L{File.ignoreExt} later.
         """
-        file = static.File(".")
+        file = static.File(b".")
         self.assertEqual(file.ignoredExts, [])
-        file.ignoreExt(".foo")
-        file.ignoreExt(".bar")
-        self.assertEqual(file.ignoredExts, [".foo", ".bar"])
+        file.ignoreExt(b".foo")
+        file.ignoreExt(b".bar")
+        self.assertEqual(file.ignoredExts, [b".foo", b".bar"])
 
-        file = static.File(".", ignoredExts=(".bar", ".baz"))
-        self.assertEqual(file.ignoredExts, [".bar", ".baz"])
+        file = static.File(b".", ignoredExts=(b".bar", b".baz"))
+        self.assertEqual(file.ignoredExts, [b".bar", b".baz"])
 
 
     def test_ignoredExtensionsIgnored(self):
@@ -362,16 +362,16 @@ class StaticFileTests(TestCase):
         """
         base = FilePath(self.mktemp())
         base.makedirs()
-        base.child('foo.bar').setContent('baz')
-        base.child('foo.quux').setContent('foobar')
-        file = static.File(base.path, ignoredExts=(".bar",))
+        base.child('foo.bar').setContent(b'baz')
+        base.child('foo.quux').setContent(b'foobar')
+        file = static.File(base.path, ignoredExts=(b".bar",))
 
-        request = DummyRequest(["foo"])
+        request = DummyRequest([b"foo"])
         child = resource.getChildForRequest(file, request)
 
         d = self._render(child, request)
         def cbRendered(ignored):
-            self.assertEqual(''.join(request.written), 'baz')
+            self.assertEqual(b''.join(request.written), b'baz')
         d.addCallback(cbRendered)
         return d
 
@@ -391,7 +391,7 @@ class StaticMakeProducerTests(TestCase):
         @param type: Optional value for the content type of the resource.
         """
         fileName = self.mktemp()
-        fileObject = open(fileName, 'w')
+        fileObject = open(fileName, 'wb')
         fileObject.write(content)
         fileObject.close()
         resource = static.File(fileName)
@@ -409,7 +409,7 @@ class StaticMakeProducerTests(TestCase):
         """
         contentHeaders = {}
         for k, v in iteritems(request.outgoingHeaders):
-            if k.startswith('content-'):
+            if k.startswith(b'content-'):
                 contentHeaders[k] = v
         return contentHeaders
 

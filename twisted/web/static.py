@@ -23,6 +23,8 @@ from twisted.web import resource
 from twisted.web import http
 from twisted.web.util import redirectTo
 
+from twisted.python.compat import networkString, intToBytes
+
 from twisted.python import components, filepath, log
 from twisted.internet import abstract, interfaces
 from twisted.persisted import styles
@@ -48,10 +50,10 @@ class Data(resource.Resource):
 
 
     def render_GET(self, request):
-        request.setHeader("content-type", self.type)
-        request.setHeader("content-length", str(len(self.data)))
-        if request.method == "HEAD":
-            return ''
+        request.setHeader(b"content-type", self.type)
+        request.setHeader(b"content-length", intToBytes(len(self.data)))
+        if request.method == b"HEAD":
+            return b''
         return self.data
     render_HEAD = render_GET
 
@@ -190,7 +192,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
     def upgradeToVersion6(self):
         self.ignoredExts = []
         if self.allowExt:
-            self.ignoreExt("*")
+            self.ignoreExt(b"*")
         del self.allowExt
 
 
@@ -219,7 +221,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
             del self.indexName
 
 
-    def __init__(self, path, defaultType="text/html", ignoredExts=(), registry=None, allowExt=0):
+    def __init__(self, path, defaultType=b"text/html", ignoredExts=(), registry=None, allowExt=0):
         """
         Create a file with the given path.
 
@@ -253,7 +255,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         if ignoredExts in (0, 1) or allowExt:
             warnings.warn("ignoredExts should receive a list, not a boolean")
             if ignoredExts or allowExt:
-                self.ignoredExts = ['*']
+                self.ignoredExts = [b'*']
             else:
                 self.ignoredExts = []
         else:
@@ -500,11 +502,11 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         matchingRangeFound = False
         rangeInfo = []
         contentLength = 0
-        boundary = "%x%x" % (int(time.time()*1000000), os.getpid())
+        boundary = networkString("%x%x" % (int(time.time()*1000000), os.getpid()))
         if self.type:
             contentType = self.type
         else:
-            contentType = 'bytes' # It's what Apache does...
+            contentType = b'bytes' # It's what Apache does...
         for start, end in byteRanges:
             partOffset, partSize = self._rangeToOffsetAndSize(start, end)
             if partOffset == partSize == 0:
@@ -512,28 +514,28 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
             contentLength += partSize
             matchingRangeFound = True
             partContentRange = self._contentRange(partOffset, partSize)
-            partSeparator = (
+            partSeparator = networkString((
                 "\r\n"
                 "--%s\r\n"
                 "Content-type: %s\r\n"
                 "Content-range: %s\r\n"
-                "\r\n") % (boundary, contentType, partContentRange)
+                "\r\n") % (boundary, contentType, partContentRange))
             contentLength += len(partSeparator)
             rangeInfo.append((partSeparator, partOffset, partSize))
         if not matchingRangeFound:
             request.setResponseCode(http.REQUESTED_RANGE_NOT_SATISFIABLE)
             request.setHeader(
-                'content-length', '0')
+                b'content-length', b'0')
             request.setHeader(
-                'content-range', 'bytes */%d' % (self.getFileSize(),))
-            return [], ''
-        finalBoundary = "\r\n--" + boundary + "--\r\n"
+                b'content-range', networkString('bytes */%d' % (self.getFileSize(),)))
+            return [], b''
+        finalBoundary = b"\r\n--" + boundary + b"--\r\n"
         rangeInfo.append((finalBoundary, 0, 0))
         request.setResponseCode(http.PARTIAL_CONTENT)
         request.setHeader(
-            'content-type', 'multipart/byteranges; boundary="%s"' % (boundary,))
+            b'content-type', 'multipart/byteranges; boundary="%s"' % (boundary,))
         request.setHeader(
-            'content-length', contentLength + len(finalBoundary))
+            b'content-length', intToBytes(contentLength + len(finalBoundary)))
         return rangeInfo
 
 
@@ -550,11 +552,11 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         """
         if size is None:
             size = self.getFileSize()
-        request.setHeader('content-length', str(size))
+        request.setHeader(b'content-length', intToBytes(size))
         if self.type:
-            request.setHeader('content-type', self.type)
+            request.setHeader(b'content-type', self.type)
         if self.encoding:
-            request.setHeader('content-encoding', self.encoding)
+            request.setHeader(b'content-encoding', self.encoding)
 
 
     def makeProducer(self, request, fileForReading):
@@ -612,25 +614,24 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         if self.isdir():
             return self.redirect(request)
 
-        request.setHeader('accept-ranges', 'bytes')
+        request.setHeader(b'accept-ranges', b'bytes')
 
         try:
             fileForReading = self.openForReading()
         except IOError as e:
             import errno
-            if e[0] == errno.EACCES:
+            if e.errno == errno.EACCES:
                 return self.forbidden.render(request)
             else:
                 raise
 
         if request.setLastModified(self.getmtime()) is http.CACHED:
-            return ''
-
+            return b''
 
         producer = self.makeProducer(request, fileForReading)
 
-        if request.method == 'HEAD':
-            return ''
+        if request.method == b'HEAD':
+            return b''
 
         producer.start()
         # and make sure the connection doesn't get closed
@@ -650,7 +651,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         return directory
 
     def listEntities(self):
-        return map(lambda fileName, self=self: self.createSimilarFile(os.path.join(self.path, fileName)), self.listNames())
+        return list(map(lambda fileName, self=self: self.createSimilarFile(os.path.join(self.path, fileName)), self.listNames()))
 
 
     def createSimilarFile(self, path):

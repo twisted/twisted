@@ -16,7 +16,7 @@ from twisted.web.error import FlattenerError
 
 def _render(resource, request):
     result = resource.render(request)
-    if isinstance(result, str):
+    if isinstance(result, bytes):
         request.write(result)
         request.finish()
         return succeed(None)
@@ -76,7 +76,3 @@ class FlattenTestCase(TestCase):
         d = self.assertFailure(self.assertFlattensTo(root, ''), FlattenerError)
         d.addCallback(lambda exc: self.assertIsInstance(exc._exception, exn))
         return d
-
-
-
-
