@@ -2212,7 +2212,7 @@ class Win32SignalProtocol(SignalProtocol):
         v = reason.value
         if v.exitCode != 1:
             return self.deferred.errback(
-                ValueError("Wrong exit code: %s" % (reason.exitCode,)))
+                ValueError("Wrong exit code: %s" % (v.exitCode,)))
         self.deferred.callback(None)
 
 
