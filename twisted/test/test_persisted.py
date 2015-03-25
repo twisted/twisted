@@ -14,9 +14,9 @@ except ImportError:
     import pickle
 
 try:
-    import cStringIO as StringIO
+    from cStringIO import StringIO
 except ImportError:
-    import StringIO
+    from io import StringIO
 
 # Twisted Imports
 from twisted.persisted import styles, aot, crefutil
@@ -25,10 +25,11 @@ from twisted.persisted import styles, aot, crefutil
 class VersionTestCase(unittest.TestCase):
     def test_nullVersionUpgrade(self):
         global NullVersioned
-        class NullVersioned:
-            ok = 0
+        class NullVersioned(object):
+            def __init__(self):
+                self.ok = 0
         pkcl = pickle.dumps(NullVersioned())
-        class NullVersioned(styles.Versioned):
+        class NullVersioned(styles.Versioned, object):
             persistenceVersion = 1
             def upgradeToVersion1(self):
                 self.ok = 1
@@ -241,7 +242,7 @@ class PicklingTestCase(unittest.TestCase):
         self.assertEqual(type(o), type(obj.getX))
     
     def test_stringIO(self):
-        f = StringIO.StringIO()
+        f = StringIO()
         f.write("abc")
         pickl = pickle.dumps(f)
         o = pickle.loads(pickl)
@@ -263,7 +264,8 @@ class NonDictState:
 
 class AOTTestCase(unittest.TestCase):
     def test_simpleTypes(self):
-        obj = (1, 2.0, 3j, True, slice(1, 2, 3), 'hello', u'world', sys.maxint + 1, None, Ellipsis)
+        obj = (1, 2.0, 3j, True, slice(1, 2, 3), 'hello', u'world',
+               sys.maxsize + 1, None, Ellipsis)
         rtObj = aot.unjellyFromSource(aot.jellyToSource(obj))
         self.assertEqual(obj, rtObj)
 
@@ -273,7 +275,7 @@ class AOTTestCase(unittest.TestCase):
         a.bmethod = b.bmethod
         b.a = a
         im_ = aot.unjellyFromSource(aot.jellyToSource(b)).a.bmethod
-        self.assertEqual(im_.im_class, im_.im_self.__class__)
+        self.assertEqual(aot._selfOfMethod(im_).__class__, aot._classOfMethod(im_))
 
 
     def test_methodNotSelfIdentity(self):
@@ -298,13 +300,14 @@ class AOTTestCase(unittest.TestCase):
     def test_unsupportedType(self):
         """
         L{aot.jellyToSource} should raise a C{TypeError} when trying to jelly
-        an unknown type.
+        an unknown type without a C{__dict__} property or C{__getstate__}
+        method.
         """
-        try:
-            set
-        except:
-            from sets import Set as set
-        self.assertRaises(TypeError, aot.jellyToSource, set())
+        class UnknownType(object):
+            @property
+            def __dict__(self):
+                raise AttributeError()
+        self.assertRaises(TypeError, aot.jellyToSource, UnknownType())
 
 
     def test_basicIdentity(self):
@@ -315,7 +318,7 @@ class AOTTestCase(unittest.TestCase):
         l = [1, 2, 3,
              "he\tllo\n\n\"x world!",
              u"goodbye \n\t\u1010 world!",
-             1, 1.0, 100 ** 100l, unittest, aot.AOTJellier, d,
+             1, 1.0, 100 ** 100, unittest, aot.AOTJellier, d,
              funktion
              ]
         t = tuple(l)
@@ -334,7 +337,7 @@ class AOTTestCase(unittest.TestCase):
 
     def test_copyReg(self):
         s = "foo_bar"
-        sio = StringIO.StringIO()
+        sio = StringIO()
         sio.write(s)
         uj = aot.unjellyFromSource(aot.jellyToSource(sio))
         # print repr(uj.__dict__)
