@@ -6,12 +6,15 @@
 I contain PythonScript, which is a very simple python script resource.
 """
 
+from __future__ import division, absolute_import
+
 import os, traceback
 
 from io import BytesIO as StringIO
 
 from twisted import copyright
-from twisted.python.compat import execfile
+from twisted.python.filepath import _coerceToFilesystemEncoding
+from twisted.python.compat import execfile, networkString, nativeString
 from twisted.web import http, server, static, resource, html
 
 
@@ -53,7 +56,7 @@ def ResourceScript(path, registry):
     renderred.
     """
     cs = CacheScanner(path, registry)
-    glob = {'__file__': path,
+    glob = {'__file__': _coerceToFilesystemEncoding("", path),
             'resource': noRsrc,
             'registry': registry,
             'cache': cs.cache,
@@ -70,7 +73,7 @@ def ResourceScript(path, registry):
 def ResourceTemplate(path, registry):
     from quixote import ptl_compile
 
-    glob = {'__file__': path,
+    glob = {'__file__': _coerceToFilesystemEncoding("", path),
             'resource': resource.ErrorPage(500, "Whoops! Internal Error",
                                            rpyNoResource),
             'registry': registry}
@@ -150,9 +153,9 @@ class PythonScript(resource.Resource):
         will NOT be handled with print - standard output goes to the log - but
         with request.write.
         """
-        request.setHeader("x-powered-by","Twisted/%s" % copyright.version)
+        request.setHeader(b"x-powered-by", networkString("Twisted/%s" % copyright.version))
         namespace = {'request': request,
-                     '__file__': self.filename,
+                     '__file__': _coerceToFilesystemEncoding("", self.filename),
                      'registry': self.registry}
         try:
             execfile(self.filename, namespace, namespace)
@@ -161,7 +164,7 @@ class PythonScript(resource.Resource):
                 request.setResponseCode(http.NOT_FOUND)
                 request.write(resource.NoResource("File not found.").render(request))
         except:
-            io = StringIO.StringIO()
+            io = StringIO()
             traceback.print_exc(file=io)
             request.write(html.PRE(io.getvalue()))
         request.finish()

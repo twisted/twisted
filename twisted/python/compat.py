@@ -426,12 +426,21 @@ except ImportError:
     FileType = IOBase
 
 
+
 if _PY3:
     def iteritems(obj):
         return obj.items()
 else:
     def iteritems(obj):
         return obj.iteritems()
+
+iteritems.__doc__ = """
+Return an iterable of the items of C{obj}. This maps to C{iteritems} on Python 2
+and C{items} on Python 3.
+
+@param obj: The object to return the iterable of the items.
+"""
+
 
 
 __all__ = [
