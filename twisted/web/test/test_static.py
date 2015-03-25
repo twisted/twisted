@@ -19,6 +19,7 @@ from twisted.internet import abstract, interfaces
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
 from twisted.python import log
+from twisted.python.compat import iteritems
 from twisted.trial.unittest import TestCase
 from twisted.web import static, http, script, resource
 from twisted.web.server import UnsupportedMethod
@@ -407,7 +408,7 @@ class StaticMakeProducerTests(TestCase):
         start with 'content-'.
         """
         contentHeaders = {}
-        for k, v in request.outgoingHeaders.iteritems():
+        for k, v in iteritems(request.outgoingHeaders):
             if k.startswith('content-'):
                 contentHeaders[k] = v
         return contentHeaders
@@ -679,7 +680,7 @@ class StaticProducerTests(TestCase):
         L{StaticProducer.stopProducing} closes the file object the producer is
         producing data from.
         """
-        fileObject = StringIO.StringIO()
+        fileObject = StringIO()
         producer = static.StaticProducer(None, fileObject)
         producer.stopProducing()
         self.assertTrue(fileObject.closed)
@@ -691,7 +692,7 @@ class StaticProducerTests(TestCase):
         None, which indicates to subclasses' resumeProducing methods that no
         more data should be produced.
         """
-        fileObject = StringIO.StringIO()
+        fileObject = StringIO()
         producer = static.StaticProducer(DummyRequest([]), fileObject)
         producer.stopProducing()
         self.assertIdentical(None, producer.request)

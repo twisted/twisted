@@ -8,10 +8,7 @@ I contain PythonScript, which is a very simple python script resource.
 
 import os, traceback
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
+from io import BytesIO as StringIO
 
 from twisted import copyright
 from twisted.python.compat import execfile
@@ -63,7 +60,7 @@ def ResourceScript(path, registry):
             'recache': cs.recache}
     try:
         execfile(path, glob, glob)
-    except AlreadyCached, ac:
+    except AlreadyCached as ac:
         return ac.args[0]
     rsrc = glob['resource']
     if cs.doCache and rsrc is not noRsrc:
@@ -79,7 +76,8 @@ def ResourceTemplate(path, registry):
             'registry': registry}
 
     e = ptl_compile.compile_template(open(path), path)
-    exec e in glob
+    code = compile(e, "<source>", "exec")
+    eval(code, glob, glob)
     return glob['resource']
 
 
@@ -158,7 +156,7 @@ class PythonScript(resource.Resource):
                      'registry': self.registry}
         try:
             execfile(self.filename, namespace, namespace)
-        except IOError, e:
+        except IOError as e:
             if e.errno == 2: #file not found
                 request.setResponseCode(http.NOT_FOUND)
                 request.write(resource.NoResource("File not found.").render(request))

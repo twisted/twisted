@@ -426,6 +426,14 @@ except ImportError:
     FileType = IOBase
 
 
+if _PY3:
+    def iteritems(obj):
+        return obj.items()
+else:
+    def iteritems(obj):
+        return obj.iteritems()
+
+
 __all__ = [
     "reraise",
     "execfile",
@@ -444,4 +452,5 @@ __all__ = [
     "StringType",
     "InstanceType",
     "FileType",
-    ]
+    "iteritems",
+]

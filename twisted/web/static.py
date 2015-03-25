@@ -16,7 +16,7 @@ import cgi
 import time
 import mimetypes
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from twisted.web import server
 from twisted.web import resource
@@ -663,6 +663,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
 
 
 
+@implementer(interfaces.IPullProducer)
 class StaticProducer(object):
     """
     Superclass for classes that implement the business of producing.
@@ -670,8 +671,6 @@ class StaticProducer(object):
     @ivar request: The L{IRequest} to write the contents of the file to.
     @ivar fileObject: The file the contents of which to write to the request.
     """
-
-    implements(interfaces.IPullProducer)
 
     bufferSize = abstract.FileDescriptor.bufferSize
 
