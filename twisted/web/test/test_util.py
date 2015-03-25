@@ -13,7 +13,7 @@ from twisted.web.error import FlattenerError
 from twisted.web.util import (
     redirectTo, _SourceLineElement,
     _SourceFragmentElement, _FrameElement, _StackElement,
-    FailureElement, formatFailure, DeferredResource, htmlIndent)
+    FailureElement, formatFailure, DeferredResource)
 
 from twisted.web.http import FOUND
 from twisted.web.server import Request
@@ -284,104 +284,6 @@ class FormatFailureTests(TestCase):
 
 
 
-class DeprecatedHTMLHelpersTests(TestCase):
-    """
-    The various HTML generation helper APIs in L{twisted.web.util} are
-    deprecated.
-    """
-    def _htmlHelperDeprecationTest(self, functionName):
-        """
-        Helper method which asserts that using the name indicated by
-        C{functionName} from the L{twisted.web.util} module emits a deprecation
-        warning.
-        """
-        getattr(util, functionName)
-        warnings = self.flushWarnings([self._htmlHelperDeprecationTest])
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]['message'],
-            "twisted.web.util.%s was deprecated in Twisted 12.1.0: "
-            "See twisted.web.template." % (functionName,))
-
-
-    def test_htmlrepr(self):
-        """
-        L{twisted.web.util.htmlrepr} is deprecated.
-        """
-        self._htmlHelperDeprecationTest("htmlrepr")
-
-
-    def test_saferepr(self):
-        """
-        L{twisted.web.util.saferepr} is deprecated.
-        """
-        self._htmlHelperDeprecationTest("saferepr")
-
-
-    def test_htmlUnknown(self):
-        """
-        L{twisted.web.util.htmlUnknown} is deprecated.
-        """
-        self._htmlHelperDeprecationTest("htmlUnknown")
-
-
-    def test_htmlDict(self):
-        """
-        L{twisted.web.util.htmlDict} is deprecated.
-        """
-        self._htmlHelperDeprecationTest("htmlDict")
-
-
-    def test_htmlList(self):
-        """
-        L{twisted.web.util.htmlList} is deprecated.
-        """
-        self._htmlHelperDeprecationTest("htmlList")
-
-
-    def test_htmlInst(self):
-        """
-        L{twisted.web.util.htmlInst} is deprecated.
-        """
-        self._htmlHelperDeprecationTest("htmlInst")
-
-
-    def test_htmlString(self):
-        """
-        L{twisted.web.util.htmlString} is deprecated.
-        """
-        self._htmlHelperDeprecationTest("htmlString")
-
-
-    def test_htmlIndent(self):
-        """
-        L{twisted.web.util.htmlIndent} is deprecated.
-        """
-        self._htmlHelperDeprecationTest("htmlIndent")
-
-
-    def test_htmlFunc(self):
-        """
-        L{twisted.web.util.htmlFunc} is deprecated.
-        """
-        self._htmlHelperDeprecationTest("htmlFunc")
-
-
-    def test_htmlReprTypes(self):
-        """
-        L{twisted.web.util.htmlReprTypes} is deprecated.
-        """
-        self._htmlHelperDeprecationTest("htmlReprTypes")
-
-
-    def test_stylesheet(self):
-        """
-        L{twisted.web.util.stylesheet} is deprecated.
-        """
-        self._htmlHelperDeprecationTest("stylesheet")
-
-
-
 class SDResource(resource.Resource):
     def __init__(self,default):
         self.default = default
@@ -422,51 +324,3 @@ class DeferredResourceTests(TestCase):
         deferredResource = DeferredResource(defer.succeed(result))
         deferredResource.render(request)
         self.assertEqual(rendered, [result])
-
-
-
-class HtmlIndentTests(TestCase):
-    """
-    Tests for L{htmlIndent}
-    """
-
-    def test_simpleInput(self):
-        """
-        L{htmlIndent} transparently processes input with no special cases
-        inside.
-        """
-        line = "foo bar"
-        self.assertEqual(line, htmlIndent(line))
-
-
-    def test_escapeHtml(self):
-        """
-        L{htmlIndent} escapes HTML from its input.
-        """
-        line = "<br />"
-        self.assertEqual("&lt;br /&gt;", htmlIndent(line))
-
-
-    def test_stripTrailingWhitespace(self):
-        """
-        L{htmlIndent} removes trailing whitespaces from its input.
-        """
-        line = " foo bar  "
-        self.assertEqual(" foo bar", htmlIndent(line))
-
-
-    def test_forceSpacingFromSpaceCharacters(self):
-        """
-        If L{htmlIndent} detects consecutive space characters, it forces the
-        rendering by substituting unbreakable space.
-        """
-        line = "  foo  bar"
-        self.assertEqual("&nbsp;foo&nbsp;bar", htmlIndent(line))
-
-
-    def test_indentFromTabCharacters(self):
-        """
-        L{htmlIndent} replaces tab characters with unbreakable spaces.
-        """
-        line = "\tfoo"
-        self.assertEqual("&nbsp; &nbsp; &nbsp; &nbsp; foo", htmlIndent(line))

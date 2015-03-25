@@ -6,20 +6,12 @@
 An assortment of web server-related utilities.
 """
 
-__all__ = [
-    "redirectTo", "Redirect", "ChildRedirector", "ParentRedirect",
-    "DeferredResource", "htmlIndent", "FailureElement", "formatFailure"]
-
-from cStringIO import StringIO
 import linecache
-import types
 
 from twisted.python.reflect import fullyQualifiedName
-from twisted.python.deprecate import deprecatedModuleAttribute
-from twisted.python.versions import Version
 from twisted.python.modules import getModule
 
-from twisted.web import html, resource
+from twisted.web import resource
 from twisted.web.template import (
     TagLoader, XMLFile, Element, renderer, flattenString)
 
@@ -131,87 +123,6 @@ class DeferredResource(resource.Resource):
     def _ebChild(self, reason, request):
         request.processingFailed(reason)
         return reason
-
-
-stylesheet = ""
-
-def htmlrepr(x):
-    return htmlReprTypes.get(type(x), htmlUnknown)(x)
-
-def saferepr(x):
-    try:
-        rx = repr(x)
-    except:
-        rx = "<repr failed! %s instance at %s>" % (x.__class__, id(x))
-    return rx
-
-def htmlUnknown(x):
-    return '<code>'+html.escape(saferepr(x))+'</code>'
-
-def htmlDict(d):
-    io = StringIO()
-    w = io.write
-    w('<div class="dict"><span class="heading">Dictionary instance @ %s</span>' % hex(id(d)))
-    w('<table class="dict">')
-    for k, v in d.items():
-
-        if k == '__builtins__':
-            v = 'builtin dictionary'
-        w('<tr><td class="dictKey">%s</td><td class="dictValue">%s</td></tr>' % (htmlrepr(k), htmlrepr(v)))
-    w('</table></div>')
-    return io.getvalue()
-
-def htmlList(l):
-    io = StringIO()
-    w = io.write
-    w('<div class="list"><span class="heading">List instance @ %s</span>' % hex(id(l)))
-    for i in l:
-        w('<div class="listItem">%s</div>' % htmlrepr(i))
-    w('</div>')
-    return io.getvalue()
-
-def htmlInst(i):
-    if hasattr(i, "__html__"):
-        s = i.__html__()
-    else:
-        s = html.escape(saferepr(i))
-    return '''<div class="instance"><span class="instanceName">%s instance @ %s</span>
-              <span class="instanceRepr">%s</span></div>
-              ''' % (i.__class__, hex(id(i)), s)
-
-def htmlString(s):
-    return html.escape(saferepr(s))
-
-def htmlFunc(f):
-    return ('<div class="function">' +
-            html.escape("function %s in file %s at line %s" %
-                        (f.__name__, f.func_code.co_filename,
-                         f.func_code.co_firstlineno))+
-            '</div>')
-
-htmlReprTypes = {types.DictType: htmlDict,
-                 types.ListType: htmlList,
-                 types.InstanceType: htmlInst,
-                 types.StringType: htmlString,
-                 types.FunctionType: htmlFunc}
-
-
-
-def htmlIndent(snippetLine):
-    """
-    Strip trailing whitespace, escape HTML entities and expand indentation
-    whitespace to HTML non-breaking space.
-
-    @param snippetLine: The line of input to indent.
-    @type snippetLine: L{bytes}
-
-    @return: The escaped and indented line.
-    """
-    ret = (html.escape(snippetLine.rstrip())
-            .replace('  ', '&nbsp;')
-            .replace('\t', '&nbsp; &nbsp; &nbsp; &nbsp; '))
-    return ret
-
 
 
 class _SourceLineElement(Element):
@@ -430,11 +341,7 @@ def formatFailure(myFailure):
     result[0].raiseException()
 
 
-_twelveOne = Version("Twisted", 12, 1, 0)
 
-for name in ["htmlrepr", "saferepr", "htmlUnknown", "htmlString", "htmlList",
-             "htmlDict", "htmlInst", "htmlFunc", "htmlIndent", "htmlReprTypes",
-             "stylesheet"]:
-    deprecatedModuleAttribute(
-        _twelveOne, "See twisted.web.template.", __name__, name)
-del name
+__all__ = [
+    "redirectTo", "Redirect", "ChildRedirector", "ParentRedirect",
+    "DeferredResource", "FailureElement", "formatFailure"]
