@@ -17,8 +17,12 @@ from twisted.python.modules import getModule
 from twisted.web import resource
 
 if not _PY3:
+    # TODO: Remove when twisted.web.template and _flatten is ported
+    # https://tm.tl/#7811
     from twisted.web.template import (
         TagLoader, XMLFile, Element, renderer, flattenString)
+    # TODO: Remove when twisted.python.urlpath is ported
+    # https://tm.tl/#7831
     from twisted.python import urlpath
 else:
     Element = object

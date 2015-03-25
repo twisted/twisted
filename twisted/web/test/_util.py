@@ -6,12 +6,20 @@
 General helpers for L{twisted.web} unit tests.
 """
 
+from __future__ import division, absolute_import
+
 from twisted.internet.defer import succeed
 from twisted.web import server
 from twisted.trial.unittest import TestCase
 from twisted.python.failure import Failure
-from twisted.web._flatten import flattenString
-from twisted.web.error import FlattenerError
+from twisted.python.compat import _PY3
+
+if not _PY3:
+    # TODO: Remove when twisted.web.template and _flatten is ported
+    # https://tm.tl/#7811
+    from twisted.web._flatten import flattenString
+    from twisted.web.error import FlattenerError
+
 
 
 def _render(resource, request):
@@ -76,3 +84,14 @@ class FlattenTestCase(TestCase):
         d = self.assertFailure(self.assertFlattensTo(root, ''), FlattenerError)
         d.addCallback(lambda exc: self.assertIsInstance(exc._exception, exn))
         return d
+
+
+__all__ = ["_render", "FlattenTestCase"]
+
+if _PY3:
+    __all3__ = ["_render"]
+    for name in __all__[:]:
+        if name not in __all3__:
+            __all__.remove(name)
+            del globals()[name]
+    del name, __all3__
