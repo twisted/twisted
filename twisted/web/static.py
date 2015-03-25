@@ -35,7 +35,7 @@ from twisted.python.runtime import platformType
 dangerousPathError = resource.NoResource("Invalid request URL.")
 
 def isDangerous(path):
-    return path == '..' or '/' in path or os.sep in path
+    return path == b'..' or b'/' in path or networkString(os.sep) in path
 
 
 class Data(resource.Resource):
@@ -343,17 +343,17 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
             Bytes-Unit is anything other than 'bytes'.
         """
         try:
-            kind, value = range.split('=', 1)
+            kind, value = range.split(b'=', 1)
         except ValueError:
             raise ValueError("Missing '=' separator")
         kind = kind.strip()
-        if kind != 'bytes':
+        if kind != b'bytes':
             raise ValueError("Unsupported Bytes-Unit: %r" % (kind,))
-        unparsedRanges = filter(None, map(str.strip, value.split(',')))
+        unparsedRanges = list(filter(None, map(bytes.strip, value.split(b','))))
         parsedRanges = []
         for byteRange in unparsedRanges:
             try:
-                start, end = byteRange.split('-', 1)
+                start, end = byteRange.split(b'-', 1)
             except ValueError:
                 raise ValueError("Invalid Byte-Range: %r" % (byteRange,))
             if start:
@@ -438,8 +438,8 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         @return: The value as appropriate for the value of a Content-Range
             header.
         """
-        return 'bytes %d-%d/%d' % (
-            offset, offset + size - 1, self.getFileSize())
+        return networkString('bytes %d-%d/%d' % (
+            offset, offset + size - 1, self.getFileSize()))
 
 
     def _doSingleRangeRequest(self, request, startAndEnd):
@@ -464,11 +464,11 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
             # request is unsatisfiable.
             request.setResponseCode(http.REQUESTED_RANGE_NOT_SATISFIABLE)
             request.setHeader(
-                'content-range', 'bytes */%d' % (self.getFileSize(),))
+                b'content-range', networkString('bytes */%d' % (self.getFileSize(),)))
         else:
             request.setResponseCode(http.PARTIAL_CONTENT)
             request.setHeader(
-                'content-range', self._contentRange(offset, size))
+                b'content-range', self._contentRange(offset, size))
         return offset, size
 
 
@@ -570,7 +570,7 @@ class File(resource.Resource, styles.Versioned, filepath.FilePath):
         @return: A L{StaticProducer}.  Calling C{.start()} on this will begin
             producing the response.
         """
-        byteRange = request.getHeader('range')
+        byteRange = request.getHeader(b'range')
         if byteRange is None:
             self._setContentHeaders(request)
             request.setResponseCode(http.OK)
@@ -827,7 +827,7 @@ class MultipleRangeStaticProducer(StaticProducer):
                 except StopIteration:
                     done = True
                     break
-        self.request.write(''.join(data))
+        self.request.write(b''.join(data))
         if done:
             self.request.unregisterProducer()
             self.request.finish()
@@ -1013,7 +1013,7 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
         """
         Render a listing of the content of C{self.path}.
         """
-        request.setHeader("content-type", "text/html; charset=utf-8")
+        request.setHeader(b"content-type", b"text/html; charset=utf-8")
         if self.dirs is None:
             directory = os.listdir(self.path)
             directory.sort()
