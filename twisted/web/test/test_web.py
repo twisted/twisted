@@ -11,7 +11,7 @@ import zlib
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import _PY3, networkString
+from twisted.python.compat import _PY3
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 from twisted.internet import reactor

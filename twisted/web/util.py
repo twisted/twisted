@@ -10,7 +10,7 @@ from __future__ import division, absolute_import
 
 import linecache
 
-from twisted.python.compat import _PY3, unicode, networkString
+from twisted.python.compat import _PY3, unicode
 from twisted.python.reflect import fullyQualifiedName
 from twisted.python.modules import getModule
 
