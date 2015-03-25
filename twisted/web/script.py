@@ -14,7 +14,7 @@ from io import BytesIO as StringIO
 
 from twisted import copyright
 from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.python.compat import execfile, networkString, nativeString
+from twisted.python.compat import execfile, networkString
 from twisted.web import http, server, static, resource, html
 
 
