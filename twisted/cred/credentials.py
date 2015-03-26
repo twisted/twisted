@@ -8,6 +8,8 @@ authentication credentials to provide, and also includes a number of useful
 implementations of that interface.
 """
 
+from __future__ import division, absolute_import
+
 from zope.interface import implementer, Interface
 
 import hmac, time, random, re, binascii, base64
@@ -54,7 +56,7 @@ class IUsernameHashedPassword(ICredentials):
     password-equivalent hashes) form so that they can be hashed in a manner
     appropriate for the particular credentials class.
 
-    @type username: C{str}
+    @type username: C{bytes}
     @ivar username: The username associated with these credentials.
     """
 
@@ -62,7 +64,7 @@ class IUsernameHashedPassword(ICredentials):
         """
         Validate these credentials against the correct password.
 
-        @type password: C{str}
+        @type password: C{bytes}
         @param password: The correct, plaintext password against which to
         check.
 
@@ -84,10 +86,10 @@ class IUsernamePassword(ICredentials):
     it need only transform the stored password in a similar way before
     performing the comparison.
 
-    @type username: C{str}
+    @type username: C{bytes}
     @ivar username: The username associated with these credentials.
 
-    @type password: C{str}
+    @type password: C{bytes}
     @ivar password: The password associated with these credentials.
     """
 
@@ -95,7 +97,7 @@ class IUsernamePassword(ICredentials):
         """
         Validate these credentials against the correct password.
 
-        @type password: C{str}
+        @type password: C{bytes}
         @param password: The correct, plaintext password against which to
         check.
 
@@ -338,14 +340,14 @@ class DigestCredentialFactory(object):
         Decode the given response and attempt to generate a
         L{DigestedCredentials} from it.
 
-        @type response: C{str}
+        @type response: C{bytes}
         @param response: A string of comma separated key=value pairs
 
-        @type method: C{str}
+        @type method: C{bytes}
         @param method: The action requested to which this response is addressed
         (GET, POST, INVITE, OPTIONS, etc).
 
-        @type host: C{str}
+        @type host: C{bytes}
         @param host: The address the request was sent from.
 
         @raise error.LoginFailed: If the response does not contain a username,
@@ -399,9 +401,8 @@ class CramMD5Credentials:
         #   -- RFC 2195
         r = random.randrange(0x7fffffff)
         t = time.time()
-        self.challenge = networkString('<%d.%d@%s>' % (nativeString(r),
-                                                       nativeString(t),
-                                                       nativeString(self.host)))
+        self.challenge = networkString('<%d.%d@%s>' % (
+            r, t,nativeString(self.host) if self.host else None))
         return self.challenge
 
     def setResponse(self, response):
@@ -450,20 +451,20 @@ class ISSHPrivateKey(ICredentials):
     against a user's private key.
 
     @ivar username: The username associated with these credentials.
-    @type username: C{str}
+    @type username: C{bytes}
 
     @ivar algName: The algorithm name for the blob.
-    @type algName: C{str}
+    @type algName: C{bytes}
 
     @ivar blob: The public key blob as sent by the client.
-    @type blob: C{str}
+    @type blob: C{bytes}
 
     @ivar sigData: The data the signature was made from.
-    @type sigData: C{str}
+    @type sigData: C{bytes}
 
     @ivar signature: The signed data.  This is checked to verify that the user
         owns the private key.
-    @type signature: C{str} or C{NoneType}
+    @type signature: C{bytes} or C{NoneType}
     """
 
 
