@@ -184,7 +184,6 @@ testModules = [
     "twisted.test.test_context",
     "twisted.test.test_cooperator",
     "twisted.test.test_digestauth",
-    "twisted.test.test_newcred",
     "twisted.test.test_defer",
     "twisted.test.test_defgen",
     "twisted.test.test_error",
