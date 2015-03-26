@@ -10,10 +10,11 @@ implementations of that interface.
 
 from zope.interface import implementer, Interface
 
-import hmac, time, random, re
+import hmac, time, random, re, binascii, base64
 from hashlib import md5
 
 from twisted.python.randbytes import secureRandom
+from twisted.python.compat import networkString, nativeString, networkFormat
 from twisted.cred._digest import calcResponse, calcHA1, calcHA2
 from twisted.cred import error
 
@@ -138,8 +139,8 @@ class DigestedCredentials(object):
         nonce = self.fields.get('nonce')
         cnonce = self.fields.get('cnonce')
         nc = self.fields.get('nc')
-        algo = self.fields.get('algorithm', 'md5').lower()
-        qop = self.fields.get('qop', 'auth')
+        algo = self.fields.get('algorithm', b'md5').lower()
+        qop = self.fields.get('qop', b'auth')
 
         expected = calcResponse(
             calcHA1(algo, self.username, self.realm, password, nonce, cnonce),
@@ -162,8 +163,8 @@ class DigestedCredentials(object):
         nonce = self.fields.get('nonce')
         cnonce = self.fields.get('cnonce')
         nc = self.fields.get('nc')
-        algo = self.fields.get('algorithm', 'md5').lower()
-        qop = self.fields.get('qop', 'auth')
+        algo = self.fields.get('algorithm', b'md5').lower()
+        qop = self.fields.get('qop', b'auth')
 
         expected = calcResponse(
             calcHA1(algo, None, None, None, nonce, cnonce, preHA1=digestHash),
@@ -181,15 +182,15 @@ class DigestCredentialFactory(object):
     @cvar CHALLENGE_LIFETIME_SECS: The number of seconds for which an
         opaque should be valid.
 
-    @type privateKey: C{str}
+    @type privateKey: C{bytes}
     @ivar privateKey: A random string used for generating the secure opaque.
 
-    @type algorithm: C{str}
+    @type algorithm: C{bytes}
     @param algorithm: Case insensitive string specifying the hash algorithm to
         use.  Must be either C{'md5'} or C{'sha'}.  C{'md5-sess'} is B{not}
         supported.
 
-    @type authenticationRealm: C{str}
+    @type authenticationRealm: C{bytes}
     @param authenticationRealm: case sensitive string that specifies the realm
         portion of the challenge
     """
@@ -206,7 +207,7 @@ class DigestCredentialFactory(object):
 
     CHALLENGE_LIFETIME_SECS = 15 * 60    # 15 minutes
 
-    scheme = "digest"
+    scheme = b"digest"
 
     def __init__(self, algorithm, authenticationRealm):
         self.algorithm = algorithm
@@ -229,7 +230,7 @@ class DigestCredentialFactory(object):
 
         return {'nonce': c,
                 'opaque': o,
-                'qop': 'auth',
+                'qop': b'auth',
                 'algorithm': self.algorithm,
                 'realm': self.authenticationRealm}
 
@@ -239,9 +240,9 @@ class DigestCredentialFactory(object):
         Create a random value suitable for use as the nonce parameter of a
         WWW-Authenticate challenge.
 
-        @rtype: C{str}
+        @rtype: C{bytes}
         """
-        return secureRandom(12).encode('hex')
+        return binascii.hexlify(secureRandom(12))
 
 
     def _getTime(self):
@@ -261,11 +262,13 @@ class DigestCredentialFactory(object):
         # opaque value with a suitable digest.
         now = str(int(self._getTime()))
         if clientip is None:
-            clientip = ''
-        key = "%s,%s,%s" % (nonce, clientip, now)
-        digest = md5(key + self.privateKey).hexdigest()
-        ekey = key.encode('base64')
-        return "%s-%s" % (digest, ekey.replace('\n', ''))
+            clientip = b''
+        key = networkFormat("{0},{1},{2}",
+                            (nonce, clientip, now))
+        digest = binascii.hexlify(md5(key + self.privateKey).digest())
+        ekey = base64.b64encode(key)
+        return networkFormat("{0}-{1}",
+                             (digest, ekey.replace(b'\n', b'')))
 
 
     def _verifyOpaque(self, opaque, nonce, clientip):
@@ -286,16 +289,18 @@ class DigestCredentialFactory(object):
             contained the wrong values.
         """
         # First split the digest from the key
-        opaqueParts = opaque.split('-')
+        opaqueParts = opaque.split(b'-')
         if len(opaqueParts) != 2:
             raise error.LoginFailed('Invalid response, invalid opaque value')
 
         if clientip is None:
-            clientip = ''
+            clientip = b''
+        else:
+            clientip = networkString(clientip)
 
         # Verify the key
-        key = opaqueParts[1].decode('base64')
-        keyParts = key.split(',')
+        key = base64.b64decode(opaqueParts[1])
+        keyParts = key.split(b',')
 
         if len(keyParts) != 3:
             raise error.LoginFailed('Invalid response, invalid opaque value')
@@ -321,7 +326,7 @@ class DigestCredentialFactory(object):
                 'Invalid response, incompatible opaque/nonce too old')
 
         # Verify the digest
-        digest = md5(key + self.privateKey).hexdigest()
+        digest = binascii.hexlify(md5(key + self.privateKey).digest())
         if digest != opaqueParts[0]:
             raise error.LoginFailed('Invalid response, invalid opaque value')
 
@@ -348,12 +353,12 @@ class DigestCredentialFactory(object):
 
         @return: L{DigestedCredentials}
         """
-        response = ' '.join(response.splitlines())
+        response = b' '.join(response.splitlines())
         parts = self._parseparts.findall(response)
         auth = {}
         for (key, bare, quoted) in parts:
             value = (quoted or bare).strip()
-            auth[key.strip()] = value
+            auth[nativeString(key.strip())] = value
 
         username = auth.get('username')
         if not username:
@@ -377,8 +382,8 @@ class DigestCredentialFactory(object):
 @implementer(IUsernameHashedPassword)
 class CramMD5Credentials:
 
-    challenge = ''
-    response = ''
+    challenge = b''
+    response = b''
 
     def __init__(self, host=None):
         self.host = host
@@ -394,7 +399,9 @@ class CramMD5Credentials:
         #   -- RFC 2195
         r = random.randrange(0x7fffffff)
         t = time.time()
-        self.challenge = '<%d.%d@%s>' % (r, t, self.host)
+        self.challenge = networkString('<%d.%d@%s>' % (nativeString(r),
+                                                       nativeString(t),
+                                                       nativeString(self.host)))
         return self.challenge
 
     def setResponse(self, response):
@@ -492,4 +499,3 @@ class PluggableAuthenticationModules:
     def __init__(self, username, pamConversion):
         self.username = username
         self.pamConversion = pamConversion
-
