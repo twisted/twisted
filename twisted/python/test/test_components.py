@@ -8,6 +8,8 @@ Test cases for Twisted component architecture.
 
 from __future__ import division, absolute_import
 
+from functools import wraps
+
 from zope.interface import Interface, implementer, Attribute
 from zope.interface.adapter import AdapterRegistry
 
@@ -653,6 +655,24 @@ class ProxyForInterfaceTests(unittest.SynchronousTestCase):
         proxy.yay()
         self.assertEqual(proxy.yay(), 2)
         self.assertEqual(yayable.yays, 2)
+
+
+    def test_decoratedProxyMethod(self):
+        """
+        Methods of the class created from L{proxyForInterface} can be used with
+        the decorator-helper L{functools.wraps}.
+        """
+        base = proxyForInterface(IProxiedInterface)
+        class klass(base):
+            @wraps(base.yay)
+            def yay(self):
+                self.original.yays += 1
+                return base.yay(self)
+
+        original = Yayable()
+        yayable = klass(original)
+        yayable.yay()
+        self.assertEqual(2, original.yays)
 
 
     def test_proxyAttribute(self):
