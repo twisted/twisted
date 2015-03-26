@@ -88,7 +88,7 @@ class DigestAuthTests(TestCase):
         hashA1 = calcHA1('md5-sess', self.username, self.realm, self.password,
                          nonce, self.cnonce)
         a1 = '%s:%s:%s' % (self.username, self.realm, self.password)
-        ha1 = md5(a1).digest()
+        ha1 = md5(a1).hexdigest()
         a1 = '%s:%s:%s' % (ha1, nonce, self.cnonce)
         expected = md5(a1).hexdigest()
         self.assertEqual(hashA1, expected)
