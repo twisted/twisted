@@ -33,6 +33,9 @@ from __future__ import division
 modules = [
     "twisted",
     "twisted.copyright",
+    "twisted.cred",
+    "twisted.cred._digest",
+    "twisted.cred.credentials"
     "twisted.internet",
     "twisted.internet.abstract",
     "twisted.internet.address",
@@ -180,6 +183,8 @@ testModules = [
     "twisted.test.test_compat",
     "twisted.test.test_context",
     "twisted.test.test_cooperator",
+    "twisted.test.test_digestauth",
+    "twisted.test.test_newcred",
     "twisted.test.test_defer",
     "twisted.test.test_defgen",
     "twisted.test.test_error",
