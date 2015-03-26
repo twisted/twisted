@@ -6,6 +6,8 @@ Tests for L{twisted.cred._digest} and the associated bits in
 L{twisted.cred.credentials}.
 """
 
+from __future__ import division, absolute_import
+
 import base64, binascii
 
 from hashlib import md5, sha1
@@ -13,7 +15,7 @@ from hashlib import md5, sha1
 from zope.interface.verify import verifyObject
 from twisted.trial.unittest import TestCase
 from twisted.internet.address import IPv4Address
-from twisted.python.compat import networkString, nativeString, networkFormat
+from twisted.python.compat import networkFormat
 from twisted.cred.error import LoginFailed
 from twisted.cred.credentials import calcHA1, calcHA2, IUsernameDigestHash
 from twisted.cred.credentials import calcResponse, DigestCredentialFactory
@@ -221,7 +223,7 @@ class DigestAuthTests(TestCase):
         response = networkFormat('{0}:{1}:{2}:{3}:{4}:{5}',
                                  (hashA1, nonce, nonceCount, clientNonce, qop,
                                   hashA2))
-        expected = networkString(_hash(response).hexdigest())
+        expected = binascii.hexlify(_hash(response).digest())
 
         digest = calcResponse(
             hashA1, hashA2, _algorithm, nonce, nonceCount, clientNonce, qop)
