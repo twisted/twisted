@@ -49,10 +49,6 @@ if not installed:
 # Avoid dumping trash all over the place.
 os.chdir(tempfile.mkdtemp(prefix="tw-py3-"))
 
-for module in testModules:
-    # So we get sane import errors
-    __import__(module)
-
 # Run the tests.
 testArguments = ["run-python3-tests"] + extraArguments + testModules
 unittest.main(module=None, argv=testArguments)
