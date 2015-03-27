@@ -223,11 +223,8 @@ class FilePasswordDB:
             return username, self._credCache[username]
         else:
             for u, p in self._loadCredentials():
-                print(u)
-                print(username)
                 if u == username:
                     return u, p
-            print("ERR")
             raise KeyError(username)
 
 

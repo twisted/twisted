@@ -11,7 +11,7 @@ import hmac, binascii
 from zope.interface import implementer, Interface
 
 from twisted.trial import unittest
-from twisted.python.compat import _PY3, networkFormat, nativeString
+from twisted.python.compat import _PY3, networkFormat, nativeString, networkString
 from twisted.cred import portal, credentials, error
 from twisted.python import components
 from twisted.internet import defer
@@ -177,24 +177,26 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
     ]
 
     def setUp(self):
-        dbfile = self.mktemp()
-        self.db = checkers.FilePasswordDB(dbfile)
-        with open(dbfile, 'wb') as f:
+        self.dbfile = self.mktemp()
+        with open(self.dbfile, 'wb') as f:
             for (u, p) in self.users:
                 f.write(networkFormat('{0}:{1}\n', (u, p)))
 
 
     def testUserLookup(self):
+        self.db = checkers.FilePasswordDB(self.dbfile)
         for (u, p) in self.users:
             self.failUnlessRaises(KeyError, self.db.getUser, u.upper())
             self.assertEqual(self.db.getUser(u), (u, p))
 
 
     def testCaseInSensitivity(self):
+        self.db = checkers.FilePasswordDB(self.dbfile, caseSensitive=False)
         for (u, p) in self.users:
             self.assertEqual(self.db.getUser(u.upper()), (u, p))
 
     def testRequestAvatarId(self):
+        self.db = checkers.FilePasswordDB(self.dbfile)
         creds = [credentials.UsernamePassword(u, p) for u, p in self.users]
         d = defer.gatherResults(
             [defer.maybeDeferred(self.db.requestAvatarId, c) for c in creds])
@@ -202,6 +204,7 @@ class OnDiskDatabaseTestCase(unittest.TestCase):
         return d
 
     def testRequestAvatarId_hashed(self):
+        self.db = checkers.FilePasswordDB(self.dbfile)
         creds = [credentials.UsernameHashedPassword(u, p) for u, p in self.users]
         d = defer.gatherResults(
             [defer.maybeDeferred(self.db.requestAvatarId, c) for c in creds])
@@ -230,7 +233,7 @@ class HashedPasswordOnDiskDatabaseTestCase(unittest.TestCase):
         self.port.registerChecker(self.db)
 
     def hash(self, u, p, s):
-        return crypt(nativeString(p), nativeString(s))
+        return networkString(crypt(nativeString(p), nativeString(s)))
 
     def testGoodCredentials(self):
         goodCreds = [credentials.UsernamePassword(u, p) for u, p in self.users]
