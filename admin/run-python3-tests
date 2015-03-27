@@ -27,13 +27,11 @@ if "--installed" in extraArguments:
 if not extraArguments:
     extraArguments = ['-v']
 
-
 # Add default modules.
 if not testModules:
     if installed:
         from twisted.python.dist3 import testModules
     else:
-
         modules = {}
         path = os.path.join(twistedPath, "twisted", "python", "dist3.py")
         with open(path) as dist3:
@@ -52,7 +50,6 @@ if not installed:
 os.chdir(tempfile.mkdtemp(prefix="tw-py3-"))
 
 for module in testModules:
-    print(sys.path)
     # So we get sane import errors
     __import__(module)
 
