@@ -5,6 +5,8 @@
 Test cases for L{twisted.names.client}.
 """
 
+from __future__ import division, absolute_import
+
 from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.python import failure
@@ -22,7 +24,7 @@ from twisted.names.error import DNSQueryTimeoutError
 from twisted.names.common import ResolverBase
 
 from twisted.names.test.test_hosts import GoodTempPathMixin
-from twisted.names.test.test_rootresolve import MemoryReactor
+from twisted.names.test.test_util import MemoryReactor
 
 from twisted.test import proto_helpers
 
