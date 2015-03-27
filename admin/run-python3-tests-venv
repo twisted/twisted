@@ -2,4 +2,4 @@
 
 virtualenv -p python3.3 py33
 py33/bin/python3.3 setup.py install
-py33/bin/python3.3 admin/run-python3-tests-venv-py
+py33/bin/python3.3 admin/run-python3-tests-venv-py --installed
