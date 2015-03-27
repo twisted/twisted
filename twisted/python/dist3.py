@@ -38,6 +38,7 @@ modules = [
     "twisted.cred.credentials",
     "twisted.cred.error",
     "twisted.cred.portal",
+    "twisted.cred.checkers",
     "twisted.internet",
     "twisted.internet.abstract",
     "twisted.internet.address",
