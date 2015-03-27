@@ -6,6 +6,8 @@
 Infrastructure for test running and suites.
 """
 
+from __future__ import division, absolute_import
+
 import doctest
 import gc
 
@@ -179,4 +181,3 @@ def _iterateTests(testSuiteOrCase):
         for test in suite:
             for subtest in _iterateTests(test):
                 yield subtest
-

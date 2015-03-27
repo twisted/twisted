@@ -22,7 +22,7 @@ from twisted.names.error import DNSQueryTimeoutError
 from twisted.names.common import ResolverBase
 
 from twisted.names.test.test_hosts import GoodTempPathMixin
-from twisted.names.test.test_rootresolve import MemoryReactor
+from twisted.names.test.test_util import MemoryReactor
 
 from twisted.test import proto_helpers
 
