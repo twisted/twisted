@@ -31,11 +31,9 @@ if not extraArguments:
 # Add default modules.
 if not testModules:
     if installed:
+        print("wat")
         from twisted.python.dist3 import testModules
     else:
-        # Make sure checkout's code is used:
-        twistedPath = os.path.abspath(os.path.dirname(os.path.dirname(sys.argv[0])))
-        sys.path.insert(0, twistedPath)
 
         modules = {}
         path = os.path.join(twistedPath, "twisted", "python", "dist3.py")
@@ -45,10 +43,17 @@ if not testModules:
             exec(code, modules)
         testModules = modules["testModules"]
 
+
+if not installed:
+    # Make sure checkout's code is used:
+    twistedPath = os.path.abspath(os.path.dirname(os.path.dirname(sys.argv[0])))
+    sys.path.insert(0, twistedPath)
+
 # Avoid dumping trash all over the place.
 os.chdir(tempfile.mkdtemp(prefix="tw-py3-"))
 
 for module in testModules:
+    print(sys.path)
     # So we get sane import errors
     __import__(module)
 
