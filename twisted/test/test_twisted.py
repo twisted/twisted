@@ -687,6 +687,9 @@ class LoreDeprecationTests(TestCase):
     """
     Contains tests to make sure Lore is marked as deprecated.
     """
+    if _PY3:
+        skip = "Lore is not being ported to Python 3."
+
     def test_loreDeprecation(self):
         """
         L{twisted.lore} is deprecated since Twisted 14.0.
