@@ -7,6 +7,7 @@
 The point of integration of application and authentication.
 """
 
+from __future__ import division, absolute_import
 
 from twisted.internet import defer
 from twisted.internet.defer import maybeDeferred
@@ -118,4 +119,3 @@ class Portal:
         ifac = providedBy(credentials)
         return defer.fail(failure.Failure(error.UnhandledCredentials(
             "No checker for %s" % ', '.join(map(reflect.qual, ifac)))))
-
