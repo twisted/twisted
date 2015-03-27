@@ -11,7 +11,7 @@ import hmac, binascii
 from zope.interface import implementer, Interface
 
 from twisted.trial import unittest
-from twisted.python.compat import _PY3, networkFormat, nativeString, networkString
+from twisted.python.compat import networkFormat, nativeString, networkString
 from twisted.cred import portal, credentials, error
 from twisted.python import components
 from twisted.internet import defer
