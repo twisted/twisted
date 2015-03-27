@@ -5,9 +5,12 @@
 Utilities for Twisted.names tests.
 """
 
+from __future__ import division, absolute_import
+
 from zope.interface import implementer
 from zope.interface.verify import verifyClass
 
+from twisted.internet.defer import succeed
 from twisted.internet.task import Clock
 from twisted.internet.interfaces import IReactorUDP, IUDPTransport
 

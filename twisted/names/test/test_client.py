@@ -5,6 +5,8 @@
 Test cases for L{twisted.names.client}.
 """
 
+from __future__ import division, absolute_import
+
 from zope.interface.verify import verifyClass, verifyObject
 
 from twisted.python import failure
