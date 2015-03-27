@@ -31,7 +31,6 @@ if not extraArguments:
 # Add default modules.
 if not testModules:
     if installed:
-        print("wat")
         from twisted.python.dist3 import testModules
     else:
 
