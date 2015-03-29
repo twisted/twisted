@@ -13,11 +13,8 @@ from twisted.trial._synctest import (
     FailTest, SkipTest, SynchronousTestCase, PyUnitResultAdapter, Todo,
     makeTodo)
 from twisted.trial._asynctest import TestCase
-
 from twisted.trial._asyncrunner import (
     TestSuite, TestDecorator, decorate)
-from twisted.trial._asyncrunner import (
-    _ForceGarbageCollectionDecorator, _iterateTests, _clearSuite)
 
 # Further obscure the origins of these objects, to reduce surprise (and this is
 # what the values were before code got shuffled around between files, but was
