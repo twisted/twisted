@@ -60,10 +60,10 @@ def calcHA1(pszAlg, pszUserName, pszRealm, pszPassword, pszNonce, pszCNonce,
         m.update(pszRealm)
         m.update(":")
         m.update(pszPassword)
-        HA1 = m.digest()
+        HA1 = m.hexdigest()
     else:
         # We were given a username:realm:password
-        HA1 = preHA1.decode('hex')
+        HA1 = preHA1
 
     if pszAlg == "md5-sess":
         m = algorithms[pszAlg]()
@@ -72,9 +72,9 @@ def calcHA1(pszAlg, pszUserName, pszRealm, pszPassword, pszNonce, pszCNonce,
         m.update(pszNonce)
         m.update(":")
         m.update(pszCNonce)
-        HA1 = m.digest()
+        HA1 = m.hexdigest()
 
-    return HA1.encode('hex')
+    return HA1
 
 
 def calcHA2(algo, pszMethod, pszDigestUri, pszQop, pszHEntity):
