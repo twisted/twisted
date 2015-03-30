@@ -5,12 +5,14 @@
 Tests for L{twisted.cred}, now with 30% more starch.
 """
 
+from __future__ import division, absolute_import
 
 import hmac
-from zope.interface import implements, Interface
+from zope.interface import implementer, Interface
 
 from twisted.trial import unittest
-from twisted.cred import portal, checkers, credentials, error
+from twisted.python.compat import _PY3
+from twisted.cred import portal, credentials, error
 from twisted.python import components
 from twisted.internet import defer
 
@@ -21,8 +23,13 @@ except ImportError:
 
 try:
     from twisted.cred import pamauth
-except ImportError:
+except (ImportError, SyntaxError):
     pamauth = None
+
+try:
+    from twisted.cred import checkers
+except (ImportError, TypeError):
+    checkers = False
 
 
 class ITestable(Interface):
@@ -41,8 +48,9 @@ class TestAvatar:
     def logout(self):
         self.loggedOut = True
 
+@implementer(ITestable)
 class Testable(components.Adapter):
-    implements(ITestable)
+    pass
 
 # components.Interface(TestAvatar).adaptWith(Testable, ITestable)
 
@@ -51,8 +59,8 @@ components.registerAdapter(Testable, TestAvatar, ITestable)
 class IDerivedCredentials(credentials.IUsernamePassword):
     pass
 
+@implementer(IDerivedCredentials, ITestable)
 class DerivedCredentials(object):
-    implements(IDerivedCredentials, ITestable)
 
     def __init__(self, username, password):
         self.username = username
@@ -61,9 +69,9 @@ class DerivedCredentials(object):
     def checkPassword(self, password):
         return password == self.password
 
-
+@implementer(portal.IRealm)
 class TestRealm:
-    implements(portal.IRealm)
+
     def __init__(self):
         self.avatars = {}
 
@@ -160,12 +168,12 @@ class CramMD5CredentialsTestCase(unittest.TestCase):
     def testCheckPassword(self):
         c = credentials.CramMD5Credentials()
         chal = c.getChallenge()
-        c.response = hmac.HMAC('secret', chal).hexdigest()
-        self.failUnless(c.checkPassword('secret'))
+        c.response = hmac.HMAC(b'secret', chal).hexdigest()
+        self.failUnless(c.checkPassword(b'secret'))
 
     def testWrongPassword(self):
         c = credentials.CramMD5Credentials()
-        self.failIf(c.checkPassword('secret'))
+        self.failIf(c.checkPassword(b'secret'))
 
 class OnDiskDatabaseTestCase(unittest.TestCase):
     users = [
@@ -455,3 +463,18 @@ class LocallyHashedFilePasswordDBCheckerTestCase(LocallyHashedFilePasswordDBMixi
 class NetworkHashedFilePasswordDBCheckerTestCase(NetworkHashedFilePasswordDBMixin, CheckersMixin, unittest.TestCase):
     pass
 
+
+__all__ = ["NewCredTest", "CramMD5CredentialsTestCase",
+           "OnDiskDatabaseTestCase", "HashedPasswordOnDiskDatabaseTestCase",
+           "PluggableAuthenticationModulesTest",
+           "HashlessFilePasswordDBCheckerTestCase",
+           "LocallyHashedFilePasswordDBCheckerTestCase",
+           "NetworkHashedFilePasswordDBCheckerTestCase"]
+
+if _PY3:
+    __all3__ = ["CramMD5CredentialsTestCase"]
+    for name in __all__[:]:
+        if name not in __all3__:
+            __all__.remove(name)
+            del globals()[name]
+    del name, __all3__

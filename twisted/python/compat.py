@@ -426,6 +426,10 @@ except ImportError:
     FileType = IOBase
 
 
+def networkFormat(formatString, args):
+
+    return networkString(formatString.format(*map(nativeString, args)))
+
 __all__ = [
     "reraise",
     "execfile",
@@ -444,4 +448,5 @@ __all__ = [
     "StringType",
     "InstanceType",
     "FileType",
+    "networkFormat",
     ]
