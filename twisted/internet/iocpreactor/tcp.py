@@ -552,8 +552,11 @@ class Port(_SocketCloser, _LogOwner):
                     (errno.errorcode.get(rc, 'unknown error'), rc))
             return False
         else:
-            # Inherit properties from the listening port socket as documented.
+            # Inherit the properties from the listening port socket as
+            # documented in the `Remarks` section of AcceptEx.
             # https://msdn.microsoft.com/en-us/library/ms737524(v=VS.85).aspx
+            # In this way we can call getsockname and getpeername on the
+            # accepted socket.
             evt.newskt.setsockopt(
                 socket.SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
                 struct.pack('P', self.socket.fileno()))
