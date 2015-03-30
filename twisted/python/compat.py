@@ -440,6 +440,7 @@ def networkFormat(formatString, args):
     @raise UnicodeError: One of C{args} is not ASCII encodable/decodable.
     @raise TypeError: One of C{args} is neither C{bytes} nor C{unicode}.
 
+    @return: The formatted string.
     @rtype: L{bytes}
     """
     return networkString(formatString.format(*map(nativeString, args)))

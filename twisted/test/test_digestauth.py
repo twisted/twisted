@@ -538,9 +538,9 @@ class DigestAuthTests(TestCase):
             self.clientAddress.host)
         self.assertEqual(str(exc), 'Invalid response, invalid opaque value')
 
-        badOpaque = b'foo-' + b64encode(networkFormat('{0},{1},foobar',
-                                                      (challenge['nonce'],
-                                                       self.clientAddress.host)))
+        badOpaque = b'foo-' + b64encode(
+            networkFormat('{0},{1},foobar', (challenge['nonce'],
+                                             self.clientAddress.host)))
         exc = self.assertRaises(
             LoginFailed,
             credentialFactory._verifyOpaque,
