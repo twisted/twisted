@@ -435,7 +435,8 @@ def networkFormat(formatString, args):
         b"foo,bar"
 
     @param formatString: The L{str} to be formatted.
-    @param args: A L{tuple} of either L{bytes} or L{unicode}.
+    @param args: A L{tuple} of format arguments. If a string argument is not
+    L{str}, it is converted to L{str} by using L{nativeString}.
 
     @raise UnicodeError: One of C{args} is not ASCII encodable/decodable.
     @raise TypeError: One of C{args} is neither C{bytes} nor C{unicode}.
@@ -443,7 +444,14 @@ def networkFormat(formatString, args):
     @return: The formatted string.
     @rtype: L{bytes}
     """
-    return networkString(formatString.format(*map(nativeString, args)))
+
+    def _format(arg):
+        if type(arg) in [bytes, unicode] and not isinstance(arg, str):
+            # If it's a 'string type' but NOT a native string, convert it.
+            arg = nativeString(arg)
+        return arg
+
+    return networkString(formatString.format(*map(_format, args)))
 
 
 

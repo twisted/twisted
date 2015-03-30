@@ -16,6 +16,7 @@ from twisted.python.compat import reduce, execfile, _PY3
 from twisted.python.compat import comparable, cmp, nativeString, networkString
 from twisted.python.compat import unicode as unicodeCompat, lazyByteSlice
 from twisted.python.compat import reraise, NativeStringIO, iterbytes, intToBytes
+from twisted.python.compat import networkFormat
 from twisted.python.filepath import FilePath
 
 
@@ -621,3 +622,50 @@ class Python3BytesTests(unittest.SynchronousTestCase):
         """
         data = b'123XYZ'
         self.assertEqual(bytes(lazyByteSlice(data, 2, 3)), data[2:5])
+
+
+
+class NetworkFormatTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{NetworkFormat}.
+    """
+
+    def test_unicodeArgs(self):
+        """
+        Unicode arguments can be passed.
+        """
+        result = networkFormat("{0},{1}", (u"foo", u"bar"))
+        self.assertEqual(result, b"foo,bar")
+
+
+    def test_intArgs(self):
+        """
+        Int arguments can be passed.
+        """
+        result = networkFormat("{0:.3g},{1}", (1.341, u"foo"))
+        self.assertEqual(result, b"1.34,foo")
+
+
+    def test_mixedTypeArgs(self):
+        """
+        Arguments of mixed type can be passed.
+        """
+        result = networkFormat("{0},{1},{2}", (2.3, u"foo", b"bar"))
+        self.assertEqual(result, b"2.3,foo,bar")
+
+
+    def test_nonASCIIBytes(self):
+        """
+        Non-ASCII arguments passed will raise an exception.
+        """
+        with self.assertRaises(UnicodeError):
+            result = networkFormat("{0}", (b"\xFF",))
+
+
+    def test_nonASCIIUnicode(self):
+        """
+        Unicode arguments passed with non-ASCII-decodable contents will raise an
+        exception.
+        """
+        with self.assertRaises(UnicodeError):
+            result = networkFormat("{0}", (u"\N{SNOWMAN}",))
