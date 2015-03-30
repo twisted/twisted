@@ -325,6 +325,8 @@ class ConchServerSetupMixin:
                                              interface="127.0.0.1")
         self.echoServer = reactor.listenTCP(0, EchoFactory())
         self.echoPort = self.echoServer.getHost().port
+        self.echoServerV6 = reactor.listenTCP(0, EchoFactory(), interface="::1")
+        self.echoPortV6 = self.echoServerV6.getHost().port
 
 
     def tearDown(self):
@@ -336,7 +338,8 @@ class ConchServerSetupMixin:
             self.conchFactory.proto.transport.loseConnection()
         return defer.gatherResults([
                 defer.maybeDeferred(self.conchServer.stopListening),
-                defer.maybeDeferred(self.echoServer.stopListening)])
+                defer.maybeDeferred(self.echoServer.stopListening),
+                defer.maybeDeferred(self.echoServerV6.stopListening)])
 
 
 
@@ -522,6 +525,17 @@ class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin,
     """
     Connection forwarding tests run against the OpenSSL command line client.
     """
+    def test_localToRemoteForwardingV6(self):
+        """
+        Forwarding of arbitrary IPv6 TCP connections via SSH.
+        """
+        localPort = self._getFreePort()
+        process = ConchTestForwardingProcess(localPort, 'test\n')
+        d = self.execute('', process,
+                         sshArgs='-N -L%i:[::1]:%i'
+                         % (localPort, self.echoPortV6))
+        d.addCallback(self.assertEqual, 'test\n')
+        return d
 
 
 

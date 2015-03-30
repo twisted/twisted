@@ -1,8 +1,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
-
 """
 This module contains the implementation of the TCP forwarding, which allows
 clients and servers to forward arbitrary TCP data across the connection.
@@ -13,6 +11,7 @@ Maintainer: Paul Swartz
 import struct
 
 from twisted.internet import protocol, reactor
+from twisted.internet.endpoints import HostnameEndpoint, connectProtocol
 from twisted.python import log
 
 import common, channel
@@ -64,20 +63,59 @@ class SSHListenServerForwardingChannel(SSHListenForwardingChannel):
 
     name = 'forwarded-tcpip'
 
+
+
 class SSHConnectForwardingChannel(channel.SSHChannel):
+    """
+    Channel used for handling server side forwarding request.
+    It acts as a client for the remote forwarding destination.
+
+    @ivar hostport: C{(host, port)} requested by client as forwarding
+        destination.
+    @type hostport: C{tupple} or a C{sequence}
+
+    @ivar client: Protocol connected to the forwarding destination.
+    @type client: L{protocol.Protocol}
+
+    @ivar clientBuf: Data received while forwarding channel is not yet
+        connected.
+    @type clientBuf: C{bytes}
+
+    @var  _reactor: Reactor used for TCP connections.
+    @type _reactor: A reactor.
+
+    @ivar _channelOpenDeferred: Deferred used in testing to check the
+        result of C{channelOpen}.
+    @type _channelOpenDeferred: L{twisted.internet.defer.Deferred}
+    """
+    _reactor = reactor
 
     def __init__(self, hostport, *args, **kw):
         channel.SSHChannel.__init__(self, *args, **kw)
-        self.hostport = hostport 
+        self.hostport = hostport
         self.client = None
         self.clientBuf = ''
 
+
     def channelOpen(self, specificData):
-        cc = protocol.ClientCreator(reactor, SSHForwardingClient, self)
+        """
+        See: L{channel.SSHChannel}
+        """
         log.msg("connecting to %s:%i" % self.hostport)
-        cc.connectTCP(*self.hostport).addCallbacks(self._setClient, self._close)
+        ep = HostnameEndpoint(
+            self._reactor, self.hostport[0], self.hostport[1])
+        d = connectProtocol(ep, SSHForwardingClient(self))
+        d.addCallbacks(self._setClient, self._close)
+        self._channelOpenDeferred = d
 
     def _setClient(self, client):
+        """
+        Called when the connection was established to the forwarding
+        destination.
+
+        @param client: Client protocol connected to the forwarding destination.
+        @type  client: L{protocol.Protocol}
+        """
         self.client = client
         log.msg("connected to %s:%i" % self.hostport)
         if self.clientBuf:
@@ -87,23 +125,40 @@ class SSHConnectForwardingChannel(channel.SSHChannel):
             self.write(self.client.buf[1:])
         self.client.buf = ''
 
+
     def _close(self, reason):
+        """
+        Called when failed to connect to the forwarding destination.
+
+        @param reason: Reason why connection failed.
+        @type  reason: L{twisted.python.failure.Failure}
+        """
         log.msg("failed to connect: %s" % reason)
         self.loseConnection()
 
+
     def dataReceived(self, data):
+        """
+        See: L{channel.SSHChannel}
+        """
         if self.client:
             self.client.transport.write(data)
         else:
             self.clientBuf += data
 
+
     def closed(self):
+        """
+        See: L{channel.SSHChannel}
+        """
         if self.client:
             log.msg('closed remote forwarding channel %s' % self.id)
             if self.client.channel:
                 self.loseConnection()
             self.client.transport.loseConnection()
             del self.client
+
+
 
 def openConnectForwardingClient(remoteWindow, remoteMaxPacket, data, avatar):
     remoteHP, origHP = unpackOpen_direct_tcpip(data)
