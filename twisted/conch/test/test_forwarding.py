@@ -21,7 +21,8 @@ class TestSSHConnectForwardingChannel(unittest.TestCase):
 
     def patchHostnameEndpointResolver(self, request, response):
         """
-        Patch L{forwarding.HostnameEndpoint} to respond o
+        Patch L{forwarding.HostnameEndpoint} to respond with a predefined
+        answer for DNS resolver requests.
 
         @param request: Tupple of requested (hostname, port).
         @type  request: C{tuppe}.
