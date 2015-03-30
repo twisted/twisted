@@ -426,9 +426,25 @@ except ImportError:
     FileType = IOBase
 
 
-def networkFormat(formatString, args):
 
+def networkFormat(formatString, args):
+    """
+    Format a L{str} with the values in C{args}.
+
+        >>> networkFormat("{0},{1}", (b"foo", u"bar"))
+        b"foo,bar"
+
+    @param formatString: The L{str} to be formatted.
+    @param args: A L{tuple} of either L{bytes} or L{unicode}.
+
+    @raise UnicodeError: One of C{args} is not ASCII encodable/decodable.
+    @raise TypeError: One of C{args} is neither C{bytes} nor C{unicode}.
+
+    @rtype: L{bytes}
+    """
     return networkString(formatString.format(*map(nativeString, args)))
+
+
 
 __all__ = [
     "reraise",
