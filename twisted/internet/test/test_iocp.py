@@ -16,9 +16,9 @@ from zope.interface.verify import verifyClass
 from twisted.trial import unittest
 from twisted.python.log import msg
 from twisted.internet.interfaces import IPushProducer
-from twisted.internet.tcp import ENOTCONN
 
 try:
+    from errno import WSAENOTCONN
     from twisted.internet.iocpreactor import iocpsupport as _iocp, tcp, udp
     from twisted.internet.iocpreactor.reactor import IOCPReactor, EVENTS_PER_LOOP, KEY_NORMAL
     from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
@@ -76,7 +76,7 @@ class SupportTests(unittest.TestCase):
                     pack('P', port.fileno()))
                 break
             except error as socketError:
-                if socketError.errno == ENOTCONN:
+                if socketError.errno == WSAENOTCONN:
                     # Without a sleep here even retrying 20 times will fail.
                     # This should allow other threads to execute.
                     time.sleep(0.1)
