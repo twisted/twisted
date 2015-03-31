@@ -438,6 +438,24 @@ class LoopTestCase(unittest.TestCase):
         self.assertEqual(times.pop(), ((3.0 * INTERVAL) + REALISTIC_DELAY, 1))
 
 
+    def test_unluckyFloatingPoint(self):
+        """
+        It is well known that 0.1 is an unlucky number.
+        """
+        clock = task.Clock()
+        accumulator = []
+        call = task.LoopingCall.withCount(accumulator.append)
+        call.clock = clock
+        call.start(0.1, now=False)
+        n = 10
+        for x in range(n):
+            clock.advance(0.1)
+        clock.advance(0.0000000000000001)
+        self.assertGreaterEqual(clock.seconds(), 0.1 * n)
+        self.assertEqual(sum(accumulator), n)
+        self.assertNotIn(0, accumulator)
+
+
     def testBasicFunction(self):
         # Arrange to have time advanced enough so that our function is
         # called a few times.
