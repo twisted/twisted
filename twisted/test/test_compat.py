@@ -652,7 +652,7 @@ class joinBytesTests(unittest.SynchronousTestCase):
         exception.
         """
         with self.assertRaises(UnicodeError):
-            result = joinBytes(b":", (u"\N{SNOWMAN}",))
+            joinBytes(b":", (u"\N{SNOWMAN}",))
 
 
     def test_nonBytesArguments(self):
@@ -660,4 +660,4 @@ class joinBytesTests(unittest.SynchronousTestCase):
         Non-bytes arguments passed will raise an exception.
         """
         with self.assertRaises(TypeError):
-            result = joinBytes(b":", (1,))
+            joinBytes(b":", (1,))
