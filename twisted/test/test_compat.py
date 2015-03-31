@@ -625,7 +625,7 @@ class Python3BytesTests(unittest.SynchronousTestCase):
 
 
 
-class joinBytesTests(unittest.SynchronousTestCase):
+class JoinBytesTests(unittest.SynchronousTestCase):
     """
     Tests for L{joinBytes}.
     """

@@ -435,10 +435,15 @@ def joinBytes(on, args):
         >>> joinBytes(b":", (u"foo", b"bar", "baz"))
         b"foo:bar:baz"
 
-    @raise UnicodeError: One of C{args} which is text is not ASCII encodable.
+    @param on: The L{bytes} that the arguments should be joined on.
+    @param args: An iterable of L{bytes} (or L{unicode}, which will be turned
+        into ASCII-encoded L{bytes}).
+
+    @raise UnicodeError: One of C{args} is a L{unicode} that is not ASCII
+        encodable.
     @raise TypeError: One of C{args} is not L{bytes} or L{unicode}.
 
-    @return: The formatted string.
+    @return: The joined bytestring.
     @rtype: L{bytes}
     """
     def _decode(arg):
