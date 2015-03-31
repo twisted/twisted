@@ -16,7 +16,7 @@ import hmac, time, random, re, binascii, base64
 from hashlib import md5
 
 from twisted.python.randbytes import secureRandom
-from twisted.python.compat import networkString, nativeString, networkFormat
+from twisted.python.compat import networkString, nativeString, joinBytes
 from twisted.cred._digest import calcResponse, calcHA1, calcHA2
 from twisted.cred import error
 
@@ -264,13 +264,11 @@ class DigestCredentialFactory(object):
         # opaque value with a suitable digest.
         now = str(int(self._getTime()))
         if clientip is None:
-            clientip = b''
-        key = networkFormat("{0},{1},{2}",
-                            (nonce, clientip, now))
+            clientip = ''
+        key = joinBytes(b",", (nonce, clientip, now))
         digest = binascii.hexlify(md5(key + self.privateKey).digest())
         ekey = base64.b64encode(key)
-        return networkFormat("{0}-{1}",
-                             (digest, ekey.replace(b'\n', b'')))
+        return joinBytes(b"-", (digest, ekey.replace(b'\n', b'')))
 
 
     def _verifyOpaque(self, opaque, nonce, clientip):

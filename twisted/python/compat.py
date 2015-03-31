@@ -427,32 +427,30 @@ except ImportError:
 
 
 
-def networkFormat(formatString, args):
+def joinBytes(on, args):
     """
-    Format a L{str} with the values in C{args}.
+    Join on a bytestring. If any of the arguments are text, they will be
+    converted to an ASCII bytestring.
 
-        >>> networkFormat("{0},{1}", (b"foo", u"bar"))
-        b"foo,bar"
+        >>> joinBytes(b":", (u"foo", b"bar", "baz"))
+        b"foo:bar:baz"
 
-    @param formatString: The L{str} to be formatted.
-    @param args: A L{tuple} of format arguments. If a string argument is not
-    L{str}, it is converted to L{str} by using L{nativeString}.
-
-    @raise UnicodeError: One of C{args} is not ASCII encodable/decodable.
-    @raise TypeError: One of C{args} is neither C{bytes} nor C{unicode}.
+    @raise UnicodeError: One of C{args} which is text is not ASCII encodable.
+    @raise TypeError: One of C{args} is not L{bytes} or L{unicode}.
 
     @return: The formatted string.
     @rtype: L{bytes}
     """
-
-    def _format(arg):
-        if type(arg) in [bytes, unicode] and not isinstance(arg, str):
-            # If it's a 'string type' but NOT a native string, convert it.
-            arg = nativeString(arg)
+    def _decode(arg):
+        if type(arg) == unicode:
+            arg = arg.encode('ascii')
+        if not isinstance(arg, bytes):
+            raise TypeError("{0} is not bytes.".format(arg))
         return arg
 
-    return networkString(formatString.format(*map(_format, args)))
-
+    if not isinstance(on, bytes):
+        raise TypeError("{0} is not bytes.".format(on))
+    return on.join(map(_decode, args))
 
 
 __all__ = [
@@ -473,5 +471,5 @@ __all__ = [
     "StringType",
     "InstanceType",
     "FileType",
-    "networkFormat",
+    "joinBytes",
     ]
