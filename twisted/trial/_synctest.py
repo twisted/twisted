@@ -387,8 +387,7 @@ class _Assertions(pyunit.TestCase, object):
 
         @param condition: any object that defines __nonzero__
         """
-        if condition:
-            raise self.failureException(msg)
+        super(_Assertions, self).assertFalse(condition, msg)
         return condition
     assertNot = failUnlessFalse = failIf = assertFalse
 
@@ -399,8 +398,7 @@ class _Assertions(pyunit.TestCase, object):
 
         @param condition: any object that defines __nonzero__
         """
-        if not condition:
-            raise self.failureException(msg)
+        super(_Assertions, self).assertTrue(condition, msg)
         return condition
     assert_ = failUnlessTrue = failUnless = assertTrue
 
@@ -430,21 +428,14 @@ class _Assertions(pyunit.TestCase, object):
     failUnlessRaises = assertRaises
 
 
-    def assertEqual(self, first, second, msg=''):
+    def assertEqual(self, first, second, msg=None):
         """
         Fail the test if C{first} and C{second} are not equal.
 
         @param msg: A string describing the failure that's included in the
             exception.
         """
-        if not first == second:
-            if msg is None:
-                msg = ''
-            if len(msg) > 0:
-                msg += '\n'
-            raise self.failureException(
-                '%snot equal:\na = %s\nb = %s\n'
-                % (msg, pformat(first), pformat(second)))
+        super(_Assertions, self).assertEqual(first, second, msg)
         return first
     failUnlessEqual = failUnlessEquals = assertEquals = assertEqual
 
