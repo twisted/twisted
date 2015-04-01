@@ -15,7 +15,6 @@ demonstrated to work earlier in the file are used by those later in the file
 from __future__ import division, absolute_import
 
 import warnings
-from pprint import pformat
 import unittest as pyunit
 
 from twisted.python.util import FancyEqMixin
