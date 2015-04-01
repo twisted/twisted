@@ -1,1 +1,1 @@
-twisted.trial.unittest.TestCase.assertEqual now passes through the standard library's more informative failure messages.
+twisted.trial.unittest.TestCase's assertEqual, assertTrue, and assertFalse methods now pass through the standard library's more informative failure messages.
