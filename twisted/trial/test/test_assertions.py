@@ -15,7 +15,6 @@ demonstrated to work earlier in the file are used by those later in the file
 from __future__ import division, absolute_import
 
 import warnings
-from pprint import pformat
 import unittest as pyunit
 
 from twisted.python.util import FancyEqMixin
@@ -138,10 +137,14 @@ class AssertFalseTests(unittest.SynchronousTestCase):
             try:
                 method(true, "failed on %r" % (true,))
             except self.failureException as e:
-                if str(e) != "failed on %r" % (true,):
-                    self.fail("Raised incorrect exception on %r: %r" % (true, e))
+                self.assertIn(
+                    "failed on %r" % (true,), str(e),
+                    "Raised incorrect exception on %r: %r" % (true, e)
+                )
             else:
-                self.fail("Call to failIf(%r) didn't fail" % (true,))
+                self.fail(
+                    "Call to %s(%r) didn't fail" % (method.__name__, true,)
+                )
 
 
     def test_failIfFalse(self):
@@ -199,12 +202,14 @@ class AssertTrueTests(unittest.SynchronousTestCase):
             try:
                 method(notTrue, "failed on %r" % (notTrue,))
             except self.failureException as e:
-                if str(e) != "failed on %r" % (notTrue,):
-                    self.fail(
-                        "Raised incorrect exception on %r: %r" % (notTrue, e))
+                self.assertIn(
+                    "failed on %r" % (notTrue,), str(e),
+                    "Raised incorrect exception on %r: %r" % (notTrue, e)
+                )
             else:
                 self.fail(
-                    "Call to %s(%r) didn't fail" % (method.__name__, notTrue,))
+                    "Call to %s(%r) didn't fail" % (method.__name__, notTrue,)
+                )
 
 
     def _assertTrueTrue(self, method):
@@ -272,16 +277,29 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
 
 
     def _testUnequalPair(self, first, second):
+        """
+        Assert that when called with unequal arguments, C{assertEqual} raises a
+        failure exception with the same message as the standard library
+        C{assertEqual} would have raised.
+        """
+        raised = False
         try:
             self.assertEqual(first, second)
-        except self.failureException as e:
-            expected = 'not equal:\na = %s\nb = %s\n' % (
-                pformat(first), pformat(second))
-            if str(e) != expected:
-                self.fail("Expected: %r; Got: %s" % (expected, str(e)))
-        else:
-            self.fail("Call to assertEqual(%r, %r) didn't fail"
-                      % (first, second))
+        except self.failureException as ourFailure:
+            case = pyunit.TestCase("setUp")
+            try:
+                case.assertEqual(first, second)
+            except case.failureException as theirFailure:
+                raised = True
+                got = str(ourFailure)
+                expected = str(theirFailure)
+                if expected != got:
+                    self.fail("Expected: %r; Got: %r" % (expected, got))
+
+        if not raised:
+            self.fail(
+                "Call to assertEqual(%r, %r) didn't fail" % (first, second)
+            )
 
 
     def test_assertEqual_basic(self):
@@ -303,15 +321,15 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
 
     def test_assertEqualMessage(self):
         """
-        When a message is passed to L{assertEqual}, it is included in the
-        error message.
+        When a message is passed to L{assertEqual} it is included in the error
+        message.
         """
+        message = 'message'
         exception = self.assertRaises(
             self.failureException, self.assertEqual,
-            'foo', 'bar', 'message')
-        self.assertEqual(
-            str(exception),
-            "message\nnot equal:\na = 'foo'\nb = 'bar'\n")
+            'foo', 'bar', message
+        )
+        self.assertIn(message, str(exception))
 
 
     def test_assertEqualNoneMessage(self):
@@ -319,9 +337,13 @@ class TestSynchronousAssertions(unittest.SynchronousTestCase):
         If a message is specified as C{None}, it is not included in the error
         message of L{assertEqual}.
         """
-        exception = self.assertRaises(
-            self.failureException, self.assertEqual, 'foo', 'bar', None)
-        self.assertEqual(str(exception), "not equal:\na = 'foo'\nb = 'bar'\n")
+        exceptionForNone = self.assertRaises(
+            self.failureException, self.assertEqual, 'foo', 'bar', None
+        )
+        exceptionWithout = self.assertRaises(
+            self.failureException, self.assertEqual, 'foo', 'bar'
+        )
+        self.assertEqual(str(exceptionWithout), str(exceptionForNone))
 
 
     def test_assertEqual_incomparable(self):
