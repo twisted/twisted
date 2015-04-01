@@ -12,7 +12,6 @@ from __future__ import division, absolute_import
 
 import inspect
 import os, warnings, sys, tempfile, types
-from pprint import pformat
 from dis import findlinestarts as _findlinestarts
 
 from twisted.python import failure, log, monkey
