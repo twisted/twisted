@@ -1,8 +1,8 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
-Twisted Core 15.1.0pre1 (2015-03-06)
-====================================
+Twisted Core 15.1.0 (2015-04-02)
+================================
 
 Features
 --------
@@ -27,20 +27,20 @@ Other
    #7724, #7725, #7748, #7763, #7765, #7766, #7768
 
 
-Twisted Conch 15.1.0pre1 (2015-03-06)
-=====================================
+Twisted Conch 15.1.0 (2015-04-02)
+=================================
 
 No significant changes have been made for this release.
 
 
-Twisted Lore 15.1.0pre1 (2015-03-06)
-====================================
+Twisted Lore 15.1.0 (2015-04-02)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Mail 15.1.0pre1 (2015-03-06)
-====================================
+Twisted Mail 15.1.0 (2015-04-02)
+================================
 
 Bugfixes
 --------
@@ -52,8 +52,8 @@ Other
  - #6705
 
 
-Twisted Names 15.1.0pre1 (2015-03-06)
-=====================================
+Twisted Names 15.1.0 (2015-04-02)
+=================================
 
 No significant changes have been made for this release.
 
@@ -62,20 +62,20 @@ Other
  - #7728
 
 
-Twisted News 15.1.0pre1 (2015-03-06)
-====================================
+Twisted News 15.1.0 (2015-04-02)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Pair 15.1.0pre1 (2015-03-06)
-====================================
+Twisted Pair 15.1.0 (2015-04-02)
+================================
 
 No significant changes have been made for this release.
 
 
-Twisted Runner 15.1.0pre1 (2015-03-06)
-======================================
+Twisted Runner 15.1.0 (2015-04-02)
+==================================
 
 No significant changes have been made for this release.
 
@@ -84,8 +84,8 @@ Other
  - #7726
 
 
-Twisted Web 15.1.0pre1 (2015-03-06)
-===================================
+Twisted Web 15.1.0 (2015-04-02)
+===============================
 
 Features
 --------
@@ -97,8 +97,8 @@ Other
  - #7000, #7485, #7750, #7762
 
 
-Twisted Words 15.1.0pre1 (2015-03-06)
-=====================================
+Twisted Words 15.1.0 (2015-04-02)
+=================================
 
 Deprecations and Removals
 -------------------------
