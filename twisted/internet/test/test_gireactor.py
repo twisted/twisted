@@ -29,6 +29,7 @@ from twisted.python.runtime import platform
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ReactorAlreadyRunning
 from twisted.internet.protocol import ProcessProtocol
+from twisted.internet.test.test_process import _bytesEnviron
 from twisted.trial.unittest import TestCase, SkipTest
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.test.test_twisted import SetAsideModule
@@ -210,7 +211,7 @@ class PygtkCompatibilityTests(TestCase):
                 result.callback(self.data)
 
         path = FilePath(__file__).sibling(b"process_gireactornocompat.py").path
-        reactor.spawnProcess(Stdout(), exe, [exe, path], env=os.environ)
+        reactor.spawnProcess(Stdout(), exe, [exe, path], env=_bytesEnviron())
         result.addCallback(self.assertEqual, b"success")
         return result
 
