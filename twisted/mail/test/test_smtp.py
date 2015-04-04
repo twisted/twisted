@@ -1833,8 +1833,8 @@ class SendmailTests(unittest.TestCase):
 
     def test_honorsESMTPArguments(self):
         """
-        Test that L{twisted.mail.smtp.sendmail} passes creates the ESMTP factory
-        with the ESMTP arguments.
+        L{twisted.mail.smtp.sendmail} creates the ESMTP factory with the ESMTP
+        arguments.
         """
         reactor = MemoryReactor()
         smtp.sendmail("localhost", "source@address", "recipient@address",
@@ -1850,8 +1850,8 @@ class SendmailTests(unittest.TestCase):
 
     def test_messageFilePassthrough(self):
         """
-        Test that L{twisted.mail.smtp.sendmail} will pass through the message
-        untouched if it is a file-like object.
+        L{twisted.mail.smtp.sendmail} will pass through the message untouched
+        if it is a file-like object.
         """
         reactor = MemoryReactor()
         messageFile = StringIO(b"File!")
@@ -1864,7 +1864,7 @@ class SendmailTests(unittest.TestCase):
 
     def test_messageStringMadeFile(self):
         """
-        Test that L{twisted.mail.smtp.sendmail} will turn non-file-like objects
+        L{twisted.mail.smtp.sendmail} will turn non-file-like objects
         (eg. strings) into file-like objects before sending.
         """
         reactor = MemoryReactor()
@@ -1878,8 +1878,8 @@ class SendmailTests(unittest.TestCase):
 
     def test_senderDomainName(self):
         """
-        Test that L{twisted.mail.smtp.sendmail} passes through the sender domain
-        name, if provided.
+        L{twisted.mail.smtp.sendmail} passes through the sender domain name, if
+        provided.
         """
         reactor = MemoryReactor()
         smtp.sendmail("localhost", "source@address", "recipient@address",
