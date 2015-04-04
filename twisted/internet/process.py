@@ -587,7 +587,7 @@ class _FDDetector(object):
             # OS-X should get the /dev/fd implementation instead, so mostly
             # this check probably isn't necessary.
             maxfds = min(1024, resource.getrlimit(resource.RLIMIT_NOFILE)[1])
-        return xrange(maxfds)
+        return range(maxfds)
 
 
 
@@ -1020,7 +1020,7 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         os.setsid()
         fcntl.ioctl(slavefd, termios.TIOCSCTTY, '')
 
-        for fd in xrange(3):
+        for fd in range(3):
             if fd != slavefd:
                 os.close(fd)
 
