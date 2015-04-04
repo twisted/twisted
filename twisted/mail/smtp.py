@@ -2097,7 +2097,7 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
     """
     Send an email.
 
-    This interface is intended to be a replacement for L{smtplib.SMTP.sendmail()}
+    This interface is intended to be a replacement for L{smtplib.SMTP.sendmail}
     and related methods. To maintain backwards compatibility, it will fall back
     to plain SMTP, if ESMTP support is not available. If ESMTP support is
     available, it will attempt to provide encryption via STARTTLS and
