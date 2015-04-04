@@ -249,15 +249,3 @@ class Gtk3ReactorTests(TestCase):
 
     if platform.getType() != "posix" or platform.isMacOSX():
         test_requiresDISPLAY.skip = "This test is only relevant when using X11"
-
-
-
-if _PY3:
-    nonRunnableTests = [
-        # Requires twisted.python.modules
-        # See: #7804
-        "PygtkCompatibilityTests",
-    ]
-    for name in nonRunnableTests:
-        del globals()[name]
-    del name
