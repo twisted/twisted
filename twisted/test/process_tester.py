@@ -1,11 +1,7 @@
 """Test program for processes."""
 
 import sys, os
-
-if sys.version_info < (3, 0):
-    _PY3 = False
-else:
-    _PY3 = True
+from twisted.python.compat import _PY3
 
 test_file_match = "process_test.log.*"
 test_file = "process_test.log.%d" % os.getpid()
