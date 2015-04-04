@@ -2104,9 +2104,12 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
     authentication if a secret is provided.
 
     @param smtphost: The host the message should be sent to.
+
     @param from_addr: The (envelope) address sending this mail.
+
     @param to_addrs: A list of addresses to send this mail to.  A string will
         be treated as a list of one address.
+
     @param msg: The message, including headers, either as a file or a string.
         File-like objects need to support read() and close(). Lines must be
         delimited by '\\n'. If you pass something that doesn't look like a file,
