@@ -426,8 +426,8 @@ class _BaseProcess(BaseProcess, object):
                         tb = tb.getvalue()
 
                         if _PY3:
-                            stderr.write(msg.encode("ascii"))
-                            stderr.write(tb.encode("ascii"))
+                            stderr.write(msg.encode("utf8"))
+                            stderr.write(tb.encode("utf8"))
                         else:
                             stderr.write(msg)
                             stderr.write(tb)
