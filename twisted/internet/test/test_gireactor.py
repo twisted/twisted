@@ -26,7 +26,6 @@ else:
 
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
-from twisted.python.compat import _PY3
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ReactorAlreadyRunning
 from twisted.internet.protocol import ProcessProtocol

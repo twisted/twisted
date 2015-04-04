@@ -16,7 +16,7 @@ from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath, _asFilesystemBytes
-from twisted.python.compat import networkString, _PY3
+from twisted.python.compat import networkString, _PY3, xrange, iteritems, items
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, succeed
@@ -42,7 +42,7 @@ def _bytesEnviron():
 
     if _PY3:
         new = {}
-        for key, val in os.environ.items():
+        for key, val in iteritems(os.environ):
             new[networkString(key)] = networkString(val)
         return new
 
@@ -535,7 +535,7 @@ sys.stdout.flush()""".format(top.path))
         # Only required if the test fails on systems that support
         # the process module.
         if process is not None:
-            for pid, handler in process.reapProcessHandlers.items():
+            for pid, handler in items(process.reapProcessHandlers):
                 if handler is not transport:
                     continue
                 process.unregisterReapProcessHandler(pid, handler)
@@ -765,9 +765,9 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         args = [b'hello', b'"', b' \t|<>^&', br'"\\"hello\\"', br'"foo\ bar baz\""']
         # Ensure that all non-NUL characters can be passed too.
         if _PY3:
-            args.append("".join(map(chr, range(1,255))).encode("utf8"))
+            args.append("".join(map(chr, xrange(1,255))).encode("utf8"))
         else:
-            args.append("".join(list(map(chr, range(1,255)))))
+            args.append("".join(map(chr, xrange(1,255))))
 
         reactor = self.buildReactor()
 

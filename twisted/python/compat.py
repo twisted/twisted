@@ -426,6 +426,26 @@ except ImportError:
     FileType = IOBase
 
 
+if _PY3:
+    def iteritems(d):
+        return d.items()
+
+    def items(d):
+        return list(d.items())
+
+    xrange = range
+
+else:
+    def iteritems(d):
+        return d.iteritems()
+
+    def items(d):
+        return d.items()
+
+    xrange = xrange
+
+
+
 __all__ = [
     "reraise",
     "execfile",

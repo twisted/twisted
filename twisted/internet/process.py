@@ -29,7 +29,7 @@ from zope.interface import implementer
 
 from twisted.python import log, failure
 from twisted.python.util import switchUID
-from twisted.python.compat import NativeStringIO, _PY3
+from twisted.python.compat import NativeStringIO, _PY3, items, xrange
 from twisted.internet import fdesc, abstract, error
 from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
 from twisted.internet._baseprocess import BaseProcess
@@ -360,7 +360,7 @@ class _BaseProcess(BaseProcess, object):
         # that responds to signals normally, we need to reset our
         # child process's signal handling (just) after we fork and
         # before we execvpe.
-        for signalnum in range(1, signal.NSIG):
+        for signalnum in xrange(1, signal.NSIG):
             if signal.getsignal(signalnum) == signal.SIG_IGN:
                 # Reset signal handling to the default
                 signal.signal(signalnum, signal.SIG_DFL)
@@ -433,7 +433,7 @@ class _BaseProcess(BaseProcess, object):
                             stderr.write(tb)
                         stderr.flush()
 
-                        for fd in range(3):
+                        for fd in xrange(3):
                             os.close(fd)
                     except:
                         pass # make *sure* the child terminates
@@ -587,7 +587,7 @@ class _FDDetector(object):
             # OS-X should get the /dev/fd implementation instead, so mostly
             # this check probably isn't necessary.
             maxfds = min(1024, resource.getrlimit(resource.RLIMIT_NOFILE)[1])
-        return range(maxfds)
+        return xrange(maxfds)
 
 
 
@@ -671,7 +671,7 @@ class Process(_BaseProcess):
         # fdmap.keys() are filenos of pipes that are used by the child.
         fdmap = {} # maps childFD to parentFD
         try:
-            for childFD, target in list(childFDs.items()):
+            for childFD, target in items(childFDs):
                 if debug: print("[%d]" % childFD, target)
                 if target == "r":
                     # we need a pipe that the parent can read from
@@ -702,7 +702,7 @@ class Process(_BaseProcess):
         self.proto = proto
 
         # arrange for the parent-side pipes to be read and written
-        for childFD, parentFD in list(helpers.items()):
+        for childFD, parentFD in items(helpers):
             os.close(fdmap[childFD])
             if childFDs[childFD] == "r":
                 reader = self.processReaderFactory(reactor, self, childFD,
@@ -797,7 +797,7 @@ class Process(_BaseProcess):
                     if debug: print("os.dup(%d) -> %d" % (child, newtarget),
                                     file=errfd)
                     os.close(child) # close the original
-                    for c, p in list(fdmap.items()):
+                    for c, p in items(fdmap):
                         if p == child:
                             fdmap[c] = newtarget # update all pointers
                 # now it should be available
@@ -1020,7 +1020,7 @@ class PTYProcess(abstract.FileDescriptor, _BaseProcess):
         os.setsid()
         fcntl.ioctl(slavefd, termios.TIOCSCTTY, '')
 
-        for fd in range(3):
+        for fd in xrange(3):
             if fd != slavefd:
                 os.close(fd)
 
