@@ -33,6 +33,7 @@ from twisted.trial.unittest import TestCase, SkipTest
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.test.test_twisted import SetAsideModule
 from twisted.internet.interfaces import IReactorProcess
+from twisted.python.compat import _PY3
 
 # Skip all tests if gi is unavailable:
 if gireactor is None:
