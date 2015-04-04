@@ -38,6 +38,9 @@ from twisted.internet.interfaces import IReactorProcess
 if gireactor is None:
     skip = "gtk3/gi not importable"
 
+exe = FilePath(sys.executable)._asBytesPath()
+
+
 
 class GApplicationRegistration(ReactorBuilder, TestCase):
     """
@@ -207,8 +210,7 @@ class PygtkCompatibilityTests(TestCase):
                 result.callback(self.data)
 
         path = FilePath(__file__).sibling(b"process_gireactornocompat.py").path
-        reactor.spawnProcess(Stdout(), sys.executable, [sys.executable, path],
-                             env=os.environ)
+        reactor.spawnProcess(Stdout(), exe, [exe, path], env=os.environ)
         result.addCallback(self.assertEqual, b"success")
         return result
 

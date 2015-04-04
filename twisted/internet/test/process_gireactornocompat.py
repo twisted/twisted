@@ -1,3 +1,5 @@
+from __future__ import division, absolute_import
+
 import sys
 
 # Override theSystemPath so it throws KeyError on gi.pygtkcompat:
@@ -19,4 +21,3 @@ except ImportError:
     sys.stdout.write("success")
 else:
     sys.stdout.write("failure: %s was imported" % (gobject.__path__,))
-
