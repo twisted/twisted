@@ -2104,11 +2104,14 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
     authentication if a secret is provided.
 
     @param smtphost: The host the message should be sent to.
+    @type smtphost: L{bytes}
 
     @param from_addr: The (envelope) address sending this mail.
+    @type from_addr: L{bytes}
 
     @param to_addrs: A list of addresses to send this mail to.  A string will
         be treated as a list of one address.
+    @type to_addr: L{list} of L{bytes} or L{bytes}
 
     @param msg: The message, including headers, either as a file or a string.
         File-like objects need to support read() and close(). Lines must be
@@ -2120,15 +2123,23 @@ def sendmail(smtphost, from_addr, to_addrs, msg, senderDomainName=None, port=25,
     @param senderDomainName: Name by which to identify. If None, try to pick
         something sane (but this depends on external configuration and may not
         succeed).
+    @type senderDomainName: L{bytes}
 
     @param port: Remote port to which to connect.
+    @type port: L{int}
 
     @param username: The username to use, if wanting to authenticate.
+    @type username: L{bytes}
+
     @param password: The secret to use, if wanting to authenticate. If you do
         not specify this, SMTP authentication will not occur.
+    @type password: L{bytes}
 
     @param requireTransportSecurity: Whether or not STARTTLS is required.
+    @type requireTransportSecurity: L{bool}
+
     @param requireAuthentication: Whether or not authentication is required.
+    @type requireAuthentication: L{bool}
 
     @param reactor: The L{reactor} used to make the TCP connection.
 
