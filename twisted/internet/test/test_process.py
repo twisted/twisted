@@ -336,9 +336,9 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         def f():
             try:
                 os.popen('%s -c "import time; time.sleep(0.1)"' %
-                    (exe.decode(),))
+                    (exe.decode('ascii'),))
                 f2 = os.popen('%s -c "import time; time.sleep(0.5); print(\'Foo\')"' %
-                    (exe.decode(),))
+                    (exe.decode('ascii'),))
                 # The read call below will blow up with an EINTR from the
                 # SIGCHLD from the first process exiting if we install a
                 # SIGCHLD handler without SA_RESTART.  (which we used to do)
@@ -726,9 +726,9 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         SHEBANG_OUTPUT = b'this is the shebang output'
 
         scriptFile = self.makeSourceFile([
-                "#!%s" % (exe.decode(),),
+                "#!%s" % (exe.decode('ascii'),),
                 "import sys",
-                "sys.stdout.write('%s')" % (SHEBANG_OUTPUT.decode(),),
+                "sys.stdout.write('%s')" % (SHEBANG_OUTPUT.decode('ascii'),),
                 "sys.stdout.flush()"])
         os.chmod(scriptFile, 0o700)
 
