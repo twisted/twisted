@@ -12,6 +12,7 @@ import sys, os, unittest, tempfile
 testModules = []
 extraArguments = []
 installed = False
+twistedPath = os.path.abspath(os.path.dirname(os.path.dirname(sys.argv[0])))
 
 for argument in sys.argv[1:]:
     if argument.startswith('-'):
@@ -40,10 +41,8 @@ if not testModules:
             exec(code, modules)
         testModules = modules["testModules"]
 
-
 if not installed:
     # Make sure checkout's code is used:
-    twistedPath = os.path.abspath(os.path.dirname(os.path.dirname(sys.argv[0])))
     sys.path.insert(0, twistedPath)
 
 # Avoid dumping trash all over the place.
