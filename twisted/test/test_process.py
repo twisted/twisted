@@ -39,25 +39,14 @@ from io import BytesIO as StringIO
 
 from twisted.python.log import msg
 from twisted.internet import reactor, protocol, error, interfaces, defer
+from twisted.internet.abstract import _concatenate
 from twisted.trial import unittest
 from twisted.python import util, runtime, procutils
 from twisted.python.compat import _PY3, networkString
 from twisted.python.filepath import FilePath, _asFilesystemBytes
 
-if _PY3:
-    def _concatenate(bObj, offset, bArray):
-        # Python 3 lacks the buffer() builtin and the other primitives don't
-        # help in this case.  Just do the copy.  Perhaps later these buffers can
-        # be joined and FileDescriptor can use writev().  Or perhaps bytearrays
-        # would help.
-        return bObj[offset:] + b"".join(bArray)
-else:
-    def _concatenate(bObj, offset, bArray):
-        # Avoid one extra string copy by using a buffer to limit what we include
-        # in the result.
-        return buffer(bObj, offset) + b"".join(bArray)
 
-
+# Get the current Python executable as a bytestring.
 exe = FilePath(sys.executable)._asBytesPath()
 CONCURRENT_PROCESS_TEST_COUNT = 25
 

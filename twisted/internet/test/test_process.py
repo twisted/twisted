@@ -12,7 +12,6 @@ __metaclass__ = type
 import os, io, sys, signal, threading
 
 import twisted
-
 from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
@@ -25,6 +24,7 @@ from twisted.internet.defer import Deferred, succeed
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, ProcessTerminated
 
+# Get the current Python executable as a bytestring.
 exe = FilePath(sys.executable)._asBytesPath()
 twistedRoot = FilePath(twisted.__file__).parent().parent()
 
