@@ -11,12 +11,14 @@ __metaclass__ = type
 
 import os, io, sys, signal, threading
 
+import twisted
+
 from twisted.trial.unittest import TestCase
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.log import msg, err
 from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath, _asFilesystemBytes
-from twisted.python.compat import networkString, _PY3, xrange, iteritems, items
+from twisted.python.compat import networkString, _PY3, xrange, items
 from twisted.internet import utils
 from twisted.internet.interfaces import IReactorProcess, IProcessTransport
 from twisted.internet.defer import Deferred, succeed
@@ -24,6 +26,7 @@ from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.error import ProcessDone, ProcessTerminated
 
 exe = FilePath(sys.executable)._asBytesPath()
+twistedRoot = FilePath(twisted.__file__).parent().parent()
 
 _uidgidSkip = None
 if platform.isWindows():
@@ -35,18 +38,6 @@ else:
     from twisted.internet import process
     if os.getuid() != 0:
         _uidgidSkip = "Cannot change UID/GID except as root"
-
-
-
-def _bytesEnviron():
-
-    if _PY3:
-        new = {}
-        for key, val in iteritems(os.environ):
-            new[networkString(key)] = networkString(val)
-        return new
-
-    return os.environ
 
 
 class _ShutdownCallbackProcessProtocol(ProcessProtocol):
@@ -361,15 +352,12 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         # To test this, we are going to open a file descriptor in the parent
         # that is unlikely to be opened in the child, then verify that it's not
         # open in the child.
-
-        here = FilePath(__file__)
-        top = here.parent().parent().parent().parent()
         source = networkString("""
 import sys
 sys.path.insert(0, '{0}')
 from twisted.internet import process
 sys.stdout.write(repr(process._listOpenFDs()))
-sys.stdout.flush()""".format(top.path))
+sys.stdout.flush()""".format(twistedRoot.path))
 
         r, w = os.pipe()
         self.addCleanup(os.close, r)
@@ -411,8 +399,7 @@ sys.stdout.flush()""".format(top.path))
 
         reactor.callWhenRunning(
             reactor.spawnProcess, GatheringProtocol(), exe,
-            [exe, b"-Wignore", b"-c", source],
-            env=_bytesEnviron(), usePTY=self.usePTY)
+            [exe, b"-Wignore", b"-c", source], usePTY=self.usePTY)
 
         self.runReactor(reactor)
         reportedChildFDs = set(eval(output.getvalue()))
