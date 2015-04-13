@@ -230,16 +230,12 @@ class FileLogObserverTests(TestCase):
         A L{FileLogObserver} returned by L{jsonFileLogObserver} is an
         L{ILogObserver}.
         """
-        try:
-            fileHandle = StringIO()
+        with StringIO() as fileHandle:
             observer = jsonFileLogObserver(fileHandle)
             try:
                 verifyObject(ILogObserver, observer)
             except BrokenMethodImplementation as e:
                 self.fail(e)
-
-        finally:
-            fileHandle.close()
 
 
     def assertObserverWritesJSON(self, **kwargs):
@@ -256,8 +252,7 @@ class FileLogObserverTests(TestCase):
         """
         recordSeparator = kwargs.get("recordSeparator", u"\x1e")
 
-        try:
-            fileHandle = StringIO()
+        with StringIO() as fileHandle:
             observer = jsonFileLogObserver(fileHandle, **kwargs)
             event = dict(x=1)
             observer(event)
@@ -265,9 +260,6 @@ class FileLogObserverTests(TestCase):
                 fileHandle.getvalue(),
                 u'{0}{{"x": 1}}\n'.format(recordSeparator)
             )
-
-        finally:
-            fileHandle.close()
 
 
     def test_observeWritesDefaultRecordSeparator(self):
