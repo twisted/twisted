@@ -43,7 +43,7 @@ def savedJSONInvariants(testCase, savedJSON):
     @raise AssertionError: If any of the preconditions fail.
     """
     testCase.assertIsInstance(savedJSON, unicode)
-    testCase.assertEquals(savedJSON.count("\n"), 0)
+    testCase.assertEqual(savedJSON.count("\n"), 0)
     return savedJSON
 
 
@@ -70,7 +70,7 @@ class SaveLoadTests(TestCase):
         """
         Saving and loading an empty dictionary results in an empty dictionary.
         """
-        self.assertEquals(eventFromJSON(self.savedEventJSON({})), {})
+        self.assertEqual(eventFromJSON(self.savedEventJSON({})), {})
 
 
     def test_saveLoad(self):
@@ -80,7 +80,7 @@ class SaveLoadTests(TestCase):
         though, all dictionary keys must be L{unicode} and any non-L{unicode}
         keys will be converted.
         """
-        self.assertEquals(
+        self.assertEqual(
             eventFromJSON(self.savedEventJSON({1: 2, u"3": u"4"})),
             {u"1": 2, u"3": u"4"}
         )
@@ -91,7 +91,7 @@ class SaveLoadTests(TestCase):
         Saving and loading an object which cannot be represented in JSON will
         result in a placeholder.
         """
-        self.assertEquals(
+        self.assertEqual(
             eventFromJSON(self.savedEventJSON({u"1": 2, u"3": object()})),
             {u"1": 2, u"3": {u"unpersistable": True}}
         )
@@ -101,7 +101,7 @@ class SaveLoadTests(TestCase):
         """
         Non-ASCII keys and values can be saved and loaded.
         """
-        self.assertEquals(
+        self.assertEqual(
             eventFromJSON(self.savedEventJSON(
                 {u"\u1234": u"\u4321", u"3": object()}
             )),
@@ -126,7 +126,7 @@ class SaveLoadTests(TestCase):
             # much we can do about that.  Let's make sure that we don't get an
             # error, though.
             inputEvent.update({b"skipped": "okay"})
-        self.assertEquals(
+        self.assertEqual(
             eventFromJSON(self.savedEventJSON(inputEvent)),
             {u"hello": asbytes(range(255)).decode("charmap")}
         )
@@ -151,7 +151,7 @@ class SaveLoadTests(TestCase):
             "object": Reprable(7)
         }
         outputEvent = eventFromJSON(self.savedEventJSON(inputEvent))
-        self.assertEquals(formatEvent(outputEvent), "reprable 7")
+        self.assertEqual(formatEvent(outputEvent), "reprable 7")
 
 
     def test_extractingFieldsPostLoad(self):
@@ -165,7 +165,7 @@ class SaveLoadTests(TestCase):
 
         inputEvent = dict(log_format="{object.value}", object=Obj())
         loadedEvent = eventFromJSON(self.savedEventJSON(inputEvent))
-        self.assertEquals(extractField("object.value", loadedEvent), 345)
+        self.assertEqual(extractField("object.value", loadedEvent), 345)
 
         # The behavior of extractField is consistent between pre-persistence
         # and post-persistence events, although looking up the key directly
@@ -190,7 +190,7 @@ class SaveLoadTests(TestCase):
         if sys.exc_info()[0] is not None:
             # Make sure we don't get the same Failure by accident.
             sys.exc_clear()
-        self.assertEquals(len(events), 1)
+        self.assertEqual(len(events), 1)
         loaded = eventFromJSON(self.savedEventJSON(events[0]))['log_failure']
         self.assertIsInstance(loaded, Failure)
         self.assertTrue(loaded.check(ZeroDivisionError))
@@ -216,7 +216,7 @@ class SaveLoadTests(TestCase):
             '{"log_level": {"name": "other", '
             '"__class_uuid__": "02E59486-F24D-46AD-8224-3ACDF2A5732A"}}'
         )
-        self.assertEquals(loadedEvent, dict(log_level=None))
+        self.assertEqual(loadedEvent, dict(log_level=None))
 
 
 
@@ -261,7 +261,7 @@ class FileLogObserverTests(TestCase):
             observer = jsonFileLogObserver(fileHandle, **kwargs)
             event = dict(x=1)
             observer(event)
-            self.assertEquals(
+            self.assertEqual(
                 fileHandle.getvalue(),
                 u'{0}{{"x": 1}}\n'.format(recordSeparator)
             )
@@ -324,8 +324,8 @@ class LogFileReaderTests(TestCase):
         """
         events = eventsFromJSONLogFile(fileHandle, **kwargs)
 
-        self.assertEquals(next(events), {u"x": 1})
-        self.assertEquals(next(events), {u"y": 2})
+        self.assertEqual(next(events), {u"x": 1})
+        self.assertEqual(next(events), {u"y": 2})
         self.assertRaises(StopIteration, next, events)  # No more events
 
 
@@ -340,7 +340,7 @@ class LogFileReaderTests(TestCase):
                 u'\x1e{"y": 2}\n'
             )
             self._readEvents(fileHandle)
-            self.assertEquals(len(self.errorEvents), 0)
+            self.assertEqual(len(self.errorEvents), 0)
 
         finally:
             fileHandle.close()
@@ -357,7 +357,7 @@ class LogFileReaderTests(TestCase):
                 u'{"y": 2}\n'
             )
             self._readEvents(fileHandle)
-            self.assertEquals(len(self.errorEvents), 0)
+            self.assertEqual(len(self.errorEvents), 0)
 
         finally:
             fileHandle.close()
@@ -375,7 +375,7 @@ class LogFileReaderTests(TestCase):
                 u'\x08{"y": 2}\n'
             )
             self._readEvents(fileHandle, recordSeparator=u"\x08")
-            self.assertEquals(len(self.errorEvents), 0)
+            self.assertEqual(len(self.errorEvents), 0)
 
         finally:
             fileHandle.close()
@@ -392,7 +392,7 @@ class LogFileReaderTests(TestCase):
             )
             # Use a buffer size smaller than the event text.
             self._readEvents(fileHandle, bufferSize=1)
-            self.assertEquals(len(self.errorEvents), 0)
+            self.assertEqual(len(self.errorEvents), 0)
 
         finally:
             fileHandle.close()
@@ -409,16 +409,16 @@ class LogFileReaderTests(TestCase):
             )
             events = eventsFromJSONLogFile(fileHandle)
 
-            self.assertEquals(next(events), {u"y": 2})
+            self.assertEqual(next(events), {u"y": 2})
             self.assertRaises(StopIteration, next, events)  # No more events
 
             # We should have logged the lost record
-            self.assertEquals(len(self.errorEvents), 1)
-            self.assertEquals(
+            self.assertEqual(len(self.errorEvents), 1)
+            self.assertEqual(
                 self.errorEvents[0]["log_format"],
                 u"Unable to read truncated JSON record: {record!r}"
             )
-            self.assertEquals(self.errorEvents[0]["record"], b'{"x": 1')
+            self.assertEqual(self.errorEvents[0]["record"], b'{"x": 1')
 
         finally:
             fileHandle.close()
@@ -434,9 +434,9 @@ class LogFileReaderTests(TestCase):
             fileHandle = StringIO(u'\x1e{"currency": "\u20ac"}\n')
             events = eventsFromJSONLogFile(fileHandle)
 
-            self.assertEquals(next(events), {u"currency": u"\u20ac"})
+            self.assertEqual(next(events), {u"currency": u"\u20ac"})
             self.assertRaises(StopIteration, next, events)  # No more events
-            self.assertEquals(len(self.errorEvents), 0)
+            self.assertEqual(len(self.errorEvents), 0)
 
         finally:
             fileHandle.close()
@@ -453,9 +453,9 @@ class LogFileReaderTests(TestCase):
             events = eventsFromJSONLogFile(fileHandle)
 
             # The Euro currency sign is u"\u20ac"
-            self.assertEquals(next(events), {u"currency": u"\u20ac"})
+            self.assertEqual(next(events), {u"currency": u"\u20ac"})
             self.assertRaises(StopIteration, next, events)  # No more events
-            self.assertEquals(len(self.errorEvents), 0)
+            self.assertEqual(len(self.errorEvents), 0)
 
         finally:
             fileHandle.close()
@@ -473,9 +473,9 @@ class LogFileReaderTests(TestCase):
             fileHandle = BytesIO(b'\x1e{"x": "\xe2\x82\xac"}\n')
             events = eventsFromJSONLogFile(fileHandle, bufferSize=8)
 
-            self.assertEquals(next(events), {u"x": u"\u20ac"})  # Got unicode
+            self.assertEqual(next(events), {u"x": u"\u20ac"})  # Got unicode
             self.assertRaises(StopIteration, next, events)  # No more events
-            self.assertEquals(len(self.errorEvents), 0)
+            self.assertEqual(len(self.errorEvents), 0)
 
         finally:
             fileHandle.close()
@@ -494,16 +494,16 @@ class LogFileReaderTests(TestCase):
             )
             events = eventsFromJSONLogFile(fileHandle)
 
-            self.assertEquals(next(events), {u"y": 2})
+            self.assertEqual(next(events), {u"y": 2})
             self.assertRaises(StopIteration, next, events)  # No more events
 
             # We should have logged the lost record
-            self.assertEquals(len(self.errorEvents), 1)
-            self.assertEquals(
+            self.assertEqual(len(self.errorEvents), 1)
+            self.assertEqual(
                 self.errorEvents[0]["log_format"],
                 u"Unable to decode UTF-8 for JSON record: {record!r}"
             )
-            self.assertEquals(
+            self.assertEqual(
                 self.errorEvents[0]["record"],
                 b'{"x": "\xe2\xac"}\n'
             )
@@ -523,16 +523,16 @@ class LogFileReaderTests(TestCase):
             )
             events = eventsFromJSONLogFile(fileHandle)
 
-            self.assertEquals(next(events), {u"y": 2})
+            self.assertEqual(next(events), {u"y": 2})
             self.assertRaises(StopIteration, next, events)  # No more events
 
             # We should have logged the lost record
-            self.assertEquals(len(self.errorEvents), 1)
-            self.assertEquals(
+            self.assertEqual(len(self.errorEvents), 1)
+            self.assertEqual(
                 self.errorEvents[0]["log_format"],
                 u"Unable to read JSON record: {record!r}"
             )
-            self.assertEquals(self.errorEvents[0]["record"], b'{"x": }\n')
+            self.assertEqual(self.errorEvents[0]["record"], b'{"x": }\n')
 
         finally:
             fileHandle.close()
@@ -551,12 +551,12 @@ class LogFileReaderTests(TestCase):
             self.assertRaises(StopIteration, next, events)  # No more events
 
             # We should have logged the lost record
-            self.assertEquals(len(self.errorEvents), 1)
-            self.assertEquals(
+            self.assertEqual(len(self.errorEvents), 1)
+            self.assertEqual(
                 self.errorEvents[0]["log_format"],
                 u"Unable to read JSON record: {record!r}"
             )
-            self.assertEquals(
+            self.assertEqual(
                 self.errorEvents[0]["record"],
                 b'{"x": 1}\n{"y": 2}\n'
             )
@@ -580,8 +580,8 @@ class LogFileReaderTests(TestCase):
             fileHandle.seek(0)
             events = eventsFromJSONLogFile(fileHandle)
 
-            self.assertEquals(tuple(events), (event,))
-            self.assertEquals(len(self.errorEvents), 0)
+            self.assertEqual(tuple(events), (event,))
+            self.assertEqual(len(self.errorEvents), 0)
 
         finally:
             fileHandle.close()

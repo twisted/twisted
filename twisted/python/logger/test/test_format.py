@@ -54,13 +54,13 @@ class FormattingTests(unittest.TestCase):
             self.assertIs(type(result), unicode)
             return result
 
-        self.assertEquals(u"", format(b""))
-        self.assertEquals(u"", format(u""))
-        self.assertEquals(u"abc", format("{x}", x="abc"))
-        self.assertEquals(u"no, yes.",
+        self.assertEqual(u"", format(b""))
+        self.assertEqual(u"", format(u""))
+        self.assertEqual(u"abc", format("{x}", x="abc"))
+        self.assertEqual(u"no, yes.",
                           format("{not_called}, {called()}.",
                                  not_called="no", called=lambda: "yes"))
-        self.assertEquals(u"S\xe1nchez", format(b"S\xc3\xa1nchez"))
+        self.assertEqual(u"S\xe1nchez", format(b"S\xc3\xa1nchez"))
         badResult = format(b"S\xe1nchez")
         self.assertIn(u"Unable to format event", badResult)
         maybeResult = format(b"S{a!s}nchez", a=b"\xe1")
@@ -83,7 +83,7 @@ class FormattingTests(unittest.TestCase):
         event = dict(foo=1, bar=2)
         result = formatEvent(event)
 
-        self.assertEquals(u"", result)
+        self.assertEqual(u"", result)
 
 
     def test_formatEventWeirdFormat(self):
@@ -179,8 +179,8 @@ class TimeFormattingTests(unittest.TestCase):
             localDST = mktime((2006, 6, 30, 0, 0, 0, 4, 181, 1))
             localSTD = mktime((2007, 1, 31, 0, 0, 0, 2, 31, 0))
 
-            self.assertEquals(formatTime(localDST), expectedDST)
-            self.assertEquals(formatTime(localSTD), expectedSTD)
+            self.assertEqual(formatTime(localDST), expectedDST)
+            self.assertEqual(formatTime(localSTD), expectedSTD)
 
         # UTC
         testForTimeZone(
@@ -215,8 +215,8 @@ class TimeFormattingTests(unittest.TestCase):
         """
         If C{when} argument is C{None}, we should get the default output.
         """
-        self.assertEquals(formatTime(None), u"-")
-        self.assertEquals(formatTime(None, default=u"!"), u"!")
+        self.assertEqual(formatTime(None), u"-")
+        self.assertEqual(formatTime(None, default=u"!"), u"!")
 
 
     def test_formatTimeWithNoFormat(self):
@@ -224,8 +224,8 @@ class TimeFormattingTests(unittest.TestCase):
         If C{timeFormat} argument is C{None}, we should get the default output.
         """
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        self.assertEquals(formatTime(t, timeFormat=None), u"-")
-        self.assertEquals(formatTime(t, timeFormat=None, default=u"!"), u"!")
+        self.assertEqual(formatTime(t, timeFormat=None), u"-")
+        self.assertEqual(formatTime(t, timeFormat=None, default=u"!"), u"!")
 
 
     def test_formatTimeWithAlternateTimeFormat(self):
@@ -233,14 +233,14 @@ class TimeFormattingTests(unittest.TestCase):
         Alternate time format in output.
         """
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
-        self.assertEquals(formatTime(t, timeFormat="%Y/%W"), u"2013/38")
+        self.assertEqual(formatTime(t, timeFormat="%Y/%W"), u"2013/38")
 
 
     def test_formatTime_f(self):
         """
         "%f" supported in time format.
         """
-        self.assertEquals(formatTime(1.23456, timeFormat="%f"), u"234560")
+        self.assertEqual(formatTime(1.23456, timeFormat="%f"), u"234560")
 
 
 
@@ -265,7 +265,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
 
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
         event = dict(log_format=u"XYZZY", log_time=t)
-        self.assertEquals(
+        self.assertEqual(
             formatEventAsClassicLogText(event),
             u"2013-09-24T11:40:47+0000 [-#-] XYZZY\n",
         )
@@ -278,7 +278,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         """
         formatTime = lambda t: u"__{0}__".format(t)
         event = dict(log_format=u"XYZZY", log_time=12345)
-        self.assertEquals(
+        self.assertEqual(
             formatEventAsClassicLogText(event, formatTime=formatTime),
             u"__12345__ [-#-] XYZZY\n",
         )
@@ -289,7 +289,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         Namespace is first part of second field.
         """
         event = dict(log_format=u"XYZZY", log_namespace="my.namespace")
-        self.assertEquals(
+        self.assertEqual(
             formatEventAsClassicLogText(event),
             u"- [my.namespace#-] XYZZY\n",
         )
@@ -300,7 +300,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         Level is second part of second field.
         """
         event = dict(log_format=u"XYZZY", log_level=LogLevel.warn)
-        self.assertEquals(
+        self.assertEqual(
             formatEventAsClassicLogText(event),
             u"- [-#warn] XYZZY\n",
         )
@@ -311,7 +311,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         System is second field.
         """
         event = dict(log_format=u"XYZZY", log_system=u"S.Y.S.T.E.M.")
-        self.assertEquals(
+        self.assertEqual(
             formatEventAsClassicLogText(event),
             u"- [S.Y.S.T.E.M.] XYZZY\n",
         )
@@ -327,7 +327,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
             log_level=LogLevel.warn,
             log_system=u"S.Y.S.T.E.M.",
         )
-        self.assertEquals(
+        self.assertEqual(
             formatEventAsClassicLogText(event),
             u"- [S.Y.S.T.E.M.] XYZZY\n",
         )
@@ -338,7 +338,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         System is not supplanted by namespace and level.
         """
         event = dict(log_format=u"XYZZY", log_system=Unformattable())
-        self.assertEquals(
+        self.assertEqual(
             formatEventAsClassicLogText(event),
             u"- [UNFORMATTABLE] XYZZY\n",
         )
@@ -349,7 +349,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         Formatted event is last field.
         """
         event = dict(log_format=u"id:{id}", id="123")
-        self.assertEquals(
+        self.assertEqual(
             formatEventAsClassicLogText(event),
             u"- [-#-] id:123\n",
         )
@@ -382,7 +382,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         If the formatted event has newlines, indent additional lines.
         """
         event = dict(log_format=u'XYZZY\nA hollow voice says:\n"Plugh"')
-        self.assertEquals(
+        self.assertEqual(
             formatEventAsClassicLogText(event),
             u'- [-#-] XYZZY\n\tA hollow voice says:\n\t"Plugh"\n',
         )
@@ -401,14 +401,14 @@ class FormatFieldTests(unittest.TestCase):
         to mean that the format key ought to be I{called} rather than
         stringified.
         """
-        self.assertEquals(
+        self.assertEqual(
             formatWithCall(
                 u"Hello, {world}. {callme()}.",
                 dict(world="earth", callme=lambda: "maybe")
             ),
             "Hello, earth. maybe."
         )
-        self.assertEquals(
+        self.assertEqual(
             formatWithCall(
                 u"Hello, {repr()!r}.",
                 dict(repr=lambda: "repr")

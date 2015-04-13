@@ -35,7 +35,7 @@ def compareEvents(test, actualEvents, expectedEvents):
     @type expected: L{list} of L{dict}
     """
     if len(actualEvents) != len(expectedEvents):
-        test.assertEquals(actualEvents, expectedEvents)
+        test.assertEqual(actualEvents, expectedEvents)
     allMergedKeys = set()
 
     for event in expectedEvents:
@@ -49,7 +49,7 @@ def compareEvents(test, actualEvents, expectedEvents):
         return copy
 
     simplifiedActual = [simplify(event) for event in actualEvents]
-    test.assertEquals(simplifiedActual, expectedEvents)
+    test.assertEqual(simplifiedActual, expectedEvents)
 
 
 
@@ -128,8 +128,8 @@ class LogBeginnerTests(unittest.TestCase):
         self.beginner.beginLoggingTo((o1, o2))
         self.publisher(event)
 
-        self.assertEquals([event], events1)
-        self.assertEquals([event], events2)
+        self.assertEqual([event], events1)
+        self.assertEqual([event], events2)
 
 
     def test_beginLoggingTo_bufferedEvents(self):
@@ -148,8 +148,8 @@ class LogBeginnerTests(unittest.TestCase):
         self.publisher(event)  # Before beginLoggingTo; this is buffered
         self.beginner.beginLoggingTo((o1, o2))
 
-        self.assertEquals([event], events1)
-        self.assertEquals([event], events2)
+        self.assertEqual([event], events1)
+        self.assertEqual([event], events2)
 
 
     def test_beginLoggingTo_twice(self):
@@ -193,7 +193,7 @@ class LogBeginnerTests(unittest.TestCase):
         log = Logger(observer=self.publisher)
         log.info('ignore this')
         log.critical('a critical {message}', message="message")
-        self.assertEquals(self.errorStream.getvalue(), u'a critical message\n')
+        self.assertEqual(self.errorStream.getvalue(), u'a critical message\n')
 
 
     def test_criticalLoggingStops(self):
@@ -204,7 +204,7 @@ class LogBeginnerTests(unittest.TestCase):
         log = Logger(observer=self.publisher)
         self.beginner.beginLoggingTo(())
         log.critical("another critical message")
-        self.assertEquals(self.errorStream.getvalue(), u'')
+        self.assertEqual(self.errorStream.getvalue(), u'')
 
 
     def test_beginLoggingTo_redirectStandardIO(self):
@@ -253,8 +253,8 @@ class LogBeginnerTests(unittest.TestCase):
 
         x = []
         self.beginner.beginLoggingTo([x.append])
-        self.assertEquals(self.sysModule.stdout.encoding, "shift-JIS")
-        self.assertEquals(self.sysModule.stderr.encoding, "big5")
+        self.assertEqual(self.sysModule.stdout.encoding, "shift-JIS")
+        self.assertEqual(self.sysModule.stderr.encoding, "big5")
 
         self.sysModule.stdout.write(b"\x97\x9B\n")
         self.sysModule.stderr.write(b"\xBC\xFC\n")
@@ -280,7 +280,7 @@ class LogBeginnerTests(unittest.TestCase):
         self.warningsModule.showwarning(
             "yet another", DeprecationWarning, __file__, 3, file=f
         )
-        self.assertEquals(
+        self.assertEqual(
             self.warningsModule.warnings,
             [
                 ("a message", DeprecationWarning, __file__, 1, None, None),

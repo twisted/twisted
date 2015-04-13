@@ -49,7 +49,7 @@ class FileLogObserverTests(TestCase):
             observer = FileLogObserver(fileHandle, lambda e: unicode(e))
             event = dict(x=1)
             observer(event)
-            self.assertEquals(fileHandle.getvalue(), unicode(event))
+            self.assertEqual(fileHandle.getvalue(), unicode(event))
 
         finally:
             fileHandle.close()
@@ -71,7 +71,7 @@ class FileLogObserverTests(TestCase):
             observer = FileLogObserver(fileHandle, lambda e: what)
             event = dict(x=1)
             observer(event)
-            self.assertEquals(fileHandle.writes, count)
+            self.assertEqual(fileHandle.writes, count)
 
         finally:
             fileHandle.close()
@@ -103,7 +103,7 @@ class FileLogObserverTests(TestCase):
             observer = FileLogObserver(fileHandle, lambda e: unicode(e))
             event = dict(x=1)
             observer(event)
-            self.assertEquals(fileHandle.flushes, 1)
+            self.assertEqual(fileHandle.flushes, 1)
 
         finally:
             fileHandle.close()
@@ -173,7 +173,7 @@ class TextFileLogObserverTests(TestCase):
         try:
             observer = textFileLogObserver(fileHandle, timeFormat=u"%f")
             observer(dict(log_format=u"XYZZY", log_time=1.23456))
-            self.assertEquals(fileHandle.getvalue(), u"234560 [-#-] XYZZY\n")
+            self.assertEqual(fileHandle.getvalue(), u"234560 [-#-] XYZZY\n")
         finally:
             fileHandle.close()
 

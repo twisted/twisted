@@ -29,7 +29,7 @@ class UtilTests(unittest.TestCase):
 
         def o2(e):
             self.assertIs(e, event)
-            self.assertEquals(
+            self.assertEqual(
                 e["log_trace"],
                 [
                     (publisher, o1),
@@ -40,7 +40,7 @@ class UtilTests(unittest.TestCase):
 
         def o3(e):
             self.assertIs(e, event)
-            self.assertEquals(
+            self.assertEqual(
                 e["log_trace"],
                 [
                     (publisher, o1),
@@ -76,7 +76,7 @@ class UtilTests(unittest.TestCase):
         def testObserver(e):
             self.assertIs(e, event)
             trace = formatTrace(e["log_trace"])
-            self.assertEquals(
+            self.assertEqual(
                 trace,
                 (
                     u"{root} ({root.name})\n"

@@ -43,7 +43,7 @@ class LimitedHistoryLogObserverTests(unittest.TestCase):
 
         outEvents = []
         observer.replayTo(outEvents.append)
-        self.assertEquals(events, outEvents)
+        self.assertEqual(events, outEvents)
 
 
     def test_limit(self):
@@ -59,4 +59,4 @@ class LimitedHistoryLogObserverTests(unittest.TestCase):
             observer(event)
         outEvents = []
         observer.replayTo(outEvents.append)
-        self.assertEquals(events[-size:], outEvents)
+        self.assertEqual(events[-size:], outEvents)

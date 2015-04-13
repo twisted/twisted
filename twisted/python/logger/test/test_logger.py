@@ -65,7 +65,7 @@ class LoggerTests(unittest.TestCase):
         """
         namespace = "bleargh"
         log = Logger(namespace)
-        self.assertEquals(repr(log), "<Logger {0}>".format(repr(namespace)))
+        self.assertEqual(repr(log), "<Logger {0}>".format(repr(namespace)))
 
 
     def test_namespace_default(self):
@@ -73,7 +73,7 @@ class LoggerTests(unittest.TestCase):
         Default namespace is module name.
         """
         log = Logger()
-        self.assertEquals(log.namespace, __name__)
+        self.assertEqual(log.namespace, __name__)
 
 
     def test_namespace_attribute(self):
@@ -86,8 +86,8 @@ class LoggerTests(unittest.TestCase):
             obj.__module__,
             obj.__class__.__name__,
         )
-        self.assertEquals(obj.log.namespace, expectedNamespace)
-        self.assertEquals(LogComposedObject.log.namespace, expectedNamespace)
+        self.assertEqual(obj.log.namespace, expectedNamespace)
+        self.assertEqual(LogComposedObject.log.namespace, expectedNamespace)
         self.assertIs(LogComposedObject.log.source, LogComposedObject)
         self.assertIs(obj.log.source, obj)
         self.assertIs(Logger().source, None)
@@ -103,8 +103,8 @@ class LoggerTests(unittest.TestCase):
             log = Logger(observer=observed.append)
 
         MyObject.log.info("hello")
-        self.assertEquals(len(observed), 1)
-        self.assertEquals(observed[0]['log_format'], "hello")
+        self.assertEqual(len(observed), 1)
+        self.assertEqual(observed[0]['log_format'], "hello")
 
 
     def test_sourceAvailableForFormatting(self):
@@ -117,7 +117,7 @@ class LoggerTests(unittest.TestCase):
         log.error("Hello, {log_source}.")
 
         self.assertIn("log_source", log.event)
-        self.assertEquals(log.event["log_source"], obj)
+        self.assertEqual(log.event["log_source"], obj)
 
         stuff = formatEvent(log.event)
         self.assertIn("Hello, <LogComposedObject hello>.", stuff)
@@ -138,19 +138,19 @@ class LoggerTests(unittest.TestCase):
             logMethod(format, junk=message, level_name=level.name)
 
             # Ensure that test_emit got called with expected arguments
-            self.assertEquals(log.emitted["level"], level)
-            self.assertEquals(log.emitted["format"], format)
-            self.assertEquals(log.emitted["kwargs"]["junk"], message)
+            self.assertEqual(log.emitted["level"], level)
+            self.assertEqual(log.emitted["format"], format)
+            self.assertEqual(log.emitted["kwargs"]["junk"], message)
 
             self.assertTrue(hasattr(log, "event"), "No event observed.")
 
-            self.assertEquals(log.event["log_format"], format)
-            self.assertEquals(log.event["log_level"], level)
-            self.assertEquals(log.event["log_namespace"], __name__)
-            self.assertEquals(log.event["log_source"], None)
-            self.assertEquals(log.event["junk"], message)
+            self.assertEqual(log.event["log_format"], format)
+            self.assertEqual(log.event["log_level"], level)
+            self.assertEqual(log.event["log_namespace"], __name__)
+            self.assertEqual(log.event["log_source"], None)
+            self.assertEqual(log.event["junk"], message)
 
-            self.assertEquals(formatEvent(log.event), message)
+            self.assertEqual(formatEvent(log.event), message)
 
 
     def test_source_onClass(self):
@@ -158,7 +158,7 @@ class LoggerTests(unittest.TestCase):
         C{log_source} event key should refer to the class.
         """
         def observer(event):
-            self.assertEquals(event["log_source"], Thingo)
+            self.assertEqual(event["log_source"], Thingo)
 
         class Thingo(object):
             log = TestLogger(observer=observer)
@@ -171,7 +171,7 @@ class LoggerTests(unittest.TestCase):
         C{log_source} event key should refer to the instance.
         """
         def observer(event):
-            self.assertEquals(event["log_source"], thingo)
+            self.assertEqual(event["log_source"], thingo)
 
         class Thingo(object):
             log = TestLogger(observer=observer)
@@ -185,7 +185,7 @@ class LoggerTests(unittest.TestCase):
         C{log_source} event key should be C{None}.
         """
         def observer(event):
-            self.assertEquals(event["log_source"], None)
+            self.assertEqual(event["log_source"], None)
 
         log = TestLogger(observer=observer)
         log.info()
@@ -202,10 +202,10 @@ class LoggerTests(unittest.TestCase):
             log.failure("Whoops")
 
         errors = self.flushLoggedErrors(RuntimeError)
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
 
-        self.assertEquals(log.emitted["level"], LogLevel.critical)
-        self.assertEquals(log.emitted["format"], "Whoops")
+        self.assertEqual(log.emitted["level"], LogLevel.critical)
+        self.assertEqual(log.emitted["format"], "Whoops")
 
 
     def test_conflicting_kwargs(self):
@@ -222,10 +222,10 @@ class LoggerTests(unittest.TestCase):
             log_source="*source*",
         )
 
-        self.assertEquals(log.event["log_format"], u"*")
-        self.assertEquals(log.event["log_level"], LogLevel.warn)
-        self.assertEquals(log.event["log_namespace"], log.namespace)
-        self.assertEquals(log.event["log_source"], None)
+        self.assertEqual(log.event["log_format"], u"*")
+        self.assertEqual(log.event["log_level"], LogLevel.warn)
+        self.assertEqual(log.event["log_namespace"], log.namespace)
+        self.assertEqual(log.event["log_source"], None)
 
 
     def test_logInvalidLogLevel(self):
@@ -237,7 +237,7 @@ class LoggerTests(unittest.TestCase):
         log.emit("*bogus*")
 
         errors = self.flushLoggedErrors(InvalidLogLevelError)
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
 
 
     def test_trace(self):
@@ -248,7 +248,7 @@ class LoggerTests(unittest.TestCase):
             observer(event)
 
         def observer(event):
-            self.assertEquals(event["log_trace"], [(log, publisher)])
+            self.assertEqual(event["log_trace"], [(log, publisher)])
 
         log = TestLogger(observer=publisher)
         log.info("Hello.", log_trace=[])

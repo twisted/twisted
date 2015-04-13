@@ -60,7 +60,7 @@ class FlatFormattingTests(unittest.TestCase):
         del event2["callme"]
         del event2["object"]
         event3 = json.loads(json.dumps(event2))
-        self.assertEquals(
+        self.assertEqual(
             formatEvent(event3),
             (
                 u"callable: 0 "
@@ -122,7 +122,7 @@ class FlatFormattingTests(unittest.TestCase):
         flattenEvent(event1)
         up.selfDestruct()
 
-        self.assertEquals(formatEvent(event1), "unpersistable: un-persistable")
+        self.assertEqual(formatEvent(event1), "unpersistable: un-persistable")
 
 
     def test_keyFlattening(self):
@@ -144,7 +144,7 @@ class FlatFormattingTests(unittest.TestCase):
 
         # No name
         try:
-            self.assertEquals(keyFromFormat("{}"), "!:")
+            self.assertEqual(keyFromFormat("{}"), "!:")
         except ValueError:
             if sys.version_info[:2] == (2, 6):
                 # In python 2.6, an empty field name causes Formatter.parse to
@@ -155,26 +155,26 @@ class FlatFormattingTests(unittest.TestCase):
                 raise
 
         # Just a name
-        self.assertEquals(keyFromFormat("{foo}"), "foo!:")
+        self.assertEqual(keyFromFormat("{foo}"), "foo!:")
 
         # Add conversion
-        self.assertEquals(keyFromFormat("{foo!s}"), "foo!s:")
-        self.assertEquals(keyFromFormat("{foo!r}"), "foo!r:")
+        self.assertEqual(keyFromFormat("{foo!s}"), "foo!s:")
+        self.assertEqual(keyFromFormat("{foo!r}"), "foo!r:")
 
         # Add format spec
-        self.assertEquals(keyFromFormat("{foo:%s}"), "foo!:%s")
-        self.assertEquals(keyFromFormat("{foo:!}"), "foo!:!")
-        self.assertEquals(keyFromFormat("{foo::}"), "foo!::")
+        self.assertEqual(keyFromFormat("{foo:%s}"), "foo!:%s")
+        self.assertEqual(keyFromFormat("{foo:!}"), "foo!:!")
+        self.assertEqual(keyFromFormat("{foo::}"), "foo!::")
 
         # Both
-        self.assertEquals(keyFromFormat("{foo!s:%s}"), "foo!s:%s")
-        self.assertEquals(keyFromFormat("{foo!s:!}"), "foo!s:!")
-        self.assertEquals(keyFromFormat("{foo!s::}"), "foo!s::")
+        self.assertEqual(keyFromFormat("{foo!s:%s}"), "foo!s:%s")
+        self.assertEqual(keyFromFormat("{foo!s:!}"), "foo!s:!")
+        self.assertEqual(keyFromFormat("{foo!s::}"), "foo!s::")
         [keyPlusLiteral] = aFormatter.parse("{x}")
         key = keyPlusLiteral[1:]
         sameFlattener = KeyFlattener()
-        self.assertEquals(sameFlattener.flatKey(*key), "x!:")
-        self.assertEquals(sameFlattener.flatKey(*key), "x!:/2")
+        self.assertEqual(sameFlattener.flatKey(*key), "x!:")
+        self.assertEqual(sameFlattener.flatKey(*key), "x!:/2")
 
 
     def _test_formatFlatEvent_fieldNamesSame(self, event=None):
@@ -200,7 +200,7 @@ class FlatFormattingTests(unittest.TestCase):
             )
 
         flattenEvent(event)
-        self.assertEquals(formatEvent(event), u"0 1")
+        self.assertEqual(formatEvent(event), u"0 1")
 
         return event
 
@@ -249,9 +249,9 @@ class FlatFormattingTests(unittest.TestCase):
         def extract(field):
             return extractField(field, flattened)
 
-        self.assertEquals(extract("something.number"), 7)
-        self.assertEquals(extract("something.number!s"), "7")
-        self.assertEquals(extract("something.object!s"), "repr")
+        self.assertEqual(extract("something.number"), 7)
+        self.assertEqual(extract("something.number!s"), "7")
+        self.assertEqual(extract("something.object!s"), "repr")
 
 
     def test_extractFieldFlattenFirst(self):
@@ -271,7 +271,7 @@ class FlatFormattingTests(unittest.TestCase):
         """
         inputEvent = {'a': 'b', 'c': 1}
         flattenEvent(inputEvent)
-        self.assertEquals(inputEvent, {'a': 'b', 'c': 1})
+        self.assertEqual(inputEvent, {'a': 'b', 'c': 1})
 
 
     def test_flattenEventWithInertFormat(self):
@@ -281,7 +281,7 @@ class FlatFormattingTests(unittest.TestCase):
         """
         inputEvent = {'a': 'b', 'c': 1, 'log_format': 'simple message'}
         flattenEvent(inputEvent)
-        self.assertEquals(
+        self.assertEqual(
             inputEvent,
             {
                 'a': 'b',
