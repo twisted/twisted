@@ -234,8 +234,8 @@ class LogBeginnerTests(unittest.TestCase):
         oldOut = self.sysModule.stdout
         oldErr = self.sysModule.stderr
         self.beginner.beginLoggingTo((), redirectStandardIO=False)
-        self.assertIdentical(self.sysModule.stdout, oldOut)
-        self.assertIdentical(self.sysModule.stderr, oldErr)
+        self.assertIs(self.sysModule.stdout, oldOut)
+        self.assertIs(self.sysModule.stderr, oldErr)
 
 
     def test_beginLoggingTo_preservesEncoding(self):

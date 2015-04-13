@@ -238,7 +238,7 @@ class FilteringLogObserverTests(unittest.TestCase):
         oNo = lambda e: None
 
         def testObserver(e):
-            self.assertIdentical(e, event)
+            self.assertIs(e, event)
             self.assertEquals(
                 event["log_trace"],
                 [

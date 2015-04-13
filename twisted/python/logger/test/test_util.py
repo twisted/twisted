@@ -28,7 +28,7 @@ class UtilTests(unittest.TestCase):
         o1 = lambda e: None
 
         def o2(e):
-            self.assertIdentical(e, event)
+            self.assertIs(e, event)
             self.assertEquals(
                 e["log_trace"],
                 [
@@ -39,7 +39,7 @@ class UtilTests(unittest.TestCase):
             )
 
         def o3(e):
-            self.assertIdentical(e, event)
+            self.assertIs(e, event)
             self.assertEquals(
                 e["log_trace"],
                 [
@@ -74,7 +74,7 @@ class UtilTests(unittest.TestCase):
         o5.name = "root/o5"
 
         def testObserver(e):
-            self.assertIdentical(e, event)
+            self.assertIs(e, event)
             trace = formatTrace(e["log_trace"])
             self.assertEquals(
                 trace,

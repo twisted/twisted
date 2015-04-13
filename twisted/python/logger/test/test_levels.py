@@ -22,7 +22,7 @@ class LogLevelTests(unittest.TestCase):
         Look up log level by name.
         """
         for level in LogLevel.iterconstants():
-            self.assertIdentical(LogLevel.levelWithName(level.name), level)
+            self.assertIs(LogLevel.levelWithName(level.name), level)
 
 
     def test_levelWithInvalidName(self):
@@ -33,6 +33,6 @@ class LogLevelTests(unittest.TestCase):
         try:
             LogLevel.levelWithName(bogus)
         except InvalidLogLevelError as e:
-            self.assertIdentical(e.level, bogus)
+            self.assertIs(e.level, bogus)
         else:
             self.fail("Expected InvalidLogLevelError.")

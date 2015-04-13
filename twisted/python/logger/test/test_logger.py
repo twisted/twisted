@@ -88,9 +88,9 @@ class LoggerTests(unittest.TestCase):
         )
         self.assertEquals(obj.log.namespace, expectedNamespace)
         self.assertEquals(LogComposedObject.log.namespace, expectedNamespace)
-        self.assertIdentical(LogComposedObject.log.source, LogComposedObject)
-        self.assertIdentical(obj.log.source, obj)
-        self.assertIdentical(Logger().source, None)
+        self.assertIs(LogComposedObject.log.source, LogComposedObject)
+        self.assertIs(obj.log.source, obj)
+        self.assertIs(Logger().source, None)
 
 
     def test_descriptorObserver(self):

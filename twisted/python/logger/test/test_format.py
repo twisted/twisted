@@ -51,7 +51,7 @@ class FormattingTests(unittest.TestCase):
         def format(logFormat, **event):
             event["log_format"] = logFormat
             result = formatEvent(event)
-            self.assertIdentical(type(result), unicode)
+            self.assertIs(type(result), unicode)
             return result
 
         self.assertEquals(u"", format(b""))
@@ -360,7 +360,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         No format string.
         """
         event = dict(id="123")
-        self.assertIdentical(
+        self.assertIs(
             formatEventAsClassicLogText(event),
             None
         )
@@ -371,7 +371,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         Empty format string.
         """
         event = dict(log_format="", id="123")
-        self.assertIdentical(
+        self.assertIs(
             formatEventAsClassicLogText(event),
             None
         )

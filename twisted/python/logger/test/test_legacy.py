@@ -254,7 +254,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         C{"isError"}, and C{"why"} keys.
         """
         event = self.eventWithFailure()
-        self.assertIdentical(event["failure"], event["log_failure"])
+        self.assertIs(event["failure"], event["log_failure"])
         self.assertTrue(event["isError"])
         self.assertEquals(event["why"], "oopsie...")
 
@@ -266,7 +266,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
         """
         failure = Failure(RuntimeError("Weak salsa!"))
         event = self.eventWithFailure(failure=failure)
-        self.assertIdentical(event["failure"], failure)
+        self.assertIs(event["failure"], failure)
 
 
     def test_isErrorAlreadySet(self):

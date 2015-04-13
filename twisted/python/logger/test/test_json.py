@@ -204,7 +204,7 @@ class SaveLoadTests(TestCase):
         """
         inputEvent = dict(log_level=LogLevel.warn)
         loadedEvent = eventFromJSON(self.savedEventJSON(inputEvent))
-        self.assertIdentical(loadedEvent["log_level"], LogLevel.warn)
+        self.assertIs(loadedEvent["log_level"], LogLevel.warn)
 
 
     def test_saveLoadUnknownLevel(self):

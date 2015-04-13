@@ -142,7 +142,7 @@ class LogPublisherTests(unittest.TestCase):
             if "log_failure" in e
         ]
         self.assertEquals(len(errors), 1)
-        self.assertIdentical(errors[0].value, exception)
+        self.assertIs(errors[0].value, exception)
         # Make sure the exceptional observer does not receive its own error.
         self.assertEquals(len(events), 1)
 

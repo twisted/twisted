@@ -160,7 +160,7 @@ class TextFileLogObserverTests(TestCase):
         fileHandle = StringIO()
         try:
             observer = textFileLogObserver(fileHandle)
-            self.assertIdentical(observer._outFile, fileHandle)
+            self.assertIs(observer._outFile, fileHandle)
         finally:
             fileHandle.close()
 
