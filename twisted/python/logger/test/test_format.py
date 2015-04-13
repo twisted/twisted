@@ -57,9 +57,13 @@ class FormattingTests(unittest.TestCase):
         self.assertEqual(u"", format(b""))
         self.assertEqual(u"", format(u""))
         self.assertEqual(u"abc", format("{x}", x="abc"))
-        self.assertEqual(u"no, yes.",
-                          format("{not_called}, {called()}.",
-                                 not_called="no", called=lambda: "yes"))
+        self.assertEqual(
+            u"no, yes.",
+            format(
+                "{not_called}, {called()}.",
+                not_called="no", called=lambda: "yes"
+            )
+        )
         self.assertEqual(u"S\xe1nchez", format(b"S\xc3\xa1nchez"))
         badResult = format(b"S\xe1nchez")
         self.assertIn(u"Unable to format event", badResult)
@@ -213,7 +217,7 @@ class TimeFormattingTests(unittest.TestCase):
 
     def test_formatTimeWithNoTime(self):
         """
-        If C{when} argument is C{None}, we should get the default output.
+        If C{when} argument is C{None}, we get the default output.
         """
         self.assertEqual(formatTime(None), u"-")
         self.assertEqual(formatTime(None, default=u"!"), u"!")
@@ -221,7 +225,7 @@ class TimeFormattingTests(unittest.TestCase):
 
     def test_formatTimeWithNoFormat(self):
         """
-        If C{timeFormat} argument is C{None}, we should get the default output.
+        If C{timeFormat} argument is C{None}, we get the default output.
         """
         t = mktime((2013, 9, 24, 11, 40, 47, 1, 267, 1))
         self.assertEqual(formatTime(t, timeFormat=None), u"-")
@@ -236,7 +240,7 @@ class TimeFormattingTests(unittest.TestCase):
         self.assertEqual(formatTime(t, timeFormat="%Y/%W"), u"2013/38")
 
 
-    def test_formatTime_f(self):
+    def test_formatTimePercentF(self):
         """
         "%f" supported in time format.
         """

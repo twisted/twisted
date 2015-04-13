@@ -465,7 +465,7 @@ class LogFileReaderTests(TestCase):
         """
         If the JSON text for a record is truncated in the middle of a two-byte
         Unicode codepoint, we don't want to see a codec exception and the
-        stream should be read properly when the additional data arrives.
+        stream is read properly when the additional data arrives.
         """
         try:
             # The Euro currency sign is u"\u20ac" and encodes in UTF-8 as three

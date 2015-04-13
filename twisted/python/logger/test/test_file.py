@@ -111,8 +111,8 @@ class FileLogObserverTests(TestCase):
 
     def test_observeFailure(self):
         """
-        If the C{"log_failure"} key exists in an event, the observer should
-        append the failure's traceback to the output.
+        If the C{"log_failure"} key exists in an event, the observer appends
+        the failure's traceback to the output.
         """
         try:
             fileHandle = StringIO()

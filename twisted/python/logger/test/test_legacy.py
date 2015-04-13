@@ -178,7 +178,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
     def test_stringPythonLogLevel(self):
         """
         If a stdlib log level was provided as a string (eg. C{"WARNING"}) in
-        the legacy "logLevel" key, it should not get converted to a number.
+        the legacy "logLevel" key, it does not get converted to a number.
         The documentation suggested that numerical values should be used but
         this was not a requirement.
         """
@@ -319,7 +319,7 @@ class PublishToNewObserverTests(unittest.TestCase):
 
     def test_observed(self):
         """
-        The observer should get called exactly once.
+        The observer is called exactly once.
         """
         publishToNewObserver(
             self.observer, self.legacyEvent(), legacyLog.textFromEventDict

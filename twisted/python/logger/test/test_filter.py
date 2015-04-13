@@ -148,62 +148,67 @@ class FilteringLogObserverTests(unittest.TestCase):
             extra = [eventsNotSeen.append]
         else:
             extra = []
-        filteringObserver = FilteringLogObserver(trackingObserver, predicates,
-                                                 *extra)
+        filteringObserver = FilteringLogObserver(
+            trackingObserver, predicates, *extra
+        )
         for e in events:
             filteringObserver(e)
 
         if extra:
-            return ([e["count"] for e in eventsSeen],
-                    [e["count"] for e in eventsNotSeen])
+            return (
+                [e["count"] for e in eventsSeen],
+                [e["count"] for e in eventsNotSeen],
+            )
         return [e["count"] for e in eventsSeen]
 
 
-    def test_shouldLogEvent_noFilters(self):
+    def test_shouldLogEventNoFilters(self):
         """
         No filters: all events come through.
         """
         self.assertEqual(self.filterWith([]), [0, 1, 2, 3])
 
 
-    def test_shouldLogEvent_noFilter(self):
+    def test_shouldLogEventNoFilter(self):
         """
         Filter with negative predicate result.
         """
         self.assertEqual(self.filterWith(["notTwo"]), [0, 1, 3])
 
 
-    def test_shouldLogEvent_otherObserver(self):
+    def test_shouldLogEventOtherObserver(self):
         """
         Filtered results get sent to the other observer, if passed.
         """
         self.assertEqual(self.filterWith(["notTwo"], True), ([0, 1, 3], [2]))
 
 
-    def test_shouldLogEvent_yesFilter(self):
+    def test_shouldLogEventYesFilter(self):
         """
         Filter with positive predicate result.
         """
         self.assertEqual(self.filterWith(["twoPlus"]), [0, 1, 2, 3])
 
 
-    def test_shouldLogEvent_yesNoFilter(self):
+    def test_shouldLogEventYesNoFilter(self):
         """
         Series of filters with positive and negative predicate results.
         """
         self.assertEqual(self.filterWith(["twoPlus", "no"]), [2, 3])
 
 
-    def test_shouldLogEvent_yesYesNoFilter(self):
+    def test_shouldLogEventYesYesNoFilter(self):
         """
         Series of filters with positive, positive and negative predicate
         results.
         """
-        self.assertEqual(self.filterWith(["twoPlus", "twoMinus", "no"]),
-                          [0, 1, 2, 3])
+        self.assertEqual(
+            self.filterWith(["twoPlus", "twoMinus", "no"]),
+            [0, 1, 2, 3]
+        )
 
 
-    def test_shouldLogEvent_badPredicateResult(self):
+    def test_shouldLogEventBadPredicateResult(self):
         """
         Filter with invalid predicate result.
         """
@@ -218,8 +223,10 @@ class FilteringLogObserverTests(unittest.TestCase):
 
         def callWithPredicateResult(result):
             seen = []
-            observer = FilteringLogObserver(lambda e: seen.append(e),
-                                            (lambda e: result,))
+            observer = FilteringLogObserver(
+                lambda e: seen.append(e),
+                (lambda e: result,)
+            )
             observer(e)
             return seen
 

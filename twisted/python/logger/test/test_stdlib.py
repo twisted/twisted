@@ -133,8 +133,8 @@ class STDLibLogObserverTests(unittest.TestCase):
 
     def test_callerInfo(self):
         """
-        C{pathname}, C{lineno}, C{exc_info}, C{func} should
-        be set properly on records.
+        C{pathname}, C{lineno}, C{exc_info}, C{func} is set properly on
+        records.
         """
         filename, logLine = nextLine()
         records, output = self.logEvent({})
@@ -146,10 +146,10 @@ class STDLibLogObserverTests(unittest.TestCase):
 
         # Attribute "func" is missing from record, which is weird because it's
         # documented.
-        #self.assertEqual(records[0].func, "test_callerInfo")
+        # self.assertEqual(records[0].func, "test_callerInfo")
 
 
-    def test_basic_format(self):
+    def test_basicFormat(self):
         """
         Basic formattable event passes the format along correctly.
         """
@@ -161,7 +161,7 @@ class STDLibLogObserverTests(unittest.TestCase):
         self.assertEqual(records[0].args, ())
 
 
-    def test_basic_formatRendered(self):
+    def test_basicFormatRendered(self):
         """
         Basic formattable event renders correctly.
         """

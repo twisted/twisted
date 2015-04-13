@@ -113,7 +113,7 @@ class LogBeginnerTests(unittest.TestCase):
         )
 
 
-    def test_beginLoggingTo_addObservers(self):
+    def test_beginLoggingToAddObservers(self):
         """
         Test that C{beginLoggingTo()} adds observers.
         """
@@ -132,7 +132,7 @@ class LogBeginnerTests(unittest.TestCase):
         self.assertEqual([event], events2)
 
 
-    def test_beginLoggingTo_bufferedEvents(self):
+    def test_beginLoggingToBufferedEvents(self):
         """
         Test that events are buffered until C{beginLoggingTo()} is
         called.
@@ -152,7 +152,7 @@ class LogBeginnerTests(unittest.TestCase):
         self.assertEqual([event], events2)
 
 
-    def test_beginLoggingTo_twice(self):
+    def test_beginLoggingToTwice(self):
         """
         When invoked twice, L{LogBeginner.beginLoggingTo} will emit a log
         message warning the user that they previously began logging, and add
@@ -207,7 +207,7 @@ class LogBeginnerTests(unittest.TestCase):
         self.assertEqual(self.errorStream.getvalue(), u'')
 
 
-    def test_beginLoggingTo_redirectStandardIO(self):
+    def test_beginLoggingToRedirectStandardIO(self):
         """
         L{LogBeginner.beginLoggingTo} will re-direct the standard output and
         error streams by setting the C{stdio} and C{stderr} attributes on its
@@ -226,7 +226,7 @@ class LogBeginnerTests(unittest.TestCase):
         )
 
 
-    def test_beginLoggingTo_dontRedirect(self):
+    def test_beginLoggingToDontRedirect(self):
         """
         L{LogBeginner.beginLoggingTo} will leave the existing stdout/stderr in
         place if it has been told not to replace them.
@@ -238,7 +238,7 @@ class LogBeginnerTests(unittest.TestCase):
         self.assertIs(self.sysModule.stderr, oldErr)
 
 
-    def test_beginLoggingTo_preservesEncoding(self):
+    def test_beginLoggingToPreservesEncoding(self):
         """
         When L{LogBeginner.beginLoggingTo} redirects stdout/stderr streams, the
         replacement streams will preserve the encoding of the replaced streams,

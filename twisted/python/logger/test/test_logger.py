@@ -68,7 +68,7 @@ class LoggerTests(unittest.TestCase):
         self.assertEqual(repr(log), "<Logger {0}>".format(repr(namespace)))
 
 
-    def test_namespace_default(self):
+    def test_namespaceDefault(self):
         """
         Default namespace is module name.
         """
@@ -76,7 +76,7 @@ class LoggerTests(unittest.TestCase):
         self.assertEqual(log.namespace, __name__)
 
 
-    def test_namespace_attribute(self):
+    def test_namespaceAttribute(self):
         """
         Default namespace for classes using L{Logger} as a descriptor is the
         class name they were retrieved from.
@@ -123,7 +123,7 @@ class LoggerTests(unittest.TestCase):
         self.assertIn("Hello, <LogComposedObject hello>.", stuff)
 
 
-    def test_basic_Logger(self):
+    def test_basicLogger(self):
         """
         Test that log levels and messages are emitted correctly for
         Logger.
@@ -153,9 +153,9 @@ class LoggerTests(unittest.TestCase):
             self.assertEqual(formatEvent(log.event), message)
 
 
-    def test_source_onClass(self):
+    def test_sourceOnClass(self):
         """
-        C{log_source} event key should refer to the class.
+        C{log_source} event key refers to the class.
         """
         def observer(event):
             self.assertEqual(event["log_source"], Thingo)
@@ -166,9 +166,9 @@ class LoggerTests(unittest.TestCase):
         Thingo.log.info()
 
 
-    def test_source_onInstance(self):
+    def test_sourceOnInstance(self):
         """
-        C{log_source} event key should refer to the instance.
+        C{log_source} event key refers to the instance.
         """
         def observer(event):
             self.assertEqual(event["log_source"], thingo)
@@ -180,9 +180,9 @@ class LoggerTests(unittest.TestCase):
         thingo.log.info()
 
 
-    def test_source_unbound(self):
+    def test_sourceUnbound(self):
         """
-        C{log_source} event key should be C{None}.
+        C{log_source} event key is C{None}.
         """
         def observer(event):
             self.assertEqual(event["log_source"], None)
@@ -208,7 +208,7 @@ class LoggerTests(unittest.TestCase):
         self.assertEqual(log.emitted["format"], "Whoops")
 
 
-    def test_conflicting_kwargs(self):
+    def test_conflictingKwargs(self):
         """
         Make sure that kwargs conflicting with args don't pass through.
         """

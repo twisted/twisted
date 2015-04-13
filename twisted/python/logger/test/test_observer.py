@@ -114,8 +114,8 @@ class LogPublisherTests(unittest.TestCase):
 
     def test_observerRaises(self):
         """
-        Observer raises an exception during fan out: a failure should be
-        logged, but not re-raised.  Life goes on.
+        Observer raises an exception during fan out: a failure is logged, but
+        not re-raised.  Life goes on.
         """
         event = dict(foo=1, bar=2)
         exception = RuntimeError("ARGH! EVIL DEATH!")
@@ -150,8 +150,8 @@ class LogPublisherTests(unittest.TestCase):
     def test_observerRaisesAndLoggerHatesMe(self):
         """
         Observer raises an exception during fan out and the publisher's Logger
-        pukes when the failure is reported.  Exception should still not
-        propagate back to the caller.
+        pukes when the failure is reported.  The exception does not propagate
+        back to the caller.
         """
         event = dict(foo=1, bar=2)
         exception = RuntimeError("ARGH! EVIL DEATH!")

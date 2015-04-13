@@ -151,7 +151,7 @@ class LoggingFileTests(unittest.TestCase):
         self.assertEqual(f.isatty(), False)
 
 
-    def test_write_buffering(self):
+    def test_writeBuffering(self):
         """
         Writing buffers correctly.
         """
@@ -171,7 +171,7 @@ class LoggingFileTests(unittest.TestCase):
         )
 
 
-    def test_write_bytes_decoded(self):
+    def test_writeBytesDecoded(self):
         """
         Bytes are decoded to unicode.
         """
@@ -180,7 +180,7 @@ class LoggingFileTests(unittest.TestCase):
         self.assertEqual(f.messages, [u"Hello, Mr. S\xe1nchez"])
 
 
-    def test_write_unicode(self):
+    def test_writeUnicode(self):
         """
         Unicode is unmodified.
         """
@@ -189,7 +189,7 @@ class LoggingFileTests(unittest.TestCase):
         self.assertEqual(f.messages, [u"Hello, Mr. S\xe1nchez"])
 
 
-    def test_write_level(self):
+    def test_writeLevel(self):
         """
         Log level is emitted properly.
         """
@@ -204,7 +204,7 @@ class LoggingFileTests(unittest.TestCase):
         self.assertEqual(f.events[0]["log_level"], LogLevel.error)
 
 
-    def test_write_format(self):
+    def test_writeFormat(self):
         """
         Log format is C{u"{message}"}.
         """
@@ -214,7 +214,7 @@ class LoggingFileTests(unittest.TestCase):
         self.assertEqual(f.events[0]["log_format"], u"{message}")
 
 
-    def test_writelines_buffering(self):
+    def test_writelinesBuffering(self):
         """
         C{writelines} does not add newlines.
         """
