@@ -26,10 +26,14 @@ toStdlibLogLevelMapping = {
     LogLevel.critical: stdlibLogging.CRITICAL,
 }
 
-fromStdlibLogLevelMapping = dict([
-    (value, key) for (key, value)
-    in toStdlibLogLevelMapping.items()
-])
+def _reverseLogLevelMapping():
+    mapping = {}
+    for logLevel, pyLogLevel in toStdlibLogLevelMapping.items():
+        mapping[pyLogLevel] = logLevel
+        mapping[stdlibLogging.getLevelName(pyLogLevel)] = logLevel
+    return mapping
+
+fromStdlibLogLevelMapping = _reverseLogLevelMapping()
 
 
 
