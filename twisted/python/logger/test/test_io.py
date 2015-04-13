@@ -239,17 +239,13 @@ class LoggingFileTests(unittest.TestCase):
         """
         L{LoggingFile} can replace L{sys.stdout}.
         """
-        oldStdout = sys.stdout
-        try:
-            f = self.observedFile()
-            sys.stdout = f
+        f = self.observedFile()
+        self.patch(sys, "stdout", f)
 
-            print("Hello,", end=" ")
-            print("world.")
+        print("Hello,", end=" ")
+        print("world.")
 
-            self.assertEqual(f.messages, [u"Hello, world."])
-        finally:
-            sys.stdout = oldStdout
+        self.assertEqual(f.messages, [u"Hello, world."])
 
 
     def observedFile(self, **kwargs):
