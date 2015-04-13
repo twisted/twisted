@@ -28,31 +28,23 @@ class FileLogObserverTests(TestCase):
         """
         L{FileLogObserver} is an L{ILogObserver}.
         """
-        try:
-            fileHandle = StringIO()
+        with StringIO() as fileHandle:
             observer = FileLogObserver(fileHandle, lambda e: unicode(e))
             try:
                 verifyObject(ILogObserver, observer)
             except BrokenMethodImplementation as e:
                 self.fail(e)
 
-        finally:
-            fileHandle.close()
-
 
     def test_observeWrites(self):
         """
         L{FileLogObserver} writes to the given file when it observes events.
         """
-        try:
-            fileHandle = StringIO()
+        with StringIO() as fileHandle:
             observer = FileLogObserver(fileHandle, lambda e: unicode(e))
             event = dict(x=1)
             observer(event)
             self.assertEqual(fileHandle.getvalue(), unicode(event))
-
-        finally:
-            fileHandle.close()
 
 
     def _test_observeWrites(self, what, count):
@@ -66,15 +58,11 @@ class FileLogObserverTests(TestCase):
         @param count: the expected number of writes.
         @type count: L{int}
         """
-        try:
-            fileHandle = DummyFile()
+        with DummyFile() as fileHandle:
             observer = FileLogObserver(fileHandle, lambda e: what)
             event = dict(x=1)
             observer(event)
             self.assertEqual(fileHandle.writes, count)
-
-        finally:
-            fileHandle.close()
 
 
     def test_observeWritesNone(self):
@@ -98,15 +86,11 @@ class FileLogObserverTests(TestCase):
         L{FileLogObserver} calles C{flush()} on the output file when it
         observes an event.
         """
-        try:
-            fileHandle = DummyFile()
+        with DummyFile() as fileHandle:
             observer = FileLogObserver(fileHandle, lambda e: unicode(e))
             event = dict(x=1)
             observer(event)
             self.assertEqual(fileHandle.flushes, 1)
-
-        finally:
-            fileHandle.close()
 
 
     def test_observeFailure(self):
@@ -114,8 +98,7 @@ class FileLogObserverTests(TestCase):
         If the C{"log_failure"} key exists in an event, the observer appends
         the failure's traceback to the output.
         """
-        try:
-            fileHandle = StringIO()
+        with StringIO() as fileHandle:
             observer = FileLogObserver(fileHandle, lambda e: unicode(e))
 
             try:
@@ -131,9 +114,6 @@ class FileLogObserverTests(TestCase):
                 "Incorrect output:\n{0}".format(output)
             )
 
-        finally:
-            fileHandle.close()
-
 
 
 class TextFileLogObserverTests(TestCase):
@@ -145,37 +125,28 @@ class TextFileLogObserverTests(TestCase):
         """
         L{textFileLogObserver} returns a L{FileLogObserver}.
         """
-        fileHandle = StringIO()
-        try:
+        with StringIO() as fileHandle:
             observer = textFileLogObserver(fileHandle)
             self.assertIsInstance(observer, FileLogObserver)
-        finally:
-            fileHandle.close()
 
 
     def test_outFile(self):
         """
         Returned L{FileLogObserver} has the correct outFile.
         """
-        fileHandle = StringIO()
-        try:
+        with StringIO() as fileHandle:
             observer = textFileLogObserver(fileHandle)
             self.assertIs(observer._outFile, fileHandle)
-        finally:
-            fileHandle.close()
 
 
     def test_timeFormat(self):
         """
         Returned L{FileLogObserver} has the correct outFile.
         """
-        fileHandle = StringIO()
-        try:
+        with StringIO() as fileHandle:
             observer = textFileLogObserver(fileHandle, timeFormat=u"%f")
             observer(dict(log_format=u"XYZZY", log_time=1.23456))
             self.assertEqual(fileHandle.getvalue(), u"234560 [-#-] XYZZY\n")
-        finally:
-            fileHandle.close()
 
 
 
@@ -206,8 +177,9 @@ class DummyFile(object):
         self.flushes += 1
 
 
-    def close(self):
-        """
-        Close.
-        """
+    def __enter__(self):
+        return self
+
+
+    def __exit__(self, exc_type, exc_value, traceback):
         pass
