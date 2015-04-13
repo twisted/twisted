@@ -1,6 +1,19 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Web 15.1.0 (2015-04-02)
+===============================
+
+Features
+--------
+ - twisted.web.static.File allows defining a custom resource for
+   rendering forbidden pages. (#6951)
+
+Other
+-----
+ - #7000, #7485, #7750, #7762
+
+
 Twisted Web 15.0.0 (2015-01-24)
 ===============================
 

@@ -1,6 +1,30 @@
 Ticket numbers in this file can be looked up by visiting
 http://twistedmatrix.com/trac/ticket/<number>
 
+Twisted Core 15.1.0 (2015-04-02)
+================================
+
+Features
+--------
+ - Optional dependencies can be installed using the extra_requires
+   facility provided by setuptools. (#3696)
+
+Improved Documentation
+----------------------
+ - Twisted Trial's basics documentation now has a link to the
+   documentation about how Trial finds tests. (#4526)
+
+Deprecations and Removals
+-------------------------
+ - twisted.application.internet.UDPClient, deprecated since Twisted
+   13.1.0, has been removed. (#7702)
+
+Other
+-----
+ - #6988, #7005, #7006, #7007, #7008, #7044, #7335, #7666, #7723,
+   #7724, #7725, #7748, #7763, #7765, #7766, #7768
+
+
 Twisted Core 15.0.0 (2015-01-24)
 ================================
 

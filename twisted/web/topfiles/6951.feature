@@ -1,1 +1,0 @@
-twisted.web.static.File allows defining a custom resource for rendering forbidden pages.

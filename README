@@ -1,14 +1,13 @@
-Twisted 15.0.0
+Twisted 15.1.0
 
 Quote of the Release:
 
+  <glyph> wsanchez: I'm a little concerned if I take a drug that is going to
+          open my mind, and then the thing I shove in there when it's wide
+          open is git
 
-  <exarkun> is there some way to stack vcs three deep yet?  Where is the voltron of version control?
-  <exarkun> Who will form the head?
-  <glyph> exarkun: ITYM "who will form the HEAD?"
 
-
-For information on what's new in Twisted 15.0.0, see the NEWS file that comes
+For information on what's new in Twisted 15.1.0, see the NEWS file that comes
 with the distribution.
 
 What is this?

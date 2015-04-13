@@ -8,4 +8,4 @@ Provides Twisted version information.
 """
 
 from twisted.python import versions
-version = versions.Version('twisted.names', 15, 0, 0)
+version = versions.Version('twisted.names', 15, 1, 0)
